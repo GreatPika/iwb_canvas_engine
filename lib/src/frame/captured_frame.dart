@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../geometry/spatial_query_result.dart';
@@ -34,6 +35,7 @@ final class CapturedFrameSnapshot {
     required Iterable<FrameElementHandle> capturedHandles,
     required Iterable<FrameElementFacts> elements,
     required Iterable<FrameResourceDescriptorFacts> resourceDescriptors,
+    required this.background,
     required this.selection,
     required this.inputs,
     required this.spatialPaintResult,
@@ -50,6 +52,7 @@ final class CapturedFrameSnapshot {
   final List<FrameElementHandle> capturedHandles;
   final List<FrameElementFacts> elements;
   final List<FrameResourceDescriptorFacts> resourceDescriptors;
+  final CanvasBackground background;
   final SelectionFacts selection;
   final FrameCaptureInputs inputs;
   final SpatialQueryResult spatialPaintResult;

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../contracts/public/canvas_document.dart';
 import 'captured_frame.dart';
 
 @immutable
@@ -62,10 +63,18 @@ final class StaticBackgroundPicture {
 final class StaticBackgroundPrimitive {
   const StaticBackgroundPrimitive({
     required this.viewportRect,
+    required this.backgroundColor,
+    required this.gridEnabled,
+    required this.gridCellSize,
+    required this.gridColor,
     required this.gridStrokeWidth,
   });
 
   final Rect viewportRect;
+  final Color backgroundColor;
+  final bool gridEnabled;
+  final double gridCellSize;
+  final Color gridColor;
   final double gridStrokeWidth;
 }
 
@@ -97,6 +106,7 @@ final class StaticBackgroundCache {
 
   StaticBackgroundPlan readOrBuild(
     StaticBackgroundKey key, {
+    required CanvasBackground background,
     required Rect primitiveViewportRect,
   }) {
     final current = _current;
@@ -110,11 +120,16 @@ final class StaticBackgroundCache {
         debugLabel: 'static-background',
         picture: _recordStaticBackgroundPicture(
           viewport: primitiveViewportRect,
+          background: background,
           gridStrokeWidth: key.gridStrokeWidth,
         ),
       ),
       primitive: StaticBackgroundPrimitive(
         viewportRect: primitiveViewportRect,
+        backgroundColor: background.color,
+        gridEnabled: background.grid.enabled,
+        gridCellSize: background.grid.cellSize,
+        gridColor: background.grid.color,
         gridStrokeWidth: key.gridStrokeWidth,
       ),
     );
@@ -139,33 +154,37 @@ final class StaticBackgroundCache {
 
 Picture _recordStaticBackgroundPicture({
   required Rect viewport,
+  required CanvasBackground background,
   required double gridStrokeWidth,
 }) {
   final recorder = PictureRecorder();
   final canvas = Canvas(recorder);
-  _paintStaticBackgroundGrid(canvas, viewport, gridStrokeWidth);
+  _paintStaticBackground(canvas, viewport, background, gridStrokeWidth);
 
   return recorder.endRecording();
 }
 
-void _paintStaticBackgroundGrid(
+void _paintStaticBackground(
   Canvas canvas,
   Rect viewport,
+  CanvasBackground background,
   double gridStrokeWidth,
 ) {
-  if (gridStrokeWidth <= 0) {
+  canvas.drawRect(viewport, Paint()..color = background.color);
+  final grid = background.grid;
+  if (!grid.enabled || gridStrokeWidth <= 0) {
     return;
   }
-  const spacing = 20.0;
   final paint = Paint()
-    ..color = const Color(0x14000000)
+    ..color = grid.color
     ..strokeWidth = gridStrokeWidth;
-  final firstX = (viewport.left / spacing).floorToDouble() * spacing;
-  for (var x = firstX; x <= viewport.right; x += spacing) {
+  final firstX =
+      (viewport.left / grid.cellSize).floorToDouble() * grid.cellSize;
+  for (var x = firstX; x <= viewport.right; x += grid.cellSize) {
     canvas.drawLine(Offset(x, viewport.top), Offset(x, viewport.bottom), paint);
   }
-  final firstY = (viewport.top / spacing).floorToDouble() * spacing;
-  for (var y = firstY; y <= viewport.bottom; y += spacing) {
+  final firstY = (viewport.top / grid.cellSize).floorToDouble() * grid.cellSize;
+  for (var y = firstY; y <= viewport.bottom; y += grid.cellSize) {
     canvas.drawLine(Offset(viewport.left, y), Offset(viewport.right, y), paint);
   }
 }
@@ -192,6 +211,7 @@ final class StaticBackgroundPlanner {
         viewportRect: frame.snapshot.inputs.viewportWorldBounds,
         devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
       ),
+      background: frame.snapshot.background,
       primitiveViewportRect: frame.snapshot.inputs.effectiveWorldBounds,
     );
   }

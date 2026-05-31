@@ -262,6 +262,11 @@ final class RuntimeRoot
     );
   }
 
+  @override
+  CanvasBackground get background {
+    return _store.background;
+  }
+
   CanvasDocument readDocument() => _store.readDocument();
   CanvasElementId generateElementId() {
     ensureRuntimeMutationAllowed();

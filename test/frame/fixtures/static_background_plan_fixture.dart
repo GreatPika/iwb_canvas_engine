@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
 import 'package:iwb_canvas_engine/src/frame/ordinary_paint_planner.dart';
 import 'package:iwb_canvas_engine/src/frame/static_background_planner.dart';
@@ -15,7 +16,7 @@ void main() {
 }
 
 void _testStaticBackgroundIdentity() {
-  test('static background cache key and replacement are separate', () {
+  test('static background cache key and replacement are separate', () async {
     final scenario = _buildStaticBackgroundScenario();
 
     expect(scenario.again, same(scenario.first));
@@ -28,6 +29,7 @@ void _testStaticBackgroundIdentity() {
       OrdinaryPaintPlanner().paintPlanKeyFor(scenario.changedFrame),
       scenario.ordinaryKey,
     );
+    await _expectCommittedBackgroundPaintFacts(scenario.changed);
 
     scenario.planner.cache.invalidate();
     expect(scenario.changed.picture.isDisposed, isTrue);
@@ -65,6 +67,14 @@ CapturedMainFrame _staticFrame({required int background}) {
   return capturedMainFrame(
     frameFacts: frameFactsPort(
       revisions: revisionsFor(background: background, grid: 20),
+      background: CanvasBackground(
+        color: const Color(0xFF112233),
+        grid: CanvasGrid(
+          enabled: true,
+          cellSize: 24,
+          color: const Color(0x33445566),
+        ),
+      ),
     ),
     viewport: const Rect.fromLTWH(0, 0, 100, 100),
     devicePixelRatio: 2,
@@ -83,4 +93,34 @@ void _expectStaticBackgroundPlan(
   expect(plan.key.devicePixelRatio, 2);
   expect(plan.primitive.viewportRect, plan.key.viewportRect);
   expect(plan.primitive.gridStrokeWidth, plan.key.gridStrokeWidth);
+}
+
+Future<void> _expectCommittedBackgroundPaintFacts(
+  StaticBackgroundPlan plan,
+) async {
+  expect(plan.primitive.backgroundColor, const Color(0xFF112233));
+  expect(plan.primitive.gridEnabled, isTrue);
+  expect(plan.primitive.gridCellSize, 24);
+  expect(plan.primitive.gridColor, const Color(0x33445566));
+  expect(
+    await _pixelColor(plan.picture.picture, 5, 5),
+    const Color(0xFF112233),
+  );
+}
+
+Future<Color> _pixelColor(Picture picture, int x, int y) async {
+  final image = await picture.toImage(32, 32);
+  final bytes = await image.toByteData(format: ImageByteFormat.rawStraightRgba);
+  image.dispose();
+  if (bytes == null) {
+    throw StateError('static background picture did not produce pixel data');
+  }
+  final offset = (y * 32 + x) * 4;
+
+  return Color.fromARGB(
+    bytes.getUint8(offset + 3),
+    bytes.getUint8(offset),
+    bytes.getUint8(offset + 1),
+    bytes.getUint8(offset + 2),
+  );
 }

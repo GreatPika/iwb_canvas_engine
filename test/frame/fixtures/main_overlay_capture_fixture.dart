@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
@@ -52,6 +53,7 @@ void _testImmutableFrameCapture() {
           metadata: const CanvasMetadata.empty(),
         ),
       },
+      committedBackground: const CanvasBackground(color: Color(0xFF224466)),
     );
     final selectionFacts = _FakeSelectionFactsPort(
       SelectionFacts(selectedElementIds: [handleA.id], selectionRevision: 3),
@@ -97,6 +99,7 @@ void _testImmutableFrameCapture() {
     expect(main.snapshot.resourceDescriptors.single.id, resourceId);
     expect(main.snapshot.selection.selectedElementIds, {CanvasElementId('a')});
     expect(main.snapshot.selection.selectionRevision, 3);
+    expect(main.snapshot.background.color, const Color(0xFF224466));
     expect(
       main.snapshot.inputs.viewportWorldBounds,
       const Rect.fromLTWH(1, 2, 3, 4),
@@ -113,6 +116,7 @@ void _testImmutableFrameCapture() {
     expect(overlay.snapshot.spatialPaintCandidates.single.id, handleB.id);
 
     expect(frameFacts.frameRevisionReads, 2);
+    expect(frameFacts.backgroundReads, 2);
     expect(frameFacts.elementHandlesReads, 0);
     expect(frameFacts.elementHandleForIdReads, 2);
     expect(frameFacts.resolveElementReads, 4);
@@ -309,16 +313,20 @@ final class _FakeFrameFactsPort implements FrameFactsPort {
     required List<FrameElementHandle> handles,
     required Map<CanvasElementId, FrameElementFacts> elements,
     required Map<CanvasResourceId, FrameResourceDescriptorFacts> descriptors,
+    CanvasBackground committedBackground = const CanvasBackground(),
   }) : _revisions = revisions,
        _handles = List.of(handles),
        _elements = Map.of(elements),
-       _descriptors = Map.of(descriptors);
+       _descriptors = Map.of(descriptors),
+       _background = committedBackground;
 
   FrameRevisionFacts _revisions;
   List<FrameElementHandle> _handles;
   Map<CanvasElementId, FrameElementFacts> _elements;
   final Map<CanvasResourceId, FrameResourceDescriptorFacts> _descriptors;
+  final CanvasBackground _background;
   int frameRevisionReads = 0;
+  int backgroundReads = 0;
   int elementHandlesReads = 0;
   int elementHandleForIdReads = 0;
   int resolveElementReads = 0;
@@ -340,6 +348,13 @@ final class _FakeFrameFactsPort implements FrameFactsPort {
     frameRevisionReads += 1;
 
     return _revisions;
+  }
+
+  @override
+  CanvasBackground get background {
+    backgroundReads += 1;
+
+    return _background;
   }
 
   @override

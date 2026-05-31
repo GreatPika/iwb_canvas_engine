@@ -55,6 +55,7 @@ final class DocumentStoreKernel {
   int get backgroundRevision => _document.revisions.backgroundRevision;
   int get gridRevision => _document.revisions.gridRevision;
   int get resourceRevision => _document.revisions.resourceRevision;
+  CanvasBackground get background => _document.background;
   int get projectionBuildCount => _projectionCache.buildCount;
   int get resourceCount => _document.resourceTable.rows.length;
   List<CanvasResource> get resources {

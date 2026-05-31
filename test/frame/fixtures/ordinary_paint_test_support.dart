@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
@@ -85,6 +86,7 @@ CapturedOverlayFrame capturedOverlayFrameFor(CanvasPreviewState preview) {
 // ignore: number-of-parameters
 TestFrameFactsPort frameFactsPort({
   FrameRevisionFacts? revisions,
+  CanvasBackground background = const CanvasBackground(),
   List<FrameElementFacts>? elements,
   List<FrameResourceDescriptorFacts> resourceDescriptors = const [],
   List<FrameElementHandle>? spatialCandidates,
@@ -110,6 +112,7 @@ TestFrameFactsPort frameFactsPort({
         ],
     staleIds: staleIds,
     resourceDescriptors: resourceDescriptors,
+    background: background,
   );
 }
 
@@ -284,6 +287,7 @@ final class TestFrameFactsPort implements FrameFactsPort {
     required List<FrameElementHandle> spatialCandidates,
     required Set<CanvasElementId> staleIds,
     required List<FrameResourceDescriptorFacts> resourceDescriptors,
+    this.background = const CanvasBackground(),
   }) : _elements = {for (final element in elements) element.id: element},
        spatialCandidates = List.unmodifiable(spatialCandidates),
        _staleIds = Set.unmodifiable(staleIds),
@@ -293,6 +297,8 @@ final class TestFrameFactsPort implements FrameFactsPort {
        });
 
   FrameRevisionFacts revisions;
+  @override
+  final CanvasBackground background;
   final Map<CanvasElementId, FrameElementFacts> _elements;
   final List<FrameElementHandle> spatialCandidates;
   final Set<CanvasElementId> _staleIds;

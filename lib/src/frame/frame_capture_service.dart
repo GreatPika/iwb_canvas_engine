@@ -67,6 +67,7 @@ final class FrameCaptureService {
       capturedHandles: capturedHandles,
       elements: resolved.elements,
       resourceDescriptors: resolved.descriptors,
+      background: _frameFacts.background,
       selection: selection,
       inputs: inputs,
       spatialPaintResult: spatialResult,

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../public/canvas_document.dart';
 import '../public/canvas_element.dart';
 import '../public/canvas_geometry.dart';
 import '../public/canvas_ids.dart';
@@ -149,6 +150,7 @@ final class FrameResourceDescriptorFacts {
 
 abstract interface class FrameFactsPort {
   FrameRevisionFacts get frameRevisions;
+  CanvasBackground get background;
   int elementCount(int structuralRevision);
   List<FrameElementHandle> elementHandles(int structuralRevision);
   FrameElementHandle? elementHandleForId(

@@ -286,6 +286,9 @@ final class SpatialFrameFactsPortFixture implements FrameFactsPort {
   }
 
   @override
+  CanvasBackground get background => const CanvasBackground();
+
+  @override
   int elementCount(int structuralRevision) {
     elementCountCalls += 1;
     if (structuralRevision != this.structuralRevision) {
