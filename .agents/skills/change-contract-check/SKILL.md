@@ -19,7 +19,7 @@ implemented units through unit commits and final committed-range review.
 A contract fails if the implementer must make design decisions that the contract
 was supposed to settle.
 
-## Decision Closure Rule
+## Decision Closure
 
 A full contract is not implementable when the implementer must choose the owner,
 boundary, source of truth, compatibility behavior, execution order, proof seam

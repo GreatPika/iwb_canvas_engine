@@ -46,6 +46,12 @@ code. Do not draft a Change Contract. Do not edit files outside `.design/`.
      current evidence.
 
 5. If the reviewer reports `BLOCKED`, classify the route before editing.
+   - Preserve `Decision Closure`: unresolved owner, boundary, source of truth,
+     compatibility, execution order, proof seam or fixture strategy, mandatory
+     source-of-truth update, temporal/reentrancy behavior, all-or-nothing
+     boundary, migration or retirement strategy, or completion signal must end
+     in the matching local blocked route instead of being deferred to contract
+     authoring or implementation.
    - For `NEEDS_RESEARCH`, ensure the same `.design/` artifact records the
      terminal blocker before stopping: set `Disposition` to `NEEDS_RESEARCH`
      when needed, copy the exact blocking research questions into `Open Decisions`, and leave unknown facts unresolved. Do not repair the design

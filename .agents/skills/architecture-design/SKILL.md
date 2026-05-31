@@ -52,6 +52,13 @@ Every artifact must contain exactly one disposition:
   directly to `change-contract`; still create the `.design/` artifact and record
   why no design decision was needed.
 
+`Decision Closure` means owner, boundary, source of truth, compatibility,
+execution order, proof seam or fixture strategy, mandatory source-of-truth
+updates, temporal/reentrancy behavior, all-or-nothing boundary, migration or
+retirement strategy, and completion signal are settled before implementation.
+Use `ARCHITECTURE_GATE` or `NEEDS_RESEARCH` when design cannot close those
+decisions from current repository evidence and user input.
+
 ## Target Contract Classification
 
 Select the future Change Contract profile using the same priority order as the

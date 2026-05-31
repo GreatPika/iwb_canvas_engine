@@ -61,6 +61,12 @@ For `BLOCKED`, include exactly one primary route:
 Use `BLOCKED` when the artifact would force contract authoring to make a core
 architecture, proof, sequencing, or source-of-truth decision.
 
+Apply `Decision Closure` when choosing the verdict: owner, boundary, source of
+truth, compatibility, execution order, proof seam or fixture strategy, mandatory
+source-of-truth update, temporal/reentrancy behavior, all-or-nothing boundary,
+migration or retirement strategy, and completion signal must be settled before
+contract authoring or routed through the local `BLOCKED` route.
+
 ## Substance And Executability Standard
 
 Do not treat template compliance, populated hard-gate rows, or cited evidence as
