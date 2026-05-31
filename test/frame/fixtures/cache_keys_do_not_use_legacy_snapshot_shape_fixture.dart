@@ -2,15 +2,22 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
 import 'package:iwb_canvas_engine/src/frame/ordinary_paint_planner.dart';
 import 'package:iwb_canvas_engine/src/frame/paint_plan.dart';
 
 import 'ordinary_paint_test_support.dart';
 
+void main() {
+  _registerOrdinaryKeyProof();
+  _registerCommittedLocationProof();
+  _registerExactAdmissionProof();
+}
+
 // This fixture compares ordinary key identity across every excluded churn source
 // in one place so the cache-boundary invariant is visible.
 // ignore: halstead-volume, source-lines-of-code
-void main() {
+void _registerOrdinaryKeyProof() {
   test('ordinary key contains only next-owned revisions and paint inputs', () {
     final frameFacts = frameFactsPort(
       revisions: revisionsFor(
@@ -62,7 +69,9 @@ void main() {
 
     expect(planner.paintPlanKeyFor(sameOrdinaryFrame), key);
   });
+}
 
+void _registerCommittedLocationProof() {
   test(
     'ordinary paint plans include committed background element candidates',
     () {
@@ -87,6 +96,37 @@ void main() {
         'content',
       ]);
       expect(planner.ordinaryPaintRecordCache.probe.entries, 1);
+    },
+  );
+}
+
+void _registerExactAdmissionProof() {
+  test(
+    'ordinary paint plans apply exact paint admission after spatial query',
+    () {
+      final frameFacts = frameFactsPort(
+        elements: [
+          rectFacts('visible', orderToken: 1),
+          rectFacts(
+            'same-tile-offscreen',
+            orderToken: 2,
+            transform: CanvasTransform.translation(const Offset(150, 0)),
+          ),
+        ],
+      );
+      final planner = OrdinaryPaintPlanner();
+      final result = planner.buildOrdinaryPlan(
+        capturedMainFrame(
+          frameFacts: frameFacts,
+          viewport: const Rect.fromLTWH(0, 0, 20, 20),
+        ),
+      );
+
+      final ready = result as OrdinaryPaintPlanReady;
+      expect(ready.plan.ordinaryRecords.map((record) => record.id.value), [
+        'visible',
+      ]);
+      expect(ready.plan.candidateCount, 1);
     },
   );
 }

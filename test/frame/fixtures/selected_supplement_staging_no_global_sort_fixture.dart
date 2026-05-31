@@ -28,6 +28,7 @@ void main() {
         CanvasElementId('c'),
         CanvasElementId('locked'),
         CanvasElementId('stale'),
+        CanvasElementId('offscreen'),
       ],
       selectionRevision: 3,
     );
@@ -37,6 +38,11 @@ void main() {
       strokeFacts('c', orderToken: 3, transform: CanvasTransform.scale(2, 2)),
       rectFacts('stale', orderToken: 4),
       rectFacts('locked', orderToken: 5, isLocked: true),
+      rectFacts(
+        'offscreen',
+        orderToken: 6,
+        transform: CanvasTransform.translation(const Offset(150, 0)),
+      ),
     ];
     final ascendingFacts = frameFactsPort(elements: rows);
     final descendingCandidates = ascendingFacts.spatialCandidates.reversed

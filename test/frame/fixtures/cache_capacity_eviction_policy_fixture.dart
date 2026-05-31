@@ -92,7 +92,7 @@ void _registerRenderFamilyProbeTests() {
     planner.buildOrdinaryPlan(
       capturedMainFrame(
         frameFacts: frameFacts,
-        viewport: const Rect.fromLTWH(100, 0, 10, 10),
+        viewport: const Rect.fromLTWH(0, 0, 10, 10),
       ),
     );
 

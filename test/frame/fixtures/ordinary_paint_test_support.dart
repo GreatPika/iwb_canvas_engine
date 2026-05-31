@@ -179,6 +179,7 @@ FrameElementFacts textFacts(String id, {required int orderToken}) {
     kind: CanvasElementKind.text,
     orderToken: orderToken,
     text: 'hello',
+    fontSize: 12,
     textColor: const Color(0xFF111111),
     textDirection: TextDirection.ltr,
   );
@@ -238,6 +239,7 @@ FrameElementFacts _baseFacts(
   required CanvasElementKind kind,
   required int orderToken,
   String? text,
+  double? fontSize,
   Color? textColor,
   TextDirection? textDirection,
   String? svgPathData,
@@ -269,6 +271,7 @@ FrameElementFacts _baseFacts(
     resourceId: resourceId,
     size: size,
     text: text,
+    fontSize: fontSize,
     textColor: textColor,
     textDirection: textDirection,
     svgPathData: svgPathData,

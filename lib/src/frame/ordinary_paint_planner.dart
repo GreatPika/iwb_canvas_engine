@@ -69,7 +69,10 @@ final class OrdinaryPaintPlanner {
   }
 
   OrdinaryPaintPlanResult buildOrdinaryPlan(CapturedMainFrame frame) {
-    final admitted = _admittedOrdinaryFacts(frame.snapshot);
+    final admitted = _admittedOrdinaryFacts(
+      frame.snapshot,
+      geometryPolicy: _geometryPolicy,
+    );
     if (admitted == null) {
       _rejectedCandidateCount += 1;
 
@@ -121,15 +124,20 @@ final class OrdinaryPaintPlanner {
 }
 
 List<FrameElementFacts>? _admittedOrdinaryFacts(
-  CapturedFrameSnapshot snapshot,
-) {
+  CapturedFrameSnapshot snapshot, {
+  required GeometryPolicy geometryPolicy,
+}) {
   final facts = <FrameElementFacts>[];
   for (final handle in snapshot.spatialPaintCandidates) {
     final candidateFacts = _capturedCandidateFacts(snapshot, handle);
     if (candidateFacts == null) {
       return null;
     }
-    if (_isCommittedPaintLocation(candidateFacts.locationKind)) {
+    if (_admitsOrdinaryPaintCandidate(
+      candidateFacts,
+      snapshot,
+      geometryPolicy,
+    )) {
       facts.add(candidateFacts);
     }
   }
@@ -137,8 +145,20 @@ List<FrameElementFacts>? _admittedOrdinaryFacts(
   return facts;
 }
 
-bool _isCommittedPaintLocation(FrameElementLocationKind locationKind) {
-  return switch (locationKind) {
+bool _admitsOrdinaryPaintCandidate(
+  FrameElementFacts facts,
+  CapturedFrameSnapshot snapshot,
+  GeometryPolicy geometryPolicy,
+) {
+  return _isCommittedPaintLocation(facts.locationKind) &&
+      geometryPolicy.admitsPaintCandidate(
+        facts,
+        snapshot.inputs.effectiveWorldBounds,
+      );
+}
+
+bool _isCommittedPaintLocation(FrameElementLocationKind kind) {
+  return switch (kind) {
     FrameElementLocationKind.background ||
     FrameElementLocationKind.content => true,
   };

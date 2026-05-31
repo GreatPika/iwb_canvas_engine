@@ -148,6 +148,9 @@ final class SelectedMoveSupplementPlanner {
         skippedStaleCount += 1;
         continue;
       }
+      if (!_shiftedRecordBoundsOverlap(facts, delta, frame.snapshot)) {
+        continue;
+      }
       supplement.add(_shiftedRecord(facts, delta));
     }
 
@@ -230,6 +233,16 @@ final class SelectedMoveSupplementPlanner {
 
     return merged;
   }
+}
+
+bool _shiftedRecordBoundsOverlap(
+  FrameElementFacts facts,
+  Offset delta,
+  CapturedFrameSnapshot snapshot,
+) {
+  return RenderElementRecord.fromFacts(facts).paintBoundsWorld
+      .shift(delta)
+      .overlaps(snapshot.inputs.effectiveWorldBounds);
 }
 
 bool _ordinaryRecordComesFirst(
