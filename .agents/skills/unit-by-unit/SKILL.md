@@ -8,6 +8,11 @@ description: "Use when implementing a step contract unit by unit: complete one c
 Use this skill when the user asks to implement a Change Contract or plan step
 unit by unit.
 
+`Completion Evidence Boundary` means completion markers and completion/readiness
+claims belong only to the workflow stage with the corresponding proof authority.
+This workflow earns that authority unit by unit through implementation,
+verification, fresh review, commit, and final committed-range review.
+
 ## Workflow
 
 1. Implement exactly one unchecked execution unit from the accepted step

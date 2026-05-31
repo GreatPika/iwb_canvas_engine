@@ -208,7 +208,10 @@ Each execution unit heading must start with an unchecked checkbox:
 `### [ ] Unit N: [short title]`.
 
 The checkbox is for later implementation tracking. Do not mark a unit complete
-when creating the contract.
+when creating the contract. This preserves `Completion Evidence Boundary`: a
+planning contract may define completion signals, but completion markers belong
+only to the later workflow that has implementation, verification, review, and
+commit evidence.
 
 Execution units should be small and roughly balanced when possible. Correct
 boundaries, dependency order, and independent completion checks are more
@@ -436,6 +439,6 @@ Before answering, ensure that:
 - no execution unit is named like "update everything", "fix architecture", or
   "add tests where needed";
 - the contract contains no implementation work or post-implementation status
-  placeholders;
+  placeholders, preserving `Completion Evidence Boundary`;
 - the answer contains no methodology explanation outside the required output
   format.

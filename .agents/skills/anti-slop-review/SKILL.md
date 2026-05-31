@@ -29,7 +29,10 @@ skills:
 For every claim about behavior, invariant, owner responsibility,
 source-of-truth update, migration, guardrail, compatibility promise, completion
 state, or readiness state, identify the direct outcome that would be false if
-the claimed work were fake or incomplete.
+the claimed work were fake or incomplete. Under `Completion Evidence Boundary`,
+completion and readiness claims still require direct outcome proof; this skill
+does not make planning artifacts authoritative for post-implementation
+completion.
 
 Verification must prove that direct outcome. A proxy signal is not sufficient
 when it can pass while the claimed outcome remains false. Proxy checks are valid

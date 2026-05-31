@@ -247,6 +247,9 @@ The design task is complete only when:
 - this run created or updated exactly one `.design/YYYY-MM-DD-topic.md` artifact;
 - no files outside `.design/` were edited by this design task; pre-existing
   unrelated changes are ignored and not reverted;
+- `Completion Evidence Boundary` is preserved: design completion only means the
+  design artifact is ready for its next local route, not that downstream
+  contract or implementation work is complete;
 - the artifact has exactly one disposition;
 - every selected-form claim has evidence or is marked as a gate/research gap;
 - materially different design forms were compared or the artifact explains why

@@ -60,8 +60,9 @@ Also flag when applicable:
   inputs, classification, selected owner, source of truth, proof seam, fixture
   strategy, Decision Trace mapping, required source-of-truth update, or
   sequencing constraint;
-- premature completion markers when the reviewed diff marks units or plan steps
-  complete without implementing and proving that work in the reviewed range;
+- `Completion Evidence Boundary` violations: premature completion markers when
+  the reviewed diff marks units or plan steps complete without implementing and
+  proving that work in the reviewed range;
 - temporal/reentrancy gaps when observer/listener/callback delivery,
   public-state publication, transaction/rollback/no-op ordering, post-commit
   notification, or mutation guards are changed without covering every
@@ -106,9 +107,10 @@ confidence, duplicated truth, weak guardrails, or self-referential proof.
   failure-contained, or already part of the accepted result with focused proof.
 - For unit-by-unit implementation, do not require extra proof blocks or trace
   commits. During unit review, keep the review scoped to the current unit and
-  flag premature completion markers for future work. During final
-  committed-range review, verify any required plan or step checkbox updates are
-  backed by implemented, verified, reviewed commits in the reviewed range.
+  flag `Completion Evidence Boundary` violations for premature completion
+  markers for future work. During final committed-range review, verify any
+  required plan or step checkbox updates are backed by implemented, verified,
+  reviewed commits in the reviewed range.
 
 ## Priorities
 

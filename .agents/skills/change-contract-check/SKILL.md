@@ -15,6 +15,8 @@ Do not require any fields not listed here.
 Pre-implementation validation must not require post-implementation status,
 commit hashes, or reviewer approvals. The `unit-by-unit` workflow proves
 implemented units through unit commits and final committed-range review.
+This preserves `Completion Evidence Boundary`: completion markers and readiness
+claims belong only to the stage with the corresponding proof authority.
 
 A contract fails if the implementer must make design decisions that the contract
 was supposed to settle.
@@ -91,8 +93,8 @@ Each execution unit must include:
 - `Completion Check`
 - `Depends On`
 
-Pre-implementation contracts must not include completed-unit status or
-post-implementation proof blocks.
+Pre-implementation contracts must preserve `Completion Evidence Boundary` by not
+including completed-unit status or post-implementation proof blocks.
 
 ### Contract Blocker
 
@@ -223,10 +225,11 @@ Mark the contract `BLOCKED` when any category applies:
    deferred, or old paths are retired before replacement and migration checks are
    in place.
 9. Execution units are invalid: a pre-implementation unit heading lacks the
-   unchecked `[ ]` checkbox, a unit is pre-marked complete, a unit includes
-   post-implementation proof/status, a unit lacks owner, boundary, concrete
-   change, completion check, or dependency, a unit is only preparatory, or units
-   are split or merged against owner, boundary, or completion-check logic.
+   unchecked `[ ]` checkbox, a unit violates `Completion Evidence Boundary` by
+   being pre-marked complete or including post-implementation proof/status, a
+   unit lacks owner, boundary, concrete change, completion check, or dependency,
+   a unit is only preparatory, or units are split or merged against owner,
+   boundary, or completion-check logic.
 10. Completion checks are inadequate: checks are vague, non-observable, lack an
    expected signal, omit the bounded surface being checked, or fail to prove the
    unit's change.

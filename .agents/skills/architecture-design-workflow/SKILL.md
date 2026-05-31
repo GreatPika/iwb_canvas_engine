@@ -93,6 +93,9 @@ The design workflow is complete only when:
 - exactly one `.design/YYYY-MM-DD-topic.md` artifact was created or updated by
   this workflow;
 - no files outside `.design/` were edited by this workflow;
+- `Completion Evidence Boundary` is preserved: workflow completion only records
+  the design-stage terminal route and does not claim downstream Change Contract
+  or implementation completion;
 - the latest fresh reviewer has returned one of these terminal outcomes after
   the latest repair:
   - `PASS`, meaning the design can proceed to future Change Contract authoring;

@@ -26,8 +26,9 @@ the contract is accepted.
    - Ensure the step contract contains the current `change-contract` source
      inputs, classification, `Decision Chain Of Custody` through decision trace,
      evidence, boundaries, and execution unit shape before review.
-   - Leave execution unit checkboxes unchecked while planning; implementation
-     evidence belongs to the later `unit-by-unit` workflow.
+   - Preserve `Completion Evidence Boundary`: leave execution unit checkboxes
+     unchecked while planning because implementation evidence belongs to the
+     later `unit-by-unit` workflow.
 
 2. After step 1 is complete, spawn a fresh primary `contract_reviewer`
    subagent.
@@ -115,7 +116,7 @@ The planning task is complete only when:
 - the new step exists in root `PLAN.md`;
 - the linked step contract file exists and follows `change-contract`, including
   source inputs, classification, decision trace, evidence, boundaries, and
-  unchecked execution units;
+  unchecked execution units that preserve `Completion Evidence Boundary`;
 - the active conversation plan reflects the new step when the plan tool is
   available;
 - the latest fresh primary `contract_reviewer` has approved the step file with
