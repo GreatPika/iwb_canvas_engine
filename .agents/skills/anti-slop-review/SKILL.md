@@ -84,11 +84,13 @@ behavior. Slop signals are investigation prompts, not automatic findings.
    - Do not make a strong finding without a concrete missed failure mode,
      consumer, scenario, or behavior affected.
 
-5. Check for self-referential proof.
+5. Check `Negative Proof And Fixture Quarantine`.
    - Be suspicious when docs prove docs, lists prove lists, tests only check
      ids, or guardrails only check that another checklist mentions the same
      thing.
    - This may still be valid registry parity, but it is not behavioral proof.
+   - Negative, bypass, fixture, and structural proof must exercise a real
+     production seam or contract-named test seam, not only self-referential proof.
 
 6. Ask the deletion question.
    - If removed, what real guarantee or workflow breaks?

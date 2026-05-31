@@ -78,11 +78,13 @@ selected form as an implementable system change:
 
 - Can the chosen owner actually accept the responsibility without creating a
   second source of truth?
-- Can the proposed verification be built using existing test/tool seams, or does
-  the artifact name the small seam that must be introduced?
-- Can negative proof be written without polluting production source-of-truth
-  files, public API, schemas, durable docs, or real registries with fixture-only
-  data?
+- Can the proposed verification be built using existing seams that are real
+  production seams or future contract-named test seams, or does the artifact
+  name the small seam that must be introduced?
+- Does `Negative Proof And Fixture Quarantine` hold: can negative proof be
+  written through a real production seam or future contract-named test seam
+  without polluting production source-of-truth files, public API, schemas,
+  durable docs, or real registries with fixture-only data?
 - Are required source-of-truth updates mandatory when the selected form changes
   what a registry, contract, guardrail, or diagram means?
 - Would two competent implementers produce the same architecture from this
@@ -167,7 +169,7 @@ Mark the review `BLOCKED` when any of these are true:
 19. The design creates a second source of truth without an invariant and proof
     strategy.
 20. A shared-seam change lacks successor or retired seam, consumer order,
-    retirement gate, or negative proof strategy.
+    retirement gate, or `Negative Proof And Fixture Quarantine` strategy.
 21. A public API change lacks compatibility, migration, or contract-owner
     reasoning.
 22. A bug-fix design lacks root-cause owner and reproducer strategy.
@@ -224,12 +226,13 @@ Mark the review `BLOCKED` when any of these are true:
 40. The artifact is formally complete but leaves the future Change Contract to
     decide how the selected form can be implemented or proven at the owning
     seam.
-41. The verification strategy requires a negative fixture, bypass proof, or
-    structural proof but does not identify a feasible proof mechanism using
-    existing repository seams, or explicitly name the small seam that must be
-    introduced.
-42. The proof strategy would require fixture-only data to be added to a real
-    production source of truth, public API registry, schema, durable contract, or
+41. `Negative Proof And Fixture Quarantine` is unresolved: the verification
+    strategy requires a negative fixture, bypass proof, or structural proof but
+    does not identify a feasible proof mechanism using a real production seam
+    or a future contract-named test seam.
+42. `Negative Proof And Fixture Quarantine` is violated: the proof strategy
+    would require fixture-only data to be added to a real production source of
+    truth, public API registry, schema, durable contract, generated doc, or
     public surface.
 43. A selected form changes the normative meaning of a registry, contract,
     guardrail, generated index, or diagram, but the source-of-truth update is

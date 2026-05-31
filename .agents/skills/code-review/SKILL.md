@@ -97,13 +97,14 @@ confidence, duplicated truth, weak guardrails, or self-referential proof.
   evidence when relevant to the diff.
 - Flag plan mismatches only when the mismatch is visible and actionable from the
   reviewed change.
-- For structural, bypass, negative-fixture, analyzer, or guardrail changes,
-  verify that the proof exercises the production seam or the contract-named test
-  seam. Flag self-referential proofs that would pass while the forbidden shape
-  still bypasses the real path.
-- Flag fixture-only names, values, schemas, or public declarations added to real
-  production source-of-truth surfaces unless the contract explicitly makes them
-  durable product/API data.
+- Apply `Negative Proof And Fixture Quarantine`: for structural, bypass,
+  negative-fixture, analyzer, or guardrail changes, verify that the proof
+  exercises the production seam or the contract-named test seam. Flag
+  self-referential proofs that would pass while the forbidden shape still
+  bypasses the real path.
+- Flag fixture-only names, values, schemas, declarations, or public data added
+  to real production source-of-truth surfaces unless the contract explicitly
+  makes them durable product/API data.
 - For observer/listener/callback work, verify guard placement covers the full
   synchronous execution window and focused tests cover happy-path delivery plus
   reentrant/interleaved mutation attempts from every callback surface.

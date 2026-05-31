@@ -43,7 +43,8 @@ still need to choose:
 - the source of truth;
 - compatibility behavior;
 - execution order;
-- the proof seam or fixture strategy for structural, bypass, or negative proof;
+- `Negative Proof And Fixture Quarantine`: the proof seam or fixture strategy
+  for structural, bypass, or negative proof;
 - mandatory source-of-truth updates when the change alters what a registry,
   contract, guardrail, generated output, or diagram means;
 - temporal/reentrancy behavior for callback, listener, observer, delivery,
@@ -411,11 +412,12 @@ Do not use vague checks such as "verify correctness", "add tests as needed",
 "ensure it works", "update callers where necessary", or "clean up related
 code". If the exact signal cannot be named, output `Contract Blocker`.
 
-For negative, bypass, fixture, or structural-recognition proof, a completion
-check must name the proof seam or fixture mechanism, the bounded surface, and
-the expected pass/fail signal. Fixture-only data must not be added to real
-production source-of-truth files, public API registries, schemas, durable
-contracts, or public surfaces.
+`Negative Proof And Fixture Quarantine`: for negative, bypass, fixture, or
+structural-recognition proof, a completion check must name the production seam
+or contract-named test seam, fixture mechanism, bounded surface, and expected
+pass/fail signal. Fixture-only names, values, schemas, declarations, or data
+must not be added to real production source-of-truth files, public API
+registries, schemas, durable contracts, generated docs, or public surfaces.
 
 For temporal/callback/guard work, a completion check is inadequate unless it
 names the specific callback surface, the reentrant or interleaved action being

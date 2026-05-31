@@ -52,6 +52,11 @@ diff.
 
 ## Typical Findings
 
+Apply `Negative Proof And Fixture Quarantine` when reviewing fixture placement:
+fixture-only names, values, schemas, declarations, or data must stay in an
+approved fixture location unless the governing contract makes them durable
+product/API data.
+
 - A file name points to one concern but contains peer declarations from another
   owner.
 - A grouped file uses an umbrella name where the repository already has a more

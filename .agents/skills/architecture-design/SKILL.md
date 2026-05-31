@@ -126,11 +126,16 @@ Reject any candidate form that fails one of these gates:
   has an invariant and proof strategy.
 - **Boundary**: names entry and exit boundaries and keeps validation at the
   boundary.
+- **Negative Proof And Fixture Quarantine**: negative, bypass, or structural
+  proof uses a real production seam or future contract-named test seam, and
+  fixture-only names, values, schemas, declarations, or data do not enter
+  production source-of-truth files, public APIs, schemas, durable contracts,
+  generated docs, or public surfaces.
 - **Dependency direction**: follows repository layer/import direction.
 - **State/data**: names committed, derived, cached, transient, and mutable state
   owners when relevant.
 - **Seam**: for shared seams, names successor or retired seam, consumer order,
-  retirement gate, and negative proof strategy.
+  retirement gate, and `Negative Proof And Fixture Quarantine` strategy.
 - **Temporal/reentrancy**: for call ordering, post-commit delivery,
   transaction, rollback, or no-op boundaries, observers, listeners, callbacks,
   guards, or public-state publication, names the temporal invariant, every

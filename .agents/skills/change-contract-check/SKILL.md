@@ -251,13 +251,14 @@ Mark the contract `BLOCKED` when any category applies:
     boundaries, public-state publication, atomicity, or mutation guard
     obligations, but completion checks do not prove every synchronous callback
     surface that can run user or runtime code before the next sequence step.
-15. Proof or fixture strategy is unresolved: a structural, bypass, negative, or
-    fixture proof is required, but the contract omits the proof seam, fixture
-    mechanism, bounded surface, or expected pass/fail signal.
-16. Fixture-only data contaminates a real source of truth: the contract requires
-    test-only names, values, schemas, or fixtures to be added to production
-    registries, public APIs, durable contracts, real schemas, generated docs, or
-    public surfaces.
+15. `Negative Proof And Fixture Quarantine` is unresolved: a structural,
+    bypass, negative, or fixture proof is required, but the contract omits the
+    production seam or contract-named test seam, fixture mechanism, bounded
+    surface, or expected pass/fail signal.
+16. `Negative Proof And Fixture Quarantine` is violated: the contract requires
+    fixture-only names, values, schemas, declarations, or data to be added to
+    production registries, public APIs, durable contracts, real schemas,
+    generated docs, or public surfaces.
 17. Source-input obligations are weakened: a source-of-truth update, registry
     change, verification strategy, decision trace row, handoff constraint, or
     sequencing fact required by a design or phase source is made optional,
