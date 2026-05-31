@@ -27,14 +27,14 @@ final class FrameCaptureInputs {
 final class CapturedFrameSnapshot {
   CapturedFrameSnapshot({
     required this.revisions,
-    required Iterable<FrameElementHandle> orderedHandles,
+    required Iterable<FrameElementHandle> capturedHandles,
     required Iterable<FrameElementFacts> elements,
     required Iterable<FrameResourceDescriptorFacts> resourceDescriptors,
     required this.selection,
     required this.inputs,
     required this.spatialPaintResult,
     required Iterable<FrameElementHandle> spatialPaintCandidates,
-  }) : orderedHandles = List.unmodifiable(orderedHandles),
+  }) : capturedHandles = List.unmodifiable(capturedHandles),
        elements = List.unmodifiable(elements),
        resourceDescriptors = List.unmodifiable(resourceDescriptors),
        spatialPaintCandidates = List.unmodifiable(spatialPaintCandidates),
@@ -43,7 +43,7 @@ final class CapturedFrameSnapshot {
        });
 
   final FrameRevisionFacts revisions;
-  final List<FrameElementHandle> orderedHandles;
+  final List<FrameElementHandle> capturedHandles;
   final List<FrameElementFacts> elements;
   final List<FrameResourceDescriptorFacts> resourceDescriptors;
   final SelectionFacts selection;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../contracts/public/canvas_ids.dart';
@@ -19,7 +20,9 @@ final class MainFramePainter extends CustomPainter {
     );
     canvas.save();
     canvas.translate(-viewport.left, -viewport.top);
-    for (final record in output.selectedMoveSupplementPlan.mergedRecords) {
+    for (final record in mainFrameRecordsInPaintOrder(
+      output.selectedMoveSupplementPlan.mergedRecords,
+    )) {
       _paintRecord(canvas, record, output.assetBindings.images);
     }
     canvas.restore();
@@ -29,6 +32,32 @@ final class MainFramePainter extends CustomPainter {
   bool shouldRepaint(covariant MainFramePainter oldDelegate) {
     return !identical(oldDelegate.output, output);
   }
+}
+
+@visibleForTesting
+Iterable<RenderElementRecord> mainFrameRecordsInPaintOrder(
+  List<RenderElementRecord> records,
+) {
+  if (_recordsAreTopmostFirst(records)) {
+    return records.reversed;
+  }
+
+  return records;
+}
+
+bool _recordsAreTopmostFirst(List<RenderElementRecord> records) {
+  RenderElementRecord? previous;
+  for (final record in records) {
+    final before = previous;
+    previous = record;
+    if (before == null || before.orderToken == record.orderToken) {
+      continue;
+    }
+
+    return before.orderToken > record.orderToken;
+  }
+
+  return false;
 }
 
 void _paintRecord(

@@ -32,12 +32,14 @@ void _testImmutableFrameCapture() {
     final resourceId = CanvasResourceId('image-a');
     final handleA = _handle('a', orderToken: 1);
     final handleB = _handle('b', orderToken: 2);
+    final handleC = _handle('offscreen', orderToken: 3);
     final frameFacts = _FakeFrameFactsPort(
       revisions: _revisions(document: 1, structural: 2),
-      handles: [handleA, handleB],
+      handles: [handleA, handleB, handleC],
       elements: {
         handleA.id: _rectFacts(handleA),
         handleB.id: _imageFacts(handleB, resourceId),
+        handleC.id: _rectFacts(handleC),
       },
       descriptors: {
         resourceId: FrameResourceDescriptorFacts(
@@ -84,13 +86,13 @@ void _testImmutableFrameCapture() {
 
     expect(main.snapshot.revisions.documentRevision, 1);
     expect(main.snapshot.revisions.structuralRevision, 2);
-    expect(main.snapshot.orderedHandles.map((handle) => handle.id), [
-      CanvasElementId('a'),
+    expect(main.snapshot.capturedHandles.map((handle) => handle.id), [
       CanvasElementId('b'),
+      CanvasElementId('a'),
     ]);
     expect(main.snapshot.elements.map((element) => element.id), [
-      CanvasElementId('a'),
       CanvasElementId('b'),
+      CanvasElementId('a'),
     ]);
     expect(main.snapshot.resourceDescriptors.single.id, resourceId);
     expect(main.snapshot.selection.selectedElementIds, {CanvasElementId('a')});
@@ -111,8 +113,15 @@ void _testImmutableFrameCapture() {
     expect(overlay.snapshot.spatialPaintCandidates.single.id, handleB.id);
 
     expect(frameFacts.frameRevisionReads, 2);
-    expect(frameFacts.elementHandlesReads, 2);
+    expect(frameFacts.elementHandlesReads, 0);
+    expect(frameFacts.elementHandleForIdReads, 2);
     expect(frameFacts.resolveElementReads, 4);
+    expect(frameFacts.resolvedIds, [
+      CanvasElementId('b'),
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+      CanvasElementId('a'),
+    ]);
     expect(frameFacts.resourceDescriptorReads, 2);
     expect(selectionFacts.reads, 2);
     expect(spatialQueries, hasLength(2));
@@ -311,8 +320,10 @@ final class _FakeFrameFactsPort implements FrameFactsPort {
   final Map<CanvasResourceId, FrameResourceDescriptorFacts> _descriptors;
   int frameRevisionReads = 0;
   int elementHandlesReads = 0;
+  int elementHandleForIdReads = 0;
   int resolveElementReads = 0;
   int resourceDescriptorReads = 0;
+  final List<CanvasElementId> resolvedIds = [];
 
   void replaceFrameData({
     required FrameRevisionFacts revisions,
@@ -346,12 +357,15 @@ final class _FakeFrameFactsPort implements FrameFactsPort {
     int structuralRevision,
     CanvasElementId id,
   ) {
+    elementHandleForIdReads += 1;
+
     return _handles.where((handle) => handle.id == id).firstOrNull;
   }
 
   @override
   FrameElementFacts? resolveElement(FrameElementHandle handle) {
     resolveElementReads += 1;
+    resolvedIds.add(handle.id);
 
     return _elements[handle.id];
   }

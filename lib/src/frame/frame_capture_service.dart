@@ -1,5 +1,6 @@
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../geometry/spatial_query_policy.dart';
 import '../geometry/spatial_query_result.dart';
@@ -50,17 +51,20 @@ final class FrameCaptureService {
   CapturedFrameSnapshot _captureSnapshot(FrameCaptureInputs inputs) {
     final revisions = _frameFacts.frameRevisions;
     final structuralRevision = revisions.structuralRevision;
-    final orderedHandles = _frameFacts.elementHandles(structuralRevision);
-    final resolved = _resolvedElementsAndDescriptors(orderedHandles);
-
     final selection = _selectionFacts.selectionFacts;
     final spatialResult = _queryPaint(
       _spatialWindow(inputs, structuralRevision),
     );
+    final capturedHandles = _capturedHandles(
+      spatialCandidates: spatialResult.candidates,
+      selectedIds: selection.selectedElementIds,
+      structuralRevision: structuralRevision,
+    );
+    final resolved = _resolvedElementsAndDescriptors(capturedHandles);
 
     return CapturedFrameSnapshot(
       revisions: revisions,
-      orderedHandles: orderedHandles,
+      capturedHandles: capturedHandles,
       elements: resolved.elements,
       resourceDescriptors: resolved.descriptors,
       selection: selection,
@@ -70,14 +74,39 @@ final class FrameCaptureService {
     );
   }
 
+  List<FrameElementHandle> _capturedHandles({
+    required Iterable<FrameElementHandle> spatialCandidates,
+    required Iterable<CanvasElementId> selectedIds,
+    required int structuralRevision,
+  }) {
+    final handles = <FrameElementHandle>[];
+    final seen = <CanvasElementId>{};
+    for (final handle in spatialCandidates) {
+      if (seen.add(handle.id)) {
+        handles.add(handle);
+      }
+    }
+    for (final id in selectedIds) {
+      if (seen.contains(id)) {
+        continue;
+      }
+      final handle = _frameFacts.elementHandleForId(structuralRevision, id);
+      if (handle != null && seen.add(id)) {
+        handles.add(handle);
+      }
+    }
+
+    return handles;
+  }
+
   _ResolvedFrameRows _resolvedElementsAndDescriptors(
-    Iterable<FrameElementHandle> orderedHandles,
+    Iterable<FrameElementHandle> handles,
   ) {
     final elements = <FrameElementFacts>[];
     final descriptors = <FrameResourceDescriptorFacts>[];
     final seenResources = <Object>{};
 
-    for (final handle in orderedHandles) {
+    for (final handle in handles) {
       final element = _frameFacts.resolveElement(handle);
       if (element == null) {
         continue;
