@@ -97,7 +97,10 @@ final class OrdinaryPaintPlanner {
     final plan = _paintPlanFrom(planKey, resolved.records);
     _ordinaryPaintRecordCache.write(
       planKey,
-      _ordinaryPaintRecordCacheEntryFor(resolved.records),
+      _ordinaryPaintRecordCacheEntryFor(
+        cachedEntry: resolved.cachedEntry,
+        resolvedRecords: resolved.records,
+      ),
     );
 
     return OrdinaryPaintPlanReady(plan: plan, cacheHit: resolved.cacheHit);
@@ -173,6 +176,7 @@ _ResolvedOrdinaryRecords _resolvedOrdinaryRecords({
   return _ResolvedOrdinaryRecords(
     records: records,
     cacheHit: records.isNotEmpty && cacheHit,
+    cachedEntry: cachedEntry,
   );
 }
 
@@ -216,12 +220,14 @@ PaintPlan _paintPlanFrom(
   );
 }
 
-OrdinaryPaintRecordCacheEntry _ordinaryPaintRecordCacheEntryFor(
-  Iterable<_ResolvedOrdinaryRecord> records,
-) {
+OrdinaryPaintRecordCacheEntry _ordinaryPaintRecordCacheEntryFor({
+  required OrdinaryPaintRecordCacheEntry? cachedEntry,
+  required Iterable<_ResolvedOrdinaryRecord> resolvedRecords,
+}) {
   return OrdinaryPaintRecordCacheEntry(
     records: [
-      for (final resolvedRecord in records)
+      if (cachedEntry != null) ...cachedEntry.records,
+      for (final resolvedRecord in resolvedRecords)
         MapEntry(resolvedRecord.cacheKey, resolvedRecord.record),
     ],
   );
@@ -247,10 +253,12 @@ final class _ResolvedOrdinaryRecords {
   _ResolvedOrdinaryRecords({
     required Iterable<_ResolvedOrdinaryRecord> records,
     required this.cacheHit,
+    required this.cachedEntry,
   }) : records = List.unmodifiable(records);
 
   final List<_ResolvedOrdinaryRecord> records;
   final bool cacheHit;
+  final OrdinaryPaintRecordCacheEntry? cachedEntry;
 }
 
 final class _ResolvedOrdinaryRecord {

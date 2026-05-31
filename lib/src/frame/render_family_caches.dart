@@ -1,7 +1,5 @@
 import 'package:flutter/painting.dart';
-import 'package:path_drawing/path_drawing.dart';
 
-import '../contracts/public/canvas_element.dart';
 import 'frame_cache.dart';
 import 'paint_plan.dart';
 import 'render_element_record.dart';
@@ -32,7 +30,10 @@ final class RenderFamilyCaches {
         case final TextRenderRow row:
           textLayouts[row.layoutCacheKey] = _bindTextLayoutCache(record, row);
         case final PathRenderRow row:
-          paths[row.geometryCacheKey] = _bindPathGeometryCache(row);
+          final path = _bindPathGeometryCache(row);
+          if (path != null) {
+            paths[row.geometryCacheKey] = path;
+          }
         case final StrokeRenderRow row:
           strokes[row.strokeCacheKey] = _bindStrokePathCache(row);
         case ImageRenderRow() || LineRenderRow() || RectRenderRow():
@@ -66,18 +67,17 @@ final class RenderFamilyCaches {
     return entry;
   }
 
-  PathGeometryCacheEntry _bindPathGeometryCache(PathRenderRow row) {
+  PathGeometryCacheEntry? _bindPathGeometryCache(PathRenderRow row) {
     final key = row.geometryCacheKey;
     final cached = pathGeometryCache.read(key);
     if (cached != null) {
       return cached;
     }
 
-    final path = parseSvgPathData(row.pathDataKey)
-      ..fillType = switch (row.fillRule) {
-        CanvasPathFillRule.evenOdd => PathFillType.evenOdd,
-        CanvasPathFillRule.nonZero => PathFillType.nonZero,
-      };
+    final path = row.normalizedPath;
+    if (path == null) {
+      return null;
+    }
     final entry = PathGeometryCacheEntry(debugLabel: key.pathData, path: path);
     pathGeometryCache.write(key, entry);
 

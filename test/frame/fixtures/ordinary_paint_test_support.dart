@@ -181,12 +181,16 @@ FrameElementFacts textFacts(String id, {required int orderToken}) {
   );
 }
 
-FrameElementFacts pathFacts(String id, {required int orderToken}) {
+FrameElementFacts pathFacts(
+  String id, {
+  required int orderToken,
+  String svgPathData = 'M0,0 L10,10',
+}) {
   return _baseFacts(
     id,
     kind: CanvasElementKind.path,
     orderToken: orderToken,
-    svgPathData: 'M0,0 L10,10',
+    svgPathData: svgPathData,
     fillRule: CanvasPathFillRule.nonZero,
     strokeWidth: 1,
   );

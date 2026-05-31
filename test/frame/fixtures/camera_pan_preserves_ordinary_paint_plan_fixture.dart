@@ -66,11 +66,22 @@ bool _panAdmissionUsesEffectiveWorldWindow() {
 
   final first = planner.buildOrdinaryPlan(scenario.beforePan);
   final second = planner.buildOrdinaryPlan(scenario.afterPan);
+  final third = planner.buildOrdinaryPlan(scenario.beforePan);
 
   expect(first, isA<OrdinaryPaintPlanReady>());
   expect(
     (second as OrdinaryPaintPlanReady).plan.ordinaryRecords.single.id.value,
     'after-pan',
+  );
+  expect(
+    third,
+    isA<OrdinaryPaintPlanReady>()
+        .having((result) => result.cacheHit, 'cacheHit', isTrue)
+        .having(
+          (result) => result.plan.ordinaryRecords.single.id.value,
+          'record id',
+          'before-pan',
+        ),
   );
 
   return true;

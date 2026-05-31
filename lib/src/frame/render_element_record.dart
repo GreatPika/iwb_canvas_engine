@@ -29,6 +29,7 @@ final class PathRenderRow extends RenderElementRow {
   const PathRenderRow({
     required this.pathDataKey,
     required this.geometryCacheKey,
+    required this.normalizedPath,
     required this.fillColor,
     required this.strokeColor,
     required this.strokeWidth,
@@ -37,6 +38,7 @@ final class PathRenderRow extends RenderElementRow {
 
   final String pathDataKey;
   final PathGeometryCacheKey geometryCacheKey;
+  final Path? normalizedPath;
   final Color? fillColor;
   final Color? strokeColor;
   final double strokeWidth;
@@ -216,6 +218,10 @@ PathRenderRow _pathRow(FrameElementFacts facts) {
       pathData: pathData,
       fillRuleName: (facts.fillRule ?? CanvasPathFillRule.nonZero).name,
       strokeWidth: facts.strokeWidth ?? 0,
+    ),
+    normalizedPath: normalizedSvgPathForPaint(
+      pathData,
+      fillRule: facts.fillRule ?? CanvasPathFillRule.nonZero,
     ),
     fillColor: facts.fillColor,
     strokeColor: facts.strokeColor,

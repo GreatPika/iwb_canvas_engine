@@ -452,6 +452,13 @@ final class ParsedSvgPath {
   final Rect bounds;
 }
 
+Path? normalizedSvgPathForPaint(
+  String source, {
+  required CanvasPathFillRule fillRule,
+}) {
+  return ParsedSvgPath.parse(source, fillRule: fillRule)?.path;
+}
+
 bool _isSvgPathParseFailure(Object error) {
   return error is Exception || error is StateError || error is ArgumentError;
 }

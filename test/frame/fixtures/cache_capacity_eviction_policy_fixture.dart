@@ -86,30 +86,32 @@ void _expectBoundFamilyCacheProbe(FrameCacheProbe probe) {
 
 void _registerRenderPrimitiveSnapshotTests() {
   test('ordinary planning exposes cached primitives for painters', () {
-    final frameFacts = frameFactsPort(
-      elements: [
-        textFacts('text-a', orderToken: 1),
-        pathFacts('path-a', orderToken: 2),
-        strokeFacts('stroke-a', orderToken: 3),
-      ],
-    );
-    final planner = OrdinaryPaintPlanner();
-    final result = planner.buildOrdinaryPlan(
-      capturedMainFrame(frameFacts: frameFacts),
-    );
-    final ready = result as OrdinaryPaintPlanReady;
-
-    final snapshot = planner.renderPrimitiveSnapshotFor(
-      ready.plan.ordinaryRecords,
-    );
+    final snapshot = _renderPrimitiveSnapshotForPainterProof();
 
     expect(snapshot.textLayouts, hasLength(1));
     expect(snapshot.textLayouts.values.single.painter.width, isNonNegative);
     expect(snapshot.paths, hasLength(1));
-    expect(snapshot.paths.values.single.path, isNotNull);
+    expect(snapshot.paths.values.single.path.getBounds().center, Offset.zero);
     expect(snapshot.strokes, hasLength(1));
     expect(snapshot.strokes.values.single.path, isNotNull);
   });
+}
+
+RenderPrimitiveCacheSnapshot _renderPrimitiveSnapshotForPainterProof() {
+  final frameFacts = frameFactsPort(
+    elements: [
+      textFacts('text-a', orderToken: 1),
+      pathFacts('path-a', orderToken: 2, svgPathData: 'M100,100 L110,100'),
+      strokeFacts('stroke-a', orderToken: 3),
+    ],
+  );
+  final planner = OrdinaryPaintPlanner();
+  final result = planner.buildOrdinaryPlan(
+    capturedMainFrame(frameFacts: frameFacts),
+  );
+  final ready = result as OrdinaryPaintPlanReady;
+
+  return planner.renderPrimitiveSnapshotFor(ready.plan.ordinaryRecords);
 }
 
 void _registerStrokeScaleKeyTests() {
