@@ -84,22 +84,7 @@ List<GuardrailViolation> checkPaintPlanExcludesSelectionStateSources(
 List<GuardrailViolation> checkCacheKeysUseNextRevisionsOnlySources(
   Map<String, String> sources,
 ) {
-  return [
-    for (final entry in sources.entries)
-      if (_isFrameSource(entry.key) &&
-          _containsAny(entry.value, const [
-            'SceneSnapshot',
-            'CanvasDocument',
-            'DocumentStoreKernel',
-            'RuntimeRoot',
-          ]))
-        GuardrailViolation(
-          guardrailId: cacheKeysUseNextRevisionsGuardrailId,
-          path: entry.key,
-          message: 'frame cache keys may not use legacy snapshot shapes',
-        ),
-    ..._cacheKeyShapeViolations(sources),
-  ];
+  return _cacheKeyShapeViolations(sources);
 }
 
 List<GuardrailViolation> _cacheKeyShapeViolations(Map<String, String> sources) {

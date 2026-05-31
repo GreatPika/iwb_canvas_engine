@@ -79,7 +79,10 @@ const _fixtures = [
   _Fixture(
     path: 'lib/src/frame/bad_public_projection_import.dart',
     content: "import '../api/canvas_document.dart';",
-    guardrailIds: ['core.import_boundaries'],
+    guardrailIds: [
+      'core.import_boundaries',
+      'frame.committed_facts_via_frame_facts_port',
+    ],
   ),
   _Fixture(
     path: 'lib/src/geometry/bad_store_import.dart',

@@ -21,7 +21,7 @@ RenderPrimitiveCacheSnapshot _renderPrimitiveSnapshotForPainterProof() {
   final frameFacts = frameFactsPort(
     elements: [
       textFacts('text-a', orderToken: 1),
-      pathFacts('path-a', orderToken: 2, svgPathData: 'M100,100 L110,100'),
+      pathFacts('path-a', orderToken: 2, svgPathData: 'M0,0 L10,0 L10,10 Z'),
       strokeFacts('stroke-a', orderToken: 3),
     ],
   );
