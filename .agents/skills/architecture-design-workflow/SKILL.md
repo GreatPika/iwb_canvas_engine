@@ -24,8 +24,13 @@ code. Do not draft a Change Contract. Do not edit files outside `.design/`.
 2. After the design artifact exists, spawn a fresh reviewer subagent.
    - Use a default subagent when no dedicated design-reviewer role exists.
    - Ask it to use `architecture-design-review`.
-   - Include a direct file reference in this form:
-     `Проверь design artifact через architecture-design-review: /absolute/path/to/.design/YYYY-MM-DD-topic.md`
+   - Give it the absolute path to the design artifact.
+   - Use this prompt only:
+     `Review the design artifact with architecture-design-review: /absolute/path/to/.design/YYYY-MM-DD-topic.md`
+   - Replace `/absolute/path/to/.design/YYYY-MM-DD-topic.md` with the concrete
+     design artifact path.
+   - Do not add other context, explanations, links, comments, or extra
+     instructions.
    - Do not reuse this reviewer after any repair.
 
 3. If the reviewer reports `PASS`, the workflow is complete.
@@ -35,6 +40,7 @@ code. Do not draft a Change Contract. Do not edit files outside `.design/`.
 4. If the reviewer reports `REVISE`, repair the same `.design/` artifact.
    - Keep repairs scoped to that one `.design/YYYY-MM-DD-topic.md` file.
    - Spawn a new fresh reviewer subagent for every follow-up review request.
+   - Use the same exact prompt form and constraints from step 2.
    - Repeat until the latest fresh reviewer returns `PASS`, or until the latest
      fresh reviewer identifies a blocking route that cannot be repaired from
      current evidence.
@@ -54,6 +60,8 @@ code. Do not draft a Change Contract. Do not edit files outside `.design/`.
      `INVALID_DESIGN_ARTIFACT`, repair the same `.design/` artifact when the fix
      is knowable from current repository evidence, then spawn a new fresh
      reviewer for the follow-up review request.
+   - Use the same exact prompt form and constraints from step 2 for every
+     follow-up review request.
    - If the artifact intentionally has disposition `NEEDS_RESEARCH` and the
      reviewer confirms `BLOCKED` with `NEEDS_RESEARCH`, treat the workflow as
      complete but not contract-ready, and report the exact research questions.
@@ -67,6 +75,10 @@ Every review request after a repair must use a newly spawned fresh reviewer
 subagent. Do not reuse a reviewer after changing the `.design/` artifact in
 response to findings. The workflow's terminal outcome comes from the latest
 fresh reviewer after the latest repair.
+
+Every review request must use the exact prompt form from step 2. Do not add
+other context, explanations, links, comments, or extra instructions to review
+requests.
 
 ## Completion Criteria
 
