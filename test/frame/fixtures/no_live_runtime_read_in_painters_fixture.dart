@@ -30,6 +30,8 @@ void _registerPainterBoundaryTests() {
     expect(recordPainterSource, contains('_paintTextRecord'));
     expect(recordPainterSource, contains('_paintStrokeRecord'));
     expect(recordPainterSource, contains('_paintLineRecord'));
+    expect(recordPainterSource, contains('_withElementOpacity'));
+    expect(recordPainterSource, contains('ColorFilter.mode'));
     expect(recordPainterSource, isNot(contains('PathRenderRow() ||')));
   });
 

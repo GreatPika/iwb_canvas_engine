@@ -1,7 +1,9 @@
 import 'dart:ui'
     show
+        BlendMode,
         Canvas,
         Color,
+        ColorFilter,
         Image,
         Offset,
         Paint,
@@ -54,7 +56,7 @@ void _paintImageRecord(
         image,
         Offset.zero & Size(image.width.toDouble(), image.height.toDouble()),
         localBounds,
-        Paint(),
+        _imagePaint(record.primitiveAlpha),
       );
 
       return;
@@ -74,7 +76,7 @@ void _paintRectRecord(
     if (fill != null) {
       canvas.drawRect(
         localBounds,
-        Paint()..color = fill.withAlpha(record.primitiveAlpha),
+        Paint()..color = _withElementOpacity(fill, record.primitiveAlpha),
       );
     }
     final stroke = row.strokeColor;
@@ -84,7 +86,7 @@ void _paintRectRecord(
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = row.strokeWidth
-          ..color = stroke.withAlpha(record.primitiveAlpha),
+          ..color = _withElementOpacity(stroke, record.primitiveAlpha),
       );
     }
   });
@@ -105,7 +107,7 @@ void _paintPathRecord(
     if (fill != null) {
       canvas.drawPath(
         path,
-        Paint()..color = fill.withAlpha(record.primitiveAlpha),
+        Paint()..color = _withElementOpacity(fill, record.primitiveAlpha),
       );
     }
     final stroke = row.strokeColor;
@@ -115,7 +117,7 @@ void _paintPathRecord(
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = row.strokeWidth
-          ..color = stroke.withAlpha(record.primitiveAlpha),
+          ..color = _withElementOpacity(stroke, record.primitiveAlpha),
       );
     }
   });
@@ -131,7 +133,7 @@ void _paintTextRecord(
       text: TextSpan(
         text: row.text,
         style: TextStyle(
-          color: row.color.withAlpha(record.primitiveAlpha),
+          color: _withElementOpacity(row.color, record.primitiveAlpha),
           fontSize: row.fontSize,
           fontFamily: row.fontFamily,
           fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal,
@@ -164,7 +166,7 @@ void _paintStrokeRecord(
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = row.thickness
-        ..color = row.color.withAlpha(record.primitiveAlpha),
+        ..color = _withElementOpacity(row.color, record.primitiveAlpha),
     );
   });
 }
@@ -181,9 +183,28 @@ void _paintLineRecord(
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = row.thickness
-        ..color = row.color.withAlpha(record.primitiveAlpha),
+        ..color = _withElementOpacity(row.color, record.primitiveAlpha),
     );
   });
+}
+
+Paint _imagePaint(int primitiveAlpha) {
+  if (primitiveAlpha >= 255) {
+    return Paint();
+  }
+
+  return Paint()
+    ..colorFilter = ColorFilter.mode(
+      Color.fromARGB(primitiveAlpha, 255, 255, 255),
+      BlendMode.modulate,
+    );
+}
+
+Color _withElementOpacity(Color color, int primitiveAlpha) {
+  final sourceAlpha = (color.toARGB32() >> 24) & 0xFF;
+  final combinedAlpha = (sourceAlpha * primitiveAlpha / 255).round();
+
+  return color.withAlpha(combinedAlpha);
 }
 
 void _withRecordTransform(

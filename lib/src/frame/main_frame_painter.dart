@@ -26,10 +26,11 @@ final class MainFramePainter extends CustomPainter {
     canvas.save();
     canvas.translate(-viewport.left, -viewport.top);
     _paintStaticBackground(canvas, output.staticBackgroundPlan.primitive);
+    final imageBindings = _resolvedImages(output);
     for (final record in mainFrameRecordsInPaintOrder(
       output.selectedMoveSupplementPlan.mergedRecords,
     )) {
-      paintMainFrameRecord(canvas, record, _resolvedImages(output));
+      paintMainFrameRecord(canvas, record, imageBindings);
     }
     _paintSelectionDecorations(
       canvas,

@@ -31,13 +31,18 @@ void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
   switch (primitive) {
     case MarqueeOverlayPrimitive(:final rect):
       canvas.drawRect(rect, Paint()..style = PaintingStyle.stroke);
-    case StrokeOverlayPrimitive(:final points, :final thickness, :final color):
+    case StrokeOverlayPrimitive(
+      :final points,
+      :final thickness,
+      :final color,
+      :final opacity,
+    ):
       canvas.drawPoints(
         PointMode.polygon,
         points,
         Paint()
           ..strokeWidth = thickness
-          ..color = color,
+          ..color = _withOpacity(color, opacity),
       );
     case PendingLineStartOverlayPrimitive(:final start, :final thickness):
       canvas.drawCircle(start, thickness, Paint());
@@ -63,4 +68,11 @@ void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
           ..blendMode = BlendMode.clear,
       );
   }
+}
+
+Color _withOpacity(Color color, double opacity) {
+  final sourceAlpha = (color.toARGB32() >> 24) & 0xFF;
+  final factor = opacity.clamp(0, 1).toDouble();
+
+  return color.withAlpha((sourceAlpha * factor).round());
 }
