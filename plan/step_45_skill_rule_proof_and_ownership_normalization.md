@@ -77,7 +77,7 @@ Implement Wave 2 before Wave 3: normalize `Evidence Consequence Link`, then `Con
 
 ## Execution Units
 
-### [ ] Unit 1: Normalize Evidence Consequence Link
+### [x] Unit 1: Normalize Evidence Consequence Link
 
 Owner:
 
@@ -100,7 +100,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Normalize Concrete Failure Mode Standard
+### [x] Unit 2: Normalize Concrete Failure Mode Standard
 
 Owner:
 
@@ -122,7 +122,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Normalize Negative Proof And Fixture Quarantine
+### [x] Unit 3: Normalize Negative Proof And Fixture Quarantine
 
 Owner:
 
@@ -144,7 +144,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Normalize Source-Of-Truth Singularity
+### [x] Unit 4: Normalize Source-Of-Truth Singularity
 
 Owner:
 
@@ -167,7 +167,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Normalize Owner-Level Fix And Boundary-Owned Policy
+### [x] Unit 5: Normalize Owner-Level Fix And Boundary-Owned Policy
 
 Owner:
 
@@ -189,7 +189,7 @@ Depends On:
 
 Unit 4.
 
-### [ ] Unit 6: Normalize Sequenced Migration And Retirement
+### [x] Unit 6: Normalize Sequenced Migration And Retirement
 
 Owner:
 
@@ -212,7 +212,7 @@ Depends On:
 
 Unit 5.
 
-### [ ] Unit 7: Normalize Temporal Surface Closure And All-Or-Nothing Failure Boundary
+### [x] Unit 7: Normalize Temporal Surface Closure And All-Or-Nothing Failure Boundary
 
 Owner:
 
@@ -235,7 +235,7 @@ Depends On:
 
 Unit 6.
 
-### [ ] Unit 8: Final Plan Status And Range Surface Audit
+### [x] Unit 8: Final Plan Status And Range Surface Audit
 
 Owner:
 
