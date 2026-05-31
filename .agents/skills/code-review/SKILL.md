@@ -64,7 +64,7 @@ Also flag when applicable:
 - visible drift from the active plan, step contract, linked design, source
   inputs, classification, selected owner, source of truth, proof seam, fixture
   strategy, Decision Trace mapping, required source-of-truth update, or
-  sequencing constraint;
+  sequencing constraint, including `Sequenced Migration And Retirement` drift;
 - `Source-Of-Truth Singularity` violations: source-of-truth drift, duplicated
   truth without a cache/performance invariant and proof strategy, or durable
   source-of-truth artifacts with no real consumer;

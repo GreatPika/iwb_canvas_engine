@@ -138,8 +138,9 @@ Reject any candidate form that fails one of these gates:
 - **Dependency direction**: follows repository layer/import direction.
 - **State/data**: names committed, derived, cached, transient, and mutable state
   owners when relevant.
-- **Seam**: for shared seams, names successor or retired seam, consumer order,
-  retirement gate, and `Negative Proof And Fixture Quarantine` strategy.
+- **Sequenced Migration And Retirement**: for shared seams, names successor or
+  retired seam, consumer order, replacement paths, retirement gate, migration
+  checks, and `Negative Proof And Fixture Quarantine` strategy.
 - **Temporal/reentrancy**: for call ordering, post-commit delivery,
   transaction, rollback, or no-op boundaries, observers, listeners, callbacks,
   guards, or public-state publication, names the temporal invariant, every

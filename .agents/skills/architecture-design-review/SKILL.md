@@ -171,8 +171,10 @@ Mark the review `BLOCKED` when any of these are true:
 19. `Source-Of-Truth Singularity` is violated: the design creates a second
     source of truth without scoping it as cache/performance duplication with an
     invariant, proof strategy, and real consumer.
-20. A shared-seam change lacks successor or retired seam, consumer order,
-    retirement gate, or `Negative Proof And Fixture Quarantine` strategy.
+20. `Sequenced Migration And Retirement` is unresolved: a shared-seam change
+    lacks successor or retired seam, consumer order, replacement paths,
+    retirement gate, migration checks, or `Negative Proof And Fixture
+    Quarantine` strategy.
 21. A public API change lacks compatibility, migration, or contract-owner
     reasoning.
 22. A bug-fix design lacks root-cause owner and reproducer strategy.

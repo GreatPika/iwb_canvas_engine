@@ -229,10 +229,11 @@ Mark the contract `BLOCKED` when any category applies:
    persistence, generated outputs, registries, or external consumers; creates
    duplicate truth without a cache/performance invariant and proof strategy; or
    names a source-of-truth artifact without a real consumer.
-8. Order is unsafe: required sequencing is missing, dependencies are circular or
-   vague, consumers move before owners exist, migration or retirement strategy is
-   deferred, or old paths are retired before replacement and migration checks are
-   in place.
+8. `Sequenced Migration And Retirement` or other order is unsafe: required
+   sequencing is missing, dependencies are circular or vague, consumers move
+   before owners or replacement paths exist, migration or retirement strategy is
+   deferred, or old paths are retired before replacement paths, migrated
+   consumers, retirement gates, and migration checks are in place.
 9. Execution units are invalid: a pre-implementation unit heading lacks the
    unchecked `[ ]` checkbox, a unit violates `Completion Evidence Boundary` by
    being pre-marked complete or including post-implementation proof/status, a

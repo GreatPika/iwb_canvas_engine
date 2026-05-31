@@ -116,7 +116,7 @@ them forward.
 | Does it depend on call order, lifecycle order, sync/async ordering, failure ordering, or migration order? | yes/no | sequence/none | ... |
 | Does it introduce or alter observer/listener/callback delivery, guard windows, public-state publication, or reentrancy-sensitive ordering? | yes/no | sequence/none | ... |
 | Does it introduce or alter modes, statuses, terminal states, sessions, or transition rules? | yes/no | state/none | ... |
-| Does it create, replace, migrate, or retire a shared seam? | yes/no | c4/data_flow/sequence/none | ... |
+| Does it create, replace, migrate, or retire a shared seam under `Sequenced Migration And Retirement`? | yes/no | c4/data_flow/sequence/none | ... |
 | Does it change public API consumer flow, payload shape, or compatibility behavior? | yes/no | sequence/data_flow/none | ... |
 | Does it introduce or change analyzer, guardrail, or structural-recognition pipeline behavior? | yes/no | data_flow/sequence/none | ... |
 

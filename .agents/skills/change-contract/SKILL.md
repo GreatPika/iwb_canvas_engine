@@ -235,8 +235,9 @@ First choose the natural split axis for the task:
 - behavior change: split by user flow, API call, command, event, or observable
   behavior;
 - refactor: split by owner, module, seam, or dependency boundary;
-- migration: split by adding the new path, migrating consumers, then removing
-  the old path;
+- `Sequenced Migration And Retirement`: split migration by adding replacement
+  paths, migrating consumers, then removing old paths after retirement gates and
+  migration checks exist;
 - rule, analyzer, or style check: split by rule, allowed case, forbidden case,
   fixture, or integration point;
 - documentation: split by source-of-truth surface and dependent references;
@@ -258,9 +259,11 @@ Then construct execution units with this procedure:
    it by those checks.
 8. If two adjacent candidates have the same owner, same boundary, same risk, and
    same completion check, merge them.
-9. Order units so that owners and boundaries are established before consumers
-   are changed.
-10. Remove old paths only after replacement paths and consumers are in place.
+9. Apply `Sequenced Migration And Retirement`: order units so that owners,
+   boundaries, and replacement paths are established before consumers are
+   changed.
+10. Remove old paths only after replacement paths, migrated consumers,
+    retirement gates, and migration checks are in place.
 
 A valid execution unit is not created from a file list alone. It is created from
 this chain:
