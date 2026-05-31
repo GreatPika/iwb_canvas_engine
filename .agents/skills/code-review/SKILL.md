@@ -74,10 +74,10 @@ Also flag when applicable:
   local utilities, or opaque abstractions introduced by the diff.
 
 For diffs that add or modify tests, guardrails, analyzers, docs, plans, design
-artifacts, verification claims, or proof fixtures, apply the `anti-slop-review`
-claim-vs-actual-work test internally. Report only actionable code-review style
-findings for artifacts that create false confidence, duplicated truth, weak
-guardrails, or self-referential proof.
+artifacts, verification claims, or proof fixtures, apply shared
+`Outcome-Proof Fit` through the `anti-slop-review` standard internally. Report
+only actionable code-review style findings for artifacts that create false
+confidence, duplicated truth, weak guardrails, or self-referential proof.
 
 ## Review Guidelines
 
