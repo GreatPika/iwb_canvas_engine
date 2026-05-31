@@ -44,7 +44,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final paintSize = _paintSizeFor(constraints);
-        final viewport = root.viewCameraOffset & paintSize;
+        final viewport = Offset.zero & paintSize;
         final devicePixelRatio = _devicePixelRatioFor(context);
         final mainOutput = root.buildResourceFreeMainFrame(
           viewportWorldBounds: viewport,

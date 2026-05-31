@@ -55,16 +55,10 @@ final class SelectedMoveSupplementPlanner {
   SelectedMoveSupplementPlan build({
     required CapturedMainFrame frame,
     required PaintPlan ordinaryPlan,
-    required int ordinaryCacheWritesBefore,
-    required int ordinaryCacheWritesAfter,
   }) {
     final preview = frame.selectedMovePreview;
     if (preview == null) {
-      return _withoutSelectedMove(
-        ordinaryPlan,
-        ordinaryCacheWritesBefore,
-        ordinaryCacheWritesAfter,
-      );
+      return _withoutSelectedMove(ordinaryPlan);
     }
 
     final selectedIds = _movableSelectedIds(frame);
@@ -95,26 +89,20 @@ final class SelectedMoveSupplementPlanner {
         supplementCount: supplement.records.length,
         skippedStaleCount: supplement.skippedStaleCount,
         globalSortCount: 0,
-        ordinaryCacheWritesDuringSupplement:
-            ordinaryCacheWritesAfter - ordinaryCacheWritesBefore,
+        ordinaryCacheWritesDuringSupplement: 0,
       ),
     );
   }
 
-  SelectedMoveSupplementPlan _withoutSelectedMove(
-    PaintPlan ordinaryPlan,
-    int ordinaryCacheWritesBefore,
-    int ordinaryCacheWritesAfter,
-  ) {
+  SelectedMoveSupplementPlan _withoutSelectedMove(PaintPlan ordinaryPlan) {
     return SelectedMoveSupplementPlan(
       mergedRecords: ordinaryPlan.ordinaryRecords,
-      probe: SelectedMoveSupplementProbe(
+      probe: const SelectedMoveSupplementProbe(
         selectedFilteredCount: 0,
         supplementCount: 0,
         skippedStaleCount: 0,
         globalSortCount: 0,
-        ordinaryCacheWritesDuringSupplement:
-            ordinaryCacheWritesAfter - ordinaryCacheWritesBefore,
+        ordinaryCacheWritesDuringSupplement: 0,
       ),
     );
   }

@@ -95,8 +95,6 @@ final class FrameEngine {
     final selectedMoveSupplement = _selectedMoveSupplementPlanner.build(
       frame: frame,
       ordinaryPlan: ordinary.plan,
-      ordinaryCacheWritesBefore: ordinary.cacheWritesBefore,
-      ordinaryCacheWritesAfter: ordinary.cacheWritesAfter,
     );
     final assetBindings = bindAssets == null
         ? FrameAssetBindings.empty
@@ -121,9 +119,7 @@ final class FrameEngine {
   }
 
   _OrdinaryMainPlan _ordinaryPlanFor(CapturedMainFrame frame) {
-    final writesBefore = _ordinaryPaintPlanner.paintPlanCache.probe.writes;
     final ordinaryResult = _ordinaryPaintPlanner.buildOrdinaryPlan(frame);
-    final writesAfter = _ordinaryPaintPlanner.paintPlanCache.probe.writes;
 
     return _OrdinaryMainPlan(
       plan: switch (ordinaryResult) {
@@ -133,8 +129,6 @@ final class FrameEngine {
           ordinaryRecords: const [],
         ),
       },
-      cacheWritesBefore: writesBefore,
-      cacheWritesAfter: writesAfter,
     );
   }
 
@@ -182,13 +176,7 @@ final class FrameEngine {
 }
 
 final class _OrdinaryMainPlan {
-  const _OrdinaryMainPlan({
-    required this.plan,
-    required this.cacheWritesBefore,
-    required this.cacheWritesAfter,
-  });
+  const _OrdinaryMainPlan({required this.plan});
 
   final PaintPlan plan;
-  final int cacheWritesBefore;
-  final int cacheWritesAfter;
 }

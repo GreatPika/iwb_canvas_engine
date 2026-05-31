@@ -58,7 +58,6 @@ void main() {
     final ordinaryPlanner = OrdinaryPaintPlanner();
     final ordinary =
         ordinaryPlanner.buildOrdinaryPlan(frame) as OrdinaryPaintPlanReady;
-    final writesBeforeSupplement = ordinaryPlanner.paintPlanCache.probe.writes;
     final queriedWindows = <SpatialQueryWindow>[];
     final supplementPlanner = SelectedMoveSupplementPlanner(
       frameFacts: supplementFrameFacts,
@@ -74,8 +73,6 @@ void main() {
     final supplement = supplementPlanner.build(
       frame: frame,
       ordinaryPlan: ordinary.plan,
-      ordinaryCacheWritesBefore: writesBeforeSupplement,
-      ordinaryCacheWritesAfter: ordinaryPlanner.paintPlanCache.probe.writes,
     );
 
     expect(
