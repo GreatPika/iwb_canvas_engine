@@ -78,7 +78,7 @@ Normalize `Outcome-Proof Fit` first because it is the existing canonical pattern
 
 ## Execution Units
 
-### [ ] Unit 1: Align Outcome-Proof Fit References
+### [x] Unit 1: Align Outcome-Proof Fit References
 
 Owner:
 
@@ -101,7 +101,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Normalize Decision Chain Of Custody
+### [x] Unit 2: Normalize Decision Chain Of Custody
 
 Owner:
 
@@ -124,7 +124,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Normalize Decision Closure
+### [x] Unit 3: Normalize Decision Closure
 
 Owner:
 
@@ -146,7 +146,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Normalize Completion Evidence Boundary
+### [x] Unit 4: Normalize Completion Evidence Boundary
 
 Owner:
 
@@ -168,7 +168,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Final Plan Status And Range Surface Audit
+### [x] Unit 5: Final Plan Status And Range Surface Audit
 
 Owner:
 
