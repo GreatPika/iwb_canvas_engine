@@ -5,8 +5,17 @@ import '../contracts/public/canvas_ids.dart';
 import '../resources/resource_resolver_adapter.dart';
 import '../resources/surface_resource_session.dart';
 import 'captured_frame.dart';
-import 'frame_paint_output.dart';
 import 'render_element_record.dart';
+
+final class FrameAssetBindings {
+  FrameAssetBindings({
+    required Map<CanvasResourceId, ResourceImageResolveResult> images,
+  }) : images = Map.unmodifiable(images);
+
+  static final empty = FrameAssetBindings(images: const {});
+
+  final Map<CanvasResourceId, ResourceImageResolveResult> images;
+}
 
 final class PaintAssetBindingService {
   const PaintAssetBindingService();

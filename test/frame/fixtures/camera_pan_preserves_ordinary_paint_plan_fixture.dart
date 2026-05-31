@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'dart:ui' show Offset, Rect;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
@@ -9,16 +9,16 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'ordinary_paint_test_support.dart';
 
 void main() {
+  _registerOrdinaryCameraPlanTests();
+}
+
+void _registerOrdinaryCameraPlanTests() {
   test('camera-only movement stays outside ordinary paint plan identity', () {
     expect(_cameraOnlyMovementStaysOutsidePlanIdentity(), isTrue);
   });
 
   test('camera pan rebuilds admission from the effective world window', () {
     expect(_panAdmissionUsesEffectiveWorldWindow(), isTrue);
-  });
-
-  test('opacity is represented as primitive alpha without saveLayer', () {
-    expect(_opacityUsesPrimitiveAlpha(), isTrue);
   });
 }
 
@@ -118,23 +118,6 @@ _PanAdmissionScenario _panAdmissionScenario() {
   );
 
   return _PanAdmissionScenario(beforePan: beforePan, afterPan: afterPan);
-}
-
-bool _opacityUsesPrimitiveAlpha() {
-  final frameFacts = frameFactsPort(
-    elements: [rectFacts('transparent', orderToken: 1, opacity: 0.5)],
-  );
-  final planner = OrdinaryPaintPlanner();
-  final result = planner.buildOrdinaryPlan(
-    capturedMainFrame(frameFacts: frameFacts),
-  );
-
-  final ready = result as OrdinaryPaintPlanReady;
-  final record = ready.plan.ordinaryRecords.single;
-  expect(record.primitiveAlpha, 128);
-  expect(record.requiresSaveLayer, isFalse);
-
-  return true;
 }
 
 final class _PanAdmissionScenario {

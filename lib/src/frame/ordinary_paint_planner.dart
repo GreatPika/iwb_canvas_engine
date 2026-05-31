@@ -6,6 +6,7 @@ import 'frame_cache.dart';
 import 'paint_plan.dart';
 import 'render_element_record.dart';
 import 'render_family_caches.dart';
+import 'render_primitive_cache_snapshot.dart';
 
 sealed class OrdinaryPaintPlanResult {
   const OrdinaryPaintPlanResult();

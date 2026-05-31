@@ -1,8 +1,8 @@
 import 'package:flutter/painting.dart';
 
 import 'frame_cache.dart';
-import 'paint_plan.dart';
 import 'render_element_record.dart';
+import 'render_primitive_cache_snapshot.dart';
 
 // These hot caches stay behind one owner so text, path, and stroke cache probes
 // share the same ordinary planning lifecycle and capacity policy.

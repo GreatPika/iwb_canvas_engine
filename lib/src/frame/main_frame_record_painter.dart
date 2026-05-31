@@ -14,8 +14,8 @@ import 'dart:ui'
 import 'package:flutter/painting.dart';
 
 import '../contracts/public/canvas_ids.dart';
-import 'paint_plan.dart';
 import 'render_element_record.dart';
+import 'render_primitive_cache_snapshot.dart';
 
 void paintMainFrameRecord(
   Canvas canvas,

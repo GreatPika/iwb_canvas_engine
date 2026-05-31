@@ -1,23 +1,13 @@
-import '../contracts/public/canvas_ids.dart';
-import '../resources/resource_resolver_adapter.dart';
 import 'captured_frame.dart';
-import 'frame_repaint_bus.dart';
+import 'frame_repaint_signal.dart';
 import 'overlay_preview_planner.dart';
+import 'paint_asset_binding_service.dart';
 import 'paint_plan.dart';
+import 'render_primitive_cache_snapshot.dart';
 import 'selected_move_supplement_planner.dart';
 import 'selected_order_cache.dart';
 import 'selection_decoration_planner.dart';
 import 'static_background_planner.dart';
-
-final class FrameAssetBindings {
-  FrameAssetBindings({
-    required Map<CanvasResourceId, ResourceImageResolveResult> images,
-  }) : images = Map.unmodifiable(images);
-
-  static final empty = FrameAssetBindings(images: const {});
-
-  final Map<CanvasResourceId, ResourceImageResolveResult> images;
-}
 
 final class MainFramePaintOutput {
   const MainFramePaintOutput({

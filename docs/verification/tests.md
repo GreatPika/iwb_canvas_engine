@@ -280,6 +280,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
 - `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
 - `test/flutter_bridge/widget_paint_test.dart`
+- `test/flutter_bridge/surface_camera_frame_output_test.dart`
 - `test/store/read_document_projection_test.dart`
 - `test/store/no_projection_hot_path_test.dart`
 - `test/store/public_document_is_projection_only_test.dart`
@@ -675,6 +676,20 @@ Current implemented proof:
   the explicit edit boundary, including the
   setCameraOffset(runtime.camera.offset) persistence path, and readDocument
   returns that persisted camera instead of the runtime view camera.
+
+#### `test/frame/ordinary_paint_primitive_policy_test.dart`
+- proves ordinary element opacity is represented through primitive paint alpha
+  and does not require implicit saveLayer behavior in the hot ordinary paint
+  path.
+
+#### `test/frame/render_primitive_cache_snapshot_test.dart`
+- proves ordinary planning exposes text, path, and stroke cache primitives
+  through `RenderPrimitiveCacheSnapshot` for painter consumption.
+
+#### `test/flutter_bridge/surface_camera_frame_output_test.dart`
+- proves the public `CanvasSurface` passive frame path rebuilds captured frame
+  output after runtime camera pan while preserving ordinary paint plan identity
+  and capturing the runtime preview source.
 
 #### `test/guardrails/selection_boundary_imports_test.dart`
 - proves InteractionEngine does not import concrete SelectionKernel or
