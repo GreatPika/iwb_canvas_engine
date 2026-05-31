@@ -1,3 +1,6 @@
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
@@ -95,7 +98,53 @@ List<GuardrailViolation> checkCacheKeysUseNextRevisionsOnlySources(
           path: entry.key,
           message: 'frame cache keys may not use legacy snapshot shapes',
         ),
+    ..._cacheKeyShapeViolations(sources),
   ];
+}
+
+List<GuardrailViolation> _cacheKeyShapeViolations(Map<String, String> sources) {
+  final violations = <GuardrailViolation>[];
+  for (final surface in _ordinaryCacheKeySurfaces) {
+    final source = sources[surface.path];
+    if (source == null) {
+      continue;
+    }
+    final unit = parseString(content: source, throwIfDiagnostics: false).unit;
+    for (final declaration in _cacheKeyClassDeclarations(
+      unit,
+      surface.className,
+    )) {
+      _addCacheKeyClassViolations(violations, surface, declaration);
+    }
+  }
+
+  return violations;
+}
+
+void _addCacheKeyClassViolations(
+  List<GuardrailViolation> violations,
+  _OrdinaryCacheKeySurface surface,
+  ClassDeclaration declaration,
+) {
+  for (final token in _cacheKeyClassForbiddenTokens(declaration, surface)) {
+    violations.add(
+      _cacheKeyViolation(
+        surface,
+        '${surface.className} may not include forbidden cache key token $token',
+      ),
+    );
+  }
+  for (final field in _classFieldNames(declaration)) {
+    if (surface.allowedFields.contains(field)) {
+      continue;
+    }
+    violations.add(
+      _cacheKeyViolation(
+        surface,
+        '${surface.className} may not include non-owned cache key field $field',
+      ),
+    );
+  }
 }
 
 List<GuardrailViolation> checkCacheBackgroundGridNotElementVisualSources(
@@ -208,11 +257,64 @@ const _cachedPaintSurfaces = [
   ),
 ];
 
+const _ordinaryCacheKeySurfaces = [
+  _OrdinaryCacheKeySurface(
+    'lib/src/frame/paint_plan.dart',
+    'PaintPlanKey',
+    {
+      'structuralRevision',
+      'boundsRevision',
+      'elementVisualRevision',
+      'viewportRect',
+      'devicePixelRatio',
+    },
+    {'documentRevision', 'resourceRevision'},
+  ),
+  _OrdinaryCacheKeySurface(
+    'lib/src/frame/paint_plan.dart',
+    'OrdinaryPaintRecordKey',
+    {
+      'id',
+      'structuralRevision',
+      'boundsRevision',
+      'elementVisualRevision',
+      'generation',
+      'orderToken',
+    },
+    {'documentRevision', 'resourceRevision'},
+  ),
+];
+
 final class _CachedPaintSurface {
   const _CachedPaintSurface(this.path, this.className);
 
   final String path;
   final String className;
+}
+
+final class _OrdinaryCacheKeySurface {
+  const _OrdinaryCacheKeySurface(
+    this.path,
+    this.className,
+    this.allowedFields,
+    this.forbiddenTokens,
+  );
+
+  final String path;
+  final String className;
+  final Set<String> allowedFields;
+  final Set<String> forbiddenTokens;
+}
+
+GuardrailViolation _cacheKeyViolation(
+  _OrdinaryCacheKeySurface surface,
+  String message,
+) {
+  return GuardrailViolation(
+    guardrailId: cacheKeysUseNextRevisionsGuardrailId,
+    path: surface.path,
+    message: message,
+  );
 }
 
 bool _containsForbiddenSceneRecordSort(String content) {
@@ -250,6 +352,41 @@ bool _containsAny(String content, Iterable<String> tokens) {
 
 bool _containsAll(String content, Iterable<String> tokens) {
   return tokens.every(content.contains);
+}
+
+Iterable<ClassDeclaration> _cacheKeyClassDeclarations(
+  CompilationUnit unit,
+  String className,
+) sync* {
+  for (final declaration in unit.declarations.whereType<ClassDeclaration>()) {
+    if (declaration.namePart.typeName.lexeme != className) {
+      continue;
+    }
+    yield declaration;
+  }
+}
+
+Iterable<String> _classFieldNames(ClassDeclaration declaration) sync* {
+  for (final member in declaration.body.members.whereType<FieldDeclaration>()) {
+    if (member.isStatic) {
+      continue;
+    }
+    for (final variable in member.fields.variables) {
+      yield variable.name.lexeme;
+    }
+  }
+}
+
+Iterable<String> _cacheKeyClassForbiddenTokens(
+  ClassDeclaration declaration,
+  _OrdinaryCacheKeySurface surface,
+) sync* {
+  final source = _withoutLineComments(declaration.toSource());
+  for (final token in surface.forbiddenTokens) {
+    if (RegExp('\\b$token\\b').hasMatch(source)) {
+      yield token;
+    }
+  }
 }
 
 Iterable<_ClassDeclaration> _frameCacheDeclarations(String source) sync* {
