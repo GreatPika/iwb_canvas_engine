@@ -158,7 +158,15 @@ Use this structure:
 
 ## Critical Rules
 
-1. Always include exact `file:line` references; no vague descriptions.
+`Evidence Consequence Link`: record exact facts and the downstream consequence
+they support, while keeping the research note factual. Use exact `file:line`
+evidence for stable text, and name the exception for new/generated/command
+surfaces without stable lines. Search coverage is part of that link because
+downstream design and contract work must know whether absence was confirmed or
+merely uninspected.
+
+1. Always include exact `file:line` references unless a named exception applies;
+   no vague descriptions.
 2. Read files completely before making claims about them.
 3. Use the `codebase_researcher` subagent for independent or broad factual investigation. For a narrow single-file or single-path question, the parent may perform the one task directly after reading the relevant files.
 4. Use at most 4 tasks and at most 4 parallel tasks.

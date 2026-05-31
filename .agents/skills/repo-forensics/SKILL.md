@@ -31,7 +31,9 @@ Legacy findings are oracle or donor evidence, not next-architecture contracts.
 ## Rules
 
 1. Prefer repo-local probes over guessed call graphs.
-2. Treat tool output as evidence, not as the design decision.
+2. Preserve `Evidence Consequence Link`: treat tool output as evidence, not as
+   the design decision, and report which owner, boundary, proof, or review
+   consequence the output supports.
 3. Keep the probe set small: run only what answers the question.
 4. If code, tests, docs, and guardrails disagree, report the drift explicitly.
 5. Run legacy-only probes from `legacy/iwb_canvas_engine`, not from the

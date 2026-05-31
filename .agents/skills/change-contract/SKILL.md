@@ -80,6 +80,10 @@ Evidence format:
 
     - `path/to/file.ext:line` / `surface`: observed fact -> contract consequence.
 
+This is the contract-stage `Evidence Consequence Link`: every cited fact must
+connect exact observed evidence to the contract boundary, order, proof, source
+of truth, or compatibility consequence it supports.
+
 Use path-only evidence only for new files that do not exist yet, generated
 outputs without stable line references, or repository-level commands/config
 surfaces where line references are not meaningful.
@@ -333,6 +337,9 @@ When enough evidence exists, output:
     ## Evidence
 
     - `path/to/file.ext:line` / `surface`: observed fact -> contract consequence.
+
+    Preserve `Evidence Consequence Link`: keep exact stable evidence tied to the
+    contract consequence, and name any new/generated/command-surface exception.
 
     ## Boundaries
 

@@ -28,7 +28,12 @@ Plain-language result and non-goals.
 
 ## Repository Evidence
 
-- `path:line` - fact supplied.
+`Evidence Consequence Link`: each fact below must state the decision, boundary,
+unit, proof surface, or review consequence it supports. Use exact `path:line`
+evidence for stable text and name exceptions for new files, generated outputs,
+or command/config surfaces without stable lines.
+
+- `path:line` - observed fact -> supported decision/boundary/unit/proof/review consequence.
 
 ## Design Form Candidates
 

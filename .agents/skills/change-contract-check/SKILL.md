@@ -156,11 +156,12 @@ Confirm, when relevant:
   fallible action being exercised or structurally excluded, and the expected
   rollback, no-mutation, containment, or publication signal.
 
-Evidence must connect observed facts to contract consequences. Repository
-evidence should use exact `path:line` references whenever the cited fact exists
-in a stable text file. Path-only evidence is acceptable only for new files,
-generated outputs without stable lines, or repository-level commands/config
-surfaces where line references are not meaningful.
+`Evidence Consequence Link`: evidence must connect observed facts to contract
+consequences. Repository evidence should use exact `path:line` references
+whenever the cited fact exists in a stable text file. Path-only evidence is
+acceptable only for new files, generated outputs without stable lines, or
+repository-level commands/config surfaces where line references are not
+meaningful.
 
 ## Repository Source Inputs
 
@@ -201,8 +202,8 @@ Mark the contract `BLOCKED` when any category applies:
    required fields, empty headings, placeholders, filler, or guessed facts.
 2. Evidence is insufficient: repository inspection is not real, cited facts
    cannot be verified, available `path:line` evidence is replaced by broad file
-   references without justification, source inputs were not read, or evidence
-   does not support the contract consequence.
+   references without a named new/generated/command-surface exception, source
+   inputs were not read, or evidence does not support the contract consequence.
 3. `Decision Chain Of Custody` from source inputs is missing: the contract was
    authored against a design, research note, phase document, PLAN step, or
    explicit source input but omits that source from `Source Inputs`, drops its

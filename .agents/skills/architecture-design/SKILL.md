@@ -91,9 +91,15 @@ found, write that none was used and rely on direct repository evidence. If the
 selected form cannot be proven without additional research, use
 `NEEDS_RESEARCH`.
 
+`Evidence Consequence Link`: every cited fact must state the architecture
+decision, contract handoff, proof surface, or review consequence it supports.
+Use exact evidence when the fact exists in stable repository text; name the
+exception when a fact comes from a new file, generated output, or
+command/config surface without stable lines.
+
 For every architecture claim that affects the selected form, cite exact
-`path:line` evidence. If a fact cannot be proven, do not guess; use
-`NEEDS_RESEARCH` or `ARCHITECTURE_GATE`.
+`path:line` evidence unless it has one of those named exceptions. If a fact
+cannot be proven, do not guess; use `NEEDS_RESEARCH` or `ARCHITECTURE_GATE`.
 
 ## Design Form Selection
 

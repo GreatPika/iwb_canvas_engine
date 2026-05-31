@@ -127,8 +127,11 @@ Mark the review `BLOCKED` when any of these are true:
    diagram-assessment rows in a way that prevents review.
 6. Research inputs are false, decorative, or point to nonexistent files without
    saying no research artifact was used.
-7. A selected-form claim lacks exact repository evidence and is not marked as
-   `NEEDS_RESEARCH` or `ARCHITECTURE_GATE`.
+7. A selected-form claim or cited repository evidence breaks `Evidence
+   Consequence Link`: it lacks exact repository evidence, lacks the supported
+   decision/boundary/proof/review consequence, or uses a broad reference
+   without a named new/generated/command-surface exception, and is not marked
+   as `NEEDS_RESEARCH` or `ARCHITECTURE_GATE`.
 8. The artifact uses `READY_FOR_CONTRACT` while any hard gate is failed,
    missing, unsupported by evidence, or marked as needing more research or a
    user/product decision.
@@ -146,10 +149,12 @@ Mark the review `BLOCKED` when any of these are true:
     change type, and required proof mode.
 13. Required obligations are missing, or listed obligations are unsupported by
     the request and repository evidence.
-14. `Decision Trace` breaks `Decision Chain Of Custody`: it is missing, keeps
-    template placeholders, omits a locked decision, cites only broad files when
-    exact `path:line` evidence is available, or fails to map a decision to a
-    future contract boundary, execution unit, or proof surface.
+14. `Decision Trace` breaks `Decision Chain Of Custody` or `Evidence
+    Consequence Link`: it is missing, keeps template placeholders, omits a
+    locked decision, cites only broad files when exact `path:line` evidence is
+    available, fails to name the exception for generated/new/command surfaces,
+    or fails to map a decision to a future contract boundary, execution unit,
+    or proof surface.
 15. Owner, owning layer, seam, boundary, dependency direction, state/data
     ownership, or verification strategy is unresolved.
 16. The selected form patches a downstream call site when the weakness belongs
@@ -328,7 +333,7 @@ Before returning, confirm:
 - Did you avoid editing files?
 - Did you review the `.design/` artifact rather than a future contract?
 - Did you check the paired template shape when available?
-- Did you re-check cited evidence?
+- Did you re-check cited evidence and its `Evidence Consequence Link`?
 - Did you read diagrams as architecture claims, not decoration?
 - Could a future Change Contract be written from this artifact as planning work,
   without making a new architecture decision?
