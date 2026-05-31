@@ -201,15 +201,15 @@ Mark the contract `BLOCKED` when any category applies:
    cannot be verified, available `path:line` evidence is replaced by broad file
    references without justification, source inputs were not read, or evidence
    does not support the contract consequence.
-3. Source-input traceability is missing: the contract was authored against a
-   design, research note, phase document, PLAN step, or explicit source input
-   but omits that source from `Source Inputs`, drops its classification, or
-   fails to map lock-required source decisions to a contract location and
-   execution unit/proof surface.
-4. Decision trace is missing or lossy: a full contract lacks `Decision Trace`,
-   uses vague targets, drops a source-input or repository-derived decision, or
-   fails to map a design handoff decision to a boundary, execution unit, or proof
-   surface.
+3. `Decision Chain Of Custody` from source inputs is missing: the contract was
+   authored against a design, research note, phase document, PLAN step, or
+   explicit source input but omits that source from `Source Inputs`, drops its
+   classification, or fails to map lock-required source decisions to a contract
+   location and execution unit/proof surface.
+4. Decision trace is missing or lossy: a full contract breaks `Decision Chain Of
+   Custody` by lacking `Decision Trace`, using vague targets, dropping a
+   source-input or repository-derived decision, or failing to map a design
+   handoff decision to a boundary, execution unit, or proof surface.
 5. Owner or boundary is unresolved: ownership is wrong, vague, split across
    unrelated owners, pushed into callers instead of the owning layer, or left
    for implementation.

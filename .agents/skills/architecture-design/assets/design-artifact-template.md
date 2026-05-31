@@ -55,6 +55,10 @@ The chosen form and why it is the best fit.
 
 ## Decision Trace
 
+Preserve `Decision Chain Of Custody`: source inputs and locked decisions must
+map to the future contract field, execution unit, or proof surface that carries
+them forward.
+
 | Decision ID | Decision | Evidence | Contract handoff target |
 |---|---|---|---|
 | D1 | ... | `path:line` | `Boundaries.Owner` / `Boundaries.Source of Truth` / `Unit N` / proof surface |

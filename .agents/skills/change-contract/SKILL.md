@@ -132,7 +132,13 @@ Inspect when relevant:
 
 ## Source Inputs, Classification, And Decision Trace
 
-Every full Change Contract must include `Source Inputs`, `Classification`, and `Decision Trace` before `Evidence`:
+Every full Change Contract must include `Source Inputs`, `Classification`, and
+`Decision Trace` before `Evidence`.
+
+`Decision Chain Of Custody` is the invariant that source inputs, design/research
+decisions, phase decisions, user decisions, and repository-derived decisions are
+preserved into contract fields, execution units, or proof surfaces instead of
+being left as prose or re-decided during implementation:
 
 - `Source Inputs`: list the concrete design, research, phase, plan, or explicit
   source files used. Write `none` only when no source input exists.
@@ -140,9 +146,9 @@ Every full Change Contract must include `Source Inputs`, `Classification`, and `
   from the request or source input. Preserve the design-selected profile and
   obligations when using `against design DESIGN_FILE`, unless the user explicitly
   asks for redesign.
-- `Decision Trace`: map every lock-required source decision to the contract
-  location that preserves it and to the execution unit or proof surface that will
-  verify it.
+- `Decision Trace`: preserve `Decision Chain Of Custody` by mapping every
+  lock-required source decision to the contract location that preserves it and
+  to the execution unit or proof surface that will verify it.
 
 Decision trace format:
 

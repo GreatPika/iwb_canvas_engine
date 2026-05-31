@@ -24,8 +24,8 @@ the contract is accepted.
    - Add the step entry to root `PLAN.md`.
    - Write or update the linked step contract file required by `PLAN.md`.
    - Ensure the step contract contains the current `change-contract` source
-     inputs, classification, decision trace, evidence, boundaries, and execution
-     unit shape before review.
+     inputs, classification, `Decision Chain Of Custody` through decision trace,
+     evidence, boundaries, and execution unit shape before review.
    - Leave execution unit checkboxes unchecked while planning; implementation
      evidence belongs to the later `unit-by-unit` workflow.
 

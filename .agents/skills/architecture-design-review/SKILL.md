@@ -81,8 +81,9 @@ selected form as an implementable system change:
   what a registry, contract, guardrail, or diagram means?
 - Would two competent implementers produce the same architecture from this
   artifact, even if their code organization differs?
-- Does `Decision Trace` preserve every locked design decision into a contract
-  field, execution unit, or proof surface?
+- Does `Decision Trace` preserve `Decision Chain Of Custody`: every locked
+  design decision carried into a contract field, execution unit, or proof
+  surface?
 - Does the verification strategy satisfy shared `Outcome-Proof Fit`: `Claim ->
   Direct outcome -> Proxy risk -> Required proof`, by naming a proof surface or
   strategy that targets the direct owner-observable or external outcome rather
@@ -100,9 +101,10 @@ Do not require:
 - future step file paths, commit hashes, or completed unit evidence.
 
 Those belong to `change-contract`, `change-contract-check`, and `unit-by-unit`.
-Do require design-level `Decision Trace` rows that map locked decisions to
-future contract fields, execution units, or proof surfaces; that is part of the
-design-to-contract handoff, not implementation metadata.
+Do require design-level `Decision Trace` rows that preserve `Decision Chain Of
+Custody` by mapping locked decisions to future contract fields, execution units,
+or proof surfaces; that is part of the design-to-contract handoff, not
+implementation metadata.
 
 ## Blocking Checks
 
@@ -138,10 +140,10 @@ Mark the review `BLOCKED` when any of these are true:
     change type, and required proof mode.
 13. Required obligations are missing, or listed obligations are unsupported by
     the request and repository evidence.
-14. `Decision Trace` is missing, keeps template placeholders, omits a locked
-    decision, cites only broad files when exact `path:line` evidence is
-    available, or fails to map a decision to a future contract boundary,
-    execution unit, or proof surface.
+14. `Decision Trace` breaks `Decision Chain Of Custody`: it is missing, keeps
+    template placeholders, omits a locked decision, cites only broad files when
+    exact `path:line` evidence is available, or fails to map a decision to a
+    future contract boundary, execution unit, or proof surface.
 15. Owner, owning layer, seam, boundary, dependency direction, state/data
     ownership, or verification strategy is unresolved.
 16. The selected form patches a downstream call site when the weakness belongs
@@ -255,10 +257,10 @@ example:
    temporal/reentrancy, all-or-nothing behavior, Outcome-Proof Fit,
    verification, and future pressure. A `READY_FOR_CONTRACT` artifact must pass
    every applicable gate with evidence.
-6. Check `Decision Trace`. Every material selected-form decision must have a
-   stable decision id, exact evidence, and a future Change Contract handoff
-   target. Do not require exact future unit numbers unless the artifact already
-   names them.
+6. Check `Decision Trace` for `Decision Chain Of Custody`. Every material
+   selected-form decision must have a stable decision id, exact evidence, and a
+   future Change Contract handoff target. Do not require exact future unit
+   numbers unless the artifact already names them.
 7. Reconstruct viable alternatives from the artifact and evidence. If a
    materially better form is visible, mark the review `BLOCKED`.
 8. Before accepting `READY_FOR_CONTRACT`, mentally simulate authoring the next

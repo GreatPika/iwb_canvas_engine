@@ -173,8 +173,11 @@ but cannot be assessed from current evidence, use `NEEDS_RESEARCH` or
 
 ## Decision Trace
 
-Every artifact must include `Decision Trace` to keep chain of custody into the
-future Change Contract:
+Every artifact must include `Decision Trace` to keep `Decision Chain Of
+Custody` into the future Change Contract. `Decision Chain Of Custody` is the
+invariant that source inputs, research/design facts, and repository-derived
+decisions must be preserved into the next stage's local fields, execution
+units, or proof surfaces:
 
 ```text
 repository evidence or research fact -> design decision -> contract handoff target
