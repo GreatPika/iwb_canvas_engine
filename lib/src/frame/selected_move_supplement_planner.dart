@@ -20,6 +20,7 @@ final class SelectedMoveSupplementProbe {
     required this.skippedStaleCount,
     required this.globalSortCount,
     required this.ordinaryCacheWritesDuringSupplement,
+    required this.rejectedAdmissionReason,
   });
 
   final int selectedFilteredCount;
@@ -27,6 +28,7 @@ final class SelectedMoveSupplementProbe {
   final int skippedStaleCount;
   final int globalSortCount;
   final int ordinaryCacheWritesDuringSupplement;
+  final FrameSpatialPaintRejectionReason? rejectedAdmissionReason;
 }
 
 final class SelectedMoveSupplementPlan {
@@ -62,6 +64,30 @@ final class SelectedMoveSupplementPlanner {
       return _withoutSelectedMove(ordinaryPlan);
     }
 
+    final shiftedAdmission = admitFrameSpatialPaint(
+      _queryPaint(_shiftedWindow(frame, preview.delta)),
+    );
+
+    return switch (shiftedAdmission) {
+      FrameSpatialPaintRejected(:final reason) => _rejectedShiftedAdmissionPlan(
+        ordinaryPlan,
+        reason,
+      ),
+      FrameSpatialPaintAdmitted(:final candidates) => _withSelectedMove(
+        frame: frame,
+        ordinaryPlan: ordinaryPlan,
+        delta: preview.delta,
+        shiftedCandidates: candidates,
+      ),
+    };
+  }
+
+  SelectedMoveSupplementPlan _withSelectedMove({
+    required CapturedMainFrame frame,
+    required PaintPlan ordinaryPlan,
+    required Offset delta,
+    required Iterable<FrameElementHandle> shiftedCandidates,
+  }) {
     final selectedIds = _movableSelectedIds(frame);
     final ordinaryRecords = _unselectedOrdinaryRecords(
       ordinaryPlan,
@@ -72,7 +98,8 @@ final class SelectedMoveSupplementPlanner {
     final supplement = _buildSupplementRecords(
       frame: frame,
       selectedIds: selectedIds,
-      delta: preview.delta,
+      delta: delta,
+      spatialCandidates: shiftedCandidates,
     );
     final descendingOrder = _usesDescendingRecordOrder(
       ordinaryRecords,
@@ -91,19 +118,7 @@ final class SelectedMoveSupplementPlanner {
         skippedStaleCount: supplement.skippedStaleCount,
         globalSortCount: 0,
         ordinaryCacheWritesDuringSupplement: 0,
-      ),
-    );
-  }
-
-  SelectedMoveSupplementPlan _withoutSelectedMove(PaintPlan ordinaryPlan) {
-    return SelectedMoveSupplementPlan(
-      mergedRecords: ordinaryPlan.ordinaryRecords,
-      probe: const SelectedMoveSupplementProbe(
-        selectedFilteredCount: 0,
-        supplementCount: 0,
-        skippedStaleCount: 0,
-        globalSortCount: 0,
-        ordinaryCacheWritesDuringSupplement: 0,
+        rejectedAdmissionReason: null,
       ),
     );
   }
@@ -133,22 +148,10 @@ final class SelectedMoveSupplementPlanner {
     required CapturedMainFrame frame,
     required Set<CanvasElementId> selectedIds,
     required Offset delta,
+    required Iterable<FrameElementHandle> spatialCandidates,
   }) {
     final supplement = <RenderElementRecord>[];
     var skippedStaleCount = 0;
-    final spatialAdmission = admitFrameSpatialPaint(
-      _queryPaint(_shiftedWindow(frame, delta)),
-    );
-    final spatialCandidates = switch (spatialAdmission) {
-      FrameSpatialPaintAdmitted(:final candidates) => candidates,
-      FrameSpatialPaintRejected() => const <FrameElementHandle>[],
-    };
-    if (spatialAdmission is FrameSpatialPaintRejected) {
-      return _SupplementRecords(
-        records: supplement,
-        skippedStaleCount: skippedStaleCount,
-      );
-    }
     for (final handle in spatialCandidates) {
       if (!selectedIds.contains(handle.id)) {
         continue;
@@ -292,6 +295,37 @@ bool? _recordStreamIsDescending(List<RenderElementRecord> records) {
   }
 
   return null;
+}
+
+SelectedMoveSupplementPlan _withoutSelectedMove(PaintPlan ordinaryPlan) {
+  return SelectedMoveSupplementPlan(
+    mergedRecords: ordinaryPlan.ordinaryRecords,
+    probe: const SelectedMoveSupplementProbe(
+      selectedFilteredCount: 0,
+      supplementCount: 0,
+      skippedStaleCount: 0,
+      globalSortCount: 0,
+      ordinaryCacheWritesDuringSupplement: 0,
+      rejectedAdmissionReason: null,
+    ),
+  );
+}
+
+SelectedMoveSupplementPlan _rejectedShiftedAdmissionPlan(
+  PaintPlan ordinaryPlan,
+  FrameSpatialPaintRejectionReason reason,
+) {
+  return SelectedMoveSupplementPlan(
+    mergedRecords: ordinaryPlan.ordinaryRecords,
+    probe: SelectedMoveSupplementProbe(
+      selectedFilteredCount: 0,
+      supplementCount: 0,
+      skippedStaleCount: 0,
+      globalSortCount: 0,
+      ordinaryCacheWritesDuringSupplement: 0,
+      rejectedAdmissionReason: reason,
+    ),
+  );
 }
 
 final class _SupplementRecords {
