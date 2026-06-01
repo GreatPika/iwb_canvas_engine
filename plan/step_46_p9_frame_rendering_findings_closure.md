@@ -124,7 +124,7 @@ All-or-nothing boundary: ordinary cache write and selected-record removal are th
 
 ## Execution Units
 
-### [ ] Unit 1: Explicit Spatial Admission Seam
+### [x] Unit 1: Explicit Spatial Admission Seam
 
 Owner:
 
@@ -146,7 +146,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Selected Supplement Rejection Fallback
+### [x] Unit 2: Selected Supplement Rejection Fallback
 
 Owner:
 
@@ -168,7 +168,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Frame Drawable Degenerate Policy
+### [x] Unit 3: Frame Drawable Degenerate Policy
 
 Owner:
 
@@ -190,7 +190,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 4: Captured-Style Marquee Overlay
+### [x] Unit 4: Captured-Style Marquee Overlay
 
 Owner:
 
@@ -212,7 +212,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 5: Analyzer-Backed Ordinary Cache Guardrails
+### [x] Unit 5: Analyzer-Backed Ordinary Cache Guardrails
 
 Owner:
 
@@ -234,7 +234,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 6: Analyzer-Backed No-Global-Sort Guardrail
+### [x] Unit 6: Analyzer-Backed No-Global-Sort Guardrail
 
 Owner:
 
@@ -256,7 +256,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 7: Source-Of-Truth And Generated Docs Repair
+### [x] Unit 7: Source-Of-Truth And Generated Docs Repair
 
 Owner:
 
