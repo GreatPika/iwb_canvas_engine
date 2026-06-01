@@ -11,6 +11,26 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 
+## test.api.command_port_actions
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.api.runtime_timestamp_order
+
+- Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.api.selection_port
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.api.selection_transform_commands
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.api.tool_port_settings
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
 ## test.api.typed_action_payloads
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
@@ -106,6 +126,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.diagnostics.disabled_no_alloc_hot_path
 
 - Sections: `section_20_diagnostics_hub`, `section_23_tests`
+
+## test.diagnostics.interaction_diagnostics
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.diagnostics.sanitizer_and_public_projection
 
@@ -203,6 +227,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
+## test.frame.marquee_overlay_repaint
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
 ## test.frame.no_live_runtime_read_in_painters
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
@@ -218,6 +246,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.frame.paint_plan_write_all_or_nothing
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
+
+## test.frame.selected_move_main_repaint
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.frame.selected_supplement_staging_no_global_sort
 
@@ -238,6 +270,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.geometry.no_legacy_scene_order
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
+
+## test.guardrails.action_after_state
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.guardrails.blocking_suite
 
@@ -262,6 +298,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.guardrails.import_boundaries
 
 - Sections: `section_03_package_layout`, `section_23_tests`
+
+## test.guardrails.interaction_guardrail_enforcement
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.guardrails.public_api_declaration_checks
 
@@ -303,6 +343,18 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_16_geometry_policy`, `section_23_tests`
 
+## test.interaction.interaction_declarations
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.interaction_read_port
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.move_machine
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
 ## test.interaction.move_resolver_not_called_on_cancel_cleanup
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
@@ -319,6 +371,14 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
+## test.interaction.pointer_sample_normalizer
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.pointer_session
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
 ## test.interaction.preview_public_state
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
@@ -327,7 +387,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
 
-## test.interaction.state_machines
+## test.interaction.select_machine
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
@@ -371,6 +431,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
+## test.runtime.command_facts_port
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
 ## test.runtime.dispose_lifecycle
 
 - Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
@@ -382,6 +446,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.runtime.load_document_state_publication
 
 - Sections: `section_10_runtime_data_model`, `section_12_load_document`, `section_23_tests`
+
+## test.runtime.load_interaction_cleanup
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.runtime.runtime_state_publication
 

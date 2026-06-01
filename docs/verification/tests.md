@@ -133,10 +133,21 @@ Required tests:
 - `test.resources.resolver_swap_starts_fresh_cache`
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_reentrancy_rejected`
+- `test.api.selection_port`
+- `test.api.selection_transform_commands`
+- `test.api.command_port_actions`
+- `test.api.tool_port_settings`
 - `test.api.typed_action_payloads`
+- `test.api.runtime_timestamp_order`
+- `test.interaction.runtime_created_timestamps_monotonic`
+- `test.runtime.command_facts_port`
+- `test.runtime.load_interaction_cleanup`
 - `test.edit.low_level_mutations_do_not_emit_actions`
 - `test.interaction.commands_emit_user_actions`
-- `test.interaction.runtime_created_timestamps_monotonic`
+- `test.interaction.interaction_declarations`
+- `test.interaction.pointer_session`
+- `test.interaction.pointer_sample_normalizer`
+- `test.interaction.interaction_read_port`
 - `test.interaction.context_action_request`
 - `test.flutter_bridge.interactive_false_pointer_routing`
 - `test.flutter_bridge.interactive_false_active_session_cancel`
@@ -191,12 +202,18 @@ Required tests:
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.preview_public_state`
-- `test.interaction.state_machines`
+- `test.interaction.move_machine`
+- `test.interaction.select_machine`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.no_stale_terminal_commit`
 - `test.interaction.pointer_cleanup_coordinator_outcomes`
 - `test.interaction.text_edit_stale_commit_guard`
+- `test.diagnostics.interaction_diagnostics`
+- `test.frame.selected_move_main_repaint`
+- `test.frame.marquee_overlay_repaint`
+- `test.guardrails.action_after_state`
+- `test.guardrails.interaction_guardrail_enforcement`
 - `test.flutter_bridge.widget_paint`
 - `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
@@ -271,10 +288,20 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/resources/resolver_swap_starts_fresh_cache_test.dart`
 - `test/resources/resolver_frame_budget_test.dart`
 - `test/resources/resolver_reentrancy_rejected_test.dart`
+- `test/api/selection_port_test.dart`
+- `test/api/selection_transform_commands_test.dart`
+- `test/api/command_port_actions_test.dart`
+- `test/api/tool_port_settings_test.dart`
 - `test/api/typed_action_payloads_test.dart`
+- `test/api/runtime_timestamp_order_test.dart`
+- `test/runtime/command_facts_port_test.dart`
+- `test/runtime/load_interaction_cleanup_test.dart`
 - `test/edit/low_level_mutations_do_not_emit_actions_test.dart`
 - `test/interaction/commands_emit_user_actions_test.dart`
-- `test/interaction/runtime_created_timestamps_monotonic_test.dart`
+- `test/interaction/interaction_declarations_test.dart`
+- `test/interaction/pointer_session_test.dart`
+- `test/interaction/pointer_sample_normalizer_test.dart`
+- `test/interaction/interaction_read_port_test.dart`
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
@@ -328,15 +355,20 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/paint_plan_excludes_selection_state_test.dart`
 - `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - `test/frame/selected_supplement_staging_no_global_sort_test.dart`
+- `test/frame/selected_move_main_repaint_test.dart`
+- `test/frame/marquee_overlay_repaint_test.dart`
 - `test/interaction/preview_public_state_test.dart`
-- `test/interaction/state_machines_test.dart`
+- `test/interaction/move_machine_test.dart`
+- `test/interaction/select_machine_test.dart`
 - `test/interaction/move_resolver_reentrancy_test.dart`
 - `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test/interaction/no_stale_terminal_commit_test.dart`
 - `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
-- `test/interaction/context_action_request_test.dart`
 - `test/interaction/text_edit_stale_commit_guard_test.dart`
+- `test/diagnostics/interaction_diagnostics_test.dart`
 - `test/selection/runtime_owner_separation_test.dart`
+- `test/guardrails/action_after_state_guardrail_test.dart`
+- `test/guardrails/interaction_guardrail_enforcement_test.dart`
 - `test/guardrails/selection_boundary_imports_test.dart`
 - `test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart`
 - `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`
@@ -358,32 +390,13 @@ touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
 
-`test.interaction.runtime_created_timestamps_monotonic` covers the public
-runtime timestamp contract: action events, context-action requests from direct
-host-recognized `handleDoubleTap` and pointer-sample recognition, pending line
-start previews, and selected move resolver requests resolve nullable or
-backwards `timestampMs` hints through one runtime-local monotonic cursor, while
-no-op, invalid direct double-tap input, stale rejection, rollback, cancel,
-loadDocument, and dispose stream-close paths create no timestamped action or
-context request output.
-
-`test.interaction.context_action_request` covers P12 double-tap context-action
-behavior: direct host-recognized `handleDoubleTap` and pointer-sample
-recognition emit exactly one `CanvasContextActionRequested` with a
-content-element target for selectable and non-selectable visible content;
-direct `handleDoubleTap` emits exactly one empty-canvas target for empty canvas
-and background-only points without pending first-tap history; direct
-`handleDoubleTap` rejects non-finite positions before cleanup, target
-resolution, timestamped request emission, or effects; direct `handleDoubleTap`
-clears existing pending context tap history through
-`PointerToolCleanupCoordinator` before current-target resolution; pointer-sample
-recognition still revalidates the second tap against pending target facts;
-delivery has no document, selection, preview, repaint, spatial, projection,
-resource, or action effect; pending context tap cleanup emits no request or
-effects; and request-originated text commits are accepted only for current text
-content-target request ids while unknown/already-retired ids are no-ops and
-known live empty-canvas, non-text, stale, missing, and family-mismatched request
-ids are privately retired without public effects.
+`test.api.runtime_timestamp_order` covers the public runtime timestamp
+contract for committed action events: nullable or backwards `timestampMs` hints
+resolve through one runtime-local monotonic cursor, while loadDocument and
+dispose stream-close paths create no timestamped action output.
+`test.interaction.runtime_created_timestamps_monotonic` remains the
+contract-level proof area for non-action runtime-created timestamp outputs
+owned by later interaction phases.
 
 `test.codec.constructor_and_schema_limits` covers element transform admission
 at public DTO construction and schema decode: non-invertible element
@@ -626,6 +639,28 @@ behavioral tests, and the required guardrail list remains owned by
   settings changes, and advance only when the operation also owns draw-mode
   selection clear or active preview cleanup.
 
+#### P10 public command and tool tests
+- `test/api/selection_port_test.dart` proves direct public selection changes
+  update the selection revision domain without emitting user actions.
+- `test/api/selection_transform_commands_test.dart` proves public selection
+  transform/delete command eligibility, transform math, pivot selection,
+  document-order ids, no-op behavior, selection pruning, validation errors,
+  and typed action emission.
+- `test/api/command_port_actions_test.dart` proves command-port remove, clear,
+  and unknown text-edit behavior plus their action payloads.
+- `test/api/tool_port_settings_test.dart` proves P10 tool-port compatibility:
+  initial settings are visible, effective changes advance interaction
+  revision, no-ops stay silent, active sessions clean up on setting changes,
+  draw-mode pointer input is a compatibility no-op, double tap remains P12
+  unsupported, and context-action requests are a non-throwing empty stream.
+- `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
+  timestamps are resolved through one runtime-local monotonic cursor.
+- `test/runtime/command_facts_port_test.dart` proves immutable command fact
+  bundles, document order, center pivot, removed-resource facts, and no
+  interaction dependency.
+- `test/runtime/load_interaction_cleanup_test.dart` proves load and dispose
+  use interaction-owned cleanup without post-install interaction calls.
+
 #### `test/selection/runtime_owner_separation_test.dart`
 - proves selection-only changes publish state.revisions.selection without
   incrementing state.revisions.document, evicting DocumentProjectionCache,
@@ -676,6 +711,27 @@ behavioral tests, and the required guardrail list remains owned by
   revisions and without emitting action events;
 - proves cleanup against already-empty preview state is public-state silent.
 
+#### P10 interaction seam tests
+- `test/interaction/interaction_declarations_test.dart` proves the required
+  P10 interaction declarations live in their owning files instead of umbrella
+  or placeholder modules.
+- `test/interaction/pointer_session_test.dart` proves active-pointer token,
+  controller-epoch, stale terminal cleanup, stale non-terminal ignore, and
+  world-position conversion behavior for interaction sessions.
+- `test/interaction/pointer_sample_normalizer_test.dart` proves finite public
+  pointer sample admission and invalid-terminal cleanup decisions.
+- `test/interaction/interaction_read_port_test.dart` proves read-port facts
+  are immutable, intent-specific, document-ordered, stale/deleted filtered,
+  and free of mutable document, draft, store, resource, and selection internals.
+- `test/interaction/move_machine_test.dart` proves selected-move admission,
+  preview, resolver request shape, commit, cancel, stale/invalid terminal,
+  zero-delta/no-movable cleanup, resolver/edit failure cleanup, transform math,
+  post-success cleanup, and move action intent facts.
+- `test/interaction/select_machine_test.dart` proves marquee preview,
+  normalized world rects, spatial/exact filtering, stale/deleted skipping,
+  unchanged-selection cleanup, changed-selection commit, previous/next
+  selection action facts, and document-order action ids.
+
 #### `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
 - proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus
   ownership context: selected-move cleanup targets main repaint, overlay
@@ -685,6 +741,20 @@ behavioral tests, and the required guardrail list remains owned by
   clears pending line state, pending context tap cleanup emits no context
   request, no resolver runs on cleanup-only paths, stale terminal cleanup
   creates no commit intent, and cleanup emits no user action.
+
+#### P10 frame and interaction guardrail proof tests
+- `test/frame/selected_move_main_repaint_test.dart` and
+  `test/frame/marquee_overlay_repaint_test.dart` prove selected-move preview is
+  main-only and marquee preview is overlay-only through the frame repaint
+  output fixture.
+- `test/guardrails/action_after_state_guardrail_test.dart` proves
+  state-before-action ordering is runner-backed and rejects inverted action
+  fixture order.
+- `test/guardrails/interaction_guardrail_enforcement_test.dart` proves P10
+  guardrail ids are registered, blocking, runner-backed or structurally
+  checked as appropriate, and reject contract-owned negative fixtures for
+  interaction imports, command-fact imports, cleanup coordinator dependencies,
+  and mutable read-port fact exposure.
 
 #### `test/resources/resource_dirty_test.dart`
 Current implemented proof:

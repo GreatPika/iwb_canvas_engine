@@ -487,6 +487,7 @@
   tests:
     - test.edit.sync_non_nested_async_stale
     - test.edit.edit_matrix_effects
+    - test.api.runtime_timestamp_order
     - test.interaction.runtime_created_timestamps_monotonic
     - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
@@ -559,9 +560,20 @@
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
   tests:
+    - test.api.selection_port
+    - test.api.selection_transform_commands
+    - test.api.command_port_actions
+    - test.api.tool_port_settings
     - test.api.typed_action_payloads
-    - test.interaction.commands_emit_user_actions
+    - test.api.runtime_timestamp_order
     - test.interaction.runtime_created_timestamps_monotonic
+    - test.runtime.command_facts_port
+    - test.runtime.load_interaction_cleanup
+    - test.interaction.commands_emit_user_actions
+    - test.interaction.interaction_declarations
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.interaction_read_port
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
     - test.flutter_bridge.interactive_false_pending_line_preserved
@@ -570,13 +582,19 @@
     - test.runtime.interaction_settings_state
     - test.api_contract.preview_state_sealed_union
     - test.interaction.preview_public_state
-    - test.interaction.state_machines
+    - test.interaction.move_machine
+    - test.interaction.select_machine
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
     - test.interaction.pointer_cleanup_coordinator_outcomes
     - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
+    - test.diagnostics.interaction_diagnostics
+    - test.frame.selected_move_main_repaint
+    - test.frame.marquee_overlay_repaint
+    - test.guardrails.action_after_state
+    - test.guardrails.interaction_guardrail_enforcement
     - test.guardrails.selection_boundary_imports
     - test.flutter_bridge.widget_paint
   do_not_assume:
@@ -1062,10 +1080,21 @@
     - test.resources.resolver_swap_starts_fresh_cache
     - test.resources.resolver_frame_budget
     - test.resources.resolver_reentrancy_rejected
+    - test.api.selection_port
+    - test.api.selection_transform_commands
+    - test.api.command_port_actions
+    - test.api.tool_port_settings
     - test.api.typed_action_payloads
+    - test.api.runtime_timestamp_order
+    - test.interaction.runtime_created_timestamps_monotonic
+    - test.runtime.command_facts_port
+    - test.runtime.load_interaction_cleanup
     - test.edit.low_level_mutations_do_not_emit_actions
     - test.interaction.commands_emit_user_actions
-    - test.interaction.runtime_created_timestamps_monotonic
+    - test.interaction.interaction_declarations
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.interaction_read_port
     - test.interaction.context_action_request
     - test.flutter_bridge.interactive_false_pointer_routing
     - test.flutter_bridge.interactive_false_active_session_cancel
@@ -1120,12 +1149,18 @@
     - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
     - test.interaction.preview_public_state
-    - test.interaction.state_machines
+    - test.interaction.move_machine
+    - test.interaction.select_machine
     - test.interaction.move_resolver_reentrancy
     - test.interaction.move_resolver_not_called_on_cancel_cleanup
     - test.interaction.no_stale_terminal_commit
     - test.interaction.pointer_cleanup_coordinator_outcomes
     - test.interaction.text_edit_stale_commit_guard
+    - test.diagnostics.interaction_diagnostics
+    - test.frame.selected_move_main_repaint
+    - test.frame.marquee_overlay_repaint
+    - test.guardrails.action_after_state
+    - test.guardrails.interaction_guardrail_enforcement
     - test.flutter_bridge.widget_paint
     - test.benchmarks.required_cases
     - test.guardrails.blocking_suite

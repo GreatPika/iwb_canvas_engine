@@ -112,28 +112,52 @@ not own the pending line.
 
 ## Tests and guardrails that prove this phase
 
+- `test.api.selection_port` -> `test/api/selection_port_test.dart`
+- `test.api.selection_transform_commands` -> `test/api/selection_transform_commands_test.dart`
+- `test.api.command_port_actions` -> `test/api/command_port_actions_test.dart`
+- `test.api.tool_port_settings` -> `test/api/tool_port_settings_test.dart`
 - `test.api.typed_action_payloads` -> `test/api/typed_action_payloads_test.dart`
+- `test.api.runtime_timestamp_order` -> `test/api/runtime_timestamp_order_test.dart`
+- `test.runtime.command_facts_port` -> `test/runtime/command_facts_port_test.dart`
+- `test.runtime.load_interaction_cleanup` -> `test/runtime/load_interaction_cleanup_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
+- `test.interaction.interaction_declarations` -> `test/interaction/interaction_declarations_test.dart`
+- `test.interaction.pointer_session` -> `test/interaction/pointer_session_test.dart`
+- `test.interaction.pointer_sample_normalizer` -> `test/interaction/pointer_sample_normalizer_test.dart`
+- `test.interaction.interaction_read_port` -> `test/interaction/interaction_read_port_test.dart`
 - `test.edit.staged_document_load_success_failure` -> `test/edit/staged_document_load_success_failure_test.dart`
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
-- `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
+- `test.interaction.move_machine` -> `test/interaction/move_machine_test.dart`
+- `test.interaction.select_machine` -> `test/interaction/select_machine_test.dart`
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 - `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test.diagnostics.interaction_diagnostics` -> `test/diagnostics/interaction_diagnostics_test.dart`
+- `test.frame.selected_move_main_repaint` -> `test/frame/selected_move_main_repaint_test.dart`
+- `test.frame.marquee_overlay_repaint` -> `test/frame/marquee_overlay_repaint_test.dart`
+- `test.guardrails.action_after_state` -> `test/guardrails/action_after_state_guardrail_test.dart`
+- `test.guardrails.interaction_guardrail_enforcement` -> `test/guardrails/interaction_guardrail_enforcement_test.dart`
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.guardrails.selection_boundary_imports` -> `test/guardrails/selection_boundary_imports_test.dart`
 - `preview.selected_move_main_repaint`
+- `preview.selected_move_main_only`
+- `preview.marquee_overlay_only`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
+- `events.action_after_state_order`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_concrete_selection_imports`
+- `interaction.read_port_immutable_facts`
+- `interaction.no_command_facts_import`
+- `interaction.cleanup_coordinator_dependency_bans`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
+- `tools.p10_compatibility`
 
 ## Exit gate
 

@@ -211,7 +211,7 @@ Mandatory guardrails:
 | `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |
 | `interaction.read_port_immutable_facts` | InteractionReadPort fact objects defensively copy caller-provided collections before exposing them to interaction machines |
 | `interaction.no_command_facts_import` | interaction code must not import command facts; command read facts stay owned by runtime command adapters |
-| `interaction.cleanup_coordinator_dependency_bans` | PointerToolCleanupCoordinator must not depend on edit, frame, resources, store, selection, Flutter bridge, or Flutter package owners |
+| `interaction.cleanup_coordinator_dependency_bans` | PointerToolCleanupCoordinator must not depend on runtime, edit, frame, resources, store, selection, Flutter bridge, Flutter package, resolver callback, or resolver guard owners |
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
