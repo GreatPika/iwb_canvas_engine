@@ -1,3 +1,4 @@
+import 'commit_action_intent.dart';
 import 'touched_set.dart';
 
 final class CommitDeliveryResult {
@@ -5,11 +6,14 @@ final class CommitDeliveryResult {
     required this.shouldPublishState,
     this.replacedDocument = false,
     Iterable<CommitDeliveryEffect> effects = const [],
-  }) : effects = List.unmodifiable(effects);
+    Iterable<CommitActionIntent> actionIntents = const [],
+  }) : effects = List.unmodifiable(effects),
+       actionIntents = List.unmodifiable(actionIntents);
 
   final bool shouldPublishState;
   final bool replacedDocument;
   final List<CommitDeliveryEffect> effects;
+  final List<CommitActionIntent> actionIntents;
 }
 
 sealed class CommitDeliveryEffect {

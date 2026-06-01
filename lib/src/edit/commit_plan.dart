@@ -1,12 +1,30 @@
+import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/touched_set.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../store/store_revision_delta.dart';
 
 final class CommitPlan {
   CommitPlan({
     required this.revisionDelta,
     required this.touchedSet,
+    this.selectionEffect,
     Iterable<CommitEffect> effects = const [],
-  }) : effects = List.unmodifiable(effects);
+    Iterable<CommitActionIntent> actionIntents = const [],
+  }) : effects = List.unmodifiable(effects),
+       actionIntents = List.unmodifiable(actionIntents);
+
+  factory CommitPlan.replaceSelection({
+    required Iterable<CanvasElementId> elementIds,
+    Iterable<CommitActionIntent> actionIntents = const [],
+  }) {
+    return CommitPlan(
+      revisionDelta: const StoreRevisionDelta(),
+      touchedSet: TouchedSet(selection: true),
+      selectionEffect: ReplaceSelectionEffect(elementIds),
+      effects: const [SelectionEffect(), PublicStateEffect()],
+      actionIntents: actionIntents,
+    );
+  }
 
   factory CommitPlan.empty() {
     return CommitPlan(
@@ -17,10 +35,27 @@ final class CommitPlan {
 
   final StoreRevisionDelta revisionDelta;
   final TouchedSet touchedSet;
+  final CommitSelectionEffect? selectionEffect;
   final List<CommitEffect> effects;
+  final List<CommitActionIntent> actionIntents;
 
-  bool get hasChanges => revisionDelta.hasChanges;
+  bool get hasChanges => revisionDelta.hasChanges || selectionEffect != null;
   bool get documentReplaced => touchedSet.documentReplaced;
+}
+
+sealed class CommitSelectionEffect {
+  const CommitSelectionEffect();
+}
+
+final class PruneSelectionEffect extends CommitSelectionEffect {
+  const PruneSelectionEffect();
+}
+
+final class ReplaceSelectionEffect extends CommitSelectionEffect {
+  ReplaceSelectionEffect(Iterable<CanvasElementId> elementIds)
+    : elementIds = List.unmodifiable(elementIds);
+
+  final List<CanvasElementId> elementIds;
 }
 
 sealed class CommitEffect {

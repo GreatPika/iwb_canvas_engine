@@ -629,8 +629,17 @@ final class RuntimeRoot
         installDocument: _store.installDocument,
         replaceDocument: _store.replaceDocument,
       ),
-      installSelectionEffects: _selection.pruneSelection,
+      installSelectionEffects: _applyCommitSelectionEffect,
     );
+  }
+
+  bool _applyCommitSelectionEffect(CommitSelectionEffect effect) {
+    return switch (effect) {
+      PruneSelectionEffect() => _selection.pruneSelection(),
+      ReplaceSelectionEffect(:final elementIds) => _selection.setSelection(
+        elementIds,
+      ),
+    };
   }
 
   void _deliverEditCommitResult(CommitDeliveryResult applyResult) {

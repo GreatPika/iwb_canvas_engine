@@ -51,6 +51,7 @@ void _expectPostInstallApplyResult() {
   final plan = CommitPlan(
     revisionDelta: const StoreRevisionDelta.structural(),
     touchedSet: TouchedSet(selection: true),
+    selectionEffect: const PruneSelectionEffect(),
     effects: effects,
   );
 
@@ -61,7 +62,7 @@ void _expectPostInstallApplyResult() {
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
     ),
-    installSelectionEffects: () {
+    installSelectionEffects: (_) {
       events.add('selection');
 
       return true;
@@ -99,7 +100,7 @@ void _expectEmptyApplyResult() {
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
     ),
-    installSelectionEffects: () {
+    installSelectionEffects: (_) {
       events.add('selection');
 
       return true;

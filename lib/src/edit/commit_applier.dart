@@ -7,7 +7,7 @@ typedef DocumentInstall =
     void Function(CanvasDocument document, StoreRevisionDelta delta);
 typedef DocumentReplace =
     void Function(CanvasDocument document, StoreRevisionDelta delta);
-typedef SelectionEffectInstall = bool Function();
+typedef SelectionEffectInstall = bool Function(CommitSelectionEffect effect);
 
 final class CommitDocumentInstallers {
   const CommitDocumentInstallers({
@@ -32,20 +32,39 @@ final class CommitApplier {
       return CommitDeliveryResult(shouldPublishState: false);
     }
 
-    if (plan.documentReplaced) {
-      documentInstallers.replaceDocument(document, plan.revisionDelta);
-    } else {
-      documentInstallers.installDocument(document, plan.revisionDelta);
+    if (plan.revisionDelta.hasChanges) {
+      if (plan.documentReplaced) {
+        documentInstallers.replaceDocument(document, plan.revisionDelta);
+      } else {
+        documentInstallers.installDocument(document, plan.revisionDelta);
+      }
     }
-    final didChangeSelection =
-        plan.touchedSet.selection && installSelectionEffects();
+    final didChangeSelection = _installSelectionEffect(
+      plan.selectionEffect,
+      installSelectionEffects,
+    );
+    final didAcceptChange = plan.revisionDelta.hasChanges || didChangeSelection;
+    final shouldPublishState =
+        plan.revisionDelta.document || didChangeSelection;
 
     return CommitDeliveryResult(
-      shouldPublishState: plan.revisionDelta.document || didChangeSelection,
+      shouldPublishState: shouldPublishState,
       replacedDocument: plan.documentReplaced,
-      effects: _deliveryEffectsFor(plan.effects),
+      effects: didAcceptChange ? _deliveryEffectsFor(plan.effects) : const [],
+      actionIntents: shouldPublishState ? plan.actionIntents : const [],
     );
   }
+}
+
+bool _installSelectionEffect(
+  CommitSelectionEffect? effect,
+  SelectionEffectInstall install,
+) {
+  if (effect == null) {
+    return false;
+  }
+
+  return install(effect);
 }
 
 List<CommitDeliveryEffect> _deliveryEffectsFor(List<CommitEffect> effects) {

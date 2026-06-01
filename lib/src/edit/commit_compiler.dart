@@ -10,13 +10,17 @@ final class CommitCompiler {
     required StoreRevisionDelta revisionDelta,
     required TouchedSet touchedSet,
   }) {
-    if (!revisionDelta.hasChanges) {
+    final selectionEffect = touchedSet.selection
+        ? const PruneSelectionEffect()
+        : null;
+    if (!revisionDelta.hasChanges && selectionEffect == null) {
       return CommitPlan.empty();
     }
 
     return CommitPlan(
       revisionDelta: revisionDelta,
       touchedSet: touchedSet,
+      selectionEffect: selectionEffect,
       effects: _effectsFor(revisionDelta, touchedSet),
     );
   }
@@ -79,7 +83,8 @@ List<CommitEffect> _effectsFor(
     if (_needsMainRepaint(revisionDelta, touchedSet))
       const RepaintEffect(mainCanvas: true),
     if (touchedSet.selection) const SelectionEffect(),
-    if (revisionDelta.document) const PublicStateEffect(),
+    if (revisionDelta.document || touchedSet.selection)
+      const PublicStateEffect(),
   ];
 }
 
