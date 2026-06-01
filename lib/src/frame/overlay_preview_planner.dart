@@ -19,10 +19,17 @@ sealed class OverlayPreviewPrimitive {
 }
 
 final class MarqueeOverlayPrimitive extends OverlayPreviewPrimitive {
-  const MarqueeOverlayPrimitive({required this.rect})
-    : super(kind: OverlayPreviewPrimitiveKind.marquee);
+  const MarqueeOverlayPrimitive({
+    required this.rect,
+    required this.color,
+    required this.strokeWidth,
+    required this.fillOpacity,
+  }) : super(kind: OverlayPreviewPrimitiveKind.marquee);
 
   final Rect rect;
+  final Color color;
+  final double strokeWidth;
+  final double fillOpacity;
 }
 
 final class StrokeOverlayPrimitive extends OverlayPreviewPrimitive {
@@ -90,7 +97,7 @@ final class OverlayPreviewPlanner {
   const OverlayPreviewPlanner();
 
   OverlayPreviewPlan build(CapturedOverlayFrame frame) {
-    final primitive = _primitiveFor(frame.overlayPreview);
+    final primitive = _primitiveFor(frame);
 
     return OverlayPreviewPlan(
       primitives: primitive == null ? const [] : [primitive],
@@ -98,12 +105,12 @@ final class OverlayPreviewPlanner {
   }
 }
 
-OverlayPreviewPrimitive? _primitiveFor(CanvasPreviewState? preview) {
+OverlayPreviewPrimitive? _primitiveFor(CapturedOverlayFrame frame) {
+  final preview = frame.overlayPreview;
+
   return switch (preview) {
     null || CanvasNoPreview() || CanvasSelectedMovePreview() => null,
-    final CanvasMarqueePreview preview => MarqueeOverlayPrimitive(
-      rect: preview.rect,
-    ),
+    final CanvasMarqueePreview preview => _marqueePrimitive(frame, preview),
     final CanvasPencilStrokePreview preview => _strokePrimitive(
       preview,
       OverlayPreviewPrimitiveKind.pencilStroke,
@@ -130,6 +137,20 @@ OverlayPreviewPrimitive? _primitiveFor(CanvasPreviewState? preview) {
       thickness: preview.thickness,
     ),
   };
+}
+
+MarqueeOverlayPrimitive _marqueePrimitive(
+  CapturedOverlayFrame frame,
+  CanvasMarqueePreview preview,
+) {
+  final style = frame.snapshot.inputs.selectionStyle;
+
+  return MarqueeOverlayPrimitive(
+    rect: preview.rect,
+    color: style.color,
+    strokeWidth: style.strokeWidth,
+    fillOpacity: style.marqueeFillOpacity,
+  );
 }
 
 StrokeOverlayPrimitive _strokePrimitive(

@@ -61,7 +61,10 @@ CapturedMainFrame capturedMainFrame({
   );
 }
 
-CapturedOverlayFrame capturedOverlayFrameFor(CanvasPreviewState preview) {
+CapturedOverlayFrame capturedOverlayFrameFor(
+  CanvasPreviewState preview, {
+  CanvasSelectionStyle selectionStyle = CanvasSelectionStyle.defaultStyle,
+}) {
   final frameFacts = frameFactsPort(elements: const []);
   final capture = FrameCaptureService(
     frameFacts: frameFacts,
@@ -73,7 +76,7 @@ CapturedOverlayFrame capturedOverlayFrameFor(CanvasPreviewState preview) {
     FrameCaptureInputs(
       viewportWorldBounds: const Rect.fromLTWH(0, 0, 10, 10),
       devicePixelRatio: 1,
-      selectionStyle: CanvasSelectionStyle.defaultStyle,
+      selectionStyle: selectionStyle,
       gridStyle: CanvasGridStyle.defaultStyle,
       preview: preview,
       previewRevision: 1,

@@ -30,8 +30,8 @@ final class OverlayFramePainter extends CustomPainter {
 
 void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
   switch (primitive) {
-    case MarqueeOverlayPrimitive(:final rect):
-      canvas.drawRect(rect, Paint()..style = PaintingStyle.stroke);
+    case final MarqueeOverlayPrimitive primitive:
+      _paintMarqueeOverlay(canvas, primitive);
     case final StrokeOverlayPrimitive primitive:
       _paintStrokeOverlay(canvas, primitive);
     case final PendingLineStartOverlayPrimitive primitive:
@@ -41,6 +41,20 @@ void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
     case final EraserOverlayPrimitive primitive:
       _paintEraserOverlay(canvas, primitive);
   }
+}
+
+void _paintMarqueeOverlay(Canvas canvas, MarqueeOverlayPrimitive primitive) {
+  canvas.drawRect(
+    primitive.rect,
+    Paint()..color = _withOpacity(primitive.color, primitive.fillOpacity),
+  );
+  canvas.drawRect(
+    primitive.rect,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = primitive.strokeWidth
+      ..color = primitive.color,
+  );
 }
 
 void _paintStrokeOverlay(Canvas canvas, StrokeOverlayPrimitive primitive) {
