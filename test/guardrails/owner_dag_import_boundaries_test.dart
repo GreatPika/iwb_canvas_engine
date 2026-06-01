@@ -272,6 +272,13 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'runtime',
     targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_command_facts_adapter.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_interaction_move_read_models.dart',
     targetPath: 'lib/src/geometry/geometry_policy.dart',
     directiveKind: 'import',
@@ -520,6 +527,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_command_facts_adapter.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',

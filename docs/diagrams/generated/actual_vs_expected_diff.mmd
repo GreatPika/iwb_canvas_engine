@@ -22,8 +22,11 @@ flowchart LR
   selection_kernel["Selection kernel<br/>required by P4"]:::ok
   store_document_kernel["Document store kernel<br/>required by P4"]:::ok
   api_canvas_runtime -->|public API forwards to by P4| runtime_view_camera
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_canvas_runtime -->|owns and creates by P4| runtime_root
+  api_canvas_runtime -->|facade stream by P10| runtime_root
   api_canvas_runtime -->|public API forwards to by P4| api_camera_port
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_public_surface -->|exports by P2| api_canvas_runtime
   api_public_surface -->|wrapper export by P6| contracts_public
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
@@ -43,12 +46,6 @@ flowchart LR
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
   runtime_root -->|read port adapter by P10| interaction_engine
-  violation_api_canvas_runtime_commands_future_placeholder["Placeholder is overdue"]:::violation
-  violation_api_canvas_runtime_commands_future_placeholder -.-> api_canvas_runtime
-  violation_api_canvas_runtime_context_action_requests_future_placeholder["Placeholder is overdue"]:::violation
-  violation_api_canvas_runtime_context_action_requests_future_placeholder -.-> api_canvas_runtime
-  violation_api_canvas_runtime_tools_future_placeholder["Placeholder is overdue"]:::violation
-  violation_api_canvas_runtime_tools_future_placeholder -.-> api_canvas_runtime
   violation_interaction_engine_emits_user_actions["Missing required link"]:::violation
   violation_interaction_engine_emits_user_actions -.-> interaction_engine
   violation_interaction_engine_emits_user_actions -.-> api_canvas_runtime
@@ -57,5 +54,5 @@ flowchart LR
   violation_interaction_engine_queries_spatial_index -.-> geometry_spatial_index
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
   classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-  linkStyle 10 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
-  linkStyle 11 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
+  linkStyle 13 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
+  linkStyle 14 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

@@ -753,6 +753,7 @@ const _boundaryRules = [
       'lib/src/frame/',
       'lib/src/runtime/',
       'lib/src/flutter_bridge/',
+      'lib/src/contracts/internal/command_facts_port.dart',
     ],
   ),
   _BoundaryRule(

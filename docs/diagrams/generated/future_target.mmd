@@ -17,6 +17,7 @@ flowchart LR
   draw_tools -->|planned produces preview intents by P11| interaction_engine
   eraser_text_request -->|planned commits through by P12| edit_kernel
   eraser_text_request -->|planned produces preview intents by P12| interaction_engine
+  eraser_text_request -->|planned context request stream by P12| api_canvas_runtime
   eraser_text_request -->|planned uses eraser exact-hit geometry through by P12| geometry_spatial_index
   flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub

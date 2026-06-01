@@ -201,6 +201,7 @@ void _testInteractionOwnerImportBoundary() {
       '../frame/frame_engine.dart',
       '../runtime/runtime_root.dart',
       '../flutter_bridge/canvas_surface.dart',
+      '../contracts/internal/command_facts_port.dart',
       'package:flutter/widgets.dart',
     ]) {
       expect(

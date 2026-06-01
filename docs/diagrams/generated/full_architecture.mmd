@@ -26,8 +26,11 @@ flowchart LR
   selection_kernel["Selection kernel<br/>required by P4"]
   store_document_kernel["Document store kernel<br/>required by P4"]
   api_canvas_runtime -->|public API forwards to by P4| runtime_view_camera
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_canvas_runtime -->|owns and creates by P4| runtime_root
+  api_canvas_runtime -->|facade stream by P10| runtime_root
   api_canvas_runtime -->|public API forwards to by P4| api_camera_port
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_public_surface -->|exports by P2| api_canvas_runtime
   api_public_surface -->|wrapper export by P6| contracts_public
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
@@ -38,6 +41,7 @@ flowchart LR
   edit_kernel -->|changes data through by P5| store_document_kernel
   eraser_text_request -->|planned commits through by P12| edit_kernel
   eraser_text_request -->|planned produces preview intents by P12| interaction_engine
+  eraser_text_request -->|planned context request stream by P12| api_canvas_runtime
   eraser_text_request -->|planned uses eraser exact-hit geometry through by P12| geometry_spatial_index
   flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session

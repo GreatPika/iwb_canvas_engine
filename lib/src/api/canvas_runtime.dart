@@ -38,14 +38,14 @@ final class CanvasRuntime {
   ValueListenable<CanvasRuntimeState> get state => _root.state;
   CanvasEditPort get edits => _root.edits;
   CanvasSelectionPort get selection => _root.selection;
-  CanvasToolPort get tools => throw UnimplementedError();
-  CanvasCommandPort get commands => throw UnimplementedError();
+  CanvasToolPort get tools => _root.toolPort();
+  CanvasCommandPort get commands => _root.commandPort();
   CanvasCameraPort get camera => _root.cameraPort();
   CanvasResourcePort get resources => _root.resources;
   CanvasPreviewState get preview => _root.preview;
   Stream<CanvasActionCommitted> get actions => _root.actions;
   Stream<CanvasContextActionRequested> get contextActionRequests =>
-      throw UnimplementedError();
+      _root.contextActionRequestStream();
   CanvasElementId generateElementId() => _root.generateElementId();
   CanvasLayerId generateLayerId() => _root.generateLayerId();
   CanvasResourceId generateResourceId() => _root.generateResourceId();

@@ -39,9 +39,9 @@ final class InteractionEngine {
   final MoveMachine _moveMachine;
   final SelectMachine _selectMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
-  final CanvasInteractionMode _mode;
-  final CanvasDrawStyle _drawStyle;
-  final CanvasPointerPolicy _pointerPolicy;
+  CanvasInteractionMode _mode;
+  CanvasDrawStyle _drawStyle;
+  CanvasPointerPolicy _pointerPolicy;
   InteractionReadPort? _readPort;
   PointerSession? _activeSession;
   CanvasPreviewState _preview = const CanvasNoPreview();
@@ -113,6 +113,42 @@ final class InteractionEngine {
 
   PointerCleanupOutcome finishMarquee(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
+  }
+
+  PointerCleanupOutcome setMode(
+    CanvasInteractionMode mode, {
+    required bool cleanupSelectionMode,
+  }) {
+    if (_mode == mode) {
+      return PointerCleanupOutcome.noChange;
+    }
+    _mode = mode;
+    _interactionRevision += 1;
+    if (cleanupSelectionMode || _activeSession != null) {
+      return _cleanupWithReason(PointerCleanupReason.modeToolChange);
+    }
+
+    return PointerCleanupOutcome.noChange;
+  }
+
+  PointerCleanupOutcome setDrawStyle(CanvasDrawStyle style) {
+    if (_drawStyle == style) {
+      return PointerCleanupOutcome.noChange;
+    }
+    _drawStyle = style;
+    _interactionRevision += 1;
+
+    return _cleanupWithReason(PointerCleanupReason.modeToolChange);
+  }
+
+  PointerCleanupOutcome setPointerPolicy(CanvasPointerPolicy policy) {
+    if (_pointerPolicy == policy) {
+      return PointerCleanupOutcome.noChange;
+    }
+    _pointerPolicy = policy;
+    _interactionRevision += 1;
+
+    return _cleanupWithReason(PointerCleanupReason.modeToolChange);
   }
 
   InteractionPointerAdmission handlePointerSample(

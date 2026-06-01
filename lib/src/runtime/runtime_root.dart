@@ -10,6 +10,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../contracts/internal/command_facts_port.dart';
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/document_facts_port.dart';
@@ -35,6 +36,8 @@ import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_surface_styles.dart';
+import '../contracts/public/canvas_tools.dart';
+import '../contracts/public/canvas_value_validators.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
@@ -52,6 +55,7 @@ import '../interaction/select_machine.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
+import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
 import 'runtime_action_finalizer.dart';
 import 'runtime_interaction_read_adapter.dart';
@@ -135,6 +139,8 @@ final class RuntimeRoot
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast();
+  final StreamController<CanvasContextActionRequested> _contextActionRequests =
+      StreamController<CanvasContextActionRequested>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
   final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
   late final InteractionReadPort _interactionReadPort =
@@ -161,6 +167,8 @@ final class RuntimeRoot
   );
   late final CanvasEditPort _editPort = _editKernel.port;
   late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
+  late final CanvasToolPort _toolPort = _RuntimeToolPort(this);
+  late final CanvasCommandPort _commandPort = _RuntimeCommandPort(this);
   late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
   late final ResourceCatalogPort _resourceCatalogPort = _StoreResourceCatalog(
     _store,
@@ -175,13 +183,29 @@ final class RuntimeRoot
     selectionFacts: _selection,
     spatialKernel: _spatial,
   );
+  late final CommandFactsPort _commandFacts = RuntimeCommandFactsAdapter(
+    frame: this,
+    selection: _selection,
+    resources: _resourceCatalogPort,
+    documentSummary: _documentSummary,
+  );
 
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
   CanvasEditPort get edits => _editPort;
   Stream<CanvasActionCommitted> get actions => _actions.stream;
+  Stream<CanvasContextActionRequested> get contextActionRequests =>
+      _contextActionRequests.stream;
   CanvasSelectionPort get selection => _selectionPort;
+  CanvasToolPort get tools => _toolPort;
+  CanvasCommandPort get commands => _commandPort;
+  CanvasToolPort toolPort() => _toolPort;
+  CanvasCommandPort commandPort() => _commandPort;
+  Stream<CanvasContextActionRequested> contextActionRequestStream() {
+    return _contextActionRequests.stream;
+  }
+
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasResourcePort get resources => _resourceKernel;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
@@ -464,6 +488,254 @@ final class RuntimeRoot
     );
   }
 
+  void moveSelection(Offset delta, {int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    validateOffset(delta, path: 'selection.move.delta');
+    if (delta == Offset.zero) {
+      return;
+    }
+    final transform = CanvasTransform.translation(delta);
+    _deliverSelectionTransform(
+      transform: transform,
+      operation: CanvasTransformOperation.move,
+      pivotWorld: null,
+      timestampMs: timestampMs,
+    );
+  }
+
+  void rotateSelectionClockwise({int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    _deliverSelectionTransformAroundCenter(
+      operation: CanvasTransformOperation.rotateClockwise,
+      localTransform: CanvasTransform.rotationDegrees(90),
+      timestampMs: timestampMs,
+    );
+  }
+
+  void rotateSelectionCounterClockwise({int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    _deliverSelectionTransformAroundCenter(
+      operation: CanvasTransformOperation.rotateCounterClockwise,
+      localTransform: CanvasTransform.rotationDegrees(-90),
+      timestampMs: timestampMs,
+    );
+  }
+
+  void flipSelectionVertical({int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    _deliverSelectionTransformAroundCenter(
+      operation: CanvasTransformOperation.flipVertical,
+      localTransform: CanvasTransform.scale(1, -1),
+      timestampMs: timestampMs,
+    );
+  }
+
+  void flipSelectionHorizontal({int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    _deliverSelectionTransformAroundCenter(
+      operation: CanvasTransformOperation.flipHorizontal,
+      localTransform: CanvasTransform.scale(-1, 1),
+      timestampMs: timestampMs,
+    );
+  }
+
+  void deleteSelection({int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    final facts = _commandFacts.selectionDeleteFacts();
+    if (facts.deletableIds.isEmpty) {
+      return;
+    }
+    final applyResult = _editKernel.prepareInteractionCommit(
+      (edit) {
+        for (final id in facts.deletableIds) {
+          edit.removeElement(id);
+        }
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        DeleteSelectionActionIntent(
+          removedElementIds: facts.deletableIds,
+          timestampHintMs: timestampMs,
+        ),
+      ]),
+    );
+    _deliverEditCommitResult(applyResult);
+  }
+
+  bool removeElementByCommand(CanvasElementId id, {int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    final facts = _commandFacts.removeElementFacts(id);
+    if (!facts.canRemove) {
+      return false;
+    }
+    var didRemove = false;
+    final applyResult = _editKernel.prepareInteractionCommit(
+      (edit) {
+        didRemove = edit.removeElement(id);
+      },
+      augmentPlan: (plan) => didRemove
+          ? plan.withActionIntents([
+              RemoveElementActionIntent(
+                elementId: id,
+                timestampHintMs: timestampMs,
+              ),
+            ])
+          : plan,
+    );
+    _deliverEditCommitResult(applyResult);
+
+    return didRemove;
+  }
+
+  CanvasClearResult clearContentByCommand({
+    required bool removeUnusedResources,
+    int? timestampMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    final facts = _commandFacts.clearContentFacts(
+      removeUnusedResources: removeUnusedResources,
+    );
+    if (facts.removableElementIds.isEmpty &&
+        facts.removableResourceIds.isEmpty) {
+      return CanvasClearResult(
+        removedElementIds: const [],
+        removedResourceIds: const [],
+        didClearContent: false,
+      );
+    }
+    late CanvasClearResult result;
+    final applyResult = _editKernel.prepareInteractionCommit(
+      (edit) {
+        result = edit.clearContent(
+          removeUnusedResources: removeUnusedResources,
+        );
+      },
+      augmentPlan: (plan) => result.removedElementIds.isNotEmpty
+          ? plan.withActionIntents([
+              ClearContentActionIntent(
+                removedElementIds: result.removedElementIds,
+                removedResourceIds: result.removedResourceIds,
+                timestampHintMs: timestampMs,
+              ),
+            ])
+          : plan,
+    );
+    _deliverEditCommitResult(applyResult);
+
+    return result;
+  }
+
+  bool commitTextEdit(
+    CanvasInteractionRequestId requestId,
+    String newText, {
+    int? timestampMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    _validateTextEditCommandInput(requestId, newText, timestampMs);
+
+    return false;
+  }
+
+  void setInteractionMode(CanvasInteractionMode mode) {
+    ensureRuntimeMutationAllowed();
+    final previousMode = _interactionEngine.mode;
+    final outcome = _interactionEngine.setMode(
+      mode,
+      cleanupSelectionMode: previousMode == CanvasInteractionMode.move,
+    );
+    final didChangeMode = previousMode != mode;
+    final didClearSelection =
+        didChangeMode &&
+        mode == CanvasInteractionMode.draw &&
+        config.clearSelectionOnDrawModeEnter &&
+        _selection.clearSelection();
+    if (didChangeMode || didClearSelection || outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void setDrawStyle(CanvasDrawStyle style) {
+    ensureRuntimeMutationAllowed();
+    final previous = _interactionEngine.drawStyle;
+    final outcome = _interactionEngine.setDrawStyle(style);
+    if (previous != style || outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void setPointerPolicy(CanvasPointerPolicy policy) {
+    ensureRuntimeMutationAllowed();
+    final previous = _interactionEngine.pointerPolicy;
+    final outcome = _interactionEngine.setPointerPolicy(policy);
+    if (previous != policy || outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void _deliverSelectionTransformAroundCenter({
+    required CanvasTransformOperation operation,
+    required CanvasTransform localTransform,
+    required int? timestampMs,
+  }) {
+    final facts = _commandFacts.selectionTransformFacts();
+    if (facts.movableElements.isEmpty || facts.selectionBoundsWorld.isEmpty) {
+      return;
+    }
+    final pivot = facts.selectionBoundsWorld.center;
+    _deliverSelectionTransform(
+      transform: _aroundPivot(localTransform, pivot),
+      operation: operation,
+      pivotWorld: pivot,
+      timestampMs: timestampMs,
+      facts: facts,
+    );
+  }
+
+  // The transform descriptor is kept explicit so move and pivoted transform
+  // actions share one delivery path without hiding action payload fields.
+  // ignore: number-of-parameters
+  void _deliverSelectionTransform({
+    required CanvasTransform transform,
+    required CanvasTransformOperation operation,
+    required Offset? pivotWorld,
+    required int? timestampMs,
+    SelectionTransformFacts? facts,
+  }) {
+    final commandFacts = facts ?? _commandFacts.selectionTransformFacts();
+    if (commandFacts.movableElements.isEmpty) {
+      return;
+    }
+    final applyResult = _editKernel.prepareInteractionCommit(
+      (edit) {
+        for (final element in commandFacts.movableElements) {
+          edit.updateElement(
+            _transformUpdate(element, transform.multiply(element.transform)),
+          );
+        }
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        if (operation == CanvasTransformOperation.move)
+          MoveSelectionActionIntent(
+            elementIds: commandFacts.movableElements.map(
+              (element) => element.id,
+            ),
+            transform: transform,
+            timestampHintMs: timestampMs,
+          )
+        else
+          TransformSelectionActionIntent(
+            elementIds: commandFacts.movableElements.map(
+              (element) => element.id,
+            ),
+            transform: transform,
+            operation: operation,
+            pivotWorld: pivotWorld as Offset,
+            timestampHintMs: timestampMs,
+          ),
+      ]),
+    );
+    _deliverEditCommitResult(applyResult);
+  }
+
   void setCameraOffset(Offset offset) {
     ensureRuntimeMutationAllowed();
     final camera = CanvasCamera(offset: offset);
@@ -528,6 +800,14 @@ final class RuntimeRoot
     }
   }
 
+  // P10 deliberately ignores the supplied target/timestamp and reports the
+  // whole double-tap path as unsupported until P12 owns context requests.
+  // ignore: avoid-unused-parameters
+  Never handleDoubleTap({required Offset position, int? timestampMs}) {
+    ensureRuntimeMutationAllowed();
+    throw UnsupportedError('P12 context action double tap is not implemented.');
+  }
+
   @visibleForTesting
   void deliverCommitPlanForTesting(
     CommitPlan plan, {
@@ -567,6 +847,7 @@ final class RuntimeRoot
     _frameEngine.dispose();
     _state.dispose();
     unawaited(_actions.close());
+    unawaited(_contextActionRequests.close());
   }
 
   @override
@@ -933,6 +1214,30 @@ final class RuntimeRoot
 
 void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
 
+void _validateTextEditCommandInput(
+  CanvasInteractionRequestId requestId,
+  String newText,
+  int? timestampMs,
+) {
+  if (timestampMs != null) {
+    validateNonNegativeInt(timestampMs, path: 'textEdit.timestampMs');
+  }
+  final normalizedRequestId = CanvasInteractionRequestId(requestId.value);
+  if (normalizedRequestId != requestId) {
+    throw StateError('CanvasInteractionRequestId normalization drifted.');
+  }
+  CanvasTextElementUpdate(
+    id: CanvasElementId('text-edit-validation-probe'),
+    text: CanvasFieldSet(newText),
+  );
+}
+
+CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
+  return CanvasTransform.translation(
+    pivot,
+  ).multiply(transform).multiply(CanvasTransform.translation(-pivot));
+}
+
 CanvasElementUpdate _transformUpdate(
   CanvasElementRead element,
   CanvasTransform transform,
@@ -1138,31 +1443,137 @@ final class _RuntimeSelectionPort implements CanvasSelectionPort {
 
   @override
   void moveSelection(Offset delta, {int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.moveSelection(delta, timestampMs: timestampMs);
   }
 
   @override
   void rotateSelectionClockwise({int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.rotateSelectionClockwise(timestampMs: timestampMs);
   }
 
   @override
   void rotateSelectionCounterClockwise({int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.rotateSelectionCounterClockwise(timestampMs: timestampMs);
   }
 
   @override
   void flipSelectionVertical({int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.flipSelectionVertical(timestampMs: timestampMs);
   }
 
   @override
   void flipSelectionHorizontal({int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.flipSelectionHorizontal(timestampMs: timestampMs);
   }
 
   @override
   void deleteSelection({int? timestampMs}) {
-    root.rejectSelectionDocumentMutation();
+    root.deleteSelection(timestampMs: timestampMs);
+  }
+}
+
+// Tool settings share one runtime-owned adapter so mode/style/policy cleanup
+// stays ordered with public state publication.
+// ignore: number-of-methods
+final class _RuntimeToolPort implements CanvasToolPort {
+  const _RuntimeToolPort(this.root);
+
+  final RuntimeRoot root;
+
+  @override
+  CanvasInteractionMode get mode => root.interactionEngine.mode;
+
+  @override
+  CanvasDrawStyle get drawStyle => root.interactionEngine.drawStyle;
+
+  @override
+  CanvasPointerPolicy get pointerPolicy => root.interactionEngine.pointerPolicy;
+
+  @override
+  void setMode(CanvasInteractionMode mode) {
+    root.setInteractionMode(mode);
+  }
+
+  @override
+  void setDrawStyle(CanvasDrawStyle style) {
+    root.setDrawStyle(style);
+  }
+
+  @override
+  void setDrawTool(CanvasDrawTool tool) {
+    final style = drawStyle;
+    root.setDrawStyle(
+      CanvasDrawStyle(
+        tool: tool,
+        color: style.color,
+        pencilThickness: style.pencilThickness,
+        markerThickness: style.markerThickness,
+        markerOpacity: style.markerOpacity,
+        lineThickness: style.lineThickness,
+        eraserThickness: style.eraserThickness,
+      ),
+    );
+  }
+
+  @override
+  void setDrawColor(Color color) {
+    final style = drawStyle;
+    root.setDrawStyle(
+      CanvasDrawStyle(
+        tool: style.tool,
+        color: color,
+        pencilThickness: style.pencilThickness,
+        markerThickness: style.markerThickness,
+        markerOpacity: style.markerOpacity,
+        lineThickness: style.lineThickness,
+        eraserThickness: style.eraserThickness,
+      ),
+    );
+  }
+
+  @override
+  void setPointerPolicy(CanvasPointerPolicy policy) {
+    root.setPointerPolicy(policy);
+  }
+
+  @override
+  void handlePointer(CanvasPointerSample sample) {
+    root.handlePointer(sample);
+  }
+
+  @override
+  void handleDoubleTap({required Offset position, int? timestampMs}) {
+    root.handleDoubleTap(position: position, timestampMs: timestampMs);
+  }
+}
+
+final class _RuntimeCommandPort implements CanvasCommandPort {
+  const _RuntimeCommandPort(this.root);
+
+  final RuntimeRoot root;
+
+  @override
+  bool removeElement(CanvasElementId id, {int? timestampMs}) {
+    return root.removeElementByCommand(id, timestampMs: timestampMs);
+  }
+
+  @override
+  bool commitTextEdit(
+    CanvasInteractionRequestId requestId,
+    String newText, {
+    int? timestampMs,
+  }) {
+    return root.commitTextEdit(requestId, newText, timestampMs: timestampMs);
+  }
+
+  @override
+  CanvasClearResult clearContent({
+    bool removeUnusedResources = false,
+    int? timestampMs,
+  }) {
+    return root.clearContentByCommand(
+      removeUnusedResources: removeUnusedResources,
+      timestampMs: timestampMs,
+    );
   }
 }

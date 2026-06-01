@@ -261,41 +261,45 @@ void _registerProductionClosureTest() {
 }
 
 void _registerP10SourceRepairInventoryTest() {
-  test('P10 source repair splits facade placeholders and diagnostics scope', () {
-    final expected = loadExpectedArchitectureGraph();
-    final placeholders = {
-      for (final placeholder in expected.placeholders)
-        placeholder.id: placeholder,
-    };
-    final edges = {for (final edge in expected.edges) edge.id: edge};
+  test(
+    'P10 source repair splits facade placeholders and diagnostics scope',
+    () {
+      final expected = loadExpectedArchitectureGraph();
+      final placeholders = {
+        for (final placeholder in expected.placeholders)
+          placeholder.id: placeholder,
+      };
+      final edges = {for (final edge in expected.edges) edge.id: edge};
 
-    expect(
-      placeholders['api.canvas_runtime.tools.future_placeholder']
-          ?.phaseRequiredBy,
-      'P10',
-    );
-    expect(
-      placeholders['api.canvas_runtime.context_action_requests.future_placeholder']
-          ?.phaseRequiredBy,
-      'P10',
-    );
-    expect(
-      placeholders['api.canvas_runtime.tools.future_placeholder']?.evidence
-          .join(' '),
-      contains('P11 owns draw behavior behind that port'),
-    );
-    expect(
-      placeholders['api.canvas_runtime.context_action_requests.future_placeholder']
-          ?.evidence
-          .join(' '),
-      contains('P12 owns request-producing context-action behavior'),
-    );
-    expect(
-      edges['geometry.spatial_index.corrupted_rows.report_to_diagnostics']
-          ?.phaseRequiredBy,
-      isNot('P10'),
-    );
-  });
+      expect(
+        placeholders,
+        isNot(contains('api.canvas_runtime.tools.future_placeholder')),
+      );
+      expect(
+        placeholders,
+        isNot(
+          contains(
+            'api.canvas_runtime.context_action_requests.future_placeholder',
+          ),
+        ),
+      );
+      expect(
+        edges['api.canvas_runtime.tools.routes_to_runtime_tools']?.evidence
+            .join(' '),
+        contains('P11 owns later draw production behavior behind the port'),
+      );
+      expect(
+        edges['eraser_text.request.produces_context_action_requests']?.evidence
+            .join(' '),
+        contains('P12 owns request-producing context-action behavior'),
+      );
+      expect(
+        edges['geometry.spatial_index.corrupted_rows.report_to_diagnostics']
+            ?.phaseRequiredBy,
+        isNot('P10'),
+      );
+    },
+  );
 }
 
 void _registerCompositionEvidenceTest() {

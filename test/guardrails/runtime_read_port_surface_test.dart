@@ -34,6 +34,7 @@ void main() {
       await _expectDocumentPortSurface(forbiddenReadPortTypes);
       await _expectFramePortSurface(forbiddenReadPortTypes);
       await _expectSelectionPortSurfaces(forbiddenReadPortTypes);
+      await _expectCommandFactsPortSurface(forbiddenReadPortTypes);
     },
   );
 
@@ -110,6 +111,41 @@ Future<void> _expectSelectionPortSurfaces(
   _expectInterface(selectionMembershipPort, 'SelectionMembershipPort');
   _expectOnlyFinalFields(selectionFactsPort, 'SelectionFacts');
   _expectFrozenCollectionFields(selectionFactsPort, 'SelectionFacts');
+}
+
+Future<void> _expectCommandFactsPortSurface(
+  Set<String> forbiddenReadPortTypes,
+) async {
+  final commandFactsPort = await _resolve(
+    'lib/src/contracts/internal/command_facts_port.dart',
+  );
+  final forbiddenCommandFactTypes = {
+    ...forbiddenReadPortTypes,
+    'InteractionReadPort',
+    'InteractionEngine',
+    'RuntimeRoot',
+    'EditKernel',
+    'DocumentStoreKernel',
+    'SelectionKernel',
+    'ResourceTable',
+    'FrameEngine',
+    'Stream',
+  };
+
+  expect(commandFactsPort.declarations, isNotEmpty);
+  _expectNoTypeReferences(commandFactsPort, forbiddenCommandFactTypes);
+  _expectInterface(commandFactsPort, 'CommandFactsPort');
+  _expectFinalClass(commandFactsPort, 'SelectionTransformFacts');
+  _expectFinalClass(commandFactsPort, 'SelectionDeleteFacts');
+  _expectFinalClass(commandFactsPort, 'RemoveElementFacts');
+  _expectFinalClass(commandFactsPort, 'ClearContentFacts');
+  _expectOnlyFinalFields(commandFactsPort, 'SelectionTransformFacts');
+  _expectOnlyFinalFields(commandFactsPort, 'SelectionDeleteFacts');
+  _expectOnlyFinalFields(commandFactsPort, 'RemoveElementFacts');
+  _expectOnlyFinalFields(commandFactsPort, 'ClearContentFacts');
+  _expectFrozenCollectionFields(commandFactsPort, 'SelectionTransformFacts');
+  _expectFrozenCollectionFields(commandFactsPort, 'SelectionDeleteFacts');
+  _expectFrozenCollectionFields(commandFactsPort, 'ClearContentFacts');
 }
 
 Future<CompilationUnit> _resolve(String path) async {

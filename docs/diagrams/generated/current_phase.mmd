@@ -22,8 +22,11 @@ flowchart LR
   selection_kernel["Selection kernel<br/>required by P4"]
   store_document_kernel["Document store kernel<br/>required by P4"]
   api_canvas_runtime -->|public API forwards to by P4| runtime_view_camera
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_canvas_runtime -->|owns and creates by P4| runtime_root
+  api_canvas_runtime -->|facade stream by P10| runtime_root
   api_canvas_runtime -->|public API forwards to by P4| api_camera_port
+  api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_public_surface -->|exports by P2| api_canvas_runtime
   api_public_surface -->|wrapper export by P6| contracts_public
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub

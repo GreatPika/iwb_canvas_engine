@@ -1,3 +1,7 @@
+// Test bodies are named helpers so DCM metrics stay on each scenario; the
+// assertions live in those helpers and DCM does not follow tear-offs.
+// ignore_for_file: missing-test-assertion
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,94 +13,221 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   test(
     'runtime action finalizer preserves public action payload matrix',
-    () async {
-      final root = RuntimeRoot(
-        initialDocument: _document(),
-        config: const CanvasRuntimeConfig(),
-      );
-      final actions = <CanvasActionCommitted>[];
-      final subscription = root.actions.listen(actions.add);
-      addTearDown(() async {
-        await subscription.cancel();
-        root.dispose();
-      });
-
-      root.deliverCommitPlanForTesting(
-        CommitPlan.replaceSelection(
-          elementIds: [CanvasElementId('b')],
-          actionIntents: _actionIntents(),
-        ),
-      );
-      await Future<void>.delayed(Duration.zero);
-
-      expect(actions, hasLength(6));
-      _expectMarquee(actions[0]);
-      _expectMove(actions[1]);
-      _expectTransform(actions[2]);
-      _expectDeleteSelection(actions[3]);
-      _expectRemoveElement(actions[4]);
-      _expectClearContent(actions[5]);
-    },
+    _runtimeActionFinalizerPreservesPublicActionPayloadMatrix,
   );
 
-  test('selected move terminal emits the public move payload shape', () async {
-    final root = RuntimeRoot(
-      initialDocument: _document(),
-      config: const CanvasRuntimeConfig(),
-    );
-    final actions = <CanvasActionCommitted>[];
-    final subscription = root.actions.listen(actions.add);
-    addTearDown(() async {
-      await subscription.cancel();
-      root.dispose();
-    });
-    root.selection.setSelection([CanvasElementId('b')]);
+  test(
+    'selected move terminal emits the public move payload shape',
+    _selectedMoveTerminalEmitsPublicMovePayloadShape,
+  );
 
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.down, const Offset(20, 0)),
-    );
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 3)),
-    );
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 3)),
-    );
-    await Future<void>.delayed(Duration.zero);
+  test(
+    'marquee terminal emits the public selection payload shape',
+    _marqueeTerminalEmitsPublicSelectionPayloadShape,
+  );
 
-    expect(actions, hasLength(1));
-    _expectMove(actions.single);
+  test(
+    'public selection and command ports emit P10 payload families',
+    _publicSelectionAndCommandPortsEmitP10PayloadFamilies,
+  );
+}
+
+Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
+  final root = RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
   });
 
-  test('marquee terminal emits the public selection payload shape', () async {
-    final root = RuntimeRoot(
-      initialDocument: _document(),
-      config: const CanvasRuntimeConfig(),
-    );
-    final actions = <CanvasActionCommitted>[];
-    final subscription = root.actions.listen(actions.add);
-    addTearDown(() async {
-      await subscription.cancel();
-      root.dispose();
-    });
-    root.selection.setSelection([CanvasElementId('a')]);
+  root.deliverCommitPlanForTesting(
+    CommitPlan.replaceSelection(
+      elementIds: [CanvasElementId('b')],
+      actionIntents: _actionIntents(),
+    ),
+  );
+  await Future<void>.delayed(Duration.zero);
 
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.down, const Offset(19, -1)),
-    );
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 2)),
-    );
-    root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 2)),
-    );
-    await Future<void>.delayed(Duration.zero);
+  expect(actions, hasLength(6));
+  _expectMarquee(actions[0]);
+  _expectMove(actions[1]);
+  _expectTransform(actions[2]);
+  _expectDeleteSelection(actions[3]);
+  _expectRemoveElement(actions[4]);
+  _expectClearContent(actions[5]);
+}
 
-    expect(actions, hasLength(1));
-    _expectMarquee(
-      actions.single,
-      marqueeRectWorld: const Rect.fromLTRB(19, -1, 22, 2),
-    );
+Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
+  final root = RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
   });
+  root.selection.setSelection([CanvasElementId('b')]);
+
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(20, 0)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 3)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 3)),
+  );
+  await Future<void>.delayed(Duration.zero);
+
+  expect(actions, hasLength(1));
+  _expectMove(actions.single);
+}
+
+// The pointer sequence and resulting payload assertion stay together to prove
+// the terminal marquee action shape from one runtime interaction.
+// ignore: halstead-volume
+Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
+  final root = RuntimeRoot(
+    initialDocument: _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+  root.selection.setSelection([CanvasElementId('a')]);
+
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(19, -1)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 2)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 2)),
+  );
+  await Future<void>.delayed(Duration.zero);
+
+  expect(actions, hasLength(1));
+  _expectMarquee(
+    actions.single,
+    marqueeRectWorld: const Rect.fromLTRB(19, -1, 22, 2),
+  );
+}
+
+Future<void> _publicSelectionAndCommandPortsEmitP10PayloadFamilies() async {
+  await _expectPublicMoveAction();
+  await _expectPublicRotateAction();
+  await _expectPublicFlipAction();
+  await _expectPublicDeleteAction();
+  await _expectSinglePublicAction((runtime) {
+    runtime.commands.removeElement(CanvasElementId('c'));
+  }, _expectRemoveElement);
+  await _expectPublicClearAction();
+}
+
+Future<void> _expectPublicMoveAction() {
+  return _expectSinglePublicAction((runtime) {
+    runtime.selection.setSelection([CanvasElementId('b')]);
+    runtime.selection.moveSelection(const Offset(2, 3));
+  }, _expectMove);
+}
+
+Future<void> _expectPublicRotateAction() {
+  return _expectSinglePublicAction(
+    (runtime) {
+      runtime.selection.setSelection([CanvasElementId('b')]);
+      runtime.selection.rotateSelectionClockwise();
+    },
+    (action) => _expectPublicTransformOperation(
+      action,
+      CanvasTransformOperation.rotateClockwise,
+    ),
+  );
+}
+
+Future<void> _expectPublicFlipAction() {
+  return _expectSinglePublicAction(
+    (runtime) {
+      runtime.selection.setSelection([CanvasElementId('b')]);
+      runtime.selection.flipSelectionVertical();
+    },
+    (action) => _expectPublicTransformOperation(
+      action,
+      CanvasTransformOperation.flipVertical,
+    ),
+  );
+}
+
+Future<void> _expectPublicDeleteAction() {
+  return _expectSinglePublicAction(
+    (runtime) {
+      runtime.selection.setSelection([CanvasElementId('b')]);
+      runtime.selection.deleteSelection();
+    },
+    (action) {
+      expect(action.type, CanvasActionType.deleteElements);
+      expect(action.elementIds, [CanvasElementId('b')]);
+      final payload = action.payload as CanvasDeleteActionPayload;
+      expect(payload.removedElementIds, [CanvasElementId('b')]);
+    },
+  );
+}
+
+Future<void> _expectPublicClearAction() {
+  return _expectSinglePublicAction(
+    (runtime) {
+      runtime.commands.clearContent(removeUnusedResources: true);
+    },
+    (action) {
+      expect(action.type, CanvasActionType.clearContent);
+      expect(action.elementIds, [
+        CanvasElementId('a'),
+        CanvasElementId('b'),
+        CanvasElementId('c'),
+      ]);
+      final payload = action.payload as CanvasClearActionPayload;
+      expect(payload.removedElementIds, action.elementIds);
+      expect(payload.removedResourceIds, [CanvasResourceId('r1')]);
+    },
+  );
+}
+
+void _expectPublicTransformOperation(
+  CanvasActionCommitted action,
+  CanvasTransformOperation operation,
+) {
+  expect(action.type, CanvasActionType.transformSelection);
+  expect(action.elementIds, [CanvasElementId('b')]);
+  final payload = action.payload as CanvasTransformActionPayload;
+  expect(payload.operation, operation);
+  expect(payload.pivotWorld, isNotNull);
+}
+
+Future<void> _expectSinglePublicAction(
+  void Function(CanvasRuntime runtime) mutate,
+  void Function(CanvasActionCommitted action) expectAction,
+) async {
+  final runtime = CanvasRuntime(initialDocument: _document());
+  final actions = <CanvasActionCommitted>[];
+  final subscription = runtime.actions.listen(actions.add);
+  try {
+    mutate(runtime);
+    await Future<void>.delayed(Duration.zero);
+    expect(actions, hasLength(1));
+    expectAction(actions.single);
+  } finally {
+    await subscription.cancel();
+    runtime.dispose();
+  }
 }
 
 List<CommitActionIntent> _actionIntents() {

@@ -656,6 +656,54 @@ edges:
         - RuntimeRoot
       delegationMembers:
         - CanvasRuntime.camera
+  - id: api.canvas_runtime.tools.routes_to_runtime_tools
+    from: api.canvas_runtime
+    to: runtime.root
+    kind: facade_port
+    phaseRequiredBy: P10
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - CanvasRuntime.tools is non-throwing in P10 for mode, draw style, pointer policy, pointer dispatch compatibility, and cleanup; P11 owns later draw production behavior behind the port.
+    actual:
+      delegationTargets:
+        - RuntimeRoot
+      delegationMembers:
+        - CanvasRuntime.tools
+  - id: api.canvas_runtime.commands.routes_to_runtime_commands
+    from: api.canvas_runtime
+    to: runtime.root
+    kind: facade_port
+    phaseRequiredBy: P10
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - CanvasRuntime.commands is non-throwing in P10 for remove, clear, and unknown text edit behavior routed through RuntimeRoot command adapters and EditKernel commits.
+    actual:
+      delegationTargets:
+        - RuntimeRoot
+      delegationMembers:
+        - CanvasRuntime.commands
+  - id: api.canvas_runtime.context_action_requests.empty_p10_stream
+    from: api.canvas_runtime
+    to: runtime.root
+    kind: facade_stream
+    phaseRequiredBy: P10
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - CanvasRuntime.contextActionRequests is a non-throwing empty broadcast stream in P10 and closes with RuntimeRoot disposal.
+    actual:
+      delegationTargets:
+        - RuntimeRoot
+      delegationMembers:
+        - CanvasRuntime.contextActionRequests
   - id: codec.schema_v1.uses_public_contracts
     from: codec.schema_v1
     to: contracts.public
@@ -927,6 +975,20 @@ edges:
     actual:
       delegationTargets:
         - InteractionEngine
+  - id: eraser_text.request.produces_context_action_requests
+    from: eraser_text.request
+    to: api.canvas_runtime
+    kind: context_request_stream
+    phaseRequiredBy: P12
+    status: future
+    sourceDocs:
+      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/contracts/interaction_engine.md
+    evidence:
+      - P12 owns request-producing context-action behavior behind the P10 non-throwing contextActionRequests stream.
+    actual:
+      delegationTargets:
+        - CanvasRuntime.contextActionRequests
   - id: flutter.surface.drives_runtime_ports
     from: flutter.surface
     to: api.canvas_runtime
@@ -953,28 +1015,6 @@ placeholders:
       - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - Closed P4 camera ownership cannot remain a public facade placeholder.
-  - id: api.canvas_runtime.tools.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.tools
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P10
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/contracts/operation_matrix.md
-    evidence:
-      - CanvasRuntime.tools must become non-throwing in P10 for mode, settings, pointer dispatch compatibility, and cleanup; P11 owns draw behavior behind that port, not the whole facade member.
-  - id: api.canvas_runtime.commands.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.commands
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P10
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/contracts/interaction_engine.md
-    evidence:
-      - Command port implementation is future interaction-command scope and must not fail P4 closure.
   - id: api.canvas_runtime.preview.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.preview
@@ -986,17 +1026,6 @@ placeholders:
       - path: docs/contracts/frame_rendering.md
     evidence:
       - CanvasRuntime.preview is implemented in P9 as a readable immutable CanvasPreviewState routed through RuntimeRoot.preview and must not return to a throwing public placeholder.
-  - id: api.canvas_runtime.context_action_requests.future_placeholder
-    node: api.canvas_runtime
-    member: CanvasRuntime.contextActionRequests
-    path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P10
-    status: deferred_until_phase
-    sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/contracts/interaction_engine.md
-    evidence:
-      - CanvasRuntime.contextActionRequests must become a non-throwing empty broadcast stream in P10; P12 owns request-producing context-action behavior behind that stream, not the whole facade member.
 forbiddenEdges:
   - id: codec.schema_v1.forbidden_runtime_dependency
     from: codec.schema_v1
@@ -1660,10 +1689,10 @@ sourceCoverage:
       - flutter.surface
       - api.canvas_runtime.exposes_camera
       - runtime.canvas_runtime.camera.closed_phase_placeholder
-      - api.canvas_runtime.tools.future_placeholder
-      - api.canvas_runtime.commands.future_placeholder
+      - api.canvas_runtime.tools.routes_to_runtime_tools
+      - api.canvas_runtime.commands.routes_to_runtime_commands
       - api.canvas_runtime.preview.future_placeholder
-      - api.canvas_runtime.context_action_requests.future_placeholder
+      - api.canvas_runtime.context_action_requests.empty_p10_stream
   - sectionId: section_05_schema_v1_contract
     disposition: graph_obligation
     graphIds:
@@ -1729,8 +1758,9 @@ sourceCoverage:
       - runtime.root.provides_interaction_read_port
       - draw.tools.produce_preview_intents_for_interaction
       - eraser_text.request.produce_preview_intents_for_interaction
-      - api.canvas_runtime.commands.future_placeholder
-      - api.canvas_runtime.context_action_requests.future_placeholder
+      - api.canvas_runtime.commands.routes_to_runtime_commands
+      - api.canvas_runtime.context_action_requests.empty_p10_stream
+      - eraser_text.request.produces_context_action_requests
   - sectionId: section_15_frame_render_contract
     disposition: graph_obligation
     graphIds:

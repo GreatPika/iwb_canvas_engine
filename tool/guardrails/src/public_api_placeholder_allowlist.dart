@@ -12,27 +12,4 @@ final class PublicApiPlaceholder {
   final String removalCondition;
 }
 
-const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.tools',
-    ownerPhase: 'P11',
-    reason: 'Tool behavior is owned by draw tools.',
-    removalCondition:
-        'Remove when CanvasToolPort is backed by tool runtime state.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.commands',
-    ownerPhase: 'P5',
-    reason: 'Command behavior depends on edit core ownership.',
-    removalCondition:
-        'Remove when CanvasCommandPort executes committed mutations.',
-  ),
-  PublicApiPlaceholder(
-    declarationId: 'CanvasRuntime.contextActionRequests',
-    ownerPhase: 'P12',
-    reason:
-        'Context action request emission is owned by text request handling.',
-    removalCondition:
-        'Remove when text request runtime behavior is implemented.',
-  ),
-];
+const publicApiPlaceholderAllowlist = <PublicApiPlaceholder>[];
