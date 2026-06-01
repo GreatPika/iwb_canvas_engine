@@ -30,7 +30,6 @@ void _testTileBudgetResult() {
     expect(budget.reason, SpatialBudgetExceededReason.queryTileBudgetExceeded);
     expect(budget.budget, kCanvasMaxQueryCells);
     expect(budget.observed, greaterThan(kCanvasMaxQueryCells));
-    expect(budget.candidates, isEmpty);
     expect(counters.queryTileBudgetExceededCount, 1);
     expect(counters.fallbackCandidateBudgetExceededCount, 0);
     expect(fallback.visited, 0);
@@ -52,7 +51,6 @@ void _testFallbackCandidateBudget() {
       budget.reason,
       SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
     );
-    expect(budget.candidates, isEmpty);
     expect(counters.queryTileBudgetExceededCount, 0);
     expect(counters.fallbackCandidateBudgetExceededCount, 1);
     expect(fallback.visited, fallback.count);
@@ -82,7 +80,8 @@ void _testOrdinaryTileQueryDoesNotUseFallback() {
         ),
       );
 
-      expect(result.candidates.map((handle) => handle.id), [
+      final candidates = (result as SpatialCandidatesResult).orderedCandidates;
+      expect(candidates.map((handle) => handle.id), [
         CanvasElementId('tile-a'),
         CanvasElementId('outlier-a'),
       ]);

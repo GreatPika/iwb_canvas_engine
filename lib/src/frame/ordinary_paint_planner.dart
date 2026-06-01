@@ -1,8 +1,8 @@
 import '../contracts/internal/frame_facts_port.dart';
 import '../geometry/geometry_policy.dart';
-import '../geometry/spatial_query_result.dart';
 import 'captured_frame.dart';
 import 'frame_cache.dart';
+import 'frame_spatial_paint_admission.dart';
 import 'paint_plan.dart';
 import 'render_element_record.dart';
 import 'render_family_caches.dart';
@@ -69,6 +69,18 @@ final class OrdinaryPaintPlanner {
   }
 
   OrdinaryPaintPlanResult buildOrdinaryPlan(CapturedMainFrame frame) {
+    final spatialAdmission = admitFrameSpatialPaint(
+      frame.snapshot.spatialPaintResult,
+    );
+    if (spatialAdmission is FrameSpatialPaintRejected) {
+      _rejectedCandidateCount += 1;
+
+      return OrdinaryPaintPlanRejected(
+        reason:
+            'spatial paint candidate admission failed: '
+            '${spatialAdmission.reason.name}',
+      );
+    }
     final admitted = _admittedOrdinaryFacts(
       frame.snapshot,
       geometryPolicy: _geometryPolicy,
@@ -78,13 +90,6 @@ final class OrdinaryPaintPlanner {
 
       return const OrdinaryPaintPlanRejected(
         reason: 'ordinary candidate admission failed',
-      );
-    }
-    if (frame.snapshot.spatialPaintResult is! SpatialCandidatesResult) {
-      _rejectedCandidateCount += 1;
-
-      return const OrdinaryPaintPlanRejected(
-        reason: 'spatial paint candidate admission failed',
       );
     }
 

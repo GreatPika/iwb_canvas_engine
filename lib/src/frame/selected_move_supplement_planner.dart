@@ -6,6 +6,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../geometry/spatial_query_policy.dart';
 import '../geometry/spatial_query_result.dart';
 import 'captured_frame.dart';
+import 'frame_spatial_paint_admission.dart';
 import 'paint_plan.dart';
 import 'render_element_record.dart';
 
@@ -135,8 +136,20 @@ final class SelectedMoveSupplementPlanner {
   }) {
     final supplement = <RenderElementRecord>[];
     var skippedStaleCount = 0;
-    final spatial = _queryPaint(_shiftedWindow(frame, delta));
-    for (final handle in spatial.candidates) {
+    final spatialAdmission = admitFrameSpatialPaint(
+      _queryPaint(_shiftedWindow(frame, delta)),
+    );
+    final spatialCandidates = switch (spatialAdmission) {
+      FrameSpatialPaintAdmitted(:final candidates) => candidates,
+      FrameSpatialPaintRejected() => const <FrameElementHandle>[],
+    };
+    if (spatialAdmission is FrameSpatialPaintRejected) {
+      return _SupplementRecords(
+        records: supplement,
+        skippedStaleCount: skippedStaleCount,
+      );
+    }
+    for (final handle in spatialCandidates) {
       if (!selectedIds.contains(handle.id)) {
         continue;
       }

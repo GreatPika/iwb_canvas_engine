@@ -5,6 +5,7 @@ import '../contracts/public/canvas_preview.dart';
 import '../geometry/spatial_query_policy.dart';
 import '../geometry/spatial_query_result.dart';
 import 'captured_frame.dart';
+import 'frame_spatial_paint_admission.dart';
 
 typedef SpatialPaintQuery = SpatialQueryResult Function(SpatialQueryWindow);
 
@@ -55,8 +56,13 @@ final class FrameCaptureService {
     final spatialResult = _queryPaint(
       _spatialWindow(inputs, structuralRevision),
     );
+    final spatialAdmission = admitFrameSpatialPaint(spatialResult);
+    final spatialCandidates = switch (spatialAdmission) {
+      FrameSpatialPaintAdmitted(:final candidates) => candidates,
+      FrameSpatialPaintRejected() => const <FrameElementHandle>[],
+    };
     final capturedHandles = _capturedHandles(
-      spatialCandidates: spatialResult.candidates,
+      spatialCandidates: spatialCandidates,
       selectedIds: selection.selectedElementIds,
       structuralRevision: structuralRevision,
     );
@@ -71,7 +77,7 @@ final class FrameCaptureService {
       selection: selection,
       inputs: inputs,
       spatialPaintResult: spatialResult,
-      spatialPaintCandidates: spatialResult.candidates,
+      spatialPaintCandidates: spatialCandidates,
     );
   }
 

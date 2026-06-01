@@ -8,8 +8,15 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 
+List<FrameElementHandle> spatialCandidates(SpatialQueryResult result) {
+  return switch (result) {
+    SpatialCandidatesResult(:final orderedCandidates) => orderedCandidates,
+    _ => fail('Expected SpatialCandidatesResult, got $result'),
+  };
+}
+
 List<CanvasElementId> spatialCandidateIds(SpatialQueryResult result) {
-  return result.candidates.map((handle) => handle.id).toList();
+  return spatialCandidates(result).map((handle) => handle.id).toList();
 }
 
 void expectMovedSpatialCandidateQueries(SpatialKernel kernel) {
@@ -135,8 +142,14 @@ void applyAndExpectSpatialClearReset(SpatialKernel kernel) {
   expect(cleared.elementHandlesCalls, 0);
   expect(kernel.snapshot.entryCount, 0);
   expect(kernel.snapshot.hitTilePageCount, 0);
-  expect(kernel.queryHit(spatialWindowNearOrigin(2)).candidates, isEmpty);
-  expect(kernel.queryPaint(spatialWindowNearOrigin(2)).candidates, isEmpty);
+  expect(
+    spatialCandidates(kernel.queryHit(spatialWindowNearOrigin(2))),
+    isEmpty,
+  );
+  expect(
+    spatialCandidates(kernel.queryPaint(spatialWindowNearOrigin(2))),
+    isEmpty,
+  );
 }
 
 void expectInvalidSpatialDeltaTriggersRebuild(SpatialKernel kernel) {
@@ -188,7 +201,9 @@ SpatialQueryWindow spatialWindowNearOrigin(int structuralRevision) {
 }
 
 Set<int> spatialCandidateRevisions(SpatialQueryResult result) {
-  return {for (final handle in result.candidates) handle.structuralRevision};
+  return {
+    for (final handle in spatialCandidates(result)) handle.structuralRevision,
+  };
 }
 
 SpatialQueryWindow spatialWindowAround(double x, int structuralRevision) {

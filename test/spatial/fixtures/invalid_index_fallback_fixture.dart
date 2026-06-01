@@ -38,7 +38,7 @@ void _testFailedUpdatePreservesEntries() {
       expect(kernel.snapshot.entryCount, before.entryCount);
       final fallback = kernel.queryPaint(spatialWindowNearOrigin(0));
       expect(fallback, isA<SpatialCandidatesResult>());
-      expect(fallback.candidates.map((handle) => handle.id), [
+      expect(spatialCandidateIds(fallback), [
         CanvasElementId('b'),
         CanvasElementId('a'),
       ]);
@@ -66,9 +66,7 @@ void _testMissingTouchedHandleRejected() {
     expect(kernel.snapshot.isInvalid, isTrue);
     final fallback = kernel.queryHit(spatialWindowNearOrigin(0));
     expect(fallback, isA<SpatialCandidatesResult>());
-    expect(fallback.candidates.map((handle) => handle.id), [
-      CanvasElementId('b'),
-    ]);
+    expect(spatialCandidateIds(fallback), [CanvasElementId('b')]);
   });
 }
 
@@ -90,7 +88,6 @@ void _testInvalidIndexBudgetExceeded() {
 
     final result = kernel.queryHit(spatialWindowNearOrigin(0));
     expect(result, isA<SpatialBudgetExceededResult>());
-    expect(result.candidates, isEmpty);
     expect(kernel.budgetCounters.fallbackCandidateBudgetExceededCount, 1);
   });
 }

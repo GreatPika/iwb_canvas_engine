@@ -99,7 +99,7 @@ void _testSpatialFailureContainment() {
       expect(root.spatialKernel.snapshot.isInvalid, isTrue);
       final result = root.spatialKernel.queryHit(_nearOrigin());
       expect(result, isA<SpatialCandidatesResult>());
-      expect(result.candidates.map((handle) => handle.id), [
+      expect(_spatialIdsFromResult(result), [
         CanvasElementId('accepted'),
         CanvasElementId('initial'),
       ]);
@@ -264,11 +264,15 @@ CanvasRectElement _rect(String id, {Offset translation = Offset.zero}) {
 }
 
 List<CanvasElementId> _spatialIds(RuntimeRoot root, SpatialQueryWindow window) {
-  return root.spatialKernel
-      .queryHit(window)
-      .candidates
-      .map((handle) => handle.id)
-      .toList();
+  return _spatialIdsFromResult(root.spatialKernel.queryHit(window));
+}
+
+List<CanvasElementId> _spatialIdsFromResult(SpatialQueryResult result) {
+  return switch (result) {
+    SpatialCandidatesResult(:final orderedCandidates) =>
+      orderedCandidates.map((handle) => handle.id).toList(),
+    _ => fail('Expected SpatialCandidatesResult, got $result'),
+  };
 }
 
 SpatialQueryWindow _nearOrigin() {

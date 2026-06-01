@@ -2,21 +2,12 @@ import '../contracts/internal/frame_facts_port.dart';
 
 sealed class SpatialQueryResult {
   const SpatialQueryResult();
-
-  bool get hasCandidates => false;
-  List<FrameElementHandle> get candidates => const [];
 }
 
 final class SpatialCandidatesResult extends SpatialQueryResult {
   const SpatialCandidatesResult({required this.orderedCandidates});
 
   final List<FrameElementHandle> orderedCandidates;
-
-  @override
-  bool get hasCandidates => orderedCandidates.isNotEmpty;
-
-  @override
-  List<FrameElementHandle> get candidates => orderedCandidates;
 }
 
 enum SpatialBudgetExceededReason {
