@@ -4,6 +4,7 @@ import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_pointer.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_tools.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:flutter_test/flutter_test.dart';

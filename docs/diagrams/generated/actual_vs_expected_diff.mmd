@@ -42,6 +42,7 @@ flowchart LR
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
+  runtime_root -->|read port adapter by P10| interaction_engine
   violation_api_canvas_runtime_commands_future_placeholder["Placeholder is overdue"]:::violation
   violation_api_canvas_runtime_commands_future_placeholder -.-> api_canvas_runtime
   violation_api_canvas_runtime_context_action_requests_future_placeholder["Placeholder is overdue"]:::violation

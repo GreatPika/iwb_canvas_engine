@@ -1,48 +1,13 @@
-import 'dart:ui';
-
 import '../contracts/internal/load_interaction_boundary.dart';
-import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
+import 'interaction_pointer_context.dart';
+import 'interaction_read_port.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
 import 'preview_state_equivalence.dart';
-
-enum InteractionPointerAdmissionKind { admitted, ignored, cleanupOnly }
-
-final class InteractionPointerAdmission {
-  const InteractionPointerAdmission({
-    required this.kind,
-    required this.sample,
-    this.cleanupDecision,
-  });
-
-  final InteractionPointerAdmissionKind kind;
-  final NormalizedPointerSample sample;
-  final InvalidTerminalCleanupDecision? cleanupDecision;
-}
-
-final class InteractionPointerContext {
-  InteractionPointerContext({
-    required this.viewCameraOffset,
-    required this.controllerEpoch,
-    Iterable<CanvasElementId> selectedIds = const [],
-    Iterable<CanvasElementId> movableIds = const [],
-    Iterable<CanvasElementId> previousSelectionIds = const [],
-    this.selectionRevision = 0,
-  }) : selectedIds = List.unmodifiable(selectedIds),
-       movableIds = List.unmodifiable(movableIds),
-       previousSelectionIds = List.unmodifiable(previousSelectionIds);
-
-  final Offset viewCameraOffset;
-  final int controllerEpoch;
-  final List<CanvasElementId> selectedIds;
-  final List<CanvasElementId> movableIds;
-  final List<CanvasElementId> previousSelectionIds;
-  final int selectionRevision;
-}
 
 // The engine deliberately keeps pointer admission state, public tool settings,
 // and session value ownership together so later tool behavior cannot split the
@@ -69,6 +34,7 @@ final class InteractionEngine {
   final CanvasInteractionMode _mode;
   final CanvasDrawStyle _drawStyle;
   final CanvasPointerPolicy _pointerPolicy;
+  InteractionReadPort? _readPort;
   PointerSession? _activeSession;
   CanvasPreviewState _preview = const CanvasNoPreview();
   int _interactionRevision = 0;
@@ -83,6 +49,22 @@ final class InteractionEngine {
   int get previewRevision => _previewRevision;
   CanvasPreviewState get preview => _preview;
   PointerSession? get activeSession => _activeSession;
+  InteractionReadPort get readPort {
+    final port = _readPort;
+    if (port == null) {
+      throw StateError('InteractionReadPort has not been attached.');
+    }
+
+    return port;
+  }
+
+  void attachReadPort(InteractionReadPort readPort) {
+    final current = _readPort;
+    if (current != null && !identical(current, readPort)) {
+      throw StateError('InteractionReadPort has already been attached.');
+    }
+    _readPort = readPort;
+  }
 
   bool replacePreview(CanvasPreviewState preview) {
     if (canvasPreviewStatesEqual(_preview, preview)) {

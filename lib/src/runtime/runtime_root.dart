@@ -39,11 +39,13 @@ import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
+import '../interaction/interaction_read_port.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import 'runtime_config.dart';
 import 'runtime_action_finalizer.dart';
+import 'runtime_interaction_read_adapter.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
@@ -108,6 +110,7 @@ final class RuntimeRoot
        _state = ValueNotifier<CanvasRuntimeState>(
          _runtimeState(store, null, const _RuntimeRevisionFacts()),
        ) {
+    _interactionEngine.attachReadPort(_interactionReadPort);
     _spatial.rebuild(this);
   }
 
@@ -125,6 +128,13 @@ final class RuntimeRoot
       StreamController<CanvasActionCommitted>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
   final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
+  late final InteractionReadPort _interactionReadPort =
+      RuntimeInteractionReadAdapter(
+        frame: this,
+        selection: _selection,
+        spatial: _spatial,
+        controllerEpoch: () => _epochRevision,
+      );
   int _viewCameraRevision = 0;
   int _epochRevision = 0;
   bool _isDisposed = false;
@@ -171,6 +181,8 @@ final class RuntimeRoot
   SelectionFacts get selectionFacts => _selection.selectionFacts;
   @visibleForTesting
   InteractionEngine get interactionEngine => _interactionEngine;
+  @visibleForTesting
+  InteractionReadPort get interactionReadPort => _interactionReadPort;
 
   DocumentFactsPort get documentFactsPort => this;
   FrameFactsPort get frameFactsPort => this;

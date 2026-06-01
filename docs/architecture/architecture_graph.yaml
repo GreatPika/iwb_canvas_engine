@@ -797,6 +797,20 @@ edges:
     actual:
       compositionFields:
         - RuntimeActionFinalizer
+  - id: runtime.root.provides_interaction_read_port
+    from: runtime.root
+    to: interaction.engine
+    kind: read_port_adapter
+    phaseRequiredBy: P10
+    status: required
+    sourceDocs:
+      - path: docs/contracts/interaction_engine.md
+      - path: docs/architecture/01_runtime_ownership.md
+    evidence:
+      - RuntimeRoot composes the runtime-local InteractionReadPort adapter so interaction receives immutable selected-move and marquee fact bundles instead of concrete store, selection, spatial, frame, resource, edit, or public stream owners.
+    actual:
+      compositionFields:
+        - InteractionReadPort
   - id: frame.renderer.uses_surface_resource_session
     from: frame.renderer
     to: resource.surface_session
@@ -1712,6 +1726,7 @@ sourceCoverage:
       - interaction.engine.queries_spatial_index
       - interaction.engine.emits_user_actions
       - runtime.root.finalizes_user_actions
+      - runtime.root.provides_interaction_read_port
       - draw.tools.produce_preview_intents_for_interaction
       - eraser_text.request.produce_preview_intents_for_interaction
       - api.canvas_runtime.commands.future_placeholder
