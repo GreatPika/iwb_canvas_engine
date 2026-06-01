@@ -33,6 +33,16 @@ final class CommitPlan {
     );
   }
 
+  CommitPlan withActionIntents(Iterable<CommitActionIntent> intents) {
+    return CommitPlan(
+      revisionDelta: revisionDelta,
+      touchedSet: touchedSet,
+      selectionEffect: selectionEffect,
+      effects: effects,
+      actionIntents: [...actionIntents, ...intents],
+    );
+  }
+
   final StoreRevisionDelta revisionDelta;
   final TouchedSet touchedSet;
   final CommitSelectionEffect? selectionEffect;

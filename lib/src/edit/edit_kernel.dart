@@ -79,6 +79,50 @@ final class EditKernel {
     }
   }
 
+  CommitDeliveryResult prepareInteractionCommit<T>(
+    T Function(CanvasEdit edit) fn, {
+    CommitPlan Function(CommitPlan plan)? augmentPlan,
+  }) {
+    _mutationGuard.ensureRuntimeMutationAllowed();
+    if (_isSessionOpen) {
+      throw StateError('CanvasRuntime edit sessions cannot be nested.');
+    }
+
+    _isSessionOpen = true;
+    final session = EditSession(
+      draft: DraftDocument(
+        _readDocument(),
+        selectedElementIds: _selectedElementIds(),
+      ),
+    );
+
+    try {
+      final result = fn(session);
+      if (result is Future<Object?>) {
+        throw StateError(
+          'CanvasRuntime edit callbacks must complete synchronously.',
+        );
+      }
+      var plan = session.commitPlan;
+      if (plan.hasChanges) {
+        plan = augmentPlan?.call(plan) ?? plan;
+        final applyResult = _installCommittedDocument(
+          session.readDraftDocument(),
+          plan,
+        );
+        session.close();
+        _isSessionOpen = false;
+
+        return applyResult;
+      }
+
+      return CommitDeliveryResult(shouldPublishState: false);
+    } finally {
+      session.close();
+      _isSessionOpen = false;
+    }
+  }
+
   void loadDocument(CanvasDocument document) {
     _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {

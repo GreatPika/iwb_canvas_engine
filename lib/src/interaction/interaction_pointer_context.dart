@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contracts/public/canvas_ids.dart';
+import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
 
 enum InteractionPointerAdmissionKind { admitted, ignored, cleanupOnly }
@@ -10,11 +11,13 @@ final class InteractionPointerAdmission {
     required this.kind,
     required this.sample,
     this.cleanupDecision,
+    this.selectedMoveCommit,
   });
 
   final InteractionPointerAdmissionKind kind;
   final NormalizedPointerSample sample;
   final InvalidTerminalCleanupDecision? cleanupDecision;
+  final SelectedMoveCommitIntent? selectedMoveCommit;
 }
 
 final class InteractionPointerContext {

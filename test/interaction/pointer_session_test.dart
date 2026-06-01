@@ -1,10 +1,9 @@
 import 'dart:ui';
 
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_pointer.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_tools.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -129,7 +128,7 @@ void _verifyAdmittedTerminalClose() {
     _context(controllerEpoch: 1),
   );
 
-  expect(terminal.kind, InteractionPointerAdmissionKind.admitted);
+  expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
   expect(engine.activeSession, isNull);
   expect(engine.interactionRevision, 2);
 }
@@ -139,7 +138,7 @@ InteractionEngine _engine() {
     initialMode: CanvasInteractionMode.move,
     initialDrawStyle: CanvasDrawStyle.defaultStyle,
     pointerPolicy: CanvasPointerPolicy.defaultPolicy,
-  );
+  )..attachReadPort(const _PointerSessionReadPort());
 }
 
 InteractionPointerContext _context({required int controllerEpoch}) {
@@ -147,6 +146,62 @@ InteractionPointerContext _context({required int controllerEpoch}) {
     viewCameraOffset: Offset.zero,
     controllerEpoch: controllerEpoch,
   );
+}
+
+final class _PointerSessionReadPort implements InteractionReadPort {
+  const _PointerSessionReadPort();
+
+  @override
+  SelectedMoveStartFacts selectedMoveStartFacts(
+    SelectedMoveStartReadRequest request,
+  ) {
+    return SelectedMoveStartFacts(
+      selectedIds: [CanvasElementId('a'), CanvasElementId('b')],
+      movableSelectedIds: [CanvasElementId('a')],
+      controllerEpoch: 1,
+      selectionRevision: 9,
+      hitSelectedMovable: true,
+    );
+  }
+
+  @override
+  SelectedMoveCommitFacts selectedMoveCommitFacts(
+    SelectedMoveCommitReadRequest request,
+  ) {
+    return SelectedMoveCommitFacts(
+      movableIds: request.sessionMovableIds,
+      movedElements: const [],
+      documentSummary: const CanvasDocumentSummary(
+        elementCount: 0,
+        layerCount: 0,
+        resourceCount: 0,
+      ),
+      selectionBoundsWorld: Rect.zero,
+      controllerEpoch: request.selectionRevision == 9 ? 1 : 2,
+      selectionRevision: request.selectionRevision,
+      hasDocumentChangesAvailable: request.sessionMovableIds.isNotEmpty,
+    );
+  }
+
+  @override
+  MarqueeStartFacts marqueeStartFacts(MarqueeStartReadRequest request) {
+    return MarqueeStartFacts(
+      previousSelectedIds: const [],
+      controllerEpoch: 1,
+      selectionRevision: 0,
+    );
+  }
+
+  @override
+  MarqueeCommitFacts marqueeCommitFacts(MarqueeCommitReadRequest request) {
+    return MarqueeCommitFacts(
+      previousSelectedIds: const [],
+      nextSelectedIds: const [],
+      controllerEpoch: 1,
+      selectionRevision: 0,
+      rectWorld: request.rectWorld,
+    );
+  }
 }
 
 CanvasPointerSample _sample(

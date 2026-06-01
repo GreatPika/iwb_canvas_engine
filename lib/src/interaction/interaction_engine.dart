@@ -1,9 +1,9 @@
-import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
+import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
@@ -21,15 +21,18 @@ final class InteractionEngine {
     required CanvasDrawStyle initialDrawStyle,
     required CanvasPointerPolicy pointerPolicy,
     PointerSampleNormalizer normalizer = const PointerSampleNormalizer(),
+    MoveMachine moveMachine = const MoveMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
   }) : _mode = initialMode,
        _drawStyle = initialDrawStyle,
        _pointerPolicy = pointerPolicy,
        _normalizer = normalizer,
+       _moveMachine = moveMachine,
        _cleanupCoordinator = cleanupCoordinator;
 
   final PointerSampleNormalizer _normalizer;
+  final MoveMachine _moveMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
   final CanvasInteractionMode _mode;
   final CanvasDrawStyle _drawStyle;
@@ -87,18 +90,20 @@ final class InteractionEngine {
     return outcome;
   }
 
-  LoadInteractionCleanupOutcome prepareLoadCleanup() {
+  PointerCleanupOutcome prepareLoadCleanup() {
     final outcome = _cleanupWithReason(
       PointerCleanupReason.preparedLoadSuccess,
     );
 
-    return LoadInteractionCleanupOutcome(
-      previewChanged: outcome.previewChanged,
-    );
+    return outcome;
   }
 
   PointerCleanupOutcome disposeCleanup() {
     return _cleanupWithReason(PointerCleanupReason.dispose);
+  }
+
+  PointerCleanupOutcome finishSelectedMove(PointerCleanupReason reason) {
+    return _cleanupWithReason(reason);
   }
 
   InteractionPointerAdmission handlePointerSample(
@@ -112,24 +117,46 @@ final class InteractionEngine {
     );
 
     return switch (sample.phase) {
-      CanvasPointerLifecyclePhase.down => _handleDown(normalized, context),
+      CanvasPointerLifecyclePhase.down => _handleDown(normalized),
       CanvasPointerLifecyclePhase.move => _handleMove(normalized),
       CanvasPointerLifecyclePhase.up ||
       CanvasPointerLifecyclePhase.cancel => _handleTerminal(normalized),
     };
   }
 
-  InteractionPointerAdmission _handleDown(
-    NormalizedPointerSample sample,
-    InteractionPointerContext context,
-  ) {
+  InteractionPointerAdmission _handleDown(NormalizedPointerSample sample) {
     if (_activeSession != null) {
       return InteractionPointerAdmission(
         kind: InteractionPointerAdmissionKind.ignored,
         sample: sample,
       );
     }
-    _activeSession = PointerSession(
+    final selection = _selectedMoveStartDecision(sample);
+    if (!selection.admitted) {
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.ignored,
+        sample: sample,
+      );
+    }
+    _activeSession = _selectedMoveSession(sample, selection);
+    replacePreview(
+      CanvasSelectedMovePreview(
+        delta: sample.worldPosition - sample.worldPosition,
+      ),
+    );
+    _interactionRevision += 1;
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+    );
+  }
+
+  PointerSession _selectedMoveSession(
+    NormalizedPointerSample sample,
+    SelectedMoveStartDecision selection,
+  ) {
+    return PointerSession(
       kind: switch (_mode) {
         CanvasInteractionMode.move => PointerSessionKind.moveModePointer,
         CanvasInteractionMode.draw => PointerSessionKind.drawModePointer,
@@ -141,17 +168,13 @@ final class InteractionEngine {
       toolMode: _mode,
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
-      capturedSelectedIds: context.selectedIds,
-      capturedMovableIds: context.movableIds,
-      previousSelectionIds: context.previousSelectionIds,
-      capturedSelectionRevision: context.selectionRevision,
-      lastPreview: const CanvasNoPreview(),
-    );
-    _interactionRevision += 1;
-
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
+      capturedSelectedIds: selection.selectedIds,
+      capturedMovableIds: selection.movableIds,
+      previousSelectionIds: selection.selectedIds,
+      capturedSelectionRevision: selection.selectionRevision,
+      lastPreview: CanvasSelectedMovePreview(
+        delta: sample.worldPosition - sample.worldPosition,
+      ),
     );
   }
 
@@ -165,7 +188,15 @@ final class InteractionEngine {
         sample: sample,
       );
     }
-    _activeSession = session.updateCurrentWorld(sample.worldPosition);
+    final updated = session.updateCurrentWorld(sample.worldPosition);
+    _activeSession = updated;
+    if (updated.kind == PointerSessionKind.moveModePointer) {
+      replacePreview(
+        _moveMachine
+            .preview(session: updated, currentWorld: sample.worldPosition)
+            .preview,
+      );
+    }
     _interactionRevision += 1;
 
     return InteractionPointerAdmission(
@@ -176,25 +207,15 @@ final class InteractionEngine {
 
   InteractionPointerAdmission _handleTerminal(NormalizedPointerSample sample) {
     final session = _activeSession;
-    final decision = _normalizer.invalidTerminalCleanupDecision(
-      activePointerId: session?.pointerId,
-      activeControllerEpoch: session?.controllerEpoch.value,
-      terminalPointerId: sample.pointerId,
-      terminalControllerEpoch: sample.controllerEpoch,
-    );
+    final decision = _terminalCleanupDecision(session, sample);
     if (decision.kind != InvalidTerminalCleanupKind.none) {
-      if (decision.shouldCleanupActiveSession) {
-        _activeSession = null;
-        _interactionRevision += 1;
-      }
-
-      return InteractionPointerAdmission(
-        kind: decision.shouldCleanupActiveSession
-            ? InteractionPointerAdmissionKind.cleanupOnly
-            : InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-        cleanupDecision: decision,
-      );
+      return _handleInvalidTerminal(sample, decision);
+    }
+    if (sample.phase == CanvasPointerLifecyclePhase.cancel) {
+      return _cleanupTerminal(sample, PointerCleanupReason.selectedMove);
+    }
+    if (session?.kind == PointerSessionKind.moveModePointer) {
+      return _handleSelectedMoveTerminal(sample, session as PointerSession);
     }
     _activeSession = null;
     _interactionRevision += 1;
@@ -202,6 +223,88 @@ final class InteractionEngine {
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
+    );
+  }
+
+  InvalidTerminalCleanupDecision _terminalCleanupDecision(
+    PointerSession? session,
+    NormalizedPointerSample sample,
+  ) {
+    return _normalizer.invalidTerminalCleanupDecision(
+      activePointerId: session?.pointerId,
+      activeControllerEpoch: session?.controllerEpoch.value,
+      terminalPointerId: sample.pointerId,
+      terminalControllerEpoch: sample.controllerEpoch,
+    );
+  }
+
+  InteractionPointerAdmission _handleInvalidTerminal(
+    NormalizedPointerSample sample,
+    InvalidTerminalCleanupDecision decision,
+  ) {
+    if (decision.shouldCleanupActiveSession) {
+      _cleanupWithReason(PointerCleanupReason.staleTerminal);
+    }
+
+    return InteractionPointerAdmission(
+      kind: decision.shouldCleanupActiveSession
+          ? InteractionPointerAdmissionKind.cleanupOnly
+          : InteractionPointerAdmissionKind.ignored,
+      sample: sample,
+      cleanupDecision: decision,
+    );
+  }
+
+  InteractionPointerAdmission _handleSelectedMoveTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+  ) {
+    final terminal = _moveMachine.terminal(
+      session: session,
+      terminalWorld: sample.worldPosition,
+      facts: readPort.selectedMoveCommitFacts(
+        SelectedMoveCommitReadRequest(
+          sessionSelectedIds: session.capturedSelectedIds,
+          sessionMovableIds: session.capturedMovableIds,
+          selectionRevision: session.capturedSelectionRevision,
+        ),
+      ),
+    );
+    final intent = terminal.intent;
+    if (intent != null) {
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.admitted,
+        sample: sample,
+        selectedMoveCommit: intent,
+      );
+    }
+
+    return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+  }
+
+  InteractionPointerAdmission _cleanupTerminal(
+    NormalizedPointerSample sample,
+    PointerCleanupReason reason,
+  ) {
+    _cleanupWithReason(reason);
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.cleanupOnly,
+      sample: sample,
+    );
+  }
+
+  SelectedMoveStartDecision _selectedMoveStartDecision(
+    NormalizedPointerSample sample,
+  ) {
+    if (_mode != CanvasInteractionMode.move) {
+      return const SelectedMoveStartDecision.rejected();
+    }
+
+    return _moveMachine.start(
+      readPort.selectedMoveStartFacts(
+        SelectedMoveStartReadRequest(worldPosition: sample.worldPosition),
+      ),
     );
   }
 

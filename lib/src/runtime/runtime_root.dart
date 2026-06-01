@@ -25,7 +25,12 @@ import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_element_update.dart';
+import '../contracts/public/canvas_field_update.dart';
+import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
@@ -39,7 +44,10 @@ import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
+import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
+import '../interaction/move_machine.dart';
+import '../interaction/pointer_tool_cleanup_coordinator.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
@@ -131,6 +139,7 @@ final class RuntimeRoot
   late final InteractionReadPort _interactionReadPort =
       RuntimeInteractionReadAdapter(
         frame: this,
+        documentSummary: _documentSummary,
         selection: _selection,
         spatial: _spatial,
         controllerEpoch: () => _epochRevision,
@@ -269,6 +278,8 @@ final class RuntimeRoot
       selectableElementIds: _store.selectableElementIds,
     );
   }
+
+  CanvasDocumentSummary _documentSummary() => _store.documentSummary;
 
   @override
   FrameRevisionFacts get frameRevisions {
@@ -487,6 +498,29 @@ final class RuntimeRoot
     return didChange;
   }
 
+  void handlePointer(CanvasPointerSample sample) {
+    ensureRuntimeMutationAllowed();
+    final admission = _interactionEngine.handlePointerSample(
+      sample,
+      InteractionPointerContext(
+        viewCameraOffset: viewCameraOffset,
+        controllerEpoch: _epochRevision,
+      ),
+    );
+    final selectedMoveCommit = admission.selectedMoveCommit;
+    if (selectedMoveCommit != null) {
+      _deliverSelectedMoveCommit(
+        selectedMoveCommit,
+        timestampHintMs: sample.timestampMs,
+      );
+
+      return;
+    }
+    if (admission.kind != InteractionPointerAdmissionKind.ignored) {
+      _publishRuntimeState();
+    }
+  }
+
   @visibleForTesting
   void deliverCommitPlanForTesting(
     CommitPlan plan, {
@@ -510,6 +544,12 @@ final class RuntimeRoot
   void dispose() {
     if (_isDisposed) {
       return;
+    }
+    _ensureNotDeliveringCommitEffects();
+    if (_isRunningResolverCallback) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
+      );
     }
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
@@ -640,8 +680,12 @@ final class RuntimeRoot
       );
     }
 
+    final outcome = _interactionEngine.prepareLoadCleanup();
+
     return _RuntimeLoadCleanupOutcome(
-      outcome: _interactionEngine.prepareLoadCleanup(),
+      outcome: LoadInteractionCleanupOutcome(
+        previewChanged: outcome.previewChanged,
+      ),
       needsRuntimeClear: false,
     );
   }
@@ -734,9 +778,153 @@ final class RuntimeRoot
       _actions.add(action);
     }
   }
+
+  void _deliverSelectedMoveCommit(
+    SelectedMoveCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    final resolver = config.moveCommitResolver;
+    final requestTimestamp = resolver == null
+        ? null
+        : _actionFinalizer.reserveTimestamp(timestampHintMs);
+    final Offset? resolvedDelta;
+    try {
+      resolvedDelta = resolver == null
+          ? intent.proposedDelta
+          : _resolveSelectedMoveDelta(
+              intent: intent,
+              timestampMs: requestTimestamp as int,
+              resolver: resolver,
+            );
+    } on Object {
+      _cleanupSelectedMove(PointerCleanupReason.resolverError);
+      rethrow;
+    }
+    if (resolvedDelta == null || resolvedDelta == Offset.zero) {
+      _cleanupSelectedMove(PointerCleanupReason.resolverCancel);
+
+      return;
+    }
+    try {
+      final applyResult = _prepareSelectedMoveCommit(
+        intent: intent,
+        delta: resolvedDelta,
+        timestampHintMs: requestTimestamp ?? timestampHintMs,
+      );
+      _cleanupSelectedMove(
+        PointerCleanupReason.postSuccessCommit,
+        publish: false,
+      );
+      _deliverEditCommitResult(applyResult);
+    } on Object {
+      _cleanupSelectedMove(PointerCleanupReason.editFailure);
+      _publishRuntimeState();
+      rethrow;
+    }
+  }
+
+  Offset? _resolveSelectedMoveDelta({
+    required SelectedMoveCommitIntent intent,
+    required int timestampMs,
+    required CanvasMoveCommitResolver resolver,
+  }) {
+    final resolution = runResolverCallback(
+      () => resolver(
+        CanvasMoveCommitRequest(
+          documentSummary: intent.documentSummary,
+          movedElements: intent.movedElements,
+          proposedDelta: intent.proposedDelta,
+          selectionBoundsWorld: intent.selectionBoundsWorld,
+          timestampMs: timestampMs,
+        ),
+      ),
+    );
+
+    return switch (resolution) {
+      CanvasMoveCommit(:final delta) => _finiteResolvedDelta(delta),
+      CanvasMoveCancel() => null,
+    };
+  }
+
+  Offset _finiteResolvedDelta(Offset delta) {
+    if (!delta.dx.isFinite || !delta.dy.isFinite) {
+      throw ArgumentError.value(delta, 'delta', 'must be finite');
+    }
+
+    return delta;
+  }
+
+  CommitDeliveryResult _prepareSelectedMoveCommit({
+    required SelectedMoveCommitIntent intent,
+    required Offset delta,
+    required int? timestampHintMs,
+  }) {
+    final transform = CanvasTransform.translation(delta);
+
+    return _editKernel.prepareInteractionCommit(
+      (edit) {
+        for (final element in intent.movedElements) {
+          edit.updateElement(
+            _transformUpdate(element, transform.multiply(element.transform)),
+          );
+        }
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        MoveSelectionActionIntent(
+          elementIds: intent.movableIds,
+          transform: transform,
+          timestampHintMs: timestampHintMs,
+        ),
+      ]),
+    );
+  }
+
+  void _cleanupSelectedMove(
+    PointerCleanupReason reason, {
+    bool publish = true,
+  }) {
+    final outcome = _interactionEngine.finishSelectedMove(reason);
+    if (publish && outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
 }
 
 void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
+
+CanvasElementUpdate _transformUpdate(
+  CanvasElementRead element,
+  CanvasTransform transform,
+) {
+  final update = CanvasFieldSet(transform);
+
+  return switch (element.kind) {
+    CanvasElementKind.image => CanvasImageElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.path => CanvasPathElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.text => CanvasTextElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.stroke => CanvasStrokeElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.line => CanvasLineElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.rect => CanvasRectElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+  };
+}
 
 List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
   return List.unmodifiable([

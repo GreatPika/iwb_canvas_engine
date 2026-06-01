@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 
 abstract interface class InteractionReadPort {
@@ -57,14 +59,21 @@ final class SelectedMoveCommitReadRequest {
 final class SelectedMoveCommitFacts {
   SelectedMoveCommitFacts({
     required Iterable<CanvasElementId> movableIds,
+    required Iterable<CanvasElementRead> movedElements,
+    required this.documentSummary,
+    required this.selectionBoundsWorld,
     required this.controllerEpoch,
     required this.selectionRevision,
     required this.hasDocumentChangesAvailable,
     Iterable<CanvasElementId> skippedSessionIds = const [],
   }) : movableIds = List.unmodifiable(movableIds),
+       movedElements = List.unmodifiable(movedElements),
        _skippedSessionIds = List.unmodifiable(skippedSessionIds);
 
   final List<CanvasElementId> movableIds;
+  final List<CanvasElementRead> movedElements;
+  final CanvasDocumentSummary documentSummary;
+  final Rect selectionBoundsWorld;
   final int controllerEpoch;
   final int selectionRevision;
   final bool hasDocumentChangesAvailable;

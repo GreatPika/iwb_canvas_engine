@@ -36,9 +36,9 @@ sequenceDiagram
   SelectionFacts-->>ReadPort: selected ids
   ReadPort->>Store: read transformable flags and document order
   Store-->>ReadPort: movable flags in document order
-  ReadPort-->>IE: selected ids and movable flags in document order
-  IE->>Spatial: hit-test down position once
-  Spatial-->>IE: top visible selectable element id
+  ReadPort->>Spatial: hit-test down position once through spatial query APIs
+  Spatial-->>ReadPort: top visible selectable element id
+  ReadPort-->>IE: selected ids, movable ids, and hit-selected fact in document order
   IE->>IE: start active selected move session
   Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and current preview delta.
   IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)

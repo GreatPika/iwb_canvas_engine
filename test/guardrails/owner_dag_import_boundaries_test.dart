@@ -272,6 +272,13 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'runtime',
     targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_interaction_move_read_models.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/geometry/hit_test_policy.dart',
     directiveKind: 'import',
@@ -323,6 +330,27 @@ const _bridgeFixtures = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_pointer_context.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/move_machine.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -489,6 +517,12 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
     targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_interaction_move_read_models.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/geometry/hit_test_policy.dart',
   ),
@@ -547,6 +581,24 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_pointer_context.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/move_machine.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',

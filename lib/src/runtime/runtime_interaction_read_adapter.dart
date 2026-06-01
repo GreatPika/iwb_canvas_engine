@@ -8,6 +8,7 @@ import '../geometry/spatial_kernel.dart';
 import '../geometry/spatial_query_policy.dart';
 import '../geometry/spatial_query_result.dart';
 import '../interaction/interaction_read_port.dart';
+import 'runtime_interaction_move_read_models.dart';
 
 // The runtime read adapter intentionally names each read collaborator so the
 // interaction owner receives one immutable fact seam without hiding ownership
@@ -16,17 +17,20 @@ import '../interaction/interaction_read_port.dart';
 final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   const RuntimeInteractionReadAdapter({
     required FrameFactsPort frame,
+    required RuntimeDocumentSummaryReader documentSummary,
     required SelectionFactsPort selection,
     required SpatialKernel spatial,
     required int Function() controllerEpoch,
     HitTestPolicy hitTestPolicy = const HitTestPolicy(),
   }) : _frame = frame,
+       _documentSummary = documentSummary,
        _selection = selection,
        _spatial = spatial,
        _controllerEpoch = controllerEpoch,
        _hitTestPolicy = hitTestPolicy;
 
   final FrameFactsPort _frame;
+  final RuntimeDocumentSummaryReader _documentSummary;
   final SelectionFactsPort _selection;
   final SpatialKernel _spatial;
   final int Function() _controllerEpoch;
@@ -75,12 +79,23 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       sessionSelectedIds.contains,
     );
     final movableIds = _movableIds(context, requestedMovableIds);
+    final moveReadModels = selectedMoveReadModels(
+      RuntimeSelectedMoveReadModelInputs(
+        frame: _frame,
+        documentSummary: _documentSummary,
+        handles: context.handles,
+        movableIds: movableIds,
+      ),
+    );
     final skippedIds = request.sessionMovableIds
         .where((id) => !movableIds.contains(id))
         .toList(growable: false);
 
     return SelectedMoveCommitFacts(
       movableIds: movableIds,
+      movedElements: moveReadModels.movedElements,
+      documentSummary: moveReadModels.documentSummary,
+      selectionBoundsWorld: moveReadModels.selectionBoundsWorld,
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
       hasDocumentChangesAvailable:

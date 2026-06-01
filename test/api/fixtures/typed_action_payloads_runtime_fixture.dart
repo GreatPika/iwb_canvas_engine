@@ -38,6 +38,34 @@ void main() {
       _expectClearContent(actions[5]);
     },
   );
+
+  test('selected move terminal emits the public move payload shape', () async {
+    final root = RuntimeRoot(
+      initialDocument: _document(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final actions = <CanvasActionCommitted>[];
+    final subscription = root.actions.listen(actions.add);
+    addTearDown(() async {
+      await subscription.cancel();
+      root.dispose();
+    });
+    root.selection.setSelection([CanvasElementId('b')]);
+
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.down, const Offset(20, 0)),
+    );
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 3)),
+    );
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 3)),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(actions, hasLength(1));
+    _expectMove(actions.single);
+  });
 }
 
 List<CommitActionIntent> _actionIntents() {
@@ -136,7 +164,11 @@ CanvasDocument _document() {
         id: CanvasLayerId('layer-1'),
         elements: [
           CanvasRectElement(id: CanvasElementId('a'), size: const Size(1, 1)),
-          CanvasRectElement(id: CanvasElementId('b'), size: const Size(1, 1)),
+          CanvasRectElement(
+            id: CanvasElementId('b'),
+            size: const Size(1, 1),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
           CanvasImageElement(
             id: CanvasElementId('c'),
             resourceId: CanvasResourceId('r1'),
@@ -145,5 +177,17 @@ CanvasDocument _document() {
         ],
       ),
     ],
+  );
+}
+
+CanvasPointerSample _pointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) {
+  return CanvasPointerSample(
+    pointerId: 1,
+    position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
   );
 }

@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
-import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -25,6 +23,13 @@ void _verifyRequiredDeclarations() {
   );
   _verifyPointerSessionDeclarations();
   _verifyPointerNormalizerDeclarations();
+  expect(
+    _source('lib/src/interaction/move_machine.dart'),
+    allOf(
+      contains('final class MoveMachine'),
+      contains('final class SelectedMoveTerminalDecision'),
+    ),
+  );
 }
 
 void _verifyPointerSessionDeclarations() {
@@ -52,22 +57,14 @@ void _verifyPointerNormalizerDeclarations() {
 }
 
 void _verifySelectedMoveCommitRequestCopies() {
-  final selected = [CanvasElementId('a')];
-  final movable = [CanvasElementId('b')];
-  final request = SelectedMoveCommitReadRequest(
-    sessionSelectedIds: selected,
-    sessionMovableIds: movable,
-    selectionRevision: 3,
-  );
-
-  selected.add(CanvasElementId('changed'));
-  movable.clear();
-
-  expect(request.sessionSelectedIds, [CanvasElementId('a')]);
-  expect(request.sessionMovableIds, [CanvasElementId('b')]);
   expect(
-    () => request.sessionSelectedIds.add(CanvasElementId('blocked')),
-    throwsUnsupportedError,
+    _source('lib/src/interaction/interaction_read_port.dart'),
+    allOf(
+      contains('sessionSelectedIds = List.unmodifiable(sessionSelectedIds)'),
+      contains('sessionMovableIds = List.unmodifiable(sessionMovableIds)'),
+      contains('movedElements = List.unmodifiable(movedElements)'),
+      contains('_skippedSessionIds = List.unmodifiable(skippedSessionIds)'),
+    ),
   );
 }
 

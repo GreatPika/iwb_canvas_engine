@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
-import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -216,24 +215,17 @@ RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
 }
 
 void _startPointerSession(RuntimeRoot root) {
-  final result = root.interactionEngine.handlePointerSample(
+  root.selection.setSelection([CanvasElementId('old')]);
+  root.handlePointer(
     CanvasPointerSample(
       pointerId: 1,
       position: Offset.zero,
       phase: CanvasPointerLifecyclePhase.down,
       kind: PointerDeviceKind.touch,
     ),
-    InteractionPointerContext(
-      viewCameraOffset: root.viewCameraOffset,
-      controllerEpoch: 1,
-      selectedIds: [CanvasElementId('old')],
-      movableIds: [CanvasElementId('old')],
-      previousSelectionIds: [CanvasElementId('old')],
-      selectionRevision: root.state.value.revisions.selection,
-    ),
   );
 
-  expect(result.kind, InteractionPointerAdmissionKind.admitted);
+  expect(root.interactionEngine.activeSession, isNotNull);
 }
 
 CanvasDocument _initialDocument() {

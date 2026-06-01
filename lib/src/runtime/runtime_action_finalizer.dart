@@ -10,6 +10,10 @@ final class RuntimeActionFinalizer {
     return List.unmodifiable(intents.map(_finalizeIntent));
   }
 
+  int reserveTimestamp(int? hint) {
+    return _resolveTimestamp(hint);
+  }
+
   CanvasActionCommitted _finalizeIntent(CommitActionIntent intent) {
     return CanvasActionCommitted(
       actionId: _nextActionId(),
