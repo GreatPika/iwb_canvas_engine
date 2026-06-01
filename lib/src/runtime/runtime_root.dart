@@ -963,35 +963,21 @@ final class RuntimeRoot
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
-    final cleanupOutcome = _prepareLoadInteractionCleanup();
+    _prepareLoadInteractionCleanup();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearForDocumentReplacement();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
-    if (cleanupOutcome.previewChanged && cleanupOutcome.needsRuntimeClear) {
-      _interactionEngine.clearPreview();
-    }
     _epochRevision += 1;
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
-  _RuntimeLoadCleanupOutcome _prepareLoadInteractionCleanup() {
+  void _prepareLoadInteractionCleanup() {
+    _interactionEngine.prepareLoadCleanup();
     final testBoundary = _loadInteractionBoundary;
     if (testBoundary != null) {
-      return _RuntimeLoadCleanupOutcome(
-        outcome: testBoundary.prepareLoadCleanup(),
-        needsRuntimeClear: true,
-      );
+      testBoundary.prepareLoadCleanup();
     }
-
-    final outcome = _interactionEngine.prepareLoadCleanup();
-
-    return _RuntimeLoadCleanupOutcome(
-      outcome: LoadInteractionCleanupOutcome(
-        previewChanged: outcome.previewChanged,
-      ),
-      needsRuntimeClear: false,
-    );
   }
 
   CommitDeliveryResult _applyEditCommit(
@@ -1354,18 +1340,6 @@ final class _RuntimeRevisionFacts {
   final int epoch;
   final int resourceVisual;
   final int interaction;
-}
-
-final class _RuntimeLoadCleanupOutcome {
-  const _RuntimeLoadCleanupOutcome({
-    required this.outcome,
-    required this.needsRuntimeClear,
-  });
-
-  final LoadInteractionCleanupOutcome outcome;
-  final bool needsRuntimeClear;
-
-  bool get previewChanged => outcome.previewChanged;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {

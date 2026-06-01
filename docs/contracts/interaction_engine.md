@@ -67,8 +67,7 @@ Required tests:
 - `test.interaction.select_machine`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
-- `test.interaction.no_stale_terminal_commit`
-- `test.interaction.pointer_cleanup_coordinator_outcomes`
+- `test.interaction.pointer_tool_cleanup_coordinator`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.diagnostics.interaction_diagnostics`

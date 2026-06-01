@@ -102,10 +102,9 @@ spatial, projection, or resource effects.
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
-- `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
 - `test.interaction.context_action_request` -> `test/interaction/context_action_request_test.dart`
 - `test.interaction.text_edit_stale_commit_guard` -> `test/interaction/text_edit_stale_commit_guard_test.dart`
-- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test.interaction.pointer_tool_cleanup_coordinator` -> `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - `geometry.eraser_exact_budget_no_partial`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`

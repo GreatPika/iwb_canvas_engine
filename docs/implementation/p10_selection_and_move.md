@@ -132,8 +132,7 @@ not own the pending line.
 - `test.interaction.select_machine` -> `test/interaction/select_machine_test.dart`
 - `test.interaction.move_resolver_reentrancy` -> `test/interaction/move_resolver_reentrancy_test.dart`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup` -> `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
-- `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
-- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test.interaction.pointer_tool_cleanup_coordinator` -> `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - `test.diagnostics.interaction_diagnostics` -> `test/diagnostics/interaction_diagnostics_test.dart`
 - `test.frame.selected_move_main_repaint` -> `test/frame/selected_move_main_repaint_test.dart`
 - `test.frame.marquee_overlay_repaint` -> `test/frame/marquee_overlay_repaint_test.dart`

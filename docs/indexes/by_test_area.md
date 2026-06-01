@@ -363,19 +363,15 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
-## test.interaction.no_stale_terminal_commit
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.interaction.pointer_cleanup_coordinator_outcomes
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
 ## test.interaction.pointer_sample_normalizer
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.interaction.pointer_session
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.pointer_tool_cleanup_coordinator
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 

@@ -6,6 +6,7 @@ import '../../tool/guardrails/src/guardrail_executor.dart';
 import '../../tool/guardrails/src/guardrail_registry.dart';
 import '../../tool/guardrails/src/guardrail_violation.dart';
 import '../../tool/guardrails/src/interaction_guardrail_checks.dart';
+import '../../tool/guardrails/src/selection_move_guardrail_suite.dart';
 import 'fixtures/runner_backed_guardrail_test_support.dart';
 
 void main() {

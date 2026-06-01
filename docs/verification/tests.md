@@ -206,8 +206,7 @@ Required tests:
 - `test.interaction.select_machine`
 - `test.interaction.move_resolver_reentrancy`
 - `test.interaction.move_resolver_not_called_on_cancel_cleanup`
-- `test.interaction.no_stale_terminal_commit`
-- `test.interaction.pointer_cleanup_coordinator_outcomes`
+- `test.interaction.pointer_tool_cleanup_coordinator`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.diagnostics.interaction_diagnostics`
 - `test.frame.selected_move_main_repaint`
@@ -362,8 +361,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/interaction/select_machine_test.dart`
 - `test/interaction/move_resolver_reentrancy_test.dart`
 - `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
-- `test/interaction/no_stale_terminal_commit_test.dart`
-- `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `test/diagnostics/interaction_diagnostics_test.dart`
 - `test/selection/runtime_owner_separation_test.dart`
@@ -732,7 +730,7 @@ behavioral tests, and the required guardrail list remains owned by
   unchanged-selection cleanup, changed-selection commit, previous/next
   selection action facts, and document-order action ids.
 
-#### `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+#### `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus
   ownership context: selected-move cleanup targets main repaint, overlay
   previews target overlay repaint, no-preview cleanup is public-state silent,

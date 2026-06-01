@@ -22,30 +22,6 @@ const interactionNoResolverOnCancelPathsGuardrailId =
     'interaction.no_resolver_on_cancel_paths';
 const interactionNoStaleTerminalCommitGuardrailId =
     'interaction.no_stale_terminal_commit';
-const eventsActionAfterStateOrderGuardrailId =
-    'events.action_after_state_order';
-const selectedMoveMainOnlyPreviewGuardrailId =
-    'preview.selected_move_main_only';
-const marqueeOverlayOnlyPreviewGuardrailId = 'preview.marquee_overlay_only';
-const toolPortCompatibilityGuardrailId = 'tools.p10_compatibility';
-
-const selectionMoveGuardrailIds = {
-  'load.prepares_before_interrupt',
-  'load.success_interrupts_before_install',
-  interactionNoConcreteStoreImportsGuardrailId,
-  interactionNoConcreteSelectionImportsGuardrailId,
-  interactionReadPortImmutableFactsGuardrailId,
-  interactionNoCommandFactsImportGuardrailId,
-  interactionCleanupCoordinatorDependencyBansGuardrailId,
-  'interaction.pointer_cleanup_coordinator_only',
-  interactionNoResolverOnCancelPathsGuardrailId,
-  interactionNoStaleTerminalCommitGuardrailId,
-  eventsActionAfterStateOrderGuardrailId,
-  'preview.selected_move_main_repaint',
-  selectedMoveMainOnlyPreviewGuardrailId,
-  marqueeOverlayOnlyPreviewGuardrailId,
-  toolPortCompatibilityGuardrailId,
-};
 
 Future<List<GuardrailViolation>> checkInteractionImportBoundaries() async {
   final violations = <GuardrailViolation>[];

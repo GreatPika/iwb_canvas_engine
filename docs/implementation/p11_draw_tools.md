@@ -95,8 +95,7 @@ non-owned pending line state remains preserved on `interactive=false`.
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
-- `test.interaction.no_stale_terminal_commit` -> `test/interaction/no_stale_terminal_commit_test.dart`
-- `test.interaction.pointer_cleanup_coordinator_outcomes` -> `test/interaction/pointer_cleanup_coordinator_outcomes_test.dart`
+- `test.interaction.pointer_tool_cleanup_coordinator` -> `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - `events.commands_emit_user_actions`
 - `api.preview_state_sealed_union_publicly_readable`
 - `interaction.no_concrete_store_imports`

@@ -90,6 +90,7 @@ final class _SuccessfulLoadOrderingScenario {
       observeEffects: (effects) =>
           _recordSuccessfulObserver(events, root, effects),
     );
+    _prepareActiveInteraction(root);
     root.state.addListener(() => _recordSuccessfulState(events, root));
 
     root.edits.loadDocument(_replacementDocument());
@@ -104,6 +105,7 @@ void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
   events.add('prepared-cleanup');
   expect(root.readDocument().layers.single.elements.single.id.value, 'old');
   expect(root.state.value.revisions.document, 0);
+  _expectInteractionAlreadyCleaned(root);
 }
 
 void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
@@ -155,6 +157,17 @@ void _expectPublishedLoadState(RuntimeRoot root) {
   expect(root.state.value.summary.elementCount, 1);
   expect(root.state.value.revisions.document, 1);
   expect(root.state.value.revisions.epoch, 1);
+  _expectInteractionAlreadyCleaned(root);
+}
+
+void _prepareActiveInteraction(RuntimeRoot root) {
+  root.replaceInteractionPreview(
+    const CanvasSelectedMovePreview(delta: Offset(2, 3)),
+  );
+}
+
+void _expectInteractionAlreadyCleaned(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
 }
 
 void _expectDeliveryGuards(RuntimeRoot root) {

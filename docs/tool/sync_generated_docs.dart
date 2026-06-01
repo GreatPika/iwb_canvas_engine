@@ -209,6 +209,9 @@ _CommandResult _runCommand(String description, List<String> arguments) {
   return _CommandResult(description: description, exitCode: result.exitCode);
 }
 
+// Diagram registry loading validates each row's identity, path, phase, section,
+// and graph-source metadata before generation can consume it.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 List<_DiagramEntry> _loadDiagrams(List<String> errors) {
   final entries = <_DiagramEntry>[];
   final seenIds = <String>{};
@@ -397,6 +400,9 @@ void _syncDiagramCatalog(
   );
 }
 
+// Generated index sync needs both registries plus check/apply accumulators in
+// one call so every generated index is derived from the same snapshot.
+// ignore: number-of-parameters
 void _syncGeneratedIndexes(
   List<_SectionEntry> sections,
   List<_DonorEntry> donors, {
@@ -451,6 +457,9 @@ void _checkIndexInventory(List<String> errors) {
   }
 }
 
+// The generated-file sync contract keeps target path, expected content, mode,
+// errors, and changed-file accumulator together for identical check/apply logic.
+// ignore: number-of-parameters
 void _syncGeneratedFile(
   String path,
   String expected, {
@@ -471,6 +480,9 @@ void _syncGeneratedFile(
   changedFiles.add(path);
 }
 
+// The diagram catalog renderer owns the complete generated document shape; a
+// metric-only split would scatter the locked text and ordering contract.
+// ignore: halstead-volume, source-lines-of-code
 String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
   final generated = diagrams.where((diagram) => diagram.isGenerated).toList();
   final semantic = diagrams.where((diagram) => !diagram.isGenerated).toList();

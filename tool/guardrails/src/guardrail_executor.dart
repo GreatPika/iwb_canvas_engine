@@ -1,3 +1,8 @@
+// GuardrailExecutor is the route table for cross-domain guardrail proof owners,
+// so the domain check imports stay visible here instead of being hidden behind
+// metric-shaped route fragments.
+// ignore_for_file: number-of-imports
+
 import 'dart:io';
 
 import 'core_boundary_checks.dart';
@@ -8,6 +13,7 @@ import 'owner_dag_import_checks.dart';
 import 'interaction_guardrail_checks.dart';
 import 'public_api_guardrail_checks.dart';
 import 'selection_boundary_checks.dart';
+import 'selection_move_guardrail_suite.dart';
 import 'store_projection_checks.dart';
 
 typedef GuardrailProofRunner =

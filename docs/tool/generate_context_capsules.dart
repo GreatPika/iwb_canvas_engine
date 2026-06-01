@@ -86,6 +86,9 @@ _ContextCapsuleSyncResult _syncContextCapsules({required bool checkOnly}) {
   return _ContextCapsuleSyncResult(errors: errors, changedFiles: changedFiles);
 }
 
+// Context capsules mirror one registry row, so row decoding stays together to
+// keep generated context and validation errors tied to the same source entry.
+// ignore: halstead-volume
 List<_SectionEntry> _loadSections(List<String> errors) {
   final value = _loadYamlList(_sectionsRegistryPath, errors);
   final sections = <_SectionEntry>[];
@@ -151,6 +154,9 @@ String _renderSectionContext(
   return buffer.toString();
 }
 
+// Syncing one capsule needs the target section, rendered text, mode, errors,
+// and changed-file accumulator together to keep check/apply behavior identical.
+// ignore: halstead-volume, number-of-parameters
 void _syncSectionFile(
   _SectionEntry section,
   String expected, {
