@@ -1,5 +1,7 @@
+import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
@@ -76,7 +78,13 @@ List<GuardrailViolation> checkPaintPlanExcludesSelectionStateSources(
   return _checkCachedPaintSurfacesExclude(
     guardrailId: framePaintPlanExcludesSelectionGuardrailId,
     sources: sources,
-    tokens: const ['selection', 'selectedElementIds', 'selectionRevision'],
+    tokens: const [
+      'selection',
+      'selectedElementIds',
+      'selectedIds',
+      'isSelected',
+      'selectionRevision',
+    ],
     message: 'ordinary paint-plan caches may not include selection state',
   );
 }
@@ -94,7 +102,7 @@ List<GuardrailViolation> _cacheKeyShapeViolations(Map<String, String> sources) {
     if (source == null) {
       continue;
     }
-    final unit = parseString(content: source, throwIfDiagnostics: false).unit;
+    final unit = _parseGuardrailUnit(source);
     for (final declaration in _cacheKeyClassDeclarations(
       unit,
       surface.className,
@@ -217,19 +225,34 @@ List<GuardrailViolation> _checkCachedPaintSurfacesExclude({
   required Iterable<String> tokens,
   required String message,
 }) {
-  return [
-    for (final surface in _cachedPaintSurfaces)
-      if (_classBody(sources[surface.path], surface.className) case final body?)
-        if (_containsAny(body, tokens))
-          GuardrailViolation(
-            guardrailId: guardrailId,
-            path: surface.path,
-            message: '$message in ${surface.className}',
-          ),
-  ];
+  final violations = <GuardrailViolation>[];
+  for (final surface in _ordinaryCachedPaintSurfaces) {
+    final source = sources[surface.path];
+    if (source == null) {
+      continue;
+    }
+    final unit = _parseGuardrailUnit(source);
+    for (final declaration in _cacheKeyClassDeclarations(
+      unit,
+      surface.className,
+    )) {
+      if (!_cacheSurfaceStoresForbiddenIdentifier(declaration, tokens)) {
+        continue;
+      }
+      violations.add(
+        GuardrailViolation(
+          guardrailId: guardrailId,
+          path: surface.path,
+          message: '$message in ${surface.className}',
+        ),
+      );
+    }
+  }
+
+  return violations;
 }
 
-const _cachedPaintSurfaces = [
+const _ordinaryCachedPaintSurfaces = [
   _CachedPaintSurface('lib/src/frame/paint_plan.dart', 'PaintPlanKey'),
   _CachedPaintSurface(
     'lib/src/frame/paint_plan.dart',
@@ -237,8 +260,36 @@ const _cachedPaintSurfaces = [
   ),
   _CachedPaintSurface('lib/src/frame/paint_plan.dart', 'PaintPlan'),
   _CachedPaintSurface(
+    'lib/src/frame/paint_plan.dart',
+    'OrdinaryPaintRecordCacheEntry',
+  ),
+  _CachedPaintSurface(
     'lib/src/frame/render_element_record.dart',
     'RenderElementRecord',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'ImageRenderRow',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'PathRenderRow',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'TextRenderRow',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'StrokeRenderRow',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'LineRenderRow',
+  ),
+  _CachedPaintSurface(
+    'lib/src/frame/render_element_record.dart',
+    'RectRenderRow',
   ),
 ];
 
@@ -339,16 +390,131 @@ bool _containsAll(String content, Iterable<String> tokens) {
   return tokens.every(content.contains);
 }
 
+CompilationUnit _parseGuardrailUnit(String source) {
+  return parseString(
+    content: source,
+    featureSet: FeatureSet.latestLanguageVersion(),
+    throwIfDiagnostics: false,
+  ).unit;
+}
+
+bool _cacheSurfaceStoresForbiddenIdentifier(
+  ClassDeclaration declaration,
+  Iterable<String> tokens,
+) {
+  final tokenSet = {for (final token in tokens) token.toLowerCase()};
+
+  return _classStoredIdentifierNames(
+    declaration,
+  ).any((identifier) => _identifierMatchesAnyToken(identifier, tokenSet));
+}
+
+Iterable<String> _classStoredIdentifierNames(
+  ClassDeclaration declaration,
+) sync* {
+  yield* _fieldStoredIdentifierNames(declaration);
+  yield* _constructorStoredIdentifierNames(declaration);
+  yield* _methodStoredIdentifierNames(declaration);
+  final visitor = _ClassIdentifierVisitor();
+  declaration.accept(visitor);
+  yield* visitor.identifiers;
+}
+
+Iterable<String> _fieldStoredIdentifierNames(
+  ClassDeclaration declaration,
+) sync* {
+  for (final member in declaration.body.members.whereType<FieldDeclaration>()) {
+    if (member.isStatic) {
+      continue;
+    }
+    yield* _identifierWords(member.fields.type?.toSource());
+    for (final variable in member.fields.variables) {
+      yield variable.name.lexeme;
+    }
+  }
+}
+
+Iterable<String> _constructorStoredIdentifierNames(
+  ClassDeclaration declaration,
+) sync* {
+  for (final constructor
+      in declaration.body.members.whereType<ConstructorDeclaration>()) {
+    for (final parameter in constructor.parameters.parameters) {
+      yield parameter.name?.lexeme ?? '';
+      yield* _identifierWords(parameter.toSource().split('=').first);
+    }
+  }
+}
+
+Iterable<String> _methodStoredIdentifierNames(
+  ClassDeclaration declaration,
+) sync* {
+  for (final method
+      in declaration.body.members.whereType<MethodDeclaration>()) {
+    if (method.isStatic) {
+      continue;
+    }
+    yield method.name.lexeme;
+    yield* _identifierWords(method.returnType?.toSource());
+    final parameters = method.parameters;
+    if (parameters == null) {
+      continue;
+    }
+    for (final parameter in parameters.parameters) {
+      yield parameter.name?.lexeme ?? '';
+      yield* _identifierWords(parameter.toSource().split('=').first);
+    }
+  }
+}
+
+Iterable<String> _identifierWords(String? source) sync* {
+  if (source == null) {
+    return;
+  }
+  for (final match in RegExp(r'\b[A-Za-z_]\w*\b').allMatches(source)) {
+    final word = match.group(0);
+    if (word != null) {
+      yield word;
+    }
+  }
+}
+
+bool _identifierMatchesAnyToken(String identifier, Set<String> tokens) {
+  final lowerIdentifier = identifier.toLowerCase();
+
+  return tokens.any(lowerIdentifier.contains);
+}
+
+final class _ClassIdentifierVisitor extends RecursiveAstVisitor<void> {
+  final Set<String> identifiers = {};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    identifiers.add(node.name);
+    super.visitSimpleIdentifier(node);
+  }
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    identifiers.add(node.value);
+    super.visitSimpleStringLiteral(node);
+  }
+}
+
 Iterable<ClassDeclaration> _cacheKeyClassDeclarations(
   CompilationUnit unit,
   String className,
 ) sync* {
   for (final declaration in unit.declarations.whereType<ClassDeclaration>()) {
-    if (declaration.namePart.typeName.lexeme != className) {
+    if (!_classDeclarationHasName(declaration, className)) {
       continue;
     }
     yield declaration;
   }
+}
+
+bool _classDeclarationHasName(ClassDeclaration declaration, String className) {
+  return declaration.namePart.typeName.lexeme == className;
 }
 
 Iterable<String> _classFieldNames(ClassDeclaration declaration) sync* {
