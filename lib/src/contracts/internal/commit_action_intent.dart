@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../public/canvas_actions.dart';
 import '../public/canvas_geometry.dart';
 import '../public/canvas_ids.dart';
+import '../public/canvas_value_validators.dart';
 
 enum CommitActionIntentKind {
   moveSelection,
@@ -14,16 +15,19 @@ enum CommitActionIntentKind {
 }
 
 sealed class CommitActionIntent {
-  const CommitActionIntent();
+  CommitActionIntent({int? timestampHintMs})
+    : timestampHintMs = _validateTimestampHint(timestampHintMs);
 
   CommitActionIntentKind get kind;
   List<CanvasElementId> get elementIds;
+  final int? timestampHintMs;
 }
 
 final class MoveSelectionActionIntent extends CommitActionIntent {
   MoveSelectionActionIntent({
     required Iterable<CanvasElementId> elementIds,
     required this.transform,
+    super.timestampHintMs,
   }) : elementIds = List.unmodifiable(elementIds);
 
   @override
@@ -41,6 +45,7 @@ final class SelectMarqueeActionIntent extends CommitActionIntent {
     required Iterable<CanvasElementId> previousSelection,
     required Iterable<CanvasElementId> nextSelection,
     required this.marqueeRectWorld,
+    super.timestampHintMs,
   }) : previousSelection = List.unmodifiable(previousSelection),
        nextSelection = List.unmodifiable(nextSelection);
 
@@ -61,6 +66,7 @@ final class TransformSelectionActionIntent extends CommitActionIntent {
     required this.transform,
     required this.operation,
     required this.pivotWorld,
+    super.timestampHintMs,
   }) : elementIds = List.unmodifiable(elementIds);
 
   @override
@@ -76,6 +82,7 @@ final class TransformSelectionActionIntent extends CommitActionIntent {
 final class DeleteSelectionActionIntent extends CommitActionIntent {
   DeleteSelectionActionIntent({
     required Iterable<CanvasElementId> removedElementIds,
+    super.timestampHintMs,
   }) : removedElementIds = List.unmodifiable(removedElementIds);
 
   @override
@@ -88,8 +95,10 @@ final class DeleteSelectionActionIntent extends CommitActionIntent {
 }
 
 final class RemoveElementActionIntent extends CommitActionIntent {
-  RemoveElementActionIntent({required CanvasElementId elementId})
-    : removedElementIds = List.unmodifiable([elementId]);
+  RemoveElementActionIntent({
+    required CanvasElementId elementId,
+    super.timestampHintMs,
+  }) : removedElementIds = List.unmodifiable([elementId]);
 
   @override
   CommitActionIntentKind get kind => CommitActionIntentKind.removeElement;
@@ -104,6 +113,7 @@ final class ClearContentActionIntent extends CommitActionIntent {
   ClearContentActionIntent({
     required Iterable<CanvasElementId> removedElementIds,
     required Iterable<CanvasResourceId> removedResourceIds,
+    super.timestampHintMs,
   }) : removedElementIds = List.unmodifiable(removedElementIds),
        removedResourceIds = List.unmodifiable(removedResourceIds);
 
@@ -115,4 +125,12 @@ final class ClearContentActionIntent extends CommitActionIntent {
 
   final List<CanvasElementId> removedElementIds;
   final List<CanvasResourceId> removedResourceIds;
+}
+
+int? _validateTimestampHint(int? timestampHintMs) {
+  if (timestampHintMs != null) {
+    validateNonNegativeInt(timestampHintMs, path: 'action.timestampMs');
+  }
+
+  return timestampHintMs;
 }

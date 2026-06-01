@@ -10,6 +10,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
@@ -42,6 +43,7 @@ import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
 import 'runtime_config.dart';
+import 'runtime_action_finalizer.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
@@ -122,6 +124,7 @@ final class RuntimeRoot
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
+  final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
   int _viewCameraRevision = 0;
   int _epochRevision = 0;
   bool _isDisposed = false;
@@ -472,6 +475,19 @@ final class RuntimeRoot
     return didChange;
   }
 
+  @visibleForTesting
+  void deliverCommitPlanForTesting(
+    CommitPlan plan, {
+    CanvasDocument? document,
+  }) {
+    ensureRuntimeMutationAllowed();
+    final applyResult = _applyEditCommit(
+      document ?? _store.readDocument(),
+      plan,
+    );
+    _deliverEditCommitResult(applyResult);
+  }
+
   Never rejectSelectionDocumentMutation() {
     ensureRuntimeMutationAllowed();
     throw UnsupportedError(
@@ -651,6 +667,7 @@ final class RuntimeRoot
           _epochRevision += 1;
         }
         _publishRuntimeState();
+        _emitActions(applyResult.actionIntents);
       }
       if (applyResult.effects.isNotEmpty) {
         _commitEffectObserver(applyResult.effects);
@@ -697,6 +714,12 @@ final class RuntimeRoot
   void _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
     for (final effect in effects.whereType<SpatialDeliveryEffect>()) {
       _spatial.applyTouched(this, effect.touchedSet);
+    }
+  }
+
+  void _emitActions(List<CommitActionIntent> intents) {
+    for (final action in _actionFinalizer.finalize(intents)) {
+      _actions.add(action);
     }
   }
 }

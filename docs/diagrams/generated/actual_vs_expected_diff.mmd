@@ -37,6 +37,7 @@ flowchart LR
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort by P9| frame_renderer
+  runtime_root -->|emits user actions by P10| api_canvas_runtime
   runtime_root -->|invalidates resource session through by P7| resource_surface_session
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel

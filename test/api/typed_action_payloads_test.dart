@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 
 import '../support/flutter_consumer_test_harness.dart';
+import '../support/flutter_in_package_test_harness.dart';
 
 void main() {
   test('typed action payloads expose their public fields', () async {
@@ -9,6 +10,15 @@ void main() {
         packageName: 'iwb_canvas_engine_typed_action_payloads_consumer',
         testFileName: 'typed_action_payloads_test.dart',
         testSource: _typedActionPayloadsSource,
+      ),
+      completes,
+    );
+  });
+
+  test('runtime action finalization preserves typed payload matrix', () {
+    return expectLater(
+      runFlutterInPackageTest(
+        'test/api/fixtures/typed_action_payloads_runtime_fixture.dart',
       ),
       completes,
     );

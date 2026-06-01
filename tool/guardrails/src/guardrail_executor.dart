@@ -239,6 +239,14 @@ const _testProofPaths = {
   'events.low_level_edit_no_user_actions': [
     'test/edit/low_level_mutations_do_not_emit_actions_test.dart',
   ],
+  'events.commands_emit_user_actions': [
+    'test/interaction/commands_emit_user_actions_test.dart',
+    'test/api/typed_action_payloads_test.dart',
+    'test/guardrails/action_after_state_guardrail_test.dart',
+  ],
+  'events.runtime_created_timestamps_monotonic': [
+    'test/api/runtime_timestamp_order_test.dart',
+  ],
   'load.prepares_before_interrupt': [
     'test/runtime/load_document_ordering_test.dart',
     'test/runtime/load_document_ordering_fixture_shape_test.dart',

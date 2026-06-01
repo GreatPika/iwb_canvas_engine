@@ -782,6 +782,21 @@ edges:
     actual:
       compositionFields:
         - ResourceSessionInvalidationSink
+  - id: runtime.root.finalizes_user_actions
+    from: runtime.root
+    to: api.canvas_runtime
+    kind: action_stream_boundary
+    phaseRequiredBy: P10
+    status: required
+    sourceDocs:
+      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/contracts/operation_matrix.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - RuntimeRoot publishes accepted public state before RuntimeActionFinalizer resolves action ids, timestamps, payloads, and emits CanvasActionCommitted events on CanvasRuntime.actions.
+    actual:
+      compositionFields:
+        - RuntimeActionFinalizer
   - id: frame.renderer.uses_surface_resource_session
     from: frame.renderer
     to: resource.surface_session
@@ -1686,6 +1701,7 @@ sourceCoverage:
       - load_document.pipeline.replaces_store_document
       - draw.tools.commit_through_edit_kernel
       - eraser_text.request.commit_through_edit_kernel
+      - runtime.root.finalizes_user_actions
       - interaction.engine.emits_user_actions
   - sectionId: section_14_interaction_engine
     disposition: graph_obligation
@@ -1695,6 +1711,7 @@ sourceCoverage:
       - eraser_text.request
       - interaction.engine.queries_spatial_index
       - interaction.engine.emits_user_actions
+      - runtime.root.finalizes_user_actions
       - draw.tools.produce_preview_intents_for_interaction
       - eraser_text.request.produce_preview_intents_for_interaction
       - api.canvas_runtime.commands.future_placeholder

@@ -165,6 +165,14 @@ const _blockingEntries = [
     suites: {'blocking', 'events'},
   ),
   GuardrailEntry(
+    id: 'events.commands_emit_user_actions',
+    suites: {'blocking', 'events'},
+  ),
+  GuardrailEntry(
+    id: 'events.runtime_created_timestamps_monotonic',
+    suites: {'blocking', 'events'},
+  ),
+  GuardrailEntry(
     id: 'load.prepares_before_interrupt',
     suites: {'blocking', 'load'},
   ),
