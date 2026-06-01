@@ -58,6 +58,9 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
     loadInteractionBoundary: const _PreviewChangedLoadBoundary(),
   );
   root.selection.setSelection([CanvasElementId('old-element')]);
+  root.replaceInteractionPreview(
+    const CanvasSelectedMovePreview(delta: Offset(2, 3)),
+  );
   final beforePreviewRevision = root.state.value.revisions.preview;
   final snapshots = <CanvasRuntimeState>[];
   root.state.addListener(() {
@@ -69,7 +72,10 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
   expect(snapshots, hasLength(1));
   final loadedState = snapshots.single;
   _expectReplacementDocumentInstalled(root);
-  _expectReplacementState(loadedState, expectedPreviewRevision: 1);
+  _expectReplacementState(
+    loadedState,
+    expectedPreviewRevision: beforePreviewRevision + 1,
+  );
   expect(loadedState.revisions.preview, beforePreviewRevision + 1);
   expect(effectBatches, hasLength(1));
   _expectLoadEffects(effectBatches.single);

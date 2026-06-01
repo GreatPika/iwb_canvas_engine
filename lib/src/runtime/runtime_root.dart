@@ -124,8 +124,6 @@ final class RuntimeRoot
       StreamController<CanvasActionCommitted>.broadcast();
   final CommitApplier _commitApplier = const CommitApplier();
   int _viewCameraRevision = 0;
-  int _previewRevision = 0;
-  CanvasPreviewState _preview = const CanvasNoPreview();
   int _epochRevision = 0;
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
@@ -165,7 +163,7 @@ final class RuntimeRoot
   CanvasCameraPort cameraPort() => _cameraPort;
   CanvasResourcePort get resources => _resourceKernel;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
-  CanvasPreviewState get preview => _preview;
+  CanvasPreviewState get preview => _interactionEngine.preview;
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
@@ -222,7 +220,7 @@ final class RuntimeRoot
       selectionStyle: selectionStyle,
       gridStyle: gridStyle,
       preview: preview,
-      previewRevision: _previewRevision,
+      previewRevision: _interactionEngine.previewRevision,
       viewCameraOffset: _viewCamera.offset,
     );
   }
@@ -455,6 +453,26 @@ final class RuntimeRoot
     setCameraOffset(_viewCamera.offset + delta);
   }
 
+  bool replaceInteractionPreview(CanvasPreviewState preview) {
+    ensureRuntimeMutationAllowed();
+    final didChange = _interactionEngine.replacePreview(preview);
+    if (didChange) {
+      _publishRuntimeState();
+    }
+
+    return didChange;
+  }
+
+  bool clearInteractionPreview() {
+    ensureRuntimeMutationAllowed();
+    final didChange = _interactionEngine.clearPreview();
+    if (didChange) {
+      _publishRuntimeState();
+    }
+
+    return didChange;
+  }
+
   Never rejectSelectionDocumentMutation() {
     ensureRuntimeMutationAllowed();
     throw UnsupportedError(
@@ -559,7 +577,7 @@ final class RuntimeRoot
       _selection.selectionFacts,
       _RuntimeRevisionFacts(
         viewCamera: _viewCameraRevision,
-        preview: _previewRevision,
+        preview: _interactionEngine.previewRevision,
         epoch: _epochRevision,
         resourceVisual: _resourceKernel.resourceVisualRevision,
         interaction: _interactionEngine.interactionRevision,
@@ -576,8 +594,7 @@ final class RuntimeRoot
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
     if (cleanupOutcome.previewChanged) {
-      _preview = const CanvasNoPreview();
-      _previewRevision += 1;
+      _interactionEngine.clearPreview();
     }
     _epochRevision += 1;
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));

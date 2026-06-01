@@ -7,6 +7,7 @@ import '../contracts/public/canvas_tools.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
+import 'preview_state_equivalence.dart';
 
 enum InteractionPointerAdmissionKind { admitted, ignored, cleanupOnly }
 
@@ -66,7 +67,9 @@ final class InteractionEngine {
   final CanvasDrawStyle _drawStyle;
   final CanvasPointerPolicy _pointerPolicy;
   PointerSession? _activeSession;
+  CanvasPreviewState _preview = const CanvasNoPreview();
   int _interactionRevision = 0;
+  int _previewRevision = 0;
   int _nextSessionId = 1;
   int _nextToken = 1;
 
@@ -74,7 +77,23 @@ final class InteractionEngine {
   CanvasDrawStyle get drawStyle => _drawStyle;
   CanvasPointerPolicy get pointerPolicy => _pointerPolicy;
   int get interactionRevision => _interactionRevision;
+  int get previewRevision => _previewRevision;
+  CanvasPreviewState get preview => _preview;
   PointerSession? get activeSession => _activeSession;
+
+  bool replacePreview(CanvasPreviewState preview) {
+    if (canvasPreviewStatesEqual(_preview, preview)) {
+      return false;
+    }
+    _preview = preview;
+    _previewRevision += 1;
+
+    return true;
+  }
+
+  bool clearPreview() {
+    return replacePreview(const CanvasNoPreview());
+  }
 
   PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
     return _cleanupCoordinator.cleanup(request);
