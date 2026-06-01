@@ -190,6 +190,7 @@ List<GuardrailViolation> _checkImport(String path, String uri) {
     ..._checkExternalPrivateImport(path, uri),
     ..._checkCodecFlutterImport(path, uri),
     ..._checkResourceFlutterImport(path, uri),
+    ..._checkInteractionFlutterImport(path, uri),
     ..._checkResourcePlatformImport(path, uri),
     ..._checkResourceNetworkImport(path, uri),
   ];
@@ -253,6 +254,23 @@ List<GuardrailViolation> _checkResourceFlutterImport(String path, String uri) {
       guardrailId: 'core.import_boundaries',
       path: path,
       message: 'resource code may not import Flutter packages',
+    ),
+  ];
+}
+
+List<GuardrailViolation> _checkInteractionFlutterImport(
+  String path,
+  String uri,
+) {
+  if (!path.startsWith('lib/src/interaction/') || !_isFlutterPackage(uri)) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message: 'interaction code may not import Flutter packages',
     ),
   ];
 }
@@ -683,12 +701,14 @@ const _boundaryRules = [
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/interaction/',
-    forbiddenTargets: ['lib/src/store/'],
-  ),
-  _BoundaryRule(
-    guardrailId: 'core.import_boundaries',
-    owner: 'lib/src/interaction/',
-    forbiddenTargets: ['lib/src/selection/'],
+    forbiddenTargets: [
+      'lib/src/store/',
+      'lib/src/selection/',
+      'lib/src/resources/',
+      'lib/src/frame/',
+      'lib/src/runtime/',
+      'lib/src/flutter_bridge/',
+    ],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',

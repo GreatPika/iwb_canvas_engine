@@ -16,6 +16,7 @@ void main() {
   _testResourcesCannotImportFlutterPackages();
   _testResourceSessionOwnerBoundaries();
   _testFrameOrSurfaceCannotOwnCanvasResourceResolverType();
+  _testInteractionOwnerImportBoundary();
 }
 
 void _testProductionBoundaries() {
@@ -187,6 +188,35 @@ void _testFrameCannotImportApiFacades() {
         ),
       ),
     );
+  });
+}
+
+void _testInteractionOwnerImportBoundary() {
+  test('interaction code cannot import concrete implementation owners', () {
+    for (final import in [
+      '../store/document_store_kernel.dart',
+      '../selection/selection_kernel.dart',
+      '../resources/resource_kernel.dart',
+      '../frame/frame_engine.dart',
+      '../runtime/runtime_root.dart',
+      '../flutter_bridge/canvas_surface.dart',
+      'package:flutter/widgets.dart',
+    ]) {
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/interaction/bad_owner_import.dart',
+          content: "import '$import';\n",
+        ),
+        contains(
+          isA<GuardrailViolation>().having(
+            (violation) => violation.guardrailId,
+            'guardrailId',
+            'core.import_boundaries',
+          ),
+        ),
+        reason: import,
+      );
+    }
   });
 }
 

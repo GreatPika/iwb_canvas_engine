@@ -401,6 +401,12 @@ const ownerDagAllowedEdges = [
   ),
   OwnerEdge(source: runtimeOwner, target: selectionOwner),
   OwnerEdge(source: runtimeOwner, target: storeOwner),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: interactionOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_engine.dart',
+  ),
   OwnerEdge(source: editOwner, target: contractsPublicOwner),
   OwnerEdge(source: editOwner, target: contractsInternalOwner),
   OwnerEdge(source: editOwner, target: storeOwner),
@@ -439,6 +445,12 @@ const ownerDagAllowedEdges = [
     target: spatialOwner,
     sourcePath: 'lib/src/frame/frame_engine.dart',
     targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
+  OwnerEdge(
+    source: frameOwner,
+    target: spatialOwner,
+    sourcePath: 'lib/src/frame/frame_spatial_paint_admission.dart',
+    targetPath: 'lib/src/geometry/spatial_query_result.dart',
   ),
   OwnerEdge(
     source: frameOwner,

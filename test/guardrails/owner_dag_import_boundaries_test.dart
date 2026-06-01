@@ -471,6 +471,12 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'selection'),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'store'),
   _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_engine.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
     sourceOwner: 'edit',
     targetOwner: 'contracts/public',
   ),
@@ -541,6 +547,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/frame/frame_engine.dart',
     targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'frame',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/frame/frame_spatial_paint_admission.dart',
+    targetPath: 'lib/src/geometry/spatial_query_result.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'frame',

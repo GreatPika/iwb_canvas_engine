@@ -37,6 +37,7 @@ import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
+import '../interaction/interaction_engine.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
@@ -98,6 +99,11 @@ final class RuntimeRoot
        _selection = SelectionKernel(
          membership: _StoreSelectionMembership(store),
        ),
+       _interactionEngine = InteractionEngine(
+         initialMode: config.initialMode,
+         initialDrawStyle: config.initialDrawStyle,
+         pointerPolicy: config.pointerPolicy,
+       ),
        _state = ValueNotifier<CanvasRuntimeState>(
          _runtimeState(store, null, const _RuntimeRevisionFacts()),
        ) {
@@ -111,6 +117,7 @@ final class RuntimeRoot
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
+  final InteractionEngine _interactionEngine;
   final SpatialKernel _spatial = SpatialKernel();
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
@@ -162,6 +169,8 @@ final class RuntimeRoot
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
+  @visibleForTesting
+  InteractionEngine get interactionEngine => _interactionEngine;
 
   DocumentFactsPort get documentFactsPort => this;
   FrameFactsPort get frameFactsPort => this;
@@ -553,6 +562,7 @@ final class RuntimeRoot
         preview: _previewRevision,
         epoch: _epochRevision,
         resourceVisual: _resourceKernel.resourceVisualRevision,
+        interaction: _interactionEngine.interactionRevision,
       ),
     );
   }
@@ -689,7 +699,7 @@ CanvasRuntimeState _runtimeState(
       preview: runtimeRevisions.preview,
       viewCamera: runtimeRevisions.viewCamera,
       resourceVisual: runtimeRevisions.resourceVisual,
-      interaction: 0,
+      interaction: runtimeRevisions.interaction,
       epoch: runtimeRevisions.epoch,
     ),
     summary: CanvasRuntimeSummary(
@@ -707,12 +717,14 @@ final class _RuntimeRevisionFacts {
     this.preview = 0,
     this.epoch = 0,
     this.resourceVisual = 0,
+    this.interaction = 0,
   });
 
   final int viewCamera;
   final int preview;
   final int epoch;
   final int resourceVisual;
+  final int interaction;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {
