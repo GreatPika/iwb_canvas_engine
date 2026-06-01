@@ -65,3 +65,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 43. P9 frame rendering and caches](plan/step_43_p9_frame_rendering_and_caches.md)
 - [x] [Step 44. Skill rule vocabulary normalization](plan/step_44_skill_rule_vocabulary_normalization.md)
 - [x] [Step 45. Skill rule proof and ownership normalization](plan/step_45_skill_rule_proof_and_ownership_normalization.md)
+- [ ] [Step 46. P9 frame rendering findings closure](plan/step_46_p9_frame_rendering_findings_closure.md)
