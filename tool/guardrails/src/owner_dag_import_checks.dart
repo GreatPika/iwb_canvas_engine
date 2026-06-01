@@ -368,6 +368,24 @@ const ownerDagAllowedEdges = [
   ),
   OwnerEdge(source: runtimeOwner, target: contractsPublicOwner),
   OwnerEdge(source: runtimeOwner, target: contractsInternalOwner),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: diagnosticsOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: diagnosticsOwner,
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostic_code.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: diagnosticsOwner,
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+  ),
   OwnerEdge(source: runtimeOwner, target: editOwner),
   OwnerEdge(
     source: runtimeOwner,
@@ -478,6 +496,12 @@ const ownerDagAllowedEdges = [
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: interactionOwner,
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/interaction/interaction_diagnostics_sink.dart',
   ),
   OwnerEdge(source: editOwner, target: contractsPublicOwner),
   OwnerEdge(source: editOwner, target: contractsInternalOwner),

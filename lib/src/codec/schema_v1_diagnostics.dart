@@ -1,4 +1,5 @@
 import '../contracts/public/canvas_errors.dart';
+import '../diagnostics/diagnostic_code.dart';
 import '../diagnostics/diagnostics_hub.dart';
 
 CanvasDataException recordSchemaV1FailureDiagnostic(
@@ -17,7 +18,7 @@ extension _SchemaV1DiagnosticsHub on DiagnosticsHub? {
 
     hub.record(
       DiagnosticEvent(
-        code: exception.code,
+        code: DiagnosticCode.data(exception.code),
         severity: DiagnosticSeverity.error,
         source: DiagnosticSource.codec,
         path: exception.path,

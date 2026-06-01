@@ -313,6 +313,27 @@ const _bridgeFixtures = [
   ),
   _OwnerDagFixture(
     sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostic_code.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
     targetOwner: 'frame',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/frame/captured_frame.dart',
@@ -372,6 +393,13 @@ const _bridgeFixtures = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/interaction/interaction_diagnostics_sink.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -566,6 +594,24 @@ const _expectedAllowedOwnerEdges = [
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostic_code.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'diagnostics',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
     targetOwner: 'resources',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/resources/resource_kernel.dart',
@@ -631,6 +677,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
+    targetPath: 'lib/src/interaction/interaction_diagnostics_sink.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'edit',

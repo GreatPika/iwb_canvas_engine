@@ -48,7 +48,7 @@ flowchart LR
   geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub
   interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
   interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
-  interaction_engine -->|planned reports errors to by P10| diagnostics_hub
+  interaction_engine -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort by P9| frame_renderer

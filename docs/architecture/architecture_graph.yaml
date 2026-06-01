@@ -226,6 +226,10 @@ nodes:
     actual:
       declarations:
         - DiagnosticsHub
+        - DiagnosticCode
+        - DiagnosticDataCode
+        - DiagnosticInteractionCode
+        - InteractionDiagnosticCode
   - id: codec.schema_v1
     label: Schema v1 codec
     kind: codec_owner
@@ -434,6 +438,7 @@ nodes:
     actual:
       declarations:
         - InteractionEngine
+        - InteractionDiagnosticsSink
         - InteractionReadPort
         - PointerSession
         - PointerSampleNormalizer
@@ -742,13 +747,21 @@ edges:
     to: diagnostics.hub
     kind: diagnostic_route
     phaseRequiredBy: P10
-    status: future
+    status: required
     sourceDocs:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/interaction_engine.md
       - path: docs/implementation/p10_selection_and_move.md
     evidence:
-      - Interaction-observed hit-test fallback, query budget, and stale candidate reliability events are planned internal diagnostics with source interaction.
+      - Interaction-observed hit-test fallback, query budget, stale candidate, stale terminal, invalid cleanup, selected-move denial, and resolver reentrancy reliability events route through an internal sink that runtime maps to DiagnosticsHub without public API exposure.
+    actual:
+      delegationMembers:
+        - InteractionEngine._recordQueryDiagnostics
+        - InteractionEngine._recordInvalidTerminalCleanup
+        - InteractionEngine._recordStaleTerminalRejected
+        - InteractionEngine._selectedMoveStartDecision
+      delegationTargets:
+        - InteractionDiagnosticsSink
   - id: geometry.spatial_index.corrupted_rows.report_to_diagnostics
     from: geometry.spatial_index
     to: diagnostics.hub

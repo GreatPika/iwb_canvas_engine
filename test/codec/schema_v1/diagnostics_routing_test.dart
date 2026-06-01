@@ -37,6 +37,7 @@ import 'package:flutter_test/flutter_test.dart';
 	import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 	import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 	import 'package:iwb_canvas_engine/src/codec/schema_v1_encoder.dart';
+	import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 	import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 
 void main() {
@@ -121,7 +122,10 @@ void main() {
     );
 
     expect(hub.recordCount, 1);
-    expect(hub.records.single.code, CanvasDataErrorCode.fieldMustBeFinite);
+    expect(
+      hub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.fieldMustBeFinite),
+    );
     expect(hub.records.single.path, 'camera.offset.dx');
   });
 
@@ -154,7 +158,10 @@ void main() {
     );
 
     expect(hub.recordCount, 1);
-    expect(hub.records.single.code, CanvasDataErrorCode.fieldMustNotBeEmpty);
+    expect(
+      hub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.fieldMustNotBeEmpty),
+    );
     expect(hub.records.single.path, 'resource.id');
   });
 
@@ -184,7 +191,7 @@ void main() {
     expect(emptyHub.recordCount, 1);
     expect(
       emptyHub.records.single.code,
-      CanvasDataErrorCode.fieldMustNotBeEmpty,
+      DiagnosticCode.data(CanvasDataErrorCode.fieldMustNotBeEmpty),
     );
     expect(emptyHub.records.single.path, 'resource.source.key');
 
@@ -204,7 +211,10 @@ void main() {
       ),
     );
     expect(controlHub.recordCount, 1);
-    expect(controlHub.records.single.code, CanvasDataErrorCode.invalidFieldType);
+    expect(
+      controlHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType),
+    );
     expect(controlHub.records.single.path, 'resource.source.key');
   });
 
@@ -237,7 +247,10 @@ void main() {
     );
 
     expect(hub.recordCount, 1);
-    expect(hub.records.single.code, CanvasDataErrorCode.duplicateResourceId);
+    expect(
+      hub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.duplicateResourceId),
+    );
     expect(hub.records.single.path, 'resources.id');
   });
 
@@ -313,7 +326,7 @@ void _expectCodecFailureRecord(
 }) {
   expect(record.source, DiagnosticSource.codec);
   expect(record.severity, DiagnosticSeverity.error);
-  expect(record.code, CanvasDataErrorCode.invalidFieldType);
+  expect(record.code, DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType));
   expect(record.path, 'resource.kind');
   expect(record.details['message'], message);
 }

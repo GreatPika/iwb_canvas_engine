@@ -23,6 +23,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 
 void main() {
@@ -34,7 +35,7 @@ void main() {
     );
 
     hub.record(DiagnosticEvent(
-      code: CanvasDataErrorCode.invalidJson,
+      code: DiagnosticCode.data(CanvasDataErrorCode.invalidJson),
       severity: DiagnosticSeverity.info,
       source: DiagnosticSource.codec,
       path: r'$.schemaVersion',
@@ -59,7 +60,7 @@ void main() {
     );
 
     hub.record(DiagnosticEvent(
-      code: CanvasDataErrorCode.invalidJson,
+      code: DiagnosticCode.data(CanvasDataErrorCode.invalidJson),
       severity: DiagnosticSeverity.warning,
       source: DiagnosticSource.codec,
       details: () {

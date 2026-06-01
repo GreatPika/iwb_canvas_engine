@@ -38,6 +38,7 @@ import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../contracts/public/canvas_tools.dart';
 import '../contracts/public/canvas_value_validators.dart';
+import '../diagnostics/diagnostics_hub.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
@@ -58,6 +59,7 @@ import '../store/document_store_kernel.dart';
 import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
 import 'runtime_action_finalizer.dart';
+import 'runtime_interaction_diagnostics_adapter.dart';
 import 'runtime_interaction_read_adapter.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
@@ -76,6 +78,7 @@ final class RuntimeRoot
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
+         diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: null,
          initialViewCamera: initialDocument.camera,
@@ -91,6 +94,7 @@ final class RuntimeRoot
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
+         diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: loadInteractionBoundary,
          initialViewCamera: initialDocument.camera,
@@ -100,11 +104,13 @@ final class RuntimeRoot
   RuntimeRoot._({
     required DocumentStoreKernel store,
     required this.config,
+    required DiagnosticsHub? diagnostics,
     required CanvasDiagnosticPolicy diagnosticPolicy,
     required LoadInteractionBoundary? loadInteractionBoundary,
     required CanvasCamera initialViewCamera,
     required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
+       _diagnostics = diagnostics,
        _viewCamera = initialViewCamera,
        _loadInteractionBoundary = loadInteractionBoundary,
        _loadPipeline = LoadDocumentPipeline(
@@ -119,6 +125,7 @@ final class RuntimeRoot
          initialMode: config.initialMode,
          initialDrawStyle: config.initialDrawStyle,
          pointerPolicy: config.pointerPolicy,
+         diagnosticsSink: RuntimeInteractionDiagnosticsAdapter(diagnostics),
        ),
        _state = ValueNotifier<CanvasRuntimeState>(
          _runtimeState(store, null, const _RuntimeRevisionFacts()),
@@ -129,6 +136,7 @@ final class RuntimeRoot
 
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
+  final DiagnosticsHub? _diagnostics;
   CanvasCamera _viewCamera;
   final LoadInteractionBoundary? _loadInteractionBoundary;
   final LoadDocumentPipeline _loadPipeline;
@@ -217,6 +225,10 @@ final class RuntimeRoot
   InteractionEngine get interactionEngine => _interactionEngine;
   @visibleForTesting
   InteractionReadPort get interactionReadPort => _interactionReadPort;
+  @visibleForTesting
+  List<DiagnosticRecord> get diagnosticRecords {
+    return _diagnostics?.records ?? const [];
+  }
 
   DocumentFactsPort get documentFactsPort => this;
   FrameFactsPort get frameFactsPort => this;
@@ -834,6 +846,7 @@ final class RuntimeRoot
     }
     _ensureNotDeliveringCommitEffects();
     if (_isRunningResolverCallback) {
+      _recordResolverReentrantMutationRejected('dispose');
       throw StateError(
         'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
       );
@@ -869,6 +882,7 @@ final class RuntimeRoot
     _ensureNotDisposed();
     _ensureNoActiveEditSession();
     if (_isRunningResolverCallback) {
+      _recordResolverReentrantMutationRejected('runtimeMutation');
       throw StateError(
         'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
       );
@@ -921,6 +935,12 @@ final class RuntimeRoot
         'CanvasRuntime public mutations cannot run during post-commit effect delivery.',
       );
     }
+  }
+
+  void _recordResolverReentrantMutationRejected(String operation) {
+    RuntimeInteractionDiagnosticsAdapter(
+      _diagnostics,
+    ).recordResolverReentrantMutationRejected(operation: operation);
   }
 
   void _publishSelectionChange(bool didChange) {

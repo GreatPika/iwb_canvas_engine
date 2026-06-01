@@ -298,6 +298,17 @@ void _registerP10SourceRepairInventoryTest() {
             ?.phaseRequiredBy,
         isNot('P10'),
       );
+      expect(
+        edges['interaction.engine.reliability_events.report_to_diagnostics']
+            ?.status,
+        'required',
+      );
+      expect(
+        edges['interaction.engine.reliability_events.report_to_diagnostics']
+            ?.actual
+            .delegationTargets,
+        contains('InteractionDiagnosticsSink'),
+      );
     },
   );
 }

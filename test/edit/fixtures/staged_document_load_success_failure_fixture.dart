@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/edit/staged_document_load.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
@@ -107,7 +108,7 @@ void _expectDiagnosticsRouting() {
   expect(enabled.diagnosticRecordCount, 1);
   expect(
     enabled.diagnosticRecords.single.code,
-    CanvasDataErrorCode.duplicateResourceId,
+    const DiagnosticCode.data(CanvasDataErrorCode.duplicateResourceId),
   );
 
   DiagnosticRecord.allocations.reset();

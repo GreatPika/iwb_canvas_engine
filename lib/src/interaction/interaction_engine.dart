@@ -1,6 +1,7 @@
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
+import 'interaction_diagnostics_sink.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
 import 'move_machine.dart';
@@ -27,18 +28,22 @@ final class InteractionEngine {
     SelectMachine selectMachine = const SelectMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
+    InteractionDiagnosticsSink diagnosticsSink =
+        const NoopInteractionDiagnosticsSink(),
   }) : _mode = initialMode,
        _drawStyle = initialDrawStyle,
        _pointerPolicy = pointerPolicy,
        _normalizer = normalizer,
        _moveMachine = moveMachine,
        _selectMachine = selectMachine,
-       _cleanupCoordinator = cleanupCoordinator;
+       _cleanupCoordinator = cleanupCoordinator,
+       _diagnosticsSink = diagnosticsSink;
 
   final PointerSampleNormalizer _normalizer;
   final MoveMachine _moveMachine;
   final SelectMachine _selectMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
+  final InteractionDiagnosticsSink _diagnosticsSink;
   CanvasInteractionMode _mode;
   CanvasDrawStyle _drawStyle;
   CanvasPointerPolicy _pointerPolicy;
@@ -346,7 +351,9 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     InvalidTerminalCleanupDecision decision,
   ) {
+    _recordInvalidTerminalCleanup(decision);
     if (decision.shouldCleanupActiveSession) {
+      _recordStaleTerminalRejected(decision);
       _cleanupWithReason(PointerCleanupReason.staleTerminal);
     }
 
@@ -363,16 +370,25 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     PointerSession session,
   ) {
+    final facts = readPort.selectedMoveCommitFacts(
+      SelectedMoveCommitReadRequest(
+        sessionSelectedIds: session.capturedSelectedIds,
+        sessionMovableIds: session.capturedMovableIds,
+        selectionRevision: session.capturedSelectionRevision,
+      ),
+    );
+    if (facts.skippedSessionIds.isNotEmpty) {
+      _diagnosticsSink.recordStaleCandidateRejected(
+        reason: 'staleSessionSelection',
+        expectedRevision: session.capturedSelectionRevision,
+        observedRevision: facts.selectionRevision,
+        skippedCandidateCount: facts.skippedSessionIds.length,
+      );
+    }
     final terminal = _moveMachine.terminal(
       session: session,
       terminalWorld: sample.worldPosition,
-      facts: readPort.selectedMoveCommitFacts(
-        SelectedMoveCommitReadRequest(
-          sessionSelectedIds: session.capturedSelectedIds,
-          sessionMovableIds: session.capturedMovableIds,
-          selectionRevision: session.capturedSelectionRevision,
-        ),
-      ),
+      facts: facts,
     );
     final intent = terminal.intent;
     if (intent != null) {
@@ -390,16 +406,15 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     PointerSession session,
   ) {
-    final terminal = _selectMachine.terminal(
-      session: session,
-      facts: readPort.marqueeCommitFacts(
-        MarqueeCommitReadRequest(
-          rectWorld: _selectMachine
-              .preview(session: session, currentWorld: sample.worldPosition)
-              .rectWorld,
-        ),
+    final facts = readPort.marqueeCommitFacts(
+      MarqueeCommitReadRequest(
+        rectWorld: _selectMachine
+            .preview(session: session, currentWorld: sample.worldPosition)
+            .rectWorld,
       ),
     );
+    _recordQueryDiagnostics(facts.query);
+    final terminal = _selectMachine.terminal(session: session, facts: facts);
     final intent = terminal.intent;
     if (intent != null) {
       return InteractionPointerAdmission(
@@ -431,11 +446,21 @@ final class InteractionEngine {
       return const SelectedMoveStartDecision.rejected();
     }
 
-    return _moveMachine.start(
-      readPort.selectedMoveStartFacts(
-        SelectedMoveStartReadRequest(worldPosition: sample.worldPosition),
-      ),
+    final facts = readPort.selectedMoveStartFacts(
+      SelectedMoveStartReadRequest(worldPosition: sample.worldPosition),
     );
+    _recordQueryDiagnostics(facts.query);
+    final decision = _moveMachine.start(facts);
+    if (!decision.admitted &&
+        facts.selectedIds.isNotEmpty &&
+        facts.movableSelectedIds.isEmpty) {
+      _diagnosticsSink.recordSelectedMoveStartDeniedNotMovable(
+        selectedCount: facts.selectedIds.length,
+        movableCount: facts.movableSelectedIds.length,
+      );
+    }
+
+    return decision;
   }
 
   PointerCleanupOutcome _cleanupWithReason(PointerCleanupReason reason) {
@@ -459,6 +484,77 @@ final class InteractionEngine {
       _interactionRevision += 1;
     }
   }
+
+  void _recordQueryDiagnostics(InteractionReadQueryFacts query) {
+    switch (query.status) {
+      case InteractionReadQueryStatus.notRun:
+      case InteractionReadQueryStatus.invalidIndex:
+        return;
+      case InteractionReadQueryStatus.candidates:
+        if (query.skippedCandidateCount > 0) {
+          _diagnosticsSink.recordStaleCandidateRejected(
+            reason: 'unresolvedCandidate',
+            expectedRevision: null,
+            observedRevision: null,
+            skippedCandidateCount: query.skippedCandidateCount,
+          );
+        }
+      case InteractionReadQueryStatus.staleIndex:
+        _diagnosticsSink.recordStaleCandidateRejected(
+          reason: 'staleIndex',
+          expectedRevision: query.expectedStructuralRevision ?? 0,
+          observedRevision: query.observedStructuralRevision ?? 0,
+          skippedCandidateCount: 0,
+        );
+      case InteractionReadQueryStatus.budgetExceeded:
+        final reason = _budgetReasonName(query);
+        if (query.budgetExceededReason ==
+            InteractionReadBudgetExceededReason
+                .fallbackCandidateBudgetExceeded) {
+          _diagnosticsSink.recordHitTestFallbackObserved(
+            reason: reason,
+            budget: query.budget,
+            observed: query.observed,
+          );
+        }
+        _diagnosticsSink.recordInteractionQueryBudgetExceeded(
+          reason: reason,
+          budget: query.budget,
+          observed: query.observed,
+        );
+    }
+  }
+
+  void _recordInvalidTerminalCleanup(InvalidTerminalCleanupDecision decision) {
+    _diagnosticsSink.recordInvalidTerminalCleanup(
+      reason: _invalidTerminalReasonName(decision),
+    );
+  }
+
+  void _recordStaleTerminalRejected(InvalidTerminalCleanupDecision decision) {
+    _diagnosticsSink.recordStaleTerminalRejected(
+      reason: _invalidTerminalReasonName(decision),
+    );
+  }
+}
+
+String _budgetReasonName(InteractionReadQueryFacts query) {
+  return switch (query.budgetExceededReason) {
+    InteractionReadBudgetExceededReason.queryTileBudgetExceeded =>
+      'queryTileBudgetExceeded',
+    InteractionReadBudgetExceededReason.fallbackCandidateBudgetExceeded =>
+      'fallbackCandidateBudgetExceeded',
+    null => 'unknown',
+  };
+}
+
+String _invalidTerminalReasonName(InvalidTerminalCleanupDecision decision) {
+  return switch (decision.kind) {
+    InvalidTerminalCleanupKind.none => 'none',
+    InvalidTerminalCleanupKind.noActiveSession => 'noActiveSession',
+    InvalidTerminalCleanupKind.stalePointer => 'stalePointer',
+    InvalidTerminalCleanupKind.staleControllerEpoch => 'staleControllerEpoch',
+  };
 }
 
 bool canvasPreviewStatesEqual(

@@ -1,6 +1,6 @@
 import '../contracts/public/canvas_error_details_sanitizer.dart';
 import '../contracts/public/canvas_diagnostics.dart';
-import '../contracts/public/canvas_errors.dart';
+import 'diagnostic_code.dart';
 
 typedef DiagnosticDetailsBuilder = Map<String, Object?> Function();
 
@@ -59,6 +59,29 @@ final class DiagnosticsHub {
   }
 }
 
+DiagnosticsHub? diagnosticsHubForPolicy(CanvasDiagnosticPolicy policy) {
+  if (policy is CanvasDiagnosticsDisabled) {
+    return null;
+  }
+
+  return DiagnosticsHub(policy: policy);
+}
+
+void recordInteractionReliabilityDiagnostic(
+  DiagnosticsHub? hub, {
+  required InteractionDiagnosticCode code,
+  DiagnosticDetailsBuilder details = _emptyDetails,
+}) {
+  hub?.record(
+    DiagnosticEvent(
+      code: DiagnosticCode.interaction(code),
+      severity: DiagnosticSeverity.warning,
+      source: DiagnosticSource.interaction,
+      details: details,
+    ),
+  );
+}
+
 final class DiagnosticEvent {
   const DiagnosticEvent({
     required this.code,
@@ -71,7 +94,7 @@ final class DiagnosticEvent {
     this.correlationId,
   });
 
-  final CanvasDataErrorCode code;
+  final DiagnosticCode code;
   final DiagnosticSeverity severity;
   final DiagnosticSource source;
   final String? path;
@@ -99,7 +122,7 @@ final class DiagnosticRecord {
     return DiagnosticRecordAllocationProbe.instance;
   }
 
-  final CanvasDataErrorCode code;
+  final DiagnosticCode code;
   final DiagnosticSeverity severity;
   final DiagnosticSource source;
   final String? path;
