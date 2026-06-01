@@ -161,6 +161,10 @@ not own the pending line.
 
 ## Exit gate
 
+- [x] P10 final verification passed for analysis, DCM, metrics, focused
+  interaction/API/runtime/edit/frame/diagnostics/guardrail tests, blocking
+  guardrails, architecture graph closure, generated graph views, and generated
+  documentation checks.
 - selection API behavior is green
 - selection-only API behavior updates `state.revisions.selection` without
   `state.revisions.document`, projection eviction, or spatial updates

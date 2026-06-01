@@ -1,3 +1,8 @@
+// This fixture exercises the full diagnostics route across public runtime,
+// interaction, codec, and internal diagnostic records, so the boundary imports
+// stay together instead of being split into metric-shaped fixtures.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 import 'dart:io';
 
@@ -49,6 +54,9 @@ void _testRecordsEveryInteractionDiagnosticCode() {
   });
 }
 
+// The route proof reads as one scenario: start denial, stale candidate, stale
+// terminal cleanup, and bounded diagnostics must be checked against one hub.
+// ignore: halstead-volume, source-lines-of-code
 void _testInteractionGuardPathsRouteDiagnostics() {
   test('interaction guard paths route bounded diagnostics without actions', () {
     final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
@@ -100,6 +108,9 @@ void _testInteractionGuardPathsRouteDiagnostics() {
   });
 }
 
+// The reentrancy proof keeps resolver mutation, rollback, action silence, and
+// diagnostic emission in one scenario so no assertion can drift from the cause.
+// ignore: halstead-volume
 void _testResolverReentrantMutationDiagnostic() {
   test('resolver reentrant mutation rejection records no public action', () {
     late RuntimeRoot root;

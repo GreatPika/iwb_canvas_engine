@@ -172,7 +172,7 @@ P10 must preserve the public typed action payload matrix below. These payloads a
 
 ## Execution Units
 
-### [ ] Unit 0: Source-Of-Truth P10 Scope Repair
+### [x] Unit 0: Source-Of-Truth P10 Scope Repair
 
 Owner:
 
@@ -210,7 +210,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 1: Interaction Value Types And Pointer Admission Seams
+### [x] Unit 1: Interaction Value Types And Pointer Admission Seams
 
 Owner:
 
@@ -247,7 +247,7 @@ Depends On:
 
 Unit 0.
 
-### [ ] Unit 2: Cleanup Coordinator And Outcome Policy
+### [x] Unit 2: Cleanup Coordinator And Outcome Policy
 
 Owner:
 
@@ -280,7 +280,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Interaction-Owned Preview Publication
+### [x] Unit 3: Interaction-Owned Preview Publication
 
 Owner:
 
@@ -313,7 +313,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Load And Dispose Interaction Cleanup
+### [x] Unit 4: Load And Dispose Interaction Cleanup
 
 Owner:
 
@@ -345,7 +345,7 @@ Depends On:
 
 Units 2 and 3.
 
-### [ ] Unit 5: EditKernel Selection Effects And Action Intents
+### [x] Unit 5: EditKernel Selection Effects And Action Intents
 
 Owner:
 
@@ -377,7 +377,7 @@ Depends On:
 
 Unit 0.
 
-### [ ] Unit 6: Runtime Action Finalization And Timestamp Ordering
+### [x] Unit 6: Runtime Action Finalization And Timestamp Ordering
 
 Owner:
 
@@ -408,7 +408,7 @@ Depends On:
 
 Unit 5.
 
-### [ ] Unit 7: Immutable Interaction Read Adapter
+### [x] Unit 7: Immutable Interaction Read Adapter
 
 Owner:
 
@@ -442,7 +442,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 8: Selected Move State Machine And Resolver Commit
+### [x] Unit 8: Selected Move State Machine And Resolver Commit
 
 Owner:
 
@@ -485,7 +485,7 @@ Depends On:
 
 Units 2, 3, 5, 6, and 7.
 
-### [ ] Unit 9: Marquee Selection State Machine
+### [x] Unit 9: Marquee Selection State Machine
 
 Owner:
 
@@ -526,7 +526,7 @@ Depends On:
 
 Units 2, 3, 5, 6, 7, and 8.
 
-### [ ] Unit 10: Public Selection, Command, And Tool Ports
+### [x] Unit 10: Public Selection, Command, And Tool Ports
 
 Owner:
 
@@ -567,7 +567,7 @@ Depends On:
 
 Units 0, 1, 2, 5, 6, 8, and 9.
 
-### [ ] Unit 11: Interaction Diagnostics Route
+### [x] Unit 11: Interaction Diagnostics Route
 
 Owner:
 
@@ -597,7 +597,7 @@ Depends On:
 
 Units 7, 8, and 9.
 
-### [ ] Unit 12: P10 Guardrail Enforcement
+### [x] Unit 12: P10 Guardrail Enforcement
 
 Owner:
 
@@ -605,7 +605,7 @@ Owner:
 
 Donors:
 
-None. This unit enforces P10 boundaries and fixture quarantine; donor-adapted behavior is proven by the production/test units above.
+None. This unit enforces P10 boundaries; donor-adapted behavior is proven by the production/test units above.
 
 Design Decisions Preserved:
 
@@ -622,11 +622,11 @@ Design Decisions Preserved:
 
 Boundary:
 
-Executable repository-local enforcement for P10 invariants. Fixture-only names and bypass values must remain in guardrail test surfaces, not production docs, public API registries, schemas, generated docs, or durable runtime code.
+Executable repository-local enforcement for P10 invariants.
 
 Change:
 
-Register and implement guardrails for interaction import boundaries, `InteractionReadPort` immutable fact exposure, interaction forbidden import of `command_facts_port.dart`, cleanup coordinator dependency bans, coordinator caller-origin, resolver-not-called on cancel/stale/invalid/load/dispose/mode/interactive paths, stale terminal no edit/action, action-after-state order, selected-move main-only preview, marquee overlay-only preview, tool-port P10 compatibility, and fixture quarantine for step/phase scheduling metadata in production names/comments.
+Register and implement guardrails for interaction import boundaries, `InteractionReadPort` immutable fact exposure, interaction forbidden import of `command_facts_port.dart`, cleanup coordinator dependency bans, coordinator caller-origin, resolver-not-called on cancel/stale/invalid/load/dispose/mode/interactive paths, stale terminal no edit/action, action-after-state order, selected-move main-only preview, marquee overlay-only preview, tool-port P10 compatibility.
 
 Completion Check:
 
@@ -636,7 +636,7 @@ Depends On:
 
 Units 1, 2, 6, 7, 8, 9, 10, and 11.
 
-### [ ] Unit 13: Graph, Diagrams, Docs, And Implementation Inventory
+### [x] Unit 13: Graph, Diagrams, Docs, And Implementation Inventory
 
 Owner:
 
@@ -668,7 +668,7 @@ Depends On:
 
 Units 0 through 12.
 
-### [ ] Unit 14: Final P10 Verification
+### [x] Unit 14: Final P10 Verification
 
 Owner:
 

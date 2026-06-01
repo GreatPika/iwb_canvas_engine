@@ -95,26 +95,38 @@ void _registerInteractionImportNegativeProofs() {
 
 void _registerCleanupCoordinatorNegativeProof() {
   test('cleanup coordinator dependency fixture is rejected', () async {
-    await _expectCleanupCoordinatorImportRejected(
-      "import '../frame/frame_engine.dart';\n",
+    expect(
+      await _expectCleanupCoordinatorImportRejected(
+        "import '../frame/frame_engine.dart';\n",
+      ),
+      isNotEmpty,
     );
   });
 
   test('cleanup coordinator runtime dependency fixture is rejected', () async {
-    await _expectCleanupCoordinatorImportRejected(
-      "import '../runtime/runtime_root.dart';\n",
+    expect(
+      await _expectCleanupCoordinatorImportRejected(
+        "import '../runtime/runtime_root.dart';\n",
+      ),
+      isNotEmpty,
     );
   });
 
   test('cleanup coordinator resolver contract fixture is rejected', () async {
-    await _expectCleanupCoordinatorImportRejected(
-      "import '../contracts/public/canvas_actions.dart';\n",
+    expect(
+      await _expectCleanupCoordinatorImportRejected(
+        "import '../contracts/public/canvas_actions.dart';\n",
+      ),
+      isNotEmpty,
     );
   });
 
   test('cleanup coordinator resolver guard fixture is rejected', () async {
-    await _expectCleanupCoordinatorImportRejected(
-      "import '../contracts/internal/resolver_mutation_guard.dart';\n",
+    expect(
+      await _expectCleanupCoordinatorImportRejected(
+        "import '../contracts/internal/resolver_mutation_guard.dart';\n",
+      ),
+      isNotEmpty,
     );
   });
 }
@@ -207,7 +219,9 @@ Future<void> _expectStructuralRejection({
   );
 }
 
-Future<void> _expectCleanupCoordinatorImportRejected(String content) async {
+Future<List<GuardrailViolation>> _expectCleanupCoordinatorImportRejected(
+  String content,
+) async {
   final violations = checkCleanupCoordinatorDependencyFile(
     path: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
     content: content,
@@ -218,6 +232,7 @@ Future<void> _expectCleanupCoordinatorImportRejected(String content) async {
     id: interactionCleanupCoordinatorDependencyBansGuardrailId,
     violations: violations,
   );
+  return violations;
 }
 
 bool _isInteractionBoundaryViolation(GuardrailViolation violation) {

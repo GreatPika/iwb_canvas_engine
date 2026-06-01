@@ -1,3 +1,8 @@
+// InteractionEngine is the pointer/tool composition owner, so these adjacent
+// machines and contracts stay visible here instead of being hidden behind
+// metric-shaped wrapper files.
+// ignore_for_file: number-of-imports
+
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
