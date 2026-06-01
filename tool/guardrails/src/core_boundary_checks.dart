@@ -48,7 +48,51 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
     await collection.dispose();
   }
 
+  violations.addAll(await checkPointerCleanupCoordinatorCallerOrigins());
+
   return violations;
+}
+
+Future<List<GuardrailViolation>>
+checkPointerCleanupCoordinatorCallerOrigins() async {
+  final violations = <GuardrailViolation>[];
+  for (final file in dartFilesUnder('lib')) {
+    final path = relativePath(file);
+    if (path == _pointerCleanupCoordinatorPath ||
+        path == _interactionEnginePath) {
+      continue;
+    }
+    violations.addAll(
+      checkPointerCleanupCoordinatorCallerFile(
+        path: path,
+        content: file.readAsStringSync(),
+      ),
+    );
+  }
+
+  return violations;
+}
+
+List<GuardrailViolation> checkPointerCleanupCoordinatorCallerFile({
+  required String path,
+  required String content,
+}) {
+  if (path == _pointerCleanupCoordinatorPath ||
+      path == _interactionEnginePath) {
+    return const [];
+  }
+  if (!content.contains('PointerToolCleanupCoordinator')) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'interaction.pointer_cleanup_coordinator_only',
+      path: path,
+      message:
+          'PointerToolCleanupCoordinator may be constructed or called only by InteractionEngine',
+    ),
+  ];
 }
 
 Future<List<GuardrailViolation>> checkCodecNoRuntimeImports() async {
@@ -96,6 +140,7 @@ List<GuardrailViolation> checkCoreBoundaryFile({
       unit,
       requireResolvedElement: false,
     ),
+    ...checkPointerCleanupCoordinatorCallerFile(path: path, content: content),
   ];
 }
 
@@ -846,6 +891,9 @@ bool _isAllowedBoundaryImport(String path, String target) {
 }
 
 const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';
+const _interactionEnginePath = 'lib/src/interaction/interaction_engine.dart';
+const _pointerCleanupCoordinatorPath =
+    'lib/src/interaction/pointer_tool_cleanup_coordinator.dart';
 
 Iterable<String> _runtimeRootDeclarations(
   String path,

@@ -310,10 +310,10 @@ final class _RecordingLoadBoundary implements LoadInteractionBoundary {
   void Function()? onPrepareCleanup;
 
   @override
-  PointerCleanupOutcome prepareLoadCleanup() {
+  LoadInteractionCleanupOutcome prepareLoadCleanup() {
     events.add('prepared-cleanup');
     onPrepareCleanup?.call();
 
-    return PointerCleanupOutcome.noChange;
+    return LoadInteractionCleanupOutcome.noChange;
   }
 }

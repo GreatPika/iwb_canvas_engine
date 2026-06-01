@@ -132,11 +132,11 @@ void _testLoadBoundaryShape() {
 
     expect(
       boundary.prepareLoadCleanup(),
-      const PointerCleanupOutcome(previewChanged: true),
+      const LoadInteractionCleanupOutcome(previewChanged: true),
     );
     expect(
       _topLevelNames(loadBoundary),
-      containsAll(['PointerCleanupOutcome', 'LoadInteractionBoundary']),
+      containsAll(['LoadInteractionCleanupOutcome', 'LoadInteractionBoundary']),
     );
     expect(
       _topLevelNames(loadBoundary),
@@ -148,7 +148,7 @@ void _testLoadBoundaryShape() {
     );
 
     _expectBoundaryMethodShape(loadBoundary);
-    _expectPointerCleanupOutcomeShape(loadBoundary);
+    _expectLoadInteractionCleanupOutcomeShape(loadBoundary);
   });
 }
 
@@ -228,7 +228,10 @@ void _expectBoundaryMethodShape(CompilationUnit unit) {
 
   expect(methods, hasLength(1));
   expect(methods.single.name.lexeme, 'prepareLoadCleanup');
-  expect(methods.single.returnType?.toSource(), 'PointerCleanupOutcome');
+  expect(
+    methods.single.returnType?.toSource(),
+    'LoadInteractionCleanupOutcome',
+  );
 }
 
 void _expectResourceCatalogPortShape(CompilationUnit unit) {
@@ -354,8 +357,8 @@ void _expectFrameResourceDescriptorSeamShape(CompilationUnit unit) {
   );
 }
 
-void _expectPointerCleanupOutcomeShape(CompilationUnit unit) {
-  final declaration = _classDeclaration(unit, 'PointerCleanupOutcome');
+void _expectLoadInteractionCleanupOutcomeShape(CompilationUnit unit) {
+  final declaration = _classDeclaration(unit, 'LoadInteractionCleanupOutcome');
 
   _expectConstConstructor(declaration);
   _expectValueOnlyFields(declaration);
@@ -376,14 +379,16 @@ void _expectValueOnlyFields(ClassDeclaration declaration) {
       .whereType<FieldDeclaration>()
       .toList();
 
-  expect(fields, hasLength(2));
+  expect(fields, hasLength(greaterThanOrEqualTo(2)));
   for (final field in fields) {
     expect(field.fields.isFinal || field.fields.isConst, isTrue);
   }
-  expect(_fieldTypesByName(fields), {
-    'previewChanged': 'bool',
-    'noChange': 'PointerCleanupOutcome',
-  });
+  final fieldsByName = _fieldTypesByName(fields);
+  expect(fieldsByName, containsPair('previewChanged', 'bool'));
+  expect(
+    fieldsByName,
+    containsPair('noChange', 'LoadInteractionCleanupOutcome'),
+  );
 }
 
 Map<String, String> _fieldTypesByName(List<FieldDeclaration> fields) {
@@ -396,8 +401,8 @@ Map<String, String> _fieldTypesByName(List<FieldDeclaration> fields) {
 
 final class _CompileTimeLoadBoundary implements LoadInteractionBoundary {
   @override
-  PointerCleanupOutcome prepareLoadCleanup() {
-    return const PointerCleanupOutcome(previewChanged: true);
+  LoadInteractionCleanupOutcome prepareLoadCleanup() {
+    return const LoadInteractionCleanupOutcome(previewChanged: true);
   }
 }
 

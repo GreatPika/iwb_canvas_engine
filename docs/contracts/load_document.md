@@ -49,8 +49,8 @@ replacement:
 PreparedDocumentLoad success -> RuntimeRoot requests prepared load cleanup;
 the target InteractionEngine boundary routes that cleanup through the internal
 PointerToolCleanupCoordinator;
-the `contracts/internal/**` boundary returns a PointerCleanupOutcome before document install;
-the outcome covers active preview, pointer normalization, and pending tap facts;
+the `contracts/internal/**` boundary returns a LoadInteractionCleanupOutcome before document install;
+the load outcome records only prepared-load publication facts;
 the boundary must not read from or mutate DocumentStoreKernel;
 the boundary must not execute terminal resolver or commit paths;
 RuntimeRoot must not call the interaction boundary again after document install
@@ -67,11 +67,10 @@ Success ordering:
 1. validate `contracts/public` CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, request prepared interaction cleanup;
-4. produce the PointerCleanupOutcome before the document install commit point;
-   the outcome records cleanup reason, previous preview kind, whether preview
-   changed, whether public state publication is needed, repaint target, active
-   token/session release, pointer normalization cleanup, pending line
-   disposition, pending tap history cleanup, and prepared-load sequencing;
+4. produce the LoadInteractionCleanupOutcome before the document install commit
+   point; the outcome records whether prepared cleanup changed public preview
+   publication state, while full pointer cleanup policy remains owned by
+   PointerToolCleanupCoordinator;
 5. atomically install the replacement document and clear selection through the
    runtime/applier boundary;
 6. initialize runtime view camera from the persisted document camera;

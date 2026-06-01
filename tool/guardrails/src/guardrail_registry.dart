@@ -137,6 +137,11 @@ const _blockingEntries = [
     suites: {'blocking', 'selection'},
     requiresRunnerStructuralProof: true,
   ),
+  GuardrailEntry(
+    id: 'interaction.pointer_cleanup_coordinator_only',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
   GuardrailEntry(id: 'edit.sync_non_nested', suites: {'blocking', 'edit'}),
   GuardrailEntry(id: 'edit.rollback_no_effects', suites: {'blocking', 'edit'}),
   GuardrailEntry(

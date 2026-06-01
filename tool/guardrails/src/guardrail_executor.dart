@@ -212,6 +212,10 @@ const _testProofPaths = {
     'test/selection/runtime_owner_separation_test.dart',
     'test/guardrails/selection_boundary_checks_test.dart',
   ],
+  'interaction.pointer_cleanup_coordinator_only': [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/interaction/pointer_tool_cleanup_coordinator_test.dart',
+  ],
   'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
   'edit.rollback_no_effects': [
     'test/edit/rollback_test.dart',
@@ -316,6 +320,8 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'store.no_public_document_live_state': checkNoPublicDocumentLiveState,
   'projection.only_explicit_read_paths': checkProjectionOnlyExplicitReadPaths,
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
+  'interaction.pointer_cleanup_coordinator_only':
+      checkPointerCleanupCoordinatorCallerOrigins,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
   'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
   'frame.committed_facts_via_frame_facts_port': checkCoreBoundaries,
@@ -352,6 +358,8 @@ const _structuralDescriptions = {
       'resolved public projection read-path check',
   'selection.owner_separate_from_document':
       'resolved selection ownership boundary check',
+  'interaction.pointer_cleanup_coordinator_only':
+      'interaction pointer cleanup coordinator caller-origin check',
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
   'resources.resolver_boundary_owned_by_surface_session':
       'resource resolver ownership and import-boundary checks',

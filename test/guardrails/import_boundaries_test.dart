@@ -17,6 +17,7 @@ void main() {
   _testResourceSessionOwnerBoundaries();
   _testFrameOrSurfaceCannotOwnCanvasResourceResolverType();
   _testInteractionOwnerImportBoundary();
+  _testPointerCleanupCoordinatorCallers();
 }
 
 void _testProductionBoundaries() {
@@ -217,6 +218,32 @@ void _testInteractionOwnerImportBoundary() {
         reason: import,
       );
     }
+  });
+}
+
+void _testPointerCleanupCoordinatorCallers() {
+  test('only InteractionEngine may call the cleanup coordinator', () async {
+    expect(await checkPointerCleanupCoordinatorCallerOrigins(), isEmpty);
+    expect(
+      checkPointerCleanupCoordinatorCallerFile(
+        path: 'lib/src/interaction/interaction_engine.dart',
+        content: 'final cleanup = PointerToolCleanupCoordinator();',
+      ),
+      isEmpty,
+    );
+    expect(
+      checkPointerCleanupCoordinatorCallerFile(
+        path: 'lib/src/runtime/bad_cleanup_caller.dart',
+        content: 'final cleanup = PointerToolCleanupCoordinator();',
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'interaction.pointer_cleanup_coordinator_only',
+        ),
+      ),
+    );
   });
 }
 

@@ -99,7 +99,7 @@ Obligations:
 - `lib/src/runtime/runtime_root.dart:120` / current preview owner: `RuntimeRoot` stores `_previewRevision` and `_preview` locally -> Unit 3 must migrate source-of-truth to interaction and keep runtime publication.
 - `lib/src/runtime/runtime_root.dart:456` / current dispose order: runtime owns stream and frame disposal -> Unit 4 and Unit 10 must add interaction cleanup before stream closure without resolver/edit/action side effects.
 - `lib/src/runtime/runtime_root.dart:560` / load order: load currently requests minimal interaction cleanup before consuming prepared load -> Unit 4 can replace the boundary while preserving P6 order.
-- `lib/src/contracts/internal/load_interaction_boundary.dart:2` / current cleanup outcome: `PointerCleanupOutcome` is only `previewChanged` -> Unit 2 must expand typed cleanup outcomes before load/machines consume them.
+- `lib/src/contracts/internal/load_interaction_boundary.dart:2` / current load cleanup outcome: `LoadInteractionCleanupOutcome` is only the prepared-load publication fact -> Unit 2 must add the interaction-owned typed cleanup outcome before machines consume cleanup policy.
 - `lib/src/frame/frame_capture_service.dart:33` / frame route: selected move preview is captured only into main frame -> Unit 8 must not reroute selected move into overlay.
 - `lib/src/frame/overlay_preview_planner.dart:111` / frame route: overlay planner admits marquee/stroke/line/eraser previews and excludes selected move -> Unit 9 must keep marquee overlay-only.
 - `tool/guardrails/src/guardrail_registry.dart:188` / guardrail registry: `preview.selected_move_main_repaint` is already registered -> P10 must keep and extend runner-backed preview-route proof instead of replacing it with prose.

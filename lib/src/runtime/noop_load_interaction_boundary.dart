@@ -7,5 +7,7 @@ final class _NoopLoadInteractionBoundary implements LoadInteractionBoundary {
   const _NoopLoadInteractionBoundary();
 
   @override
-  PointerCleanupOutcome prepareLoadCleanup() => PointerCleanupOutcome.noChange;
+  LoadInteractionCleanupOutcome prepareLoadCleanup() {
+    return LoadInteractionCleanupOutcome.noChange;
+  }
 }

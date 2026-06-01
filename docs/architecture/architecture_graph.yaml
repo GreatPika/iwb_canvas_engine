@@ -434,6 +434,10 @@ nodes:
     actual:
       declarations:
         - InteractionEngine
+        - InteractionReadPort
+        - PointerSession
+        - PointerSampleNormalizer
+        - PointerToolCleanupCoordinator
   - id: draw.tools
     label: Draw tool owner
     kind: tool_owner

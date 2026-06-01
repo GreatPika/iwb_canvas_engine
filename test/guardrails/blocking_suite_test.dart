@@ -78,6 +78,15 @@ void main() {
       suiteGuardrailIds('selection'),
     );
   });
+  test(
+    'interaction suite selection routes only interaction guardrails',
+    () async {
+      expect(
+        await _selectedGuardrailIds(['--suite=interaction']),
+        suiteGuardrailIds('interaction'),
+      );
+    },
+  );
   test('edit suite selection routes only edit guardrails', () async {
     expect(
       await _selectedGuardrailIds(['--suite=edit']),
@@ -180,7 +189,6 @@ bool _inventoryEntriesHaveRunnerRoutes() {
 
 Future<bool> _badSuiteSelectionsFail() async {
   final results = await Future.wait([
-    _runGuardrails(['--suite=interaction']),
     _runGuardrails(['--suite=runner-structural']),
     _runGuardrails(['--suite=']),
   ]);
@@ -308,6 +316,14 @@ const _runnerStructuralScanCases = [
       'test/guardrails/selection_boundary_checks_test.dart',
     ],
     violationPath: 'lib/src/runtime/bad_runner_selection.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.pointer_cleanup_coordinator_only',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/interaction/pointer_tool_cleanup_coordinator_test.dart',
+    ],
+    violationPath: 'lib/src/runtime/bad_cleanup_caller.dart',
   ),
   _StructuralScanCase(
     id: 'resources.resolver_boundary_owned_by_surface_session',

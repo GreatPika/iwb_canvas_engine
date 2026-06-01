@@ -203,8 +203,8 @@ final class _PreviewChangedLoadBoundary implements LoadInteractionBoundary {
   const _PreviewChangedLoadBoundary();
 
   @override
-  PointerCleanupOutcome prepareLoadCleanup() {
-    return const PointerCleanupOutcome(previewChanged: true);
+  LoadInteractionCleanupOutcome prepareLoadCleanup() {
+    return const LoadInteractionCleanupOutcome(previewChanged: true);
   }
 }
 

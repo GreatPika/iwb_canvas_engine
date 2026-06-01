@@ -6,6 +6,7 @@ import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
+import 'pointer_tool_cleanup_coordinator.dart';
 
 enum InteractionPointerAdmissionKind { admitted, ignored, cleanupOnly }
 
@@ -44,19 +45,23 @@ final class InteractionPointerContext {
 // The engine deliberately keeps pointer admission state, public tool settings,
 // and session value ownership together so later tool behavior cannot split the
 // active-session invariant across multiple owners.
-// ignore: coupling-between-object-classes
+// ignore: coupling-between-object-classes, number-of-methods
 final class InteractionEngine {
   InteractionEngine({
     required CanvasInteractionMode initialMode,
     required CanvasDrawStyle initialDrawStyle,
     required CanvasPointerPolicy pointerPolicy,
     PointerSampleNormalizer normalizer = const PointerSampleNormalizer(),
+    PointerToolCleanupCoordinator cleanupCoordinator =
+        const PointerToolCleanupCoordinator(),
   }) : _mode = initialMode,
        _drawStyle = initialDrawStyle,
        _pointerPolicy = pointerPolicy,
-       _normalizer = normalizer;
+       _normalizer = normalizer,
+       _cleanupCoordinator = cleanupCoordinator;
 
   final PointerSampleNormalizer _normalizer;
+  final PointerToolCleanupCoordinator _cleanupCoordinator;
   final CanvasInteractionMode _mode;
   final CanvasDrawStyle _drawStyle;
   final CanvasPointerPolicy _pointerPolicy;
@@ -70,6 +75,10 @@ final class InteractionEngine {
   CanvasPointerPolicy get pointerPolicy => _pointerPolicy;
   int get interactionRevision => _interactionRevision;
   PointerSession? get activeSession => _activeSession;
+
+  PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
+    return _cleanupCoordinator.cleanup(request);
+  }
 
   InteractionPointerAdmission handlePointerSample(
     CanvasPointerSample sample,

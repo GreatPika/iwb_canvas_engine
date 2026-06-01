@@ -1,11 +1,12 @@
-final class PointerCleanupOutcome {
-  const PointerCleanupOutcome({this.previewChanged = false});
+final class LoadInteractionCleanupOutcome {
+  const LoadInteractionCleanupOutcome({this.previewChanged = false});
 
-  static const PointerCleanupOutcome noChange = PointerCleanupOutcome();
+  static const LoadInteractionCleanupOutcome noChange =
+      LoadInteractionCleanupOutcome();
 
   final bool previewChanged;
 }
 
 abstract interface class LoadInteractionBoundary {
-  PointerCleanupOutcome prepareLoadCleanup();
+  LoadInteractionCleanupOutcome prepareLoadCleanup();
 }
