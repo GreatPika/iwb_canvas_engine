@@ -49,10 +49,24 @@ Future<List<GuardrailViolation>> checkCacheHotCachesHaveCapacityEviction() {
 List<GuardrailViolation> checkFrameNoGlobalSceneSortSources(
   Map<String, String> sources,
 ) {
-  return [
+  final frameUnits = {
     for (final entry in sources.entries)
-      if (_isFrameSource(entry.key) &&
-          _containsForbiddenSceneRecordSort(entry.value))
+      if (_isFrameSource(entry.key))
+        entry.key: _parseGuardrailUnit(entry.value),
+  };
+  final topLevelHelperNames = _topLevelOrderTokenComparatorHelpers(
+    frameUnits.values,
+  );
+  final topLevelQualifiedHelperNames =
+      _topLevelQualifiedOrderTokenComparatorHelpers(frameUnits.values);
+
+  return [
+    for (final entry in frameUnits.entries)
+      if (_containsForbiddenSceneRecordSort(
+        entry.value,
+        topLevelHelperNames,
+        topLevelQualifiedHelperNames,
+      ))
         GuardrailViolation(
           guardrailId: frameNoGlobalSceneSortGuardrailId,
           path: entry.key,
@@ -353,13 +367,34 @@ GuardrailViolation _cacheKeyViolation(
   );
 }
 
-bool _containsForbiddenSceneRecordSort(String content) {
-  final uncommented = _withoutLineComments(content);
-  final matches = RegExp(r'\.sort\s*\(').allMatches(uncommented);
-
-  return matches.any(
-    (match) => _sortComparatorMentionsOrderToken(uncommented, match.start),
+bool _containsForbiddenSceneRecordSort(
+  CompilationUnit unit,
+  Set<String> topLevelHelperNames,
+  Set<String> topLevelQualifiedHelperNames,
+) {
+  final projectionVisitor = _OrderTokenProjectionVisitor();
+  unit.accept(projectionVisitor);
+  final helperNames = {
+    ...topLevelHelperNames,
+    ..._orderTokenComparatorHelpers(unit),
+  };
+  final qualifiedHelperNames = {
+    ...topLevelQualifiedHelperNames,
+    ..._qualifiedOrderTokenComparatorHelpers(unit),
+  };
+  final helperInstances = _orderTokenComparatorHelperInstances(
+    unit,
+    _helperMethodsByClass(qualifiedHelperNames),
   );
+  final visitor = _OrderTokenSortVisitor(
+    helperNames: helperNames,
+    qualifiedHelperNames: qualifiedHelperNames,
+    helperInstances: helperInstances,
+    orderTokenProjectionCollections: projectionVisitor.collectionNames,
+  );
+  unit.accept(visitor);
+
+  return visitor.hasViolation;
 }
 
 String _withoutLineComments(String content) {
@@ -367,17 +402,6 @@ String _withoutLineComments(String content) {
       .split('\n')
       .where((line) => !line.trimLeft().startsWith('//'))
       .join('\n');
-}
-
-bool _sortComparatorMentionsOrderToken(String content, int sortStart) {
-  final nextStatement = content.indexOf(';', sortStart);
-  final fallbackEnd = sortStart + 240 > content.length
-      ? content.length
-      : sortStart + 240;
-  final expressionEnd = nextStatement < 0 ? fallbackEnd : nextStatement;
-  final expression = content.substring(sortStart, expressionEnd);
-
-  return expression.contains('orderToken');
 }
 
 bool _containsAny(String content, Iterable<String> tokens) {
@@ -498,6 +522,610 @@ final class _ClassIdentifierVisitor extends RecursiveAstVisitor<void> {
   void visitSimpleStringLiteral(SimpleStringLiteral node) {
     identifiers.add(node.value);
     super.visitSimpleStringLiteral(node);
+  }
+}
+
+Set<String> _topLevelOrderTokenComparatorHelpers(
+  Iterable<CompilationUnit> units,
+) {
+  final helperNames = <String>{};
+  for (final unit in units) {
+    helperNames.addAll(_orderTokenComparatorHelpers(unit, topLevelOnly: true));
+  }
+
+  return helperNames;
+}
+
+Set<String> _topLevelQualifiedOrderTokenComparatorHelpers(
+  Iterable<CompilationUnit> units,
+) {
+  final helperNames = <String>{};
+  for (final unit in units) {
+    helperNames.addAll(_qualifiedOrderTokenComparatorHelpers(unit));
+  }
+
+  return helperNames;
+}
+
+Set<String> _orderTokenComparatorHelpers(
+  CompilationUnit unit, {
+  bool topLevelOnly = false,
+}) {
+  final visitor = _OrderTokenHelperVisitor(topLevelOnly: topLevelOnly);
+  unit.accept(visitor);
+
+  return visitor.helperNames;
+}
+
+final class _OrderTokenHelperVisitor extends RecursiveAstVisitor<void> {
+  _OrderTokenHelperVisitor({this.topLevelOnly = false});
+
+  final bool topLevelOnly;
+  final Set<String> helperNames = {};
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if ((!topLevelOnly || _isTopLevelVariableDeclaration(node)) &&
+        initializer != null &&
+        _nodeMentionsIdentifier(initializer, 'orderToken')) {
+      helperNames.add(node.name.lexeme);
+    }
+    super.visitVariableDeclaration(node);
+  }
+
+  @override
+  void visitFunctionDeclaration(FunctionDeclaration node) {
+    if ((!topLevelOnly || node.parent is CompilationUnit) &&
+        _nodeMentionsIdentifier(node.functionExpression.body, 'orderToken')) {
+      helperNames.add(node.name.lexeme);
+    }
+    super.visitFunctionDeclaration(node);
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (!topLevelOnly && _nodeMentionsIdentifier(node.body, 'orderToken')) {
+      helperNames.add(node.name.lexeme);
+    }
+    super.visitMethodDeclaration(node);
+  }
+}
+
+bool _isTopLevelVariableDeclaration(VariableDeclaration node) {
+  return node.parent?.parent is TopLevelVariableDeclaration;
+}
+
+Set<String> _qualifiedOrderTokenComparatorHelpers(CompilationUnit unit) {
+  final visitor = _QualifiedOrderTokenHelperVisitor();
+  unit.accept(visitor);
+
+  return visitor.helperNames;
+}
+
+final class _QualifiedOrderTokenHelperVisitor
+    extends RecursiveAstVisitor<void> {
+  final Set<String> helperNames = {};
+  final List<String> _classNames = [];
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    _classNames.add(node.namePart.typeName.lexeme);
+    super.visitClassDeclaration(node);
+    _classNames.removeLast();
+  }
+
+  @override
+  void visitMethodDeclaration(MethodDeclaration node) {
+    if (_classNames.isNotEmpty &&
+        _nodeMentionsIdentifier(node.body, 'orderToken')) {
+      helperNames.add('${_classNames.last}.${node.name.lexeme}');
+    }
+    super.visitMethodDeclaration(node);
+  }
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if (_classNames.isNotEmpty &&
+        initializer != null &&
+        _nodeMentionsIdentifier(initializer, 'orderToken')) {
+      helperNames.add('${_classNames.last}.${node.name.lexeme}');
+    }
+    super.visitVariableDeclaration(node);
+  }
+}
+
+final class _OrderTokenSortVisitor extends RecursiveAstVisitor<void> {
+  _OrderTokenSortVisitor({
+    required this.helperNames,
+    required this.qualifiedHelperNames,
+    required this.helperInstances,
+    required this.orderTokenProjectionCollections,
+  });
+
+  final Set<String> helperNames;
+  final Set<String> qualifiedHelperNames;
+  final Map<String, Set<String>> helperInstances;
+  final Set<String> orderTokenProjectionCollections;
+  bool hasViolation = false;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (node.methodName.name == 'sort' &&
+        _sortInvocationMentionsOrderToken(node)) {
+      hasViolation = true;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  bool _sortInvocationMentionsOrderToken(MethodInvocation node) {
+    return _nodeMentionsIdentifier(node.argumentList, 'orderToken') ||
+        _sortArgumentsUseOrderTokenHelper(node.argumentList) ||
+        _sortReceiverIsOrderTokenProjection(node);
+  }
+
+  bool _sortArgumentsUseOrderTokenHelper(ArgumentList argumentList) {
+    if (_nodeMentionsQualifiedHelper(
+      argumentList,
+      qualifiedHelperNames,
+      helperInstances,
+    )) {
+      return true;
+    }
+
+    return _helperIdentifierReferences(argumentList, helperNames).any(
+      (identifier) => !_isLocallyShadowedByNonOrderTokenDeclaration(identifier),
+    );
+  }
+
+  bool _sortReceiverIsOrderTokenProjection(MethodInvocation node) {
+    final target = node.realTarget;
+    if (target == null) {
+      return false;
+    }
+
+    return _expressionIsOrderTokenProjection(target);
+  }
+
+  bool _expressionIsOrderTokenProjection(Expression expression) {
+    if (expression is SimpleIdentifier &&
+        orderTokenProjectionCollections.contains(expression.name)) {
+      return true;
+    }
+
+    return _nodeMentionsIdentifier(expression, 'orderToken') ||
+        _nodeMentionsAnyIdentifier(expression, orderTokenProjectionCollections);
+  }
+}
+
+bool _nodeMentionsQualifiedHelper(
+  AstNode node,
+  Set<String> qualifiedNames,
+  Map<String, Set<String>> helperInstances,
+) {
+  if (qualifiedNames.isEmpty && helperInstances.isEmpty) {
+    return false;
+  }
+  final visitor = _QualifiedHelperPresenceVisitor(
+    qualifiedNames,
+    helperInstances,
+  );
+  node.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _QualifiedHelperPresenceVisitor extends RecursiveAstVisitor<void> {
+  _QualifiedHelperPresenceVisitor(this.qualifiedNames, this.helperInstances);
+
+  final Set<String> qualifiedNames;
+  final Map<String, Set<String>> helperInstances;
+  bool found = false;
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    final target = node.target;
+    if (target != null && _targetOwnsHelper(target, node.methodName.name)) {
+      found = true;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    if (_simpleTargetOwnsHelper(node.prefix, node.identifier.name)) {
+      found = true;
+    }
+    super.visitPrefixedIdentifier(node);
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    final target = node.target;
+    if (target != null && _targetOwnsHelper(target, node.propertyName.name)) {
+      found = true;
+    }
+    super.visitPropertyAccess(node);
+  }
+
+  bool _targetOwnsHelper(Expression target, String method) {
+    if (target is SimpleIdentifier) {
+      return _simpleTargetOwnsHelper(target, method);
+    }
+    final constructedType = _constructedTypeName(target);
+
+    return constructedType != null &&
+        _qualifiedReceiverOwnsHelper(constructedType, method) &&
+        !_unitShadowsQualifiedHelper(target, constructedType, method);
+  }
+
+  bool _simpleTargetOwnsHelper(SimpleIdentifier target, String method) {
+    return (helperInstances[target.name]?.contains(method) ?? false) ||
+        (_qualifiedReceiverOwnsHelper(target.name, method) &&
+            !_unitShadowsQualifiedHelper(target, target.name, method));
+  }
+
+  bool _qualifiedReceiverOwnsHelper(String receiver, String method) {
+    return qualifiedNames.contains('$receiver.$method') ||
+        (helperInstances[receiver]?.contains(method) ?? false);
+  }
+}
+
+String? _constructedTypeName(Expression expression) {
+  if (expression is InstanceCreationExpression) {
+    return expression.constructorName.type.name.lexeme;
+  }
+  if (expression is MethodInvocation && expression.target == null) {
+    return expression.methodName.name;
+  }
+
+  return null;
+}
+
+bool _unitShadowsQualifiedHelper(
+  AstNode node,
+  String receiverName,
+  String methodName,
+) {
+  for (final ancestor in _ancestorNodes(node)) {
+    if (ancestor is CompilationUnit) {
+      return _unitHasNonOrderTokenClassMethod(
+        ancestor,
+        receiverName,
+        methodName,
+      );
+    }
+  }
+
+  return false;
+}
+
+bool _unitHasNonOrderTokenClassMethod(
+  CompilationUnit unit,
+  String className,
+  String methodName,
+) {
+  for (final declaration in unit.declarations.whereType<ClassDeclaration>()) {
+    if (declaration.namePart.typeName.lexeme != className) {
+      continue;
+    }
+    for (final member
+        in declaration.body.members.whereType<MethodDeclaration>()) {
+      if (member.name.lexeme == methodName &&
+          !_nodeMentionsIdentifier(member.body, 'orderToken')) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+Iterable<SimpleIdentifier> _helperIdentifierReferences(
+  AstNode node,
+  Set<String> names,
+) {
+  if (names.isEmpty) {
+    return const [];
+  }
+  final visitor = _HelperIdentifierReferenceVisitor(names);
+  node.accept(visitor);
+
+  return visitor.references;
+}
+
+final class _HelperIdentifierReferenceVisitor
+    extends RecursiveAstVisitor<void> {
+  _HelperIdentifierReferenceVisitor(this.names);
+
+  final Set<String> names;
+  final List<SimpleIdentifier> references = [];
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    if (names.contains(node.name)) {
+      references.add(node);
+    }
+    super.visitSimpleIdentifier(node);
+  }
+}
+
+Map<String, Set<String>> _helperMethodsByClass(Set<String> qualifiedNames) {
+  final methodsByClass = <String, Set<String>>{};
+  for (final qualifiedName in qualifiedNames) {
+    final separator = qualifiedName.indexOf('.');
+    if (separator <= 0 || separator == qualifiedName.length - 1) {
+      continue;
+    }
+    final className = qualifiedName.substring(0, separator);
+    final methodName = qualifiedName.substring(separator + 1);
+    methodsByClass.putIfAbsent(className, () => {}).add(methodName);
+  }
+
+  return methodsByClass;
+}
+
+Map<String, Set<String>> _orderTokenComparatorHelperInstances(
+  CompilationUnit unit,
+  Map<String, Set<String>> helperMethodsByClass,
+) {
+  if (helperMethodsByClass.isEmpty) {
+    return const {};
+  }
+  final visitor = _OrderTokenComparatorHelperInstanceVisitor(
+    helperMethodsByClass,
+  );
+  unit.accept(visitor);
+
+  return visitor.methodsByInstance;
+}
+
+final class _OrderTokenComparatorHelperInstanceVisitor
+    extends RecursiveAstVisitor<void> {
+  _OrderTokenComparatorHelperInstanceVisitor(this.helperMethodsByClass);
+
+  final Map<String, Set<String>> helperMethodsByClass;
+  final Map<String, Set<String>> methodsByInstance = {};
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final methods = _helperMethodsForVariable(node, helperMethodsByClass);
+    if (methods != null) {
+      methodsByInstance[node.name.lexeme] = methods;
+    }
+    super.visitVariableDeclaration(node);
+  }
+}
+
+Set<String>? _helperMethodsForVariable(
+  VariableDeclaration node,
+  Map<String, Set<String>> helperMethodsByClass,
+) {
+  final declaredType = _variableDeclaredType(node);
+  if (declaredType != null && helperMethodsByClass.containsKey(declaredType)) {
+    return helperMethodsByClass[declaredType];
+  }
+  final initializerType = _constructorInitializerType(node.initializer);
+  if (initializerType != null &&
+      helperMethodsByClass.containsKey(initializerType)) {
+    return helperMethodsByClass[initializerType];
+  }
+
+  return null;
+}
+
+String? _variableDeclaredType(VariableDeclaration node) {
+  final parent = node.parent;
+  if (parent is! VariableDeclarationList) {
+    return null;
+  }
+  final type = parent.type;
+  if (type is NamedType) {
+    return type.name.lexeme;
+  }
+
+  return null;
+}
+
+String? _constructorInitializerType(Expression? initializer) {
+  if (initializer is InstanceCreationExpression) {
+    return initializer.constructorName.type.name.lexeme;
+  }
+  if (initializer is MethodInvocation && initializer.target == null) {
+    return initializer.methodName.name;
+  }
+
+  return null;
+}
+
+bool _isLocallyShadowedByNonOrderTokenDeclaration(SimpleIdentifier identifier) {
+  for (final node in _ancestorNodes(identifier)) {
+    if (node is FormalParameter &&
+        _parameterDeclaresName(node, identifier.name)) {
+      return true;
+    }
+    if (node is FunctionBody &&
+        _functionBodyDeclaresParameter(node, identifier.name)) {
+      return true;
+    }
+    if (node is Block &&
+        _blockHasVisibleNonOrderTokenDeclaration(node, identifier)) {
+      return true;
+    }
+    if (node is CompilationUnit &&
+        _unitHasNonOrderTokenDeclaration(node, identifier.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+Iterable<AstNode> _ancestorNodes(AstNode node) sync* {
+  var current = node.parent;
+  while (current != null) {
+    yield current;
+    current = current.parent;
+  }
+}
+
+bool _parameterDeclaresName(FormalParameter parameter, String name) {
+  return parameter.name?.lexeme == name &&
+      !_nodeMentionsIdentifier(parameter, 'orderToken');
+}
+
+bool _functionBodyDeclaresParameter(FunctionBody body, String name) {
+  final parent = body.parent;
+  if (parent is FunctionExpression) {
+    return _parameterListDeclaresName(parent.parameters, name);
+  }
+  if (parent is MethodDeclaration) {
+    return _parameterListDeclaresName(parent.parameters, name);
+  }
+  if (parent is ConstructorDeclaration) {
+    return _parameterListDeclaresName(parent.parameters, name);
+  }
+
+  return false;
+}
+
+bool _parameterListDeclaresName(FormalParameterList? parameters, String name) {
+  if (parameters == null) {
+    return false;
+  }
+
+  return parameters.parameters.any(
+    (parameter) => _parameterDeclaresName(parameter, name),
+  );
+}
+
+bool _blockHasVisibleNonOrderTokenDeclaration(
+  Block block,
+  SimpleIdentifier identifier,
+) {
+  for (final statement in block.statements) {
+    if (statement.offset >= identifier.offset) {
+      continue;
+    }
+    if (_statementDeclaresNonOrderTokenName(statement, identifier.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool _statementDeclaresNonOrderTokenName(Statement statement, String name) {
+  if (statement is FunctionDeclarationStatement) {
+    final declaration = statement.functionDeclaration;
+
+    return declaration.name.lexeme == name &&
+        !_nodeMentionsIdentifier(
+          declaration.functionExpression.body,
+          'orderToken',
+        );
+  }
+  if (statement is VariableDeclarationStatement) {
+    return _variableListDeclaresNonOrderTokenName(statement.variables, name);
+  }
+
+  return false;
+}
+
+bool _unitHasNonOrderTokenDeclaration(CompilationUnit unit, String name) {
+  for (final declaration in unit.declarations) {
+    if (declaration is FunctionDeclaration &&
+        declaration.name.lexeme == name &&
+        !_nodeMentionsIdentifier(
+          declaration.functionExpression.body,
+          'orderToken',
+        )) {
+      return true;
+    }
+    if (declaration is TopLevelVariableDeclaration &&
+        _variableListDeclaresNonOrderTokenName(declaration.variables, name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool _variableListDeclaresNonOrderTokenName(
+  VariableDeclarationList variables,
+  String name,
+) {
+  for (final variable in variables.variables) {
+    final initializer = variable.initializer;
+    if (variable.name.lexeme == name &&
+        (initializer == null ||
+            !_nodeMentionsIdentifier(initializer, 'orderToken'))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+final class _OrderTokenProjectionVisitor extends RecursiveAstVisitor<void> {
+  final Set<String> collectionNames = {};
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if (initializer != null && _expressionDerivesOrderToken(initializer)) {
+      collectionNames.add(node.name.lexeme);
+    }
+    super.visitVariableDeclaration(node);
+  }
+
+  bool _expressionDerivesOrderToken(Expression expression) {
+    return _nodeMentionsIdentifier(expression, 'orderToken') ||
+        _nodeMentionsAnyIdentifier(expression, collectionNames);
+  }
+}
+
+bool _nodeMentionsIdentifier(AstNode node, String name) {
+  final visitor = _IdentifierPresenceVisitor(name);
+  node.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _IdentifierPresenceVisitor extends RecursiveAstVisitor<void> {
+  _IdentifierPresenceVisitor(this.name);
+
+  final String name;
+  bool found = false;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    found = found || node.name == name;
+    super.visitSimpleIdentifier(node);
+  }
+}
+
+bool _nodeMentionsAnyIdentifier(AstNode node, Set<String> names) {
+  if (names.isEmpty) {
+    return false;
+  }
+  final visitor = _AnyIdentifierPresenceVisitor(names);
+  node.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _AnyIdentifierPresenceVisitor extends RecursiveAstVisitor<void> {
+  _AnyIdentifierPresenceVisitor(this.names);
+
+  final Set<String> names;
+  bool found = false;
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    found = found || names.contains(node.name);
+    super.visitSimpleIdentifier(node);
   }
 }
 
