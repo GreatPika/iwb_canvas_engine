@@ -137,10 +137,23 @@ void _exerciseP2ContractSurface() {
     thickness: 2,
     color: const Color(0xFF222222),
   );
+  final onePointStrokeElement = CanvasStrokeElement(
+    id: CanvasElementId('stroke-one-point'),
+    points: const [Offset(1, 1)],
+    thickness: 2,
+    color: const Color(0xFF222222),
+  );
   final lineElement = CanvasLineElement(
     id: CanvasElementId('line-1'),
     start: Offset.zero,
     end: const Offset(4, 4),
+    thickness: 2,
+    color: const Color(0xFF333333),
+  );
+  final samePointLineElement = CanvasLineElement(
+    id: CanvasElementId('line-same-point'),
+    start: const Offset(2, 2),
+    end: const Offset(2, 2),
     thickness: 2,
     color: const Color(0xFF333333),
   );
@@ -157,7 +170,9 @@ void _exerciseP2ContractSurface() {
     pathElement,
     textElement,
     strokeElement,
+    onePointStrokeElement,
     lineElement,
+    samePointLineElement,
     rectElement,
   ];
   _use(elements.map((element) => element.kind));
@@ -381,6 +396,22 @@ void _exerciseP2ContractSurface() {
     ),
     CanvasPreviewState.eraser(
       corridor: const [Offset.zero, Offset(1, 1)],
+      thickness: 10,
+    ),
+    CanvasPreviewState.pencilStroke(
+      points: const [Offset(1, 1)],
+      color: const Color(0xFF000000),
+      thickness: 2,
+      opacity: 1,
+    ),
+    CanvasPreviewState.markerStroke(
+      points: const [Offset(1, 1)],
+      color: const Color(0xFF000000),
+      thickness: 4,
+      opacity: 0.4,
+    ),
+    CanvasPreviewState.eraser(
+      corridor: const [Offset(1, 1)],
       thickness: 10,
     ),
   ];

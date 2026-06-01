@@ -1,9 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/rendering.dart';
 
+import 'frame_drawable_policy.dart';
 import 'frame_paint_output.dart';
 import 'overlay_preview_planner.dart';
+
+const _drawablePolicy = FrameDrawablePolicy();
 
 final class OverlayFramePainter extends CustomPainter {
   const OverlayFramePainter({required this.output});
@@ -43,8 +44,8 @@ void _paintPrimitive(Canvas canvas, OverlayPreviewPrimitive primitive) {
 }
 
 void _paintStrokeOverlay(Canvas canvas, StrokeOverlayPrimitive primitive) {
-  canvas.drawPoints(
-    PointMode.polygon,
+  _drawablePolicy.paintPolyline(
+    canvas,
     primitive.points,
     Paint()
       ..strokeWidth = primitive.thickness
@@ -64,7 +65,8 @@ void _paintPendingLineStartOverlay(
 }
 
 void _paintLineOverlay(Canvas canvas, LineOverlayPrimitive primitive) {
-  canvas.drawLine(
+  _drawablePolicy.paintLine(
+    canvas,
     primitive.start,
     primitive.end,
     Paint()
@@ -74,8 +76,8 @@ void _paintLineOverlay(Canvas canvas, LineOverlayPrimitive primitive) {
 }
 
 void _paintEraserOverlay(Canvas canvas, EraserOverlayPrimitive primitive) {
-  canvas.drawPoints(
-    PointMode.polygon,
+  _drawablePolicy.paintPolyline(
+    canvas,
     primitive.corridor,
     Paint()
       ..strokeWidth = primitive.thickness

@@ -14,8 +14,11 @@ import 'dart:ui'
 import 'package:flutter/painting.dart';
 
 import '../contracts/public/canvas_ids.dart';
+import 'frame_drawable_policy.dart';
 import 'render_element_record.dart';
 import 'render_primitive_cache_snapshot.dart';
+
+const _drawablePolicy = FrameDrawablePolicy();
 
 void paintMainFrameRecord(
   Canvas canvas,
@@ -161,7 +164,16 @@ void _paintStrokeRecord(
 ) {
   _withRecordTransform(canvas, record, () {
     final path = renderPrimitives.strokes[row.strokeCacheKey]?.path;
-    if (path == null) {
+    final painted = _drawablePolicy.paintCachedStroke(
+      canvas: canvas,
+      points: row.points,
+      path: path,
+      paint: Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = row.thickness
+        ..color = _withElementOpacity(row.color, record.primitiveAlpha),
+    );
+    if (!painted) {
       _paintFallbackBounds(
         canvas,
         record.paintBoundsWorld,
@@ -170,13 +182,6 @@ void _paintStrokeRecord(
 
       return;
     }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = row.thickness
-        ..color = _withElementOpacity(row.color, record.primitiveAlpha),
-    );
   });
 }
 
@@ -186,7 +191,8 @@ void _paintLineRecord(
   LineRenderRow row,
 ) {
   _withRecordTransform(canvas, record, () {
-    canvas.drawLine(
+    _drawablePolicy.paintLine(
+      canvas,
       row.start,
       row.end,
       Paint()
