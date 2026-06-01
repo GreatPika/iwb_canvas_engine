@@ -35,15 +35,16 @@ sequenceDiagram
   ViewCamera-->>Capture: viewCameraRevision and viewCameraOffset
   Capture->>SelectionFacts: capture selected ids and selectionRevision once
   SelectionFacts-->>Capture: selectionRevision and selectionIds
+  Capture->>Spatial: query paint result bounded by viewportRect and structuralRevision
+  Spatial-->>Capture: typed spatial paint result
+  Capture->>Capture: store captured spatialPaintResult and admitted candidate handles
   Capture->>Preview: capture CanvasSelectedMovePreview once
   Preview-->>Capture: delta or CanvasNoPreview
   Capture-->>Frame: CapturedMainFrame
   Note over Capture: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
   Frame->>Ordinary: plan ordinary committed records
-  Ordinary->>Spatial: use captured paint result bounded by viewportRect
-  Spatial-->>Ordinary: typed spatial paint result
-  Ordinary->>Ordinary: admit only SpatialCandidatesResult for ordinary paint; reject typed failures visibly
+  Ordinary->>Ordinary: admit captured spatialPaintResult only when it is SpatialCandidatesResult; reject typed failures visibly
   alt ordinary admission rejected
     Ordinary-->>Frame: empty ordinary plan with rejected-admission reason and no cache write
   else ordinary admission accepted
