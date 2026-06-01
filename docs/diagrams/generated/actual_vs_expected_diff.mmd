@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Actual vs expected selected phase diff
-%% Selected phase: P9
+%% Selected phase: P10
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]:::ok
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]:::ok
@@ -13,6 +13,7 @@ flowchart LR
   edit_kernel["Edit kernel<br/>required by P5"]:::ok
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]:::ok
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]:::ok
+  interaction_engine["Interaction engine boundary<br/>required by P10"]:::violation
   load_document_pipeline["Load document pipeline<br/>required by P6"]:::ok
   resource_kernel["Resource kernel<br/>required by P7"]:::ok
   resource_surface_session["Surface resource session<br/>required by P7"]:::ok
@@ -30,6 +31,9 @@ flowchart LR
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
   frame_renderer -->|resolves resources through by P9| resource_surface_session
+  interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
+  interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
+  interaction_engine -->|planned reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort by P9| frame_renderer
@@ -37,5 +41,21 @@ flowchart LR
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
+  violation_api_canvas_runtime_commands_future_placeholder["Placeholder is overdue"]:::violation
+  violation_api_canvas_runtime_commands_future_placeholder -.-> api_canvas_runtime
+  violation_api_canvas_runtime_context_action_requests_future_placeholder["Placeholder is overdue"]:::violation
+  violation_api_canvas_runtime_context_action_requests_future_placeholder -.-> api_canvas_runtime
+  violation_api_canvas_runtime_tools_future_placeholder["Placeholder is overdue"]:::violation
+  violation_api_canvas_runtime_tools_future_placeholder -.-> api_canvas_runtime
+  violation_interaction_engine["Missing required box"]:::violation
+  violation_interaction_engine -.-> interaction_engine
+  violation_interaction_engine_emits_user_actions["Missing required link"]:::violation
+  violation_interaction_engine_emits_user_actions -.-> interaction_engine
+  violation_interaction_engine_emits_user_actions -.-> api_canvas_runtime
+  violation_interaction_engine_queries_spatial_index["Missing required link"]:::violation
+  violation_interaction_engine_queries_spatial_index -.-> interaction_engine
+  violation_interaction_engine_queries_spatial_index -.-> geometry_spatial_index
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
   classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
+  linkStyle 10 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
+  linkStyle 11 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

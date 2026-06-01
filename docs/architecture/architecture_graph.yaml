@@ -701,14 +701,14 @@ edges:
     from: geometry.spatial_index
     to: diagnostics.hub
     kind: diagnostic_route
-    phaseRequiredBy: P10
+    phaseRequiredBy: P14
     status: future
     sourceDocs:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/geometry.md
       - path: docs/implementation/p8_geometry_and_spatial.md
     evidence:
-      - Corrupted committed geometry or spatial rows return miss without mutation in P8; policy-gated internal diagnostics are deferred until a later diagnostics integration phase adds an explicit bridge.
+      - Corrupted committed geometry or spatial rows return miss without mutation in P8 and remain outside P10 closure; policy-gated internal diagnostics are deferred until a later diagnostics integration phase adds an explicit bridge.
   - id: runtime.root.observer_failures.report_to_diagnostics
     from: runtime.root
     to: diagnostics.hub
@@ -924,13 +924,13 @@ placeholders:
     node: api.canvas_runtime
     member: CanvasRuntime.tools
     path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P11
+    phaseRequiredBy: P10
     status: deferred_until_phase
     sourceDocs:
-      - path: docs/implementation/p11_draw_tools.md
+      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/operation_matrix.md
     evidence:
-      - Tool port implementation is future P11 scope and must not fail P4 closure.
+      - CanvasRuntime.tools must become non-throwing in P10 for mode, settings, pointer dispatch compatibility, and cleanup; P11 owns draw behavior behind that port, not the whole facade member.
   - id: api.canvas_runtime.commands.future_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.commands
@@ -957,13 +957,13 @@ placeholders:
     node: api.canvas_runtime
     member: CanvasRuntime.contextActionRequests
     path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P12
+    phaseRequiredBy: P10
     status: deferred_until_phase
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Context action request stream implementation is future P12 scope and must not fail P4 closure.
+      - CanvasRuntime.contextActionRequests must become a non-throwing empty broadcast stream in P10; P12 owns request-producing context-action behavior behind that stream, not the whole facade member.
 forbiddenEdges:
   - id: codec.schema_v1.forbidden_runtime_dependency
     from: codec.schema_v1

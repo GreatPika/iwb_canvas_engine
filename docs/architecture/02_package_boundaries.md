@@ -205,6 +205,19 @@ needed by interaction routing and must not expose mutation APIs, draft access,
 `CanvasDocument` projection, concrete store internals, concrete selection
 internals, or resource/session internals.
 
+`lib/src/interaction/pointer_sample_normalizer.dart` is the target pointer
+admission boundary. It owns conversion from constructible public pointer
+samples to finite normalized world-space samples, plus invalid-terminal cleanup
+decisions for internal raw terminal facts. It does not read document,
+selection, spatial, resolver, edit, resource, frame, runtime stream, or Flutter
+state.
+
+`lib/src/contracts/internal/command_facts_port.dart` is the target
+runtime-owned high-level command facts boundary. It supplies immutable facts
+for selection transform/delete, remove element, and clear content commands to
+runtime-owned adapters. It is not an interaction read seam and must not be
+imported by `lib/src/interaction/**`.
+
 Source boundary rules:
 
 ```text
@@ -268,6 +281,8 @@ lib/src/selection/**         -> may read document facts only through contracts/i
 lib/src/edit/**              -> may not import src/surface
 lib/src/interaction/**       -> may not import, read, or mutate src/store or src/selection concrete internals directly
 lib/src/interaction/interaction_read_port.dart -> may not expose mutation APIs, drafts, CanvasDocument projection, concrete store internals, concrete selection internals, or resource/session internals
+lib/src/interaction/**       -> may not import src/contracts/internal/command_facts_port.dart
+lib/src/interaction/pointer_sample_normalizer.dart -> may not import document, selection, spatial, resolver, edit, resource, frame, runtime stream, or Flutter owners
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input or ResourceCatalogPort as an asset-binding seam
 lib/src/geometry/**          -> may use only typed geometry/spatial delta/read ports, not concrete store tables or interaction/frame state

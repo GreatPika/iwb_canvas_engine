@@ -107,6 +107,10 @@ Rules:
 - concurrent pointer sessions are not supported in v1;
 - raw pointer routing belongs to Flutter bridge;
 - InteractionEngine receives normalized CanvasPointerSample;
+- public pointer samples are normalized by
+  `lib/src/interaction/pointer_sample_normalizer.dart`, which converts
+  view-space positions to world-space positions by adding the current runtime
+  view camera offset;
 - terminal admission requires the active pointer token and current
   `controllerEpoch`; stale token or epoch mismatch may clean up only and cannot
   create a commit intent;
@@ -225,13 +229,20 @@ result.
 
 ### 14.4 Double-tap context action
 
-Double-tap on an accepted context-action target emits exactly one
+Double-tap context actions are P12-owned. In P10,
+`CanvasToolPort.handleDoubleTap` throws an `UnsupportedError` naming P12
+context actions and performs no request, document, selection, preview,
+interaction, action, timestamp, repaint, or DiagnosticsHub effect.
+`CanvasRuntime.contextActionRequests` is still non-throwing in P10, but it is
+an empty broadcast stream that closes on dispose.
+
+P12 double-tap on an accepted context-action target emits exactly one
 `CanvasContextActionRequested` through `CanvasRuntime.contextActionRequests`.
 The trigger is `CanvasContextActionTrigger.doubleTap`, and the target is either
 a content element or empty canvas. Request delivery has no document, selection,
 preview, repaint, spatial, projection, resource, or action effect.
 
-`CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
+In P12, `CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
 not the second sample in engine-owned pointer-sample recognition. It accepts a
 finite view position from the host surface and does not require pending
 first-tap history. On a valid direct double-tap, the interaction engine resolves
@@ -275,7 +286,10 @@ focus, accessibility, text selection, hide/show policy, and editor lifetime.
 
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
-The command accepts only current, unretired context request ids whose target is
+Until P12 creates `InteractionRequestRegistry`, every P10 commitTextEdit
+request id is unknown and returns false without document, selection, preview,
+interaction, action, timestamp, repaint, or private-retirement effects. After
+P12, the command accepts only current, unretired context request ids whose target is
 a text content element. It retires accepted no-op and changed requests,
 privately retires known live rejected request ids, treats unknown and
 already-retired ids as no-ops, rejects empty-canvas, non-text, stale, missing,

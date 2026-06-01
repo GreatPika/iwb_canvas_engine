@@ -88,7 +88,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
-| context-action double-tap request | contextActionRequests stream only; direct `handleDoubleTap` clears pending context tap history before current-target resolution; InteractionRequestRegistry stores context request target kind and guard facts | none | none | no | none | CanvasContextActionRequested; `runtime_created_timestamps_monotonic` |
+| context-action double-tap request | P10 unsupported direct double tap has no touched state; P12 contextActionRequests stream only; P12 direct `handleDoubleTap` clears pending context tap history before current-target resolution; InteractionRequestRegistry stores context request target kind and guard facts | none in P10; none for P12 request delivery | none | no | none | none in P10; P12 CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
 | commitTextEdit stale rejection | retired request state only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | retired request state | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
@@ -150,6 +150,11 @@ Notes:
   through the public runtime timestamp contract before publishing the
   timestamped action, request, preview, or resolver request output. Preview and
   resolver request rows remain non-user-action outputs.
+- P10 action rows emit only after the accepted state for the same operation has
+  been installed and published. No-op, stale, invalid, cancel, resolver cancel,
+  rollback, load cleanup, dispose cleanup, unknown text request ids, and P10
+  unsupported double tap do not resolve action/request timestamps and emit no
+  action or context request.
 ```
 
 ### Compact row expanded dimensions
@@ -386,7 +391,8 @@ unchanged.
 #### setMode
 
 Touched state: interaction settings; selection owner if entering draw mode
-clears selection; preview state if active preview is cleared.
+clears selection and `CanvasRuntimeConfig.clearSelectionOnDrawModeEnter` is
+true; preview state if active preview is cleared.
 
 Public state revisions: `state.revisions.interaction`;
 `state.revisions.selection` if selection is cleared; `state.revisions.preview`
@@ -405,7 +411,9 @@ Repaint target: main and overlay only for affected changed state.
 User-action notification: none.
 
 No-op behavior: no publication when requested mode and cleanup result is
-unchanged.
+unchanged. Entering draw mode with `clearSelectionOnDrawModeEnter` false does
+not clear selection; entering draw mode with the flag true clears selection
+through the selection owner in the same public state as the mode change.
 
 Rollback behavior: interaction settings, selection, preview, repaint, and
 notifications remain unchanged.

@@ -67,9 +67,11 @@ Success ordering:
 1. validate `contracts/public` CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
 2. materialize PreparedDocumentLoad;
 3. if validation/materialization succeeds, request prepared interaction cleanup;
-4. produce the PointerCleanupOutcome that describes active preview cleanup,
-   pointer normalization cleanup, and pending tap history cleanup before the
-   document install commit point;
+4. produce the PointerCleanupOutcome before the document install commit point;
+   the outcome records cleanup reason, previous preview kind, whether preview
+   changed, whether public state publication is needed, repaint target, active
+   token/session release, pointer normalization cleanup, pending line
+   disposition, pending tap history cleanup, and prepared-load sequencing;
 5. atomically install the replacement document and clear selection through the
    runtime/applier boundary;
 6. initialize runtime view camera from the persisted document camera;

@@ -12,7 +12,7 @@ const _diagramGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _indexGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
-const _selectedArchitectureGraphPhase = 'P9';
+const _selectedArchitectureGraphPhase = 'P10';
 
 const _generatedIndexPaths = [
   'docs/indexes/by_phase.md',

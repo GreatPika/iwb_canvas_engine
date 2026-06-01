@@ -1464,6 +1464,11 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   cursor;
 - no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream
   close paths do not create timestamped action or context request outputs.
+- P10 selected-move resolver requests and accepted user actions resolve
+  timestamps only after the path is accepted far enough to create that output;
+  stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
+  rollback, load cleanup, dispose cleanup, unsupported double tap, and unknown
+  text request ids remain timestamp-silent.
 ```
 
 ```dart
@@ -1486,6 +1491,10 @@ Rules:
 ```text
 - command mutations must go through EditKernel and inherit rollback/stale/dispose checks;
 - removeElement emits deleteElements only when it removes an element;
+- P10 has no `InteractionRequestRegistry`; until P12 introduces it,
+  commitTextEdit returns false for every request id and performs no document,
+  selection, preview, interaction, action, timestamp, or request-retirement
+  effect;
 - commitTextEdit returns false when the request id is unknown or already
   retired; unknown and already-retired request ids perform no mutation, private
   request retirement, public state snapshot, document, selection, preview,
@@ -1547,6 +1556,9 @@ Selection rules:
 - selection-only changes do not evict the public document projection;
 - move/rotate/flip operate only on selected elements with isTransformable=true && isLocked=false;
 - deleteSelection deletes only selected elements with isDeletable=true;
+- rotateSelectionClockwise, rotateSelectionCounterClockwise,
+  flipSelectionVertical, and flipSelectionHorizontal use the center of the
+  union bounds of eligible selected elements as `pivotWorld`;
 - selection actions preserve document order in emitted elementIds.
 ```
 
@@ -1713,16 +1725,35 @@ abstract interface class CanvasToolPort {
 }
 ```
 
-`CanvasToolPort.handleDoubleTap` is the direct host-recognized double-tap
-input boundary. It accepts a finite view `position` from the host surface and
-does not require pending first-tap history from engine-owned pointer-sample
-recognition. A valid direct double-tap resolves its timestamp through the same
-runtime-local timestamp cursor used for other timestamped runtime outputs,
-clears any pending context tap history, resolves the current context-action
-target at `position`, and publishes exactly one
-`CanvasContextActionRequested` through `CanvasRuntime.contextActionRequests`
-for either a content-element target or empty canvas. Invalid non-finite
-positions are rejected before request publication.
+P10 tool-port compatibility:
+
+```text
+- CanvasRuntime.tools is non-throwing in P10 for mode, draw style, pointer
+  policy, and handlePointer dispatch;
+- the runtime's configured initial mode, draw style, and pointer policy are
+  visible immediately after construction without a construction-time
+  `state.revisions.interaction` increment;
+- effective post-construction mode, style, tool, color, or pointer-policy
+  changes increment `state.revisions.interaction`;
+- setter no-ops publish no state and create no timestamped output;
+- mode/tool/pointer-policy changes request interaction cleanup before
+  publishing their public state;
+- entering draw mode clears selection in the same public state only when
+  `CanvasRuntimeConfig.clearSelectionOnDrawModeEnter` is true;
+- entering draw mode with `clearSelectionOnDrawModeEnter` false does not clear
+  selection;
+- draw-mode pointer input is a P10 compatibility no-op except for cleanup-capable
+  terminal handling; pencil, marker, line, eraser, text, and context-action
+  production behavior remains later-phase scope;
+- P10 `CanvasRuntime.contextActionRequests` is a non-throwing empty broadcast
+  stream that closes on dispose.
+```
+
+`CanvasToolPort.handleDoubleTap` remains P12-owned in P10. In P10 the method
+throws an `UnsupportedError` whose message names P12 context actions and
+performs no request, document, selection, preview, interaction, action,
+timestamp, repaint, or DiagnosticsHub effect. P12 will introduce the direct
+host-recognized double-tap input boundary and context-action request delivery.
 
 Validation:
 
@@ -2300,7 +2331,11 @@ final class CanvasEmptyCanvasContextActionTarget
 Context-action and text editing model:
 
 ```text
-- engine detects an accepted double-tap context target;
+- P10 has no context-action request producer; `contextActionRequests` is an
+  empty broadcast stream that closes on dispose;
+- P10 direct `CanvasToolPort.handleDoubleTap` throws `UnsupportedError` naming
+  P12 context actions and has no request, state, action, or timestamp effect;
+- P12 engine behavior detects an accepted double-tap context target;
 - engine emits exactly one CanvasContextActionRequested through
   contextActionRequests for the accepted target;
 - trigger is CanvasContextActionTrigger.doubleTap;
@@ -2318,6 +2353,8 @@ Context-action and text editing model:
   the issued request stale;
 - application commits request-originated text changes through
   CanvasCommandPort.commitTextEdit(requestId, newText);
+- until P12 creates `InteractionRequestRegistry`, every commitTextEdit request
+  id is unknown and returns false without side effects;
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;
 - documentRevision is emitted as an observation and diagnostics fact, not a

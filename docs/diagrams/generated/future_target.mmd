@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Future target architecture graph
-%% Selected phase: P9
+%% Selected phase: P10
 %% Note: Shows future planned edges after the selected phase plus their endpoint nodes for context.
 flowchart LR
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -19,8 +19,5 @@ flowchart LR
   eraser_text_request -->|planned produces preview intents by P12| interaction_engine
   eraser_text_request -->|planned uses eraser exact-hit geometry through by P12| geometry_spatial_index
   flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
-  geometry_spatial_index -->|planned reports errors to by P10| diagnostics_hub
-  interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
-  interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
-  interaction_engine -->|planned reports errors to by P10| diagnostics_hub
+  geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub
   runtime_root -->|planned reports errors to by P14| diagnostics_hub

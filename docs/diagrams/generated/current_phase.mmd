@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Selected phase architecture graph
-%% Selected phase: P9
+%% Selected phase: P10
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -13,6 +13,7 @@ flowchart LR
   edit_kernel["Edit kernel<br/>required by P5"]
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
+  interaction_engine["Interaction engine boundary<br/>required by P10"]
   load_document_pipeline["Load document pipeline<br/>required by P6"]
   resource_kernel["Resource kernel<br/>required by P7"]
   resource_surface_session["Surface resource session<br/>required by P7"]
@@ -30,6 +31,9 @@ flowchart LR
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
   frame_renderer -->|resolves resources through by P9| resource_surface_session
+  interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
+  interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
+  interaction_engine -->|planned reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort by P9| frame_renderer
