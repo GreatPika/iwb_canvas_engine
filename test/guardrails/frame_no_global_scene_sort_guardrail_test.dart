@@ -70,6 +70,21 @@ void bad(List<dynamic> records) {
 ''',
   ),
   (
+    label: 'import-aliased cross-file comparator helper',
+    helperSource: '''
+int compareByOrderToken(dynamic left, dynamic right) {
+  return left.orderToken.compareTo(right.orderToken);
+}
+''',
+    consumerSource: '''
+import 'order_token_comparator.dart' as order;
+
+void bad(List<dynamic> records) {
+  records.sort(order.compareByOrderToken);
+}
+''',
+  ),
+  (
     label: 'cross-file static comparator helper',
     helperSource: '''
 class OrderTokenComparators {
@@ -81,6 +96,23 @@ class OrderTokenComparators {
     consumerSource: '''
 void bad(List<dynamic> records) {
   records.sort(OrderTokenComparators.compare);
+}
+''',
+  ),
+  (
+    label: 'import-aliased cross-file static comparator helper',
+    helperSource: '''
+class OrderTokenComparators {
+  static int compare(dynamic left, dynamic right) {
+    return left.orderToken.compareTo(right.orderToken);
+  }
+}
+''',
+    consumerSource: '''
+import 'order_token_comparator.dart' as order;
+
+void bad(List<dynamic> records) {
+  records.sort(order.OrderTokenComparators.compare);
 }
 ''',
   ),

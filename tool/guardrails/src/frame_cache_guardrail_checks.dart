@@ -59,14 +59,16 @@ List<GuardrailViolation> checkFrameNoGlobalSceneSortSources(
   );
   final topLevelQualifiedHelperNames =
       _topLevelQualifiedOrderTokenComparatorHelpers(frameUnits.values);
+  final context = _FrameSceneSortGuardrailContext(
+    frameUnits: frameUnits,
+    topLevelHelperNames: topLevelHelperNames,
+    topLevelQualifiedHelperNames: topLevelQualifiedHelperNames,
+    helperCatalog: _orderTokenComparatorHelperCatalog(frameUnits),
+  );
 
   return [
     for (final entry in frameUnits.entries)
-      if (_containsForbiddenSceneRecordSort(
-        entry.value,
-        topLevelHelperNames,
-        topLevelQualifiedHelperNames,
-      ))
+      if (_containsForbiddenSceneRecordSort(entry.key, entry.value, context))
         GuardrailViolation(
           guardrailId: frameNoGlobalSceneSortGuardrailId,
           path: entry.key,
@@ -368,18 +370,19 @@ GuardrailViolation _cacheKeyViolation(
 }
 
 bool _containsForbiddenSceneRecordSort(
+  String path,
   CompilationUnit unit,
-  Set<String> topLevelHelperNames,
-  Set<String> topLevelQualifiedHelperNames,
+  _FrameSceneSortGuardrailContext context,
 ) {
   final projectionVisitor = _OrderTokenProjectionVisitor();
   unit.accept(projectionVisitor);
   final helperNames = {
-    ...topLevelHelperNames,
+    ...context.topLevelHelperNames,
     ..._orderTokenComparatorHelpers(unit),
   };
   final qualifiedHelperNames = {
-    ...topLevelQualifiedHelperNames,
+    ...context.topLevelQualifiedHelperNames,
+    ...context.importAliasQualifiedHelpers(path: path, unit: unit),
     ..._qualifiedOrderTokenComparatorHelpers(unit),
   };
   final helperInstances = _orderTokenComparatorHelperInstances(
@@ -545,6 +548,106 @@ Set<String> _topLevelQualifiedOrderTokenComparatorHelpers(
   }
 
   return helperNames;
+}
+
+Map<String, _OrderTokenComparatorHelperNames>
+_orderTokenComparatorHelperCatalog(Map<String, CompilationUnit> units) {
+  return {
+    for (final entry in units.entries)
+      entry.key: _OrderTokenComparatorHelperNames(
+        topLevel: _orderTokenComparatorHelpers(entry.value, topLevelOnly: true),
+        qualified: _qualifiedOrderTokenComparatorHelpers(entry.value),
+      ),
+  };
+}
+
+final class _OrderTokenComparatorHelperNames {
+  const _OrderTokenComparatorHelperNames({
+    required this.topLevel,
+    required this.qualified,
+  });
+
+  final Set<String> topLevel;
+  final Set<String> qualified;
+}
+
+final class _FrameSceneSortGuardrailContext {
+  const _FrameSceneSortGuardrailContext({
+    required this.frameUnits,
+    required this.topLevelHelperNames,
+    required this.topLevelQualifiedHelperNames,
+    required this.helperCatalog,
+  });
+
+  final Map<String, CompilationUnit> frameUnits;
+  final Set<String> topLevelHelperNames;
+  final Set<String> topLevelQualifiedHelperNames;
+  final Map<String, _OrderTokenComparatorHelperNames> helperCatalog;
+
+  Set<String> importAliasQualifiedHelpers({
+    required String path,
+    required CompilationUnit unit,
+  }) {
+    final helpers = <String>{};
+    for (final directive in unit.directives.whereType<ImportDirective>()) {
+      final alias = directive.prefix?.name;
+      if (alias == null) {
+        continue;
+      }
+      final importedPath = _resolvedFrameImportPath(path, directive);
+      if (importedPath == null || !frameUnits.containsKey(importedPath)) {
+        continue;
+      }
+      final importedHelpers = helperCatalog[importedPath];
+      if (importedHelpers == null) {
+        continue;
+      }
+      helpers.addAll(importedHelpers.topLevel.map((name) => '$alias.$name'));
+      helpers.addAll(importedHelpers.qualified.map((name) => '$alias.$name'));
+    }
+
+    return helpers;
+  }
+}
+
+String? _resolvedFrameImportPath(String sourcePath, ImportDirective directive) {
+  final uri = directive.uri.stringValue;
+  if (uri == null) {
+    return null;
+  }
+  if (uri.startsWith('package:iwb_canvas_engine/src/frame/')) {
+    return 'lib/${uri.substring('package:iwb_canvas_engine/'.length)}';
+  }
+  if (uri.startsWith('dart:') ||
+      uri.startsWith('package:') ||
+      uri.startsWith('/')) {
+    return null;
+  }
+  final directoryEnd = sourcePath.lastIndexOf('/');
+  final directory = directoryEnd < 0
+      ? ''
+      : sourcePath.substring(0, directoryEnd);
+  final rawPath = directory.isEmpty ? uri : '$directory/$uri';
+
+  return _normalizeRelativePath(rawPath);
+}
+
+String _normalizeRelativePath(String path) {
+  final parts = <String>[];
+  for (final part in path.split('/')) {
+    if (part.isEmpty || part == '.') {
+      continue;
+    }
+    if (part == '..') {
+      if (parts.isNotEmpty) {
+        parts.removeLast();
+      }
+      continue;
+    }
+    parts.add(part);
+  }
+
+  return parts.join('/');
 }
 
 Set<String> _orderTokenComparatorHelpers(
@@ -752,6 +855,10 @@ final class _QualifiedHelperPresenceVisitor extends RecursiveAstVisitor<void> {
   bool _targetOwnsHelper(Expression target, String method) {
     if (target is SimpleIdentifier) {
       return _simpleTargetOwnsHelper(target, method);
+    }
+    if (target is PrefixedIdentifier) {
+      return _qualifiedReceiverOwnsHelper(target.toSource(), method) &&
+          !_unitShadowsQualifiedHelper(target, target.identifier.name, method);
     }
     final constructedType = _constructedTypeName(target);
 
