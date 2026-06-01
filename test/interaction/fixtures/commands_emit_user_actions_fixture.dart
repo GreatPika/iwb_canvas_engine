@@ -56,6 +56,7 @@ _recordAcceptedIntentDelivery() async {
         elementIds: [CanvasElementId('b')],
         actionIntents: _allActionIntents(),
       ),
+      document: root.readDocument(),
     );
     await _flushActions();
 
@@ -124,6 +125,7 @@ void _deliverNoOpMarquee(RuntimeRoot root) {
         ),
       ],
     ),
+    document: root.readDocument(),
   );
 }
 
@@ -139,6 +141,7 @@ void _deliverAcceptedMarquee(RuntimeRoot root) {
         ),
       ],
     ),
+    document: root.readDocument(),
   );
 }
 

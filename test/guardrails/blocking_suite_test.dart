@@ -123,6 +123,34 @@ void main() {
       suiteGuardrailIds('preview'),
     );
   });
+  test('tools suite selection routes only tools guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=tools']),
+      suiteGuardrailIds('tools'),
+    );
+  });
+  test('selection and move guardrails are blocking', () {
+    expect(
+      blockingGuardrailIds(),
+      containsAll({
+        'load.prepares_before_interrupt',
+        'load.success_interrupts_before_install',
+        'interaction.no_concrete_store_imports',
+        'interaction.no_concrete_selection_imports',
+        'interaction.read_port_immutable_facts',
+        'interaction.no_command_facts_import',
+        'interaction.cleanup_coordinator_dependency_bans',
+        'interaction.pointer_cleanup_coordinator_only',
+        'interaction.no_resolver_on_cancel_paths',
+        'interaction.no_stale_terminal_commit',
+        'events.action_after_state_order',
+        'preview.selected_move_main_repaint',
+        'preview.selected_move_main_only',
+        'preview.marquee_overlay_only',
+        'tools.p10_compatibility',
+      }),
+    );
+  });
   test('frame, cache, and preview guardrails are blocking', () {
     expect(
       blockingGuardrailIds(),
@@ -316,6 +344,46 @@ const _runnerStructuralScanCases = [
       'test/guardrails/selection_boundary_checks_test.dart',
     ],
     violationPath: 'lib/src/runtime/bad_runner_selection.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.no_concrete_store_imports',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/interaction/bad_store_import.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.no_concrete_selection_imports',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/interaction/bad_selection_import.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.read_port_immutable_facts',
+    proofPaths: [
+      'test/interaction/interaction_read_port_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.no_command_facts_import',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/interaction/bad_command_facts_import.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.cleanup_coordinator_dependency_bans',
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
   ),
   _StructuralScanCase(
     id: 'interaction.pointer_cleanup_coordinator_only',

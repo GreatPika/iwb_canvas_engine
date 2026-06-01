@@ -812,8 +812,7 @@ final class RuntimeRoot
     }
   }
 
-  // P10 deliberately ignores the supplied target/timestamp and reports the
-  // whole double-tap path as unsupported until P12 owns context requests.
+  // Double-tap context requests are not implemented by the current runtime.
   // ignore: avoid-unused-parameters
   Never handleDoubleTap({required Offset position, int? timestampMs}) {
     ensureRuntimeMutationAllowed();
@@ -823,13 +822,10 @@ final class RuntimeRoot
   @visibleForTesting
   void deliverCommitPlanForTesting(
     CommitPlan plan, {
-    CanvasDocument? document,
+    required CanvasDocument document,
   }) {
     ensureRuntimeMutationAllowed();
-    final applyResult = _applyEditCommit(
-      document ?? _store.readDocument(),
-      plan,
-    );
+    final applyResult = _applyEditCommit(document, plan);
     _deliverEditCommitResult(applyResult);
   }
 

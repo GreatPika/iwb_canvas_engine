@@ -8,6 +8,7 @@ void main() {
   _testRuntimeSelectionState();
   _testStoreSelectionState();
   _testNonSelectionElementFacts();
+  _testRuntimeReadBoundaryFacts();
   _testActionHistoryAllowanceScope();
   _testCodecSelectionState();
   _testPublicApiSelectionState();
@@ -65,6 +66,46 @@ import 'package:iwb_canvas_engine/src/api/canvas_ids.dart';
 class GoodStoreState {
   final activeElementIds = <CanvasElementId, bool>{};
   final indexedElementIds = <CanvasElementId>{};
+}
+''',
+      }),
+      completes,
+    );
+  });
+}
+
+void _testRuntimeReadBoundaryFacts() {
+  test('selection owner check allows runtime read-boundary fact contexts', () {
+    return expectLater(
+      _expectNoSelectionBoundaryViolation({
+        'lib/src/runtime/runtime_command_facts_adapter.dart': '''
+import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+
+final class RuntimeCommandFactsAdapter {
+  const RuntimeCommandFactsAdapter(this._selection);
+
+  final SelectionFactsPort _selection;
+}
+
+final class _CommandReadContext {
+  const _CommandReadContext({required this.selection});
+
+  final SelectionFacts selection;
+}
+''',
+        'lib/src/runtime/runtime_interaction_read_adapter.dart': '''
+import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+
+final class RuntimeInteractionReadAdapter {
+  const RuntimeInteractionReadAdapter(this._selection);
+
+  final SelectionFactsPort _selection;
+}
+
+final class _InteractionReadContext {
+  const _InteractionReadContext({required this.selection});
+
+  final SelectionFacts selection;
 }
 ''',
       }),

@@ -138,9 +138,42 @@ const _blockingEntries = [
     requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(
+    id: 'interaction.no_concrete_store_imports',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'interaction.no_concrete_selection_imports',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'interaction.read_port_immutable_facts',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'interaction.no_command_facts_import',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'interaction.cleanup_coordinator_dependency_bans',
+    suites: {'blocking', 'interaction'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
     id: 'interaction.pointer_cleanup_coordinator_only',
     suites: {'blocking', 'interaction'},
     requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'interaction.no_resolver_on_cancel_paths',
+    suites: {'blocking', 'interaction'},
+  ),
+  GuardrailEntry(
+    id: 'interaction.no_stale_terminal_commit',
+    suites: {'blocking', 'interaction'},
   ),
   GuardrailEntry(id: 'edit.sync_non_nested', suites: {'blocking', 'edit'}),
   GuardrailEntry(id: 'edit.rollback_no_effects', suites: {'blocking', 'edit'}),
@@ -166,6 +199,10 @@ const _blockingEntries = [
   ),
   GuardrailEntry(
     id: 'events.commands_emit_user_actions',
+    suites: {'blocking', 'events'},
+  ),
+  GuardrailEntry(
+    id: 'events.action_after_state_order',
     suites: {'blocking', 'events'},
   ),
   GuardrailEntry(
@@ -201,6 +238,15 @@ const _blockingEntries = [
     id: 'preview.selected_move_main_repaint',
     suites: {'blocking', 'preview'},
   ),
+  GuardrailEntry(
+    id: 'preview.selected_move_main_only',
+    suites: {'blocking', 'preview'},
+  ),
+  GuardrailEntry(
+    id: 'preview.marquee_overlay_only',
+    suites: {'blocking', 'preview'},
+  ),
+  GuardrailEntry(id: 'tools.p10_compatibility', suites: {'blocking', 'tools'}),
   GuardrailEntry(
     id: 'frame.committed_facts_via_frame_facts_port',
     suites: {'blocking', 'frame'},

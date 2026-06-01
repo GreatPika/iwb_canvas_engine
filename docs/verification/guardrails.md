@@ -52,12 +52,18 @@ Guardrails:
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
+- `events.action_after_state_order`
 - `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
+- `preview.selected_move_main_only`
+- `preview.marquee_overlay_only`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_concrete_selection_imports`
+- `interaction.read_port_immutable_facts`
+- `interaction.no_command_facts_import`
+- `interaction.cleanup_coordinator_dependency_bans`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
@@ -86,6 +92,7 @@ Guardrails:
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
+- `tools.p10_compatibility`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
@@ -193,12 +200,18 @@ Mandatory guardrails:
 | `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
+| `events.action_after_state_order` | accepted public state is published before user action events emitted by interaction and command commits |
 | `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, pending line start previews, and selected move resolver requests |
 | `load.prepares_before_interrupt` | failed load does not interrupt gesture |
 | `load.success_interrupts_before_install` | successful load prepares interaction cleanup before atomic install and performs no post-install interaction owner call to finish load cleanup |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
+| `preview.selected_move_main_only` | selected move preview is routed only through the main repaint domain |
+| `preview.marquee_overlay_only` | marquee preview is routed only through the overlay repaint domain |
 | `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |
 | `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |
+| `interaction.read_port_immutable_facts` | InteractionReadPort fact objects defensively copy caller-provided collections before exposing them to interaction machines |
+| `interaction.no_command_facts_import` | interaction code must not import command facts; command read facts stay owned by runtime command adapters |
+| `interaction.cleanup_coordinator_dependency_bans` | PointerToolCleanupCoordinator must not depend on edit, frame, resources, store, selection, Flutter bridge, or Flutter package owners |
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create commit intent |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
@@ -227,6 +240,7 @@ Mandatory guardrails:
 | `codec.no_runtime_side_effects` | schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
+| `tools.p10_compatibility` | public tool and command ports continue to expose P10 interaction payload families without source-level internal imports |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 

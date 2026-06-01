@@ -49,6 +49,7 @@ Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
       elementIds: [CanvasElementId('b')],
       actionIntents: _actionIntents(),
     ),
+    document: root.readDocument(),
   );
   await Future<void>.delayed(Duration.zero);
 

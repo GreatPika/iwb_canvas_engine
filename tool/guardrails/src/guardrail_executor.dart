@@ -5,6 +5,7 @@ import 'frame_cache_guardrail_checks.dart';
 import 'geometry_spatial_guardrail_checks.dart';
 import 'guardrail_violation.dart';
 import 'owner_dag_import_checks.dart';
+import 'interaction_guardrail_checks.dart';
 import 'public_api_guardrail_checks.dart';
 import 'selection_boundary_checks.dart';
 import 'store_projection_checks.dart';
@@ -212,9 +213,35 @@ const _testProofPaths = {
     'test/selection/runtime_owner_separation_test.dart',
     'test/guardrails/selection_boundary_checks_test.dart',
   ],
+  interactionNoConcreteStoreImportsGuardrailId: [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/guardrails/interaction_guardrail_enforcement_test.dart',
+  ],
+  interactionNoConcreteSelectionImportsGuardrailId: [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/guardrails/interaction_guardrail_enforcement_test.dart',
+  ],
+  interactionReadPortImmutableFactsGuardrailId: [
+    'test/interaction/interaction_read_port_test.dart',
+    'test/guardrails/interaction_guardrail_enforcement_test.dart',
+  ],
+  interactionNoCommandFactsImportGuardrailId: [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/guardrails/interaction_guardrail_enforcement_test.dart',
+  ],
+  interactionCleanupCoordinatorDependencyBansGuardrailId: [
+    'test/guardrails/import_boundaries_test.dart',
+    'test/guardrails/interaction_guardrail_enforcement_test.dart',
+  ],
   'interaction.pointer_cleanup_coordinator_only': [
     'test/guardrails/import_boundaries_test.dart',
     'test/interaction/pointer_tool_cleanup_coordinator_test.dart',
+  ],
+  interactionNoResolverOnCancelPathsGuardrailId: [
+    'test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart',
+  ],
+  interactionNoStaleTerminalCommitGuardrailId: [
+    'test/interaction/move_machine_test.dart',
   ],
   'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
   'edit.rollback_no_effects': [
@@ -244,6 +271,10 @@ const _testProofPaths = {
     'test/api/typed_action_payloads_test.dart',
     'test/guardrails/action_after_state_guardrail_test.dart',
   ],
+  eventsActionAfterStateOrderGuardrailId: [
+    'test/interaction/commands_emit_user_actions_test.dart',
+    'test/guardrails/action_after_state_guardrail_test.dart',
+  ],
   'events.runtime_created_timestamps_monotonic': [
     'test/api/runtime_timestamp_order_test.dart',
   ],
@@ -271,6 +302,17 @@ const _testProofPaths = {
   ],
   'preview.selected_move_main_repaint': [
     'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
+  ],
+  selectedMoveMainOnlyPreviewGuardrailId: [
+    'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
+  ],
+  marqueeOverlayOnlyPreviewGuardrailId: [
+    'test/frame/marquee_overlay_repaint_test.dart',
+  ],
+  toolPortCompatibilityGuardrailId: [
+    'test/api/tool_port_settings_test.dart',
+    'test/api/command_port_actions_test.dart',
+    'test/api/typed_action_payloads_test.dart',
   ],
   'frame.committed_facts_via_frame_facts_port': [
     'test/guardrails/import_boundaries_test.dart',
@@ -328,6 +370,15 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   'store.no_public_document_live_state': checkNoPublicDocumentLiveState,
   'projection.only_explicit_read_paths': checkProjectionOnlyExplicitReadPaths,
   'selection.owner_separate_from_document': checkSelectionOwnerSeparation,
+  interactionNoConcreteStoreImportsGuardrailId:
+      checkInteractionImportBoundaries,
+  interactionNoConcreteSelectionImportsGuardrailId:
+      checkInteractionImportBoundaries,
+  interactionReadPortImmutableFactsGuardrailId:
+      checkInteractionReadPortImmutableFacts,
+  interactionNoCommandFactsImportGuardrailId: checkInteractionImportBoundaries,
+  interactionCleanupCoordinatorDependencyBansGuardrailId:
+      checkCleanupCoordinatorDependencyBans,
   'interaction.pointer_cleanup_coordinator_only':
       checkPointerCleanupCoordinatorCallerOrigins,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
@@ -366,6 +417,16 @@ const _structuralDescriptions = {
       'resolved public projection read-path check',
   'selection.owner_separate_from_document':
       'resolved selection ownership boundary check',
+  interactionNoConcreteStoreImportsGuardrailId:
+      'selection-and-move interaction concrete-store import boundary check',
+  interactionNoConcreteSelectionImportsGuardrailId:
+      'selection-and-move interaction concrete-selection import boundary check',
+  interactionReadPortImmutableFactsGuardrailId:
+      'selection-and-move interaction read-port immutable fact exposure check',
+  interactionNoCommandFactsImportGuardrailId:
+      'selection-and-move interaction command-facts import boundary check',
+  interactionCleanupCoordinatorDependencyBansGuardrailId:
+      'selection-and-move cleanup coordinator dependency boundary check',
   'interaction.pointer_cleanup_coordinator_only':
       'interaction pointer cleanup coordinator caller-origin check',
   ownerDagGuardrailId: 'owner DAG import/export boundary check',

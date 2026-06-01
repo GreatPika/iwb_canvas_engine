@@ -158,6 +158,8 @@ final class _SelectionStateVisitor extends RecursiveAstVisitor<void> {
   bool _isAllowedSelectionStateShape(String name) {
     return _isAllowedActionHistoryName(path, name, _currentClassName) ||
         _isRuntimeSelectionReadPortState(path, name, _currentClassName) ||
+        _isRuntimeSelectionBoundaryReadContext(path, name, _currentClassName) ||
+        _isRuntimeSelectionBoundaryReadPort(path, name, _currentClassName) ||
         _isRuntimeRootCompositionState(path, name, _currentClassName);
   }
 }
@@ -256,6 +258,30 @@ bool _isRuntimeSelectionReadPortState(
   return path == 'lib/src/contracts/internal/selection_facts_port.dart' &&
       className == 'SelectionFacts' &&
       (name == 'selectedElementIds' || name == 'selectionRevision');
+}
+
+bool _isRuntimeSelectionBoundaryReadContext(
+  String path,
+  String name,
+  String className,
+) {
+  return name == 'selection' &&
+      (path == 'lib/src/runtime/runtime_command_facts_adapter.dart' &&
+              className == '_CommandReadContext' ||
+          path == 'lib/src/runtime/runtime_interaction_read_adapter.dart' &&
+              className == '_InteractionReadContext');
+}
+
+bool _isRuntimeSelectionBoundaryReadPort(
+  String path,
+  String name,
+  String className,
+) {
+  return name == '_selection' &&
+      (path == 'lib/src/runtime/runtime_command_facts_adapter.dart' &&
+              className == 'RuntimeCommandFactsAdapter' ||
+          path == 'lib/src/runtime/runtime_interaction_read_adapter.dart' &&
+              className == 'RuntimeInteractionReadAdapter');
 }
 
 bool _isRuntimeRootCompositionState(

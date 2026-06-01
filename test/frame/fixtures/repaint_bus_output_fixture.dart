@@ -22,25 +22,43 @@ void _testSelectedMoveAndOverlayRouting() {
   test(
     'selected move invalidates main and overlay previews invalidate overlay',
     () {
-      final (:main, :overlay) = _selectedMoveAndOverlayOutputs();
+      final (
+        :selectedMoveMain,
+        :selectedMoveOverlay,
+        :marqueeMain,
+        :marqueeOverlay,
+      ) = _selectedMoveAndOverlayOutputs();
 
-      expect(main.repaintSignal.reason, 'selected_move_preview');
-      expect(main.repaintSignal.mainCanvas, isTrue);
-      expect(main.repaintSignal.overlayCanvas, isFalse);
+      expect(selectedMoveMain.repaintSignal.reason, 'selected_move_preview');
+      expect(selectedMoveMain.repaintSignal.mainCanvas, isTrue);
+      expect(selectedMoveMain.repaintSignal.overlayCanvas, isFalse);
       expect(
-        main
+        selectedMoveMain
             .selectedMoveSupplementPlan
             .probe
             .ordinaryCacheWritesDuringSupplement,
         0,
       );
-      expect(overlay.repaintSignal.mainCanvas, isFalse);
-      expect(overlay.repaintSignal.overlayCanvas, isTrue);
+      expect(selectedMoveOverlay.overlayPreviewPlan.primitives, isEmpty);
+      expect(selectedMoveOverlay.repaintSignal.mainCanvas, isFalse);
+      expect(selectedMoveOverlay.repaintSignal.overlayCanvas, isFalse);
+      expect(marqueeMain.capturedFrame.selectedMovePreview, isNull);
+      expect(marqueeMain.selectedMoveSupplementPlan.probe.supplementCount, 0);
+      expect(marqueeMain.repaintSignal.reason, 'main_frame');
+      expect(marqueeMain.repaintSignal.mainCanvas, isTrue);
+      expect(marqueeMain.repaintSignal.overlayCanvas, isFalse);
+      expect(marqueeOverlay.repaintSignal.mainCanvas, isFalse);
+      expect(marqueeOverlay.repaintSignal.overlayCanvas, isTrue);
     },
   );
 }
 
-({MainFramePaintOutput main, OverlayFramePaintOutput overlay})
+({
+  MainFramePaintOutput selectedMoveMain,
+  OverlayFramePaintOutput selectedMoveOverlay,
+  MainFramePaintOutput marqueeMain,
+  OverlayFramePaintOutput marqueeOverlay,
+})
 _selectedMoveAndOverlayOutputs() {
   final row = rectFacts('a', orderToken: 1);
   final frameFacts = frameFactsPort(elements: [row]);
@@ -54,11 +72,20 @@ _selectedMoveAndOverlayOutputs() {
   );
 
   return (
-    main: engine.buildResourceFreeMainFrame(
+    selectedMoveMain: engine.buildResourceFreeMainFrame(
       inputs: _inputs(const CanvasSelectedMovePreview(delta: Offset(1, 0))),
       viewCameraBucket: 0,
     ),
-    overlay: engine.buildResourceFreeOverlayFrame(
+    selectedMoveOverlay: engine.buildResourceFreeOverlayFrame(
+      inputs: _inputs(const CanvasSelectedMovePreview(delta: Offset(1, 0))),
+    ),
+    marqueeMain: engine.buildResourceFreeMainFrame(
+      inputs: _inputs(
+        const CanvasMarqueePreview(rect: Rect.fromLTWH(0, 0, 1, 1)),
+      ),
+      viewCameraBucket: 0,
+    ),
+    marqueeOverlay: engine.buildResourceFreeOverlayFrame(
       inputs: _inputs(
         const CanvasMarqueePreview(rect: Rect.fromLTWH(0, 0, 1, 1)),
       ),

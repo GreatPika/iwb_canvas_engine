@@ -63,17 +63,24 @@ Required tests:
 - `test.flutter_bridge.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
+- `preview.selected_move_main_only`
+- `preview.marquee_overlay_only`
 - `api.preview_state_sealed_union_publicly_readable`
 - `events.commands_emit_user_actions`
+- `events.action_after_state_order`
 - `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_concrete_selection_imports`
+- `interaction.read_port_immutable_facts`
+- `interaction.no_command_facts_import`
+- `interaction.cleanup_coordinator_dependency_bans`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
+- `tools.p10_compatibility`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:

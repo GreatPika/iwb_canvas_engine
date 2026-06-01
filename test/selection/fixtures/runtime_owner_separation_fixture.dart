@@ -21,7 +21,6 @@ void main() {
       _verifyToggleAndNoOpBehavior(root, selection);
       _verifyClearAndSelectAll(root, selection);
       _verifyEditPrunesSelectionAtomically(root, selection);
-      _verifyRejectedMutationCommands(root, selection);
 
       root.dispose();
     },
@@ -110,20 +109,6 @@ void _verifyClearAndSelectAll(RuntimeRoot root, CanvasSelectionPort selection) {
   });
   expect(root.state.value.revisions.selection, 5);
   expect(root.state.value.summary.selectedCount, 4);
-}
-
-void _verifyRejectedMutationCommands(
-  RuntimeRoot root,
-  CanvasSelectionPort selection,
-) {
-  final stateBeforeRejectedCommand = root.state.value;
-  expect(
-    () => selection.moveSelection(const Offset(1, 1)),
-    throwsUnsupportedError,
-  );
-  expect(() => selection.deleteSelection(), throwsUnsupportedError);
-  expect(root.state.value, stateBeforeRejectedCommand);
-  expect(root.projectionBuildCount, 1);
 }
 
 void _verifyEditPrunesSelectionAtomically(

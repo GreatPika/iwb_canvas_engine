@@ -34,8 +34,6 @@ flowchart LR
   contracts_internal_ports -->|contract dependency by P6| contracts_public
   edit_kernel -->|changes data through by P5| store_document_kernel
   frame_renderer -->|resolves resources through by P9| resource_surface_session
-  interaction_engine -->|planned emits user actions by P10| api_canvas_runtime
-  interaction_engine -->|planned queries hits through by P10| geometry_spatial_index
   interaction_engine -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
@@ -46,13 +44,5 @@ flowchart LR
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel
   runtime_root -->|read port adapter by P10| interaction_engine
-  violation_interaction_engine_emits_user_actions["Missing required link"]:::violation
-  violation_interaction_engine_emits_user_actions -.-> interaction_engine
-  violation_interaction_engine_emits_user_actions -.-> api_canvas_runtime
-  violation_interaction_engine_queries_spatial_index["Missing required link"]:::violation
-  violation_interaction_engine_queries_spatial_index -.-> interaction_engine
-  violation_interaction_engine_queries_spatial_index -.-> geometry_spatial_index
   classDef ok fill:#f8fafc,stroke:#64748b,color:#0f172a
   classDef violation fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-  linkStyle 13 stroke:#dc2626,stroke-width:3px,color:#7f1d1d
-  linkStyle 14 stroke:#dc2626,stroke-width:3px,color:#7f1d1d

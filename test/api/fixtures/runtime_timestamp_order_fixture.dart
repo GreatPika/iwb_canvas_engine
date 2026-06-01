@@ -89,6 +89,7 @@ final class _TimestampScenario {
         elementIds: [nextId],
         actionIntents: [intent],
       ),
+      document: root.readDocument(),
     );
   }
 }

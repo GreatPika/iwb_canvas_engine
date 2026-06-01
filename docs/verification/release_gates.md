@@ -118,12 +118,18 @@ Guardrails:
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
 - `events.commands_emit_user_actions`
+- `events.action_after_state_order`
 - `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
 - `preview.selected_move_main_repaint`
+- `preview.selected_move_main_only`
+- `preview.marquee_overlay_only`
 - `interaction.no_concrete_store_imports`
 - `interaction.no_concrete_selection_imports`
+- `interaction.read_port_immutable_facts`
+- `interaction.no_command_facts_import`
+- `interaction.cleanup_coordinator_dependency_bans`
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
@@ -152,6 +158,7 @@ Guardrails:
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
+- `tools.p10_compatibility`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:

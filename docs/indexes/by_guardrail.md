@@ -147,6 +147,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
+## events.action_after_state_order
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
 ## events.commands_emit_user_actions
 
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
@@ -183,6 +187,14 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
+## interaction.cleanup_coordinator_dependency_bans
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## interaction.no_command_facts_import
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
 ## interaction.no_concrete_selection_imports
 
 - Sections: `section_03_package_layout`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
@@ -203,6 +215,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
+## interaction.read_port_immutable_facts
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
 ## interaction.text_edit_stale_commit_guard
 
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
@@ -214,6 +230,14 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 ## load.success_interrupts_before_install
 
 - Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## preview.marquee_overlay_only
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## preview.selected_move_main_only
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## preview.selected_move_main_repaint
 
@@ -276,6 +300,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## surface.pointer_samples_normalized_before_runtime
+
+- Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## tools.p10_compatibility
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
