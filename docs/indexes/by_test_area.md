@@ -15,6 +15,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 
+## test.api_contract.api_facades_do_not_export_internal
+
+- Sections: `section_23_tests`
+
 ## test.api_contract.app_next_engine_adapter_compile_fixture
 
 - Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
@@ -50,6 +54,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.api_contract.public_equality_policy
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.api_contract.public_exports_complete
+
+- Sections: `section_23_tests`
 
 ## test.api_contract.public_readable_union_variants
 
@@ -179,7 +187,19 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 
+## test.frame.frame_drawable_policy
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.frame.frame_spatial_paint_admission
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.frame.main_overlay_capture
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.frame.marquee_captured_style
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
@@ -194,6 +214,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.frame.paint_plan_excludes_selection_state
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`
+
+## test.frame.paint_plan_write_all_or_nothing
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 
 ## test.frame.selected_supplement_staging_no_global_sort
 

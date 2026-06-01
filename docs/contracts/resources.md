@@ -101,6 +101,10 @@ supplement records are known, it reads descriptor facts through
 paint assets or placeholders for painter inputs. This keeps descriptor binding
 and resolver access out of capture, ordinary planning, painters, and app
 resolver ownership.
+The binding service calls `beginFrameResourcePass()` before resolving any image
+for a main paint frame. That call resets the session-owned per-frame resolver
+budget, clears same-frame null-result suppression for the new frame, and clears
+the pending budget follow-up repaint flag before resolver work begins.
 
 `CanvasSurface` creates an empty `SurfaceResourceSession` only after successful
 single-active-surface attachment. Rejected attachment creates no session and

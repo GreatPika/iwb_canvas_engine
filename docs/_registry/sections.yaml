@@ -621,6 +621,10 @@
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.guardrails.frame_committed_facts_via_frame_facts_port
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_drawable_policy
+    - test.frame.marquee_captured_style
+    - test.frame.paint_plan_write_all_or_nothing
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
@@ -742,6 +746,7 @@
   tests:
     - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
     - test.frame.cache_capacity_eviction_policy
+    - test.frame.paint_plan_write_all_or_nothing
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.paint_plan_excludes_selection_state
     - test.frame.camera_pan_preserves_ordinary_paint_plan
@@ -1007,6 +1012,8 @@
     - test.api_contract.public_readable_union_variants
     - test.api_contract.preview_state_sealed_union
     - test.api_contract.public_api_v1_compiles_as_written
+    - test.api_contract.public_exports_complete
+    - test.api_contract.api_facades_do_not_export_internal
     - test.api_contract.public_api_no_unapproved_placeholders
     - test.guardrails.public_api_declaration_checks
     - test.guardrails.public_api_import_cycles
@@ -1084,6 +1091,10 @@
     - test.frame.main_overlay_capture
     - test.frame.no_live_runtime_read_in_painters
     - test.guardrails.frame_committed_facts_via_frame_facts_port
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_drawable_policy
+    - test.frame.marquee_captured_style
+    - test.frame.paint_plan_write_all_or_nothing
     - test.guardrails.geometry_no_legacy_scene_order
     - test.guardrails.geometry_eraser_exact_budget_inputs
     - test.guardrails.spatial_no_full_clone_ordinary_edit

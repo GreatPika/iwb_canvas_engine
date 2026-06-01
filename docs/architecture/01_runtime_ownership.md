@@ -197,7 +197,7 @@ RuntimeRoot
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel
   ├─ ResourceKernel
-  ├─ SurfaceResourceSession (owned by active CanvasSurface)
+  ├─ active ResourceSessionInvalidationSink? (nullable active surface bridge)
   ├─ CodecBoundary
   └─ DiagnosticsHub
 ```

@@ -106,4 +106,9 @@ budget-exceeded result contains no partial candidates and does not mutate indexe
 invalid index can request rebuild/retry only outside the hot pointer/paint path.
 ```
 
+Candidate admission is explicit. Only `SpatialCandidatesResult` carries
+candidate handles. Non-candidate typed results, including budget-exceeded,
+invalid-index, and stale-candidate results, must not be projected as successful
+empty candidate sets by frame or interaction callers.
+
 ---

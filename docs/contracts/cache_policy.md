@@ -21,6 +21,7 @@ Related diagrams:
 Required tests:
 - `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
 - `test.frame.cache_capacity_eviction_policy`
+- `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
@@ -79,6 +80,11 @@ components because view camera, background, grid, and style-only changes repaint
 frame surfaces or decoration plans without changing ordinary element render
 records. Runtime view camera changes also do not invalidate public
 `CanvasDocument` projection.
+The executable ordinary-cache exclusion guardrails cover all ordinary-record
+storage surfaces, including `PaintPlanKey`, `OrdinaryPaintRecordKey`,
+`OrdinaryPaintRecordCacheEntry`, `PaintPlan`, and the registered render-row
+payloads. Rejected shifted selected-move admission must publish the ordinary
+frame unchanged and perform no ordinary cache write.
 Committed background elements are still ordinary render records: they are
 admitted through spatial candidates and cached through their structural, bounds,
 elementVisual, generation, and order-token facts. The separate background/grid

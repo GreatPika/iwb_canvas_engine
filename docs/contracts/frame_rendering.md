@@ -34,6 +34,10 @@ Required tests:
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.frame.frame_spatial_paint_admission`
+- `test.frame.frame_drawable_policy`
+- `test.frame.marquee_captured_style`
+- `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
@@ -116,6 +120,9 @@ Rules:
 - painters do not materialize CanvasDocument;
 - stale spatial candidate is rejected by structuralRevision/generation/orderToken
   check;
+- frame paint admission accepts only explicit spatial candidate results;
+  typed non-candidate spatial results stay visible as rejected admissions
+  instead of becoming successful candidate streams;
 - `SurfaceResourceSession` is the only image resolution boundary in paint, and
   app resolver callbacks cannot mutate runtime;
 - v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
@@ -153,6 +160,19 @@ document element rows.
 `PaintAssetBindingService` is the only target frame collaborator that receives
 `SurfaceResourceSession`; painters remain immutable-output consumers and never
 receive store, runtime, resolver, or public document read access.
+It starts the frame resource pass before image resolution so resolver budgets,
+same-frame null suppression, and budget follow-up throttles belong to the
+current main paint frame.
+
+Overlay preview primitives are immutable frame output admitted from
+`CapturedOverlayFrame`. Marquee primitives carry the captured
+`CanvasSelectionStyle` values needed for stroke and fill output; the overlay
+painter consumes those primitive fields and does not re-read live style state.
+
+`FrameDrawablePolicy` is the single frame-owned degenerate drawable policy.
+One-point committed strokes, one-point stroke previews, one-point eraser
+corridors, and same-point committed or preview lines render as explicit
+commands at the frame boundary. Empty point lists remain no-op draw inputs.
 
 Opacity and layer policy:
 
@@ -221,25 +241,29 @@ Algorithm:
 6. Build a per-frame PaintPlan from the current admitted record stream. Its
    PaintPlanKey is the cache-entry lookup, but the entry can only reuse records
    admitted again by the current frame.
-7. When CanvasSelectedMovePreview is active, read selected ids through the captured
-   selection facts boundary and filter movable selected ids from the
-   ordinary record stream for this frame only.
-8. Query visibilityRect shifted by -previewDelta for selected supplement
-   candidates.
-9. Resolve selected handles through `FrameFactsPort` against the captured
+7. When `CanvasSelectedMovePreview` is active, query `visibilityRect` shifted by
+   `-previewDelta` and admit the shifted spatial result before filtering
+   selected ordinary records.
+8. Rejected shifted admission publishes the ordinary records unchanged for that
+   paint, exposes the internal rejection reason, and performs no ordinary cache
+   writes.
+9. For admitted shifted candidates, read selected ids through the captured
+   selection facts boundary and filter movable selected ids from the ordinary
+   record stream for this frame only.
+10. Resolve selected handles through `FrameFactsPort` against the captured
    structuralRevision, generation, and orderToken.
-10. If the selected row facts are current, create shifted RenderElementRecord
+11. If the selected row facts are current, create shifted RenderElementRecord
    instances with previewDelta for this frame only.
-11. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate
+12. If `FrameFactsPort` rejects a stale selected candidate, skip that candidate
    and do not build a supplement RenderElementRecord for it.
-12. Merge filtered ordinary records and supplement records by orderToken.
-13. Do not store selected supplement records in OrdinaryPaintRecordCache.
-14. Do not global sort all scene elements.
-15. Do not materialize CanvasDocument.
+13. Merge filtered ordinary records and supplement records by orderToken.
+14. Do not store selected supplement records in OrdinaryPaintRecordCache.
+15. Do not global sort all scene elements.
+16. Do not materialize CanvasDocument.
 ```
 
 Accepted internal ownership: `OrdinaryPaintPlanner` owns steps 1 through 6, while
-`SelectedMoveSupplementPlanner` owns steps 7 through 14. The supplement planner
+`SelectedMoveSupplementPlanner` owns steps 7 through 15. The supplement planner
 consumes captured selection facts and ordinary records for the current frame,
 but does not write the ordinary `OrdinaryPaintRecordCache`, does not render overlays, and
 does not global sort the scene.

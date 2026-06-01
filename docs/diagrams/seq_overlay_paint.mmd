@@ -25,7 +25,7 @@ sequenceDiagram
   Frame->>Overlay: admit overlay preview variant from captured CanvasPreviewState only
 
   alt preview is CanvasMarqueePreview
-    Overlay->>Builder: build marquee fill and stroke primitive
+    Overlay->>Builder: build marquee primitive with captured selectionStyle
   else preview is CanvasPencilStrokePreview or CanvasMarkerStrokePreview
     Overlay->>Builder: build stroke preview primitive from CanvasStrokePreview facts
   else preview is CanvasPendingLineStartPreview

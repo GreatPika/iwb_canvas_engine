@@ -41,52 +41,64 @@ sequenceDiagram
   Note over Capture: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
   Frame->>Ordinary: plan ordinary committed records
-  Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio
-  Note over Ordinary,PlanCache: OrdinaryPaintRecordCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
+  Ordinary->>Spatial: use captured paint result bounded by viewportRect
+  Spatial-->>Ordinary: typed spatial paint result
+  Ordinary->>Ordinary: admit only SpatialCandidatesResult for ordinary paint; reject typed failures visibly
+  alt ordinary admission rejected
+    Ordinary-->>Frame: empty ordinary plan with rejected-admission reason and no cache write
+  else ordinary admission accepted
+    Ordinary->>PlanCache: lookup ordinary paint plan by structural, bounds, elementVisual, viewportRect, and devicePixelRatio
+    Note over Ordinary,PlanCache: OrdinaryPaintRecordCache excludes backgroundRevision, gridRevision, viewCameraRevision, viewCameraOffset, selectionRevision, selected ids, selectedMoveDelta, previewDelta, and style-only inputs.
 
-  alt ordinary paint plan cache hit
-    PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
-  else paint plan cache miss
-    Ordinary->>Spatial: query paint candidates bounded by captured viewportRect
-    Spatial-->>Ordinary: ordinary candidate handles with id, generation, orderToken, and structuralRevision
+    alt ordinary paint plan cache hit
+      PlanCache-->>Ordinary: ordinary committed RenderElementRecord list
+    else paint plan cache miss
+      Ordinary->>Ordinary: use admitted ordinary candidate handles with id, generation, orderToken, and structuralRevision
 
-    loop for each ordinary candidate handle
-      Ordinary->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
-      Facts->>Store: read committed row snapshot
-      alt handle generation, structuralRevision, and orderToken still match the captured frame
-        Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
-        Facts-->>Ordinary: immutable committed row facts
-        Ordinary->>Ordinary: build ordinary committed RenderElementRecord
-      else stale candidate
-        Store-->>Facts: reject stale candidate
-        Facts-->>Ordinary: stale candidate rejection
-        Ordinary->>Ordinary: skip record for stale generation, structuralRevision, or orderToken
+      loop for each ordinary candidate handle
+        Ordinary->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
+        Facts->>Store: read committed row snapshot
+        alt handle generation, structuralRevision, and orderToken still match the captured frame
+          Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
+          Facts-->>Ordinary: immutable committed row facts
+          Ordinary->>Ordinary: build ordinary committed RenderElementRecord
+        else stale candidate
+          Store-->>Facts: reject stale candidate
+          Facts-->>Ordinary: stale candidate rejection
+          Ordinary->>Ordinary: skip record for stale generation, structuralRevision, or orderToken
+        end
       end
-    end
 
-    Ordinary->>PlanCache: store ordinary committed records only
+      Ordinary->>PlanCache: store ordinary committed records only
+    end
+    Ordinary-->>Frame: ordinary committed records
   end
-  Ordinary-->>Frame: ordinary committed records
 
   opt selectedMoveDelta is active
     Frame->>Supplement: stage selected move supplement
-    Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
     Supplement->>Spatial: query selected supplement using visibilityRect shifted by -selectedMoveDelta
-    Spatial-->>Supplement: selected candidate handles with id, generation, orderToken, and structuralRevision
-    loop for each selected supplement candidate handle
-      Supplement->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
-      Facts->>Store: read committed selected row snapshot
-      Store-->>Facts: immutable selected row view or stale rejection
-      alt selected row facts are current
-        Facts-->>Supplement: selected row facts
-        Supplement->>Supplement: build per-frame supplement RenderElementRecord with previewDelta
-      else stale selected candidate
-        Facts-->>Supplement: stale candidate rejection
-        Supplement->>Supplement: skip selected supplement candidate
+    Spatial-->>Supplement: typed shifted spatial result
+    Supplement->>Supplement: admit shifted candidates before filtering ordinary records
+    alt shifted admission rejected
+      Supplement-->>Frame: ordinary records unchanged with rejected-admission reason
+    else shifted admission accepted
+      Supplement->>Supplement: filter movable selected ids from ordinary records for this frame
+      Supplement->>Supplement: selected candidate handles with id, generation, orderToken, and structuralRevision
+      loop for each selected supplement candidate handle
+        Supplement->>Facts: resolve handle against captured structuralRevision, generation, and orderToken
+        Facts->>Store: read committed selected row snapshot
+        Store-->>Facts: immutable selected row view or stale rejection
+        alt selected row facts are current
+          Facts-->>Supplement: selected row facts
+          Supplement->>Supplement: build per-frame supplement RenderElementRecord with previewDelta
+        else stale selected candidate
+          Facts-->>Supplement: stale candidate rejection
+          Supplement->>Supplement: skip selected supplement candidate
+        end
       end
+      Supplement->>Supplement: merge filtered ordinary records and supplement records by orderToken
+      Supplement-->>Frame: merged records with per-frame supplement
     end
-    Supplement->>Supplement: merge filtered ordinary records and supplement records by orderToken
-    Supplement-->>Frame: merged records with per-frame supplement
     Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
   end
 
@@ -99,6 +111,7 @@ sequenceDiagram
 
   opt explicit frame caller supplies SurfaceResourceSession and records include image resource ids
     ExplicitCaller->>Assets: bind assets for immutable frame output
+    Assets->>Session: beginFrameResourcePass before image resolution
     loop for each image resource id in records
       Assets->>Facts: read descriptor facts by resourceId
       Facts->>Store: read descriptor facts from committed state

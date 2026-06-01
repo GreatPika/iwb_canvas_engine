@@ -112,17 +112,19 @@ The new package is rooted at the repository top level:
       frame/
         frame_engine.dart
         frame_capture_service.dart
-        captured_main_frame.dart
-        captured_overlay_frame.dart
+        captured_frame.dart
         ordinary_paint_planner.dart
         selected_move_supplement_planner.dart
         selection_decoration_planner.dart
         paint_asset_binding_service.dart
+        frame_spatial_paint_admission.dart
+        frame_drawable_policy.dart
         static_background_planner.dart
         overlay_preview_planner.dart
         paint_plan.dart
         render_element_record.dart
-        repaint_bus.dart
+        frame_paint_output.dart
+        frame_repaint_signal.dart
       geometry/
         geometry_policy.dart
         hit_test_policy.dart

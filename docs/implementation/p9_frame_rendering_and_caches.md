@@ -32,6 +32,13 @@ frame output.
   invalidation and public document projection invalidation
 - `selectionRevision`, selected ids, selection flags, and selected-move preview
   deltas excluded from ordinary paint-plan keys and cached ordinary records
+- explicit frame spatial paint admission for ordinary and selected-move shifted
+  candidates, with typed non-candidate spatial results rejected visibly
+- rejected selected-move shifted admission publishes ordinary records unchanged
+  and performs no ordinary cache write
+- frame-owned degenerate drawable policy for one-point strokes, eraser
+  corridors, and same-point lines
+- marquee overlay primitives carry captured selection style for painter output
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint
 - resource image resolution only through `SurfaceResourceSession` owned by
@@ -61,7 +68,8 @@ admission need explicit owners.
 Implementation target keeps committed document facts behind `FrameFactsPort`,
 selection facts behind the selection facts boundary, and resolver/session access
 isolated to `SurfaceResourceSession`. `PaintAssetBindingService` is the only
-frame collaborator that receives the session. `OrdinaryPaintPlanner` must not
+frame collaborator that receives the session, and it calls
+`beginFrameResourcePass()` before image resolution. `OrdinaryPaintPlanner` must not
 depend on selection revision, selection style, selected move delta, preview
 state, resolver/session APIs, or static background identity. Painters consume
 immutable frame outputs and do not read live runtime, store, resolver, or public
@@ -74,9 +82,10 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `OrdinaryPaintPlanner` keeps ordinary cache identity free of selection,
   preview, resolver/session, static background facts, and viewport-admission
   results, while still admitting committed background elements as ordinary
-  render records.
+  render records, and admits only explicit spatial candidate results.
 - `SelectedMoveSupplementPlanner` stages selected move records without ordinary
-  `OrdinaryPaintRecordCache` writes or global scene sort.
+  `OrdinaryPaintRecordCache` writes or global scene sort; rejected shifted
+  spatial admission returns ordinary records unchanged.
 - `SelectionDecorationPlanner` includes `boundsRevision` so selected element
   bounds changes invalidate decoration even when selection membership is
   unchanged.
@@ -86,7 +95,8 @@ without exposing frame collaborators through the package barrel. At minimum:
   invalidate ordinary element paint plans.
 - `OverlayPreviewPlanner` admits immutable overlay primitives from
   `CapturedOverlayFrame` without selected move rendering, resource resolver
-  reads, cache invalidation, or repaint scheduling ownership.
+  reads, cache invalidation, or repaint scheduling ownership, and marquee
+  primitives carry captured selection style values.
 
 ## Dependencies on earlier phases
 
@@ -162,6 +172,10 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
 - `test.frame.frame_donor_mapping` -> `test/frame/frame_donor_mapping_test.dart`
 - `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test.frame.frame_spatial_paint_admission` -> `test/frame/frame_spatial_paint_admission_test.dart`
+- `test.frame.frame_drawable_policy` -> `test/frame/frame_drawable_policy_test.dart`
+- `test.frame.marquee_captured_style` -> `test/frame/marquee_captured_style_test.dart`
+- `test.frame.paint_plan_write_all_or_nothing` -> `test/frame/paint_plan_write_all_or_nothing_test.dart`
 - `test.frame.paint_asset_binding_service` -> `test/frame/paint_asset_binding_service_test.dart`
 - `test.frame.repaint_bus_output` -> `test/frame/repaint_bus_output_test.dart`
 - `test.frame.static_background_plan` -> `test/frame/static_background_plan_test.dart`
@@ -179,6 +193,8 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.frame.cache_capacity_eviction_policy` -> `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test.frame.paint_plan_excludes_preview_delta` -> `test/frame/paint_plan_excludes_preview_delta_test.dart`
 - `test.frame.paint_plan_excludes_selection_state` -> `test/frame/paint_plan_excludes_selection_state_test.dart`
+- `test.api_contract.public_exports_complete` -> `test/api_contract/public_exports_complete_test.dart`
+- `test.api_contract.api_facades_do_not_export_internal` -> `test/api_contract/api_facades_do_not_export_internal_test.dart`
 - `test.selection.runtime_owner_separation` -> `test/selection/runtime_owner_separation_test.dart`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan` -> `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - `test.frame.selected_supplement_staging_no_global_sort` -> `test/frame/selected_supplement_staging_no_global_sort_test.dart`
@@ -201,8 +217,14 @@ without exposing frame collaborators through the package barrel. At minimum:
 - main capture once
 - overlay capture once
 - selected supplement staging support is present without caching preview records
+- selected supplement rejected shifted admission returns ordinary records
+  unchanged and writes no ordinary cache entry
 - selection decoration and selected order are separate from ordinary paint plan
   cache entries
+- frame paint admission accepts only explicit spatial candidate results
+- typed non-candidate spatial results remain visible rejected admissions
+- degenerate drawable inputs render through frame-owned explicit commands
+- marquee overlay primitives use captured selection style values
 - overlay previews can be captured without live runtime reads
 - no live runtime read in painters
 - no `CanvasDocument` projection in paint

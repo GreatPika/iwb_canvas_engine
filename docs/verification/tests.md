@@ -97,6 +97,8 @@ Required tests:
 - `test.api_contract.public_readable_union_variants`
 - `test.api_contract.preview_state_sealed_union`
 - `test.api_contract.public_api_v1_compiles_as_written`
+- `test.api_contract.public_exports_complete`
+- `test.api_contract.api_facades_do_not_export_internal`
 - `test.api_contract.public_api_no_unapproved_placeholders`
 - `test.guardrails.public_api_declaration_checks`
 - `test.guardrails.public_api_import_cycles`
@@ -174,6 +176,10 @@ Required tests:
 - `test.frame.main_overlay_capture`
 - `test.frame.no_live_runtime_read_in_painters`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.frame.frame_spatial_paint_admission`
+- `test.frame.frame_drawable_policy`
+- `test.frame.marquee_captured_style`
+- `test.frame.paint_plan_write_all_or_nothing`
 - `test.guardrails.geometry_no_legacy_scene_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
 - `test.guardrails.spatial_no_full_clone_ordinary_edit`
@@ -207,6 +213,8 @@ Do not assume:
 Required tests:
 
 - `test/api_contract/public_api_v1_compiles_as_written_test.dart`
+- `test/api_contract/public_exports_complete_test.dart`
+- `test/api_contract/api_facades_do_not_export_internal_test.dart`
 - `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
 - `test/api_contract/public_readable_union_variants_test.dart`
 - `test/api_contract/preview_state_sealed_union_test.dart`
@@ -307,6 +315,10 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/main_overlay_capture_test.dart`
 - `test/frame/frame_donor_mapping_test.dart`
 - `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test/frame/frame_spatial_paint_admission_test.dart`
+- `test/frame/frame_drawable_policy_test.dart`
+- `test/frame/marquee_captured_style_test.dart`
+- `test/frame/paint_plan_write_all_or_nothing_test.dart`
 - `test/frame/paint_asset_binding_service_test.dart`
 - `test/frame/repaint_bus_output_test.dart`
 - `test/frame/static_background_plan_test.dart`
@@ -456,6 +468,17 @@ behavioral tests, and the required guardrail list remains owned by
 - compiles the exported API declarations in an empty consumer package;
 - instantiates and calls P2-owned public constructors, getters, methods,
   defaults, and return shapes through the public barrel.
+
+#### `test/api_contract/public_exports_complete_test.dart`
+- proves every public API declaration registered for v1 is exported by the
+  package barrel;
+- proves frame-private collaborators and other implementation owners do not
+  become public exports by omission from the public registry.
+
+#### `test/api_contract/api_facades_do_not_export_internal_test.dart`
+- proves API facade export files do not expose declarations marked `@internal`;
+- protects frame, resource, and other implementation-owned collaborators from
+  accidental facade export.
 
 #### `test/guardrails/public_api_declaration_checks_test.dart`
 - checks exported public declarations for non-empty dartdoc summaries for
@@ -612,6 +635,30 @@ behavioral tests, and the required guardrail list remains owned by
 - proves selectedOrder is derived from selectionRevision and
   structuralRevision, not stored as an independent source of truth.
 
+#### `test/frame/frame_spatial_paint_admission_test.dart`
+- proves frame paint admission accepts only explicit spatial candidate results;
+- proves typed budget-exceeded, invalid-index, and stale-candidate spatial
+  results remain rejected admissions instead of successful empty candidate
+  streams.
+
+#### `test/frame/paint_plan_write_all_or_nothing_test.dart`
+- proves ordinary cache writes occur only after ordinary spatial admission and
+  current row resolution complete;
+- proves rejected selected-move shifted admission returns ordinary records
+  unchanged and performs no ordinary cache write.
+
+#### `test/frame/frame_drawable_policy_test.dart`
+- proves the frame-owned drawable policy renders one-point committed strokes,
+  one-point overlay stroke previews, one-point eraser corridors, and same-point
+  lines through explicit point or circle commands;
+- proves empty point lists remain no-op draw inputs.
+
+#### `test/frame/marquee_captured_style_test.dart`
+- proves marquee overlay primitives carry captured selection style color,
+  stroke width, and fill opacity;
+- proves overlay painting uses those primitive fields instead of live style
+  state.
+
 #### `test/frame/paint_plan_excludes_selection_state_test.dart`
 - proves OrdinaryPaintRecordCache keys and cached ordinary records exclude
   selected ids, selectionRevision, selection flags, and selected-move preview
@@ -719,7 +766,13 @@ Current implemented proof:
   and `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
   prove the P9 frame, cache, and preview guardrail ids are registered,
   runner-backed or structurally checked where required, and reject fixtures
-  containing only the forbidden contract shapes.
+  containing only the forbidden contract shapes. The frame scene-sort proof
+  covers direct sort calls, cascades, multi-line statements, and named
+  comparator/helper indirection while preserving unrelated local scalar sorts.
+  The ordinary-cache exclusion proofs use the guardrail-owned ordinary-cache
+  surface registry, including `PaintPlanKey`, `OrdinaryPaintRecordKey`,
+  `OrdinaryPaintRecordCacheEntry`, `PaintPlan`, `RenderElementRecord`, and
+  registered row payloads.
 
 Legacy capability inventory rows require inventory-only tests. Next API
 behavior is proved by focused API, subsystem, and integration tests, not by
