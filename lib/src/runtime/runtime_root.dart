@@ -41,7 +41,6 @@ import '../interaction/interaction_engine.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
-import 'noop_load_interaction_boundary.dart';
 import 'runtime_config.dart';
 
 // RuntimeRoot is intentionally the one place where public runtime behavior,
@@ -61,7 +60,7 @@ final class RuntimeRoot
          store: DocumentStoreKernel(initialDocument),
          config: RuntimeConfig.from(config),
          diagnosticPolicy: config.diagnosticPolicy,
-         loadInteractionBoundary: noopLoadInteractionBoundary,
+         loadInteractionBoundary: null,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -85,7 +84,7 @@ final class RuntimeRoot
     required DocumentStoreKernel store,
     required this.config,
     required CanvasDiagnosticPolicy diagnosticPolicy,
-    required LoadInteractionBoundary loadInteractionBoundary,
+    required LoadInteractionBoundary? loadInteractionBoundary,
     required CanvasCamera initialViewCamera,
     required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
@@ -113,7 +112,7 @@ final class RuntimeRoot
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   CanvasCamera _viewCamera;
-  final LoadInteractionBoundary _loadInteractionBoundary;
+  final LoadInteractionBoundary? _loadInteractionBoundary;
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
   final SelectionKernel _selection;
@@ -485,7 +484,11 @@ final class RuntimeRoot
       return;
     }
     _ensureNoActiveEditSession();
+    final cleanupOutcome = _interactionEngine.disposeCleanup();
     _isDisposed = true;
+    if (cleanupOutcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
     _frameEngine.dispose();
     _state.dispose();
     unawaited(_actions.close());
@@ -588,16 +591,31 @@ final class RuntimeRoot
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
-    final cleanupOutcome = _loadInteractionBoundary.prepareLoadCleanup();
+    final cleanupOutcome = _prepareLoadInteractionCleanup();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearForDocumentReplacement();
     _viewCamera = preparedLoad.document.camera;
     _viewCameraRevision += 1;
-    if (cleanupOutcome.previewChanged) {
+    if (cleanupOutcome.previewChanged && cleanupOutcome.needsRuntimeClear) {
       _interactionEngine.clearPreview();
     }
     _epochRevision += 1;
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
+  }
+
+  _RuntimeLoadCleanupOutcome _prepareLoadInteractionCleanup() {
+    final testBoundary = _loadInteractionBoundary;
+    if (testBoundary != null) {
+      return _RuntimeLoadCleanupOutcome(
+        outcome: testBoundary.prepareLoadCleanup(),
+        needsRuntimeClear: true,
+      );
+    }
+
+    return _RuntimeLoadCleanupOutcome(
+      outcome: _interactionEngine.prepareLoadCleanup(),
+      needsRuntimeClear: false,
+    );
   }
 
   CommitDeliveryResult _applyEditCommit(
@@ -742,6 +760,18 @@ final class _RuntimeRevisionFacts {
   final int epoch;
   final int resourceVisual;
   final int interaction;
+}
+
+final class _RuntimeLoadCleanupOutcome {
+  const _RuntimeLoadCleanupOutcome({
+    required this.outcome,
+    required this.needsRuntimeClear,
+  });
+
+  final LoadInteractionCleanupOutcome outcome;
+  final bool needsRuntimeClear;
+
+  bool get previewChanged => outcome.previewChanged;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {

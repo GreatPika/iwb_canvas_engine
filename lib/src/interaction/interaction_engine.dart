@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
@@ -46,7 +47,9 @@ final class InteractionPointerContext {
 // The engine deliberately keeps pointer admission state, public tool settings,
 // and session value ownership together so later tool behavior cannot split the
 // active-session invariant across multiple owners.
-// ignore: coupling-between-object-classes, number-of-methods
+// Keeping preview cleanup with session cleanup avoids a second mutable owner for
+// the public interaction revision and active pointer lifecycle.
+// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
 final class InteractionEngine {
   InteractionEngine({
     required CanvasInteractionMode initialMode,
@@ -96,7 +99,24 @@ final class InteractionEngine {
   }
 
   PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
-    return _cleanupCoordinator.cleanup(request);
+    final outcome = _cleanupCoordinator.cleanup(request);
+    _applyCleanupOutcome(outcome);
+
+    return outcome;
+  }
+
+  LoadInteractionCleanupOutcome prepareLoadCleanup() {
+    final outcome = _cleanupWithReason(
+      PointerCleanupReason.preparedLoadSuccess,
+    );
+
+    return LoadInteractionCleanupOutcome(
+      previewChanged: outcome.previewChanged,
+    );
+  }
+
+  PointerCleanupOutcome disposeCleanup() {
+    return _cleanupWithReason(PointerCleanupReason.dispose);
   }
 
   InteractionPointerAdmission handlePointerSample(
@@ -202,4 +222,42 @@ final class InteractionEngine {
       sample: sample,
     );
   }
+
+  PointerCleanupOutcome _cleanupWithReason(PointerCleanupReason reason) {
+    return cleanupPointerTool(
+      PointerCleanupRequest(
+        reason: reason,
+        activePreviewKind: _pointerCleanupPreviewKindFor(_preview.kind),
+        hasActiveToken: _activeSession != null,
+        hasActiveSession: _activeSession != null,
+      ),
+    );
+  }
+
+  void _applyCleanupOutcome(PointerCleanupOutcome outcome) {
+    if (outcome.previewChanged) {
+      clearPreview();
+    }
+    if (outcome.sessionDisposition == PointerSessionDisposition.released &&
+        _activeSession != null) {
+      _activeSession = null;
+      _interactionRevision += 1;
+    }
+  }
+}
+
+PointerCleanupPreviewKind _pointerCleanupPreviewKindFor(
+  CanvasPreviewKind kind,
+) {
+  return switch (kind) {
+    CanvasPreviewKind.none => PointerCleanupPreviewKind.none,
+    CanvasPreviewKind.marquee => PointerCleanupPreviewKind.marquee,
+    CanvasPreviewKind.selectedMove => PointerCleanupPreviewKind.selectedMove,
+    CanvasPreviewKind.pencilStroke => PointerCleanupPreviewKind.pencilStroke,
+    CanvasPreviewKind.markerStroke => PointerCleanupPreviewKind.markerStroke,
+    CanvasPreviewKind.pendingLineStart =>
+      PointerCleanupPreviewKind.pendingLineStart,
+    CanvasPreviewKind.linePreview => PointerCleanupPreviewKind.linePreview,
+    CanvasPreviewKind.eraser => PointerCleanupPreviewKind.eraser,
+  };
 }

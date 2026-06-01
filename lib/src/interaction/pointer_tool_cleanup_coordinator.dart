@@ -92,17 +92,18 @@ final class PointerToolCleanupCoordinator {
   PointerCleanupOutcome cleanup(PointerCleanupRequest request) {
     final previewChanged =
         request.activePreviewKind != PointerCleanupPreviewKind.none;
+    final sessionReleased = request.hasActiveSession;
 
     return PointerCleanupOutcome(
       reason: request.reason,
       previousPreviewKind: request.activePreviewKind,
       previewChanged: previewChanged,
-      publicStateNeeded: previewChanged,
+      publicStateNeeded: previewChanged || sessionReleased,
       repaintTarget: previewChanged
           ? _repaintTargetFor(request.activePreviewKind)
           : PointerCleanupRepaintTarget.none,
       activeTokenReleased: request.hasActiveToken,
-      sessionDisposition: request.hasActiveSession
+      sessionDisposition: sessionReleased
           ? PointerSessionDisposition.released
           : PointerSessionDisposition.preserved,
       pendingLineDisposition: _pendingLineDisposition(request),
