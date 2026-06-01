@@ -123,6 +123,18 @@ final class EditKernel {
     }
   }
 
+  CommitDeliveryResult prepareInteractionPlan(CommitPlan plan) {
+    _mutationGuard.ensureRuntimeMutationAllowed();
+    if (_isSessionOpen) {
+      throw StateError('CanvasRuntime edit sessions cannot be nested.');
+    }
+    if (!plan.hasChanges) {
+      return CommitDeliveryResult(shouldPublishState: false);
+    }
+
+    return _installCommittedDocument(_readDocument(), plan);
+  }
+
   void loadDocument(CanvasDocument document) {
     _mutationGuard.ensureRuntimeMutationAllowed();
     if (_isSessionOpen) {

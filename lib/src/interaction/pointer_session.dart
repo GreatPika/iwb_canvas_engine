@@ -4,7 +4,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 
-enum PointerSessionKind { moveModePointer, drawModePointer }
+enum PointerSessionKind { moveModePointer, moveModeMarquee, drawModePointer }
 
 final class PointerSessionToken {
   const PointerSessionToken(this.value);

@@ -7,14 +7,16 @@ import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
-import 'preview_state_equivalence.dart';
+import 'select_machine.dart';
 
 // The engine deliberately keeps pointer admission state, public tool settings,
 // and session value ownership together so later tool behavior cannot split the
 // active-session invariant across multiple owners.
 // Keeping preview cleanup with session cleanup avoids a second mutable owner for
 // the public interaction revision and active pointer lifecycle.
-// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
+// The response set is the cost of keeping active pointer state transitions
+// auditable in one owner instead of splitting session mutation across machines.
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class InteractionEngine {
   InteractionEngine({
     required CanvasInteractionMode initialMode,
@@ -22,6 +24,7 @@ final class InteractionEngine {
     required CanvasPointerPolicy pointerPolicy,
     PointerSampleNormalizer normalizer = const PointerSampleNormalizer(),
     MoveMachine moveMachine = const MoveMachine(),
+    SelectMachine selectMachine = const SelectMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
   }) : _mode = initialMode,
@@ -29,10 +32,12 @@ final class InteractionEngine {
        _pointerPolicy = pointerPolicy,
        _normalizer = normalizer,
        _moveMachine = moveMachine,
+       _selectMachine = selectMachine,
        _cleanupCoordinator = cleanupCoordinator;
 
   final PointerSampleNormalizer _normalizer;
   final MoveMachine _moveMachine;
+  final SelectMachine _selectMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
   final CanvasInteractionMode _mode;
   final CanvasDrawStyle _drawStyle;
@@ -106,6 +111,10 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
+  PointerCleanupOutcome finishMarquee(PointerCleanupReason reason) {
+    return _cleanupWithReason(reason);
+  }
+
   InteractionPointerAdmission handlePointerSample(
     CanvasPointerSample sample,
     InteractionPointerContext context,
@@ -132,23 +141,57 @@ final class InteractionEngine {
       );
     }
     final selection = _selectedMoveStartDecision(sample);
-    if (!selection.admitted) {
+    if (selection.admitted) {
+      _activeSession = _selectedMoveSession(sample, selection);
+      replacePreview(
+        CanvasSelectedMovePreview(
+          delta: sample.worldPosition - sample.worldPosition,
+        ),
+      );
+      _interactionRevision += 1;
+
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.admitted,
+        sample: sample,
+      );
+    }
+    if (_mode != CanvasInteractionMode.move) {
       return InteractionPointerAdmission(
         kind: InteractionPointerAdmissionKind.ignored,
         sample: sample,
       );
     }
-    _activeSession = _selectedMoveSession(sample, selection);
-    replacePreview(
-      CanvasSelectedMovePreview(
-        delta: sample.worldPosition - sample.worldPosition,
-      ),
+    final marquee = _selectMachine.start(
+      readPort.marqueeStartFacts(const MarqueeStartReadRequest()),
     );
+    _activeSession = _marqueeSession(sample, marquee);
+    replacePreview(_selectMachine.initialPreview(sample.worldPosition).preview);
     _interactionRevision += 1;
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
+    );
+  }
+
+  PointerSession _marqueeSession(
+    NormalizedPointerSample sample,
+    MarqueeStartDecision marquee,
+  ) {
+    return PointerSession(
+      kind: PointerSessionKind.moveModeMarquee,
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      toolMode: _mode,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      capturedSelectedIds: const [],
+      capturedMovableIds: const [],
+      previousSelectionIds: marquee.previousSelectionIds,
+      capturedSelectionRevision: marquee.selectionRevision,
+      lastPreview: _selectMachine.initialPreview(sample.worldPosition).preview,
     );
   }
 
@@ -190,11 +233,27 @@ final class InteractionEngine {
     }
     final updated = session.updateCurrentWorld(sample.worldPosition);
     _activeSession = updated;
-    if (updated.kind == PointerSessionKind.moveModePointer) {
-      replacePreview(
-        _moveMachine
-            .preview(session: updated, currentWorld: sample.worldPosition)
-            .preview,
+    var previewChanged = false;
+    switch (updated.kind) {
+      case PointerSessionKind.moveModePointer:
+        previewChanged = replacePreview(
+          _moveMachine
+              .preview(session: updated, currentWorld: sample.worldPosition)
+              .preview,
+        );
+      case PointerSessionKind.moveModeMarquee:
+        previewChanged = replacePreview(
+          _selectMachine
+              .preview(session: updated, currentWorld: sample.worldPosition)
+              .preview,
+        );
+      case PointerSessionKind.drawModePointer:
+        break;
+    }
+    if (!previewChanged) {
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.ignored,
+        sample: sample,
       );
     }
     _interactionRevision += 1;
@@ -212,10 +271,13 @@ final class InteractionEngine {
       return _handleInvalidTerminal(sample, decision);
     }
     if (sample.phase == CanvasPointerLifecyclePhase.cancel) {
-      return _cleanupTerminal(sample, PointerCleanupReason.selectedMove);
+      return _cleanupTerminal(sample, _cancelReasonFor(session));
     }
     if (session?.kind == PointerSessionKind.moveModePointer) {
       return _handleSelectedMoveTerminal(sample, session as PointerSession);
+    }
+    if (session?.kind == PointerSessionKind.moveModeMarquee) {
+      return _handleMarqueeTerminal(sample, session as PointerSession);
     }
     _activeSession = null;
     _interactionRevision += 1;
@@ -224,6 +286,12 @@ final class InteractionEngine {
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
     );
+  }
+
+  PointerCleanupReason _cancelReasonFor(PointerSession? session) {
+    return session?.kind == PointerSessionKind.moveModeMarquee
+        ? PointerCleanupReason.marquee
+        : PointerCleanupReason.selectedMove;
   }
 
   InvalidTerminalCleanupDecision _terminalCleanupDecision(
@@ -282,6 +350,32 @@ final class InteractionEngine {
     return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
   }
 
+  InteractionPointerAdmission _handleMarqueeTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+  ) {
+    final terminal = _selectMachine.terminal(
+      session: session,
+      facts: readPort.marqueeCommitFacts(
+        MarqueeCommitReadRequest(
+          rectWorld: _selectMachine
+              .preview(session: session, currentWorld: sample.worldPosition)
+              .rectWorld,
+        ),
+      ),
+    );
+    final intent = terminal.intent;
+    if (intent != null) {
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.admitted,
+        sample: sample,
+        marqueeCommit: intent,
+      );
+    }
+
+    return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+  }
+
   InteractionPointerAdmission _cleanupTerminal(
     NormalizedPointerSample sample,
     PointerCleanupReason reason,
@@ -329,6 +423,115 @@ final class InteractionEngine {
       _interactionRevision += 1;
     }
   }
+}
+
+bool canvasPreviewStatesEqual(
+  CanvasPreviewState left,
+  CanvasPreviewState right,
+) {
+  if (identical(left, right)) {
+    return true;
+  }
+  if (left.kind != right.kind) {
+    return false;
+  }
+
+  return switch (left) {
+    CanvasNoPreview() => _noPreviewsEqual(right),
+    CanvasMarqueePreview() => _marqueePreviewsEqual(left, right),
+    CanvasSelectedMovePreview() => _selectedMovePreviewsEqual(left, right),
+    CanvasPencilStrokePreview() => _pencilStrokesEqual(left, right),
+    CanvasMarkerStrokePreview() => _markerStrokesEqual(left, right),
+    CanvasPendingLineStartPreview() => _pendingLineStartsEqual(left, right),
+    CanvasLinePreview() => _linePreviewsEqual(left, right),
+    CanvasEraserPreview() => _eraserPreviewsEqual(left, right),
+  };
+}
+
+bool _noPreviewsEqual(CanvasPreviewState right) {
+  return right is CanvasNoPreview;
+}
+
+bool _marqueePreviewsEqual(
+  CanvasMarqueePreview left,
+  CanvasPreviewState right,
+) {
+  return right is CanvasMarqueePreview && left.rect == right.rect;
+}
+
+bool _selectedMovePreviewsEqual(
+  CanvasSelectedMovePreview left,
+  CanvasPreviewState right,
+) {
+  return right is CanvasSelectedMovePreview && left.delta == right.delta;
+}
+
+bool _pencilStrokesEqual(
+  CanvasPencilStrokePreview left,
+  CanvasPreviewState right,
+) {
+  return right is CanvasPencilStrokePreview && _strokesEqual(left, right);
+}
+
+bool _markerStrokesEqual(
+  CanvasMarkerStrokePreview left,
+  CanvasPreviewState right,
+) {
+  return right is CanvasMarkerStrokePreview && _strokesEqual(left, right);
+}
+
+bool _strokesEqual(CanvasStrokePreview left, CanvasStrokePreview right) {
+  return left.color == right.color &&
+      left.thickness == right.thickness &&
+      left.opacity == right.opacity &&
+      _offsetListsEqual(left.points, right.points);
+}
+
+bool _pendingLineStartsEqual(
+  CanvasPendingLineStartPreview left,
+  CanvasPreviewState right,
+) {
+  if (right is! CanvasPendingLineStartPreview) {
+    return false;
+  }
+
+  return left.start == right.start &&
+      left.timestampMs == right.timestampMs &&
+      left.color == right.color &&
+      left.thickness == right.thickness;
+}
+
+bool _linePreviewsEqual(CanvasLinePreview left, CanvasPreviewState right) {
+  if (right is! CanvasLinePreview) {
+    return false;
+  }
+
+  return left.start == right.start &&
+      left.end == right.end &&
+      left.color == right.color &&
+      left.thickness == right.thickness;
+}
+
+bool _eraserPreviewsEqual(CanvasEraserPreview left, CanvasPreviewState right) {
+  if (right is! CanvasEraserPreview) {
+    return false;
+  }
+
+  return left.thickness == right.thickness &&
+      _offsetListsEqual(left.corridor, right.corridor);
+}
+
+bool _offsetListsEqual(List<Object> left, List<Object> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index += 1) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 PointerCleanupPreviewKind _pointerCleanupPreviewKindFor(

@@ -8,15 +8,16 @@ stateDiagram-v2
     candidate set, or overlay preview exists.
   end note
 
-  Idle --> DownAdmission: generic pointer session admits down for marquee
+  Idle --> DownAdmission: selected-move down denied and marquee start facts read
   Idle --> Idle: stale move/up/cancel / ignore
   Idle --> Disposed: runtime.dispose()
 
   state "Down admitted by pointer session" as DownAdmission
   note right of DownAdmission
-    Admission is owned by the generic pointer session.
-    InteractionEngine records token, session id, anchor,
-    controllerEpoch, and previous selection.
+    InteractionEngine first asks InteractionReadPort for
+    selected-move start facts. If the hit is not a selected
+    movable element, it reads marquee start facts and records
+    token, session id, anchor, controllerEpoch, and previous selection.
   end note
 
   DownAdmission --> DragPreview: publish zero-area marquee preview / overlay repaint
@@ -40,10 +41,12 @@ stateDiagram-v2
 
   state "Candidate query / read only" as CandidateQuery
   note right of CandidateQuery
-    SpatialKernel may be queried only for visible selectable
-    marquee candidates whose hitBoundsWorld overlap the
-    normalized marquee rectangle. The query cannot mutate
-    committed document state or commit selection directly.
+    InteractionEngine asks InteractionReadPort for terminal
+    marquee commit facts. The runtime adapter may query
+    SpatialKernel for visible selectable marquee candidates
+    whose hitBoundsWorld overlap the normalized rectangle.
+    The query cannot mutate committed document state or
+    commit selection directly.
   end note
 
   CandidateQuery --> CandidateQuery: reject stale candidate handle / continue
@@ -60,7 +63,7 @@ stateDiagram-v2
 
   SelectionIntent --> NoOpSelection: next selection empty and previous empty
   SelectionIntent --> NoOpSelection: next selection equals previous selection
-  SelectionIntent --> EditCommit: selection changed / open synchronous EditKernel edit
+  SelectionIntent --> EditCommit: selection changed / RuntimeRoot prepares EditKernel selection plan
 
   state "No-op selection cleanup" as NoOpSelection
   note right of NoOpSelection
@@ -77,7 +80,7 @@ stateDiagram-v2
   state "EditKernel commit outcome" as EditCommit
   note right of EditCommit
     Selection mutation is committed only through EditKernel
-    and the selection owner.
+    CommitPlan.replaceSelection and the selection owner.
     Atomic install is the commit boundary; rollback or
     rejection leaves selected ids and document/selection state
     unchanged. Active marquee preview cleanup publishes

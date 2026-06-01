@@ -30,6 +30,13 @@ void _verifyRequiredDeclarations() {
       contains('final class SelectedMoveTerminalDecision'),
     ),
   );
+  expect(
+    _source('lib/src/interaction/select_machine.dart'),
+    allOf(
+      contains('final class SelectMachine'),
+      contains('final class MarqueeTerminalDecision'),
+    ),
+  );
 }
 
 void _verifyPointerSessionDeclarations() {

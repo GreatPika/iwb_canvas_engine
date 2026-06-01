@@ -60,12 +60,7 @@ _selectedMoveAndOverlayOutputs() {
     ),
     overlay: engine.buildResourceFreeOverlayFrame(
       inputs: _inputs(
-        const CanvasLinePreview(
-          start: Offset.zero,
-          end: Offset(1, 1),
-          color: Color(0xFF000000),
-          thickness: 1,
-        ),
+        const CanvasMarqueePreview(rect: Rect.fromLTWH(0, 0, 1, 1)),
       ),
     ),
   );

@@ -464,6 +464,12 @@ const ownerDagAllowedEdges = [
   OwnerEdge(
     source: runtimeOwner,
     target: interactionOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/select_machine.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
   ),

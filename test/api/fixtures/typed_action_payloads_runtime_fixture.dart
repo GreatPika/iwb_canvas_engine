@@ -66,6 +66,37 @@ void main() {
     expect(actions, hasLength(1));
     _expectMove(actions.single);
   });
+
+  test('marquee terminal emits the public selection payload shape', () async {
+    final root = RuntimeRoot(
+      initialDocument: _document(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final actions = <CanvasActionCommitted>[];
+    final subscription = root.actions.listen(actions.add);
+    addTearDown(() async {
+      await subscription.cancel();
+      root.dispose();
+    });
+    root.selection.setSelection([CanvasElementId('a')]);
+
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.down, const Offset(19, -1)),
+    );
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 2)),
+    );
+    root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 2)),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(actions, hasLength(1));
+    _expectMarquee(
+      actions.single,
+      marqueeRectWorld: const Rect.fromLTRB(19, -1, 22, 2),
+    );
+  });
 }
 
 List<CommitActionIntent> _actionIntents() {
@@ -96,13 +127,16 @@ List<CommitActionIntent> _actionIntents() {
   ];
 }
 
-void _expectMarquee(CanvasActionCommitted action) {
+void _expectMarquee(
+  CanvasActionCommitted action, {
+  Rect marqueeRectWorld = const Rect.fromLTRB(0, 0, 10, 10),
+}) {
   expect(action.type, CanvasActionType.selectMarquee);
   expect(action.elementIds, [CanvasElementId('b')]);
   final payload = action.payload as CanvasSelectionActionPayload;
   expect(payload.previousSelection, [CanvasElementId('a')]);
   expect(payload.nextSelection, [CanvasElementId('b')]);
-  expect(payload.marqueeRectWorld, const Rect.fromLTRB(0, 0, 10, 10));
+  expect(payload.marqueeRectWorld, marqueeRectWorld);
 }
 
 void _expectMove(CanvasActionCommitted action) {

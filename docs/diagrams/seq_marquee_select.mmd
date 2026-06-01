@@ -34,12 +34,20 @@ sequenceDiagram
   ReadPort->>Store: read document order for selected ids
   Store-->>ReadPort: previous selection in document order
   ReadPort-->>IE: previous selection in document order
-  IE->>Spatial: hit-test down position once
-  Spatial-->>IE: top visible selectable element id or none
+  IE->>ReadPort: read selected-move start facts for down position
+  ReadPort->>Spatial: hit-test down position once
+  Spatial-->>ReadPort: top visible selectable element id or none
+  ReadPort-->>IE: selected ids, movable ids, and hit-selected fact
 
   alt down is admitted for selected move
     IE-->>Tools: route to selected move behavior
   else down is admitted for marquee
+    IE->>ReadPort: read marquee start selection facts
+    ReadPort->>SelectionFacts: read selected ids and selectionRevision
+    SelectionFacts-->>ReadPort: selected ids
+    ReadPort->>Store: read document order for selected ids
+    Store-->>ReadPort: previous selection in document order
+    ReadPort-->>IE: previous selection in document order
     IE->>IE: start marquee session with anchor position
     Note over IE: Session stores pointer token, sessionId, anchor position, and previous selection.
     IE->>Preview: publish CanvasMarqueePreview(rect: zero-area rect)
@@ -70,9 +78,11 @@ sequenceDiagram
   Surface->>Tools: handlePointer(CanvasPointerSample up)
   Tools->>IE: same-token terminal sample
   IE->>IE: normalize terminal marquee rectangle
-  IE->>Spatial: query hitBounds overlapping marquee rect
-  Spatial-->>IE: visible selectable candidate handles
-  IE->>IE: run exact family inclusion test and order selected ids by document order
+  IE->>ReadPort: read marquee commit facts for normalized rect
+  ReadPort->>Spatial: query hitBounds overlapping marquee rect
+  Spatial-->>ReadPort: visible selectable candidate handles
+  ReadPort->>ReadPort: run exact family inclusion test and order selected ids by document order
+  ReadPort-->>IE: previous ids, next ids, rect, and query facts
 
   alt next selection equals previous selection
     IE->>Cleanup: typed cleanup request for marquee session
@@ -87,45 +97,27 @@ sequenceDiagram
     Note over EK,Events: No EditKernel commit, no Store mutation, no selection revision, and no selectMarquee action.
     IE-->>Tools: terminal handling complete
   else marquee selection changed
-    IE->>EK: open synchronous interaction edit
-    EK->>EK: reject disposed or nested edit
-    EK->>Store: read committed revision snapshot
-    Store-->>EK: committed tables and document revision
-    EK->>Selection: read selection snapshot
-    Selection-->>EK: selected ids and selectionRevision
-    EK->>Draft: create rollback-safe draft
-    IE->>EK: provide selection mutation request and selectMarquee action descriptor
-    EK->>Draft: record selection-owner request for next selected ids
-    Draft->>Touched: record selectionChanged only
-    EK->>Events: stage CanvasActionCommitted
+    IE-->>Runtime: return MarqueeCommitIntent
+    Runtime->>EK: prepare interaction CommitPlan.replaceSelection
+    EK->>EK: reject disposed, nested edit, or resolver callback mutation
+    Runtime->>Events: stage selectMarquee action descriptor in CommitPlan
+    Runtime->>Touched: record selectionChanged only
     Note over Events: type selectMarquee. elementIds are next selection in document order. payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
-    EK->>EK: reject Future result before success path
-    EK->>CC: compile exact selection revision and repaint intent
-    Touched-->>CC: selectionChanged revision fact
     alt commit preflight and install succeed
-      CC->>Store: preflight document invariants
-      Store-->>CC: preflight accepted
-      CC->>Selection: preflight selection effect
-      Selection-->>CC: preflight accepted
-      CC->>Effects: prepare typed main RepaintIntent
-      CC->>Events: attach staged selectMarquee event to commit
-      CC->>Applier: hand off compiled CommitPlan
+      EK->>Applier: apply prepared selection CommitPlan
       Applier->>Selection: install selection effect atomically
       Selection->>Selection: replace selected ids and selectionRevision
       Note over Applier,Selection: Atomic install is the commit boundary.
       Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
       Selection-->>Applier: committed selection revision facts
-      Applier->>Events: commit buffered action event
-      Applier->>Frame: publish committed main repaint bus
-      EK->>EK: close edit session and stale handle
-      EK-->>IE: edit result
+      Applier-->>Runtime: committed selection facts and staged action intents
+      Runtime->>IE: finishMarquee(postSuccessCommit)
       IE->>Cleanup: typed cleanup request for marquee session
       Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
       IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay repaint cleanup
       Preview-->>Runtime: preview cleanup revision fact
-      Applier-->>Runtime: committed selection facts
       Runtime->>Signals: publish one CanvasRuntimeState with selection and preview effects
       Events->>Signals: publish selectMarquee action notification
       Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
@@ -133,8 +125,8 @@ sequenceDiagram
       IE-->>Tools: terminal handling complete
     else edit exception, rejected Future, or preflight failure
       EK->>Events: discard pending selectMarquee action
-      EK->>EK: rollback draft and close session
-      EK-->>IE: terminal failure
+      EK-->>Runtime: terminal failure
+      Runtime->>IE: finishMarquee(editFailure)
       IE->>Cleanup: typed cleanup request for marquee session
       Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
       IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session

@@ -356,6 +356,13 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'runtime',
     targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/select_machine.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
     directiveKind: 'import',
@@ -599,6 +606,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/select_machine.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',

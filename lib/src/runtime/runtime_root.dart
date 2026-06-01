@@ -48,6 +48,7 @@ import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
 import '../interaction/move_machine.dart';
 import '../interaction/pointer_tool_cleanup_coordinator.dart';
+import '../interaction/select_machine.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/document_store_kernel.dart';
@@ -516,6 +517,12 @@ final class RuntimeRoot
 
       return;
     }
+    final marqueeCommit = admission.marqueeCommit;
+    if (marqueeCommit != null) {
+      _deliverMarqueeCommit(marqueeCommit, timestampHintMs: sample.timestampMs);
+
+      return;
+    }
     if (admission.kind != InteractionPointerAdmissionKind.ignored) {
       _publishRuntimeState();
     }
@@ -884,6 +891,40 @@ final class RuntimeRoot
     bool publish = true,
   }) {
     final outcome = _interactionEngine.finishSelectedMove(reason);
+    if (publish && outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void _deliverMarqueeCommit(
+    MarqueeCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    try {
+      final applyResult = _editKernel.prepareInteractionPlan(
+        CommitPlan.replaceSelection(
+          elementIds: intent.nextSelectionIds,
+          actionIntents: [
+            SelectMarqueeActionIntent(
+              previousSelection: intent.previousSelectionIds,
+              nextSelection: intent.nextSelectionIds,
+              marqueeRectWorld: intent.rectWorld,
+              timestampHintMs: timestampHintMs,
+            ),
+          ],
+        ),
+      );
+      _cleanupMarquee(PointerCleanupReason.postSuccessCommit, publish: false);
+      _deliverEditCommitResult(applyResult);
+    } on Object {
+      _cleanupMarquee(PointerCleanupReason.editFailure);
+      _publishRuntimeState();
+      rethrow;
+    }
+  }
+
+  void _cleanupMarquee(PointerCleanupReason reason, {bool publish = true}) {
+    final outcome = _interactionEngine.finishMarquee(reason);
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
