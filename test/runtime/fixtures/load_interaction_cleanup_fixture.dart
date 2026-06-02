@@ -27,8 +27,20 @@ void main() {
     );
   });
 
+  test('prepared load success clears eraser interaction before install', () {
+    expect(_verifyLoadSuccessCleansEraserInteraction, returnsNormally);
+  });
+
+  test('prepared load success clears pending context tap before install', () {
+    expect(_verifyLoadSuccessCleansPendingContextTap, returnsNormally);
+  });
+
   test('load failure preserves active interaction state', () {
     expect(_verifyLoadFailurePreservesInteraction, returnsNormally);
+  });
+
+  test('load failure preserves pending context tap', () {
+    expect(_verifyLoadFailurePreservesPendingContextTap, returnsNormally);
   });
 
   test('dispose cleanup publishes before streams close only when needed', () {
@@ -89,6 +101,68 @@ void _verifyLoadFailurePreservesInteraction() {
     preview: preview,
     sideEffects: (effectBatches: effectBatches, actionEvents: actionEvents),
   );
+}
+
+void _verifyLoadSuccessCleansEraserInteraction() {
+  final actionEvents = <CanvasActionCommitted>[];
+  final root = _runtimeRoot((_) {});
+  root.actions.listen(actionEvents.add);
+  _startEraserSession(root);
+  final before = root.state.value;
+  final snapshots = <CanvasRuntimeState>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  root.edits.loadDocument(_replacementDocument());
+
+  expect(snapshots, hasLength(1));
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(actionEvents, isEmpty);
+  _expectLoadCleanupRevisions(before, snapshots.single);
+}
+
+void _verifyLoadSuccessCleansPendingContextTap() {
+  final actionEvents = <CanvasActionCommitted>[];
+  final contextRequests = <CanvasContextActionRequested>[];
+  final root = _runtimeRoot((_) {});
+  root.actions.listen(actionEvents.add);
+  root.contextActionRequests.listen(contextRequests.add);
+  _startPendingContextTap(root);
+
+  root.edits.loadDocument(_replacementDocument());
+
+  expect(root.interactionEngine.pendingContextTap, isNull);
+  expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
+  expect(actionEvents, isEmpty);
+  expect(contextRequests, isEmpty);
+}
+
+void _verifyLoadFailurePreservesPendingContextTap() {
+  final actionEvents = <CanvasActionCommitted>[];
+  final contextRequests = <CanvasContextActionRequested>[];
+  final root = _runtimeRoot((_) {});
+  root.actions.listen(actionEvents.add);
+  root.contextActionRequests.listen(contextRequests.add);
+  _startPendingContextTap(root);
+  final before = root.state.value;
+  final pendingTap = root.interactionEngine.pendingContextTap;
+  var publications = 0;
+  root.state.addListener(() {
+    publications += 1;
+  });
+
+  expect(
+    () => root.edits.loadDocument(_invalidReplacementDocument()),
+    throwsA(isA<CanvasDataException>()),
+  );
+
+  expect(publications, 0);
+  expect(root.state.value, before);
+  expect(root.interactionEngine.pendingContextTap, same(pendingTap));
+  expect(actionEvents, isEmpty);
+  expect(contextRequests, isEmpty);
 }
 
 void _expectInteractionPreserved({
@@ -226,6 +300,55 @@ void _startPointerSession(RuntimeRoot root) {
   );
 
   expect(root.interactionEngine.activeSession, isNotNull);
+}
+
+void _startEraserSession(RuntimeRoot root) {
+  root
+    ..setInteractionMode(CanvasInteractionMode.draw)
+    ..setDrawStyle(
+      CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 6),
+    )
+    ..handlePointer(
+      CanvasPointerSample(
+        pointerId: 1,
+        position: Offset.zero,
+        phase: CanvasPointerLifecyclePhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+    )
+    ..handlePointer(
+      CanvasPointerSample(
+        pointerId: 1,
+        position: const Offset(1, 0),
+        phase: CanvasPointerLifecyclePhase.move,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+
+  expect(root.interactionEngine.activeSession, isNotNull);
+  expect(root.preview, isA<CanvasEraserPreview>());
+}
+
+void _startPendingContextTap(RuntimeRoot root) {
+  root.handlePointer(
+    CanvasPointerSample(
+      pointerId: 1,
+      position: Offset.zero,
+      phase: CanvasPointerLifecyclePhase.down,
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+  root.handlePointer(
+    CanvasPointerSample(
+      pointerId: 1,
+      position: Offset.zero,
+      phase: CanvasPointerLifecyclePhase.up,
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+
+  expect(root.interactionEngine.pendingContextTap, isNotNull);
+  expect(root.interactionEngine.activeSession, isNull);
 }
 
 CanvasDocument _initialDocument() {

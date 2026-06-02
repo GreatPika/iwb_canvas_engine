@@ -2,11 +2,13 @@ import 'dart:ui' show Offset, PointerDeviceKind;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 
 void main() {
   test('preview budget overflow keeps corridor-only preview', () {
@@ -23,6 +25,8 @@ void main() {
 }
 
 void _verifyPreviewOverflowCorridorOnly() {
+  DiagnosticRecord.allocations.reset();
+  final before = DiagnosticRecord.allocations.count;
   const machine = EraserMachine();
   final eraser = PointerEraserCapture(points: [Offset.zero], thickness: 6);
 
@@ -40,9 +44,12 @@ void _verifyPreviewOverflowCorridorOnly() {
   expect(preview.exactBudgetExceeded, isTrue);
   expect(eraserPreview.corridor, const [Offset.zero, Offset(10, 0)]);
   expect(eraserPreview.thickness, 6);
+  expect(DiagnosticRecord.allocations.count, before);
 }
 
 void _verifyTerminalOverflowNoPartialCommit() {
+  DiagnosticRecord.allocations.reset();
+  final before = DiagnosticRecord.allocations.count;
   const machine = EraserMachine();
   final eraser = PointerEraserCapture(points: [Offset.zero], thickness: 6);
 
@@ -58,18 +65,37 @@ void _verifyTerminalOverflowNoPartialCommit() {
   );
 
   expect(terminal.intent, isNull);
+  expect(DiagnosticRecord.allocations.count, before);
 }
 
 void _verifyTerminalOverflowInteractionCleanup() {
-  final engine = InteractionEngine(
+  DiagnosticRecord.allocations.reset();
+  final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
+  final engine = _budgetOverflowEngine(hub);
+  final before = DiagnosticRecord.allocations.count;
+
+  final terminal = _runOverflowEraserGesture(engine);
+
+  _expectCleanupOnlyOverflow(terminal, engine);
+  expect(hub.records, isEmpty);
+  expect(DiagnosticRecord.allocations.count, before);
+}
+
+InteractionEngine _budgetOverflowEngine(DiagnosticsHub hub) {
+  return InteractionEngine(
     initialMode: CanvasInteractionMode.draw,
     initialDrawStyle: CanvasDrawStyle(
       tool: CanvasDrawTool.eraser,
       eraserThickness: 6,
     ),
     pointerPolicy: CanvasPointerPolicy.defaultPolicy,
+    diagnosticsSink: RuntimeInteractionDiagnosticsAdapter(hub),
   )..attachReadPort(_BudgetOverflowReadPort());
+}
 
+InteractionPointerAdmission _runOverflowEraserGesture(
+  InteractionEngine engine,
+) {
   engine.handlePointerSample(
     _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
     _context(),
@@ -78,11 +104,16 @@ void _verifyTerminalOverflowInteractionCleanup() {
     _sample(CanvasPointerLifecyclePhase.move, const Offset(10, 0)),
     _context(),
   );
-  final terminal = engine.handlePointerSample(
+  return engine.handlePointerSample(
     _sample(CanvasPointerLifecyclePhase.up, const Offset(20, 0)),
     _context(),
   );
+}
 
+void _expectCleanupOnlyOverflow(
+  InteractionPointerAdmission terminal,
+  InteractionEngine engine,
+) {
   expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
   expect(terminal.eraserCommit, isNull);
   expect(terminal.strokeCommit, isNull);

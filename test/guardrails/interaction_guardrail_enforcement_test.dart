@@ -51,6 +51,7 @@ void _registerStructuralNegativeProofs() {
   _registerInteractionImportNegativeProofs();
   _registerCleanupCoordinatorNegativeProof();
   _registerReadPortNegativeProof();
+  _registerTextEditGuardNegativeProof();
 }
 
 void _registerInteractionImportNegativeProofs() {
@@ -177,6 +178,52 @@ final List<CanvasElementId> selectedIds;
   });
 }
 
+void _registerTextEditGuardNegativeProof() {
+  test('text edit stale guard fixture is rejected', () async {
+    final productionSource = File(
+      'lib/src/runtime/runtime_root.dart',
+    ).readAsStringSync();
+    final unguardedFixture = productionSource.replaceFirst(
+      'final guard = _interactionEngine.textEditGuardDecision(requestId);',
+      'final guard = const TextEditGuardDecision.accepted('
+          'targetElementId: CanvasElementId("fixture"), currentText: "old");',
+    );
+    final violations = checkTextEditStaleCommitGuardSources({
+      'lib/src/runtime/runtime_root.dart': unguardedFixture,
+    });
+    expect(violations, isNotEmpty);
+
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test('text edit hardcoded guard facts fixture is rejected', () async {
+    final productionSource = File(
+      'lib/src/runtime/runtime_root.dart',
+    ).readAsStringSync();
+    final hardcodedFactsFixture = productionSource
+        .replaceFirst(
+          'final targetElementId = guard.targetElementId as CanvasElementId;',
+          'final targetElementId = CanvasElementId("fixture");',
+        )
+        .replaceFirst(
+          'final previousText = guard.currentText as String;',
+          'const previousText = "old";',
+        );
+    final violations = checkTextEditStaleCommitGuardSources({
+      'lib/src/runtime/runtime_root.dart': hardcodedFactsFixture,
+    });
+    expect(violations, isNotEmpty);
+
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
 void _registerStructuralPositiveProofs() {
   test('selection-and-move structural guardrails accept positive fixtures', () {
     expect(
@@ -197,6 +244,14 @@ void _registerStructuralPositiveProofs() {
       checkInteractionReadPortImmutableFactsSources({
         'lib/src/interaction/interaction_read_port.dart': File(
           'lib/src/interaction/interaction_read_port.dart',
+        ).readAsStringSync(),
+      }),
+      isEmpty,
+    );
+    expect(
+      checkTextEditStaleCommitGuardSources({
+        'lib/src/runtime/runtime_root.dart': File(
+          'lib/src/runtime/runtime_root.dart',
         ).readAsStringSync(),
       }),
       isEmpty,
@@ -295,6 +350,14 @@ const _runnerBackedProofs = [
       'test/interaction/move_machine_test.dart',
       'test/interaction/draw_stroke_interaction_routing_test.dart',
       'test/interaction/line_interaction_routing_test.dart',
+    ],
+  ),
+  _RunnerBackedProof(
+    id: interactionTextEditStaleCommitGuardrailId,
+    suites: {'blocking', 'interaction'},
+    proofPaths: [
+      'test/interaction/text_edit_stale_commit_guard_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
     ],
   ),
   _RunnerBackedProof(

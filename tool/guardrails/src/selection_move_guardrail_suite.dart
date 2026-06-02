@@ -18,6 +18,7 @@ const selectionMoveGuardrailIds = {
   'interaction.pointer_cleanup_coordinator_only',
   interactionNoResolverOnCancelPathsGuardrailId,
   interactionNoStaleTerminalCommitGuardrailId,
+  interactionTextEditStaleCommitGuardrailId,
   eventsActionAfterStateOrderGuardrailId,
   'preview.selected_move_main_repaint',
   selectedMoveMainOnlyPreviewGuardrailId,

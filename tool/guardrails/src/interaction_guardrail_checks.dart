@@ -22,6 +22,8 @@ const interactionNoResolverOnCancelPathsGuardrailId =
     'interaction.no_resolver_on_cancel_paths';
 const interactionNoStaleTerminalCommitGuardrailId =
     'interaction.no_stale_terminal_commit';
+const interactionTextEditStaleCommitGuardrailId =
+    'interaction.text_edit_stale_commit_guard';
 
 Future<List<GuardrailViolation>> checkInteractionImportBoundaries() async {
   final violations = <GuardrailViolation>[];
@@ -157,6 +159,125 @@ Future<List<GuardrailViolation>> checkInteractionReadPortImmutableFacts() {
     checkInteractionReadPortImmutableFactsSources({
       _interactionReadPortPath: file.readAsStringSync(),
     }),
+  );
+}
+
+Future<List<GuardrailViolation>> checkTextEditStaleCommitGuard() {
+  final file = File('$repositoryRoot/$_runtimeRootPath');
+  if (!file.existsSync()) {
+    return Future.value([
+      const GuardrailViolation(
+        guardrailId: interactionTextEditStaleCommitGuardrailId,
+        path: _runtimeRootPath,
+        message: 'runtime text edit command owner is missing',
+      ),
+    ]);
+  }
+
+  return Future.value(
+    checkTextEditStaleCommitGuardSources({
+      _runtimeRootPath: file.readAsStringSync(),
+    }),
+  );
+}
+
+List<GuardrailViolation> checkTextEditStaleCommitGuardSources(
+  Map<String, String> sources,
+) {
+  final source = sources[_runtimeRootPath];
+  if (source == null) {
+    return const [
+      GuardrailViolation(
+        guardrailId: interactionTextEditStaleCommitGuardrailId,
+        path: _runtimeRootPath,
+        message: 'runtime text edit command owner is missing',
+      ),
+    ];
+  }
+  final body = _methodBody(source, 'commitTextEdit');
+  if (body == null) {
+    return const [
+      GuardrailViolation(
+        guardrailId: interactionTextEditStaleCommitGuardrailId,
+        path: _runtimeRootPath,
+        message: 'commitTextEdit method is missing',
+      ),
+    ];
+  }
+
+  return _textEditGuardViolations(body);
+}
+
+List<GuardrailViolation> _textEditGuardViolations(String body) {
+  final markers = _TextEditGuardMarkers.fromBody(body);
+
+  return [
+    _validationBeforeGuardViolation(markers),
+    _guardBeforePrepareViolation(markers),
+    _guardAcceptedGateViolation(markers),
+    _guardFactsFeedCommitViolation(markers),
+    _retireBeforeDeliveryViolation(markers),
+    _hardcodedAcceptedDecisionViolation(body),
+  ].nonNulls.toList();
+}
+
+GuardrailViolation? _validationBeforeGuardViolation(
+  _TextEditGuardMarkers markers,
+) {
+  return markers.validationBeforeGuard
+      ? null
+      : _textEditGuardViolation('text validation must precede guard');
+}
+
+GuardrailViolation? _guardBeforePrepareViolation(
+  _TextEditGuardMarkers markers,
+) {
+  return markers.guardBeforePrepare
+      ? null
+      : _textEditGuardViolation('interaction guard must precede edit commit');
+}
+
+GuardrailViolation? _guardAcceptedGateViolation(_TextEditGuardMarkers markers) {
+  return markers.acceptedGateBeforePrepare
+      ? null
+      : _textEditGuardViolation(
+          'commit path must be controlled by the interaction guard decision',
+        );
+}
+
+GuardrailViolation? _guardFactsFeedCommitViolation(
+  _TextEditGuardMarkers markers,
+) {
+  return markers.guardFactsFeedCommit
+      ? null
+      : _textEditGuardViolation(
+          'edit commit facts must come from the interaction guard decision',
+        );
+}
+
+GuardrailViolation? _retireBeforeDeliveryViolation(
+  _TextEditGuardMarkers markers,
+) {
+  return markers.retireAfterPrepareBeforeDelivery
+      ? null
+      : _textEditGuardViolation(
+          'accepted changed text request must retire after install and before delivery',
+        );
+}
+
+GuardrailViolation? _hardcodedAcceptedDecisionViolation(String body) {
+  return body.contains('TextEditGuardDecision.accepted(')
+      ? _textEditGuardViolation(
+          'commitTextEdit must not synthesize accepted text guard decisions',
+        )
+      : null;
+}
+
+GuardrailViolation _textEditGuardViolation(String message) {
+  return GuardrailViolation(
+    guardrailId: interactionTextEditStaleCommitGuardrailId,
+    path: _runtimeRootPath,
+    message: message,
   );
 }
 
@@ -306,6 +427,59 @@ bool _isListUnmodifiableCall(Expression expression) {
 
 const _interactionReadPortPath =
     'lib/src/interaction/interaction_read_port.dart';
+const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';
+
+String? _methodBody(String source, String methodName) {
+  final match = RegExp('\\b$methodName\\s*\\(').firstMatch(source);
+  if (match == null) {
+    return null;
+  }
+  final parameterStart = source.indexOf('(', match.start);
+  final parameterEnd = _balancedParameterEnd(source, parameterStart);
+  if (parameterEnd == null) {
+    return null;
+  }
+  final bodyStart = source.indexOf('{', parameterEnd);
+  if (bodyStart < 0) {
+    return null;
+  }
+
+  var depth = 0;
+  for (var index = bodyStart; index < source.length; index += 1) {
+    final char = source.codeUnitAt(index);
+    if (char == 0x7B) {
+      depth += 1;
+    } else if (char == 0x7D) {
+      depth -= 1;
+      if (depth == 0) {
+        return source.substring(bodyStart, index + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+int? _balancedParameterEnd(String source, int start) {
+  if (start < 0) {
+    return null;
+  }
+
+  var depth = 0;
+  for (var index = start; index < source.length; index += 1) {
+    final char = source.codeUnitAt(index);
+    if (char == 0x28) {
+      depth += 1;
+    } else if (char == 0x29) {
+      depth -= 1;
+      if (depth == 0) {
+        return index;
+      }
+    }
+  }
+
+  return null;
+}
 
 const _readPortCopiedFields = [
   _ReadPortCopiedField('SelectedMoveStartFacts', 'selectedIds'),
@@ -325,6 +499,89 @@ final class _ReadPortCopiedField {
 
   final String className;
   final String fieldName;
+}
+
+final class _TextEditGuardMarkers {
+  const _TextEditGuardMarkers({
+    required this.validation,
+    required this.guard,
+    required this.acceptedGate,
+    required this.targetRead,
+    required this.currentTextRead,
+    required this.prepare,
+    required this.retire,
+    required this.deliver,
+  });
+
+  factory _TextEditGuardMarkers.fromBody(String body) {
+    final guardName = _guardDecisionVariableName(body);
+
+    return _TextEditGuardMarkers(
+      validation: body.indexOf('_validateTextEditCommandInput'),
+      guard: body.indexOf('_interactionEngine.textEditGuardDecision'),
+      acceptedGate: _guardAcceptedGateIndex(body, guardName),
+      targetRead: _guardFactReadIndex(body, guardName, 'targetElementId'),
+      currentTextRead: _guardFactReadIndex(body, guardName, 'currentText'),
+      prepare: body.indexOf('_editKernel.prepareInteractionCommit'),
+      retire: body.lastIndexOf('_interactionEngine.retireTextEditRequest'),
+      deliver: body.indexOf('_deliverEditCommitResult'),
+    );
+  }
+
+  final int validation;
+  final int guard;
+  final int acceptedGate;
+  final int targetRead;
+  final int currentTextRead;
+  final int prepare;
+  final int retire;
+  final int deliver;
+
+  bool get validationBeforeGuard {
+    return validation >= 0 && guard >= 0 && validation < guard;
+  }
+
+  bool get guardBeforePrepare {
+    return guard >= 0 && prepare >= 0 && guard < prepare;
+  }
+
+  bool get acceptedGateBeforePrepare {
+    return acceptedGate > guard && prepare >= 0 && acceptedGate < prepare;
+  }
+
+  bool get guardFactsFeedCommit {
+    return targetRead > acceptedGate &&
+        currentTextRead > acceptedGate &&
+        prepare >= 0 &&
+        targetRead < prepare &&
+        currentTextRead < prepare;
+  }
+
+  bool get retireAfterPrepareBeforeDelivery {
+    return prepare >= 0 && retire > prepare && deliver >= 0 && retire < deliver;
+  }
+}
+
+String? _guardDecisionVariableName(String body) {
+  return RegExp(
+    r'(?:final|var)\s+(\w+)\s*=\s*_interactionEngine\.textEditGuardDecision\s*\(\s*requestId\s*\)\s*;',
+  ).firstMatch(body)?.group(1);
+}
+
+int _guardAcceptedGateIndex(String body, String? guardName) {
+  if (guardName == null) {
+    return -1;
+  }
+
+  return body.indexOf('$guardName.kind != TextEditGuardDecisionKind.accepted');
+}
+
+int _guardFactReadIndex(String body, String? guardName, String factName) {
+  if (guardName == null) {
+    return -1;
+  }
+
+  return body.indexOf('$guardName.$factName');
 }
 
 final class _ConstructorCopyVisitor extends RecursiveAstVisitor<void> {

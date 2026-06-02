@@ -143,6 +143,7 @@ void main() {
         'interaction.pointer_cleanup_coordinator_only',
         'interaction.no_resolver_on_cancel_paths',
         'interaction.no_stale_terminal_commit',
+        'interaction.text_edit_stale_commit_guard',
         'events.action_after_state_order',
         'preview.selected_move_main_repaint',
         'preview.selected_move_main_only',
@@ -392,6 +393,14 @@ const _runnerStructuralScanCases = [
       'test/interaction/pointer_tool_cleanup_coordinator_test.dart',
     ],
     violationPath: 'lib/src/runtime/bad_cleanup_caller.dart',
+  ),
+  _StructuralScanCase(
+    id: 'interaction.text_edit_stale_commit_guard',
+    proofPaths: [
+      'test/interaction/text_edit_stale_commit_guard_test.dart',
+      'test/guardrails/interaction_guardrail_enforcement_test.dart',
+    ],
+    violationPath: 'lib/src/runtime/runtime_root.dart',
   ),
   _StructuralScanCase(
     id: 'resources.resolver_boundary_owned_by_surface_session',
