@@ -1,8 +1,6 @@
-// RuntimeRoot is the composition root for public facade ports, store facts, and
-// selection state; its imports reflect owned seams that are meant to meet here
-// instead of being hidden behind metric-only wrapper files.
-// The composition root directly names each owned seam so dependency direction is
-// visible at the facade boundary.
+// RuntimeRoot intentionally owns the composition boundary. Import count is
+// accepted here because the file exposes dependency direction at the facade
+// boundary instead of hiding owned seams behind metric-only wrappers.
 // ignore_for_file: number-of-imports
 
 import 'dart:async';
@@ -136,23 +134,40 @@ final class RuntimeRoot
     _spatial.rebuild(this);
   }
 
+  // Configuration and owned infrastructure.
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   final DiagnosticsHub? _diagnostics;
-  CanvasCamera _viewCamera;
   final LoadInteractionBoundary? _loadInteractionBoundary;
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
+
+  // Core kernels and engines.
   final SelectionKernel _selection;
   final InteractionEngine _interactionEngine;
   final SpatialKernel _spatial = SpatialKernel();
+  final CommitApplier _commitApplier = const CommitApplier();
+  final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
+
+  // Public state and event streams.
+  CanvasCamera _viewCamera;
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast();
   final StreamController<CanvasContextActionRequested> _contextActionRequests =
       StreamController<CanvasContextActionRequested>.broadcast();
-  final CommitApplier _commitApplier = const CommitApplier();
-  final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
+
+  // Runtime revision counters.
+  int _viewCameraRevision = 0;
+  int _epochRevision = 0;
+
+  // Mutation and lifecycle guards.
+  bool _isDisposed = false;
+  bool _isDeliveringCommitEffects = false;
+  bool _isRunningResolverCallback = false;
+  ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
+
+  // Lazy internal adapters and kernels.
   late final InteractionReadPort _interactionReadPort =
       RuntimeInteractionReadAdapter(
         frame: this,
@@ -161,12 +176,6 @@ final class RuntimeRoot
         spatial: _spatial,
         controllerEpoch: () => _epochRevision,
       );
-  int _viewCameraRevision = 0;
-  int _epochRevision = 0;
-  bool _isDisposed = false;
-  bool _isDeliveringCommitEffects = false;
-  bool _isRunningResolverCallback = false;
-  ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
   late final EditKernel _editKernel = EditKernel(
     mutationGuard: this,
     readDocument: _store.readDocument,
@@ -175,11 +184,6 @@ final class RuntimeRoot
     deliverApplyResult: _deliverEditCommitResult,
     installLoadedDocument: _loadDocument,
   );
-  late final CanvasEditPort _editPort = _editKernel.port;
-  late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
-  late final CanvasToolPort _toolPort = _RuntimeToolPort(this);
-  late final CanvasCommandPort _commandPort = _RuntimeCommandPort(this);
-  late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
   late final ResourceCatalogPort _resourceCatalogPort = _StoreResourceCatalog(
     _store,
   );
@@ -200,29 +204,46 @@ final class RuntimeRoot
     documentSummary: _documentSummary,
   );
 
+  // Public facade ports.
+  late final CanvasEditPort _editPort = _editKernel.port;
+  late final CanvasSelectionPort _selectionPort = _RuntimeSelectionPort(this);
+  late final CanvasToolPort _toolPort = _RuntimeToolPort(this);
+  late final CanvasCommandPort _commandPort = _RuntimeCommandPort(this);
+  late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
+
+  // Public state.
   ValueListenable<CanvasRuntimeState> get state => _state;
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
+
+  // Facade ports.
   CanvasEditPort get edits => _editPort;
-  Stream<CanvasActionCommitted> get actions => _actions.stream;
-  Stream<CanvasContextActionRequested> get contextActionRequests =>
-      _contextActionRequests.stream;
   CanvasSelectionPort get selection => _selectionPort;
   CanvasToolPort get tools => _toolPort;
   CanvasCommandPort get commands => _commandPort;
+  CanvasResourcePort get resources => _resourceKernel;
+  ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
+  CanvasCameraPort cameraPort() => _cameraPort;
+
+  // Event streams.
+  Stream<CanvasActionCommitted> get actions => _actions.stream;
+  Stream<CanvasContextActionRequested> get contextActionRequests =>
+      _contextActionRequests.stream;
+
+  // Backward-compatible method accessors.
   CanvasToolPort toolPort() => _toolPort;
   CanvasCommandPort commandPort() => _commandPort;
   Stream<CanvasContextActionRequested> contextActionRequestStream() {
     return _contextActionRequests.stream;
   }
 
-  CanvasCameraPort cameraPort() => _cameraPort;
-  CanvasResourcePort get resources => _resourceKernel;
-  ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
+  // Camera and interaction state.
   CanvasPreviewState get preview => _interactionEngine.preview;
   CanvasCamera get viewCamera => _viewCamera;
   Offset get viewCameraOffset => _viewCamera.offset;
   SelectionFacts get selectionFacts => _selection.selectionFacts;
+
+  // Internal and test read ports.
   @visibleForTesting
   InteractionEngine get interactionEngine => _interactionEngine;
   @visibleForTesting
@@ -237,6 +258,7 @@ final class RuntimeRoot
   @visibleForTesting
   SpatialKernel get spatialKernel => _spatial;
 
+  // Frame facade.
   MainFramePaintOutput buildResourceFreeMainFrame({
     required Rect viewportWorldBounds,
     required double devicePixelRatio,
@@ -287,6 +309,7 @@ final class RuntimeRoot
     );
   }
 
+  // Resource session sink API.
   void attachResourceSessionInvalidationSink(
     ResourceSessionInvalidationSink sink,
   ) {
@@ -303,6 +326,7 @@ final class RuntimeRoot
     }
   }
 
+  // DocumentFactsPort.
   @override
   DocumentFacts get documentFacts {
     final summary = _store.documentSummary;
@@ -320,6 +344,7 @@ final class RuntimeRoot
 
   CanvasDocumentSummary _documentSummary() => _store.documentSummary;
 
+  // FrameFactsPort.
   @override
   FrameRevisionFacts get frameRevisions {
     return FrameRevisionFacts(
@@ -336,25 +361,6 @@ final class RuntimeRoot
   @override
   CanvasBackground get background {
     return _store.background;
-  }
-
-  CanvasDocument readDocument() => _store.readDocument();
-  CanvasElementId generateElementId() {
-    ensureRuntimeMutationAllowed();
-
-    return _store.generateElementId();
-  }
-
-  CanvasLayerId generateLayerId() {
-    ensureRuntimeMutationAllowed();
-
-    return _store.generateLayerId();
-  }
-
-  CanvasResourceId generateResourceId() {
-    ensureRuntimeMutationAllowed();
-
-    return _store.generateResourceId();
   }
 
   @override
@@ -476,6 +482,28 @@ final class RuntimeRoot
     );
   }
 
+  // Document read and id generation.
+  CanvasDocument readDocument() => _store.readDocument();
+
+  CanvasElementId generateElementId() {
+    ensureRuntimeMutationAllowed();
+
+    return _store.generateElementId();
+  }
+
+  CanvasLayerId generateLayerId() {
+    ensureRuntimeMutationAllowed();
+
+    return _store.generateLayerId();
+  }
+
+  CanvasResourceId generateResourceId() {
+    ensureRuntimeMutationAllowed();
+
+    return _store.generateResourceId();
+  }
+
+  // Selection commands.
   Set<CanvasElementId> get selectedElementIds {
     return _selection.selectedElementIds;
   }
@@ -493,14 +521,6 @@ final class RuntimeRoot
   void clearSelection() {
     ensureRuntimeMutationAllowed();
     _publishSelectionChange(_selection.clearSelection());
-  }
-
-  void handleSurfaceInteractiveDisabled() {
-    ensureRuntimeMutationAllowed();
-    final outcome = _interactionEngine.interactiveDisabledCleanup();
-    if (outcome.publicStateNeeded) {
-      _publishRuntimeState();
-    }
   }
 
   void selectAll({required bool onlySelectable}) {
@@ -583,6 +603,77 @@ final class RuntimeRoot
     _deliverEditCommitResult(applyResult);
   }
 
+  void _deliverSelectionTransformAroundCenter({
+    required CanvasTransformOperation operation,
+    required CanvasTransform localTransform,
+    required int? timestampMs,
+  }) {
+    final facts = _commandFacts.selectionTransformFacts();
+    if (facts.movableElements.isEmpty || facts.selectionBoundsWorld.isEmpty) {
+      return;
+    }
+    final pivot = facts.selectionBoundsWorld.center;
+    _deliverSelectionTransform(
+      transform: _aroundPivot(localTransform, pivot),
+      operation: operation,
+      pivotWorld: pivot,
+      timestampMs: timestampMs,
+      facts: facts,
+    );
+  }
+
+  // The transform descriptor is kept explicit so move and pivoted transform
+  // actions share one delivery path without hiding action payload fields.
+  // ignore: number-of-parameters
+  void _deliverSelectionTransform({
+    required CanvasTransform transform,
+    required CanvasTransformOperation operation,
+    required Offset? pivotWorld,
+    required int? timestampMs,
+    SelectionTransformFacts? facts,
+  }) {
+    final commandFacts = facts ?? _commandFacts.selectionTransformFacts();
+    if (commandFacts.movableElements.isEmpty) {
+      return;
+    }
+    final elementIds = commandFacts.movableElements.map((e) => e.id);
+    final List<CommitActionIntent> actionIntents;
+    if (operation == CanvasTransformOperation.move) {
+      actionIntents = [
+        MoveSelectionActionIntent(
+          elementIds: elementIds,
+          transform: transform,
+          timestampHintMs: timestampMs,
+        ),
+      ];
+    } else {
+      final pivot = pivotWorld;
+      if (pivot == null) {
+        throw StateError(
+          'Pivot is required for non-move selection transforms.',
+        );
+      }
+      actionIntents = [
+        TransformSelectionActionIntent(
+          elementIds: elementIds,
+          transform: transform,
+          operation: operation,
+          pivotWorld: pivot,
+          timestampHintMs: timestampMs,
+        ),
+      ];
+    }
+    final applyResult = _editKernel.prepareInteractionCommit((edit) {
+      for (final element in commandFacts.movableElements) {
+        edit.updateElement(
+          _transformUpdate(element, transform.multiply(element.transform)),
+        );
+      }
+    }, augmentPlan: (plan) => plan.withActionIntents(actionIntents));
+    _deliverEditCommitResult(applyResult);
+  }
+
+  // Command operations.
   bool removeElementByCommand(CanvasElementId id, {int? timestampMs}) {
     ensureRuntimeMutationAllowed();
     final facts = _commandFacts.removeElementFacts(id);
@@ -654,9 +745,20 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     _validateTextEditCommandInput(requestId, newText, timestampMs);
 
+    // Text edit commit is validated here but not supported by this phase.
     return false;
   }
 
+  // Surface interaction lifecycle.
+  void handleSurfaceInteractiveDisabled() {
+    ensureRuntimeMutationAllowed();
+    final outcome = _interactionEngine.interactiveDisabledCleanup();
+    if (outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  // Tool state.
   void setInteractionMode(CanvasInteractionMode mode) {
     ensureRuntimeMutationAllowed();
     final previousMode = _interactionEngine.mode;
@@ -693,71 +795,7 @@ final class RuntimeRoot
     }
   }
 
-  void _deliverSelectionTransformAroundCenter({
-    required CanvasTransformOperation operation,
-    required CanvasTransform localTransform,
-    required int? timestampMs,
-  }) {
-    final facts = _commandFacts.selectionTransformFacts();
-    if (facts.movableElements.isEmpty || facts.selectionBoundsWorld.isEmpty) {
-      return;
-    }
-    final pivot = facts.selectionBoundsWorld.center;
-    _deliverSelectionTransform(
-      transform: _aroundPivot(localTransform, pivot),
-      operation: operation,
-      pivotWorld: pivot,
-      timestampMs: timestampMs,
-      facts: facts,
-    );
-  }
-
-  // The transform descriptor is kept explicit so move and pivoted transform
-  // actions share one delivery path without hiding action payload fields.
-  // ignore: number-of-parameters
-  void _deliverSelectionTransform({
-    required CanvasTransform transform,
-    required CanvasTransformOperation operation,
-    required Offset? pivotWorld,
-    required int? timestampMs,
-    SelectionTransformFacts? facts,
-  }) {
-    final commandFacts = facts ?? _commandFacts.selectionTransformFacts();
-    if (commandFacts.movableElements.isEmpty) {
-      return;
-    }
-    final applyResult = _editKernel.prepareInteractionCommit(
-      (edit) {
-        for (final element in commandFacts.movableElements) {
-          edit.updateElement(
-            _transformUpdate(element, transform.multiply(element.transform)),
-          );
-        }
-      },
-      augmentPlan: (plan) => plan.withActionIntents([
-        if (operation == CanvasTransformOperation.move)
-          MoveSelectionActionIntent(
-            elementIds: commandFacts.movableElements.map(
-              (element) => element.id,
-            ),
-            transform: transform,
-            timestampHintMs: timestampMs,
-          )
-        else
-          TransformSelectionActionIntent(
-            elementIds: commandFacts.movableElements.map(
-              (element) => element.id,
-            ),
-            transform: transform,
-            operation: operation,
-            pivotWorld: pivotWorld as Offset,
-            timestampHintMs: timestampMs,
-          ),
-      ]),
-    );
-    _deliverEditCommitResult(applyResult);
-  }
-
+  // Camera.
   void setCameraOffset(Offset offset) {
     ensureRuntimeMutationAllowed();
     final camera = CanvasCamera(offset: offset);
@@ -773,6 +811,7 @@ final class RuntimeRoot
     setCameraOffset(_viewCamera.offset + delta);
   }
 
+  // Preview.
   bool replaceInteractionPreview(CanvasPreviewState preview) {
     ensureRuntimeMutationAllowed();
     final didChange = _interactionEngine.replacePreview(preview);
@@ -793,6 +832,7 @@ final class RuntimeRoot
     return didChange;
   }
 
+  // Pointer input.
   void handlePointer(CanvasPointerSample sample) {
     ensureRuntimeMutationAllowed();
     final admission = _interactionEngine.handlePointerSample(
@@ -838,30 +878,12 @@ final class RuntimeRoot
     }
   }
 
+  // Unsupported later-phase operations.
   // Double-tap context requests are not implemented by the current runtime.
   // ignore: avoid-unused-parameters
   Never handleDoubleTap({required Offset position, int? timestampMs}) {
     ensureRuntimeMutationAllowed();
     throw UnsupportedError('P12 context action double tap is not implemented.');
-  }
-
-  @visibleForTesting
-  void deliverCommitPlanForTesting(
-    CommitPlan plan, {
-    required CanvasDocument document,
-  }) {
-    ensureRuntimeMutationAllowed();
-    final applyResult = _applyEditCommit(document, plan);
-    _deliverEditCommitResult(applyResult);
-  }
-
-  @visibleForTesting
-  void deliverDrawStrokeCommitForTesting(
-    DrawStrokeCommitIntent intent, {
-    required int? timestampHintMs,
-  }) {
-    ensureRuntimeMutationAllowed();
-    _deliverDrawStrokeCommit(intent, timestampHintMs: timestampHintMs);
   }
 
   Never rejectSelectionDocumentMutation() {
@@ -871,6 +893,7 @@ final class RuntimeRoot
     );
   }
 
+  // Lifecycle.
   void dispose() {
     if (_isDisposed) {
       return;
@@ -894,6 +917,7 @@ final class RuntimeRoot
     unawaited(_contextActionRequests.close());
   }
 
+  // Mutation guard.
   @override
   T runResolverCallback<T>(T Function() callback) {
     _ensureNotDisposed();
@@ -917,30 +941,6 @@ final class RuntimeRoot
       throw StateError(
         'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
       );
-    }
-  }
-
-  @override
-  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) {
-    if (!outcome.hasDirtyResources) {
-      return;
-    }
-    _invalidateActiveResourceSession(outcome);
-    _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
-  }
-
-  void _invalidateActiveResourceSession(ResourceDirtyOutcome outcome) {
-    final sink = _activeResourceSessionInvalidationSink;
-    if (sink == null) {
-      return;
-    }
-    if (outcome.allResourcesDirty) {
-      sink.invalidateAllResourceImages();
-
-      return;
-    }
-    for (final id in outcome.dirtyResourceIds) {
-      sink.invalidateResourceImage(id);
     }
   }
 
@@ -974,6 +974,27 @@ final class RuntimeRoot
     ).recordResolverReentrantMutationRejected(operation: operation);
   }
 
+  // Test hooks.
+  @visibleForTesting
+  void deliverCommitPlanForTesting(
+    CommitPlan plan, {
+    required CanvasDocument document,
+  }) {
+    ensureRuntimeMutationAllowed();
+    final applyResult = _applyEditCommit(document, plan);
+    _deliverEditCommitResult(applyResult);
+  }
+
+  @visibleForTesting
+  void deliverDrawStrokeCommitForTesting(
+    DrawStrokeCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    _deliverDrawStrokeCommit(intent, timestampHintMs: timestampHintMs);
+  }
+
+  // State publication.
   void _publishSelectionChange(bool didChange) {
     if (!didChange) {
       return;
@@ -995,6 +1016,7 @@ final class RuntimeRoot
     );
   }
 
+  // Load pipeline.
   void _loadDocument(CanvasDocument document) {
     final preparedLoad = _loadPipeline.prepare(document);
 
@@ -1015,6 +1037,7 @@ final class RuntimeRoot
     _interactionEngine.prepareLoadCleanup();
   }
 
+  // Commit delivery pipeline.
   CommitDeliveryResult _applyEditCommit(
     CanvasDocument document,
     CommitPlan plan,
@@ -1077,6 +1100,31 @@ final class RuntimeRoot
     }
   }
 
+  // Resource dirty delivery.
+  @override
+  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) {
+    if (!outcome.hasDirtyResources) {
+      return;
+    }
+    _invalidateActiveResourceSession(outcome);
+    _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
+  }
+
+  void _invalidateActiveResourceSession(ResourceDirtyOutcome outcome) {
+    final sink = _activeResourceSessionInvalidationSink;
+    if (sink == null) {
+      return;
+    }
+    if (outcome.allResourcesDirty) {
+      sink.invalidateAllResourceImages();
+
+      return;
+    }
+    for (final id in outcome.dirtyResourceIds) {
+      sink.invalidateResourceImage(id);
+    }
+  }
+
   void _deliverResourceDirtyResult(List<CommitDeliveryEffect> effects) {
     _isDeliveringCommitEffects = true;
     try {
@@ -1092,6 +1140,7 @@ final class RuntimeRoot
     }
   }
 
+  // Delivery shared helpers.
   void _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
     for (final effect in effects.whereType<SpatialDeliveryEffect>()) {
       _spatial.applyTouched(this, effect.touchedSet);
@@ -1104,6 +1153,7 @@ final class RuntimeRoot
     }
   }
 
+  // Selected move commit flow.
   void _deliverSelectedMoveCommit(
     SelectedMoveCommitIntent intent, {
     required int? timestampHintMs,
@@ -1214,6 +1264,7 @@ final class RuntimeRoot
     }
   }
 
+  // Marquee commit flow.
   void _deliverMarqueeCommit(
     MarqueeCommitIntent intent, {
     required int? timestampHintMs,
@@ -1248,6 +1299,7 @@ final class RuntimeRoot
     }
   }
 
+  // Draw stroke commit flow.
   void _deliverDrawStrokeCommit(
     DrawStrokeCommitIntent intent, {
     required int? timestampHintMs,
@@ -1309,6 +1361,7 @@ final class RuntimeRoot
     }
   }
 
+  // Draw line commit flow.
   void _deliverDrawLineCommit(
     DrawLineCommitIntent intent, {
     required int? timestampHintMs,
@@ -1373,134 +1426,6 @@ final class RuntimeRoot
       _publishRuntimeState();
     }
   }
-}
-
-void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
-
-void _validateTextEditCommandInput(
-  CanvasInteractionRequestId requestId,
-  String newText,
-  int? timestampMs,
-) {
-  if (timestampMs != null) {
-    validateNonNegativeInt(timestampMs, path: 'textEdit.timestampMs');
-  }
-  final normalizedRequestId = CanvasInteractionRequestId(requestId.value);
-  if (normalizedRequestId != requestId) {
-    throw StateError('CanvasInteractionRequestId normalization drifted.');
-  }
-  CanvasTextElementUpdate(
-    id: CanvasElementId('text-edit-validation-probe'),
-    text: CanvasFieldSet(newText),
-  );
-}
-
-CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
-  return CanvasTransform.translation(
-    pivot,
-  ).multiply(transform).multiply(CanvasTransform.translation(-pivot));
-}
-
-CanvasElementUpdate _transformUpdate(
-  CanvasElementRead element,
-  CanvasTransform transform,
-) {
-  final update = CanvasFieldSet(transform);
-
-  return switch (element.kind) {
-    CanvasElementKind.image => CanvasImageElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-    CanvasElementKind.path => CanvasPathElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-    CanvasElementKind.text => CanvasTextElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-    CanvasElementKind.stroke => CanvasStrokeElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-    CanvasElementKind.line => CanvasLineElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-    CanvasElementKind.rect => CanvasRectElementUpdate(
-      id: element.id,
-      transform: update,
-    ),
-  };
-}
-
-List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
-  return List.unmodifiable([
-    const ProjectionDeliveryEffect(),
-    SpatialDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
-    ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
-    const RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true),
-    if (didClearSelection) const SelectionDeliveryEffect(),
-    const PublicStateDeliveryEffect(),
-  ]);
-}
-
-List<CommitDeliveryEffect> _resourceDirtyEffects(ResourceDirtyOutcome outcome) {
-  return List.unmodifiable([
-    ResourceDeliveryEffect(
-      touchedSet: TouchedSet(
-        resourceVisualChangedIds: outcome.dirtyResourceIds,
-        allResourceVisualsChanged: outcome.allResourcesDirty,
-      ),
-    ),
-    const RepaintDeliveryEffect(mainCanvas: true),
-    const PublicStateDeliveryEffect(),
-  ]);
-}
-
-CanvasRuntimeState _runtimeState(
-  DocumentStoreKernel store,
-  SelectionFacts? selectionFacts,
-  _RuntimeRevisionFacts runtimeRevisions,
-) {
-  final selection =
-      selectionFacts ??
-      SelectionFacts(selectedElementIds: const {}, selectionRevision: 0);
-
-  return CanvasRuntimeState(
-    revisions: CanvasRuntimeRevisions(
-      document: store.documentRevision,
-      selection: selection.selectionRevision,
-      preview: runtimeRevisions.preview,
-      viewCamera: runtimeRevisions.viewCamera,
-      resourceVisual: runtimeRevisions.resourceVisual,
-      interaction: runtimeRevisions.interaction,
-      epoch: runtimeRevisions.epoch,
-    ),
-    summary: CanvasRuntimeSummary(
-      elementCount: store.documentSummary.elementCount,
-      layerCount: store.documentSummary.layerCount,
-      resourceCount: store.documentSummary.resourceCount,
-      selectedCount: selection.selectedCount,
-    ),
-  );
-}
-
-final class _RuntimeRevisionFacts {
-  const _RuntimeRevisionFacts({
-    this.viewCamera = 0,
-    this.preview = 0,
-    this.epoch = 0,
-    this.resourceVisual = 0,
-    this.interaction = 0,
-  });
-
-  final int viewCamera;
-  final int preview;
-  final int epoch;
-  final int resourceVisual;
-  final int interaction;
 }
 
 final class _StoreSelectionMembership implements SelectionMembershipPort {
@@ -1727,4 +1652,132 @@ final class _RuntimeCommandPort implements CanvasCommandPort {
       timestampMs: timestampMs,
     );
   }
+}
+
+void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
+
+void _validateTextEditCommandInput(
+  CanvasInteractionRequestId requestId,
+  String newText,
+  int? timestampMs,
+) {
+  if (timestampMs != null) {
+    validateNonNegativeInt(timestampMs, path: 'textEdit.timestampMs');
+  }
+  final normalizedRequestId = CanvasInteractionRequestId(requestId.value);
+  if (normalizedRequestId != requestId) {
+    throw StateError('CanvasInteractionRequestId normalization drifted.');
+  }
+  CanvasTextElementUpdate(
+    id: CanvasElementId('text-edit-validation-probe'),
+    text: CanvasFieldSet(newText),
+  );
+}
+
+CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
+  return CanvasTransform.translation(
+    pivot,
+  ).multiply(transform).multiply(CanvasTransform.translation(-pivot));
+}
+
+CanvasElementUpdate _transformUpdate(
+  CanvasElementRead element,
+  CanvasTransform transform,
+) {
+  final update = CanvasFieldSet(transform);
+
+  return switch (element.kind) {
+    CanvasElementKind.image => CanvasImageElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.path => CanvasPathElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.text => CanvasTextElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.stroke => CanvasStrokeElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.line => CanvasLineElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.rect => CanvasRectElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+  };
+}
+
+List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
+  return List.unmodifiable([
+    const ProjectionDeliveryEffect(),
+    SpatialDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
+    ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true)),
+    const RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true),
+    if (didClearSelection) const SelectionDeliveryEffect(),
+    const PublicStateDeliveryEffect(),
+  ]);
+}
+
+List<CommitDeliveryEffect> _resourceDirtyEffects(ResourceDirtyOutcome outcome) {
+  return List.unmodifiable([
+    ResourceDeliveryEffect(
+      touchedSet: TouchedSet(
+        resourceVisualChangedIds: outcome.dirtyResourceIds,
+        allResourceVisualsChanged: outcome.allResourcesDirty,
+      ),
+    ),
+    const RepaintDeliveryEffect(mainCanvas: true),
+    const PublicStateDeliveryEffect(),
+  ]);
+}
+
+CanvasRuntimeState _runtimeState(
+  DocumentStoreKernel store,
+  SelectionFacts? selectionFacts,
+  _RuntimeRevisionFacts runtimeRevisions,
+) {
+  final selection =
+      selectionFacts ??
+      SelectionFacts(selectedElementIds: const {}, selectionRevision: 0);
+
+  return CanvasRuntimeState(
+    revisions: CanvasRuntimeRevisions(
+      document: store.documentRevision,
+      selection: selection.selectionRevision,
+      preview: runtimeRevisions.preview,
+      viewCamera: runtimeRevisions.viewCamera,
+      resourceVisual: runtimeRevisions.resourceVisual,
+      interaction: runtimeRevisions.interaction,
+      epoch: runtimeRevisions.epoch,
+    ),
+    summary: CanvasRuntimeSummary(
+      elementCount: store.documentSummary.elementCount,
+      layerCount: store.documentSummary.layerCount,
+      resourceCount: store.documentSummary.resourceCount,
+      selectedCount: selection.selectedCount,
+    ),
+  );
+}
+
+final class _RuntimeRevisionFacts {
+  const _RuntimeRevisionFacts({
+    this.viewCamera = 0,
+    this.preview = 0,
+    this.epoch = 0,
+    this.resourceVisual = 0,
+    this.interaction = 0,
+  });
+
+  final int viewCamera;
+  final int preview;
+  final int epoch;
+  final int resourceVisual;
+  final int interaction;
 }
