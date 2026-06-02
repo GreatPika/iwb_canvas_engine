@@ -973,11 +973,11 @@ final class RuntimeRoot
   }
 
   void _prepareLoadInteractionCleanup() {
-    _interactionEngine.prepareLoadCleanup();
     final testBoundary = _loadInteractionBoundary;
     if (testBoundary != null) {
       testBoundary.prepareLoadCleanup();
     }
+    _interactionEngine.prepareLoadCleanup();
   }
 
   CommitDeliveryResult _applyEditCommit(

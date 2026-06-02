@@ -63,6 +63,7 @@ Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
         _recordLoadFailureObserver(events, effectBatches, effects),
   );
   _prepareExistingRuntimeFacts(root);
+  _prepareActiveInteraction(root);
   final before = _RuntimeFactsSnapshot.capture(root);
   _recordLoadFailurePublicSignals(root, events, actionEvents);
   boundary.onPrepareCleanup = () => _throwFromPreparedCleanup(events);
@@ -105,7 +106,6 @@ void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
   events.add('prepared-cleanup');
   expect(root.readDocument().layers.single.elements.single.id.value, 'old');
   expect(root.state.value.revisions.document, 0);
-  _expectInteractionAlreadyCleaned(root);
 }
 
 void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
@@ -164,6 +164,15 @@ void _prepareActiveInteraction(RuntimeRoot root) {
   root.replaceInteractionPreview(
     const CanvasSelectedMovePreview(delta: Offset(2, 3)),
   );
+  root.handlePointer(
+    CanvasPointerSample(
+      pointerId: 1,
+      position: Offset.zero,
+      phase: CanvasPointerLifecyclePhase.down,
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+  expect(root.interactionEngine.activeSession, isNotNull);
 }
 
 void _expectInteractionAlreadyCleaned(RuntimeRoot root) {
@@ -250,6 +259,8 @@ final class _RuntimeFactsSnapshot {
     required this.document,
     required this.selection,
     required this.cameraOffset,
+    required this.preview,
+    required this.activeSession,
   });
 
   factory _RuntimeFactsSnapshot.capture(RuntimeRoot root) {
@@ -258,6 +269,8 @@ final class _RuntimeFactsSnapshot {
       document: root.readDocument(),
       selection: root.selectedElementIds,
       cameraOffset: root.cameraPort().offset,
+      preview: root.preview,
+      activeSession: root.interactionEngine.activeSession,
     );
   }
 
@@ -265,6 +278,8 @@ final class _RuntimeFactsSnapshot {
   final CanvasDocument document;
   final Set<CanvasElementId> selection;
   final Offset cameraOffset;
+  final CanvasPreviewState preview;
+  final Object? activeSession;
 
   void expectStillCurrent(RuntimeRoot root) {
     expect(root.state.value, state);
@@ -272,6 +287,8 @@ final class _RuntimeFactsSnapshot {
     expect(root.readDocument().layers.single.elements.single.id.value, 'old');
     expect(root.selectedElementIds, selection);
     expect(root.cameraPort().offset, cameraOffset);
+    expect(root.preview, same(preview));
+    expect(root.interactionEngine.activeSession, same(activeSession));
   }
 }
 
