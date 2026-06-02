@@ -192,6 +192,9 @@ void _testMarqueeQueryBudgetFacts() {
   );
 }
 
+// This assertion matrix stays together to prove corridor immutability, exact ids,
+// query facts, and budget status are from one eraser read snapshot.
+// ignore: halstead-volume
 void _testEraserReadFacts() {
   test('eraser read facts use immutable corridor and exact content ids', () {
     final root = _runtimeRoot();
@@ -216,6 +219,9 @@ void _testEraserReadFacts() {
   });
 }
 
+// This target matrix stays together so content-vs-empty behavior and guard facts
+// are proved against the same document ordering fixture.
+// ignore: halstead-volume
 void _testContextTargetReadFacts() {
   test(
     'context target facts distinguish content from empty background coverage',
@@ -289,6 +295,9 @@ RuntimeRoot _runtimeRoot() {
   );
 }
 
+// The fixture document keeps all read-port target families in one place so
+// ordering, background coverage, selectable state, and text facts do not drift.
+// ignore: halstead-volume
 CanvasDocument _document() {
   return CanvasDocument(
     backgroundElements: [

@@ -5,6 +5,10 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 
+// The interaction read port is the single immutable fact boundary for pointer
+// decisions; splitting it by tool would let active gesture owners reassemble
+// committed facts piecemeal.
+// ignore: coupling-between-object-classes
 abstract interface class InteractionReadPort {
   SelectedMoveStartFacts selectedMoveStartFacts(
     SelectedMoveStartReadRequest request,

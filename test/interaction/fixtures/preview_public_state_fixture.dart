@@ -36,6 +36,10 @@ void main() {
   test('draw line previews publish only preview revision', () {
     expect(_verifyDrawLinePreviewOnlyPublication, returnsNormally);
   });
+
+  test('eraser previews publish only preview revision', () {
+    expect(_verifyEraserPreviewOnlyPublication, returnsNormally);
+  });
 }
 
 void _verifyPreviewOnlyPublication() {
@@ -154,6 +158,23 @@ void _verifyDrawLinePreviewOnlyPublication() {
   ));
 }
 
+void _verifyEraserPreviewOnlyPublication() {
+  final scenario = _eraserPreviewScenario();
+
+  _expectEraserPreviewPublication(
+    scenario,
+    CanvasPointerLifecyclePhase.down,
+    Offset.zero,
+    const [Offset.zero],
+  );
+  _expectEraserPreviewPublication(
+    scenario,
+    CanvasPointerLifecyclePhase.move,
+    const Offset(3, 4),
+    const [Offset.zero, Offset(3, 4)],
+  );
+}
+
 _DrawPreviewScenario _drawPreviewScenario() {
   final root = _drawRuntimeRoot();
   final actions = <CanvasActionCommitted>[];
@@ -214,6 +235,29 @@ _DrawPreviewScenario _linePreviewScenario() {
   return (root: root, snapshots: snapshots, actions: actions);
 }
 
+_DrawPreviewScenario _eraserPreviewScenario() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(
+    CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 6),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final actionSubscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await actionSubscription.cancel();
+    root.dispose();
+  });
+  final snapshots = <CanvasRuntimeState>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  return (root: root, snapshots: snapshots, actions: actions);
+}
+
 void _expectDrawPreviewPublication(
   _DrawPreviewScenario scenario,
   _DrawPreviewStep step,
@@ -240,6 +284,25 @@ void _expectLinePreviewPublication(
 
   expect(scenario.snapshots, hasLength(1));
   step.expectPreview(scenario.root.preview);
+  _expectOnlyPreviewRevisionChanged(before, scenario.snapshots.single);
+  expect(scenario.actions, isEmpty);
+}
+
+void _expectEraserPreviewPublication(
+  _DrawPreviewScenario scenario,
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+  List<Offset> expectedCorridor,
+) {
+  scenario.snapshots.clear();
+  final before = scenario.root.state.value;
+
+  scenario.root.handlePointer(_sample(phase, position));
+
+  expect(scenario.snapshots, hasLength(1));
+  final preview = scenario.root.preview as CanvasEraserPreview;
+  expect(preview.corridor, expectedCorridor);
+  expect(preview.thickness, 6);
   _expectOnlyPreviewRevisionChanged(before, scenario.snapshots.single);
   expect(scenario.actions, isEmpty);
 }

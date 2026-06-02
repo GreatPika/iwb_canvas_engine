@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/public/canvas_ids.dart';
 import 'draw_stroke_machine.dart';
+import 'eraser_machine.dart';
 import 'line_machine.dart';
 import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
@@ -19,6 +20,7 @@ final class InteractionPointerAdmission {
     this.selectedMoveCommit,
     this.marqueeCommit,
     this.strokeCommit,
+    this.eraserCommit,
     this.lineCommit,
   });
 
@@ -28,6 +30,7 @@ final class InteractionPointerAdmission {
   final SelectedMoveCommitIntent? selectedMoveCommit;
   final MarqueeCommitIntent? marqueeCommit;
   final DrawStrokeCommitIntent? strokeCommit;
+  final EraserCommitIntent? eraserCommit;
   final DrawLineCommitIntent? lineCommit;
 }
 

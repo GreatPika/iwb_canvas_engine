@@ -25,6 +25,10 @@ void main() {
   test('draw line commit intent has no generated element id', () {
     expect(_verifyDrawLineCommitIntentFields, returnsNormally);
   });
+
+  test('eraser commit intent carries eraser facts only', () {
+    expect(_verifyEraserCommitIntentFields, returnsNormally);
+  });
 }
 
 void _verifyRequiredDeclarations() {
@@ -70,6 +74,14 @@ void _verifyMachineDeclarations() {
     ),
   );
   expect(
+    _source('lib/src/interaction/eraser_machine.dart'),
+    allOf(
+      contains('final class EraserMachine'),
+      contains('final class PointerEraserCapture'),
+      contains('final class EraserCommitIntent'),
+    ),
+  );
+  expect(
     _source('lib/src/interaction/line_machine.dart'),
     allOf(
       contains('final class LineMachine'),
@@ -85,6 +97,7 @@ void _verifyPayloadOwnershipDeclarations() {
     _source('lib/src/interaction/pointer_session.dart'),
     allOf(
       isNot(contains('final class PointerStrokeCapture')),
+      isNot(contains('final class PointerEraserCapture')),
       isNot(contains('final class PointerLineEndpointCapture')),
     ),
   );
@@ -139,9 +152,23 @@ void _verifyPointerAdmissionFields() {
     'selectedMoveCommit',
     'marqueeCommit',
     'strokeCommit',
+    'eraserCommit',
     'lineCommit',
   });
   expect(fields.any((name) => name.contains('draw')), isFalse);
+}
+
+void _verifyEraserCommitIntentFields() {
+  final unit = _parse(_source('lib/src/interaction/eraser_machine.dart'));
+  final fields = _fieldNames(unit, 'EraserCommitIntent');
+
+  expect(fields, {
+    'sessionId',
+    'pointerToken',
+    'eraserThickness',
+    'corridorPointCount',
+    'erasedElementIds',
+  });
 }
 
 void _verifyDrawStrokeCommitIntentFields() {

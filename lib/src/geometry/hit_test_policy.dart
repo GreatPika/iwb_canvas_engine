@@ -10,6 +10,9 @@ import 'geometry_policy.dart';
 typedef FrameElementResolver =
     FrameElementFacts? Function(FrameElementHandle handle);
 
+// Point, marquee, eraser, and context hit checks stay in one geometry policy so
+// every interaction path shares the same eligibility and exact-hit rules.
+// ignore: weighted-methods-per-class
 final class HitTestPolicy {
   const HitTestPolicy({this.geometryPolicy = const GeometryPolicy()});
 
@@ -77,6 +80,10 @@ final class HitTestPolicy {
     };
   }
 
+  // Context hit eligibility intentionally differs from selectable hit testing:
+  // context requests may target non-selectable visible content, but not
+  // background; keeping the exact geometry switch here prevents drift.
+  // ignore: cyclomatic-complexity
   bool exactContextHit({
     required Offset point,
     required FrameElementFacts facts,

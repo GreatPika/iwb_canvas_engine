@@ -8,6 +8,7 @@ import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'draw_stroke_machine.dart';
+import 'eraser_machine.dart';
 import 'interaction_diagnostics_sink.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
@@ -30,6 +31,7 @@ final class InteractionEngine {
     MoveMachine moveMachine = const MoveMachine(),
     SelectMachine selectMachine = const SelectMachine(),
     DrawStrokeMachine drawStrokeMachine = const DrawStrokeMachine(),
+    EraserMachine eraserMachine = const EraserMachine(),
     LineMachine lineMachine = const LineMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
@@ -42,6 +44,7 @@ final class InteractionEngine {
        _moveMachine = moveMachine,
        _selectMachine = selectMachine,
        _drawStrokeMachine = drawStrokeMachine,
+       _eraserMachine = eraserMachine,
        _lineMachine = lineMachine,
        _cleanupCoordinator = cleanupCoordinator,
        _diagnosticsSink = diagnosticsSink;
@@ -50,6 +53,7 @@ final class InteractionEngine {
   final MoveMachine _moveMachine;
   final SelectMachine _selectMachine;
   final DrawStrokeMachine _drawStrokeMachine;
+  final EraserMachine _eraserMachine;
   final LineMachine _lineMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
   final InteractionDiagnosticsSink _diagnosticsSink;
@@ -309,6 +313,9 @@ final class InteractionEngine {
   }
 
   InteractionPointerAdmission _handleDrawDown(NormalizedPointerSample sample) {
+    if (_drawStyle.tool == CanvasDrawTool.eraser) {
+      return _handleEraserDown(sample);
+    }
     if (_drawStyle.tool == CanvasDrawTool.line) {
       return _handleLineDown(sample);
     }
@@ -323,6 +330,38 @@ final class InteractionEngine {
     }
     _activeSession = _drawStrokeSession(sample, stroke);
     replacePreview(stroke.preview);
+
+    return _admitted(sample);
+  }
+
+  InteractionPointerAdmission _handleEraserDown(
+    NormalizedPointerSample sample,
+  ) {
+    final start = _eraserMachine.start(
+      tool: _drawStyle.tool,
+      startWorld: sample.worldPosition,
+      style: _drawStyle,
+    );
+    final eraser = start.eraser;
+    if (!start.admitted || eraser == null) {
+      return _ignored(sample);
+    }
+    final preview = _eraserMachine.initialPreview(
+      eraser: eraser,
+      facts: readPort.eraserPreviewFacts(
+        EraserReadRequest(
+          corridorPoints: eraser.points,
+          eraserThickness: eraser.thickness,
+        ),
+      ),
+    );
+    final nextPreview = preview.preview;
+    final nextEraser = preview.eraser;
+    if (!preview.changed || nextPreview == null || nextEraser == null) {
+      return _ignored(sample);
+    }
+    _activeSession = _eraserSession(sample, nextEraser, nextPreview);
+    replacePreview(nextPreview);
 
     return _admitted(sample);
   }
@@ -385,6 +424,10 @@ final class InteractionEngine {
         session,
         currentWorld,
       ),
+      PointerSessionKind.drawEraserPointer => _handleEraserMove(
+        session,
+        currentWorld,
+      ),
       PointerSessionKind.drawLineFirstTap => false,
       PointerSessionKind.drawLineEndpoint => _handleLineEndpointMove(
         session,
@@ -428,6 +471,39 @@ final class InteractionEngine {
     );
 
     return replacePreview(updatedStroke.preview);
+  }
+
+  bool _handleEraserMove(PointerSession session, Offset currentWorld) {
+    final eraser = session.eraserCapture;
+    if (eraser == null) {
+      return false;
+    }
+    final proposed = eraser.appendPoint(currentWorld);
+    if (identical(proposed, eraser)) {
+      return false;
+    }
+    final decision = _eraserMachine.preview(
+      eraser: eraser,
+      currentWorld: currentWorld,
+      facts: readPort.eraserPreviewFacts(
+        EraserReadRequest(
+          corridorPoints: proposed.points,
+          eraserThickness: proposed.thickness,
+        ),
+      ),
+    );
+    final updatedEraser = decision.eraser;
+    final updatedPreview = decision.preview;
+    if (!decision.changed || updatedEraser == null || updatedPreview == null) {
+      return false;
+    }
+    _activeSession = session.updateEraser(
+      currentWorld: currentWorld,
+      eraser: updatedEraser,
+      lastPreview: updatedPreview,
+    );
+
+    return replacePreview(updatedPreview);
   }
 
   bool _handleLineEndpointMove(PointerSession session, Offset currentWorld) {
@@ -488,6 +564,10 @@ final class InteractionEngine {
         sample,
         session,
       ),
+      PointerSessionKind.drawEraserPointer => _handleEraserTerminal(
+        sample,
+        session,
+      ),
       PointerSessionKind.drawLineFirstTap => _handleLineFirstTapTerminal(
         sample,
         session,
@@ -519,6 +599,38 @@ final class InteractionEngine {
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
       strokeCommit: terminal.intent,
+    );
+  }
+
+  InteractionPointerAdmission _handleEraserTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+  ) {
+    final eraser = session.eraserCapture;
+    if (eraser == null) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+    final proposed = eraser.appendPoint(sample.worldPosition);
+    final terminal = _eraserMachine.terminal(
+      sessionId: session.sessionId,
+      pointerToken: session.token,
+      eraser: eraser,
+      facts: readPort.eraserTerminalFacts(
+        EraserReadRequest(
+          corridorPoints: proposed.points,
+          eraserThickness: proposed.thickness,
+        ),
+      ),
+    );
+    final intent = terminal.intent;
+    if (intent == null) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      eraserCommit: intent,
     );
   }
 
@@ -585,6 +697,7 @@ final class InteractionEngine {
     return switch (session?.kind) {
       PointerSessionKind.moveModeMarquee => PointerCleanupReason.marquee,
       PointerSessionKind.drawModePointer ||
+      PointerSessionKind.drawEraserPointer ||
       PointerSessionKind.drawLineFirstTap ||
       PointerSessionKind.drawLineEndpoint => PointerCleanupReason.cancel,
       PointerSessionKind.moveModePointer ||
@@ -639,6 +752,7 @@ final class InteractionEngine {
       PointerSessionKind.moveModePointer ||
       PointerSessionKind.moveModeMarquee ||
       PointerSessionKind.drawModePointer ||
+      PointerSessionKind.drawEraserPointer ||
       null => false,
     };
   }
@@ -768,6 +882,23 @@ final class InteractionEngine {
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
       stroke: stroke,
+    );
+  }
+
+  PointerSession _eraserSession(
+    NormalizedPointerSample sample,
+    PointerEraserCapture eraser,
+    CanvasPreviewState preview,
+  ) {
+    return PointerSession.eraser(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      eraser: eraser,
+      lastPreview: preview,
     );
   }
 

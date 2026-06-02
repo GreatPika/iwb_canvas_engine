@@ -48,6 +48,12 @@ void _verifyPreviewRepaintTargets() {
       activePreviewKind: PointerCleanupPreviewKind.marquee,
     ),
   );
+  final eraser = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.noOpTerminal,
+      activePreviewKind: PointerCleanupPreviewKind.eraser,
+    ),
+  );
   final noPreview = coordinator.cleanup(
     const PointerCleanupRequest(reason: PointerCleanupReason.noOpTerminal),
   );
@@ -57,6 +63,8 @@ void _verifyPreviewRepaintTargets() {
   expect(selectedMove.repaintTarget, PointerCleanupRepaintTarget.main);
   expect(marquee.previewChanged, isTrue);
   expect(marquee.repaintTarget, PointerCleanupRepaintTarget.overlay);
+  expect(eraser.previewChanged, isTrue);
+  expect(eraser.repaintTarget, PointerCleanupRepaintTarget.overlay);
   expect(noPreview.previewChanged, isFalse);
   expect(noPreview.publicStateNeeded, isFalse);
   expect(noPreview.repaintTarget, PointerCleanupRepaintTarget.none);

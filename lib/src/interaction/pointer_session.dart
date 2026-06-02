@@ -3,12 +3,14 @@ import 'dart:ui';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'draw_stroke_machine.dart';
+import 'eraser_machine.dart';
 import 'line_machine.dart';
 
 enum PointerSessionKind {
   moveModePointer,
   moveModeMarquee,
   drawModePointer,
+  drawEraserPointer,
   drawLineFirstTap,
   drawLineEndpoint,
 }
@@ -141,6 +143,31 @@ final class PointerSession {
     );
   }
 
+  factory PointerSession.eraser({
+    required PointerSessionToken token,
+    required PointerControllerEpoch controllerEpoch,
+    required PointerSessionId sessionId,
+    required int pointerId,
+    required Offset startWorld,
+    required Offset currentWorld,
+    required PointerEraserCapture eraser,
+    required CanvasPreviewState lastPreview,
+  }) {
+    return PointerSession._(
+      kind: PointerSessionKind.drawEraserPointer,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _EraserPointerPayload(
+        startWorld: startWorld,
+        currentWorld: currentWorld,
+        eraser: eraser,
+        lastPreview: lastPreview,
+      ),
+    );
+  }
+
   factory PointerSession.lineFirstTap({
     required PointerSessionToken token,
     required PointerControllerEpoch controllerEpoch,
@@ -199,6 +226,7 @@ final class PointerSession {
   PointerSessionSelectionCapture get selectionCapture =>
       _payload.selectionCapture;
   PointerStrokeCapture? get strokeCapture => _payload.strokeCapture;
+  PointerEraserCapture? get eraserCapture => _payload.eraserCapture;
   PointerLineFirstTapCapture? get lineFirstTapCapture =>
       _payload.lineFirstTapCapture;
   PointerLineEndpointCapture? get lineEndpointCapture =>
@@ -228,6 +256,25 @@ final class PointerSession {
       payload: _payload.updateStroke(
         currentWorld: currentWorld,
         stroke: stroke,
+      ),
+    );
+  }
+
+  PointerSession updateEraser({
+    required Offset currentWorld,
+    required PointerEraserCapture eraser,
+    required CanvasPreviewState lastPreview,
+  }) {
+    return PointerSession._(
+      kind: kind,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _payload.updateEraser(
+        currentWorld: currentWorld,
+        eraser: eraser,
+        lastPreview: lastPreview,
       ),
     );
   }
@@ -269,6 +316,7 @@ sealed class _PointerSessionPayload {
         revision: 0,
       );
   PointerStrokeCapture? get strokeCapture => null;
+  PointerEraserCapture? get eraserCapture => null;
   PointerLineFirstTapCapture? get lineFirstTapCapture => null;
   PointerLineEndpointCapture? get lineEndpointCapture => null;
 
@@ -276,6 +324,14 @@ sealed class _PointerSessionPayload {
   _PointerSessionPayload updateStroke({
     required Offset currentWorld,
     required PointerStrokeCapture stroke,
+  }) {
+    return updateCurrentWorld(currentWorld);
+  }
+
+  _PointerSessionPayload updateEraser({
+    required Offset currentWorld,
+    required PointerEraserCapture eraser,
+    required CanvasPreviewState lastPreview,
   }) {
     return updateCurrentWorld(currentWorld);
   }
@@ -392,6 +448,44 @@ final class _DrawStrokePointerPayload extends _PointerSessionPayload {
       startWorld: startWorld,
       currentWorld: currentWorld,
       stroke: stroke,
+    );
+  }
+}
+
+final class _EraserPointerPayload extends _PointerSessionPayload {
+  _EraserPointerPayload({
+    required super.startWorld,
+    required super.currentWorld,
+    required this.eraser,
+    required super.lastPreview,
+  });
+
+  final PointerEraserCapture eraser;
+
+  @override
+  PointerEraserCapture get eraserCapture => eraser;
+
+  @override
+  _PointerSessionPayload updateCurrentWorld(Offset value) {
+    return _EraserPointerPayload(
+      startWorld: startWorld,
+      currentWorld: value,
+      eraser: eraser,
+      lastPreview: lastPreview,
+    );
+  }
+
+  @override
+  _PointerSessionPayload updateEraser({
+    required Offset currentWorld,
+    required PointerEraserCapture eraser,
+    required CanvasPreviewState lastPreview,
+  }) {
+    return _EraserPointerPayload(
+      startWorld: startWorld,
+      currentWorld: currentWorld,
+      eraser: eraser,
+      lastPreview: lastPreview,
     );
   }
 }

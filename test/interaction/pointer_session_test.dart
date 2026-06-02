@@ -267,6 +267,9 @@ InteractionPointerContext _context({required int controllerEpoch}) {
   );
 }
 
+// The fake implements the full port so pointer-session tests fail if unrelated
+// read paths are accidentally invoked.
+// ignore: coupling-between-object-classes, number-of-methods
 final class _PointerSessionReadPort implements InteractionReadPort {
   const _PointerSessionReadPort();
 
