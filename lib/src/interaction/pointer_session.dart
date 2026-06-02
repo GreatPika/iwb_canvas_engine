@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
+import 'draw_stroke_machine.dart';
 
 enum PointerSessionKind { moveModePointer, moveModeMarquee, drawModePointer }
 
@@ -107,15 +108,14 @@ final class PointerSession {
     );
   }
 
-  factory PointerSession.drawModePointer({
+  factory PointerSession.drawStroke({
     required PointerSessionToken token,
     required PointerControllerEpoch controllerEpoch,
     required PointerSessionId sessionId,
     required int pointerId,
     required Offset startWorld,
     required Offset currentWorld,
-    required CanvasPreviewState lastPreview,
-    bool ownsPendingLine = false,
+    required PointerStrokeCapture stroke,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.drawModePointer,
@@ -123,11 +123,10 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
-      payload: _DrawPointerPayload(
+      payload: _DrawStrokePointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
-        lastPreview: lastPreview,
-        ownsPendingLine: ownsPendingLine,
+        stroke: stroke,
       ),
     );
   }
@@ -143,7 +142,7 @@ final class PointerSession {
   Offset get currentWorld => _payload.currentWorld;
   PointerSessionSelectionCapture get selectionCapture =>
       _payload.selectionCapture;
-  bool get ownsPendingLine => _payload.ownsPendingLine;
+  PointerStrokeCapture? get strokeCapture => _payload.strokeCapture;
 
   PointerSession updateCurrentWorld(Offset value) {
     return PointerSession._(
@@ -153,6 +152,23 @@ final class PointerSession {
       sessionId: sessionId,
       pointerId: pointerId,
       payload: _payload.updateCurrentWorld(value),
+    );
+  }
+
+  PointerSession updateStroke({
+    required Offset currentWorld,
+    required PointerStrokeCapture stroke,
+  }) {
+    return PointerSession._(
+      kind: kind,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _payload.updateStroke(
+        currentWorld: currentWorld,
+        stroke: stroke,
+      ),
     );
   }
 }
@@ -175,9 +191,15 @@ sealed class _PointerSessionPayload {
         previousIds: const [],
         revision: 0,
       );
-  bool get ownsPendingLine => false;
+  PointerStrokeCapture? get strokeCapture => null;
 
   _PointerSessionPayload updateCurrentWorld(Offset value);
+  _PointerSessionPayload updateStroke({
+    required Offset currentWorld,
+    required PointerStrokeCapture stroke,
+  }) {
+    return updateCurrentWorld(currentWorld);
+  }
 }
 
 final class _SelectedMovePointerPayload extends _PointerSessionPayload {
@@ -254,23 +276,36 @@ final class _MarqueePointerPayload extends _PointerSessionPayload {
   }
 }
 
-final class _DrawPointerPayload extends _PointerSessionPayload {
-  const _DrawPointerPayload({
+final class _DrawStrokePointerPayload extends _PointerSessionPayload {
+  _DrawStrokePointerPayload({
     required super.startWorld,
     required super.currentWorld,
-    required super.lastPreview,
-    required this.ownsPendingLine,
-  });
+    required this.stroke,
+  }) : super(lastPreview: stroke.preview);
+
+  final PointerStrokeCapture stroke;
+
   @override
-  final bool ownsPendingLine;
+  PointerStrokeCapture get strokeCapture => stroke;
 
   @override
   _PointerSessionPayload updateCurrentWorld(Offset value) {
-    return _DrawPointerPayload(
+    return _DrawStrokePointerPayload(
       startWorld: startWorld,
       currentWorld: value,
-      lastPreview: lastPreview,
-      ownsPendingLine: ownsPendingLine,
+      stroke: stroke,
+    );
+  }
+
+  @override
+  _PointerSessionPayload updateStroke({
+    required Offset currentWorld,
+    required PointerStrokeCapture stroke,
+  }) {
+    return _DrawStrokePointerPayload(
+      startWorld: startWorld,
+      currentWorld: currentWorld,
+      stroke: stroke,
     );
   }
 }

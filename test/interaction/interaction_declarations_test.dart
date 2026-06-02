@@ -14,8 +14,12 @@ void main() {
     expect(_verifySelectedMoveCommitRequestCopies, returnsNormally);
   });
 
-  test('unit 1 pointer admission has no draw commit fields', () {
+  test('unit 3 pointer admission has no premature line commit field', () {
     expect(_verifyPointerAdmissionFields, returnsNormally);
+  });
+
+  test('draw stroke commit intent has no generated element id', () {
+    expect(_verifyDrawStrokeCommitIntentFields, returnsNormally);
   });
 }
 
@@ -43,6 +47,18 @@ void _verifyRequiredDeclarations() {
       contains('final class SelectMachine'),
       contains('final class MarqueeTerminalDecision'),
     ),
+  );
+  expect(
+    _source('lib/src/interaction/draw_stroke_machine.dart'),
+    allOf(
+      contains('final class DrawStrokeMachine'),
+      contains('final class PointerStrokeCapture'),
+      contains('final class DrawStrokeCommitIntent'),
+    ),
+  );
+  expect(
+    _source('lib/src/interaction/pointer_session.dart'),
+    isNot(contains('final class PointerStrokeCapture')),
   );
 }
 
@@ -94,10 +110,26 @@ void _verifyPointerAdmissionFields() {
     'cleanupDecision',
     'selectedMoveCommit',
     'marqueeCommit',
+    'strokeCommit',
   });
-  expect(fields.any((name) => name.contains('stroke')), isFalse);
   expect(fields.any((name) => name.contains('line')), isFalse);
   expect(fields.any((name) => name.contains('draw')), isFalse);
+}
+
+void _verifyDrawStrokeCommitIntentFields() {
+  final unit = _parse(_source('lib/src/interaction/draw_stroke_machine.dart'));
+  final fields = _fieldNames(unit, 'DrawStrokeCommitIntent');
+
+  expect(fields, {
+    'sessionId',
+    'pointerToken',
+    'tool',
+    'points',
+    'color',
+    'thickness',
+    'opacity',
+  });
+  expect(fields.any((name) => name.toLowerCase().contains('element')), isFalse);
 }
 
 String _source(String path) => File(path).readAsStringSync();

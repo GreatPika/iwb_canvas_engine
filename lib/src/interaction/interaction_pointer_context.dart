@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contracts/public/canvas_ids.dart';
+import 'draw_stroke_machine.dart';
 import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
 import 'select_machine.dart';
@@ -16,6 +17,7 @@ final class InteractionPointerAdmission {
     this.cleanupDecision,
     this.selectedMoveCommit,
     this.marqueeCommit,
+    this.strokeCommit,
   });
 
   final InteractionPointerAdmissionKind kind;
@@ -23,6 +25,7 @@ final class InteractionPointerAdmission {
   final InvalidTerminalCleanupDecision? cleanupDecision;
   final SelectedMoveCommitIntent? selectedMoveCommit;
   final MarqueeCommitIntent? marqueeCommit;
+  final DrawStrokeCommitIntent? strokeCommit;
 }
 
 final class InteractionPointerContext {
