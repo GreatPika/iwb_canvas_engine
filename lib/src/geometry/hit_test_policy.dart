@@ -36,8 +36,55 @@ final class HitTestPolicy {
     return null;
   }
 
+  CanvasElementId? topmostContextHit({
+    required Offset point,
+    required Iterable<FrameElementHandle> candidates,
+    required FrameElementResolver resolve,
+  }) {
+    final ordered = candidates.toList(growable: false)
+      ..sort((left, right) => right.orderToken.compareTo(left.orderToken));
+    for (final handle in ordered) {
+      final facts = resolve(handle);
+      if (facts == null ||
+          facts.locationKind == FrameElementLocationKind.background ||
+          !exactContextHit(point: point, facts: facts)) {
+        continue;
+      }
+
+      return facts.id;
+    }
+
+    return null;
+  }
+
   bool exactHit({required Offset point, required FrameElementFacts facts}) {
     if (!geometryPolicy.isHitEligible(facts, point) ||
+        _needsInverseHit(facts.kind) && !facts.transform.isInvertible) {
+      return false;
+    }
+    final bounds = geometryPolicy.boundsFor(facts).hitBoundsWorld;
+    if (!_rectContainsPointInclusive(bounds, point)) {
+      return false;
+    }
+
+    return switch (facts.kind) {
+      CanvasElementKind.image ||
+      CanvasElementKind.rect ||
+      CanvasElementKind.text => _hitBox(point, facts),
+      CanvasElementKind.line => _hitLine(point, facts),
+      CanvasElementKind.stroke => _hitStroke(point, facts),
+      CanvasElementKind.path => _hitPath(point, facts),
+    };
+  }
+
+  bool exactContextHit({
+    required Offset point,
+    required FrameElementFacts facts,
+  }) {
+    if (!isFiniteOffset(point) ||
+        !facts.isVisible ||
+        facts.locationKind != FrameElementLocationKind.content ||
+        !isFiniteTransform(facts.transform) ||
         _needsInverseHit(facts.kind) && !facts.transform.isInvertible) {
       return false;
     }

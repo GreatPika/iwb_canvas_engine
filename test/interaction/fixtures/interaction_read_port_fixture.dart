@@ -13,6 +13,9 @@ void main() {
   _testMarqueeStartFacts();
   _testMarqueeCommitFacts();
   _testMarqueeQueryBudgetFacts();
+  _testEraserReadFacts();
+  _testContextTargetReadFacts();
+  _testTextCommitGuardFacts();
 }
 
 void _testRuntimeInjectsReadPortIntoInteractionEngine() {
@@ -189,6 +192,96 @@ void _testMarqueeQueryBudgetFacts() {
   );
 }
 
+void _testEraserReadFacts() {
+  test('eraser read facts use immutable corridor and exact content ids', () {
+    final root = _runtimeRoot();
+    addTearDown(root.dispose);
+
+    final corridor = [const Offset(1, 1), const Offset(9, 9)];
+    final facts = root.interactionReadPort.eraserTerminalFacts(
+      EraserReadRequest(corridorPoints: corridor, eraserThickness: 4),
+    );
+    corridor.clear();
+
+    expect(facts.corridorPoints, [const Offset(1, 1), const Offset(9, 9)]);
+    expect(facts.erasedElementIds, [CanvasElementId('movable-a')]);
+    expect(facts.eraserThickness, 4);
+    expect(facts.controllerEpoch, 0);
+    expect(facts.documentRevision, 0);
+    expect(facts.query.status, InteractionReadQueryStatus.candidates);
+    expect(facts.exactCheckCount, greaterThanOrEqualTo(1));
+    expect(facts.exactBudgetExceeded, isFalse);
+    expect(() => facts.corridorPoints.clear(), throwsUnsupportedError);
+    expect(() => facts.erasedElementIds.clear(), throwsUnsupportedError);
+  });
+}
+
+void _testContextTargetReadFacts() {
+  test(
+    'context target facts distinguish content from empty background coverage',
+    () {
+      final root = _runtimeRoot();
+      addTearDown(root.dispose);
+
+      final content = root.interactionReadPort.directContextTargetFacts(
+        const ContextTargetReadRequest(worldPosition: Offset(5, 25)),
+      );
+
+      expect(content.kind, ContextActionReadTargetKind.contentElement);
+      expect(content.elementId, CanvasElementId('nonselectable-a'));
+      expect(content.elementKind, CanvasElementKind.rect);
+      expect(content.elementSnapshot, isA<CanvasRectElement>());
+      expect(content.boundsWorld, const Rect.fromLTRB(-5, 15, 5, 25));
+      expect(content.generation, 0);
+      expect(content.elementRevision, 0);
+      expect(content.family, InteractionElementFamily.rect);
+      expect(content.controllerEpoch, 0);
+      expect(content.documentRevision, 0);
+
+      final empty = root.interactionReadPort.directContextTargetFacts(
+        const ContextTargetReadRequest(worldPosition: Offset(82, 2)),
+      );
+
+      expect(empty.kind, ContextActionReadTargetKind.emptyCanvas);
+      expect(empty.elementId, isNull);
+      expect(empty.elementSnapshot, isNull);
+      expect(empty.boundsWorld, isNull);
+      expect(empty.controllerEpoch, 0);
+      expect(empty.documentRevision, 0);
+    },
+  );
+}
+
+void _testTextCommitGuardFacts() {
+  test('text guard facts include current family and observation revision', () {
+    final root = _runtimeRoot();
+    addTearDown(root.dispose);
+
+    final textFacts = root.interactionReadPort.textCommitGuardFacts(
+      TextCommitGuardReadRequest(targetElementId: CanvasElementId('text-a')),
+    );
+
+    expect(textFacts.exists, isTrue);
+    expect(textFacts.targetKind, CanvasElementKind.text);
+    expect(textFacts.generation, 0);
+    expect(textFacts.elementRevision, 0);
+    expect(textFacts.family, InteractionElementFamily.text);
+    expect(textFacts.currentText, 'hello');
+    expect(textFacts.controllerEpoch, 0);
+    expect(textFacts.documentRevision, 0);
+
+    final backgroundFacts = root.interactionReadPort.textCommitGuardFacts(
+      TextCommitGuardReadRequest(
+        targetElementId: CanvasElementId('background-a'),
+      ),
+    );
+
+    expect(backgroundFacts.exists, isFalse);
+    expect(backgroundFacts.targetKind, isNull);
+    expect(backgroundFacts.documentRevision, 0);
+  });
+}
+
 RuntimeRoot _runtimeRoot() {
   return RuntimeRoot(
     initialDocument: _document(),
@@ -203,6 +296,11 @@ CanvasDocument _document() {
         id: CanvasElementId('background-a'),
         size: const Size(10, 10),
       ),
+      CanvasRectElement(
+        id: CanvasElementId('background-b'),
+        size: const Size(10, 10),
+        transform: CanvasTransform.translation(const Offset(80, 0)),
+      ),
     ],
     layers: [
       CanvasLayer(
@@ -211,6 +309,13 @@ CanvasDocument _document() {
           _rect('movable-a', const Offset(0, 0)),
           _lockedRect('locked-a', const Offset(20, 0)),
           _staticRect('static-a', const Offset(40, 0)),
+          CanvasTextElement(
+            id: CanvasElementId('text-a'),
+            text: 'hello',
+            color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
+            transform: CanvasTransform.translation(const Offset(120, 0)),
+          ),
           _nonselectableRect('nonselectable-a', const Offset(0, 20)),
           _hiddenRect('hidden-a', const Offset(20, 20)),
         ],

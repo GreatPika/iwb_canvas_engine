@@ -373,6 +373,59 @@ final class _FakeInteractionReadPort implements InteractionReadPort {
       rectWorld: request.rectWorld,
     );
   }
+
+  @override
+  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
+    return EraserReadFacts(
+      corridorPoints: request.corridorPoints,
+      erasedElementIds: const [],
+      eraserThickness: request.eraserThickness,
+      controllerEpoch: 0,
+      documentRevision: 0,
+      exactCheckCount: 0,
+      exactBudgetExceeded: false,
+    );
+  }
+
+  @override
+  EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
+    return eraserPreviewFacts(request);
+  }
+
+  @override
+  ContextTargetReadFacts directContextTargetFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return const ContextTargetReadFacts.emptyCanvas(
+      controllerEpoch: 0,
+      documentRevision: 0,
+    );
+  }
+
+  @override
+  ContextTargetReadFacts pendingContextTapFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return directContextTargetFacts(request);
+  }
+
+  @override
+  ContextTargetReadFacts secondContextTapFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return directContextTargetFacts(request);
+  }
+
+  @override
+  TextCommitGuardReadFacts textCommitGuardFacts(
+    TextCommitGuardReadRequest request,
+  ) {
+    return TextCommitGuardReadFacts.missing(
+      targetElementId: request.targetElementId,
+      controllerEpoch: 0,
+      documentRevision: 0,
+    );
+  }
 }
 
 final class _SensitivePayload {}

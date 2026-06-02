@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../geometry/geometry_policy.dart';
 import '../geometry/hit_test_policy.dart';
 import '../geometry/spatial_kernel.dart';
 import '../geometry/spatial_query_policy.dart';
@@ -21,12 +23,14 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     required SelectionFactsPort selection,
     required SpatialKernel spatial,
     required int Function() controllerEpoch,
+    GeometryPolicy geometryPolicy = const GeometryPolicy(),
     HitTestPolicy hitTestPolicy = const HitTestPolicy(),
   }) : _frame = frame,
        _documentSummary = documentSummary,
        _selection = selection,
        _spatial = spatial,
        _controllerEpoch = controllerEpoch,
+       _geometryPolicy = geometryPolicy,
        _hitTestPolicy = hitTestPolicy;
 
   final FrameFactsPort _frame;
@@ -34,6 +38,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   final SelectionFactsPort _selection;
   final SpatialKernel _spatial;
   final int Function() _controllerEpoch;
+  final GeometryPolicy _geometryPolicy;
   final HitTestPolicy _hitTestPolicy;
 
   @override
@@ -148,11 +153,188 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     );
   }
 
+  @override
+  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
+    return _eraserFacts(
+      request,
+      budget: _geometryPolicy.eraserPreviewBudgetInputs(
+        request.corridorPoints.length,
+      ),
+    );
+  }
+
+  @override
+  EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
+    return _eraserFacts(
+      request,
+      budget: _geometryPolicy.eraserTerminalBudgetInputs(),
+    );
+  }
+
+  @override
+  ContextTargetReadFacts directContextTargetFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return _contextTargetFacts(request);
+  }
+
+  @override
+  ContextTargetReadFacts pendingContextTapFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return _contextTargetFacts(request);
+  }
+
+  @override
+  ContextTargetReadFacts secondContextTapFacts(
+    ContextTargetReadRequest request,
+  ) {
+    return _contextTargetFacts(request);
+  }
+
+  @override
+  TextCommitGuardReadFacts textCommitGuardFacts(
+    TextCommitGuardReadRequest request,
+  ) {
+    final context = _readContext();
+    final handle = _frame.elementHandleForId(
+      context.structuralRevision,
+      request.targetElementId,
+    );
+    final facts = handle == null ? null : _frame.resolveElement(handle);
+    if (facts == null ||
+        facts.locationKind != FrameElementLocationKind.content ||
+        !facts.isVisible) {
+      return TextCommitGuardReadFacts.missing(
+        targetElementId: request.targetElementId,
+        controllerEpoch: context.controllerEpoch,
+        documentRevision: context.documentRevision,
+      );
+    }
+
+    return TextCommitGuardReadFacts.current(
+      targetElementId: request.targetElementId,
+      targetKind: facts.kind,
+      generation: facts.generation,
+      elementRevision: facts.revision,
+      family: _elementFamily(facts.kind),
+      controllerEpoch: context.controllerEpoch,
+      documentRevision: context.documentRevision,
+      currentText: facts.kind == CanvasElementKind.text ? facts.text : null,
+    );
+  }
+
+  EraserReadFacts _eraserFacts(
+    EraserReadRequest request, {
+    required EraserExactBudgetInputs budget,
+  }) {
+    final context = _readContext();
+    final corridor = _geometryPolicy.corridorEnvelope(
+      points: request.corridorPoints,
+      eraserThickness: request.eraserThickness,
+      hitPadding: 0,
+    );
+    final query = _spatial.queryEraser(
+      SpatialQueryWindow(
+        boundsWorld: corridor.envelopeWorld,
+        structuralRevision: context.structuralRevision,
+      ),
+    );
+    final candidates = _resolvedCandidates(query);
+    final queryFacts = _queryFacts(query, candidates);
+    if (query is! SpatialCandidatesResult ||
+        candidates.handles.length > budget.candidateLimit) {
+      return EraserReadFacts(
+        corridorPoints: corridor.points,
+        erasedElementIds: const [],
+        eraserThickness: request.eraserThickness,
+        controllerEpoch: context.controllerEpoch,
+        documentRevision: context.documentRevision,
+        exactCheckCount: 0,
+        exactBudgetExceeded: query is SpatialCandidatesResult,
+        query: queryFacts,
+      );
+    }
+
+    final erasedIds = <CanvasElementId>[];
+    var exactChecks = 0;
+    for (final facts in candidates.facts) {
+      exactChecks += 1;
+      if (exactChecks > budget.exactCheckLimit) {
+        return EraserReadFacts(
+          corridorPoints: corridor.points,
+          erasedElementIds: const [],
+          eraserThickness: request.eraserThickness,
+          controllerEpoch: context.controllerEpoch,
+          documentRevision: context.documentRevision,
+          exactCheckCount: exactChecks,
+          exactBudgetExceeded: true,
+          query: queryFacts,
+        );
+      }
+      if (_hitTestPolicy.exactEraserHit(corridor: corridor, facts: facts)) {
+        erasedIds.add(facts.id);
+      }
+    }
+
+    return EraserReadFacts(
+      corridorPoints: corridor.points,
+      erasedElementIds: _documentOrderIds(
+        handles: context.handles,
+        ids: erasedIds,
+      ),
+      eraserThickness: request.eraserThickness,
+      controllerEpoch: context.controllerEpoch,
+      documentRevision: context.documentRevision,
+      exactCheckCount: exactChecks,
+      exactBudgetExceeded: false,
+      query: queryFacts,
+    );
+  }
+
+  ContextTargetReadFacts _contextTargetFacts(ContextTargetReadRequest request) {
+    final context = _readContext();
+    final query = _spatial.queryEraser(
+      SpatialQueryWindow(
+        boundsWorld: _pointQueryWindow(request.worldPosition),
+        structuralRevision: context.structuralRevision,
+      ),
+    );
+    final candidates = _resolvedCandidates(query);
+    final hitId = _hitTestPolicy.topmostContextHit(
+      point: request.worldPosition,
+      candidates: candidates.handles,
+      resolve: _frame.resolveElement,
+    );
+    final hitFacts = hitId == null ? null : _factsForId(candidates, hitId);
+    if (hitFacts == null) {
+      return ContextTargetReadFacts.emptyCanvas(
+        controllerEpoch: context.controllerEpoch,
+        documentRevision: context.documentRevision,
+        query: _queryFacts(query, candidates),
+      );
+    }
+
+    return ContextTargetReadFacts.contentElement(
+      elementId: hitFacts.id,
+      elementKind: hitFacts.kind,
+      elementSnapshot: _elementSnapshot(hitFacts),
+      boundsWorld: _geometryPolicy.boundsFor(hitFacts).paintBoundsWorld,
+      generation: hitFacts.generation,
+      elementRevision: hitFacts.revision,
+      family: _elementFamily(hitFacts.kind),
+      controllerEpoch: context.controllerEpoch,
+      documentRevision: context.documentRevision,
+      query: _queryFacts(query, candidates),
+    );
+  }
+
   _InteractionReadContext _readContext() {
     final structuralRevision = _frame.frameRevisions.structuralRevision;
 
     return _InteractionReadContext(
       controllerEpoch: _controllerEpoch(),
+      documentRevision: _frame.frameRevisions.documentRevision,
       structuralRevision: structuralRevision,
       handles: _frame.elementHandles(structuralRevision),
       selection: _selection.selectionFacts,
@@ -292,12 +474,14 @@ InteractionReadBudgetExceededReason _budgetExceededReason(
 final class _InteractionReadContext {
   const _InteractionReadContext({
     required this.controllerEpoch,
+    required this.documentRevision,
     required this.structuralRevision,
     required this.handles,
     required this.selection,
   });
 
   final int controllerEpoch;
+  final int documentRevision;
   final int structuralRevision;
   final List<FrameElementHandle> handles;
   final SelectionFacts selection;
@@ -313,4 +497,154 @@ final class _ResolvedSpatialCandidates {
   final List<FrameElementHandle> handles;
   final List<FrameElementFacts> facts;
   final int skippedCandidateCount;
+}
+
+FrameElementFacts? _factsForId(
+  _ResolvedSpatialCandidates candidates,
+  CanvasElementId id,
+) {
+  for (final facts in candidates.facts) {
+    if (facts.id == id) {
+      return facts;
+    }
+  }
+
+  return null;
+}
+
+InteractionElementFamily _elementFamily(CanvasElementKind kind) {
+  return switch (kind) {
+    CanvasElementKind.image => InteractionElementFamily.image,
+    CanvasElementKind.path => InteractionElementFamily.path,
+    CanvasElementKind.text => InteractionElementFamily.text,
+    CanvasElementKind.stroke => InteractionElementFamily.stroke,
+    CanvasElementKind.line => InteractionElementFamily.line,
+    CanvasElementKind.rect => InteractionElementFamily.rect,
+  };
+}
+
+// Reconstructing the immutable public snapshot here keeps context requests on
+// the frame/read boundary instead of exposing a full document projection.
+// ignore: cyclomatic-complexity
+CanvasElement _elementSnapshot(FrameElementFacts facts) {
+  return switch (facts.kind) {
+    CanvasElementKind.image => CanvasImageElement(
+      id: facts.id,
+      resourceId: _requiredFact(facts.resourceId, facts, 'resourceId'),
+      size: _requiredFact(facts.size, facts, 'size'),
+      naturalSize: facts.naturalSize,
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.path => CanvasPathElement(
+      id: facts.id,
+      svgPathData: _requiredFact(facts.svgPathData, facts, 'svgPathData'),
+      fillColor: facts.fillColor,
+      strokeColor: facts.strokeColor,
+      strokeWidth: facts.strokeWidth ?? 0,
+      fillRule: facts.fillRule ?? CanvasPathFillRule.nonZero,
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.text => CanvasTextElement(
+      id: facts.id,
+      text: _requiredFact(facts.text, facts, 'text'),
+      color: facts.textColor ?? const Color(0xFF000000),
+      textDirection: facts.textDirection ?? TextDirection.ltr,
+      fontSize: facts.fontSize ?? 24,
+      align: facts.textAlign ?? TextAlign.left,
+      isBold: facts.isBold ?? false,
+      isItalic: facts.isItalic ?? false,
+      isUnderline: facts.isUnderline ?? false,
+      fontFamily: facts.fontFamily,
+      maxWidth: facts.maxWidth,
+      lineHeight: facts.lineHeight,
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.stroke => CanvasStrokeElement(
+      id: facts.id,
+      points: facts.points,
+      thickness: _requiredFact(facts.thickness, facts, 'thickness'),
+      color: facts.color ?? const Color(0xFF000000),
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.line => CanvasLineElement(
+      id: facts.id,
+      start: _requiredFact(facts.start, facts, 'start'),
+      end: _requiredFact(facts.end, facts, 'end'),
+      thickness: _requiredFact(facts.thickness, facts, 'thickness'),
+      color: facts.color ?? const Color(0xFF000000),
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.rect => CanvasRectElement(
+      id: facts.id,
+      size: _requiredFact(facts.size, facts, 'size'),
+      fillColor: facts.fillColor,
+      strokeColor: facts.strokeColor,
+      strokeWidth: facts.strokeWidth ?? 0,
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+  };
+}
+
+T _requiredFact<T>(T? value, FrameElementFacts facts, String field) {
+  if (value == null) {
+    throw StateError(
+      'Missing $field for ${facts.kind.name} element ${facts.id.value}.',
+    );
+  }
+
+  return value;
 }

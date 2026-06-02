@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 
 abstract interface class InteractionReadPort {
@@ -16,6 +17,26 @@ abstract interface class InteractionReadPort {
   MarqueeStartFacts marqueeStartFacts(MarqueeStartReadRequest request);
 
   MarqueeCommitFacts marqueeCommitFacts(MarqueeCommitReadRequest request);
+
+  EraserReadFacts eraserPreviewFacts(EraserReadRequest request);
+
+  EraserReadFacts eraserTerminalFacts(EraserReadRequest request);
+
+  ContextTargetReadFacts directContextTargetFacts(
+    ContextTargetReadRequest request,
+  );
+
+  ContextTargetReadFacts pendingContextTapFacts(
+    ContextTargetReadRequest request,
+  );
+
+  ContextTargetReadFacts secondContextTapFacts(
+    ContextTargetReadRequest request,
+  );
+
+  TextCommitGuardReadFacts textCommitGuardFacts(
+    TextCommitGuardReadRequest request,
+  );
 }
 
 final class SelectedMoveStartReadRequest {
@@ -203,3 +224,126 @@ enum InteractionReadBudgetExceededReason {
 }
 
 enum InteractionReadInvalidIndexReason { rebuildNeeded, failedUpdate }
+
+final class EraserReadRequest {
+  EraserReadRequest({
+    required Iterable<Offset> corridorPoints,
+    required this.eraserThickness,
+  }) : corridorPoints = List.unmodifiable(corridorPoints);
+
+  final List<Offset> corridorPoints;
+  final double eraserThickness;
+}
+
+final class EraserReadFacts {
+  EraserReadFacts({
+    required Iterable<Offset> corridorPoints,
+    required Iterable<CanvasElementId> erasedElementIds,
+    required this.eraserThickness,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    required this.exactCheckCount,
+    required this.exactBudgetExceeded,
+    this.query = const InteractionReadQueryFacts.notRun(),
+  }) : corridorPoints = List.unmodifiable(corridorPoints),
+       erasedElementIds = List.unmodifiable(erasedElementIds);
+
+  final List<Offset> corridorPoints;
+  final List<CanvasElementId> erasedElementIds;
+  final double eraserThickness;
+  final int controllerEpoch;
+  final int documentRevision;
+  final int exactCheckCount;
+  final bool exactBudgetExceeded;
+  final InteractionReadQueryFacts query;
+}
+
+final class ContextTargetReadRequest {
+  const ContextTargetReadRequest({required this.worldPosition});
+
+  final Offset worldPosition;
+}
+
+enum ContextActionReadTargetKind { contentElement, emptyCanvas }
+
+enum InteractionElementFamily { image, path, text, stroke, line, rect }
+
+final class ContextTargetReadFacts {
+  const ContextTargetReadFacts.emptyCanvas({
+    required this.controllerEpoch,
+    required this.documentRevision,
+    this.query = const InteractionReadQueryFacts.notRun(),
+  }) : kind = ContextActionReadTargetKind.emptyCanvas,
+       elementId = null,
+       elementKind = null,
+       elementSnapshot = null,
+       boundsWorld = null,
+       generation = null,
+       elementRevision = null,
+       family = null;
+
+  const ContextTargetReadFacts.contentElement({
+    required this.elementId,
+    required this.elementKind,
+    required this.elementSnapshot,
+    required this.boundsWorld,
+    required this.generation,
+    required this.elementRevision,
+    required this.family,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    this.query = const InteractionReadQueryFacts.notRun(),
+  }) : kind = ContextActionReadTargetKind.contentElement;
+
+  final ContextActionReadTargetKind kind;
+  final CanvasElementId? elementId;
+  final CanvasElementKind? elementKind;
+  final CanvasElement? elementSnapshot;
+  final Rect? boundsWorld;
+  final int? generation;
+  final int? elementRevision;
+  final InteractionElementFamily? family;
+  final int controllerEpoch;
+  final int documentRevision;
+  final InteractionReadQueryFacts query;
+}
+
+final class TextCommitGuardReadRequest {
+  const TextCommitGuardReadRequest({required this.targetElementId});
+
+  final CanvasElementId targetElementId;
+}
+
+final class TextCommitGuardReadFacts {
+  const TextCommitGuardReadFacts.missing({
+    required this.targetElementId,
+    required this.controllerEpoch,
+    required this.documentRevision,
+  }) : exists = false,
+       targetKind = null,
+       generation = null,
+       elementRevision = null,
+       family = null,
+       currentText = null;
+
+  const TextCommitGuardReadFacts.current({
+    required this.targetElementId,
+    required this.targetKind,
+    required this.generation,
+    required this.elementRevision,
+    required this.family,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    this.currentText,
+  }) : exists = true;
+
+  final CanvasElementId targetElementId;
+  final bool exists;
+  final CanvasElementKind? targetKind;
+  final int? generation;
+  final int? elementRevision;
+  final InteractionElementFamily? family;
+  final int controllerEpoch;
+  final int documentRevision;
+  final String? currentText;
+}
