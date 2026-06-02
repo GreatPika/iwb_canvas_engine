@@ -80,17 +80,21 @@ stateDiagram-v2
     note right of CommitIntent
       Intent contains tool, final normalized points,
       color, thickness, and pencil opacity 1.0 or
-      marker opacity. InteractionEngine never mutates
-      DocumentStoreKernel directly.
+      marker opacity. InteractionEngine returns this
+      intent to RuntimeRoot; RuntimeRoot allocates the
+      element id and prepares the EditKernel commit.
+      InteractionEngine never mutates DocumentStoreKernel
+      directly.
     end note
 
-    CommitIntent --> EditKernelOutcome: "open synchronous EditKernel interaction edit"
+    CommitIntent --> EditKernelOutcome: "RuntimeRoot opens synchronous EditKernel interaction edit"
 
     state "EditKernel outcome" as EditKernelOutcome
     note right of EditKernelOutcome
-      EditKernel is the only commit boundary. It may
-      install the add-stroke edit atomically or reject,
-      roll back, or throw with no public commit effects.
+      RuntimeRoot delegates the prepared add-stroke edit
+      to EditKernel. EditKernel is the only commit boundary:
+      it may install atomically or reject, roll back, or
+      throw with no public commit effects.
     end note
 
     EditKernelOutcome --> CleanupAfterCommit: "commit installed"

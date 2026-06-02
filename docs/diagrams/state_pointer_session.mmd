@@ -81,11 +81,12 @@ stateDiagram-v2
     state "Commit intent" as CommitIntent
     note right of CommitIntent
       Commit-capable pointer tools produce an interaction
-      commit request. InteractionEngine never mutates
+      commit request that RuntimeRoot delivers through
+      EditKernel. InteractionEngine never mutates
       DocumentStoreKernel directly.
     end note
 
-    CommitIntent --> EditKernelCommit: open synchronous EditKernel session
+    CommitIntent --> EditKernelCommit: RuntimeRoot opens synchronous EditKernel session
 
     state "EditKernel commit outcome" as EditKernelCommit
     note right of EditKernelCommit

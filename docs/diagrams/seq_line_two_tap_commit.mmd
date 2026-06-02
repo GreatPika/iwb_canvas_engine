@@ -117,12 +117,14 @@ sequenceDiagram
       Signals-->>Surface: repaint overlay without line preview
       Note over Touched,Signals: No touched set, committed document revision change, spatial add, projection eviction, main repaint, or drawLine action is published.
     else line geometry is accepted
-      IE->>EK: open synchronous interaction edit
+      IE-->>Runtime: DrawLineCommitIntent with pending start and terminal end
+      Runtime->>Runtime: allocate element id and construct CanvasLineElement
+      Runtime->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
       EK->>Store: read committed revision snapshot
       Store-->>EK: committed tables and revision
       EK->>Draft: create rollback-safe draft
-      IE->>EK: provide add-line mutation request and drawLine action descriptor
+      Runtime->>EK: provide add-line mutation request and drawLine action descriptor
       EK->>Draft: add CanvasLineElement with generated element id
       Note over EK,Draft: Line uses finite startWorld, endWorld, color, thickness, opacity 1.0, and default common element flags.
       Draft->>Touched: record addedElementIds containing new line id
@@ -148,7 +150,8 @@ sequenceDiagram
         Applier->>Events: materialize CanvasActionCommitted drawLine after install
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
-        EK-->>IE: edit result
+        EK-->>Runtime: edit result
+        Runtime->>IE: post-success line cleanup request
         IE->>Cleanup: typed cleanup request for line-owned pending state
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
         IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
@@ -160,11 +163,12 @@ sequenceDiagram
         Events->>Signals: publish drawLine action notification
         Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
         Signals-->>Surface: repaint main scene with committed line and overlay without preview
-        IE-->>Tools: terminal handling complete
+        Runtime-->>Tools: terminal handling complete
       else edit exception, rejected Future, or preflight failure
         EK->>Events: discard pending drawLine action
         EK->>EK: rollback draft and close session
-        EK-->>IE: terminal failure
+        EK-->>Runtime: terminal failure
+        Runtime->>IE: edit-failure line cleanup request
         IE->>Cleanup: typed cleanup request for line-owned pending state
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
         IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview

@@ -90,12 +90,14 @@ sequenceDiagram
       Signals-->>Surface: repaint overlay without stroke preview
       Note over Touched,Signals: No touched set, commit plan, committed document revision change, spatial change, projection eviction, main repaint, or draw action is published.
     else final stroke is accepted
-      IE->>EK: open synchronous interaction edit
+      IE-->>Runtime: DrawStrokeCommitIntent with final points and style facts
+      Runtime->>Runtime: allocate element id and construct CanvasStrokeElement
+      Runtime->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
       EK->>Store: read committed revision snapshot
       Store-->>EK: committed tables and revision
       EK->>Draft: create rollback-safe draft
-      IE->>EK: provide add-stroke mutation request and draw action descriptor
+      Runtime->>EK: provide add-stroke mutation request and draw action descriptor
       EK->>Draft: add CanvasStrokeElement with generated element id
       Note over EK,Draft: Stroke uses final normalized points, color, thickness, and pencil opacity 1.0 or markerOpacity.
       Draft->>Touched: record addedElementIds containing new stroke id
@@ -121,7 +123,8 @@ sequenceDiagram
         Applier->>Events: materialize CanvasActionCommitted drawPencil or drawMarker after install
         Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
-        EK-->>IE: edit result
+        EK-->>Runtime: edit result
+        Runtime->>IE: post-success stroke cleanup request
         IE->>Cleanup: typed cleanup request for stroke session
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
@@ -133,11 +136,12 @@ sequenceDiagram
         Events->>Signals: publish draw action notification
         Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
         Signals-->>Surface: repaint main scene with committed stroke and overlay without preview
-        IE-->>Tools: terminal handling complete
+        Runtime-->>Tools: terminal handling complete
       else edit exception, rejected Future, or preflight failure
         EK->>Events: discard pending draw action
         EK->>EK: rollback draft and close session
-        EK-->>IE: terminal failure
+        EK-->>Runtime: terminal failure
+        Runtime->>IE: edit-failure stroke cleanup request
         IE->>Cleanup: typed cleanup request for stroke session
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session

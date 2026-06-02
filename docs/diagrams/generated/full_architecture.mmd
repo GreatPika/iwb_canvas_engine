@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Full architecture graph
-%% Selected phase: P10
+%% Selected phase: P11
 %% Note: Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
@@ -36,8 +36,8 @@ flowchart LR
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
-  draw_tools -->|planned commits through by P11| edit_kernel
-  draw_tools -->|planned produces preview intents by P11| interaction_engine
+  runtime_root -->|commits through by P11| edit_kernel
+  interaction_engine -->|delegates lifecycle decisions to by P11| draw_tools
   edit_kernel -->|changes data through by P5| store_document_kernel
   eraser_text_request -->|planned commits through by P12| edit_kernel
   eraser_text_request -->|planned produces preview intents by P12| interaction_engine

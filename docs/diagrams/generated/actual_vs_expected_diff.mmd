@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Actual vs expected selected phase diff
-%% Selected phase: P10
+%% Selected phase: P11
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]:::ok
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]:::ok
@@ -10,6 +10,7 @@ flowchart LR
   contracts_internal_ports["Internal owner ports and fact contracts<br/>required by P6"]:::ok
   contracts_public["Public contract declarations<br/>required by P6"]:::ok
   diagnostics_hub["Diagnostics hub<br/>required by P3"]:::ok
+  draw_tools["Draw tool owner<br/>required by P11"]:::ok
   edit_kernel["Edit kernel<br/>required by P5"]:::ok
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]:::ok
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]:::ok
@@ -32,6 +33,8 @@ flowchart LR
   codec_schema_v1 -->|reports errors to by P3| diagnostics_hub
   codec_schema_v1 -->|uses public data by P3| contracts_public
   contracts_internal_ports -->|contract dependency by P6| contracts_public
+  runtime_root -->|commits through by P11| edit_kernel
+  interaction_engine -->|delegates lifecycle decisions to by P11| draw_tools
   edit_kernel -->|changes data through by P5| store_document_kernel
   frame_renderer -->|resolves resources through by P9| resource_surface_session
   interaction_engine -->|reports errors to by P10| diagnostics_hub

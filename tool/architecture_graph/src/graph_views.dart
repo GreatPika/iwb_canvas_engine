@@ -19,6 +19,7 @@ const _edgeKindLabels = {
   'ui_boundary': 'drives public runtime ports',
   'tool_commit': 'commits through',
   'preview_intent_boundary': 'produces preview intents',
+  'tool_lifecycle_delegation': 'delegates lifecycle decisions to',
   'hit_test_boundary': 'queries hits through',
   'eraser_exact_hit_boundary': 'uses eraser exact-hit geometry through',
   'action_stream_boundary': 'emits user actions',

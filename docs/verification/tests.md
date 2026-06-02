@@ -582,6 +582,10 @@ behavioral tests, and the required guardrail list remains owned by
   empty context-request stream, marquee replacement selection, selected-move
   preview and resolved commit, typed action delivery, remove-element command,
   unknown text-edit no-op, and clear-content command behavior;
+- appends P11 draw coverage for pencil and marker stroke previews, two-tap
+  line pending/endpoint previews, public `CanvasSurface(interactive: false)`
+  pending-line preservation, committed stroke/line document elements, and typed
+  draw action delivery after accepted state publication;
 - uses the shared Flutter consumer harness as the package-boundary proof;
 - stays intentionally coarse so focused codec, runtime, selection, and cache
   interaction tests own detailed diagnostics;
@@ -653,8 +657,9 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/api/tool_port_settings_test.dart` proves P10 tool-port compatibility:
   initial settings are visible, effective changes advance interaction
   revision, no-ops stay silent, active sessions clean up on setting changes,
-  draw-mode pointer input is a compatibility no-op, double tap remains P12
-  unsupported, and context-action requests are a non-throwing empty stream.
+  pencil draw-mode pointer input publishes preview-only public state, double
+  tap remains P12 unsupported, and context-action requests are a non-throwing
+  empty stream.
 - `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
   timestamps are resolved through one runtime-local monotonic cursor.
 - `test/runtime/command_facts_port_test.dart` proves immutable command fact
@@ -662,6 +667,47 @@ behavioral tests, and the required guardrail list remains owned by
   interaction dependency.
 - `test/runtime/load_interaction_cleanup_test.dart` proves load and dispose
   use interaction-owned cleanup without post-install interaction calls.
+
+#### P11 draw tool tests
+- `test/interaction/draw_stroke_machine_test.dart` proves pencil and marker
+  stroke decisions, duplicate-point handling, and max-point replacement.
+- `test/interaction/draw_stroke_engine_test.dart` proves pencil and marker
+  preview publication, commit intents, second-pointer ignore, cancel/stale
+  cleanup, and no timestamp resolution on rejected stroke terminals.
+- `test/interaction/line_machine_test.dart` proves two-tap line decisions,
+  pending-line facts, endpoint preview facts, and line commit intent payload.
+- `test/interaction/line_engine_test.dart` proves accepted first-tap pending
+  preview timestamps, rejected first-tap timestamp silence, endpoint preview
+  and commit intents, same-point line acceptance, stale/invalid/cancel cleanup,
+  and pending-line ownership behavior.
+- `test/runtime/draw_commit_delivery_test.dart` proves accepted pencil, marker,
+  and line commits create public stroke/line elements through the edit kernel,
+  emit typed draw actions after public state publication, preserve
+  programmatic `CanvasEdit.addElement` action silence, and roll back failed
+  draw delivery without action or timestamp advancement.
+- `test/runtime/draw_cleanup_integration_test.dart` proves draw cleanup paths,
+  load success, load failure, `interactive=false`, settings changes, cancel,
+  and no-op terminals do not reserve the next draw output timestamp.
+- `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+  proves public `CanvasSurface(interactive: false)` preserves non-owned
+  pending line state, clears active endpoint state, and cleans the old runtime
+  on runtime-swap plus `interactive` disable.
+- `test/api/typed_action_payloads_test.dart` proves public draw action payload
+  fields and runtime finalization for `drawPencil`, `drawMarker`, and
+  `drawLine`.
+- `test/smoke/public_incremental_smoke_test.dart` appends root-barrel public
+  consumer coverage for drawing pencil, marker, and line, observing public
+  preview variants, preserving pending line preview across a public surface
+  `interactive=false` update, reading committed stroke/line elements, and
+  observing typed draw actions after accepted state publication.
+- `test/guardrails/interaction_guardrail_enforcement_test.dart` proves
+  `interaction.no_stale_terminal_commit`,
+  `interaction.pointer_cleanup_coordinator_only`, and interaction import
+  guardrails are runner-backed or structurally checked for the P11 draw and
+  line owner surfaces.
+- `test/architecture_graph/generated_graph_views_test.dart` proves generated
+  architecture graph Mermaid views are reproducible for the selected P11 phase
+  and stay synchronized with `docs/architecture/architecture_graph.yaml`.
 
 #### `test/selection/runtime_owner_separation_test.dart`
 - proves selection-only changes publish state.revisions.selection without

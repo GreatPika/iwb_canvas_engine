@@ -7,7 +7,12 @@ flowchart LR
     EditPort["CanvasEditPort.edit(fn)"]
     EditHandle["CanvasEdit handle"]
     EditResult["Callback result"]
-    PublicSignals["Post-commit public state\n(CanvasRuntimeState)\nno user action events"]
+    PublicSignals["Post-commit public state\n(CanvasRuntimeState)"]
+  end
+
+  subgraph Runtime["RuntimeRoot"]
+    InteractionCommit["Runtime-prepared interaction commit\nselected move, pencil, marker, line"]
+    ActionDescriptor["Optional high-level action descriptor\nnot available to CanvasEditPort.edit(fn)"]
   end
 
   subgraph Contracts["Contract declarations"]
@@ -41,6 +46,7 @@ flowchart LR
     ProjectionEvict["Projection cache eviction"]
     ResourceInvalidation["Resource cache invalidation"]
     RepaintBus["Main/overlay repaint buses"]
+    ActionEvents["Typed user action events\ninteraction/command commits only"]
     PostInstallEffects["Post-install effect dispatch\nruntime/applier boundary"]
     ErrorProjection["Error projection\npre-install validation/runtime failures\nno edit-owned DiagnosticsHub writer"]
   end
@@ -48,6 +54,9 @@ flowchart LR
   App -->|"synchronous edit callback"| EditPort
   EditPort -->|"declared by"| PublicContracts
   PostInstallEffects -->|"typed through"| InternalContracts
+  InteractionCommit -->|"generated id, element, and edit callback"| SessionGate
+  InteractionCommit -->|"stage draw/move action after accepted install"| ActionDescriptor
+  ActionDescriptor -->|"augment commit plan only for high-level runtime commit"| Compiler
   EditPort -->|"open edit session"| SessionGate
   SessionGate -->|"committed revision snapshot"| Committed
   Committed -->|"draft source data"| Draft
@@ -73,6 +82,8 @@ flowchart LR
   Install -->|"apply resource descriptor/cache scope"| ResourceInvalidation
   Install -->|"publish typed effect scope"| PostInstallEffects
   PostInstallEffects -->|"dispatch repaint intent"| RepaintBus
+  PostInstallEffects -->|"dispatch staged high-level action after state"| ActionEvents
+  EditPort -.->|"low-level public edits stage no user action descriptor"| ActionEvents
   Install -->|"publish after atomic install"| PublicSignals
   Install -->|"return after successful commit"| EditResult
   EditResult -->|"callback result"| App

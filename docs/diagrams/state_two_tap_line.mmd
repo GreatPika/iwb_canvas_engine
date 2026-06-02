@@ -67,14 +67,17 @@ stateDiagram-v2
   SecondTapGate --> CleanupOnly: no pending start, controllerEpoch mismatch, tool mismatch, invalid terminal, or non-finite facts
   SecondTapGate --> CommitIntent: same tool and controllerEpoch with finite start/end and valid style facts
 
-  state "Commit intent / EditKernel only" as CommitIntent
+  state "Line commit intent" as CommitIntent
   note right of CommitIntent
-    InteractionEngine submits a synchronous EditKernel request
-    to add the line. It does not mutate DocumentStoreKernel
-    directly and does not publish drawLine before commit success.
+    InteractionEngine returns a line commit intent to
+    RuntimeRoot. RuntimeRoot allocates the element id,
+    constructs the CanvasLineElement, and prepares the
+    synchronous EditKernel request. InteractionEngine does
+    not mutate DocumentStoreKernel directly and does not
+    publish drawLine before commit success.
   end note
 
-  CommitIntent --> EditKernelOutcome: open interaction edit and stage drawLine action descriptor
+  CommitIntent --> EditKernelOutcome: RuntimeRoot opens interaction edit and stages drawLine action descriptor
 
   state "EditKernel outcome" as EditKernelOutcome
   note right of EditKernelOutcome

@@ -106,7 +106,7 @@ Forbidden donor structure for P11 is fixed: do not copy `avoid_scene_controller_
 - `lib/src/runtime/runtime_action_finalizer.dart:5` / finalizer owner: timestamp cursor, action id sequence, and action finalization live in `RuntimeActionFinalizer` -> draw action timestamp/id creation belongs here.
 - `docs/architecture/architecture_graph.yaml:67` / graph phase: P11 is `Draw tools` and is still future -> implementation closure must update graph status and declarations when P11 lands.
 - `docs/architecture/architecture_graph.yaml:446` / graph node: `draw.tools` is a future P11 owner with placeholder `DrawToolController` -> Unit 9 must replace placeholder evidence with real selected owners after declarations exist.
-- `docs/architecture/architecture_graph.yaml:891` / graph edges: draw tools are expected to commit through edit and produce preview intents for interaction -> architecture checks must prove these edges after implementation.
+- `docs/architecture/architecture_graph.yaml:891` / graph edges: draw commits are expected to route through runtime/edit delivery and draw lifecycle decisions are expected to stay delegated from InteractionEngine to focused machines -> architecture checks must prove these edges after implementation.
 - `docs/verification/tests.md:568` / smoke policy: public incremental smoke imports only the root public barrel and must expand by appending the next real public user step -> Unit 7 must expand this file for P11 draw behavior.
 - `test/smoke/public_incremental_smoke_test.dart:18` / smoke implementation: the embedded public consumer source imports only Flutter public packages and `package:iwb_canvas_engine/iwb_canvas_engine.dart` -> P11 smoke must preserve that package-boundary proof.
 - `test/smoke/public_incremental_smoke_test.dart:528` / current public workflow: smoke already exercises public tool, preview, command, action, and runtime surfaces -> P11 draw smoke should be appended to the same public consumer source.
@@ -176,7 +176,7 @@ Rejected draw paths must not emit draw actions or reserve action timestamps. The
 
 ## Execution Units
 
-### [ ] Unit 1: Interaction Session And Cleanup Foundation
+### [x] Unit 1: Interaction Session And Cleanup Foundation
 
 Owner:
 
@@ -213,7 +213,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Draw Action Intent And Finalizer Setup
+### [x] Unit 2: Draw Action Intent And Finalizer Setup
 
 Owner:
 
@@ -244,7 +244,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Pencil And Marker Stroke Lifecycle
+### [x] Unit 3: Pencil And Marker Stroke Lifecycle
 
 Owner:
 
@@ -282,7 +282,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Two-Tap Line Lifecycle And Pending State
+### [x] Unit 4: Two-Tap Line Lifecycle And Pending State
 
 Owner:
 
@@ -320,7 +320,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 5: Runtime Draw Commit Delivery
+### [x] Unit 5: Runtime Draw Commit Delivery
 
 Owner:
 
@@ -358,7 +358,7 @@ Depends On:
 
 Units 1, 2, 3, and 4.
 
-### [ ] Unit 6: Cleanup, Load, Surface, And Rejection Integration
+### [x] Unit 6: Cleanup, Load, Surface, And Rejection Integration
 
 Owner:
 
@@ -394,7 +394,7 @@ Depends On:
 
 Units 1, 3, 4, and 5.
 
-### [ ] Unit 7: Public Incremental Smoke Draw Workflow
+### [x] Unit 7: Public Incremental Smoke Draw Workflow
 
 Owner:
 
@@ -430,7 +430,7 @@ Depends On:
 
 Units 2, 3, 4, 5, and 6.
 
-### [ ] Unit 8: Donor-Equivalent Guardrails And Focused Verification Closure
+### [x] Unit 8: Donor-Equivalent Guardrails And Focused Verification Closure
 
 Owner:
 
@@ -471,7 +471,7 @@ Depends On:
 
 Units 1 through 7.
 
-### [ ] Unit 9: P11 Source-Of-Truth And Architecture Closure
+### [x] Unit 9: P11 Source-Of-Truth And Architecture Closure
 
 Owner:
 
@@ -494,7 +494,7 @@ Source-of-truth closure only after production declarations and tests exist. Do n
 
 Change:
 
-After implementation, verification, implementation review, and completion evidence exist, mark the Step 48 entry in `PLAN.md` and the completed execution unit checkboxes in this step document. Update `docs/contracts/interaction_engine.md` with exact `PointerCleanupReason.cancel` mapping for draw/line cancel paths; update `docs/architecture/architecture_graph.yaml` to replace placeholder `DrawToolController` with real selected owners, close P11 draw commit-through-edit and preview-intent-to-interaction edges, and preserve phase status accurately; update P11 durable diagrams for pointer preview/commit, public edit, pencil/marker commit, line two-tap commit, pencil/marker state, pointer session state, and two-tap line state; update `docs/verification/tests.md` to record P11 public smoke and focused proof; regenerate generated docs/indexes and graph views when tools require it.
+After implementation, verification, implementation review, and completion evidence exist, mark the Step 48 entry in `PLAN.md` and the completed execution unit checkboxes in this step document. Update `docs/contracts/interaction_engine.md` with exact `PointerCleanupReason.cancel` mapping for draw/line cancel paths; update `docs/architecture/architecture_graph.yaml` to replace placeholder `DrawToolController` with real selected owners, close P11 draw commit-through-edit and draw lifecycle delegation edges, and preserve phase status accurately; update P11 durable diagrams for pointer preview/commit, public edit, pencil/marker commit, line two-tap commit, pencil/marker state, pointer session state, and two-tap line state; update `docs/verification/tests.md` to record P11 public smoke and focused proof; regenerate generated docs/indexes and graph views when tools require it.
 
 Completion Check:
 

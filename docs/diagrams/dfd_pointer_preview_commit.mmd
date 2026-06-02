@@ -28,8 +28,12 @@ flowchart LR
     CandidatePreview["Candidate-based preview update\nmarquee, eraser, initial hit"]
     CommitIntent["Terminal commit intent\nselection, stroke, line,\neraser, or selected move"]
     CancelIntent["Cancel intent\ncancel, mode change, dispose,\nresolver cancel, zero move"]
-    EditResult["Terminal edit result\nInteractionEngine-owned cleanup point"]
     CleanupByKind["Cleanup by active preview kind"]
+  end
+
+  subgraph Runtime["RuntimeRoot"]
+    Delivery["Interaction commit delivery\nid allocation and action descriptor staging"]
+    EditResult["Terminal edit result\nruntime-owned delivery outcome"]
   end
 
   subgraph Spatial["SpatialKernel"]
@@ -37,7 +41,7 @@ flowchart LR
   end
 
   subgraph EditKernel["EditKernel"]
-    InteractionEdit["Interaction-owned edit bridge\nsynchronous edit session"]
+    InteractionEdit["Runtime-prepared edit bridge\nsynchronous edit session"]
     Draft["DraftDocument\nrollback-safe mutations"]
     Touched["TouchedSet\nexact changed state"]
     Compiler["CommitCompiler\npreflight and commit plan"]
@@ -105,7 +109,8 @@ flowchart LR
   MoveResolver -.->|"runtime-safe error"| ErrorProjection
   MoveResolver -->|"finite committed delta"| CommitIntent
 
-  CommitIntent -->|"committed mutation request"| InteractionEdit
+  CommitIntent -->|"terminal commit intent\nno document mutation yet"| Delivery
+  Delivery -->|"generated id, public element,\nand action descriptor"| InteractionEdit
   InteractionEdit -->|"draft mutations for terminal result"| Draft
   Draft -->|"exact touched state"| Touched
   Touched -->|"compile exact effects"| Compiler
@@ -119,11 +124,12 @@ flowchart LR
   AtomicInstall -->|"schedule committed scene repaint"| MainRepaint
   AtomicInstall -->|"publish changed terminal action"| Actions
   AtomicInstall -->|"commit result"| EditResult
-  EditResult -->|"post-edit interaction cleanup"| TerminalCleanup
+  EditResult -->|"post-success cleanup request\nthrough InteractionEngine"| TerminalCleanup
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
   Rollback -.->|"committed document, selection, revisions,\nand action events unchanged"| ErrorProjection
   Rollback -.->|"terminal failure result"| EditResult
+  EditResult -.->|"edit-failure cleanup request\nthrough InteractionEngine"| TerminalCleanup
   ErrorProjection -.->|"projected runtime-safe error"| Surface
   PublicSignals --> Surface
   MainRepaint --> PublicSignals

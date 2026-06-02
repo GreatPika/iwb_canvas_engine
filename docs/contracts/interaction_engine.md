@@ -192,6 +192,17 @@ cleanup request carries both cleanup reason and ownership context so the
 coordinator can distinguish active pointer-owned state from non-owned pending
 line state. Tool machines must not call the coordinator directly.
 
+P11 draw cancellation maps to `PointerCleanupReason.cancel` for every
+user-cancelled pencil, marker, and line path. Pencil and marker cancellation
+clears the active stroke preview/session without creating a commit, action, or
+timestamp reservation. Line first-tap cancellation clears only the active
+first-tap session and preserves any non-owned pending line state. Line endpoint
+cancellation uses line-owned cleanup, clears the active line preview plus the
+owned pending line, and emits no action or document mutation. Stale, invalid,
+and no-op draw terminals use their specific stale, invalid, and no-op cleanup
+reasons instead of `cancel`; those rejected terminals never create
+`strokeCommit`, `lineCommit`, or draw output timestamps.
+
 The coordinator owns cleanup policy and outcome calculation for cancel, dispose,
 prepared load success, mode/tool change, active-session `interactive=false`,
 stale terminal, invalid terminal, no-op terminal, resolver cancel/error after
