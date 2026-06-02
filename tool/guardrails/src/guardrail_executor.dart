@@ -248,8 +248,8 @@ const _testProofPaths = {
   ],
   interactionNoStaleTerminalCommitGuardrailId: [
     'test/interaction/move_machine_test.dart',
-    'test/interaction/draw_stroke_engine_test.dart',
-    'test/interaction/line_engine_test.dart',
+    'test/interaction/draw_stroke_interaction_routing_test.dart',
+    'test/interaction/line_interaction_routing_test.dart',
   ],
   'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
   'edit.rollback_no_effects': [

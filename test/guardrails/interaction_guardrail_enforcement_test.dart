@@ -293,8 +293,8 @@ const _runnerBackedProofs = [
     suites: {'blocking', 'interaction'},
     proofPaths: [
       'test/interaction/move_machine_test.dart',
-      'test/interaction/draw_stroke_engine_test.dart',
-      'test/interaction/line_engine_test.dart',
+      'test/interaction/draw_stroke_interaction_routing_test.dart',
+      'test/interaction/line_interaction_routing_test.dart',
     ],
   ),
   _RunnerBackedProof(

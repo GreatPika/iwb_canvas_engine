@@ -671,15 +671,17 @@ behavioral tests, and the required guardrail list remains owned by
 #### P11 draw tool tests
 - `test/interaction/draw_stroke_machine_test.dart` proves pencil and marker
   stroke decisions, duplicate-point handling, and max-point replacement.
-- `test/interaction/draw_stroke_engine_test.dart` proves pencil and marker
-  preview publication, commit intents, second-pointer ignore, cancel/stale
-  cleanup, and no timestamp resolution on rejected stroke terminals.
+- `test/interaction/draw_stroke_interaction_routing_test.dart` proves
+  `InteractionEngine` pencil and marker routing for preview publication,
+  commit intents, second-pointer ignore, cancel/stale cleanup, and no timestamp
+  resolution on rejected stroke terminals.
 - `test/interaction/line_machine_test.dart` proves two-tap line decisions,
   pending-line facts, endpoint preview facts, and line commit intent payload.
-- `test/interaction/line_engine_test.dart` proves accepted first-tap pending
-  preview timestamps, rejected first-tap timestamp silence, endpoint preview
-  and commit intents, same-point line acceptance, stale/invalid/cancel cleanup,
-  and pending-line ownership behavior.
+- `test/interaction/line_interaction_routing_test.dart` proves
+  `InteractionEngine` line routing for accepted first-tap pending preview
+  timestamps, rejected first-tap timestamp silence, endpoint preview and commit
+  intents, same-point line acceptance, stale/invalid/cancel cleanup, and
+  pending-line ownership behavior.
 - `test/runtime/draw_commit_delivery_test.dart` proves accepted pencil, marker,
   and line commits create public stroke/line elements through the edit kernel,
   emit typed draw actions after public state publication, preserve
