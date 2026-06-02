@@ -259,6 +259,10 @@ void main() {
   test('public consumer uses selection move and command actions', () async {
     await _exercisePublicSelectionMoveAndCommandSurface();
   });
+
+  testWidgets('public consumer draws pencil marker and line', (tester) async {
+    await _exercisePublicDrawWorkflow(tester);
+  });
 }
 
 Map<String, Object?> _smallSchemaV1Document() {
@@ -691,6 +695,199 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
       runtime.dispose();
     }
   }
+}
+
+Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
+  final runtime = CanvasRuntime();
+  final actions = <CanvasActionCommitted>[];
+  final actionSubscription = runtime.actions.listen(actions.add);
+  addTearDown(() async {
+    await actionSubscription.cancel();
+    runtime.dispose();
+  });
+
+  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+
+  runtime.tools.setMode(CanvasInteractionMode.draw);
+  runtime.tools.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.pencil,
+      color: const Color(0xFF112233),
+      pencilThickness: 3,
+    ),
+  );
+  final beforePencil = runtime.state.value;
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, Offset.zero),
+  );
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(2, 3)),
+  );
+  final pencilPreview = runtime.preview as CanvasPencilStrokePreview;
+  expect(pencilPreview.points, const [Offset.zero, Offset(2, 3)]);
+  expect(runtime.state.value.revisions.document, beforePencil.revisions.document);
+  expect(
+    runtime.state.value.revisions.preview,
+    greaterThan(beforePencil.revisions.preview),
+  );
+  runtime.tools.handlePointer(
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(4, 5),
+      timestampMs: 10,
+    ),
+  );
+  await tester.pump();
+  expect(actions, hasLength(1));
+  _expectPencilDraw(runtime, actions.single);
+
+  runtime.tools.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.marker,
+      color: const Color(0xFF445566),
+      markerThickness: 12,
+      markerOpacity: 0.4,
+    ),
+  );
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(6, 7)),
+  );
+  final markerPreview = runtime.preview as CanvasMarkerStrokePreview;
+  expect(markerPreview.points, const [Offset(6, 7)]);
+  runtime.tools.handlePointer(
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(8, 9),
+      timestampMs: 11,
+    ),
+  );
+  await tester.pump();
+  expect(actions, hasLength(2));
+  _expectMarkerDraw(runtime, actions.last);
+
+  runtime.tools.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.line,
+      color: const Color(0xFF778899),
+      lineThickness: 4,
+    ),
+  );
+  final beforeLine = runtime.state.value;
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 2)),
+  );
+  runtime.tools.handlePointer(
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(1, 2),
+      timestampMs: 30,
+    ),
+  );
+  final pendingLine = runtime.preview as CanvasPendingLineStartPreview;
+  expect(pendingLine.start, const Offset(1, 2));
+  expect(pendingLine.timestampMs, 30);
+  expect(runtime.state.value.revisions.document, beforeLine.revisions.document);
+  expect(actions, hasLength(2));
+
+  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  final preservedLine = runtime.preview as CanvasPendingLineStartPreview;
+  expect(preservedLine.start, pendingLine.start);
+  expect(preservedLine.timestampMs, pendingLine.timestampMs);
+
+  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(3, 4)),
+  );
+  final linePreview = runtime.preview as CanvasLinePreview;
+  expect(linePreview.start, const Offset(1, 2));
+  expect(linePreview.end, const Offset(3, 4));
+  runtime.tools.handlePointer(
+    _pointer(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(3, 4),
+      timestampMs: 31,
+    ),
+  );
+  await tester.pump();
+  expect(actions, hasLength(3));
+  _expectLineDraw(runtime, actions.last);
+}
+
+Widget _surfaceHost(CanvasRuntime runtime, {required bool interactive}) {
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: SizedBox(
+      width: 120,
+      height: 80,
+      child: CanvasSurface(runtime: runtime, interactive: interactive),
+    ),
+  );
+}
+
+void _expectPencilDraw(
+  CanvasRuntime runtime,
+  CanvasActionCommitted action,
+) {
+  expect(action.type, CanvasActionType.drawPencil);
+  expect(action.timestampMs, 10);
+  final payload = action.payload as CanvasDrawStrokeActionPayload;
+  expect(payload.tool, CanvasDrawTool.pencil);
+  expect(payload.color, const Color(0xFF112233));
+  expect(payload.thickness, 3);
+  expect(payload.opacity, 1);
+  expect(payload.pointCount, 3);
+
+  final stroke = _element(runtime, action) as CanvasStrokeElement;
+  expect(stroke.points, const [Offset.zero, Offset(2, 3), Offset(4, 5)]);
+  expect(stroke.color, const Color(0xFF112233));
+  expect(stroke.thickness, 3);
+  expect(stroke.opacity, 1);
+}
+
+void _expectMarkerDraw(
+  CanvasRuntime runtime,
+  CanvasActionCommitted action,
+) {
+  expect(action.type, CanvasActionType.drawMarker);
+  expect(action.timestampMs, 11);
+  final payload = action.payload as CanvasDrawStrokeActionPayload;
+  expect(payload.tool, CanvasDrawTool.marker);
+  expect(payload.color, const Color(0xFF445566));
+  expect(payload.thickness, 12);
+  expect(payload.opacity, 0.4);
+  expect(payload.pointCount, 2);
+
+  final stroke = _element(runtime, action) as CanvasStrokeElement;
+  expect(stroke.points, const [Offset(6, 7), Offset(8, 9)]);
+  expect(stroke.color, const Color(0xFF445566));
+  expect(stroke.thickness, 12);
+  expect(stroke.opacity, 0.4);
+}
+
+void _expectLineDraw(CanvasRuntime runtime, CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.drawLine);
+  expect(action.timestampMs, 31);
+  final payload = action.payload as CanvasDrawLineActionPayload;
+  expect(payload.color, const Color(0xFF778899));
+  expect(payload.thickness, 4);
+  expect(payload.opacity, 1);
+  expect(payload.startWorld, const Offset(1, 2));
+  expect(payload.endWorld, const Offset(3, 4));
+
+  final line = _element(runtime, action) as CanvasLineElement;
+  expect(line.start, const Offset(1, 2));
+  expect(line.end, const Offset(3, 4));
+  expect(line.color, const Color(0xFF778899));
+  expect(line.thickness, 4);
+  expect(line.opacity, 1);
+}
+
+CanvasElement _element(CanvasRuntime runtime, CanvasActionCommitted action) {
+  return runtime
+      .readDocument()
+      .layers
+      .expand((layer) => layer.elements)
+      .singleWhere((element) => element.id == action.elementIds.single);
 }
 
 void _dragPointer(
