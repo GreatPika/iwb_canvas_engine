@@ -5,8 +5,6 @@ import '../contracts/public/canvas_ids.dart';
 import 'geometry_policy.dart';
 import 'spatial_query_policy.dart';
 
-enum SpatialIndexKind { hit, paint }
-
 final class SpatialMembership {
   SpatialMembership._({
     required this.handle,

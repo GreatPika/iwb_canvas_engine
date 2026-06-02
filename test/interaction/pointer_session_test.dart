@@ -61,7 +61,7 @@ void _verifyPointerAdmission() {
   final active = session as PointerSession;
   _expectPointerIdentity(active);
   _expectPointerCapture(active, selected);
-  expect(engine.interactionRevision, 1);
+  expect(engine.interactionRevision, 0);
 }
 
 void _expectPointerIdentity(PointerSession active) {
@@ -106,7 +106,7 @@ void _verifyStaleNonTerminalHandling() {
   expect(staleMove.kind, InteractionPointerAdmissionKind.ignored);
   expect(active?.pointerId, 1);
   expect(active?.currentWorld, Offset.zero);
-  expect(engine.interactionRevision, 1);
+  expect(engine.interactionRevision, 0);
 }
 
 void _verifyStaleTerminalCleanup() {
@@ -127,7 +127,7 @@ void _verifyStaleTerminalCleanup() {
     InvalidTerminalCleanupKind.staleControllerEpoch,
   );
   expect(engine.activeSession, isNull);
-  expect(engine.interactionRevision, 2);
+  expect(engine.interactionRevision, 0);
 }
 
 void _verifyAdmittedTerminalClose() {
@@ -144,7 +144,7 @@ void _verifyAdmittedTerminalClose() {
 
   expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
   expect(engine.activeSession, isNull);
-  expect(engine.interactionRevision, 2);
+  expect(engine.interactionRevision, 0);
 }
 
 void _verifyPendingLineCleanupOwnership() {

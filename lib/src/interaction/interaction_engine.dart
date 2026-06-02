@@ -372,7 +372,6 @@ final class InteractionEngine {
     final selection = _selectedMoveStartDecision(sample);
     if (selection.admitted) {
       _activeSession = _selectedMoveSession(sample, selection);
-      _interactionRevision += 1;
 
       return _privateAdmitted(sample);
     }
@@ -383,7 +382,6 @@ final class InteractionEngine {
       readPort.marqueeStartFacts(const MarqueeStartReadRequest()),
     );
     _activeSession = _marqueeSession(sample, marquee);
-    _interactionRevision += 1;
 
     return _privateAdmitted(sample);
   }
@@ -1283,7 +1281,6 @@ final class InteractionEngine {
     if (outcome.sessionDisposition == PointerSessionDisposition.released &&
         _activeSession != null) {
       _activeSession = null;
-      _interactionRevision += 1;
     }
   }
 

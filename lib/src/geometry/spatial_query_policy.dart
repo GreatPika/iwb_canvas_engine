@@ -7,6 +7,8 @@ import 'geometry_policy.dart';
 const int kCanvasMaxFallbackCandidates = 4096;
 const double _tileBoundaryEpsilon = 1e-9;
 
+enum SpatialIndexKind { hit, paint, context }
+
 final class SpatialQueryWindow {
   const SpatialQueryWindow({
     required this.boundsWorld,

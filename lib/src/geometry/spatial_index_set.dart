@@ -9,8 +9,10 @@ import 'tile_index.dart';
 final class SpatialIndexSet {
   final TileIndex _hitIndex = TileIndex();
   final TileIndex _paintIndex = TileIndex();
+  final TileIndex _contextIndex = TileIndex();
   final OutlierIndex _hitOutliers = OutlierIndex();
   final OutlierIndex _paintOutliers = OutlierIndex();
+  final OutlierIndex _contextOutliers = OutlierIndex();
   final Map<CanvasElementId, SpatialEntry> _entriesById = {};
 
   SpatialIndexSetSnapshot get snapshot {
@@ -18,8 +20,10 @@ final class SpatialIndexSet {
       entryCount: _entriesById.length,
       hitTilePageCount: _hitIndex.pageCount,
       paintTilePageCount: _paintIndex.pageCount,
+      contextTilePageCount: _contextIndex.pageCount,
       hitOutlierCount: _hitOutliers.length,
       paintOutlierCount: _paintOutliers.length,
+      contextOutlierCount: _contextOutliers.length,
     );
   }
 
@@ -34,8 +38,10 @@ final class SpatialIndexSet {
   void clear() {
     _hitIndex.clear();
     _paintIndex.clear();
+    _contextIndex.clear();
     _hitOutliers.clear();
     _paintOutliers.clear();
+    _contextOutliers.clear();
     _entriesById.clear();
   }
 
@@ -51,27 +57,26 @@ final class SpatialIndexSet {
     }
     _hitIndex.remove(previous.hitMembership);
     _paintIndex.remove(previous.paintMembership);
+    _contextIndex.remove(previous.contextMembership);
     _hitOutliers.remove(id);
     _paintOutliers.remove(id);
+    _contextOutliers.remove(id);
   }
 
-  SpatialQueryResult queryHit(
+  SpatialQueryResult query(
+    SpatialIndexKind kind,
     SpatialQueryWindow window,
     TileQueryContext context,
   ) {
-    return _hitIndex.query(
-      window,
-      _contextWithCandidates(context, _hitOutliers.candidates()),
-    );
-  }
+    final (index, outliers) = switch (kind) {
+      SpatialIndexKind.hit => (_hitIndex, _hitOutliers),
+      SpatialIndexKind.paint => (_paintIndex, _paintOutliers),
+      SpatialIndexKind.context => (_contextIndex, _contextOutliers),
+    };
 
-  SpatialQueryResult queryPaint(
-    SpatialQueryWindow window,
-    TileQueryContext context,
-  ) {
-    return _paintIndex.query(
+    return index.query(
       window,
-      _contextWithCandidates(context, _paintOutliers.candidates()),
+      _contextWithCandidates(context, outliers.candidates()),
     );
   }
 
@@ -94,8 +99,33 @@ final class SpatialIndexSet {
   void _addToIndexes(SpatialEntry entry) {
     _hitIndex.put(entry.hitMembership);
     _paintIndex.put(entry.paintMembership);
+    _contextIndex.put(entry.contextMembership);
     _hitOutliers.put(entry.hitMembership);
     _paintOutliers.put(entry.paintMembership);
+    _contextOutliers.put(entry.contextMembership);
+  }
+}
+
+extension SpatialIndexSetQueries on SpatialIndexSet {
+  SpatialQueryResult queryHit(
+    SpatialQueryWindow window,
+    TileQueryContext context,
+  ) {
+    return query(SpatialIndexKind.hit, window, context);
+  }
+
+  SpatialQueryResult queryPaint(
+    SpatialQueryWindow window,
+    TileQueryContext context,
+  ) {
+    return query(SpatialIndexKind.paint, window, context);
+  }
+
+  SpatialQueryResult queryContext(
+    SpatialQueryWindow window,
+    TileQueryContext context,
+  ) {
+    return query(SpatialIndexKind.context, window, context);
   }
 }
 
@@ -104,13 +134,17 @@ final class SpatialIndexSetSnapshot {
     required this.entryCount,
     required this.hitTilePageCount,
     required this.paintTilePageCount,
+    required this.contextTilePageCount,
     required this.hitOutlierCount,
     required this.paintOutlierCount,
+    required this.contextOutlierCount,
   });
 
   final int entryCount;
   final int hitTilePageCount;
   final int paintTilePageCount;
+  final int contextTilePageCount;
   final int hitOutlierCount;
   final int paintOutlierCount;
+  final int contextOutlierCount;
 }

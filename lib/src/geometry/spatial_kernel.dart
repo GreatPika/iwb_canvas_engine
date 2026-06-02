@@ -27,8 +27,10 @@ final class SpatialKernel {
       entryCount: indexes.entryCount,
       hitTilePageCount: indexes.hitTilePageCount,
       paintTilePageCount: indexes.paintTilePageCount,
+      contextTilePageCount: indexes.contextTilePageCount,
       hitOutlierCount: indexes.hitOutlierCount,
       paintOutlierCount: indexes.paintOutlierCount,
+      contextOutlierCount: indexes.contextOutlierCount,
     );
   }
 
@@ -144,6 +146,10 @@ extension SpatialKernelInteractionQueries on SpatialKernel {
   SpatialQueryResult queryEraser(SpatialQueryWindow window) {
     return _queryIndex(window, _indexes.queryPaint);
   }
+
+  SpatialQueryResult queryContext(SpatialQueryWindow window) {
+    return _queryIndex(window, _indexes.queryContext);
+  }
 }
 
 extension SpatialKernelBudgetCounterAccess on SpatialKernel {
@@ -177,8 +183,10 @@ final class SpatialKernelSnapshot {
     required this.entryCount,
     required this.hitTilePageCount,
     required this.paintTilePageCount,
+    required this.contextTilePageCount,
     required this.hitOutlierCount,
     required this.paintOutlierCount,
+    required this.contextOutlierCount,
   });
 
   final int structuralRevision;
@@ -186,6 +194,8 @@ final class SpatialKernelSnapshot {
   final int entryCount;
   final int hitTilePageCount;
   final int paintTilePageCount;
+  final int contextTilePageCount;
   final int hitOutlierCount;
   final int paintOutlierCount;
+  final int contextOutlierCount;
 }

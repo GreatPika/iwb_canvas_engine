@@ -317,7 +317,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   // ignore: halstead-volume
   ContextTargetReadFacts _contextTargetFacts(ContextTargetReadRequest request) {
     final context = _readContext();
-    final query = _spatial.queryEraser(
+    final query = _spatial.queryContext(
       SpatialQueryWindow(
         boundsWorld: _pointQueryWindow(request.worldPosition),
         structuralRevision: context.structuralRevision,
