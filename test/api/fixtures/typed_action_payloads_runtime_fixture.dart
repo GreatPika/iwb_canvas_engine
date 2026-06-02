@@ -53,13 +53,28 @@ Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   );
   await Future<void>.delayed(Duration.zero);
 
-  expect(actions, hasLength(6));
+  expect(actions, hasLength(9));
+  expect(
+    actions.map((action) => action.timestampMs),
+    List.generate(9, (index) => index),
+  );
+  _expectLegacyActionPayloads(actions);
+  _expectDrawActionPayloads(actions);
+}
+
+void _expectLegacyActionPayloads(List<CanvasActionCommitted> actions) {
   _expectMarquee(actions[0]);
   _expectMove(actions[1]);
   _expectTransform(actions[2]);
   _expectDeleteSelection(actions[3]);
   _expectRemoveElement(actions[4]);
   _expectClearContent(actions[5]);
+}
+
+void _expectDrawActionPayloads(List<CanvasActionCommitted> actions) {
+  _expectPencilStroke(actions[6]);
+  _expectMarkerStroke(actions[7]);
+  _expectLine(actions[8]);
 }
 
 Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
@@ -232,6 +247,10 @@ Future<void> _expectSinglePublicAction(
 }
 
 List<CommitActionIntent> _actionIntents() {
+  return [..._legacyActionIntents(), ..._drawActionIntents()];
+}
+
+List<CommitActionIntent> _legacyActionIntents() {
   return [
     SelectMarqueeActionIntent(
       previousSelection: [CanvasElementId('a')],
@@ -255,6 +274,35 @@ List<CommitActionIntent> _actionIntents() {
     ClearContentActionIntent(
       removedElementIds: [CanvasElementId('b'), CanvasElementId('c')],
       removedResourceIds: [CanvasResourceId('r1')],
+    ),
+  ];
+}
+
+List<CommitActionIntent> _drawActionIntents() {
+  return [
+    DrawStrokeActionIntent(
+      elementId: CanvasElementId('stroke-pencil'),
+      tool: CanvasDrawTool.pencil,
+      color: const Color(0xFF112233),
+      thickness: 3,
+      opacity: 1,
+      pointCount: 2,
+    ),
+    DrawStrokeActionIntent(
+      elementId: CanvasElementId('stroke-marker'),
+      tool: CanvasDrawTool.marker,
+      color: const Color(0xFF445566),
+      thickness: 12,
+      opacity: 0.4,
+      pointCount: 3,
+    ),
+    DrawLineActionIntent(
+      elementId: CanvasElementId('line-1'),
+      color: const Color(0xFF778899),
+      thickness: 4,
+      opacity: 1,
+      startWorld: const Offset(1, 2),
+      endWorld: const Offset(3, 4),
     ),
   ];
 }
@@ -315,6 +363,39 @@ void _expectClearContent(CanvasActionCommitted action) {
     CanvasElementId('c'),
   ]);
   expect(payload.removedResourceIds, [CanvasResourceId('r1')]);
+}
+
+void _expectPencilStroke(CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.drawPencil);
+  expect(action.elementIds, [CanvasElementId('stroke-pencil')]);
+  final payload = action.payload as CanvasDrawStrokeActionPayload;
+  expect(payload.tool, CanvasDrawTool.pencil);
+  expect(payload.color, const Color(0xFF112233));
+  expect(payload.thickness, 3);
+  expect(payload.opacity, 1);
+  expect(payload.pointCount, 2);
+}
+
+void _expectMarkerStroke(CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.drawMarker);
+  expect(action.elementIds, [CanvasElementId('stroke-marker')]);
+  final payload = action.payload as CanvasDrawStrokeActionPayload;
+  expect(payload.tool, CanvasDrawTool.marker);
+  expect(payload.color, const Color(0xFF445566));
+  expect(payload.thickness, 12);
+  expect(payload.opacity, 0.4);
+  expect(payload.pointCount, 3);
+}
+
+void _expectLine(CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.drawLine);
+  expect(action.elementIds, [CanvasElementId('line-1')]);
+  final payload = action.payload as CanvasDrawLineActionPayload;
+  expect(payload.color, const Color(0xFF778899));
+  expect(payload.thickness, 4);
+  expect(payload.opacity, 1);
+  expect(payload.startWorld, const Offset(1, 2));
+  expect(payload.endWorld, const Offset(3, 4));
 }
 
 CanvasDocument _document() {

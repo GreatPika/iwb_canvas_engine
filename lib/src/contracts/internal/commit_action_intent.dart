@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../public/canvas_actions.dart';
 import '../public/canvas_geometry.dart';
 import '../public/canvas_ids.dart';
+import '../public/canvas_tools.dart';
 import '../public/canvas_value_validators.dart';
 
 enum CommitActionIntentKind {
@@ -12,6 +13,8 @@ enum CommitActionIntentKind {
   deleteSelection,
   removeElement,
   clearContent,
+  drawStroke,
+  drawLine,
 }
 
 sealed class CommitActionIntent {
@@ -127,10 +130,68 @@ final class ClearContentActionIntent extends CommitActionIntent {
   final List<CanvasResourceId> removedResourceIds;
 }
 
+final class DrawStrokeActionIntent extends CommitActionIntent {
+  DrawStrokeActionIntent({
+    required CanvasElementId elementId,
+    required CanvasDrawTool tool,
+    required this.color,
+    required this.thickness,
+    required this.opacity,
+    required this.pointCount,
+    super.timestampHintMs,
+  }) : tool = _validateStrokeTool(tool),
+       elementIds = List.unmodifiable([elementId]);
+
+  @override
+  CommitActionIntentKind get kind => CommitActionIntentKind.drawStroke;
+
+  @override
+  final List<CanvasElementId> elementIds;
+  final CanvasDrawTool tool;
+  final Color color;
+  final double thickness;
+  final double opacity;
+  final int pointCount;
+}
+
+final class DrawLineActionIntent extends CommitActionIntent {
+  DrawLineActionIntent({
+    required CanvasElementId elementId,
+    required this.color,
+    required this.thickness,
+    required this.opacity,
+    required this.startWorld,
+    required this.endWorld,
+    super.timestampHintMs,
+  }) : elementIds = List.unmodifiable([elementId]);
+
+  @override
+  CommitActionIntentKind get kind => CommitActionIntentKind.drawLine;
+
+  @override
+  final List<CanvasElementId> elementIds;
+  final Color color;
+  final double thickness;
+  final double opacity;
+  final Offset startWorld;
+  final Offset endWorld;
+}
+
 int? _validateTimestampHint(int? timestampHintMs) {
   if (timestampHintMs != null) {
     validateNonNegativeInt(timestampHintMs, path: 'action.timestampMs');
   }
 
   return timestampHintMs;
+}
+
+CanvasDrawTool _validateStrokeTool(CanvasDrawTool tool) {
+  return switch (tool) {
+    CanvasDrawTool.pencil || CanvasDrawTool.marker => tool,
+    CanvasDrawTool.line || CanvasDrawTool.eraser => throw ArgumentError.value(
+      tool,
+      'tool',
+      'must be pencil or marker',
+    ),
+  };
 }

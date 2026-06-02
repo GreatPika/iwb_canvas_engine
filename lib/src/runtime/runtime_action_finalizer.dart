@@ -1,6 +1,7 @@
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_tools.dart';
 
 final class RuntimeActionFinalizer {
   int _timestampCursor = -1;
@@ -48,47 +49,95 @@ CanvasActionType _actionType(CommitActionIntent intent) {
     DeleteSelectionActionIntent() ||
     RemoveElementActionIntent() => CanvasActionType.deleteElements,
     ClearContentActionIntent() => CanvasActionType.clearContent,
+    DrawStrokeActionIntent(:final tool) => _drawStrokeActionType(tool),
+    DrawLineActionIntent() => CanvasActionType.drawLine,
   };
 }
 
 CanvasActionPayload _payload(CommitActionIntent intent) {
   return switch (intent) {
-    MoveSelectionActionIntent(:final transform) => CanvasTransformActionPayload(
-      delta: transform,
-      operation: intent.operation,
-      pivotWorld: intent.pivotWorld,
-    ),
-    SelectMarqueeActionIntent(
-      :final previousSelection,
-      :final nextSelection,
-      :final marqueeRectWorld,
-    ) =>
-      CanvasSelectionActionPayload(
-        previousSelection: previousSelection,
-        nextSelection: nextSelection,
-        marqueeRectWorld: marqueeRectWorld,
-      ),
-    TransformSelectionActionIntent(
-      :final transform,
-      :final operation,
-      :final pivotWorld,
-    ) =>
-      CanvasTransformActionPayload(
-        delta: transform,
-        operation: operation,
-        pivotWorld: pivotWorld,
-      ),
-    DeleteSelectionActionIntent(:final removedElementIds) =>
-      CanvasDeleteActionPayload(removedElementIds: removedElementIds),
-    RemoveElementActionIntent(:final removedElementIds) =>
-      CanvasDeleteActionPayload(removedElementIds: removedElementIds),
-    ClearContentActionIntent(
+    MoveSelectionActionIntent() => _movePayload(intent),
+    SelectMarqueeActionIntent() => _selectionPayload(intent),
+    TransformSelectionActionIntent() => _transformPayload(intent),
+    DeleteSelectionActionIntent(:final removedElementIds) ||
+    RemoveElementActionIntent(
       :final removedElementIds,
-      :final removedResourceIds,
-    ) =>
-      CanvasClearActionPayload(
-        removedElementIds: removedElementIds,
-        removedResourceIds: removedResourceIds,
-      ),
+    ) => _deletePayload(removedElementIds),
+    ClearContentActionIntent() => _clearPayload(intent),
+    DrawStrokeActionIntent() => _drawStrokePayload(intent),
+    DrawLineActionIntent() => _drawLinePayload(intent),
   };
+}
+
+CanvasTransformActionPayload _movePayload(MoveSelectionActionIntent intent) {
+  return CanvasTransformActionPayload(
+    delta: intent.transform,
+    operation: intent.operation,
+    pivotWorld: intent.pivotWorld,
+  );
+}
+
+CanvasSelectionActionPayload _selectionPayload(
+  SelectMarqueeActionIntent intent,
+) {
+  return CanvasSelectionActionPayload(
+    previousSelection: intent.previousSelection,
+    nextSelection: intent.nextSelection,
+    marqueeRectWorld: intent.marqueeRectWorld,
+  );
+}
+
+CanvasTransformActionPayload _transformPayload(
+  TransformSelectionActionIntent intent,
+) {
+  return CanvasTransformActionPayload(
+    delta: intent.transform,
+    operation: intent.operation,
+    pivotWorld: intent.pivotWorld,
+  );
+}
+
+CanvasDeleteActionPayload _deletePayload(
+  Iterable<CanvasElementId> removedElementIds,
+) {
+  return CanvasDeleteActionPayload(removedElementIds: removedElementIds);
+}
+
+CanvasClearActionPayload _clearPayload(ClearContentActionIntent intent) {
+  return CanvasClearActionPayload(
+    removedElementIds: intent.removedElementIds,
+    removedResourceIds: intent.removedResourceIds,
+  );
+}
+
+CanvasActionType _drawStrokeActionType(CanvasDrawTool tool) {
+  return switch (tool) {
+    CanvasDrawTool.pencil => CanvasActionType.drawPencil,
+    CanvasDrawTool.marker => CanvasActionType.drawMarker,
+    CanvasDrawTool.line || CanvasDrawTool.eraser => throw StateError(
+      'Unsupported draw stroke action tool: $tool',
+    ),
+  };
+}
+
+CanvasDrawStrokeActionPayload _drawStrokePayload(
+  DrawStrokeActionIntent intent,
+) {
+  return CanvasDrawStrokeActionPayload(
+    tool: intent.tool,
+    color: intent.color,
+    thickness: intent.thickness,
+    opacity: intent.opacity,
+    pointCount: intent.pointCount,
+  );
+}
+
+CanvasDrawLineActionPayload _drawLinePayload(DrawLineActionIntent intent) {
+  return CanvasDrawLineActionPayload(
+    color: intent.color,
+    thickness: intent.thickness,
+    opacity: intent.opacity,
+    startWorld: intent.startWorld,
+    endWorld: intent.endWorld,
+  );
 }
