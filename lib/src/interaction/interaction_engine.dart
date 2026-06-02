@@ -160,6 +160,14 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
+  PointerCleanupOutcome finishDrawStroke(PointerCleanupReason reason) {
+    return _cleanupWithReason(reason);
+  }
+
+  PointerCleanupOutcome finishLineEndpoint(PointerCleanupReason reason) {
+    return _cleanupWithReason(reason);
+  }
+
   PointerCleanupOutcome setMode(
     CanvasInteractionMode mode, {
     required bool cleanupSelectionMode,

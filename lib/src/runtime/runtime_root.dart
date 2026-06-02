@@ -47,9 +47,11 @@ import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
+import '../interaction/draw_stroke_machine.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
+import '../interaction/line_machine.dart';
 import '../interaction/move_machine.dart';
 import '../interaction/pointer_tool_cleanup_coordinator.dart';
 import '../interaction/select_machine.dart';
@@ -808,6 +810,21 @@ final class RuntimeRoot
 
       return;
     }
+    final strokeCommit = admission.strokeCommit;
+    if (strokeCommit != null) {
+      _deliverDrawStrokeCommit(
+        strokeCommit,
+        timestampHintMs: sample.timestampMs,
+      );
+
+      return;
+    }
+    final lineCommit = admission.lineCommit;
+    if (lineCommit != null) {
+      _deliverDrawLineCommit(lineCommit, timestampHintMs: sample.timestampMs);
+
+      return;
+    }
     if (admission.kind != InteractionPointerAdmissionKind.ignored) {
       _publishRuntimeState();
     }
@@ -828,6 +845,15 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     final applyResult = _applyEditCommit(document, plan);
     _deliverEditCommitResult(applyResult);
+  }
+
+  @visibleForTesting
+  void deliverDrawStrokeCommitForTesting(
+    DrawStrokeCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    _deliverDrawStrokeCommit(intent, timestampHintMs: timestampHintMs);
   }
 
   Never rejectSelectionDocumentMutation() {
@@ -1209,6 +1235,132 @@ final class RuntimeRoot
 
   void _cleanupMarquee(PointerCleanupReason reason, {bool publish = true}) {
     final outcome = _interactionEngine.finishMarquee(reason);
+    if (publish && outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void _deliverDrawStrokeCommit(
+    DrawStrokeCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    try {
+      final elementId = generateElementId();
+      final applyResult = _prepareDrawStrokeCommit(
+        intent: intent,
+        elementId: elementId,
+        timestampHintMs: timestampHintMs,
+      );
+      _cleanupDrawStroke(
+        PointerCleanupReason.postSuccessCommit,
+        publish: false,
+      );
+      _deliverEditCommitResult(applyResult);
+    } on Object {
+      _cleanupDrawStroke(PointerCleanupReason.editFailure);
+      _publishRuntimeState();
+      rethrow;
+    }
+  }
+
+  CommitDeliveryResult _prepareDrawStrokeCommit({
+    required DrawStrokeCommitIntent intent,
+    required CanvasElementId elementId,
+    required int? timestampHintMs,
+  }) {
+    final element = CanvasStrokeElement(
+      id: elementId,
+      points: intent.points,
+      color: intent.color,
+      thickness: intent.thickness,
+      opacity: intent.opacity,
+    );
+
+    return _editKernel.prepareInteractionCommit(
+      (edit) {
+        edit.addElement(element);
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        DrawStrokeActionIntent(
+          elementId: elementId,
+          tool: intent.tool,
+          color: intent.color,
+          thickness: intent.thickness,
+          opacity: intent.opacity,
+          pointCount: intent.points.length,
+          timestampHintMs: timestampHintMs,
+        ),
+      ]),
+    );
+  }
+
+  void _cleanupDrawStroke(PointerCleanupReason reason, {bool publish = true}) {
+    final outcome = _interactionEngine.finishDrawStroke(reason);
+    if (publish && outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
+  void _deliverDrawLineCommit(
+    DrawLineCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    try {
+      final elementId = generateElementId();
+      final applyResult = _prepareDrawLineCommit(
+        intent: intent,
+        elementId: elementId,
+        timestampHintMs: timestampHintMs,
+      );
+      _cleanupLineEndpoint(
+        PointerCleanupReason.postSuccessCommit,
+        publish: false,
+      );
+      _deliverEditCommitResult(applyResult);
+    } on Object {
+      _cleanupLineEndpoint(PointerCleanupReason.editFailure);
+      _publishRuntimeState();
+      rethrow;
+    }
+  }
+
+  CommitDeliveryResult _prepareDrawLineCommit({
+    required DrawLineCommitIntent intent,
+    required CanvasElementId elementId,
+    required int? timestampHintMs,
+  }) {
+    final element = CanvasLineElement(
+      id: elementId,
+      start: intent.startWorld,
+      end: intent.endWorld,
+      color: intent.color,
+      thickness: intent.thickness,
+      opacity: intent.opacity,
+    );
+
+    return _editKernel.prepareInteractionCommit(
+      (edit) {
+        edit.addElement(element);
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        DrawLineActionIntent(
+          elementId: elementId,
+          color: intent.color,
+          thickness: intent.thickness,
+          opacity: intent.opacity,
+          startWorld: intent.startWorld,
+          endWorld: intent.endWorld,
+          timestampHintMs: timestampHintMs,
+        ),
+      ]),
+    );
+  }
+
+  void _cleanupLineEndpoint(
+    PointerCleanupReason reason, {
+    bool publish = true,
+  }) {
+    final outcome = _interactionEngine.finishLineEndpoint(reason);
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
