@@ -30,6 +30,10 @@ void main() {
   test('cancel and stale terminal cleanup produce no stroke commit', () {
     expect(_verifyRejectedTerminals, returnsNormally);
   });
+
+  test('rejected stroke terminals do not resolve output timestamps', () {
+    expect(_verifyRejectedTerminalsDoNotResolveTimestamps, returnsNormally);
+  });
 }
 
 void _verifyPencilStrokeLifecycle() {
@@ -114,15 +118,25 @@ void _verifyRejectedTerminals() {
   _expectStaleTerminalCleanup();
 }
 
-void _expectCancelCleanup() {
+void _verifyRejectedTerminalsDoNotResolveTimestamps() {
+  final resolvedHints = <int?>[];
+
+  _expectCancelCleanup(resolvedHints: resolvedHints);
+  _expectStaleTerminalCleanup(resolvedHints: resolvedHints);
+  _expectNoActiveTerminalIgnored(resolvedHints);
+
+  expect(resolvedHints, isEmpty);
+}
+
+void _expectCancelCleanup({List<int?>? resolvedHints}) {
   final cancelEngine = _engine(CanvasDrawStyle.defaultStyle)
     ..handlePointerSample(
       _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
-      _context(1),
+      _context(1, resolvedHints: resolvedHints),
     );
   final cancel = cancelEngine.handlePointerSample(
     _sample(1, const Offset(2, 2), CanvasPointerLifecyclePhase.cancel),
-    _context(1),
+    _context(1, resolvedHints: resolvedHints),
   );
   expect(cancel.strokeCommit, isNull);
   expect(cancel.kind, InteractionPointerAdmissionKind.cleanupOnly);
@@ -130,15 +144,15 @@ void _expectCancelCleanup() {
   expect(cancelEngine.preview, isA<CanvasNoPreview>());
 }
 
-void _expectStaleTerminalCleanup() {
+void _expectStaleTerminalCleanup({List<int?>? resolvedHints}) {
   final staleEngine = _engine(CanvasDrawStyle.defaultStyle)
     ..handlePointerSample(
       _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
-      _context(1),
+      _context(1, resolvedHints: resolvedHints),
     );
   final stale = staleEngine.handlePointerSample(
     _sample(1, const Offset(2, 2), CanvasPointerLifecyclePhase.up),
-    _context(2),
+    _context(2, resolvedHints: resolvedHints),
   );
   expect(stale.strokeCommit, isNull);
   expect(
@@ -146,6 +160,18 @@ void _expectStaleTerminalCleanup() {
     InvalidTerminalCleanupKind.staleControllerEpoch,
   );
   expect(staleEngine.activeSession, isNull);
+}
+
+void _expectNoActiveTerminalIgnored(List<int?> resolvedHints) {
+  final engine = _engine(CanvasDrawStyle.defaultStyle);
+
+  final terminal = engine.handlePointerSample(
+    _sample(1, const Offset(2, 2), CanvasPointerLifecyclePhase.up),
+    _context(1, resolvedHints: resolvedHints),
+  );
+
+  expect(terminal.kind, InteractionPointerAdmissionKind.ignored);
+  expect(terminal.strokeCommit, isNull);
 }
 
 InteractionPointerAdmission _handle(
@@ -164,10 +190,17 @@ InteractionEngine _engine(CanvasDrawStyle style) {
   );
 }
 
-InteractionPointerContext _context(int epoch) {
+InteractionPointerContext _context(int epoch, {List<int?>? resolvedHints}) {
   return InteractionPointerContext(
     viewCameraOffset: Offset.zero,
     controllerEpoch: epoch,
+    resolveOutputTimestamp: resolvedHints == null
+        ? null
+        : (timestampHintMs) {
+            resolvedHints.add(timestampHintMs);
+
+            return timestampHintMs ?? 0;
+          },
   );
 }
 

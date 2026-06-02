@@ -35,6 +35,16 @@ final class CanvasSurface extends StatefulWidget {
 // ignore: coupling-between-object-classes
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   @override
+  void didUpdateWidget(covariant CanvasSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.interactive && !widget.interactive) {
+      canvasRuntimeFrameRootForSurface(
+        oldWidget.runtime,
+      )?.handleSurfaceInteractiveDisabled();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder(
       valueListenable: widget.runtime.state,

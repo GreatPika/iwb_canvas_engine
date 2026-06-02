@@ -152,6 +152,10 @@ final class InteractionEngine {
     return _cleanupWithReason(PointerCleanupReason.dispose);
   }
 
+  PointerCleanupOutcome interactiveDisabledCleanup() {
+    return _cleanupWithReason(PointerCleanupReason.interactiveDisabled);
+  }
+
   PointerCleanupOutcome finishSelectedMove(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }

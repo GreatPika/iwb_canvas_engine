@@ -495,6 +495,14 @@ final class RuntimeRoot
     _publishSelectionChange(_selection.clearSelection());
   }
 
+  void handleSurfaceInteractiveDisabled() {
+    ensureRuntimeMutationAllowed();
+    final outcome = _interactionEngine.interactiveDisabledCleanup();
+    if (outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+  }
+
   void selectAll({required bool onlySelectable}) {
     ensureRuntimeMutationAllowed();
     _publishSelectionChange(
