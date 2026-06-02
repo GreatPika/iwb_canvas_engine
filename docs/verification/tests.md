@@ -578,11 +578,15 @@ behavioral tests, and the required guardrail list remains owned by
   pumping a resource-free `CanvasSurface` through the public API until the
   `ValueKey<String>('iwb_canvas_surface.paint_host')` `CustomPaint` host is
   present;
+- appends public interaction compatibility coverage for non-throwing tool,
+  empty context-request stream, marquee replacement selection, selected-move
+  preview and resolved commit, typed action delivery, remove-element command,
+  unknown text-edit no-op, and clear-content command behavior;
 - uses the shared Flutter consumer harness as the package-boundary proof;
 - stays intentionally coarse so focused codec, runtime, selection, and cache
-  tests own detailed diagnostics;
-- must expand only by appending the next real public user step after a future
-  phase exposes one.
+  interaction tests own detailed diagnostics;
+- must expand only by appending the next real public user step after the public
+  API exposes one.
 
 #### `test/spatial/committed_spatial_read_boundary_test.dart`
 - proves `FrameFactsPort` exposes `locationKind` and nullable `layerId` as

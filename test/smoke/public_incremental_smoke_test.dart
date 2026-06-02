@@ -253,6 +253,11 @@ void main() {
       replacementDocument.layers.single.elements.single.id,
       CanvasElementId('replacement-content'),
     );
+
+  });
+
+  test('public consumer uses selection move and command actions', () async {
+    await _exercisePublicSelectionMoveAndCommandSurface();
   });
 }
 
@@ -518,6 +523,252 @@ Map<String, Object?> _replacementGeometryRichSchemaV1Document() {
     ],
     'metadata': {'source': 'replacement public geometry smoke'},
   };
+}
+
+Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
+  CanvasMoveCommitRequest? moveRequest;
+  var resolverCalls = 0;
+  final runtime = CanvasRuntime(
+    initialDocument: _selectionMoveCommandDocument(),
+    config: CanvasRuntimeConfig(
+      clearSelectionOnDrawModeEnter: true,
+      moveCommitResolver: (request) {
+        resolverCalls += 1;
+        moveRequest = request;
+
+        return const CanvasMoveCommit(delta: Offset(7, 8));
+      },
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final actionSubscription = runtime.actions.listen(actions.add);
+  var actionSubscriptionCanceled = false;
+  var disposed = false;
+
+  try {
+    expect(runtime.tools.mode, CanvasInteractionMode.move);
+    expect(runtime.contextActionRequests.isBroadcast, isTrue);
+    runtime.tools.setDrawTool(CanvasDrawTool.marker);
+    runtime.tools.setDrawColor(const Color(0xFF123456));
+    runtime.tools.setPointerPolicy(CanvasPointerPolicy(tapSlop: 4));
+    expect(runtime.tools.drawStyle.tool, CanvasDrawTool.marker);
+    expect(runtime.tools.drawStyle.color, const Color(0xFF123456));
+    expect(runtime.tools.pointerPolicy, CanvasPointerPolicy(tapSlop: 4));
+
+    runtime.selection.setSelection([CanvasElementId('a')]);
+    runtime.tools.setMode(CanvasInteractionMode.draw);
+    expect(runtime.selection.selectedElementIds, isEmpty);
+    expect(runtime.tools.mode, CanvasInteractionMode.draw);
+    runtime.tools.setMode(CanvasInteractionMode.move);
+
+    expect(
+      () => runtime.tools.handleDoubleTap(position: Offset.zero),
+      throwsA(isA<UnsupportedError>()),
+    );
+
+    _dragPointer(
+      runtime.tools,
+      start: const Offset(-20, -20),
+      end: const Offset(45, 12),
+      timestampMs: 17,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(runtime.preview, isA<CanvasNoPreview>());
+    expect(runtime.selection.selectedElementIds, {
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+      CanvasElementId('locked'),
+    });
+    expect(actions, hasLength(1));
+    final marqueeAction = actions.single;
+    expect(marqueeAction.type, CanvasActionType.selectMarquee);
+    expect(marqueeAction.timestampMs, 17);
+    expect(marqueeAction.elementIds, [
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+      CanvasElementId('locked'),
+    ]);
+    final marqueePayload =
+        marqueeAction.payload as CanvasSelectionActionPayload;
+    expect(marqueePayload.previousSelection, isEmpty);
+    expect(marqueePayload.nextSelection, marqueeAction.elementIds);
+    expect(
+      marqueePayload.marqueeRectWorld,
+      const Rect.fromLTRB(-20, -20, 45, 12),
+    );
+
+    runtime.selection.setSelection([
+      CanvasElementId('b'),
+      CanvasElementId('a'),
+      CanvasElementId('locked'),
+    ]);
+    runtime.tools.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.down, Offset.zero),
+    );
+    runtime.tools.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.move, const Offset(3, 4)),
+    );
+    final preview = runtime.preview as CanvasSelectedMovePreview;
+    expect(preview.delta, const Offset(3, 4));
+    runtime.tools.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.up, const Offset(3, 4), timestampMs: 21),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(resolverCalls, 1);
+    final request = moveRequest as CanvasMoveCommitRequest;
+    expect(request.proposedDelta, const Offset(3, 4));
+    expect(request.timestampMs, 21);
+    expect(request.movedElements.map((element) => element.id), [
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+    ]);
+    expect(runtime.preview, isA<CanvasNoPreview>());
+    expect(_rect(runtime, 'a').transform, CanvasTransform.translation(const Offset(7, 8)));
+    expect(_rect(runtime, 'b').transform, CanvasTransform.translation(const Offset(27, 8)));
+    expect(actions, hasLength(2));
+    final moveAction = actions.last;
+    expect(moveAction.type, CanvasActionType.moveSelection);
+    expect(moveAction.timestampMs, 22);
+    expect(moveAction.elementIds, [
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+    ]);
+    final movePayload = moveAction.payload as CanvasTransformActionPayload;
+    expect(movePayload.delta, CanvasTransform.translation(const Offset(7, 8)));
+    expect(movePayload.operation, CanvasTransformOperation.move);
+    expect(movePayload.pivotWorld, isNull);
+
+    expect(
+      runtime.commands.removeElement(CanvasElementId('remove-me'), timestampMs: 30),
+      isTrue,
+    );
+    expect(
+      runtime.commands.commitTextEdit(
+        CanvasInteractionRequestId('unknown'),
+        'ignored',
+        timestampMs: 31,
+      ),
+      isFalse,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(actions, hasLength(3));
+    final deleteAction = actions.last;
+    expect(deleteAction.type, CanvasActionType.deleteElements);
+    expect(deleteAction.elementIds, [CanvasElementId('remove-me')]);
+
+    final clearResult = runtime.commands.clearContent(
+      removeUnusedResources: true,
+      timestampMs: 32,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(clearResult.didClearContent, isTrue);
+    expect(clearResult.removedElementIds, [
+      CanvasElementId('a'),
+      CanvasElementId('b'),
+      CanvasElementId('locked'),
+      CanvasElementId('hidden'),
+    ]);
+    expect(clearResult.removedResourceIds, [CanvasResourceId('unused-resource')]);
+    expect(actions, hasLength(4));
+    final clearAction = actions.last;
+    expect(clearAction.type, CanvasActionType.clearContent);
+    expect(clearAction.elementIds, clearResult.removedElementIds);
+    final clearPayload = clearAction.payload as CanvasClearActionPayload;
+    expect(clearPayload.removedElementIds, clearResult.removedElementIds);
+    expect(clearPayload.removedResourceIds, clearResult.removedResourceIds);
+
+    await actionSubscription.cancel();
+    actionSubscriptionCanceled = true;
+    runtime.dispose();
+    disposed = true;
+  } finally {
+    if (!actionSubscriptionCanceled) {
+      await actionSubscription.cancel();
+    }
+    if (!disposed) {
+      runtime.dispose();
+    }
+  }
+}
+
+void _dragPointer(
+  CanvasToolPort tools, {
+  required Offset start,
+  required Offset end,
+  int? timestampMs,
+}) {
+  tools.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, start));
+  tools.handlePointer(_pointer(CanvasPointerLifecyclePhase.move, end));
+  tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, end, timestampMs: timestampMs),
+  );
+}
+
+CanvasPointerSample _pointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position, {
+  int? timestampMs,
+}) {
+  return CanvasPointerSample(
+    pointerId: 1,
+    position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+    timestampMs: timestampMs,
+  );
+}
+
+CanvasRectElement _rect(CanvasRuntime runtime, String id) {
+  return runtime
+      .readDocument()
+      .layers
+      .single
+      .elements
+      .whereType<CanvasRectElement>()
+      .firstWhere((element) => element.id == CanvasElementId(id));
+}
+
+CanvasDocument _selectionMoveCommandDocument() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('unused-resource'),
+        source: CanvasResourceSource.appKey('unused'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('interaction-layer'),
+        elements: [
+          CanvasRectElement(id: CanvasElementId('a'), size: const Size(10, 10)),
+          CanvasRectElement(
+            id: CanvasElementId('b'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('locked'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(40, 0)),
+            isLocked: true,
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('hidden'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(45, 0)),
+            isVisible: false,
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('remove-me'),
+            size: const Size(4, 4),
+            transform: CanvasTransform.translation(const Offset(80, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
 }
 
 CanvasRuntimeRevisions _runtimeRevisions({
