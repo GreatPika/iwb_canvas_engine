@@ -710,8 +710,8 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/guardrails/interaction_guardrail_enforcement_test.dart` proves
   `interaction.no_stale_terminal_commit`,
   `interaction.pointer_cleanup_coordinator_only`, and interaction import
-  guardrails are runner-backed or structurally checked for the P11 draw and
-  line owner surfaces.
+  guardrails are runner-backed or structurally checked for P11 draw/line and
+  P12 eraser owner surfaces.
 - `test/architecture_graph/generated_graph_views_test.dart` proves generated
   architecture graph Mermaid views are reproducible for the selected P12 phase
   and stay synchronized with `docs/architecture/architecture_graph.yaml`.

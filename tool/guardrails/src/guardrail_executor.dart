@@ -250,6 +250,7 @@ const _testProofPaths = {
     'test/interaction/move_machine_test.dart',
     'test/interaction/draw_stroke_interaction_routing_test.dart',
     'test/interaction/line_interaction_routing_test.dart',
+    'test/interaction/state_machines_test.dart',
   ],
   interactionTextEditStaleCommitGuardrailId: [
     'test/interaction/text_edit_stale_commit_guard_test.dart',
