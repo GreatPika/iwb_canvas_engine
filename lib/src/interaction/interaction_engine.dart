@@ -1,6 +1,5 @@
-// InteractionEngine is the pointer/tool composition owner, so these adjacent
-// machines and contracts stay visible here instead of being hidden behind
-// metric-shaped wrapper files.
+// Keep the engine's adjacent machines visible; wrapper files would hide
+// pointer/tool ownership instead of simplifying it.
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
@@ -19,13 +18,8 @@ import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
 import 'select_machine.dart';
 
-// The engine deliberately keeps pointer admission state, public tool settings,
-// and session value ownership together so later tool behavior cannot split the
-// active-session invariant across multiple owners.
-// Keeping preview cleanup with session cleanup avoids a second mutable owner for
-// the public interaction revision and active pointer lifecycle.
-// The response set is the cost of keeping active pointer state transitions
-// auditable in one owner instead of splitting session mutation across machines.
+// Pointer sessions, tool settings, preview cleanup, and revisions stay together
+// so the active pointer lifecycle has one auditable owner.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class InteractionEngine {
   InteractionEngine({
@@ -71,6 +65,7 @@ final class InteractionEngine {
   int _nextSessionId = 1;
   int _nextToken = 1;
 
+  // Public state and read-port attachment.
   CanvasInteractionMode get mode => _mode;
   CanvasDrawStyle get drawStyle => _drawStyle;
   CanvasPointerPolicy get pointerPolicy => _pointerPolicy;
@@ -100,6 +95,7 @@ final class InteractionEngine {
     _readPort = readPort;
   }
 
+  // Preview and pending line state.
   bool replacePreview(CanvasPreviewState preview) {
     if (canvasPreviewStatesEqual(_preview, preview)) {
       return false;
@@ -133,6 +129,7 @@ final class InteractionEngine {
     return replacePreview(next.preview);
   }
 
+  // Cleanup entrypoints.
   PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
     final outcome = _cleanupCoordinator.cleanup(request);
     _applyCleanupOutcome(outcome);
@@ -172,6 +169,7 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
+  // Tool settings.
   PointerCleanupOutcome setMode(
     CanvasInteractionMode mode, {
     required bool cleanupSelectionMode,
@@ -210,6 +208,7 @@ final class InteractionEngine {
     return _cleanupWithReason(PointerCleanupReason.modeToolChange);
   }
 
+  // Pointer sample routing.
   InteractionPointerAdmission handlePointerSample(
     CanvasPointerSample sample,
     InteractionPointerContext context,
@@ -228,27 +227,49 @@ final class InteractionEngine {
     };
   }
 
+  InteractionPointerAdmission _admitted(NormalizedPointerSample sample) {
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+    );
+  }
+
+  InteractionPointerAdmission _ignored(NormalizedPointerSample sample) {
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.ignored,
+      sample: sample,
+    );
+  }
+
+  CanvasSelectedMovePreview _initialSelectedMovePreview(
+    NormalizedPointerSample sample,
+  ) {
+    return CanvasSelectedMovePreview(
+      delta: sample.worldPosition - sample.worldPosition,
+    );
+  }
+
+  bool _replacePreviewAndBumpInteractionRevision(CanvasPreviewState preview) {
+    final previewChanged = replacePreview(preview);
+    if (previewChanged) {
+      _interactionRevision += 1;
+    }
+
+    return previewChanged;
+  }
+
+  // Pointer down phase.
   InteractionPointerAdmission _handleDown(NormalizedPointerSample sample) {
     if (_activeSession != null) {
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-      );
+      return _ignored(sample);
     }
     final selection = _selectedMoveStartDecision(sample);
     if (selection.admitted) {
       _activeSession = _selectedMoveSession(sample, selection);
-      replacePreview(
-        CanvasSelectedMovePreview(
-          delta: sample.worldPosition - sample.worldPosition,
-        ),
-      );
+      replacePreview(_initialSelectedMovePreview(sample));
       _interactionRevision += 1;
 
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.admitted,
-        sample: sample,
-      );
+      return _admitted(sample);
     }
     if (_mode != CanvasInteractionMode.move) {
       return _handleDrawDown(sample);
@@ -260,10 +281,31 @@ final class InteractionEngine {
     replacePreview(_selectMachine.initialPreview(sample.worldPosition).preview);
     _interactionRevision += 1;
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
+    return _admitted(sample);
+  }
+
+  SelectedMoveStartDecision _selectedMoveStartDecision(
+    NormalizedPointerSample sample,
+  ) {
+    if (_mode != CanvasInteractionMode.move) {
+      return const SelectedMoveStartDecision.rejected();
+    }
+
+    final facts = readPort.selectedMoveStartFacts(
+      SelectedMoveStartReadRequest(worldPosition: sample.worldPosition),
     );
+    _recordQueryDiagnostics(facts.query);
+    final decision = _moveMachine.start(facts);
+    if (!decision.admitted &&
+        facts.selectedIds.isNotEmpty &&
+        facts.movableSelectedIds.isEmpty) {
+      _diagnosticsSink.recordSelectedMoveStartDeniedNotMovable(
+        selectedCount: facts.selectedIds.length,
+        movableCount: facts.movableSelectedIds.length,
+      );
+    }
+
+    return decision;
   }
 
   InteractionPointerAdmission _handleDrawDown(NormalizedPointerSample sample) {
@@ -277,18 +319,12 @@ final class InteractionEngine {
     );
     final stroke = start.stroke;
     if (!start.admitted || stroke == null) {
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-      );
+      return _ignored(sample);
     }
     _activeSession = _drawStrokeSession(sample, stroke);
     replacePreview(stroke.preview);
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
-    );
+    return _admitted(sample);
   }
 
   InteractionPointerAdmission _handleLineDown(NormalizedPointerSample sample) {
@@ -301,10 +337,7 @@ final class InteractionEngine {
       _activeSession = _lineEndpointSession(sample, start.line);
       replacePreview(start.line.preview);
 
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.admitted,
-        sample: sample,
-      );
+      return _admitted(sample);
     }
     final start = _lineMachine.startFirstTap(
       tool: _drawStyle.tool,
@@ -313,126 +346,29 @@ final class InteractionEngine {
     );
     final firstTap = start.firstTap;
     if (!start.admitted || firstTap == null) {
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-      );
+      return _ignored(sample);
     }
     _activeSession = _lineFirstTapSession(sample, firstTap);
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
-    );
+    return _admitted(sample);
   }
 
-  PointerSession _marqueeSession(
-    NormalizedPointerSample sample,
-    MarqueeStartDecision marquee,
-  ) {
-    return PointerSession.marquee(
-      token: PointerSessionToken(_nextToken++),
-      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
-      sessionId: PointerSessionId(_nextSessionId++),
-      pointerId: sample.pointerId,
-      startWorld: sample.worldPosition,
-      currentWorld: sample.worldPosition,
-      previousSelectionIds: marquee.previousSelectionIds,
-      capturedSelectionRevision: marquee.selectionRevision,
-      lastPreview: _selectMachine.initialPreview(sample.worldPosition).preview,
-    );
-  }
-
-  PointerSession _selectedMoveSession(
-    NormalizedPointerSample sample,
-    SelectedMoveStartDecision selection,
-  ) {
-    return PointerSession.selectedMove(
-      token: PointerSessionToken(_nextToken++),
-      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
-      sessionId: PointerSessionId(_nextSessionId++),
-      pointerId: sample.pointerId,
-      startWorld: sample.worldPosition,
-      currentWorld: sample.worldPosition,
-      capturedSelectedIds: selection.selectedIds,
-      capturedMovableIds: selection.movableIds,
-      previousSelectionIds: selection.selectedIds,
-      capturedSelectionRevision: selection.selectionRevision,
-      lastPreview: CanvasSelectedMovePreview(
-        delta: sample.worldPosition - sample.worldPosition,
-      ),
-    );
-  }
-
-  PointerSession _drawStrokeSession(
-    NormalizedPointerSample sample,
-    PointerStrokeCapture stroke,
-  ) {
-    return PointerSession.drawStroke(
-      token: PointerSessionToken(_nextToken++),
-      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
-      sessionId: PointerSessionId(_nextSessionId++),
-      pointerId: sample.pointerId,
-      startWorld: sample.worldPosition,
-      currentWorld: sample.worldPosition,
-      stroke: stroke,
-    );
-  }
-
-  PointerSession _lineFirstTapSession(
-    NormalizedPointerSample sample,
-    PointerLineFirstTapCapture firstTap,
-  ) {
-    return PointerSession.lineFirstTap(
-      token: PointerSessionToken(_nextToken++),
-      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
-      sessionId: PointerSessionId(_nextSessionId++),
-      pointerId: sample.pointerId,
-      startWorld: sample.worldPosition,
-      currentWorld: sample.worldPosition,
-      firstTap: firstTap,
-    );
-  }
-
-  PointerSession _lineEndpointSession(
-    NormalizedPointerSample sample,
-    PointerLineEndpointCapture line,
-  ) {
-    return PointerSession.lineEndpoint(
-      token: PointerSessionToken(_nextToken++),
-      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
-      sessionId: PointerSessionId(_nextSessionId++),
-      pointerId: sample.pointerId,
-      startWorld: line.startWorld,
-      currentWorld: sample.worldPosition,
-      line: line,
-    );
-  }
-
+  // Pointer move phase.
   InteractionPointerAdmission _handleMove(NormalizedPointerSample sample) {
     final session = _activeSession;
     if (session == null ||
         session.pointerId != sample.pointerId ||
         session.controllerEpoch.value != sample.controllerEpoch) {
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-      );
+      return _ignored(sample);
     }
     final updated = session.updateCurrentWorld(sample.worldPosition);
     _activeSession = updated;
     final previewChanged = _handleSessionMove(updated, sample.worldPosition);
     if (!previewChanged) {
-      return InteractionPointerAdmission(
-        kind: InteractionPointerAdmissionKind.ignored,
-        sample: sample,
-      );
+      return _ignored(sample);
     }
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
-    );
+    return _admitted(sample);
   }
 
   bool _handleSessionMove(PointerSession session, Offset currentWorld) {
@@ -458,29 +394,19 @@ final class InteractionEngine {
   }
 
   bool _handleSelectedMovePreview(PointerSession session, Offset currentWorld) {
-    final previewChanged = replacePreview(
+    return _replacePreviewAndBumpInteractionRevision(
       _moveMachine
           .preview(session: session, currentWorld: currentWorld)
           .preview,
     );
-    if (previewChanged) {
-      _interactionRevision += 1;
-    }
-
-    return previewChanged;
   }
 
   bool _handleMarqueePreview(PointerSession session, Offset currentWorld) {
-    final previewChanged = replacePreview(
+    return _replacePreviewAndBumpInteractionRevision(
       _selectMachine
           .preview(session: session, currentWorld: currentWorld)
           .preview,
     );
-    if (previewChanged) {
-      _interactionRevision += 1;
-    }
-
-    return previewChanged;
   }
 
   bool _handleDrawMove(PointerSession session, Offset currentWorld) {
@@ -522,6 +448,7 @@ final class InteractionEngine {
     return replacePreview(updatedLine.preview);
   }
 
+  // Pointer terminal phase.
   InteractionPointerAdmission _handleTerminal(
     NormalizedPointerSample sample,
     InteractionPointerContext context,
@@ -540,10 +467,7 @@ final class InteractionEngine {
     _activeSession = null;
     _interactionRevision += 1;
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
-    );
+    return _admitted(sample);
   }
 
   InteractionPointerAdmission _handleActiveTerminal(
@@ -632,10 +556,7 @@ final class InteractionEngine {
       controllerEpoch: sample.controllerEpoch,
     );
 
-    return InteractionPointerAdmission(
-      kind: InteractionPointerAdmissionKind.admitted,
-      sample: sample,
-    );
+    return _admitted(sample);
   }
 
   InteractionPointerAdmission _handleLineEndpointTerminal(
@@ -798,6 +719,89 @@ final class InteractionEngine {
     return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
   }
 
+  // Session factories.
+  PointerSession _marqueeSession(
+    NormalizedPointerSample sample,
+    MarqueeStartDecision marquee,
+  ) {
+    return PointerSession.marquee(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      previousSelectionIds: marquee.previousSelectionIds,
+      capturedSelectionRevision: marquee.selectionRevision,
+      lastPreview: _selectMachine.initialPreview(sample.worldPosition).preview,
+    );
+  }
+
+  PointerSession _selectedMoveSession(
+    NormalizedPointerSample sample,
+    SelectedMoveStartDecision selection,
+  ) {
+    return PointerSession.selectedMove(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      capturedSelectedIds: selection.selectedIds,
+      capturedMovableIds: selection.movableIds,
+      previousSelectionIds: selection.selectedIds,
+      capturedSelectionRevision: selection.selectionRevision,
+      lastPreview: _initialSelectedMovePreview(sample),
+    );
+  }
+
+  PointerSession _drawStrokeSession(
+    NormalizedPointerSample sample,
+    PointerStrokeCapture stroke,
+  ) {
+    return PointerSession.drawStroke(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      stroke: stroke,
+    );
+  }
+
+  PointerSession _lineFirstTapSession(
+    NormalizedPointerSample sample,
+    PointerLineFirstTapCapture firstTap,
+  ) {
+    return PointerSession.lineFirstTap(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      firstTap: firstTap,
+    );
+  }
+
+  PointerSession _lineEndpointSession(
+    NormalizedPointerSample sample,
+    PointerLineEndpointCapture line,
+  ) {
+    return PointerSession.lineEndpoint(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: line.startWorld,
+      currentWorld: sample.worldPosition,
+      line: line,
+    );
+  }
+
+  // Cleanup internals.
   InteractionPointerAdmission _cleanupTerminal(
     NormalizedPointerSample sample,
     PointerCleanupReason reason,
@@ -808,30 +812,6 @@ final class InteractionEngine {
       kind: InteractionPointerAdmissionKind.cleanupOnly,
       sample: sample,
     );
-  }
-
-  SelectedMoveStartDecision _selectedMoveStartDecision(
-    NormalizedPointerSample sample,
-  ) {
-    if (_mode != CanvasInteractionMode.move) {
-      return const SelectedMoveStartDecision.rejected();
-    }
-
-    final facts = readPort.selectedMoveStartFacts(
-      SelectedMoveStartReadRequest(worldPosition: sample.worldPosition),
-    );
-    _recordQueryDiagnostics(facts.query);
-    final decision = _moveMachine.start(facts);
-    if (!decision.admitted &&
-        facts.selectedIds.isNotEmpty &&
-        facts.movableSelectedIds.isEmpty) {
-      _diagnosticsSink.recordSelectedMoveStartDeniedNotMovable(
-        selectedCount: facts.selectedIds.length,
-        movableCount: facts.movableSelectedIds.length,
-      );
-    }
-
-    return decision;
   }
 
   PointerCleanupOutcome _cleanupWithReason(PointerCleanupReason reason) {
@@ -862,6 +842,7 @@ final class InteractionEngine {
     }
   }
 
+  // Diagnostics.
   void _recordQueryDiagnostics(InteractionReadQueryFacts query) {
     switch (query.status) {
       case InteractionReadQueryStatus.notRun:
