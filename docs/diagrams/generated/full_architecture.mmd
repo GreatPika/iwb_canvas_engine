@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Full architecture graph
-%% Selected phase: P11
+%% Selected phase: P12
 %% Note: Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
@@ -39,10 +39,10 @@ flowchart LR
   runtime_root -->|commits through by P11| edit_kernel
   interaction_engine -->|delegates lifecycle decisions to by P11| draw_tools
   edit_kernel -->|changes data through by P5| store_document_kernel
-  eraser_text_request -->|planned commits through by P12| edit_kernel
-  eraser_text_request -->|planned produces preview intents by P12| interaction_engine
-  eraser_text_request -->|planned context request stream by P12| api_canvas_runtime
-  eraser_text_request -->|planned uses eraser exact-hit geometry through by P12| geometry_spatial_index
+  runtime_root -->|commits through by P12| edit_kernel
+  interaction_engine -->|delegates lifecycle decisions to by P12| eraser_text_request
+  runtime_root -->|context request stream by P12| api_canvas_runtime
+  runtime_root -->|uses eraser exact-hit geometry through by P12| geometry_spatial_index
   flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session
   geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub

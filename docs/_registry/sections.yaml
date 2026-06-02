@@ -696,6 +696,7 @@
     - test.interaction.context_action_request
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_inputs
+    - test.geometry.eraser_exact_budget_no_partial_commit
   do_not_assume:
     - do not port legacy SceneNode traversal
     - do not copy legacy scene order logic
@@ -1123,6 +1124,7 @@
     - test.geometry.hit_policy
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_inputs
+    - test.geometry.eraser_exact_budget_no_partial_commit
     - test.spatial.tile_outlier_membership
     - test.spatial.touched_update
     - test.spatial.no_full_clone_for_touched_update
@@ -1148,6 +1150,7 @@
     - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
     - test.interaction.preview_public_state
+    - test.interaction.state_machines
     - test.interaction.move_machine
     - test.interaction.select_machine
     - test.interaction.move_resolver_reentrancy

@@ -72,7 +72,7 @@ phases:
       - path: docs/contracts/operation_matrix.md
   - id: P12
     title: Eraser and text request
-    status: future
+    status: closed
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/interaction_engine.md
@@ -262,10 +262,11 @@ nodes:
       - path: docs/implementation/p4_runtime_spine.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot composes store, selection, config, facts, and public state.
+      - RuntimeRoot composes store, selection, config, facts, public state, and the runtime-local interaction read adapter.
     actual:
       declarations:
         - RuntimeRoot
+        - RuntimeInteractionReadAdapter
       implementedInterfaces:
         - DocumentFactsPort
         - FrameFactsPort
@@ -466,16 +467,18 @@ nodes:
     owner: interaction
     phaseIntroduced: P12
     phaseRequiredBy: P12
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Eraser and text request flows are future-phase interaction scope.
+      - EraserMachine, ContextActionRouter, and InteractionRequestRegistry own P12 eraser capture, context request routing, and request guard facts under the interaction boundary.
     actual:
       declarations:
-        - EraserTextRequestCoordinator
+        - EraserMachine
+        - ContextActionRouter
+        - InteractionRequestRegistry
   - id: flutter.surface
     label: Flutter surface integration
     kind: surface_owner
@@ -930,62 +933,78 @@ edges:
         - DrawStrokeMachine
         - LineMachine
   - id: eraser_text.request.commit_through_edit_kernel
-    from: eraser_text.request
+    from: runtime.root
     to: edit.kernel
     kind: tool_commit
     phaseRequiredBy: P12
-    status: future
+    status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/operation_matrix.md
     evidence:
-      - Eraser and request-originated text changes commit through EditKernel when they mutate document content.
+      - RuntimeRoot delivers accepted eraser and request-originated text changes through EditKernel.prepareInteractionCommit before public state/action delivery.
     actual:
+      delegationMembers:
+        - RuntimeRoot._prepareEraserCommit
+        - RuntimeRoot.commitTextEdit
       delegationTargets:
         - EditKernel
   - id: eraser_text.request.uses_exact_hit_geometry
-    from: eraser_text.request
+    from: runtime.root
     to: geometry.spatial_index
     kind: eraser_exact_hit_boundary
     phaseRequiredBy: P12
-    status: future
+    status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/geometry.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
-      - Eraser exact-hit checks consume geometry and spatial candidate facts without owning preview publication or general interaction hit-test routing.
+      - RuntimeInteractionReadAdapter resolves eraser and context target facts through SpatialKernel query paths without exposing store tables to interaction machines.
     actual:
+      delegationMembers:
+        - RuntimeInteractionReadAdapter._eraserFacts
+        - RuntimeInteractionReadAdapter._contextTargetFacts
       delegationTargets:
         - SpatialKernel
   - id: eraser_text.request.produce_preview_intents_for_interaction
-    from: eraser_text.request
-    to: interaction.engine
-    kind: preview_intent_boundary
+    from: interaction.engine
+    to: eraser_text.request
+    kind: tool_lifecycle_delegation
     phaseRequiredBy: P12
-    status: future
+    status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - Eraser preview intents, cleanup, and context-action request emission remain InteractionEngine-owned effects.
+      - InteractionEngine delegates P12 eraser lifecycle and context request decisions to EraserMachine, ContextActionRouter, and InteractionRequestRegistry while owning preview/session state and cleanup routing.
     actual:
+      delegationMembers:
+        - InteractionEngine.handleDoubleTap
+        - InteractionEngine._handleEraserDown
+        - InteractionEngine._handleEraserMove
+        - InteractionEngine._handleEraserTerminal
+        - InteractionEngine._issueContextRequest
       delegationTargets:
-        - InteractionEngine
+        - EraserMachine
+        - ContextActionRouter
+        - InteractionRequestRegistry
   - id: eraser_text.request.produces_context_action_requests
-    from: eraser_text.request
+    from: runtime.root
     to: api.canvas_runtime
     kind: context_request_stream
     phaseRequiredBy: P12
-    status: future
+    status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_text_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - P12 owns request-producing context-action behavior behind the P10 non-throwing contextActionRequests stream.
+      - RuntimeRoot emits accepted P12 context-action requests through the public CanvasRuntime.contextActionRequests stream controller.
     actual:
+      delegationMembers:
+        - RuntimeRoot._emitContextRequest
       delegationTargets:
-        - CanvasRuntime.contextActionRequests
+        - StreamController<CanvasContextActionRequested>
   - id: flutter.surface.drives_runtime_ports
     from: flutter.surface
     to: api.canvas_runtime

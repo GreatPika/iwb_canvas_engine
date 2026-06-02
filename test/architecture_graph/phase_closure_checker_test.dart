@@ -265,51 +265,64 @@ void _registerP10SourceRepairInventoryTest() {
     'P10 source repair splits facade placeholders and diagnostics scope',
     () {
       final expected = loadExpectedArchitectureGraph();
-      final placeholders = {
-        for (final placeholder in expected.placeholders)
-          placeholder.id: placeholder,
-      };
-      final edges = {for (final edge in expected.edges) edge.id: edge};
-
-      expect(
-        placeholders,
-        isNot(contains('api.canvas_runtime.tools.future_placeholder')),
-      );
-      expect(
-        placeholders,
-        isNot(
-          contains(
-            'api.canvas_runtime.context_action_requests.future_placeholder',
-          ),
-        ),
-      );
-      expect(
-        edges['api.canvas_runtime.tools.routes_to_runtime_tools']?.evidence
-            .join(' '),
-        contains('P11 owns later draw production behavior behind the port'),
-      );
-      expect(
-        edges['eraser_text.request.produces_context_action_requests']?.evidence
-            .join(' '),
-        contains('P12 owns request-producing context-action behavior'),
-      );
-      expect(
-        edges['geometry.spatial_index.corrupted_rows.report_to_diagnostics']
-            ?.phaseRequiredBy,
-        isNot('P10'),
-      );
-      expect(
-        edges['interaction.engine.reliability_events.report_to_diagnostics']
-            ?.status,
-        'required',
-      );
-      expect(
-        edges['interaction.engine.reliability_events.report_to_diagnostics']
-            ?.actual
-            .delegationTargets,
-        contains('InteractionDiagnosticsSink'),
-      );
+      expect(expected.phaseIds, contains('P12'));
+      _expectP10FacadePlaceholdersRetired(expected.placeholders);
+      _expectP10FacadeRoutesDocumentLaterOwners(expected.edges);
+      _expectP10DiagnosticsScope(expected.edges);
     },
+  );
+}
+
+void _expectP10FacadePlaceholdersRetired(
+  Iterable<ArchitecturePlaceholder> placeholders,
+) {
+  final byId = {for (final placeholder in placeholders) placeholder.id};
+
+  expect(byId, isNot(contains('api.canvas_runtime.tools.future_placeholder')));
+  expect(
+    byId,
+    isNot(
+      contains('api.canvas_runtime.context_action_requests.future_placeholder'),
+    ),
+  );
+}
+
+void _expectP10FacadeRoutesDocumentLaterOwners(
+  Iterable<ArchitectureEdge> edges,
+) {
+  final byId = {for (final edge in edges) edge.id: edge};
+
+  expect(
+    byId['api.canvas_runtime.tools.routes_to_runtime_tools']?.evidence.join(
+      ' ',
+    ),
+    contains('P11 owns later draw production behavior behind the port'),
+  );
+  expect(
+    byId['eraser_text.request.produces_context_action_requests']?.evidence.join(
+      ' ',
+    ),
+    contains('RuntimeRoot emits accepted P12 context-action requests'),
+  );
+}
+
+void _expectP10DiagnosticsScope(Iterable<ArchitectureEdge> edges) {
+  final byId = {for (final edge in edges) edge.id: edge};
+
+  expect(
+    byId['geometry.spatial_index.corrupted_rows.report_to_diagnostics']
+        ?.phaseRequiredBy,
+    isNot('P10'),
+  );
+  expect(
+    byId['interaction.engine.reliability_events.report_to_diagnostics']?.status,
+    'required',
+  );
+  expect(
+    byId['interaction.engine.reliability_events.report_to_diagnostics']
+        ?.actual
+        .delegationTargets,
+    contains('InteractionDiagnosticsSink'),
   );
 }
 

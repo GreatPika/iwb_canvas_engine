@@ -6,7 +6,7 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
-const _selectedArchitectureGraphPhase = 'P11';
+const _selectedArchitectureGraphPhase = 'P12';
 
 void main() {
   group('rendered views', () {
@@ -71,6 +71,10 @@ void _expectCurrentPhaseView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
+    contains('eraser_text_request'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
     isNot(contains(r'\n')),
   );
   expect(
@@ -82,7 +86,11 @@ void _expectCurrentPhaseView(Map<String, String> views) {
 void _expectFutureView(Map<String, String> views) {
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('edit_kernel'),
+    contains('flutter_surface'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    contains('planned drives public runtime ports by P13'),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
@@ -94,11 +102,7 @@ void _expectFutureView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('eraser_text_request'),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('invalidates resource session through by P7')),
+    isNot(contains('eraser_text_request')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],

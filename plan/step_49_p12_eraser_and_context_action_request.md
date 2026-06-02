@@ -210,7 +210,7 @@ P12 must preserve this public compatibility matrix with focused tests and public
 
 ## Execution Units
 
-### [ ] Unit 1: P12 Read Model And Payload Foundation
+### [x] Unit 1: P12 Read Model And Payload Foundation
 
 Owner:
 
@@ -245,7 +245,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Eraser Machine, Session, Preview, And Budget Decisions
+### [x] Unit 2: Eraser Machine, Session, Preview, And Budget Decisions
 
 Owner:
 
@@ -286,7 +286,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Atomic Eraser Commit And Erase Action Delivery
+### [x] Unit 3: Atomic Eraser Commit And Erase Action Delivery
 
 Owner:
 
@@ -322,7 +322,7 @@ Depends On:
 
 Units 1 and 2.
 
-### [ ] Unit 4: Context Action Router And Request Emission
+### [x] Unit 4: Context Action Router And Request Emission
 
 Owner:
 
@@ -364,7 +364,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 5: Request Registry And Guarded Text Edit Commit
+### [x] Unit 5: Request Registry And Guarded Text Edit Commit
 
 Owner:
 
@@ -401,7 +401,7 @@ Depends On:
 
 Units 1 and 4.
 
-### [ ] Unit 6: Lifecycle Cleanup, Stale Terminals, Diagnostics, And Donor-Equivalent Guardrails
+### [x] Unit 6: Lifecycle Cleanup, Stale Terminals, Diagnostics, And Donor-Equivalent Guardrails
 
 Owner:
 
@@ -439,7 +439,7 @@ Depends On:
 
 Units 2, 4, and 5.
 
-### [ ] Unit 7: Public Incremental Smoke Expansion To P12
+### [x] Unit 7: Public Incremental Smoke Expansion To P12
 
 Owner:
 
@@ -480,7 +480,7 @@ Depends On:
 
 Units 1 through 6.
 
-### [ ] Unit 8: Source-Of-Truth, Architecture Graph, And Verification Closure
+### [x] Unit 8: Source-Of-Truth, Architecture Graph, And Verification Closure
 
 Owner:
 

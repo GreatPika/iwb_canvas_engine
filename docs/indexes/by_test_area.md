@@ -259,6 +259,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 
+## test.geometry.eraser_exact_budget_no_partial_commit
+
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+
 ## test.geometry.geometry_spatial_donor_mapping
 
 - Sections: `section_23_tests`
@@ -386,6 +390,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.interaction.select_machine
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.interaction.state_machines
+
+- Sections: `section_23_tests`
 
 ## test.interaction.text_edit_stale_commit_guard
 

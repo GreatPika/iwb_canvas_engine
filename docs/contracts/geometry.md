@@ -32,6 +32,7 @@ Required tests:
 - `test.interaction.context_action_request`
 - `test.geometry.no_legacy_scene_order`
 - `test.geometry.eraser_exact_budget_inputs`
+- `test.geometry.eraser_exact_budget_no_partial_commit`
 Guardrails:
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`

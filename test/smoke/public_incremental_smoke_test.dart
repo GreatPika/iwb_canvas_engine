@@ -833,7 +833,9 @@ Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
 Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(initialDocument: _p12Document());
+  final runtime = CanvasRuntime(
+    initialDocument: _eraserContextRequestDocument(),
+  );
   final actions = <CanvasActionCommitted>[];
   final requests = <CanvasContextActionRequested>[];
   final stateEvents = <CanvasRuntimeState>[];
@@ -1211,7 +1213,7 @@ CanvasDocument _selectionMoveCommandDocument() {
   );
 }
 
-CanvasDocument _p12Document() {
+CanvasDocument _eraserContextRequestDocument() {
   return CanvasDocument(
     backgroundElements: [
       CanvasRectElement(
@@ -1226,7 +1228,7 @@ CanvasDocument _p12Document() {
     ],
     layers: [
       CanvasLayer(
-        id: CanvasLayerId('p12-layer'),
+        id: CanvasLayerId('eraser-context-layer'),
         elements: [
           CanvasRectElement(
             id: CanvasElementId('erase-me'),

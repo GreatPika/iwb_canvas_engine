@@ -9,8 +9,8 @@ subdirectory. Their source of truth is
 `docs/architecture/architecture_graph.yaml`; regenerate or check them with:
 
 ```bash
-dart run tool/architecture_graph/generate_views.dart --phase P11
-dart run tool/architecture_graph/generate_views.dart --phase P11 --check
+dart run tool/architecture_graph/generate_views.dart --phase P12
+dart run tool/architecture_graph/generate_views.dart --phase P12 --check
 ```
 
 Handwritten sequence, state, C4, lifecycle, and data-flow diagrams remain

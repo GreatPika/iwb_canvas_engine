@@ -177,6 +177,7 @@ Required tests:
 - `test.geometry.hit_policy`
 - `test.geometry.no_legacy_scene_order`
 - `test.geometry.eraser_exact_budget_inputs`
+- `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.spatial.tile_outlier_membership`
 - `test.spatial.touched_update`
 - `test.spatial.no_full_clone_for_touched_update`
@@ -202,6 +203,7 @@ Required tests:
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.preview_public_state`
+- `test.interaction.state_machines`
 - `test.interaction.move_machine`
 - `test.interaction.select_machine`
 - `test.interaction.move_resolver_reentrancy`
@@ -301,6 +303,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/interaction/pointer_session_test.dart`
 - `test/interaction/pointer_sample_normalizer_test.dart`
 - `test/interaction/interaction_read_port_test.dart`
+- `test/interaction/context_action_request_test.dart`
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
@@ -330,6 +333,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/geometry/hit_policy_test.dart`
 - `test/geometry/no_legacy_scene_order_test.dart`
 - `test/geometry/eraser_exact_budget_inputs_test.dart`
+- `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
 - `test/spatial/tile_outlier_membership_test.dart`
 - `test/spatial/touched_update_test.dart`
 - `test/spatial/no_full_clone_for_touched_update_test.dart`
@@ -357,6 +361,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/selected_move_main_repaint_test.dart`
 - `test/frame/marquee_overlay_repaint_test.dart`
 - `test/interaction/preview_public_state_test.dart`
+- `test/interaction/state_machines_test.dart`
 - `test/interaction/move_machine_test.dart`
 - `test/interaction/select_machine_test.dart`
 - `test/interaction/move_resolver_reentrancy_test.dart`
@@ -708,8 +713,40 @@ behavioral tests, and the required guardrail list remains owned by
   guardrails are runner-backed or structurally checked for the P11 draw and
   line owner surfaces.
 - `test/architecture_graph/generated_graph_views_test.dart` proves generated
-  architecture graph Mermaid views are reproducible for the selected P11 phase
+  architecture graph Mermaid views are reproducible for the selected P12 phase
   and stay synchronized with `docs/architecture/architecture_graph.yaml`.
+
+#### P12 eraser and context-action request tests
+- `test/interaction/interaction_read_port_test.dart` proves P12 immutable read
+  facts for eraser, context targets, and text guard inputs without exposing
+  store tables or mutation owners to interaction machines.
+- `test/interaction/state_machines_test.dart` proves eraser machine routing,
+  immutable preview publication, terminal commit intent decisions, direct
+  double-tap request production, and two-tap context revalidation behavior.
+- `test/interaction/context_action_request_test.dart` proves direct and
+  pointer-sample context-action request issuance, target classification,
+  request id generation, registry guard facts, finite-position validation, and
+  stream-only public effects.
+- `test/geometry/eraser_exact_budget_no_partial_commit_test.dart` proves
+  terminal eraser budget overflow cleans up without partial document mutation,
+  action delivery, or DiagnosticsHub allocation.
+- `test/runtime/load_interaction_cleanup_test.dart` proves successful document
+  load prepares P12 eraser/context cleanup before install while failed load
+  preserves active interaction state where required.
+- `test/interaction/text_edit_stale_commit_guard_test.dart` proves guarded
+  request-originated text commits, including unknown/retired no-ops,
+  stale/private retirement, unrelated documentRevision acceptance, single-use
+  accepted ids, and no raw text action payload.
+- `test/api/typed_action_payloads_test.dart` proves public erase and editText
+  action payload constructors, defensive copies, and runtime finalization.
+- `test/smoke/public_incremental_smoke_test.dart` appends root-barrel public
+  consumer coverage for eraser preview/commit, content and background-only
+  context requests, issued text commit, retired/unknown text no-ops, and no raw
+  text leakage through observed action payloads.
+- `test/guardrails/interaction_guardrail_enforcement_test.dart` and
+  `test/guardrails/blocking_suite_test.dart` prove
+  `interaction.text_edit_stale_commit_guard` is runner-backed, selected by the
+  blocking suite, and rejects hardcoded or bypassed text guard facts.
 
 #### `test/selection/runtime_owner_separation_test.dart`
 - proves selection-only changes publish state.revisions.selection without
