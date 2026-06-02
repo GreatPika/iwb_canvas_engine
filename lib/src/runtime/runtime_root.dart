@@ -46,6 +46,7 @@ import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
 import '../interaction/draw_stroke_machine.dart';
+import '../interaction/eraser_machine.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
@@ -153,7 +154,7 @@ final class RuntimeRoot
   CanvasCamera _viewCamera;
   final ValueNotifier<CanvasRuntimeState> _state;
   final StreamController<CanvasActionCommitted> _actions =
-      StreamController<CanvasActionCommitted>.broadcast();
+      StreamController<CanvasActionCommitted>.broadcast(sync: true);
   final StreamController<CanvasContextActionRequested> _contextActionRequests =
       StreamController<CanvasContextActionRequested>.broadcast();
 
@@ -843,39 +844,56 @@ final class RuntimeRoot
         resolveOutputTimestamp: _actionFinalizer.reserveTimestamp,
       ),
     );
-    final selectedMoveCommit = admission.selectedMoveCommit;
-    if (selectedMoveCommit != null) {
-      _deliverSelectedMoveCommit(
-        selectedMoveCommit,
-        timestampHintMs: sample.timestampMs,
-      );
-
-      return;
-    }
-    final marqueeCommit = admission.marqueeCommit;
-    if (marqueeCommit != null) {
-      _deliverMarqueeCommit(marqueeCommit, timestampHintMs: sample.timestampMs);
-
-      return;
-    }
-    final strokeCommit = admission.strokeCommit;
-    if (strokeCommit != null) {
-      _deliverDrawStrokeCommit(
-        strokeCommit,
-        timestampHintMs: sample.timestampMs,
-      );
-
-      return;
-    }
-    final lineCommit = admission.lineCommit;
-    if (lineCommit != null) {
-      _deliverDrawLineCommit(lineCommit, timestampHintMs: sample.timestampMs);
-
+    if (_deliverPointerCommitAdmission(
+      admission,
+      timestampHintMs: sample.timestampMs,
+    )) {
       return;
     }
     if (admission.kind != InteractionPointerAdmissionKind.ignored) {
       _publishRuntimeState();
     }
+  }
+
+  bool _deliverPointerCommitAdmission(
+    InteractionPointerAdmission admission, {
+    required int? timestampHintMs,
+  }) {
+    final selectedMoveCommit = admission.selectedMoveCommit;
+    if (selectedMoveCommit != null) {
+      _deliverSelectedMoveCommit(
+        selectedMoveCommit,
+        timestampHintMs: timestampHintMs,
+      );
+
+      return true;
+    }
+    final marqueeCommit = admission.marqueeCommit;
+    if (marqueeCommit != null) {
+      _deliverMarqueeCommit(marqueeCommit, timestampHintMs: timestampHintMs);
+
+      return true;
+    }
+    final strokeCommit = admission.strokeCommit;
+    if (strokeCommit != null) {
+      _deliverDrawStrokeCommit(strokeCommit, timestampHintMs: timestampHintMs);
+
+      return true;
+    }
+    final lineCommit = admission.lineCommit;
+    if (lineCommit != null) {
+      _deliverDrawLineCommit(lineCommit, timestampHintMs: timestampHintMs);
+
+      return true;
+    }
+    final eraserCommit = admission.eraserCommit;
+    if (eraserCommit != null) {
+      _deliverEraserCommit(eraserCommit, timestampHintMs: timestampHintMs);
+
+      return true;
+    }
+
+    return false;
   }
 
   // Unsupported later-phase operations.
@@ -992,6 +1010,19 @@ final class RuntimeRoot
   }) {
     ensureRuntimeMutationAllowed();
     _deliverDrawStrokeCommit(intent, timestampHintMs: timestampHintMs);
+  }
+
+  @visibleForTesting
+  void failEraserCommitPrepareForTesting(
+    EraserCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    _deliverEraserCommit(
+      intent,
+      timestampHintMs: timestampHintMs,
+      prepareCommit: () => throw StateError('forced eraser edit failure'),
+    );
   }
 
   // State publication.
@@ -1425,6 +1456,138 @@ final class RuntimeRoot
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
+  }
+
+  // Eraser commit flow.
+  void _deliverEraserCommit(
+    EraserCommitIntent intent, {
+    required int? timestampHintMs,
+    CommitDeliveryResult Function()? prepareCommit,
+  }) {
+    try {
+      final applyResult =
+          prepareCommit?.call() ??
+          _prepareEraserCommit(
+            intent: intent,
+            timestampHintMs: timestampHintMs,
+          );
+      final cleanup = _cleanupEraser(
+        PointerCleanupReason.postSuccessCommit,
+        publish: false,
+      );
+      _deliverEditCommitResult(
+        _withPointerCleanupEffects(applyResult, cleanup),
+      );
+    } on Object {
+      _cleanupEraser(PointerCleanupReason.editFailure);
+      _publishRuntimeState();
+      rethrow;
+    }
+  }
+
+  CommitDeliveryResult _prepareEraserCommit({
+    required EraserCommitIntent intent,
+    required int? timestampHintMs,
+  }) {
+    return _editKernel.prepareInteractionCommit(
+      (edit) {
+        for (final id in intent.erasedElementIds) {
+          edit.removeElement(id);
+        }
+      },
+      augmentPlan: (plan) => plan.withActionIntents([
+        EraseActionIntent(
+          erasedElementIds: intent.erasedElementIds,
+          eraserThickness: intent.eraserThickness,
+          corridorPointCount: intent.corridorPointCount,
+          timestampHintMs: timestampHintMs,
+        ),
+      ]),
+    );
+  }
+
+  PointerCleanupOutcome _cleanupEraser(
+    PointerCleanupReason reason, {
+    bool publish = true,
+  }) {
+    final outcome = _interactionEngine.finishEraser(reason);
+    if (publish && outcome.publicStateNeeded) {
+      _publishRuntimeState();
+    }
+
+    return outcome;
+  }
+
+  CommitDeliveryResult _withPointerCleanupEffects(
+    CommitDeliveryResult result,
+    PointerCleanupOutcome cleanup,
+  ) {
+    return CommitDeliveryResult(
+      shouldPublishState:
+          result.shouldPublishState || cleanup.publicStateNeeded,
+      replacedDocument: result.replacedDocument,
+      effects: _mergeRepaintEffects([
+        ...result.effects,
+        ..._cleanupDeliveryEffects(cleanup),
+      ]),
+      actionIntents: result.actionIntents,
+    );
+  }
+
+  List<CommitDeliveryEffect> _cleanupDeliveryEffects(
+    PointerCleanupOutcome cleanup,
+  ) {
+    final repaint = _cleanupRepaintEffect(cleanup.repaintTarget);
+
+    return repaint == null ? const [] : [repaint];
+  }
+
+  RepaintDeliveryEffect? _cleanupRepaintEffect(
+    PointerCleanupRepaintTarget target,
+  ) {
+    return switch (target) {
+      PointerCleanupRepaintTarget.none => null,
+      PointerCleanupRepaintTarget.main => const RepaintDeliveryEffect(
+        mainCanvas: true,
+      ),
+      PointerCleanupRepaintTarget.overlay => const RepaintDeliveryEffect(
+        mainCanvas: false,
+        overlayCanvas: true,
+      ),
+      PointerCleanupRepaintTarget.mainAndOverlay => const RepaintDeliveryEffect(
+        mainCanvas: true,
+        overlayCanvas: true,
+      ),
+    };
+  }
+
+  List<CommitDeliveryEffect> _mergeRepaintEffects(
+    Iterable<CommitDeliveryEffect> effects,
+  ) {
+    final merged = <CommitDeliveryEffect>[];
+    var repaintMain = false;
+    var repaintOverlay = false;
+    for (final effect in effects) {
+      if (effect case RepaintDeliveryEffect(
+        :final mainCanvas,
+        :final overlayCanvas,
+      )) {
+        repaintMain = repaintMain || mainCanvas;
+        repaintOverlay = repaintOverlay || overlayCanvas;
+      } else {
+        merged.add(effect);
+      }
+    }
+    if (repaintMain || repaintOverlay) {
+      merged.add(
+        RepaintDeliveryEffect(
+          mainCanvas: repaintMain,
+          overlayCanvas: repaintOverlay,
+        ),
+      );
+    }
+
+    return List.unmodifiable(merged);
   }
 }
 

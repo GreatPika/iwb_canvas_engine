@@ -173,6 +173,10 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
+  PointerCleanupOutcome finishEraser(PointerCleanupReason reason) {
+    return _cleanupWithReason(reason);
+  }
+
   // Tool settings.
   PointerCleanupOutcome setMode(
     CanvasInteractionMode mode, {

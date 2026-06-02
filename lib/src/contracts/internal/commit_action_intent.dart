@@ -15,6 +15,7 @@ enum CommitActionIntentKind {
   clearContent,
   drawStroke,
   drawLine,
+  erase,
 }
 
 sealed class CommitActionIntent {
@@ -177,6 +178,27 @@ final class DrawLineActionIntent extends CommitActionIntent {
   final Offset endWorld;
 }
 
+final class EraseActionIntent extends CommitActionIntent {
+  EraseActionIntent({
+    required Iterable<CanvasElementId> erasedElementIds,
+    required double eraserThickness,
+    required int corridorPointCount,
+    super.timestampHintMs,
+  }) : erasedElementIds = List.unmodifiable(erasedElementIds),
+       eraserThickness = _validateEraserThickness(eraserThickness),
+       corridorPointCount = _validateCorridorPointCount(corridorPointCount);
+
+  @override
+  CommitActionIntentKind get kind => CommitActionIntentKind.erase;
+
+  @override
+  List<CanvasElementId> get elementIds => erasedElementIds;
+
+  final List<CanvasElementId> erasedElementIds;
+  final double eraserThickness;
+  final int corridorPointCount;
+}
+
 int? _validateTimestampHint(int? timestampHintMs) {
   if (timestampHintMs != null) {
     validateNonNegativeInt(timestampHintMs, path: 'action.timestampMs');
@@ -194,4 +216,16 @@ CanvasDrawTool _validateStrokeTool(CanvasDrawTool tool) {
       'must be pencil or marker',
     ),
   };
+}
+
+double _validateEraserThickness(double value) {
+  validatePositiveDouble(value, path: 'action.eraserThickness');
+
+  return value;
+}
+
+int _validateCorridorPointCount(int value) {
+  validateNonNegativeInt(value, path: 'action.corridorPointCount');
+
+  return value;
 }

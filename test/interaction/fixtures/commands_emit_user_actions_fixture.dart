@@ -4,40 +4,111 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
-  test('accepted intents emit actions only after public state', () async {
-    final result = await _recordAcceptedIntentDelivery();
+  test(
+    'accepted intents emit actions only after public state',
+    () => expectLater(
+      _acceptedIntentsEmitActionsOnlyAfterPublicState(),
+      completes,
+    ),
+  );
+  test(
+    'no-op internal command intents emit no actions',
+    () => expectLater(_noOpInternalCommandIntentsEmitNoActions(), completes),
+  );
+  test(
+    'eraser pointer commit emits erase action after state',
+    () => expectLater(
+      _eraserPointerCommitEmitsEraseActionAfterState(),
+      completes,
+    ),
+  );
+  test(
+    'empty eraser cleanup emits no action or timestamp',
+    () => expectLater(_emptyEraserCleanupEmitsNoActionOrTimestamp(), completes),
+  );
+  test(
+    'eraser edit failure rolls back without action or timestamp',
+    () => expectLater(
+      _eraserEditFailureRollsBackWithoutActionOrTimestamp(),
+      completes,
+    ),
+  );
+}
 
-    expect(result.actions, hasLength(6));
-    expect(result.events.first, 'state:1');
-    expect(result.events.skip(1), [
-      'action:selectMarquee:0',
-      'action:moveSelection:3',
-      'action:transformSelection:4',
-      'action:deleteElements:5',
-      'action:deleteElements:6',
-      'action:clearContent:7',
-    ]);
-    expect(result.actions.map((action) => action.actionId.value), [
-      'action-0',
-      'action-1',
-      'action-2',
-      'action-3',
-      'action-4',
-      'action-5',
-    ]);
-  });
+Future<void> _acceptedIntentsEmitActionsOnlyAfterPublicState() async {
+  final result = await _recordAcceptedIntentDelivery();
 
-  test('no-op internal command intents emit no actions', () async {
-    final result = await _recordNoOpIntentDelivery();
+  expect(result.actions, hasLength(7));
+  expect(result.events.first, 'state:1');
+  expect(result.events.skip(1), [
+    'action:selectMarquee:0',
+    'action:moveSelection:3',
+    'action:transformSelection:4',
+    'action:deleteElements:5',
+    'action:deleteElements:6',
+    'action:clearContent:7',
+    'action:erase:8',
+  ]);
+  expect(result.actions.map((action) => action.actionId.value), [
+    'action-0',
+    'action-1',
+    'action-2',
+    'action-3',
+    'action-4',
+    'action-5',
+    'action-6',
+  ]);
+}
 
-    expect(result.noOpEvents, isEmpty);
-    expect(result.noOpActions, isEmpty);
-    expect(result.acceptedAction.timestampMs, 0);
-  });
+Future<void> _noOpInternalCommandIntentsEmitNoActions() async {
+  final result = await _recordNoOpIntentDelivery();
+
+  expect(result.noOpEvents, isEmpty);
+  expect(result.noOpActions, isEmpty);
+  expect(result.acceptedAction.timestampMs, 0);
+}
+
+Future<void> _eraserPointerCommitEmitsEraseActionAfterState() async {
+  final result = await _recordEraserPointerDelivery();
+
+  expect(result.actions, hasLength(1));
+  expect(result.events.last, 'action:erase:9');
+  expect(
+    result.events.where((event) => event.startsWith('state:')),
+    isNotEmpty,
+  );
+  expect(result.lastStateBeforeAction, 'state:2:0');
+  expect(result.guardedMutationRejections, 3);
+  _expectEraseDeliveryEffects(result.effectBatch);
+  _expectEraseAction(result.actions.single);
+  expect(result.remainingIds, [CanvasElementId('a'), CanvasElementId('c')]);
+}
+
+Future<void> _emptyEraserCleanupEmitsNoActionOrTimestamp() async {
+  final result = await _recordEmptyEraserThenAcceptedAction();
+
+  expect(result.emptyActions, isEmpty);
+  expect(result.acceptedAction.timestampMs, 0);
+}
+
+Future<void> _eraserEditFailureRollsBackWithoutActionOrTimestamp() async {
+  final result = await _recordFailedEraserThenAcceptedAction();
+
+  expect(result.failure, isA<StateError>());
+  expect(result.actionsAfterFailure, isEmpty);
+  expect(result.idsAfterFailure, [
+    CanvasElementId('a'),
+    CanvasElementId('b'),
+    CanvasElementId('c'),
+  ]);
+  expect(result.acceptedAction.timestampMs, 0);
 }
 
 Future<({List<String> events, List<CanvasActionCommitted> actions})>
@@ -100,6 +171,206 @@ _recordNoOpIntentDelivery() async {
   }
 }
 
+Future<_EraserPointerDeliveryResult> _recordEraserPointerDelivery() {
+  return _EraserPointerDeliveryScenario().run();
+}
+
+typedef _EraserPointerDeliveryResult = ({
+  List<String> events,
+  List<CanvasActionCommitted> actions,
+  String lastStateBeforeAction,
+  List<CanvasElementId> remainingIds,
+  List<CommitDeliveryEffect> effectBatch,
+  int guardedMutationRejections,
+});
+
+final class _EraserPointerDeliveryScenario {
+  _EraserPointerDeliveryScenario() {
+    root = _eraserRoot(_observeEffects);
+    _recordSummaryStateEvents(root, events, onState: _guardStateMutation);
+  }
+
+  late final RuntimeRoot root;
+  final List<String> events = [];
+  final List<CanvasActionCommitted> actions = [];
+  final List<List<CommitDeliveryEffect>> effectBatches = [];
+  bool guardDuringDelivery = false;
+  int guardedMutationRejections = 0;
+
+  Future<_EraserPointerDeliveryResult> run() async {
+    final subscription = root.actions.listen(_recordAction);
+    try {
+      root.selection.setSelection([CanvasElementId('b')]);
+      events.clear();
+      guardDuringDelivery = true;
+      _performEraserStroke(root);
+      guardDuringDelivery = false;
+      await _flushActions();
+
+      return _result();
+    } finally {
+      await subscription.cancel();
+      root.dispose();
+    }
+  }
+
+  void _recordAction(CanvasActionCommitted action) {
+    actions.add(action);
+    events.add('action:${action.type.name}:${action.timestampMs}');
+    guardedMutationRejections += _expectDeliveryGuardedMutation(root);
+  }
+
+  void _observeEffects(List<CommitDeliveryEffect> effects) {
+    effectBatches.add(effects);
+    guardedMutationRejections += _expectDeliveryGuardedMutation(root);
+  }
+
+  void _guardStateMutation() {
+    if (guardDuringDelivery) {
+      guardedMutationRejections += _expectDeliveryGuardedMutation(root);
+    }
+  }
+
+  _EraserPointerDeliveryResult _result() {
+    return (
+      events: events,
+      actions: actions,
+      lastStateBeforeAction: events.lastWhere(
+        (event) => event.startsWith('state:'),
+      ),
+      remainingIds: _contentIds(root.readDocument()),
+      effectBatch: effectBatches.single,
+      guardedMutationRejections: guardedMutationRejections,
+    );
+  }
+}
+
+Future<
+  ({
+    List<CanvasActionCommitted> emptyActions,
+    CanvasActionCommitted acceptedAction,
+  })
+>
+_recordEmptyEraserThenAcceptedAction() async {
+  final root = _eraserRoot();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+
+  try {
+    _performEmptyEraserStroke(root);
+    await _flushActions();
+    final emptyActions = List<CanvasActionCommitted>.of(actions);
+
+    root.selection.setSelection([CanvasElementId('b')]);
+    root.deleteSelection();
+    await _flushActions();
+
+    return (emptyActions: emptyActions, acceptedAction: actions.single);
+  } finally {
+    await subscription.cancel();
+    root.dispose();
+  }
+}
+
+Future<
+  ({
+    Object failure,
+    List<CanvasActionCommitted> actionsAfterFailure,
+    List<CanvasElementId> idsAfterFailure,
+    CanvasActionCommitted acceptedAction,
+  })
+>
+_recordFailedEraserThenAcceptedAction() async {
+  final root = _eraserRoot();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+
+  try {
+    root.selection.setSelection([CanvasElementId('b')]);
+    _performEraserPreview(root);
+    final failure = _captureFailure(() {
+      root.failEraserCommitPrepareForTesting(
+        _eraserCommitIntent(),
+        timestampHintMs: 99,
+      );
+    });
+    await _flushActions();
+    final actionsAfterFailure = List<CanvasActionCommitted>.of(actions);
+    final idsAfterFailure = _contentIds(root.readDocument());
+
+    root.selection.deleteSelection();
+    await _flushActions();
+
+    return (
+      failure: failure,
+      actionsAfterFailure: actionsAfterFailure,
+      idsAfterFailure: idsAfterFailure,
+      acceptedAction: actions.single,
+    );
+  } finally {
+    await subscription.cancel();
+    root.dispose();
+  }
+}
+
+RuntimeRoot _eraserRoot([
+  void Function(List<CommitDeliveryEffect> effects)? observeEffects,
+]) {
+  return RuntimeRoot(
+    initialDocument: _document(),
+    config: CanvasRuntimeConfig(
+      initialMode: CanvasInteractionMode.draw,
+      initialDrawStyle: CanvasDrawStyle(
+        tool: CanvasDrawTool.eraser,
+        eraserThickness: 8,
+      ),
+    ),
+    commitEffectObserver: observeEffects,
+  );
+}
+
+void _recordSummaryStateEvents(
+  RuntimeRoot root,
+  List<String> events, {
+  void Function()? onState,
+}) {
+  root.state.addListener(() {
+    final state = root.state.value;
+    events.add(
+      'state:${state.summary.elementCount}:${state.summary.selectedCount}',
+    );
+    onState?.call();
+  });
+}
+
+void _performEraserStroke(RuntimeRoot root) {
+  _performEraserPreview(root);
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 0), 9),
+  );
+}
+
+void _performEraserPreview(RuntimeRoot root) {
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(20, 0)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(21, 0)),
+  );
+}
+
+void _performEmptyEraserStroke(RuntimeRoot root) {
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(200, 200), 99),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(201, 200), 100),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(202, 200), 101),
+  );
+}
+
 RuntimeRoot _runtimeRoot({required List<String> events}) {
   final root = RuntimeRoot(
     initialDocument: _document(),
@@ -146,6 +417,10 @@ void _deliverAcceptedMarquee(RuntimeRoot root) {
 }
 
 List<CommitActionIntent> _allActionIntents() {
+  return [..._legacyActionIntents(), _eraseIntent()];
+}
+
+List<CommitActionIntent> _legacyActionIntents() {
   return [
     SelectMarqueeActionIntent(
       previousSelection: [CanvasElementId('a')],
@@ -180,6 +455,15 @@ List<CommitActionIntent> _allActionIntents() {
   ];
 }
 
+CommitActionIntent _eraseIntent() {
+  return EraseActionIntent(
+    erasedElementIds: [CanvasElementId('b')],
+    eraserThickness: 8,
+    corridorPointCount: 3,
+    timestampHintMs: 6,
+  );
+}
+
 Future<void> _dispose(
   RuntimeRoot root,
   StreamSubscription<CanvasActionCommitted> subscription,
@@ -189,6 +473,70 @@ Future<void> _dispose(
 }
 
 Future<void> _flushActions() => Future<void>.delayed(Duration.zero);
+
+CanvasPointerSample _pointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position, [
+  int? timestampMs,
+]) {
+  return CanvasPointerSample(
+    pointerId: 1,
+    position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+    timestampMs: timestampMs,
+  );
+}
+
+void _expectEraseAction(CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.erase);
+  expect(action.elementIds, [CanvasElementId('b')]);
+  final payload = action.payload as CanvasEraseActionPayload;
+  expect(payload.erasedElementIds, [CanvasElementId('b')]);
+  expect(payload.eraserThickness, 8);
+  expect(payload.corridorPointCount, 3);
+}
+
+void _expectEraseDeliveryEffects(List<CommitDeliveryEffect> effects) {
+  expect(effects.whereType<ProjectionDeliveryEffect>(), hasLength(1));
+  expect(effects.whereType<SpatialDeliveryEffect>(), hasLength(1));
+  final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isTrue);
+}
+
+int _expectDeliveryGuardedMutation(RuntimeRoot root) {
+  expect(root.selection.clearSelection, throwsStateError);
+
+  return 1;
+}
+
+Object _captureFailure(void Function() action) {
+  try {
+    action();
+  } on Object catch (error) {
+    return error;
+  }
+
+  fail('expected action to throw');
+}
+
+EraserCommitIntent _eraserCommitIntent() {
+  return EraserCommitIntent(
+    sessionId: const PointerSessionId(1),
+    pointerToken: const PointerSessionToken(1),
+    eraserThickness: 8,
+    corridorPointCount: 3,
+    erasedElementIds: [CanvasElementId('b')],
+  );
+}
+
+List<CanvasElementId> _contentIds(CanvasDocument document) {
+  return [
+    for (final layer in document.layers)
+      for (final element in layer.elements) element.id,
+  ];
+}
 
 CanvasDocument _document() {
   return CanvasDocument(
@@ -203,7 +551,11 @@ CanvasDocument _document() {
         id: CanvasLayerId('layer-1'),
         elements: [
           CanvasRectElement(id: CanvasElementId('a'), size: const Size(1, 1)),
-          CanvasRectElement(id: CanvasElementId('b'), size: const Size(1, 1)),
+          CanvasRectElement(
+            id: CanvasElementId('b'),
+            size: const Size(1, 1),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
           CanvasImageElement(
             id: CanvasElementId('c'),
             resourceId: CanvasResourceId('r1'),

@@ -53,13 +53,14 @@ Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   );
   await Future<void>.delayed(Duration.zero);
 
-  expect(actions, hasLength(9));
+  expect(actions, hasLength(10));
   expect(
     actions.map((action) => action.timestampMs),
-    List.generate(9, (index) => index),
+    List.generate(10, (index) => index),
   );
   _expectLegacyActionPayloads(actions);
   _expectDrawActionPayloads(actions);
+  _expectErase(actions[9]);
 }
 
 void _expectLegacyActionPayloads(List<CanvasActionCommitted> actions) {
@@ -247,7 +248,7 @@ Future<void> _expectSinglePublicAction(
 }
 
 List<CommitActionIntent> _actionIntents() {
-  return [..._legacyActionIntents(), ..._drawActionIntents()];
+  return [..._legacyActionIntents(), ..._drawActionIntents(), _eraseIntent()];
 }
 
 List<CommitActionIntent> _legacyActionIntents() {
@@ -305,6 +306,14 @@ List<CommitActionIntent> _drawActionIntents() {
       endWorld: const Offset(3, 4),
     ),
   ];
+}
+
+CommitActionIntent _eraseIntent() {
+  return EraseActionIntent(
+    erasedElementIds: [CanvasElementId('b'), CanvasElementId('c')],
+    eraserThickness: 8,
+    corridorPointCount: 3,
+  );
 }
 
 void _expectMarquee(
@@ -396,6 +405,15 @@ void _expectLine(CanvasActionCommitted action) {
   expect(payload.opacity, 1);
   expect(payload.startWorld, const Offset(1, 2));
   expect(payload.endWorld, const Offset(3, 4));
+}
+
+void _expectErase(CanvasActionCommitted action) {
+  expect(action.type, CanvasActionType.erase);
+  expect(action.elementIds, [CanvasElementId('b'), CanvasElementId('c')]);
+  final payload = action.payload as CanvasEraseActionPayload;
+  expect(payload.erasedElementIds, action.elementIds);
+  expect(payload.eraserThickness, 8);
+  expect(payload.corridorPointCount, 3);
 }
 
 CanvasDocument _document() {
