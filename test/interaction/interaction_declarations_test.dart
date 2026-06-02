@@ -14,16 +14,26 @@ void main() {
     expect(_verifySelectedMoveCommitRequestCopies, returnsNormally);
   });
 
-  test('unit 3 pointer admission has no premature line commit field', () {
+  test('pointer admission carries concrete draw commit fields', () {
     expect(_verifyPointerAdmissionFields, returnsNormally);
   });
 
   test('draw stroke commit intent has no generated element id', () {
     expect(_verifyDrawStrokeCommitIntentFields, returnsNormally);
   });
+
+  test('draw line commit intent has no generated element id', () {
+    expect(_verifyDrawLineCommitIntentFields, returnsNormally);
+  });
 }
 
 void _verifyRequiredDeclarations() {
+  _verifyCoreDeclarations();
+  _verifyMachineDeclarations();
+  _verifyPayloadOwnershipDeclarations();
+}
+
+void _verifyCoreDeclarations() {
   expect(
     _source('lib/src/interaction/interaction_engine.dart'),
     contains('final class InteractionEngine'),
@@ -34,6 +44,9 @@ void _verifyRequiredDeclarations() {
   );
   _verifyPointerSessionDeclarations();
   _verifyPointerNormalizerDeclarations();
+}
+
+void _verifyMachineDeclarations() {
   expect(
     _source('lib/src/interaction/move_machine.dart'),
     allOf(
@@ -57,8 +70,23 @@ void _verifyRequiredDeclarations() {
     ),
   );
   expect(
+    _source('lib/src/interaction/line_machine.dart'),
+    allOf(
+      contains('final class LineMachine'),
+      contains('final class PointerLineFirstTapCapture'),
+      contains('final class PointerLineEndpointCapture'),
+      contains('final class DrawLineCommitIntent'),
+    ),
+  );
+}
+
+void _verifyPayloadOwnershipDeclarations() {
+  expect(
     _source('lib/src/interaction/pointer_session.dart'),
-    isNot(contains('final class PointerStrokeCapture')),
+    allOf(
+      isNot(contains('final class PointerStrokeCapture')),
+      isNot(contains('final class PointerLineEndpointCapture')),
+    ),
   );
 }
 
@@ -111,8 +139,8 @@ void _verifyPointerAdmissionFields() {
     'selectedMoveCommit',
     'marqueeCommit',
     'strokeCommit',
+    'lineCommit',
   });
-  expect(fields.any((name) => name.contains('line')), isFalse);
   expect(fields.any((name) => name.contains('draw')), isFalse);
 }
 
@@ -125,6 +153,22 @@ void _verifyDrawStrokeCommitIntentFields() {
     'pointerToken',
     'tool',
     'points',
+    'color',
+    'thickness',
+    'opacity',
+  });
+  expect(fields.any((name) => name.toLowerCase().contains('element')), isFalse);
+}
+
+void _verifyDrawLineCommitIntentFields() {
+  final unit = _parse(_source('lib/src/interaction/line_machine.dart'));
+  final fields = _fieldNames(unit, 'DrawLineCommitIntent');
+
+  expect(fields, {
+    'sessionId',
+    'pointerToken',
+    'startWorld',
+    'endWorld',
     'color',
     'thickness',
     'opacity',

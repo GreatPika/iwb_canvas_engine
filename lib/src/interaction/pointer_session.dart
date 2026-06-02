@@ -3,8 +3,15 @@ import 'dart:ui';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'draw_stroke_machine.dart';
+import 'line_machine.dart';
 
-enum PointerSessionKind { moveModePointer, moveModeMarquee, drawModePointer }
+enum PointerSessionKind {
+  moveModePointer,
+  moveModeMarquee,
+  drawModePointer,
+  drawLineFirstTap,
+  drawLineEndpoint,
+}
 
 final class PointerSessionToken {
   const PointerSessionToken(this.value);
@@ -40,6 +47,9 @@ final class PointerSessionSelectionCapture {
   final int revision;
 }
 
+// One active pointer can carry move, marquee, stroke, or line payloads. Keeping
+// those variants in this value keeps token/session identity updates atomic.
+// ignore: coupling-between-object-classes, number-of-methods
 final class PointerSession {
   PointerSession._({
     required this.kind,
@@ -131,6 +141,52 @@ final class PointerSession {
     );
   }
 
+  factory PointerSession.lineFirstTap({
+    required PointerSessionToken token,
+    required PointerControllerEpoch controllerEpoch,
+    required PointerSessionId sessionId,
+    required int pointerId,
+    required Offset startWorld,
+    required Offset currentWorld,
+    required PointerLineFirstTapCapture firstTap,
+  }) {
+    return PointerSession._(
+      kind: PointerSessionKind.drawLineFirstTap,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _LineFirstTapPointerPayload(
+        startWorld: startWorld,
+        currentWorld: currentWorld,
+        firstTap: firstTap,
+      ),
+    );
+  }
+
+  factory PointerSession.lineEndpoint({
+    required PointerSessionToken token,
+    required PointerControllerEpoch controllerEpoch,
+    required PointerSessionId sessionId,
+    required int pointerId,
+    required Offset startWorld,
+    required Offset currentWorld,
+    required PointerLineEndpointCapture line,
+  }) {
+    return PointerSession._(
+      kind: PointerSessionKind.drawLineEndpoint,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _LineEndpointPointerPayload(
+        startWorld: startWorld,
+        currentWorld: currentWorld,
+        line: line,
+      ),
+    );
+  }
+
   final PointerSessionKind kind;
   final PointerSessionToken token;
   final PointerControllerEpoch controllerEpoch;
@@ -143,6 +199,10 @@ final class PointerSession {
   PointerSessionSelectionCapture get selectionCapture =>
       _payload.selectionCapture;
   PointerStrokeCapture? get strokeCapture => _payload.strokeCapture;
+  PointerLineFirstTapCapture? get lineFirstTapCapture =>
+      _payload.lineFirstTapCapture;
+  PointerLineEndpointCapture? get lineEndpointCapture =>
+      _payload.lineEndpointCapture;
 
   PointerSession updateCurrentWorld(Offset value) {
     return PointerSession._(
@@ -171,6 +231,23 @@ final class PointerSession {
       ),
     );
   }
+
+  PointerSession updateLineEndpoint({
+    required Offset currentWorld,
+    required PointerLineEndpointCapture line,
+  }) {
+    return PointerSession._(
+      kind: kind,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      payload: _payload.updateLineEndpoint(
+        currentWorld: currentWorld,
+        line: line,
+      ),
+    );
+  }
 }
 
 sealed class _PointerSessionPayload {
@@ -192,11 +269,20 @@ sealed class _PointerSessionPayload {
         revision: 0,
       );
   PointerStrokeCapture? get strokeCapture => null;
+  PointerLineFirstTapCapture? get lineFirstTapCapture => null;
+  PointerLineEndpointCapture? get lineEndpointCapture => null;
 
   _PointerSessionPayload updateCurrentWorld(Offset value);
   _PointerSessionPayload updateStroke({
     required Offset currentWorld,
     required PointerStrokeCapture stroke,
+  }) {
+    return updateCurrentWorld(currentWorld);
+  }
+
+  _PointerSessionPayload updateLineEndpoint({
+    required Offset currentWorld,
+    required PointerLineEndpointCapture line,
   }) {
     return updateCurrentWorld(currentWorld);
   }
@@ -306,6 +392,62 @@ final class _DrawStrokePointerPayload extends _PointerSessionPayload {
       startWorld: startWorld,
       currentWorld: currentWorld,
       stroke: stroke,
+    );
+  }
+}
+
+final class _LineFirstTapPointerPayload extends _PointerSessionPayload {
+  _LineFirstTapPointerPayload({
+    required super.startWorld,
+    required super.currentWorld,
+    required this.firstTap,
+  }) : super(lastPreview: const CanvasNoPreview());
+
+  final PointerLineFirstTapCapture firstTap;
+
+  @override
+  PointerLineFirstTapCapture get lineFirstTapCapture => firstTap;
+
+  @override
+  _PointerSessionPayload updateCurrentWorld(Offset value) {
+    return _LineFirstTapPointerPayload(
+      startWorld: startWorld,
+      currentWorld: value,
+      firstTap: firstTap,
+    );
+  }
+}
+
+final class _LineEndpointPointerPayload extends _PointerSessionPayload {
+  _LineEndpointPointerPayload({
+    required super.startWorld,
+    required super.currentWorld,
+    required this.line,
+  }) : super(lastPreview: line.preview);
+
+  final PointerLineEndpointCapture line;
+
+  @override
+  PointerLineEndpointCapture get lineEndpointCapture => line;
+
+  @override
+  _PointerSessionPayload updateCurrentWorld(Offset value) {
+    return _LineEndpointPointerPayload(
+      startWorld: startWorld,
+      currentWorld: value,
+      line: line,
+    );
+  }
+
+  @override
+  _PointerSessionPayload updateLineEndpoint({
+    required Offset currentWorld,
+    required PointerLineEndpointCapture line,
+  }) {
+    return _LineEndpointPointerPayload(
+      startWorld: startWorld,
+      currentWorld: currentWorld,
+      line: line,
     );
   }
 }

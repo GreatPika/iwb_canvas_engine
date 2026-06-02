@@ -14,6 +14,11 @@ typedef _DrawPreviewScenario = ({
   List<CanvasRuntimeState> snapshots,
   List<CanvasActionCommitted> actions,
 });
+typedef _LinePreviewStep = ({
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+  void Function(CanvasPreviewState preview) expectPreview,
+});
 
 void main() {
   test('preview-only changes publish only preview revision', () {
@@ -26,6 +31,10 @@ void main() {
 
   test('draw stroke previews publish only preview revision', () {
     expect(_verifyDrawStrokePreviewOnlyPublication, returnsNormally);
+  });
+
+  test('draw line previews publish only preview revision', () {
+    expect(_verifyDrawLinePreviewOnlyPublication, returnsNormally);
   });
 }
 
@@ -119,6 +128,32 @@ void _verifyDrawStrokePreviewOnlyPublication() {
   ));
 }
 
+void _verifyDrawLinePreviewOnlyPublication() {
+  final scenario = _linePreviewScenario();
+
+  scenario.root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+  );
+  expect(scenario.snapshots, isEmpty);
+  scenario.root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.up, Offset.zero),
+  );
+  expect(scenario.snapshots, hasLength(1));
+  _expectPendingLineStartPreview(scenario.root.preview);
+  expect(scenario.actions, isEmpty);
+
+  _expectLinePreviewPublication(scenario, (
+    phase: CanvasPointerLifecyclePhase.down,
+    position: const Offset(2, 3),
+    expectPreview: _expectInitialLinePreview,
+  ));
+  _expectLinePreviewPublication(scenario, (
+    phase: CanvasPointerLifecyclePhase.move,
+    position: const Offset(4, 5),
+    expectPreview: _expectMovedLinePreview,
+  ));
+}
+
 _DrawPreviewScenario _drawPreviewScenario() {
   final root = _drawRuntimeRoot();
   final actions = <CanvasActionCommitted>[];
@@ -152,6 +187,33 @@ RuntimeRoot _drawRuntimeRoot() {
   return root;
 }
 
+_DrawPreviewScenario _linePreviewScenario() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.line,
+      color: const Color(0xFF00AAFF),
+      lineThickness: 4,
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final actionSubscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await actionSubscription.cancel();
+    root.dispose();
+  });
+  final snapshots = <CanvasRuntimeState>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  return (root: root, snapshots: snapshots, actions: actions);
+}
+
 void _expectDrawPreviewPublication(
   _DrawPreviewScenario scenario,
   _DrawPreviewStep step,
@@ -165,6 +227,45 @@ void _expectDrawPreviewPublication(
   _expectPencilPreview(scenario.root.preview, points: step.expectedPoints);
   _expectOnlyPreviewRevisionChanged(before, scenario.snapshots.single);
   expect(scenario.actions, isEmpty);
+}
+
+void _expectLinePreviewPublication(
+  _DrawPreviewScenario scenario,
+  _LinePreviewStep step,
+) {
+  scenario.snapshots.clear();
+  final before = scenario.root.state.value;
+
+  scenario.root.handlePointer(_sample(step.phase, step.position));
+
+  expect(scenario.snapshots, hasLength(1));
+  step.expectPreview(scenario.root.preview);
+  _expectOnlyPreviewRevisionChanged(before, scenario.snapshots.single);
+  expect(scenario.actions, isEmpty);
+}
+
+void _expectPendingLineStartPreview(CanvasPreviewState preview) {
+  final pending = preview as CanvasPendingLineStartPreview;
+  expect(pending.start, Offset.zero);
+  expect(pending.timestampMs, 0);
+  expect(pending.color, const Color(0xFF00AAFF));
+  expect(pending.thickness, 4);
+}
+
+void _expectInitialLinePreview(CanvasPreviewState preview) {
+  _expectLinePreview(preview, end: const Offset(2, 3));
+}
+
+void _expectMovedLinePreview(CanvasPreviewState preview) {
+  _expectLinePreview(preview, end: const Offset(4, 5));
+}
+
+void _expectLinePreview(CanvasPreviewState preview, {required Offset end}) {
+  final line = preview as CanvasLinePreview;
+  expect(line.start, Offset.zero);
+  expect(line.end, end);
+  expect(line.color, const Color(0xFF00AAFF));
+  expect(line.thickness, 4);
 }
 
 void _expectOnlyPreviewRevisionChanged(

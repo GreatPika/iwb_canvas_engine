@@ -12,6 +12,7 @@ import 'draw_stroke_machine.dart';
 import 'interaction_diagnostics_sink.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
+import 'line_machine.dart';
 import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
@@ -35,6 +36,7 @@ final class InteractionEngine {
     MoveMachine moveMachine = const MoveMachine(),
     SelectMachine selectMachine = const SelectMachine(),
     DrawStrokeMachine drawStrokeMachine = const DrawStrokeMachine(),
+    LineMachine lineMachine = const LineMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
     InteractionDiagnosticsSink diagnosticsSink =
@@ -46,6 +48,7 @@ final class InteractionEngine {
        _moveMachine = moveMachine,
        _selectMachine = selectMachine,
        _drawStrokeMachine = drawStrokeMachine,
+       _lineMachine = lineMachine,
        _cleanupCoordinator = cleanupCoordinator,
        _diagnosticsSink = diagnosticsSink;
 
@@ -53,6 +56,7 @@ final class InteractionEngine {
   final MoveMachine _moveMachine;
   final SelectMachine _selectMachine;
   final DrawStrokeMachine _drawStrokeMachine;
+  final LineMachine _lineMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
   final InteractionDiagnosticsSink _diagnosticsSink;
   CanvasInteractionMode _mode;
@@ -77,7 +81,8 @@ final class InteractionEngine {
   bool get hasPendingLine => _pendingLine != null;
   CanvasPendingLineStartPreview? get pendingLinePreview =>
       _pendingLine?.preview;
-  bool get activeSessionOwnsPendingLine => false;
+  bool get activeSessionOwnsPendingLine =>
+      _activeSession?.kind == PointerSessionKind.drawLineEndpoint;
   InteractionReadPort get readPort {
     final port = _readPort;
     if (port == null) {
@@ -206,8 +211,8 @@ final class InteractionEngine {
     return switch (sample.phase) {
       CanvasPointerLifecyclePhase.down => _handleDown(normalized),
       CanvasPointerLifecyclePhase.move => _handleMove(normalized),
-      CanvasPointerLifecyclePhase.up ||
-      CanvasPointerLifecyclePhase.cancel => _handleTerminal(normalized),
+      CanvasPointerLifecyclePhase.up || CanvasPointerLifecyclePhase.cancel =>
+        _handleTerminal(normalized, context),
     };
   }
 
@@ -250,6 +255,9 @@ final class InteractionEngine {
   }
 
   InteractionPointerAdmission _handleDrawDown(NormalizedPointerSample sample) {
+    if (_drawStyle.tool == CanvasDrawTool.line) {
+      return _handleLineDown(sample);
+    }
     final start = _drawStrokeMachine.start(
       tool: _drawStyle.tool,
       startWorld: sample.worldPosition,
@@ -264,6 +272,41 @@ final class InteractionEngine {
     }
     _activeSession = _drawStrokeSession(sample, stroke);
     replacePreview(stroke.preview);
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+    );
+  }
+
+  InteractionPointerAdmission _handleLineDown(NormalizedPointerSample sample) {
+    final pendingLine = _pendingLine;
+    if (pendingLine != null) {
+      final start = _lineMachine.startEndpoint(
+        pendingLine: pendingLine.capture,
+        endWorld: sample.worldPosition,
+      );
+      _activeSession = _lineEndpointSession(sample, start.line);
+      replacePreview(start.line.preview);
+
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.admitted,
+        sample: sample,
+      );
+    }
+    final start = _lineMachine.startFirstTap(
+      tool: _drawStyle.tool,
+      startWorld: sample.worldPosition,
+      style: _drawStyle,
+    );
+    final firstTap = start.firstTap;
+    if (!start.admitted || firstTap == null) {
+      return InteractionPointerAdmission(
+        kind: InteractionPointerAdmissionKind.ignored,
+        sample: sample,
+      );
+    }
+    _activeSession = _lineFirstTapSession(sample, firstTap);
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
@@ -324,6 +367,36 @@ final class InteractionEngine {
     );
   }
 
+  PointerSession _lineFirstTapSession(
+    NormalizedPointerSample sample,
+    PointerLineFirstTapCapture firstTap,
+  ) {
+    return PointerSession.lineFirstTap(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: sample.worldPosition,
+      currentWorld: sample.worldPosition,
+      firstTap: firstTap,
+    );
+  }
+
+  PointerSession _lineEndpointSession(
+    NormalizedPointerSample sample,
+    PointerLineEndpointCapture line,
+  ) {
+    return PointerSession.lineEndpoint(
+      token: PointerSessionToken(_nextToken++),
+      controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
+      sessionId: PointerSessionId(_nextSessionId++),
+      pointerId: sample.pointerId,
+      startWorld: line.startWorld,
+      currentWorld: sample.worldPosition,
+      line: line,
+    );
+  }
+
   InteractionPointerAdmission _handleMove(NormalizedPointerSample sample) {
     final session = _activeSession;
     if (session == null ||
@@ -361,6 +434,11 @@ final class InteractionEngine {
         currentWorld,
       ),
       PointerSessionKind.drawModePointer => _handleDrawMove(
+        session,
+        currentWorld,
+      ),
+      PointerSessionKind.drawLineFirstTap => false,
+      PointerSessionKind.drawLineEndpoint => _handleLineEndpointMove(
         session,
         currentWorld,
       ),
@@ -414,7 +492,28 @@ final class InteractionEngine {
     return replacePreview(updatedStroke.preview);
   }
 
-  InteractionPointerAdmission _handleTerminal(NormalizedPointerSample sample) {
+  bool _handleLineEndpointMove(PointerSession session, Offset currentWorld) {
+    final line = session.lineEndpointCapture;
+    if (line == null) {
+      return false;
+    }
+    final decision = _lineMachine.preview(line: line, endWorld: currentWorld);
+    final updatedLine = decision.line;
+    if (!decision.changed || updatedLine == null) {
+      return false;
+    }
+    _activeSession = session.updateLineEndpoint(
+      currentWorld: currentWorld,
+      line: updatedLine,
+    );
+
+    return replacePreview(updatedLine.preview);
+  }
+
+  InteractionPointerAdmission _handleTerminal(
+    NormalizedPointerSample sample,
+    InteractionPointerContext context,
+  ) {
     final session = _activeSession;
     final decision = _terminalCleanupDecision(session, sample);
     if (decision.kind != InvalidTerminalCleanupKind.none) {
@@ -423,14 +522,8 @@ final class InteractionEngine {
     if (sample.phase == CanvasPointerLifecyclePhase.cancel) {
       return _cleanupTerminal(sample, _cancelReasonFor(session));
     }
-    if (session?.kind == PointerSessionKind.moveModePointer) {
-      return _handleSelectedMoveTerminal(sample, session as PointerSession);
-    }
-    if (session?.kind == PointerSessionKind.moveModeMarquee) {
-      return _handleMarqueeTerminal(sample, session as PointerSession);
-    }
-    if (session?.kind == PointerSessionKind.drawModePointer) {
-      return _handleDrawTerminal(sample, session as PointerSession);
+    if (session != null) {
+      return _handleActiveTerminal(sample, session, context);
     }
     _activeSession = null;
     _interactionRevision += 1;
@@ -439,6 +532,36 @@ final class InteractionEngine {
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
     );
+  }
+
+  InteractionPointerAdmission _handleActiveTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
+    return switch (session.kind) {
+      PointerSessionKind.moveModePointer => _handleSelectedMoveTerminal(
+        sample,
+        session,
+      ),
+      PointerSessionKind.moveModeMarquee => _handleMarqueeTerminal(
+        sample,
+        session,
+      ),
+      PointerSessionKind.drawModePointer => _handleDrawTerminal(
+        sample,
+        session,
+      ),
+      PointerSessionKind.drawLineFirstTap => _handleLineFirstTapTerminal(
+        sample,
+        session,
+        context,
+      ),
+      PointerSessionKind.drawLineEndpoint => _handleLineEndpointTerminal(
+        sample,
+        session,
+      ),
+    };
   }
 
   InteractionPointerAdmission _handleDrawTerminal(
@@ -463,10 +586,74 @@ final class InteractionEngine {
     );
   }
 
+  InteractionPointerAdmission _handleLineFirstTapTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
+    final firstTap = session.lineFirstTapCapture;
+    if (firstTap == null) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+    final decision = _lineMachine.firstTapTerminal(
+      firstTap: firstTap,
+      terminalWorld: sample.worldPosition,
+      tapSlop: _pointerPolicy.tapSlop,
+    );
+    final startWorld = decision.startWorld;
+    final color = decision.color;
+    final thickness = decision.thickness;
+    if (!decision.accepted ||
+        startWorld == null ||
+        color == null ||
+        thickness == null) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+    _activeSession = null;
+    storePendingLineStart(
+      preview: CanvasPendingLineStartPreview(
+        start: startWorld,
+        timestampMs: context.resolveOutputTimestamp(sample.timestampMs),
+        color: color,
+        thickness: thickness,
+      ),
+      controllerEpoch: sample.controllerEpoch,
+    );
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+    );
+  }
+
+  InteractionPointerAdmission _handleLineEndpointTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+  ) {
+    final line = session.lineEndpointCapture;
+    if (line == null) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+    final terminal = _lineMachine.terminal(
+      sessionId: session.sessionId,
+      pointerToken: session.token,
+      line: line,
+      terminalWorld: sample.worldPosition,
+    );
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      lineCommit: terminal.intent,
+    );
+  }
+
   PointerCleanupReason _cancelReasonFor(PointerSession? session) {
     return switch (session?.kind) {
       PointerSessionKind.moveModeMarquee => PointerCleanupReason.marquee,
-      PointerSessionKind.drawModePointer => PointerCleanupReason.cancel,
+      PointerSessionKind.drawModePointer ||
+      PointerSessionKind.drawLineFirstTap ||
+      PointerSessionKind.drawLineEndpoint => PointerCleanupReason.cancel,
       PointerSessionKind.moveModePointer ||
       null => PointerCleanupReason.selectedMove,
     };
@@ -489,18 +676,52 @@ final class InteractionEngine {
     InvalidTerminalCleanupDecision decision,
   ) {
     _recordInvalidTerminalCleanup(decision);
-    if (decision.shouldCleanupActiveSession) {
+    final shouldCleanup =
+        decision.shouldCleanupActiveSession ||
+        _shouldCleanupLineInvalidTerminal(decision);
+    if (shouldCleanup) {
       _recordStaleTerminalRejected(decision);
-      _cleanupWithReason(PointerCleanupReason.staleTerminal);
+      _cleanupWithReason(_invalidTerminalCleanupReason(decision));
     }
 
     return InteractionPointerAdmission(
-      kind: decision.shouldCleanupActiveSession
+      kind: shouldCleanup
           ? InteractionPointerAdmissionKind.cleanupOnly
           : InteractionPointerAdmissionKind.ignored,
       sample: sample,
       cleanupDecision: decision,
     );
+  }
+
+  bool _shouldCleanupLineInvalidTerminal(
+    InvalidTerminalCleanupDecision decision,
+  ) {
+    if (decision.kind != InvalidTerminalCleanupKind.stalePointer) {
+      return false;
+    }
+
+    return switch (_activeSession?.kind) {
+      PointerSessionKind.drawLineFirstTap ||
+      PointerSessionKind.drawLineEndpoint => true,
+      PointerSessionKind.moveModePointer ||
+      PointerSessionKind.moveModeMarquee ||
+      PointerSessionKind.drawModePointer ||
+      null => false,
+    };
+  }
+
+  PointerCleanupReason _invalidTerminalCleanupReason(
+    InvalidTerminalCleanupDecision decision,
+  ) {
+    return switch (decision.kind) {
+      InvalidTerminalCleanupKind.noActiveSession =>
+        PointerCleanupReason.noOpTerminal,
+      InvalidTerminalCleanupKind.stalePointer =>
+        PointerCleanupReason.invalidTerminal,
+      InvalidTerminalCleanupKind.staleControllerEpoch =>
+        PointerCleanupReason.staleTerminal,
+      InvalidTerminalCleanupKind.none => PointerCleanupReason.invalidTerminal,
+    };
   }
 
   InteractionPointerAdmission _handleSelectedMoveTerminal(
@@ -843,6 +1064,13 @@ final class _PendingLineState {
 
   CanvasPendingLineStartPreview get preview => CanvasPendingLineStartPreview(
     start: startWorld,
+    timestampMs: timestampMs,
+    color: color,
+    thickness: thickness,
+  );
+
+  LinePendingStartCapture get capture => LinePendingStartCapture(
+    startWorld: startWorld,
     timestampMs: timestampMs,
     color: color,
     thickness: thickness,
