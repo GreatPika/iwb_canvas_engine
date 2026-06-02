@@ -13,6 +13,7 @@ enum PointerCleanupReason {
   cancel,
   editFailure,
   postSuccessCommit,
+  contextTap,
 }
 
 enum PointerCleanupPreviewKind {

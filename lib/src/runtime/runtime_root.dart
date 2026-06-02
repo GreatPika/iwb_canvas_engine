@@ -45,6 +45,7 @@ import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../geometry/spatial_kernel.dart';
+import '../interaction/context_action_router.dart';
 import '../interaction/draw_stroke_machine.dart';
 import '../interaction/eraser_machine.dart';
 import '../interaction/interaction_engine.dart';
@@ -850,7 +851,7 @@ final class RuntimeRoot
     )) {
       return;
     }
-    if (admission.kind != InteractionPointerAdmissionKind.ignored) {
+    if (admission.publishRuntimeState) {
       _publishRuntimeState();
     }
   }
@@ -892,16 +893,33 @@ final class RuntimeRoot
 
       return true;
     }
+    final contextRequest = admission.contextRequest;
+    if (contextRequest != null) {
+      if (admission.publishRuntimeState) {
+        _publishRuntimeState();
+      }
+      _emitContextRequest(contextRequest);
+
+      return true;
+    }
 
     return false;
   }
 
-  // Unsupported later-phase operations.
-  // Double-tap context requests are not implemented by the current runtime.
-  // ignore: avoid-unused-parameters
-  Never handleDoubleTap({required Offset position, int? timestampMs}) {
+  void handleDoubleTap({required Offset position, int? timestampMs}) {
     ensureRuntimeMutationAllowed();
-    throw UnsupportedError('P12 context action double tap is not implemented.');
+    final intent = _interactionEngine.handleDoubleTap(
+      position,
+      InteractionPointerContext(
+        viewCameraOffset: viewCameraOffset,
+        controllerEpoch: _epochRevision,
+        resolveOutputTimestamp: _actionFinalizer.reserveTimestamp,
+      ),
+      timestampHintMs: timestampMs,
+    );
+    if (intent != null) {
+      _emitContextRequest(intent);
+    }
   }
 
   Never rejectSelectionDocumentMutation() {
@@ -1182,6 +1200,10 @@ final class RuntimeRoot
     for (final action in _actionFinalizer.finalize(intents)) {
       _actions.add(action);
     }
+  }
+
+  void _emitContextRequest(ContextActionRequestIntent intent) {
+    _contextActionRequests.add(intent.request);
   }
 
   // Selected move commit flow.

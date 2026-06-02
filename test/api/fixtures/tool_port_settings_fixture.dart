@@ -2,6 +2,7 @@
 // assertions live in those helpers and DCM does not follow tear-offs.
 // ignore_for_file: missing-test-assertion
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -135,28 +136,52 @@ void _expectPencilPreview(CanvasPreviewState preview) {
 
 Future<void> _modeFlagFalseAndDoubleTapCompatibilityStayBounded() async {
   final runtime = CanvasRuntime(initialDocument: _document());
-  final requestStream = runtime.contextActionRequests;
-  final firstSubscription = requestStream.listen(
-    expectAsync1((_) {}, count: 0),
-  );
-  final secondSubscription = requestStream.listen(
-    expectAsync1((_) {}, count: 0),
-  );
+  final requests = <CanvasContextActionRequested>[];
+  final subscriptions = _listenToContextRequests(runtime, requests);
   runtime.selection.setSelection([CanvasElementId('rect-a')]);
 
   runtime.tools.setMode(CanvasInteractionMode.draw);
   expect(runtime.selection.selectedElementIds, {CanvasElementId('rect-a')});
-  _expectDoubleTapUnsupported(runtime);
+  runtime.tools.handleDoubleTap(position: const Offset(1, 1));
+  await Future<void>.delayed(Duration.zero);
+  expect(requests, hasLength(1));
 
-  await firstSubscription.cancel();
+  await _expectContextRequestStreamCloses(runtime, subscriptions);
+}
+
+({
+  StreamSubscription<CanvasContextActionRequested> first,
+  StreamSubscription<CanvasContextActionRequested> second,
+})
+_listenToContextRequests(
+  CanvasRuntime runtime,
+  List<CanvasContextActionRequested> requests,
+) {
+  final requestStream = runtime.contextActionRequests;
+
+  return (
+    first: requestStream.listen(requests.add),
+    second: requestStream.listen(expectAsync1((_) {}, count: 1)),
+  );
+}
+
+Future<void> _expectContextRequestStreamCloses(
+  CanvasRuntime runtime,
+  ({
+    StreamSubscription<CanvasContextActionRequested> first,
+    StreamSubscription<CanvasContextActionRequested> second,
+  })
+  subscriptions,
+) async {
+  await subscriptions.first.cancel();
   var closed = false;
-  secondSubscription.onDone(() {
+  subscriptions.second.onDone(() {
     closed = true;
   });
   runtime.dispose();
   await Future<void>.delayed(Duration.zero);
   expect(closed, isTrue);
-  await secondSubscription.cancel();
+  await subscriptions.second.cancel();
 }
 
 void _sendDrawModePreviewPointer(CanvasRuntime runtime) {
@@ -166,27 +191,6 @@ void _sendDrawModePreviewPointer(CanvasRuntime runtime) {
   runtime.tools.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
   );
-}
-
-void _expectDoubleTapUnsupported(CanvasRuntime runtime) {
-  for (final call in [
-    () => runtime.tools.handleDoubleTap(position: const Offset(1, 1)),
-    () => runtime.tools.handleDoubleTap(
-      position: const Offset(double.nan, 1),
-      timestampMs: -1,
-    ),
-  ]) {
-    expect(
-      call,
-      throwsA(
-        isA<UnsupportedError>().having(
-          (error) => error.message,
-          'message',
-          contains('P12 context action'),
-        ),
-      ),
-    );
-  }
 }
 
 CanvasDocument _document() {

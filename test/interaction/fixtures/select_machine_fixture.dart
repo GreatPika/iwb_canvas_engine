@@ -28,12 +28,12 @@ void _testMarqueeAdmissionAndPreview() {
     expect(session, isNotNull);
     final preview = root.preview as CanvasMarqueePreview;
     expect(preview.rect, const Rect.fromLTRB(-5, -5, 15, 10));
-    expect(root.state.value.revisions.preview, 2);
+    expect(root.state.value.revisions.preview, 1);
   });
 }
 
 void _testSameRectMoveKeepsPreviewRevision() {
-  test('marquee same-rect move is a preview no-op', () {
+  test('marquee same-rect move stays private before drag threshold', () {
     final root = _runtimeRoot();
     addTearDown(root.dispose);
 
@@ -48,8 +48,7 @@ void _testSameRectMoveKeepsPreviewRevision() {
 
     expect(root.interactionEngine.previewRevision, previewRevision);
     expect(root.state.value, same(beforeSameRectState));
-    final preview = root.preview as CanvasMarqueePreview;
-    expect(preview.rect, const Rect.fromLTRB(-5, -5, -5, -5));
+    expect(root.preview, isA<CanvasNoPreview>());
   });
 }
 

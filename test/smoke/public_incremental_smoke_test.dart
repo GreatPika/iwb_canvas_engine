@@ -545,8 +545,13 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
     ),
   );
   final actions = <CanvasActionCommitted>[];
+  final contextRequests = <CanvasContextActionRequested>[];
   final actionSubscription = runtime.actions.listen(actions.add);
+  final requestSubscription = runtime.contextActionRequests.listen(
+    contextRequests.add,
+  );
   var actionSubscriptionCanceled = false;
+  var requestSubscriptionCanceled = false;
   var disposed = false;
 
   try {
@@ -565,10 +570,15 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
     expect(runtime.tools.mode, CanvasInteractionMode.draw);
     runtime.tools.setMode(CanvasInteractionMode.move);
 
+    runtime.tools.handleDoubleTap(position: Offset.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(contextRequests, hasLength(1));
+    expect(contextRequests.single.trigger, CanvasContextActionTrigger.doubleTap);
     expect(
-      () => runtime.tools.handleDoubleTap(position: Offset.zero),
-      throwsA(isA<UnsupportedError>()),
+      contextRequests.single.target,
+      isA<CanvasContentElementContextActionTarget>(),
     );
+    expect(actions, isEmpty);
 
     _dragPointer(
       runtime.tools,
@@ -690,6 +700,9 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
   } finally {
     if (!actionSubscriptionCanceled) {
       await actionSubscription.cancel();
+    }
+    if (!requestSubscriptionCanceled) {
+      await requestSubscription.cancel();
     }
     if (!disposed) {
       runtime.dispose();

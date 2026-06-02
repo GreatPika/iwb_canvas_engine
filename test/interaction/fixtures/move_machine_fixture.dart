@@ -5,6 +5,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_tool_cleanup_coordinator.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+const _selectedMoveDragEnd = Offset(9, 0);
+
 void main() {
   _testSelectedMoveAdmissionAndPreview();
   _testSameDeltaMoveKeepsPreviewRevision();
@@ -37,19 +39,19 @@ void _testSelectedMoveAdmissionAndPreview() {
         _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
       );
       root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.move, const Offset(3, 4)),
+        _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
       );
 
       expect(root.interactionEngine.activeSession, isNotNull);
       final preview = root.preview as CanvasSelectedMovePreview;
-      expect(preview.delta, const Offset(3, 4));
-      expect(root.state.value.revisions.preview, 2);
+      expect(preview.delta, _selectedMoveDragEnd);
+      expect(root.state.value.revisions.preview, 1);
     },
   );
 }
 
 void _testSameDeltaMoveKeepsPreviewRevision() {
-  test('selected move same-delta preview is a preview no-op', () {
+  test('selected move same-delta stays private before drag threshold', () {
     final root = _runtimeRoot();
     addTearDown(root.dispose);
     root.selection.setSelection([CanvasElementId('a')]);
@@ -59,8 +61,7 @@ void _testSameDeltaMoveKeepsPreviewRevision() {
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.move, Offset.zero));
 
     expect(root.interactionEngine.previewRevision, previewRevision);
-    final preview = root.preview as CanvasSelectedMovePreview;
-    expect(preview.delta, Offset.zero);
+    expect(root.preview, isA<CanvasNoPreview>());
   });
 }
 
@@ -93,7 +94,10 @@ void _testSelectedMoveStaleSelectionDoesNotResolve() {
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
     root.selection.clearSelection();
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+      _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );
     await Future<void>.delayed(Duration.zero);
 
@@ -110,7 +114,14 @@ void _testSelectedMoveInvalidTerminalDoesNotResolve() {
 
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0), pointerId: 2),
+      _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
+    );
+    root.handlePointer(
+      _sample(
+        CanvasPointerLifecyclePhase.up,
+        _selectedMoveDragEnd,
+        pointerId: 2,
+      ),
     );
     await Future<void>.delayed(Duration.zero);
 
@@ -137,7 +148,10 @@ void _testSelectedMoveEmptyMovableSetDoesNotResolve() {
       ),
     );
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+      _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
     );
     await Future<void>.delayed(Duration.zero);
 
@@ -155,7 +169,7 @@ void _testSelectedMoveCommitWithResolver() {
       final actions = scenario.actions;
       root.selection.setSelection([CanvasElementId('b'), CanvasElementId('a')]);
 
-      _dragSelectedMove(root, start: Offset.zero, end: const Offset(3, 4));
+      _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
       await Future<void>.delayed(Duration.zero);
 
       expect(scenario.resolverCalls(), 1);
@@ -195,7 +209,7 @@ _CommitScenario _commitScenario() {
 
 void _expectResolverRequest(CanvasMoveCommitRequest? request) {
   final value = request as CanvasMoveCommitRequest;
-  expect(value.proposedDelta, const Offset(3, 4));
+  expect(value.proposedDelta, _selectedMoveDragEnd);
   expect(value.movedElements.map((element) => element.id), [
     CanvasElementId('a'),
     CanvasElementId('b'),
@@ -235,7 +249,7 @@ void _testSelectedMoveResolverCancelDoesNotCommit() {
     final root = scenario.root;
     root.selection.setSelection([CanvasElementId('a')]);
 
-    _dragSelectedMove(root, start: Offset.zero, end: const Offset(2, 0));
+    _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
     await Future<void>.delayed(Duration.zero);
 
     expect(scenario.resolverCalls(), 1);
@@ -254,7 +268,7 @@ void _testSelectedMoveResolverErrorCleansPreview() {
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
       ),
       throwsStateError,
     );
@@ -274,7 +288,7 @@ void _testSelectedMoveNonFiniteResolverDeltaCleansPreview() {
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
       ),
       throwsArgumentError,
     );
@@ -389,7 +403,7 @@ void _testSelectedMoveEditFailureCleansPreview() {
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
       ),
       throwsA(isA<CanvasDataException>()),
     );
@@ -450,12 +464,12 @@ void _testSelectedMoveResolverReentrancy() {
 
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.move, const Offset(2, 0)),
+      _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
     );
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
       ),
       throwsStateError,
     );
@@ -480,7 +494,7 @@ void _testSelectedMoveResolverDisposeReentrancy() {
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
       ),
       throwsStateError,
     );
@@ -503,7 +517,7 @@ void _dragSelectedMove(
 void _startSelectedMove(RuntimeRoot root) {
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
   root.handlePointer(
-    _sample(CanvasPointerLifecyclePhase.move, const Offset(2, 0)),
+    _sample(CanvasPointerLifecyclePhase.move, _selectedMoveDragEnd),
   );
 }
 

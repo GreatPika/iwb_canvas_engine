@@ -4,14 +4,17 @@
 
 import 'dart:ui';
 
+import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
+import 'context_action_router.dart';
 import 'draw_stroke_machine.dart';
 import 'eraser_machine.dart';
 import 'interaction_diagnostics_sink.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
+import 'interaction_request_registry.dart';
 import 'line_machine.dart';
 import 'move_machine.dart';
 import 'pointer_sample_normalizer.dart';
@@ -32,6 +35,7 @@ final class InteractionEngine {
     SelectMachine selectMachine = const SelectMachine(),
     DrawStrokeMachine drawStrokeMachine = const DrawStrokeMachine(),
     EraserMachine eraserMachine = const EraserMachine(),
+    ContextActionRouter contextActionRouter = const ContextActionRouter(),
     LineMachine lineMachine = const LineMachine(),
     PointerToolCleanupCoordinator cleanupCoordinator =
         const PointerToolCleanupCoordinator(),
@@ -45,6 +49,7 @@ final class InteractionEngine {
        _selectMachine = selectMachine,
        _drawStrokeMachine = drawStrokeMachine,
        _eraserMachine = eraserMachine,
+       _contextActionRouter = contextActionRouter,
        _lineMachine = lineMachine,
        _cleanupCoordinator = cleanupCoordinator,
        _diagnosticsSink = diagnosticsSink;
@@ -54,6 +59,7 @@ final class InteractionEngine {
   final SelectMachine _selectMachine;
   final DrawStrokeMachine _drawStrokeMachine;
   final EraserMachine _eraserMachine;
+  final ContextActionRouter _contextActionRouter;
   final LineMachine _lineMachine;
   final PointerToolCleanupCoordinator _cleanupCoordinator;
   final InteractionDiagnosticsSink _diagnosticsSink;
@@ -63,6 +69,9 @@ final class InteractionEngine {
   InteractionReadPort? _readPort;
   PointerSession? _activeSession;
   _PendingLineState? _pendingLine;
+  PendingContextTap? _pendingContextTap;
+  final InteractionRequestRegistry _requestRegistry =
+      InteractionRequestRegistry();
   CanvasPreviewState _preview = const CanvasNoPreview();
   int _interactionRevision = 0;
   int _previewRevision = 0;
@@ -78,6 +87,7 @@ final class InteractionEngine {
   CanvasPreviewState get preview => _preview;
   PointerSession? get activeSession => _activeSession;
   bool get hasPendingLine => _pendingLine != null;
+  PendingContextTap? get pendingContextTap => _pendingContextTap;
   CanvasPendingLineStartPreview? get pendingLinePreview =>
       _pendingLine?.preview;
   bool get activeSessionOwnsPendingLine =>
@@ -89,6 +99,12 @@ final class InteractionEngine {
     }
 
     return port;
+  }
+
+  InteractionRequestGuardFacts? requestFactsFor(
+    CanvasInteractionRequestId requestId,
+  ) {
+    return _requestRegistry.factsFor(requestId);
   }
 
   void attachReadPort(InteractionReadPort readPort) {
@@ -177,6 +193,31 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
+  ContextActionRequestIntent? handleDoubleTap(
+    Offset viewPosition,
+    InteractionPointerContext context, {
+    required int? timestampHintMs,
+  }) {
+    if (!viewPosition.dx.isFinite || !viewPosition.dy.isFinite) {
+      return null;
+    }
+    if (_pendingContextTap != null) {
+      _cleanupPendingContextTapOnly();
+    }
+    final timestampMs = context.resolveOutputTimestamp(timestampHintMs);
+    final worldPosition = viewPosition + context.viewCameraOffset;
+    final facts = readPort.directContextTargetFacts(
+      ContextTargetReadRequest(worldPosition: worldPosition),
+    );
+
+    return _issueContextRequest(
+      facts: facts,
+      timestampMs: timestampMs,
+      viewPosition: viewPosition,
+      worldPosition: worldPosition,
+    );
+  }
+
   // Tool settings.
   PointerCleanupOutcome setMode(
     CanvasInteractionMode mode, {
@@ -246,6 +287,15 @@ final class InteractionEngine {
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.ignored,
       sample: sample,
+      publishRuntimeState: false,
+    );
+  }
+
+  InteractionPointerAdmission _privateAdmitted(NormalizedPointerSample sample) {
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      publishRuntimeState: false,
     );
   }
 
@@ -274,10 +324,9 @@ final class InteractionEngine {
     final selection = _selectedMoveStartDecision(sample);
     if (selection.admitted) {
       _activeSession = _selectedMoveSession(sample, selection);
-      replacePreview(_initialSelectedMovePreview(sample));
       _interactionRevision += 1;
 
-      return _admitted(sample);
+      return _privateAdmitted(sample);
     }
     if (_mode != CanvasInteractionMode.move) {
       return _handleDrawDown(sample);
@@ -286,10 +335,9 @@ final class InteractionEngine {
       readPort.marqueeStartFacts(const MarqueeStartReadRequest()),
     );
     _activeSession = _marqueeSession(sample, marquee);
-    replacePreview(_selectMachine.initialPreview(sample.worldPosition).preview);
     _interactionRevision += 1;
 
-    return _admitted(sample);
+    return _privateAdmitted(sample);
   }
 
   SelectedMoveStartDecision _selectedMoveStartDecision(
@@ -406,6 +454,9 @@ final class InteractionEngine {
     }
     final updated = session.updateCurrentWorld(sample.worldPosition);
     _activeSession = updated;
+    if (_isMoveModeTapCandidate(updated, sample)) {
+      return _ignored(sample);
+    }
     final previewChanged = _handleSessionMove(updated, sample.worldPosition);
     if (!previewChanged) {
       return _ignored(sample);
@@ -438,6 +489,18 @@ final class InteractionEngine {
         currentWorld,
       ),
     };
+  }
+
+  bool _isMoveModeTapCandidate(
+    PointerSession session,
+    NormalizedPointerSample sample,
+  ) {
+    if (!_isContextTapSessionKind(session.kind)) {
+      return false;
+    }
+
+    return _distanceFromStart(session, sample.worldPosition) <=
+        _pointerPolicy.tapSlop;
   }
 
   bool _handleSelectedMovePreview(PointerSession session, Offset currentWorld) {
@@ -544,10 +607,110 @@ final class InteractionEngine {
     if (session != null) {
       return _handleActiveTerminal(sample, session, context);
     }
-    _activeSession = null;
-    _interactionRevision += 1;
+    return _handleContextTapTerminal(sample, context);
+  }
 
-    return _admitted(sample);
+  InteractionPointerAdmission _handleContextTapTerminal(
+    NormalizedPointerSample sample,
+    InteractionPointerContext context, {
+    bool publishRuntimeState = false,
+  }) {
+    if (sample.phase != CanvasPointerLifecyclePhase.up) {
+      return _ignoredWithPublication(sample, publishRuntimeState);
+    }
+    final pending = _pendingContextTap;
+    final facts = _contextTapFacts(sample, pending);
+    if (pending == null) {
+      return _storePendingContextTap(sample, facts, publishRuntimeState);
+    }
+    if (!_contextActionRouter.matchesSecondTap((
+      pending: pending,
+      sample: sample,
+      facts: facts,
+      doubleTapSlop: _pointerPolicy.doubleTapSlop,
+      doubleTapMaxDelayMs: _pointerPolicy.doubleTapMaxDelayMs,
+    ))) {
+      return _contextTapMismatchAdmission(sample, publishRuntimeState);
+    }
+
+    return _contextTapRequestAdmission(
+      sample,
+      context,
+      facts,
+      publishRuntimeState,
+    );
+  }
+
+  InteractionPointerAdmission _ignoredWithPublication(
+    NormalizedPointerSample sample,
+    bool publishRuntimeState,
+  ) {
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.ignored,
+      sample: sample,
+      publishRuntimeState: publishRuntimeState,
+    );
+  }
+
+  ContextTargetReadFacts _contextTapFacts(
+    NormalizedPointerSample sample,
+    PendingContextTap? pending,
+  ) {
+    final request = ContextTargetReadRequest(
+      worldPosition: sample.worldPosition,
+    );
+    if (pending == null) {
+      return readPort.pendingContextTapFacts(request);
+    }
+
+    return readPort.secondContextTapFacts(request);
+  }
+
+  InteractionPointerAdmission _storePendingContextTap(
+    NormalizedPointerSample sample,
+    ContextTargetReadFacts facts,
+    bool publishRuntimeState,
+  ) {
+    _pendingContextTap = _contextActionRouter.pendingTap(
+      sample: sample,
+      facts: facts,
+    );
+
+    return _ignoredWithPublication(sample, publishRuntimeState);
+  }
+
+  InteractionPointerAdmission _contextTapMismatchAdmission(
+    NormalizedPointerSample sample,
+    bool publishRuntimeState,
+  ) {
+    final outcome = _cleanupWithReason(PointerCleanupReason.contextTap);
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.cleanupOnly,
+      sample: sample,
+      publishRuntimeState: publishRuntimeState || outcome.publicStateNeeded,
+    );
+  }
+
+  InteractionPointerAdmission _contextTapRequestAdmission(
+    NormalizedPointerSample sample,
+    InteractionPointerContext context,
+    ContextTargetReadFacts facts,
+    bool publishRuntimeState,
+  ) {
+    final outcome = _cleanupWithReason(PointerCleanupReason.contextTap);
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      publishRuntimeState: publishRuntimeState || outcome.publicStateNeeded,
+      contextRequest: _issueContextRequest(
+        facts: facts,
+        timestampMs: context.resolveOutputTimestamp(sample.timestampMs),
+        viewPosition: sample.viewPosition,
+        worldPosition: sample.worldPosition,
+      ),
+    );
   }
 
   InteractionPointerAdmission _handleActiveTerminal(
@@ -555,6 +718,16 @@ final class InteractionEngine {
     PointerSession session,
     InteractionPointerContext context,
   ) {
+    if (_isContextTapCandidate(session, sample)) {
+      final cleanup = _cleanupActiveTapSessionForContextRecognition();
+
+      return _handleContextTapTerminal(
+        sample,
+        context,
+        publishRuntimeState: cleanup.previewChanged,
+      );
+    }
+
     return switch (session.kind) {
       PointerSessionKind.moveModePointer => _handleSelectedMoveTerminal(
         sample,
@@ -582,6 +755,49 @@ final class InteractionEngine {
         session,
       ),
     };
+  }
+
+  bool _isContextTapCandidate(
+    PointerSession session,
+    NormalizedPointerSample sample,
+  ) {
+    if (_mode != CanvasInteractionMode.move ||
+        sample.phase != CanvasPointerLifecyclePhase.up) {
+      return false;
+    }
+    if (!_isContextTapSessionKind(session.kind)) {
+      return false;
+    }
+
+    return _isWithinContextTapSlop(session, sample);
+  }
+
+  bool _isContextTapSessionKind(PointerSessionKind kind) {
+    return switch (kind) {
+      PointerSessionKind.moveModePointer ||
+      PointerSessionKind.moveModeMarquee => true,
+      PointerSessionKind.drawModePointer ||
+      PointerSessionKind.drawEraserPointer ||
+      PointerSessionKind.drawLineFirstTap ||
+      PointerSessionKind.drawLineEndpoint => false,
+    };
+  }
+
+  bool _isWithinContextTapSlop(
+    PointerSession session,
+    NormalizedPointerSample sample,
+  ) {
+    if (_distanceFromStart(session, sample.worldPosition) >
+        _pointerPolicy.tapSlop) {
+      return false;
+    }
+
+    return _distanceFromStart(session, session.currentWorld) <=
+        _pointerPolicy.tapSlop;
+  }
+
+  double _distanceFromStart(PointerSession session, Offset worldPosition) {
+    return (worldPosition - session.startWorld).distance;
   }
 
   InteractionPointerAdmission _handleDrawTerminal(
@@ -837,6 +1053,23 @@ final class InteractionEngine {
     return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
   }
 
+  ContextActionRequestIntent _issueContextRequest({
+    required ContextTargetReadFacts facts,
+    required int timestampMs,
+    required Offset viewPosition,
+    required Offset worldPosition,
+  }) {
+    final guard = _requestRegistry.issueContextRequest(facts);
+
+    return _contextActionRouter.requestIntent((
+      requestId: guard.requestId,
+      facts: facts,
+      timestampMs: timestampMs,
+      viewPosition: viewPosition,
+      worldPosition: worldPosition,
+    ));
+  }
+
   // Session factories.
   PointerSession _marqueeSession(
     NormalizedPointerSample sample,
@@ -941,11 +1174,12 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     PointerCleanupReason reason,
   ) {
-    _cleanupWithReason(reason);
+    final outcome = _cleanupWithReason(reason);
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.cleanupOnly,
       sample: sample,
+      publishRuntimeState: outcome.publicStateNeeded,
     );
   }
 
@@ -958,6 +1192,30 @@ final class InteractionEngine {
         hasActiveSession: _activeSession != null,
         ownsPendingLine: activeSessionOwnsPendingLine,
         hasPendingLine: _pendingLine != null,
+        hasPendingContextTap: _pendingContextTap != null,
+      ),
+    );
+  }
+
+  PointerCleanupOutcome _cleanupActiveTapSessionForContextRecognition() {
+    return cleanupPointerTool(
+      PointerCleanupRequest(
+        reason: PointerCleanupReason.contextTap,
+        activePreviewKind: _pointerCleanupPreviewKindFor(_preview.kind),
+        hasActiveToken: _activeSession != null,
+        hasActiveSession: _activeSession != null,
+        ownsPendingLine: activeSessionOwnsPendingLine,
+        hasPendingLine: _pendingLine != null,
+        hasPendingContextTap: false,
+      ),
+    );
+  }
+
+  PointerCleanupOutcome _cleanupPendingContextTapOnly() {
+    return cleanupPointerTool(
+      PointerCleanupRequest(
+        reason: PointerCleanupReason.contextTap,
+        hasPendingContextTap: _pendingContextTap != null,
       ),
     );
   }
@@ -969,6 +1227,10 @@ final class InteractionEngine {
     if (outcome.pendingLineDisposition ==
         PointerPendingLineDisposition.cleared) {
       _pendingLine = null;
+    }
+    if (outcome.pendingContextTapDisposition ==
+        PointerPendingContextTapDisposition.cleared) {
+      _pendingContextTap = null;
     }
     if (outcome.sessionDisposition == PointerSessionDisposition.released &&
         _activeSession != null) {

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contracts/public/canvas_ids.dart';
+import 'context_action_router.dart';
 import 'draw_stroke_machine.dart';
 import 'eraser_machine.dart';
 import 'line_machine.dart';
@@ -16,22 +17,26 @@ final class InteractionPointerAdmission {
   const InteractionPointerAdmission({
     required this.kind,
     required this.sample,
+    this.publishRuntimeState = true,
     this.cleanupDecision,
     this.selectedMoveCommit,
     this.marqueeCommit,
     this.strokeCommit,
     this.eraserCommit,
     this.lineCommit,
+    this.contextRequest,
   });
 
   final InteractionPointerAdmissionKind kind;
   final NormalizedPointerSample sample;
+  final bool publishRuntimeState;
   final InvalidTerminalCleanupDecision? cleanupDecision;
   final SelectedMoveCommitIntent? selectedMoveCommit;
   final MarqueeCommitIntent? marqueeCommit;
   final DrawStrokeCommitIntent? strokeCommit;
   final EraserCommitIntent? eraserCommit;
   final DrawLineCommitIntent? lineCommit;
+  final ContextActionRequestIntent? contextRequest;
 }
 
 final class InteractionPointerContext {

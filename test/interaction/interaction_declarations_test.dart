@@ -148,12 +148,14 @@ void _verifyPointerAdmissionFields() {
   expect(fields, {
     'kind',
     'sample',
+    'publishRuntimeState',
     'cleanupDecision',
     'selectedMoveCommit',
     'marqueeCommit',
     'strokeCommit',
     'eraserCommit',
     'lineCommit',
+    'contextRequest',
   });
   expect(fields.any((name) => name.contains('draw')), isFalse);
 }
