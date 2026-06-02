@@ -19,8 +19,8 @@ void main() {
   );
 
   test(
-    'mode changes clear selection by flag and draw pointer remains no-op',
-    _modeChangesClearSelectionByFlagAndDrawPointerRemainsNoop,
+    'mode changes clear selection by flag and draw pointer publishes preview',
+    _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview,
   );
 
   test(
@@ -79,10 +79,11 @@ void _setterNoopsAreSilentAndEffectiveChangesPublishInteractionState() {
   expect(notifications.map((state) => state.revisions.interaction), [1, 2, 3]);
 }
 
-// Selection clearing and draw-mode pointer silence must be observed in the same
-// public state to prove the configured mode-change contract.
+// Selection clearing and draw-mode pointer preview stay in one scenario to
+// prove the configured mode-change contract and preview-only draw behavior.
 // ignore: halstead-volume
-Future<void> _modeChangesClearSelectionByFlagAndDrawPointerRemainsNoop() async {
+Future<void>
+_modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
   final runtime = CanvasRuntime(
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(clearSelectionOnDrawModeEnter: true),
@@ -102,11 +103,34 @@ Future<void> _modeChangesClearSelectionByFlagAndDrawPointerRemainsNoop() async {
   expect(runtime.state.value.revisions.interaction, 1);
 
   final before = runtime.state.value;
-  _sendDrawModePointer(runtime);
+  _sendDrawModePreviewPointer(runtime);
   await Future<void>.delayed(Duration.zero);
 
-  expect(runtime.state.value, before);
+  _expectOnlyPointerPreviewChanged(before, runtime.state.value);
+  _expectPencilPreview(runtime.preview);
   expect(actions, isEmpty);
+}
+
+void _expectOnlyPointerPreviewChanged(
+  CanvasRuntimeState before,
+  CanvasRuntimeState after,
+) {
+  expect(after.revisions.document, before.revisions.document);
+  expect(after.revisions.selection, before.revisions.selection);
+  expect(after.revisions.resourceVisual, before.revisions.resourceVisual);
+  expect(after.revisions.viewCamera, before.revisions.viewCamera);
+  expect(after.revisions.epoch, before.revisions.epoch);
+  expect(after.revisions.preview, before.revisions.preview + 2);
+  expect(after.revisions.interaction, before.revisions.interaction);
+  expect(after.summary, before.summary);
+}
+
+void _expectPencilPreview(CanvasPreviewState preview) {
+  final pencil = preview as CanvasPencilStrokePreview;
+  expect(pencil.points, const [Offset(1, 1), Offset(4, 4)]);
+  expect(pencil.color, CanvasDrawStyle.defaultStyle.color);
+  expect(pencil.thickness, CanvasDrawStyle.defaultStyle.pencilThickness);
+  expect(pencil.opacity, 1);
 }
 
 Future<void> _modeFlagFalseAndDoubleTapCompatibilityStayBounded() async {
@@ -135,15 +159,12 @@ Future<void> _modeFlagFalseAndDoubleTapCompatibilityStayBounded() async {
   await secondSubscription.cancel();
 }
 
-void _sendDrawModePointer(CanvasRuntime runtime) {
+void _sendDrawModePreviewPointer(CanvasRuntime runtime) {
   runtime.tools.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 1)),
   );
   runtime.tools.handlePointer(
     _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
-  );
-  runtime.tools.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(4, 4)),
   );
 }
 
