@@ -263,6 +263,10 @@ void main() {
   testWidgets('public consumer draws pencil marker and line', (tester) async {
     await _exercisePublicDrawWorkflow(tester);
   });
+
+  testWidgets('public consumer erases and commits context text requests', (tester) async {
+    await _exercisePublicEraserAndContextRequestWorkflow(tester);
+  });
 }
 
 Map<String, Object?> _smallSchemaV1Document() {
@@ -826,6 +830,220 @@ Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
   _expectLineDraw(runtime, actions.last);
 }
 
+Future<void> _exercisePublicEraserAndContextRequestWorkflow(
+  WidgetTester tester,
+) async {
+  final runtime = CanvasRuntime(initialDocument: _p12Document());
+  final actions = <CanvasActionCommitted>[];
+  final requests = <CanvasContextActionRequested>[];
+  final stateEvents = <CanvasRuntimeState>[];
+  final deliveryEvents = <String>[];
+  final actionSubscription = runtime.actions.listen((action) {
+    actions.add(action);
+    deliveryEvents.add('action:${action.type.name}');
+  });
+  final requestSubscription = runtime.contextActionRequests.listen(requests.add);
+  runtime.state.addListener(() {
+    stateEvents.add(runtime.state.value);
+    deliveryEvents.add('state');
+  });
+  addTearDown(() async {
+    await actionSubscription.cancel();
+    await requestSubscription.cancel();
+    runtime.dispose();
+  });
+
+  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+
+  _previewAndCommitPublicEraser(runtime, actions, deliveryEvents);
+  await tester.pump();
+  _expectPublicEraseCommit(runtime, actions, deliveryEvents);
+
+  _clearPublicEventBuffers(actions, requests, stateEvents, deliveryEvents);
+  runtime.tools.handleDoubleTap(position: const Offset(60, 0), timestampMs: 50);
+  await tester.pump();
+  final textRequest = _expectPublicContentRequest(
+    runtime,
+    actions,
+    requests,
+    stateEvents,
+  );
+
+  _clearPublicEventBuffers(actions, requests, stateEvents, deliveryEvents);
+  expect(
+    runtime.commands.commitTextEdit(
+      textRequest.requestId,
+      'updated',
+      timestampMs: 51,
+    ),
+    isTrue,
+  );
+  await tester.pump();
+  _expectPublicTextEditCommit(
+    runtime,
+    actions,
+    stateEvents,
+    deliveryEvents,
+    textRequest.requestId,
+  );
+
+  _clearPublicEventBuffers(actions, requests, stateEvents, deliveryEvents);
+  expect(
+    runtime.commands.commitTextEdit(textRequest.requestId, 'retry'),
+    isFalse,
+  );
+  final beforeUnknown = runtime.state.value;
+  expect(
+    runtime.commands.commitTextEdit(
+      CanvasInteractionRequestId('unknown'),
+      'ignored',
+    ),
+    isFalse,
+  );
+  await tester.pump();
+  expect(actions, isEmpty);
+  expect(stateEvents, isEmpty);
+  expect(runtime.state.value, same(beforeUnknown));
+
+  _clearPublicEventBuffers(actions, requests, stateEvents, deliveryEvents);
+  runtime.tools.handleDoubleTap(position: const Offset(200, 200), timestampMs: 52);
+  await tester.pump();
+  _expectPublicEmptyRequest(actions, requests, stateEvents);
+}
+
+void _previewAndCommitPublicEraser(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<String> deliveryEvents,
+) {
+  runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawStyle(
+      CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 6),
+    );
+  final before = runtime.state.value;
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(2, 2)),
+  );
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(18, 2)),
+  );
+  final preview = runtime.preview as CanvasEraserPreview;
+  expect(preview.corridor, const [Offset(2, 2), Offset(18, 2)]);
+  expect(() => preview.corridor.add(Offset.zero), throwsUnsupportedError);
+  expect(preview.thickness, 6);
+  expect(runtime.state.value.revisions.document, before.revisions.document);
+  expect(actions, isEmpty);
+  deliveryEvents.clear();
+
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(18, 2), timestampMs: 40),
+  );
+}
+
+void _expectPublicEraseCommit(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<String> deliveryEvents,
+) {
+  expect(deliveryEvents, ['state', 'action:erase']);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  expect(_elementOrNull(runtime, CanvasElementId('erase-me')), isNull);
+  expect(actions, hasLength(1));
+  final action = actions.single;
+  expect(action.type, CanvasActionType.erase);
+  expect(action.timestampMs, 40);
+  expect(action.elementIds, [CanvasElementId('erase-me')]);
+  final payload = action.payload as CanvasEraseActionPayload;
+  expect(payload.eraserThickness, 6);
+  expect(payload.erasedElementIds, action.elementIds);
+  expect(payload.corridorPointCount, 2);
+  expect(
+    (_elementOrNull(runtime, CanvasElementId('locked-content')) as CanvasRectElement)
+        .isDeletable,
+    isFalse,
+  );
+}
+
+CanvasContextActionRequested _expectPublicContentRequest(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+  List<CanvasRuntimeState> stateEvents,
+) {
+  expect(actions, isEmpty);
+  expect(stateEvents, isEmpty);
+  expect(requests, hasLength(1));
+  final request = requests.single;
+  expect(request.trigger, CanvasContextActionTrigger.doubleTap);
+  expect(request.timestampMs, 50);
+  expect(request.viewPosition, const Offset(60, 0));
+  expect(request.worldPosition, const Offset(60, 0));
+  expect(request.controllerEpoch, runtime.state.value.revisions.epoch);
+  expect(request.documentRevision, runtime.state.value.revisions.document);
+  final target = request.target as CanvasContentElementContextActionTarget;
+  expect(target.elementSnapshot.id, CanvasElementId('text-edit'));
+  expect(target.elementSnapshot, isA<CanvasTextElement>());
+  expect(target.boundsWorld.isEmpty, isFalse);
+  expect(target.boundsWorld.left.isFinite, isTrue);
+  expect(target.boundsWorld.top.isFinite, isTrue);
+  expect(target.boundsWorld.right.isFinite, isTrue);
+  expect(target.boundsWorld.bottom.isFinite, isTrue);
+
+  return request;
+}
+
+void _expectPublicTextEditCommit(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<CanvasRuntimeState> stateEvents,
+  List<String> deliveryEvents,
+  CanvasInteractionRequestId requestId,
+) {
+  expect(deliveryEvents, ['state', 'action:editText']);
+  expect(stateEvents, hasLength(1));
+  expect(actions, hasLength(1));
+  expect((_elementOrNull(runtime, CanvasElementId('text-edit')) as CanvasTextElement).text, 'updated');
+  final action = actions.single;
+  expect(action.type, CanvasActionType.editText);
+  expect(action.timestampMs, 51);
+  expect(action.elementIds, [CanvasElementId('text-edit')]);
+  final payload = action.payload as CanvasTextEditActionPayload;
+  expect(payload.requestId, requestId);
+  expect(payload.previousTextLength, 5);
+  expect(payload.nextTextLength, 7);
+  final observedActionSurface = '$action $payload';
+  expect(observedActionSurface, isNot(contains('hello')));
+  expect(observedActionSurface, isNot(contains('updated')));
+}
+
+void _expectPublicEmptyRequest(
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+  List<CanvasRuntimeState> stateEvents,
+) {
+  expect(actions, isEmpty);
+  expect(stateEvents, isEmpty);
+  expect(requests, hasLength(1));
+  final request = requests.single;
+  expect(request.timestampMs, 52);
+  expect(request.viewPosition, const Offset(200, 200));
+  expect(request.worldPosition, const Offset(200, 200));
+  expect(request.target, isA<CanvasEmptyCanvasContextActionTarget>());
+}
+
+void _clearPublicEventBuffers(
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+  List<CanvasRuntimeState> stateEvents,
+  List<String> deliveryEvents,
+) {
+  actions.clear();
+  requests.clear();
+  stateEvents.clear();
+  deliveryEvents.clear();
+}
+
 Widget _surfaceHost(CanvasRuntime runtime, {required bool interactive}) {
   return Directionality(
     textDirection: TextDirection.ltr,
@@ -903,6 +1121,18 @@ CanvasElement _element(CanvasRuntime runtime, CanvasActionCommitted action) {
       .singleWhere((element) => element.id == action.elementIds.single);
 }
 
+CanvasElement? _elementOrNull(CanvasRuntime runtime, CanvasElementId id) {
+  for (final layer in runtime.readDocument().layers) {
+    for (final element in layer.elements) {
+      if (element.id == id) {
+        return element;
+      }
+    }
+  }
+
+  return null;
+}
+
 void _dragPointer(
   CanvasToolPort tools, {
   required Offset start,
@@ -974,6 +1204,46 @@ CanvasDocument _selectionMoveCommandDocument() {
             id: CanvasElementId('remove-me'),
             size: const Size(4, 4),
             transform: CanvasTransform.translation(const Offset(80, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _p12Document() {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('background-only'),
+        size: const Size(40, 40),
+        transform: CanvasTransform.translation(const Offset(180, 180)),
+        isSelectable: false,
+        isLocked: true,
+        isDeletable: false,
+        isTransformable: false,
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('p12-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('erase-me'),
+            size: const Size(20, 20),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('locked-content'),
+            size: const Size(20, 20),
+            transform: CanvasTransform.translation(const Offset(30, 0)),
+            isDeletable: false,
+          ),
+          CanvasTextElement(
+            id: CanvasElementId('text-edit'),
+            text: 'hello',
+            color: const Color(0xFF111827),
+            textDirection: TextDirection.ltr,
+            transform: CanvasTransform.translation(const Offset(60, 0)),
           ),
         ],
       ),
