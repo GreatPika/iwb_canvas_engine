@@ -93,6 +93,14 @@ artifacts, verification claims, or proof fixtures, apply shared
 only actionable code-review style findings for artifacts that create false
 confidence, duplicated truth, weak guardrails, or self-referential proof.
 
+## Contract-Scoped Guardrail Review
+
+When reviewing guardrail, analyzer, structural-enforcement, or negative-proof
+code, treat the active contract and its source inputs as the scope boundary. Do
+not flag hypothetical edge cases outside the contracted owner, boundary, fixture
+strategy, proof seam, or the guardrail's own stated claim; flag only drift,
+false confidence, or missed cases inside that stated scope.
+
 ## Review Guidelines
 
 - Ignore trivial style unless it obscures meaning or violates documented
@@ -149,12 +157,16 @@ If there are findings, output exactly:
 Findings
 
 [P2] path/to/file.dart:31 describes the issue in one concise paragraph. Explain why this is a problem, name the scenario or input that exposes it, and point to the expected fix direction without writing the patch.
+
+Review complete: after reviewing the full relevant diff, no further qualifying findings remain.
 ```
 
 Use one paragraph per finding. Keep each finding self-contained and actionable.
 Start each finding with `[P0]`, `[P1]`, `[P2]`, or `[P3]`, then the shortest useful
 file path and line number from the diff. Reference only lines that overlap the
-reviewed diff. Do not wrap output in JSON or markdown fences.
+reviewed diff. End every review response with the exact `Review complete:`
+line shown above. A review response without that line is incomplete. Do not wrap
+output in JSON or markdown fences.
 
 If there are no findings, output exactly:
 
@@ -162,4 +174,6 @@ If there are no findings, output exactly:
 Findings
 
 No findings.
+
+Review complete: after reviewing the full relevant diff, no further qualifying findings remain.
 ```
