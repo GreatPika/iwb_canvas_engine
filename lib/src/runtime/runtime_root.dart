@@ -51,6 +51,7 @@ import '../interaction/eraser_machine.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
+import '../interaction/interaction_request_registry.dart';
 import '../interaction/line_machine.dart';
 import '../interaction/move_machine.dart';
 import '../interaction/pointer_tool_cleanup_coordinator.dart';
@@ -747,8 +748,41 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     _validateTextEditCommandInput(requestId, newText, timestampMs);
 
-    // Text edit commit is validated here but not supported by this phase.
-    return false;
+    final guard = _interactionEngine.textEditGuardDecision(requestId);
+    if (guard.kind != TextEditGuardDecisionKind.accepted) {
+      return false;
+    }
+    final targetElementId = guard.targetElementId as CanvasElementId;
+    final previousText = guard.currentText as String;
+    if (previousText == newText) {
+      _interactionEngine.retireTextEditRequest(requestId);
+
+      return true;
+    }
+    final applyResult = _editKernel.prepareInteractionCommit(
+      (edit) => edit.updateElement(
+        CanvasTextElementUpdate(
+          id: targetElementId,
+          text: CanvasFieldSet(newText),
+        ),
+      ),
+      augmentPlan: (plan) => plan.withActionIntents([
+        EditTextActionIntent(
+          requestId: requestId,
+          elementId: targetElementId,
+          previousTextLength: previousText.length,
+          nextTextLength: newText.length,
+          timestampHintMs: timestampMs,
+        ),
+      ]),
+    );
+    if (!applyResult.shouldPublishState) {
+      return false;
+    }
+    _interactionEngine.retireTextEditRequest(requestId);
+    _deliverEditCommitResult(applyResult);
+
+    return true;
   }
 
   // Surface interaction lifecycle.

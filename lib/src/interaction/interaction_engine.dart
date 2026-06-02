@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
@@ -107,12 +108,59 @@ final class InteractionEngine {
     return _requestRegistry.factsFor(requestId);
   }
 
+  TextEditGuardDecision textEditGuardDecision(
+    CanvasInteractionRequestId requestId,
+  ) {
+    final guard = _requestRegistry.liveFactsFor(requestId);
+    if (guard == null) {
+      return const TextEditGuardDecision.unknownOrRetired();
+    }
+    final targetElementId = guard.contentElementId;
+    if (guard.targetKind != InteractionRequestTargetKind.contentElement ||
+        guard.contentElementKind != CanvasElementKind.text ||
+        targetElementId == null) {
+      _requestRegistry.retire(requestId);
+
+      return const TextEditGuardDecision.rejectedAndRetired();
+    }
+    final current = readPort.textCommitGuardFacts(
+      TextCommitGuardReadRequest(targetElementId: targetElementId),
+    );
+    if (!_textGuardMatches(guard, current)) {
+      _requestRegistry.retire(requestId);
+
+      return const TextEditGuardDecision.rejectedAndRetired();
+    }
+
+    return TextEditGuardDecision.accepted(
+      targetElementId: targetElementId,
+      currentText: current.currentText as String,
+    );
+  }
+
+  bool retireTextEditRequest(CanvasInteractionRequestId requestId) {
+    return _requestRegistry.retire(requestId);
+  }
+
   void attachReadPort(InteractionReadPort readPort) {
     final current = _readPort;
     if (current != null && !identical(current, readPort)) {
       throw StateError('InteractionReadPort has already been attached.');
     }
     _readPort = readPort;
+  }
+
+  bool _textGuardMatches(
+    InteractionRequestGuardFacts guard,
+    TextCommitGuardReadFacts current,
+  ) {
+    return current.exists &&
+        current.targetKind == CanvasElementKind.text &&
+        current.controllerEpoch == guard.controllerEpoch &&
+        current.generation == guard.generation &&
+        current.elementRevision == guard.elementRevision &&
+        current.family == guard.family &&
+        current.currentText != null;
   }
 
   // Preview and pending line state.

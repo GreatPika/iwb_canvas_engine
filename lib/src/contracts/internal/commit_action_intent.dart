@@ -16,6 +16,7 @@ enum CommitActionIntentKind {
   drawStroke,
   drawLine,
   erase,
+  editText,
 }
 
 sealed class CommitActionIntent {
@@ -199,6 +200,30 @@ final class EraseActionIntent extends CommitActionIntent {
   final int corridorPointCount;
 }
 
+final class EditTextActionIntent extends CommitActionIntent {
+  EditTextActionIntent({
+    required this.requestId,
+    required CanvasElementId elementId,
+    required int previousTextLength,
+    required int nextTextLength,
+    super.timestampHintMs,
+  }) : previousTextLength = _validateTextLength(
+         previousTextLength,
+         'previousTextLength',
+       ),
+       nextTextLength = _validateTextLength(nextTextLength, 'nextTextLength'),
+       elementIds = List.unmodifiable([elementId]);
+
+  @override
+  CommitActionIntentKind get kind => CommitActionIntentKind.editText;
+
+  @override
+  final List<CanvasElementId> elementIds;
+  final CanvasInteractionRequestId requestId;
+  final int previousTextLength;
+  final int nextTextLength;
+}
+
 int? _validateTimestampHint(int? timestampHintMs) {
   if (timestampHintMs != null) {
     validateNonNegativeInt(timestampHintMs, path: 'action.timestampMs');
@@ -226,6 +251,12 @@ double _validateEraserThickness(double value) {
 
 int _validateCorridorPointCount(int value) {
   validateNonNegativeInt(value, path: 'action.corridorPointCount');
+
+  return value;
+}
+
+int _validateTextLength(int value, String field) {
+  validateNonNegativeInt(value, path: 'action.$field');
 
   return value;
 }

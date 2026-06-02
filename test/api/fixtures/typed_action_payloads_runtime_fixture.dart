@@ -30,12 +30,17 @@ void main() {
     'public selection and command ports emit P10 payload families',
     _publicSelectionAndCommandPortsEmitP10PayloadFamilies,
   );
+
+  test(
+    'commit text edit emits payload without raw text and ignores no-op timestamps',
+    _commitTextEditEmitsPayloadWithoutRawTextAndIgnoresNoOpTimestamps,
+  );
 }
 
 Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   final root = RuntimeRoot(
     initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
+    config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -81,7 +86,7 @@ void _expectDrawActionPayloads(List<CanvasActionCommitted> actions) {
 Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
   final root = RuntimeRoot(
     initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
+    config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -123,20 +128,20 @@ Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
   root.selection.setSelection([CanvasElementId('a')]);
 
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.down, const Offset(19, -1)),
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(18, -20)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.move, const Offset(22, 2)),
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(23, 3)),
   );
   root.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.up, const Offset(22, 2)),
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(23, 3)),
   );
   await Future<void>.delayed(Duration.zero);
 
   expect(actions, hasLength(1));
   _expectMarquee(
     actions.single,
-    marqueeRectWorld: const Rect.fromLTRB(19, -1, 22, 2),
+    marqueeRectWorld: const Rect.fromLTRB(18, -20, 23, 3),
   );
 }
 
@@ -149,6 +154,89 @@ Future<void> _publicSelectionAndCommandPortsEmitP10PayloadFamilies() async {
     runtime.commands.removeElement(CanvasElementId('c'));
   }, _expectRemoveElement);
   await _expectPublicClearAction();
+}
+
+Future<void>
+_commitTextEditEmitsPayloadWithoutRawTextAndIgnoresNoOpTimestamps() async {
+  final runtime = CanvasRuntime(initialDocument: _documentWithText());
+  final actions = <CanvasActionCommitted>[];
+  final requests = <CanvasContextActionRequested>[];
+  final actionSubscription = runtime.actions.listen(actions.add);
+  final requestSubscription = runtime.contextActionRequests.listen(
+    requests.add,
+  );
+  try {
+    await _expectNoOpTimestampIgnored(runtime, actions, requests);
+    await _expectStaleTimestampIgnored(runtime, actions, requests);
+    await _expectChangedCommitPayload(runtime, actions, requests);
+  } finally {
+    await actionSubscription.cancel();
+    await requestSubscription.cancel();
+    runtime.dispose();
+  }
+}
+
+Future<void> _expectNoOpTimestampIgnored(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+) async {
+  final requestId = await _requestTextEdit(runtime, requests);
+  expect(
+    runtime.commands.commitTextEdit(requestId, 'hello', timestampMs: 99),
+    isTrue,
+  );
+  expect(actions, isEmpty);
+}
+
+Future<void> _expectStaleTimestampIgnored(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+) async {
+  final requestId = await _requestTextEdit(runtime, requests);
+  runtime.edits.edit(
+    (edit) => edit.updateElement(
+      CanvasTextElementUpdate(id: _textId, fontSize: const CanvasFieldSet(30)),
+    ),
+  );
+
+  expect(
+    runtime.commands.commitTextEdit(requestId, 'ignored', timestampMs: 100),
+    isFalse,
+  );
+  expect(actions, isEmpty);
+}
+
+Future<void> _expectChangedCommitPayload(
+  CanvasRuntime runtime,
+  List<CanvasActionCommitted> actions,
+  List<CanvasContextActionRequested> requests,
+) async {
+  final requestId = await _requestTextEdit(runtime, requests);
+  expect(runtime.commands.commitTextEdit(requestId, 'updated'), isTrue);
+  await Future<void>.delayed(Duration.zero);
+
+  expect(actions, hasLength(1));
+  expect(actions.single.timestampMs, 3);
+  expect(actions.single.type, CanvasActionType.editText);
+  expect(actions.single.elementIds, [_textId]);
+  final payload = actions.single.payload as CanvasTextEditActionPayload;
+  expect(payload.requestId, requestId);
+  expect(payload.previousTextLength, 5);
+  expect(payload.nextTextLength, 7);
+}
+
+Future<CanvasInteractionRequestId> _requestTextEdit(
+  CanvasRuntime runtime,
+  List<CanvasContextActionRequested> requests,
+) async {
+  runtime.tools.handleDoubleTap(position: const Offset(120, 0));
+  await Future<void>.delayed(Duration.zero);
+  final requestId = requests.single.requestId;
+  requests.clear();
+
+  return requestId;
 }
 
 Future<void> _expectPublicMoveAction() {
@@ -445,6 +533,25 @@ CanvasDocument _document() {
   );
 }
 
+CanvasDocument _documentWithText() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasTextElement(
+            id: _textId,
+            text: 'hello',
+            color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
+            transform: CanvasTransform.translation(const Offset(120, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 CanvasPointerSample _pointer(
   CanvasPointerLifecyclePhase phase,
   Offset position,
@@ -456,3 +563,5 @@ CanvasPointerSample _pointer(
     kind: PointerDeviceKind.touch,
   );
 }
+
+final CanvasElementId _textId = CanvasElementId('text-a');

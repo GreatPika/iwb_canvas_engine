@@ -4,6 +4,33 @@ import 'interaction_read_port.dart';
 
 enum InteractionRequestTargetKind { contentElement, emptyCanvas }
 
+enum TextEditGuardDecisionKind {
+  unknownOrRetired,
+  rejectedAndRetired,
+  accepted,
+}
+
+final class TextEditGuardDecision {
+  const TextEditGuardDecision.unknownOrRetired()
+    : kind = TextEditGuardDecisionKind.unknownOrRetired,
+      targetElementId = null,
+      currentText = null;
+
+  const TextEditGuardDecision.rejectedAndRetired()
+    : kind = TextEditGuardDecisionKind.rejectedAndRetired,
+      targetElementId = null,
+      currentText = null;
+
+  const TextEditGuardDecision.accepted({
+    required CanvasElementId this.targetElementId,
+    required String this.currentText,
+  }) : kind = TextEditGuardDecisionKind.accepted;
+
+  final TextEditGuardDecisionKind kind;
+  final CanvasElementId? targetElementId;
+  final String? currentText;
+}
+
 final class InteractionRequestGuardFacts {
   const InteractionRequestGuardFacts({
     required this.requestId,
@@ -28,6 +55,21 @@ final class InteractionRequestGuardFacts {
   final int? generation;
   final int? elementRevision;
   final InteractionElementFamily? family;
+
+  InteractionRequestGuardFacts retire() {
+    return InteractionRequestGuardFacts(
+      requestId: requestId,
+      targetKind: targetKind,
+      controllerEpoch: controllerEpoch,
+      documentRevision: documentRevision,
+      retired: true,
+      contentElementId: contentElementId,
+      contentElementKind: contentElementKind,
+      generation: generation,
+      elementRevision: elementRevision,
+      family: family,
+    );
+  }
 }
 
 final class InteractionRequestRegistry {
@@ -63,5 +105,26 @@ final class InteractionRequestRegistry {
 
   InteractionRequestGuardFacts? factsFor(CanvasInteractionRequestId requestId) {
     return _facts[requestId];
+  }
+
+  InteractionRequestGuardFacts? liveFactsFor(
+    CanvasInteractionRequestId requestId,
+  ) {
+    final facts = _facts[requestId];
+    if (facts == null || facts.retired) {
+      return null;
+    }
+
+    return facts;
+  }
+
+  bool retire(CanvasInteractionRequestId requestId) {
+    final facts = liveFactsFor(requestId);
+    if (facts == null) {
+      return false;
+    }
+    _facts[requestId] = facts.retire();
+
+    return true;
   }
 }

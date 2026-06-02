@@ -52,6 +52,7 @@ CanvasActionType _actionType(CommitActionIntent intent) {
     DrawStrokeActionIntent(:final tool) => _drawStrokeActionType(tool),
     DrawLineActionIntent() => CanvasActionType.drawLine,
     EraseActionIntent() => CanvasActionType.erase,
+    EditTextActionIntent() => CanvasActionType.editText,
   };
 }
 
@@ -68,6 +69,7 @@ CanvasActionPayload _payload(CommitActionIntent intent) {
     DrawStrokeActionIntent() => _drawStrokePayload(intent),
     DrawLineActionIntent() => _drawLinePayload(intent),
     EraseActionIntent() => _erasePayload(intent),
+    EditTextActionIntent() => _editTextPayload(intent),
   };
 }
 
@@ -149,5 +151,13 @@ CanvasEraseActionPayload _erasePayload(EraseActionIntent intent) {
     eraserThickness: intent.eraserThickness,
     erasedElementIds: intent.erasedElementIds,
     corridorPointCount: intent.corridorPointCount,
+  );
+}
+
+CanvasTextEditActionPayload _editTextPayload(EditTextActionIntent intent) {
+  return CanvasTextEditActionPayload(
+    requestId: intent.requestId,
+    previousTextLength: intent.previousTextLength,
+    nextTextLength: intent.nextTextLength,
   );
 }
