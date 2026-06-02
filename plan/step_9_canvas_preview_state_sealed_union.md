@@ -695,7 +695,7 @@ BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 - Update `docs/implementation/p11_draw_tools.md` as draw tools phase owner:
   align pencil, marker, pending line, and line preview wording with sealed
   variants and `CanvasStrokePreview`.
-- Update `docs/implementation/p12_eraser_and_text_request.md` as eraser/text
+- Update `docs/implementation/p12_eraser_and_context_action_request.md` as eraser/text
   phase owner: align eraser preview wording with `CanvasEraserPreview` and keep
   text request out of preview state.
 - Update `docs/implementation/p13_flutter_surface.md` as surface phase owner:
@@ -726,7 +726,7 @@ complete only after all proofs pass.
 Prove phase docs point at the sealed public preview API:
 
 ```sh
-rg -n "CanvasPreviewState|CanvasStrokePreview|CanvasPencilStrokePreview|CanvasMarkerStrokePreview|CanvasPendingLineStartPreview|CanvasEraserPreview|preview_state_sealed_union" docs/implementation/p2_public_api_v1_freeze.md docs/implementation/p10_selection_and_move.md docs/implementation/p11_draw_tools.md docs/implementation/p12_eraser_and_text_request.md docs/implementation/p13_flutter_surface.md
+rg -n "CanvasPreviewState|CanvasStrokePreview|CanvasPencilStrokePreview|CanvasMarkerStrokePreview|CanvasPendingLineStartPreview|CanvasEraserPreview|preview_state_sealed_union" docs/implementation/p2_public_api_v1_freeze.md docs/implementation/p10_selection_and_move.md docs/implementation/p11_draw_tools.md docs/implementation/p12_eraser_and_context_action_request.md docs/implementation/p13_flutter_surface.md
 ```
 
 Prove redesign and audit retirement:

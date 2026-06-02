@@ -520,7 +520,7 @@ type request id in these active surfaces.
 ### P4. Verification mapping
 
 ```sh
-rg -n "test\\.interaction\\.text_edit_stale_commit_guard|test\\.interaction\\.commands_emit_user_actions|test\\.api\\.typed_action_payloads|interaction\\.text_edit_stale_commit_guard|events\\.commands_emit_user_actions|functional\\.text_edit_request|editText|commitTextEdit" docs/verification docs/indexes docs/_registry/sections.yaml docs/implementation/p12_eraser_and_text_request.md
+rg -n "test\\.interaction\\.text_edit_stale_commit_guard|test\\.interaction\\.commands_emit_user_actions|test\\.api\\.typed_action_payloads|interaction\\.text_edit_stale_commit_guard|events\\.commands_emit_user_actions|functional\\.text_edit_request|editText|commitTextEdit" docs/verification docs/indexes docs/_registry/sections.yaml docs/implementation/p12_eraser_and_context_action_request.md
 ```
 
 Expected signal: verification, generated-style indexes, registry section
@@ -678,7 +678,7 @@ BUG_FIX, SEAM_MIGRATION, PUBLIC_API_CHANGE
 - Section registry owner: `docs/_registry/sections.yaml` — wire the new proof
   and guardrail to public API and interaction sections.
 - Phase guidance owner:
-  `docs/implementation/p12_eraser_and_text_request.md` — require guarded text
+  `docs/implementation/p12_eraser_and_context_action_request.md` — require guarded text
   commit semantics in the text request phase without broadening to the full
   contextual-action API.
 - Accepted redesign backlog owner: `redesign.md` — remove the accepted text

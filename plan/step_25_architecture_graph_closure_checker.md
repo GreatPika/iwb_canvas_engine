@@ -116,7 +116,7 @@ the change, not target-state requirements.
 - `docs/architecture/architecture_graph.yaml:367`,
   `docs/architecture/architecture_graph.yaml:383`, and
   `docs/architecture/architecture_graph.yaml:415` currently define future
-  nodes such as `draw.tools`, `eraser_text.request`, and `release.measurement`.
+  nodes such as `draw.tools`, `eraser_context.request`, and `release.measurement`.
   `docs/diagrams/generated/full_architecture.mmd:11`,
   `docs/diagrams/generated/full_architecture.mmd:13`, and
   `docs/diagrams/generated/full_architecture.mmd:19` currently render those
@@ -1019,7 +1019,7 @@ BUG_FIX, SEAM_MIGRATION
 Audit repository source-of-truth documents for graph-checkable future-phase
 architecture obligations that should already be represented in
 `architecture_graph.yaml`. Add missing planned edges for future owners such as
-`draw.tools` and `eraser_text.request` when the SSOT already defines their
+`draw.tools` and `eraser_context.request` when the SSOT already defines their
 major seams. Resolve `release.measurement` explicitly: either connect it
 through a release/verification relationship that belongs in the generated view,
 or exclude it from runtime full/future architecture views and represent it only

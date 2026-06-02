@@ -35,7 +35,7 @@ The future Change Contract is verification-only: it adds an executable public sm
 - `.research/2026-05-23-p0-p4-smoke-test-facts.md:15` - the implemented public vertical path includes codec entrypoints, runtime construction, state observation, `readDocument()`, selection commands, and camera updates.
 - `.research/2026-05-23-p0-p4-smoke-test-facts.md:17` - existing tests already cover the individual API, codec, runtime, projection, camera, and selection pieces.
 - `.research/2026-05-23-p0-p4-smoke-test-facts.md:74` - external consumer behavior tests should use `test/support/flutter_consumer_test_harness.dart`; compile/static and guardrail tests have different ownership.
-- `.research/2026-05-23-p0-p4-smoke-test-facts.md:114` - later phases introduce edit, load, resources, geometry/spatial, frame, interaction, draw, eraser/text request, Flutter surface, and release readiness pressure.
+- `.research/2026-05-23-p0-p4-smoke-test-facts.md:114` - later phases introduce edit, load, resources, geometry/spatial, frame, interaction, draw, eraser/context-action request, Flutter surface, and release readiness pressure.
 - `lib/iwb_canvas_engine.dart:1` - the root package barrel exports public API files.
 - `lib/iwb_canvas_engine.dart:17` - the public barrel ends with API exports only.
 - `lib/src/api/canvas_codec.dart:21` - `decodeCanvasDocument` is a public codec entrypoint.

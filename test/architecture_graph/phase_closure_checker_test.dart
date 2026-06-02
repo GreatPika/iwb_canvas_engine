@@ -299,9 +299,8 @@ void _expectP10FacadeRoutesDocumentLaterOwners(
     contains('P11 owns later draw production behavior behind the port'),
   );
   expect(
-    byId['eraser_text.request.produces_context_action_requests']?.evidence.join(
-      ' ',
-    ),
+    byId['eraser_context.request.produces_context_action_requests']?.evidence
+        .join(' '),
     contains('RuntimeRoot emits accepted P12 context-action requests'),
   );
 }
@@ -665,8 +664,8 @@ const _requiredStep38ForbiddenGraphEdges = [
     to: 'api.public_surface',
   ),
   _RequiredForbiddenGraphEdge(
-    id: 'eraser_text.request.forbidden_api_dependency',
-    from: 'eraser_text.request',
+    id: 'eraser_context.request.forbidden_api_dependency',
+    from: 'eraser_context.request',
     to: 'api.public_surface',
   ),
   _RequiredForbiddenGraphEdge(

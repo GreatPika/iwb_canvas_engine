@@ -1150,7 +1150,7 @@
     - test.frame.cache_capacity_eviction_policy
     - test.frame.selected_supplement_staging_no_global_sort
     - test.interaction.preview_public_state
-    - test.interaction.state_machines
+    - test.interaction.eraser_context_action_routing
     - test.interaction.move_machine
     - test.interaction.select_machine
     - test.interaction.move_resolver_reentrancy

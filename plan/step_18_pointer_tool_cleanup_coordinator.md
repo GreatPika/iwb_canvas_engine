@@ -192,8 +192,8 @@ the documentation change, not target-state requirements.
   `docs/implementation/p11_draw_tools.md:21` place pencil, marker, line preview
   lifecycle, overlay repaint, commits, actions, terminal cleanup, and stale
   terminal rejection in P11.
-- `docs/implementation/p12_eraser_and_text_request.md:11` through
-  `docs/implementation/p12_eraser_and_text_request.md:24` place eraser preview,
+- `docs/implementation/p12_eraser_and_context_action_request.md:11` through
+  `docs/implementation/p12_eraser_and_context_action_request.md:24` place eraser preview,
   eraser cleanup/no-op, text double-tap request routing, and terminal cleanup in
   P12.
 - `docs/verification/guardrails.md:180` through
@@ -236,7 +236,7 @@ the documentation change, not target-state requirements.
   preview/commit data flow, and interaction sequences.
 - `docs/implementation/p10_selection_and_move.md`,
   `docs/implementation/p11_draw_tools.md`, and
-  `docs/implementation/p12_eraser_and_text_request.md` own phase-specific
+  `docs/implementation/p12_eraser_and_context_action_request.md` own phase-specific
   implementation guidance.
 - `docs/verification/guardrails.md` owns mandatory guardrail ids and rules.
 - `docs/verification/tests.md` owns planned test inventory and test ownership
@@ -452,7 +452,7 @@ individual tool machines.
 | D2 | Document `InteractionEngine` as the future composition owner and only caller of the coordinator. | `docs/architecture/01_runtime_ownership.md`, `docs/contracts/interaction_engine.md` | P1, P2 |
 | D3 | Document the coordinator as internal to `lib/src/interaction/**` and absent from public API/export surfaces. | `docs/architecture/02_package_boundaries.md` | P1, P2 |
 | D4 | Document cleanup outcome semantics for previous preview kind, repaint target, preview revision/no-op behavior, token/session release, pending line, and pending text cleanup. | `docs/contracts/interaction_engine.md`, `docs/diagrams/**` | P1, P2 |
-| D5 | Document P10/P11/P12 migration order so future tool machines consume the same cleanup seam. | `docs/implementation/p10_selection_and_move.md`, `docs/implementation/p11_draw_tools.md`, `docs/implementation/p12_eraser_and_text_request.md` | P1, P2 |
+| D5 | Document P10/P11/P12 migration order so future tool machines consume the same cleanup seam. | `docs/implementation/p10_selection_and_move.md`, `docs/implementation/p11_draw_tools.md`, `docs/implementation/p12_eraser_and_context_action_request.md` | P1, P2 |
 | D6 | Document future behavioral and structural verification requirements for cleanup ownership and bypass prevention. | `docs/verification/guardrails.md`, `docs/verification/tests.md` | P1, P2 |
 
 ### Rejected Alternatives
@@ -704,7 +704,7 @@ SEAM_MIGRATION
   wording.
 - Phase guidance edit: `docs/implementation/p11_draw_tools.md` — require P11
   draw/line work to consume the existing coordinator.
-- Phase guidance edit: `docs/implementation/p12_eraser_and_text_request.md` —
+- Phase guidance edit: `docs/implementation/p12_eraser_and_context_action_request.md` —
   require P12 eraser/text work to consume the existing coordinator.
 - Verification inventory edit: `docs/verification/guardrails.md` — add or map
   the future cleanup-coordinator structural guardrail requirement.

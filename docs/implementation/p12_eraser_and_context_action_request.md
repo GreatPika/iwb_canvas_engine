@@ -101,7 +101,7 @@ spatial, projection, or resource effects.
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.interaction.commands_emit_user_actions` -> `test/interaction/commands_emit_user_actions_test.dart`
 - `test.interaction.preview_public_state` -> `test/interaction/preview_public_state_test.dart`
-- `test.interaction.state_machines` -> `test/interaction/state_machines_test.dart`
+- `test.interaction.eraser_context_action_routing` -> `test/interaction/eraser_context_action_routing_test.dart`
 - `test.interaction.context_action_request` -> `test/interaction/context_action_request_test.dart`
 - `test.interaction.text_edit_stale_commit_guard` -> `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `test.interaction.pointer_tool_cleanup_coordinator` -> `test/interaction/pointer_tool_cleanup_coordinator_test.dart`

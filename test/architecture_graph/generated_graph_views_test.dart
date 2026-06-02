@@ -71,7 +71,7 @@ void _expectCurrentPhaseView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
-    contains('eraser_text_request'),
+    contains('eraser_context_request'),
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
@@ -102,7 +102,7 @@ void _expectFutureView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('eraser_text_request')),
+    isNot(contains('eraser_context_request')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],

@@ -651,7 +651,7 @@ PUBLIC_API_CHANGE
 
 #### Files
 
-- Phase guidance edit: `docs/implementation/p12_eraser_and_text_request.md` -
+- Phase guidance edit: `docs/implementation/p12_eraser_and_context_action_request.md` -
   require later implementation coverage for direct `handleDoubleTap` content,
   empty-canvas, pending-history cleanup, and no-effect delivery.
 - Verification contract edit: `docs/verification/tests.md` - add direct

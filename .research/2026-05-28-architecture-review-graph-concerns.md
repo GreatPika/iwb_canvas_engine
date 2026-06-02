@@ -11,7 +11,7 @@ research_question: "Check whether the architecture review concerns about the edi
 ## Summary
 
 The reviewed graph concerns about `geometry_spatial_index`, `frame_renderer`,
-`interaction_engine`, `draw_tools`, and `eraser_text_request` describe
+`interaction_engine`, `draw_tools`, and `eraser_context_request` describe
 future architecture graph nodes or edges rather than current selected-phase
 graph facts. The generated graph views are selected for P7
 (`docs/diagrams/generated/current_phase.mmd:4`), while the graph source marks
@@ -234,7 +234,7 @@ that the runtime implements `FrameFactsPort`
   `lib/src/runtime/runtime_root.dart:577`).
 
 The graph source marks `geometry.spatial_index`, `interaction.engine`,
-`draw.tools`, and `eraser_text.request` as future
+`draw.tools`, and `eraser_context.request` as future
 (`docs/architecture/architecture_graph.yaml:380`,
 `docs/architecture/architecture_graph.yaml:386`,
 `docs/architecture/architecture_graph.yaml:412`,
@@ -273,12 +273,12 @@ P10 cleanup coordinator seam (`docs/implementation/p11_draw_tools.md:5`,
 `docs/implementation/p11_draw_tools.md:27`). P12 documents eraser preview,
 eraser commit through `EditKernel`, exact-hit budget behavior, context-action
 request routing, and `commitTextEdit` semantics
-(`docs/implementation/p12_eraser_and_text_request.md:5`,
-`docs/implementation/p12_eraser_and_text_request.md:12`,
-`docs/implementation/p12_eraser_and_text_request.md:14`,
-`docs/implementation/p12_eraser_and_text_request.md:15`,
-`docs/implementation/p12_eraser_and_text_request.md:18`,
-`docs/implementation/p12_eraser_and_text_request.md:24`).
+(`docs/implementation/p12_eraser_and_context_action_request.md:5`,
+`docs/implementation/p12_eraser_and_context_action_request.md:12`,
+`docs/implementation/p12_eraser_and_context_action_request.md:14`,
+`docs/implementation/p12_eraser_and_context_action_request.md:15`,
+`docs/implementation/p12_eraser_and_context_action_request.md:18`,
+`docs/implementation/p12_eraser_and_context_action_request.md:24`).
 
 ### 4. Public/Internal Contracts and UI-Independent Core Boundaries
 
@@ -359,7 +359,7 @@ imports of interaction, frame, and flutter bridge owners
 - `docs/architecture/architecture_graph.yaml:812` - future
   `draw.tools -> interaction.engine` preview-intent edge.
 - `docs/architecture/architecture_graph.yaml:855` - future
-  `eraser_text.request -> interaction.engine` preview-intent edge.
+  `eraser_context.request -> interaction.engine` preview-intent edge.
 - `docs/architecture/architecture_graph.yaml:583` - future
   `runtime.root -> frame.renderer` FrameFactsPort provider edge.
 - `lib/src/api/canvas_runtime.dart:20` - public `CanvasRuntime` facade

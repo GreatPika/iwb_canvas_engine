@@ -135,7 +135,7 @@ The P11 design source of truth is `.design/2026-06-02-p11-draw-tools.md`; curren
 
 Compatibility:
 
-The public package remains source-compatible. P11 changes behavior through already exported declarations: `CanvasInteractionMode.draw`, `CanvasDrawTool.pencil`, `CanvasDrawTool.marker`, `CanvasDrawTool.line`, `CanvasDrawStyle`, `CanvasToolPort.handlePointer`, draw preview variants, `CanvasStrokeElement`, `CanvasLineElement`, `CanvasActionType.drawPencil`, `CanvasActionType.drawMarker`, `CanvasActionType.drawLine`, and draw action payloads. Existing P10 draw-pointer no-op compatibility is retired only for pencil, marker, and line. Eraser and context/text request behavior remain later-phase scope. Preview changes must not advance document revision before commit. Accepted draw commits publish public state before action events.
+The public package remains source-compatible. P11 changes behavior through already exported declarations: `CanvasInteractionMode.draw`, `CanvasDrawTool.pencil`, `CanvasDrawTool.marker`, `CanvasDrawTool.line`, `CanvasDrawStyle`, `CanvasToolPort.handlePointer`, draw preview variants, `CanvasStrokeElement`, `CanvasLineElement`, `CanvasActionType.drawPencil`, `CanvasActionType.drawMarker`, `CanvasActionType.drawLine`, and draw action payloads. Existing P10 draw-pointer no-op compatibility is retired only for pencil, marker, and line. Eraser, context-action request, and guarded text-edit commit behavior remain later-phase scope. Preview changes must not advance document revision before commit. Accepted draw commits publish public state before action events.
 
 Order Constraints:
 
@@ -248,7 +248,7 @@ Unit 1.
 
 Owner:
 
-`lib/src/interaction/draw_stroke_machine.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/interaction/pointer_session.dart`, `test/interaction/state_machines_test.dart` or cohesive stroke-machine tests, preview public state tests.
+`lib/src/interaction/draw_stroke_machine.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/interaction/pointer_session.dart`, `test/interaction/draw_stroke_interaction_routing_test.dart` or cohesive stroke-machine tests, preview public state tests.
 
 Donors:
 
@@ -286,7 +286,7 @@ Units 1 and 2.
 
 Owner:
 
-`lib/src/interaction/line_machine.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/interaction/pointer_session.dart`, `test/interaction/state_machines_test.dart` or cohesive line-machine tests, preview public state tests.
+`lib/src/interaction/line_machine.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/interaction/pointer_session.dart`, `test/interaction/line_interaction_routing_test.dart` or cohesive line-machine tests, preview public state tests.
 
 Donors:
 

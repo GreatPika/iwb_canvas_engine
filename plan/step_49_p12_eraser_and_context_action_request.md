@@ -8,7 +8,7 @@ Implement P12 eraser and context-action request behavior so public consumers can
 
 - Design: `.design/2026-06-02-p12-eraser-and-context-action-request.md`
 - Research: `.research/2026-06-02-p12-eraser-context-action-request.md`
-- Phase: `docs/implementation/p12_eraser_and_text_request.md`
+- Phase: `docs/implementation/p12_eraser_and_context_action_request.md`
 - PLAN: `PLAN.md`
 - Other: `docs/contracts/public_api_v1.md`, `docs/contracts/interaction_engine.md`, `docs/contracts/operation_matrix.md`, `docs/contracts/geometry.md`, `docs/contracts/diagnostics.md`, `docs/contracts/edit_kernel.md`, `docs/contracts/frame_rendering.md`, `docs/contracts/load_document.md`, `docs/diagrams/state_pending_context_action_request.mmd`, `docs/architecture/02_package_boundaries.md`, `docs/architecture/architecture_graph.yaml`, `docs/verification/tests.md`, `docs/verification/guardrails.md`, `docs/indexes/by_guardrail.md`, `tool/guardrails/src/guardrail_registry.dart`, `tool/guardrails/src/guardrail_executor.dart`, `tool/guardrails/src/interaction_guardrail_checks.dart`, `tool/guardrails/src/selection_move_guardrail_suite.dart`, `test/guardrails/blocking_suite_test.dart`, `docs/donors/00_reuse_rules.md`, `docs/donors/07_donors_to_avoid.md`, `docs/_registry/donors.yaml`
 
@@ -77,12 +77,12 @@ Forbidden donor structure for P12 is fixed: do not copy `avoid_scene_controller_
 - `.design/2026-06-02-p12-eraser-and-context-action-request.md:535` / smoke handoff: public smoke must append a P12 root-barrel workflow -> Unit 7 requires `test/smoke/public_incremental_smoke_test.dart` expansion to P12.
 - `.design/2026-06-02-p12-eraser-and-context-action-request.md:522` / verification handoff: P12 proof files include exact geometry, action payload, preview, context request, text guard, cleanup, load, selection, guardrail, and smoke tests -> execution units and verification commands must name the exact files rather than only test categories.
 - `.design/2026-06-02-p12-eraser-and-context-action-request.md:577` / change-contract handoff: D1 through D18, profile, obligations, proof surfaces, and constraints are locked -> Decision Trace maps every design decision to units and checks.
-- `docs/implementation/p12_eraser_and_text_request.md:11` / phase scope: P12 names eraser state machine, preview, exact hit, edit-kernel commit, budget behavior, erase action, context router, request id, guarded text commit, cleanup, and stale terminal rejection -> execution units must cover each named surface.
-- `docs/implementation/p12_eraser_and_text_request.md:28` / cleanup seam: eraser/context machines may create typed cleanup requests but must not call `PointerToolCleanupCoordinator` directly -> Units 2, 4, and 6 need cleanup ownership proof.
-- `docs/implementation/p12_eraser_and_text_request.md:52` / required donors: P12 lists exact donors and decisions -> this contract preserves donor lists globally and per unit.
-- `docs/implementation/p12_eraser_and_text_request.md:66` / forbidden donors: scene controller, whole runtime, scene builder, scene codec, and scene store controller structures are forbidden -> guardrail/source search must prove they are not copied.
-- `docs/implementation/p12_eraser_and_text_request.md:97` / proof inventory: P12 lists focused tests and guardrails -> completion checks must name direct proof surfaces instead of vague verification.
-- `docs/implementation/p12_eraser_and_text_request.md:118` / exit gate: eraser preview, commit, double tap, text commit, stale terminal, and load cleanup behaviors define phase closure -> units must include those exit signals.
+- `docs/implementation/p12_eraser_and_context_action_request.md:11` / phase scope: P12 names eraser state machine, preview, exact hit, edit-kernel commit, budget behavior, erase action, context router, request id, guarded text commit, cleanup, and stale terminal rejection -> execution units must cover each named surface.
+- `docs/implementation/p12_eraser_and_context_action_request.md:28` / cleanup seam: eraser/context machines may create typed cleanup requests but must not call `PointerToolCleanupCoordinator` directly -> Units 2, 4, and 6 need cleanup ownership proof.
+- `docs/implementation/p12_eraser_and_context_action_request.md:52` / required donors: P12 lists exact donors and decisions -> this contract preserves donor lists globally and per unit.
+- `docs/implementation/p12_eraser_and_context_action_request.md:66` / forbidden donors: scene controller, whole runtime, scene builder, scene codec, and scene store controller structures are forbidden -> guardrail/source search must prove they are not copied.
+- `docs/implementation/p12_eraser_and_context_action_request.md:97` / proof inventory: P12 lists focused tests and guardrails -> completion checks must name direct proof surfaces instead of vague verification.
+- `docs/implementation/p12_eraser_and_context_action_request.md:118` / exit gate: eraser preview, commit, double tap, text commit, stale terminal, and load cleanup behaviors define phase closure -> units must include those exit signals.
 - `docs/contracts/interaction_engine.md:141` / cleanup rule: cleanup-capable machines return typed cleanup requests and `InteractionEngine` is the only coordinator caller -> owner boundary excludes direct coordinator calls.
 - `docs/contracts/interaction_engine.md:144` / read boundary: committed facts for gesture decisions use narrow read-only interaction query ports -> Unit 1 must extend `InteractionReadPort`, not expose store internals.
 - `docs/contracts/interaction_engine.md:244` / preview owner: `InteractionEngine` is the only producer of public preview variants -> eraser preview publication belongs in interaction.
@@ -110,7 +110,7 @@ Forbidden donor structure for P12 is fixed: do not copy `avoid_scene_controller_
 - `docs/contracts/public_api_v1.md:2333` / context model: P12 emits exactly one request and application owns menu/editor UI -> out of scope excludes engine UI state.
 - `docs/diagrams/state_pending_context_action_request.mmd:155` / disposed request state: later `commitTextEdit` after `runtime.dispose()` throws `StateError` -> Unit 5 completion check must not accept false/no-op as disposed behavior.
 - `docs/architecture/02_package_boundaries.md:303` / package boundary: `context_action_router.dart` is the future route owner and may only read narrow query facts -> Unit 4 filename and dependency direction are fixed.
-- `docs/architecture/architecture_graph.yaml:463` / graph placeholder: P12 `eraser_text.request` is future with placeholder declaration -> Unit 8 must replace placeholder graph facts with actual P12 declarations after implementation.
+- `docs/architecture/architecture_graph.yaml:463` / graph placeholder: P12 `eraser_context.request` is future with placeholder declaration -> Unit 8 must replace placeholder graph facts with actual P12 declarations after implementation.
 - `docs/verification/tests.md:568` / smoke policy: public incremental smoke proves root-barrel external consumer behavior and must expand only by appending the next public step -> Unit 7 must extend the smoke to P12.
 - `docs/verification/tests.md:657` / tool-port proof: `test/api/tool_port_settings_test.dart` owns public tool-port compatibility including context request stream behavior -> Unit 4 must name this file for broadcast/close proof.
 - `docs/verification/guardrails.md` / guardrail source of truth: guardrail documentation records runner-backed enforcement expectations -> Unit 8 must update this file when P12 guardrail coverage changes.
@@ -155,7 +155,7 @@ Do not create application UI for context menus, Flutter text editor overlays, IM
 
 Source of Truth:
 
-The P12 design source of truth is `.design/2026-06-02-p12-eraser-and-context-action-request.md`; current factual research is `.research/2026-06-02-p12-eraser-context-action-request.md`; phase scope is `docs/implementation/p12_eraser_and_text_request.md`. Public command/tool/request/preview/action contracts belong in `docs/contracts/public_api_v1.md` and `lib/src/contracts/public/**`. Interaction ownership, cleanup, pending context tap, preview, and request registry behavior belong in `docs/contracts/interaction_engine.md` and `lib/src/interaction/**`. Eraser budget constants and exact-hit policy belong in `docs/contracts/geometry.md`, `GeometryPolicy`, `HitTestPolicy`, and `SpatialKernel`; do not duplicate them elsewhere. Operation effects belong in `docs/contracts/operation_matrix.md`. Diagnostics routing belongs in `docs/contracts/diagnostics.md`. Architecture closure belongs in `docs/architecture/architecture_graph.yaml` and generated graph views. Verification inventory belongs in `docs/verification/tests.md`. Guardrail source-of-truth surfaces are `docs/verification/guardrails.md`, `docs/indexes/by_guardrail.md`, and runner-backed guardrail tests. The roadmap source of truth is `PLAN.md` plus this linked step contract.
+The P12 design source of truth is `.design/2026-06-02-p12-eraser-and-context-action-request.md`; current factual research is `.research/2026-06-02-p12-eraser-context-action-request.md`; phase scope is `docs/implementation/p12_eraser_and_context_action_request.md`. Public command/tool/request/preview/action contracts belong in `docs/contracts/public_api_v1.md` and `lib/src/contracts/public/**`. Interaction ownership, cleanup, pending context tap, preview, and request registry behavior belong in `docs/contracts/interaction_engine.md` and `lib/src/interaction/**`. Eraser budget constants and exact-hit policy belong in `docs/contracts/geometry.md`, `GeometryPolicy`, `HitTestPolicy`, and `SpatialKernel`; do not duplicate them elsewhere. Operation effects belong in `docs/contracts/operation_matrix.md`. Diagnostics routing belongs in `docs/contracts/diagnostics.md`. Architecture closure belongs in `docs/architecture/architecture_graph.yaml` and generated graph views. Verification inventory belongs in `docs/verification/tests.md`. Guardrail source-of-truth surfaces are `docs/verification/guardrails.md`, `docs/indexes/by_guardrail.md`, and runner-backed guardrail tests. The roadmap source of truth is `PLAN.md` plus this linked step contract.
 
 Compatibility:
 
@@ -249,7 +249,7 @@ None.
 
 Owner:
 
-`lib/src/interaction/eraser_machine.dart`, `lib/src/interaction/pointer_session.dart`, `lib/src/interaction/interaction_pointer_context.dart`, `lib/src/interaction/interaction_engine.dart`, `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`, `test/interaction/preview_public_state_test.dart`, `test/interaction/state_machines_test.dart`, `test/interaction/pointer_tool_cleanup_coordinator_test.dart`.
+`lib/src/interaction/eraser_machine.dart`, `lib/src/interaction/pointer_session.dart`, `lib/src/interaction/interaction_pointer_context.dart`, `lib/src/interaction/interaction_engine.dart`, `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`, `test/interaction/preview_public_state_test.dart`, `test/interaction/eraser_context_action_routing_test.dart`, `test/interaction/pointer_tool_cleanup_coordinator_test.dart`.
 
 Donors:
 
@@ -280,7 +280,7 @@ Add or update focused eraser machine/routing tests before accepting production e
 
 Completion Check:
 
-`test/geometry/eraser_exact_budget_no_partial_commit_test.dart`, `test/interaction/preview_public_state_test.dart`, `test/interaction/state_machines_test.dart`, and `test/interaction/pointer_tool_cleanup_coordinator_test.dart` are added or updated before production acceptance and prove draw-mode eraser admission, one active pointer, finite thickness and world corridor capture, duplicate/finite corridor behavior, preview publication as immutable `CanvasEraserPreview`, preview revision only with overlay repaint, no document/selection/action effects during preview, preview budget overflow corridor-only behavior, terminal budget overflow cleanup/no-op with no commit intent, stale token/epoch terminal cleanup without commit, cancel/no-op/empty-id cleanup without action, eraser commit intent is carried by `InteractionPointerAdmission`, and `DrawStrokeMachine` still rejects eraser. `interaction.pointer_cleanup_coordinator_only`, `interaction.no_concrete_store_imports`, and `interaction.no_stale_terminal_commit` pass for P12 eraser files.
+`test/geometry/eraser_exact_budget_no_partial_commit_test.dart`, `test/interaction/preview_public_state_test.dart`, `test/interaction/eraser_context_action_routing_test.dart`, and `test/interaction/pointer_tool_cleanup_coordinator_test.dart` are added or updated before production acceptance and prove draw-mode eraser admission, one active pointer, finite thickness and world corridor capture, duplicate/finite corridor behavior, preview publication as immutable `CanvasEraserPreview`, preview revision only with overlay repaint, no document/selection/action effects during preview, preview budget overflow corridor-only behavior, terminal budget overflow cleanup/no-op with no commit intent, stale token/epoch terminal cleanup without commit, cancel/no-op/empty-id cleanup without action, eraser commit intent is carried by `InteractionPointerAdmission`, and `DrawStrokeMachine` still rejects eraser. `interaction.pointer_cleanup_coordinator_only`, `interaction.no_concrete_store_imports`, and `interaction.no_stale_terminal_commit` pass for P12 eraser files.
 
 Depends On:
 
@@ -326,7 +326,7 @@ Units 1 and 2.
 
 Owner:
 
-`lib/src/interaction/context_action_router.dart`, `lib/src/interaction/interaction_request_registry.dart`, `lib/src/interaction/interaction_pointer_context.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/runtime/runtime_root.dart`, `test/interaction/context_action_request_test.dart`, `test/interaction/state_machines_test.dart`, `test/api/tool_port_settings_test.dart`.
+`lib/src/interaction/context_action_router.dart`, `lib/src/interaction/interaction_request_registry.dart`, `lib/src/interaction/interaction_pointer_context.dart`, `lib/src/interaction/interaction_engine.dart`, `lib/src/runtime/runtime_root.dart`, `test/interaction/context_action_request_test.dart`, `test/interaction/eraser_context_action_routing_test.dart`, `test/api/tool_port_settings_test.dart`.
 
 Donors:
 
@@ -358,7 +358,7 @@ Add or update context request focused tests before accepting production request 
 
 Completion Check:
 
-`test/interaction/context_action_request_test.dart` and `test/interaction/state_machines_test.dart` are added or updated before production acceptance and prove direct content double tap records registry guard facts before emitting exactly one event with immutable content element snapshot, boundsWorld, trigger, id, epoch, documentRevision, timestamp, finite view/world positions, and no document/selection/preview/repaint/spatial/projection/resource/action effect; direct empty/background-only double tap emits one empty target event with no public effects; direct non-finite position rejects before timestamp resolution, cleanup, target query, registry issue, or stream emission; direct valid double tap clears existing pending context tap through `InteractionEngine`/coordinator before current-target resolution; pointer-sample first tap stores private history only; pointer-sample second tap revalidates current target facts and returns request intent through `InteractionPointerAdmission` only on match; mismatch/hidden/family-changed/current-target-changed second tap clears pending only and emits no request. `test/api/tool_port_settings_test.dart` proves `contextActionRequests` remains broadcast and closes on dispose.
+`test/interaction/context_action_request_test.dart` and `test/interaction/eraser_context_action_routing_test.dart` are added or updated before production acceptance and prove direct content double tap records registry guard facts before emitting exactly one event with immutable content element snapshot, boundsWorld, trigger, id, epoch, documentRevision, timestamp, finite view/world positions, and no document/selection/preview/repaint/spatial/projection/resource/action effect; direct empty/background-only double tap emits one empty target event with no public effects; direct non-finite position rejects before timestamp resolution, cleanup, target query, registry issue, or stream emission; direct valid double tap clears existing pending context tap through `InteractionEngine`/coordinator before current-target resolution; pointer-sample first tap stores private history only; pointer-sample second tap revalidates current target facts and returns request intent through `InteractionPointerAdmission` only on match; mismatch/hidden/family-changed/current-target-changed second tap clears pending only and emits no request. `test/api/tool_port_settings_test.dart` proves `contextActionRequests` remains broadcast and closes on dispose.
 
 Depends On:
 
@@ -504,7 +504,7 @@ Durable source-of-truth closure only. Do not duplicate implementation facts into
 
 Change:
 
-Update source-of-truth surfaces to reflect actual P12 declaration names, route order, effect matrix, verification inventory, guardrail coverage, and architecture graph status. Update `docs/verification/guardrails.md`, `docs/indexes/by_guardrail.md`, and runner-backed guardrail tests to reflect P12 enforcement for cleanup coordinator ownership, stale terminal prevention, text edit stale guard, concrete-store import prevention, diagnostics no-hub proof, and forbidden donor structure. Replace `eraser_text.request` placeholder declarations with actual selected P12 declarations such as `EraserMachine`, `ContextActionRouter`, and `InteractionRequestRegistry` unless implementation has first updated the package-boundary source of truth for a different name. Regenerate/check graph views and generated docs. Keep names such as `p12`, `phase_12`, `step_49`, fixture-only request ids, and placeholder graph labels out of production source, fixtures that claim to be durable model data, public registries, schemas, and stable docs unless the identifier is a real phase/protocol/source-of-truth reference. Mark Step 49 and execution unit checkboxes complete only during implementation closure after unit evidence exists.
+Update source-of-truth surfaces to reflect actual P12 declaration names, route order, effect matrix, verification inventory, guardrail coverage, and architecture graph status. Update `docs/verification/guardrails.md`, `docs/indexes/by_guardrail.md`, and runner-backed guardrail tests to reflect P12 enforcement for cleanup coordinator ownership, stale terminal prevention, text edit stale guard, concrete-store import prevention, diagnostics no-hub proof, and forbidden donor structure. Replace `eraser_context.request` placeholder declarations with actual selected P12 declarations such as `EraserMachine`, `ContextActionRouter`, and `InteractionRequestRegistry` unless implementation has first updated the package-boundary source of truth for a different name. Regenerate/check graph views and generated docs. Keep names such as `p12`, `phase_12`, `step_49`, fixture-only request ids, and placeholder graph labels out of production source, fixtures that claim to be durable model data, public registries, schemas, and stable docs unless the identifier is a real phase/protocol/source-of-truth reference. Mark Step 49 and execution unit checkboxes complete only during implementation closure after unit evidence exists.
 
 Completion Check:
 
@@ -544,7 +544,7 @@ After Dart code changes:
 - `dart test test/api_contract/preview_state_sealed_union_test.dart`
 - `dart test test/interaction/commands_emit_user_actions_test.dart`
 - `dart test test/interaction/preview_public_state_test.dart`
-- `dart test test/interaction/state_machines_test.dart`
+- `dart test test/interaction/eraser_context_action_routing_test.dart`
 - `dart test test/interaction/context_action_request_test.dart`
 - `dart test test/interaction/text_edit_stale_commit_guard_test.dart`
 - `dart test test/interaction/pointer_tool_cleanup_coordinator_test.dart`

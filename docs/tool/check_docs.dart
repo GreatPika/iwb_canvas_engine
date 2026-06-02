@@ -33,7 +33,7 @@ const _phaseDocs = {
   'P9': 'docs/implementation/p9_frame_rendering_and_caches.md',
   'P10': 'docs/implementation/p10_selection_and_move.md',
   'P11': 'docs/implementation/p11_draw_tools.md',
-  'P12': 'docs/implementation/p12_eraser_and_text_request.md',
+  'P12': 'docs/implementation/p12_eraser_and_context_action_request.md',
   'P13': 'docs/implementation/p13_flutter_surface.md',
   'P14': 'docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md',
 };

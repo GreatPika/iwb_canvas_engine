@@ -350,7 +350,7 @@ const _runnerBackedProofs = [
       'test/interaction/move_machine_test.dart',
       'test/interaction/draw_stroke_interaction_routing_test.dart',
       'test/interaction/line_interaction_routing_test.dart',
-      'test/interaction/state_machines_test.dart',
+      'test/interaction/eraser_context_action_routing_test.dart',
     ],
   ),
   _RunnerBackedProof(

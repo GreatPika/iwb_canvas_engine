@@ -16,12 +16,12 @@ builds the eraser state machine, `CanvasEraserPreview`, exact-hit integration,
 terminal deletion through `EditKernel`, no-partial behavior on exact-budget
 overflow, context-action request emission, `CanvasInteractionRequestId`,
 guarded `commitTextEdit`, terminal cleanup, and stale terminal rejection
-(`docs/implementation/p12_eraser_and_text_request.md:5`,
-`docs/implementation/p12_eraser_and_text_request.md:11`,
-`docs/implementation/p12_eraser_and_text_request.md:17`,
-`docs/implementation/p12_eraser_and_text_request.md:20`,
-`docs/implementation/p12_eraser_and_text_request.md:23`,
-`docs/implementation/p12_eraser_and_text_request.md:26`).
+(`docs/implementation/p12_eraser_and_context_action_request.md:5`,
+`docs/implementation/p12_eraser_and_context_action_request.md:11`,
+`docs/implementation/p12_eraser_and_context_action_request.md:17`,
+`docs/implementation/p12_eraser_and_context_action_request.md:20`,
+`docs/implementation/p12_eraser_and_context_action_request.md:23`,
+`docs/implementation/p12_eraser_and_context_action_request.md:26`).
 
 The current codebase already contains the public API shapes, geometry eraser
 primitives, spatial eraser candidate query, edit-kernel deletion and rollback
@@ -49,44 +49,44 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 
 ### 1. P12 Phase Inputs And Documentation Map
 
-- **Location**: `docs/implementation/p12_eraser_and_text_request.md:1`.
+- **Location**: `docs/implementation/p12_eraser_and_context_action_request.md:1`.
 - **Description**: The P12 request is titled "P12 eraser and context-action
   request" and sets the implementation purpose as eraser preview/commit with
   exact-check budgets plus context-action double-tap request routing
-  (`docs/implementation/p12_eraser_and_text_request.md:5`,
-  `docs/implementation/p12_eraser_and_text_request.md:6`,
-  `docs/implementation/p12_eraser_and_text_request.md:7`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:5`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:6`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:7`).
 - **Scope facts**: The build scope explicitly names the eraser state machine,
   `CanvasEraserPreview`, exact-hit integration, terminal commit through
   `EditKernel`, no partial erase when exact checks exceed budget, direct and
   pointer-sample double-tap routing, target read models, request ids, guarded
   text edit commits, terminal cleanup, and stale terminal rejection
-  (`docs/implementation/p12_eraser_and_text_request.md:11`,
-  `docs/implementation/p12_eraser_and_text_request.md:14`,
-  `docs/implementation/p12_eraser_and_text_request.md:15`,
-  `docs/implementation/p12_eraser_and_text_request.md:16`,
-  `docs/implementation/p12_eraser_and_text_request.md:18`,
-  `docs/implementation/p12_eraser_and_text_request.md:20`,
-  `docs/implementation/p12_eraser_and_text_request.md:21`,
-  `docs/implementation/p12_eraser_and_text_request.md:23`,
-  `docs/implementation/p12_eraser_and_text_request.md:24`,
-  `docs/implementation/p12_eraser_and_text_request.md:26`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:11`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:14`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:15`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:16`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:18`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:20`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:21`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:23`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:24`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:26`).
 - **Dependencies**: P12 states dependencies on P5 deletion commits/rollback, P8
   geometry and spatial exact hit primitives, P9 overlay preview capture, P10
   pointer session/move safety, and P11 draw-mode preview infrastructure
-  (`docs/implementation/p12_eraser_and_text_request.md:37`,
-  `docs/implementation/p12_eraser_and_text_request.md:39`,
-  `docs/implementation/p12_eraser_and_text_request.md:40`,
-  `docs/implementation/p12_eraser_and_text_request.md:41`,
-  `docs/implementation/p12_eraser_and_text_request.md:42`,
-  `docs/implementation/p12_eraser_and_text_request.md:43`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:37`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:39`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:40`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:41`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:42`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:43`).
 - **Read-first contract inputs**: P12 names public API v1, interaction engine,
   geometry policy, and tests as the required read-first sections
-  (`docs/implementation/p12_eraser_and_text_request.md:45`,
-  `docs/implementation/p12_eraser_and_text_request.md:47`,
-  `docs/implementation/p12_eraser_and_text_request.md:48`,
-  `docs/implementation/p12_eraser_and_text_request.md:49`,
-  `docs/implementation/p12_eraser_and_text_request.md:50`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:45`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:47`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:48`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:49`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:50`).
 - **Contracts satisfied by P12**: The P12 file states that the phase satisfies
   eraser policy, exact-check budgets, and no-partial-commit behavior from
   geometry policy; eraser and context-action interaction behavior from the
@@ -94,41 +94,41 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   event, guarded text edit commit, editText action payload API, and erase action
   payload API from public API v1; and operation matrix rows for eraser preview,
   eraser commit, and context request behavior
-  (`docs/implementation/p12_eraser_and_text_request.md:85`,
-  `docs/implementation/p12_eraser_and_text_request.md:87`,
-  `docs/implementation/p12_eraser_and_text_request.md:88`,
-  `docs/implementation/p12_eraser_and_text_request.md:89`,
-  `docs/implementation/p12_eraser_and_text_request.md:90`,
-  `docs/implementation/p12_eraser_and_text_request.md:91`,
-  `docs/implementation/p12_eraser_and_text_request.md:92`,
-  `docs/implementation/p12_eraser_and_text_request.md:93`,
-  `docs/implementation/p12_eraser_and_text_request.md:94`,
-  `docs/implementation/p12_eraser_and_text_request.md:95`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:85`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:87`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:88`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:89`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:90`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:91`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:92`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:93`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:94`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:95`).
 - **P12 exit-gate load cleanup fact**: The P12 exit gate states that stale
   terminal samples do not commit and that `loadDocument` prepared cleanup before
   install clears eraser/context gesture state on success while failure preserves
-  it where required (`docs/implementation/p12_eraser_and_text_request.md:153`,
-  `docs/implementation/p12_eraser_and_text_request.md:154`,
-  `docs/implementation/p12_eraser_and_text_request.md:155`,
-  `docs/implementation/p12_eraser_and_text_request.md:156`).
+  it where required (`docs/implementation/p12_eraser_and_context_action_request.md:153`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:154`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:155`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:156`).
 - **P12 risks and trade-offs**: The P12 file identifies eraser deletion as the
   interaction path most likely to partially mutate state, and states that
   budget-exceeded terminal behavior must be cleanup/no-op and never partial
   commit. It also states that context menus and text editing UI remain
   application-owned and the engine only emits the request
-  (`docs/implementation/p12_eraser_and_text_request.md:158`,
-  `docs/implementation/p12_eraser_and_text_request.md:160`,
-  `docs/implementation/p12_eraser_and_text_request.md:161`,
-  `docs/implementation/p12_eraser_and_text_request.md:162`,
-  `docs/implementation/p12_eraser_and_text_request.md:163`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:158`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:160`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:161`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:162`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:163`).
 - **P12 phase placement**: The P12 file says eraser and context-action request
   both need geometry, spatial, frame preview, pointer session, event dispatch,
   and edit safety, and that they belong after move and draw tools when shared
   interaction machinery is already proven
-  (`docs/implementation/p12_eraser_and_text_request.md:165`,
-  `docs/implementation/p12_eraser_and_text_request.md:167`,
-  `docs/implementation/p12_eraser_and_text_request.md:168`,
-  `docs/implementation/p12_eraser_and_text_request.md:169`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:165`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:167`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:168`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:169`).
 - **Documentation entry point**: `docs/README.md` routes implementation phases
   through `docs/indexes/by_phase.md`, verification through
   `docs/verification/`, subsystem contracts through `docs/indexes/by_subsystem.md`,
@@ -188,8 +188,8 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   `lib/src/interaction/interaction_engine.dart:110`).
 - **Cleanup-only paths**: P12 states eraser cleanup-only paths clear preview and
   session through the existing cleanup seam and do not emit erase action or
-  document state (`docs/implementation/p12_eraser_and_text_request.md:31`,
-  `docs/implementation/p12_eraser_and_text_request.md:32`). The eraser state
+  document state (`docs/implementation/p12_eraser_and_context_action_request.md:31`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:32`). The eraser state
   diagram includes cancel, mode/load/interactive/dispose, stale/invalid, empty
   ids, budget overflow, and edit-failure as cleanup-only paths
   (`docs/diagrams/state_eraser.mmd:112`,
@@ -247,7 +247,7 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 
 ### 3. P12 Donor Inputs
 
-- **Location**: `docs/implementation/p12_eraser_and_text_request.md:52`.
+- **Location**: `docs/implementation/p12_eraser_and_context_action_request.md:52`.
 - **Description**: The P12 phase file has an explicit `Required donors` section.
   It names `foundation_pointer_input_contract`,
   `foundation_action_event_immutability`, `geometry_interactive_geometry`,
@@ -255,18 +255,18 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   `interaction_pointer_normalizer`, `interaction_event_dispatcher`,
   `interaction_double_tap_router`, `interaction_gesture_runtime`,
   `interaction_draw_coordinator`, and `interaction_mutation_boundary` as
-  required donor inputs (`docs/implementation/p12_eraser_and_text_request.md:52`,
-  `docs/implementation/p12_eraser_and_text_request.md:54`,
-  `docs/implementation/p12_eraser_and_text_request.md:55`,
-  `docs/implementation/p12_eraser_and_text_request.md:56`,
-  `docs/implementation/p12_eraser_and_text_request.md:57`,
-  `docs/implementation/p12_eraser_and_text_request.md:58`,
-  `docs/implementation/p12_eraser_and_text_request.md:59`,
-  `docs/implementation/p12_eraser_and_text_request.md:60`,
-  `docs/implementation/p12_eraser_and_text_request.md:61`,
-  `docs/implementation/p12_eraser_and_text_request.md:62`,
-  `docs/implementation/p12_eraser_and_text_request.md:63`,
-  `docs/implementation/p12_eraser_and_text_request.md:64`).
+  required donor inputs (`docs/implementation/p12_eraser_and_context_action_request.md:52`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:54`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:55`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:56`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:57`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:58`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:59`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:60`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:61`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:62`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:63`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:64`).
 - **P12 donor decisions and owners**: P12 marks pointer input and interactive
   geometry donors as `copy/adapt`, action events, eraser exact hit,
   pointer session, event dispatch, double-tap router, gesture runtime, and
@@ -277,18 +277,18 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   sample normalizer, interaction event dispatch, context-action double-tap
   router, InteractionEngine dispatch order and cleanup, draw/line/eraser
   machines, and the interaction-owned mutation bridge into `EditKernel`
-  (`docs/implementation/p12_eraser_and_text_request.md:54`,
-  `docs/implementation/p12_eraser_and_text_request.md:64`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:54`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:64`).
 - **Forbidden donor structure in P12**: The phase file forbids donor structure
   from `avoid_scene_controller_facades`, `avoid_interactive_runtime_whole`,
   `avoid_scene_builder_public_architecture`, `avoid_scene_codec_whole`, and
   `avoid_scene_store_controller_whole`
-  (`docs/implementation/p12_eraser_and_text_request.md:66`,
-  `docs/implementation/p12_eraser_and_text_request.md:68`,
-  `docs/implementation/p12_eraser_and_text_request.md:69`,
-  `docs/implementation/p12_eraser_and_text_request.md:70`,
-  `docs/implementation/p12_eraser_and_text_request.md:71`,
-  `docs/implementation/p12_eraser_and_text_request.md:72`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:66`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:68`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:69`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:70`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:71`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:72`).
 - **Donor reuse boundary**: The donor inventory defines the current engine as a
   functional oracle and implementation donor, not a legacy dependency. Donor
   use means copying or adapting proven algorithms, contracts, tests, and
@@ -481,8 +481,8 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   `docs/contracts/interaction_engine.md:227`,
   `docs/contracts/interaction_engine.md:232`). The P12 request applies the same
   no-effect rule to context tap cleanup
-  (`docs/implementation/p12_eraser_and_text_request.md:33`,
-  `docs/implementation/p12_eraser_and_text_request.md:35`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:33`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:35`).
 - **Load cleanup**: Runtime load prepares interaction cleanup before load install
   (`lib/src/runtime/runtime_root.dart:1001`,
   `lib/src/runtime/runtime_root.dart:1016`). Operation matrix notes that a failed
@@ -852,24 +852,24 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 
 ### 9. Test Surface And Guardrails
 
-- **Location**: `docs/implementation/p12_eraser_and_text_request.md:97`.
+- **Location**: `docs/implementation/p12_eraser_and_context_action_request.md:97`.
 - **Description**: P12 names required tests and guardrails for geometry budget
   no-partial behavior, typed action payloads, public preview sealed union,
   commands emitting user actions, preview public state, interaction state
   machines, context-action requests, guarded text edits, cleanup coordinator,
   concrete store import bans, stale terminal commit bans, cleanup coordinator
   ownership, and load interruption behavior
-  (`docs/implementation/p12_eraser_and_text_request.md:97`,
-  `docs/implementation/p12_eraser_and_text_request.md:99`,
-  `docs/implementation/p12_eraser_and_text_request.md:100`,
-  `docs/implementation/p12_eraser_and_text_request.md:101`,
-  `docs/implementation/p12_eraser_and_text_request.md:102`,
-  `docs/implementation/p12_eraser_and_text_request.md:103`,
-  `docs/implementation/p12_eraser_and_text_request.md:104`,
-  `docs/implementation/p12_eraser_and_text_request.md:105`,
-  `docs/implementation/p12_eraser_and_text_request.md:106`,
-  `docs/implementation/p12_eraser_and_text_request.md:108`,
-  `docs/implementation/p12_eraser_and_text_request.md:116`).
+  (`docs/implementation/p12_eraser_and_context_action_request.md:97`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:99`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:100`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:101`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:102`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:103`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:104`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:105`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:106`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:108`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:116`).
 - **Existing P12-named or adjacent tests**: Present files include
   `test/api/typed_action_payloads_test.dart`,
   `test/api_contract/preview_state_sealed_union_test.dart`,
@@ -878,7 +878,7 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   `test/interaction/pointer_tool_cleanup_coordinator_test.dart`, and
   `test/smoke/public_incremental_smoke_test.dart`. Direct file checks found no
   `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`,
-  no `test/interaction/state_machines_test.dart`,
+  no `test/interaction/eraser_context_action_routing_test.dart`,
   no `test/interaction/context_action_request_test.dart`, and no
   `test/interaction/text_edit_stale_commit_guard_test.dart`.
 - **Tests contract facts**: The tests contract includes
@@ -1078,9 +1078,9 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 
 ## Code References
 
-- `docs/implementation/p12_eraser_and_text_request.md:5` - P12 purpose begins
+- `docs/implementation/p12_eraser_and_context_action_request.md:5` - P12 purpose begins
   with eraser preview/commit and context-action request routing.
-- `docs/implementation/p12_eraser_and_text_request.md:97` - P12 named tests and
+- `docs/implementation/p12_eraser_and_context_action_request.md:97` - P12 named tests and
   guardrails begin.
 - `docs/contracts/public_api_v1.md:381` - public runtime context-action request
   stream.
@@ -1130,7 +1130,7 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 
 ## Search Coverage
 
-- **Inspected directly**: `docs/implementation/p12_eraser_and_text_request.md`,
+- **Inspected directly**: `docs/implementation/p12_eraser_and_context_action_request.md`,
   `PLAN.md`, `docs/README.md`, `docs/contracts/public_api_v1.md`,
   `docs/contracts/interaction_engine.md`, `docs/contracts/geometry.md`,
   `docs/contracts/operation_matrix.md`, `docs/verification/tests.md`,
@@ -1223,7 +1223,7 @@ command surface (`docs/contracts/public_api_v1.md:381`,
   interaction machine class; no eraser pointer session kind; no context-action
   read-port methods; no `erase` or `editText` internal commit action intent;
   no physical `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`;
-  no physical `test/interaction/state_machines_test.dart`; no physical
+  no physical `test/interaction/eraser_context_action_routing_test.dart`; no physical
   `test/interaction/context_action_request_test.dart`; no physical
   `test/interaction/text_edit_stale_commit_guard_test.dart`.
 - **Not inspected**: No dependency package internals were inspected because the
@@ -1295,7 +1295,7 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 - No eraser-specific interaction machine or eraser pointer session kind was
   found, while P12 and the eraser state diagram define eraser admission,
   preview, terminal budget, commit, and cleanup states
-  (`docs/implementation/p12_eraser_and_text_request.md:11`,
+  (`docs/implementation/p12_eraser_and_context_action_request.md:11`,
   `docs/diagrams/state_eraser.mmd:16`,
   `lib/src/interaction/pointer_session.dart:8`,
   `lib/src/interaction/pointer_session.dart:14`).
@@ -1314,8 +1314,8 @@ command surface (`docs/contracts/public_api_v1.md:381`,
 - The P12-named no-partial eraser commit test, context-action request test,
   state-machine test, and text-edit stale-commit guard test were not present as
   physical test files, while P12 and the tests contract name them
-  (`docs/implementation/p12_eraser_and_text_request.md:99`,
-  `docs/implementation/p12_eraser_and_text_request.md:104`,
-  `docs/implementation/p12_eraser_and_text_request.md:105`,
-  `docs/implementation/p12_eraser_and_text_request.md:106`,
+  (`docs/implementation/p12_eraser_and_context_action_request.md:99`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:104`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:105`,
+  `docs/implementation/p12_eraser_and_context_action_request.md:106`,
   `docs/verification/tests.md:365`).

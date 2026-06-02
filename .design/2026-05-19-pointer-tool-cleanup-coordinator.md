@@ -293,7 +293,7 @@ with the tool machines.
 
 | Pressure | Evidence | How the selected form responds | Accepted cost or risk |
 |---|---|---|---|
-| P10-P12 implement interaction slices in sequence, so cleanup decisions made for selected move/marquee will be reused by draw, line, eraser, and text. | `docs/implementation/p10_selection_and_move.md:16`; `docs/implementation/p11_draw_tools.md:28`; `docs/implementation/p12_eraser_and_text_request.md:31` | Introduce the coordinator with P10 pointer-session/move work, then require P11 and P12 tool machines to route cleanup through the same seam. | P10 gets a slightly wider internal scope, but later tool phases avoid duplicating policy. |
+| P10-P12 implement interaction slices in sequence, so cleanup decisions made for selected move/marquee will be reused by draw, line, eraser, and text. | `docs/implementation/p10_selection_and_move.md:16`; `docs/implementation/p11_draw_tools.md:28`; `docs/implementation/p12_eraser_and_context_action_request.md:31` | Introduce the coordinator with P10 pointer-session/move work, then require P11 and P12 tool machines to route cleanup through the same seam. | P10 gets a slightly wider internal scope, but later tool phases avoid duplicating policy. |
 | `interactive=false` must cancel active routed sessions while preserving pending line state not owned by the active session. | `docs/contracts/public_api_v1.md:517`; `docs/contracts/public_api_v1.md:519`; `docs/diagrams/state_two_tap_line.mmd:26`; `docs/diagrams/state_two_tap_line.mmd:39` | Cleanup requests must carry both reason and ownership context. `interactiveDisabledActiveSession` may clear only active pointer-owned state; mode/tool, successful load, dispose, terminal line, and explicit line-owned cleanup may clear pending line. | The request type is more explicit than a generic `cleanup()` call, but it prevents accidental pending-line loss. |
 | Selected move cleanup uses main-scene repaint while all other pointer preview cleanup uses overlay or no repaint. | `docs/contracts/interaction_engine.md:150`; `docs/diagrams/state_selected_move.mmd:164`; `docs/diagrams/dfd_pointer_preview_commit.mmd:94` | The coordinator classifies cleanup target from the cleared preview kind before changing it to `CanvasNoPreview`. | The coordinator must capture previous preview kind as part of cleanup outcome before clearing state. |
 | Cleanup must finish before public state, action, repaint, stream close, or load publication effects become visible. | `docs/diagrams/state_pointer_session.mmd:111`; `docs/contracts/load_document.md:76`; `docs/diagrams/seq_dispose_during_gesture.mmd:76`; `docs/diagrams/seq_dispose_during_gesture.mmd:82` | The coordinator returns an effect-only outcome. `InteractionEngine`/`RuntimeRoot` aggregate and publish after cleanup has already closed state and released tokens. | The outcome type must be complete enough that later publication code does not re-read stale active session state. |
@@ -371,7 +371,7 @@ without resolver, edit, action, or text-request dependencies.
 | State/data | pass | Preview changes publish `state.revisions.preview`; no-op cleanup is public-state silent; pending non-owned line state is preserved: `docs/contracts/interaction_engine.md:120`; `docs/contracts/interaction_engine.md:122`; `docs/contracts/interaction_engine.md:135`. |
 | Seam | pass | The successor seam is `PointerToolCleanupCoordinator`; consumers are P10 selected move/marquee first, then P11 draw/line, then P12 eraser/text. Retirement gate: no tool machine may directly publish cleanup effects or clear preview/session state outside the coordinator except through private state primitives owned by the coordinator call. |
 | Verification | pass | Existing planned tests and guardrails prove preview revision isolation, no action on preview-only changes, empty cleanup silence, no resolver on cancel paths, stale terminal no commit, and `interactive=false` pending-line preservation: `docs/verification/tests.md:439`; `docs/verification/tests.md:443`; `docs/verification/guardrails.md:183`; `docs/verification/guardrails.md:184`; `docs/verification/guardrails.md:211`. |
-| Future pressure | pass | P10-P12 phase ordering creates reuse pressure, but adding the coordinator in P10 lets later tool phases consume it: `docs/implementation/p10_selection_and_move.md:16`; `docs/implementation/p11_draw_tools.md:28`; `docs/implementation/p12_eraser_and_text_request.md:31`. |
+| Future pressure | pass | P10-P12 phase ordering creates reuse pressure, but adding the coordinator in P10 lets later tool phases consume it: `docs/implementation/p10_selection_and_move.md:16`; `docs/implementation/p11_draw_tools.md:28`; `docs/implementation/p12_eraser_and_context_action_request.md:31`. |
 
 ## Lock-Required Facts
 
@@ -492,7 +492,7 @@ is implemented:
   preserving tool-specific terminal/gesture rules.
 - `docs/implementation/p10_selection_and_move.md`,
   `docs/implementation/p11_draw_tools.md`, and
-  `docs/implementation/p12_eraser_and_text_request.md` - make coordinator use a
+  `docs/implementation/p12_eraser_and_context_action_request.md` - make coordinator use a
   phase requirement and exit-gate proof.
 - `docs/verification/guardrails.md` and `docs/_registry/sections.yaml` - add or
   map a structural proof if the implementation contract chooses a durable
@@ -528,7 +528,7 @@ Future implementation should prove:
   production files exist.
 
 Proof surfaces should include `test/interaction/preview_public_state_test.dart`,
-`test/interaction/state_machines_test.dart`,
+`test/interaction/eraser_context_action_routing_test.dart`,
 `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`,
 `test/interaction/no_stale_terminal_commit_test.dart`,
 `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`,

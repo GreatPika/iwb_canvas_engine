@@ -144,13 +144,13 @@ and tests can follow after the source-of-truth docs are locked.
 - `docs/diagrams/state_pending_context_action_request.mmd:53` - current durable
   state diagram still says `second tap or explicit double-tap`, which can imply
   direct `handleDoubleTap` belongs to the pending-flow path.
-- `docs/implementation/p12_eraser_and_text_request.md:20` - P12 currently scopes
+- `docs/implementation/p12_eraser_and_context_action_request.md:20` - P12 currently scopes
   `CanvasContextActionRequested` emission for content-element and empty-canvas
   targets.
-- `docs/implementation/p12_eraser_and_text_request.md:131` - the P12 exit gate
+- `docs/implementation/p12_eraser_and_context_action_request.md:131` - the P12 exit gate
   currently requires eligible content double-tap to emit one content-target
   context request.
-- `docs/implementation/p12_eraser_and_text_request.md:134` - the P12 exit gate
+- `docs/implementation/p12_eraser_and_context_action_request.md:134` - the P12 exit gate
   currently requires empty-canvas double-tap to emit one empty-canvas target.
 - `docs/verification/tests.md:263` - runtime-created timestamp tests currently
   include context-action requests.
@@ -517,7 +517,7 @@ A later Change Contract must update these source-of-truth surfaces:
 - `docs/diagrams/README.md` if diagram filenames or titles change.
 - `docs/_registry/sections.yaml`: keep diagram/test mapping aligned with the
   current context-action diagram names if titles or diagram ids change.
-- `docs/implementation/p12_eraser_and_text_request.md`: update exit gates to
+- `docs/implementation/p12_eraser_and_context_action_request.md`: update exit gates to
   require direct `handleDoubleTap` coverage when describing context-action
   request behavior.
 - `docs/verification/tests.md`, `docs/indexes/by_test_area.md`,
@@ -640,7 +640,7 @@ For later implementation, verification should be behavior-first:
   - `docs/architecture/02_package_boundaries.md:247`
   - `docs/diagrams/seq_context_action_request.mmd:1`
   - `docs/diagrams/state_pending_context_action_request.mmd:53`
-  - `docs/implementation/p12_eraser_and_text_request.md:131`
+  - `docs/implementation/p12_eraser_and_context_action_request.md:131`
   - `docs/verification/tests.md:263`
   - `docs/verification/tests.md:272`
 - Contract constraints or sequencing facts:

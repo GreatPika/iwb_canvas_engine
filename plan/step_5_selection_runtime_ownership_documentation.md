@@ -541,7 +541,7 @@ needed before implementation phases depend on selection behavior.
 - `docs/implementation/p10_selection_and_move.md` - primary selection owner,
   API behavior, marquee, selected move, and interaction proof.
 - `docs/implementation/p11_draw_tools.md`,
-  `docs/implementation/p12_eraser_and_text_request.md`, and
+  `docs/implementation/p12_eraser_and_context_action_request.md`, and
   `docs/implementation/p13_flutter_surface.md` - secondary references only.
 - `docs/_registry/sections.yaml` - section ownership, must-read dependencies,
   tests, and guardrail references.

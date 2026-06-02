@@ -385,7 +385,7 @@ DiagnosticsHub/diagnostic/probe/counter hits:
 - `docs/implementation/p9_frame_rendering_and_caches.md`
 - `docs/implementation/p10_selection_and_move.md`
 - `docs/implementation/p11_draw_tools.md`
-- `docs/implementation/p12_eraser_and_text_request.md`
+- `docs/implementation/p12_eraser_and_context_action_request.md`
 
 These classification-only files may remain textually unchanged only when manual
 review confirms their hits are already table-backed, explicitly non-hub, donor

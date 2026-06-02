@@ -71,10 +71,10 @@ phases:
       - path: docs/implementation/p11_draw_tools.md
       - path: docs/contracts/operation_matrix.md
   - id: P12
-    title: Eraser and text request
+    title: Eraser and context requests
     status: closed
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
   - id: P13
     title: Flutter surface
@@ -461,8 +461,8 @@ nodes:
       declarations:
         - DrawStrokeMachine
         - LineMachine
-  - id: eraser_text.request
-    label: Eraser and text request owner
+  - id: eraser_context.request
+    label: Eraser and context request owner
     kind: interaction_owner
     owner: interaction
     phaseIntroduced: P12
@@ -470,7 +470,7 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - EraserMachine, ContextActionRouter, and InteractionRequestRegistry own P12 eraser capture, context request routing, and request guard facts under the interaction boundary.
@@ -697,17 +697,18 @@ edges:
         - RuntimeRoot
       delegationMembers:
         - CanvasRuntime.commands
-  - id: api.canvas_runtime.context_action_requests.empty_p10_stream
+  - id: api.canvas_runtime.context_action_requests.routes_context_action_requests
     from: api.canvas_runtime
     to: runtime.root
     kind: facade_stream
-    phaseRequiredBy: P10
+    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - CanvasRuntime.contextActionRequests is a non-throwing empty broadcast stream in P10 and closes with RuntimeRoot disposal.
+      - CanvasRuntime.contextActionRequests is a non-throwing broadcast stream that is empty in P10, emits P12 context-action requests from RuntimeRoot, and closes with RuntimeRoot disposal.
     actual:
       delegationTargets:
         - RuntimeRoot
@@ -932,14 +933,14 @@ edges:
       delegationTargets:
         - DrawStrokeMachine
         - LineMachine
-  - id: eraser_text.request.commit_through_edit_kernel
+  - id: eraser_context.request.commit_through_edit_kernel
     from: runtime.root
     to: edit.kernel
     kind: tool_commit
     phaseRequiredBy: P12
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/operation_matrix.md
     evidence:
       - RuntimeRoot delivers accepted eraser and request-originated text changes through EditKernel.prepareInteractionCommit before public state/action delivery.
@@ -949,14 +950,14 @@ edges:
         - RuntimeRoot.commitTextEdit
       delegationTargets:
         - EditKernel
-  - id: eraser_text.request.uses_exact_hit_geometry
+  - id: eraser_context.request.uses_target_geometry
     from: runtime.root
     to: geometry.spatial_index
-    kind: eraser_exact_hit_boundary
+    kind: interaction_target_geometry_boundary
     phaseRequiredBy: P12
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/geometry.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
@@ -967,14 +968,14 @@ edges:
         - RuntimeInteractionReadAdapter._contextTargetFacts
       delegationTargets:
         - SpatialKernel
-  - id: eraser_text.request.produce_preview_intents_for_interaction
+  - id: eraser_context.request.delegate_lifecycle_and_requests
     from: interaction.engine
-    to: eraser_text.request
-    kind: tool_lifecycle_delegation
+    to: eraser_context.request
+    kind: lifecycle_request_delegation
     phaseRequiredBy: P12
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - InteractionEngine delegates P12 eraser lifecycle and context request decisions to EraserMachine, ContextActionRouter, and InteractionRequestRegistry while owning preview/session state and cleanup routing.
@@ -989,14 +990,14 @@ edges:
         - EraserMachine
         - ContextActionRouter
         - InteractionRequestRegistry
-  - id: eraser_text.request.produces_context_action_requests
+  - id: eraser_context.request.produces_context_action_requests
     from: runtime.root
     to: api.canvas_runtime
     kind: context_request_stream
     phaseRequiredBy: P12
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_text_request.md
+      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - RuntimeRoot emits accepted P12 context-action requests through the public CanvasRuntime.contextActionRequests stream controller.
@@ -1197,8 +1198,8 @@ forbiddenEdges:
       - path: docs/verification/guardrails.md
     evidence:
       - Implementation owners consume contracts, not API facade wrappers.
-  - id: eraser_text.request.forbidden_api_dependency
-    from: eraser_text.request
+  - id: eraser_context.request.forbidden_api_dependency
+    from: eraser_context.request
     to: api.public_surface
     kind: forbidden_import
     phaseRequiredBy: P6
@@ -1708,7 +1709,7 @@ sourceCoverage:
       - api.canvas_runtime.tools.routes_to_runtime_tools
       - api.canvas_runtime.commands.routes_to_runtime_commands
       - api.canvas_runtime.preview.future_placeholder
-      - api.canvas_runtime.context_action_requests.empty_p10_stream
+      - api.canvas_runtime.context_action_requests.routes_context_action_requests
   - sectionId: section_05_schema_v1_contract
     disposition: graph_obligation
     graphIds:
@@ -1747,7 +1748,7 @@ sourceCoverage:
       - edit.kernel
       - edit.kernel.mutates_store
       - draw.tools.commit_through_edit_kernel
-      - eraser_text.request.commit_through_edit_kernel
+      - eraser_context.request.commit_through_edit_kernel
   - sectionId: section_12_load_document
     disposition: graph_obligation
     graphIds:
@@ -1759,21 +1760,21 @@ sourceCoverage:
       - edit.kernel.mutates_store
       - load_document.pipeline.replaces_store_document
       - draw.tools.commit_through_edit_kernel
-      - eraser_text.request.commit_through_edit_kernel
+      - eraser_context.request.commit_through_edit_kernel
       - runtime.root.finalizes_user_actions
   - sectionId: section_14_interaction_engine
     disposition: graph_obligation
     graphIds:
       - interaction.engine
       - draw.tools
-      - eraser_text.request
+      - eraser_context.request
       - runtime.root.finalizes_user_actions
       - runtime.root.provides_interaction_read_port
       - draw.tools.delegate_lifecycle_decisions
-      - eraser_text.request.produce_preview_intents_for_interaction
+      - eraser_context.request.delegate_lifecycle_and_requests
       - api.canvas_runtime.commands.routes_to_runtime_commands
-      - api.canvas_runtime.context_action_requests.empty_p10_stream
-      - eraser_text.request.produces_context_action_requests
+      - api.canvas_runtime.context_action_requests.routes_context_action_requests
+      - eraser_context.request.produces_context_action_requests
   - sectionId: section_15_frame_render_contract
     disposition: graph_obligation
     graphIds:
@@ -1785,13 +1786,13 @@ sourceCoverage:
     disposition: graph_obligation
     graphIds:
       - geometry.spatial_index
-      - eraser_text.request.uses_exact_hit_geometry
+      - eraser_context.request.uses_target_geometry
       - runtime.root.composes_spatial_kernel
   - sectionId: section_17_spatial_kernel
     disposition: graph_obligation
     graphIds:
       - geometry.spatial_index
-      - eraser_text.request.uses_exact_hit_geometry
+      - eraser_context.request.uses_target_geometry
       - runtime.root.composes_spatial_kernel
   - sectionId: section_18_cache_policy
     disposition: graph_obligation
@@ -1833,7 +1834,7 @@ sourceCoverage:
       - frame.renderer.forbidden_api_dependency
       - interaction.engine.forbidden_api_dependency
       - draw.tools.forbidden_api_dependency
-      - eraser_text.request.forbidden_api_dependency
+      - eraser_context.request.forbidden_api_dependency
       - flutter.surface.forbidden_api_dependency
       - contracts.public.forbidden_api_dependency
       - contracts.internal_ports.forbidden_api_dependency

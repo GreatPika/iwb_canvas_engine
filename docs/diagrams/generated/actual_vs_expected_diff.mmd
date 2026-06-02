@@ -12,7 +12,7 @@ flowchart LR
   diagnostics_hub["Diagnostics hub<br/>required by P3"]:::ok
   draw_tools["Draw tool owner<br/>required by P11"]:::ok
   edit_kernel["Edit kernel<br/>required by P5"]:::ok
-  eraser_text_request["Eraser and text request owner<br/>required by P12"]:::ok
+  eraser_context_request["Eraser and context request owner<br/>required by P12"]:::ok
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]:::ok
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]:::ok
   interaction_engine["Interaction engine boundary<br/>required by P10"]:::ok
@@ -26,7 +26,7 @@ flowchart LR
   api_canvas_runtime -->|public API forwards to by P4| runtime_view_camera
   api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_canvas_runtime -->|owns and creates by P4| runtime_root
-  api_canvas_runtime -->|facade stream by P10| runtime_root
+  api_canvas_runtime -->|facade stream by P12| runtime_root
   api_canvas_runtime -->|public API forwards to by P4| api_camera_port
   api_canvas_runtime -->|public API forwards to by P10| runtime_root
   api_public_surface -->|exports by P2| api_canvas_runtime
@@ -38,9 +38,9 @@ flowchart LR
   interaction_engine -->|delegates lifecycle decisions to by P11| draw_tools
   edit_kernel -->|changes data through by P5| store_document_kernel
   runtime_root -->|commits through by P12| edit_kernel
-  interaction_engine -->|delegates lifecycle decisions to by P12| eraser_text_request
+  interaction_engine -->|delegates lifecycle and request decisions to by P12| eraser_context_request
   runtime_root -->|context request stream by P12| api_canvas_runtime
-  runtime_root -->|uses eraser exact-hit geometry through by P12| geometry_spatial_index
+  runtime_root -->|uses interaction target geometry through by P12| geometry_spatial_index
   frame_renderer -->|resolves resources through by P9| resource_surface_session
   interaction_engine -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel

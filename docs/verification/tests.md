@@ -203,7 +203,7 @@ Required tests:
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.preview_public_state`
-- `test.interaction.state_machines`
+- `test.interaction.eraser_context_action_routing`
 - `test.interaction.move_machine`
 - `test.interaction.select_machine`
 - `test.interaction.move_resolver_reentrancy`
@@ -361,7 +361,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/selected_move_main_repaint_test.dart`
 - `test/frame/marquee_overlay_repaint_test.dart`
 - `test/interaction/preview_public_state_test.dart`
-- `test/interaction/state_machines_test.dart`
+- `test/interaction/eraser_context_action_routing_test.dart`
 - `test/interaction/move_machine_test.dart`
 - `test/interaction/select_machine_test.dart`
 - `test/interaction/move_resolver_reentrancy_test.dart`
@@ -720,7 +720,7 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/interaction/interaction_read_port_test.dart` proves P12 immutable read
   facts for eraser, context targets, and text guard inputs without exposing
   store tables or mutation owners to interaction machines.
-- `test/interaction/state_machines_test.dart` proves eraser machine routing,
+- `test/interaction/eraser_context_action_routing_test.dart` proves eraser machine routing,
   immutable preview publication, terminal commit intent decisions, direct
   double-tap request production, and two-tap context revalidation behavior.
 - `test/interaction/context_action_request_test.dart` proves direct and

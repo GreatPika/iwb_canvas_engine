@@ -347,6 +347,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_16_geometry_policy`, `section_23_tests`
 
+## test.interaction.eraser_context_action_routing
+
+- Sections: `section_23_tests`
+
 ## test.interaction.interaction_declarations
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
@@ -390,10 +394,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.interaction.select_machine
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.interaction.state_machines
-
-- Sections: `section_23_tests`
 
 ## test.interaction.text_edit_stale_commit_guard
 
