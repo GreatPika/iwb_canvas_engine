@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:analyzer/dart/analysis/features.dart';
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -9,6 +12,10 @@ void main() {
 
   test('interaction read requests defensively copy captured session ids', () {
     expect(_verifySelectedMoveCommitRequestCopies, returnsNormally);
+  });
+
+  test('unit 1 pointer admission has no draw commit fields', () {
+    expect(_verifyPointerAdmissionFields, returnsNormally);
   });
 }
 
@@ -75,4 +82,42 @@ void _verifySelectedMoveCommitRequestCopies() {
   );
 }
 
+void _verifyPointerAdmissionFields() {
+  final unit = _parse(
+    _source('lib/src/interaction/interaction_pointer_context.dart'),
+  );
+  final fields = _fieldNames(unit, 'InteractionPointerAdmission');
+
+  expect(fields, {
+    'kind',
+    'sample',
+    'cleanupDecision',
+    'selectedMoveCommit',
+    'marqueeCommit',
+  });
+  expect(fields.any((name) => name.contains('stroke')), isFalse);
+  expect(fields.any((name) => name.contains('line')), isFalse);
+  expect(fields.any((name) => name.contains('draw')), isFalse);
+}
+
 String _source(String path) => File(path).readAsStringSync();
+
+CompilationUnit _parse(String content) {
+  return parseString(
+    content: content,
+    featureSet: FeatureSet.latestLanguageVersion(),
+  ).unit;
+}
+
+Set<String> _fieldNames(CompilationUnit unit, String className) {
+  final declaration = unit.declarations
+      .whereType<ClassDeclaration>()
+      .singleWhere(
+        (candidate) => candidate.namePart.typeName.lexeme == className,
+      );
+
+  return {
+    for (final field in declaration.body.members.whereType<FieldDeclaration>())
+      for (final variable in field.fields.variables) variable.name.lexeme,
+  };
+}

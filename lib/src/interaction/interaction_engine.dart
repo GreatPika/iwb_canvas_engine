@@ -3,6 +3,8 @@
 // metric-shaped wrapper files.
 // ignore_for_file: number-of-imports
 
+import 'dart:ui';
+
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
@@ -54,6 +56,7 @@ final class InteractionEngine {
   CanvasPointerPolicy _pointerPolicy;
   InteractionReadPort? _readPort;
   PointerSession? _activeSession;
+  _PendingLineState? _pendingLine;
   CanvasPreviewState _preview = const CanvasNoPreview();
   int _interactionRevision = 0;
   int _previewRevision = 0;
@@ -67,6 +70,11 @@ final class InteractionEngine {
   int get previewRevision => _previewRevision;
   CanvasPreviewState get preview => _preview;
   PointerSession? get activeSession => _activeSession;
+  bool get hasPendingLine => _pendingLine != null;
+  CanvasPendingLineStartPreview? get pendingLinePreview =>
+      _pendingLine?.preview;
+  bool get activeSessionOwnsPendingLine =>
+      _activeSession?.ownsPendingLine ?? false;
   InteractionReadPort get readPort {
     final port = _readPort;
     if (port == null) {
@@ -96,6 +104,25 @@ final class InteractionEngine {
 
   bool clearPreview() {
     return replacePreview(const CanvasNoPreview());
+  }
+
+  bool storePendingLineStart({
+    required CanvasPendingLineStartPreview preview,
+    required int controllerEpoch,
+  }) {
+    final next = _PendingLineState(
+      startWorld: preview.start,
+      timestampMs: preview.timestampMs,
+      color: preview.color,
+      thickness: preview.thickness,
+      controllerEpoch: controllerEpoch,
+    );
+    if (_pendingLinesEqual(_pendingLine, next)) {
+      return false;
+    }
+    _pendingLine = next;
+
+    return replacePreview(next.preview);
   }
 
   PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
@@ -134,7 +161,9 @@ final class InteractionEngine {
     }
     _mode = mode;
     _interactionRevision += 1;
-    if (cleanupSelectionMode || _activeSession != null) {
+    if (cleanupSelectionMode ||
+        _activeSession != null ||
+        _pendingLine != null) {
       return _cleanupWithReason(PointerCleanupReason.modeToolChange);
     }
 
@@ -224,17 +253,13 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     MarqueeStartDecision marquee,
   ) {
-    return PointerSession(
-      kind: PointerSessionKind.moveModeMarquee,
+    return PointerSession.marquee(
       token: PointerSessionToken(_nextToken++),
       controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
       sessionId: PointerSessionId(_nextSessionId++),
       pointerId: sample.pointerId,
-      toolMode: _mode,
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
-      capturedSelectedIds: const [],
-      capturedMovableIds: const [],
       previousSelectionIds: marquee.previousSelectionIds,
       capturedSelectionRevision: marquee.selectionRevision,
       lastPreview: _selectMachine.initialPreview(sample.worldPosition).preview,
@@ -245,16 +270,11 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     SelectedMoveStartDecision selection,
   ) {
-    return PointerSession(
-      kind: switch (_mode) {
-        CanvasInteractionMode.move => PointerSessionKind.moveModePointer,
-        CanvasInteractionMode.draw => PointerSessionKind.drawModePointer,
-      },
+    return PointerSession.selectedMove(
       token: PointerSessionToken(_nextToken++),
       controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
       sessionId: PointerSessionId(_nextSessionId++),
       pointerId: sample.pointerId,
-      toolMode: _mode,
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
       capturedSelectedIds: selection.selectedIds,
@@ -335,9 +355,12 @@ final class InteractionEngine {
   }
 
   PointerCleanupReason _cancelReasonFor(PointerSession? session) {
-    return session?.kind == PointerSessionKind.moveModeMarquee
-        ? PointerCleanupReason.marquee
-        : PointerCleanupReason.selectedMove;
+    return switch (session?.kind) {
+      PointerSessionKind.moveModeMarquee => PointerCleanupReason.marquee,
+      PointerSessionKind.drawModePointer => PointerCleanupReason.cancel,
+      PointerSessionKind.moveModePointer ||
+      null => PointerCleanupReason.selectedMove,
+    };
   }
 
   InvalidTerminalCleanupDecision _terminalCleanupDecision(
@@ -375,17 +398,18 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     PointerSession session,
   ) {
+    final selectionCapture = session.selectionCapture;
     final facts = readPort.selectedMoveCommitFacts(
       SelectedMoveCommitReadRequest(
-        sessionSelectedIds: session.capturedSelectedIds,
-        sessionMovableIds: session.capturedMovableIds,
-        selectionRevision: session.capturedSelectionRevision,
+        sessionSelectedIds: selectionCapture.selectedIds,
+        sessionMovableIds: selectionCapture.movableIds,
+        selectionRevision: selectionCapture.revision,
       ),
     );
     if (facts.skippedSessionIds.isNotEmpty) {
       _diagnosticsSink.recordStaleCandidateRejected(
         reason: 'staleSessionSelection',
-        expectedRevision: session.capturedSelectionRevision,
+        expectedRevision: selectionCapture.revision,
         observedRevision: facts.selectionRevision,
         skippedCandidateCount: facts.skippedSessionIds.length,
       );
@@ -475,6 +499,8 @@ final class InteractionEngine {
         activePreviewKind: _pointerCleanupPreviewKindFor(_preview.kind),
         hasActiveToken: _activeSession != null,
         hasActiveSession: _activeSession != null,
+        ownsPendingLine: activeSessionOwnsPendingLine,
+        hasPendingLine: _pendingLine != null,
       ),
     );
   }
@@ -482,6 +508,10 @@ final class InteractionEngine {
   void _applyCleanupOutcome(PointerCleanupOutcome outcome) {
     if (outcome.previewChanged) {
       clearPreview();
+    }
+    if (outcome.pendingLineDisposition ==
+        PointerPendingLineDisposition.cleared) {
+      _pendingLine = null;
     }
     if (outcome.sessionDisposition == PointerSessionDisposition.released &&
         _activeSession != null) {
@@ -685,4 +715,36 @@ PointerCleanupPreviewKind _pointerCleanupPreviewKindFor(
     CanvasPreviewKind.linePreview => PointerCleanupPreviewKind.linePreview,
     CanvasPreviewKind.eraser => PointerCleanupPreviewKind.eraser,
   };
+}
+
+final class _PendingLineState {
+  const _PendingLineState({
+    required this.startWorld,
+    required this.timestampMs,
+    required this.color,
+    required this.thickness,
+    required this.controllerEpoch,
+  });
+
+  final Offset startWorld;
+  final int timestampMs;
+  final Color color;
+  final double thickness;
+  final int controllerEpoch;
+
+  CanvasPendingLineStartPreview get preview => CanvasPendingLineStartPreview(
+    start: startWorld,
+    timestampMs: timestampMs,
+    color: color,
+    thickness: thickness,
+  );
+}
+
+bool _pendingLinesEqual(_PendingLineState? left, _PendingLineState right) {
+  return left != null &&
+      left.startWorld == right.startWorld &&
+      left.timestampMs == right.timestampMs &&
+      left.color == right.color &&
+      left.thickness == right.thickness &&
+      left.controllerEpoch == right.controllerEpoch;
 }

@@ -39,9 +39,10 @@ final class MoveMachine {
     required SelectedMoveCommitFacts facts,
   }) {
     final proposedDelta = terminalWorld - session.startWorld;
+    final selectionCapture = session.selectionCapture;
     if (proposedDelta == Offset.zero ||
         facts.movableIds.isEmpty ||
-        facts.selectionRevision != session.capturedSelectionRevision ||
+        facts.selectionRevision != selectionCapture.revision ||
         facts.controllerEpoch != session.controllerEpoch.value ||
         !facts.hasDocumentChangesAvailable) {
       return const SelectedMoveTerminalDecision.cleanupOnly();

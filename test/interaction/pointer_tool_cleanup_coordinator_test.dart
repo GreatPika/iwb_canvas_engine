@@ -14,6 +14,10 @@ void main() {
     expect(_verifyCleanupDispositions, returnsNormally);
   });
 
+  test('preserves non-owned pending line preview on interactive false', () {
+    expect(_verifyPendingLinePreviewPreservation, returnsNormally);
+  });
+
   test('resolver error cleanup cannot produce an action', () {
     expect(_verifyResolverErrorNoAction, returnsNormally);
   });
@@ -61,6 +65,12 @@ void _verifyPreviewRepaintTargets() {
 void _verifyCleanupDispositions() {
   const coordinator = PointerToolCleanupCoordinator();
 
+  _expectLoadCleanupDispositions(coordinator);
+  _expectInteractiveFalsePendingLineDispositions(coordinator);
+  _expectDisposeCleanupDisposition(coordinator);
+}
+
+void _expectLoadCleanupDispositions(PointerToolCleanupCoordinator coordinator) {
   final load = coordinator.cleanup(
     const PointerCleanupRequest(
       reason: PointerCleanupReason.preparedLoadSuccess,
@@ -71,15 +81,6 @@ void _verifyCleanupDispositions() {
       hasPendingContextTap: true,
     ),
   );
-  final interactiveFalse = coordinator.cleanup(
-    const PointerCleanupRequest(
-      reason: PointerCleanupReason.interactiveDisabled,
-      hasPendingLine: true,
-    ),
-  );
-  final dispose = coordinator.cleanup(
-    const PointerCleanupRequest(reason: PointerCleanupReason.dispose),
-  );
 
   expect(load.activeTokenReleased, isTrue);
   expect(load.sessionDisposition, PointerSessionDisposition.released);
@@ -89,11 +90,85 @@ void _verifyCleanupDispositions() {
     PointerPendingContextTapDisposition.cleared,
   );
   expect(load.loadPreparedBeforeInstall, isTrue);
+}
+
+void _expectInteractiveFalsePendingLineDispositions(
+  PointerToolCleanupCoordinator coordinator,
+) {
+  final interactiveFalse = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.interactiveDisabled,
+      hasPendingLine: true,
+    ),
+  );
+  final lineOwnedInteractiveFalse = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.interactiveDisabled,
+      ownsPendingLine: true,
+      hasPendingLine: true,
+    ),
+  );
   expect(
     interactiveFalse.pendingLineDisposition,
     PointerPendingLineDisposition.preserved,
   );
+  expect(
+    lineOwnedInteractiveFalse.pendingLineDisposition,
+    PointerPendingLineDisposition.cleared,
+  );
+}
+
+void _expectDisposeCleanupDisposition(
+  PointerToolCleanupCoordinator coordinator,
+) {
+  final dispose = coordinator.cleanup(
+    const PointerCleanupRequest(reason: PointerCleanupReason.dispose),
+  );
+
   expect(dispose.disposeBeforeStreamClose, isTrue);
+}
+
+void _verifyPendingLinePreviewPreservation() {
+  const coordinator = PointerToolCleanupCoordinator();
+
+  final nonOwnedPendingLine = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.interactiveDisabled,
+      activePreviewKind: PointerCleanupPreviewKind.pendingLineStart,
+      hasPendingLine: true,
+    ),
+  );
+  final ownedPendingLine = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.interactiveDisabled,
+      activePreviewKind: PointerCleanupPreviewKind.pendingLineStart,
+      ownsPendingLine: true,
+      hasPendingLine: true,
+    ),
+  );
+  final cancel = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.cancel,
+      activePreviewKind: PointerCleanupPreviewKind.linePreview,
+      ownsPendingLine: true,
+      hasPendingLine: true,
+    ),
+  );
+
+  expect(nonOwnedPendingLine.previewChanged, isFalse);
+  expect(nonOwnedPendingLine.repaintTarget, PointerCleanupRepaintTarget.none);
+  expect(
+    nonOwnedPendingLine.pendingLineDisposition,
+    PointerPendingLineDisposition.preserved,
+  );
+  expect(ownedPendingLine.previewChanged, isTrue);
+  expect(ownedPendingLine.repaintTarget, PointerCleanupRepaintTarget.overlay);
+  expect(
+    ownedPendingLine.pendingLineDisposition,
+    PointerPendingLineDisposition.cleared,
+  );
+  expect(cancel.actionEmissionAllowed, isFalse);
+  expect(cancel.pendingLineDisposition, PointerPendingLineDisposition.cleared);
 }
 
 void _verifyResolverErrorNoAction() {

@@ -34,18 +34,19 @@ final class SelectMachine {
     required PointerSession session,
     required MarqueeCommitFacts facts,
   }) {
-    if (facts.selectionRevision != session.capturedSelectionRevision ||
+    final selectionCapture = session.selectionCapture;
+    if (facts.selectionRevision != selectionCapture.revision ||
         facts.controllerEpoch != session.controllerEpoch.value) {
       return const MarqueeTerminalDecision.cleanupOnly();
     }
-    if (_idsEqual(facts.nextSelectedIds, session.previousSelectionIds)) {
+    if (_idsEqual(facts.nextSelectedIds, selectionCapture.previousIds)) {
       return const MarqueeTerminalDecision.cleanupOnly();
     }
 
     return MarqueeTerminalDecision.commit(
       sessionId: session.sessionId,
       pointerToken: session.token,
-      previousSelectionIds: session.previousSelectionIds,
+      previousSelectionIds: selectionCapture.previousIds,
       nextSelectionIds: facts.nextSelectedIds,
       rectWorld: facts.rectWorld,
     );

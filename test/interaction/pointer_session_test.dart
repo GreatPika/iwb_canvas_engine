@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_tool_cleanup_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -23,6 +24,18 @@ void main() {
 
   test('closes an admitted terminal sample', () {
     expect(_verifyAdmittedTerminalClose, returnsNormally);
+  });
+
+  test('preserves and clears pending line by cleanup ownership', () {
+    expect(_verifyPendingLineCleanupOwnership, returnsNormally);
+  });
+
+  test('dispose clears pending line state', () {
+    expect(_verifyDisposeClearsPendingLine, returnsNormally);
+  });
+
+  test('exposes output timestamp resolver only through pointer context', () {
+    expect(_verifyPointerContextTimestampResolver, returnsNormally);
   });
 }
 
@@ -65,10 +78,11 @@ void _expectPointerCapture(
   PointerSession active,
   List<CanvasElementId> selected,
 ) {
-  expect(active.capturedSelectedIds, selected);
-  expect(active.capturedMovableIds, [CanvasElementId('a')]);
-  expect(active.previousSelectionIds, selected);
-  expect(active.capturedSelectionRevision, 9);
+  final capture = active.selectionCapture;
+  expect(capture.selectedIds, selected);
+  expect(capture.movableIds, [CanvasElementId('a')]);
+  expect(capture.previousIds, selected);
+  expect(capture.revision, 9);
 }
 
 void _verifyStaleNonTerminalHandling() {
@@ -131,6 +145,111 @@ void _verifyAdmittedTerminalClose() {
   expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
   expect(engine.activeSession, isNull);
   expect(engine.interactionRevision, 2);
+}
+
+void _verifyPendingLineCleanupOwnership() {
+  final engine = _engine();
+  final stored = _storePendingLine(engine);
+  final preview = engine.pendingLinePreview as CanvasPendingLineStartPreview;
+
+  _expectStoredPendingLine(engine, stored, preview);
+  _expectInteractiveFalsePreservesPendingLine(engine, preview);
+  _expectPreparedLoadClearsPendingLine(engine);
+}
+
+void _verifyDisposeClearsPendingLine() {
+  final engine = _engine();
+  _storePendingLine(engine);
+
+  final cleared = engine.disposeCleanup();
+
+  expect(cleared.disposeBeforeStreamClose, isTrue);
+  expect(cleared.pendingLineDisposition, PointerPendingLineDisposition.cleared);
+  expect(engine.hasPendingLine, isFalse);
+  expect(engine.preview, isA<CanvasNoPreview>());
+}
+
+bool _storePendingLine(InteractionEngine engine) {
+  return engine.storePendingLineStart(
+    preview: const CanvasPendingLineStartPreview(
+      start: Offset(2, 3),
+      timestampMs: 7,
+      color: Color(0xFF112233),
+      thickness: 4,
+    ),
+    controllerEpoch: 1,
+  );
+}
+
+void _expectStoredPendingLine(
+  InteractionEngine engine,
+  bool stored,
+  CanvasPendingLineStartPreview preview,
+) {
+  expect(stored, isTrue);
+  expect(engine.hasPendingLine, isTrue);
+  expect(preview.start, const Offset(2, 3));
+  expect(preview.timestampMs, 7);
+  expect(engine.preview, isA<CanvasPendingLineStartPreview>());
+}
+
+void _expectInteractiveFalsePreservesPendingLine(
+  InteractionEngine engine,
+  CanvasPendingLineStartPreview preview,
+) {
+  final preserved = engine.cleanupPointerTool(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.interactiveDisabled,
+      activePreviewKind: PointerCleanupPreviewKind.pendingLineStart,
+      hasPendingLine: true,
+    ),
+  );
+  expect(preserved.previewChanged, isFalse);
+  expect(
+    preserved.pendingLineDisposition,
+    PointerPendingLineDisposition.preserved,
+  );
+  expect(engine.hasPendingLine, isTrue);
+  _expectPendingLinePreview(engine.preview, preview);
+}
+
+void _expectPreparedLoadClearsPendingLine(InteractionEngine engine) {
+  final cleared = engine.prepareLoadCleanup();
+  expect(cleared.pendingLineDisposition, PointerPendingLineDisposition.cleared);
+  expect(engine.hasPendingLine, isFalse);
+  expect(engine.preview, isA<CanvasNoPreview>());
+}
+
+void _expectPendingLinePreview(
+  CanvasPreviewState actual,
+  CanvasPendingLineStartPreview expected,
+) {
+  final pendingLine = actual as CanvasPendingLineStartPreview;
+  expect(pendingLine.start, expected.start);
+  expect(pendingLine.timestampMs, expected.timestampMs);
+  expect(pendingLine.color, expected.color);
+  expect(pendingLine.thickness, expected.thickness);
+}
+
+void _verifyPointerContextTimestampResolver() {
+  final resolvedHints = <int?>[];
+  final context = InteractionPointerContext(
+    viewCameraOffset: Offset.zero,
+    controllerEpoch: 1,
+    resolveOutputTimestamp: (timestampHintMs) {
+      resolvedHints.add(timestampHintMs);
+
+      return timestampHintMs ?? 0;
+    },
+  );
+
+  expect(context.resolveOutputTimestamp(null), 0);
+  expect(context.resolveOutputTimestamp(12), 12);
+  expect(resolvedHints, [null, 12]);
+  expect(
+    () => _context(controllerEpoch: 1).resolveOutputTimestamp(null),
+    throwsStateError,
+  );
 }
 
 InteractionEngine _engine() {

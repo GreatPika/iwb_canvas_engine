@@ -790,6 +790,7 @@ final class RuntimeRoot
       InteractionPointerContext(
         viewCameraOffset: viewCameraOffset,
         controllerEpoch: _epochRevision,
+        resolveOutputTimestamp: _actionFinalizer.reserveTimestamp,
       ),
     );
     final selectedMoveCommit = admission.selectedMoveCommit;

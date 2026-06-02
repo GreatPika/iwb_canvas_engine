@@ -10,6 +10,7 @@ enum PointerCleanupReason {
   noOpTerminal,
   resolverCancel,
   resolverError,
+  cancel,
   editFailure,
   postSuccessCommit,
 }
@@ -90,9 +91,9 @@ final class PointerToolCleanupCoordinator {
   const PointerToolCleanupCoordinator();
 
   PointerCleanupOutcome cleanup(PointerCleanupRequest request) {
-    final previewChanged =
-        request.activePreviewKind != PointerCleanupPreviewKind.none;
+    final previewChanged = _previewChanged(request);
     final sessionReleased = request.hasActiveSession;
+    final pendingLineDisposition = _pendingLineDisposition(request);
 
     return PointerCleanupOutcome(
       reason: request.reason,
@@ -106,7 +107,7 @@ final class PointerToolCleanupCoordinator {
       sessionDisposition: sessionReleased
           ? PointerSessionDisposition.released
           : PointerSessionDisposition.preserved,
-      pendingLineDisposition: _pendingLineDisposition(request),
+      pendingLineDisposition: pendingLineDisposition,
       pendingContextTapDisposition: request.hasPendingContextTap
           ? PointerPendingContextTapDisposition.cleared
           : PointerPendingContextTapDisposition.none,
@@ -115,6 +116,21 @@ final class PointerToolCleanupCoordinator {
       disposeBeforeStreamClose: request.reason == PointerCleanupReason.dispose,
       actionEmissionAllowed: false,
     );
+  }
+
+  bool _previewChanged(PointerCleanupRequest request) {
+    if (request.activePreviewKind == PointerCleanupPreviewKind.none) {
+      return false;
+    }
+    if (request.reason == PointerCleanupReason.interactiveDisabled &&
+        request.activePreviewKind ==
+            PointerCleanupPreviewKind.pendingLineStart &&
+        request.hasPendingLine &&
+        !request.ownsPendingLine) {
+      return false;
+    }
+
+    return true;
   }
 
   PointerCleanupRepaintTarget _repaintTargetFor(
