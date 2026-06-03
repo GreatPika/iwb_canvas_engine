@@ -431,6 +431,12 @@ const ownerDagAllowedEdges = [
   ),
   OwnerEdge(
     source: runtimeOwner,
+    target: spatialOwner,
+    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
+    targetPath: 'lib/src/geometry/spatial_query_result.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
     target: resourcesOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/resources/resource_kernel.dart',
@@ -477,24 +483,30 @@ const ownerDagAllowedEdges = [
     source: runtimeOwner,
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/move_machine.dart',
+    targetPath: 'lib/src/interaction/interaction_runtime_intents.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
+    targetPath: 'lib/src/interaction/pointer_cleanup_outcome.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/select_machine.dart',
+    targetPath: 'lib/src/interaction/text_edit_guard_decision.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
+    targetPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: interactionOwner,
+    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
   ),
   OwnerEdge(

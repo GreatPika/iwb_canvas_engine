@@ -5,6 +5,7 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'interaction_read_port.dart';
+import 'interaction_runtime_intents.dart';
 import 'pointer_session.dart';
 
 final class MoveMachine {
@@ -114,25 +115,4 @@ final class SelectedMoveTerminalDecision {
 
   final bool shouldCommit;
   final SelectedMoveCommitIntent? intent;
-}
-
-final class SelectedMoveCommitIntent {
-  SelectedMoveCommitIntent({
-    required this.sessionId,
-    required this.pointerToken,
-    required this.proposedDelta,
-    required Iterable<CanvasElementId> movableIds,
-    required Iterable<CanvasElementRead> movedElements,
-    required this.documentSummary,
-    required this.selectionBoundsWorld,
-  }) : movableIds = List.unmodifiable(movableIds),
-       movedElements = List.unmodifiable(movedElements);
-
-  final PointerSessionId sessionId;
-  final PointerSessionToken pointerToken;
-  final Offset proposedDelta;
-  final List<CanvasElementId> movableIds;
-  final List<CanvasElementRead> movedElements;
-  final CanvasDocumentSummary documentSummary;
-  final Rect selectionBoundsWorld;
 }

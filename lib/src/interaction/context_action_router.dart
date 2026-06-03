@@ -1,9 +1,8 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
-
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_ids.dart';
+import 'interaction_runtime_intents.dart';
 import 'interaction_read_port.dart';
 import 'pointer_sample_normalizer.dart';
 
@@ -79,12 +78,6 @@ typedef ContextRequestIntentInput = ({
   Offset worldPosition,
 });
 
-final class ContextActionRequestIntent {
-  const ContextActionRequestIntent({required this.request});
-
-  final CanvasContextActionRequested request;
-}
-
 final class PendingContextTap {
   const PendingContextTap({
     required this.viewPosition,
@@ -103,7 +96,6 @@ final class PendingContextTap {
   ContextTargetKey get target => _target;
 }
 
-@immutable
 sealed class ContextTargetKey {
   const ContextTargetKey();
 }
@@ -111,10 +103,14 @@ sealed class ContextTargetKey {
 final class EmptyContextTargetKey extends ContextTargetKey {
   const EmptyContextTargetKey();
 
+  // Context target keys are immutable value objects; the interaction owner must
+  // not import Flutter foundation only to carry the @immutable annotation.
   @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes, immutable key type with final fields
   bool operator ==(Object other) => other is EmptyContextTargetKey;
 
   @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes, immutable key type with final fields
   int get hashCode => 0;
 }
 
@@ -131,7 +127,10 @@ final class ContentContextTargetKey extends ContextTargetKey {
   final int elementRevision;
   final InteractionElementFamily family;
 
+  // Context target keys are immutable value objects; the interaction owner must
+  // not import Flutter foundation only to carry the @immutable annotation.
   @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes, immutable key type with final fields
   bool operator ==(Object other) {
     return other is ContentContextTargetKey &&
         other.elementId == elementId &&
@@ -141,6 +140,7 @@ final class ContentContextTargetKey extends ContextTargetKey {
   }
 
   @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes, immutable key type with final fields
   int get hashCode =>
       Object.hash(elementId, generation, elementRevision, family);
 }

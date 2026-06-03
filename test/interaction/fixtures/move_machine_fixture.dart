@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/interaction/pointer_tool_cleanup_coordinator.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_outcome.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 const _selectedMoveDragEnd = Offset(9, 0);

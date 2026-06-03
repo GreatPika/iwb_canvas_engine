@@ -96,6 +96,11 @@ void _registerInteractionImportNegativeProofs() {
 }
 
 void _registerCleanupCoordinatorNegativeProof() {
+  _registerCleanupCoordinatorFileNegativeProof();
+  _registerCleanupOutcomeFileNegativeProof();
+}
+
+void _registerCleanupCoordinatorFileNegativeProof() {
   test('cleanup coordinator dependency fixture is rejected', () async {
     expect(
       await _expectCleanupCoordinatorImportRejected(
@@ -133,20 +138,36 @@ void _registerCleanupCoordinatorNegativeProof() {
   });
 }
 
+void _registerCleanupOutcomeFileNegativeProof() {
+  test('cleanup outcome dependency fixture is rejected', () async {
+    final violations = checkCleanupCoordinatorDependencyFile(
+      path: 'lib/src/interaction/pointer_cleanup_outcome.dart',
+      content: "import '../contracts/public/canvas_actions.dart';\n",
+    );
+    expect(violations, isNotEmpty);
+
+    await _expectStructuralRejection(
+      id: interactionCleanupCoordinatorDependencyBansGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
 void _registerReadPortNegativeProof() {
+  _registerSelectedMoveReadPortNegativeProof();
+  _registerEraserReadPortNegativeProof();
+  _registerSyntheticReadPortNegativeProof();
+}
+
+void _registerSelectedMoveReadPortNegativeProof() {
   test('read-port mutable fact fixture is rejected', () async {
-    final productionSource = File(
-      'lib/src/interaction/interaction_read_port.dart',
-    ).readAsStringSync();
+    final productionSource = _interactionReadPortSource();
     final mutableFixture = productionSource.replaceFirst(
       'selectedIds = List.unmodifiable(selectedIds)',
       'selectedIds = selectedIds',
     );
-    final violations = checkInteractionReadPortImmutableFactsSources({
-      'lib/src/interaction/interaction_read_port.dart': mutableFixture,
-    });
+    final violations = _readPortImmutableViolations(mutableFixture);
     expect(violations, isNotEmpty);
-
     await _expectStructuralRejection(
       id: interactionReadPortImmutableFactsGuardrailId,
       violations: violations,
@@ -154,9 +175,7 @@ void _registerReadPortNegativeProof() {
   });
 
   test('read-port comment-only copy fixture is rejected', () async {
-    final productionSource = File(
-      'lib/src/interaction/interaction_read_port.dart',
-    ).readAsStringSync();
+    final productionSource = _interactionReadPortSource();
     final mutableFixture = productionSource
         .replaceFirst(
           'selectedIds = List.unmodifiable(selectedIds)',
@@ -166,11 +185,8 @@ void _registerReadPortNegativeProof() {
 final List<CanvasElementId> selectedIds;
 // selectedIds = List.unmodifiable(selectedIds)
 ''');
-    final violations = checkInteractionReadPortImmutableFactsSources({
-      'lib/src/interaction/interaction_read_port.dart': mutableFixture,
-    });
+    final violations = _readPortImmutableViolations(mutableFixture);
     expect(violations, isNotEmpty);
-
     await _expectStructuralRejection(
       id: interactionReadPortImmutableFactsGuardrailId,
       violations: violations,
@@ -178,32 +194,312 @@ final List<CanvasElementId> selectedIds;
   });
 }
 
+void _registerEraserReadPortNegativeProof() {
+  test('read-port eraser request corridor fixture is rejected', () async {
+    final mutableFixture = _interactionReadPortSource().replaceFirst(
+      '}) : corridorPoints = List.unmodifiable(corridorPoints);',
+      '}) : corridorPoints = corridorPoints;',
+    );
+    final violations = _readPortImmutableViolations(mutableFixture);
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test('read-port eraser facts corridor fixture is rejected', () async {
+    final mutableFixture = _interactionReadPortSource().replaceFirst(
+      '''
+}) : corridorPoints = List.unmodifiable(corridorPoints),
+       erasedElementIds = List.unmodifiable(erasedElementIds);
+''',
+      '''
+}) : corridorPoints = corridorPoints,
+       erasedElementIds = List.unmodifiable(erasedElementIds);
+''',
+    );
+    final violations = _readPortImmutableViolations(mutableFixture);
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test('read-port eraser facts erased ids fixture is rejected', () async {
+    final mutableFixture = _interactionReadPortSource().replaceFirst(
+      '''
+}) : corridorPoints = List.unmodifiable(corridorPoints),
+       erasedElementIds = List.unmodifiable(erasedElementIds);
+''',
+      '''
+}) : corridorPoints = List.unmodifiable(corridorPoints),
+       erasedElementIds = erasedElementIds;
+''',
+    );
+    final violations = _readPortImmutableViolations(mutableFixture);
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
+void _registerSyntheticReadPortNegativeProof() {
+  _registerSyntheticReadPortCopyNegativeProof();
+  _registerSyntheticReadPortArgumentNegativeProof();
+  _registerSyntheticReadPortFieldFormalNegativeProof();
+}
+
+void _registerSyntheticReadPortCopyNegativeProof() {
+  test('read-port synthetic copied collection fixture is rejected', () async {
+    final violations = _readPortImmutableViolations('''
+final class SyntheticReadFacts {
+  SyntheticReadFacts({required Iterable<CanvasElementId> ids}) : ids = ids;
+
+  final List<CanvasElementId> ids;
+}
+''');
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test('read-port synthetic mutable copy fixture is rejected', () async {
+    final violations = _readPortImmutableViolations('''
+final class SyntheticReadFacts {
+  SyntheticReadFacts({required Iterable<CanvasElementId> ids})
+    : ids = List.of(ids);
+
+  final List<CanvasElementId> ids;
+}
+''');
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
+void _registerSyntheticReadPortArgumentNegativeProof() {
+  test('read-port synthetic wrong unmodifiable argument is rejected', () async {
+    final violations = _readPortImmutableViolations('''
+final class SyntheticReadFacts {
+  SyntheticReadFacts({
+    required Iterable<CanvasElementId> ids,
+    required Iterable<CanvasElementId> otherIds,
+  }) : ids = List.unmodifiable(otherIds);
+
+  final List<CanvasElementId> ids;
+}
+''');
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionReadPortImmutableFactsGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test(
+    'read-port synthetic mixed unmodifiable expression is rejected',
+    () async {
+      final violations = _readPortImmutableViolations('''
+final class SyntheticReadFacts {
+  SyntheticReadFacts({
+    required Iterable<CanvasElementId> ids,
+    required Iterable<CanvasElementId> otherIds,
+  }) : ids = List.unmodifiable(otherIds.followedBy(ids));
+
+  final List<CanvasElementId> ids;
+}
+''');
+      expect(violations, isNotEmpty);
+      await _expectStructuralRejection(
+        id: interactionReadPortImmutableFactsGuardrailId,
+        violations: violations,
+      );
+    },
+  );
+}
+
+void _registerSyntheticReadPortFieldFormalNegativeProof() {
+  test(
+    'read-port synthetic field-formal collection fixture is rejected',
+    () async {
+      final violations = _readPortImmutableViolations('''
+final class SyntheticReadFacts {
+  SyntheticReadFacts({required this.ids});
+
+  final List<CanvasElementId> ids;
+}
+''');
+      expect(violations, isNotEmpty);
+      await _expectStructuralRejection(
+        id: interactionReadPortImmutableFactsGuardrailId,
+        violations: violations,
+      );
+    },
+  );
+}
+
+List<GuardrailViolation> _readPortImmutableViolations(String source) {
+  return checkInteractionReadPortImmutableFactsSources({
+    'lib/src/interaction/interaction_read_port.dart': source,
+  });
+}
+
+String _interactionReadPortSource() {
+  return File(
+    'lib/src/interaction/interaction_read_port.dart',
+  ).readAsStringSync();
+}
+
+String _runtimeRootSource() {
+  return File('lib/src/runtime/runtime_root.dart').readAsStringSync();
+}
+
+List<GuardrailViolation> _textEditGuardViolations(String source) {
+  return checkTextEditStaleCommitGuardSources({
+    'lib/src/runtime/runtime_root.dart': source,
+  });
+}
+
+String _prepareTextEditCallFixture() {
+  return '''
+final applyResult = _prepareTextEditCommit((
+  requestId: requestId,
+  targetElementId: CanvasElementId('fixture'),
+  previousText: 'old',
+  newText: newText,
+  timestampMs: timestampMs,
+));
+''';
+}
+
+String _guardRejectedBranchPrepareFixture(String source) {
+  return source.replaceFirst(
+    '''
+if (guard.kind != TextEditGuardDecisionKind.accepted) {
+      return false;
+    }
+''',
+    '''
+if (guard.kind != TextEditGuardDecisionKind.accepted) {
+      ${_prepareTextEditCallFixture()}
+      return applyResult.shouldPublishState;
+    }
+''',
+  );
+}
+
+String _prepareBypassesGuardFactLocalsFixture(String source) {
+  return source
+      .replaceFirst('targetElementId: targetElementId,', '''
+targetElementId: CanvasElementId('fixture'),''')
+      .replaceFirst('previousText: previousText,', '''
+previousText: 'old',''');
+}
+
+String _guardFactLocalReassignedFixture(String source) {
+  return source
+      .replaceFirst(
+        'final targetElementId = guard.targetElementId as CanvasElementId;',
+        '''
+var targetElementId = guard.targetElementId as CanvasElementId;
+    targetElementId = CanvasElementId('fixture');''',
+      )
+      .replaceFirst('final previousText = guard.currentText as String;', '''
+var previousText = guard.currentText as String;
+    previousText = 'old';''');
+}
+
+String _consumeBeforePrepareSuccessFixture(String source) {
+  return source.replaceFirst(
+    '''
+final applyResult = _prepareTextEditCommit((
+''',
+    '''
+_interactionEngine.consumeTextEditRequest(requestId);
+    final applyResult = _prepareTextEditCommit((
+''',
+  );
+}
+
+String _deliverBeforeConsumeFixture(String source) {
+  return source.replaceFirst(
+    '''
+_interactionEngine.consumeTextEditRequest(requestId);
+    _deliverEditCommitResult(applyResult);
+''',
+    '''
+_deliverEditCommitResult(applyResult);
+    _interactionEngine.consumeTextEditRequest(requestId);
+''',
+  );
+}
+
+String _guardUsesWrongRequestIdFixture(String source) {
+  return source.replaceFirst(
+    '_interactionEngine.textEditGuardDecision(requestId)',
+    '_interactionEngine.textEditGuardDecision(otherRequestId)',
+  );
+}
+
+String _consumeUsesWrongRequestIdFixture(String source) {
+  return source.replaceFirst(
+    '''
+_interactionEngine.consumeTextEditRequest(requestId);
+    _deliverEditCommitResult(applyResult);
+''',
+    '''
+_interactionEngine.consumeTextEditRequest(otherRequestId);
+    _deliverEditCommitResult(applyResult);
+''',
+  );
+}
+
 void _registerTextEditGuardNegativeProof() {
+  _registerTextEditGuardDecisionNegativeProof();
+  _registerTextEditGuardPrepareFactNegativeProof();
+  _registerTextEditGuardOrderNegativeProof();
+  _registerTextEditGuardConsumeIdentityNegativeProof();
+}
+
+void _registerTextEditGuardDecisionNegativeProof() {
   test('text edit stale guard fixture is rejected', () async {
-    final productionSource = File(
-      'lib/src/runtime/runtime_root.dart',
-    ).readAsStringSync();
-    final unguardedFixture = productionSource.replaceFirst(
+    final unguardedFixture = _runtimeRootSource().replaceFirst(
       'final guard = _interactionEngine.textEditGuardDecision(requestId);',
       'final guard = const TextEditGuardDecision.accepted('
           'targetElementId: CanvasElementId("fixture"), currentText: "old");',
     );
-    final violations = checkTextEditStaleCommitGuardSources({
-      'lib/src/runtime/runtime_root.dart': unguardedFixture,
-    });
+    final violations = _textEditGuardViolations(unguardedFixture);
     expect(violations, isNotEmpty);
-
     await _expectStructuralRejection(
       id: interactionTextEditStaleCommitGuardrailId,
       violations: violations,
     );
   });
 
+  test('text edit wrong guard request id fixture is rejected', () async {
+    final violations = _textEditGuardViolations(
+      _guardUsesWrongRequestIdFixture(_runtimeRootSource()),
+    );
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
+void _registerTextEditGuardPrepareFactNegativeProof() {
   test('text edit hardcoded guard facts fixture is rejected', () async {
-    final productionSource = File(
-      'lib/src/runtime/runtime_root.dart',
-    ).readAsStringSync();
-    final hardcodedFactsFixture = productionSource
+    final hardcodedFactsFixture = _runtimeRootSource()
         .replaceFirst(
           'final targetElementId = guard.targetElementId as CanvasElementId;',
           'final targetElementId = CanvasElementId("fixture");',
@@ -212,11 +508,84 @@ void _registerTextEditGuardNegativeProof() {
           'final previousText = guard.currentText as String;',
           'const previousText = "old";',
         );
-    final violations = checkTextEditStaleCommitGuardSources({
-      'lib/src/runtime/runtime_root.dart': hardcodedFactsFixture,
-    });
+    final violations = _textEditGuardViolations(hardcodedFactsFixture);
     expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
 
+  test(
+    'text edit prepare bypasses guard fact locals fixture is rejected',
+    () async {
+      final violations = _textEditGuardViolations(
+        _prepareBypassesGuardFactLocalsFixture(_runtimeRootSource()),
+      );
+      expect(violations, isNotEmpty);
+      await _expectStructuralRejection(
+        id: interactionTextEditStaleCommitGuardrailId,
+        violations: violations,
+      );
+    },
+  );
+
+  test('text edit reassigned guard fact locals fixture is rejected', () async {
+    final violations = _textEditGuardViolations(
+      _guardFactLocalReassignedFixture(_runtimeRootSource()),
+    );
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
+void _registerTextEditGuardOrderNegativeProof() {
+  test('text edit rejected branch prepare fixture is rejected', () async {
+    final violations = _textEditGuardViolations(
+      _guardRejectedBranchPrepareFixture(_runtimeRootSource()),
+    );
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+
+  test(
+    'text edit consume-before-prepare-success fixture is rejected',
+    () async {
+      final violations = _textEditGuardViolations(
+        _consumeBeforePrepareSuccessFixture(_runtimeRootSource()),
+      );
+      expect(violations, isNotEmpty);
+      await _expectStructuralRejection(
+        id: interactionTextEditStaleCommitGuardrailId,
+        violations: violations,
+      );
+    },
+  );
+
+  test('text edit deliver-before-consume fixture is rejected', () async {
+    final violations = _textEditGuardViolations(
+      _deliverBeforeConsumeFixture(_runtimeRootSource()),
+    );
+    expect(violations, isNotEmpty);
+    await _expectStructuralRejection(
+      id: interactionTextEditStaleCommitGuardrailId,
+      violations: violations,
+    );
+  });
+}
+
+void _registerTextEditGuardConsumeIdentityNegativeProof() {
+  test('text edit wrong consume request id fixture is rejected', () async {
+    final violations = _textEditGuardViolations(
+      _consumeUsesWrongRequestIdFixture(_runtimeRootSource()),
+    );
+    expect(violations, isNotEmpty);
     await _expectStructuralRejection(
       id: interactionTextEditStaleCommitGuardrailId,
       violations: violations,
@@ -237,6 +606,13 @@ void _registerStructuralPositiveProofs() {
       checkCleanupCoordinatorDependencyFile(
         path: 'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
         content: "import 'dart:ui';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCleanupCoordinatorDependencyFile(
+        path: 'lib/src/interaction/pointer_cleanup_outcome.dart',
+        content: '',
       ),
       isEmpty,
     );

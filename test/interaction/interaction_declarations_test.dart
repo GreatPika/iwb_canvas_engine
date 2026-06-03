@@ -34,6 +34,7 @@ void main() {
 void _verifyRequiredDeclarations() {
   _verifyCoreDeclarations();
   _verifyMachineDeclarations();
+  _verifyRuntimeIntentDeclarations();
   _verifyPayloadOwnershipDeclarations();
 }
 
@@ -70,7 +71,7 @@ void _verifyMachineDeclarations() {
     allOf(
       contains('final class DrawStrokeMachine'),
       contains('final class PointerStrokeCapture'),
-      contains('final class DrawStrokeCommitIntent'),
+      isNot(contains('final class DrawStrokeCommitIntent')),
     ),
   );
   expect(
@@ -78,7 +79,7 @@ void _verifyMachineDeclarations() {
     allOf(
       contains('final class EraserMachine'),
       contains('final class PointerEraserCapture'),
-      contains('final class EraserCommitIntent'),
+      isNot(contains('final class EraserCommitIntent')),
     ),
   );
   expect(
@@ -87,7 +88,21 @@ void _verifyMachineDeclarations() {
       contains('final class LineMachine'),
       contains('final class PointerLineFirstTapCapture'),
       contains('final class PointerLineEndpointCapture'),
+      isNot(contains('final class DrawLineCommitIntent')),
+    ),
+  );
+}
+
+void _verifyRuntimeIntentDeclarations() {
+  expect(
+    _source('lib/src/interaction/interaction_runtime_intents.dart'),
+    allOf(
+      contains('final class ContextActionRequestIntent'),
+      contains('final class SelectedMoveCommitIntent'),
+      contains('final class MarqueeCommitIntent'),
+      contains('final class DrawStrokeCommitIntent'),
       contains('final class DrawLineCommitIntent'),
+      contains('final class EraserCommitIntent'),
     ),
   );
 }
@@ -109,8 +124,15 @@ void _verifyPointerSessionDeclarations() {
     allOf(
       contains('final class PointerSession'),
       contains('enum PointerSessionKind'),
-      contains('final class PointerSessionToken'),
       contains('final class PointerControllerEpoch'),
+      isNot(contains('final class PointerSessionToken')),
+      isNot(contains('final class PointerSessionId')),
+    ),
+  );
+  expect(
+    _source('lib/src/interaction/interaction_runtime_intents.dart'),
+    allOf(
+      contains('final class PointerSessionToken'),
       contains('final class PointerSessionId'),
     ),
   );
@@ -161,7 +183,9 @@ void _verifyPointerAdmissionFields() {
 }
 
 void _verifyEraserCommitIntentFields() {
-  final unit = _parse(_source('lib/src/interaction/eraser_machine.dart'));
+  final unit = _parse(
+    _source('lib/src/interaction/interaction_runtime_intents.dart'),
+  );
   final fields = _fieldNames(unit, 'EraserCommitIntent');
 
   expect(fields, {
@@ -174,7 +198,9 @@ void _verifyEraserCommitIntentFields() {
 }
 
 void _verifyDrawStrokeCommitIntentFields() {
-  final unit = _parse(_source('lib/src/interaction/draw_stroke_machine.dart'));
+  final unit = _parse(
+    _source('lib/src/interaction/interaction_runtime_intents.dart'),
+  );
   final fields = _fieldNames(unit, 'DrawStrokeCommitIntent');
 
   expect(fields, {
@@ -190,7 +216,9 @@ void _verifyDrawStrokeCommitIntentFields() {
 }
 
 void _verifyDrawLineCommitIntentFields() {
-  final unit = _parse(_source('lib/src/interaction/line_machine.dart'));
+  final unit = _parse(
+    _source('lib/src/interaction/interaction_runtime_intents.dart'),
+  );
   final fields = _fieldNames(unit, 'DrawLineCommitIntent');
 
   expect(fields, {

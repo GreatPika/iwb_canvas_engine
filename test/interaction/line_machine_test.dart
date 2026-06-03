@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/line_machine.dart';
-import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 
 void main() {
   test('line first tap snapshots style and rejects non-line tools', () {

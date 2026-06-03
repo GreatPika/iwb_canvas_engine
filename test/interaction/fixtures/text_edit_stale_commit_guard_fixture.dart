@@ -7,7 +7,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
-import 'package:iwb_canvas_engine/src/interaction/interaction_request_registry.dart';
+import 'package:iwb_canvas_engine/src/interaction/text_edit_guard_decision.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {

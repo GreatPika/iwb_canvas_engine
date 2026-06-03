@@ -6,8 +6,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
-import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
-import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {

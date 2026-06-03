@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'interaction_read_port.dart';
+import 'interaction_runtime_intents.dart';
 import 'pointer_session.dart';
 
 final class SelectMachine {
@@ -92,23 +93,6 @@ final class MarqueeTerminalDecision {
 
   final bool shouldCommit;
   final MarqueeCommitIntent? intent;
-}
-
-final class MarqueeCommitIntent {
-  MarqueeCommitIntent({
-    required this.sessionId,
-    required this.pointerToken,
-    required Iterable<CanvasElementId> previousSelectionIds,
-    required Iterable<CanvasElementId> nextSelectionIds,
-    required this.rectWorld,
-  }) : previousSelectionIds = List.unmodifiable(previousSelectionIds),
-       nextSelectionIds = List.unmodifiable(nextSelectionIds);
-
-  final PointerSessionId sessionId;
-  final PointerSessionToken pointerToken;
-  final List<CanvasElementId> previousSelectionIds;
-  final List<CanvasElementId> nextSelectionIds;
-  final Rect rectWorld;
 }
 
 Rect _normalizedRect(Offset a, Offset b) {

@@ -16,12 +16,15 @@ import 'interaction_diagnostics_sink.dart';
 import 'interaction_pointer_context.dart';
 import 'interaction_read_port.dart';
 import 'interaction_request_registry.dart';
+import 'interaction_runtime_intents.dart';
 import 'line_machine.dart';
 import 'move_machine.dart';
+import 'pointer_cleanup_outcome.dart';
 import 'pointer_sample_normalizer.dart';
 import 'pointer_session.dart';
 import 'pointer_tool_cleanup_coordinator.dart';
 import 'select_machine.dart';
+import 'text_edit_guard_decision.dart';
 
 // Pointer sessions, tool settings, preview cleanup, and revisions stay together
 // so the active pointer lifecycle has one auditable owner.

@@ -4,9 +4,9 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_outcome.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
-import 'package:iwb_canvas_engine/src/interaction/pointer_tool_cleanup_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../contracts/public/canvas_contract_limits.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
-import 'pointer_session.dart';
+import 'interaction_runtime_intents.dart';
 
 final class DrawStrokeMachine {
   const DrawStrokeMachine();
@@ -150,26 +150,6 @@ final class DrawStrokeTerminalDecision {
        );
 
   final DrawStrokeCommitIntent intent;
-}
-
-final class DrawStrokeCommitIntent {
-  DrawStrokeCommitIntent({
-    required this.sessionId,
-    required this.pointerToken,
-    required this.tool,
-    required Iterable<Offset> points,
-    required this.color,
-    required this.thickness,
-    required this.opacity,
-  }) : points = List.unmodifiable(points);
-
-  final PointerSessionId sessionId;
-  final PointerSessionToken pointerToken;
-  final CanvasDrawTool tool;
-  final List<Offset> points;
-  final Color color;
-  final double thickness;
-  final double opacity;
 }
 
 ({double thickness, double opacity})? _strokeStyleFor(

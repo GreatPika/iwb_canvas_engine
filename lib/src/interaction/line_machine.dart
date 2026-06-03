@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
-import 'pointer_session.dart';
+import 'interaction_runtime_intents.dart';
 
 final class LineMachine {
   const LineMachine();
@@ -207,24 +207,4 @@ final class LineEndpointTerminalDecision {
        );
 
   final DrawLineCommitIntent intent;
-}
-
-final class DrawLineCommitIntent {
-  const DrawLineCommitIntent({
-    required this.sessionId,
-    required this.pointerToken,
-    required this.startWorld,
-    required this.endWorld,
-    required this.color,
-    required this.thickness,
-    required this.opacity,
-  });
-
-  final PointerSessionId sessionId;
-  final PointerSessionToken pointerToken;
-  final Offset startWorld;
-  final Offset endWorld;
-  final Color color;
-  final double thickness;
-  final double opacity;
 }

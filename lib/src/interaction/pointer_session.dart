@@ -4,6 +4,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'draw_stroke_machine.dart';
 import 'eraser_machine.dart';
+import 'interaction_runtime_intents.dart';
 import 'line_machine.dart';
 
 enum PointerSessionKind {
@@ -15,20 +16,8 @@ enum PointerSessionKind {
   drawLineEndpoint,
 }
 
-final class PointerSessionToken {
-  const PointerSessionToken(this.value);
-
-  final int value;
-}
-
 final class PointerControllerEpoch {
   const PointerControllerEpoch(this.value);
-
-  final int value;
-}
-
-final class PointerSessionId {
-  const PointerSessionId(this.value);
 
   final int value;
 }

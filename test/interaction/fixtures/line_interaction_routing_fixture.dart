@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
-import 'package:iwb_canvas_engine/src/interaction/line_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 
 void main() {
   test('first tap stores timestamped pending line preview', () {

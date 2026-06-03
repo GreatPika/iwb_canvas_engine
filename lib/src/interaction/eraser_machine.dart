@@ -4,7 +4,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'interaction_read_port.dart';
-import 'pointer_session.dart';
+import 'interaction_runtime_intents.dart';
 
 final class EraserMachine {
   const EraserMachine();
@@ -147,20 +147,4 @@ final class EraserTerminalDecision {
        );
 
   final EraserCommitIntent? intent;
-}
-
-final class EraserCommitIntent {
-  EraserCommitIntent({
-    required this.sessionId,
-    required this.pointerToken,
-    required this.eraserThickness,
-    required this.corridorPointCount,
-    required Iterable<CanvasElementId> erasedElementIds,
-  }) : erasedElementIds = List.unmodifiable(erasedElementIds);
-
-  final PointerSessionId sessionId;
-  final PointerSessionToken pointerToken;
-  final double eraserThickness;
-  final int corridorPointCount;
-  final List<CanvasElementId> erasedElementIds;
 }
