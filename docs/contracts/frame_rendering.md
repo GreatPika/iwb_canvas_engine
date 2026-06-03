@@ -32,7 +32,7 @@ Related diagrams:
 Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
-- `test.frame.no_live_runtime_read_in_painters`
+- `test.frame.frame_record_painter_boundary`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.frame_spatial_paint_admission`
 - `test.frame.frame_drawable_policy`

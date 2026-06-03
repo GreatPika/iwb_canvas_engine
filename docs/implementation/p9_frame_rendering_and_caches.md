@@ -171,7 +171,7 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
 - `test.frame.frame_donor_mapping` -> `test/frame/frame_donor_mapping_test.dart`
-- `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test.frame.frame_record_painter_boundary` -> `test/frame/frame_record_painter_boundary_test.dart`
 - `test.surface.no_live_runtime_read_in_painters` -> `test/surface/no_live_runtime_read_in_painters_test.dart`
 - `test.frame.frame_spatial_paint_admission` -> `test/frame/frame_spatial_paint_admission_test.dart`
 - `test.frame.frame_drawable_policy` -> `test/frame/frame_drawable_policy_test.dart`

@@ -183,6 +183,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
+## test.frame.frame_record_painter_boundary
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.frame.frame_spatial_paint_admission
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
@@ -198,10 +202,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.frame.marquee_overlay_repaint
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.frame.no_live_runtime_read_in_painters
-
-- Sections: `section_15_frame_render_contract`, `section_23_tests`
 
 ## test.frame.paint_plan_excludes_preview_delta
 
