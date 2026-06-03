@@ -23,17 +23,21 @@ stateDiagram-v2
     before resolving the current target.
   end note
 
-  DirectDoubleTapGate --> DirectTopTarget: "resolve timestamp and query current content hit candidates"
+  DirectDoubleTapGate --> DirectTopTarget: "query current content hit candidates"
 
   state "Direct current target resolution" as DirectTopTarget
   note right of DirectTopTarget
     Direct double-tap resolves the current
     context-action target at the supplied position:
-    top visible content element or empty canvas.
+    top visible content element or empty canvas
+    after candidate spatial admission. Invalid-index,
+    stale-index, and budget-exceeded reads reject
+    without timestamp, request id, or stream emission.
   end note
 
   DirectTopTarget --> EmitContentRequest: "current content target"
   DirectTopTarget --> EmitEmptyCanvasRequest: "current empty-canvas target"
+  DirectTopTarget --> CleanupOnly: "invalid-index, stale-index, or budget-exceeded / no request"
 
   state "First tap gate" as FirstTapGate
   note right of FirstTapGate
@@ -56,6 +60,7 @@ stateDiagram-v2
 
   TopTargetFirst --> PendingContentTarget: "top content target / store id, generation, elementRevision, family, positions, timestamp, epoch"
   TopTargetFirst --> PendingEmptyCanvas: "no qualifying content target / store empty-canvas candidate"
+  TopTargetFirst --> Idle: "invalid-index, stale-index, or budget-exceeded / no pending tap or request"
 
   state "Pending content target" as PendingContentTarget
   note right of PendingContentTarget
@@ -104,6 +109,7 @@ stateDiagram-v2
 
   TopTargetSecond --> CandidateMatch: "same target class"
   TopTargetSecond --> CleanupOnly: "target class changed / clear pending only"
+  TopTargetSecond --> CleanupOnly: "invalid-index, stale-index, or budget-exceeded / clear pending only"
 
   state "Candidate match gate" as CandidateMatch
   note right of CandidateMatch
@@ -122,7 +128,7 @@ stateDiagram-v2
   note right of EmitContentRequest
     InteractionEngine issues CanvasInteractionRequestId
     through InteractionRequestRegistry, then emits
-    CanvasContextActionRequested with doubleTap trigger,
+    asynchronous CanvasContextActionRequested with doubleTap trigger,
     content target kind, immutable CanvasElement snapshot,
     boundsWorld, positions, timestamp, controllerEpoch,
     and documentRevision. documentRevision is observation-only.
@@ -132,7 +138,7 @@ stateDiagram-v2
   note right of EmitEmptyCanvasRequest
     InteractionEngine issues CanvasInteractionRequestId
     through InteractionRequestRegistry, then emits
-    CanvasContextActionRequested with doubleTap trigger,
+    asynchronous CanvasContextActionRequested with doubleTap trigger,
     empty-canvas target kind, positions, timestamp,
     controllerEpoch, and documentRevision.
   end note
@@ -149,21 +155,21 @@ stateDiagram-v2
     The registry is not an app UI session and not CanvasPreviewState.
   end note
 
-  IssuedRequestLive --> RetiredRequest: "commitTextEdit accepted no-op or changed text content request / retire request"
-  IssuedRequestLive --> RetiredRequest: "commitTextEdit rejects known live stale, empty-canvas, non-text, missing, or family-mismatched request / privately retire request"
-  IssuedRequestLive --> RetiredRequest: "loadDocument success / controllerEpoch makes request stale"
-  IssuedRequestLive --> Disposed: "runtime.dispose() / later commitTextEdit throws StateError"
+  IssuedRequestLive --> ConsumedRequest: "commitTextEdit accepted no-op or changed text content request / consume request"
+  IssuedRequestLive --> ConsumedRequest: "commitTextEdit rejects known live stale, empty-canvas, non-text, missing, or family-mismatched request / privately consume request"
+  IssuedRequestLive --> ConsumedRequest: "loadDocument success / clear live request facts"
+  IssuedRequestLive --> Disposed: "runtime.dispose() / clear live request facts before later commitTextEdit throws StateError"
 
-  state "Retired or stale request id" as RetiredRequest
-  note right of RetiredRequest
-    Retired and epoch-stale request ids cannot commit.
-    Unknown and already-retired ids do nothing.
+  state "Consumed or stale request id" as ConsumedRequest
+  note right of ConsumedRequest
+    Consumed and epoch-stale request ids cannot commit.
+    Unknown and already-consumed ids do nothing.
     Text commit acceptance requires a current,
-    unretired text content target request.
+    live text content target request.
     documentRevision is not a stale guard.
   end note
 
-  RetiredRequest --> Idle: "request lifecycle closed"
+  ConsumedRequest --> Idle: "request lifecycle closed"
 
   state "Cleanup only" as CleanupOnly
   note left of CleanupOnly
@@ -172,6 +178,9 @@ stateDiagram-v2
     It publishes no context request, action event,
     document revision, selection change, preview update,
     spatial update, projection eviction, or repaint.
+    Stale-index and budget-exceeded target-read rejections
+    record bounded interaction diagnostics; invalid-index
+    records none.
   end note
 
   CleanupOnly --> CleanupCoordinator: "typed cleanup request"

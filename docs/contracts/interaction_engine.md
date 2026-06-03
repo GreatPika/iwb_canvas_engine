@@ -271,22 +271,27 @@ interaction, action, timestamp, repaint, or DiagnosticsHub effect.
 an empty broadcast stream that closes on dispose.
 
 P12 double-tap on an accepted context-action target emits exactly one
-`CanvasContextActionRequested` through `CanvasRuntime.contextActionRequests`.
-The trigger is `CanvasContextActionTrigger.doubleTap`, and the target is either
-a content element or empty canvas. Request delivery has no document, selection,
-preview, repaint, spatial, projection, resource, or action effect.
+asynchronous `CanvasContextActionRequested` through
+`CanvasRuntime.contextActionRequests`. The trigger is
+`CanvasContextActionTrigger.doubleTap`, and the accepted target is either a
+content element or empty canvas after candidate spatial admission succeeds.
+Rejected invalid-index, stale-index, and budget-exceeded context target reads
+emit no public request. Rejected stale-index and budget-exceeded reads record
+bounded interaction diagnostics; rejected invalid-index reads record none.
+Request delivery has no document, selection, preview, repaint, spatial,
+projection, resource, or action effect.
 
 In P12, `CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
 not the second sample in engine-owned pointer-sample recognition. It accepts a
 finite view position from the host surface and does not require pending
-first-tap history. On a valid direct double-tap, the interaction engine resolves
-the request timestamp through the runtime timestamp cursor, clears any pending
-context tap history through `PointerToolCleanupCoordinator`, resolves the
-current context-action target at the supplied position, issues a
-`CanvasInteractionRequestId`, records guard facts in
-`InteractionRequestRegistry`, and emits exactly one context-action request for
-the current content target or empty canvas. A non-finite position is rejected
-before target resolution and request emission.
+first-tap history. On a valid direct double-tap, the interaction engine clears
+any pending context tap history through `PointerToolCleanupCoordinator`,
+resolves the current context-action target at the supplied position, admits only
+candidate spatial results, then resolves the request timestamp through the
+runtime timestamp cursor, issues a `CanvasInteractionRequestId`, records live
+guard facts in `InteractionRequestRegistry`, and emits exactly one asynchronous
+context-action request for the current content target or empty canvas. A
+non-finite position is rejected before target resolution and request emission.
 
 Engine-owned pointer-sample recognition remains separate: the first tap may
 store a pending context tap candidate, and the second tap must revalidate the
@@ -301,16 +306,17 @@ an application-owned choice after delivery: the application may open a context
 menu first or immediately show a text editor when the content target snapshot
 is a `CanvasTextElement`.
 
-Context request emission records an issued request in
+Context request emission records a live issued request in
 `InteractionRequestRegistry` with a generated `CanvasInteractionRequestId`,
-request target kind, controllerEpoch, and retired request status. For
-content-element targets, the registry also stores target element id, element
-generation, elementRevision, and element family.
+request target kind and controllerEpoch. For content-element targets, the
+registry also stores target element id, element generation, elementRevision, and
+element family. Request facts are consumed and removed once; already-consumed
+ids are absent rather than stored as durable retired state.
 
 `documentRevision` is an observation and diagnostics fact only, not a
 DiagnosticsHub write and not a stale commit guard. Unrelated document edits
 after request emission do not reject a later text commit while the request id
-is current and unretired, the request target is a text content element, and
+is current and live, the request target is a text content element, and
 controllerEpoch, element generation, elementRevision, and element family remain
 current.
 
@@ -323,14 +329,15 @@ Request-originated text changes commit through
 Until P12 creates `InteractionRequestRegistry`, every P10 commitTextEdit
 request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private-retirement effects. After
-P12, the command accepts only current, unretired context request ids whose target is
-a text content element. It retires accepted no-op and changed requests,
-privately retires known live rejected request ids, treats unknown and
-already-retired ids as no-ops, rejects empty-canvas, non-text, stale, missing,
-or family-mismatched request ids with no public state, document, selection,
-preview, repaint, or action effect, validates `newText` before
-retirement or draft mutation, and delegates changed text to EditKernel before
-emitting `CanvasActionType.editText`. Direct
+P12, the command accepts only current live context request ids whose target is a
+text content element. It consumes accepted no-op requests, consumes changed
+requests only after successful edit preparation and before public delivery,
+consumes known live rejected request ids, treats unknown and already-consumed
+ids as no-ops, rejects empty-canvas, non-text, stale, missing, or
+family-mismatched request ids with no public state, document, selection,
+preview, repaint, or action effect, validates `newText` before consumption or
+draft mutation, and delegates changed text to EditKernel before emitting
+`CanvasActionType.editText`. Direct
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
 non-request synchronization API.
 

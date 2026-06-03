@@ -659,12 +659,13 @@ behavioral tests, and the required guardrail list remains owned by
   and typed action emission.
 - `test/api/command_port_actions_test.dart` proves command-port remove, clear,
   and unknown text-edit behavior plus their action payloads.
-- `test/api/tool_port_settings_test.dart` proves P10 tool-port compatibility:
+- `test/api/tool_port_settings_test.dart` proves historical P10 tool-port
+  compatibility:
   initial settings are visible, effective changes advance interaction
   revision, no-ops stay silent, active sessions clean up on setting changes,
-  pencil draw-mode pointer input publishes preview-only public state, double
-  tap remains P12 unsupported, and context-action requests are a non-throwing
-  empty stream.
+  pencil draw-mode pointer input publishes preview-only public state, P10 double
+  tap remains unsupported until P12, and P10 context-action requests are a
+  non-throwing empty stream.
 - `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
   timestamps are resolved through one runtime-local monotonic cursor.
 - `test/runtime/command_facts_port_test.dart` proves immutable command fact
@@ -725,8 +726,9 @@ behavioral tests, and the required guardrail list remains owned by
   double-tap request production, and two-tap context revalidation behavior.
 - `test/interaction/context_action_request_test.dart` proves direct and
   pointer-sample context-action request issuance, target classification,
-  request id generation, registry guard facts, finite-position validation, and
-  stream-only public effects.
+  request id generation, live registry guard facts, finite-position validation,
+  rejected invalid/stale/budget target reads with no public request, accepted
+  asynchronous stream delivery, and stream-only public effects.
 - `test/geometry/eraser_exact_budget_no_partial_commit_test.dart` proves
   terminal eraser budget overflow cleans up without partial document mutation,
   action delivery, or DiagnosticsHub allocation.
@@ -734,15 +736,15 @@ behavioral tests, and the required guardrail list remains owned by
   load prepares P12 eraser/context cleanup before install while failed load
   preserves active interaction state where required.
 - `test/interaction/text_edit_stale_commit_guard_test.dart` proves guarded
-  request-originated text commits, including unknown/retired no-ops,
-  stale/private retirement, unrelated documentRevision acceptance, single-use
+  request-originated text commits, including unknown/already-consumed no-ops,
+  stale/private consumption, unrelated documentRevision acceptance, single-use
   accepted ids, and no raw text action payload.
 - `test/api/typed_action_payloads_test.dart` proves public erase and editText
   action payload constructors, defensive copies, and runtime finalization.
 - `test/smoke/public_incremental_smoke_test.dart` appends root-barrel public
   consumer coverage for eraser preview/commit, content and background-only
-  context requests, issued text commit, retired/unknown text no-ops, and no raw
-  text leakage through observed action payloads.
+  context requests, issued text commit, consumed/unknown text no-ops, and no
+  raw text leakage through observed action payloads.
 - `test/guardrails/interaction_guardrail_enforcement_test.dart` and
   `test/guardrails/blocking_suite_test.dart` prove
   `interaction.text_edit_stale_commit_guard` is runner-backed, selected by the

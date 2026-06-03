@@ -1468,7 +1468,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   timestamps only after the path is accepted far enough to create that output;
   stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
   rollback, load cleanup, dispose cleanup, unsupported double tap, and unknown
-  text request ids remain timestamp-silent.
+  or already-consumed text request ids remain timestamp-silent.
 ```
 
 ```dart
@@ -1493,29 +1493,29 @@ Rules:
 - removeElement emits deleteElements only when it removes an element;
 - P10 has no `InteractionRequestRegistry`; until P12 introduces it,
   commitTextEdit returns false for every request id and performs no document,
-  selection, preview, interaction, action, timestamp, or request-retirement
+  selection, preview, interaction, action, timestamp, or request-consumption
   effect;
 - commitTextEdit returns false when the request id is unknown or already
-  retired; unknown and already-retired request ids perform no mutation, private
-  request retirement, public state snapshot, document, selection, preview,
-  spatial, projection, resource, repaint, or action effect;
-- commitTextEdit returns false and privately retires a known live request id in
+  consumed; unknown and already-consumed request ids perform no mutation,
+  private request consumption, public state snapshot, document, selection,
+  preview, spatial, projection, resource, repaint, or action effect;
+- commitTextEdit returns false and privately consumes a known live request id in
   InteractionRequestRegistry when the request target is empty canvas, the
   request target is non-text content, the controller epoch changed, the current
   element is missing, the current element generation no longer matches the
   issued request, the current elementRevision changed, or the current element
   family no longer matches a text element;
-- commitTextEdit private request retirement has no public state snapshot,
+- commitTextEdit private request consumption has no public state snapshot,
   document, selection, preview, spatial, projection, resource, repaint, or
   action effect;
 - commitTextEdit validates newText through the existing text validation path
-  before request retirement and before draft mutation;
+  before request consumption and before draft mutation;
 - commitTextEdit treats documentRevision as an observation fact, not a stale
   guard, so unrelated document edits do not reject a still-current text edit;
-- commitTextEdit returns true, retires the request id, and emits no document
+- commitTextEdit returns true, consumes the request id, and emits no document
   revision, repaint, or action event when newText equals the current text;
-- commitTextEdit changed-text commits run through EditKernel and emit editText
-  after atomic install;
+- commitTextEdit changed-text commits run through EditKernel, consume the
+  request after successful prepare, and emit editText after atomic install;
 - CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;
 - if only unused resources are removed and no elements are removed, no user
   action event is emitted;
@@ -2335,8 +2335,12 @@ Context-action and text editing model:
   empty broadcast stream that closes on dispose;
 - P10 direct `CanvasToolPort.handleDoubleTap` throws `UnsupportedError` naming
   P12 context actions and has no request, state, action, or timestamp effect;
-- P12 engine behavior detects an accepted double-tap context target;
-- engine emits exactly one CanvasContextActionRequested through
+- P12 engine behavior detects an accepted double-tap context target after
+  candidate spatial admission;
+- rejected invalid-index, stale-index, and budget-exceeded target reads emit no
+  context request; stale and budget rejected reads record bounded interaction
+  diagnostics, while invalid-index rejected reads record none;
+- engine emits exactly one asynchronous CanvasContextActionRequested through
   contextActionRequests for the accepted target;
 - trigger is CanvasContextActionTrigger.doubleTap;
 - target is either CanvasContentElementContextActionTarget or
@@ -2355,6 +2359,9 @@ Context-action and text editing model:
   CanvasCommandPort.commitTextEdit(requestId, newText);
 - until P12 creates `InteractionRequestRegistry`, every commitTextEdit request
   id is unknown and returns false without side effects;
+- after P12, request facts are live and consumed/removed once rather than kept
+  as durable retired registry state; unknown and already-consumed ids are
+  no-effect false results;
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;
 - documentRevision is emitted as an observation and diagnostics fact, not a

@@ -173,13 +173,13 @@ frame descriptor lookup stays on `FrameFactsPort`.
 
 `InteractionRequestRegistry` is the interaction-owned registry for issued
 request guard facts, such as the `CanvasInteractionRequestId`, context request
-target kind, controllerEpoch, and retired request status. For content-element
+target kind, controllerEpoch, and live request status. For content-element
 targets, it also stores target element id, element generation, elementRevision,
 and element family. `RuntimeRoot` owns the registry instance lifetime,
 `InteractionEngine` records issued request facts, and guarded command-port
-operations consume those facts through a narrow boundary before delegating
-accepted mutations to `EditKernel`. The registry is not an active text-input
-session, not a context menu or app overlay state owner, and not
+operations consume and remove those facts through a narrow boundary before
+delegating accepted mutations to `EditKernel`. The registry is not an active
+text-input session, not a context menu or app overlay state owner, and not
 `CanvasPreviewState`.
 
 Composition root:

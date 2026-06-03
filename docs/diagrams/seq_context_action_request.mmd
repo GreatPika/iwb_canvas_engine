@@ -28,32 +28,38 @@ sequenceDiagram
       IE-->>Tools: reject before target resolution or request emission
       Note over IE,Signals: Invalid direct handleDoubleTap produces no context request, document mutation, selection change, preview update, repaint, or action event.
     else finite position
-      IE->>IE: resolve timestamp through runtime cursor
       IE->>Cleanup: clear pending context tap history when present
       Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
       IE->>IE: convert viewPosition to finite worldPosition
       IE->>Spatial: query point hit candidates at worldPosition
-      Spatial-->>IE: committed content handles in hit order
-      IE->>Geometry: exact context-action hit for visible content elements
-      Geometry-->>IE: top visible content element or no content target
+      Spatial-->>IE: candidates or typed non-candidate result
+      alt invalid-index, stale-index, or budget-exceeded
+        IE-->>Tools: reject before timestamp, request id, or stream emission
+        Note over IE,Signals: Rejected target reads emit no public request. Stale-index and budget-exceeded record bounded interaction diagnostics; invalid-index records none.
+      else candidate result
+        IE->>Geometry: exact context-action hit for visible content elements
+        Geometry-->>IE: top visible content element or no content target
       alt current content target found
         IE->>ReadPort: read immutable current content target facts
         ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, family, documentRevision, and controllerEpoch
         Store-->>ReadPort: current target facts
         ReadPort-->>IE: current target facts
+        IE->>IE: resolve timestamp through runtime cursor
         IE->>Registry: issue request id with content target kind and guard facts
         Registry-->>IE: issued request id
-        IE->>Requests: emit CanvasContextActionRequested(doubleTap, content element target)
+        IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
         Requests->>Signals: publish context-action request notification only
         Signals-->>App: deliver CanvasContextActionRequested
         App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
       else current empty-canvas target
+        IE->>IE: resolve timestamp through runtime cursor
         IE->>Registry: issue request id with empty-canvas target kind
         Registry-->>IE: issued request id
-        IE->>Requests: emit CanvasContextActionRequested(doubleTap, empty-canvas target)
+        IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
         Requests->>Signals: publish context-action request notification only
         Signals-->>App: deliver CanvasContextActionRequested
         App->>AppUI: open app-owned empty-canvas context UI
+      end
       end
     end
     Note over IE,Signals: Direct handleDoubleTap is independent of pending first-tap history and has no document, selection, preview, repaint, spatial, projection, resource, or action effect.
@@ -65,9 +71,13 @@ sequenceDiagram
   IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
   IE->>IE: convert viewPosition to finite worldPosition
   IE->>Spatial: query point hit candidates at worldPosition
-  Spatial-->>IE: committed content handles in hit order
-  IE->>Geometry: exact context-action hit for visible content elements
-  Geometry-->>IE: top visible content element or no content target
+  Spatial-->>IE: candidates or typed non-candidate result
+  alt first tap target read is invalid-index, stale-index, or budget-exceeded
+    IE-->>Tools: finish tap without pending context tap or request
+    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index and budget-exceeded record bounded interaction diagnostics; invalid-index records none.
+  else candidate result
+    IE->>Geometry: exact context-action hit for visible content elements
+    Geometry-->>IE: top visible content element or no content target
 
   alt first tap has content target
     IE->>ReadPort: read immutable content target facts
@@ -80,6 +90,7 @@ sequenceDiagram
     IE->>IE: store pending empty-canvas target, timestamp, viewPosition, worldPosition, and controllerEpoch
     Note over IE,Signals: Background-only coverage is still an empty-canvas target. No document, revision, spatial, projection, resource, selection, preview, repaint, or action effect is produced.
   end
+  end
 
   User->>Surface: second tap on canvas
   Surface->>Tools: handlePointer(CanvasPointerSample down/up)
@@ -87,9 +98,15 @@ sequenceDiagram
   IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
   IE->>IE: convert viewPosition to finite worldPosition
   IE->>Spatial: query point hit candidates at second worldPosition
-  Spatial-->>IE: committed content handles in hit order
-  IE->>Geometry: exact context-action hit for visible content elements
-  Geometry-->>IE: top visible content element or no content target
+  Spatial-->>IE: candidates or typed non-candidate result
+  alt second tap target read is invalid-index, stale-index, or budget-exceeded
+    IE->>Cleanup: typed cleanup request for pending context tap when needed
+    Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
+    IE-->>Tools: finish double-tap handling without request
+    Note over IE,Signals: Rejected second tap clears pending context tap without timestamp, request id, stream event, or public effect.
+  else candidate result
+    IE->>Geometry: exact context-action hit for visible content elements
+    Geometry-->>IE: top visible content element or no content target
 
   alt target class changed, delay exceeded, slop exceeded, sample invalid, or controllerEpoch changed
     IE->>Cleanup: typed cleanup request for pending context tap when needed
@@ -104,7 +121,7 @@ sequenceDiagram
     IE->>IE: verify same id, generation, elementRevision, family, epoch, visibility, and top-hit status
     IE->>Registry: issue request id with content target kind and guard facts
     Registry-->>IE: issued request id
-    IE->>Requests: emit CanvasContextActionRequested(doubleTap, content element target)
+    IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
     Requests->>Signals: publish context-action request notification only
     Signals-->>App: deliver CanvasContextActionRequested
     App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
@@ -116,7 +133,7 @@ sequenceDiagram
   else empty-canvas target still has no qualifying content target
     IE->>Registry: issue request id with empty-canvas target kind
     Registry-->>IE: issued request id
-    IE->>Requests: emit CanvasContextActionRequested(doubleTap, empty-canvas target)
+    IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
     Requests->>Signals: publish context-action request notification only
     Signals-->>App: deliver CanvasContextActionRequested
     App->>AppUI: open app-owned empty-canvas context UI
@@ -124,28 +141,29 @@ sequenceDiagram
     Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
     IE-->>Tools: finish double-tap handling
   end
+  end
 
   opt later application text change after app-owned editor finishes
     App->>Commands: commitTextEdit(requestId, newText)
-    Commands->>Registry: consume issued request guard facts
-    Registry-->>Commands: request facts or stale/retired
+    Commands->>Registry: read live issued request guard facts
+    Registry-->>Commands: live request facts or absent
     Commands->>ReadPort: read current element generation, elementRevision, family, and controllerEpoch
     ReadPort-->>Commands: current guard facts
-    alt request is unknown or already retired
+    alt request is unknown or already consumed
       Commands-->>App: false
-      Note over Commands,Signals: Unknown or already-retired request ids are pure no-ops with no private retirement, document, revision, repaint, or action effect.
+      Note over Commands,Signals: Unknown or already-consumed request ids are pure no-ops with no private consumption, document, revision, repaint, or action effect.
     else known live request is empty-canvas, non-text, stale, missing, or family-mismatched
-      Commands->>Registry: privately retire request
+      Commands->>Registry: consume and remove request facts
       Commands-->>App: false
-      Note over Commands,Signals: Known rejected request retirement is private registry state only. Rejection has no public state, document, selection, preview, repaint, or action effect. documentRevision is observation-only and is not a stale guard.
+      Note over Commands,Signals: Known rejected request consumption is private registry state only. Rejection has no public state, document, selection, preview, repaint, or action effect. documentRevision is observation-only and is not a stale guard.
     else current text equals newText
-      Commands->>Registry: retire request
+      Commands->>Registry: consume and remove request facts
       Commands-->>App: true
-      Note over Commands,Signals: Accepted no-op retires request without document revision, repaint, or action event.
+      Note over Commands,Signals: Accepted no-op consumes request without document revision, repaint, or action event.
     else changed text is valid
       Commands->>Edit: update text inside normal EditKernel transaction
+      Commands->>Registry: consume and remove request facts after successful prepare
       Edit-->>Signals: publish document revision, invalidation, repaint, and editText action after atomic install
-      Commands->>Registry: retire request
       Commands-->>App: true
     end
   end

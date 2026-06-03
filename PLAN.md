@@ -69,4 +69,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 47. P10 selection and move](plan/step_47_p10_selection_and_move.md)
 - [x] [Step 48. P11 draw tools](plan/step_48_p11_draw_tools.md)
 - [x] [Step 49. P12 eraser and context-action request](plan/step_49_p12_eraser_and_context_action_request.md)
-- [ ] [Step 50. P12 findings closure](plan/step_50_p12_findings_closure.md)
+- [x] [Step 50. P12 findings closure](plan/step_50_p12_findings_closure.md)

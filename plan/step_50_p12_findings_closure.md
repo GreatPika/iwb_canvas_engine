@@ -124,7 +124,7 @@ For context requests, spatial query and target admission are fallible and occur 
 
 ## Execution Units
 
-### [ ] Unit 1: Context Target Outcome And Issue Admission
+### [x] Unit 1: Context Target Outcome And Issue Admission
 
 Owner:
 
@@ -146,7 +146,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Request Registry Consumption And Text Commit Sequencing
+### [x] Unit 2: Request Registry Consumption And Text Commit Sequencing
 
 Owner:
 
@@ -168,7 +168,7 @@ Depends On:
 
 Unit 1 for admitted-only issued request facts.
 
-### [ ] Unit 3: Async Context Request Stream Contract
+### [x] Unit 3: Async Context Request Stream Contract
 
 Owner:
 
@@ -190,7 +190,7 @@ Depends On:
 
 Unit 1 for admitted/rejected request issuance behavior.
 
-### [ ] Unit 4: Guardrail Semantic Sequence And Immutable Read-Fact Enforcement
+### [x] Unit 4: Guardrail Semantic Sequence And Immutable Read-Fact Enforcement
 
 Owner:
 
@@ -212,7 +212,7 @@ Depends On:
 
 Unit 2 for final text-edit consume/remove sequencing.
 
-### [ ] Unit 5: Source-Of-Truth And Generated Documentation Repair
+### [x] Unit 5: Source-Of-Truth And Generated Documentation Repair
 
 Owner:
 

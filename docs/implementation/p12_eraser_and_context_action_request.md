@@ -146,10 +146,10 @@ spatial, projection, or resource effects.
 - context cleanup clears pending tap history without preview, repaint, action,
   context request, document, selection, spatial, projection, or resource effects
 - request-originated text commits use `commitTextEdit`, reject stale request
-  facts, empty-canvas request ids, non-text request ids, retired request ids,
-  missing targets, and family-mismatched targets without side effects, do not
-  treat unrelated `documentRevision` changes as stale, and emit `editText` only
-  for changed text after atomic install
+  facts, empty-canvas request ids, non-text request ids, already-consumed
+  request ids, missing targets, and family-mismatched targets without side
+  effects, do not treat unrelated `documentRevision` changes as stale, and emit
+  `editText` only for changed text after atomic install
 - context request ids use the generic `CanvasInteractionRequestId`
 - stale terminal samples do not commit
 - loadDocument prepared cleanup before install clears eraser/context gesture

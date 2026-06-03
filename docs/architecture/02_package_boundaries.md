@@ -311,10 +311,12 @@ menu state, editor overlay lifetime, or mutations.
 
 `lib/src/interaction/interaction_request_registry.dart` stores only
 engine-issued `CanvasInteractionRequestId` guard facts, context request target
-kind, controller epoch, retired request status, and content-target guard facts
-for app-owned interaction requests. It must not expose store tables, selection
-internals, Flutter editor overlay state, IME/focus/selection state, context menu
-state, or mutation methods; guarded mutations still enter through public command
-ports and commit through `EditKernel`.
+kind, controller epoch, live request status, and content-target guard facts for
+app-owned interaction requests. Guarded command operations consume and remove
+live facts instead of retaining durable retired facts. The registry must not
+expose store tables, selection internals, Flutter editor overlay state,
+IME/focus/selection state, context menu state, or mutation methods; guarded
+mutations still enter through public command ports and commit through
+`EditKernel`.
 
 ---

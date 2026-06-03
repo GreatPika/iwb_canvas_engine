@@ -89,10 +89,10 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
-| context-action double-tap request | P10 unsupported direct double tap has no touched state; P12 contextActionRequests stream only; P12 direct `handleDoubleTap` clears pending context tap history before current-target resolution; InteractionRequestRegistry stores context request target kind and guard facts | none in P10; none for P12 request delivery | none | no | none | none in P10; P12 CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
-| commitTextEdit stale rejection | retired request state only when the request id is known and rejected; otherwise none | none | none | no | none | none |
-| commitTextEdit no-op accepted | retired request state | none | none | no | none | none |
-| commitTextEdit changed accepted | text element content through EditKernel plus retired request state | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
+| context-action double-tap request | P10 unsupported direct double tap has no touched state; P12 contextActionRequests stream only; P12 direct `handleDoubleTap` clears pending context tap history before candidate-admitted current-target resolution; InteractionRequestRegistry stores live context request target kind and guard facts | none in P10; none for P12 request delivery | none | no | none | none in P10; P12 asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
+| commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
+| commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
+| commitTextEdit changed accepted | text element content through EditKernel plus consume/remove live request facts after successful prepare | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
 | no-op edit | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
@@ -128,21 +128,27 @@ Notes:
   require pending first-tap history; pointer-sample recognition remains a
   separate two-tap path. Content targets carry an immutable public
   `CanvasElement` snapshot and boundsWorld; empty-canvas targets carry no
-  element snapshot. Request delivery itself has no document, selection,
-  preview, repaint, spatial, projection, resource, or action effect.
+  element snapshot. Delivery is asynchronous through the context request stream.
+  Rejected invalid-index, stale-index, and budget-exceeded target reads emit no
+  request; stale and budget rejected reads record bounded interaction
+  diagnostics, while invalid-index rejected reads record none. Request delivery
+  itself has no document, selection, preview, repaint, spatial, projection,
+  resource, or action effect.
 - `commitTextEdit` rejects stale request ids by request id, controller epoch,
   target kind, element generation, elementRevision, missing element,
   empty-canvas target, non-text target, and current text-family mismatch.
   `documentRevision` is observation-only; unrelated document edits do not
   reject a still-current text edit.
-- For `commitTextEdit` stale rejection, known live rejected request ids retire
-  privately in InteractionRequestRegistry, while unknown or already-retired ids
-  do nothing. That private registry retirement does not publish public
+- For `commitTextEdit` stale rejection, known live rejected request ids are
+  consumed and removed from InteractionRequestRegistry, while unknown or
+  already-consumed ids do nothing. That private registry consumption does not
+  publish public
   `CanvasRuntimeState` and has no document, selection, preview, spatial,
   projection, resource, repaint, or action effect.
-- `commitTextEdit` validates `newText` before request retirement and before
-  draft mutation. Changed text commits are normal EditKernel-backed document
-  edits and emit `CanvasActionType.editText` with
+- `commitTextEdit` validates `newText` before request consumption and before
+  draft mutation. Changed text commits consume the request only after successful
+  EditKernel prepare and before public delivery, then emit
+  `CanvasActionType.editText` with
   `CanvasTextEditActionPayload`; the payload contains text lengths and never
   raw text.
 - Bounds-affecting text layout changes must compile `boundsRevision` and touched
@@ -195,7 +201,7 @@ User-action notification: the row's `Events` cell.
 
 No-op behavior: successful no-op paths publish no public state snapshot and
 produce no spatial, projection, resource, repaint, or event effects unless the
-row explicitly names state touched for that no-op, such as request retirement.
+row explicitly names state touched for that no-op, such as request consumption.
 Rows with no successful no-op path treat validation failure, stale handle,
 nested/async edit rejection, and callback failure as rollback rather than no-op.
 
