@@ -836,6 +836,8 @@ behavioral tests, and the required guardrail list remains owned by
 #### `test/frame/frame_drawable_policy_test.dart`
 - proves the frame-owned record painter renders one-point committed strokes and
   same-point lines through explicit point or circle commands;
+- proves non-degenerate committed lines use round caps and committed stroke
+  paths use solid round joins;
 - proves empty point lists remain no-op draw inputs.
 
 #### `test/frame/marquee_captured_style_test.dart`
@@ -849,8 +851,9 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### `test/surface/overlay_drawable_policy_test.dart`
 - proves the surface-owned overlay painter renders one-point stroke previews and
-  eraser corridors through explicit drawable policy and keeps empty point lists
-  no-op.
+  eraser corridors through explicit drawable policy, keeps empty point lists
+  no-op, paints multi-point stroke preview turns as solid round path joins, and
+  paints overlay line previews with round caps.
 
 #### `test/surface/marquee_captured_style_test.dart`
 - proves surface-owned overlay painting uses captured marquee primitive fill and

@@ -11,6 +11,8 @@ import '../../frame/fixtures/ordinary_paint_test_support.dart';
 
 void main() {
   _testOverlayOnePointPreviews();
+  _testOverlayStrokePreviewJoins();
+  _testOverlayLinePreviewCaps();
   _testOverlayEmptyPreviews();
 }
 
@@ -47,6 +49,34 @@ void _testOverlayOnePointPreviews() {
   });
 }
 
+void _testOverlayStrokePreviewJoins() {
+  test('overlay stroke previews paint path joins as solid turns', () async {
+    final preview = CanvasMarkerStrokePreview(
+      points: const [Offset(8, 24), Offset(16, 8), Offset(24, 24)],
+      color: const Color(0xFF00FF00),
+      thickness: 10,
+      opacity: 0.8,
+    );
+
+    expect(await _overlayAlphaAt(preview, x: 16, y: 5), greaterThan(0));
+    expect(await _overlayAlphaAt(preview, x: 16, y: 1), 0);
+  });
+}
+
+void _testOverlayLinePreviewCaps() {
+  test('overlay line previews paint round caps', () async {
+    const preview = CanvasLinePreview(
+      start: Offset(8, 16),
+      end: Offset(24, 16),
+      color: Color(0xFF0000FF),
+      thickness: 10,
+    );
+
+    expect(await _overlayAlphaAt(preview, x: 4, y: 16), greaterThan(0));
+    expect(await _overlayAlphaAt(preview, x: 2, y: 16), 0);
+  });
+}
+
 void _testOverlayEmptyPreviews() {
   test('overlay empty point lists are no-op', () async {
     expect(
@@ -69,7 +99,11 @@ void _testOverlayEmptyPreviews() {
   });
 }
 
-Future<int> _overlayAlphaAt(CanvasPreviewState preview) {
+Future<int> _overlayAlphaAt(
+  CanvasPreviewState preview, {
+  int x = 5,
+  int y = 5,
+}) {
   final frame = capturedOverlayFrameFor(preview);
   final plan = const OverlayPreviewPlanner().build(frame);
   final output = OverlayFramePaintOutput(
@@ -85,8 +119,8 @@ Future<int> _overlayAlphaAt(CanvasPreviewState preview) {
   return _alphaAt(
     (canvas) =>
         OverlayFramePainter(output: output).paint(canvas, const Size(32, 32)),
-    5,
-    5,
+    x,
+    y,
   );
 }
 

@@ -12,7 +12,7 @@ final class FrameDrawablePolicy {
 
       return;
     }
-    canvas.drawPoints(PointMode.polygon, points, paint);
+    canvas.drawPath(_polylinePath(points), _strokePaint(paint));
   }
 
   void paintLine(Canvas canvas, Offset start, Offset end, Paint paint) {
@@ -21,7 +21,7 @@ final class FrameDrawablePolicy {
 
       return;
     }
-    canvas.drawLine(start, end, paint);
+    canvas.drawLine(start, end, _strokePaint(paint));
   }
 
   bool paintCachedStroke({
@@ -41,14 +41,28 @@ final class FrameDrawablePolicy {
     if (path == null) {
       return false;
     }
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, _strokePaint(paint));
 
     return true;
   }
 
   void _paintPoint(Canvas canvas, Offset point, Paint paint) {
-    canvas.drawPoints(PointMode.points, [
-      point,
-    ], paint..strokeCap = StrokeCap.round);
+    canvas.drawPoints(PointMode.points, [point], _strokePaint(paint));
+  }
+
+  Paint _strokePaint(Paint paint) {
+    return paint
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+  }
+
+  Path _polylinePath(List<Offset> points) {
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+
+    return path;
   }
 }

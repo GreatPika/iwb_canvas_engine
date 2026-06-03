@@ -172,10 +172,15 @@ Overlay preview primitives are immutable frame output admitted from
 `CanvasSelectionStyle` values needed for stroke and fill output; the overlay
 painter consumes those primitive fields and does not re-read live style state.
 
-`FrameDrawablePolicy` is the single frame-owned degenerate drawable policy.
+`FrameDrawablePolicy` is the single frame-owned drawable edge-case policy.
 One-point committed strokes, one-point stroke previews, one-point eraser
 corridors, and same-point committed or preview lines render as explicit
-commands at the frame boundary. Empty point lists remain no-op draw inputs.
+commands at the frame boundary. Multi-point stroke and eraser preview polylines
+render through round path stroke joins rather than independent point segments
+so preview turns remain visually continuous with committed strokes. Committed
+stroke paths and overlay stroke previews use round caps and round joins.
+Non-degenerate committed lines and overlay line previews use round caps. Empty
+point lists remain no-op draw inputs.
 
 Opacity and layer policy:
 
