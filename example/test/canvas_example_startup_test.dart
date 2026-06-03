@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_app.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_defaults.dart';
+import 'package:iwb_canvas_engine_example/src/canvas_example_screen.dart';
 import 'package:yaml/yaml.dart';
 
 void main() {
@@ -109,9 +110,11 @@ void _expectDefaultPalette(CanvasDocument document) {
     0xFFFB8C00,
     0xFF8E24AA,
   ]);
-  expect(
-    document.palette.backgroundColors.map((color) => color.toARGB32()),
-    [0xFFFFFFFF, 0xFFFFF9C4, 0xFFBBDEFB, 0xFFC8E6C9],
-  );
+  expect(document.palette.backgroundColors.map((color) => color.toARGB32()), [
+    0xFFFFFFFF,
+    0xFFFFF9C4,
+    0xFFBBDEFB,
+    0xFFC8E6C9,
+  ]);
   expect(document.palette.gridSizes, [10, 20, 40, 80]);
 }

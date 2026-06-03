@@ -210,7 +210,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Screen, CanvasSurface, controls dock, and pending preview
+### [x] Unit 3: Screen, CanvasSurface, controls dock, and pending preview
 
 Owner:
 

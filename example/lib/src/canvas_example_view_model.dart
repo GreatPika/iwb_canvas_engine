@@ -11,9 +11,12 @@ import 'canvas_example_defaults.dart';
 // runtime ownership across widgets instead of making the boundary auditable.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class CanvasExampleViewModel extends ChangeNotifier {
-  CanvasExampleViewModel({CanvasRuntime? runtime})
-    : _runtime = runtime ?? createCanvasExampleRuntime(),
-      _ownsRuntime = runtime == null {
+  CanvasExampleViewModel({
+    CanvasRuntime? runtime,
+    VoidCallback? addSampleCommand,
+  }) : _addSampleCommand = addSampleCommand,
+       _runtime = runtime ?? createCanvasExampleRuntime(),
+       _ownsRuntime = runtime == null {
     _runtime.state.addListener(_handleRuntimeChanged);
     _actionsSubscription = _runtime.actions.listen(_handleActionCommitted);
     _contextRequestSubscription = _runtime.contextActionRequests.listen(
@@ -23,6 +26,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   final CanvasRuntime _runtime;
   final bool _ownsRuntime;
+  final VoidCallback? _addSampleCommand;
 
   late final StreamSubscription<CanvasActionCommitted> _actionsSubscription;
   late final StreamSubscription<CanvasContextActionRequested>
@@ -46,6 +50,9 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   CanvasBackground get background => document.background;
   CanvasGrid get grid => document.background.grid;
   CanvasPalette get palette => document.palette;
+  List<Color> get penColors => palette.penColors;
+  List<Color> get backgroundColors => palette.backgroundColors;
+  List<double> get gridSizes => palette.gridSizes;
   CanvasPreviewState get preview => _runtime.preview;
   Set<CanvasElementId> get selectedElementIds =>
       _runtime.selection.selectedElementIds;
@@ -57,6 +64,10 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   void rememberLastExportedJson(String json) {
     _lastExportedJson = json;
     _notifyIfActive();
+  }
+
+  void setInteractionMode(CanvasInteractionMode mode) {
+    _runtime.tools.setMode(mode);
   }
 
   void setMoveMode() => _runtime.tools.setMode(CanvasInteractionMode.move);
@@ -143,6 +154,10 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   CanvasClearResult clearCanvas() {
     return _runtime.commands.clearContent(removeUnusedResources: true);
+  }
+
+  void requestAddSample() {
+    _addSampleCommand?.call();
   }
 
   @override
