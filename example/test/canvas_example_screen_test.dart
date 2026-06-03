@@ -26,6 +26,7 @@ void main() {
   _registerAddSampleEntryPointTest();
   _registerTextStyleDockTest();
   _registerInlineTextEditOverlayCommitTest();
+  _registerInlineTextEditOverlayCoverageTest();
   _registerInlineTextEditOverlayDismissTest();
   _registerJsonExportDialogTest();
   _registerJsonImportDialogPrefillTest();
@@ -374,6 +375,34 @@ void _registerInlineTextEditOverlayCommitTest() {
   );
 }
 
+void _registerInlineTextEditOverlayCoverageTest() {
+  testWidgets('inline text overlay covers the target text bounds', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    _addWideText(viewModel.runtime, 'screen-wide-edit-text');
+    await _pumpScreen(tester, viewModel);
+
+    await _openTextOverlay(tester, viewModel);
+
+    final overlaySize = tester.getSize(
+      find
+          .ancestor(
+            of: find.byKey(const ValueKey('text.edit.field')),
+            matching: find.byType(ConstrainedBox),
+          )
+          .first,
+    );
+    final targetBounds = viewModel.activeTextEdit?.boundsWorld;
+    if (targetBounds == null) {
+      fail('Expected active text edit bounds.');
+    }
+    expect(overlaySize.width, greaterThanOrEqualTo(targetBounds.width));
+    expect(overlaySize.height, greaterThanOrEqualTo(targetBounds.height));
+  });
+}
+
 void _registerInlineTextEditOverlayDismissTest() {
   testWidgets('inline text overlay dismisses without document mutation', (
     tester,
@@ -595,6 +624,26 @@ CanvasElementId _addText(CanvasRuntime runtime, String id) {
         text: 'hello',
         color: const Color(0xFF111827),
         textDirection: TextDirection.ltr,
+        transform: CanvasTransform.translation(const Offset(60, 0)),
+      ),
+      layerId: CanvasLayerId('layer-auto-0'),
+    );
+  });
+
+  return elementId;
+}
+
+CanvasElementId _addWideText(CanvasRuntime runtime, String id) {
+  final elementId = CanvasElementId(id);
+  runtime.edits.edit((edit) {
+    edit.addElement(
+      CanvasTextElement(
+        id: elementId,
+        text: 'wide editable text',
+        color: const Color(0xFF111827),
+        textDirection: TextDirection.ltr,
+        maxWidth: 620,
+        lineHeight: 2,
         transform: CanvasTransform.translation(const Offset(60, 0)),
       ),
       layerId: CanvasLayerId('layer-auto-0'),

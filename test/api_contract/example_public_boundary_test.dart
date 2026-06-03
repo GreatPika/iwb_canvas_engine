@@ -99,17 +99,8 @@ void _registerProductionAdapterBoundaryTest() {
 }
 
 void _registerNoProductionLibDiffTest() {
-  test('current step diff does not modify production lib source', () {
-    final changedPaths = [
-      ..._gitChangedPaths(['diff', '--name-only', '--', 'lib']),
-      ..._gitChangedPaths(['diff', '--cached', '--name-only', '--', 'lib']),
-      ..._gitChangedPaths([
-        'ls-files',
-        '--others',
-        '--exclude-standard',
-        'lib',
-      ]),
-    ];
+  test('step diff does not modify production lib source', () {
+    final changedPaths = _productionLibChangedPaths();
 
     expect(
       changedPaths.toSet(),
@@ -117,6 +108,26 @@ void _registerNoProductionLibDiffTest() {
       reason: 'Production lib/** changes require a separate engine contract.',
     );
   });
+}
+
+List<String> _productionLibChangedPaths() {
+  final base = Platform.environment['EXAMPLE_BOUNDARY_DIFF_BASE'];
+  final head = Platform.environment['EXAMPLE_BOUNDARY_DIFF_HEAD'];
+  if (base != null && base.isNotEmpty && head != null && head.isNotEmpty) {
+    return _gitChangedPaths([
+      'diff',
+      '--name-only',
+      '$base..$head',
+      '--',
+      'lib',
+    ]);
+  }
+
+  return [
+    ..._gitChangedPaths(['diff', '--name-only', '--', 'lib']),
+    ..._gitChangedPaths(['diff', '--cached', '--name-only', '--', 'lib']),
+    ..._gitChangedPaths(['ls-files', '--others', '--exclude-standard', 'lib']),
+  ];
 }
 
 List<String> _gitChangedPaths(List<String> arguments) {

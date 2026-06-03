@@ -62,7 +62,8 @@ final class _CanvasTextEditOverlayState extends State<CanvasTextEditOverlay> {
       left: left,
       top: top,
       child: _TextEditPanel(
-        width: bounds.width.clamp(160, 360).toDouble(),
+        width: bounds.width.clamp(160, double.infinity).toDouble(),
+        minHeight: bounds.height,
         controller: _controller,
         focusNode: _focusNode,
         onCommit: widget.onCommit,
@@ -96,6 +97,7 @@ final class _CanvasTextEditOverlayState extends State<CanvasTextEditOverlay> {
 final class _TextEditPanel extends StatelessWidget {
   const _TextEditPanel({
     required this.width,
+    required this.minHeight,
     required this.controller,
     required this.focusNode,
     required this.onCommit,
@@ -103,6 +105,7 @@ final class _TextEditPanel extends StatelessWidget {
   });
 
   final double width;
+  final double minHeight;
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onCommit;
@@ -112,8 +115,12 @@ final class _TextEditPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: _editorDecoration,
-      child: SizedBox(
-        width: width,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: width,
+          maxWidth: width,
+          minHeight: minHeight,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
