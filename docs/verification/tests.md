@@ -486,6 +486,20 @@ behavioral tests, and the required guardrail list remains owned by
   requests, guarded text commit, resources, and CanvasSurface construction
   with public resolver/style inputs.
 
+#### `test/api_contract/example_public_boundary_test.dart`
+- scans rebuilt root example Dart sources under `example/**`, excluding
+  generated `.dart_tool` and build output;
+- proves example engine imports use only
+  `package:iwb_canvas_engine/iwb_canvas_engine.dart`;
+- rejects example imports of engine internals, legacy paths, retired legacy
+  scene/controller/spec/patch/codec symbols, and app-adapter responsibility
+  names;
+- fails the current unstaged, staged, or untracked step diff when production
+  `lib/**` files are modified, reserving engine changes for a separate owner
+  contract;
+- proves production engine source under `lib/**` does not contain
+  `AppCanvasPort`, `LegacyEngineAdapter`, or `NextEngineAdapter`.
+
 #### `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - compiles the exported API declarations in an empty consumer package;
 - instantiates and calls P2-owned public constructors, getters, methods,

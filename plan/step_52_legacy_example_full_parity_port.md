@@ -298,7 +298,7 @@ Depends On:
 
 Unit 2, Unit 3.
 
-### [ ] Unit 7: Example parity proof, structural guardrails, docs, and final checks
+### [x] Unit 7: Example parity proof, structural guardrails, docs, and final checks
 
 Owner:
 
