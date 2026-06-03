@@ -140,40 +140,71 @@ Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
 
 Future<List<GuardrailViolation>>
 checkSurfaceInteractiveDisabledReservedBoundary() async {
-  const path = 'lib/src/api/canvas_runtime_surface_bridge.dart';
-  final file = File(path);
-  if (!file.existsSync()) {
+  final violations = <GuardrailViolation>[];
+  const bridgePath = 'lib/src/api/canvas_runtime_surface_bridge.dart';
+  final bridgeFile = File(bridgePath);
+  if (!bridgeFile.existsSync()) {
     return const [
       GuardrailViolation(
         guardrailId: 'surface.interactive_false_pending_line_preserved',
-        path: path,
+        path: bridgePath,
         message: 'runtime-surface bridge must exist before surface cleanup',
       ),
     ];
   }
-
-  return checkSurfaceInteractiveDisabledReservedBoundaryFile(
-    path: path,
-    content: file.readAsStringSync(),
+  violations.addAll(
+    checkSurfaceInteractiveDisabledReservedBoundaryFile(
+      path: bridgePath,
+      content: bridgeFile.readAsStringSync(),
+    ),
   );
+
+  const widgetPath = 'lib/src/surface/canvas_surface_widget.dart';
+  final widgetContent = File(widgetPath).readAsStringSync();
+  for (final requiredPattern in [
+    'oldWidget.interactive',
+    '_activePort?.handleSurfaceInteractiveDisabled(_surfaceToken)',
+    'widget.interactive',
+    '_detachSurface();',
+  ]) {
+    if (!widgetContent.contains(requiredPattern)) {
+      violations.add(
+        const GuardrailViolation(
+          guardrailId: 'surface.interactive_false_pending_line_preserved',
+          path: widgetPath,
+          message:
+              'CanvasSurface must run interactive-disabled cleanup before detach/dispose',
+        ),
+      );
+    }
+  }
+
+  return violations;
 }
 
 List<GuardrailViolation> checkSurfaceInteractiveDisabledReservedBoundaryFile({
   required String path,
   required String content,
 }) {
-  if (!content.contains('_root.handleSurfaceInteractiveDisabled')) {
-    return const [];
+  final violations = <GuardrailViolation>[];
+  for (final requiredPattern in [
+    'void handleSurfaceInteractiveDisabled(Object token)',
+    'if (!_root.isActiveSurface(token))',
+    '_root.handleSurfaceInteractiveDisabled();',
+  ]) {
+    if (!content.contains(requiredPattern)) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'surface.interactive_false_pending_line_preserved',
+          path: path,
+          message:
+              'interactive-disabled cleanup must be token-checked before runtime delegation',
+        ),
+      );
+    }
   }
 
-  return [
-    GuardrailViolation(
-      guardrailId: 'surface.interactive_false_pending_line_preserved',
-      path: path,
-      message:
-          'Unit 0 must not delegate interactive-disabled cleanup before token checks exist',
-    ),
-  ];
+  return violations;
 }
 
 List<GuardrailViolation> checkPointerCleanupCoordinatorCallerFile({

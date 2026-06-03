@@ -421,7 +421,13 @@ const _runnerStructuralScanCases = [
   ),
   _StructuralScanCase(
     id: 'surface.interactive_false_pending_line_preserved',
-    proofPaths: ['test/guardrails/import_boundaries_test.dart'],
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/surface/interactive_false_pointer_routing_test.dart',
+      'test/surface/interactive_false_active_session_cancel_test.dart',
+      'test/surface/interactive_false_pending_line_preserved_test.dart',
+      'test/surface/interactive_false_state_isolation_test.dart',
+    ],
     violationPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
   ),
   _StructuralScanCase(

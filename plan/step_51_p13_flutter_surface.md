@@ -459,7 +459,7 @@ Depends On:
 
 Units 0, 1, and 3.
 
-### [ ] Unit 5: Interactive false cleanup, runtime swap cleanup, and state isolation
+### [x] Unit 5: Interactive false cleanup, runtime swap cleanup, and state isolation
 
 Owner:
 

@@ -50,7 +50,12 @@ final class CanvasRuntimeSurfacePort {
     return _root.detachSurface(token);
   }
 
-  void handleSurfaceInteractiveDisabled(Object _) {}
+  void handleSurfaceInteractiveDisabled(Object token) {
+    if (!_root.isActiveSurface(token)) {
+      return;
+    }
+    _root.handleSurfaceInteractiveDisabled();
+  }
 
   void handlePointer(Object token, CanvasPointerSample sample) {
     if (!_root.isActiveSurface(token)) {

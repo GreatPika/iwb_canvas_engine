@@ -331,6 +331,10 @@ const _testProofPaths = {
   ],
   'surface.interactive_false_pending_line_preserved': [
     'test/guardrails/import_boundaries_test.dart',
+    'test/surface/interactive_false_pointer_routing_test.dart',
+    'test/surface/interactive_false_active_session_cancel_test.dart',
+    'test/surface/interactive_false_pending_line_preserved_test.dart',
+    'test/surface/interactive_false_state_isolation_test.dart',
   ],
   'preview.selected_move_main_repaint': [
     'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',

@@ -128,11 +128,18 @@ void _testApiBridgeAndPassiveSurfaceAllowances() {
 }
 
 void _testSurfaceReservedRuntimeBoundaries() {
-  test('surface interactive-disabled cleanup remains reserved in Unit 0', () {
+  test('surface interactive-disabled cleanup is token-checked', () {
     expect(
       checkSurfaceInteractiveDisabledReservedBoundaryFile(
         path: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-        content: 'void handleSurfaceInteractiveDisabled(Object _) {}',
+        content: '''
+void handleSurfaceInteractiveDisabled(Object token) {
+  if (!_root.isActiveSurface(token)) {
+    return;
+  }
+  _root.handleSurfaceInteractiveDisabled();
+}
+''',
       ),
       isEmpty,
     );
@@ -140,7 +147,7 @@ void _testSurfaceReservedRuntimeBoundaries() {
       checkSurfaceInteractiveDisabledReservedBoundaryFile(
         path: 'lib/src/api/canvas_runtime_surface_bridge.dart',
         content: '''
-void handleSurfaceInteractiveDisabled(Object _) {
+void handleSurfaceInteractiveDisabled(Object token) {
   _root.handleSurfaceInteractiveDisabled();
 }
 ''',

@@ -31,9 +31,9 @@ final class CanvasSurface extends StatefulWidget {
   State<CanvasSurface> createState() => _CanvasSurfaceState();
 }
 
-// The state is the public widget boundary where Flutter layout, runtime lookup,
-// frame output construction, and passive painters meet for the passive frame proof path.
-// ignore: coupling-between-object-classes
+// The state keeps attach, cleanup, paint, and detach ordering together so the
+// temporal surface lifecycle is auditable at the Flutter boundary.
+// ignore: coupling-between-object-classes, weighted-methods-per-class
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   final Object _surfaceToken = Object();
   CanvasRuntime? _activeRuntime;
@@ -51,6 +51,9 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   void didUpdateWidget(covariant CanvasSurface oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.runtime, widget.runtime)) {
+      if (oldWidget.interactive) {
+        _activePort?.handleSurfaceInteractiveDisabled(_surfaceToken);
+      }
       _detachSurface();
       _attachSurface(widget.runtime);
 
@@ -68,6 +71,9 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 
   @override
   void dispose() {
+    if (widget.interactive) {
+      _activePort?.handleSurfaceInteractiveDisabled(_surfaceToken);
+    }
     _detachSurface();
     super.dispose();
   }
