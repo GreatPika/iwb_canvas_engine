@@ -64,6 +64,11 @@ void _testInteractionGuardPathsRouteDiagnostics() {
 
     _rejectSelectedMoveWithFallbackBudget(diagnostics);
     _rejectSelectedMoveWithStaleCandidate(diagnostics);
+    _rejectContextTargetWithStaleIndex(diagnostics);
+    _rejectContextTargetWithBudgetExceeded(diagnostics);
+    final beforeInvalidContextReject = hub.records.length;
+    _rejectContextTargetWithInvalidIndex(diagnostics);
+    expect(hub.records, hasLength(beforeInvalidContextReject));
     _rejectStaleTerminal(diagnostics);
 
     expect(
@@ -90,6 +95,21 @@ void _testInteractionGuardPathsRouteDiagnostics() {
       }),
     );
     expect(
+      _diagnosticCount(
+        hub,
+        InteractionDiagnosticCode.interactionQueryBudgetExceeded,
+      ),
+      2,
+    );
+    expect(
+      _diagnosticCount(hub, InteractionDiagnosticCode.hitTestFallbackObserved),
+      2,
+    );
+    expect(
+      _diagnosticCount(hub, InteractionDiagnosticCode.staleCandidateRejected),
+      2,
+    );
+    expect(
       hub.records,
       everyElement(
         isA<DiagnosticRecord>()
@@ -106,6 +126,12 @@ void _testInteractionGuardPathsRouteDiagnostics() {
       ),
     );
   });
+}
+
+int _diagnosticCount(DiagnosticsHub hub, InteractionDiagnosticCode code) {
+  return hub.records
+      .where((record) => record.code == DiagnosticCode.interaction(code))
+      .length;
 }
 
 // The reentrancy proof keeps resolver mutation, rollback, action silence, and
@@ -132,12 +158,12 @@ void _testResolverReentrantMutationDiagnostic() {
 
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.move, const Offset(2, 0)),
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(10, 0)),
     );
 
     expect(
       () => root.handlePointer(
-        _sample(CanvasPointerLifecyclePhase.up, const Offset(2, 0)),
+        _sample(CanvasPointerLifecyclePhase.up, const Offset(10, 0)),
       ),
       throwsStateError,
     );
@@ -241,6 +267,85 @@ void _rejectSelectedMoveWithStaleCandidate(
   );
 }
 
+void _rejectContextTargetWithStaleIndex(
+  RuntimeInteractionDiagnosticsAdapter diagnostics,
+) {
+  final engine = _contextEngine(
+    diagnostics,
+    contextTarget: const RejectedContextTargetRead(
+      query: InteractionReadQueryFacts.staleIndex(
+        expectedStructuralRevision: 2,
+        observedStructuralRevision: 1,
+      ),
+    ),
+  );
+
+  final intent = engine.handleDoubleTap(
+    Offset.zero,
+    _context(),
+    timestampHintMs: 1,
+  );
+
+  expect(intent, isNull);
+  expect(
+    engine.requestFactsFor(CanvasInteractionRequestId('request-0')),
+    isNull,
+  );
+}
+
+void _rejectContextTargetWithBudgetExceeded(
+  RuntimeInteractionDiagnosticsAdapter diagnostics,
+) {
+  final engine = _contextEngine(
+    diagnostics,
+    contextTarget: const RejectedContextTargetRead(
+      query: InteractionReadQueryFacts.budgetExceeded(
+        budgetExceededReason:
+            InteractionReadBudgetExceededReason.fallbackCandidateBudgetExceeded,
+        budget: 1,
+        observed: 2,
+      ),
+    ),
+  );
+
+  final intent = engine.handleDoubleTap(
+    Offset.zero,
+    _context(),
+    timestampHintMs: 1,
+  );
+
+  expect(intent, isNull);
+  expect(
+    engine.requestFactsFor(CanvasInteractionRequestId('request-0')),
+    isNull,
+  );
+}
+
+void _rejectContextTargetWithInvalidIndex(
+  RuntimeInteractionDiagnosticsAdapter diagnostics,
+) {
+  final engine = _contextEngine(
+    diagnostics,
+    contextTarget: const RejectedContextTargetRead(
+      query: InteractionReadQueryFacts.invalidIndex(
+        invalidIndexReason: InteractionReadInvalidIndexReason.rebuildNeeded,
+      ),
+    ),
+  );
+
+  final intent = engine.handleDoubleTap(
+    Offset.zero,
+    _context(),
+    timestampHintMs: 1,
+  );
+
+  expect(intent, isNull);
+  expect(
+    engine.requestFactsFor(CanvasInteractionRequestId('request-0')),
+    isNull,
+  );
+}
+
 void _rejectStaleTerminal(RuntimeInteractionDiagnosticsAdapter diagnostics) {
   final engine = _engine(
     diagnostics,
@@ -275,6 +380,32 @@ InteractionEngine _engine(
   );
   engine.attachReadPort(
     _FakeInteractionReadPort(startFacts: selectedMoveStartFacts),
+  );
+
+  return engine;
+}
+
+InteractionEngine _contextEngine(
+  RuntimeInteractionDiagnosticsAdapter diagnostics, {
+  required ContextTargetReadOutcome contextTarget,
+}) {
+  final engine = InteractionEngine(
+    initialMode: CanvasInteractionMode.move,
+    initialDrawStyle: CanvasDrawStyle(),
+    pointerPolicy: CanvasPointerPolicy(),
+    diagnosticsSink: diagnostics,
+  );
+  engine.attachReadPort(
+    _FakeInteractionReadPort(
+      startFacts: SelectedMoveStartFacts(
+        selectedIds: const [],
+        movableSelectedIds: const [],
+        controllerEpoch: 0,
+        selectionRevision: 0,
+        hitSelectedMovable: false,
+      ),
+      contextTarget: contextTarget,
+    ),
   );
 
   return engine;
@@ -335,10 +466,23 @@ final Matcher _isSanitizedInteractionRecord = isA<DiagnosticRecord>()
       'unsupportedType': '_Sen<truncated>',
     });
 
+// This fixture implements the full read port so diagnostic route tests fail if
+// a scenario unexpectedly crosses into an unrelated interaction read path.
+// Splitting it into metric-sized fakes would hide that boundary proof.
+// ignore: coupling-between-object-classes, number-of-methods
 final class _FakeInteractionReadPort implements InteractionReadPort {
-  const _FakeInteractionReadPort({required this.startFacts});
+  const _FakeInteractionReadPort({
+    required this.startFacts,
+    this.contextTarget = const AdmittedContextTargetRead(
+      ContextTargetReadFacts.emptyCanvas(
+        controllerEpoch: 0,
+        documentRevision: 0,
+      ),
+    ),
+  });
 
   final SelectedMoveStartFacts startFacts;
+  final ContextTargetReadOutcome contextTarget;
 
   @override
   SelectedMoveStartFacts selectedMoveStartFacts(
@@ -393,24 +537,21 @@ final class _FakeInteractionReadPort implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
-    return const ContextTargetReadFacts.emptyCanvas(
-      controllerEpoch: 0,
-      documentRevision: 0,
-    );
+    return contextTarget;
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return directContextTargetFacts(request);
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return directContextTargetFacts(request);

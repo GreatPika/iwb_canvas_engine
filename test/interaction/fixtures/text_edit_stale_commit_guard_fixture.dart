@@ -434,19 +434,21 @@ final class _TextGuardReadPort implements InteractionReadPort {
   int textGuardReads = 0;
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
-    return ContextTargetReadFacts.contentElement(
-      elementId: _textId,
-      elementKind: CanvasElementKind.text,
-      elementSnapshot: _textElement(),
-      boundsWorld: const Rect.fromLTWH(120, 0, 10, 10),
-      generation: 1,
-      elementRevision: 0,
-      family: InteractionElementFamily.text,
-      controllerEpoch: 1,
-      documentRevision: 0,
+    return AdmittedContextTargetRead(
+      ContextTargetReadFacts.contentElement(
+        elementId: _textId,
+        elementKind: CanvasElementKind.text,
+        elementSnapshot: _textElement(),
+        boundsWorld: const Rect.fromLTWH(120, 0, 10, 10),
+        generation: 1,
+        elementRevision: 0,
+        family: InteractionElementFamily.text,
+        controllerEpoch: 1,
+        documentRevision: 0,
+      ),
     );
   }
 
@@ -470,14 +472,14 @@ final class _TextGuardReadPort implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     throw UnimplementedError('pending context tap is outside this fixture.');
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     throw UnimplementedError('second context tap is outside this fixture.');

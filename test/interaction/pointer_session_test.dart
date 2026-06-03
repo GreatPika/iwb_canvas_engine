@@ -344,24 +344,26 @@ final class _PointerSessionReadPort implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
-    return const ContextTargetReadFacts.emptyCanvas(
-      controllerEpoch: 1,
-      documentRevision: 0,
+    return const AdmittedContextTargetRead(
+      ContextTargetReadFacts.emptyCanvas(
+        controllerEpoch: 1,
+        documentRevision: 0,
+      ),
     );
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return directContextTargetFacts(request);
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return directContextTargetFacts(request);

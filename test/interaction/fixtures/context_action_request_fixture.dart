@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -22,6 +24,7 @@ void main() {
       completes,
     );
   });
+  _registerRejectedContextTargetTests();
   test('pointer sample down-up double tap emits one request', () {
     return expectLater(_verifyPointerSampleDoubleTapRequest(), completes);
   });
@@ -36,6 +39,21 @@ void main() {
   });
   test('private pointer tap does not leak through later state', () {
     return expectLater(_verifyPrivateTapRevisionStaysPrivate(), completes);
+  });
+}
+
+void _registerRejectedContextTargetTests() {
+  test(
+    'invalid-index direct target read emits no public request or effects',
+    () {
+      return expectLater(_verifyInvalidIndexTargetRejectsPublicly(), completes);
+    },
+  );
+  test('stale-index direct target read emits no public request or effects', () {
+    return expectLater(_verifyStaleIndexTargetRejectsPublicly(), completes);
+  });
+  test('budget direct target read emits no public request or effects', () {
+    return expectLater(_verifyBudgetTargetRejectsPublicly(), completes);
   });
 }
 
@@ -128,6 +146,65 @@ Future<void> _verifyNonFiniteDirectRejectsBeforeTimestamp() async {
   } finally {
     await scenario.dispose();
   }
+}
+
+Future<void> _verifyInvalidIndexTargetRejectsPublicly() async {
+  final scenario = _RuntimeContextRequestScenario(
+    initialDocument: CanvasDocument(),
+  );
+  try {
+    scenario.root.spatialKernel.applyTouched(
+      scenario.root,
+      TouchedSet(updatedElementIds: [CanvasElementId('missing')]),
+    );
+
+    scenario.root.handleDoubleTap(position: Offset.zero);
+    await _flushEvents();
+
+    _expectRejectedContextTargetIsPrivate(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+Future<void> _verifyStaleIndexTargetRejectsPublicly() async {
+  final scenario = _RuntimeContextRequestScenario();
+  try {
+    scenario.root.spatialKernel.resetEmpty(1);
+
+    scenario.root.handleDoubleTap(position: const Offset(20, 0));
+    await _flushEvents();
+
+    _expectRejectedContextTargetIsPrivate(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+Future<void> _verifyBudgetTargetRejectsPublicly() async {
+  final scenario = _RuntimeContextRequestScenario(
+    initialDocument: _fallbackBudgetDocument(),
+  );
+  try {
+    scenario.root.spatialKernel.applyTouched(
+      scenario.root,
+      TouchedSet(updatedElementIds: [CanvasElementId('missing')]),
+    );
+
+    scenario.root.handleDoubleTap(position: Offset.zero);
+    await _flushEvents();
+
+    _expectRejectedContextTargetIsPrivate(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+void _expectRejectedContextTargetIsPrivate(
+  _RuntimeContextRequestScenario scenario,
+) {
+  expect(scenario.requests, isEmpty);
+  _expectNoIncidentalEffects(scenario);
 }
 
 Future<void> _verifyPointerSampleDoubleTapRequest() async {
@@ -240,12 +317,15 @@ final class _RuntimeContextRequestScenario {
     bool selectableContent = false,
     double hitPadding = 0,
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+    CanvasDocument? initialDocument,
   }) {
     root = RuntimeRoot(
-      initialDocument: _document(
-        selectableContent: selectableContent,
-        hitPadding: hitPadding,
-      ),
+      initialDocument:
+          initialDocument ??
+          _document(
+            selectableContent: selectableContent,
+            hitPadding: hitPadding,
+          ),
       config: config,
       commitEffectObserver: effectBatches.add,
     );
@@ -270,6 +350,24 @@ final class _RuntimeContextRequestScenario {
     await actionSubscription.cancel();
     root.dispose();
   }
+}
+
+CanvasDocument _fallbackBudgetDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          for (var index = 0; index <= kCanvasMaxFallbackCandidates; index += 1)
+            CanvasRectElement(
+              id: CanvasElementId('fallback-$index'),
+              size: const Size(10, 10),
+              transform: CanvasTransform.translation(Offset(index * 20, 0)),
+            ),
+        ],
+      ),
+    ],
+  );
 }
 
 Future<void> _flushEvents() => Future<void>.delayed(Duration.zero);

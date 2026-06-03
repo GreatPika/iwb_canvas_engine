@@ -26,15 +26,15 @@ abstract interface class InteractionReadPort {
 
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request);
 
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   );
 
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   );
 
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   );
 
@@ -266,6 +266,28 @@ final class ContextTargetReadRequest {
   const ContextTargetReadRequest({required this.worldPosition});
 
   final Offset worldPosition;
+}
+
+sealed class ContextTargetReadOutcome {
+  const ContextTargetReadOutcome();
+
+  InteractionReadQueryFacts get query;
+}
+
+final class AdmittedContextTargetRead extends ContextTargetReadOutcome {
+  const AdmittedContextTargetRead(this.facts);
+
+  final ContextTargetReadFacts facts;
+
+  @override
+  InteractionReadQueryFacts get query => facts.query;
+}
+
+final class RejectedContextTargetRead extends ContextTargetReadOutcome {
+  const RejectedContextTargetRead({required this.query});
+
+  @override
+  final InteractionReadQueryFacts query;
 }
 
 enum ContextActionReadTargetKind { contentElement, emptyCanvas }

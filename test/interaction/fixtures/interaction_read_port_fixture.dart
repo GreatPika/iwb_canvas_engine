@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
@@ -15,6 +17,7 @@ void main() {
   _testMarqueeQueryBudgetFacts();
   _testEraserReadFacts();
   _testContextTargetReadFacts();
+  _testRejectedContextTargetReadOutcomes();
   _testTextCommitGuardFacts();
 }
 
@@ -229,33 +232,112 @@ void _testContextTargetReadFacts() {
       final root = _runtimeRoot();
       addTearDown(root.dispose);
 
-      final content = root.interactionReadPort.directContextTargetFacts(
-        const ContextTargetReadRequest(worldPosition: Offset(5, 25)),
-      );
+      final content =
+          root.interactionReadPort.directContextTargetFacts(
+                const ContextTargetReadRequest(worldPosition: Offset(5, 25)),
+              )
+              as AdmittedContextTargetRead;
+      final contentFacts = content.facts;
 
-      expect(content.kind, ContextActionReadTargetKind.contentElement);
-      expect(content.elementId, CanvasElementId('nonselectable-a'));
-      expect(content.elementKind, CanvasElementKind.rect);
-      expect(content.elementSnapshot, isA<CanvasRectElement>());
-      expect(content.boundsWorld, const Rect.fromLTRB(-5, 15, 5, 25));
-      expect(content.generation, 0);
-      expect(content.elementRevision, 0);
-      expect(content.family, InteractionElementFamily.rect);
-      expect(content.controllerEpoch, 0);
-      expect(content.documentRevision, 0);
+      expect(contentFacts.kind, ContextActionReadTargetKind.contentElement);
+      expect(contentFacts.elementId, CanvasElementId('nonselectable-a'));
+      expect(contentFacts.elementKind, CanvasElementKind.rect);
+      expect(contentFacts.elementSnapshot, isA<CanvasRectElement>());
+      expect(contentFacts.boundsWorld, const Rect.fromLTRB(-5, 15, 5, 25));
+      expect(contentFacts.generation, 0);
+      expect(contentFacts.elementRevision, 0);
+      expect(contentFacts.family, InteractionElementFamily.rect);
+      expect(contentFacts.controllerEpoch, 0);
+      expect(contentFacts.documentRevision, 0);
 
-      final empty = root.interactionReadPort.directContextTargetFacts(
-        const ContextTargetReadRequest(worldPosition: Offset(82, 2)),
-      );
+      final empty =
+          root.interactionReadPort.directContextTargetFacts(
+                const ContextTargetReadRequest(worldPosition: Offset(82, 2)),
+              )
+              as AdmittedContextTargetRead;
+      final emptyFacts = empty.facts;
 
-      expect(empty.kind, ContextActionReadTargetKind.emptyCanvas);
-      expect(empty.elementId, isNull);
-      expect(empty.elementSnapshot, isNull);
-      expect(empty.boundsWorld, isNull);
-      expect(empty.controllerEpoch, 0);
-      expect(empty.documentRevision, 0);
+      expect(emptyFacts.kind, ContextActionReadTargetKind.emptyCanvas);
+      expect(emptyFacts.elementId, isNull);
+      expect(emptyFacts.elementSnapshot, isNull);
+      expect(emptyFacts.boundsWorld, isNull);
+      expect(emptyFacts.controllerEpoch, 0);
+      expect(emptyFacts.documentRevision, 0);
     },
   );
+}
+
+void _testRejectedContextTargetReadOutcomes() {
+  _testInvalidIndexContextTargetReadOutcome();
+  _testStaleIndexContextTargetReadOutcome();
+  _testBudgetExceededContextTargetReadOutcome();
+}
+
+void _testInvalidIndexContextTargetReadOutcome() {
+  test('context target reads reject invalid spatial index results', () {
+    final root = RuntimeRoot(
+      initialDocument: CanvasDocument(),
+      config: const CanvasRuntimeConfig(),
+    );
+    addTearDown(root.dispose);
+    root.spatialKernel.applyTouched(
+      root,
+      TouchedSet(updatedElementIds: [CanvasElementId('missing')]),
+    );
+
+    final rejected = root.interactionReadPort.directContextTargetFacts(
+      const ContextTargetReadRequest(worldPosition: Offset.zero),
+    );
+
+    expect(rejected, isA<RejectedContextTargetRead>());
+    expect(rejected.query.status, InteractionReadQueryStatus.invalidIndex);
+  });
+}
+
+void _testStaleIndexContextTargetReadOutcome() {
+  test('context target reads reject stale spatial index results', () {
+    final root = _runtimeRoot();
+    addTearDown(root.dispose);
+    root.edits.edit((edit) {
+      edit.addElement(
+        _rect('fresh-a', Offset.zero),
+        layerId: CanvasLayerId('layer-a'),
+      );
+    });
+    root.spatialKernel.resetEmpty(0);
+
+    final rejected = root.interactionReadPort.directContextTargetFacts(
+      const ContextTargetReadRequest(worldPosition: Offset.zero),
+    );
+
+    expect(rejected, isA<RejectedContextTargetRead>());
+    expect(rejected.query.status, InteractionReadQueryStatus.staleIndex);
+  });
+}
+
+void _testBudgetExceededContextTargetReadOutcome() {
+  test('context target reads reject fallback budget overflow results', () {
+    final root = RuntimeRoot(
+      initialDocument: _fallbackBudgetDocument(),
+      config: const CanvasRuntimeConfig(),
+    );
+    addTearDown(root.dispose);
+    root.spatialKernel.applyTouched(
+      root,
+      TouchedSet(updatedElementIds: [CanvasElementId('missing')]),
+    );
+
+    final rejected = root.interactionReadPort.directContextTargetFacts(
+      const ContextTargetReadRequest(worldPosition: Offset.zero),
+    );
+
+    expect(rejected, isA<RejectedContextTargetRead>());
+    expect(rejected.query.status, InteractionReadQueryStatus.budgetExceeded);
+    expect(
+      rejected.query.budgetExceededReason,
+      InteractionReadBudgetExceededReason.fallbackCandidateBudgetExceeded,
+    );
+  });
 }
 
 void _testTextCommitGuardFacts() {
@@ -286,6 +368,20 @@ void _testTextCommitGuardFacts() {
     expect(backgroundFacts.targetKind, isNull);
     expect(backgroundFacts.documentRevision, 0);
   });
+}
+
+CanvasDocument _fallbackBudgetDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          for (var index = 0; index <= kCanvasMaxFallbackCandidates; index += 1)
+            _rect('fallback-$index', Offset(index * 20, 0)),
+        ],
+      ),
+    ],
+  );
 }
 
 RuntimeRoot _runtimeRoot() {

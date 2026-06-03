@@ -213,21 +213,21 @@ final class _BudgetOverflowReadPort implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
     throw UnimplementedError('context target is outside this fixture.');
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     throw UnimplementedError('context target is outside this fixture.');
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     throw UnimplementedError('context target is outside this fixture.');

@@ -78,6 +78,21 @@ void _registerContextTapTests() {
   test('non-finite direct double tap performs no read or timestamp', () {
     expect(_verifyNonFiniteDirectDoubleTapIsSilent, returnsNormally);
   });
+  _registerRejectedContextTapTests();
+}
+
+void _registerRejectedContextTapTests() {
+  test('rejected direct context read issues no request or timestamp', () {
+    expect(_verifyRejectedDirectContextReadIsSilent, returnsNormally);
+  });
+
+  test('rejected first context tap stores no pending state', () {
+    expect(_verifyRejectedFirstContextTapStoresNoPending, returnsNormally);
+  });
+
+  test('rejected second context tap clears pending without request', () {
+    expect(_verifyRejectedSecondContextTapClearsPending, returnsNormally);
+  });
 }
 
 // The machine assertions stay together to prove capture, preview, immutability,
@@ -320,7 +335,7 @@ void _verifyDirectDoubleTapCleanupBeforeTargetRead() {
   _tapContext(engine, _contextTap(const Offset(10, 10)));
   readPort.onDirectContextRead = () {
     expect(engine.pendingContextTap, isNull);
-    expect(timestampReads, 1);
+    expect(timestampReads, 0);
   };
 
   final request = engine.handleDoubleTap(
@@ -393,10 +408,119 @@ void _verifyNonFiniteDirectDoubleTapIsSilent() {
   expect(readPort.directContextReads, 0);
 }
 
+void _verifyRejectedDirectContextReadIsSilent() {
+  var timestampReads = 0;
+  final readPort = _FakeReadPort(
+    contextOutcome: const RejectedContextTargetRead(
+      query: InteractionReadQueryFacts.invalidIndex(
+        invalidIndexReason: InteractionReadInvalidIndexReason.rebuildNeeded,
+      ),
+    ),
+  );
+  final engine = _contextEngine(readPort);
+
+  final request = engine.handleDoubleTap(
+    const Offset(10, 10),
+    InteractionPointerContext(
+      viewCameraOffset: Offset.zero,
+      controllerEpoch: 1,
+      resolveOutputTimestamp: (hint) {
+        timestampReads += 1;
+
+        return hint ?? 0;
+      },
+    ),
+    timestampHintMs: 5,
+  );
+
+  expect(request, isNull);
+  expect(timestampReads, 0);
+  expect(readPort.directContextReads, 1);
+  expect(
+    engine.requestFactsFor(CanvasInteractionRequestId('request-0')),
+    isNull,
+  );
+}
+
+void _verifyRejectedFirstContextTapStoresNoPending() {
+  var timestampReads = 0;
+  final readPort = _FakeReadPort(
+    contextOutcome: const RejectedContextTargetRead(
+      query: InteractionReadQueryFacts.staleIndex(
+        expectedStructuralRevision: 2,
+        observedStructuralRevision: 1,
+      ),
+    ),
+  );
+  final engine = _contextEngine(readPort);
+
+  final first = _tapContext(
+    engine,
+    _contextTap(const Offset(10, 10)),
+    context: _contextWithTimestampCounter(
+      epoch: 1,
+      onRead: () {
+        timestampReads += 1;
+      },
+    ),
+  );
+
+  expect(first.kind, InteractionPointerAdmissionKind.ignored);
+  expect(first.contextRequest, isNull);
+  expect(engine.pendingContextTap, isNull);
+  expect(timestampReads, 0);
+  expect(readPort.pendingContextReads, 1);
+}
+
+void _verifyRejectedSecondContextTapClearsPending() {
+  var timestampReads = 0;
+  final readPort = _FakeReadPort(contextElementId: CanvasElementId('ctx-a'));
+  final engine = _contextEngine(readPort);
+
+  _tapContext(engine, _contextTap(const Offset(10, 10)));
+  expect(engine.pendingContextTap, isNotNull);
+  readPort.secondContextOutcome = _budgetRejectedContextTarget();
+
+  final second = _tapContext(
+    engine,
+    _contextTap(const Offset(12, 10)),
+    context: _contextWithTimestampCounter(
+      epoch: 1,
+      onRead: () {
+        timestampReads += 1;
+      },
+    ),
+  );
+
+  expect(second.kind, InteractionPointerAdmissionKind.cleanupOnly);
+  expect(second.contextRequest, isNull);
+  expect(engine.pendingContextTap, isNull);
+  expect(timestampReads, 0);
+  expect(readPort.pendingContextReads, 1);
+  expect(readPort.secondContextReads, 1);
+  expect(
+    engine.requestFactsFor(CanvasInteractionRequestId('request-0')),
+    isNull,
+  );
+}
+
+ContextTargetReadOutcome _budgetRejectedContextTarget() {
+  return const RejectedContextTargetRead(
+    query: InteractionReadQueryFacts.budgetExceeded(
+      budgetExceededReason:
+          InteractionReadBudgetExceededReason.queryTileBudgetExceeded,
+      budget: 1,
+      observed: 2,
+    ),
+  );
+}
+
 InteractionPointerAdmission _tapContext(
   InteractionEngine engine,
-  _ContextTapInput input,
-) {
+  _ContextTapInput input, {
+  InteractionPointerContext? context,
+}) {
+  final pointerContext = context ?? _context(1);
   engine.handlePointerSample(
     _sample(
       1,
@@ -404,7 +528,7 @@ InteractionPointerAdmission _tapContext(
       CanvasPointerLifecyclePhase.down,
       timestampMs: input.timestampMs,
     ),
-    _context(1),
+    pointerContext,
   );
   final moved = input.movePosition;
   if (moved != null) {
@@ -415,7 +539,7 @@ InteractionPointerAdmission _tapContext(
         CanvasPointerLifecyclePhase.move,
         timestampMs: input.timestampMs,
       ),
-      _context(1),
+      pointerContext,
     );
   }
 
@@ -426,7 +550,7 @@ InteractionPointerAdmission _tapContext(
       CanvasPointerLifecyclePhase.up,
       timestampMs: input.timestampMs,
     ),
-    _context(1),
+    pointerContext,
   );
 }
 
@@ -468,6 +592,21 @@ InteractionPointerContext _context(int epoch) {
     viewCameraOffset: Offset.zero,
     controllerEpoch: epoch,
     resolveOutputTimestamp: (hint) => hint ?? 0,
+  );
+}
+
+InteractionPointerContext _contextWithTimestampCounter({
+  required int epoch,
+  required void Function() onRead,
+}) {
+  return InteractionPointerContext(
+    viewCameraOffset: Offset.zero,
+    controllerEpoch: epoch,
+    resolveOutputTimestamp: (hint) {
+      onRead();
+
+      return hint ?? 0;
+    },
   );
 }
 
@@ -514,11 +653,14 @@ final class _FakeReadPort implements InteractionReadPort {
     this.erasedIds = const [],
     this.contextElementId,
     this.secondContextElementId,
-  });
+    ContextTargetReadOutcome? contextOutcome,
+  }) : contextOutcome = contextOutcome ?? _contextOutcome(contextElementId);
 
   final Iterable<CanvasElementId> erasedIds;
   final CanvasElementId? contextElementId;
   final CanvasElementId? secondContextElementId;
+  final ContextTargetReadOutcome contextOutcome;
+  ContextTargetReadOutcome? secondContextOutcome;
   var _previewReads = 0;
   var _terminalReads = 0;
   var _directContextReads = 0;
@@ -581,31 +723,32 @@ final class _FakeReadPort implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
     _directContextReads += 1;
     onDirectContextRead?.call();
 
-    return _contextFacts(contextElementId);
+    return contextOutcome;
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     _pendingContextReads += 1;
 
-    return _contextFacts(contextElementId);
+    return contextOutcome;
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     _secondContextReads += 1;
 
-    return _contextFacts(secondContextElementId ?? contextElementId);
+    return secondContextOutcome ??
+        _contextOutcome(secondContextElementId ?? contextElementId);
   }
 
   @override
@@ -616,23 +759,27 @@ final class _FakeReadPort implements InteractionReadPort {
   }
 }
 
-ContextTargetReadFacts _contextFacts(CanvasElementId? id) {
+ContextTargetReadOutcome _contextOutcome(CanvasElementId? id) {
   if (id == null) {
-    return const ContextTargetReadFacts.emptyCanvas(
-      controllerEpoch: 1,
-      documentRevision: 0,
+    return const AdmittedContextTargetRead(
+      ContextTargetReadFacts.emptyCanvas(
+        controllerEpoch: 1,
+        documentRevision: 0,
+      ),
     );
   }
 
-  return ContextTargetReadFacts.contentElement(
-    elementId: id,
-    elementKind: CanvasElementKind.rect,
-    elementSnapshot: CanvasRectElement(id: id, size: const Size(10, 10)),
-    boundsWorld: const Rect.fromLTWH(10, 10, 10, 10),
-    generation: 1,
-    elementRevision: 0,
-    family: InteractionElementFamily.rect,
-    controllerEpoch: 1,
-    documentRevision: 0,
+  return AdmittedContextTargetRead(
+    ContextTargetReadFacts.contentElement(
+      elementId: id,
+      elementKind: CanvasElementKind.rect,
+      elementSnapshot: CanvasRectElement(id: id, size: const Size(10, 10)),
+      boundsWorld: const Rect.fromLTWH(10, 10, 10, 10),
+      generation: 1,
+      elementRevision: 0,
+      family: InteractionElementFamily.rect,
+      controllerEpoch: 1,
+      documentRevision: 0,
+    ),
   );
 }

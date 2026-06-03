@@ -185,21 +185,21 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   }
 
   @override
-  ContextTargetReadFacts directContextTargetFacts(
+  ContextTargetReadOutcome directContextTargetFacts(
     ContextTargetReadRequest request,
   ) {
     return _contextTargetFacts(request);
   }
 
   @override
-  ContextTargetReadFacts pendingContextTapFacts(
+  ContextTargetReadOutcome pendingContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return _contextTargetFacts(request);
   }
 
   @override
-  ContextTargetReadFacts secondContextTapFacts(
+  ContextTargetReadOutcome secondContextTapFacts(
     ContextTargetReadRequest request,
   ) {
     return _contextTargetFacts(request);
@@ -315,7 +315,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   // Context target reads must atomically resolve topmost content, immutable
   // snapshot, bounds, generation, and observation revision for one request.
   // ignore: halstead-volume
-  ContextTargetReadFacts _contextTargetFacts(ContextTargetReadRequest request) {
+  ContextTargetReadOutcome _contextTargetFacts(
+    ContextTargetReadRequest request,
+  ) {
     final context = _readContext();
     final query = _spatial.queryContext(
       SpatialQueryWindow(
@@ -327,6 +329,25 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       query,
       resolve: _frame.resolveElement,
     );
+    final queryFacts = interactionQueryFacts(query, candidates);
+    if (!interactionQueryHasCandidates(query)) {
+      return RejectedContextTargetRead(query: queryFacts);
+    }
+
+    return _admittedContextTarget(
+      request: request,
+      context: context,
+      candidates: candidates,
+      queryFacts: queryFacts,
+    );
+  }
+
+  ContextTargetReadOutcome _admittedContextTarget({
+    required ContextTargetReadRequest request,
+    required _InteractionReadContext context,
+    required RuntimeResolvedSpatialCandidates candidates,
+    required InteractionReadQueryFacts queryFacts,
+  }) {
     final hitId = _hitTestPolicy.topmostContextHit(
       point: request.worldPosition,
       candidates: candidates.handles,
@@ -336,26 +357,30 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         ? null
         : interactionFactsForId(candidates, hitId);
     if (hitFacts == null) {
-      return ContextTargetReadFacts.emptyCanvas(
-        controllerEpoch: context.controllerEpoch,
-        documentRevision: context.documentRevision,
-        query: interactionQueryFacts(query, candidates),
+      return AdmittedContextTargetRead(
+        ContextTargetReadFacts.emptyCanvas(
+          controllerEpoch: context.controllerEpoch,
+          documentRevision: context.documentRevision,
+          query: queryFacts,
+        ),
       );
     }
 
-    return ContextTargetReadFacts.contentElement(
-      elementId: hitFacts.id,
-      elementKind: hitFacts.kind,
-      elementSnapshot: interactionElementSnapshot(hitFacts),
-      boundsWorld: _hitTestPolicy.geometryPolicy
-          .boundsFor(hitFacts)
-          .paintBoundsWorld,
-      generation: hitFacts.generation,
-      elementRevision: hitFacts.revision,
-      family: interactionElementFamily(hitFacts),
-      controllerEpoch: context.controllerEpoch,
-      documentRevision: context.documentRevision,
-      query: interactionQueryFacts(query, candidates),
+    return AdmittedContextTargetRead(
+      ContextTargetReadFacts.contentElement(
+        elementId: hitFacts.id,
+        elementKind: hitFacts.kind,
+        elementSnapshot: interactionElementSnapshot(hitFacts),
+        boundsWorld: _hitTestPolicy.geometryPolicy
+            .boundsFor(hitFacts)
+            .paintBoundsWorld,
+        generation: hitFacts.generation,
+        elementRevision: hitFacts.revision,
+        family: interactionElementFamily(hitFacts),
+        controllerEpoch: context.controllerEpoch,
+        documentRevision: context.documentRevision,
+        query: queryFacts,
+      ),
     );
   }
 

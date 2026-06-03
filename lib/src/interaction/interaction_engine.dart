@@ -252,11 +252,15 @@ final class InteractionEngine {
     if (_pendingContextTap != null) {
       _cleanupPendingContextTapOnly();
     }
-    final timestampMs = context.resolveOutputTimestamp(timestampHintMs);
     final worldPosition = viewPosition + context.viewCameraOffset;
-    final facts = readPort.directContextTargetFacts(
+    final target = readPort.directContextTargetFacts(
       ContextTargetReadRequest(worldPosition: worldPosition),
     );
+    final facts = _admittedContextTargetFacts(target);
+    if (facts == null) {
+      return null;
+    }
+    final timestampMs = context.resolveOutputTimestamp(timestampHintMs);
 
     return _issueContextRequest(
       facts: facts,
@@ -665,7 +669,15 @@ final class InteractionEngine {
       return _ignoredWithPublication(sample, publishRuntimeState);
     }
     final pending = _pendingContextTap;
-    final facts = _contextTapFacts(sample, pending);
+    final target = _contextTapFacts(sample, pending);
+    final facts = _admittedContextTargetFacts(target);
+    if (facts == null) {
+      if (pending == null) {
+        return _ignoredWithPublication(sample, publishRuntimeState);
+      }
+
+      return _contextTapMismatchAdmission(sample, publishRuntimeState);
+    }
     if (pending == null) {
       return _storePendingContextTap(sample, facts, publishRuntimeState);
     }
@@ -698,7 +710,7 @@ final class InteractionEngine {
     );
   }
 
-  ContextTargetReadFacts _contextTapFacts(
+  ContextTargetReadOutcome _contextTapFacts(
     NormalizedPointerSample sample,
     PendingContextTap? pending,
   ) {
@@ -710,6 +722,19 @@ final class InteractionEngine {
     }
 
     return readPort.secondContextTapFacts(request);
+  }
+
+  ContextTargetReadFacts? _admittedContextTargetFacts(
+    ContextTargetReadOutcome outcome,
+  ) {
+    switch (outcome) {
+      case AdmittedContextTargetRead(:final facts):
+        return facts;
+      case RejectedContextTargetRead(:final query):
+        _recordQueryDiagnostics(query);
+
+        return null;
+    }
   }
 
   InteractionPointerAdmission _storePendingContextTap(
