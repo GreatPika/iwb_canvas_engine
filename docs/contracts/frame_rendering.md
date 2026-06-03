@@ -37,6 +37,9 @@ Required tests:
 - `test.frame.frame_spatial_paint_admission`
 - `test.frame.frame_drawable_policy`
 - `test.frame.marquee_captured_style`
+- `test.surface.no_live_runtime_read_in_painters`
+- `test.surface.overlay_drawable_policy`
+- `test.surface.marquee_captured_style`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`

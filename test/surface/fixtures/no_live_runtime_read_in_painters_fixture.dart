@@ -4,11 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 
-import 'ordinary_paint_test_support.dart';
+import '../../frame/fixtures/ordinary_paint_test_support.dart';
 
 void main() {
   _registerPainterBoundaryTests();
-  _registerRecordPainterBoundaryTests();
   _registerOverlayPainterBoundaryTests();
   _registerPaintOrderTests();
 }
@@ -17,32 +16,7 @@ void _registerPainterBoundaryTests() {
   test('surface painters import only immutable frame paint outputs', () {
     expect(File('lib/src/surface/main_painter.dart').existsSync(), isTrue);
     _expectPainterBoundary('lib/src/surface/main_painter.dart');
-    _expectRecordPainterBoundary(
-      'lib/src/frame/main_frame_record_painter.dart',
-    );
     _expectPainterBoundary('lib/src/surface/overlay_painter.dart');
-  });
-}
-
-void _registerRecordPainterBoundaryTests() {
-  test('record painter consumes row-specific paint data', () {
-    final recordPainterSource = File(
-      'lib/src/frame/main_frame_record_painter.dart',
-    ).readAsStringSync();
-    expect(
-      recordPainterSource,
-      contains('record.transform.toCanvasTransform()'),
-    );
-    expect(recordPainterSource, contains('_paintPathRecord'));
-    expect(recordPainterSource, contains('_paintTextRecord'));
-    expect(recordPainterSource, contains('_paintStrokeRecord'));
-    expect(recordPainterSource, contains('_paintLineRecord'));
-    expect(recordPainterSource, contains('_withElementOpacity'));
-    expect(recordPainterSource, contains('ColorFilter.mode'));
-    expect(recordPainterSource, contains('RenderPrimitiveCacheSnapshot'));
-    expect(recordPainterSource, isNot(contains('parseSvgPathData')));
-    expect(recordPainterSource, isNot(contains('TextPainter(')));
-    expect(recordPainterSource, isNot(contains('PathRenderRow() ||')));
   });
 }
 
@@ -94,13 +68,6 @@ void _expectPainterBoundary(String path) {
   final source = File(path).readAsStringSync();
 
   expect(source, contains('FramePaintOutput'));
-  _expectNoLivePaintInputs(source);
-}
-
-void _expectRecordPainterBoundary(String path) {
-  final source = File(path).readAsStringSync();
-
-  expect(source, contains('RenderElementRecord'));
   _expectNoLivePaintInputs(source);
 }
 

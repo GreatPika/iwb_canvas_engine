@@ -495,6 +495,18 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
 
+## test.surface.marquee_captured_style
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.surface.no_live_runtime_read_in_painters
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
+## test.surface.overlay_drawable_policy
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.surface.pointer_adapter_finite_normalization
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`

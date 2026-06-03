@@ -191,6 +191,9 @@ Required tests:
 - `test.frame.frame_spatial_paint_admission`
 - `test.frame.frame_drawable_policy`
 - `test.frame.marquee_captured_style`
+- `test.surface.no_live_runtime_read_in_painters`
+- `test.surface.overlay_drawable_policy`
+- `test.surface.marquee_captured_style`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.guardrails.geometry_no_legacy_scene_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
@@ -348,6 +351,9 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/frame_spatial_paint_admission_test.dart`
 - `test/frame/frame_drawable_policy_test.dart`
 - `test/frame/marquee_captured_style_test.dart`
+- `test/surface/no_live_runtime_read_in_painters_test.dart`
+- `test/surface/overlay_drawable_policy_test.dart`
+- `test/surface/marquee_captured_style_test.dart`
 - `test/frame/paint_plan_write_all_or_nothing_test.dart`
 - `test/frame/paint_asset_binding_service_test.dart`
 - `test/frame/repaint_bus_output_test.dart`
@@ -810,16 +816,27 @@ behavioral tests, and the required guardrail list remains owned by
   unchanged and performs no ordinary cache write.
 
 #### `test/frame/frame_drawable_policy_test.dart`
-- proves the frame-owned drawable policy renders one-point committed strokes,
-  one-point overlay stroke previews, one-point eraser corridors, and same-point
-  lines through explicit point or circle commands;
+- proves the frame-owned record painter renders one-point committed strokes and
+  same-point lines through explicit point or circle commands;
 - proves empty point lists remain no-op draw inputs.
 
 #### `test/frame/marquee_captured_style_test.dart`
 - proves marquee overlay primitives carry captured selection style color,
-  stroke width, and fill opacity;
-- proves overlay painting uses those primitive fields instead of live style
-  state.
+  stroke width, and fill opacity.
+
+#### `test/surface/no_live_runtime_read_in_painters_test.dart`
+- proves surface-owned `MainFramePainter` and `OverlayFramePainter` consume
+  immutable frame paint outputs and do not read runtime, store, document
+  projection, resolver, or session state during paint.
+
+#### `test/surface/overlay_drawable_policy_test.dart`
+- proves the surface-owned overlay painter renders one-point stroke previews and
+  eraser corridors through explicit drawable policy and keeps empty point lists
+  no-op.
+
+#### `test/surface/marquee_captured_style_test.dart`
+- proves surface-owned overlay painting uses captured marquee primitive fill and
+  stroke style instead of live style state.
 
 #### `test/frame/paint_plan_excludes_selection_state_test.dart`
 - proves OrdinaryPaintRecordCache keys and cached ordinary records exclude

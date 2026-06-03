@@ -172,9 +172,12 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.frame.main_overlay_capture` -> `test/frame/main_overlay_capture_test.dart`
 - `test.frame.frame_donor_mapping` -> `test/frame/frame_donor_mapping_test.dart`
 - `test.frame.no_live_runtime_read_in_painters` -> `test/frame/no_live_runtime_read_in_painters_test.dart`
+- `test.surface.no_live_runtime_read_in_painters` -> `test/surface/no_live_runtime_read_in_painters_test.dart`
 - `test.frame.frame_spatial_paint_admission` -> `test/frame/frame_spatial_paint_admission_test.dart`
 - `test.frame.frame_drawable_policy` -> `test/frame/frame_drawable_policy_test.dart`
 - `test.frame.marquee_captured_style` -> `test/frame/marquee_captured_style_test.dart`
+- `test.surface.overlay_drawable_policy` -> `test/surface/overlay_drawable_policy_test.dart`
+- `test.surface.marquee_captured_style` -> `test/surface/marquee_captured_style_test.dart`
 - `test.frame.paint_plan_write_all_or_nothing` -> `test/frame/paint_plan_write_all_or_nothing_test.dart`
 - `test.frame.paint_asset_binding_service` -> `test/frame/paint_asset_binding_service_test.dart`
 - `test.frame.repaint_bus_output` -> `test/frame/repaint_bus_output_test.dart`

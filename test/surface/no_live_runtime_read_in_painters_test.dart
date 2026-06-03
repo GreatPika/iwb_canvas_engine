@@ -3,10 +3,10 @@ import 'package:test/test.dart';
 import '../support/flutter_in_package_test_harness.dart';
 
 void main() {
-  test('frame record painter consumes immutable record output only', () async {
+  test('surface painters consume immutable frame output only', () async {
     await expectLater(
       runFlutterInPackageTest(
-        'test/frame/fixtures/frame_record_painter_boundary_fixture.dart',
+        'test/surface/fixtures/no_live_runtime_read_in_painters_fixture.dart',
       ),
       completes,
     );

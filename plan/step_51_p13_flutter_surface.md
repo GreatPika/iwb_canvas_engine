@@ -395,7 +395,7 @@ Completion Check:
 - Surface/frame structural tests prove `lib/src/surface/main_painter.dart` and `lib/src/surface/overlay_painter.dart` do not import runtime, store, public API facade, `CanvasResourceResolver`, or resource resolver adapter ownership; they consume immutable frame outputs only.
 - Existing no-live-runtime-read painter proof is updated from frame painter paths to surface painter paths and remains green.
 - Existing frame opacity/no-saveLayer proof plus a surface painter source/semantic guard proves no ordinary opacity `Canvas.saveLayer` call exists in the surface hot paint path.
-- `dart test test/surface/widget_paint_test.dart test/surface/surface_camera_frame_output_test.dart test/frame/no_live_runtime_read_in_painters_test.dart` passes.
+- `dart test test/surface/widget_paint_test.dart test/surface/surface_camera_frame_output_test.dart test/surface/no_live_runtime_read_in_painters_test.dart` passes.
 - `dart analyze` passes after the Unit 3 Dart code changes.
 - `dcm analyze .` passes after the Unit 3 Dart code changes.
 - `dcm calculate-metrics lib/src/frame lib/src/runtime lib/src/surface test/surface test/frame` passes after Unit 3, with any intentional metric exception represented only by a localized exact suppression and nearby rationale allowed by repository rules.
