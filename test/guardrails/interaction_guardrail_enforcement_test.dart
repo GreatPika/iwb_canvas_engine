@@ -49,7 +49,9 @@ void _registerRunnerBackedProofs() {
 
 void _registerStructuralNegativeProofs() {
   _registerInteractionImportNegativeProofs();
+  _registerRetiredFlutterBridgeImportNegativeProof();
   _registerCleanupCoordinatorNegativeProof();
+  _registerRetiredFlutterBridgeCleanupNegativeProof();
   _registerReadPortNegativeProof();
   _registerTextEditGuardNegativeProof();
 }
@@ -95,6 +97,25 @@ void _registerInteractionImportNegativeProofs() {
   });
 }
 
+void _registerRetiredFlutterBridgeImportNegativeProof() {
+  test('interaction retired flutter bridge import fixture is rejected', () {
+    final violations = checkInteractionImportBoundaryFile(
+      path: 'lib/src/interaction/bad_flutter_bridge_import.dart',
+      content: "import '../flutter_bridge/canvas_surface.dart';\n",
+    );
+    expect(
+      violations,
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'core.import_boundaries',
+        ),
+      ),
+    );
+  });
+}
+
 void _registerCleanupCoordinatorNegativeProof() {
   _registerCleanupCoordinatorFileNegativeProof();
   _registerCleanupProtocolFileNegativeProof();
@@ -136,6 +157,20 @@ void _registerCleanupCoordinatorFileNegativeProof() {
       isNotEmpty,
     );
   });
+}
+
+void _registerRetiredFlutterBridgeCleanupNegativeProof() {
+  test(
+    'cleanup coordinator retired flutter bridge fixture is rejected',
+    () async {
+      expect(
+        await _expectCleanupCoordinatorImportRejected(
+          "import '../flutter_bridge/canvas_surface.dart';\n",
+        ),
+        isNotEmpty,
+      );
+    },
+  );
 }
 
 void _registerCleanupProtocolFileNegativeProof() {

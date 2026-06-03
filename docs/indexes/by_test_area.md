@@ -167,38 +167,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 
-## test.flutter_bridge.interactive_false_active_session_cancel
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.flutter_bridge.interactive_false_pending_line_preserved
-
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
-
-## test.flutter_bridge.interactive_false_pointer_routing
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.flutter_bridge.interactive_false_state_isolation
-
-- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
-
-## test.flutter_bridge.pointer_adapter_finite_normalization
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.flutter_bridge.single_active_surface
-
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-
-## test.flutter_bridge.surface_resource_session_lifecycle
-
-- Sections: `section_04_public_api_v1`, `section_23_tests`
-
-## test.flutter_bridge.widget_paint
-
-- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
-
 ## test.frame.cache_capacity_eviction_policy
 
 - Sections: `section_18_cache_policy`, `section_23_tests`
@@ -510,4 +478,36 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.store.read_document_projection
 
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.surface.interactive_false_active_session_cancel
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.interactive_false_pending_line_preserved
+
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.interactive_false_pointer_routing
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.interactive_false_state_isolation
+
+- Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.pointer_adapter_finite_normalization
+
+- Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.single_active_surface
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.surface.surface_resource_session_lifecycle
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.surface.widget_paint
+
+- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
 

@@ -87,8 +87,8 @@ void _testResourceBoundary() {
   test('resource resolver values stay resource-owned', () {
     final source = _adapterSource();
     final forbiddenImports = RegExp(
-      r"(\.\./(runtime|store|frame|surface|interaction|diagnostics|flutter_bridge)/|"
-      r"package:iwb_canvas_engine/src/(runtime|store|frame|surface|interaction|diagnostics|flutter_bridge)|"
+      r"(\.\./(runtime|store|frame|surface|interaction|diagnostics)/|"
+      r"package:iwb_canvas_engine/src/(runtime|store|frame|surface|interaction|diagnostics)|"
       r"package:flutter/|dart:io)",
     );
 

@@ -156,8 +156,8 @@ void _testInternalContractsDoNotImportImplementationOwners() {
   test('internal contracts do not import API or implementation owners', () {
     final forbidden = RegExp(
       r"(\.\./api/|package:iwb_canvas_engine/src/api|"
-      r"\.\./(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|flutter_bridge)/|"
-      r"package:iwb_canvas_engine/src/(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|flutter_bridge))",
+      r"\.\./(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|surface|flutter_bridge)/|"
+      r"package:iwb_canvas_engine/src/(runtime|edit|store|selection|codec|diagnostics|resources|frame|interaction|geometry|surface|flutter_bridge))",
     );
 
     for (final file in Directory('lib/src/contracts/internal').listSync()) {

@@ -236,17 +236,46 @@ const _bridgeFixtures = [
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/frame/main_frame_painter.dart',
+    targetOwner: 'runtime',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/runtime/runtime_root.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'api',
+    targetOwner: 'contracts/internal',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/contracts/internal/resolver_mutation_guard.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'api',
+    targetOwner: 'contracts/internal',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath:
+        'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
     targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/frame/overlay_frame_painter.dart',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/frame/frame_engine.dart',
     directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'api',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'api',
+    targetOwner: 'surface',
+    sourcePath: 'lib/src/api/canvas_surface.dart',
+    targetPath: 'lib/src/surface/canvas_surface_widget.dart',
+    directiveKind: 'export',
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
@@ -503,6 +532,13 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'frame',
     targetOwner: 'resources',
+    sourcePath: 'lib/src/frame/main_frame_asset_images.dart',
+    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'frame',
+    targetOwner: 'resources',
     sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
     directiveKind: 'import',
@@ -540,15 +576,41 @@ const _expectedAllowedOwnerEdges = [
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/frame/main_frame_painter.dart',
+    targetOwner: 'runtime',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/runtime/runtime_root.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'contracts/internal',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/contracts/internal/resolver_mutation_guard.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'contracts/internal',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath:
+        'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'api',
     targetOwner: 'frame',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/frame/frame_engine.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
+    targetOwner: 'surface',
     sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/frame/overlay_frame_painter.dart',
+    targetPath: 'lib/src/surface/canvas_surface_widget.dart',
+    directiveKinds: {'export'},
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'api',
@@ -840,6 +902,12 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'frame',
     targetOwner: 'resources',
+    sourcePath: 'lib/src/frame/main_frame_asset_images.dart',
+    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'frame',
+    targetOwner: 'resources',
     sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
@@ -880,6 +948,78 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'surface',
     targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'api',
+    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
+    targetPath: 'lib/src/api/canvas_runtime.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'api',
+    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
+    targetPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
+    targetPath: 'lib/src/frame/paint_asset_binding_service.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/main_painter.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/main_painter.dart',
+    targetPath: 'lib/src/frame/main_frame_asset_images.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/main_painter.dart',
+    targetPath: 'lib/src/frame/main_frame_record_painter.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/main_painter.dart',
+    targetPath: 'lib/src/frame/render_element_record.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/main_painter.dart',
+    targetPath: 'lib/src/frame/selection_decoration_planner.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/overlay_painter.dart',
+    targetPath: 'lib/src/frame/frame_drawable_policy.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/overlay_painter.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/surface/overlay_painter.dart',
+    targetPath: 'lib/src/frame/overlay_preview_planner.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'resources',
+    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
+    targetPath: 'lib/src/resources/surface_resource_session.dart',
   ),
 ];
 

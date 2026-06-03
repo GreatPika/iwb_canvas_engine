@@ -9,7 +9,9 @@ void main() {
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
   _testApiBridgeAndPassiveSurfaceAllowances();
+  _testSurfaceReservedRuntimeBoundaries();
   _testApiContractWrapperExports();
+  _testRetiredFlutterBridgeOwnerCannotBeImported();
   _testFrameCannotUseResourceCatalogPort();
   _testFrameCannotImportApiFacades();
   _testOnlyAssetBindingServiceMayReceiveSurfaceResourceSession();
@@ -86,7 +88,7 @@ void _testApiFacadeRuntimeRootImport() {
 }
 
 void _testApiBridgeAndPassiveSurfaceAllowances() {
-  test('api bridge and passive surface imports are narrowly allowlisted', () {
+  test('api bridges and surface imports are narrowly allowlisted', () {
     expect(
       checkCoreBoundaryFile(
         path: 'lib/src/api/canvas_runtime_frame_bridge.dart',
@@ -96,17 +98,60 @@ void _testApiBridgeAndPassiveSurfaceAllowances() {
     );
     expect(
       checkCoreBoundaryFile(
-        path: 'lib/src/api/canvas_surface.dart',
-        content: "import '../frame/main_frame_painter.dart';\n",
+        path: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+        content: "import '../runtime/runtime_root.dart';\n",
       ),
       isEmpty,
     );
     expect(
       checkCoreBoundaryFile(
         path: 'lib/src/api/canvas_surface.dart',
-        content: "import '../frame/frame_engine.dart';\n",
+        content: "import '../frame/main_frame_painter.dart';\n",
       ),
       contains(isA<GuardrailViolation>()),
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/surface/canvas_surface_widget.dart',
+        content: "import '../api/canvas_runtime.dart';\n",
+      ),
+      isEmpty,
+    );
+    expect(
+      checkCoreBoundaryFile(
+        path: 'lib/src/surface/bad_runtime_import.dart',
+        content: "import '../runtime/runtime_root.dart';\n",
+      ),
+      contains(isA<GuardrailViolation>()),
+    );
+  });
+}
+
+void _testSurfaceReservedRuntimeBoundaries() {
+  test('surface interactive-disabled cleanup remains reserved in Unit 0', () {
+    expect(
+      checkSurfaceInteractiveDisabledReservedBoundaryFile(
+        path: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+        content: 'void handleSurfaceInteractiveDisabled(Object _) {}',
+      ),
+      isEmpty,
+    );
+    expect(
+      checkSurfaceInteractiveDisabledReservedBoundaryFile(
+        path: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+        content: '''
+void handleSurfaceInteractiveDisabled(Object _) {
+  _root.handleSurfaceInteractiveDisabled();
+}
+''',
+      ),
+      contains(
+        isA<GuardrailViolation>().having(
+          (violation) => violation.guardrailId,
+          'guardrailId',
+          'surface.interactive_false_pending_line_preserved',
+        ),
+      ),
     );
   });
 }
@@ -148,6 +193,51 @@ void _testApiContractWrapperExports() {
     );
   });
 }
+
+void _testRetiredFlutterBridgeOwnerCannotBeImported() {
+  test('retired flutter bridge owner remains a forbidden dependency', () {
+    for (final entry in _retiredFlutterBridgeForbiddenFixtures.entries) {
+      expect(
+        checkCoreBoundaryFile(path: entry.key, content: entry.value),
+        contains(
+          isA<GuardrailViolation>().having(
+            (violation) => violation.guardrailId,
+            'guardrailId',
+            'core.import_boundaries',
+          ),
+        ),
+        reason: entry.key,
+      );
+    }
+  });
+}
+
+const _retiredFlutterBridgeForbiddenFixtures = {
+  'lib/src/api/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/surface/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/store/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/edit/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/selection/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/interaction/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/interaction/pointer_tool_cleanup_coordinator.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/resources/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/codec/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/diagnostics/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/frame/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+  'lib/src/geometry/bad_flutter_bridge_import.dart':
+      "import '../flutter_bridge/canvas_surface.dart';\n",
+};
 
 void _testFrameCannotUseResourceCatalogPort() {
   test('frame code cannot import the resource catalog port', () {
@@ -200,7 +290,7 @@ void _testInteractionOwnerImportBoundary() {
       '../resources/resource_kernel.dart',
       '../frame/frame_engine.dart',
       '../runtime/runtime_root.dart',
-      '../flutter_bridge/canvas_surface.dart',
+      '../surface/canvas_surface_widget.dart',
       '../contracts/internal/command_facts_port.dart',
       'package:flutter/widgets.dart',
     ]) {
@@ -316,7 +406,7 @@ void _testResourceSessionOwnerBoundaries() {
         'lib/src/resources/bad_frame_import.dart':
             "import '../frame/frame_engine.dart';\n",
         'lib/src/resources/bad_surface_import.dart':
-            "import '../surface/canvas_surface.dart';\n",
+            "import '../surface/canvas_surface_widget.dart';\n",
         'lib/src/resources/bad_interaction_import.dart':
             "import '../interaction/interaction_read_port.dart';\n",
         'lib/src/resources/bad_diagnostics_import.dart':

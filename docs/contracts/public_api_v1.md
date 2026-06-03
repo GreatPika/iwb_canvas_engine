@@ -50,10 +50,10 @@ Required tests:
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.interaction_settings_state`
-- `test.flutter_bridge.interactive_false_state_isolation`
-- `test.flutter_bridge.interactive_false_pending_line_preserved`
-- `test.flutter_bridge.single_active_surface`
-- `test.flutter_bridge.surface_resource_session_lifecycle`
+- `test.surface.interactive_false_state_isolation`
+- `test.surface.interactive_false_pending_line_preserved`
+- `test.surface.single_active_surface`
+- `test.surface.surface_resource_session_lifecycle`
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`

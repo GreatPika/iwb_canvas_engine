@@ -369,7 +369,7 @@ bool _isInteractionOwnerTarget(String? target) {
       target.startsWith('lib/src/resources/') ||
       target.startsWith('lib/src/frame/') ||
       target.startsWith('lib/src/runtime/') ||
-      target.startsWith('lib/src/flutter_bridge/') ||
+      _isSurfaceAdapterTarget(target) ||
       target == 'lib/src/contracts/internal/command_facts_port.dart';
 }
 
@@ -382,11 +382,16 @@ bool _isCleanupCoordinatorForbiddenTarget(String? target) {
       target == 'lib/src/contracts/internal/resolver_mutation_guard.dart' ||
       target == 'lib/src/contracts/public/canvas_actions.dart' ||
       target.startsWith('lib/src/frame/') ||
-      target.startsWith('lib/src/flutter_bridge/') ||
+      _isSurfaceAdapterTarget(target) ||
       target.startsWith('lib/src/resources/') ||
       target.startsWith('lib/src/runtime/') ||
       target.startsWith('lib/src/store/') ||
       target.startsWith('lib/src/selection/');
+}
+
+bool _isSurfaceAdapterTarget(String target) {
+  return target.startsWith('lib/src/surface/') ||
+      target.startsWith('lib/src/flutter_bridge/');
 }
 
 CompilationUnit _parseGuardrailUnit(String content) {

@@ -1016,10 +1016,11 @@ edges:
       - path: docs/implementation/p13_flutter_surface.md
       - path: docs/architecture/02_package_boundaries.md
     evidence:
-      - Flutter surface integration drives public runtime ports, not internals.
+      - Flutter surface integration reaches runtime behavior through CanvasRuntime and the narrow runtime-surface bridge, not RuntimeRoot.
     actual:
-      delegationTargets:
-        - CanvasRuntime
+      imports:
+        - lib/src/api/canvas_runtime.dart
+        - lib/src/api/canvas_runtime_surface_bridge.dart
 placeholders:
   - id: runtime.canvas_runtime.camera.closed_phase_placeholder
     node: api.canvas_runtime
@@ -1200,17 +1201,6 @@ forbiddenEdges:
       - Implementation owners consume contracts, not API facade wrappers.
   - id: eraser_context.request.forbidden_api_dependency
     from: eraser_context.request
-    to: api.public_surface
-    kind: forbidden_import
-    phaseRequiredBy: P6
-    status: forbidden
-    sourceDocs:
-      - path: docs/architecture/02_package_boundaries.md
-      - path: docs/verification/guardrails.md
-    evidence:
-      - Implementation owners consume contracts, not API facade wrappers.
-  - id: flutter.surface.forbidden_api_dependency
-    from: flutter.surface
     to: api.public_surface
     kind: forbidden_import
     phaseRequiredBy: P6
@@ -1835,7 +1825,6 @@ sourceCoverage:
       - interaction.engine.forbidden_api_dependency
       - draw.tools.forbidden_api_dependency
       - eraser_context.request.forbidden_api_dependency
-      - flutter.surface.forbidden_api_dependency
       - contracts.public.forbidden_api_dependency
       - contracts.internal_ports.forbidden_api_dependency
       - contracts.public.forbidden_runtime_dependency

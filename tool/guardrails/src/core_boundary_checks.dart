@@ -73,6 +73,65 @@ checkPointerCleanupCoordinatorCallerOrigins() async {
   return violations;
 }
 
+Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
+  final violations = <GuardrailViolation>[];
+  for (final file in dartFilesUnder('lib/src/surface')) {
+    final path = relativePath(file);
+    final content = file.readAsStringSync();
+    if (content.contains('CanvasPointerSample(') ||
+        content.contains('.handlePointer(')) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'surface.pointer_samples_normalized_before_runtime',
+          path: path,
+          message:
+              'Unit 0 surface code must not route pointer samples before the pointer adapter proof exists',
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+Future<List<GuardrailViolation>>
+checkSurfaceInteractiveDisabledReservedBoundary() async {
+  const path = 'lib/src/api/canvas_runtime_surface_bridge.dart';
+  final file = File(path);
+  if (!file.existsSync()) {
+    return const [
+      GuardrailViolation(
+        guardrailId: 'surface.interactive_false_pending_line_preserved',
+        path: path,
+        message: 'runtime-surface bridge must exist before surface cleanup',
+      ),
+    ];
+  }
+
+  return checkSurfaceInteractiveDisabledReservedBoundaryFile(
+    path: path,
+    content: file.readAsStringSync(),
+  );
+}
+
+List<GuardrailViolation> checkSurfaceInteractiveDisabledReservedBoundaryFile({
+  required String path,
+  required String content,
+}) {
+  if (!content.contains('_root.handleSurfaceInteractiveDisabled')) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'surface.interactive_false_pending_line_preserved',
+      path: path,
+      message:
+          'Unit 0 must not delegate interactive-disabled cleanup before token checks exist',
+    ),
+  ];
+}
+
 List<GuardrailViolation> checkPointerCleanupCoordinatorCallerFile({
   required String path,
   required String content,
@@ -402,6 +461,11 @@ List<GuardrailViolation> _checkApiFacadeExport(String path, String uri) {
     return const [];
   }
 
+  if (path == 'lib/src/api/canvas_surface.dart' &&
+      target == 'lib/src/surface/canvas_surface_widget.dart') {
+    return const [];
+  }
+
   return [
     GuardrailViolation(
       guardrailId: 'core.import_boundaries',
@@ -715,6 +779,21 @@ const _boundaryRules = [
       'lib/src/resources/',
       'lib/src/diagnostics/',
       'lib/src/geometry/',
+      'lib/src/surface/',
+      'lib/src/flutter_bridge/',
+    ],
+  ),
+  _BoundaryRule(
+    guardrailId: 'core.import_boundaries',
+    owner: 'lib/src/surface/',
+    forbiddenTargets: [
+      'lib/iwb_canvas_engine.dart',
+      'lib/src/api/',
+      'lib/src/runtime/',
+      'lib/src/store/',
+      'lib/src/selection/',
+      'lib/src/edit/',
+      'lib/src/interaction/',
       'lib/src/flutter_bridge/',
     ],
   ),
@@ -724,13 +803,14 @@ const _boundaryRules = [
     forbiddenTargets: [
       'lib/src/interaction/',
       'lib/src/frame/',
+      'lib/src/surface/',
       'lib/src/flutter_bridge/',
     ],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/edit/',
-    forbiddenTargets: ['lib/src/flutter_bridge/'],
+    forbiddenTargets: ['lib/src/surface/', 'lib/src/flutter_bridge/'],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
@@ -740,6 +820,7 @@ const _boundaryRules = [
       'lib/src/edit/',
       'lib/src/interaction/',
       'lib/src/frame/',
+      'lib/src/surface/',
       'lib/src/flutter_bridge/',
     ],
   ),
@@ -752,6 +833,7 @@ const _boundaryRules = [
       'lib/src/resources/',
       'lib/src/frame/',
       'lib/src/runtime/',
+      'lib/src/surface/',
       'lib/src/flutter_bridge/',
       'lib/src/contracts/internal/command_facts_port.dart',
     ],
@@ -773,6 +855,7 @@ const _boundaryRules = [
     forbiddenTargets: [
       'lib/src/edit/',
       'lib/src/frame/',
+      'lib/src/surface/',
       'lib/src/flutter_bridge/',
       'lib/src/resources/',
       'lib/src/store/',
@@ -787,15 +870,19 @@ const _boundaryRules = [
       'lib/src/store/',
       'lib/src/frame/',
       'lib/src/surface/',
+      'lib/src/flutter_bridge/',
       'lib/src/interaction/',
       'lib/src/diagnostics/',
-      'lib/src/flutter_bridge/',
     ],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
     owner: 'lib/src/codec/',
-    forbiddenTargets: ['lib/src/flutter_bridge/', 'lib/src/interaction/'],
+    forbiddenTargets: [
+      'lib/src/surface/',
+      'lib/src/flutter_bridge/',
+      'lib/src/interaction/',
+    ],
   ),
   _BoundaryRule(
     guardrailId: 'core.import_boundaries',
@@ -807,6 +894,7 @@ const _boundaryRules = [
       'lib/src/edit/',
       'lib/src/frame/',
       'lib/src/surface/',
+      'lib/src/flutter_bridge/',
     ],
   ),
   _BoundaryRule(
@@ -817,6 +905,7 @@ const _boundaryRules = [
       'lib/src/store/',
       'lib/src/edit/',
       'lib/src/api/canvas_document.dart',
+      'lib/src/flutter_bridge/',
     ],
   ),
   _BoundaryRule(
@@ -834,6 +923,7 @@ const _boundaryRules = [
       'lib/src/store/',
       'lib/src/interaction/',
       'lib/src/frame/',
+      'lib/src/flutter_bridge/',
     ],
   ),
 ];
@@ -881,14 +971,37 @@ bool _isAllowedBoundaryImport(String path, String target) {
     return true;
   }
 
+  if (path == 'lib/src/api/canvas_runtime_surface_bridge.dart' &&
+      target == 'lib/src/runtime/runtime_root.dart') {
+    return true;
+  }
+
+  if (path == 'lib/src/api/canvas_runtime_surface_bridge.dart' &&
+      (target == 'lib/src/contracts/internal/resolver_mutation_guard.dart' ||
+          target ==
+              'lib/src/contracts/internal/surface_resource_session_lifecycle.dart' ||
+          target == 'lib/src/frame/frame_engine.dart' ||
+          target == 'lib/src/frame/frame_paint_output.dart')) {
+    return true;
+  }
+
+  if (path == 'lib/src/api/canvas_surface.dart' &&
+      target == 'lib/src/surface/canvas_surface_widget.dart') {
+    return true;
+  }
+
+  if (path == 'lib/src/surface/canvas_surface_widget.dart' &&
+      (target == 'lib/src/api/canvas_runtime.dart' ||
+          target == 'lib/src/api/canvas_runtime_surface_bridge.dart')) {
+    return true;
+  }
+
   if (path == 'lib/src/frame/paint_asset_binding_service.dart' &&
       target == 'lib/src/resources/surface_resource_session.dart') {
     return true;
   }
 
-  return path == 'lib/src/api/canvas_surface.dart' &&
-      (target == 'lib/src/frame/main_frame_painter.dart' ||
-          target == 'lib/src/frame/overlay_frame_painter.dart');
+  return false;
 }
 
 const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';

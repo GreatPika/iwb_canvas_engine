@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Selected phase architecture graph
-%% Selected phase: P12
+%% Selected phase: P13
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -13,6 +13,7 @@ flowchart LR
   draw_tools["Draw tool owner<br/>required by P11"]
   edit_kernel["Edit kernel<br/>required by P5"]
   eraser_context_request["Eraser and context request owner<br/>required by P12"]
+  flutter_surface["Flutter surface integration<br/>required by P13"]
   frame_renderer["Frame renderer and cache owner<br/>required by P9"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
   interaction_engine["Interaction engine boundary<br/>required by P10"]
@@ -41,6 +42,7 @@ flowchart LR
   interaction_engine -->|delegates lifecycle and request decisions to by P12| eraser_context_request
   runtime_root -->|context request stream by P12| api_canvas_runtime
   runtime_root -->|uses interaction target geometry through by P12| geometry_spatial_index
+  flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session
   interaction_engine -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel

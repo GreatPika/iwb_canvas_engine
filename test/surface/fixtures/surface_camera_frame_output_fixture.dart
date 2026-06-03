@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
-import 'package:iwb_canvas_engine/src/frame/main_frame_painter.dart';
+import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 
 void main() {
   testWidgets('CanvasSurface camera pan keeps ordinary plan identity', (
@@ -87,16 +87,16 @@ Widget _surfaceHost(CanvasRuntime runtime) {
   );
 }
 
-MainFramePainter _mainPainter(WidgetTester tester) {
+MainSurfacePainter _mainPainter(WidgetTester tester) {
   final host = find.byKey(
     const ValueKey<String>('iwb_canvas_surface.paint_host'),
   );
   final paintHost = tester.widget<CustomPaint>(host);
   final painter = paintHost.painter;
 
-  expect(painter, isA<MainFramePainter>());
+  expect(painter, isA<MainSurfacePainter>());
 
-  return painter as MainFramePainter;
+  return painter as MainSurfacePainter;
 }
 
 final class _NoopResolver implements CanvasResourceResolver {

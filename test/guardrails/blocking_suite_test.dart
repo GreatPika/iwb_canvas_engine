@@ -412,6 +412,16 @@ const _runnerStructuralScanCases = [
     violationPath: 'lib/src/frame/bad_runner_resolver_boundary.dart',
   ),
   _StructuralScanCase(
+    id: 'surface.pointer_samples_normalized_before_runtime',
+    proofPaths: ['test/guardrails/import_boundaries_test.dart'],
+    violationPath: 'lib/src/surface/bad_runtime_import.dart',
+  ),
+  _StructuralScanCase(
+    id: 'surface.interactive_false_pending_line_preserved',
+    proofPaths: ['test/guardrails/import_boundaries_test.dart'],
+    violationPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+  ),
+  _StructuralScanCase(
     id: 'geometry.no_legacy_scene_order',
     proofPaths: [
       'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',

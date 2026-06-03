@@ -228,6 +228,18 @@ const _blockingEntries = [
     requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(
+    id: 'resources.app_key_only',
+    suites: {'blocking', 'resources'},
+  ),
+  GuardrailEntry(
+    id: 'resources.dirty_no_document_revision',
+    suites: {'blocking', 'resources'},
+  ),
+  GuardrailEntry(
+    id: 'resources.mutation_inside_edit_only',
+    suites: {'blocking', 'resources'},
+  ),
+  GuardrailEntry(
     id: 'resources.resolver_frame_budget',
     suites: {'blocking', 'resources'},
   ),
@@ -250,6 +262,16 @@ const _blockingEntries = [
   GuardrailEntry(
     id: 'preview.marquee_overlay_only',
     suites: {'blocking', 'preview'},
+  ),
+  GuardrailEntry(
+    id: 'surface.pointer_samples_normalized_before_runtime',
+    suites: {'blocking', 'surface'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'surface.interactive_false_pending_line_preserved',
+    suites: {'blocking', 'surface'},
+    requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(id: 'tools.p10_compatibility', suites: {'blocking', 'tools'}),
   GuardrailEntry(

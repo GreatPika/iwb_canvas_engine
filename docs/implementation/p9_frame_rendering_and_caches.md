@@ -179,7 +179,7 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.frame.paint_asset_binding_service` -> `test/frame/paint_asset_binding_service_test.dart`
 - `test.frame.repaint_bus_output` -> `test/frame/repaint_bus_output_test.dart`
 - `test.frame.static_background_plan` -> `test/frame/static_background_plan_test.dart`
-- `test.flutter_bridge.widget_paint` -> `test/flutter_bridge/widget_paint_test.dart`
+- `test.surface.widget_paint` -> `test/surface/widget_paint_test.dart`
 - `test.smoke.public_incremental_smoke` -> `test/smoke/public_incremental_smoke_test.dart`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port` -> `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test.guardrails.frame_no_global_scene_sort` -> `test/guardrails/frame_no_global_scene_sort_guardrail_test.dart`

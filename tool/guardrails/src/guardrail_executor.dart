@@ -313,6 +313,24 @@ const _testProofPaths = {
   'resources.resolver_reentrancy_rejected': [
     'test/resources/resolver_reentrancy_rejected_test.dart',
   ],
+  'resources.app_key_only': [
+    'test/api_contract/public_readable_union_variants_test.dart',
+    'test/resources/resource_resolver_adapter_shape_test.dart',
+  ],
+  'resources.dirty_no_document_revision': [
+    'test/resources/resource_dirty_port_test.dart',
+    'test/resources/mark_all_resources_dirty_test.dart',
+  ],
+  'resources.mutation_inside_edit_only': [
+    'test/edit/edit_matrix_effects_test.dart',
+    'test/edit/sync_non_nested_async_stale_test.dart',
+  ],
+  'surface.pointer_samples_normalized_before_runtime': [
+    'test/guardrails/import_boundaries_test.dart',
+  ],
+  'surface.interactive_false_pending_line_preserved': [
+    'test/guardrails/import_boundaries_test.dart',
+  ],
   'preview.selected_move_main_repaint': [
     'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
   ],
@@ -397,6 +415,10 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   interactionTextEditStaleCommitGuardrailId: checkTextEditStaleCommitGuard,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
   'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
+  'surface.pointer_samples_normalized_before_runtime':
+      checkSurfacePointerReservedBoundary,
+  'surface.interactive_false_pending_line_preserved':
+      checkSurfaceInteractiveDisabledReservedBoundary,
   'frame.committed_facts_via_frame_facts_port': checkCoreBoundaries,
   frameNoGlobalSceneSortGuardrailId: checkFrameNoGlobalSceneSort,
   framePaintPlanExcludesPreviewGuardrailId: checkPaintPlanExcludesPreviewDelta,
@@ -448,6 +470,10 @@ const _structuralDescriptions = {
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
   'resources.resolver_boundary_owned_by_surface_session':
       'resource resolver ownership and import-boundary checks',
+  'surface.pointer_samples_normalized_before_runtime':
+      'surface pointer adapter reserved-path structural boundary check',
+  'surface.interactive_false_pending_line_preserved':
+      'surface interactive-disabled cleanup reserved-path boundary check',
   'frame.committed_facts_via_frame_facts_port':
       'frame facts and asset-binding session ownership checks',
   frameNoGlobalSceneSortGuardrailId:

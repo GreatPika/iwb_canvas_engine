@@ -1,14 +1,11 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Future target architecture graph
-%% Selected phase: P12
+%% Selected phase: P13
 %% Note: Shows future planned edges after the selected phase plus their endpoint nodes for context.
 flowchart LR
-  api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
   diagnostics_hub["Diagnostics hub<br/>required by P3"]
-  flutter_surface["Flutter surface integration<br/>required by P13"]
   geometry_spatial_index["Geometry and spatial index<br/>required by P8"]
   runtime_root["Runtime composition root<br/>required by P4"]
-  flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub
   runtime_root -->|planned reports errors to by P14| diagnostics_hub

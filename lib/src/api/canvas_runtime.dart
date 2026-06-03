@@ -15,6 +15,7 @@ import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_tools.dart';
 import '../runtime/runtime_root.dart';
 import 'canvas_runtime_frame_bridge.dart';
+import 'canvas_runtime_surface_bridge.dart';
 
 export '../contracts/public/canvas_runtime.dart';
 
@@ -30,6 +31,7 @@ final class CanvasRuntime {
     final document = initialDocument ?? CanvasDocument();
     _root = RuntimeRoot(initialDocument: document, config: config);
     attachCanvasRuntimeFrameRoot(this, _root);
+    attachCanvasRuntimeSurfacePort(this, _root);
   }
 
   late final RuntimeRoot _root;
@@ -51,6 +53,7 @@ final class CanvasRuntime {
   CanvasResourceId generateResourceId() => _root.generateResourceId();
   void dispose() {
     _root.dispose();
+    detachCanvasRuntimeSurfacePort(this);
     detachCanvasRuntimeFrameRoot(this);
   }
 }

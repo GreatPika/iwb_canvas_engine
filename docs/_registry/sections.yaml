@@ -161,10 +161,10 @@
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
     - test.runtime.interaction_settings_state
-    - test.flutter_bridge.interactive_false_state_isolation
-    - test.flutter_bridge.interactive_false_pending_line_preserved
-    - test.flutter_bridge.single_active_surface
-    - test.flutter_bridge.surface_resource_session_lifecycle
+    - test.surface.interactive_false_state_isolation
+    - test.surface.interactive_false_pending_line_preserved
+    - test.surface.single_active_surface
+    - test.surface.surface_resource_session_lifecycle
   do_not_assume:
     - no legacy public API shape
     - no PatchField export
@@ -574,11 +574,11 @@
     - test.interaction.pointer_session
     - test.interaction.pointer_sample_normalizer
     - test.interaction.interaction_read_port
-    - test.flutter_bridge.interactive_false_pointer_routing
-    - test.flutter_bridge.interactive_false_active_session_cancel
-    - test.flutter_bridge.interactive_false_pending_line_preserved
-    - test.flutter_bridge.interactive_false_state_isolation
-    - test.flutter_bridge.pointer_adapter_finite_normalization
+    - test.surface.interactive_false_pointer_routing
+    - test.surface.interactive_false_active_session_cancel
+    - test.surface.interactive_false_pending_line_preserved
+    - test.surface.interactive_false_state_isolation
+    - test.surface.pointer_adapter_finite_normalization
     - test.runtime.interaction_settings_state
     - test.api_contract.preview_state_sealed_union
     - test.interaction.preview_public_state
@@ -595,7 +595,7 @@
     - test.guardrails.action_after_state
     - test.guardrails.interaction_guardrail_enforcement
     - test.guardrails.selection_boundary_imports
-    - test.flutter_bridge.widget_paint
+    - test.surface.widget_paint
   do_not_assume:
     - no legacy callback graph as structure
     - no reentrant mutation from resolver
@@ -654,7 +654,7 @@
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
     - test.api_contract.preview_state_sealed_union
-    - test.flutter_bridge.widget_paint
+    - test.surface.widget_paint
   do_not_assume:
     - no live runtime reads in painters
     - no CanvasDocument projection in paint
@@ -1096,13 +1096,13 @@
     - test.interaction.pointer_sample_normalizer
     - test.interaction.interaction_read_port
     - test.interaction.context_action_request
-    - test.flutter_bridge.interactive_false_pointer_routing
-    - test.flutter_bridge.interactive_false_active_session_cancel
-    - test.flutter_bridge.interactive_false_pending_line_preserved
-    - test.flutter_bridge.interactive_false_state_isolation
-    - test.flutter_bridge.single_active_surface
-    - test.flutter_bridge.surface_resource_session_lifecycle
-    - test.flutter_bridge.pointer_adapter_finite_normalization
+    - test.surface.interactive_false_pointer_routing
+    - test.surface.interactive_false_active_session_cancel
+    - test.surface.interactive_false_pending_line_preserved
+    - test.surface.interactive_false_state_isolation
+    - test.surface.single_active_surface
+    - test.surface.surface_resource_session_lifecycle
+    - test.surface.pointer_adapter_finite_normalization
     - test.codec.constructor_and_schema_limits
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
@@ -1162,7 +1162,7 @@
     - test.frame.marquee_overlay_repaint
     - test.guardrails.action_after_state
     - test.guardrails.interaction_guardrail_enforcement
-    - test.flutter_bridge.widget_paint
+    - test.surface.widget_paint
     - test.benchmarks.required_cases
     - test.guardrails.blocking_suite
   do_not_assume:

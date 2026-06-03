@@ -149,13 +149,13 @@ Required tests:
 - `test.interaction.pointer_sample_normalizer`
 - `test.interaction.interaction_read_port`
 - `test.interaction.context_action_request`
-- `test.flutter_bridge.interactive_false_pointer_routing`
-- `test.flutter_bridge.interactive_false_active_session_cancel`
-- `test.flutter_bridge.interactive_false_pending_line_preserved`
-- `test.flutter_bridge.interactive_false_state_isolation`
-- `test.flutter_bridge.single_active_surface`
-- `test.flutter_bridge.surface_resource_session_lifecycle`
-- `test.flutter_bridge.pointer_adapter_finite_normalization`
+- `test.surface.interactive_false_pointer_routing`
+- `test.surface.interactive_false_active_session_cancel`
+- `test.surface.interactive_false_pending_line_preserved`
+- `test.surface.interactive_false_state_isolation`
+- `test.surface.single_active_surface`
+- `test.surface.surface_resource_session_lifecycle`
+- `test.surface.pointer_adapter_finite_normalization`
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
@@ -215,7 +215,7 @@ Required tests:
 - `test.frame.marquee_overlay_repaint`
 - `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
-- `test.flutter_bridge.widget_paint`
+- `test.surface.widget_paint`
 - `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
 Guardrails:
@@ -309,15 +309,15 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/smoke/public_incremental_smoke_test.dart`
 - `test/runtime/load_document_state_publication_test.dart`
 - `test/runtime/interaction_settings_state_test.dart`
-- `test/flutter_bridge/interactive_false_pointer_routing_test.dart`
-- `test/flutter_bridge/interactive_false_active_session_cancel_test.dart`
-- `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
-- `test/flutter_bridge/interactive_false_state_isolation_test.dart`
-- `test/flutter_bridge/single_active_surface_test.dart`
-- `test/flutter_bridge/surface_resource_session_lifecycle_test.dart`
-- `test/flutter_bridge/pointer_adapter_finite_normalization_test.dart`
-- `test/flutter_bridge/widget_paint_test.dart`
-- `test/flutter_bridge/surface_camera_frame_output_test.dart`
+- `test/surface/interactive_false_pointer_routing_test.dart`
+- `test/surface/interactive_false_active_session_cancel_test.dart`
+- `test/surface/interactive_false_pending_line_preserved_test.dart`
+- `test/surface/interactive_false_state_isolation_test.dart`
+- `test/surface/single_active_surface_test.dart`
+- `test/surface/surface_resource_session_lifecycle_test.dart`
+- `test/surface/pointer_adapter_finite_normalization_test.dart`
+- `test/surface/widget_paint_test.dart`
+- `test/surface/surface_camera_frame_output_test.dart`
 - `test/store/read_document_projection_test.dart`
 - `test/store/no_projection_hot_path_test.dart`
 - `test/store/public_document_is_projection_only_test.dart`
@@ -696,7 +696,7 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/runtime/draw_cleanup_integration_test.dart` proves draw cleanup paths,
   load success, load failure, `interactive=false`, settings changes, cancel,
   and no-op terminals do not reserve the next draw output timestamp.
-- `test/flutter_bridge/interactive_false_pending_line_preserved_test.dart`
+- `test/surface/interactive_false_pending_line_preserved_test.dart`
   proves public `CanvasSurface(interactive: false)` preserves non-owned
   pending line state, clears active endpoint state, and cleans the old runtime
   on runtime-swap plus `interactive` disable.
@@ -892,7 +892,7 @@ Current implemented proof:
 - proves ordinary planning exposes text, path, and stroke cache primitives
   through `RenderPrimitiveCacheSnapshot` for painter consumption.
 
-#### `test/flutter_bridge/surface_camera_frame_output_test.dart`
+#### `test/surface/surface_camera_frame_output_test.dart`
 - proves the public `CanvasSurface` passive frame path rebuilds captured frame
   output after runtime camera pan while preserving ordinary paint plan identity
   and capturing the runtime preview source.
@@ -936,6 +936,6 @@ Current implemented proof:
 Legacy capability inventory rows require inventory-only tests. Next API
 behavior is proved by focused API, subsystem, and integration tests, not by
 mapping rows.
-Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, flutter_bridge, and diagnostics tests.
+Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, surface, and diagnostics tests.
 
 ---

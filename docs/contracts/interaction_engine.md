@@ -55,11 +55,11 @@ Required tests:
 - `test.interaction.pointer_session`
 - `test.interaction.pointer_sample_normalizer`
 - `test.interaction.interaction_read_port`
-- `test.flutter_bridge.interactive_false_pointer_routing`
-- `test.flutter_bridge.interactive_false_active_session_cancel`
-- `test.flutter_bridge.interactive_false_pending_line_preserved`
-- `test.flutter_bridge.interactive_false_state_isolation`
-- `test.flutter_bridge.pointer_adapter_finite_normalization`
+- `test.surface.interactive_false_pointer_routing`
+- `test.surface.interactive_false_active_session_cancel`
+- `test.surface.interactive_false_pending_line_preserved`
+- `test.surface.interactive_false_state_isolation`
+- `test.surface.pointer_adapter_finite_normalization`
 - `test.runtime.interaction_settings_state`
 - `test.api_contract.preview_state_sealed_union`
 - `test.interaction.preview_public_state`
@@ -76,7 +76,7 @@ Required tests:
 - `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.guardrails.selection_boundary_imports`
-- `test.flutter_bridge.widget_paint`
+- `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
 - `preview.selected_move_main_only`
