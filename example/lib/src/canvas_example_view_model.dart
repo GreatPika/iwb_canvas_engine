@@ -43,6 +43,8 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   CanvasContextActionRequested? _lastContextRequest;
   CanvasExampleTextEditSession? _activeTextEdit;
   String? _lastExportedJson;
+  String? _jsonImportError;
+  int _jsonImportErrorRevision = 0;
   String? _sampleImageError;
   int _sampleImageErrorRevision = 0;
   Future<void>? _sampleImageLoad;
@@ -83,6 +85,8 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   CanvasContextActionRequested? get lastContextRequest => _lastContextRequest;
   CanvasExampleTextEditSession? get activeTextEdit => _activeTextEdit;
   String? get lastExportedJson => _lastExportedJson;
+  String? get jsonImportError => _jsonImportError;
+  int get jsonImportErrorRevision => _jsonImportErrorRevision;
   String? get sampleImageError => _sampleImageError;
   int get sampleImageErrorRevision => _sampleImageErrorRevision;
   CanvasResourceResolver get resourceResolver {
@@ -92,6 +96,32 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   void rememberLastExportedJson(String json) {
     _lastExportedJson = json;
     _notifyIfActive();
+  }
+
+  String exportDocumentJson() {
+    final json = encodeCanvasDocumentToJson(document);
+    _lastExportedJson = json;
+    _notifyIfActive();
+
+    return json;
+  }
+
+  bool importDocumentJson(String json) {
+    try {
+      final document = decodeCanvasDocumentFromJson(json);
+      _runtime.edits.loadDocument(document);
+      _lastExportedJson = json;
+      _jsonImportError = null;
+      _notifyIfActive();
+
+      return true;
+    } on Object {
+      _jsonImportError = 'Unable to import schema v1 document JSON.';
+      _jsonImportErrorRevision += 1;
+      _notifyIfActive();
+
+      return false;
+    }
   }
 
   void setInteractionMode(CanvasInteractionMode mode) {

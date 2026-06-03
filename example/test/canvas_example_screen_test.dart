@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_defaults.dart';
@@ -26,6 +27,10 @@ void main() {
   _registerTextStyleDockTest();
   _registerInlineTextEditOverlayCommitTest();
   _registerInlineTextEditOverlayDismissTest();
+  _registerJsonExportDialogTest();
+  _registerJsonImportDialogPrefillTest();
+  _registerJsonImportDialogSuccessTest();
+  _registerJsonImportDialogFailureTest();
   _registerPendingLineOverlayTest();
   _registerPendingLinePainterTest();
 }
@@ -394,6 +399,94 @@ void _registerInlineTextEditOverlayDismissTest() {
   });
 }
 
+void _registerJsonExportDialogTest() {
+  testWidgets('export dialog shows schema v1 JSON and copies it', (
+    tester,
+  ) async {
+    final clipboard = _ClipboardRecorder();
+    _installClipboardRecorder(clipboard);
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    _addText(viewModel.runtime, 'screen-export-text');
+    await _pumpScreen(tester, viewModel);
+
+    await _openJsonExportDialog(tester);
+    final json = _exportDialogJson(tester);
+
+    expect(json, contains('"schemaVersion":1'));
+    expect(viewModel.lastExportedJson, json);
+
+    await tester.tap(find.byKey(const ValueKey('json.export.copy')));
+    await tester.pump();
+    expect(clipboard.copiedText, json);
+  });
+}
+
+void _registerJsonImportDialogPrefillTest() {
+  testWidgets('import dialog pre-fills the last exported JSON', (tester) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final json = viewModel.exportDocumentJson();
+    await _pumpScreen(tester, viewModel);
+
+    await _openJsonImportDialog(tester);
+
+    expect(_textFieldValue(const ValueKey('json.import.text'), tester), json);
+  });
+}
+
+void _registerJsonImportDialogSuccessTest() {
+  testWidgets('valid import dialog JSON replaces the public document', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = CanvasElementId('screen-import-text');
+    final json = encodeCanvasDocumentToJson(
+      _documentWithText(textId, 'imported'),
+    );
+    await _pumpScreen(tester, viewModel);
+
+    await _openJsonImportDialog(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('json.import.text')),
+      json,
+    );
+    await tester.tap(find.byKey(const ValueKey('json.import.submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('json.import.text')), findsNothing);
+    expect(
+      (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+      'imported',
+    );
+  });
+}
+
+void _registerJsonImportDialogFailureTest() {
+  testWidgets('invalid import dialog JSON shows snackbar without mutation', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    _addText(viewModel.runtime, 'screen-invalid-json-text');
+    final before = viewModel.document;
+    await _pumpScreen(tester, viewModel);
+
+    await _openJsonImportDialog(tester);
+    await tester.enterText(find.byKey(const ValueKey('json.import.text')), '{');
+    await tester.tap(find.byKey(const ValueKey('json.import.submit')));
+    await tester.pumpAndSettle();
+
+    expect(viewModel.document, same(before));
+    expect(find.byKey(const ValueKey('json.import.text')), findsOneWidget);
+    expect(
+      find.text('Unable to import schema v1 document JSON.'),
+      findsOneWidget,
+    );
+  });
+}
+
 void _registerPendingLineOverlayTest() {
   testWidgets('pending line overlay projects public preview state', (
     tester,
@@ -511,6 +604,25 @@ CanvasElementId _addText(CanvasRuntime runtime, String id) {
   return elementId;
 }
 
+CanvasDocument _documentWithText(CanvasElementId id, String text) {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-auto-0'),
+        elements: [
+          CanvasTextElement(
+            id: id,
+            text: text,
+            color: const Color(0xFF111827),
+            textDirection: TextDirection.ltr,
+          ),
+        ],
+      ),
+      CanvasLayer(id: CanvasLayerId('layer-auto-1')),
+    ],
+  );
+}
+
 CanvasElement _findElement(CanvasDocument document, CanvasElementId id) {
   final element = _tryFindElement(document, id);
   if (element == null) {
@@ -605,8 +717,57 @@ void _expectUpdatedTextStyle(CanvasDocument document, CanvasElementId textId) {
   expect(text.color.toARGB32(), 0xFFE53935);
 }
 
+String _textFieldValue(ValueKey<String> key, WidgetTester tester) {
+  final field = tester.widget<TextField>(find.byKey(key));
+  final controller = field.controller;
+  if (controller == null) {
+    fail('Expected text field ${key.value} to have a controller.');
+  }
+
+  return controller.text;
+}
+
+String _exportDialogJson(WidgetTester tester) {
+  final text = tester.widget<SelectableText>(
+    find.descendant(
+      of: find.byKey(const ValueKey('json.export.text')),
+      matching: find.byType(SelectableText),
+    ),
+  );
+
+  return text.data ?? '';
+}
+
+void _installClipboardRecorder(_ClipboardRecorder recorder) {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          recorder.copiedText =
+              (call.arguments as Map<Object?, Object?>)['text'] as String?;
+        }
+
+        return null;
+      });
+  addTearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
+  });
+}
+
 String _colorLabel(Color color) {
   return '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
+}
+
+Future<void> _openJsonExportDialog(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('json.export')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('json.export.text')), findsOneWidget);
+}
+
+Future<void> _openJsonImportDialog(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('json.import')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('json.import.text')), findsOneWidget);
 }
 
 Future<void> _openTextOverlay(
@@ -639,4 +800,8 @@ void _tapPointer(CanvasRuntime runtime, Offset position) {
       timestampMs: 2,
     ),
   );
+}
+
+final class _ClipboardRecorder {
+  String? copiedText;
 }

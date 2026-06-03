@@ -25,6 +25,8 @@ void main() {
   _registerInlineTextEditNoOpTest();
   _registerInlineTextEditStaleTest();
   _registerInlineTextEditDismissTest();
+  _registerJsonExportImportTest();
+  _registerJsonImportFailureTest();
 }
 
 void _registerOwnedRuntimeLifecycleTest() {
@@ -420,6 +422,52 @@ void _registerInlineTextEditDismissTest() {
       );
     },
   );
+}
+
+void _registerJsonExportImportTest() {
+  test(
+    'schema v1 JSON export and valid import replace the public document',
+    () {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'json-text');
+
+      final json = viewModel.exportDocumentJson();
+
+      expect(json, contains('"schemaVersion":1'));
+      expect(viewModel.lastExportedJson, json);
+
+      viewModel.clearCanvas();
+      expect(viewModel.runtimeState.summary.elementCount, 0);
+
+      expect(viewModel.importDocumentJson(json), isTrue);
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'hello',
+      );
+    },
+  );
+}
+
+void _registerJsonImportFailureTest() {
+  test('invalid and legacy-shaped JSON leave the document unchanged', () {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    _addText(viewModel.runtime, 'json-failure-text');
+    final beforeInvalid = viewModel.document;
+
+    expect(viewModel.importDocumentJson('{'), isFalse);
+    expect(viewModel.document, same(beforeInvalid));
+    expect(
+      viewModel.jsonImportError,
+      'Unable to import schema v1 document JSON.',
+    );
+    expect(viewModel.jsonImportErrorRevision, 1);
+
+    expect(viewModel.importDocumentJson('{"nodes":[]}'), isFalse);
+    expect(viewModel.document, same(beforeInvalid));
+    expect(viewModel.jsonImportErrorRevision, 2);
+  });
 }
 
 CanvasElementId _addRect(CanvasRuntime runtime, String id) {

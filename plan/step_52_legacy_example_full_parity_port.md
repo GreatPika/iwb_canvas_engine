@@ -276,7 +276,7 @@ Depends On:
 
 Unit 2, Unit 3.
 
-### [ ] Unit 6: Schema v1 JSON export/import dialogs and error projection
+### [x] Unit 6: Schema v1 JSON export/import dialogs and error projection
 
 Owner:
 

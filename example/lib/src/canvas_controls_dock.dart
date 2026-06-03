@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'canvas_example_view_model.dart';
+import 'canvas_json_dialogs.dart';
 
 // Camera label composition is clearer inline than split into tiny text/icon
 // wrappers solely to lower Flutter widget coupling.
@@ -428,13 +429,13 @@ final class _DocumentControls extends StatelessWidget {
           key: const ValueKey('json.export'),
           icon: Icons.upload_file,
           tooltip: 'Export JSON',
-          onPressed: () {},
+          onPressed: () => showCanvasJsonExportDialog(context, viewModel),
         ),
         _IconCommandButton(
           key: const ValueKey('json.import'),
           icon: Icons.download,
           tooltip: 'Import JSON',
-          onPressed: () {},
+          onPressed: () => showCanvasJsonImportDialog(context, viewModel),
         ),
         _IconCommandButton(
           key: const ValueKey('canvas.clear'),

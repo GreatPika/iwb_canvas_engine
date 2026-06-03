@@ -22,6 +22,7 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   late CanvasExampleViewModel _viewModel;
   late bool _ownsViewModel;
   int _lastShownSampleImageErrorRevision = 0;
+  int _lastShownJsonImportErrorRevision = 0;
 
   @override
   void initState() {
@@ -74,6 +75,7 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
 
   void _handleViewModelChanged() {
     _showSampleImageErrorIfNeeded();
+    _showJsonImportErrorIfNeeded();
     if (mounted) {
       setState(() {});
     }
@@ -88,6 +90,18 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
       return;
     }
     _lastShownSampleImageErrorRevision = revision;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+  }
+
+  void _showJsonImportErrorIfNeeded() {
+    final error = _viewModel.jsonImportError;
+    final revision = _viewModel.jsonImportErrorRevision;
+    if (!mounted ||
+        error == null ||
+        revision == _lastShownJsonImportErrorRevision) {
+      return;
+    }
+    _lastShownJsonImportErrorRevision = revision;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 }
