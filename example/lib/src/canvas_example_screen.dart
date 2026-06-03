@@ -14,9 +14,13 @@ final class CanvasExampleScreen extends StatefulWidget {
   State<CanvasExampleScreen> createState() => _CanvasExampleScreenState();
 }
 
+// The state owns view-model lifecycle and snackbar projection at the Flutter
+// boundary; splitting that lifecycle would make mounted/dispose ordering opaque.
+// ignore: coupling-between-object-classes
 final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   late CanvasExampleViewModel _viewModel;
   late bool _ownsViewModel;
+  int _lastShownSampleImageErrorRevision = 0;
 
   @override
   void initState() {
@@ -68,9 +72,22 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   }
 
   void _handleViewModelChanged() {
+    _showSampleImageErrorIfNeeded();
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _showSampleImageErrorIfNeeded() {
+    final error = _viewModel.sampleImageError;
+    final revision = _viewModel.sampleImageErrorRevision;
+    if (!mounted ||
+        error == null ||
+        revision == _lastShownSampleImageErrorRevision) {
+      return;
+    }
+    _lastShownSampleImageErrorRevision = revision;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 }
 
@@ -120,6 +137,7 @@ final class _CanvasExampleContent extends StatelessWidget {
       children: [
         CanvasSurface(
           runtime: viewModel.runtime,
+          resourceResolver: viewModel.resourceResolver,
           selectionStyle: CanvasSelectionStyle(
             color: const Color(0xFFFFFF00),
             strokeWidth: 4,

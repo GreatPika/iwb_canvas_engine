@@ -232,7 +232,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Add Sample objects, cat image resolver, rendering, and disposal
+### [x] Unit 4: Add Sample objects, cat image resolver, rendering, and disposal
 
 Owner:
 
