@@ -1,3 +1,8 @@
+// This fixture verifies the full eraser/context routing boundary, so the
+// machine, read-port, intent, session identity, and runtime surfaces stay
+// together instead of being split into metric-shaped fixtures.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +14,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 
 typedef _ContextTapInput = ({
   Offset position,

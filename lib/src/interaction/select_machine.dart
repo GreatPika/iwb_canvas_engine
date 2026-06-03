@@ -5,6 +5,7 @@ import '../contracts/public/canvas_preview.dart';
 import 'interaction_read_port.dart';
 import 'interaction_runtime_intents.dart';
 import 'pointer_session.dart';
+import 'pointer_session_identity.dart';
 
 final class SelectMachine {
   const SelectMachine();

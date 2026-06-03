@@ -4,18 +4,7 @@ import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_tools.dart';
-
-final class PointerSessionToken {
-  const PointerSessionToken(this.value);
-
-  final int value;
-}
-
-final class PointerSessionId {
-  const PointerSessionId(this.value);
-
-  final int value;
-}
+import 'pointer_session_identity.dart';
 
 final class ContextActionRequestIntent {
   const ContextActionRequestIntent({required this.request});

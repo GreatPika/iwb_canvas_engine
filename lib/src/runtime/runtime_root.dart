@@ -49,7 +49,7 @@ import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
 import '../interaction/interaction_runtime_intents.dart';
-import '../interaction/pointer_cleanup_outcome.dart';
+import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';

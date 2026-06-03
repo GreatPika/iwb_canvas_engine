@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/interaction/draw_stroke_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 
 typedef _StrokeExpectation = ({
   CanvasDrawTool tool,

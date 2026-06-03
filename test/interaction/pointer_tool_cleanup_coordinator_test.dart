@@ -1,4 +1,4 @@
-import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_outcome.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_tool_cleanup_coordinator.dart';
 import 'package:test/test.dart';
 

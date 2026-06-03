@@ -468,7 +468,7 @@ const _interactionReadPortPath =
 const _runtimeRootPath = 'lib/src/runtime/runtime_root.dart';
 const _cleanupDependencyBanPaths = [
   'lib/src/interaction/pointer_tool_cleanup_coordinator.dart',
-  'lib/src/interaction/pointer_cleanup_outcome.dart',
+  'lib/src/interaction/pointer_cleanup_protocol.dart',
 ];
 
 final class _ReadPortCopiedField {

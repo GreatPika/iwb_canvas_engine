@@ -4,8 +4,8 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import 'draw_stroke_machine.dart';
 import 'eraser_machine.dart';
-import 'interaction_runtime_intents.dart';
 import 'line_machine.dart';
+import 'pointer_session_identity.dart';
 
 enum PointerSessionKind {
   moveModePointer,

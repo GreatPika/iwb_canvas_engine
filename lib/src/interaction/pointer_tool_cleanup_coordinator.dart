@@ -1,4 +1,4 @@
-import 'pointer_cleanup_outcome.dart';
+import 'pointer_cleanup_protocol.dart';
 
 final class PointerToolCleanupCoordinator {
   const PointerToolCleanupCoordinator();

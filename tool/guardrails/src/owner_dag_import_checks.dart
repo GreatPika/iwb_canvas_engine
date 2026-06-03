@@ -489,7 +489,7 @@ const ownerDagAllowedEdges = [
     source: runtimeOwner,
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/pointer_cleanup_outcome.dart',
+    targetPath: 'lib/src/interaction/pointer_cleanup_protocol.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,

@@ -132,6 +132,13 @@ void _verifyPointerSessionDeclarations() {
   expect(
     _source('lib/src/interaction/interaction_runtime_intents.dart'),
     allOf(
+      isNot(contains('final class PointerSessionToken')),
+      isNot(contains('final class PointerSessionId')),
+    ),
+  );
+  expect(
+    _source('lib/src/interaction/pointer_session_identity.dart'),
+    allOf(
       contains('final class PointerSessionToken'),
       contains('final class PointerSessionId'),
     ),

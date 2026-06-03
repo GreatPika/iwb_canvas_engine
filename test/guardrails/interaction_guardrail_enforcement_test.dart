@@ -97,7 +97,7 @@ void _registerInteractionImportNegativeProofs() {
 
 void _registerCleanupCoordinatorNegativeProof() {
   _registerCleanupCoordinatorFileNegativeProof();
-  _registerCleanupOutcomeFileNegativeProof();
+  _registerCleanupProtocolFileNegativeProof();
 }
 
 void _registerCleanupCoordinatorFileNegativeProof() {
@@ -138,10 +138,10 @@ void _registerCleanupCoordinatorFileNegativeProof() {
   });
 }
 
-void _registerCleanupOutcomeFileNegativeProof() {
-  test('cleanup outcome dependency fixture is rejected', () async {
+void _registerCleanupProtocolFileNegativeProof() {
+  test('cleanup protocol dependency fixture is rejected', () async {
     final violations = checkCleanupCoordinatorDependencyFile(
-      path: 'lib/src/interaction/pointer_cleanup_outcome.dart',
+      path: 'lib/src/interaction/pointer_cleanup_protocol.dart',
       content: "import '../contracts/public/canvas_actions.dart';\n",
     );
     expect(violations, isNotEmpty);
@@ -611,7 +611,7 @@ void _registerStructuralPositiveProofs() {
     );
     expect(
       checkCleanupCoordinatorDependencyFile(
-        path: 'lib/src/interaction/pointer_cleanup_outcome.dart',
+        path: 'lib/src/interaction/pointer_cleanup_protocol.dart',
         content: '',
       ),
       isEmpty,
