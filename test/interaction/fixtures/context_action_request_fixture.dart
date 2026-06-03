@@ -18,6 +18,7 @@ void main() {
   test('direct empty double tap emits one empty request', () {
     return expectLater(_verifyDirectEmptyRequest(), completes);
   });
+  _registerAsyncContextRequestStreamTests();
   test('non-finite direct double tap is rejected before timestamp', () {
     return expectLater(
       _verifyNonFiniteDirectRejectsBeforeTimestamp(),
@@ -39,6 +40,18 @@ void main() {
   });
   test('private pointer tap does not leak through later state', () {
     return expectLater(_verifyPrivateTapRevisionStaysPrivate(), completes);
+  });
+}
+
+void _registerAsyncContextRequestStreamTests() {
+  test('accepted direct request delivery is asynchronous', () {
+    return expectLater(_verifyAcceptedDirectRequestIsAsync(), completes);
+  });
+  test('dispose preserves accepted request before stream done', () {
+    return expectLater(
+      _verifyDisposePreservesQueuedRequestBeforeDone(),
+      completes,
+    );
   });
 }
 
@@ -109,6 +122,52 @@ Future<void> _verifyDirectEmptyRequest() async {
   } finally {
     await scenario.dispose();
   }
+}
+
+Future<void> _verifyAcceptedDirectRequestIsAsync() async {
+  final scenario = _RuntimeContextRequestScenario();
+  try {
+    scenario.root.handleDoubleTap(
+      position: const Offset(20, 0),
+      timestampMs: 7,
+    );
+    expect(scenario.requests, isEmpty);
+
+    await _flushEvents();
+
+    expect(scenario.requests, hasLength(1));
+    _expectContentRequest(scenario.requests.single);
+    _expectNoIncidentalEffects(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+Future<void> _verifyDisposePreservesQueuedRequestBeforeDone() async {
+  final root = RuntimeRoot(
+    initialDocument: _document(selectableContent: false, hitPadding: 0),
+    config: const CanvasRuntimeConfig(),
+  );
+  final events = <String>[];
+  final done = Completer<void>();
+  root.contextActionRequests.listen(
+    (request) {
+      events.add('request:${request.requestId.value}');
+    },
+    onDone: () {
+      events.add('done');
+      done.complete();
+    },
+  );
+
+  root.handleDoubleTap(position: const Offset(20, 0), timestampMs: 7);
+  root.dispose();
+
+  await done.future;
+
+  expect(events, hasLength(2));
+  expect(events.first, startsWith('request:'));
+  expect(events.last, 'done');
 }
 
 Future<void> _verifyPaddedContextHitRequest() async {
