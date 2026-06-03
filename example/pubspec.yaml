@@ -1,0 +1,24 @@
+name: iwb_canvas_engine_example
+description: Runnable public-consumer example for the rebuilt IWB canvas engine.
+publish_to: none
+
+environment:
+  sdk: ^3.10.4
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  iwb_canvas_engine:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  yaml: ^3.1.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - image/cat.png

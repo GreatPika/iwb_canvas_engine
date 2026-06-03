@@ -166,7 +166,7 @@ For JSON import, schema v1 decode/validation is fallible and must complete befor
 
 ## Execution Units
 
-### [ ] Unit 1: Root example package, startup, default document, and cat asset
+### [x] Unit 1: Root example package, startup, default document, and cat asset
 
 Owner:
 
