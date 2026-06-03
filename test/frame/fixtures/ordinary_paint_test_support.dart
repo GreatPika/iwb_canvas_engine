@@ -84,6 +84,13 @@ CapturedOverlayFrame capturedOverlayFrameFor(
   );
 }
 
+CanvasSelectionStyle selectionStyleFor({
+  required Color color,
+  required double strokeWidth,
+}) {
+  return CanvasSelectionStyle(color: color, strokeWidth: strokeWidth);
+}
+
 // The shared frame-facts builder exposes the same knobs as the frame port so
 // cache, resource, stale-row, and spatial tests can vary one boundary at a time.
 // ignore: number-of-parameters
@@ -176,6 +183,18 @@ FrameElementFacts rectFacts(
   );
 }
 
+FrameElementFacts translatedRectFacts(
+  String id, {
+  required int orderToken,
+  required Offset translation,
+}) {
+  return rectFacts(
+    id,
+    orderToken: orderToken,
+    transform: CanvasTransform.translation(translation),
+  );
+}
+
 FrameElementFacts textFacts(String id, {required int orderToken}) {
   return _baseFacts(
     id,
@@ -234,6 +253,30 @@ FrameElementFacts strokeFacts(
   );
 }
 
+FrameElementFacts translatedStrokeFacts(
+  String id, {
+  required int orderToken,
+  required Offset translation,
+}) {
+  return strokeFacts(
+    id,
+    orderToken: orderToken,
+    transform: CanvasTransform.translation(translation),
+  );
+}
+
+FrameElementFacts lineFacts(String id, {required int orderToken}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.line,
+    orderToken: orderToken,
+    start: Offset.zero,
+    end: const Offset(10, 0),
+    thickness: 2,
+    color: const Color(0xFF222222),
+  );
+}
+
 // The base row fixture mirrors the internal port shape; keeping one complete
 // constructor avoids inconsistent test facts across element families.
 // ignore: number-of-parameters
@@ -252,6 +295,8 @@ FrameElementFacts _baseFacts(
   CanvasResourceId? resourceId,
   Size? size,
   List<Offset> points = const [],
+  Offset? start,
+  Offset? end,
   double? thickness,
   Color? color,
 }) {
@@ -281,6 +326,8 @@ FrameElementFacts _baseFacts(
     fillRule: fillRule,
     strokeWidth: strokeWidth,
     points: points,
+    start: start,
+    end: end,
     thickness: thickness,
     color: color,
   );
