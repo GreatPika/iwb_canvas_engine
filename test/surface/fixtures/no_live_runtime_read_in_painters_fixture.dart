@@ -43,6 +43,17 @@ void _registerOverlayPainterBoundaryTests() {
     expect(mainPainterSource, contains('drawPicture'));
     expect(mainPainterSource, isNot(contains('StaticBackgroundPrimitive')));
     expect(mainPainterSource, contains('selectionDecorationPlan'));
+    expect(
+      mainPainterSource,
+      contains('paintMainFrameRecordsAndSelectionDecorations(canvas, output)'),
+    );
+    expect(
+      mainPainterSource,
+      isNot(contains('void _paintSelectionDecorations(')),
+    );
+    expect(mainPainterSource, isNot(contains('.sort(')));
+    expect(mainPainterSource, isNot(contains('saveLayer')));
+    expect(mainPainterSource, isNot(contains('ordinaryPaintRecordCache')));
   });
 }
 

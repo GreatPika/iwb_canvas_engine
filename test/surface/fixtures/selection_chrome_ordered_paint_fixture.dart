@@ -1,0 +1,311 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
+import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
+
+void main() {
+  _registerOrderedChromeTest();
+  _registerInsideBoxChromeTests();
+  _registerOutlineChromeTest();
+}
+
+void _registerOrderedChromeTest() {
+  testWidgets('higher-order records cover ordered selection chrome', (
+    tester,
+  ) async {
+    final output = await _selectedFrameOutput(
+      tester,
+      document: _overlappingDocument(),
+      selectedIds: [CanvasElementId('selected')],
+    );
+    final selectedBounds =
+        output.selectionDecorationPlan.primitives.single.boundsWorld;
+
+    expect(
+      (await _pixelAt(
+        tester,
+        output,
+        selectedBounds.left.round() + 1,
+        selectedBounds.center.dy.round(),
+      )).rgba,
+      _redRgba,
+    );
+  });
+}
+
+void _registerInsideBoxChromeTests() {
+  testWidgets('box chrome strokes stay inside primitive bounds', (
+    tester,
+  ) async {
+    final rect = await _selectedFrameOutput(
+      tester,
+      document: _singleRectDocument(),
+      selectedIds: [CanvasElementId('selected')],
+    );
+    final image = await _selectedFrameOutput(
+      tester,
+      document: _singleImageDocument(),
+      selectedIds: [CanvasElementId('image')],
+    );
+    final group = await _selectedFrameOutput(
+      tester,
+      document: _multiSelectLineStrokeDocument(),
+      selectedIds: [CanvasElementId('line'), CanvasElementId('stroke')],
+    );
+
+    final outsidePixels = [
+      await _pixelAt(tester, rect, 18, 20),
+      await _pixelAt(tester, image, 18, 20),
+      await _pixelAt(tester, group, 8, 20),
+      await _pixelAt(tester, group, 20, 18),
+    ];
+
+    expect(
+      outsidePixels.map((pixel) => pixel.isBlueStroke),
+      everyElement(isFalse),
+    );
+  });
+}
+
+void _registerOutlineChromeTest() {
+  testWidgets('non-box outline chrome keeps outline placement', (tester) async {
+    final output = await _selectedFrameOutput(
+      tester,
+      document: _singleLineDocument(),
+      selectedIds: [CanvasElementId('line')],
+    );
+
+    expect((await _pixelAt(tester, output, 20, 18)).blue, greaterThan(200));
+  });
+}
+
+Future<MainFramePaintOutput> _selectedFrameOutput(
+  WidgetTester tester, {
+  required CanvasDocument document,
+  required Iterable<CanvasElementId> selectedIds,
+}) async {
+  final runtime = CanvasRuntime(initialDocument: document);
+  addTearDown(runtime.dispose);
+  runtime.selection.setSelection(selectedIds);
+
+  await tester.pumpWidget(_surfaceHost(runtime));
+
+  return _mainPainter(tester).output;
+}
+
+Widget _surfaceHost(CanvasRuntime runtime) {
+  return Directionality(
+    textDirection: TextDirection.ltr,
+    child: SizedBox(
+      width: 64,
+      height: 64,
+      child: CanvasSurface(
+        runtime: runtime,
+        interactive: false,
+        selectionStyle: CanvasSelectionStyle(
+          color: const Color(0xFF0000FF),
+          strokeWidth: 4,
+          haloWidth: 0,
+        ),
+      ),
+    ),
+  );
+}
+
+MainFramePainter _mainPainter(WidgetTester tester) {
+  final host = find.byKey(
+    const ValueKey<String>('iwb_canvas_surface.paint_host'),
+  );
+  final paintHost = tester.widget<CustomPaint>(host);
+  final painter = paintHost.painter;
+
+  expect(painter, isA<MainFramePainter>());
+
+  return painter as MainFramePainter;
+}
+
+Future<_Pixel> _pixelAt(
+  WidgetTester tester,
+  MainFramePaintOutput output,
+  int x,
+  int y,
+) async {
+  final pixel = await tester.runAsync(() => _recordedPixelAt(output, x, y));
+  if (pixel == null) {
+    throw StateError('selection chrome ordered paint test produced no pixel');
+  }
+
+  return pixel;
+}
+
+Future<_Pixel> _recordedPixelAt(
+  MainFramePaintOutput output,
+  int x,
+  int y,
+) async {
+  final recorder = ui.PictureRecorder();
+  MainFramePainter(
+    output: output,
+  ).paint(ui.Canvas(recorder), const Size(64, 64));
+  final image = await recorder.endRecording().toImage(64, 64);
+  final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  if (bytes == null) {
+    throw StateError('selection chrome ordered paint test produced no pixels');
+  }
+
+  return _pixelFrom(bytes.buffer.asUint8List(), x, y);
+}
+
+_Pixel _pixelFrom(List<int> rgba, int x, int y) {
+  final offset = (y * 64 + x) * 4;
+
+  return _Pixel(
+    red: rgba[offset],
+    green: rgba[offset + 1],
+    blue: rgba[offset + 2],
+    alpha: rgba[offset + 3],
+  );
+}
+
+CanvasDocument _overlappingDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          _rect(
+            'selected',
+            translation: const Offset(30, 20),
+            fillColor: const Color(0xFF00AA00),
+          ),
+          _rect(
+            'cover',
+            translation: const Offset(30, 20),
+            fillColor: const Color(0xFFFF0000),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _singleRectDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [_rect('selected', translation: const Offset(30, 20))],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _singleImageDocument() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-a'),
+        source: CanvasResourceSource.appKey('image-a'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image'),
+            resourceId: CanvasResourceId('resource-a'),
+            size: const Size(20, 20),
+            transform: CanvasTransform.translation(const Offset(30, 20)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _multiSelectLineStrokeDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasLineElement(
+            id: CanvasElementId('line'),
+            start: const Offset(10, 20),
+            end: const Offset(18, 20),
+            thickness: 2,
+            color: const Color(0x00000000),
+          ),
+          CanvasStrokeElement(
+            id: CanvasElementId('stroke'),
+            points: const [Offset(24, 20), Offset(30, 20)],
+            thickness: 2,
+            color: const Color(0x00000000),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _singleLineDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasLineElement(
+            id: CanvasElementId('line'),
+            start: const Offset(10, 20),
+            end: const Offset(30, 20),
+            thickness: 2,
+            color: const Color(0x00000000),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasRectElement _rect(
+  String id, {
+  required Offset translation,
+  Size size = const Size(20, 20),
+  Color? fillColor,
+}) {
+  return CanvasRectElement(
+    id: CanvasElementId(id),
+    size: size,
+    fillColor: fillColor,
+    transform: CanvasTransform.translation(translation),
+  );
+}
+
+const _redRgba = [255, 0, 0, 255];
+
+final class _Pixel {
+  const _Pixel({
+    required this.red,
+    required this.green,
+    required this.blue,
+    required this.alpha,
+  });
+
+  final int red;
+  final int green;
+  final int blue;
+  final int alpha;
+
+  List<int> get rgba => [red, green, blue, alpha];
+  bool get isBlueStroke =>
+      red == 0 && green == 0 && blue == 255 && alpha == 255;
+
+  @override
+  String toString() {
+    return '_Pixel(red: $red, green: $green, blue: $blue, alpha: $alpha)';
+  }
+}

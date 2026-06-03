@@ -21,21 +21,7 @@ final class MainFramePainter extends CustomPainter {
     canvas.save();
     canvas.translate(-viewport.left, -viewport.top);
     canvas.drawPicture(output.staticBackgroundPlan.picture.picture);
-    final imageBindings = resolvedMainFrameImages(output);
-    for (final record in mainFrameRecordsInPaintOrder(
-      output.selectedMoveSupplementPlan.mergedRecords,
-    )) {
-      paintMainFrameRecord(
-        canvas,
-        record,
-        imageBindings,
-        output.renderPrimitiveSnapshot,
-      );
-    }
-    _paintSelectionDecorations(
-      canvas,
-      output.selectionDecorationPlan.primitives,
-    );
+    paintMainFrameRecordsAndSelectionDecorations(canvas, output);
     canvas.restore();
   }
 
@@ -70,31 +56,170 @@ bool _recordsAreTopmostFirst(List<RenderElementRecord> records) {
   return false;
 }
 
-void _paintSelectionDecorations(
+void paintMainFrameRecordsAndSelectionDecorations(
   Canvas canvas,
-  Iterable<SelectionDecorationPrimitive> primitives,
+  MainFramePaintOutput output,
 ) {
-  for (final primitive in primitives) {
-    final bounds = primitive.boundsWorld;
-    final haloWidth = primitive.haloWidth;
-    if (haloWidth > 0) {
-      canvas.drawRect(
-        bounds.inflate(haloWidth / 2),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = haloWidth
-          ..color = primitive.color.withAlpha(48),
-      );
-    }
-    final strokeWidth = primitive.strokeWidth;
-    if (strokeWidth > 0) {
-      canvas.drawRect(
-        bounds,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
-          ..color = primitive.color,
-      );
-    }
+  final imageBindings = resolvedMainFrameImages(output);
+  final pendingDecorations = output.selectionDecorationPlan.primitives;
+  var nextDecorationIndex = 0;
+  for (final record in mainFrameRecordsInPaintOrder(
+    output.selectedMoveSupplementPlan.mergedRecords,
+  )) {
+    nextDecorationIndex = _paintSelectionDecorationsBeforeRecord(
+      canvas,
+      pendingDecorations,
+      nextDecorationIndex,
+      record,
+    );
+    paintMainFrameRecord(
+      canvas,
+      record,
+      imageBindings,
+      output.renderPrimitiveSnapshot,
+    );
+    nextDecorationIndex = _paintSelectionDecorationsAtRecord(
+      canvas,
+      pendingDecorations,
+      nextDecorationIndex,
+      record,
+    );
   }
+  _paintSelectionDecorationRange(
+    canvas,
+    pendingDecorations,
+    nextDecorationIndex,
+    pendingDecorations.length,
+  );
+}
+
+int _paintSelectionDecorationsBeforeRecord(
+  Canvas canvas,
+  List<SelectionDecorationPrimitive> primitives,
+  int startIndex,
+  RenderElementRecord record,
+) {
+  var index = startIndex;
+  while (index < primitives.length &&
+      primitives[index].paintOrderToken < record.orderToken) {
+    _paintSelectionDecoration(canvas, primitives[index]);
+    index += 1;
+  }
+
+  return index;
+}
+
+int _paintSelectionDecorationsAtRecord(
+  Canvas canvas,
+  List<SelectionDecorationPrimitive> primitives,
+  int startIndex,
+  RenderElementRecord record,
+) {
+  var index = startIndex;
+  while (index < primitives.length &&
+      primitives[index].paintOrderToken <= record.orderToken) {
+    _paintSelectionDecoration(canvas, primitives[index]);
+    index += 1;
+  }
+
+  return index;
+}
+
+void _paintSelectionDecorationRange(
+  Canvas canvas,
+  List<SelectionDecorationPrimitive> primitives,
+  int startIndex,
+  int endIndex,
+) {
+  for (var index = startIndex; index < endIndex; index += 1) {
+    _paintSelectionDecoration(canvas, primitives[index]);
+  }
+}
+
+void _paintSelectionDecoration(
+  Canvas canvas,
+  SelectionDecorationPrimitive primitive,
+) {
+  final haloWidth = primitive.haloWidth;
+  if (haloWidth > 0) {
+    final effectiveHaloWidth = _effectiveSelectionStrokeWidth(
+      primitive,
+      haloWidth,
+    );
+    canvas.drawRect(
+      _selectionDecorationStrokeRectFor(
+        primitive,
+        strokeWidth: effectiveHaloWidth,
+        isHalo: true,
+      ),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = effectiveHaloWidth
+        ..color = primitive.color.withAlpha(48),
+    );
+  }
+  final strokeWidth = primitive.strokeWidth;
+  if (strokeWidth > 0) {
+    final effectiveStrokeWidth = _effectiveSelectionStrokeWidth(
+      primitive,
+      strokeWidth,
+    );
+    canvas.drawRect(
+      _selectionDecorationStrokeRectFor(
+        primitive,
+        strokeWidth: effectiveStrokeWidth,
+        isHalo: false,
+      ),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = effectiveStrokeWidth
+        ..color = primitive.color,
+    );
+  }
+}
+
+double _effectiveSelectionStrokeWidth(
+  SelectionDecorationPrimitive primitive,
+  double strokeWidth,
+) {
+  if (primitive.strokePlacement ==
+      SelectionDecorationStrokePlacement.boundsOutline) {
+    return strokeWidth;
+  }
+  final maxInsideWidth = _minPositive(
+    primitive.boundsWorld.width,
+    primitive.boundsWorld.height,
+  );
+
+  return strokeWidth <= maxInsideWidth ? strokeWidth : maxInsideWidth;
+}
+
+Rect _selectionDecorationStrokeRectFor(
+  SelectionDecorationPrimitive primitive, {
+  required double strokeWidth,
+  required bool isHalo,
+}) {
+  final bounds = primitive.boundsWorld;
+  if (primitive.strokePlacement ==
+      SelectionDecorationStrokePlacement.boundsOutline) {
+    return isHalo ? bounds.inflate(strokeWidth / 2) : bounds;
+  }
+  final inset = _insideStrokeInset(bounds, strokeWidth);
+
+  return bounds.deflate(inset);
+}
+
+double _insideStrokeInset(Rect bounds, double strokeWidth) {
+  final halfStroke = strokeWidth / 2;
+  final maxInset = _minPositive(bounds.width, bounds.height) / 2;
+
+  return halfStroke <= maxInset ? halfStroke : maxInset;
+}
+
+double _minPositive(double left, double right) {
+  if (left <= 0 || right <= 0) {
+    return 0;
+  }
+
+  return left < right ? left : right;
 }
