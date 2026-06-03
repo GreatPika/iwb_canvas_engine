@@ -70,11 +70,12 @@ final class CanvasRuntimeSurfacePort {
     }
     bindAssets;
 
-    return _root.buildResourceFreeMainFrame(
+    return _root.buildMainFrameWithAssetBindings(
       viewportWorldBounds: viewportWorldBounds,
       devicePixelRatio: devicePixelRatio,
       selectionStyle: selectionStyle,
       gridStyle: gridStyle,
+      bindAssets: bindAssets,
     );
   }
 

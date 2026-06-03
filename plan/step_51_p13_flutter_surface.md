@@ -352,7 +352,7 @@ Depends On:
 
 Units 0 and 1.
 
-### [ ] Unit 3: Surface paint, image bridge, and painter migration
+### [x] Unit 3: Surface paint, image bridge, and painter migration
 
 Owner:
 

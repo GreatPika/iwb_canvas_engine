@@ -6,8 +6,8 @@ import '../frame/main_frame_record_painter.dart';
 import '../frame/render_element_record.dart';
 import '../frame/selection_decoration_planner.dart';
 
-final class MainSurfacePainter extends CustomPainter {
-  const MainSurfacePainter({required this.output});
+final class MainFramePainter extends CustomPainter {
+  const MainFramePainter({required this.output});
 
   final MainFramePaintOutput output;
 
@@ -22,7 +22,7 @@ final class MainSurfacePainter extends CustomPainter {
     canvas.translate(-viewport.left, -viewport.top);
     canvas.drawPicture(output.staticBackgroundPlan.picture.picture);
     final imageBindings = resolvedMainFrameImages(output);
-    for (final record in _mainFrameRecordsInPaintOrder(
+    for (final record in mainFrameRecordsInPaintOrder(
       output.selectedMoveSupplementPlan.mergedRecords,
     )) {
       paintMainFrameRecord(
@@ -40,12 +40,12 @@ final class MainSurfacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant MainSurfacePainter oldDelegate) {
+  bool shouldRepaint(covariant MainFramePainter oldDelegate) {
     return !identical(oldDelegate.output, output);
   }
 }
 
-Iterable<RenderElementRecord> _mainFrameRecordsInPaintOrder(
+Iterable<RenderElementRecord> mainFrameRecordsInPaintOrder(
   List<RenderElementRecord> records,
 ) {
   if (_recordsAreTopmostFirst(records)) {

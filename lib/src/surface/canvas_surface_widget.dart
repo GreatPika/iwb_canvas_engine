@@ -4,8 +4,8 @@ import '../api/canvas_runtime.dart';
 import '../api/canvas_runtime_surface_bridge.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
-import '../frame/paint_asset_binding_service.dart';
 import '../resources/surface_resource_session.dart';
+import 'image_bridge.dart';
 import 'main_painter.dart';
 import 'overlay_painter.dart';
 
@@ -150,13 +150,17 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     required Rect viewport,
     required double devicePixelRatio,
   }) {
+    final session = _activeSession;
+    if (session == null) {
+      return const SizedBox.shrink();
+    }
     final mainOutput = port.buildSurfaceMainFrame(
       _surfaceToken,
       viewportWorldBounds: viewport,
       devicePixelRatio: devicePixelRatio,
       selectionStyle: widget.selectionStyle,
       gridStyle: widget.gridStyle,
-      bindAssets: _emptyAssetBindings,
+      bindAssets: const CanvasSurfaceImageBridge().bindAssets(session),
     );
     final overlayOutput = port.buildSurfaceOverlayFrame(
       _surfaceToken,
@@ -168,8 +172,8 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 
     return CustomPaint(
       key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
-      painter: MainSurfacePainter(output: mainOutput),
-      foregroundPainter: OverlaySurfacePainter(output: overlayOutput),
+      painter: MainFramePainter(output: mainOutput),
+      foregroundPainter: OverlayFramePainter(output: overlayOutput),
       size: paintSize,
     );
   }
@@ -184,11 +188,4 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   double _devicePixelRatioFor(BuildContext context) {
     return MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
   }
-}
-
-FrameAssetBindings _emptyAssetBindings({
-  required Object frame,
-  required Iterable<Object> records,
-}) {
-  return FrameAssetBindings.empty;
 }

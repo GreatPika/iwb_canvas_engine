@@ -341,6 +341,28 @@ final class RuntimeRoot
     );
   }
 
+  // The asset-binding builder stays supplied by surface/resources while frame
+  // ownership remains inside FrameEngine.
+  // ignore: number-of-parameters
+  MainFramePaintOutput buildMainFrameWithAssetBindings({
+    required Rect viewportWorldBounds,
+    required double devicePixelRatio,
+    required CanvasSelectionStyle selectionStyle,
+    required CanvasGridStyle gridStyle,
+    required FrameAssetBindingBuilder bindAssets,
+  }) {
+    return _frameEngine.buildMainFrameWithAssetBindings(
+      inputs: _frameInputs(
+        viewportWorldBounds: viewportWorldBounds,
+        devicePixelRatio: devicePixelRatio,
+        selectionStyle: selectionStyle,
+        gridStyle: gridStyle,
+      ),
+      viewCameraBucket: _viewCameraRevision,
+      bindAssets: bindAssets,
+    );
+  }
+
   OverlayFramePaintOutput buildResourceFreeOverlayFrame({
     required Rect viewportWorldBounds,
     required double devicePixelRatio,

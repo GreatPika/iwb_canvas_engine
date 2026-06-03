@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/frame/main_frame_painter.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
+import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 
 import 'ordinary_paint_test_support.dart';
 
@@ -14,13 +14,13 @@ void main() {
 }
 
 void _registerPainterBoundaryTests() {
-  test('painters import only immutable frame paint outputs', () {
-    expect(File('lib/src/frame/main_frame_painter.dart').existsSync(), isTrue);
-    _expectPainterBoundary('lib/src/frame/main_frame_painter.dart');
+  test('surface painters import only immutable frame paint outputs', () {
+    expect(File('lib/src/surface/main_painter.dart').existsSync(), isTrue);
+    _expectPainterBoundary('lib/src/surface/main_painter.dart');
     _expectRecordPainterBoundary(
       'lib/src/frame/main_frame_record_painter.dart',
     );
-    _expectPainterBoundary('lib/src/frame/overlay_frame_painter.dart');
+    _expectPainterBoundary('lib/src/surface/overlay_painter.dart');
   });
 }
 
@@ -49,7 +49,7 @@ void _registerRecordPainterBoundaryTests() {
 void _registerOverlayPainterBoundaryTests() {
   test('overlay painter consumes primitive paint data', () {
     final overlayPainterSource = File(
-      'lib/src/frame/overlay_frame_painter.dart',
+      'lib/src/surface/overlay_painter.dart',
     ).readAsStringSync();
     expect(
       overlayPainterSource,
@@ -62,7 +62,7 @@ void _registerOverlayPainterBoundaryTests() {
 
   test('main painter consumes derived frame plans', () {
     final mainPainterSource = File(
-      'lib/src/frame/main_frame_painter.dart',
+      'lib/src/surface/main_painter.dart',
     ).readAsStringSync();
 
     expect(mainPainterSource, contains('staticBackgroundPlan'));

@@ -87,16 +87,16 @@ Widget _surfaceHost(CanvasRuntime runtime) {
   );
 }
 
-MainSurfacePainter _mainPainter(WidgetTester tester) {
+MainFramePainter _mainPainter(WidgetTester tester) {
   final host = find.byKey(
     const ValueKey<String>('iwb_canvas_surface.paint_host'),
   );
   final paintHost = tester.widget<CustomPaint>(host);
   final painter = paintHost.painter;
 
-  expect(painter, isA<MainSurfacePainter>());
+  expect(painter, isA<MainFramePainter>());
 
-  return painter as MainSurfacePainter;
+  return painter as MainFramePainter;
 }
 
 final class _NoopResolver implements CanvasResourceResolver {

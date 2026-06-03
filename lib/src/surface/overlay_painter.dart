@@ -6,8 +6,8 @@ import '../frame/overlay_preview_planner.dart';
 
 const _drawablePolicy = FrameDrawablePolicy();
 
-final class OverlaySurfacePainter extends CustomPainter {
-  const OverlaySurfacePainter({required this.output});
+final class OverlayFramePainter extends CustomPainter {
+  const OverlayFramePainter({required this.output});
 
   final OverlayFramePaintOutput output;
 
@@ -23,7 +23,7 @@ final class OverlaySurfacePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant OverlaySurfacePainter oldDelegate) {
+  bool shouldRepaint(covariant OverlayFramePainter oldDelegate) {
     return !identical(oldDelegate.output, output);
   }
 }

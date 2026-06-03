@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_repaint_signal.dart';
-import 'package:iwb_canvas_engine/src/frame/overlay_frame_painter.dart';
 import 'package:iwb_canvas_engine/src/frame/overlay_preview_planner.dart';
+import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 import 'ordinary_paint_test_support.dart';
 
