@@ -327,6 +327,7 @@ const _testProofPaths = {
   ],
   'surface.pointer_samples_normalized_before_runtime': [
     'test/guardrails/import_boundaries_test.dart',
+    'test/surface/pointer_adapter_finite_normalization_test.dart',
   ],
   'surface.interactive_false_pending_line_preserved': [
     'test/guardrails/import_boundaries_test.dart',

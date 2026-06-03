@@ -8,6 +8,7 @@ import '../resources/surface_resource_session.dart';
 import 'image_bridge.dart';
 import 'main_painter.dart';
 import 'overlay_painter.dart';
+import 'pointer_adapter.dart';
 
 /// Public API v1 declaration for [CanvasSurface].
 final class CanvasSurface extends StatefulWidget {
@@ -170,11 +171,21 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       gridStyle: widget.gridStyle,
     );
 
-    return CustomPaint(
+    final paintHost = CustomPaint(
       key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
       painter: MainFramePainter(output: mainOutput),
       foregroundPainter: OverlayFramePainter(output: overlayOutput),
       size: paintSize,
+    );
+    if (!widget.interactive) {
+      return paintHost;
+    }
+
+    return CanvasSurfacePointerAdapter(
+      routeSample: (sample) {
+        port.handlePointer(_surfaceToken, sample);
+      },
+      child: paintHost,
     );
   }
 

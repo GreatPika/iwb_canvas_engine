@@ -404,7 +404,7 @@ Depends On:
 
 Units 0, 1, and 2.
 
-### [ ] Unit 4: Flutter pointer adapter routing and finite admission
+### [x] Unit 4: Flutter pointer adapter routing and finite admission
 
 Owner:
 

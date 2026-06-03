@@ -75,22 +75,66 @@ checkPointerCleanupCoordinatorCallerOrigins() async {
 
 Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
   final violations = <GuardrailViolation>[];
-  for (final file in dartFilesUnder('lib/src/surface')) {
-    final path = relativePath(file);
-    final content = file.readAsStringSync();
-    if (content.contains('CanvasPointerSample(') ||
-        content.contains('.handlePointer(')) {
+  const adapterPath = 'lib/src/surface/pointer_adapter.dart';
+  final adapterFile = File(adapterPath);
+  if (!adapterFile.existsSync()) {
+    return const [
+      GuardrailViolation(
+        guardrailId: 'surface.pointer_samples_normalized_before_runtime',
+        path: adapterPath,
+        message: 'CanvasSurfacePointerAdapter must own surface pointer routing',
+      ),
+    ];
+  }
+  final adapterContent = adapterFile.readAsStringSync();
+  for (final requiredPattern in [
+    'final class CanvasSurfacePointerAdapter',
+    'Listener(',
+    'CanvasPointerSample(',
+    'localPosition',
+    'isFinite',
+  ]) {
+    if (!adapterContent.contains(requiredPattern)) {
       violations.add(
         GuardrailViolation(
           guardrailId: 'surface.pointer_samples_normalized_before_runtime',
-          path: path,
-          message:
-              'Unit 0 surface code must not route pointer samples before the pointer adapter proof exists',
+          path: adapterPath,
+          message: 'pointer adapter is missing required $requiredPattern proof',
         ),
       );
     }
   }
-
+  for (final forbiddenPattern in [
+    'GestureDetector',
+    'MouseRegion',
+    'GestureRecognizer',
+    'PointerSampleNormalizer',
+    'viewCameraOffset',
+    'worldPosition',
+  ]) {
+    if (adapterContent.contains(forbiddenPattern)) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: 'surface.pointer_samples_normalized_before_runtime',
+          path: adapterPath,
+          message: 'pointer adapter must not contain $forbiddenPattern',
+        ),
+      );
+    }
+  }
+  const widgetPath = 'lib/src/surface/canvas_surface_widget.dart';
+  final widgetContent = File(widgetPath).readAsStringSync();
+  if (!widgetContent.contains('CanvasSurfacePointerAdapter(') ||
+      !widgetContent.contains('port.handlePointer(_surfaceToken, sample)')) {
+    violations.add(
+      const GuardrailViolation(
+        guardrailId: 'surface.pointer_samples_normalized_before_runtime',
+        path: widgetPath,
+        message:
+            'CanvasSurface must route pointer samples through active token',
+      ),
+    );
+  }
   return violations;
 }
 

@@ -413,7 +413,10 @@ const _runnerStructuralScanCases = [
   ),
   _StructuralScanCase(
     id: 'surface.pointer_samples_normalized_before_runtime',
-    proofPaths: ['test/guardrails/import_boundaries_test.dart'],
+    proofPaths: [
+      'test/guardrails/import_boundaries_test.dart',
+      'test/surface/pointer_adapter_finite_normalization_test.dart',
+    ],
     violationPath: 'lib/src/surface/bad_runtime_import.dart',
   ),
   _StructuralScanCase(

@@ -52,7 +52,12 @@ final class CanvasRuntimeSurfacePort {
 
   void handleSurfaceInteractiveDisabled(Object _) {}
 
-  void handlePointer(Object _, CanvasPointerSample _) {}
+  void handlePointer(Object token, CanvasPointerSample sample) {
+    if (!_root.isActiveSurface(token)) {
+      return;
+    }
+    _root.handlePointer(sample);
+  }
 
   // The surface port keeps the viewport/style/binding inputs explicit so the
   // Flutter adapter cannot smuggle frame or resource ownership through a bag.
