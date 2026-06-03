@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import 'canvas_example_defaults.dart';
+import 'canvas_example_view_model.dart';
 
 final class CanvasExampleApp extends StatelessWidget {
   const CanvasExampleApp({super.key});
@@ -23,17 +23,17 @@ final class CanvasExampleScreen extends StatefulWidget {
 }
 
 final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
-  late final CanvasRuntime _runtime = createCanvasExampleRuntime();
+  late final CanvasExampleViewModel _viewModel = CanvasExampleViewModel();
 
   @override
   void dispose() {
-    _runtime.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CanvasExampleSurfaceHost(runtime: _runtime);
+    return CanvasExampleSurfaceHost(runtime: _viewModel.runtime);
   }
 }
 

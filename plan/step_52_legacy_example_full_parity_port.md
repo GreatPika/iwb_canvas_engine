@@ -188,7 +188,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Example view model runtime and public port mapping
+### [x] Unit 2: Example view model runtime and public port mapping
 
 Owner:
 
