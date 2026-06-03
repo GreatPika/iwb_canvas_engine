@@ -256,7 +256,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 1: Single-active attach gate and surface token lifecycle
+### [x] Unit 1: Single-active attach gate and surface token lifecycle
 
 Owner:
 

@@ -35,14 +35,18 @@ final class CanvasRuntimeSurfacePort {
 
   ResolverMutationGuard get resolverMutationGuard => _root;
 
-  void attachSurface(Object _) {}
+  void attachSurface(Object token) {
+    _root.attachSurface(token);
+  }
 
   void installSurfaceResourceSession(
     Object _,
     SurfaceResourceSessionLifecycle _,
   ) {}
 
-  void detachSurface(Object _) {}
+  void detachSurface(Object token) {
+    _root.detachSurface(token);
+  }
 
   void handleSurfaceInteractiveDisabled(Object _) {}
 
@@ -52,13 +56,16 @@ final class CanvasRuntimeSurfacePort {
   // Flutter adapter cannot smuggle frame or resource ownership through a bag.
   // ignore: number-of-parameters
   MainFramePaintOutput buildSurfaceMainFrame(
-    Object _, {
+    Object token, {
     required Rect viewportWorldBounds,
     required double devicePixelRatio,
     required CanvasSelectionStyle selectionStyle,
     required CanvasGridStyle gridStyle,
     required FrameAssetBindingBuilder bindAssets,
   }) {
+    if (!_root.isActiveSurface(token)) {
+      throw StateError('CanvasSurface is not active for this CanvasRuntime.');
+    }
     bindAssets;
 
     return _root.buildResourceFreeMainFrame(
@@ -73,12 +80,16 @@ final class CanvasRuntimeSurfacePort {
   // resource-free; grouping them would hide the surface/runtime handoff shape.
   // ignore: number-of-parameters
   OverlayFramePaintOutput buildSurfaceOverlayFrame(
-    Object _, {
+    Object token, {
     required Rect viewportWorldBounds,
     required double devicePixelRatio,
     required CanvasSelectionStyle selectionStyle,
     required CanvasGridStyle gridStyle,
   }) {
+    if (!_root.isActiveSurface(token)) {
+      throw StateError('CanvasSurface is not active for this CanvasRuntime.');
+    }
+
     return _root.buildResourceFreeOverlayFrame(
       viewportWorldBounds: viewportWorldBounds,
       devicePixelRatio: devicePixelRatio,

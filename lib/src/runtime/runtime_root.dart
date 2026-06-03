@@ -182,6 +182,7 @@ final class RuntimeRoot
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
   bool _isRunningResolverCallback = false;
+  Object? _activeSurfaceToken;
   ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
 
   // Lazy internal adapters and kernels.
@@ -274,6 +275,29 @@ final class RuntimeRoot
   FrameFactsPort get frameFactsPort => this;
   @visibleForTesting
   SpatialKernel get spatialKernel => _spatial;
+
+  // Surface lifecycle.
+  void attachSurface(Object token) {
+    _ensureNotDisposed();
+    final activeToken = _activeSurfaceToken;
+    if (activeToken == null || identical(activeToken, token)) {
+      _activeSurfaceToken = token;
+
+      return;
+    }
+
+    throw StateError('CanvasRuntime already has an active CanvasSurface.');
+  }
+
+  void detachSurface(Object token) {
+    if (identical(_activeSurfaceToken, token)) {
+      _activeSurfaceToken = null;
+    }
+  }
+
+  bool isActiveSurface(Object token) {
+    return identical(_activeSurfaceToken, token);
+  }
 
   // Frame facade.
   MainFramePaintOutput buildResourceFreeMainFrame({
@@ -1008,6 +1032,7 @@ final class RuntimeRoot
     final cleanupOutcome = _interactionEngine.disposeCleanup();
     _interactionEngine.clearInteractionRequests();
     _isDisposed = true;
+    _activeSurfaceToken = null;
     if (cleanupOutcome.publicStateNeeded) {
       _publishRuntimeState();
     }
