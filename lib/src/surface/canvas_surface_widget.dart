@@ -5,6 +5,7 @@ import '../api/canvas_runtime_surface_bridge.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../frame/paint_asset_binding_service.dart';
+import '../resources/surface_resource_session.dart';
 import 'main_painter.dart';
 import 'overlay_painter.dart';
 
@@ -36,6 +37,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   final Object _surfaceToken = Object();
   CanvasRuntime? _activeRuntime;
   CanvasRuntimeSurfacePort? _activePort;
+  SurfaceResourceSession? _activeSession;
   bool _isSurfaceAttached = false;
 
   @override
@@ -52,6 +54,10 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       _attachSurface(widget.runtime);
 
       return;
+    }
+
+    if (!identical(oldWidget.resourceResolver, widget.resourceResolver)) {
+      _activeSession?.replaceResolver(widget.resourceResolver);
     }
 
     if (oldWidget.interactive && !widget.interactive) {
@@ -99,21 +105,41 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     if (port == null) {
       return;
     }
-    port.attachSurface(_surfaceToken);
+    SurfaceResourceSession? session;
+    try {
+      port.attachSurface(_surfaceToken);
+      session = SurfaceResourceSession(
+        resolver: widget.resourceResolver,
+        mutationGuard: port.resolverMutationGuard,
+      );
+      port.installSurfaceResourceSession(_surfaceToken, session);
+    } catch (_) {
+      session?.drop();
+      port.detachSurface(_surfaceToken);
+      rethrow;
+    }
     _activeRuntime = runtime;
     _activePort = port;
+    _activeSession = session;
     _isSurfaceAttached = true;
   }
 
   void _detachSurface() {
+    final session = _activeSession;
     if (!_isSurfaceAttached) {
+      session?.drop();
+      _activeSession = null;
       _activeRuntime = null;
       _activePort = null;
 
       return;
     }
-    _activePort?.detachSurface(_surfaceToken);
+    final didRuntimeDetach = _activePort?.detachSurface(_surfaceToken) ?? false;
+    if (!didRuntimeDetach) {
+      session?.drop();
+    }
     _isSurfaceAttached = false;
+    _activeSession = null;
     _activeRuntime = null;
     _activePort = null;
   }

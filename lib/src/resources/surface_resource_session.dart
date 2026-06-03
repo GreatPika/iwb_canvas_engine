@@ -1,5 +1,5 @@
 import '../contracts/internal/resolver_mutation_guard.dart';
-import '../contracts/internal/resource_session_invalidation_sink.dart';
+import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'resource_cache.dart';
@@ -14,7 +14,7 @@ typedef _SuppressedResolveKey = ({
 // The session intentionally coordinates every explicit resolver outcome in one
 // owner so cache, suppression, budget, and resolver generation cannot drift.
 // ignore: coupling-between-object-classes, number-of-methods
-final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
+final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   SurfaceResourceSession({
     required CanvasResourceResolver? resolver,
     required ResolverMutationGuard mutationGuard,
@@ -185,6 +185,7 @@ final class SurfaceResourceSession implements ResourceSessionInvalidationSink {
     _cache.clear();
   }
 
+  @override
   void drop() {
     _isDropped = true;
     _resolver = null;

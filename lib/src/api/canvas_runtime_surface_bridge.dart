@@ -40,12 +40,14 @@ final class CanvasRuntimeSurfacePort {
   }
 
   void installSurfaceResourceSession(
-    Object _,
-    SurfaceResourceSessionLifecycle _,
-  ) {}
+    Object token,
+    SurfaceResourceSessionLifecycle session,
+  ) {
+    _root.installSurfaceResourceSession(token, session);
+  }
 
-  void detachSurface(Object token) {
-    _root.detachSurface(token);
+  bool detachSurface(Object token) {
+    return _root.detachSurface(token);
   }
 
   void handleSurfaceInteractiveDisabled(Object _) {}

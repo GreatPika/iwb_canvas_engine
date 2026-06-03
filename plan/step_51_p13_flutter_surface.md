@@ -303,7 +303,7 @@ Depends On:
 
 Unit 0.
 
-### [ ] Unit 2: SurfaceResourceSession lifecycle and runtime-installed session handle
+### [x] Unit 2: SurfaceResourceSession lifecycle and runtime-installed session handle
 
 Owner:
 

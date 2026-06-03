@@ -20,6 +20,7 @@ import '../contracts/internal/resource_session_invalidation_sink.dart';
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
+import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
@@ -183,6 +184,7 @@ final class RuntimeRoot
   bool _isDeliveringCommitEffects = false;
   bool _isRunningResolverCallback = false;
   Object? _activeSurfaceToken;
+  SurfaceResourceSessionLifecycle? _activeSurfaceResourceSession;
   ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
 
   // Lazy internal adapters and kernels.
@@ -289,14 +291,36 @@ final class RuntimeRoot
     throw StateError('CanvasRuntime already has an active CanvasSurface.');
   }
 
-  void detachSurface(Object token) {
-    if (identical(_activeSurfaceToken, token)) {
-      _activeSurfaceToken = null;
+  bool detachSurface(Object token) {
+    if (!identical(_activeSurfaceToken, token)) {
+      return false;
     }
+    _dropActiveSurfaceResourceSession();
+    _activeSurfaceToken = null;
+
+    return true;
   }
 
   bool isActiveSurface(Object token) {
     return identical(_activeSurfaceToken, token);
+  }
+
+  void installSurfaceResourceSession(
+    Object token,
+    SurfaceResourceSessionLifecycle session,
+  ) {
+    ensureRuntimeMutationAllowed();
+    if (!isActiveSurface(token)) {
+      throw StateError('CanvasSurface is not active for this CanvasRuntime.');
+    }
+    _dropActiveSurfaceResourceSession();
+    _activeSurfaceResourceSession = session;
+    _activeResourceSessionInvalidationSink = session;
+  }
+
+  @visibleForTesting
+  SurfaceResourceSessionLifecycle? get activeSurfaceResourceSessionForTesting {
+    return _activeSurfaceResourceSession;
   }
 
   // Frame facade.
@@ -1032,6 +1056,7 @@ final class RuntimeRoot
     final cleanupOutcome = _interactionEngine.disposeCleanup();
     _interactionEngine.clearInteractionRequests();
     _isDisposed = true;
+    _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
     if (cleanupOutcome.publicStateNeeded) {
       _publishRuntimeState();
@@ -1262,6 +1287,18 @@ final class RuntimeRoot
     for (final id in outcome.dirtyResourceIds) {
       sink.invalidateResourceImage(id);
     }
+  }
+
+  void _dropActiveSurfaceResourceSession() {
+    final session = _activeSurfaceResourceSession;
+    if (session == null) {
+      return;
+    }
+    _activeSurfaceResourceSession = null;
+    if (identical(_activeResourceSessionInvalidationSink, session)) {
+      _activeResourceSessionInvalidationSink = null;
+    }
+    session.drop();
   }
 
   void _deliverResourceDirtyResult(List<CommitDeliveryEffect> effects) {
