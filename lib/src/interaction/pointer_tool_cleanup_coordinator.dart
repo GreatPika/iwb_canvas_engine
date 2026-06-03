@@ -21,9 +21,7 @@ final class PointerToolCleanupCoordinator {
           ? PointerSessionDisposition.released
           : PointerSessionDisposition.preserved,
       pendingLineDisposition: pendingLineDisposition,
-      pendingContextTapDisposition: request.hasPendingContextTap
-          ? PointerPendingContextTapDisposition.cleared
-          : PointerPendingContextTapDisposition.none,
+      pendingContextTapDisposition: _pendingContextTapDisposition(request),
       loadPreparedBeforeInstall:
           request.reason == PointerCleanupReason.preparedLoadSuccess,
       disposeBeforeStreamClose: request.reason == PointerCleanupReason.dispose,
@@ -74,5 +72,18 @@ final class PointerToolCleanupCoordinator {
     }
 
     return PointerPendingLineDisposition.cleared;
+  }
+
+  PointerPendingContextTapDisposition _pendingContextTapDisposition(
+    PointerCleanupRequest request,
+  ) {
+    if (!request.hasPendingContextTap) {
+      return PointerPendingContextTapDisposition.none;
+    }
+    if (request.preservePendingContextTap) {
+      return PointerPendingContextTapDisposition.preserved;
+    }
+
+    return PointerPendingContextTapDisposition.cleared;
   }
 }

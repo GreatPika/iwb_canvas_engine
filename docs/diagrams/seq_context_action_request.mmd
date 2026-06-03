@@ -86,6 +86,12 @@ sequenceDiagram
     ReadPort-->>IE: content target facts
     IE->>IE: store pending content target, generation, elementRevision, family, controllerEpoch, timestamp, viewPosition, and worldPosition
     Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
+    opt first tap also selects content in move mode
+      IE->>IE: pair same terminal sample with zero-area marquee selection intent
+      IE->>Cleanup: selection post-commit cleanup preserving pending context tap
+      Cleanup-->>IE: PointerCleanupOutcome(selection session released, pending tap preserved)
+      IE-->>Signals: publish normal select-marquee action and selection state
+    end
   else first tap has no content target
     IE->>IE: store pending empty-canvas target, timestamp, viewPosition, worldPosition, and controllerEpoch
     Note over IE,Signals: Background-only coverage is still an empty-canvas target. No document, revision, spatial, projection, resource, selection, preview, repaint, or action effect is produced.

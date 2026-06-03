@@ -755,8 +755,10 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/interaction/context_action_request_test.dart` proves direct and
   pointer-sample context-action request issuance, target classification,
   request id generation, live registry guard facts, finite-position validation,
-  rejected invalid/stale/budget target reads with no public request, accepted
-  asynchronous stream delivery, and stream-only public effects.
+  selection taps preserving the first-tap context history for universal
+  double-tap recognition, rejected invalid/stale/budget target reads with no
+  public request, accepted asynchronous stream delivery, and stream-only public
+  effects.
 - `test/geometry/eraser_exact_budget_no_partial_commit_test.dart` proves
   terminal eraser budget overflow cleans up without partial document mutation,
   action delivery, or DiagnosticsHub allocation.

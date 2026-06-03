@@ -44,6 +44,8 @@ stateDiagram-v2
     First tap detection is gesture tracking only.
     It reads current target data and may remember
     a content-element or empty-canvas candidate.
+    A move-mode selection tap may also commit selection,
+    but post-commit cleanup preserves pending tap history.
   end note
 
   FirstTapGate --> TopTargetFirst: "query committed content hit candidates"

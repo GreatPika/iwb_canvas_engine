@@ -311,10 +311,13 @@ non-finite position is rejected before target resolution and request emission.
 
 Engine-owned pointer-sample recognition remains separate: the first tap may
 store a pending context tap candidate, and the second tap must revalidate the
-current target class and target facts before request emission. Direct
-`handleDoubleTap` bypasses that pending candidate requirement while still
-clearing stale pending context tap history before it resolves the current
-target.
+current target class and target facts before request emission. When the first
+tap is also a move-mode selection tap, the selection commit may update
+selection state and emit the normal select-marquee action, but post-commit
+cleanup must preserve the pending context tap history so the next fast tap is
+recognized as the second tap. Direct `handleDoubleTap` bypasses that pending
+candidate requirement while still clearing stale pending context tap history
+before it resolves the current target.
 
 Content-element targets carry an immutable public `CanvasElement` snapshot and
 `boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is

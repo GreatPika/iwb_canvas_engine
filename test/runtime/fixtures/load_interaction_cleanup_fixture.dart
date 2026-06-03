@@ -383,10 +383,11 @@ void _startEraserSession(RuntimeRoot root) {
 }
 
 void _startPendingContextTap(RuntimeRoot root) {
+  const position = Offset(20, 20);
   root.handlePointer(
     CanvasPointerSample(
       pointerId: 1,
-      position: Offset.zero,
+      position: position,
       phase: CanvasPointerLifecyclePhase.down,
       kind: PointerDeviceKind.touch,
     ),
@@ -394,7 +395,7 @@ void _startPendingContextTap(RuntimeRoot root) {
   root.handlePointer(
     CanvasPointerSample(
       pointerId: 1,
-      position: Offset.zero,
+      position: position,
       phase: CanvasPointerLifecyclePhase.up,
       kind: PointerDeviceKind.touch,
     ),

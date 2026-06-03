@@ -1485,7 +1485,11 @@ final class RuntimeRoot
           ],
         ),
       );
-      _cleanupMarquee(PointerCleanupReason.postSuccessCommit, publish: false);
+      _cleanupMarquee(
+        PointerCleanupReason.postSuccessCommit,
+        publish: false,
+        preservePendingContextTap: intent.preservePendingContextTap,
+      );
       _deliverEditCommitResult(applyResult);
     } on Object {
       _cleanupMarquee(PointerCleanupReason.editFailure);
@@ -1494,8 +1498,15 @@ final class RuntimeRoot
     }
   }
 
-  void _cleanupMarquee(PointerCleanupReason reason, {bool publish = true}) {
-    final outcome = _interactionEngine.finishMarquee(reason);
+  void _cleanupMarquee(
+    PointerCleanupReason reason, {
+    bool publish = true,
+    bool preservePendingContextTap = false,
+  }) {
+    final outcome = _interactionEngine.finishMarquee(
+      reason,
+      preservePendingContextTap: preservePendingContextTap,
+    );
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }

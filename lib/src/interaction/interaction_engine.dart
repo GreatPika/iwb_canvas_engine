@@ -233,8 +233,14 @@ final class InteractionEngine {
     return _cleanupWithReason(reason);
   }
 
-  PointerCleanupOutcome finishMarquee(PointerCleanupReason reason) {
-    return _cleanupWithReason(reason);
+  PointerCleanupOutcome finishMarquee(
+    PointerCleanupReason reason, {
+    bool preservePendingContextTap = false,
+  }) {
+    return _cleanupWithReason(
+      reason,
+      preservePendingContextTap: preservePendingContextTap,
+    );
   }
 
   PointerCleanupOutcome finishDrawStroke(PointerCleanupReason reason) {
@@ -893,11 +899,50 @@ final class InteractionEngine {
     if (intent == null) {
       return null;
     }
+    final preservePendingContextTap = _tryStorePendingContextTap(sample);
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
-      marqueeCommit: intent,
+      marqueeCommit: _marqueeIntentWithContextTapDisposition(
+        intent,
+        preservePendingContextTap: preservePendingContextTap,
+      ),
+    );
+  }
+
+  bool _tryStorePendingContextTap(NormalizedPointerSample sample) {
+    final facts = _admittedContextTargetFacts(
+      readPort.pendingContextTapFacts(
+        ContextTargetReadRequest(worldPosition: sample.worldPosition),
+      ),
+    );
+    if (facts == null) {
+      return false;
+    }
+    _pendingContextTap = _contextActionRouter.pendingTap(
+      sample: sample,
+      facts: facts,
+    );
+
+    return true;
+  }
+
+  MarqueeCommitIntent _marqueeIntentWithContextTapDisposition(
+    MarqueeCommitIntent intent, {
+    required bool preservePendingContextTap,
+  }) {
+    if (!preservePendingContextTap) {
+      return intent;
+    }
+
+    return MarqueeCommitIntent(
+      sessionId: intent.sessionId,
+      pointerToken: intent.pointerToken,
+      previousSelectionIds: intent.previousSelectionIds,
+      nextSelectionIds: intent.nextSelectionIds,
+      rectWorld: intent.rectWorld,
+      preservePendingContextTap: true,
     );
   }
 
@@ -1337,7 +1382,10 @@ final class InteractionEngine {
     );
   }
 
-  PointerCleanupOutcome _cleanupWithReason(PointerCleanupReason reason) {
+  PointerCleanupOutcome _cleanupWithReason(
+    PointerCleanupReason reason, {
+    bool preservePendingContextTap = false,
+  }) {
     return cleanupPointerTool(
       PointerCleanupRequest(
         reason: reason,
@@ -1347,6 +1395,7 @@ final class InteractionEngine {
         ownsPendingLine: activeSessionOwnsPendingLine,
         hasPendingLine: _pendingLine != null,
         hasPendingContextTap: _pendingContextTap != null,
+        preservePendingContextTap: preservePendingContextTap,
       ),
     );
   }

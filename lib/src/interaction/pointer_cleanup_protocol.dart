@@ -77,6 +77,7 @@ final class PointerCleanupRequest {
     this.ownsPendingLine = false,
     this.hasPendingLine = false,
     this.hasPendingContextTap = false,
+    this.preservePendingContextTap = false,
   });
 
   final PointerCleanupReason reason;
@@ -86,4 +87,5 @@ final class PointerCleanupRequest {
   final bool ownsPendingLine;
   final bool hasPendingLine;
   final bool hasPendingContextTap;
+  final bool preservePendingContextTap;
 }

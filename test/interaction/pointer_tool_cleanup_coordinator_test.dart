@@ -76,6 +76,7 @@ void _verifyCleanupDispositions() {
 
   _expectLoadCleanupDispositions(coordinator);
   _expectInteractiveFalsePendingLineDispositions(coordinator);
+  _expectPreservedPendingContextTapDisposition(coordinator);
   _expectDisposeCleanupDisposition(coordinator);
 }
 
@@ -124,6 +125,33 @@ void _expectInteractiveFalsePendingLineDispositions(
   expect(
     lineOwnedInteractiveFalse.pendingLineDisposition,
     PointerPendingLineDisposition.cleared,
+  );
+}
+
+void _expectPreservedPendingContextTapDisposition(
+  PointerToolCleanupCoordinator coordinator,
+) {
+  final preserved = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.postSuccessCommit,
+      hasPendingContextTap: true,
+      preservePendingContextTap: true,
+    ),
+  );
+  final cleared = coordinator.cleanup(
+    const PointerCleanupRequest(
+      reason: PointerCleanupReason.postSuccessCommit,
+      hasPendingContextTap: true,
+    ),
+  );
+
+  expect(
+    preserved.pendingContextTapDisposition,
+    PointerPendingContextTapDisposition.preserved,
+  );
+  expect(
+    cleared.pendingContextTapDisposition,
+    PointerPendingContextTapDisposition.cleared,
   );
 }
 

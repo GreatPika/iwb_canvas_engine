@@ -26,8 +26,15 @@ void main() {
     );
   });
   _registerRejectedContextTargetTests();
+  _registerPointerSampleContextTapTests();
+}
+
+void _registerPointerSampleContextTapTests() {
   test('pointer sample down-up double tap emits one request', () {
     return expectLater(_verifyPointerSampleDoubleTapRequest(), completes);
+  });
+  test('pointer sample selection tap still starts double tap history', () {
+    return expectLater(_verifySelectionTapStartsDoubleTapHistory(), completes);
   });
   test('pointer sample double tap works on selected content', () {
     return expectLater(_verifySelectedContentPointerRequest(), completes);
@@ -283,6 +290,41 @@ Future<void> _verifyPointerSampleDoubleTapRequest() async {
   } finally {
     await scenario.dispose();
   }
+}
+
+Future<void> _verifySelectionTapStartsDoubleTapHistory() async {
+  final scenario = _RuntimeContextRequestScenario(selectableContent: true);
+  try {
+    _tapPointer(scenario.root, const Offset(20, 0), timestampMs: 1);
+    _expectSelectionTapSetupStarted(scenario);
+
+    _tapPointer(scenario.root, const Offset(21, 0), timestampMs: 2);
+    await _flushEvents();
+
+    _expectSelectionTapDoubleTapRequest(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+void _expectSelectionTapSetupStarted(_RuntimeContextRequestScenario scenario) {
+  expect(scenario.root.selection.selectedElementIds, {
+    CanvasElementId('rect-a'),
+  });
+  expect(scenario.actions, hasLength(1));
+  expect(scenario.actions.single.type, CanvasActionType.selectMarquee);
+  expect(scenario.effectBatches, hasLength(1));
+}
+
+void _expectSelectionTapDoubleTapRequest(
+  _RuntimeContextRequestScenario scenario,
+) {
+  expect(scenario.requests, hasLength(1));
+  final request = scenario.requests.single;
+  expect(request.timestampMs, 2);
+  expect(request.target, isA<CanvasContentElementContextActionTarget>());
+  expect(scenario.actions, hasLength(1));
+  expect(scenario.effectBatches, hasLength(1));
 }
 
 Future<void> _verifySelectedContentPointerRequest() async {

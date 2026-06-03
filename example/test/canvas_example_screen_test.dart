@@ -27,6 +27,7 @@ void main() {
   _registerAddSampleEntryPointTest();
   _registerTextStyleDockTest();
   _registerInlineTextEditOverlayCommitTest();
+  _registerInlineTextEditSurfaceDoubleTapTest();
   _registerInlineTextEditOverlayCoverageTest();
   _registerInlineTextEditOverlayDismissTest();
   _registerJsonExportDialogTest();
@@ -395,6 +396,30 @@ void _registerInlineTextEditOverlayCommitTest() {
       expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
     },
   );
+}
+
+void _registerInlineTextEditSurfaceDoubleTapTest() {
+  testWidgets('surface double tap opens inline text overlay after selection', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'screen-double-tap-text');
+    await _pumpScreen(tester, viewModel);
+
+    await _tapSurfaceAt(tester, const Offset(60, 0));
+    await tester.pump();
+
+    expect(viewModel.activeTextEdit, isNull);
+    expect(viewModel.selectedElementIds, {textId});
+
+    await _tapSurfaceAt(tester, const Offset(61, 0));
+    await tester.pump();
+    await tester.pump();
+
+    expect(viewModel.activeTextEdit, isNotNull);
+    expect(find.byKey(const ValueKey('text.edit.field')), findsOneWidget);
+  });
 }
 
 void _registerInlineTextEditOverlayCoverageTest() {
@@ -863,6 +888,13 @@ Future<void> _openTextOverlay(
   await tester.pump();
   expect(viewModel.activeTextEdit, isNotNull);
   expect(find.byKey(const ValueKey('text.edit.field')), findsOneWidget);
+}
+
+Future<void> _tapSurfaceAt(WidgetTester tester, Offset localPosition) async {
+  final topLeft = tester.getTopLeft(
+    find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host')),
+  );
+  await tester.tapAt(topLeft + localPosition);
 }
 
 void _tapPointer(CanvasRuntime runtime, Offset position) {

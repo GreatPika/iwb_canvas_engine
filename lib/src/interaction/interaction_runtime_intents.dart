@@ -40,6 +40,7 @@ final class MarqueeCommitIntent {
     required Iterable<CanvasElementId> previousSelectionIds,
     required Iterable<CanvasElementId> nextSelectionIds,
     required this.rectWorld,
+    this.preservePendingContextTap = false,
   }) : previousSelectionIds = List.unmodifiable(previousSelectionIds),
        nextSelectionIds = List.unmodifiable(nextSelectionIds);
 
@@ -48,6 +49,7 @@ final class MarqueeCommitIntent {
   final List<CanvasElementId> previousSelectionIds;
   final List<CanvasElementId> nextSelectionIds;
   final Rect rectWorld;
+  final bool preservePendingContextTap;
 }
 
 final class DrawStrokeCommitIntent {
