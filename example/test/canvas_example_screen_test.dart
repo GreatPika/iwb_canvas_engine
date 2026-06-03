@@ -23,6 +23,9 @@ void main() {
   _registerSelectionFlipHorizontalDockTest();
   _registerSelectionDeleteDockTest();
   _registerAddSampleEntryPointTest();
+  _registerTextStyleDockTest();
+  _registerInlineTextEditOverlayCommitTest();
+  _registerInlineTextEditOverlayDismissTest();
   _registerPendingLineOverlayTest();
   _registerPendingLinePainterTest();
 }
@@ -314,6 +317,83 @@ void _registerAddSampleEntryPointTest() {
   });
 }
 
+void _registerTextStyleDockTest() {
+  testWidgets('text controls update selected public text element', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'screen-style-text');
+    viewModel.setSelection([textId]);
+    await _pumpScreen(tester, viewModel);
+
+    expect(find.byKey(const ValueKey('text.bold')), findsOneWidget);
+    await _applyTextStyleDockControls(tester);
+    _expectUpdatedTextStyle(viewModel.document, textId);
+  });
+}
+
+void _registerInlineTextEditOverlayCommitTest() {
+  testWidgets(
+    'inline text overlay focuses and commits through public command',
+    (tester) async {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'screen-edit-text');
+      await _pumpScreen(tester, viewModel);
+
+      await _openTextOverlay(tester, viewModel);
+
+      final field = tester.widget<TextField>(
+        find.byKey(const ValueKey('text.edit.field')),
+      );
+      expect(field.focusNode?.hasFocus, isTrue);
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'hello',
+      );
+
+      await tester.enterText(
+        find.byKey(const ValueKey('text.edit.field')),
+        'updated',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'updated',
+      );
+      expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
+    },
+  );
+}
+
+void _registerInlineTextEditOverlayDismissTest() {
+  testWidgets('inline text overlay dismisses without document mutation', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'screen-dismiss-text');
+    await _pumpScreen(tester, viewModel);
+
+    await _openTextOverlay(tester, viewModel);
+    await tester.enterText(
+      find.byKey(const ValueKey('text.edit.field')),
+      'ignored',
+    );
+    await tester.tap(find.byKey(const ValueKey('text.edit.dismiss')));
+    await tester.pump();
+
+    expect(
+      (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+      'hello',
+    );
+    expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
+  });
+}
+
 void _registerPendingLineOverlayTest() {
   testWidgets('pending line overlay projects public preview state', (
     tester,
@@ -413,6 +493,24 @@ CanvasElementId _addRect(CanvasRuntime runtime, String id) {
   return elementId;
 }
 
+CanvasElementId _addText(CanvasRuntime runtime, String id) {
+  final elementId = CanvasElementId(id);
+  runtime.edits.edit((edit) {
+    edit.addElement(
+      CanvasTextElement(
+        id: elementId,
+        text: 'hello',
+        color: const Color(0xFF111827),
+        textDirection: TextDirection.ltr,
+        transform: CanvasTransform.translation(const Offset(60, 0)),
+      ),
+      layerId: CanvasLayerId('layer-auto-0'),
+    );
+  });
+
+  return elementId;
+}
+
 CanvasElement _findElement(CanvasDocument document, CanvasElementId id) {
   final element = _tryFindElement(document, id);
   if (element == null) {
@@ -445,8 +543,81 @@ Future<void> _tapTool(
   expect(viewModel.drawTool, expected);
 }
 
+Future<void> _tapScrollableControl(
+  WidgetTester tester,
+  ValueKey<String> key,
+) async {
+  final finder = find.byKey(key);
+  await tester.scrollUntilVisible(
+    finder,
+    80,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(finder);
+  await tester.pump();
+}
+
+Future<void> _selectTextMenuValue(
+  WidgetTester tester, {
+  required ValueKey<String> menuKey,
+  required Finder option,
+}) async {
+  await _tapScrollableControl(tester, menuKey);
+  await tester.pumpAndSettle();
+  await tester.tap(option);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _applyTextStyleDockControls(WidgetTester tester) async {
+  await _tapScrollableControl(tester, const ValueKey('text.bold'));
+  await _tapScrollableControl(tester, const ValueKey('text.italic'));
+  await _tapScrollableControl(tester, const ValueKey('text.underline'));
+  await _selectTextMenuValue(
+    tester,
+    menuKey: const ValueKey('text.align.menu'),
+    option: find.byIcon(Icons.format_align_center).last,
+  );
+  await _selectTextMenuValue(
+    tester,
+    menuKey: const ValueKey('text.font.size.menu'),
+    option: find.text('32').last,
+  );
+  await _selectTextMenuValue(
+    tester,
+    menuKey: const ValueKey('text.line.height.menu'),
+    option: find.text('1.5').last,
+  );
+  await _selectTextMenuValue(
+    tester,
+    menuKey: const ValueKey('text.color.menu'),
+    option: find.text(_colorLabel(const Color(0xFFE53935))).last,
+  );
+}
+
+void _expectUpdatedTextStyle(CanvasDocument document, CanvasElementId textId) {
+  final text = _findElement(document, textId) as CanvasTextElement;
+  expect(text.isBold, isTrue);
+  expect(text.isItalic, isTrue);
+  expect(text.isUnderline, isTrue);
+  expect(text.align, TextAlign.center);
+  expect(text.fontSize, 32);
+  expect(text.lineHeight, 1.5);
+  expect(text.color.toARGB32(), 0xFFE53935);
+}
+
 String _colorLabel(Color color) {
   return '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
+}
+
+Future<void> _openTextOverlay(
+  WidgetTester tester,
+  CanvasExampleViewModel viewModel,
+) async {
+  viewModel.runtime.tools.handleDoubleTap(position: const Offset(60, 0));
+  await tester.pump();
+  await tester.pump();
+  expect(viewModel.activeTextEdit, isNotNull);
+  expect(find.byKey(const ValueKey('text.edit.field')), findsOneWidget);
 }
 
 void _tapPointer(CanvasRuntime runtime, Offset position) {

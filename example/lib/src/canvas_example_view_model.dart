@@ -41,6 +41,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   bool _disposed = false;
   CanvasActionCommitted? _lastCommittedAction;
   CanvasContextActionRequested? _lastContextRequest;
+  CanvasExampleTextEditSession? _activeTextEdit;
   String? _lastExportedJson;
   String? _sampleImageError;
   int _sampleImageErrorRevision = 0;
@@ -69,8 +70,18 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   Set<CanvasElementId> get selectedElementIds =>
       _runtime.selection.selectedElementIds;
   bool get hasSelection => selectedElementIds.isNotEmpty;
+  CanvasTextElement? get selectedTextElement {
+    if (selectedElementIds.length != 1) {
+      return null;
+    }
+
+    return _findTextElement(selectedElementIds.single);
+  }
+
+  bool get hasSelectedTextElement => selectedTextElement != null;
   CanvasActionCommitted? get lastCommittedAction => _lastCommittedAction;
   CanvasContextActionRequested? get lastContextRequest => _lastContextRequest;
+  CanvasExampleTextEditSession? get activeTextEdit => _activeTextEdit;
   String? get lastExportedJson => _lastExportedJson;
   String? get sampleImageError => _sampleImageError;
   int get sampleImageErrorRevision => _sampleImageErrorRevision;
@@ -169,8 +180,106 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     });
   }
 
+  bool toggleSelectedTextBold() {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            isBold: CanvasFieldSet(!text.isBold),
+          ),
+        );
+  }
+
+  bool toggleSelectedTextItalic() {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            isItalic: CanvasFieldSet(!text.isItalic),
+          ),
+        );
+  }
+
+  bool toggleSelectedTextUnderline() {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            isUnderline: CanvasFieldSet(!text.isUnderline),
+          ),
+        );
+  }
+
+  bool setSelectedTextAlign(ui.TextAlign align) {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(id: text.id, align: CanvasFieldSet(align)),
+        );
+  }
+
+  bool setSelectedTextFontSize(double fontSize) {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            fontSize: CanvasFieldSet(fontSize),
+          ),
+        );
+  }
+
+  bool setSelectedTextLineHeight(double lineHeight) {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            lineHeight: CanvasFieldSet(lineHeight),
+          ),
+        );
+  }
+
+  bool setSelectedTextColor(ui.Color color) {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(id: text.id, color: CanvasFieldSet(color)),
+        );
+  }
+
   CanvasClearResult clearCanvas() {
     return _runtime.commands.clearContent(removeUnusedResources: true);
+  }
+
+  bool commitActiveTextEdit(String text) {
+    final session = _activeTextEdit;
+    if (session == null) {
+      return false;
+    }
+    final didCommit = _runtime.commands.commitTextEdit(session.requestId, text);
+    _activeTextEdit = null;
+    _notifyIfActive();
+
+    return didCommit;
+  }
+
+  void dismissActiveTextEdit() {
+    if (_activeTextEdit == null) {
+      return;
+    }
+    _activeTextEdit = null;
+    _notifyIfActive();
   }
 
   void requestAddSample() {
@@ -222,6 +331,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
       return;
     }
     _disposed = true;
+    _activeTextEdit = null;
     _runtime.state.removeListener(_handleRuntimeChanged);
     unawaited(_actionsSubscription.cancel());
     unawaited(_contextRequestSubscription.cancel());
@@ -238,6 +348,15 @@ final class CanvasExampleViewModel extends ChangeNotifier {
       final current = edit.readDraftDocument().background.grid;
       edit.setGrid(update(current));
     });
+  }
+
+  bool _updateSelectedText(CanvasTextElementUpdate update) {
+    var didUpdate = false;
+    _runtime.edits.edit((edit) {
+      didUpdate = edit.updateElement(update);
+    });
+
+    return didUpdate;
   }
 
   Future<void> _loadSampleImage() async {
@@ -344,6 +463,18 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     return CanvasElementId(value);
   }
 
+  CanvasTextElement? _findTextElement(CanvasElementId id) {
+    for (final layer in document.layers) {
+      for (final element in layer.elements) {
+        if (element.id == id && element is CanvasTextElement) {
+          return element;
+        }
+      }
+    }
+
+    return null;
+  }
+
   void _handleRuntimeChanged() {
     _notifyIfActive();
   }
@@ -355,7 +486,29 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   void _handleContextActionRequested(CanvasContextActionRequested request) {
     _lastContextRequest = request;
+    _activeTextEdit = _textEditSessionFromRequest(request);
     _notifyIfActive();
+  }
+
+  CanvasExampleTextEditSession? _textEditSessionFromRequest(
+    CanvasContextActionRequested request,
+  ) {
+    final target = request.target;
+    if (target is! CanvasContentElementContextActionTarget) {
+      return null;
+    }
+    final element = target.elementSnapshot;
+    if (element is! CanvasTextElement) {
+      return null;
+    }
+
+    return CanvasExampleTextEditSession(
+      requestId: request.requestId,
+      elementId: element.id,
+      initialText: element.text,
+      boundsWorld: target.boundsWorld,
+      viewPosition: request.viewPosition,
+    );
   }
 
   void _notifyIfActive() {
@@ -363,4 +516,20 @@ final class CanvasExampleViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
+}
+
+final class CanvasExampleTextEditSession {
+  const CanvasExampleTextEditSession({
+    required this.requestId,
+    required this.elementId,
+    required this.initialText,
+    required this.boundsWorld,
+    required this.viewPosition,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final CanvasElementId elementId;
+  final String initialText;
+  final ui.Rect boundsWorld;
+  final ui.Offset viewPosition;
 }

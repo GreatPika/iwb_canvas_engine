@@ -20,6 +20,11 @@ void main() {
   _registerSelectionDeleteTest();
   _registerCameraTests();
   _registerDocumentCommandTests();
+  _registerTextStyleCommandTests();
+  _registerInlineTextEditCommitTest();
+  _registerInlineTextEditNoOpTest();
+  _registerInlineTextEditStaleTest();
+  _registerInlineTextEditDismissTest();
 }
 
 void _registerOwnedRuntimeLifecycleTest() {
@@ -186,35 +191,43 @@ void _registerSelectionProjectionTests() {
 }
 
 void _registerSelectionRotateTest() {
-  test('selection rotation directions mutate the public document distinctly', () {
-    final viewModel = CanvasExampleViewModel();
-    addTearDown(viewModel.dispose);
-    final clockwiseId = _addRect(viewModel.runtime, 'rotate-cw-target');
-    final counterClockwiseId = _addRect(viewModel.runtime, 'rotate-ccw-target');
+  test(
+    'selection rotation directions mutate the public document distinctly',
+    () {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final clockwiseId = _addRect(viewModel.runtime, 'rotate-cw-target');
+      final counterClockwiseId = _addRect(
+        viewModel.runtime,
+        'rotate-ccw-target',
+      );
 
-    final beforeClockwise =
-        _findElement(viewModel.document, clockwiseId).transform;
-    viewModel.setSelection([clockwiseId]);
-    viewModel.rotateSelectionClockwise();
-    final clockwiseTransform =
-        _findElement(viewModel.document, clockwiseId).transform;
-    expect(
-      clockwiseTransform,
-      isNot(beforeClockwise),
-    );
+      final beforeClockwise = _findElement(
+        viewModel.document,
+        clockwiseId,
+      ).transform;
+      viewModel.setSelection([clockwiseId]);
+      viewModel.rotateSelectionClockwise();
+      final clockwiseTransform = _findElement(
+        viewModel.document,
+        clockwiseId,
+      ).transform;
+      expect(clockwiseTransform, isNot(beforeClockwise));
 
-    final beforeCounterClockwise =
-        _findElement(viewModel.document, counterClockwiseId).transform;
-    viewModel.setSelection([counterClockwiseId]);
-    viewModel.rotateSelectionCounterClockwise();
-    final counterClockwiseTransform =
-        _findElement(viewModel.document, counterClockwiseId).transform;
-    expect(
-      counterClockwiseTransform,
-      isNot(beforeCounterClockwise),
-    );
-    expect(counterClockwiseTransform, isNot(clockwiseTransform));
-  });
+      final beforeCounterClockwise = _findElement(
+        viewModel.document,
+        counterClockwiseId,
+      ).transform;
+      viewModel.setSelection([counterClockwiseId]);
+      viewModel.rotateSelectionCounterClockwise();
+      final counterClockwiseTransform = _findElement(
+        viewModel.document,
+        counterClockwiseId,
+      ).transform;
+      expect(counterClockwiseTransform, isNot(beforeCounterClockwise));
+      expect(counterClockwiseTransform, isNot(clockwiseTransform));
+    },
+  );
 }
 
 void _registerSelectionFlipTests() {
@@ -235,8 +248,10 @@ void _registerSelectionFlipTests() {
       isNot(beforeVertical),
     );
 
-    final beforeHorizontal =
-        _findElement(viewModel.document, flipHorizontalId).transform;
+    final beforeHorizontal = _findElement(
+      viewModel.document,
+      flipHorizontalId,
+    ).transform;
     viewModel.setSelection([flipHorizontalId]);
     viewModel.flipSelectionHorizontal();
     expect(
@@ -293,6 +308,120 @@ void _registerDocumentCommandTests() {
   });
 }
 
+void _registerTextStyleCommandTests() {
+  test('selected text style commands mutate public document updates', () {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'style-text');
+
+    viewModel.setSelection([textId]);
+    expect(viewModel.hasSelectedTextElement, isTrue);
+    _applyTextStyleCommands(viewModel);
+    _expectUpdatedTextStyle(viewModel.document, textId);
+  });
+}
+
+void _registerInlineTextEditCommitTest() {
+  test(
+    'text context request opens app session and commit uses public command',
+    () async {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'edit-text');
+
+      await _openTextEdit(viewModel);
+
+      final session = viewModel.activeTextEdit;
+      if (session == null) {
+        fail('Expected an active text edit session.');
+      }
+      expect(session.elementId, textId);
+      expect(session.initialText, 'hello');
+      final beforeCommit =
+          _findElement(viewModel.document, textId) as CanvasTextElement;
+      expect(beforeCommit.text, 'hello');
+      expect(beforeCommit.isVisible, isTrue);
+
+      expect(viewModel.commitActiveTextEdit('updated'), isTrue);
+
+      final afterCommit =
+          _findElement(viewModel.document, textId) as CanvasTextElement;
+      expect(afterCommit.text, 'updated');
+      expect(afterCommit.isVisible, isTrue);
+      expect(viewModel.activeTextEdit, isNull);
+    },
+  );
+}
+
+void _registerInlineTextEditNoOpTest() {
+  test(
+    'same-text commit closes overlay without manual document mutation',
+    () async {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'noop-text');
+      final before = viewModel.document;
+
+      await _openTextEdit(viewModel);
+
+      expect(viewModel.commitActiveTextEdit('hello'), isTrue);
+      expect(viewModel.document, same(before));
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'hello',
+      );
+      expect(viewModel.activeTextEdit, isNull);
+    },
+  );
+}
+
+void _registerInlineTextEditStaleTest() {
+  test(
+    'stale text edit result closes overlay without manual text mutation',
+    () async {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'stale-text');
+
+      await _openTextEdit(viewModel);
+      viewModel.runtime.edits.loadDocument(
+        _documentWithText(textId, 'replacement'),
+      );
+      final beforeCommit = viewModel.document;
+
+      expect(viewModel.commitActiveTextEdit('updated'), isFalse);
+      expect(viewModel.document, same(beforeCommit));
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'replacement',
+      );
+      expect(viewModel.activeTextEdit, isNull);
+    },
+  );
+}
+
+void _registerInlineTextEditDismissTest() {
+  test(
+    'dismiss closes inline text overlay without document mutation',
+    () async {
+      final viewModel = CanvasExampleViewModel();
+      addTearDown(viewModel.dispose);
+      final textId = _addText(viewModel.runtime, 'dismiss-text');
+      final before = viewModel.document;
+
+      await _openTextEdit(viewModel);
+      viewModel.dismissActiveTextEdit();
+
+      expect(viewModel.activeTextEdit, isNull);
+      expect(viewModel.document, same(before));
+      expect(
+        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
+        'hello',
+      );
+    },
+  );
+}
+
 CanvasElementId _addRect(CanvasRuntime runtime, String id) {
   final elementId = CanvasElementId(id);
   runtime.edits.edit((edit) {
@@ -303,6 +432,62 @@ CanvasElementId _addRect(CanvasRuntime runtime, String id) {
   });
 
   return elementId;
+}
+
+CanvasElementId _addText(CanvasRuntime runtime, String id) {
+  final elementId = CanvasElementId(id);
+  runtime.edits.edit((edit) {
+    edit.addElement(
+      _textElement(elementId, 'hello'),
+      layerId: CanvasLayerId('layer-auto-0'),
+    );
+  });
+
+  return elementId;
+}
+
+CanvasTextElement _textElement(CanvasElementId id, String text) {
+  return CanvasTextElement(
+    id: id,
+    text: text,
+    color: const Color(0xFF111827),
+    textDirection: TextDirection.ltr,
+    transform: CanvasTransform.translation(const Offset(60, 0)),
+  );
+}
+
+void _applyTextStyleCommands(CanvasExampleViewModel viewModel) {
+  expect(viewModel.hasSelectedTextElement, isTrue);
+  expect(viewModel.toggleSelectedTextBold(), isTrue);
+  expect(viewModel.toggleSelectedTextItalic(), isTrue);
+  expect(viewModel.toggleSelectedTextUnderline(), isTrue);
+  expect(viewModel.setSelectedTextAlign(TextAlign.center), isTrue);
+  expect(viewModel.setSelectedTextFontSize(32), isTrue);
+  expect(viewModel.setSelectedTextLineHeight(1.5), isTrue);
+  expect(viewModel.setSelectedTextColor(const Color(0xFFE53935)), isTrue);
+}
+
+void _expectUpdatedTextStyle(CanvasDocument document, CanvasElementId textId) {
+  final text = _findElement(document, textId) as CanvasTextElement;
+  expect(text.isBold, isTrue);
+  expect(text.isItalic, isTrue);
+  expect(text.isUnderline, isTrue);
+  expect(text.align, TextAlign.center);
+  expect(text.fontSize, 32);
+  expect(text.lineHeight, 1.5);
+  expect(text.color.toARGB32(), 0xFFE53935);
+}
+
+CanvasDocument _documentWithText(CanvasElementId id, String text) {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-auto-0'),
+        elements: [_textElement(id, text)],
+      ),
+      CanvasLayer(id: CanvasLayerId('layer-auto-1')),
+    ],
+  );
 }
 
 CanvasElement _findElement(CanvasDocument document, CanvasElementId id) {
@@ -350,6 +535,14 @@ Future<CanvasContextActionRequested> _recordContextRequestProjection(
   }
 
   return request;
+}
+
+Future<void> _openTextEdit(CanvasExampleViewModel viewModel) async {
+  viewModel.runtime.tools.handleDoubleTap(position: const Offset(60, 0));
+  await _flushEvents();
+  if (viewModel.activeTextEdit == null) {
+    throw StateError('Expected an active text edit session.');
+  }
 }
 
 Future<void> _flushEvents() => Future<void>.delayed(Duration.zero);

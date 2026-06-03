@@ -252,6 +252,7 @@ final class _MoveControls extends StatelessWidget {
             tooltip: 'Delete selection',
             action: viewModel.deleteSelection,
           ),
+          _TextStyleControls(viewModel: viewModel),
           _addSampleButton(),
         ],
       ),
@@ -287,6 +288,123 @@ final class _MoveControls extends StatelessWidget {
       tooltip: tooltip,
       quarterTurns: quarterTurns,
       onPressed: _selectionAction(action),
+    );
+  }
+}
+
+// Text controls are a separate move-mode group because they are shown only for
+// a selected public text element and mutate text fields, not selection state.
+// ignore: coupling-between-object-classes
+final class _TextStyleControls extends StatelessWidget {
+  const _TextStyleControls({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = viewModel.selectedTextElement;
+    if (text == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      children: [
+        const SizedBox(width: 8),
+        _ToggleCommandButton(
+          key: const ValueKey('text.bold'),
+          icon: Icons.format_bold,
+          tooltip: 'Bold',
+          selected: text.isBold,
+          onPressed: viewModel.toggleSelectedTextBold,
+        ),
+        _ToggleCommandButton(
+          key: const ValueKey('text.italic'),
+          icon: Icons.format_italic,
+          tooltip: 'Italic',
+          selected: text.isItalic,
+          onPressed: viewModel.toggleSelectedTextItalic,
+        ),
+        _ToggleCommandButton(
+          key: const ValueKey('text.underline'),
+          icon: Icons.format_underline,
+          tooltip: 'Underline',
+          selected: text.isUnderline,
+          onPressed: viewModel.toggleSelectedTextUnderline,
+        ),
+        _textAlignMenu(),
+        _textFontSizeMenu(),
+        _textLineHeightMenu(),
+        _textColorMenu(),
+      ],
+    );
+  }
+
+  Widget _textAlignMenu() {
+    return PopupMenuButton<TextAlign>(
+      key: const ValueKey('text.align.menu'),
+      icon: const Icon(Icons.format_align_left),
+      tooltip: 'Text alignment',
+      onSelected: viewModel.setSelectedTextAlign,
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: TextAlign.left,
+          child: Icon(Icons.format_align_left),
+        ),
+        PopupMenuItem(
+          value: TextAlign.center,
+          child: Icon(Icons.format_align_center),
+        ),
+        PopupMenuItem(
+          value: TextAlign.right,
+          child: Icon(Icons.format_align_right),
+        ),
+      ],
+    );
+  }
+
+  Widget _textFontSizeMenu() {
+    return PopupMenuButton<double>(
+      key: const ValueKey('text.font.size.menu'),
+      icon: const Icon(Icons.format_size),
+      tooltip: 'Font size',
+      onSelected: viewModel.setSelectedTextFontSize,
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: 16, child: Text('16')),
+        PopupMenuItem(value: 20, child: Text('20')),
+        PopupMenuItem(value: 24, child: Text('24')),
+        PopupMenuItem(value: 32, child: Text('32')),
+      ],
+    );
+  }
+
+  Widget _textLineHeightMenu() {
+    return PopupMenuButton<double>(
+      key: const ValueKey('text.line.height.menu'),
+      icon: const Icon(Icons.format_line_spacing),
+      tooltip: 'Line height',
+      onSelected: viewModel.setSelectedTextLineHeight,
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: 1, child: Text('1.0')),
+        PopupMenuItem(value: 1.2, child: Text('1.2')),
+        PopupMenuItem(value: 1.5, child: Text('1.5')),
+        PopupMenuItem(value: 2, child: Text('2.0')),
+      ],
+    );
+  }
+
+  Widget _textColorMenu() {
+    return PopupMenuButton<Color>(
+      key: const ValueKey('text.color.menu'),
+      icon: const Icon(Icons.format_color_text),
+      tooltip: 'Text color',
+      onSelected: viewModel.setSelectedTextColor,
+      itemBuilder: (context) => [
+        for (final color in viewModel.penColors)
+          PopupMenuItem(
+            value: color,
+            child: _ColorMenuItem(color: color),
+          ),
+      ],
     );
   }
 }

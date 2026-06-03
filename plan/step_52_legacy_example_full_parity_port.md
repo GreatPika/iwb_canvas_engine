@@ -254,7 +254,7 @@ Depends On:
 
 Unit 1, Unit 3.
 
-### [ ] Unit 5: Text options and inline text editing
+### [x] Unit 5: Text options and inline text editing
 
 Owner:
 
