@@ -185,7 +185,7 @@ The irreversible point is accepted `attachSurface(token)` marking the runtime ac
 
 ## Execution Units
 
-### [ ] Unit 0: P13 source-of-truth and enforcement closure
+### [x] Unit 0: P13 source-of-truth and enforcement closure
 
 Owner:
 

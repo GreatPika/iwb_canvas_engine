@@ -80,10 +80,8 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 
   @override
   Widget build(BuildContext context) {
-    final port = _activePort;
-    if (!_isSurfaceAttached ||
-        !identical(_activeRuntime, widget.runtime) ||
-        port == null) {
+    final port = _currentSurfacePort();
+    if (port == null) {
       return const SizedBox.shrink();
     }
 
@@ -129,6 +127,26 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activePort = port;
     _activeSession = session;
     _isSurfaceAttached = true;
+  }
+
+  CanvasRuntimeSurfacePort? _currentSurfacePort() {
+    final port = _activePort;
+    if (!_isSurfaceAttached ||
+        !identical(_activeRuntime, widget.runtime) ||
+        port == null) {
+      return null;
+    }
+    final currentPort = canvasRuntimeSurfacePortFor(widget.runtime);
+    if (identical(currentPort, port)) {
+      return port;
+    }
+
+    _isSurfaceAttached = false;
+    _activeSession = null;
+    _activeRuntime = null;
+    _activePort = null;
+
+    return null;
   }
 
   void _detachSurface() {

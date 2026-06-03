@@ -267,9 +267,32 @@ Future<void> _expectRuntimeDisposeDropsSessionBeforeWidgetDetach(
     session.resolveImage(descriptorRequest(id: 'resource-a')),
     isA<NoResolverResourceImagePlaceholder>(),
   );
+  await _expectDisposedRuntimeRebuildDetachesSurface(
+    tester,
+    runtime: runtime,
+    resolver: resolver,
+  );
   await tester.pumpWidget(const SizedBox.shrink());
   expect(image.debugDisposed, isFalse);
   image.dispose();
+}
+
+Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
+  WidgetTester tester, {
+  required CanvasRuntime runtime,
+  required CanvasResourceResolver resolver,
+}) async {
+  await tester.pumpWidget(
+    _host(
+      CanvasSurface(
+        runtime: runtime,
+        resourceResolver: resolver,
+        interactive: false,
+      ),
+    ),
+  );
+  expect(tester.takeException(), isNull);
+  expect(_paintHosts(), findsNothing);
 }
 
 bool _runtimeTokenGuardedSessionInstall() {
