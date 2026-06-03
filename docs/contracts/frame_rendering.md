@@ -149,7 +149,7 @@ frame-private collaborators:
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record cache lookup/build inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
 | `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
-| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
+| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` plus selected-move preview delta/revision for decoration movement | ordinary record cache identity, selected move supplement records, static background identity |
 | `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
@@ -274,13 +274,18 @@ does not global sort the scene.
 Selection decoration reads selected ids and selectionRevision through the same
 captured selection facts boundary and is invalidated separately from ordinary
 paint plans. Its decoration key includes `boundsRevision` because selected
-element bounds can change without changing selection membership. `selectedOrder`
-is derived data or a bounded cache keyed by `selectionRevision` and
-`structuralRevision`; it is not a second stored selection source of truth.
-Accepted internal ownership: `SelectionDecorationPlanner` owns the decoration key,
-including `boundsRevision`, and keeps selection decoration state out of
-ordinary record cache identity, selected move supplement records, and static
-background identity.
+element bounds can change without changing selection membership. When
+`CanvasSelectedMovePreview` is active, the key also includes the selected-move
+preview delta and previewRevision, and the decoration bounds are shifted by the
+captured delta for that frame only. This keeps the selection UI visually aligned
+with the selected-move supplement without adding preview state to ordinary
+paint cache identity. `selectedOrder` is derived data or a bounded cache keyed
+by `selectionRevision` and `structuralRevision`; it is not a second stored
+selection source of truth. Accepted internal ownership:
+`SelectionDecorationPlanner` owns the decoration key, including
+`boundsRevision` and selected-move decoration movement facts, and keeps
+selection decoration state out of ordinary record cache identity, selected move
+supplement records, and static background identity.
 
 ### 15.4 Render primitive cache misses
 

@@ -7,6 +7,9 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   _testMarqueeAdmissionAndPreview();
   _testSameRectMoveKeepsPreviewRevision();
+  _testPointClickSelectsTopmostObject();
+  _testPointClickJitterSelectsTopmostOnly();
+  _testPointClickSelectsLine();
   _testUnchangedSelectionCleansWithoutAction();
   _testChangedSelectionCommitsAndEmitsAction();
   _testDeletedCandidateIsSkipped();
@@ -49,6 +52,65 @@ void _testSameRectMoveKeepsPreviewRevision() {
     expect(root.interactionEngine.previewRevision, previewRevision);
     expect(root.state.value, same(beforeSameRectState));
     expect(root.preview, isA<CanvasNoPreview>());
+  });
+}
+
+void _testPointClickSelectsTopmostObject() {
+  test('move-mode point click selects the topmost hit object', () async {
+    final scenario = _scenario();
+    final root = scenario.root;
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(5, 5)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, const Offset(5, 5)),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(root.preview, isA<CanvasNoPreview>());
+    expect(root.interactionEngine.activeSession, isNull);
+    expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+    expect(scenario.actions.single.elementIds, [CanvasElementId('a')]);
+  });
+}
+
+void _testPointClickJitterSelectsTopmostOnly() {
+  test(
+    'move-mode point click with jitter selects only the topmost hit',
+    () async {
+      final scenario = _overlappingScenario();
+      final root = scenario.root;
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, const Offset(5, 5)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, const Offset(6, 5)),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.selection.selectedElementIds, {CanvasElementId('top')});
+      expect(scenario.actions.single.elementIds, [CanvasElementId('top')]);
+    },
+  );
+}
+
+void _testPointClickSelectsLine() {
+  test('move-mode point click selects line hits', () async {
+    final scenario = _lineScenario();
+    final root = scenario.root;
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(5, 0)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.up, const Offset(5, 0)),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(root.selection.selectedElementIds, {CanvasElementId('line-a')});
+    expect(scenario.actions.single.elementIds, [CanvasElementId('line-a')]);
   });
 }
 
@@ -136,6 +198,67 @@ void _expectMarqueeAction(CanvasActionCommitted action) {
 
 _MarqueeScenario _scenario() {
   final root = _runtimeRoot();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  return _MarqueeScenario(root: root, actions: actions);
+}
+
+_MarqueeScenario _overlappingScenario() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('lower'),
+              size: const Size(20, 20),
+            ),
+            CanvasRectElement(
+              id: CanvasElementId('top'),
+              size: const Size(20, 20),
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  return _MarqueeScenario(root: root, actions: actions);
+}
+
+_MarqueeScenario _lineScenario() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [
+            CanvasLineElement(
+              id: CanvasElementId('line-a'),
+              start: Offset.zero,
+              end: const Offset(10, 0),
+              color: const Color(0xFF111111),
+              thickness: 3,
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
   addTearDown(() async {

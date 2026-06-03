@@ -726,7 +726,13 @@ final class _FakeReadPort implements InteractionReadPort {
 
   @override
   MarqueeCommitFacts marqueeCommitFacts(MarqueeCommitReadRequest request) {
-    throw UnimplementedError('marquee is outside this fixture.');
+    return MarqueeCommitFacts(
+      previousSelectedIds: const [],
+      nextSelectedIds: const [],
+      controllerEpoch: 1,
+      selectionRevision: 0,
+      rectWorld: request.rectWorld,
+    );
   }
 
   @override

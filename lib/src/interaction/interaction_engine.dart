@@ -541,7 +541,10 @@ final class InteractionEngine {
         session,
         currentWorld,
       ),
-      PointerSessionKind.drawLineFirstTap => false,
+      PointerSessionKind.drawLineFirstTap => _handleLineFirstTapMove(
+        session,
+        currentWorld,
+      ),
       PointerSessionKind.drawLineEndpoint => _handleLineEndpointMove(
         session,
         currentWorld,
@@ -629,6 +632,31 @@ final class InteractionEngine {
     );
 
     return replacePreview(updatedPreview);
+  }
+
+  bool _handleLineFirstTapMove(PointerSession session, Offset currentWorld) {
+    final firstTap = session.lineFirstTapCapture;
+    if (firstTap == null ||
+        (currentWorld - firstTap.startWorld).distance <=
+            _pointerPolicy.tapSlop) {
+      return false;
+    }
+    final start = _lineMachine.startDrag(
+      firstTap: firstTap,
+      endWorld: currentWorld,
+    );
+    final line = start.line;
+    _activeSession = PointerSession.lineEndpoint(
+      token: session.token,
+      controllerEpoch: session.controllerEpoch,
+      sessionId: session.sessionId,
+      pointerId: session.pointerId,
+      startWorld: line.startWorld,
+      currentWorld: currentWorld,
+      line: line,
+    );
+
+    return replacePreview(line.preview);
   }
 
   bool _handleLineEndpointMove(PointerSession session, Offset currentWorld) {
@@ -797,6 +825,12 @@ final class InteractionEngine {
     PointerSession session,
     InteractionPointerContext context,
   ) {
+    if (_isMarqueeSelectionTapCandidate(session, sample)) {
+      final selectionTap = _tryMarqueeSelectionTapTerminal(sample, session);
+      if (selectionTap != null) {
+        return selectionTap;
+      }
+    }
     if (_isContextTapCandidate(session, sample)) {
       final cleanup = _cleanupActiveTapSessionForContextRecognition();
 
@@ -807,6 +841,14 @@ final class InteractionEngine {
       );
     }
 
+    return _handleNonTapActiveTerminal(sample, session, context);
+  }
+
+  InteractionPointerAdmission _handleNonTapActiveTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
     return switch (session.kind) {
       PointerSessionKind.moveModePointer => _handleSelectedMoveTerminal(
         sample,
@@ -834,6 +876,39 @@ final class InteractionEngine {
         session,
       ),
     };
+  }
+
+  InteractionPointerAdmission? _tryMarqueeSelectionTapTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+  ) {
+    final facts = readPort.marqueeCommitFacts(
+      MarqueeCommitReadRequest(
+        rectWorld: Rect.fromPoints(sample.worldPosition, sample.worldPosition),
+      ),
+    );
+    _recordQueryDiagnostics(facts.query);
+    final terminal = _selectMachine.terminal(session: session, facts: facts);
+    final intent = terminal.intent;
+    if (intent == null) {
+      return null;
+    }
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      marqueeCommit: intent,
+    );
+  }
+
+  bool _isMarqueeSelectionTapCandidate(
+    PointerSession session,
+    NormalizedPointerSample sample,
+  ) {
+    return _mode == CanvasInteractionMode.move &&
+        sample.phase == CanvasPointerLifecyclePhase.up &&
+        session.kind == PointerSessionKind.moveModeMarquee &&
+        _isWithinContextTapSlop(session, sample);
   }
 
   bool _isContextTapCandidate(

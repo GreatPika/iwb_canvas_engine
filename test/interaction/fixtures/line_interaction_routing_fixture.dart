@@ -19,6 +19,10 @@ void main() {
     expect(_verifyEndpointLifecycle, returnsNormally);
   });
 
+  test('first pointer drag previews and commits a line', () {
+    expect(_verifyFirstPointerDragLifecycle, returnsNormally);
+  });
+
   test('same-point endpoint returns line commit intent', () {
     expect(_verifySamePointEndpointCommit, returnsNormally);
   });
@@ -160,6 +164,47 @@ void _verifyEndpointLifecycle() {
   _expectLineCommit(terminal.lineCommit);
   expect(timestamps, isEmpty);
   expect(engine.hasPendingLine, isTrue);
+}
+
+void _verifyFirstPointerDragLifecycle() {
+  final timestamps = <int?>[];
+  final engine = _engine();
+
+  final down = engine.handlePointerSample(
+    _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.down),
+    _context(1, timestamps),
+  );
+  final move = engine.handlePointerSample(
+    _sample(1, const Offset(9, 11), CanvasPointerLifecyclePhase.move),
+    _context(1, timestamps),
+  );
+  final preview = engine.preview as CanvasLinePreview;
+  final terminal = engine.handlePointerSample(
+    _sample(1, const Offset(12, 13), CanvasPointerLifecyclePhase.up),
+    _context(1, timestamps),
+  );
+
+  expect(down.kind, InteractionPointerAdmissionKind.admitted);
+  expect(move.kind, InteractionPointerAdmissionKind.admitted);
+  _expectDragStartLinePreview(preview);
+  _expectDragStartLineCommit(terminal.lineCommit);
+  expect(timestamps, isEmpty);
+  expect(engine.hasPendingLine, isFalse);
+}
+
+void _expectDragStartLinePreview(CanvasLinePreview preview) {
+  expect(preview.start, const Offset(2, 3));
+  expect(preview.end, const Offset(9, 11));
+  expect(preview.color, const Color(0xFF112233));
+  expect(preview.thickness, 6);
+}
+
+void _expectDragStartLineCommit(DrawLineCommitIntent? intent) {
+  final commit = intent as DrawLineCommitIntent;
+  expect(commit.startWorld, const Offset(2, 3));
+  expect(commit.endWorld, const Offset(12, 13));
+  expect(commit.color, const Color(0xFF112233));
+  expect(commit.thickness, 6);
 }
 
 void _verifySamePointEndpointCommit() {

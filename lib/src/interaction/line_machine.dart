@@ -50,9 +50,22 @@ final class LineMachine {
       line: PointerLineEndpointCapture(
         startWorld: pendingLine.startWorld,
         endWorld: endWorld,
-        timestampMs: pendingLine.timestampMs,
         color: pendingLine.color,
         thickness: pendingLine.thickness,
+      ),
+    );
+  }
+
+  LineEndpointStartDecision startDrag({
+    required PointerLineFirstTapCapture firstTap,
+    required Offset endWorld,
+  }) {
+    return LineEndpointStartDecision.admitted(
+      line: PointerLineEndpointCapture(
+        startWorld: firstTap.startWorld,
+        endWorld: endWorld,
+        color: firstTap.color,
+        thickness: firstTap.thickness,
       ),
     );
   }
@@ -114,14 +127,12 @@ final class PointerLineEndpointCapture {
   const PointerLineEndpointCapture({
     required this.startWorld,
     required this.endWorld,
-    required this.timestampMs,
     required this.color,
     required this.thickness,
   });
 
   final Offset startWorld;
   final Offset endWorld;
-  final int timestampMs;
   final Color color;
   final double thickness;
 
@@ -129,7 +140,6 @@ final class PointerLineEndpointCapture {
     return PointerLineEndpointCapture(
       startWorld: startWorld,
       endWorld: value,
-      timestampMs: timestampMs,
       color: color,
       thickness: thickness,
     );

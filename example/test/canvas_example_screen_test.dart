@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine_example/src/canvas_pending_line_overlay.dart';
 
 void main() {
   _registerSurfaceAndPointerTests();
+  _registerLineDragSurfaceTest();
   _registerSurfaceStyleTest();
   _registerDrawToolDockTest();
   _registerDrawColorDockTest();
@@ -54,6 +55,27 @@ void _registerSurfaceAndPointerTests() {
     await tester.pump();
 
     expect(runtime.state.value.summary.elementCount, greaterThan(0));
+  });
+}
+
+void _registerLineDragSurfaceTest() {
+  testWidgets('screen line tool commits first pointer drag', (tester) async {
+    final runtime = createCanvasExampleRuntime();
+    addTearDown(runtime.dispose);
+    final viewModel = CanvasExampleViewModel(runtime: runtime);
+    addTearDown(viewModel.dispose);
+    await _pumpScreen(tester, viewModel);
+
+    await tester.tap(find.byKey(const ValueKey('mode.draw')));
+    await tester.pump();
+    await _tapTool(tester, 'tool.line', CanvasDrawTool.line, viewModel);
+
+    await tester.drag(find.byType(CanvasSurface), const Offset(40, 20));
+    await tester.pump();
+
+    final line = _singleLineElement(viewModel.document);
+    expect(line.start, isNot(equals(line.end)));
+    expect(viewModel.preview, isA<CanvasNoPreview>());
   });
 }
 
@@ -691,6 +713,19 @@ CanvasElement? _tryFindElement(CanvasDocument document, CanvasElementId id) {
   }
 
   return null;
+}
+
+CanvasLineElement _singleLineElement(CanvasDocument document) {
+  final lines = <CanvasLineElement>[];
+  for (final layer in document.layers) {
+    for (final element in layer.elements) {
+      if (element case final CanvasLineElement line) {
+        lines.add(line);
+      }
+    }
+  }
+
+  return lines.single;
 }
 
 Future<void> _tapTool(

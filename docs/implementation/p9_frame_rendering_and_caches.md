@@ -60,7 +60,7 @@ admission need explicit owners.
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record reuse inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
 | `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
-| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
+| `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` plus selected-move preview delta/revision for decoration movement | ordinary record cache identity, selected move supplement records, static background identity |
 | `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
@@ -88,7 +88,9 @@ without exposing frame collaborators through the package barrel. At minimum:
   spatial admission returns ordinary records unchanged.
 - `SelectionDecorationPlanner` includes `boundsRevision` so selected element
   bounds changes invalidate decoration even when selection membership is
-  unchanged.
+  unchanged. During selected-move preview, it also keys and shifts decoration
+  bounds by the captured preview delta so the selection UI follows the moved
+  supplement without adding preview facts to ordinary paint records.
 - `PaintAssetBindingService` binds image descriptors through
   `SurfaceResourceSession` after record planning.
 - `StaticBackgroundPlanner` proves background/grid cache identity does not

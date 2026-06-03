@@ -45,8 +45,10 @@ stateDiagram-v2
     marquee commit facts. The runtime adapter may query
     SpatialKernel for visible selectable marquee candidates
     whose hitBoundsWorld overlap the normalized rectangle.
-    The query cannot mutate committed document state or
-    commit selection directly.
+    A zero-area click rectangle uses a bounded point-hit query
+    and topmost exact hit selection instead of rectangle overlap.
+    The query cannot mutate committed document state or commit
+    selection directly.
   end note
 
   CandidateQuery --> CandidateQuery: reject stale candidate handle / continue

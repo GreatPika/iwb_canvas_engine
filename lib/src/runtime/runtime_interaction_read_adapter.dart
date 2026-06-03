@@ -128,6 +128,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   MarqueeCommitFacts marqueeCommitFacts(MarqueeCommitReadRequest request) {
     final context = _readContext();
     final rect = _normalizeRect(request.rectWorld);
+    if (rect.width == 0 && rect.height == 0) {
+      return _pointSelectionCommitFacts(context: context, rect: rect);
+    }
     final query = _spatial.queryMarquee(
       SpatialQueryWindow(
         boundsWorld: rect,
@@ -142,6 +145,41 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       for (final facts in candidates.facts)
         if (_hitTestPolicy.exactMarquee(marquee: rect, facts: facts)) facts.id,
     };
+
+    return MarqueeCommitFacts(
+      previousSelectedIds: _documentOrderIds(
+        handles: context.handles,
+        ids: context.selection.selectedElementIds,
+      ),
+      nextSelectedIds: _documentOrderIds(handles: context.handles, ids: hitIds),
+      controllerEpoch: context.controllerEpoch,
+      selectionRevision: context.selection.selectionRevision,
+      rectWorld: rect,
+      query: interactionQueryFacts(query, candidates),
+    );
+  }
+
+  MarqueeCommitFacts _pointSelectionCommitFacts({
+    required _InteractionReadContext context,
+    required Rect rect,
+  }) {
+    final point = rect.center;
+    final query = _spatial.queryHit(
+      SpatialQueryWindow(
+        boundsWorld: _pointQueryWindow(point),
+        structuralRevision: context.structuralRevision,
+      ),
+    );
+    final candidates = resolveInteractionCandidates(
+      query,
+      resolve: _frame.resolveElement,
+    );
+    final hitId = _hitTestPolicy.topmostHit(
+      point: point,
+      candidates: candidates.handles,
+      resolve: _frame.resolveElement,
+    );
+    final hitIds = hitId == null ? const <CanvasElementId>[] : [hitId];
 
     return MarqueeCommitFacts(
       previousSelectedIds: _documentOrderIds(

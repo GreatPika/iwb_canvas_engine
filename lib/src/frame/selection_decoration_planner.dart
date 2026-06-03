@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import 'captured_frame.dart';
@@ -13,6 +14,8 @@ final class SelectionDecorationKey {
     required this.selectionRevision,
     required Iterable<CanvasElementId> selectedElementIds,
     required this.boundsRevision,
+    required this.selectedMoveDelta,
+    required this.previewRevision,
     required this.selectionStyle,
     required this.devicePixelRatio,
   }) : selectedElementIds = Set.unmodifiable(selectedElementIds);
@@ -20,6 +23,8 @@ final class SelectionDecorationKey {
   final int selectionRevision;
   final Set<CanvasElementId> selectedElementIds;
   final int boundsRevision;
+  final Offset selectedMoveDelta;
+  final int previewRevision;
   final CanvasSelectionStyle selectionStyle;
   final double devicePixelRatio;
 
@@ -29,6 +34,8 @@ final class SelectionDecorationKey {
         other.selectionRevision == selectionRevision &&
         setEquals(other.selectedElementIds, selectedElementIds) &&
         other.boundsRevision == boundsRevision &&
+        other.selectedMoveDelta == selectedMoveDelta &&
+        other.previewRevision == previewRevision &&
         other.selectionStyle == selectionStyle &&
         other.devicePixelRatio == devicePixelRatio;
   }
@@ -39,6 +46,8 @@ final class SelectionDecorationKey {
       selectionRevision,
       Object.hashAllUnordered(selectedElementIds),
       boundsRevision,
+      selectedMoveDelta,
+      previewRevision,
       selectionStyle,
       devicePixelRatio,
     );
@@ -86,13 +95,7 @@ final class SelectionDecorationPlanner {
   int _rebuildCount = 0;
 
   SelectionDecorationPlan build(CapturedMainFrame frame) {
-    final key = SelectionDecorationKey(
-      selectionRevision: frame.snapshot.selection.selectionRevision,
-      selectedElementIds: frame.snapshot.selection.selectedElementIds,
-      boundsRevision: frame.snapshot.revisions.boundsRevision,
-      selectionStyle: frame.snapshot.inputs.selectionStyle,
-      devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
-    );
+    final key = _selectionDecorationKeyFor(frame);
     final current = _current;
     if (current != null && current.key == key) {
       return current;
@@ -117,7 +120,7 @@ final class SelectionDecorationPlanner {
         continue;
       }
       yield SelectionDecorationPrimitive(
-        boundsWorld: RenderElementRecord.fromFacts(facts).paintBoundsWorld,
+        boundsWorld: _selectionDecorationBoundsFor(facts, frame),
         color: style.color,
         strokeWidth: style.strokeWidth,
         haloWidth: style.haloWidth,
@@ -131,4 +134,30 @@ final class SelectionDecorationPlanner {
       rebuildCount: _rebuildCount,
     );
   }
+}
+
+SelectionDecorationKey _selectionDecorationKeyFor(CapturedMainFrame frame) {
+  final selectedMovePreview = frame.selectedMovePreview;
+
+  return SelectionDecorationKey(
+    selectionRevision: frame.snapshot.selection.selectionRevision,
+    selectedElementIds: frame.snapshot.selection.selectedElementIds,
+    boundsRevision: frame.snapshot.revisions.boundsRevision,
+    selectedMoveDelta: selectedMovePreview?.delta ?? Offset.zero,
+    previewRevision: selectedMovePreview == null
+        ? 0
+        : frame.snapshot.previewRevision,
+    selectionStyle: frame.snapshot.inputs.selectionStyle,
+    devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
+  );
+}
+
+Rect _selectionDecorationBoundsFor(
+  FrameElementFacts facts,
+  CapturedMainFrame frame,
+) {
+  final boundsWorld = RenderElementRecord.fromFacts(facts).paintBoundsWorld;
+  final delta = frame.selectedMovePreview?.delta ?? Offset.zero;
+
+  return boundsWorld.shift(delta);
 }

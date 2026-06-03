@@ -169,6 +169,14 @@ methods such as per-property `exists`, `isVisible`, or `isLocked` reads, and the
 port must not expose mutation, draft access, `CanvasDocument` projection, store
 internals, or resource/session internals.
 
+A move-mode click that stays within pointer slop is a point-selection commit
+through the marquee/select owner, not a direct selection-owner mutation from
+the surface. For zero-area marquee commit rectangles, the runtime interaction
+read adapter performs a bounded point hit query, resolves immutable candidates,
+uses the hit-test policy to choose the topmost selectable hit, and returns that
+single id in document/action order. Non-zero marquee rectangles keep the
+rectangle-overlap selection path.
+
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed
 pointer session is preserved until a line-owned cleanup, mode/tool change,
@@ -230,6 +238,14 @@ cleared only by line-owned cleanup, mode/tool change, prepared load cleanup,
 dispose, or a terminal line decision. Pending context tap cleanup clears tap
 history without preview, repaint, action, context request, document, selection,
 spatial, or projection effects.
+
+The line tool supports two commit paths. A tap within pointer slop stores a
+timestamped `CanvasPendingLineStartPreview` and waits for a later endpoint tap.
+A first pointer drag that exits pointer slop converts the active first-tap
+session directly into a line endpoint session, publishes `CanvasLinePreview`,
+and commits on the terminal up sample. Both paths keep line previews
+overlay-only, create no document mutation before the terminal commit intent,
+and use line-owned cleanup for pending start or endpoint state.
 
 The coordinator may depend only on interaction-owned state models and public
 preview value types needed to calculate `CanvasNoPreview` outcomes. It must not

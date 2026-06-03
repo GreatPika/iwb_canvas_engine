@@ -1,4 +1,4 @@
-%% Two-tap line preview then terminal commit sequence
+%% Line preview then terminal commit sequence: first-drag and two-tap paths
 sequenceDiagram
   autonumber
 
@@ -24,27 +24,50 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Signals as Public state/effects
 
-  User->>Surface: first tap in draw mode with line tool
-  Surface->>Tools: handlePointer(CanvasPointerSample down/up)
-  Tools->>IE: normalized finite tap sample
+  User->>Surface: first pointer down in draw mode with line tool
+  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Tools->>IE: normalized finite down sample
   IE->>IE: reject active pointer conflict and stale token
   IE->>IE: read drawStyle line color and finite lineThickness
-  IE->>ReadPort: read current controllerEpoch for pending line
-  ReadPort->>Store: read current controllerEpoch
-  Store-->>ReadPort: current epoch
-  ReadPort-->>IE: epoch for pending line start
-  IE->>IE: store pending line start bound to current epoch
-  IE->>Preview: publish CanvasPendingLineStartPreview(start, timestampMs, color, thickness)
-  Note over IE,Preview: Pending line session is epoch-bound. Preview snapshot is immutable and no committed document state is touched.
-  Preview-->>Runtime: preview revision fact
-  Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-  Preview->>Frame: request overlay repaint only
-  Frame->>Preview: capture previewRevision and CanvasPendingLineStartPreview once
-  Frame->>Frame: build immutable pending-line overlay primitive
-  Frame->>Signals: publish overlay repaint request
-  Signals-->>Surface: repaint overlay pending line start
+  IE->>IE: store active first-tap capture bound to pointer token and controllerEpoch
+  Note over IE: First pointer down creates no public preview, line element, action, or document signal.
 
-  loop pointer movement while pending line exists
+  alt first pointer drag exits tap slop
+    User->>Surface: pointer move beyond tap slop
+    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Tools->>IE: normalized finite move sample
+    IE->>IE: convert active first-tap capture to line endpoint session
+    IE->>Preview: publish CanvasLinePreview(start, end, color, thickness)
+    Note over IE,Frame: First-drag preview is overlay-only and no selected-move main-scene preview delta is staged.
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+    Preview->>Frame: request overlay repaint only
+    Frame->>Preview: capture previewRevision and CanvasLinePreview once
+    Frame->>Geometry: build finite line preview bounds from start, end, and thickness
+    Frame->>Frame: build immutable line overlay primitive
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay line preview
+  else terminal up remains within tap slop
+    User->>Surface: first pointer up within tap slop
+    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Tools->>IE: normalized finite up sample
+    IE->>ReadPort: read current controllerEpoch for pending line
+    ReadPort->>Store: read current controllerEpoch
+    Store-->>ReadPort: current epoch
+    ReadPort-->>IE: epoch for pending line start
+    IE->>IE: store pending line start bound to current epoch
+    IE->>Preview: publish CanvasPendingLineStartPreview(start, timestampMs, color, thickness)
+    Note over IE,Preview: Pending line session is epoch-bound. Preview snapshot is immutable and no committed document state is touched.
+    Preview-->>Runtime: preview revision fact
+    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+    Preview->>Frame: request overlay repaint only
+    Frame->>Preview: capture previewRevision and CanvasPendingLineStartPreview once
+    Frame->>Frame: build immutable pending-line overlay primitive
+    Frame->>Signals: publish overlay repaint request
+    Signals-->>Surface: repaint overlay pending line start
+  end
+
+  loop pointer movement while pending or active endpoint line exists
     User->>Surface: pointer move toward second point
     Surface->>Tools: handlePointer(CanvasPointerSample move)
     Tools->>IE: normalized finite move sample
@@ -84,8 +107,8 @@ sequenceDiagram
     Tools->>IE: no active routed pointer cancel
     IE->>Preview: preserve CanvasPendingLineStartPreview or CanvasLinePreview
     Note over IE,Signals: No pending line cleanup, overlay cleanup repaint, edit, action, or committed mutation is produced.
-  else terminal second tap sample is invalid
-    User->>Surface: second tap terminal sample
+  else terminal endpoint sample is invalid
+    User->>Surface: endpoint terminal sample
     Surface->>Tools: handlePointer(CanvasPointerSample up)
     Tools->>IE: invalid terminal sample for cleanup only
     IE->>Cleanup: typed cleanup request for line-owned pending state
@@ -98,8 +121,8 @@ sequenceDiagram
     Frame->>Signals: publish overlay cleanup repaint request
     Signals-->>Surface: repaint overlay without line preview
     Note over EK,Signals: Invalid terminal cleanup publishes no committed effects.
-  else second tap completes finite line
-    User->>Surface: second tap at endpoint
+  else endpoint terminal completes finite line
+    User->>Surface: second tap or first-drag terminal up at endpoint
     Surface->>Tools: handlePointer(CanvasPointerSample down/up)
     Tools->>IE: normalized finite terminal sample
     IE->>IE: verify pending line epoch matches current controllerEpoch

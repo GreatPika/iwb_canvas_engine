@@ -609,8 +609,8 @@ behavioral tests, and the required guardrail list remains owned by
   empty context-request stream, marquee replacement selection, selected-move
   preview and resolved commit, typed action delivery, remove-element command,
   unknown text-edit no-op, and clear-content command behavior;
-- appends P11 draw coverage for pencil and marker stroke previews, two-tap
-  line pending/endpoint previews, public `CanvasSurface(interactive: false)`
+- appends P11 draw coverage for pencil and marker stroke previews, first-drag
+  and two-tap line previews/commits, public `CanvasSurface(interactive: false)`
   pending-line preservation, committed stroke/line document elements, and typed
   draw action delivery after accepted state publication;
 - appends P13 `public consumer uses CanvasSurface pointer and resource bridge`
@@ -712,10 +712,10 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/interaction/line_machine_test.dart` proves two-tap line decisions,
   pending-line facts, endpoint preview facts, and line commit intent payload.
 - `test/interaction/line_interaction_routing_test.dart` proves
-  `InteractionEngine` line routing for accepted first-tap pending preview
-  timestamps, rejected first-tap timestamp silence, endpoint preview and commit
-  intents, same-point line acceptance, stale/invalid/cancel cleanup, and
-  pending-line ownership behavior.
+  `InteractionEngine` line routing for first-pointer-drag preview/commit,
+  accepted first-tap pending preview timestamps, rejected first-tap timestamp
+  silence, endpoint preview and commit intents, same-point line acceptance,
+  stale/invalid/cancel cleanup, and pending-line ownership behavior.
 - `test/runtime/draw_commit_delivery_test.dart` proves accepted pencil, marker,
   and line commits create public stroke/line elements through the edit kernel,
   emit typed draw actions after public state publication, preserve
@@ -862,6 +862,8 @@ behavioral tests, and the required guardrail list remains owned by
   ordinary committed paint plan;
 - proves selected element bounds changes rebuild SelectionDecorationPlan even
   when selection membership is unchanged;
+- proves selected-move preview delta/revision rebuild and shift selection
+  decoration without entering ordinary committed paint cache identity;
 - proves captured selectionStyle changes rebuild SelectionDecorationPlan
   without entering StaticBackgroundCache or OrdinaryPaintRecordCache identity.
 
@@ -888,9 +890,10 @@ behavioral tests, and the required guardrail list remains owned by
   zero-delta/no-movable cleanup, resolver/edit failure cleanup, transform math,
   post-success cleanup, and move action intent facts.
 - `test/interaction/select_machine_test.dart` proves marquee preview,
-  normalized world rects, spatial/exact filtering, stale/deleted skipping,
-  unchanged-selection cleanup, changed-selection commit, previous/next
-  selection action facts, and document-order action ids.
+  normalized world rects, point-click topmost hit selection including line
+  hits, spatial/exact filtering, stale/deleted skipping, unchanged-selection
+  cleanup, changed-selection commit, previous/next selection action facts, and
+  document-order action ids.
 
 #### `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus

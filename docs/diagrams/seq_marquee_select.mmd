@@ -79,9 +79,15 @@ sequenceDiagram
   Tools->>IE: same-token terminal sample
   IE->>IE: normalize terminal marquee rectangle
   IE->>ReadPort: read marquee commit facts for normalized rect
-  ReadPort->>Spatial: query hitBounds overlapping marquee rect
-  Spatial-->>ReadPort: visible selectable candidate handles
-  ReadPort->>ReadPort: run exact family inclusion test and order selected ids by document order
+  alt zero-area rect from point click
+    ReadPort->>Spatial: query bounded point hit window
+    Spatial-->>ReadPort: visible selectable point-hit candidate handles
+    ReadPort->>ReadPort: resolve immutable candidates and choose topmost exact hit
+  else non-zero marquee rect
+    ReadPort->>Spatial: query hitBounds overlapping marquee rect
+    Spatial-->>ReadPort: visible selectable candidate handles
+    ReadPort->>ReadPort: run exact family inclusion test and order selected ids by document order
+  end
   ReadPort-->>IE: previous ids, next ids, rect, and query facts
 
   alt next selection equals previous selection

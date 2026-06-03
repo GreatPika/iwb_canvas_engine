@@ -1,4 +1,4 @@
-%% Two-tap line lifecycle state diagram
+%% Line tool lifecycle state diagram: first-drag and two-tap paths
 stateDiagram-v2
   [*] --> Idle
 
@@ -14,12 +14,16 @@ stateDiagram-v2
 
   state "First tap admission" as FirstTapGate
   note right of FirstTapGate
-    The first tap stores finite start facts, current tool,
-    and current document/controller epoch. It never creates
-    a line element, commit intent, action, or document signal.
+    The first pointer down stores finite start facts, current
+    tool, and current document/controller epoch. A terminal up
+    within tap slop stores pending start for the two-tap path;
+    a move outside tap slop becomes the first-drag path. Neither
+    path creates a line element, commit intent, action, or document
+    signal before a terminal endpoint decision.
   end note
 
   FirstTapGate --> PendingStart: start finite and tool style drawable / store pending start, publish overlay pending marker
+  FirstTapGate --> LinePreview: finite move beyond tap slop / convert active first-tap session to endpoint preview
   FirstTapGate --> Idle: non-finite start, non-drawable style, or inactive surface / no commit
   FirstTapGate --> Disposed: disposed runtime / StateError
 
@@ -50,18 +54,19 @@ stateDiagram-v2
   end note
 
   LinePreview --> LinePreview: finite move with same tool and controllerEpoch / replace overlay preview end
-  LinePreview --> SecondTapGate: finite second tap
+  LinePreview --> SecondTapGate: finite second tap or active-drag terminal up
   LinePreview --> CleanupOnly: cancel, mode/tool change, or loadDocument prepared cleanup before install
   LinePreview --> LinePreview: loadDocument failure / preserve pending line
   LinePreview --> LinePreview: interactive=false with no active routed pointer / disable future routing only; preserve line preview
   LinePreview --> LinePreview: unrelated pointer cleanup or stale non-terminal sample / preserve preview
   LinePreview --> DisposeCleanup: runtime.dispose()
 
-  state "Second tap terminal gate" as SecondTapGate
+  state "Endpoint terminal gate" as SecondTapGate
   note right of SecondTapGate
-    A terminal tap may create a commit intent only when the
-    pending start still exists, tool and controllerEpoch match, start/end
-    are finite, and style facts remain valid.
+    A terminal endpoint may create a commit intent only when the
+    pending start or active drag endpoint still exists, tool and
+    controllerEpoch match, start/end are finite, and style facts
+    remain valid.
   end note
 
   SecondTapGate --> CleanupOnly: no pending start, controllerEpoch mismatch, tool mismatch, invalid terminal, or non-finite facts
@@ -113,8 +118,8 @@ stateDiagram-v2
 
   state "Cleanup only / no committed effects" as CleanupOnly
   note left of CleanupOnly
-    Creates a typed cleanup request for pending start and line
-    overlay preview only. No line
+    Creates a typed cleanup request for pending start, active
+    first-tap, and line overlay preview only. No line
     element, document effect, drawLine action, spatial delta,
     projection eviction, or main-scene preview is produced.
     previewRevision advances and publishes CanvasRuntimeState only

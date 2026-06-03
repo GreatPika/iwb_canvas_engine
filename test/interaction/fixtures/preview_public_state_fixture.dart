@@ -37,6 +37,10 @@ void main() {
     expect(_verifyDrawLinePreviewOnlyPublication, returnsNormally);
   });
 
+  test('drag-start draw line previews publish only preview revision', () {
+    expect(_verifyDragStartDrawLinePreviewOnlyPublication, returnsNormally);
+  });
+
   test('eraser previews publish only preview revision', () {
     expect(_verifyEraserPreviewOnlyPublication, returnsNormally);
   });
@@ -155,6 +159,21 @@ void _verifyDrawLinePreviewOnlyPublication() {
     phase: CanvasPointerLifecyclePhase.move,
     position: const Offset(4, 5),
     expectPreview: _expectMovedLinePreview,
+  ));
+}
+
+void _verifyDragStartDrawLinePreviewOnlyPublication() {
+  final scenario = _linePreviewScenario();
+
+  scenario.root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+  );
+  expect(scenario.snapshots, isEmpty);
+
+  _expectLinePreviewPublication(scenario, (
+    phase: CanvasPointerLifecyclePhase.move,
+    position: const Offset(18, 2),
+    expectPreview: _expectDraggedLinePreview,
   ));
 }
 
@@ -321,6 +340,10 @@ void _expectInitialLinePreview(CanvasPreviewState preview) {
 
 void _expectMovedLinePreview(CanvasPreviewState preview) {
   _expectLinePreview(preview, end: const Offset(4, 5));
+}
+
+void _expectDraggedLinePreview(CanvasPreviewState preview) {
+  _expectLinePreview(preview, end: const Offset(18, 2));
 }
 
 void _expectLinePreview(CanvasPreviewState preview, {required Offset end}) {

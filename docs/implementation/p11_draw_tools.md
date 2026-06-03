@@ -9,7 +9,7 @@ helpers, and overlay frame capture exist.
 
 - draw mode state machine for pencil
 - draw mode state machine for marker
-- two-tap line state machine
+- line state machine with first-pointer-drag and two-tap endpoint paths
 - pointer preview lifecycle for pencil, marker, and line
 - `CanvasPencilStrokePreview`, `CanvasMarkerStrokePreview`,
   `CanvasPendingLineStartPreview`, and `CanvasLinePreview` preview state
@@ -113,7 +113,7 @@ non-owned pending line state remains preserved on `interactive=false`.
   thickness, and opacity facts through concrete variants
 - `CanvasPendingLineStartPreview` exposes start, timestamp, color, and
   thickness facts; `CanvasLinePreview` exposes start, end, color, and thickness
-- line commit tests green
+- line drag and two-tap commit tests green
 - draw commits emit typed action payloads only after atomic install
 - draw previews repaint overlay only
 - draw previews publish `state.revisions.preview` without document revision

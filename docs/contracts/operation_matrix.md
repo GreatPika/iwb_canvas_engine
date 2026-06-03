@@ -85,6 +85,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | pencil/marker preview | preview only | state.revisions.preview | none | no | overlay | none |
 | pencil/marker commit | add stroke | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawPencil/drawMarker; `runtime_created_timestamps_monotonic` |
 | line first tap | preview pending | state.revisions.preview | none | no | overlay | none; timestamped preview `runtime_created_timestamps_monotonic` |
+| line first drag | preview line, then terminal add line on up | state.revisions.preview during preview; state.revisions.document and state.revisions.preview cleanup on commit | add id on commit | evict on commit | overlay while previewing; main + overlay cleanup on commit | drawLine on commit; `runtime_created_timestamps_monotonic` |
 | line preview | preview line | state.revisions.preview | none | no | overlay | none |
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
