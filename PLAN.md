@@ -72,3 +72,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 50. P12 findings closure](plan/step_50_p12_findings_closure.md)
 - [x] [Step 51. P13 Flutter surface](plan/step_51_p13_flutter_surface.md)
 - [ ] [Step 52. Legacy example full parity port](plan/step_52_legacy_example_full_parity_port.md)
+- [ ] [Step 53. Selection chrome and move hit area](plan/step_53_selection_chrome_and_move_hit_area.md)
