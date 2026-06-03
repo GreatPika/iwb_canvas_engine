@@ -5,19 +5,19 @@ import 'interaction_read_port.dart';
 enum InteractionRequestTargetKind { contentElement, emptyCanvas }
 
 enum TextEditGuardDecisionKind {
-  unknownOrRetired,
-  rejectedAndRetired,
+  unknownOrConsumed,
+  rejectedAndConsumed,
   accepted,
 }
 
 final class TextEditGuardDecision {
-  const TextEditGuardDecision.unknownOrRetired()
-    : kind = TextEditGuardDecisionKind.unknownOrRetired,
+  const TextEditGuardDecision.unknownOrConsumed()
+    : kind = TextEditGuardDecisionKind.unknownOrConsumed,
       targetElementId = null,
       currentText = null;
 
-  const TextEditGuardDecision.rejectedAndRetired()
-    : kind = TextEditGuardDecisionKind.rejectedAndRetired,
+  const TextEditGuardDecision.rejectedAndConsumed()
+    : kind = TextEditGuardDecisionKind.rejectedAndConsumed,
       targetElementId = null,
       currentText = null;
 
@@ -37,7 +37,6 @@ final class InteractionRequestGuardFacts {
     required this.targetKind,
     required this.controllerEpoch,
     required this.documentRevision,
-    required this.retired,
     this.contentElementId,
     this.contentElementKind,
     this.generation,
@@ -49,27 +48,11 @@ final class InteractionRequestGuardFacts {
   final InteractionRequestTargetKind targetKind;
   final int controllerEpoch;
   final int documentRevision;
-  final bool retired;
   final CanvasElementId? contentElementId;
   final CanvasElementKind? contentElementKind;
   final int? generation;
   final int? elementRevision;
   final InteractionElementFamily? family;
-
-  InteractionRequestGuardFacts retire() {
-    return InteractionRequestGuardFacts(
-      requestId: requestId,
-      targetKind: targetKind,
-      controllerEpoch: controllerEpoch,
-      documentRevision: documentRevision,
-      retired: true,
-      contentElementId: contentElementId,
-      contentElementKind: contentElementKind,
-      generation: generation,
-      elementRevision: elementRevision,
-      family: family,
-    );
-  }
 }
 
 final class InteractionRequestRegistry {
@@ -91,7 +74,6 @@ final class InteractionRequestRegistry {
       },
       controllerEpoch: target.controllerEpoch,
       documentRevision: target.documentRevision,
-      retired: false,
       contentElementId: target.elementId,
       contentElementKind: target.elementKind,
       generation: target.generation,
@@ -107,24 +89,11 @@ final class InteractionRequestRegistry {
     return _facts[requestId];
   }
 
-  InteractionRequestGuardFacts? liveFactsFor(
-    CanvasInteractionRequestId requestId,
-  ) {
-    final facts = _facts[requestId];
-    if (facts == null || facts.retired) {
-      return null;
-    }
-
-    return facts;
+  InteractionRequestGuardFacts? consume(CanvasInteractionRequestId requestId) {
+    return _facts.remove(requestId);
   }
 
-  bool retire(CanvasInteractionRequestId requestId) {
-    final facts = liveFactsFor(requestId);
-    if (facts == null) {
-      return false;
-    }
-    _facts[requestId] = facts.retire();
-
-    return true;
+  void clear() {
+    _facts.clear();
   }
 }

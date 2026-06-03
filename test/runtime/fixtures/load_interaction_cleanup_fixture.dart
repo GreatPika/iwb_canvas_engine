@@ -6,6 +6,12 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
+  _registerLoadSuccessCleanupTests();
+  _registerLoadFailureCleanupTests();
+  _registerDisposeCleanupTests();
+}
+
+void _registerLoadSuccessCleanupTests() {
   test(
     'prepared load success clears selected move interaction before install',
     () {
@@ -35,6 +41,12 @@ void main() {
     expect(_verifyLoadSuccessCleansPendingContextTap, returnsNormally);
   });
 
+  test('successful load clears live context request facts', () {
+    return expectLater(_verifyLoadSuccessClearsLiveRequestFacts(), completes);
+  });
+}
+
+void _registerLoadFailureCleanupTests() {
   test('load failure preserves active interaction state', () {
     expect(_verifyLoadFailurePreservesInteraction, returnsNormally);
   });
@@ -42,9 +54,15 @@ void main() {
   test('load failure preserves pending context tap', () {
     expect(_verifyLoadFailurePreservesPendingContextTap, returnsNormally);
   });
+}
 
+void _registerDisposeCleanupTests() {
   test('dispose cleanup publishes before streams close only when needed', () {
     expect(_verifyDisposeCleanupPublication, returnsNormally);
+  });
+
+  test('dispose clears live context request facts', () {
+    return expectLater(_verifyDisposeClearsLiveRequestFacts(), completes);
   });
 }
 
@@ -165,6 +183,41 @@ void _verifyLoadFailurePreservesPendingContextTap() {
   expect(contextRequests, isEmpty);
 }
 
+Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
+  final root = _runtimeRoot((_) {});
+  try {
+    final request = await _issueContextRequest(root);
+    expect(
+      root.interactionEngine.requestFactsFor(request.requestId),
+      isNotNull,
+    );
+
+    root.edits.loadDocument(_replacementDocument());
+
+    expect(root.interactionEngine.requestFactsFor(request.requestId), isNull);
+    expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
+  } finally {
+    root.dispose();
+  }
+}
+
+Future<void> _verifyDisposeClearsLiveRequestFacts() async {
+  final root = _runtimeRoot((_) {});
+  final request = await _issueContextRequest(root);
+  expect(root.interactionEngine.requestFactsFor(request.requestId), isNotNull);
+
+  root.dispose();
+
+  expect(root.interactionEngine.requestFactsFor(request.requestId), isNull);
+}
+
+Future<CanvasContextActionRequested> _issueContextRequest(RuntimeRoot root) {
+  final request = root.contextActionRequests.first;
+  root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+
+  return request;
+}
+
 void _expectInteractionPreserved({
   required RuntimeRoot root,
   required Object? activeSession,
@@ -263,7 +316,7 @@ void _expectLoadCleanupRevisions(
   expect(after.revisions.document, before.revisions.document + 1);
   expect(after.revisions.selection, before.revisions.selection + 1);
   expect(after.revisions.preview, before.revisions.preview + 1);
-  expect(after.revisions.interaction, before.revisions.interaction + 1);
+  expect(after.revisions.interaction, before.revisions.interaction);
   expect(after.revisions.epoch, before.revisions.epoch + 1);
 }
 
@@ -275,7 +328,7 @@ void _expectDisposeCleanupRevisions(
   expect(after.revisions.selection, before.revisions.selection);
   expect(after.revisions.resourceVisual, before.revisions.resourceVisual);
   expect(after.revisions.preview, before.revisions.preview + 1);
-  expect(after.revisions.interaction, before.revisions.interaction + 1);
+  expect(after.revisions.interaction, before.revisions.interaction);
   expect(after.revisions.epoch, before.revisions.epoch);
   expect(after.summary, before.summary);
 }

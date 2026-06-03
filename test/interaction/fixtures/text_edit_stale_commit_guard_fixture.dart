@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
@@ -14,23 +15,38 @@ void main() {
     return expectLater(_verifyRejectedRequests(), completes);
   });
 
-  test('generation mismatch retires text requests', () {
+  test('generation mismatch consumes text requests', () {
     return expectLater(
-      Future<void>.sync(_verifyGenerationMismatchRetiresRequest),
+      Future<void>.sync(_verifyGenerationMismatchConsumesRequest),
       completes,
     );
   });
 
-  test('same-text and changed text requests retire correctly', () {
+  test('same-text and changed text requests consume correctly', () {
     return expectLater(_verifyAcceptedRequests(), completes);
   });
 
-  test('text validation runs before request retirement', () {
-    return expectLater(_verifyValidationBeforeRetirement(), completes);
+  test('accepted guard keeps live facts until runtime consume', () {
+    expect(
+      _verifyAcceptedGuardKeepsRequestLiveUntilRuntimeConsume,
+      returnsNormally,
+    );
+  });
+
+  test('failed changed-text prepare returns before request consumption', () {
+    return expectLater(_verifyFailedPrepareKeepsRequestLive(), completes);
+  });
+
+  test('text validation runs before request consumption', () {
+    return expectLater(_verifyValidationBeforeConsumption(), completes);
   });
 
   test('disposed runtime rejects before request consumption', () {
     return expectLater(_verifyDisposedRuntimeBehavior(), completes);
+  });
+
+  test('successful load clears live text requests', () {
+    return expectLater(_verifyLoadClearsLiveRequestFacts(), completes);
   });
 }
 
@@ -44,7 +60,7 @@ Future<void> _verifyRejectedRequests() async {
   await _expectCommitFalse(_familyStaleScenario());
 }
 
-void _verifyGenerationMismatchRetiresRequest() {
+void _verifyGenerationMismatchConsumesRequest() {
   final readPort = _TextGuardReadPort(
     textGuardFacts: TextCommitGuardReadFacts.current(
       targetElementId: _textId,
@@ -62,11 +78,12 @@ void _verifyGenerationMismatchRetiresRequest() {
 
   expect(
     engine.textEditGuardDecision(requestId).kind,
-    TextEditGuardDecisionKind.rejectedAndRetired,
+    TextEditGuardDecisionKind.rejectedAndConsumed,
   );
+  expect(engine.requestFactsFor(requestId), isNull);
   expect(
     engine.textEditGuardDecision(requestId).kind,
-    TextEditGuardDecisionKind.unknownOrRetired,
+    TextEditGuardDecisionKind.unknownOrConsumed,
   );
   expect(readPort.textGuardReads, 1);
 }
@@ -74,6 +91,9 @@ void _verifyGenerationMismatchRetiresRequest() {
 Future<void> _expectCommitFalse(Future<_IssuedScenario> future) async {
   final scenario = await future;
   try {
+    final wasLiveBeforeCommit =
+        scenario.root.interactionEngine.requestFactsFor(scenario.requestId) !=
+        null;
     expect(
       scenario.root.commands.commitTextEdit(
         scenario.requestId,
@@ -82,6 +102,19 @@ Future<void> _expectCommitFalse(Future<_IssuedScenario> future) async {
       ),
       isFalse,
     );
+    if (wasLiveBeforeCommit) {
+      expect(
+        scenario.root.interactionEngine.requestFactsFor(scenario.requestId),
+        isNull,
+      );
+      expect(
+        scenario.root.commands.commitTextEdit(
+          scenario.requestId,
+          'updated-again',
+        ),
+        isFalse,
+      );
+    }
     expect(scenario.actions, isEmpty);
     expect(_textValueOrNull(scenario.root), isNot('updated'));
   } finally {
@@ -160,6 +193,7 @@ Future<void> _expectSameTextCommitRetiresPrivately() async {
   try {
     final requestId = await sameText.issueTextRequest();
     expect(sameText.root.commands.commitTextEdit(requestId, 'hello'), isTrue);
+    expect(sameText.root.interactionEngine.requestFactsFor(requestId), isNull);
     expect(sameText.root.commands.commitTextEdit(requestId, 'again'), isFalse);
     expect(sameText.actions, isEmpty);
     expect(sameText.stateEvents, isEmpty);
@@ -191,6 +225,7 @@ Future<void> _expectUnrelatedDocumentRevisionIsObservationOnly() async {
       isTrue,
     );
     expect(_textValueOrNull(scenario.root), 'updated');
+    expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNull);
   } finally {
     await scenario.dispose();
   }
@@ -212,12 +247,68 @@ Future<void> _expectChangedTextCommitPublishesAction() async {
     );
     expect(changed.stateEvents, hasLength(1));
     expect(changed.actions, hasLength(1));
-    expect(deliveryEvents, ['state', 'actionRetired']);
+    expect(deliveryEvents, ['state', 'actionConsumed']);
     _expectEditTextAction(changed.actions.single, requestId);
     expect(_textValueOrNull(changed.root), 'updated');
+    expect(changed.root.interactionEngine.requestFactsFor(requestId), isNull);
     expect(changed.root.commands.commitTextEdit(requestId, 'retry'), isFalse);
   } finally {
     await changed.dispose();
+  }
+}
+
+void _verifyAcceptedGuardKeepsRequestLiveUntilRuntimeConsume() {
+  final readPort = _TextGuardReadPort(
+    textGuardFacts: TextCommitGuardReadFacts.current(
+      targetElementId: _textId,
+      targetKind: CanvasElementKind.text,
+      generation: 1,
+      elementRevision: 0,
+      family: InteractionElementFamily.text,
+      controllerEpoch: 1,
+      documentRevision: 0,
+      currentText: 'hello',
+    ),
+  );
+  final engine = _textGuardEngine(readPort);
+  final requestId = _issueTextRequest(engine);
+
+  expect(
+    engine.textEditGuardDecision(requestId).kind,
+    TextEditGuardDecisionKind.accepted,
+  );
+  expect(engine.requestFactsFor(requestId), isNotNull);
+  expect(engine.consumeTextEditRequest(requestId), isTrue);
+  expect(engine.requestFactsFor(requestId), isNull);
+}
+
+Future<void> _verifyFailedPrepareKeepsRequestLive() async {
+  var prepareCalls = 0;
+  final scenario = _Scenario.failedTextPrepare(() {
+    prepareCalls += 1;
+  });
+  try {
+    final requestId = await scenario.issueTextRequest();
+
+    expect(
+      scenario.root.commands.commitTextEdit(
+        requestId,
+        'updated',
+        timestampMs: 12,
+      ),
+      isFalse,
+    );
+
+    expect(prepareCalls, 1);
+    expect(
+      scenario.root.interactionEngine.requestFactsFor(requestId),
+      isNotNull,
+    );
+    expect(scenario.actions, isEmpty);
+    expect(scenario.stateEvents, isEmpty);
+    expect(_textValueOrNull(scenario.root), 'hello');
+  } finally {
+    await scenario.dispose();
   }
 }
 
@@ -234,7 +325,7 @@ void _expectEditTextAction(
   expect(payload.nextTextLength, 7);
 }
 
-Future<void> _verifyValidationBeforeRetirement() async {
+Future<void> _verifyValidationBeforeConsumption() async {
   final scenario = _Scenario();
   try {
     final requestId = await scenario.issueTextRequest();
@@ -251,7 +342,9 @@ Future<void> _verifyValidationBeforeRetirement() async {
 Future<void> _verifyDisposedRuntimeBehavior() async {
   final scenario = _Scenario();
   final requestId = await scenario.issueTextRequest();
+  expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNotNull);
   await scenario.dispose();
+  expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNull);
 
   expect(
     () => scenario.root.commands.commitTextEdit(requestId, 'updated'),
@@ -265,6 +358,28 @@ Future<void> _verifyDisposedRuntimeBehavior() async {
   );
 }
 
+Future<void> _verifyLoadClearsLiveRequestFacts() async {
+  final scenario = _Scenario();
+  try {
+    final requestId = await scenario.issueTextRequest();
+    expect(
+      scenario.root.interactionEngine.requestFactsFor(requestId),
+      isNotNull,
+    );
+
+    scenario.root.edits.loadDocument(_document());
+
+    expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNull);
+    expect(
+      scenario.root.commands.commitTextEdit(requestId, 'updated'),
+      isFalse,
+    );
+    expect(scenario.actions, isEmpty);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
 String? _textValueOrNull(RuntimeRoot root) {
   for (final element in root.readDocument().layers.single.elements) {
     if (element is CanvasTextElement && element.id == _textId) {
@@ -275,12 +390,33 @@ String? _textValueOrNull(RuntimeRoot root) {
   return null;
 }
 
+// This fixture owns one runtime plus its action, state, and request observers so
+// request consumption, delivery order, and public effects stay tied to the same
+// issued request. Splitting it would hide the lifecycle proof.
+// ignore: coupling-between-object-classes
 final class _Scenario {
-  _Scenario() {
-    root = RuntimeRoot(
-      initialDocument: _document(),
-      config: const CanvasRuntimeConfig(),
-    );
+  _Scenario()
+    : this._(
+        RuntimeRoot(
+          initialDocument: _document(),
+          config: const CanvasRuntimeConfig(),
+        ),
+      );
+
+  _Scenario.failedTextPrepare(void Function() onPrepare)
+    : this._(
+        RuntimeRoot.test(
+          initialDocument: _document(),
+          config: const CanvasRuntimeConfig(),
+          textEditPrepareOverride: (input) {
+            onPrepare();
+
+            return CommitDeliveryResult(shouldPublishState: false);
+          },
+        ),
+      );
+
+  _Scenario._(this.root) {
     actionSubscription = root.actions.listen((action) {
       actions.add(action);
       _onAction?.call(action);
@@ -293,7 +429,7 @@ final class _Scenario {
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
 
-  late final RuntimeRoot root;
+  final RuntimeRoot root;
   late final StreamSubscription<CanvasActionCommitted> actionSubscription;
   late final StreamSubscription<CanvasContextActionRequested>
   requestSubscription;
@@ -332,11 +468,8 @@ final class _Scenario {
       events.add('state');
     };
     _onAction = (_) {
-      expect(
-        root.interactionEngine.requestFactsFor(requestId)?.retired,
-        isTrue,
-      );
-      events.add('actionRetired');
+      expect(root.interactionEngine.requestFactsFor(requestId), isNull);
+      events.add('actionConsumed');
     };
   }
 

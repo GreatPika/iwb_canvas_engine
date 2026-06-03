@@ -111,25 +111,25 @@ final class InteractionEngine {
   TextEditGuardDecision textEditGuardDecision(
     CanvasInteractionRequestId requestId,
   ) {
-    final guard = _requestRegistry.liveFactsFor(requestId);
+    final guard = _requestRegistry.factsFor(requestId);
     if (guard == null) {
-      return const TextEditGuardDecision.unknownOrRetired();
+      return const TextEditGuardDecision.unknownOrConsumed();
     }
     final targetElementId = guard.contentElementId;
     if (guard.targetKind != InteractionRequestTargetKind.contentElement ||
         guard.contentElementKind != CanvasElementKind.text ||
         targetElementId == null) {
-      _requestRegistry.retire(requestId);
+      _requestRegistry.consume(requestId);
 
-      return const TextEditGuardDecision.rejectedAndRetired();
+      return const TextEditGuardDecision.rejectedAndConsumed();
     }
     final current = readPort.textCommitGuardFacts(
       TextCommitGuardReadRequest(targetElementId: targetElementId),
     );
     if (!_textGuardMatches(guard, current)) {
-      _requestRegistry.retire(requestId);
+      _requestRegistry.consume(requestId);
 
-      return const TextEditGuardDecision.rejectedAndRetired();
+      return const TextEditGuardDecision.rejectedAndConsumed();
     }
 
     return TextEditGuardDecision.accepted(
@@ -138,8 +138,12 @@ final class InteractionEngine {
     );
   }
 
-  bool retireTextEditRequest(CanvasInteractionRequestId requestId) {
-    return _requestRegistry.retire(requestId);
+  bool consumeTextEditRequest(CanvasInteractionRequestId requestId) {
+    return _requestRegistry.consume(requestId) != null;
+  }
+
+  void clearInteractionRequests() {
+    _requestRegistry.clear();
   }
 
   void attachReadPort(InteractionReadPort readPort) {

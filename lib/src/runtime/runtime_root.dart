@@ -65,6 +65,19 @@ import 'runtime_action_finalizer.dart';
 import 'runtime_interaction_diagnostics_adapter.dart';
 import 'runtime_interaction_read_adapter.dart';
 
+@visibleForTesting
+typedef TextEditPrepareInput = ({
+  CanvasInteractionRequestId requestId,
+  CanvasElementId targetElementId,
+  String previousText,
+  String newText,
+  int? timestampMs,
+});
+
+@visibleForTesting
+typedef TextEditPrepareOverride =
+    CommitDeliveryResult Function(TextEditPrepareInput input);
+
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
@@ -84,6 +97,7 @@ final class RuntimeRoot
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: null,
+         textEditPrepareOverride: null,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -92,7 +106,8 @@ final class RuntimeRoot
   RuntimeRoot.test({
     required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
-    required LoadInteractionBoundary loadInteractionBoundary,
+    LoadInteractionBoundary? loadInteractionBoundary,
+    TextEditPrepareOverride? textEditPrepareOverride,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
          store: DocumentStoreKernel(initialDocument),
@@ -100,6 +115,7 @@ final class RuntimeRoot
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: loadInteractionBoundary,
+         textEditPrepareOverride: textEditPrepareOverride,
          initialViewCamera: initialDocument.camera,
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
@@ -110,12 +126,14 @@ final class RuntimeRoot
     required DiagnosticsHub? diagnostics,
     required CanvasDiagnosticPolicy diagnosticPolicy,
     required LoadInteractionBoundary? loadInteractionBoundary,
+    required TextEditPrepareOverride? textEditPrepareOverride,
     required CanvasCamera initialViewCamera,
     required CommitEffectObserver commitEffectObserver,
   }) : _store = store,
        _diagnostics = diagnostics,
        _viewCamera = initialViewCamera,
        _loadInteractionBoundary = loadInteractionBoundary,
+       _textEditPrepareOverride = textEditPrepareOverride,
        _loadPipeline = LoadDocumentPipeline(
          store: store,
          diagnosticPolicy: diagnosticPolicy,
@@ -142,6 +160,7 @@ final class RuntimeRoot
   final DocumentStoreKernel _store;
   final DiagnosticsHub? _diagnostics;
   final LoadInteractionBoundary? _loadInteractionBoundary;
+  final TextEditPrepareOverride? _textEditPrepareOverride;
   final LoadDocumentPipeline _loadPipeline;
   final CommitEffectObserver _commitEffectObserver;
 
@@ -755,34 +774,49 @@ final class RuntimeRoot
     final targetElementId = guard.targetElementId as CanvasElementId;
     final previousText = guard.currentText as String;
     if (previousText == newText) {
-      _interactionEngine.retireTextEditRequest(requestId);
+      _interactionEngine.consumeTextEditRequest(requestId);
 
       return true;
     }
-    final applyResult = _editKernel.prepareInteractionCommit(
+    final applyResult = _prepareTextEditCommit((
+      requestId: requestId,
+      targetElementId: targetElementId,
+      previousText: previousText,
+      newText: newText,
+      timestampMs: timestampMs,
+    ));
+    if (!applyResult.shouldPublishState) {
+      return false;
+    }
+    _interactionEngine.consumeTextEditRequest(requestId);
+    _deliverEditCommitResult(applyResult);
+
+    return true;
+  }
+
+  CommitDeliveryResult _prepareTextEditCommit(TextEditPrepareInput input) {
+    final prepareOverride = _textEditPrepareOverride;
+    if (prepareOverride != null) {
+      return prepareOverride(input);
+    }
+
+    return _editKernel.prepareInteractionCommit(
       (edit) => edit.updateElement(
         CanvasTextElementUpdate(
-          id: targetElementId,
-          text: CanvasFieldSet(newText),
+          id: input.targetElementId,
+          text: CanvasFieldSet(input.newText),
         ),
       ),
       augmentPlan: (plan) => plan.withActionIntents([
         EditTextActionIntent(
-          requestId: requestId,
-          elementId: targetElementId,
-          previousTextLength: previousText.length,
-          nextTextLength: newText.length,
-          timestampHintMs: timestampMs,
+          requestId: input.requestId,
+          elementId: input.targetElementId,
+          previousTextLength: input.previousText.length,
+          nextTextLength: input.newText.length,
+          timestampHintMs: input.timestampMs,
         ),
       ]),
     );
-    if (!applyResult.shouldPublishState) {
-      return false;
-    }
-    _interactionEngine.retireTextEditRequest(requestId);
-    _deliverEditCommitResult(applyResult);
-
-    return true;
   }
 
   // Surface interaction lifecycle.
@@ -977,6 +1011,7 @@ final class RuntimeRoot
     }
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
+    _interactionEngine.clearInteractionRequests();
     _isDisposed = true;
     if (cleanupOutcome.publicStateNeeded) {
       _publishRuntimeState();
@@ -1118,6 +1153,7 @@ final class RuntimeRoot
       testBoundary.prepareLoadCleanup();
     }
     _interactionEngine.prepareLoadCleanup();
+    _interactionEngine.clearInteractionRequests();
   }
 
   // Commit delivery pipeline.
