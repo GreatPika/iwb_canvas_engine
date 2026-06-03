@@ -16,7 +16,8 @@ stateDiagram-v2
 
   state "Down admission gate" as AdmissionGate
   note right of AdmissionGate
-    The Flutter bridge routes samples to the public tool port.
+    The surface pointer adapter routes samples through
+    the runtime-surface port.
     Down samples must be normalized and finite before
     InteractionEngine admits a pointer token.
     Invalid down facts are rejected before runtime routing.

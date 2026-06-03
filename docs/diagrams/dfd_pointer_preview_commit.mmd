@@ -3,8 +3,8 @@ flowchart LR
 
   Surface["CanvasSurface\nFlutter pointer host"]
 
-  subgraph FlutterBridge["Flutter bridge boundary"]
-    PointerAdapter["Pointer adapter\nfinite down/move normalization\nbefore runtime routing"]
+  subgraph SurfacePointerAdapter["Surface pointer adapter boundary"]
+    PointerAdapter["CanvasSurfacePointerAdapter\nfinite down/move normalization\nbefore runtime routing"]
     InvalidDownMoveEvent["Invalid down/move Flutter pointer facts\nrejected before runtime"]
   end
 

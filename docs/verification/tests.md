@@ -591,6 +591,12 @@ behavioral tests, and the required guardrail list remains owned by
   line pending/endpoint previews, public `CanvasSurface(interactive: false)`
   pending-line preservation, committed stroke/line document elements, and typed
   draw action delivery after accepted state publication;
+- appends P13 `public consumer uses CanvasSurface pointer and resource bridge`
+  coverage for resource-free zero resolver calls, app-key image resource
+  resolution through `CanvasSurface`, resolver replacement, bounded null
+  resolver behavior, Flutter pointer gestures on the public paint host,
+  `interactive=false` no-route isolation, and pending-line preservation through
+  Flutter events;
 - uses the shared Flutter consumer harness as the package-boundary proof;
 - stays intentionally coarse so focused codec, runtime, selection, and cache
   interaction tests own detailed diagnostics;
@@ -749,6 +755,38 @@ behavioral tests, and the required guardrail list remains owned by
   `test/guardrails/blocking_suite_test.dart` prove
   `interaction.text_edit_stale_commit_guard` is runner-backed, selected by the
   blocking suite, and rejects hardcoded or bypassed text guard facts.
+
+#### P13 Flutter surface tests
+- `test/surface/single_active_surface_test.dart` proves exactly one active
+  `CanvasSurface` per `CanvasRuntime`, rejected attach all-or-nothing behavior,
+  and independent active surfaces for independent runtimes.
+- `test/surface/surface_resource_session_lifecycle_test.dart` proves accepted
+  attach creates the active surface resource session, resolver replacement uses
+  the fresh resolver, dirty invalidation reaches the active session, and detach,
+  dispose, runtime swap, and runtime dispose drop session state without
+  disposing app-owned images.
+- `test/surface/pointer_adapter_finite_normalization_test.dart` proves the
+  surface `Listener` converts only finite Flutter down/move/up/cancel events to
+  public pointer samples, leaves world normalization in interaction, and keeps
+  stale callbacks and non-finite events runtime-effect silent.
+- `test/surface/interactive_false_pointer_routing_test.dart`,
+  `test/surface/interactive_false_active_session_cancel_test.dart`,
+  `test/surface/interactive_false_pending_line_preserved_test.dart`, and
+  `test/surface/interactive_false_state_isolation_test.dart` prove
+  `interactive=false` removes pointer routing, cancels only active routed
+  pointer state through interaction cleanup, preserves non-owned pending-line
+  preview, ignores stale terminal events after re-enable, and does not mutate
+  committed document, selection, resources, mode, or actions.
+- `test/surface/widget_paint_test.dart` and
+  `test/surface/surface_camera_frame_output_test.dart` prove the public surface
+  paint host remains stable while frame-owned main and overlay outputs render
+  through surface-owned painter adapters.
+- `test/smoke/public_incremental_smoke_test.dart` appends the P13 root-barrel
+  public consumer scenario named
+  `public consumer uses CanvasSurface pointer and resource bridge`, covering
+  resource-free paint, resource-backed resolver calls, resolver replacement,
+  Flutter pointer draw output, `interactive=false` no-route isolation, and
+  pending-line preservation without internal package imports.
 
 #### `test/selection/runtime_owner_separation_test.dart`
 - proves selection-only changes publish state.revisions.selection without

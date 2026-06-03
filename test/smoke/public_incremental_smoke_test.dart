@@ -267,6 +267,10 @@ void main() {
   testWidgets('public consumer erases and commits context text requests', (tester) async {
     await _exercisePublicEraserAndContextRequestWorkflow(tester);
   });
+
+  testWidgets('public consumer uses CanvasSurface pointer and resource bridge', (tester) async {
+    await _exercisePublicCanvasSurfacePointerAndResourceBridge(tester);
+  });
 }
 
 Map<String, Object?> _smallSchemaV1Document() {
@@ -913,6 +917,118 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   _expectPublicEmptyRequest(actions, requests, stateEvents);
 }
 
+Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
+  WidgetTester tester,
+) async {
+  final resourceFreeRuntime = CanvasRuntime(initialDocument: _surfaceShapeDocument());
+  final resourceFreeResolver = _NoopResolver();
+  addTearDown(resourceFreeRuntime.dispose);
+  await tester.pumpWidget(
+    _surfaceHost(
+      resourceFreeRuntime,
+      interactive: false,
+      resourceResolver: resourceFreeResolver,
+    ),
+  );
+  expect(_paintHosts(), findsOneWidget);
+  expect(resourceFreeResolver.calls, 0);
+
+  final runtime = CanvasRuntime(initialDocument: _surfaceImageDocument());
+  final actions = <CanvasActionCommitted>[];
+  final actionSubscription = runtime.actions.listen(actions.add);
+  addTearDown(() async {
+    await actionSubscription.cancel();
+    runtime.dispose();
+  });
+
+  final resolver = _NoopResolver();
+  await tester.pumpWidget(
+    _surfaceHost(runtime, interactive: true, resourceResolver: resolver),
+  );
+  await tester.pump();
+  expect(_paintHosts(), findsOneWidget);
+  expect(find.byType(CustomPaint), findsOneWidget);
+  expect(resolver.calls, greaterThan(0));
+  expect(tester.takeException(), isNull);
+
+  final resolverCallsBeforeReplacement = resolver.calls;
+  final replacementResolver = _NoopResolver();
+  await tester.pumpWidget(
+    _surfaceHost(
+      runtime,
+      interactive: true,
+      resourceResolver: replacementResolver,
+    ),
+  );
+  await tester.pump();
+  expect(resolver.calls, resolverCallsBeforeReplacement);
+  expect(replacementResolver.calls, greaterThan(0));
+  expect(tester.takeException(), isNull);
+
+  runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawStyle(
+      CanvasDrawStyle(
+        tool: CanvasDrawTool.pencil,
+        color: const Color(0xFF135724),
+        pencilThickness: 5,
+      ),
+    );
+  await _drawFlutterStroke(tester, const Offset(8, 9), const Offset(18, 19));
+  await tester.pump();
+  expect(actions, hasLength(1));
+  final pencilAction = actions.single;
+  expect(pencilAction.type, CanvasActionType.drawPencil);
+  final stroke = _element(runtime, pencilAction) as CanvasStrokeElement;
+  expect(stroke.points, const [Offset(8, 9), Offset(18, 19)]);
+  expect(stroke.color, const Color(0xFF135724));
+  expect(stroke.thickness, 5);
+
+  final beforeFalse = _PublicRuntimeProbe(runtime, actions);
+  await tester.pumpWidget(
+    _surfaceHost(
+      runtime,
+      interactive: false,
+      resourceResolver: replacementResolver,
+    ),
+  );
+  await _tapPaintHost(tester, const Offset(28, 29));
+  await tester.pump();
+  beforeFalse.expectNoEffects(runtime, actions);
+
+  runtime.tools.setDrawStyle(
+    CanvasDrawStyle(
+      tool: CanvasDrawTool.line,
+      color: const Color(0xFF246813),
+      lineThickness: 4,
+    ),
+  );
+  await tester.pumpWidget(
+    _surfaceHost(
+      runtime,
+      interactive: true,
+      resourceResolver: replacementResolver,
+    ),
+  );
+  await _tapPaintHost(tester, const Offset(31, 32), timestampMs: 70);
+  final pendingLine = runtime.preview as CanvasPendingLineStartPreview;
+  expect(pendingLine.start, const Offset(31, 32));
+  expect(pendingLine.timestampMs, 71);
+  final beforePendingFalse = _PublicRuntimeProbe(runtime, actions);
+  await tester.pumpWidget(
+    _surfaceHost(
+      runtime,
+      interactive: false,
+      resourceResolver: replacementResolver,
+    ),
+  );
+  await tester.pump();
+  final preservedLine = runtime.preview as CanvasPendingLineStartPreview;
+  expect(preservedLine.start, pendingLine.start);
+  expect(preservedLine.timestampMs, pendingLine.timestampMs);
+  beforePendingFalse.expectNoEffects(runtime, actions);
+}
+
 void _previewAndCommitPublicEraser(
   CanvasRuntime runtime,
   List<CanvasActionCommitted> actions,
@@ -1046,15 +1162,69 @@ void _clearPublicEventBuffers(
   deliveryEvents.clear();
 }
 
-Widget _surfaceHost(CanvasRuntime runtime, {required bool interactive}) {
+Widget _surfaceHost(
+  CanvasRuntime runtime, {
+  required bool interactive,
+  CanvasResourceResolver? resourceResolver,
+}) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: SizedBox(
       width: 120,
       height: 80,
-      child: CanvasSurface(runtime: runtime, interactive: interactive),
+      child: CanvasSurface(
+        runtime: runtime,
+        resourceResolver: resourceResolver,
+        interactive: interactive,
+      ),
     ),
   );
+}
+
+Finder _paintHosts() {
+  return find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host'));
+}
+
+Future<void> _drawFlutterStroke(
+  WidgetTester tester,
+  Offset start,
+  Offset end,
+) async {
+  final gesture = await _downOnPaintHost(tester, start, timestampMs: 60);
+  await gesture.moveTo(
+    tester.getTopLeft(_paintHosts()) + end,
+    timeStamp: const Duration(milliseconds: 61),
+  );
+  await gesture.up(timeStamp: const Duration(milliseconds: 62));
+  await tester.pump();
+}
+
+Future<void> _tapPaintHost(
+  WidgetTester tester,
+  Offset localPosition, {
+  int timestampMs = 1,
+}) async {
+  final gesture = await _downOnPaintHost(
+    tester,
+    localPosition,
+    timestampMs: timestampMs,
+  );
+  await gesture.up(timeStamp: Duration(milliseconds: timestampMs + 1));
+  await tester.pump();
+}
+
+Future<TestGesture> _downOnPaintHost(
+  WidgetTester tester,
+  Offset localPosition, {
+  int timestampMs = 1,
+}) async {
+  final gesture = await tester.createGesture(kind: PointerDeviceKind.touch);
+  await gesture.down(
+    tester.getTopLeft(_paintHosts()) + localPosition,
+    timeStamp: Duration(milliseconds: timestampMs),
+  );
+
+  return gesture;
 }
 
 void _expectPencilDraw(
@@ -1213,6 +1383,54 @@ CanvasDocument _selectionMoveCommandDocument() {
   );
 }
 
+CanvasDocument _surfaceShapeDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('surface-shape-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('surface-shape'),
+            size: const Size(20, 18),
+            fillColor: const Color(0xFF336699),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _surfaceImageDocument() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('surface-image-resource'),
+        source: CanvasResourceSource.appKey('surface-smoke-image'),
+        mimeType: 'image/png',
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('surface-image-layer'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('surface-image'),
+            resourceId: CanvasResourceId('surface-image-resource'),
+            size: const Size(24, 16),
+            naturalSize: const Size(24, 16),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('surface-selectable'),
+            transform: CanvasTransform.translation(const Offset(40, 0)),
+            size: const Size(16, 16),
+            fillColor: const Color(0xFF669933),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 CanvasDocument _eraserContextRequestDocument() {
   return CanvasDocument(
     backgroundElements: [
@@ -1278,4 +1496,55 @@ final class _NoopResolver implements CanvasResourceResolver {
     return null;
   }
 }
+
+final class _PublicRuntimeProbe {
+  _PublicRuntimeProbe(CanvasRuntime runtime, List<CanvasActionCommitted> actions)
+    : document = runtime.readDocument(),
+      preview = runtime.preview,
+      mode = runtime.tools.mode,
+      drawStyle = runtime.tools.drawStyle,
+      selection = Set<CanvasElementId>.of(runtime.selection.selectedElementIds),
+      resources = _resourceFacts(runtime.resources.resources),
+      actionCount = actions.length;
+
+  final CanvasDocument document;
+  final CanvasPreviewState preview;
+  final CanvasInteractionMode mode;
+  final CanvasDrawStyle drawStyle;
+  final Set<CanvasElementId> selection;
+  final List<_ResourceFact> resources;
+  final int actionCount;
+
+  void expectNoEffects(
+    CanvasRuntime runtime,
+    List<CanvasActionCommitted> actions,
+  ) {
+    expect(runtime.readDocument(), same(document));
+    expect(runtime.preview, same(preview));
+    expect(runtime.tools.mode, mode);
+    expect(runtime.tools.drawStyle, drawStyle);
+    expect(runtime.selection.selectedElementIds, selection);
+    expect(_resourceFacts(runtime.resources.resources), resources);
+    expect(actions, hasLength(actionCount));
+  }
+}
+
+List<_ResourceFact> _resourceFacts(List<CanvasResource> resources) {
+  return [
+    for (final resource in resources)
+      (
+        id: resource.id,
+        source: resource.source,
+        contentHash: resource.contentHash,
+        byteLength: resource.byteLength,
+      ),
+  ];
+}
+
+typedef _ResourceFact = ({
+  CanvasResourceId id,
+  CanvasResourceSource source,
+  String? contentHash,
+  int? byteLength,
+});
 ''';

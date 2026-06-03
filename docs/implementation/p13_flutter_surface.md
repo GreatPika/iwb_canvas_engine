@@ -9,6 +9,8 @@ store, resolver, or interaction internals.
 ## Build scope
 
 - `CanvasSurface` widget
+- public API wrapper export for the surface-owned `CanvasSurface`
+- narrow runtime-surface bridge and active surface token
 - single active `CanvasSurface` attachment gate per `CanvasRuntime`
 - pointer adapter
 - main painter
@@ -121,6 +123,11 @@ store, resolver, or interaction internals.
 - `test.surface.surface_resource_session_lifecycle` -> `test/surface/surface_resource_session_lifecycle_test.dart`
 - `test.surface.pointer_adapter_finite_normalization` -> `test/surface/pointer_adapter_finite_normalization_test.dart`
 - `test.surface.widget_paint` -> `test/surface/widget_paint_test.dart`
+- `test.smoke.public_incremental_smoke` -> `test/smoke/public_incremental_smoke_test.dart`
+  proves a root-barrel public consumer pumps resource-free and resource-backed
+  `CanvasSurface`, swaps `resourceResolver`, uses Flutter pointer gestures on
+  the paint host, observes public draw output, proves `interactive=false`
+  no-route isolation, and preserves pending-line preview through Flutter events
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
@@ -145,6 +152,10 @@ store, resolver, or interaction internals.
   swap drop the session without disposing app-owned images
 - surface observes `CanvasRuntime.state` as the public runtime change signal and
   does not own or mutate public runtime snapshots
+- the public `lib/src/api/canvas_surface.dart` facade exports the
+  surface-owned implementation without exposing implementation internals
+- the runtime-surface bridge token-checks attach, session installation,
+  interactive-disabled cleanup, pointer routing, frame build, and detach
 - surface captures sealed `CanvasPreviewState` variants and routes
   `CanvasSelectedMovePreview` to the main painter while overlay variants remain
   overlay-only

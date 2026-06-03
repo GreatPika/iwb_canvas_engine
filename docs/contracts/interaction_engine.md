@@ -128,7 +128,7 @@ Rules:
 - one active routed pointer per runtime;
 - pointerId is a routing token only;
 - concurrent pointer sessions are not supported in v1;
-- raw pointer routing belongs to Flutter bridge;
+- raw pointer routing belongs to the surface pointer adapter;
 - InteractionEngine receives normalized CanvasPointerSample;
 - public pointer samples are normalized by
   `lib/src/interaction/pointer_sample_normalizer.dart`, which converts

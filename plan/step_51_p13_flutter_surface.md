@@ -508,7 +508,7 @@ Depends On:
 
 Units 0, 1, 2, and 4.
 
-### [ ] Unit 6: Public smoke, docs, architecture graph, and final P13 verification
+### [x] Unit 6: Public smoke, docs, architecture graph, and final P13 verification
 
 Owner:
 

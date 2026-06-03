@@ -218,7 +218,9 @@ obligations before continuing dependent phase work.
 26. runtime-created timestamp monotonicity tests are green.
 27. low-level edit emits no user action events tests are green.
 28. interaction stale terminal, selection-boundary import, resolver-cancel, and interactive=false routing, cancel, pending-line, and state-isolation tests are green.
-29. surface single-active-surface and pointer normalization tests are green.
+29. surface single-active-surface, resource-session lifecycle, pointer
+    normalization, public surface smoke, and resource-backed paint tests are
+    green.
 30. DTO immutability, `CanvasMetadata` deep-freeze, validating-constructor
     factory policy, approved const-form policy, and public equality policy tests
     are green, including runtime state snapshot value equality.

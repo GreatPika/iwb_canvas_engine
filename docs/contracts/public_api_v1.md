@@ -523,6 +523,7 @@ final class CanvasSurface extends StatefulWidget {
 Surface contract:
 
 ```text
+- public API facade exports the surface-owned CanvasSurface implementation;
 - v1 supports one active CanvasSurface per CanvasRuntime;
 - multiple CanvasSurface widgets may be active at the same time when each uses
   a different CanvasRuntime;
