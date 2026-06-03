@@ -70,3 +70,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 48. P11 draw tools](plan/step_48_p11_draw_tools.md)
 - [x] [Step 49. P12 eraser and context-action request](plan/step_49_p12_eraser_and_context_action_request.md)
 - [x] [Step 50. P12 findings closure](plan/step_50_p12_findings_closure.md)
+- [ ] [Step 51. P13 Flutter surface](plan/step_51_p13_flutter_surface.md)
