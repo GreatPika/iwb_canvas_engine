@@ -60,12 +60,14 @@ descriptors; frame code continues to use `FrameFactsPort` for descriptor facts
 and must not use the catalog seam for asset binding. `ResourceKernel` owns the
 implemented non-surface resource API, catalog read delegation,
 `resourceVisualRevision`, and dirty-resource no-op/acceptance orchestration.
-`RuntimeRoot` holds the nullable active `ResourceSessionInvalidationSink` and
-invalidates it before dirty public-state/effect publication. Each active future
-`CanvasSurface` owns one `SurfaceResourceSession` instance under
-`lib/src/resources/**` for synchronous resolver lifecycle and resolved-image
-cache state; P13 wires that instance to the runtime sink after successful
-surface attach.
+`RuntimeRoot` holds the nullable active `SurfaceResourceSessionLifecycle` port,
+which extends `ResourceSessionInvalidationSink` with `drop()`. Runtime uses the
+invalidation side before dirty public-state/effect publication and the drop side
+when the active surface detaches, swaps runtimes, or the runtime is disposed.
+Each active `CanvasSurface` creates one concrete `SurfaceResourceSession`
+instance under `lib/src/resources/**` for synchronous resolver lifecycle and
+resolved-image cache state; P13 wires that instance to the runtime lifecycle
+port after successful surface attach.
 
 ```text
 Committed document:
@@ -75,6 +77,7 @@ Runtime resource orchestration:
   dirty resource ids;
   resource visual public-state publication;
   target/all session invalidation events;
+  active session drop on detach/runtime swap/dispose;
   resolver reentrancy rejection.
 
 SurfaceResourceSession:
@@ -108,9 +111,11 @@ the pending budget follow-up repaint flag before resolver work begins.
 
 `CanvasSurface` creates an empty `SurfaceResourceSession` only after successful
 single-active-surface attachment. Rejected attachment creates no session and
-performs no resolver side effects. Detach, dispose, and runtime swap drop the
-session and its cache without disposing app-owned `ui.Image` instances. If an
-active surface receives a different `resourceResolver`, the session increments
+performs no resolver side effects. The runtime-surface bridge installs the
+session through `SurfaceResourceSessionLifecycle`; detach, dispose, runtime
+swap, and runtime disposal call `drop()` through that lifecycle port and clear
+the cache without disposing app-owned `ui.Image` instances. If an active surface
+receives a different `resourceResolver`, the session increments
 `resolverGeneration` and clears stale entries before the next resolve.
 
 ### 7.1.1 Image resolve cache policy
