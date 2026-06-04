@@ -1,15 +1,44 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
+import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 
+import '../../frame/fixtures/ordinary_paint_test_support.dart';
+
 void main() {
+  _registerSelectionChromePaintBoundaryTests();
   _registerOrderedChromeTest();
+  _registerPaintOrderTests();
   _registerInsideBoxChromeTests();
   _registerOutlineChromeTest();
+}
+
+void _registerSelectionChromePaintBoundaryTests() {
+  test('main painter consumes ordered selection chrome frame plans', () {
+    final mainPainterSource = File(
+      'lib/src/surface/main_painter.dart',
+    ).readAsStringSync();
+
+    expect(mainPainterSource, contains('selectionDecorationPlan'));
+    expect(
+      mainPainterSource,
+      contains('paintMainFrameRecordsAndSelectionDecorations(canvas, output)'),
+    );
+    expect(
+      mainPainterSource,
+      isNot(contains('void _paintSelectionDecorations(')),
+    );
+    expect(mainPainterSource, isNot(contains('.sort(')));
+    expect(mainPainterSource, isNot(contains('SelectedOrderSnapshot')));
+    expect(mainPainterSource, isNot(contains('selectedOrderSnapshot')));
+    expect(mainPainterSource, isNot(contains('saveLayer')));
+    expect(mainPainterSource, isNot(contains('ordinaryPaintRecordCache')));
+  });
 }
 
 void _registerOrderedChromeTest() {
@@ -32,6 +61,24 @@ void _registerOrderedChromeTest() {
         selectedBounds.center.dy.round(),
       )).rgba,
       _redRgba,
+    );
+  });
+}
+
+void _registerPaintOrderTests() {
+  test('main painter consumes records bottom-to-top', () {
+    final bottom = RenderElementRecord.fromFacts(
+      rectFacts('bottom', orderToken: 1),
+    );
+    final top = RenderElementRecord.fromFacts(rectFacts('top', orderToken: 2));
+
+    expect(
+      mainFrameRecordsInPaintOrder([top, bottom]).map((record) => record.id),
+      [bottom.id, top.id],
+    );
+    expect(
+      mainFrameRecordsInPaintOrder([bottom, top]).map((record) => record.id),
+      [bottom.id, top.id],
     );
   });
 }

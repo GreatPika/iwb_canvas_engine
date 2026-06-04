@@ -1,16 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
-import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
-
-import '../../frame/fixtures/ordinary_paint_test_support.dart';
 
 void main() {
   _registerPainterBoundaryTests();
   _registerOverlayPainterBoundaryTests();
   _registerMainPainterBoundaryTests();
-  _registerPaintOrderTests();
 }
 
 void _registerPainterBoundaryTests() {
@@ -45,38 +40,6 @@ void _registerMainPainterBoundaryTests() {
     expect(mainPainterSource, contains('staticBackgroundPlan'));
     expect(mainPainterSource, contains('drawPicture'));
     expect(mainPainterSource, isNot(contains('StaticBackgroundPrimitive')));
-    expect(mainPainterSource, contains('selectionDecorationPlan'));
-    expect(
-      mainPainterSource,
-      contains('paintMainFrameRecordsAndSelectionDecorations(canvas, output)'),
-    );
-    expect(
-      mainPainterSource,
-      isNot(contains('void _paintSelectionDecorations(')),
-    );
-    expect(mainPainterSource, isNot(contains('.sort(')));
-    expect(mainPainterSource, isNot(contains('SelectedOrderSnapshot')));
-    expect(mainPainterSource, isNot(contains('selectedOrderSnapshot')));
-    expect(mainPainterSource, isNot(contains('saveLayer')));
-    expect(mainPainterSource, isNot(contains('ordinaryPaintRecordCache')));
-  });
-}
-
-void _registerPaintOrderTests() {
-  test('main painter consumes records bottom-to-top', () {
-    final bottom = RenderElementRecord.fromFacts(
-      rectFacts('bottom', orderToken: 1),
-    );
-    final top = RenderElementRecord.fromFacts(rectFacts('top', orderToken: 2));
-
-    expect(
-      mainFrameRecordsInPaintOrder([top, bottom]).map((record) => record.id),
-      [bottom.id, top.id],
-    );
-    expect(
-      mainFrameRecordsInPaintOrder([bottom, top]).map((record) => record.id),
-      [bottom.id, top.id],
-    );
   });
 }
 
