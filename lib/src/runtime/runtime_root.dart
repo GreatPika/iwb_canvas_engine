@@ -48,10 +48,12 @@ import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
 import '../frame/frame_text_layout_measurer.dart';
+import '../geometry/geometry_policy.dart';
 import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
 import '../interaction/interaction_read_port.dart';
+import '../interaction/interaction_request_registry.dart';
 import '../interaction/interaction_runtime_intents.dart';
 import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
@@ -237,8 +239,9 @@ final class RuntimeRoot
   late final CanvasToolPort _toolPort = _RuntimeToolPort(this);
   late final CanvasCommandPort _commandPort = _RuntimeCommandPort(this);
   late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
-  late final _InactiveTextEditingPort _textEditingPort =
-      _InactiveTextEditingPort();
+  late final _RuntimeTextEditingPort _textEditingPort = _RuntimeTextEditingPort(
+    this,
+  );
 
   // Public state.
   ValueListenable<CanvasRuntimeState> get state => _state;
@@ -287,6 +290,26 @@ final class RuntimeRoot
   FrameFactsPort get frameFactsPort => this;
   @visibleForTesting
   SpatialKernel get spatialKernel => _spatial;
+  @visibleForTesting
+  Object? get activeTextEditSuppressionForTesting {
+    return _textEditingPort.activeSuppressionToken;
+  }
+
+  @visibleForTesting
+  ({
+    CanvasInteractionRequestId requestId,
+    CanvasElementId elementId,
+    int elementRevision,
+    int generation,
+  })?
+  get activeTextEditSuppressionIdentityForTesting {
+    return _textEditingPort.activeSuppressionToken?.identityForTesting;
+  }
+
+  @visibleForTesting
+  int get textEditCandidateStateCountForTesting {
+    return _textEditingPort.candidateStateCount;
+  }
 
   // Surface lifecycle.
   void attachSurface(Object token) {
@@ -580,6 +603,66 @@ final class RuntimeRoot
     );
   }
 
+  FrameElementFacts? _frameFactsForElement(CanvasElementId id) {
+    final handle = elementHandleForId(frameRevisions.structuralRevision, id);
+    return handle == null ? null : resolveElement(handle);
+  }
+
+  // This explicit copy keeps a live text measurement in the same frame-facts
+  // shape GeometryPolicy already owns; splitting fields into a partial builder
+  // would make the frame handoff harder to audit.
+  // ignore: halstead-volume, source-lines-of-code
+  FrameElementFacts _textFrameFactsWithLiveText(
+    FrameElementFacts source,
+    String text,
+  ) {
+    final layout = _measuredTextLayoutFromFrameFacts(source, text);
+
+    return FrameElementFacts(
+      id: source.id,
+      kind: source.kind,
+      revision: source.revision,
+      generation: source.generation,
+      orderToken: source.orderToken,
+      locationKind: source.locationKind,
+      transform: source.transform,
+      opacity: source.opacity,
+      hitPadding: source.hitPadding,
+      isVisible: source.isVisible,
+      isSelectable: source.isSelectable,
+      isLocked: source.isLocked,
+      isDeletable: source.isDeletable,
+      isTransformable: source.isTransformable,
+      metadata: source.metadata,
+      resourceId: source.resourceId,
+      layerId: source.layerId,
+      size: source.size,
+      naturalSize: source.naturalSize,
+      svgPathData: source.svgPathData,
+      fillColor: source.fillColor,
+      strokeColor: source.strokeColor,
+      strokeWidth: source.strokeWidth,
+      fillRule: source.fillRule,
+      text: text,
+      fontSize: source.fontSize,
+      textColor: source.textColor,
+      textAlign: source.textAlign,
+      textDirection: source.textDirection,
+      isBold: source.isBold,
+      isItalic: source.isItalic,
+      isUnderline: source.isUnderline,
+      fontFamily: source.fontFamily,
+      maxWidth: source.maxWidth,
+      lineHeight: source.lineHeight,
+      measuredTextLayout: layout,
+      points: source.points,
+      start: source.start,
+      end: source.end,
+      color: source.color,
+      thickness: source.thickness,
+    );
+  }
+
   MeasuredTextLayout? _measuredTextLayoutFor(StoreElementFacts facts) {
     final text = facts.text;
     if (facts.kind != CanvasElementKind.text || text == null) {
@@ -590,6 +673,34 @@ final class RuntimeRoot
         text: text,
         fontSize: facts.fontSize ?? 24,
         color: _textLayoutColorFor(facts),
+        align: facts.textAlign ?? TextAlign.left,
+        direction: facts.textDirection ?? TextDirection.ltr,
+        isBold: facts.isBold ?? false,
+        isItalic: facts.isItalic ?? false,
+        isUnderline: facts.isUnderline ?? false,
+        fontFamily: facts.fontFamily,
+        maxWidth: facts.maxWidth,
+        lineHeight: facts.lineHeight,
+      ),
+    );
+
+    return switch (result) {
+      MeasuredTextLayoutReady(:final layout) => layout,
+      MeasuredTextLayoutFailed(:final reason) => throw StateError(
+        'Text layout measurement failed for ${facts.id.value}: $reason',
+      ),
+    };
+  }
+
+  MeasuredTextLayout _measuredTextLayoutFromFrameFacts(
+    FrameElementFacts facts,
+    String text,
+  ) {
+    final result = _textLayoutMeasurer.measureTextLayout(
+      MeasuredTextLayoutInput(
+        text: text,
+        fontSize: facts.fontSize ?? 24,
+        color: facts.textColor ?? const Color(0xFF000000),
         align: facts.textAlign ?? TextAlign.left,
         direction: facts.textDirection ?? TextDirection.ltr,
         isBold: facts.isBold ?? false,
@@ -874,12 +985,15 @@ final class RuntimeRoot
 
     final guard = _interactionEngine.textEditGuardDecision(requestId);
     if (guard.kind != TextEditGuardDecisionKind.accepted) {
+      _textEditingPort.clearConsumedRequest(requestId);
+
       return false;
     }
     final targetElementId = guard.targetElementId as CanvasElementId;
     final previousText = guard.currentText as String;
     if (previousText == newText) {
       _interactionEngine.consumeTextEditRequest(requestId);
+      _textEditingPort.clearAcceptedRequest(requestId);
 
       return true;
     }
@@ -895,6 +1009,7 @@ final class RuntimeRoot
     }
     _interactionEngine.consumeTextEditRequest(requestId);
     _deliverEditCommitResult(applyResult);
+    _textEditingPort.clearAcceptedRequest(requestId);
 
     return true;
   }
@@ -1276,6 +1391,7 @@ final class RuntimeRoot
     if (testBoundary != null) {
       testBoundary.prepareLoadCleanup();
     }
+    _textEditingPort.clearTransientState();
     _interactionEngine.prepareLoadCleanup();
     _interactionEngine.clearInteractionRequests();
   }
@@ -2229,10 +2345,29 @@ final class _RuntimeRevisionFacts {
   final int interaction;
 }
 
-final class _InactiveTextEditingPort implements CanvasTextEditingPort {
-  final ValueNotifier<CanvasTextEditSession?> _activeSession =
-      ValueNotifier<CanvasTextEditSession?>(null);
+final class _TextEditActiveSessionNotifier
+    extends ValueNotifier<CanvasTextEditSession?> {
+  _TextEditActiveSessionNotifier() : super(null);
+
+  void notifyLiveTextChanged() {
+    notifyListeners();
+  }
+}
+
+// Text editing admission, active publication, live text updates, guarded commit,
+// and dismissal share one runtime-owned session state; splitting this port would
+// require sync glue for the single-active and read-only invariants.
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
+final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
+  _RuntimeTextEditingPort(this._root);
+
+  final RuntimeRoot _root;
+  final _TextEditActiveSessionNotifier _activeSession =
+      _TextEditActiveSessionNotifier();
+  final List<_RuntimeTextEditSessionState> _ownedStates = [];
   bool _readOnly = false;
+  _RuntimeTextEditSessionState? _active;
+  _TextEditSuppressionToken? _suppressionToken;
 
   @override
   ValueListenable<CanvasTextEditSession?> get activeSession => _activeSession;
@@ -2240,34 +2375,435 @@ final class _InactiveTextEditingPort implements CanvasTextEditingPort {
   @override
   bool get readOnly => _readOnly;
 
+  _TextEditSuppressionToken? get activeSuppressionToken => _suppressionToken;
+  int get candidateStateCount => _ownedStates.length;
+
   @override
   CanvasTextEditSession? sessionCandidateFor(
     CanvasContextActionRequested request,
   ) {
-    return null;
+    _ensurePublicOperationAllowed();
+    _pruneExpiredCandidateStates();
+    final existing = _stateForRequest(request.requestId);
+    if (existing != null && !_isStale(existing)) {
+      return existing.session;
+    }
+    final state = _candidateStateFor(request);
+    if (state == null) {
+      return null;
+    }
+    _ownedStates.removeWhere(
+      (owned) => !identical(owned, state) && _sameGuardIdentity(owned, state),
+    );
+    _ownedStates.add(state);
+
+    return state.session;
   }
 
   @override
   CanvasTextEditSession? start(CanvasTextEditSession session) {
-    return null;
+    _ensurePublicOperationAllowed();
+    _pruneExpiredCandidateStates();
+    final state = _stateForSession(session);
+    if (_readOnly || state == null) {
+      return null;
+    }
+    final current = _active;
+    if (current != null) {
+      if (identical(current.session, session) ||
+          _sameGuardIdentity(current, state)) {
+        _discardCandidateState(state);
+
+        return current.session;
+      }
+
+      return null;
+    }
+    if (_isStale(state)) {
+      _discardCandidateState(state);
+
+      return null;
+    }
+    state.active = true;
+    _active = state;
+    _suppressionToken = _TextEditSuppressionToken.fromState(state);
+    _activeSession.value = state.session;
+
+    return state.session;
   }
 
   @override
   CanvasTextEditSession? startFromContextAction(
     CanvasContextActionRequested request,
   ) {
-    return null;
+    final candidate = sessionCandidateFor(request);
+
+    return candidate == null ? null : start(candidate);
   }
 
   @override
   void setReadOnly(bool value) {
+    _ensurePublicOperationAllowed();
     _readOnly = value;
+    if (value) {
+      _dismissActiveWithoutGuard();
+    }
   }
 
   @override
-  void dismissActive() {}
+  void dismissActive() {
+    _ensurePublicOperationAllowed();
+    _dismissActiveWithoutGuard();
+  }
+
+  void _dismissActiveWithoutGuard() {
+    final state = _active;
+    if (state == null) {
+      _pruneExpiredCandidateStates();
+
+      return;
+    }
+    state.active = false;
+    _active = null;
+    _suppressionToken = null;
+    _activeSession.value = null;
+    _discardCandidateState(state);
+    _pruneExpiredCandidateStates();
+  }
+
+  void clearTransientState() {
+    final state = _active;
+    if (state != null) {
+      state.active = false;
+      _active = null;
+      _suppressionToken = null;
+      _activeSession.value = null;
+    }
+    _ownedStates.clear();
+  }
+
+  void _ensurePublicOperationAllowed() {
+    _root.ensureRuntimeMutationAllowed();
+  }
+
+  void clearAcceptedRequest(CanvasInteractionRequestId requestId) {
+    final state = _active;
+    if (state != null && state.requestId == requestId) {
+      _dismissActiveWithoutGuard();
+
+      return;
+    }
+    _pruneExpiredCandidateStates();
+  }
+
+  void clearConsumedRequest(CanvasInteractionRequestId requestId) {
+    final state = _active;
+    if (state != null && state.requestId == requestId && _isStale(state)) {
+      _dismissActiveWithoutGuard();
+
+      return;
+    }
+    _pruneExpiredCandidateStates();
+  }
 
   void dispose() {
+    clearTransientState();
     _activeSession.dispose();
+  }
+
+  // Candidate creation captures request guard facts and runtime callbacks in one
+  // atomic session value so later start/commit cannot mix guard identities.
+  // ignore: halstead-volume, source-lines-of-code
+  _RuntimeTextEditSessionState? _candidateStateFor(
+    CanvasContextActionRequested request,
+  ) {
+    final guard = _root._interactionEngine.requestFactsFor(request.requestId);
+    if (guard == null ||
+        guard.requestId != request.requestId ||
+        guard.targetKind != InteractionRequestTargetKind.contentElement ||
+        guard.contentElementKind != CanvasElementKind.text) {
+      return null;
+    }
+    final current = _currentGuardFacts(guard);
+    if (!_textGuardMatches(guard, current)) {
+      return null;
+    }
+    final targetElementId = guard.contentElementId as CanvasElementId;
+    final facts = _root._frameFactsForElement(targetElementId);
+    if (facts == null || facts.kind != CanvasElementKind.text) {
+      return null;
+    }
+    final initialText = current.currentText as String;
+    late final _RuntimeTextEditSessionState state;
+    state = _RuntimeTextEditSessionState(
+      requestId: guard.requestId,
+      elementId: targetElementId,
+      documentRevision: guard.documentRevision,
+      elementRevision: guard.elementRevision as int,
+      generation: guard.generation as int,
+      initialText: initialText,
+      liveText: initialText,
+      baseFacts: facts,
+      session: canvasTextEditSessionForRuntime(
+        elementId: targetElementId,
+        requestId: guard.requestId,
+        documentRevision: guard.documentRevision,
+        elementRevision: guard.elementRevision as int,
+        generation: guard.generation as int,
+        initialText: initialText,
+        liveText: () {
+          _ensurePublicOperationAllowed();
+
+          return state.liveText;
+        },
+        geometry: () {
+          _ensurePublicOperationAllowed();
+
+          return _geometryFor(state);
+        },
+        style: () {
+          _ensurePublicOperationAllowed();
+
+          return _styleFor(state.baseFacts);
+        },
+        isActive: () {
+          _ensurePublicOperationAllowed();
+
+          return state.active;
+        },
+        isStale: () {
+          _ensurePublicOperationAllowed();
+
+          return _isStale(state);
+        },
+        updateText: (text) => _updateText(state, text),
+        commit: ({timestampMs}) => _commit(state, timestampMs),
+        dismiss: () => _dismiss(state),
+      ),
+    );
+
+    return state;
+  }
+
+  TextCommitGuardReadFacts _currentGuardFacts(
+    InteractionRequestGuardFacts guard,
+  ) {
+    final targetElementId = guard.contentElementId;
+    if (targetElementId == null) {
+      return TextCommitGuardReadFacts.missing(
+        targetElementId: CanvasElementId('missing-text-target'),
+        controllerEpoch: guard.controllerEpoch,
+        documentRevision: guard.documentRevision,
+      );
+    }
+
+    return _root._interactionReadPort.textCommitGuardFacts(
+      TextCommitGuardReadRequest(targetElementId: targetElementId),
+    );
+  }
+
+  bool _textGuardMatches(
+    InteractionRequestGuardFacts guard,
+    TextCommitGuardReadFacts current,
+  ) {
+    return current.exists &&
+        current.targetKind == CanvasElementKind.text &&
+        current.controllerEpoch == guard.controllerEpoch &&
+        current.generation == guard.generation &&
+        current.elementRevision == guard.elementRevision &&
+        current.family == guard.family &&
+        current.currentText != null;
+  }
+
+  _RuntimeTextEditSessionState? _stateForSession(
+    CanvasTextEditSession session,
+  ) {
+    if (_active case final active? when identical(active.session, session)) {
+      return active;
+    }
+
+    for (final state in _ownedStates) {
+      if (identical(state.session, session)) {
+        return state;
+      }
+    }
+
+    return null;
+  }
+
+  _RuntimeTextEditSessionState? _stateForRequest(
+    CanvasInteractionRequestId requestId,
+  ) {
+    if (_active case final active? when active.requestId == requestId) {
+      return active;
+    }
+
+    for (final state in _ownedStates) {
+      if (state.requestId == requestId) {
+        return state;
+      }
+    }
+
+    return null;
+  }
+
+  bool _isStale(_RuntimeTextEditSessionState state) {
+    final guard = _root._interactionEngine.requestFactsFor(state.requestId);
+    if (guard == null) {
+      return true;
+    }
+
+    return !_textGuardMatches(guard, _currentGuardFacts(guard));
+  }
+
+  bool _sameGuardIdentity(
+    _RuntimeTextEditSessionState left,
+    _RuntimeTextEditSessionState right,
+  ) {
+    return left.requestId == right.requestId &&
+        left.elementId == right.elementId &&
+        left.elementRevision == right.elementRevision &&
+        left.generation == right.generation;
+  }
+
+  void _discardCandidateState(_RuntimeTextEditSessionState state) {
+    if (identical(_active, state)) {
+      return;
+    }
+    _ownedStates.removeWhere((owned) => identical(owned, state));
+  }
+
+  void _pruneExpiredCandidateStates() {
+    _ownedStates.removeWhere((state) {
+      return !identical(_active, state) && _isStale(state);
+    });
+  }
+
+  void _updateText(_RuntimeTextEditSessionState state, String text) {
+    _ensurePublicOperationAllowed();
+    if (!identical(_active?.session, state.session)) {
+      return;
+    }
+    state.liveText = text;
+    _activeSession.notifyLiveTextChanged();
+  }
+
+  bool _commit(_RuntimeTextEditSessionState state, int? timestampMs) {
+    _ensurePublicOperationAllowed();
+    if (!identical(_active?.session, state.session)) {
+      return false;
+    }
+    final didCommit = _root.commitTextEdit(
+      state.requestId,
+      state.liveText,
+      timestampMs: timestampMs,
+    );
+    if (didCommit || _isStale(state)) {
+      _dismiss(state);
+    }
+
+    return didCommit;
+  }
+
+  void _dismiss(_RuntimeTextEditSessionState state) {
+    _ensurePublicOperationAllowed();
+    if (!identical(_active?.session, state.session)) {
+      return;
+    }
+    _dismissActiveWithoutGuard();
+  }
+
+  CanvasTextEditGeometry _geometryFor(_RuntimeTextEditSessionState state) {
+    final facts = _root._textFrameFactsWithLiveText(
+      state.baseFacts,
+      state.liveText,
+    );
+    final bounds = const GeometryPolicy().boundsFor(facts);
+
+    return CanvasTextEditGeometry(
+      paintBoundsWorld: bounds.paintBoundsWorld,
+      editBoundsWorld: bounds.editBoundsWorld,
+      transform: facts.transform,
+      maxWidth: facts.maxWidth,
+    );
+  }
+
+  CanvasTextEditStyle _styleFor(FrameElementFacts facts) {
+    return CanvasTextEditStyle(
+      fontSize: facts.fontSize ?? 24,
+      fontFamily: facts.fontFamily,
+      isBold: facts.isBold ?? false,
+      isItalic: facts.isItalic ?? false,
+      isUnderline: facts.isUnderline ?? false,
+      color: facts.textColor ?? const Color(0xFF000000),
+      textAlign: facts.textAlign ?? TextAlign.left,
+      textDirection: facts.textDirection ?? TextDirection.ltr,
+      lineHeight: facts.lineHeight,
+    );
+  }
+}
+
+final class _RuntimeTextEditSessionState {
+  _RuntimeTextEditSessionState({
+    required this.requestId,
+    required this.elementId,
+    required this.documentRevision,
+    required this.elementRevision,
+    required this.generation,
+    required this.initialText,
+    required this.liveText,
+    required this.baseFacts,
+    required this.session,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final CanvasElementId elementId;
+  final int documentRevision;
+  final int elementRevision;
+  final int generation;
+  final String initialText;
+  String liveText;
+  final FrameElementFacts baseFacts;
+  final CanvasTextEditSession session;
+  bool active = false;
+}
+
+final class _TextEditSuppressionToken {
+  const _TextEditSuppressionToken({
+    required this.requestId,
+    required this.elementId,
+    required this.elementRevision,
+    required this.generation,
+  });
+
+  factory _TextEditSuppressionToken.fromState(
+    _RuntimeTextEditSessionState state,
+  ) {
+    return _TextEditSuppressionToken(
+      requestId: state.requestId,
+      elementId: state.elementId,
+      elementRevision: state.elementRevision,
+      generation: state.generation,
+    );
+  }
+
+  final CanvasInteractionRequestId requestId;
+  final CanvasElementId elementId;
+  final int elementRevision;
+  final int generation;
+
+  ({
+    CanvasInteractionRequestId requestId,
+    CanvasElementId elementId,
+    int elementRevision,
+    int generation,
+  })
+  get identityForTesting {
+    return (
+      requestId: requestId,
+      elementId: elementId,
+      elementRevision: elementRevision,
+      generation: generation,
+    );
   }
 }
