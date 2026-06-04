@@ -28,12 +28,13 @@ void _testGeometryImportsCommittedFacts() {
 void _testTopmostUsesCommittedHandleOrder() {
   test('topmost hit resolution uses committed handle order tokens', () {
     final unit = _parse(File('lib/src/geometry/hit_test_policy.dart'));
-    final method = _classMethod(unit, 'HitTestPolicy', 'topmostHit');
+    final method = _classMethod(unit, 'HitTestPolicy', 'topmostHitResult');
     final source = method.toSource();
 
     expect(source, contains('FrameElementHandle'));
     expect(source, contains('orderToken.compareTo'));
     expect(source, contains('resolve(handle)'));
+    expect(source, contains('HitTestResult'));
     expect(source, isNot(contains('scene.layers')));
     expect(source, isNot(contains('layer.nodes')));
   });
