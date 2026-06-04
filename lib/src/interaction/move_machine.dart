@@ -70,6 +70,7 @@ bool _admitsGroupUnionStart(SelectedMoveStartFacts facts) {
       facts.insideSelectedGroupUnion &&
       !facts.groupUnionOccludedByHigherOrderHit &&
       facts.query.status == InteractionReadQueryStatus.candidates &&
+      facts.query.skippedCandidateCount == 0 &&
       facts.selectedTopOrderToken != null &&
       bounds != null &&
       _isFiniteNonEmptyRect(bounds);

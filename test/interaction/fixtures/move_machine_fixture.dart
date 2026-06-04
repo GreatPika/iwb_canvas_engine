@@ -103,6 +103,22 @@ void _testMoveMachineRejectsUnreliableGroupOcclusionFacts() {
       );
     },
   );
+
+  test('move machine rejects group union facts with skipped candidates', () {
+    expect(
+      const MoveMachine()
+          .start(
+            _groupStartFacts(
+              query: const InteractionReadQueryFacts.candidates(
+                candidateCount: 2,
+                skippedCandidateCount: 1,
+              ),
+            ),
+          )
+          .admitted,
+      isFalse,
+    );
+  });
 }
 
 void _testSelectedMoveAdmissionAndPreview() {
