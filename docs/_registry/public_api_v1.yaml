@@ -42,6 +42,7 @@ public_exports:
   - CanvasTextEditGeometry
   - CanvasTextEditStyle
   - CanvasTextEditingPort
+  - CanvasTextEditingOverlay
   - CanvasResourcePort
   - CanvasResource
   - CanvasImageResource

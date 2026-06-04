@@ -596,6 +596,16 @@ void _exerciseP2ContractSurface() {
     gridStyle: CanvasGridStyle(strokeWidth: 0.5),
     interactive: false,
   );
+  final Widget textEditingOverlay = CanvasTextEditingOverlay(
+    runtime: runtime,
+    inlineEditOnDoubleTap: true,
+    maxEditorHeight: 120,
+    cursorColor: const Color(0xFF1565C0),
+    selectionColor: const Color(0x331565C0),
+    autofocus: false,
+    commitOnFocusLoss: false,
+    dismissOnEscape: true,
+  );
   final selectionStyle = CanvasSelectionStyle(
     color: const Color(0xFF1565C0),
     strokeWidth: 1,
@@ -604,6 +614,7 @@ void _exerciseP2ContractSurface() {
   );
   _use(selectionStyle);
   _use(surface);
+  _use(textEditingOverlay);
 }
 
 void _exerciseInlineTextEditingContractSurface(
@@ -616,6 +627,7 @@ void _exerciseInlineTextEditingContractSurface(
     editBoundsWorld: const Rect.fromLTWH(1, 2, 3, 4),
     transform: CanvasTransform.identity,
     maxWidth: 120,
+    editBoundsLocal: const Rect.fromLTWH(0, 0, 3, 4),
   );
   final style = CanvasTextEditStyle(
     fontSize: 16,

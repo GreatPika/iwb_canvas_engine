@@ -14,12 +14,14 @@ final class CanvasTextEditGeometry {
     required this.editBoundsWorld,
     required this.transform,
     required this.maxWidth,
+    this.editBoundsLocal,
   });
 
   final Rect paintBoundsWorld;
   final Rect editBoundsWorld;
   final CanvasTransform transform;
   final double? maxWidth;
+  final Rect? editBoundsLocal;
 
   @override
   bool operator ==(Object other) {
@@ -27,12 +29,19 @@ final class CanvasTextEditGeometry {
         other.paintBoundsWorld == paintBoundsWorld &&
         other.editBoundsWorld == editBoundsWorld &&
         other.transform == transform &&
-        other.maxWidth == maxWidth;
+        other.maxWidth == maxWidth &&
+        other.editBoundsLocal == editBoundsLocal;
   }
 
   @override
   int get hashCode {
-    return Object.hash(paintBoundsWorld, editBoundsWorld, transform, maxWidth);
+    return Object.hash(
+      paintBoundsWorld,
+      editBoundsWorld,
+      transform,
+      maxWidth,
+      editBoundsLocal,
+    );
   }
 }
 

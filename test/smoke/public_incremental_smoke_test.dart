@@ -268,6 +268,10 @@ void main() {
     await _exercisePublicEraserAndContextRequestWorkflow(tester);
   });
 
+  testWidgets('public consumer can replace the official text editing overlay', (tester) async {
+    await _exercisePublicCustomTextEditingOverlay(tester);
+  });
+
   testWidgets('public consumer uses CanvasSurface pointer and resource bridge', (tester) async {
     await _exercisePublicCanvasSurfacePointerAndResourceBridge(tester);
   });
@@ -866,7 +870,7 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   _expectPublicEraseCommit(runtime, actions, deliveryEvents);
 
   _clearPublicEventBuffers(actions, requests, stateEvents, deliveryEvents);
-  runtime.tools.handleDoubleTap(position: const Offset(60, 0), timestampMs: 50);
+  runtime.tools.handleDoubleTap(position: const Offset(90, 0), timestampMs: 50);
   await tester.pump();
   final textRequest = _expectPublicContentRequest(
     runtime,
@@ -915,6 +919,72 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   runtime.tools.handleDoubleTap(position: const Offset(200, 200), timestampMs: 52);
   await tester.pump();
   _expectPublicEmptyRequest(actions, requests, stateEvents);
+}
+
+Future<void> _exercisePublicCustomTextEditingOverlay(
+  WidgetTester tester,
+) async {
+  final runtime = CanvasRuntime(
+    initialDocument: _eraserContextRequestDocument(
+      cameraOffset: const Offset(5, 3),
+    ),
+  );
+  final requests = <CanvasContextActionRequested>[];
+  final requestSubscription = runtime.contextActionRequests.listen(requests.add);
+  addTearDown(() async {
+    await requestSubscription.cancel();
+    runtime.dispose();
+  });
+
+  await tester.pumpWidget(
+    Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 160,
+        height: 120,
+        child: Stack(
+          children: [
+            CanvasSurface(runtime: runtime, interactive: false),
+            _CustomTextEditingOverlay(runtime: runtime),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  runtime.tools.handleDoubleTap(position: const Offset(85, -3), timestampMs: 70);
+  await tester.pump();
+  final session = runtime.textEditing.startFromContextAction(requests.single);
+  expect(session, isNotNull);
+  await tester.pump();
+
+  expect(
+    find.byKey(const ValueKey<String>('custom.text.edit.host')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const ValueKey<String>('custom.text.edit.field')),
+    findsOneWidget,
+  );
+  await tester.enterText(
+    find.byKey(const ValueKey<String>('custom.text.edit.field')),
+    'custom',
+  );
+  await tester.pump();
+  final editor = tester.widget<EditableText>(
+    find.byKey(const ValueKey<String>('custom.text.edit.field')),
+  );
+  expect(editor.style.fontSize, session!.style.fontSize);
+  expect(editor.textAlign, session.style.textAlign);
+  editor.onEditingComplete?.call();
+  await tester.pump();
+
+  expect(
+    (_elementOrNull(runtime, CanvasElementId('text-edit')) as CanvasTextElement)
+        .text,
+    'custom',
+  );
+  expect(runtime.textEditing.activeSession.value, isNull);
 }
 
 Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
@@ -1095,8 +1165,8 @@ CanvasContextActionRequested _expectPublicContentRequest(
   final request = requests.single;
   expect(request.trigger, CanvasContextActionTrigger.doubleTap);
   expect(request.timestampMs, 50);
-  expect(request.viewPosition, const Offset(60, 0));
-  expect(request.worldPosition, const Offset(60, 0));
+  expect(request.viewPosition, const Offset(90, 0));
+  expect(request.worldPosition, const Offset(90, 0));
   expect(request.controllerEpoch, runtime.state.value.revisions.epoch);
   expect(request.documentRevision, runtime.state.value.revisions.document);
   final target = request.target as CanvasContentElementContextActionTarget;
@@ -1431,8 +1501,9 @@ CanvasDocument _surfaceImageDocument() {
   );
 }
 
-CanvasDocument _eraserContextRequestDocument() {
+CanvasDocument _eraserContextRequestDocument({Offset cameraOffset = Offset.zero}) {
   return CanvasDocument(
+    camera: CanvasCamera(offset: cameraOffset),
     backgroundElements: [
       CanvasRectElement(
         id: CanvasElementId('background-only'),
@@ -1463,7 +1534,7 @@ CanvasDocument _eraserContextRequestDocument() {
             text: 'hello',
             color: const Color(0xFF111827),
             textDirection: TextDirection.ltr,
-            transform: CanvasTransform.translation(const Offset(60, 0)),
+            transform: CanvasTransform.translation(const Offset(90, 0)),
           ),
         ],
       ),
@@ -1526,6 +1597,135 @@ final class _PublicRuntimeProbe {
     expect(runtime.selection.selectedElementIds, selection);
     expect(_resourceFacts(runtime.resources.resources), resources);
     expect(actions, hasLength(actionCount));
+  }
+}
+
+final class _CustomTextEditingOverlay extends StatelessWidget {
+  const _CustomTextEditingOverlay({required this.runtime});
+
+  final CanvasRuntime runtime;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<CanvasRuntimeState>(
+      valueListenable: runtime.state,
+      builder: (context, session, _) {
+        return ValueListenableBuilder<CanvasTextEditSession?>(
+          valueListenable: runtime.textEditing.activeSession,
+          builder: (context, session, _) {
+            if (session == null) {
+              return const SizedBox.shrink();
+            }
+
+            return _CustomSessionEditor(
+              session: session,
+              cameraOffset: runtime.camera.offset,
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+final class _CustomSessionEditor extends StatefulWidget {
+  const _CustomSessionEditor({
+    required this.session,
+    required this.cameraOffset,
+  });
+
+  final CanvasTextEditSession session;
+  final Offset cameraOffset;
+
+  @override
+  State<_CustomSessionEditor> createState() => _CustomSessionEditorState();
+}
+
+final class _CustomSessionEditorState extends State<_CustomSessionEditor> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.session.liveText)
+      ..addListener(_handleTextChanged);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handleTextChanged);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final geometry = widget.session.geometry;
+    final bounds = geometry.editBoundsLocal;
+    if (bounds == null) {
+      return const SizedBox.shrink();
+    }
+    final style = widget.session.style;
+    final surfaceTransform = geometry.transform
+        .withTranslation(geometry.transform.translation - widget.cameraOffset)
+        .toCanvasTransform();
+
+    return Positioned.fill(
+      child: Transform(
+        transform: Matrix4.fromFloat64List(surfaceTransform),
+        alignment: Alignment.topLeft,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: bounds.left,
+              top: bounds.top,
+              child: SizedBox(
+                key: const ValueKey<String>('custom.text.edit.host'),
+                width: bounds.width,
+                height: bounds.height,
+                child: EditableText(
+                  key: const ValueKey<String>('custom.text.edit.field'),
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  style: TextStyle(
+                    color: style.color,
+                    fontSize: style.fontSize,
+                    fontFamily: style.fontFamily,
+                    fontWeight: style.isBold
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    fontStyle: style.isItalic
+                        ? FontStyle.italic
+                        : FontStyle.normal,
+                    decoration: style.isUnderline
+                        ? TextDecoration.underline
+                        : null,
+                    height: style.lineHeight,
+                  ),
+                  cursorColor: const Color(0xFF1565C0),
+                  backgroundCursorColor: const Color(0x00000000),
+                  textAlign: style.textAlign,
+                  textDirection: style.textDirection,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.done,
+                  maxLines: null,
+                  onEditingComplete: () =>
+                      widget.session.commit(timestampMs: 71),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleTextChanged() {
+    widget.session.updateText(_controller.text);
   }
 }
 

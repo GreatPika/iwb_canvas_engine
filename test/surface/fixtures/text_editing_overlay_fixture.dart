@@ -1,0 +1,458 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/surface/text_editing_overlay.dart';
+
+void main() {
+  _testOverlayUsesEditableTextAndSessionGeometry();
+  _testOverlayAppliesSessionTransform();
+  _testAutoStartPolicy();
+  _testReadOnlyPolicy();
+  _testCameraPanRepositionsActiveEditor();
+  _testCommitAndDismiss();
+  _testMultilineGrowthAndMaxHeightPolicy();
+  _testDisposesListeners();
+  _testOverlayDoesNotMeasureText();
+}
+
+// This proof keeps geometry placement and style adoption together because the
+// contract requires both to come from the same active session snapshot.
+// ignore: halstead-volume, source-lines-of-code
+void _testOverlayUsesEditableTextAndSessionGeometry() {
+  testWidgets('overlay uses EditableText, session geometry, and style', (
+    tester,
+  ) async {
+    final scenario = _OverlayScenario(
+      document: _document(
+        camera: const Offset(12, 4),
+        text: 'styled',
+        fontSize: 18,
+        color: const Color(0xFF884422),
+        isBold: true,
+        isItalic: true,
+        isUnderline: true,
+        fontFamily: 'Roboto',
+        lineHeight: 1.4,
+        align: TextAlign.center,
+        textDirection: TextDirection.ltr,
+        transform: CanvasTransform.translation(const Offset(40, 20)),
+      ),
+      inlineEditOnDoubleTap: true,
+    );
+    addTearDown(scenario.dispose);
+
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester, const Offset(28, 16));
+
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsOneWidget);
+    final hostTopLeft = tester.getTopLeft(
+      find.byKey(canvasTextEditingOverlayEditorHostKey),
+    );
+    final hostSize = tester.getSize(
+      find.byKey(canvasTextEditingOverlayEditorHostKey),
+    );
+    final session = scenario.activeSession;
+    final localEditBounds = _localEditBoundsFor(session.geometry);
+    final worldEditBounds = session.geometry.editBoundsWorld;
+
+    expect(
+      hostTopLeft,
+      worldEditBounds.topLeft - scenario.runtime.camera.offset,
+    );
+    expect(hostSize, localEditBounds.size);
+
+    final editable = _editableText(tester);
+    expect(editable.style.fontSize, 18);
+    expect(editable.style.color, const Color(0xFF884422));
+    expect(editable.style.fontWeight, FontWeight.bold);
+    expect(editable.style.fontStyle, FontStyle.italic);
+    expect(editable.style.decoration, TextDecoration.underline);
+    expect(editable.style.fontFamily, 'Roboto');
+    expect(editable.style.height, 1.4);
+    expect(editable.textAlign, TextAlign.center);
+    expect(editable.textDirection, TextDirection.ltr);
+    expect(editable.cursorColor, const Color(0xFF1565C0));
+    expect(editable.selectionColor, const Color(0x331565C0));
+  });
+}
+
+void _testOverlayAppliesSessionTransform() {
+  testWidgets('overlay applies session transform in surface space', (
+    tester,
+  ) async {
+    final transform = CanvasTransform.trs(
+      translation: const Offset(40, 20),
+      scaleX: 2,
+      scaleY: 1.5,
+    );
+    final scenario = _OverlayScenario(
+      inlineEditOnDoubleTap: true,
+      document: _document(transform: transform),
+    );
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester, const Offset(40, 20));
+
+    final appliedTransform = tester.widget<Transform>(
+      find.byKey(canvasTextEditingOverlayTransformKey),
+    );
+    final expected = transform
+        .withTranslation(transform.translation - scenario.runtime.camera.offset)
+        .toCanvasTransform();
+
+    expect(appliedTransform.transform.storage, expected);
+    expect(
+      tester.getSize(find.byKey(canvasTextEditingOverlayEditorHostKey)),
+      _localEditBoundsFor(scenario.activeSession.geometry).size,
+    );
+  });
+}
+
+void _testAutoStartPolicy() {
+  testWidgets('overlay auto-starts only when configured', (tester) async {
+    final disabled = _OverlayScenario(inlineEditOnDoubleTap: false);
+    addTearDown(disabled.dispose);
+    await disabled.pump(tester);
+    await disabled.doubleTapText(tester);
+
+    expect(disabled.runtime.textEditing.activeSession.value, isNull);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsNothing);
+
+    final enabled = _OverlayScenario(inlineEditOnDoubleTap: true);
+    addTearDown(enabled.dispose);
+    await enabled.pump(tester);
+    await enabled.doubleTapText(tester);
+
+    expect(enabled.runtime.textEditing.activeSession.value, isNotNull);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsOneWidget);
+  });
+}
+
+void _testReadOnlyPolicy() {
+  testWidgets('overlay observes runtime read-only policy', (tester) async {
+    final readOnlyStart = _OverlayScenario(inlineEditOnDoubleTap: true);
+    addTearDown(readOnlyStart.dispose);
+    readOnlyStart.runtime.textEditing.setReadOnly(true);
+    await readOnlyStart.pump(tester);
+    await readOnlyStart.doubleTapText(tester);
+
+    expect(readOnlyStart.runtime.textEditing.activeSession.value, isNull);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsNothing);
+
+    final active = _OverlayScenario(inlineEditOnDoubleTap: true);
+    addTearDown(active.dispose);
+    await active.pump(tester);
+    await active.doubleTapText(tester);
+
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsOneWidget);
+    active.runtime.textEditing.setReadOnly(true);
+    await tester.pump();
+
+    expect(active.runtime.textEditing.activeSession.value, isNull);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsNothing);
+    expect(_textElement(active.runtime).text, 'hello');
+  });
+}
+
+void _testCameraPanRepositionsActiveEditor() {
+  testWidgets('overlay repositions active editor when runtime camera pans', (
+    tester,
+  ) async {
+    final scenario = _OverlayScenario(
+      inlineEditOnDoubleTap: true,
+      document: _document(transform: CanvasTransform.translation(Offset.zero)),
+    );
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    final before = tester.getTopLeft(
+      find.byKey(canvasTextEditingOverlayEditorHostKey),
+    );
+
+    scenario.runtime.camera.panBy(const Offset(12, 5));
+    await tester.pump();
+
+    expect(
+      tester.getTopLeft(find.byKey(canvasTextEditingOverlayEditorHostKey)),
+      before - const Offset(12, 5),
+    );
+    expect(scenario.activeSession.liveText, 'hello');
+  });
+}
+
+// Commit and dismiss are paired here so the test proves both exits from the
+// same official overlay lifecycle without duplicating fixture setup.
+// ignore: halstead-volume
+void _testCommitAndDismiss() {
+  testWidgets(
+    'overlay commits through session and dismisses without mutation',
+    (tester) async {
+      final committed = _OverlayScenario(inlineEditOnDoubleTap: true);
+      addTearDown(committed.dispose);
+      await committed.pump(tester);
+      await committed.doubleTapText(tester);
+      await tester.enterText(
+        find.byKey(canvasTextEditingOverlayEditableTextKey),
+        'committed',
+      );
+      await tester.pump();
+      _editableText(tester).onEditingComplete?.call();
+      await tester.pump();
+
+      expect(_textElement(committed.runtime).text, 'committed');
+      expect(committed.runtime.textEditing.activeSession.value, isNull);
+      expect(committed.actions.single.type, CanvasActionType.editText);
+
+      final dismissed = _OverlayScenario(inlineEditOnDoubleTap: true);
+      addTearDown(dismissed.dispose);
+      await dismissed.pump(tester);
+      await dismissed.doubleTapText(tester);
+      await tester.enterText(
+        find.byKey(canvasTextEditingOverlayEditableTextKey),
+        'discarded',
+      );
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+
+      expect(_textElement(dismissed.runtime).text, 'hello');
+      expect(dismissed.runtime.textEditing.activeSession.value, isNull);
+      expect(dismissed.actions, isEmpty);
+    },
+  );
+}
+
+// Default growth and max-height scroll are the two sides of one sizing policy,
+// keeping them adjacent makes the contrast explicit.
+// ignore: halstead-volume, source-lines-of-code
+void _testMultilineGrowthAndMaxHeightPolicy() {
+  testWidgets('overlay grows with live multiline geometry by default', (
+    tester,
+  ) async {
+    final scenario = _OverlayScenario(
+      document: _document(maxWidth: 80, lineHeight: 1.0),
+      inlineEditOnDoubleTap: true,
+    );
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    final initialHeight = tester
+        .getSize(find.byKey(canvasTextEditingOverlayEditorHostKey))
+        .height;
+
+    await tester.enterText(
+      find.byKey(canvasTextEditingOverlayEditableTextKey),
+      'line 1\nline 2\nline 3',
+    );
+    await tester.pump();
+
+    final liveHeight = tester
+        .getSize(find.byKey(canvasTextEditingOverlayEditorHostKey))
+        .height;
+    expect(liveHeight, greaterThan(initialHeight));
+    expect(
+      liveHeight,
+      _localEditBoundsFor(scenario.activeSession.geometry).height,
+    );
+    expect(_editableText(tester).scrollController, isNull);
+    expect(_editableText(tester).textInputAction, TextInputAction.newline);
+    expect(_editableText(tester).onSubmitted, isNull);
+    expect(scenario.runtime.textEditing.activeSession.value, isNotNull);
+    expect(scenario.actions, isEmpty);
+  });
+
+  testWidgets(
+    'overlay clamps height and enables scroll when max height is set',
+    (tester) async {
+      const maxHeight = 24.0;
+      final scenario = _OverlayScenario(
+        document: _document(maxWidth: 80, lineHeight: 1.0),
+        inlineEditOnDoubleTap: true,
+        maxEditorHeight: maxHeight,
+      );
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
+      await scenario.doubleTapText(tester);
+      await tester.enterText(
+        find.byKey(canvasTextEditingOverlayEditableTextKey),
+        'line 1\nline 2\nline 3\nline 4',
+      );
+      await tester.pump();
+
+      expect(
+        tester
+            .getSize(find.byKey(canvasTextEditingOverlayEditorHostKey))
+            .height,
+        maxHeight,
+      );
+      expect(_editableText(tester).scrollController, isNotNull);
+    },
+  );
+}
+
+void _testDisposesListeners() {
+  testWidgets('overlay disposes context and editor listeners', (tester) async {
+    final scenario = _OverlayScenario(inlineEditOnDoubleTap: true);
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    scenario.runtime.tools.handleDoubleTap(position: Offset.zero);
+    await tester.pump();
+
+    expect(scenario.runtime.textEditing.activeSession.value, isNull);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+void _testOverlayDoesNotMeasureText() {
+  test('official overlay does not construct a text measurer', () {
+    final source = File(
+      'lib/src/surface/text_editing_overlay.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('TextPainter')));
+  });
+}
+
+// The scenario intentionally owns runtime, actions, surface host, and overlay
+// configuration so each widget test observes the same public integration path.
+// ignore: coupling-between-object-classes
+final class _OverlayScenario {
+  _OverlayScenario({
+    required this.inlineEditOnDoubleTap,
+    CanvasDocument? document,
+    this.maxEditorHeight,
+  }) : runtime = CanvasRuntime(initialDocument: document ?? _document()) {
+    actionSubscription = runtime.actions.listen(actions.add);
+  }
+
+  final CanvasRuntime runtime;
+  final bool inlineEditOnDoubleTap;
+  final double? maxEditorHeight;
+  final List<CanvasActionCommitted> actions = [];
+  late final StreamSubscription<CanvasActionCommitted> actionSubscription;
+
+  CanvasTextEditSession get activeSession {
+    final session = runtime.textEditing.activeSession.value;
+    if (session == null) {
+      throw StateError('Expected an active text editing session.');
+    }
+
+    return session;
+  }
+
+  Future<void> pump(WidgetTester tester) {
+    return tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: SizedBox(
+          width: 240,
+          height: 160,
+          child: Stack(
+            children: [
+              CanvasSurface(runtime: runtime, interactive: false),
+              CanvasTextEditingOverlay(
+                runtime: runtime,
+                inlineEditOnDoubleTap: inlineEditOnDoubleTap,
+                maxEditorHeight: maxEditorHeight,
+                autofocus: false,
+                commitOnFocusLoss: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> doubleTapText(
+    WidgetTester tester, [
+    Offset position = Offset.zero,
+  ]) async {
+    runtime.tools.handleDoubleTap(position: position, timestampMs: 1);
+    await tester.pump();
+    await tester.pump();
+  }
+
+  Future<void> dispose() async {
+    await actionSubscription.cancel();
+    runtime.dispose();
+  }
+}
+
+EditableText _editableText(WidgetTester tester) {
+  return tester.widget<EditableText>(
+    find.byKey(canvasTextEditingOverlayEditableTextKey),
+  );
+}
+
+Rect _localEditBoundsFor(CanvasTextEditGeometry geometry) {
+  final bounds = geometry.editBoundsLocal;
+  if (bounds == null) {
+    throw StateError('Expected text edit local bounds.');
+  }
+
+  return bounds;
+}
+
+CanvasTextElement _textElement(CanvasRuntime runtime) {
+  return runtime
+      .readDocument()
+      .layers
+      .single
+      .elements
+      .whereType<CanvasTextElement>()
+      .single;
+}
+
+// Test documents list the public text style fields explicitly so each proof can
+// opt into the exact style/geometry fact it asserts.
+// ignore: number-of-parameters
+CanvasDocument _document({
+  Offset camera = Offset.zero,
+  String text = 'hello',
+  double fontSize = 16,
+  Color color = const Color(0xFF111111),
+  bool isBold = false,
+  bool isItalic = false,
+  bool isUnderline = false,
+  String? fontFamily,
+  double? lineHeight,
+  TextAlign align = TextAlign.left,
+  TextDirection textDirection = TextDirection.ltr,
+  double? maxWidth,
+  CanvasTransform transform = CanvasTransform.identity,
+}) {
+  return CanvasDocument(
+    camera: CanvasCamera(offset: camera),
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasTextElement(
+            id: CanvasElementId('text-a'),
+            text: text,
+            fontSize: fontSize,
+            color: color,
+            isBold: isBold,
+            isItalic: isItalic,
+            isUnderline: isUnderline,
+            fontFamily: fontFamily,
+            lineHeight: lineHeight,
+            align: align,
+            textDirection: textDirection,
+            maxWidth: maxWidth,
+            transform: transform,
+          ),
+        ],
+      ),
+    ],
+  );
+}

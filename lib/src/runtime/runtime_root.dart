@@ -2781,6 +2781,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       editBoundsWorld: bounds.editBoundsWorld,
       transform: facts.transform,
       maxWidth: facts.maxWidth,
+      editBoundsLocal: bounds.editBoundsLocal,
     );
   }
 

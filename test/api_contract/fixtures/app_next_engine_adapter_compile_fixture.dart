@@ -21,6 +21,16 @@ final class AppNextEngineAdapterCompileFixture {
     );
   }
 
+  CanvasTextEditingOverlay createTextEditingOverlay() {
+    return CanvasTextEditingOverlay(
+      runtime: runtime,
+      inlineEditOnDoubleTap: true,
+      maxEditorHeight: 160,
+      autofocus: false,
+      commitOnFocusLoss: false,
+    );
+  }
+
   CanvasDocument observeDocumentAndState() {
     final document = runtime.readDocument();
     final state = runtime.state.value;

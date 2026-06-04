@@ -37,21 +37,33 @@ void _testDiagnosticsSurface() {
 }
 
 void _testInlineTextEditingSurface() {
-  test('inline text editing non-widget public surface is additive only', () {
+  test('inline text editing public surface has exactly the feature names', () {
     final publicExports = readPublicApiRegistry();
+    final featureNames = {
+      for (final name in publicExports)
+        if (_isInlineTextEditingFeatureName(name)) name,
+    };
+    const inlineTextEditingNames = {
+      'CanvasTextEditSession',
+      'CanvasTextEditGeometry',
+      'CanvasTextEditStyle',
+      'CanvasTextEditingPort',
+      'CanvasTextEditingOverlay',
+    };
 
-    expect(
-      publicExports,
-      containsAll({
-        'CanvasTextEditSession',
-        'CanvasTextEditGeometry',
-        'CanvasTextEditStyle',
-        'CanvasTextEditingPort',
-      }),
-    );
+    expect(featureNames, inlineTextEditingNames);
     expect(publicExports, isNot(contains('CanvasTextEditCandidate')));
     expect(publicExports, isNot(contains('CanvasTextEditToken')));
   });
+}
+
+bool _isInlineTextEditingFeatureName(String name) {
+  if (name == 'CanvasTextEditActionPayload') {
+    return false;
+  }
+
+  return name.startsWith('CanvasTextEdit') ||
+      name.startsWith('CanvasTextEditing');
 }
 
 void _testDiagnosticsMembershipValidation() {
