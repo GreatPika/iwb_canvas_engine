@@ -8,7 +8,6 @@ import 'package:iwb_canvas_engine_example/src/canvas_example_defaults.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_screen.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_view_model.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_pending_line_overlay.dart';
-import 'package:iwb_canvas_engine_example/src/canvas_text_edit_overlay.dart';
 
 void main() {
   _registerSurfaceAndPointerTests();
@@ -31,6 +30,7 @@ void main() {
   _registerInlineTextEditSurfaceDoubleTapTest();
   _registerInlineTextEditOverlayCoverageTest();
   _registerInlineTextEditOverlayDismissTest();
+  _registerInlineTextEditOverlayStaleCommitTest();
   _registerJsonExportDialogTest();
   _registerJsonImportDialogPrefillTest();
   _registerJsonImportDialogSuccessTest();
@@ -387,27 +387,17 @@ void _registerInlineTextEditOverlayCommitTest() {
 
       await _openTextOverlay(tester, viewModel);
 
-      final field = tester.widget<TextField>(
-        find.byKey(const ValueKey('text.edit.field')),
-      );
-      expect(field.focusNode?.hasFocus, isTrue);
-      expect(
-        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-        'hello',
-      );
+      final editor = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editor.focusNode.hasFocus, isTrue);
+      _expectTextDocumentState(viewModel, textId, text: 'hello');
 
-      await tester.enterText(
-        find.byKey(const ValueKey('text.edit.field')),
-        'updated',
-      );
-      await tester.tap(find.byKey(canvasExampleTextEditDismissOverlayKey));
+      await tester.enterText(find.byType(EditableText), 'updated');
+      await tester.pump();
+      _commitInlineTextEdit(tester);
       await tester.pump();
 
-      expect(
-        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-        'updated',
-      );
-      expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
+      _expectTextDocumentState(viewModel, textId, text: 'updated');
+      expect(find.byType(EditableText), findsNothing);
     },
   );
 }
@@ -424,15 +414,16 @@ void _registerInlineTextEditSurfaceDoubleTapTest() {
     await _tapSurfaceAt(tester, const Offset(60, 0));
     await tester.pump();
 
-    expect(viewModel.activeTextEdit, isNull);
+    expect(viewModel.runtime.textEditing.activeSession.value, isNull);
     expect(viewModel.selectedElementIds, {textId});
 
     await _tapSurfaceAt(tester, const Offset(61, 0));
     await tester.pump();
     await tester.pump();
 
-    expect(viewModel.activeTextEdit, isNotNull);
-    expect(find.byKey(const ValueKey('text.edit.field')), findsOneWidget);
+    expect(viewModel.runtime.textEditing.activeSession.value, isNotNull);
+    expect(find.byType(EditableText), findsOneWidget);
+    _expectTextDocumentState(viewModel, textId, text: 'hello');
   });
 }
 
@@ -448,18 +439,19 @@ void _registerInlineTextEditOverlayCoverageTest() {
     await _openTextOverlay(tester, viewModel);
 
     final overlaySize = _textEditBoundsSize(tester);
-    final targetBounds = _activeTextEditBounds(viewModel);
+    final targetBounds = _activeEditBoundsLocal(viewModel);
     expect(overlaySize.width, greaterThan(0));
     expect(overlaySize.width, lessThanOrEqualTo(targetBounds.width));
     expect(overlaySize.height, greaterThan(0));
 
     await tester.enterText(
-      find.byKey(const ValueKey('text.edit.field')),
+      find.byType(EditableText),
       'wide editable text\nwrapped line',
     );
     await tester.pump();
     final resizedOverlaySize = _textEditBoundsSize(tester);
     expect(resizedOverlaySize.height, greaterThan(overlaySize.height));
+    expect(resizedOverlaySize.height, _activeEditBoundsLocal(viewModel).height);
   });
 }
 
@@ -473,18 +465,42 @@ void _registerInlineTextEditOverlayDismissTest() {
     await _pumpScreen(tester, viewModel);
 
     await _openTextOverlay(tester, viewModel);
-    await tester.enterText(
-      find.byKey(const ValueKey('text.edit.field')),
-      'ignored',
-    );
-    await tester.tap(find.byKey(canvasExampleTextEditDismissOverlayKey));
+    await tester.enterText(find.byType(EditableText), 'ignored');
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
 
-    expect(
-      (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-      'ignored',
+    _expectTextDocumentState(viewModel, textId, text: 'hello');
+    expect(find.byType(EditableText), findsNothing);
+  });
+}
+
+void _registerInlineTextEditOverlayStaleCommitTest() {
+  testWidgets('stale inline text commit leaves document unchanged', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'screen-stale-edit-text');
+    await _pumpScreen(tester, viewModel);
+
+    await _openTextOverlay(tester, viewModel);
+    final session = _activeTextEditSession(viewModel);
+    _expectSurfaceTextSuppressed();
+    await tester.enterText(find.byType(EditableText), 'stale update');
+    await tester.pump();
+    viewModel.runtime.edits.loadDocument(
+      _documentWithText(textId, 'replacement'),
     );
-    expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
+    await tester.pump();
+
+    expect(session.commit(), isFalse);
+    await tester.pump();
+
+    _expectTextDocumentState(viewModel, textId, text: 'replacement');
+    expect(viewModel.runtime.textEditing.activeSession.value, isNull);
+    expect(find.byType(EditableText), findsNothing);
+    _expectSurfaceTextPainted();
   });
 }
 
@@ -829,16 +845,47 @@ String _textFieldValue(ValueKey<String> key, WidgetTester tester) {
 }
 
 Size _textEditBoundsSize(WidgetTester tester) {
-  return tester.getSize(find.byKey(const ValueKey('text.edit.bounds')));
+  return tester.getSize(find.byType(EditableText));
 }
 
-Rect _activeTextEditBounds(CanvasExampleViewModel viewModel) {
-  final bounds = viewModel.activeTextEdit?.boundsWorld;
+Rect _activeEditBoundsLocal(CanvasExampleViewModel viewModel) {
+  final bounds = _activeTextEditSession(viewModel).geometry.editBoundsLocal;
   if (bounds == null) {
-    fail('Expected active text edit bounds.');
+    fail('Expected active text edit geometry.');
   }
 
   return bounds;
+}
+
+CanvasTextEditSession _activeTextEditSession(CanvasExampleViewModel viewModel) {
+  final session = viewModel.runtime.textEditing.activeSession.value;
+  if (session == null) {
+    fail('Expected an active text edit session.');
+  }
+
+  return session;
+}
+
+void _expectTextDocumentState(
+  CanvasExampleViewModel viewModel,
+  CanvasElementId textId, {
+  required String text,
+}) {
+  final element = _findElement(viewModel.document, textId) as CanvasTextElement;
+  expect(element.text, text);
+  expect(element.isVisible, isTrue);
+}
+
+void _expectSurfaceTextSuppressed() {
+  expect(_surfacePaintHost(), isNot(paints..paragraph()));
+}
+
+void _expectSurfaceTextPainted() {
+  expect(_surfacePaintHost(), paints..paragraph());
+}
+
+Finder _surfacePaintHost() {
+  return find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host'));
 }
 
 String _exportDialogJson(WidgetTester tester) {
@@ -884,14 +931,19 @@ Future<void> _openTextOverlay(
   viewModel.runtime.tools.handleDoubleTap(position: const Offset(60, 0));
   await tester.pump();
   await tester.pump();
-  expect(viewModel.activeTextEdit, isNotNull);
-  expect(find.byKey(const ValueKey('text.edit.field')), findsOneWidget);
+  expect(viewModel.runtime.textEditing.activeSession.value, isNotNull);
+  expect(find.byType(EditableText), findsOneWidget);
+}
+
+void _commitInlineTextEdit(WidgetTester tester) {
+  tester
+      .widget<EditableText>(find.byType(EditableText))
+      .onEditingComplete
+      ?.call();
 }
 
 Future<void> _tapSurfaceAt(WidgetTester tester, Offset localPosition) async {
-  final topLeft = tester.getTopLeft(
-    find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host')),
-  );
+  final topLeft = tester.getTopLeft(_surfacePaintHost());
   await tester.tapAt(topLeft + localPosition);
 }
 

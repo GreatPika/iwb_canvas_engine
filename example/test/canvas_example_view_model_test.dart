@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -21,10 +22,8 @@ void main() {
   _registerCameraTests();
   _registerDocumentCommandTests();
   _registerTextStyleCommandTests();
-  _registerInlineTextEditCommitTest();
-  _registerInlineTextEditNoOpTest();
-  _registerInlineTextEditStaleTest();
-  _registerInlineTextEditDismissTest();
+  _registerInlineTextEditContextProjectionTest();
+  _registerInlineTextEditStructuralGuardTest();
   _registerJsonExportImportTest();
   _registerJsonImportFailureTest();
 }
@@ -324,91 +323,100 @@ void _registerTextStyleCommandTests() {
   });
 }
 
-void _registerInlineTextEditCommitTest() {
-  test(
-    'text context request opens app session and commit restores hidden text',
-    () async {
-      final viewModel = CanvasExampleViewModel();
-      addTearDown(viewModel.dispose);
-      final textId = _addText(viewModel.runtime, 'edit-text');
-
-      await _openTextEdit(viewModel);
-
-      final session = viewModel.activeTextEdit;
-      if (session == null) {
-        fail('Expected an active text edit session.');
-      }
-      expect(session.elementId, textId);
-      expect(session.initialText, 'hello');
-      final beforeCommit =
-          _findElement(viewModel.document, textId) as CanvasTextElement;
-      expect(beforeCommit.text, 'hello');
-      expect(beforeCommit.isVisible, isFalse);
-
-      expect(viewModel.commitActiveTextEdit('updated'), isTrue);
-
-      final afterCommit =
-          _findElement(viewModel.document, textId) as CanvasTextElement;
-      expect(afterCommit.text, 'updated');
-      expect(afterCommit.isVisible, isTrue);
-      expect(viewModel.activeTextEdit, isNull);
-    },
-  );
-}
-
-void _registerInlineTextEditNoOpTest() {
-  test('same-text commit closes overlay and restores hidden text', () async {
+void _registerInlineTextEditContextProjectionTest() {
+  test('text context request stays public and leaves text visible', () async {
     final viewModel = CanvasExampleViewModel();
     addTearDown(viewModel.dispose);
-    final textId = _addText(viewModel.runtime, 'noop-text');
-    await _openTextEdit(viewModel);
+    final textId = _addText(viewModel.runtime, 'edit-text');
 
-    expect(viewModel.commitActiveTextEdit('hello'), isTrue);
+    viewModel.runtime.tools.handleDoubleTap(position: const Offset(60, 0));
+    await _flushEvents();
+
+    final request = viewModel.lastContextRequest;
+    if (request == null) {
+      fail('Expected a context request projection.');
+    }
+    expect(request.target, isA<CanvasContentElementContextActionTarget>());
     final text = _findElement(viewModel.document, textId) as CanvasTextElement;
     expect(text.text, 'hello');
     expect(text.isVisible, isTrue);
-    expect(viewModel.activeTextEdit, isNull);
+    expect(viewModel.runtime.textEditing.activeSession.value, isNull);
   });
 }
 
-void _registerInlineTextEditStaleTest() {
+void _registerInlineTextEditStructuralGuardTest() {
   test(
-    'stale text edit result closes overlay without manual text mutation',
-    () async {
-      final viewModel = CanvasExampleViewModel();
-      addTearDown(viewModel.dispose);
-      final textId = _addText(viewModel.runtime, 'stale-text');
+    'example inline editing uses the public overlay without legacy hiding',
+    () {
+      final sourceRoot = _exampleSourceRoot();
+      final exampleSources = Directory(sourceRoot)
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.dart'))
+          .map((file) => MapEntry(file.path, file.readAsStringSync()))
+          .toList();
 
-      await _openTextEdit(viewModel);
-      viewModel.runtime.edits.loadDocument(
-        _documentWithText(textId, 'replacement'),
-      );
-      final beforeCommit = viewModel.document;
-
-      expect(viewModel.commitActiveTextEdit('updated'), isFalse);
-      expect(viewModel.document, same(beforeCommit));
       expect(
-        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-        'replacement',
+        File('$sourceRoot/canvas_text_edit_overlay.dart').existsSync(),
+        isFalse,
       );
-      expect(viewModel.activeTextEdit, isNull);
+      for (final source in exampleSources) {
+        _expectNoForbiddenInlineTextEditSource(source);
+      }
     },
   );
 }
 
-void _registerInlineTextEditDismissTest() {
-  test('dismiss closes inline text overlay and restores hidden text', () async {
-    final viewModel = CanvasExampleViewModel();
-    addTearDown(viewModel.dispose);
-    final textId = _addText(viewModel.runtime, 'dismiss-text');
-    await _openTextEdit(viewModel);
-    viewModel.dismissActiveTextEdit();
+void _expectNoForbiddenInlineTextEditSource(MapEntry<String, String> source) {
+  for (final rule in _forbiddenInlineTextEditSourceRules) {
+    expect(
+      source.value,
+      isNot(contains(rule.fragment)),
+      reason: '${source.key} ${rule.reason}',
+    );
+  }
+}
 
-    expect(viewModel.activeTextEdit, isNull);
-    final text = _findElement(viewModel.document, textId) as CanvasTextElement;
-    expect(text.text, 'hello');
-    expect(text.isVisible, isTrue);
-  });
+String _exampleSourceRoot() {
+  if (Directory('example/lib/src').existsSync()) {
+    return 'example/lib/src';
+  }
+
+  return 'lib/src';
+}
+
+const _forbiddenInlineTextEditSourceRules = [
+  _ForbiddenSourceRule(
+    'package:iwb_canvas_engine/src',
+    'must use the public package barrel.',
+  ),
+  _ForbiddenSourceRule(
+    'CanvasExampleTextEditSession',
+    'must not reintroduce an app-owned edit session.',
+  ),
+  _ForbiddenSourceRule(
+    'TextPainter',
+    'must not duplicate overlay text height measurement.',
+  ),
+  _ForbiddenSourceRule(
+    'isVisible: const CanvasFieldSet(false)',
+    'must not hide text for inline editing.',
+  ),
+  _ForbiddenSourceRule(
+    'isVisible: CanvasFieldSet(false)',
+    'must not hide text for inline editing.',
+  ),
+  _ForbiddenSourceRule(
+    'boundsWorld',
+    'must not calculate overlay placement from context target bounds.',
+  ),
+];
+
+final class _ForbiddenSourceRule {
+  const _ForbiddenSourceRule(this.fragment, this.reason);
+
+  final String fragment;
+  final String reason;
 }
 
 void _registerJsonExportImportTest() {
@@ -513,18 +521,6 @@ void _expectUpdatedTextStyle(CanvasDocument document, CanvasElementId textId) {
   expect(text.color.toARGB32(), 0xFFE53935);
 }
 
-CanvasDocument _documentWithText(CanvasElementId id, String text) {
-  return CanvasDocument(
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-auto-0'),
-        elements: [_textElement(id, text)],
-      ),
-      CanvasLayer(id: CanvasLayerId('layer-auto-1')),
-    ],
-  );
-}
-
 CanvasElement _findElement(CanvasDocument document, CanvasElementId id) {
   final element = _tryFindElement(document, id);
   if (element == null) {
@@ -570,14 +566,6 @@ Future<CanvasContextActionRequested> _recordContextRequestProjection(
   }
 
   return request;
-}
-
-Future<void> _openTextEdit(CanvasExampleViewModel viewModel) async {
-  viewModel.runtime.tools.handleDoubleTap(position: const Offset(60, 0));
-  await _flushEvents();
-  if (viewModel.activeTextEdit == null) {
-    throw StateError('Expected an active text edit session.');
-  }
 }
 
 Future<void> _flushEvents() => Future<void>.delayed(Duration.zero);

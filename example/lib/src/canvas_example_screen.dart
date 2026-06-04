@@ -4,7 +4,6 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'canvas_controls_dock.dart';
 import 'canvas_example_view_model.dart';
 import 'canvas_pending_line_overlay.dart';
-import 'canvas_text_edit_overlay.dart';
 import 'canvas_text_options_panel.dart';
 
 final class CanvasExampleScreen extends StatefulWidget {
@@ -159,13 +158,10 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
             preview: viewModel.preview,
             cameraOffset: viewModel.cameraOffset,
           ),
-          if (viewModel.activeTextEdit case final session?)
-            CanvasTextEditOverlay(
-              session: session,
-              cameraOffset: viewModel.cameraOffset,
-              onCommit: viewModel.commitActiveTextEdit,
-              onDismiss: viewModel.dismissActiveTextEdit,
-            ),
+          CanvasTextEditingOverlay(
+            runtime: viewModel.runtime,
+            inlineEditOnDoubleTap: true,
+          ),
         ],
       ),
     );

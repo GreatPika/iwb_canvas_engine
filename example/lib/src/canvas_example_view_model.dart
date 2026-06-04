@@ -49,7 +49,6 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   bool _disposed = false;
   CanvasActionCommitted? _lastCommittedAction;
   CanvasContextActionRequested? _lastContextRequest;
-  CanvasExampleTextEditSession? _activeTextEdit;
   String? _lastExportedJson;
   String? _jsonImportError;
   int _jsonImportErrorRevision = 0;
@@ -91,7 +90,6 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   bool get hasSelectedTextElement => selectedTextElement != null;
   CanvasActionCommitted? get lastCommittedAction => _lastCommittedAction;
   CanvasContextActionRequested? get lastContextRequest => _lastContextRequest;
-  CanvasExampleTextEditSession? get activeTextEdit => _activeTextEdit;
   String? get lastExportedJson => _lastExportedJson;
   String? get jsonImportError => _jsonImportError;
   int get jsonImportErrorRevision => _jsonImportErrorRevision;
@@ -325,45 +323,6 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     return lineHeight;
   }
 
-  bool commitActiveTextEdit(String text) {
-    final session = _activeTextEdit;
-    if (session == null) {
-      return false;
-    }
-    _activeTextEdit = null;
-    final current = _findTextElement(session.elementId);
-    if (current == null || current.revision != session.editingRevision) {
-      _notifyIfActive();
-
-      return false;
-    }
-    final didCommit = _updateTextEditElement(
-      session: session,
-      text: text,
-      isVisible: true,
-    );
-    _notifyIfActive();
-
-    return didCommit;
-  }
-
-  void dismissActiveTextEdit() {
-    final session = _activeTextEdit;
-    if (session == null) {
-      return;
-    }
-    _activeTextEdit = null;
-    final current = _findTextElement(session.elementId);
-    if (current != null && current.revision == session.editingRevision) {
-      _updateTextEditElement(
-        session: session,
-        text: session.initialText,
-        isVisible: true,
-      );
-    }
-    _notifyIfActive();
-  }
-
   void requestAddSample() {
     final command = _addSampleCommand;
     if (command != null) {
@@ -413,7 +372,6 @@ final class CanvasExampleViewModel extends ChangeNotifier {
       return;
     }
     _disposed = true;
-    _activeTextEdit = null;
     _runtime.state.removeListener(_handleRuntimeChanged);
     unawaited(_actionsSubscription.cancel());
     unawaited(_contextRequestSubscription.cancel());
@@ -624,59 +582,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   void _handleContextActionRequested(CanvasContextActionRequested request) {
     _lastContextRequest = request;
-    _activeTextEdit = _beginTextEditSession(request);
     _notifyIfActive();
-  }
-
-  CanvasExampleTextEditSession? _beginTextEditSession(
-    CanvasContextActionRequested request,
-  ) {
-    final target = request.target;
-    if (target is! CanvasContentElementContextActionTarget) {
-      return null;
-    }
-    final element = target.elementSnapshot;
-    if (element is! CanvasTextElement) {
-      return null;
-    }
-    _runtime.edits.edit((edit) {
-      edit.updateElement(
-        CanvasTextElementUpdate(
-          id: element.id,
-          isVisible: const CanvasFieldSet(false),
-        ),
-      );
-    });
-    final hiddenElement = _findTextElement(element.id);
-    if (hiddenElement == null || hiddenElement.isVisible) {
-      return null;
-    }
-
-    return CanvasExampleTextEditSession(
-      requestId: request.requestId,
-      elementSnapshot: element,
-      boundsWorld: target.boundsWorld,
-      editingRevision: hiddenElement.revision,
-    );
-  }
-
-  bool _updateTextEditElement({
-    required CanvasExampleTextEditSession session,
-    required String text,
-    required bool isVisible,
-  }) {
-    var didUpdate = false;
-    _runtime.edits.edit((edit) {
-      didUpdate = edit.updateElement(
-        CanvasTextElementUpdate(
-          id: session.elementId,
-          text: CanvasFieldSet(text),
-          isVisible: CanvasFieldSet(isVisible),
-        ),
-      );
-    });
-
-    return didUpdate;
   }
 
   void _notifyIfActive() {
@@ -684,20 +590,4 @@ final class CanvasExampleViewModel extends ChangeNotifier {
       notifyListeners();
     }
   }
-}
-
-final class CanvasExampleTextEditSession {
-  const CanvasExampleTextEditSession({
-    required this.requestId,
-    required this.elementSnapshot,
-    required this.boundsWorld,
-    required this.editingRevision,
-  });
-
-  final CanvasInteractionRequestId requestId;
-  final CanvasTextElement elementSnapshot;
-  final ui.Rect boundsWorld;
-  final int editingRevision;
-  CanvasElementId get elementId => elementSnapshot.id;
-  String get initialText => elementSnapshot.text;
 }
