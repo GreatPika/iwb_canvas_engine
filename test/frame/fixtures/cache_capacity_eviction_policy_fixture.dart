@@ -1,5 +1,6 @@
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/measured_text_layout.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_cache.dart';
@@ -200,12 +201,26 @@ void _expectStrokePathLru() {
 }
 
 TextLayoutCacheEntry _textEntry(int index) {
+  final painter = TextPainter(
+    text: TextSpan(text: '$index'),
+    textDirection: TextDirection.ltr,
+  )..layout(maxWidth: double.infinity);
+  final bounds = Rect.fromCenter(
+    center: Offset.zero,
+    width: painter.width,
+    height: painter.height,
+  );
+
   return TextLayoutCacheEntry(
     debugLabel: '$index',
-    painter: TextPainter(
-      text: TextSpan(text: '$index'),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: double.infinity),
+    painter: painter,
+    layout: MeasuredTextLayout(
+      paintBoundsLocal: bounds,
+      hitBoundsLocal: bounds,
+      selectionBoundsLocal: bounds,
+      editBoundsLocal: bounds,
+      lines: const [],
+    ),
   );
 }
 

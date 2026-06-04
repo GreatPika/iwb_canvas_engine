@@ -104,7 +104,7 @@ final class HitTestPolicy {
     return switch (facts.kind) {
       CanvasElementKind.image ||
       CanvasElementKind.rect ||
-      CanvasElementKind.text => _hitBox(point, facts),
+      CanvasElementKind.text => _hitBox(point, facts, geometryPolicy),
       CanvasElementKind.line => _hitLine(point, facts),
       CanvasElementKind.stroke => _hitStroke(point, facts),
       CanvasElementKind.path => _hitPath(point, facts),
@@ -134,7 +134,7 @@ final class HitTestPolicy {
     return switch (facts.kind) {
       CanvasElementKind.image ||
       CanvasElementKind.rect ||
-      CanvasElementKind.text => _hitBox(point, facts),
+      CanvasElementKind.text => _hitBox(point, facts, geometryPolicy),
       CanvasElementKind.line => _hitLine(point, facts),
       CanvasElementKind.stroke => _hitStroke(point, facts),
       CanvasElementKind.path => _hitPath(point, facts),
@@ -190,13 +190,20 @@ bool _needsInverseHit(CanvasElementKind kind) {
   };
 }
 
-bool _hitBox(Offset point, FrameElementFacts facts) {
+bool _hitBox(
+  Offset point,
+  FrameElementFacts facts,
+  GeometryPolicy geometryPolicy,
+) {
   final inverse = facts.transform.invert();
   if (inverse == null) {
     return false;
   }
   final localPoint = inverse.applyToPoint(point);
-  final localBounds = const GeometryPolicy().boundsFor(facts).localBounds;
+  final localBounds = geometryPolicy.boundsFor(facts).hitBoundsLocal;
+  if (localBounds == Rect.zero) {
+    return false;
+  }
 
   final inflated = _inflateLocalBoundsForScenePadding(
     localBounds,

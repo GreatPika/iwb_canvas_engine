@@ -5,6 +5,7 @@
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/measured_text_layout.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
@@ -15,6 +16,7 @@ import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_surface_styles.dart';
 import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_capture_service.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 
 // This helper exposes the frame-capture inputs directly so each test can vary a
@@ -322,6 +324,12 @@ FrameElementFacts _baseFacts(
     fontSize: fontSize,
     textColor: textColor,
     textDirection: textDirection,
+    measuredTextLayout: _measuredTextLayout(
+      text: text,
+      fontSize: fontSize,
+      color: textColor,
+      direction: textDirection,
+    ),
     svgPathData: svgPathData,
     fillRule: fillRule,
     strokeWidth: strokeWidth,
@@ -331,6 +339,37 @@ FrameElementFacts _baseFacts(
     thickness: thickness,
     color: color,
   );
+}
+
+MeasuredTextLayout? _measuredTextLayout({
+  required String? text,
+  required double? fontSize,
+  required Color? color,
+  required TextDirection? direction,
+}) {
+  if (text == null) {
+    return null;
+  }
+  final result = FrameTextLayoutMeasurer().measureTextLayout(
+    MeasuredTextLayoutInput(
+      text: text,
+      fontSize: fontSize ?? 24,
+      color: color ?? const Color(0xFF000000),
+      align: TextAlign.left,
+      direction: direction ?? TextDirection.ltr,
+      isBold: false,
+      isItalic: false,
+      isUnderline: false,
+      fontFamily: null,
+      maxWidth: null,
+      lineHeight: null,
+    ),
+  );
+
+  return switch (result) {
+    MeasuredTextLayoutReady(:final layout) => layout,
+    MeasuredTextLayoutFailed() => null,
+  };
 }
 
 final class TestFrameFactsPort implements FrameFactsPort {

@@ -5,6 +5,7 @@ import '../public/canvas_element.dart';
 import '../public/canvas_geometry.dart';
 import '../public/canvas_ids.dart';
 import '../public/canvas_metadata.dart';
+import 'measured_text_layout.dart';
 
 final class FrameRevisionFacts {
   const FrameRevisionFacts({
@@ -79,6 +80,7 @@ final class FrameElementFacts {
     this.fontFamily,
     this.maxWidth,
     this.lineHeight,
+    this.measuredTextLayout,
     Iterable<Offset> points = const [],
     this.start,
     this.end,
@@ -121,6 +123,7 @@ final class FrameElementFacts {
   final String? fontFamily;
   final double? maxWidth;
   final double? lineHeight;
+  final MeasuredTextLayout? measuredTextLayout;
   final List<Offset> points;
   final Offset? start;
   final Offset? end;

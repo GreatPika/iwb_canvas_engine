@@ -7,6 +7,7 @@ import 'paint_plan.dart';
 import 'render_element_record.dart';
 import 'render_family_caches.dart';
 import 'render_primitive_cache_snapshot.dart';
+import 'frame_text_layout_measurer.dart';
 
 sealed class OrdinaryPaintPlanResult {
   const OrdinaryPaintPlanResult();
@@ -34,6 +35,7 @@ final class OrdinaryPaintPlanner {
     TextLayoutCache? textLayoutCache,
     PathGeometryCache? pathGeometryCache,
     StrokePathCache? strokePathCache,
+    FrameTextLayoutMeasurer? textLayoutMeasurer,
     RenderFamilyCaches? renderFamilyCaches,
     GeometryPolicy geometryPolicy = const GeometryPolicy(),
   }) : _ordinaryPaintRecordCache =
@@ -44,6 +46,7 @@ final class OrdinaryPaintPlanner {
              textLayoutCache: textLayoutCache,
              pathGeometryCache: pathGeometryCache,
              strokePathCache: strokePathCache,
+             textLayoutMeasurer: textLayoutMeasurer,
            ),
        _geometryPolicy = geometryPolicy;
 

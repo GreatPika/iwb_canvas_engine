@@ -137,8 +137,8 @@ void _paintTextRecord(
   RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   _withRecordTransform(canvas, record, () {
-    final painter = renderPrimitives.textLayouts[row.layoutCacheKey]?.painter;
-    if (painter == null) {
+    final entry = renderPrimitives.textLayouts[row.layoutCacheKey];
+    if (entry == null) {
       _paintFallbackBounds(
         canvas,
         record.paintBoundsWorld,
@@ -147,12 +147,7 @@ void _paintTextRecord(
 
       return;
     }
-    final localBounds = Rect.fromCenter(
-      center: Offset.zero,
-      width: painter.width,
-      height: painter.height,
-    );
-    painter.paint(canvas, localBounds.topLeft);
+    entry.painter.paint(canvas, entry.layout.paintBoundsLocal.topLeft);
   });
 }
 

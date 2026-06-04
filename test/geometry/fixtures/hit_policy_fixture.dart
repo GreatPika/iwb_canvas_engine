@@ -1,11 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_geometry.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_metadata.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/measured_text_layout.dart';
+import 'package:iwb_canvas_engine/src/frame/frame_text_layout_measurer.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 
@@ -76,6 +75,10 @@ void _expectBoxFamilyHits() {
   );
   expect(policy.exactHit(point: Offset.zero, facts: _image()), isTrue);
   expect(policy.exactHit(point: Offset.zero, facts: _text()), isTrue);
+  expect(
+    policy.exactHit(point: Offset.zero, facts: _unmeasuredText()),
+    isFalse,
+  );
 }
 
 void _expectLineAndStrokeFamilyHits() {
@@ -436,6 +439,18 @@ FrameElementFacts _text() {
       kind: CanvasElementKind.text,
       text: 'text',
       fontSize: 10,
+      measuredText: true,
+    ),
+  );
+}
+
+FrameElementFacts _unmeasuredText() {
+  return _facts(
+    const _FactSpec(
+      id: 'unmeasured-text',
+      kind: CanvasElementKind.text,
+      text: 'text',
+      fontSize: 10,
     ),
   );
 }
@@ -730,6 +745,7 @@ FrameElementFacts _facts(_FactSpec spec) {
     thickness: spec.thickness,
     text: spec.text,
     fontSize: spec.fontSize,
+    measuredTextLayout: _measuredTextLayout(spec),
     svgPathData: spec.svgPathData,
     fillColor: spec.fillColor,
     strokeColor: spec.strokeColor,
@@ -792,6 +808,7 @@ final class _FactSpec {
     this.points = const [],
     this.text,
     this.fontSize,
+    this.measuredText = false,
     this.svgPathData,
     this.fillColor,
     this.strokeColor,
@@ -814,11 +831,39 @@ final class _FactSpec {
   final List<Offset> points;
   final String? text;
   final double? fontSize;
+  final bool measuredText;
   final String? svgPathData;
   final Color? fillColor;
   final Color? strokeColor;
   final double? strokeWidth;
   final CanvasPathFillRule? fillRule;
+}
+
+MeasuredTextLayout? _measuredTextLayout(_FactSpec spec) {
+  final text = spec.text;
+  if (!spec.measuredText || text == null) {
+    return null;
+  }
+  final result = FrameTextLayoutMeasurer().measureTextLayout(
+    MeasuredTextLayoutInput(
+      text: text,
+      fontSize: spec.fontSize ?? 24,
+      color: const Color(0xFF000000),
+      align: TextAlign.left,
+      direction: TextDirection.ltr,
+      isBold: false,
+      isItalic: false,
+      isUnderline: false,
+      fontFamily: null,
+      maxWidth: null,
+      lineHeight: null,
+    ),
+  );
+
+  return switch (result) {
+    MeasuredTextLayoutReady(:final layout) => layout,
+    MeasuredTextLayoutFailed() => null,
+  };
 }
 
 FrameElementHandle _handleFor(FrameElementFacts facts) {

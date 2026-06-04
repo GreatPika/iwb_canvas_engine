@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -25,14 +26,18 @@ void main() {
 
 void _verifyDocumentFacts(RuntimeRoot root) {
   final documentFacts = root.documentFactsPort.documentFacts;
-  expect(documentFacts.elementCount, 3);
+  expect(documentFacts.elementCount, 4);
   expect(documentFacts.layerCount, 1);
   expect(documentFacts.resourceCount, 1);
   expect(documentFacts.contentElementIds, {
     CanvasElementId('image-a'),
     CanvasElementId('rect-a'),
+    CanvasElementId('text-a'),
   });
-  expect(documentFacts.selectableElementIds, {CanvasElementId('image-a')});
+  expect(documentFacts.selectableElementIds, {
+    CanvasElementId('image-a'),
+    CanvasElementId('text-a'),
+  });
   expect(
     () => documentFacts.contentElementIds.add(CanvasElementId('x')),
     throwsUnsupportedError,
@@ -58,6 +63,7 @@ void _verifyFrameHandles(List<FrameElementHandle> handles) {
     CanvasElementId('background-a'),
     CanvasElementId('image-a'),
     CanvasElementId('rect-a'),
+    CanvasElementId('text-a'),
   ]);
   expect(() => handles.add(handles.first), throwsUnsupportedError);
 }
@@ -78,12 +84,33 @@ void _verifyResolvedFrameElement(
   expect(imageFacts.hitPadding, 2);
   expect(imageFacts.size, const Size(2, 2));
 
+  _verifyResolvedRectFrameElement(frame);
+  _verifyMeasuredTextFrameFacts(frame);
+}
+
+void _verifyResolvedRectFrameElement(FrameFactsPort frame) {
   final maybeRectFacts = frame.resolveElement(handleForRect(frame));
   expect(maybeRectFacts, isNotNull);
   final rectFacts = maybeRectFacts as FrameElementFacts;
   expect(rectFacts.fillColor, const Color(0xff112233));
   expect(rectFacts.strokeColor, const Color(0xff445566));
   expect(rectFacts.strokeWidth, 7);
+}
+
+void _verifyMeasuredTextFrameFacts(FrameFactsPort frame) {
+  final maybeTextFacts = frame.resolveElement(handleForText(frame));
+  expect(maybeTextFacts, isNotNull);
+  final textFacts = maybeTextFacts as FrameElementFacts;
+  final textLayout = textFacts.measuredTextLayout;
+  expect(textLayout, isNotNull);
+  if (textLayout == null) {
+    fail('Expected runtime text frame facts to include measured layout.');
+  }
+  expect(textLayout.paintBoundsLocal.width, greaterThan(0));
+  expect(
+    const GeometryPolicy().boundsFor(textFacts).localBounds,
+    textLayout.paintBoundsLocal,
+  );
 }
 
 void _verifyStaleFrameHandle(FrameFactsPort frame, FrameElementHandle handle) {
@@ -140,6 +167,12 @@ FrameElementHandle handleForRect(FrameFactsPort frame) {
       .singleWhere((handle) => handle.id == CanvasElementId('rect-a'));
 }
 
+FrameElementHandle handleForText(FrameFactsPort frame) {
+  return frame
+      .elementHandles(frame.frameRevisions.structuralRevision)
+      .singleWhere((handle) => handle.id == CanvasElementId('text-a'));
+}
+
 void _verifyConstructedFrameFactsAreImmutable() {
   final points = [const Offset(1, 1)];
   final facts = FrameElementFacts(
@@ -194,6 +227,13 @@ CanvasDocument _document() {
             fillColor: const Color(0xff112233),
             strokeColor: const Color(0xff445566),
             strokeWidth: 7,
+          ),
+          CanvasTextElement(
+            id: CanvasElementId('text-a'),
+            text: 'Measured runtime text',
+            fontSize: 16,
+            color: const Color(0xff223344),
+            textDirection: TextDirection.ltr,
           ),
         ],
       ),

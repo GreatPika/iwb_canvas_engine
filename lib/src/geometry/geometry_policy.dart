@@ -23,26 +23,13 @@ final class GeometryPolicy {
   const GeometryPolicy();
 
   GeometryBounds boundsFor(FrameElementFacts facts) {
-    final localBounds = _localBoundsFor(facts);
-    if (_isEmptyLocalBounds(localBounds) ||
+    final local = _localGeometryMetricsFor(facts);
+    if (_isEmptyLocalBounds(local.paintBounds) ||
         !isFiniteTransform(facts.transform)) {
       return GeometryBounds.empty(facts.id);
     }
-    final paintBounds = facts.transform.applyToRect(localBounds);
-    final hitBounds =
-        _requiresInvertibleHitBounds(facts.kind) &&
-            !facts.transform.isInvertible
-        ? Rect.zero
-        : _hitBoundsWorld(facts, localBounds);
 
-    return GeometryBounds(
-      id: facts.id,
-      localBounds: sanitizeFiniteRect(localBounds),
-      hitBoundsWorld: sanitizeFiniteRect(hitBounds),
-      paintBoundsWorld: facts.isVisible
-          ? sanitizeFiniteRect(paintBounds)
-          : Rect.zero,
-    );
+    return _geometryBoundsFor(facts, local);
   }
 
   bool isHitEligible(FrameElementFacts facts, Offset point) {
@@ -110,27 +97,69 @@ final class GeometryPolicy {
       exactCheckLimit: kMaxEraserTerminalExactChecks,
     );
   }
+}
 
-  Rect _hitBoundsWorld(FrameElementFacts facts, Rect localBounds) {
-    final padding = _scenePadding(facts.hitPadding);
-    if (facts.kind == CanvasElementKind.line ||
-        facts.kind == CanvasElementKind.stroke) {
-      return _lineFamilyHitBoundsWorld(facts, padding);
-    }
-
-    return facts.transform.applyToRect(localBounds).inflate(padding);
+Rect _hitBoundsWorld(FrameElementFacts facts, Rect localBounds) {
+  final padding = _scenePadding(facts.hitPadding);
+  if (facts.kind == CanvasElementKind.line ||
+      facts.kind == CanvasElementKind.stroke) {
+    return _lineFamilyHitBoundsWorld(facts, padding);
   }
 
-  Rect _localBoundsFor(FrameElementFacts facts) {
-    return switch (facts.kind) {
-      CanvasElementKind.image => _sizedBounds(facts.size),
-      CanvasElementKind.rect => _rectBounds(facts),
-      CanvasElementKind.text => _textBounds(facts),
-      CanvasElementKind.line => _lineBounds(facts),
-      CanvasElementKind.stroke => _strokeBounds(facts),
-      CanvasElementKind.path => _pathBounds(facts),
-    };
-  }
+  return facts.transform.applyToRect(localBounds).inflate(padding);
+}
+
+GeometryBounds _geometryBoundsFor(
+  FrameElementFacts facts,
+  _LocalGeometryMetrics local,
+) {
+  final paintBounds = facts.transform.applyToRect(local.paintBounds);
+  final selectionBounds = facts.transform.applyToRect(local.selectionBounds);
+  final editBounds = facts.transform.applyToRect(local.editBounds);
+  final hitBounds =
+      _requiresInvertibleHitBounds(facts.kind) && !facts.transform.isInvertible
+      ? Rect.zero
+      : _hitBoundsWorld(facts, local.hitBounds);
+
+  return GeometryBounds(
+    id: facts.id,
+    localBounds: sanitizeFiniteRect(local.paintBounds),
+    hitBoundsLocal: sanitizeFiniteRect(local.hitBounds),
+    selectionBoundsLocal: sanitizeFiniteRect(local.selectionBounds),
+    editBoundsLocal: sanitizeFiniteRect(local.editBounds),
+    hitBoundsWorld: sanitizeFiniteRect(hitBounds),
+    paintBoundsWorld: facts.isVisible
+        ? sanitizeFiniteRect(paintBounds)
+        : Rect.zero,
+    selectionBoundsWorld: facts.isVisible
+        ? sanitizeFiniteRect(selectionBounds)
+        : Rect.zero,
+    editBoundsWorld: facts.isVisible
+        ? sanitizeFiniteRect(editBounds)
+        : Rect.zero,
+  );
+}
+
+_LocalGeometryMetrics _localGeometryMetricsFor(FrameElementFacts facts) {
+  final paintBounds = _localBoundsFor(facts);
+
+  return _LocalGeometryMetrics(
+    paintBounds: paintBounds,
+    hitBounds: _hitBoundsLocalFor(facts, fallback: paintBounds),
+    selectionBounds: _selectionBoundsLocalFor(facts, fallback: paintBounds),
+    editBounds: _editBoundsLocalFor(facts, fallback: paintBounds),
+  );
+}
+
+Rect _localBoundsFor(FrameElementFacts facts) {
+  return switch (facts.kind) {
+    CanvasElementKind.image => _sizedBounds(facts.size),
+    CanvasElementKind.rect => _rectBounds(facts),
+    CanvasElementKind.text => _textBounds(facts),
+    CanvasElementKind.line => _lineBounds(facts),
+    CanvasElementKind.stroke => _strokeBounds(facts),
+    CanvasElementKind.path => _pathBounds(facts),
+  };
 }
 
 bool _isEmptyLocalBounds(Rect bounds) {
@@ -152,19 +181,48 @@ final class GeometryBounds {
   const GeometryBounds({
     required this.id,
     required this.localBounds,
+    required this.hitBoundsLocal,
+    required this.selectionBoundsLocal,
+    required this.editBoundsLocal,
     required this.hitBoundsWorld,
     required this.paintBoundsWorld,
+    required this.selectionBoundsWorld,
+    required this.editBoundsWorld,
   });
 
   const GeometryBounds.empty(this.id)
     : localBounds = Rect.zero,
+      hitBoundsLocal = Rect.zero,
+      selectionBoundsLocal = Rect.zero,
+      editBoundsLocal = Rect.zero,
       hitBoundsWorld = Rect.zero,
-      paintBoundsWorld = Rect.zero;
+      paintBoundsWorld = Rect.zero,
+      selectionBoundsWorld = Rect.zero,
+      editBoundsWorld = Rect.zero;
 
   final CanvasElementId id;
   final Rect localBounds;
+  final Rect hitBoundsLocal;
+  final Rect selectionBoundsLocal;
+  final Rect editBoundsLocal;
   final Rect hitBoundsWorld;
   final Rect paintBoundsWorld;
+  final Rect selectionBoundsWorld;
+  final Rect editBoundsWorld;
+}
+
+final class _LocalGeometryMetrics {
+  const _LocalGeometryMetrics({
+    required this.paintBounds,
+    required this.hitBounds,
+    required this.selectionBounds,
+    required this.editBounds,
+  });
+
+  final Rect paintBounds;
+  final Rect hitBounds;
+  final Rect selectionBounds;
+  final Rect editBounds;
 }
 
 final class EraserCorridor {
@@ -326,14 +384,34 @@ Rect _strokeAwareBounds({
 }
 
 Rect _textBounds(FrameElementFacts facts) {
-  final text = facts.text ?? '';
-  final fontSize = clampNonNegativeFinite(facts.fontSize ?? 0);
-  final width = clampNonNegativeFinite(
-    facts.maxWidth ?? text.length * fontSize * 0.5,
-  );
-  final height = fontSize * clampNonNegativeFinite(facts.lineHeight ?? 1);
+  return facts.measuredTextLayout?.paintBoundsLocal ?? Rect.zero;
+}
 
-  return Rect.fromCenter(center: Offset.zero, width: width, height: height);
+Rect _hitBoundsLocalFor(FrameElementFacts facts, {required Rect fallback}) {
+  if (facts.kind == CanvasElementKind.text) {
+    return facts.measuredTextLayout?.hitBoundsLocal ?? Rect.zero;
+  }
+
+  return fallback;
+}
+
+Rect _selectionBoundsLocalFor(
+  FrameElementFacts facts, {
+  required Rect fallback,
+}) {
+  if (facts.kind == CanvasElementKind.text) {
+    return facts.measuredTextLayout?.selectionBoundsLocal ?? Rect.zero;
+  }
+
+  return fallback;
+}
+
+Rect _editBoundsLocalFor(FrameElementFacts facts, {required Rect fallback}) {
+  if (facts.kind == CanvasElementKind.text) {
+    return facts.measuredTextLayout?.editBoundsLocal ?? Rect.zero;
+  }
+
+  return fallback;
 }
 
 Rect _lineBounds(FrameElementFacts facts) {

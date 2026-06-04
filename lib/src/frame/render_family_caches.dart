@@ -1,6 +1,7 @@
-import 'package:flutter/painting.dart';
+import 'dart:ui';
 
 import 'frame_cache.dart';
+import 'frame_text_layout_measurer.dart';
 import 'render_element_record.dart';
 import 'render_primitive_cache_snapshot.dart';
 
@@ -12,13 +13,21 @@ final class RenderFamilyCaches {
     TextLayoutCache? textLayoutCache,
     PathGeometryCache? pathGeometryCache,
     StrokePathCache? strokePathCache,
-  }) : textLayoutCache = textLayoutCache ?? TextLayoutCache(),
+    FrameTextLayoutMeasurer? textLayoutMeasurer,
+  }) : textLayoutMeasurer =
+           textLayoutMeasurer ??
+           FrameTextLayoutMeasurer(cache: textLayoutCache),
        pathGeometryCache = pathGeometryCache ?? PathGeometryCache(),
-       strokePathCache = strokePathCache ?? StrokePathCache();
+       strokePathCache = strokePathCache ?? StrokePathCache(),
+       assert(
+         textLayoutCache == null || textLayoutMeasurer == null,
+         'Pass either textLayoutCache or textLayoutMeasurer, not both.',
+       );
 
-  final TextLayoutCache textLayoutCache;
+  TextLayoutCache get textLayoutCache => textLayoutMeasurer.cache;
   final PathGeometryCache pathGeometryCache;
   final StrokePathCache strokePathCache;
+  final FrameTextLayoutMeasurer textLayoutMeasurer;
 
   RenderPrimitiveCacheSnapshot bindAll(Iterable<RenderElementRecord> records) {
     final textLayouts = <TextLayoutCacheKey, TextLayoutCacheEntry>{};
@@ -52,19 +61,10 @@ final class RenderFamilyCaches {
     RenderElementRecord record,
     TextRenderRow row,
   ) {
-    final key = row.layoutCacheKey;
-    final cached = textLayoutCache.read(key);
-    if (cached != null) {
-      return cached;
-    }
-
-    final entry = TextLayoutCacheEntry(
+    return textLayoutMeasurer.bindTextLayout(
+      row.layoutInput,
       debugLabel: record.id.value,
-      painter: _textPainterFor(row),
     );
-    textLayoutCache.write(key, entry);
-
-    return entry;
   }
 
   PathGeometryCacheEntry? _bindPathGeometryCache(PathRenderRow row) {
@@ -99,27 +99,6 @@ final class RenderFamilyCaches {
 
     return entry;
   }
-}
-
-TextPainter _textPainterFor(TextRenderRow row) {
-  final painter = TextPainter(
-    text: TextSpan(
-      text: row.text,
-      style: TextStyle(
-        color: Color(row.layoutCacheKey.colorValue),
-        fontSize: row.fontSize,
-        fontFamily: row.fontFamily,
-        fontWeight: row.isBold ? FontWeight.bold : FontWeight.normal,
-        fontStyle: row.isItalic ? FontStyle.italic : FontStyle.normal,
-        decoration: row.isUnderline ? TextDecoration.underline : null,
-        height: row.lineHeight,
-      ),
-    ),
-    textAlign: row.align,
-    textDirection: row.direction,
-  )..layout(maxWidth: row.maxWidth ?? double.infinity);
-
-  return painter;
 }
 
 Path _strokePathFor(List<Offset> points) {

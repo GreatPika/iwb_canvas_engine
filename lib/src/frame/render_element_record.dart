@@ -1,11 +1,13 @@
 import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
+import '../contracts/internal/measured_text_layout.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../geometry/geometry_policy.dart';
 import 'frame_cache.dart';
+import 'frame_text_layout_measurer.dart';
 
 enum RenderElementFamily { image, path, text, stroke, line, rect }
 
@@ -48,6 +50,7 @@ final class PathRenderRow extends RenderElementRow {
 final class TextRenderRow extends RenderElementRow {
   const TextRenderRow({
     required this.text,
+    required this.layoutInput,
     required this.layoutCacheKey,
     required this.fontSize,
     required this.color,
@@ -62,6 +65,7 @@ final class TextRenderRow extends RenderElementRow {
   });
 
   final String text;
+  final MeasuredTextLayoutInput layoutInput;
   final TextLayoutCacheKey layoutCacheKey;
   final double fontSize;
   final Color color;
@@ -238,7 +242,8 @@ TextRenderRow _textRow(FrameElementFacts facts) {
 
   return TextRenderRow(
     text: text,
-    layoutCacheKey: _textLayoutCacheKey(facts, text),
+    layoutInput: _textLayoutInputFor(facts, text),
+    layoutCacheKey: textLayoutCacheKeyFor(_textLayoutInputFor(facts, text)),
     fontSize: facts.fontSize ?? 24,
     color: facts.textColor ?? const Color(0xFF000000),
     align: facts.textAlign ?? TextAlign.left,
@@ -252,13 +257,16 @@ TextRenderRow _textRow(FrameElementFacts facts) {
   );
 }
 
-TextLayoutCacheKey _textLayoutCacheKey(FrameElementFacts facts, String text) {
-  return TextLayoutCacheKey(
+MeasuredTextLayoutInput _textLayoutInputFor(
+  FrameElementFacts facts,
+  String text,
+) {
+  return MeasuredTextLayoutInput(
     text: text,
     fontSize: facts.fontSize ?? 24,
-    colorValue: _textLayoutColorValue(facts),
-    alignName: (facts.textAlign ?? TextAlign.left).name,
-    directionName: (facts.textDirection ?? TextDirection.ltr).name,
+    color: _textLayoutColor(facts),
+    align: facts.textAlign ?? TextAlign.left,
+    direction: facts.textDirection ?? TextDirection.ltr,
     isBold: facts.isBold ?? false,
     isItalic: facts.isItalic ?? false,
     isUnderline: facts.isUnderline ?? false,
@@ -268,11 +276,11 @@ TextLayoutCacheKey _textLayoutCacheKey(FrameElementFacts facts, String text) {
   );
 }
 
-int _textLayoutColorValue(FrameElementFacts facts) {
+Color _textLayoutColor(FrameElementFacts facts) {
   return _withElementOpacity(
     facts.textColor ?? const Color(0xFF000000),
     _primitiveAlpha(facts.opacity),
-  ).toARGB32();
+  );
 }
 
 StrokeRenderRow _strokeRow(FrameElementFacts facts) {

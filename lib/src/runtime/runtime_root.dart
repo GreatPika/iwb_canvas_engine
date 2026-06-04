@@ -14,6 +14,7 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
+import '../contracts/internal/measured_text_layout.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/resource_dirty_outcome.dart';
 import '../contracts/internal/resource_session_invalidation_sink.dart';
@@ -45,6 +46,7 @@ import '../edit/staged_document_load.dart';
 import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
+import '../frame/frame_text_layout_measurer.dart';
 import '../geometry/spatial_kernel.dart';
 import '../interaction/interaction_engine.dart';
 import '../interaction/interaction_pointer_context.dart';
@@ -138,6 +140,8 @@ final class RuntimeRoot
        _selection = SelectionKernel(
          membership: _StoreSelectionMembership(store),
        ),
+       _textLayoutMeasurer = FrameTextLayoutMeasurer(),
+       _spatial = SpatialKernel(),
        _interactionEngine = InteractionEngine(
          initialMode: config.initialMode,
          initialDrawStyle: config.initialDrawStyle,
@@ -162,8 +166,9 @@ final class RuntimeRoot
 
   // Core kernels and engines.
   final SelectionKernel _selection;
+  final FrameTextLayoutMeasurer _textLayoutMeasurer;
   final InteractionEngine _interactionEngine;
-  final SpatialKernel _spatial = SpatialKernel();
+  final SpatialKernel _spatial;
   final CommitApplier _commitApplier = const CommitApplier();
   final RuntimeActionFinalizer _actionFinalizer = RuntimeActionFinalizer();
 
@@ -216,6 +221,7 @@ final class RuntimeRoot
     frameFacts: this,
     selectionFacts: _selection,
     spatialKernel: _spatial,
+    textLayoutMeasurer: _textLayoutMeasurer,
   );
   late final CommandFactsPort _commandFacts = RuntimeCommandFactsAdapter(
     frame: this,
@@ -543,6 +549,7 @@ final class RuntimeRoot
       fontFamily: facts.fontFamily,
       maxWidth: facts.maxWidth,
       lineHeight: facts.lineHeight,
+      measuredTextLayout: _measuredTextLayoutFor(facts),
       points: facts.points,
       start: facts.start,
       end: facts.end,
@@ -567,6 +574,35 @@ final class RuntimeRoot
       resourceRevision: facts.resourceRevision,
       metadata: facts.metadata,
     );
+  }
+
+  MeasuredTextLayout? _measuredTextLayoutFor(StoreElementFacts facts) {
+    final text = facts.text;
+    if (facts.kind != CanvasElementKind.text || text == null) {
+      return null;
+    }
+    final result = _textLayoutMeasurer.measureTextLayout(
+      MeasuredTextLayoutInput(
+        text: text,
+        fontSize: facts.fontSize ?? 24,
+        color: _textLayoutColorFor(facts),
+        align: facts.textAlign ?? TextAlign.left,
+        direction: facts.textDirection ?? TextDirection.ltr,
+        isBold: facts.isBold ?? false,
+        isItalic: facts.isItalic ?? false,
+        isUnderline: facts.isUnderline ?? false,
+        fontFamily: facts.fontFamily,
+        maxWidth: facts.maxWidth,
+        lineHeight: facts.lineHeight,
+      ),
+    );
+
+    return switch (result) {
+      MeasuredTextLayoutReady(:final layout) => layout,
+      MeasuredTextLayoutFailed(:final reason) => throw StateError(
+        'Text layout measurement failed for ${facts.id.value}: $reason',
+      ),
+    };
   }
 
   // Document read and id generation.
@@ -2133,6 +2169,15 @@ bool _sameIdSet(
   final rightSet = right.toSet();
 
   return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
+}
+
+Color _textLayoutColorFor(StoreElementFacts facts) {
+  final color = facts.textColor ?? const Color(0xFF000000);
+  final primitiveAlpha = (facts.opacity.clamp(0, 1) * 255).round();
+  final sourceAlpha = (color.toARGB32() >> 24) & 0xFF;
+  final combinedAlpha = (sourceAlpha * primitiveAlpha / 255).round();
+
+  return color.withAlpha(combinedAlpha);
 }
 
 CanvasRuntimeState _runtimeState(

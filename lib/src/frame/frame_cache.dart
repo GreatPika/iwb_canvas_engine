@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../contracts/internal/measured_text_layout.dart';
+
 final class FrameCacheProbe {
   const FrameCacheProbe({
     required this.entries,
@@ -293,10 +295,15 @@ final class StrokePathCacheKey {
 }
 
 final class TextLayoutCacheEntry {
-  const TextLayoutCacheEntry({required this.debugLabel, required this.painter});
+  const TextLayoutCacheEntry({
+    required this.debugLabel,
+    required this.painter,
+    required this.layout,
+  });
 
   final String debugLabel;
   final TextPainter painter;
+  final MeasuredTextLayout layout;
 }
 
 final class PathGeometryCacheEntry {

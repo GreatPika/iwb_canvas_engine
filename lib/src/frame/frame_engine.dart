@@ -11,6 +11,7 @@ import 'captured_frame.dart';
 import 'frame_capture_service.dart';
 import 'frame_paint_output.dart';
 import 'frame_repaint_signal.dart';
+import 'frame_text_layout_measurer.dart';
 import 'ordinary_paint_planner.dart';
 import 'overlay_preview_planner.dart';
 import 'paint_asset_binding_service.dart';
@@ -35,11 +36,15 @@ final class FrameEngine {
     required FrameFactsPort frameFacts,
     required SelectionFactsPort selectionFacts,
     required SpatialKernel spatialKernel,
+    FrameTextLayoutMeasurer? textLayoutMeasurer,
   }) : _frameFacts = frameFacts,
        _capture = FrameCaptureService(
          frameFacts: frameFacts,
          selectionFacts: selectionFacts,
          queryPaint: spatialKernel.queryPaint,
+       ),
+       _ordinaryPaintPlanner = OrdinaryPaintPlanner(
+         textLayoutMeasurer: textLayoutMeasurer,
        ),
        _selectedMoveSupplementPlanner = SelectedMoveSupplementPlanner(
          frameFacts: frameFacts,
@@ -48,7 +53,7 @@ final class FrameEngine {
 
   final FrameFactsPort _frameFacts;
   final FrameCaptureService _capture;
-  final OrdinaryPaintPlanner _ordinaryPaintPlanner = OrdinaryPaintPlanner();
+  final OrdinaryPaintPlanner _ordinaryPaintPlanner;
   final StaticBackgroundPlanner _staticBackgroundPlanner =
       StaticBackgroundPlanner();
   final SelectionDecorationPlanner _selectionDecorationPlanner =
