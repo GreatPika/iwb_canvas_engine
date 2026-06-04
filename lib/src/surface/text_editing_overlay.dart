@@ -21,6 +21,9 @@ const Key canvasTextEditingOverlayEditableTextKey = ValueKey<String>(
   'iwb_canvas_text_editing_overlay.editable_text',
 );
 
+const _editorInlineWidthSlack = 8.0;
+const _editorScrollBehavior = _InlineTextEditorScrollBehavior();
+
 /// Public API v1 declaration for [CanvasTextEditingOverlay].
 final class CanvasTextEditingOverlay extends StatefulWidget {
   const CanvasTextEditingOverlay({
@@ -193,6 +196,7 @@ final class _CanvasTextEditingOverlayState
                           expands: false,
                           scrollPadding: EdgeInsets.zero,
                           scrollController: _scrollController,
+                          scrollBehavior: _editorScrollBehavior,
                           onEditingComplete: _commitSession,
                         ),
                       ),
@@ -355,7 +359,23 @@ final class _CanvasTextEditingOverlayState
         ? editSize.height
         : math.min(editSize.height, maxHeight);
 
-    return Size(math.max(1, editSize.width), math.max(1, height));
+    return Size(
+      math.max(1, editSize.width + _editorInlineWidthSlack),
+      math.max(1, height),
+    );
+  }
+}
+
+final class _InlineTextEditorScrollBehavior extends ScrollBehavior {
+  const _InlineTextEditorScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }
 

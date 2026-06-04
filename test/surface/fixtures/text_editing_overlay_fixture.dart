@@ -52,9 +52,6 @@ void _testOverlayUsesEditableTextAndSessionGeometry() {
     final hostTopLeft = tester.getTopLeft(
       find.byKey(canvasTextEditingOverlayEditorHostKey),
     );
-    final hostSize = tester.getSize(
-      find.byKey(canvasTextEditingOverlayEditorHostKey),
-    );
     final session = scenario.activeSession;
     final localEditBounds = _localEditBoundsFor(session.geometry);
     final worldEditBounds = session.geometry.editBoundsWorld;
@@ -63,9 +60,10 @@ void _testOverlayUsesEditableTextAndSessionGeometry() {
       hostTopLeft,
       worldEditBounds.topLeft - scenario.runtime.camera.offset,
     );
-    expect(hostSize, localEditBounds.size);
+    _expectEditorHostExtendsMeasuredWidth(tester, localEditBounds);
 
     final editable = _editableText(tester);
+    _expectInlineEditorDisablesScrollbar(tester, editable);
     expect(editable.style.fontSize, 18);
     expect(editable.style.color, const Color(0xFF884422));
     expect(editable.style.fontWeight, FontWeight.bold);
@@ -105,9 +103,9 @@ void _testOverlayAppliesSessionTransform() {
         .toCanvasTransform();
 
     expect(appliedTransform.transform.storage, expected);
-    expect(
-      tester.getSize(find.byKey(canvasTextEditingOverlayEditorHostKey)),
-      _localEditBoundsFor(scenario.activeSession.geometry).size,
+    _expectEditorHostExtendsMeasuredWidth(
+      tester,
+      _localEditBoundsFor(scenario.activeSession.geometry),
     );
   });
 }
@@ -391,6 +389,35 @@ EditableText _editableText(WidgetTester tester) {
   return tester.widget<EditableText>(
     find.byKey(canvasTextEditingOverlayEditableTextKey),
   );
+}
+
+void _expectEditorHostExtendsMeasuredWidth(
+  WidgetTester tester,
+  Rect localEditBounds,
+) {
+  final hostSize = tester.getSize(
+    find.byKey(canvasTextEditingOverlayEditorHostKey),
+  );
+
+  expect(hostSize.height, localEditBounds.height);
+  expect(hostSize.width, greaterThan(localEditBounds.width));
+}
+
+void _expectInlineEditorDisablesScrollbar(
+  WidgetTester tester,
+  EditableText editable,
+) {
+  final scrollBehavior = editable.scrollBehavior;
+  if (scrollBehavior == null) {
+    fail('Expected inline text editor to set a local scroll behavior.');
+  }
+
+  final child = scrollBehavior.buildScrollbar(
+    tester.element(find.byKey(canvasTextEditingOverlayEditableTextKey)),
+    const SizedBox(key: ValueKey<String>('inline-text-scroll-child')),
+    const ScrollableDetails.vertical(),
+  );
+  expect(child.key, const ValueKey<String>('inline-text-scroll-child'));
 }
 
 Rect _localEditBoundsFor(CanvasTextEditGeometry geometry) {
