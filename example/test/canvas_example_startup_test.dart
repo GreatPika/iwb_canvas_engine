@@ -46,7 +46,7 @@ void _registerRuntimePolicyTests() {
     final config = createCanvasExampleRuntimeConfig();
 
     expect(config.clearSelectionOnDrawModeEnter, isTrue);
-    expect(config.pointerPolicy.tapSlop, 16);
+    expect(config.pointerPolicy.tapSlop, 1);
     expect(config.pointerPolicy.doubleTapSlop, 32);
     expect(config.pointerPolicy.doubleTapMaxDelayMs, 450);
     expect(config.pointerPolicy.dragStartSlop, 1.0);
@@ -61,7 +61,7 @@ void _registerRuntimePolicyTests() {
     expect(runtime.state.value.summary.layerCount, 2);
     expect(runtime.state.value.summary.elementCount, 0);
     expect(runtime.state.value.summary.resourceCount, 0);
-    expect(runtime.tools.pointerPolicy.tapSlop, 16);
+    expect(runtime.tools.pointerPolicy.tapSlop, 1);
     expect(runtime.tools.pointerPolicy.dragStartSlop, 1.0);
   });
 }

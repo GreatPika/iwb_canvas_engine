@@ -114,7 +114,7 @@ final class _CanvasExampleContent extends StatelessWidget {
             runtime: viewModel.runtime,
             resourceResolver: viewModel.resourceResolver,
             selectionStyle: CanvasSelectionStyle(
-              color: const Color(0xFFFFFF00),
+              color: const Color(0xFF1565C0),
               strokeWidth: 2,
               haloWidth: 0,
             ),

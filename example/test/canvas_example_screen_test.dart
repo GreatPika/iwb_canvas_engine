@@ -91,7 +91,7 @@ void _registerSurfaceStyleTest() {
 
     final surface = tester.widget<CanvasSurface>(find.byType(CanvasSurface));
 
-    expect(surface.selectionStyle.color.toARGB32(), 0xFFFFFF00);
+    expect(surface.selectionStyle.color.toARGB32(), 0xFF1565C0);
     expect(surface.selectionStyle.strokeWidth, 2);
     expect(surface.selectionStyle.haloWidth, 0);
   });
