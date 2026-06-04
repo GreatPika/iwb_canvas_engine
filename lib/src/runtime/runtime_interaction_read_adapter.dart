@@ -39,15 +39,19 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   final HitTestPolicy _hitTestPolicy;
 
   @override
+  // Move-start reads keep selection ids, exact hit facts, group bounds, and
+  // occlusion in one snapshot so the gesture owner cannot mix revisions.
+  // ignore: halstead-volume, source-lines-of-code
   SelectedMoveStartFacts selectedMoveStartFacts(
     SelectedMoveStartReadRequest request,
   ) {
-    final context = _readContext();
-    final selectedIds = _documentOrderIds(
-      handles: context.handles,
+    final context = _selectedMoveStartReadContext();
+    final selectedHandles = _selectedHandlesInDocumentOrder(
+      structuralRevision: context.structuralRevision,
       ids: context.selection.selectedElementIds,
     );
-    final movableIds = _movableIds(context, selectedIds);
+    final selectedIds = _idsForHandles(selectedHandles);
+    final movableIds = _movableIdsFromHandles(selectedHandles);
     final query = _spatial.queryHit(
       SpatialQueryWindow(
         boundsWorld: _pointQueryWindow(request.worldPosition),
@@ -58,10 +62,16 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       query,
       resolve: _frame.resolveElement,
     );
-    final hitId = _hitTestPolicy.topmostHit(
+    final hit = _hitTestPolicy.topmostHitResult(
       point: request.worldPosition,
       candidates: candidates.handles,
       resolve: _frame.resolveElement,
+    );
+    final selectedGroup = _selectedGroupFacts(
+      selectedHandles: selectedHandles,
+      selectedIds: selectedIds,
+      point: request.worldPosition,
+      topmostHit: hit,
     );
 
     return SelectedMoveStartFacts(
@@ -69,7 +79,13 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       movableSelectedIds: movableIds,
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
-      hitSelectedMovable: hitId != null && movableIds.contains(hitId),
+      hitSelectedMovable: hit != null && movableIds.contains(hit.id),
+      topmostHitId: hit?.id,
+      topmostHitOrderToken: hit?.orderToken,
+      selectedGroupBoundsWorld: selectedGroup.boundsWorld,
+      selectedTopOrderToken: selectedGroup.topOrderToken,
+      insideSelectedGroupUnion: selectedGroup.insideUnion,
+      groupUnionOccludedByHigherOrderHit: selectedGroup.occluded,
       query: interactionQueryFacts(query, candidates),
     );
   }
@@ -434,6 +450,16 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     );
   }
 
+  _SelectedMoveStartReadContext _selectedMoveStartReadContext() {
+    final structuralRevision = _frame.frameRevisions.structuralRevision;
+
+    return _SelectedMoveStartReadContext(
+      controllerEpoch: _controllerEpoch(),
+      structuralRevision: structuralRevision,
+      selection: _selection.selectionFacts,
+    );
+  }
+
   List<CanvasElementId> _movableIds(
     _InteractionReadContext context,
     Iterable<CanvasElementId> ids,
@@ -446,6 +472,34 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     ];
   }
 
+  List<FrameElementHandle> _selectedHandlesInDocumentOrder({
+    required int structuralRevision,
+    required Iterable<CanvasElementId> ids,
+  }) {
+    final handles = <FrameElementHandle>[];
+    for (final id in ids) {
+      final handle = _frame.elementHandleForId(structuralRevision, id);
+      if (handle != null) {
+        _insertHandleByOrder(handles, handle);
+      }
+    }
+
+    return List.unmodifiable(handles);
+  }
+
+  List<CanvasElementId> _idsForHandles(Iterable<FrameElementHandle> handles) {
+    return List.unmodifiable([for (final handle in handles) handle.id]);
+  }
+
+  List<CanvasElementId> _movableIdsFromHandles(
+    Iterable<FrameElementHandle> handles,
+  ) {
+    return List.unmodifiable([
+      for (final handle in handles)
+        if (_isMovable(handle)) handle.id,
+    ]);
+  }
+
   bool _isMovable(FrameElementHandle handle) {
     final facts = _frame.resolveElement(handle);
 
@@ -455,6 +509,50 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         facts.isSelectable &&
         !facts.isLocked &&
         facts.isTransformable;
+  }
+
+  // Group union admission facts stay together because bounds, top order, and
+  // occlusion are one invariant over the same selected handles.
+  // ignore: halstead-volume
+  _SelectedGroupMoveStartFacts _selectedGroupFacts({
+    required List<FrameElementHandle> selectedHandles,
+    required List<CanvasElementId> selectedIds,
+    required Offset point,
+    required HitTestResult? topmostHit,
+  }) {
+    if (selectedIds.isEmpty) {
+      return const _SelectedGroupMoveStartFacts.none();
+    }
+    final selected = selectedIds.toSet();
+    final facts = [
+      for (final handle in selectedHandles) _frame.resolveElement(handle),
+    ].whereType<FrameElementFacts>().toList(growable: false);
+    if (facts.isEmpty) {
+      return const _SelectedGroupMoveStartFacts.none();
+    }
+    final topOrderToken = _topOrderToken(facts);
+    if (facts.length < 2) {
+      return _SelectedGroupMoveStartFacts(
+        boundsWorld: null,
+        topOrderToken: topOrderToken,
+        insideUnion: false,
+        occluded: false,
+      );
+    }
+    final bounds = _unionPaintBounds(facts, policy: _hitTestPolicy);
+    final insideUnion = _rectContainsPointInclusive(bounds, point);
+    final occluded =
+        insideUnion &&
+        topmostHit != null &&
+        topmostHit.orderToken > topOrderToken &&
+        !selected.contains(topmostHit.id);
+
+    return _SelectedGroupMoveStartFacts(
+      boundsWorld: bounds,
+      topOrderToken: topOrderToken,
+      insideUnion: insideUnion,
+      occluded: occluded,
+    );
   }
 }
 
@@ -476,6 +574,20 @@ Rect _pointQueryWindow(Offset point) {
   return Rect.fromCircle(center: point, radius: 0.5);
 }
 
+void _insertHandleByOrder(
+  List<FrameElementHandle> ordered,
+  FrameElementHandle handle,
+) {
+  for (var index = 0; index < ordered.length; index += 1) {
+    if (handle.orderToken < ordered[index].orderToken) {
+      ordered.insert(index, handle);
+
+      return;
+    }
+  }
+  ordered.add(handle);
+}
+
 Rect _normalizeRect(Rect rect) {
   return Rect.fromLTRB(
     rect.left < rect.right ? rect.left : rect.right,
@@ -483,6 +595,69 @@ Rect _normalizeRect(Rect rect) {
     rect.left < rect.right ? rect.right : rect.left,
     rect.top < rect.bottom ? rect.bottom : rect.top,
   );
+}
+
+Rect _unionPaintBounds(
+  List<FrameElementFacts> facts, {
+  required HitTestPolicy policy,
+}) {
+  final geometry = policy.geometryPolicy;
+  var bounds = geometry.boundsFor(facts.first).paintBoundsWorld;
+  for (final row in facts.skip(1)) {
+    bounds = bounds.expandToInclude(geometry.boundsFor(row).paintBoundsWorld);
+  }
+
+  return bounds;
+}
+
+int _topOrderToken(List<FrameElementFacts> facts) {
+  var topOrderToken = facts.first.orderToken;
+  for (final row in facts.skip(1)) {
+    if (row.orderToken > topOrderToken) {
+      topOrderToken = row.orderToken;
+    }
+  }
+
+  return topOrderToken;
+}
+
+bool _rectContainsPointInclusive(Rect rect, Offset point) {
+  return point.dx >= rect.left &&
+      point.dx <= rect.right &&
+      point.dy >= rect.top &&
+      point.dy <= rect.bottom;
+}
+
+final class _SelectedGroupMoveStartFacts {
+  const _SelectedGroupMoveStartFacts({
+    required this.boundsWorld,
+    required this.topOrderToken,
+    required this.insideUnion,
+    required this.occluded,
+  });
+
+  const _SelectedGroupMoveStartFacts.none()
+    : boundsWorld = null,
+      topOrderToken = null,
+      insideUnion = false,
+      occluded = false;
+
+  final Rect? boundsWorld;
+  final int? topOrderToken;
+  final bool insideUnion;
+  final bool occluded;
+}
+
+final class _SelectedMoveStartReadContext {
+  const _SelectedMoveStartReadContext({
+    required this.controllerEpoch,
+    required this.structuralRevision,
+    required this.selection,
+  });
+
+  final int controllerEpoch;
+  final int structuralRevision;
+  final SelectionFacts selection;
 }
 
 final class _InteractionReadContext {

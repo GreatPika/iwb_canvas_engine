@@ -56,6 +56,12 @@ final class SelectedMoveStartFacts {
     required this.controllerEpoch,
     required this.selectionRevision,
     required this.hitSelectedMovable,
+    this.topmostHitId,
+    this.topmostHitOrderToken,
+    this.selectedGroupBoundsWorld,
+    this.selectedTopOrderToken,
+    this.insideSelectedGroupUnion = false,
+    this.groupUnionOccludedByHigherOrderHit = false,
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : selectedIds = List.unmodifiable(selectedIds),
        movableSelectedIds = List.unmodifiable(movableSelectedIds);
@@ -65,6 +71,12 @@ final class SelectedMoveStartFacts {
   final int controllerEpoch;
   final int selectionRevision;
   final bool hitSelectedMovable;
+  final CanvasElementId? topmostHitId;
+  final int? topmostHitOrderToken;
+  final Rect? selectedGroupBoundsWorld;
+  final int? selectedTopOrderToken;
+  final bool insideSelectedGroupUnion;
+  final bool groupUnionOccludedByHigherOrderHit;
   final InteractionReadQueryFacts query;
 }
 

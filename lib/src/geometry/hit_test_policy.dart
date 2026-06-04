@@ -10,6 +10,13 @@ import 'geometry_policy.dart';
 typedef FrameElementResolver =
     FrameElementFacts? Function(FrameElementHandle handle);
 
+final class HitTestResult {
+  const HitTestResult({required this.id, required this.orderToken});
+
+  final CanvasElementId id;
+  final int orderToken;
+}
+
 // Point, marquee, eraser, and context hit checks stay in one geometry policy so
 // every interaction path shares the same eligibility and exact-hit rules.
 // ignore: weighted-methods-per-class
@@ -19,6 +26,18 @@ final class HitTestPolicy {
   final GeometryPolicy geometryPolicy;
 
   CanvasElementId? topmostHit({
+    required Offset point,
+    required Iterable<FrameElementHandle> candidates,
+    required FrameElementResolver resolve,
+  }) {
+    return topmostHitResult(
+      point: point,
+      candidates: candidates,
+      resolve: resolve,
+    )?.id;
+  }
+
+  HitTestResult? topmostHitResult({
     required Offset point,
     required Iterable<FrameElementHandle> candidates,
     required FrameElementResolver resolve,
@@ -33,7 +52,7 @@ final class HitTestPolicy {
         continue;
       }
 
-      return facts.id;
+      return HitTestResult(id: facts.id, orderToken: handle.orderToken);
     }
 
     return null;

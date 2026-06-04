@@ -7,9 +7,15 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+import 'interaction_read_port_bounded_read_fixture.dart';
+
 void main() {
   _testRuntimeInjectsReadPortIntoInteractionEngine();
   _testSelectedMoveStartFacts();
+  _testSelectedMoveStartGroupUnionFacts();
+  _testSelectedMoveStartOccludedGroupUnionFacts();
+  _testSingleLineMoveStartDoesNotExposeGroupUnionFacts();
+  testSelectedMoveStartUsesSelectedHandleLookups();
   _testSelectedMoveCommitFiltersStaleFacts();
   _testSelectedMoveCommitRejectsMismatchedSelectionFacts();
   _testMarqueeStartFacts();
@@ -30,6 +36,9 @@ void _testRuntimeInjectsReadPortIntoInteractionEngine() {
   });
 }
 
+// This selected move-start matrix stays together to prove ordering,
+// movability, exact-hit facts, and immutability from one committed read.
+// ignore: halstead-volume
 void _testSelectedMoveStartFacts() {
   test('selected move start facts are immutable and document ordered', () {
     final root = _runtimeRoot()
@@ -52,12 +61,116 @@ void _testSelectedMoveStartFacts() {
     expect(facts.movableSelectedIds, [CanvasElementId('movable-a')]);
     expect(facts.controllerEpoch, 0);
     expect(facts.hitSelectedMovable, isTrue);
+    expect(facts.topmostHitId, CanvasElementId('movable-a'));
+    expect(facts.topmostHitOrderToken, isNotNull);
     expect(facts.query.status, InteractionReadQueryStatus.candidates);
     expect(
       () => facts.selectedIds.add(CanvasElementId('x')),
       throwsUnsupportedError,
     );
   });
+}
+
+// This group-start matrix stays together so union bounds, selected ordering,
+// and gap admission cannot drift across separate fixture setups.
+// ignore: halstead-volume
+void _testSelectedMoveStartGroupUnionFacts() {
+  test('selected move start facts expose selected group union facts', () {
+    final root =
+        RuntimeRoot(
+            initialDocument: _groupSelectionDocument(includeOccluder: false),
+            config: const CanvasRuntimeConfig(),
+          )
+          ..selection.setSelection([
+            CanvasElementId('selected-left'),
+            CanvasElementId('selected-right'),
+          ]);
+    addTearDown(root.dispose);
+
+    final facts = root.interactionReadPort.selectedMoveStartFacts(
+      const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
+    );
+
+    expect(facts.selectedIds, [
+      CanvasElementId('selected-left'),
+      CanvasElementId('selected-right'),
+    ]);
+    expect(facts.movableSelectedIds, [
+      CanvasElementId('selected-left'),
+      CanvasElementId('selected-right'),
+    ]);
+    expect(facts.hitSelectedMovable, isFalse);
+    expect(facts.topmostHitId, isNull);
+    expect(facts.selectedGroupBoundsWorld, const Rect.fromLTRB(-5, -5, 35, 5));
+    expect(facts.selectedTopOrderToken, isNotNull);
+    expect(facts.insideSelectedGroupUnion, isTrue);
+    expect(facts.groupUnionOccludedByHigherOrderHit, isFalse);
+  });
+}
+
+// Occlusion assertions stay together to prove exact top-hit order and selected
+// group order are compared from one read-port snapshot.
+// ignore: halstead-volume
+void _testSelectedMoveStartOccludedGroupUnionFacts() {
+  test(
+    'selected group union facts report higher order exact-hit occlusion',
+    () {
+      final root =
+          RuntimeRoot(
+              initialDocument: _groupSelectionDocument(includeOccluder: true),
+              config: const CanvasRuntimeConfig(),
+            )
+            ..selection.setSelection([
+              CanvasElementId('selected-left'),
+              CanvasElementId('selected-right'),
+            ]);
+      addTearDown(root.dispose);
+
+      final facts = root.interactionReadPort.selectedMoveStartFacts(
+        const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
+      );
+
+      expect(facts.hitSelectedMovable, isFalse);
+      expect(facts.topmostHitId, CanvasElementId('occluder-a'));
+      final selectedTopOrderToken = facts.selectedTopOrderToken;
+      if (selectedTopOrderToken == null) {
+        fail('selected top order token must be available for group selection');
+      }
+      expect(facts.topmostHitOrderToken, greaterThan(selectedTopOrderToken));
+      expect(
+        facts.selectedGroupBoundsWorld,
+        const Rect.fromLTRB(-5, -5, 35, 5),
+      );
+      expect(facts.insideSelectedGroupUnion, isTrue);
+      expect(facts.groupUnionOccludedByHigherOrderHit, isTrue);
+    },
+  );
+}
+
+void _testSingleLineMoveStartDoesNotExposeGroupUnionFacts() {
+  test(
+    'single selected line move start does not expose group-union admission',
+    () {
+      final root = RuntimeRoot(
+        initialDocument: _singleSelectedLineDocument(),
+        config: const CanvasRuntimeConfig(),
+      )..selection.setSelection([CanvasElementId('line-a')]);
+      addTearDown(root.dispose);
+
+      final facts = root.interactionReadPort.selectedMoveStartFacts(
+        const SelectedMoveStartReadRequest(worldPosition: Offset(80, 20)),
+      );
+
+      expect(facts.selectedIds, [CanvasElementId('line-a')]);
+      expect(facts.movableSelectedIds, [CanvasElementId('line-a')]);
+      expect(facts.hitSelectedMovable, isFalse);
+      expect(facts.topmostHitId, isNull);
+      expect(facts.selectedGroupBoundsWorld, isNull);
+      expect(facts.selectedTopOrderToken, isNotNull);
+      expect(facts.insideSelectedGroupUnion, isFalse);
+      expect(facts.groupUnionOccludedByHigherOrderHit, isFalse);
+    },
+  );
 }
 
 void _testSelectedMoveCommitFiltersStaleFacts() {
@@ -388,6 +501,40 @@ RuntimeRoot _runtimeRoot() {
   return RuntimeRoot(
     initialDocument: _document(),
     config: const CanvasRuntimeConfig(),
+  );
+}
+
+CanvasDocument _groupSelectionDocument({required bool includeOccluder}) {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          _rect('selected-left', const Offset(0, 0)),
+          _rect('selected-right', const Offset(30, 0)),
+          if (includeOccluder) _rect('occluder-a', const Offset(15, 0)),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _singleSelectedLineDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasLineElement(
+            id: CanvasElementId('line-a'),
+            start: Offset.zero,
+            end: const Offset(100, 100),
+            thickness: 2,
+            color: const Color(0xFF111111),
+          ),
+        ],
+      ),
+    ],
   );
 }
 

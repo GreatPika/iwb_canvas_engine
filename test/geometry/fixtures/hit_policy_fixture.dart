@@ -138,6 +138,11 @@ void _testTopmostResolution() {
   test('order-token topmost resolution ignores background candidates', () {
     const policy = HitTestPolicy();
     final stack = _hitStack();
+    final result = policy.topmostHitResult(
+      point: Offset.zero,
+      candidates: stack.values.map(_handleFor),
+      resolve: (handle) => stack[handle.id],
+    );
 
     expect(
       policy.topmostHit(
@@ -147,6 +152,8 @@ void _testTopmostResolution() {
       ),
       CanvasElementId('upper'),
     );
+    expect(result?.id, CanvasElementId('upper'));
+    expect(result?.orderToken, 2);
   });
 }
 
