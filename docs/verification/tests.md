@@ -194,6 +194,8 @@ Required tests:
 - `test.surface.no_live_runtime_read_in_painters`
 - `test.surface.overlay_drawable_policy`
 - `test.surface.marquee_captured_style`
+- `test.frame.selection_decoration_plan`
+- `test.surface.selection_chrome_ordered_paint`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.guardrails.geometry_no_legacy_scene_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
@@ -354,6 +356,8 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/surface/no_live_runtime_read_in_painters_test.dart`
 - `test/surface/overlay_drawable_policy_test.dart`
 - `test/surface/marquee_captured_style_test.dart`
+- `test/frame/selection_decoration_plan_test.dart`
+- `test/surface/selection_chrome_ordered_paint_test.dart`
 - `test/frame/paint_plan_write_all_or_nothing_test.dart`
 - `test/frame/paint_asset_binding_service_test.dart`
 - `test/frame/repaint_bus_output_test.dart`
@@ -858,6 +862,25 @@ behavioral tests, and the required guardrail list remains owned by
 #### `test/surface/marquee_captured_style_test.dart`
 - proves surface-owned overlay painting uses captured marquee primitive fill and
   stroke style instead of live style state.
+
+#### `test/frame/selection_decoration_plan_test.dart`
+- proves single selection emits one ordered decoration primitive for the selected
+  element and multi-select emits one group-box primitive from the union of
+  selected paint bounds;
+- proves selected-move preview delta shifts selection decoration bounds without
+  entering ordinary paint cache identity;
+- proves chrome order/placement metadata and selected order/structural
+  invalidation stay frame-owned, and that selected document order is not the
+  chrome paint-order source.
+
+#### `test/surface/selection_chrome_ordered_paint_test.dart`
+- proves `MainFramePainter` paints selection chrome interleaved with the main
+  record stream so higher-order content can cover selected chrome;
+- proves inside-box stroke placement for box chrome does not protrude outside
+  primitive bounds;
+- proves ordered decoration insertion remains a bounded painter merge over
+  immutable frame output, with no global scene sort, `saveLayer`, ordinary cache
+  write, or live runtime read.
 
 #### `test/frame/paint_plan_excludes_selection_state_test.dart`
 - proves OrdinaryPaintRecordCache keys and cached ordinary records exclude

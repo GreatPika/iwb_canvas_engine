@@ -169,6 +169,19 @@ methods such as per-property `exists`, `isVisible`, or `isLocked` reads, and the
 port must not expose mutation, draft access, `CanvasDocument` projection, store
 internals, or resource/session internals.
 
+Selected-move start admission is decided from one pointer-down snapshot. The
+read-port facts preserve the ordinary exact topmost hit id/order and whether
+that exact hit is a movable selected element. For multi-select, the same read
+also derives selected group union bounds, selected top order token, whether the
+pointer is inside that union, and whether a higher-order exact content hit
+occludes union-only admission. `MoveMachine` may start selected move from an
+exact movable selected hit, or from reliable multi-select group-union facts with
+no higher-order occluder. It must reject empty selection, empty movable set,
+single-selection bounds-only misses, stale or otherwise unreliable hit-query
+facts, non-finite group bounds, and occluded union-only starts. Rejected starts
+fall through to existing move-mode behavior and produce no selected-move
+preview, resolver call, action, or document mutation.
+
 A move-mode click that stays within pointer slop is a point-selection commit
 through the marquee/select owner, not a direct selection-owner mutation from
 the surface. For zero-area marquee commit rectangles, the runtime interaction

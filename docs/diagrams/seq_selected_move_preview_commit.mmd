@@ -37,20 +37,22 @@ sequenceDiagram
   IE->>ReadPort: read selected move start facts
   ReadPort->>SelectionFacts: read selected ids and selectionRevision
   SelectionFacts-->>ReadPort: selected ids
-  ReadPort->>Store: read transformable flags and document order
-  Store-->>ReadPort: movable flags in document order
+  ReadPort->>Store: lookup selected handles/facts by id
+  Store-->>ReadPort: selected row facts, movable flags, and order tokens
+  ReadPort->>ReadPort: derive selected union bounds and selected top order
   ReadPort->>Spatial: hit-test down position once through spatial query APIs
-  Spatial-->>ReadPort: top visible selectable element id
-  ReadPort-->>IE: selected ids, movable ids, and hit-selected fact in document order
+  Spatial-->>ReadPort: exact top-hit id/order candidates
+  ReadPort-->>IE: selected ids, movable ids, exact hit id/order, group union, selected top order, and occlusion facts
 
-  alt hit is selected and movable set is not empty
+  alt exact hit is selected movable, or reliable multi-select group union is inside and not occluded
     IE->>IE: start selected move session
     Note over IE: Session stores pointer token, sessionId, start position, selected ids, movable ids, and delta Offset.zero.
     IE->>Preview: publish CanvasSelectedMovePreview(delta: Offset.zero)
     IE->>Preview: bump previewRevision for selected move preview
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-  else down is not admitted for selected move
+  else empty selection, empty movable set, stale query, single bounds-only miss, or higher-order occlusion
+    Note over IE,ReadPort: Rejection does not create selected-move preview, resolver call, action, or document mutation.
     IE-->>Tools: route to other move mode behavior or ignore
   end
 

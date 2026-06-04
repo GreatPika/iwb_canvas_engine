@@ -86,6 +86,8 @@ Point hit:
 - reverse layer order;
 - reverse element order within layer;
 - first exact hit wins;
+- policy-owned topmost hit result exposes both element id and paint order token
+  when interaction admission needs occlusion-aware ordering facts;
 - background elements are not pointer-selectable in v1.
 ```
 

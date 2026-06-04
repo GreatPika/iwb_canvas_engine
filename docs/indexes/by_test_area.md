@@ -223,6 +223,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
+## test.frame.selection_decoration_plan
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.geometry.eraser_exact_budget_inputs
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
@@ -510,6 +514,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.surface.pointer_adapter_finite_normalization
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
+
+## test.surface.selection_chrome_ordered_paint
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
 
 ## test.surface.single_active_surface
 

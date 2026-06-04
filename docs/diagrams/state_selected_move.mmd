@@ -17,14 +17,17 @@ stateDiagram-v2
   note right of AdmissionGate
     Admission happens after the generic pointer session
     owns the routed token, session id, and controllerEpoch.
-    Hit-test uses visible selectable geometry. The target
-    must be selected and at least one selected id must be
-    movable or this path performs no selected move work.
+    InteractionReadPort reads one immutable pointer-down
+    snapshot with exact top-hit id/order facts, movable
+    selected ids, multi-select group union bounds, selected
+    top order, and higher-order occlusion facts.
   end note
 
-  AdmissionGate --> ActivePreview: "hit selected movable target / start session"
-  AdmissionGate --> PreResolverCleanup: "no selected target, no moved ids, or empty movable set"
-  AdmissionGate --> PreResolverCleanup: "controllerEpoch mismatch or non-finite admission facts"
+  AdmissionGate --> ActivePreview: "exact selected movable hit / start session"
+  AdmissionGate --> ActivePreview: "reliable multi-select group union inside and not occluded / start session"
+  AdmissionGate --> PreResolverCleanup: "empty selection, no moved ids, empty movable set, or single bounds-only miss"
+  AdmissionGate --> PreResolverCleanup: "stale query, controllerEpoch mismatch, non-finite group bounds, or incomplete admission facts"
+  AdmissionGate --> PreResolverCleanup: "higher-order exact content hit occludes union-only admission"
 
   state "Active selected move preview" as ActivePreview {
     [*] --> PreviewReady
