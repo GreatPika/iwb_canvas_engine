@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/move_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
@@ -10,8 +11,19 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 const _selectedMoveDragEnd = Offset(9, 0);
 const _groupMoveStart = Offset(10, 0);
 const _groupMoveEnd = Offset(19, 0);
+const _previewDelta = Offset(5, 0);
+const _commitDelta = Offset(17, 0);
 
 void main() {
+  _registerMoveMachineFactTests();
+  _registerUnselectedMoveRegressionTests();
+  _registerSelectedMoveStartTests();
+  _registerSelectedMoveTerminalTests();
+  _registerSelectedMoveCleanupTests();
+  _registerResolverReentrancyTests();
+}
+
+void _registerMoveMachineFactTests() {
   _testMoveMachineGroupAdmissionFacts();
   _testMoveMachineRejectsOccludedGroupFacts();
   _testMoveMachineRejectsSingleSelectionGroupFacts();
@@ -19,12 +31,36 @@ void main() {
   _testMoveMachineRejectsGroupUnionWithoutCandidateQueryProof();
   _testMoveMachineRejectsGroupUnionWithSkippedCandidates();
   _testMoveMachineRejectsGroupUnionWithUnreliableOcclusionRead();
+}
+
+void _registerUnselectedMoveRegressionTests() {
   _testSelectedMoveAdmissionAndPreview();
+  _testUnselectedMovableDragSelectsAndMoves();
+  _testUnselectedMovableDragCancelRestoresSelection();
+  _testUnselectedMovableResolverCancelRestoresSelection();
+  _testUnselectedMovableDragUsesDragStartSlop();
+  _testUnselectedMovableClickJitterRemainsSelectionTap();
+  _testUnselectedMovableTapTerminalRestoresPreviousSelection();
+  _testUnselectedMovableCleanupPreservesExternalSelection();
+  _testUnselectedMovablePreviewRequiresCurrentSelection();
+  _testUnselectedMovableInvalidTerminalRestoresSelection();
+  _testUnselectedMovableCleanupPreservesExternalSelectionRoundTrip();
+  _testUnselectedMovableTapTerminalPreservesExternalSelection();
+  _testUnselectedMovableTapTerminalReadsTerminalTopmost();
+  _testLockedHitDoesNotStartMove();
+}
+
+void _registerSelectedMoveStartTests() {
+  _testSelectedMoveDragStartSlopFallbackUsesTapSlop();
+  _testSelectedMoveContinuesInsideSlopAfterPreviewStart();
   _testGroupInteriorSelectedMoveAdmissionAndPreview();
   _testOccludedGroupInteriorDoesNotStartSelectedMove();
   _testNonSelectableOccludedGroupInteriorDoesNotStartSelectedMove();
   _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove();
   _testSameDeltaMoveKeepsPreviewRevision();
+}
+
+void _registerSelectedMoveTerminalTests() {
   _testSelectedMoveZeroDeltaDoesNotResolve();
   _testGroupInteriorZeroDeltaDoesNotResolve();
   _testSelectedMoveStaleSelectionDoesNotResolve();
@@ -33,6 +69,9 @@ void main() {
   _testSelectedMoveEmptyMovableSetDoesNotResolve();
   _testSelectedMoveCommitWithResolver();
   _testGroupInteriorSelectedMoveCommitWithResolver();
+}
+
+void _registerSelectedMoveCleanupTests() {
   _testSelectedMoveResolverCancelDoesNotCommit();
   _testGroupInteriorResolverCancelDoesNotCommit();
   _testSelectedMoveResolverErrorCleansPreview();
@@ -43,6 +82,9 @@ void main() {
   _testSelectedMoveInteractiveDisabledDoesNotResolve();
   _testSelectedMoveLoadAndDisposeDoNotResolve();
   _testSelectedMoveEditFailureCleansPreview();
+}
+
+void _registerResolverReentrancyTests() {
   _testSelectedMoveResolverReentrancy();
   _testSelectedMoveResolverDisposeReentrancy();
 }
@@ -176,6 +218,381 @@ void _testSelectedMoveAdmissionAndPreview() {
   );
 }
 
+void _testUnselectedMovableDragSelectsAndMoves() {
+  test(
+    'dragging unselected movable hit selects it and commits move only',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _commitDelta);
+      _finishPointer(root, CanvasPointerLifecyclePhase.up, timestampMs: 17);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(_rect(root, 'a').transform.translation, _commitDelta);
+      expect(_rect(root, 'b').transform.translation, const Offset(20, 0));
+      expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+      _expectSingleActionForA(scenario, CanvasActionType.moveSelection);
+    },
+  );
+}
+
+void _testUnselectedMovableDragCancelRestoresSelection() {
+  test('cancel during unselected movable drag restores previous selection', () {
+    final scenario = _actionScenario(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+      ),
+    );
+    final root = scenario.root;
+    root.selection.setSelection([CanvasElementId('b')]);
+
+    root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(5, 0)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.cancel, const Offset(5, 0)),
+    );
+
+    expect(root.preview, isA<CanvasNoPreview>());
+    expect(root.selection.selectedElementIds, {CanvasElementId('b')});
+    expect(_rect(root, 'a').transform.translation, Offset.zero);
+    expect(scenario.actions, isEmpty);
+  });
+}
+
+void _testUnselectedMovableResolverCancelRestoresSelection() {
+  test(
+    'resolver cancel during unselected movable drag restores previous selection',
+    () async {
+      final scenario = _actionScenario(
+        config: _dragStartBeforeTapConfig(
+          moveCommitResolver: (_) => const CanvasMoveCancel(),
+        ),
+      );
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _commitDelta);
+      _finishPointer(root, CanvasPointerLifecyclePhase.up);
+      await Future<void>.delayed(Duration.zero);
+
+      _expectPreviousSelectionRestored(root);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testUnselectedMovableDragUsesDragStartSlop() {
+  test('unselected movable drag starts after dragStartSlop before tapSlop', () {
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+      ),
+    );
+    addTearDown(root.dispose);
+
+    root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(4, 0)),
+    );
+    expect(root.preview, isA<CanvasNoPreview>());
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(5, 0)),
+    );
+    final preview = root.preview as CanvasSelectedMovePreview;
+    expect(preview.delta, const Offset(5, 0));
+  });
+}
+
+void _testUnselectedMovableClickJitterRemainsSelectionTap() {
+  test(
+    'unselected movable click jitter inside tapSlop remains selection tap',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _previewDelta);
+      _finishPointer(
+        root,
+        CanvasPointerLifecyclePhase.up,
+        position: _previewDelta,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+      expect(_rect(root, 'a').transform.translation, Offset.zero);
+      _expectSingleActionForA(scenario, CanvasActionType.selectMarquee);
+    },
+  );
+}
+
+void _testUnselectedMovableTapTerminalRestoresPreviousSelection() {
+  test(
+    'unselected movable tap terminal restores previous selection on no-op select',
+    () async {
+      final scenario = _actionScenario(config: _wideTapDragStartConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _previewDelta);
+      _finishPointer(
+        root,
+        CanvasPointerLifecyclePhase.up,
+        position: const Offset(20, 0),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      _expectPreviousSelectionRestored(root);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testUnselectedMovableTapTerminalReadsTerminalTopmost() {
+  test(
+    'unselected movable tap terminal selects terminal topmost hit',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _previewDelta);
+      _addTerminalTopElement(root);
+      _finishPointer(
+        root,
+        CanvasPointerLifecyclePhase.up,
+        position: _previewDelta,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.selection.selectedElementIds, {
+        CanvasElementId('terminal-top'),
+      });
+      expect(_rect(root, 'a').transform.translation, Offset.zero);
+      _expectTerminalTopSelectionAction(scenario);
+    },
+  );
+}
+
+void _testLockedHitDoesNotStartMove() {
+  test(
+    'dragging locked unselected hit does not start move or marquee',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, const Offset(40, 0)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, const Offset(57, 0)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, const Offset(57, 0)),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.selection.selectedElementIds, isEmpty);
+      expect(_rect(root, 'locked').transform.translation, const Offset(40, 0));
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testUnselectedMovableCleanupPreservesExternalSelection() {
+  test(
+    'provisional cleanup preserves external selection replacement',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _commitDelta);
+      _selectExternalObject(root);
+      _finishPointer(
+        root,
+        CanvasPointerLifecyclePhase.cancel,
+        position: _commitDelta,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.selection.selectedElementIds, {CanvasElementId('locked')});
+      expect(_rect(root, 'a').transform.translation, Offset.zero);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testUnselectedMovablePreviewRequiresCurrentSelection() {
+  test(
+    'provisional preview is rejected after external selection replacement',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+      _selectExternalObject(root);
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, _commitDelta),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.interactionEngine.activeSession, isNull);
+      expect(root.selection.selectedElementIds, {CanvasElementId('locked')});
+      expect(_rect(root, 'a').transform.translation, Offset.zero);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testUnselectedMovableInvalidTerminalRestoresSelection() {
+  test('provisional stale-controller cleanup carries selection restore', () {
+    final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+    final root = scenario.root;
+    _selectPreviousObject(root);
+
+    _startUnselectedMovablePreview(root, _commitDelta);
+    final admission = root.interactionEngine.handlePointerSample(
+      _sample(CanvasPointerLifecyclePhase.up, _commitDelta),
+      InteractionPointerContext(
+        viewCameraOffset: Offset.zero,
+        controllerEpoch: 1,
+        selectedIds: root.selection.selectedElementIds,
+        selectionRevision: root.selectionFacts.selectionRevision,
+        resolveOutputTimestamp: (_) => 0,
+      ),
+    );
+
+    expect(admission.selectionReplacement?.elementIds, [CanvasElementId('b')]);
+    expect(admission.selectionReplacement?.expectedCurrentIds, [
+      CanvasElementId('a'),
+    ]);
+    expect(
+      admission.selectionReplacement?.expectedCurrentRevision,
+      root.selectionFacts.selectionRevision,
+    );
+    expect(admission.publishRuntimeState, isTrue);
+    expect(scenario.actions, isEmpty);
+  });
+}
+
+void _testUnselectedMovableCleanupPreservesExternalSelectionRoundTrip() {
+  test('provisional cleanup preserves external selection round trip', () async {
+    final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+    final root = scenario.root;
+    _selectPreviousObject(root);
+
+    _startUnselectedMovablePreview(root, _commitDelta);
+    _selectExternalObject(root);
+    root.selection.setSelection([CanvasElementId('a')]);
+    _finishPointer(
+      root,
+      CanvasPointerLifecyclePhase.cancel,
+      position: _commitDelta,
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(root.preview, isA<CanvasNoPreview>());
+    expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+    expect(_rect(root, 'a').transform.translation, Offset.zero);
+    expect(scenario.actions, isEmpty);
+  });
+}
+
+void _testUnselectedMovableTapTerminalPreservesExternalSelection() {
+  test(
+    'provisional tap terminal preserves external selection replacement',
+    () async {
+      final scenario = _actionScenario(config: _dragStartBeforeTapConfig());
+      final root = scenario.root;
+      _selectPreviousObject(root);
+
+      _startUnselectedMovablePreview(root, _previewDelta);
+      _selectExternalObject(root);
+      _finishPointer(
+        root,
+        CanvasPointerLifecyclePhase.up,
+        position: _previewDelta,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isA<CanvasNoPreview>());
+      expect(root.selection.selectedElementIds, {CanvasElementId('locked')});
+      expect(_rect(root, 'a').transform.translation, Offset.zero);
+      expect(scenario.actions, isEmpty);
+    },
+  );
+}
+
+void _testSelectedMoveDragStartSlopFallbackUsesTapSlop() {
+  test('selected move dragStartSlop null falls back to tapSlop', () {
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
+      ),
+    );
+    addTearDown(root.dispose);
+    root.selection.setSelection([CanvasElementId('a')]);
+
+    root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(8, 0)),
+    );
+    expect(root.preview, isA<CanvasNoPreview>());
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(9, 0)),
+    );
+    final preview = root.preview as CanvasSelectedMovePreview;
+    expect(preview.delta, const Offset(9, 0));
+  });
+}
+
+void _testSelectedMoveContinuesInsideSlopAfterPreviewStart() {
+  test('selected move keeps preview live when crossing back through start', () {
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+      ),
+    );
+    addTearDown(root.dispose);
+    root.selection.setSelection([CanvasElementId('a')]);
+
+    root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(5, 0)),
+    );
+    expect(
+      (root.preview as CanvasSelectedMovePreview).delta,
+      const Offset(5, 0),
+    );
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(3, 0)),
+    );
+    expect(
+      (root.preview as CanvasSelectedMovePreview).delta,
+      const Offset(3, 0),
+    );
+
+    root.handlePointer(_sample(CanvasPointerLifecyclePhase.move, Offset.zero));
+    expect((root.preview as CanvasSelectedMovePreview).delta, Offset.zero);
+  });
+}
+
 void _testGroupInteriorSelectedMoveAdmissionAndPreview() {
   test('selected move admits empty space inside selected group union', () {
     final root = _runtimeRoot();
@@ -199,7 +616,7 @@ void _testOccludedGroupInteriorDoesNotStartSelectedMove() {
   test(
     'higher order exact hit blocks selected group union admission',
     () async {
-      final scenario = _occludedNoCommitScenario();
+      final scenario = _occludedNoCommitScenario(occluderLocked: true);
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
 
@@ -776,11 +1193,15 @@ _NoCommitScenario _noCommitScenario({CanvasMoveCommitResolver? resolver}) {
   );
 }
 
-_NoCommitScenario _occludedNoCommitScenario({bool occluderSelectable = true}) {
+_NoCommitScenario _occludedNoCommitScenario({
+  bool occluderSelectable = true,
+  bool occluderLocked = false,
+}) {
   var resolverCalls = 0;
   final root = RuntimeRoot(
     initialDocument: _occludedGroupDocument(
       occluderSelectable: occluderSelectable,
+      occluderLocked: occluderLocked,
     ),
     config: CanvasRuntimeConfig(
       moveCommitResolver: (request) {
@@ -882,6 +1303,71 @@ void _dragSelectedMove(
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.up, end));
 }
 
+CanvasSelectedMovePreview _startUnselectedMovablePreview(
+  RuntimeRoot root,
+  Offset delta,
+) {
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.move, delta));
+
+  expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+  final preview = root.preview as CanvasSelectedMovePreview;
+  expect(preview.delta, delta);
+
+  return preview;
+}
+
+void _finishPointer(
+  RuntimeRoot root,
+  CanvasPointerLifecyclePhase phase, {
+  Offset position = _commitDelta,
+  int? timestampMs,
+}) {
+  root.handlePointer(_sample(phase, position, timestampMs: timestampMs));
+}
+
+void _selectPreviousObject(RuntimeRoot root) {
+  root.selection.setSelection([CanvasElementId('b')]);
+}
+
+void _selectExternalObject(RuntimeRoot root) {
+  root.selection.setSelection([CanvasElementId('locked')]);
+}
+
+void _addTerminalTopElement(RuntimeRoot root) {
+  root.edits.edit((edit) {
+    edit.addElement(
+      CanvasRectElement(
+        id: CanvasElementId('terminal-top'),
+        size: const Size(10, 10),
+      ),
+      layerId: CanvasLayerId('layer-a'),
+    );
+  });
+}
+
+void _expectPreviousSelectionRestored(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.selection.selectedElementIds, {CanvasElementId('b')});
+  expect(_rect(root, 'a').transform.translation, Offset.zero);
+}
+
+void _expectSingleActionForA(_ActionScenario scenario, CanvasActionType type) {
+  expect(scenario.actions, hasLength(1));
+  expect(scenario.actions.single.type, type);
+  expect(scenario.actions.single.elementIds, [CanvasElementId('a')]);
+}
+
+void _expectTerminalTopSelectionAction(_ActionScenario scenario) {
+  expect(scenario.actions, hasLength(1));
+  final action = scenario.actions.single;
+  expect(action.type, CanvasActionType.selectMarquee);
+  expect(action.elementIds, [CanvasElementId('terminal-top')]);
+  final payload = action.payload as CanvasSelectionActionPayload;
+  expect(payload.previousSelection, [CanvasElementId('b')]);
+  expect(payload.nextSelection, [CanvasElementId('terminal-top')]);
+}
+
 void _startSelectedMove(RuntimeRoot root) {
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
   root.handlePointer(
@@ -915,10 +1401,42 @@ void _cancelSelectedMove(RuntimeRoot root, Offset position) {
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.cancel, position));
 }
 
-RuntimeRoot _runtimeRoot({CanvasMoveCommitResolver? resolver}) {
+_ActionScenario _actionScenario({
+  CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+}) {
+  final root = _runtimeRoot(config: config);
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  return _ActionScenario(root: root, actions: actions);
+}
+
+CanvasRuntimeConfig _dragStartBeforeTapConfig({
+  CanvasMoveCommitResolver? moveCommitResolver,
+}) {
+  return CanvasRuntimeConfig(
+    pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+    moveCommitResolver: moveCommitResolver,
+  );
+}
+
+CanvasRuntimeConfig _wideTapDragStartConfig() {
+  return CanvasRuntimeConfig(
+    pointerPolicy: CanvasPointerPolicy(tapSlop: 32, dragStartSlop: 4),
+  );
+}
+
+RuntimeRoot _runtimeRoot({
+  CanvasMoveCommitResolver? resolver,
+  CanvasRuntimeConfig? config,
+}) {
   return RuntimeRoot(
     initialDocument: _document(),
-    config: CanvasRuntimeConfig(moveCommitResolver: resolver),
+    config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
   );
 }
 
@@ -926,12 +1444,14 @@ CanvasPointerSample _sample(
   CanvasPointerLifecyclePhase phase,
   Offset position, {
   int pointerId = 1,
+  int? timestampMs,
 }) {
   return CanvasPointerSample(
     pointerId: pointerId,
     position: position,
     phase: phase,
     kind: PointerDeviceKind.touch,
+    timestampMs: timestampMs,
   );
 }
 
@@ -969,7 +1489,10 @@ CanvasDocument _document() {
   );
 }
 
-CanvasDocument _occludedGroupDocument({bool occluderSelectable = true}) {
+CanvasDocument _occludedGroupDocument({
+  bool occluderSelectable = true,
+  bool occluderLocked = false,
+}) {
   return CanvasDocument(
     layers: [
       CanvasLayer(
@@ -986,6 +1509,7 @@ CanvasDocument _occludedGroupDocument({bool occluderSelectable = true}) {
             size: const Size(10, 10),
             transform: CanvasTransform.translation(const Offset(15, 0)),
             isSelectable: occluderSelectable,
+            isLocked: occluderLocked,
           ),
         ],
       ),
@@ -1051,6 +1575,13 @@ final class _CommitScenario {
   final List<CanvasActionCommitted> actions;
   final CanvasMoveCommitRequest? Function() request;
   final int Function() resolverCalls;
+}
+
+final class _ActionScenario {
+  const _ActionScenario({required this.root, required this.actions});
+
+  final RuntimeRoot root;
+  final List<CanvasActionCommitted> actions;
 }
 
 final class _CancelScenario {

@@ -97,6 +97,19 @@ final class InteractionEngine {
       _pendingLine?.preview;
   bool get activeSessionOwnsPendingLine =>
       _activeSession?.kind == PointerSessionKind.drawLineEndpoint;
+
+  void markActiveProvisionalSelectionReplacementApplied({
+    required int selectionRevision,
+  }) {
+    final session = _activeSession;
+    if (session == null || session.kind != PointerSessionKind.moveModePointer) {
+      return;
+    }
+    _activeSession = session.markProvisionalSelectionReplacementApplied(
+      selectionRevision: selectionRevision,
+    );
+  }
+
   InteractionReadPort get readPort {
     final port = _readPort;
     if (port == null) {
@@ -206,14 +219,18 @@ final class InteractionEngine {
   }
 
   // Cleanup entrypoints.
-  PointerCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
+  InteractionCleanupOutcome cleanupPointerTool(PointerCleanupRequest request) {
+    final selectionReplacement = _selectionReplacementForCleanup(
+      request.reason,
+      _activeSession,
+    );
     final outcome = _cleanupCoordinator.cleanup(request);
     _applyCleanupOutcome(outcome);
 
-    return outcome;
+    return _cleanupOutcomeWithSelectionRestore(outcome, selectionReplacement);
   }
 
-  PointerCleanupOutcome prepareLoadCleanup() {
+  InteractionCleanupOutcome prepareLoadCleanup() {
     final outcome = _cleanupWithReason(
       PointerCleanupReason.preparedLoadSuccess,
     );
@@ -221,19 +238,19 @@ final class InteractionEngine {
     return outcome;
   }
 
-  PointerCleanupOutcome disposeCleanup() {
+  InteractionCleanupOutcome disposeCleanup() {
     return _cleanupWithReason(PointerCleanupReason.dispose);
   }
 
-  PointerCleanupOutcome interactiveDisabledCleanup() {
+  InteractionCleanupOutcome interactiveDisabledCleanup() {
     return _cleanupWithReason(PointerCleanupReason.interactiveDisabled);
   }
 
-  PointerCleanupOutcome finishSelectedMove(PointerCleanupReason reason) {
+  InteractionCleanupOutcome finishSelectedMove(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }
 
-  PointerCleanupOutcome finishMarquee(
+  InteractionCleanupOutcome finishMarquee(
     PointerCleanupReason reason, {
     bool preservePendingContextTap = false,
   }) {
@@ -243,15 +260,15 @@ final class InteractionEngine {
     );
   }
 
-  PointerCleanupOutcome finishDrawStroke(PointerCleanupReason reason) {
+  InteractionCleanupOutcome finishDrawStroke(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }
 
-  PointerCleanupOutcome finishLineEndpoint(PointerCleanupReason reason) {
+  InteractionCleanupOutcome finishLineEndpoint(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }
 
-  PointerCleanupOutcome finishEraser(PointerCleanupReason reason) {
+  InteractionCleanupOutcome finishEraser(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }
 
@@ -285,12 +302,12 @@ final class InteractionEngine {
   }
 
   // Tool settings.
-  PointerCleanupOutcome setMode(
+  InteractionCleanupOutcome setMode(
     CanvasInteractionMode mode, {
     required bool cleanupSelectionMode,
   }) {
     if (_mode == mode) {
-      return PointerCleanupOutcome.noChange;
+      return InteractionCleanupOutcome.noChange;
     }
     _mode = mode;
     _interactionRevision += 1;
@@ -300,12 +317,12 @@ final class InteractionEngine {
       return _cleanupWithReason(PointerCleanupReason.modeToolChange);
     }
 
-    return PointerCleanupOutcome.noChange;
+    return InteractionCleanupOutcome.noChange;
   }
 
-  PointerCleanupOutcome setDrawStyle(CanvasDrawStyle style) {
+  InteractionCleanupOutcome setDrawStyle(CanvasDrawStyle style) {
     if (_drawStyle == style) {
-      return PointerCleanupOutcome.noChange;
+      return InteractionCleanupOutcome.noChange;
     }
     _drawStyle = style;
     _interactionRevision += 1;
@@ -313,9 +330,9 @@ final class InteractionEngine {
     return _cleanupWithReason(PointerCleanupReason.modeToolChange);
   }
 
-  PointerCleanupOutcome setPointerPolicy(CanvasPointerPolicy policy) {
+  InteractionCleanupOutcome setPointerPolicy(CanvasPointerPolicy policy) {
     if (_pointerPolicy == policy) {
-      return PointerCleanupOutcome.noChange;
+      return InteractionCleanupOutcome.noChange;
     }
     _pointerPolicy = policy;
     _interactionRevision += 1;
@@ -336,16 +353,23 @@ final class InteractionEngine {
 
     return switch (sample.phase) {
       CanvasPointerLifecyclePhase.down => _handleDown(normalized),
-      CanvasPointerLifecyclePhase.move => _handleMove(normalized),
+      CanvasPointerLifecyclePhase.move => _handleMove(normalized, context),
       CanvasPointerLifecyclePhase.up || CanvasPointerLifecyclePhase.cancel =>
         _handleTerminal(normalized, context),
     };
   }
 
-  InteractionPointerAdmission _admitted(NormalizedPointerSample sample) {
+  InteractionPointerAdmission _admitted(
+    NormalizedPointerSample sample, {
+    InteractionSelectionReplacement? selectionReplacement,
+    bool markProvisionalSelectionReplacementApplied = false,
+  }) {
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
+      selectionReplacement: selectionReplacement,
+      markProvisionalSelectionReplacementApplied:
+          markProvisionalSelectionReplacementApplied,
     );
   }
 
@@ -399,7 +423,12 @@ final class InteractionEngine {
     final marquee = _selectMachine.start(
       readPort.marqueeStartFacts(const MarqueeStartReadRequest()),
     );
-    _activeSession = _marqueeSession(sample, marquee);
+    _activeSession = _marqueeSession(
+      sample,
+      marquee,
+      dragStartSlop: selection.suppressMarqueeDrag ? double.infinity : null,
+      suppressCommit: selection.suppressMarqueeDrag,
+    );
 
     return _privateAdmitted(sample);
   }
@@ -509,7 +538,10 @@ final class InteractionEngine {
   }
 
   // Pointer move phase.
-  InteractionPointerAdmission _handleMove(NormalizedPointerSample sample) {
+  InteractionPointerAdmission _handleMove(
+    NormalizedPointerSample sample,
+    InteractionPointerContext context,
+  ) {
     final session = _activeSession;
     if (session == null ||
         session.pointerId != sample.pointerId ||
@@ -521,15 +553,59 @@ final class InteractionEngine {
     if (_isMoveModeTapCandidate(updated, sample)) {
       return _ignored(sample);
     }
-    final previewChanged = _handleSessionMove(updated, sample.worldPosition);
-    if (!previewChanged) {
+    final blockedReplacement = _blockedProvisionalSelectionReplacement(
+      updated,
+      context,
+    );
+    if (blockedReplacement) {
+      return _cleanupTerminal(sample, PointerCleanupReason.staleTerminal);
+    }
+    final move = _handleSessionMove(updated, sample.worldPosition);
+    if (!move.previewChanged) {
       return _ignored(sample);
     }
 
-    return _admitted(sample);
+    return _admitted(
+      sample,
+      selectionReplacement: move.selectionReplacement,
+      markProvisionalSelectionReplacementApplied:
+          move.markProvisionalSelectionReplacementApplied,
+    );
   }
 
-  bool _handleSessionMove(PointerSession session, Offset currentWorld) {
+  bool _blockedProvisionalSelectionReplacement(
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
+    final replacement = _provisionalSelectionReplacementFor(session);
+    if (replacement == null) {
+      return false;
+    }
+
+    return !_selectionReplacementExpectedCurrent(context, replacement);
+  }
+
+  bool _selectionReplacementExpectedCurrent(
+    InteractionPointerContext context,
+    InteractionSelectionReplacement replacement,
+  ) {
+    final expectedIds = replacement.expectedCurrentIds;
+    if (expectedIds != null && !_sameIds(context.selectedIds, expectedIds)) {
+      return false;
+    }
+    final expectedRevision = replacement.expectedCurrentRevision;
+    if (expectedRevision != null &&
+        context.selectionRevision != expectedRevision) {
+      return false;
+    }
+
+    return true;
+  }
+
+  _SessionMoveOutcome _handleSessionMove(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
     return switch (session.kind) {
       PointerSessionKind.moveModePointer => _handleSelectedMovePreview(
         session,
@@ -562,34 +638,78 @@ final class InteractionEngine {
     PointerSession session,
     NormalizedPointerSample sample,
   ) {
-    if (!_isContextTapSessionKind(session.kind)) {
+    if (session.dragPreviewStarted || !_isContextTapSessionKind(session.kind)) {
       return false;
     }
 
     return _distanceFromStart(session, sample.worldPosition) <=
-        _pointerPolicy.tapSlop;
+        session.dragStartSlop;
   }
 
-  bool _handleSelectedMovePreview(PointerSession session, Offset currentWorld) {
-    return _replacePreviewAndBumpInteractionRevision(
+  _SessionMoveOutcome _handleSelectedMovePreview(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
+    final previewChanged = _replacePreviewAndBumpInteractionRevision(
       _moveMachine
           .preview(session: session, currentWorld: currentWorld)
           .preview,
     );
+    if (!previewChanged) {
+      return const _SessionMoveOutcome.unchanged();
+    }
+    _activeSession = session.markDragPreviewStarted();
+    final selectionReplacement = _provisionalSelectionReplacementFor(session);
+
+    return _SessionMoveOutcome.changed(
+      selectionReplacement: selectionReplacement,
+      markProvisionalSelectionReplacementApplied: selectionReplacement != null,
+    );
   }
 
-  bool _handleMarqueePreview(PointerSession session, Offset currentWorld) {
-    return _replacePreviewAndBumpInteractionRevision(
+  InteractionSelectionReplacement? _provisionalSelectionReplacementFor(
+    PointerSession session,
+  ) {
+    if (session.provisionalSelectionReplacementApplied) {
+      return null;
+    }
+    final selection = session.selectionCapture;
+    if (_sameIds(selection.selectedIds, selection.previousIds)) {
+      return null;
+    }
+
+    return InteractionSelectionReplacement(
+      elementIds: selection.selectedIds,
+      expectedCurrentIds: selection.previousIds,
+      expectedCurrentRevision: selection.revision,
+    );
+  }
+
+  _SessionMoveOutcome _handleMarqueePreview(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
+    final previewChanged = _replacePreviewAndBumpInteractionRevision(
       _selectMachine
           .preview(session: session, currentWorld: currentWorld)
           .preview,
     );
+    if (previewChanged) {
+      _activeSession = session.markDragPreviewStarted();
+    }
+
+    return _SessionMoveOutcome.fromPreviewChanged(
+      previewChanged: previewChanged,
+    );
   }
 
-  bool _handleDrawMove(PointerSession session, Offset currentWorld) {
+  _SessionMoveOutcome _handleDrawMove(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
     final stroke = session.strokeCapture;
     if (stroke == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     final decision = _drawStrokeMachine.preview(
       stroke: stroke,
@@ -597,24 +717,29 @@ final class InteractionEngine {
     );
     final updatedStroke = decision.stroke;
     if (!decision.changed || updatedStroke == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     _activeSession = session.updateStroke(
       currentWorld: currentWorld,
       stroke: updatedStroke,
     );
 
-    return replacePreview(updatedStroke.preview);
+    return _SessionMoveOutcome.fromPreviewChanged(
+      previewChanged: replacePreview(updatedStroke.preview),
+    );
   }
 
-  bool _handleEraserMove(PointerSession session, Offset currentWorld) {
+  _SessionMoveOutcome _handleEraserMove(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
     final eraser = session.eraserCapture;
     if (eraser == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     final proposed = eraser.appendPoint(currentWorld);
     if (identical(proposed, eraser)) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     final decision = _eraserMachine.preview(
       eraser: eraser,
@@ -629,7 +754,7 @@ final class InteractionEngine {
     final updatedEraser = decision.eraser;
     final updatedPreview = decision.preview;
     if (!decision.changed || updatedEraser == null || updatedPreview == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     _activeSession = session.updateEraser(
       currentWorld: currentWorld,
@@ -637,15 +762,20 @@ final class InteractionEngine {
       lastPreview: updatedPreview,
     );
 
-    return replacePreview(updatedPreview);
+    return _SessionMoveOutcome.fromPreviewChanged(
+      previewChanged: replacePreview(updatedPreview),
+    );
   }
 
-  bool _handleLineFirstTapMove(PointerSession session, Offset currentWorld) {
+  _SessionMoveOutcome _handleLineFirstTapMove(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
     final firstTap = session.lineFirstTapCapture;
     if (firstTap == null ||
         (currentWorld - firstTap.startWorld).distance <=
-            _pointerPolicy.tapSlop) {
-      return false;
+            session.dragStartSlop) {
+      return const _SessionMoveOutcome.unchanged();
     }
     final start = _lineMachine.startDrag(
       firstTap: firstTap,
@@ -660,27 +790,35 @@ final class InteractionEngine {
       startWorld: line.startWorld,
       currentWorld: currentWorld,
       line: line,
+      dragStartSlop: session.dragStartSlop,
     );
 
-    return replacePreview(line.preview);
+    return _SessionMoveOutcome.fromPreviewChanged(
+      previewChanged: replacePreview(line.preview),
+    );
   }
 
-  bool _handleLineEndpointMove(PointerSession session, Offset currentWorld) {
+  _SessionMoveOutcome _handleLineEndpointMove(
+    PointerSession session,
+    Offset currentWorld,
+  ) {
     final line = session.lineEndpointCapture;
     if (line == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     final decision = _lineMachine.preview(line: line, endWorld: currentWorld);
     final updatedLine = decision.line;
     if (!decision.changed || updatedLine == null) {
-      return false;
+      return const _SessionMoveOutcome.unchanged();
     }
     _activeSession = session.updateLineEndpoint(
       currentWorld: currentWorld,
       line: updatedLine,
     );
 
-    return replacePreview(updatedLine.preview);
+    return _SessionMoveOutcome.fromPreviewChanged(
+      previewChanged: replacePreview(updatedLine.preview),
+    );
   }
 
   // Pointer terminal phase.
@@ -705,23 +843,19 @@ final class InteractionEngine {
   InteractionPointerAdmission _handleContextTapTerminal(
     NormalizedPointerSample sample,
     InteractionPointerContext context, {
-    bool publishRuntimeState = false,
+    _ContextTapAdmissionCarry carry = const _ContextTapAdmissionCarry(),
   }) {
     if (sample.phase != CanvasPointerLifecyclePhase.up) {
-      return _ignoredWithPublication(sample, publishRuntimeState);
+      return _ignoredWithPublication(sample, carry);
     }
     final pending = _pendingContextTap;
     final target = _contextTapFacts(sample, pending);
     final facts = _admittedContextTargetFacts(target);
     if (facts == null) {
-      if (pending == null) {
-        return _ignoredWithPublication(sample, publishRuntimeState);
-      }
-
-      return _contextTapMismatchAdmission(sample, publishRuntimeState);
+      return _contextTapRejectedAdmission(sample, pending, carry);
     }
     if (pending == null) {
-      return _storePendingContextTap(sample, facts, publishRuntimeState);
+      return _storePendingContextTap(sample, facts, carry);
     }
     if (!_contextActionRouter.matchesSecondTap((
       pending: pending,
@@ -730,25 +864,21 @@ final class InteractionEngine {
       doubleTapSlop: _pointerPolicy.doubleTapSlop,
       doubleTapMaxDelayMs: _pointerPolicy.doubleTapMaxDelayMs,
     ))) {
-      return _contextTapMismatchAdmission(sample, publishRuntimeState);
+      return _contextTapMismatchAdmission(sample, carry);
     }
 
-    return _contextTapRequestAdmission(
-      sample,
-      context,
-      facts,
-      publishRuntimeState,
-    );
+    return _contextTapRequestAdmission(sample, context, facts, carry);
   }
 
   InteractionPointerAdmission _ignoredWithPublication(
     NormalizedPointerSample sample,
-    bool publishRuntimeState,
+    _ContextTapAdmissionCarry carry,
   ) {
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.ignored,
       sample: sample,
-      publishRuntimeState: publishRuntimeState,
+      publishRuntimeState: carry.publicStateNeeded,
+      selectionReplacement: carry.selectionReplacement,
     );
   }
 
@@ -782,26 +912,40 @@ final class InteractionEngine {
   InteractionPointerAdmission _storePendingContextTap(
     NormalizedPointerSample sample,
     ContextTargetReadFacts facts,
-    bool publishRuntimeState,
+    _ContextTapAdmissionCarry carry,
   ) {
     _pendingContextTap = _contextActionRouter.pendingTap(
       sample: sample,
       facts: facts,
     );
 
-    return _ignoredWithPublication(sample, publishRuntimeState);
+    return _ignoredWithPublication(sample, carry);
+  }
+
+  InteractionPointerAdmission _contextTapRejectedAdmission(
+    NormalizedPointerSample sample,
+    PendingContextTap? pending,
+    _ContextTapAdmissionCarry carry,
+  ) {
+    if (pending == null) {
+      return _ignoredWithPublication(sample, carry);
+    }
+
+    return _contextTapMismatchAdmission(sample, carry);
   }
 
   InteractionPointerAdmission _contextTapMismatchAdmission(
     NormalizedPointerSample sample,
-    bool publishRuntimeState,
+    _ContextTapAdmissionCarry carry,
   ) {
     final outcome = _cleanupWithReason(PointerCleanupReason.contextTap);
+    final updatedCarry = carry.withCleanup(outcome);
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.cleanupOnly,
       sample: sample,
-      publishRuntimeState: publishRuntimeState || outcome.publicStateNeeded,
+      publishRuntimeState: updatedCarry.publicStateNeeded,
+      selectionReplacement: updatedCarry.selectionReplacement,
     );
   }
 
@@ -809,14 +953,16 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     InteractionPointerContext context,
     ContextTargetReadFacts facts,
-    bool publishRuntimeState,
+    _ContextTapAdmissionCarry carry,
   ) {
     final outcome = _cleanupWithReason(PointerCleanupReason.contextTap);
+    final updatedCarry = carry.withCleanup(outcome);
 
     return InteractionPointerAdmission(
       kind: InteractionPointerAdmissionKind.admitted,
       sample: sample,
-      publishRuntimeState: publishRuntimeState || outcome.publicStateNeeded,
+      publishRuntimeState: updatedCarry.publicStateNeeded,
+      selectionReplacement: updatedCarry.selectionReplacement,
       contextRequest: _issueContextRequest(
         facts: facts,
         timestampMs: context.resolveOutputTimestamp(sample.timestampMs),
@@ -831,6 +977,14 @@ final class InteractionEngine {
     PointerSession session,
     InteractionPointerContext context,
   ) {
+    final selectedMoveSelectionTap = _trySelectedMoveSelectionTapTerminal(
+      sample,
+      session,
+      context,
+    );
+    if (selectedMoveSelectionTap != null) {
+      return selectedMoveSelectionTap;
+    }
     if (_isMarqueeSelectionTapCandidate(session, sample)) {
       final selectionTap = _tryMarqueeSelectionTapTerminal(sample, session);
       if (selectionTap != null) {
@@ -843,11 +997,100 @@ final class InteractionEngine {
       return _handleContextTapTerminal(
         sample,
         context,
-        publishRuntimeState: cleanup.previewChanged,
+        carry: _ContextTapAdmissionCarry.fromCleanup(cleanup),
       );
     }
 
     return _handleNonTapActiveTerminal(sample, session, context);
+  }
+
+  InteractionPointerAdmission? _trySelectedMoveSelectionTapTerminal(
+    NormalizedPointerSample sample,
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
+    final selection = session.selectionCapture;
+    if (session.kind != PointerSessionKind.moveModePointer ||
+        _sameIds(selection.selectedIds, selection.previousIds) ||
+        !_selectedMoveTapSelectionIsCurrent(session, context) ||
+        !_isWithinContextTapSlop(session, sample)) {
+      return null;
+    }
+    final intent = _terminalPointSelectionIntentFor(
+      sample: sample,
+      session: session,
+      previousSelectionIds: selection.previousIds,
+    );
+    if (intent == null) {
+      return null;
+    }
+    final preservePendingContextTap = _tryStorePendingContextTap(sample);
+
+    return InteractionPointerAdmission(
+      kind: InteractionPointerAdmissionKind.admitted,
+      sample: sample,
+      selectionReplacement: _provisionalTapTerminalSelectionReplacement(
+        session,
+      ),
+      marqueeCommit: _marqueeIntentWithContextTapDisposition(
+        intent,
+        preservePendingContextTap: preservePendingContextTap,
+      ),
+    );
+  }
+
+  InteractionSelectionReplacement? _provisionalTapTerminalSelectionReplacement(
+    PointerSession session,
+  ) {
+    if (!session.provisionalSelectionReplacementApplied) {
+      return null;
+    }
+    final selection = session.selectionCapture;
+
+    return InteractionSelectionReplacement(
+      elementIds: selection.previousIds,
+      expectedCurrentIds: selection.selectedIds,
+      expectedCurrentRevision: session.provisionalSelectionReplacementRevision,
+    );
+  }
+
+  MarqueeCommitIntent? _terminalPointSelectionIntentFor({
+    required NormalizedPointerSample sample,
+    required PointerSession session,
+    required List<CanvasElementId> previousSelectionIds,
+  }) {
+    final facts = readPort.marqueeCommitFacts(
+      MarqueeCommitReadRequest(
+        rectWorld: Rect.fromPoints(sample.worldPosition, sample.worldPosition),
+      ),
+    );
+    _recordQueryDiagnostics(facts.query);
+
+    return _selectMachine
+        .terminal(
+          session: session.asSelectionTerminalSession(
+            previousSelectionIds: previousSelectionIds,
+            selectionRevision: facts.selectionRevision,
+            terminalWorld: sample.worldPosition,
+          ),
+          facts: facts,
+        )
+        .intent;
+  }
+
+  bool _selectedMoveTapSelectionIsCurrent(
+    PointerSession session,
+    InteractionPointerContext context,
+  ) {
+    final selection = session.selectionCapture;
+    if (!session.provisionalSelectionReplacementApplied) {
+      return context.selectionRevision == selection.revision &&
+          _sameIds(context.selectedIds, selection.previousIds);
+    }
+
+    return context.selectionRevision ==
+            session.provisionalSelectionReplacementRevision &&
+        _sameIds(context.selectedIds, selection.selectedIds);
   }
 
   InteractionPointerAdmission _handleNonTapActiveTerminal(
@@ -967,7 +1210,6 @@ final class InteractionEngine {
     if (!_isContextTapSessionKind(session.kind)) {
       return false;
     }
-
     return _isWithinContextTapSlop(session, sample);
   }
 
@@ -1144,9 +1386,10 @@ final class InteractionEngine {
     final shouldCleanup =
         decision.shouldCleanupActiveSession ||
         _shouldCleanupLineInvalidTerminal(decision);
+    InteractionCleanupOutcome? outcome;
     if (shouldCleanup) {
       _recordStaleTerminalRejected(decision);
-      _cleanupWithReason(_invalidTerminalCleanupReason(decision));
+      outcome = _cleanupWithReason(_invalidTerminalCleanupReason(decision));
     }
 
     return InteractionPointerAdmission(
@@ -1154,6 +1397,8 @@ final class InteractionEngine {
           ? InteractionPointerAdmissionKind.cleanupOnly
           : InteractionPointerAdmissionKind.ignored,
       sample: sample,
+      publishRuntimeState: outcome?.publicStateNeeded ?? false,
+      selectionReplacement: outcome?.selectionReplacement,
       cleanupDecision: decision,
     );
   }
@@ -1200,6 +1445,10 @@ final class InteractionEngine {
         sessionSelectedIds: selectionCapture.selectedIds,
         sessionMovableIds: selectionCapture.movableIds,
         selectionRevision: selectionCapture.revision,
+        provisionalSelectionReplacementApplied:
+            session.provisionalSelectionReplacementApplied,
+        provisionalSelectionReplacementRevision:
+            session.provisionalSelectionReplacementRevision,
       ),
     );
     if (facts.skippedSessionIds.isNotEmpty) {
@@ -1231,6 +1480,10 @@ final class InteractionEngine {
     NormalizedPointerSample sample,
     PointerSession session,
   ) {
+    if (session.marqueeCommitSuppressed) {
+      return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
+    }
+
     final facts = readPort.marqueeCommitFacts(
       MarqueeCommitReadRequest(
         rectWorld: _selectMachine
@@ -1272,8 +1525,10 @@ final class InteractionEngine {
   // Session factories.
   PointerSession _marqueeSession(
     NormalizedPointerSample sample,
-    MarqueeStartDecision marquee,
-  ) {
+    MarqueeStartDecision marquee, {
+    double? dragStartSlop,
+    bool suppressCommit = false,
+  }) {
     return PointerSession.marquee(
       token: PointerSessionToken(_nextToken++),
       controllerEpoch: PointerControllerEpoch(sample.controllerEpoch),
@@ -1284,6 +1539,8 @@ final class InteractionEngine {
       previousSelectionIds: marquee.previousSelectionIds,
       capturedSelectionRevision: marquee.selectionRevision,
       lastPreview: _selectMachine.initialPreview(sample.worldPosition).preview,
+      dragStartSlop: dragStartSlop ?? _effectiveDragStartSlop,
+      suppressCommit: suppressCommit,
     );
   }
 
@@ -1300,9 +1557,10 @@ final class InteractionEngine {
       currentWorld: sample.worldPosition,
       capturedSelectedIds: selection.selectedIds,
       capturedMovableIds: selection.movableIds,
-      previousSelectionIds: selection.selectedIds,
+      previousSelectionIds: selection.previousSelectionIds,
       capturedSelectionRevision: selection.selectionRevision,
       lastPreview: _initialSelectedMovePreview(sample),
+      dragStartSlop: _effectiveDragStartSlop,
     );
   }
 
@@ -1318,6 +1576,7 @@ final class InteractionEngine {
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
       stroke: stroke,
+      dragStartSlop: _effectiveDragStartSlop,
     );
   }
 
@@ -1335,6 +1594,7 @@ final class InteractionEngine {
       currentWorld: sample.worldPosition,
       eraser: eraser,
       lastPreview: preview,
+      dragStartSlop: _effectiveDragStartSlop,
     );
   }
 
@@ -1350,6 +1610,7 @@ final class InteractionEngine {
       startWorld: sample.worldPosition,
       currentWorld: sample.worldPosition,
       firstTap: firstTap,
+      dragStartSlop: _effectiveDragStartSlop,
     );
   }
 
@@ -1365,7 +1626,12 @@ final class InteractionEngine {
       startWorld: line.startWorld,
       currentWorld: sample.worldPosition,
       line: line,
+      dragStartSlop: _effectiveDragStartSlop,
     );
+  }
+
+  double get _effectiveDragStartSlop {
+    return _pointerPolicy.dragStartSlop ?? _pointerPolicy.tapSlop;
   }
 
   // Cleanup internals.
@@ -1379,10 +1645,11 @@ final class InteractionEngine {
       kind: InteractionPointerAdmissionKind.cleanupOnly,
       sample: sample,
       publishRuntimeState: outcome.publicStateNeeded,
+      selectionReplacement: outcome.selectionReplacement,
     );
   }
 
-  PointerCleanupOutcome _cleanupWithReason(
+  InteractionCleanupOutcome _cleanupWithReason(
     PointerCleanupReason reason, {
     bool preservePendingContextTap = false,
   }) {
@@ -1400,7 +1667,36 @@ final class InteractionEngine {
     );
   }
 
-  PointerCleanupOutcome _cleanupActiveTapSessionForContextRecognition() {
+  InteractionSelectionReplacement? _selectionReplacementForCleanup(
+    PointerCleanupReason reason,
+    PointerSession? session,
+  ) {
+    if (reason == PointerCleanupReason.postSuccessCommit ||
+        session == null ||
+        !session.provisionalSelectionReplacementApplied) {
+      return null;
+    }
+
+    final selection = session.selectionCapture;
+
+    return InteractionSelectionReplacement(
+      elementIds: selection.previousIds,
+      expectedCurrentIds: selection.selectedIds,
+      expectedCurrentRevision: session.provisionalSelectionReplacementRevision,
+    );
+  }
+
+  InteractionCleanupOutcome _cleanupOutcomeWithSelectionRestore(
+    PointerCleanupOutcome outcome,
+    InteractionSelectionReplacement? selectionReplacement,
+  ) {
+    return InteractionCleanupOutcome(
+      pointer: outcome,
+      selectionReplacement: selectionReplacement,
+    );
+  }
+
+  InteractionCleanupOutcome _cleanupActiveTapSessionForContextRecognition() {
     return cleanupPointerTool(
       PointerCleanupRequest(
         reason: PointerCleanupReason.contextTap,
@@ -1414,7 +1710,7 @@ final class InteractionEngine {
     );
   }
 
-  PointerCleanupOutcome _cleanupPendingContextTapOnly() {
+  InteractionCleanupOutcome _cleanupPendingContextTapOnly() {
     return cleanupPointerTool(
       PointerCleanupRequest(
         reason: PointerCleanupReason.contextTap,
@@ -1621,6 +1917,69 @@ bool _offsetListsEqual(List<Object> left, List<Object> right) {
   }
 
   return true;
+}
+
+bool _sameIds(List<CanvasElementId> left, List<CanvasElementId> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  final rightSet = right.toSet();
+
+  return left.every(rightSet.contains);
+}
+
+final class _SessionMoveOutcome {
+  const _SessionMoveOutcome.changed({
+    this.selectionReplacement,
+    this.markProvisionalSelectionReplacementApplied = false,
+  }) : previewChanged = true;
+
+  const _SessionMoveOutcome.unchanged()
+    : previewChanged = false,
+      selectionReplacement = null,
+      markProvisionalSelectionReplacementApplied = false;
+
+  factory _SessionMoveOutcome.fromPreviewChanged({
+    required bool previewChanged,
+  }) {
+    return previewChanged
+        ? const _SessionMoveOutcome.changed()
+        : const _SessionMoveOutcome.unchanged();
+  }
+
+  final bool previewChanged;
+  final InteractionSelectionReplacement? selectionReplacement;
+  final bool markProvisionalSelectionReplacementApplied;
+}
+
+final class _ContextTapAdmissionCarry {
+  const _ContextTapAdmissionCarry({
+    this.publishRuntimeState = false,
+    this.selectionReplacement,
+  });
+
+  factory _ContextTapAdmissionCarry.fromCleanup(
+    InteractionCleanupOutcome cleanup,
+  ) {
+    return _ContextTapAdmissionCarry(
+      publishRuntimeState: cleanup.publicStateNeeded,
+      selectionReplacement: cleanup.selectionReplacement,
+    );
+  }
+
+  final bool publishRuntimeState;
+  final InteractionSelectionReplacement? selectionReplacement;
+
+  bool get publicStateNeeded =>
+      publishRuntimeState || selectionReplacement != null;
+
+  _ContextTapAdmissionCarry withCleanup(InteractionCleanupOutcome cleanup) {
+    return _ContextTapAdmissionCarry(
+      publishRuntimeState: publishRuntimeState || cleanup.publicStateNeeded,
+      selectionReplacement:
+          selectionReplacement ?? cleanup.selectionReplacement,
+    );
+  }
 }
 
 PointerCleanupPreviewKind _pointerCleanupPreviewKindFor(

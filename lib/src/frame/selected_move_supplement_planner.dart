@@ -60,7 +60,7 @@ final class SelectedMoveSupplementPlanner {
     required PaintPlan ordinaryPlan,
   }) {
     final preview = frame.selectedMovePreview;
-    if (preview == null) {
+    if (preview == null || preview.delta == Offset.zero) {
       return _withoutSelectedMove(ordinaryPlan);
     }
 

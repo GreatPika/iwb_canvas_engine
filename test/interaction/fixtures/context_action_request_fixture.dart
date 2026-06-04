@@ -42,8 +42,8 @@ void _registerPointerSampleContextTapTests() {
   test('pointer sample mismatch clears without public effects', () {
     return expectLater(_verifyPointerSampleMismatchIsPrivate(), completes);
   });
-  test('pointer tap movement inside tap slop stays private', () {
-    return expectLater(_verifyPointerTapInsideTapSlopIsPrivate(), completes);
+  test('pointer tap movement inside tap slop stays tap-only', () {
+    return expectLater(_verifyPointerTapInsideTapSlopIsTapOnly(), completes);
   });
   test('private pointer tap does not leak through later state', () {
     return expectLater(_verifyPrivateTapRevisionStaysPrivate(), completes);
@@ -366,7 +366,7 @@ Future<void> _verifyPointerSampleMismatchIsPrivate() async {
   }
 }
 
-Future<void> _verifyPointerTapInsideTapSlopIsPrivate() async {
+Future<void> _verifyPointerTapInsideTapSlopIsTapOnly() async {
   final scenario = _RuntimeContextRequestScenario(
     config: CanvasRuntimeConfig(
       pointerPolicy: CanvasPointerPolicy(tapSlop: 8, dragStartSlop: 4),
@@ -382,7 +382,6 @@ Future<void> _verifyPointerTapInsideTapSlopIsPrivate() async {
     await _flushEvents();
 
     expect(scenario.requests, isEmpty);
-    expect(scenario.stateEvents, isEmpty);
     expect(scenario.root.preview, isA<CanvasNoPreview>());
     expect(scenario.actions, isEmpty);
     expect(scenario.effectBatches, isEmpty);

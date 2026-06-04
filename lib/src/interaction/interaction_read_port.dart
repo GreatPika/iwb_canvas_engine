@@ -56,6 +56,7 @@ final class SelectedMoveStartFacts {
     required this.controllerEpoch,
     required this.selectionRevision,
     required this.hitSelectedMovable,
+    this.topmostMovableHitId,
     this.topmostHitId,
     this.topmostHitOrderToken,
     this.selectedGroupBoundsWorld,
@@ -72,6 +73,7 @@ final class SelectedMoveStartFacts {
   final int controllerEpoch;
   final int selectionRevision;
   final bool hitSelectedMovable;
+  final CanvasElementId? topmostMovableHitId;
   final CanvasElementId? topmostHitId;
   final int? topmostHitOrderToken;
   final Rect? selectedGroupBoundsWorld;
@@ -87,12 +89,16 @@ final class SelectedMoveCommitReadRequest {
     required Iterable<CanvasElementId> sessionSelectedIds,
     required Iterable<CanvasElementId> sessionMovableIds,
     required this.selectionRevision,
+    this.provisionalSelectionReplacementApplied = false,
+    this.provisionalSelectionReplacementRevision,
   }) : sessionSelectedIds = List.unmodifiable(sessionSelectedIds),
        sessionMovableIds = List.unmodifiable(sessionMovableIds);
 
   final List<CanvasElementId> sessionSelectedIds;
   final List<CanvasElementId> sessionMovableIds;
   final int selectionRevision;
+  final bool provisionalSelectionReplacementApplied;
+  final int? provisionalSelectionReplacementRevision;
 }
 
 final class SelectedMoveCommitFacts {

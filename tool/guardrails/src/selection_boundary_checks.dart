@@ -269,7 +269,8 @@ bool _isRuntimeSelectionBoundaryReadContext(
       (path == 'lib/src/runtime/runtime_command_facts_adapter.dart' &&
               className == '_CommandReadContext' ||
           path == 'lib/src/runtime/runtime_interaction_read_adapter.dart' &&
-              className == '_InteractionReadContext');
+              (className == '_InteractionReadContext' ||
+                  className == '_SelectedMoveStartReadContext'));
 }
 
 bool _isRuntimeSelectionBoundaryReadPort(

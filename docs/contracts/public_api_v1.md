@@ -1726,6 +1726,21 @@ abstract interface class CanvasToolPort {
 }
 ```
 
+Pointer policy semantics:
+
+```text
+- tapSlop controls terminal tap classification for point selection and
+  context-tap recognition;
+- dragStartSlop controls the first visible drag preview for selected move,
+  marquee selection, and first-pointer line drag;
+- the effective drag-start threshold is `dragStartSlop ?? tapSlop`;
+- after a selected-move or marquee preview starts, dragStartSlop no longer
+  suppresses move updates when the pointer returns inside the start radius;
+- a gesture may publish a drag preview after effective drag-start slop and
+  still resolve as a tap if its terminal position remains within tapSlop;
+- doubleTapSlop is used only to match two tap terminals into a double tap.
+```
+
 P10 tool-port compatibility:
 
 ```text

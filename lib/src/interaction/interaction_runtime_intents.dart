@@ -4,6 +4,7 @@ import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_tools.dart';
+import 'pointer_cleanup_protocol.dart';
 import 'pointer_session_identity.dart';
 
 final class ContextActionRequestIntent {
@@ -106,4 +107,41 @@ final class EraserCommitIntent {
   final double eraserThickness;
   final int corridorPointCount;
   final List<CanvasElementId> erasedElementIds;
+}
+
+final class InteractionSelectionReplacement {
+  InteractionSelectionReplacement({
+    required Iterable<CanvasElementId> elementIds,
+    Iterable<CanvasElementId>? expectedCurrentIds,
+    this.expectedCurrentRevision,
+  }) : elementIds = List.unmodifiable(elementIds),
+       expectedCurrentIds = expectedCurrentIds == null
+           ? null
+           : List.unmodifiable(expectedCurrentIds);
+
+  final List<CanvasElementId> elementIds;
+  final List<CanvasElementId>? expectedCurrentIds;
+  final int? expectedCurrentRevision;
+}
+
+final class InteractionCleanupOutcome {
+  const InteractionCleanupOutcome({
+    required this.pointer,
+    this.selectionReplacement,
+  });
+
+  static const InteractionCleanupOutcome noChange = InteractionCleanupOutcome(
+    pointer: PointerCleanupOutcome.noChange,
+  );
+
+  final PointerCleanupOutcome pointer;
+  final InteractionSelectionReplacement? selectionReplacement;
+
+  bool get previewChanged => pointer.previewChanged;
+  bool get publicStateNeeded =>
+      pointer.publicStateNeeded || selectionReplacement != null;
+  PointerCleanupRepaintTarget get repaintTarget => pointer.repaintTarget;
+  PointerPendingLineDisposition get pendingLineDisposition =>
+      pointer.pendingLineDisposition;
+  bool get disposeBeforeStreamClose => pointer.disposeBeforeStreamClose;
 }

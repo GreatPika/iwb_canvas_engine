@@ -48,6 +48,11 @@ final class PointerSession {
     required this.controllerEpoch,
     required this.sessionId,
     required this.pointerId,
+    required this.dragStartSlop,
+    required this.dragPreviewStarted,
+    required this.provisionalSelectionReplacementApplied,
+    required this.provisionalSelectionReplacementRevision,
+    required this.marqueeCommitSuppressed,
     required _PointerSessionPayload payload,
   }) : _payload = payload;
 
@@ -63,6 +68,9 @@ final class PointerSession {
     required Iterable<CanvasElementId> previousSelectionIds,
     required int capturedSelectionRevision,
     required CanvasPreviewState lastPreview,
+    required double dragStartSlop,
+    bool provisionalSelectionReplacementApplied = false,
+    int? provisionalSelectionReplacementRevision,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.moveModePointer,
@@ -70,6 +78,13 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: false,
       payload: _SelectedMovePointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -92,6 +107,8 @@ final class PointerSession {
     required Iterable<CanvasElementId> previousSelectionIds,
     required int capturedSelectionRevision,
     required CanvasPreviewState lastPreview,
+    required double dragStartSlop,
+    bool suppressCommit = false,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.moveModeMarquee,
@@ -99,6 +116,11 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied: false,
+      provisionalSelectionReplacementRevision: null,
+      marqueeCommitSuppressed: suppressCommit,
       payload: _MarqueePointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -117,6 +139,7 @@ final class PointerSession {
     required Offset startWorld,
     required Offset currentWorld,
     required PointerStrokeCapture stroke,
+    required double dragStartSlop,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.drawModePointer,
@@ -124,6 +147,11 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied: false,
+      provisionalSelectionReplacementRevision: null,
+      marqueeCommitSuppressed: false,
       payload: _DrawStrokePointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -141,6 +169,7 @@ final class PointerSession {
     required Offset currentWorld,
     required PointerEraserCapture eraser,
     required CanvasPreviewState lastPreview,
+    required double dragStartSlop,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.drawEraserPointer,
@@ -148,6 +177,11 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied: false,
+      provisionalSelectionReplacementRevision: null,
+      marqueeCommitSuppressed: false,
       payload: _EraserPointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -165,6 +199,7 @@ final class PointerSession {
     required Offset startWorld,
     required Offset currentWorld,
     required PointerLineFirstTapCapture firstTap,
+    required double dragStartSlop,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.drawLineFirstTap,
@@ -172,6 +207,11 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied: false,
+      provisionalSelectionReplacementRevision: null,
+      marqueeCommitSuppressed: false,
       payload: _LineFirstTapPointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -188,6 +228,7 @@ final class PointerSession {
     required Offset startWorld,
     required Offset currentWorld,
     required PointerLineEndpointCapture line,
+    required double dragStartSlop,
   }) {
     return PointerSession._(
       kind: PointerSessionKind.drawLineEndpoint,
@@ -195,6 +236,11 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: false,
+      provisionalSelectionReplacementApplied: false,
+      provisionalSelectionReplacementRevision: null,
+      marqueeCommitSuppressed: false,
       payload: _LineEndpointPointerPayload(
         startWorld: startWorld,
         currentWorld: currentWorld,
@@ -208,6 +254,11 @@ final class PointerSession {
   final PointerControllerEpoch controllerEpoch;
   final PointerSessionId sessionId;
   final int pointerId;
+  final double dragStartSlop;
+  final bool dragPreviewStarted;
+  final bool provisionalSelectionReplacementApplied;
+  final int? provisionalSelectionReplacementRevision;
+  final bool marqueeCommitSuppressed;
   final _PointerSessionPayload _payload;
 
   Offset get startWorld => _payload.startWorld;
@@ -228,7 +279,82 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
       payload: _payload.updateCurrentWorld(value),
+    );
+  }
+
+  PointerSession markProvisionalSelectionReplacementApplied({
+    required int selectionRevision,
+  }) {
+    return PointerSession._(
+      kind: kind,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied: true,
+      provisionalSelectionReplacementRevision: selectionRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
+      payload: _payload,
+    );
+  }
+
+  PointerSession markDragPreviewStarted() {
+    if (dragPreviewStarted) {
+      return this;
+    }
+
+    return PointerSession._(
+      kind: kind,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: true,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
+      payload: _payload,
+    );
+  }
+
+  PointerSession asSelectionTerminalSession({
+    required Iterable<CanvasElementId> previousSelectionIds,
+    required int selectionRevision,
+    required Offset terminalWorld,
+  }) {
+    return PointerSession._(
+      kind: PointerSessionKind.moveModeMarquee,
+      token: token,
+      controllerEpoch: controllerEpoch,
+      sessionId: sessionId,
+      pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
+      payload: _MarqueePointerPayload(
+        startWorld: terminalWorld,
+        currentWorld: terminalWorld,
+        previousSelectionIds: previousSelectionIds,
+        capturedSelectionRevision: selectionRevision,
+        lastPreview: const CanvasNoPreview(),
+      ),
     );
   }
 
@@ -242,6 +368,13 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
       payload: _payload.updateStroke(
         currentWorld: currentWorld,
         stroke: stroke,
@@ -260,6 +393,13 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
       payload: _payload.updateEraser(
         currentWorld: currentWorld,
         eraser: eraser,
@@ -278,6 +418,13 @@ final class PointerSession {
       controllerEpoch: controllerEpoch,
       sessionId: sessionId,
       pointerId: pointerId,
+      dragStartSlop: dragStartSlop,
+      dragPreviewStarted: dragPreviewStarted,
+      provisionalSelectionReplacementApplied:
+          provisionalSelectionReplacementApplied,
+      provisionalSelectionReplacementRevision:
+          provisionalSelectionReplacementRevision,
+      marqueeCommitSuppressed: marqueeCommitSuppressed,
       payload: _payload.updateLineEndpoint(
         currentWorld: currentWorld,
         line: line,

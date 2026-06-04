@@ -48,6 +48,11 @@ are covered by rows and tests, or by an explicit accepted difference:
   application;
 - pointer policy includes legacy `tapSlop`, `doubleTapSlop`,
   `doubleTapMaxDelayMs`, `deferSingleTap`, and `dragStartSlop` behavior;
+- `dragStartSlop` counts as implemented only when interaction tests prove it
+  drives drag preview start for selected move, marquee, and line drag paths
+  with `dragStartSlop ?? tapSlop` fallback and does not suppress selected-move
+  or marquee preview updates after the preview has started; a public field
+  alone is not evidence of legacy parity;
 - draw style keeps separate thickness values for pencil, marker, line, and
   eraser, plus marker opacity;
 - external visual resource repaint was represented by legacy
@@ -97,7 +102,7 @@ are covered by rows and tests, or by an explicit accepted difference:
 | marker opacity | interaction config | marker opacity behavior |
 | line thickness | interaction config | line thickness behavior |
 | eraser thickness | interaction config | eraser thickness behavior |
-| pointer settings | `PointerInputSettings` | pointer policy behavior |
+| pointer settings | `PointerInputSettings` | pointer policy behavior, including actual `dragStartSlop` use |
 | pending line state | interaction getters | pending line preview state |
 | text edit request | `EditTextRequested` | text edit request event |
 | action committed event | `ActionCommitted` | user action event behavior |

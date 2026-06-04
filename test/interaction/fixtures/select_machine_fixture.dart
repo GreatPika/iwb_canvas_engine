@@ -4,8 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+const _marqueeDragStart = Offset(-20, -20);
+const _marqueeBacktrackSteps = [
+  (position: Offset(-15, -20), rect: Rect.fromLTRB(-20, -20, -15, -20)),
+  (position: Offset(-18, -20), rect: Rect.fromLTRB(-20, -20, -18, -20)),
+  (position: Offset(-20, -20), rect: Rect.fromLTRB(-20, -20, -20, -20)),
+  (position: Offset(-22, -20), rect: Rect.fromLTRB(-22, -20, -20, -20)),
+];
+
 void main() {
   _testMarqueeAdmissionAndPreview();
+  _testMarqueeDragStartSlopControlsFirstPreview();
+  _testMarqueeDragStartSlopFallbackUsesTapSlop();
+  _testMarqueeContinuesInsideSlopAfterPreviewStart();
   _testSameRectMoveKeepsPreviewRevision();
   _testPointClickSelectsTopmostObject();
   _testPointClickJitterSelectsTopmostOnly();
@@ -16,12 +27,12 @@ void main() {
 }
 
 void _testMarqueeAdmissionAndPreview() {
-  test('marquee admits non-selected hit and publishes overlay preview', () {
+  test('marquee admits empty-canvas drag and publishes overlay preview', () {
     final root = _runtimeRoot();
     addTearDown(root.dispose);
 
     root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.down, const Offset(-5, -5)),
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
     );
     root.handlePointer(
       _sample(CanvasPointerLifecyclePhase.move, const Offset(15, 10)),
@@ -30,8 +41,81 @@ void _testMarqueeAdmissionAndPreview() {
     final session = root.interactionEngine.activeSession;
     expect(session, isNotNull);
     final preview = root.preview as CanvasMarqueePreview;
-    expect(preview.rect, const Rect.fromLTRB(-5, -5, 15, 10));
+    expect(preview.rect, const Rect.fromLTRB(-20, -20, 15, 10));
     expect(root.state.value.revisions.preview, 1);
+  });
+}
+
+void _testMarqueeDragStartSlopControlsFirstPreview() {
+  test('marquee dragStartSlop controls the first visible preview', () {
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+      ),
+    );
+    addTearDown(root.dispose);
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(-16, -20)),
+    );
+    expect(root.preview, isA<CanvasNoPreview>());
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(-15, -20)),
+    );
+    final preview = root.preview as CanvasMarqueePreview;
+    expect(preview.rect, const Rect.fromLTRB(-20, -20, -15, -20));
+  });
+}
+
+void _testMarqueeDragStartSlopFallbackUsesTapSlop() {
+  test('marquee dragStartSlop null falls back to tapSlop', () {
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
+      ),
+    );
+    addTearDown(root.dispose);
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(-12, -20)),
+    );
+    expect(root.preview, isA<CanvasNoPreview>());
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(-11, -20)),
+    );
+    final preview = root.preview as CanvasMarqueePreview;
+    expect(preview.rect, const Rect.fromLTRB(-20, -20, -11, -20));
+  });
+}
+
+void _testMarqueeContinuesInsideSlopAfterPreviewStart() {
+  test('marquee keeps preview live when crossing back through start', () {
+    expect(_marqueeBacktrackSteps, hasLength(4));
+    final root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+      ),
+    );
+    addTearDown(root.dispose);
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, _marqueeDragStart),
+    );
+
+    for (final step in _marqueeBacktrackSteps) {
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, step.position),
+      );
+      _expectMarqueePreviewRect(root, step.rect);
+    }
   });
 }
 
@@ -196,6 +280,10 @@ void _expectMarqueeAction(CanvasActionCommitted action) {
   expect(payload.marqueeRectWorld, const Rect.fromLTRB(-20, -20, 55, 12));
 }
 
+void _expectMarqueePreviewRect(RuntimeRoot root, Rect rect) {
+  expect((root.preview as CanvasMarqueePreview).rect, rect);
+}
+
 _MarqueeScenario _scenario() {
   final root = _runtimeRoot();
   final actions = <CanvasActionCommitted>[];
@@ -282,10 +370,10 @@ void _dragMarquee(
   );
 }
 
-RuntimeRoot _runtimeRoot() {
+RuntimeRoot _runtimeRoot({CanvasRuntimeConfig? config}) {
   return RuntimeRoot(
     initialDocument: _document(),
-    config: const CanvasRuntimeConfig(),
+    config: config ?? const CanvasRuntimeConfig(),
   );
 }
 

@@ -102,6 +102,12 @@ final class RuntimeInteractionReadAdapter {
   final SelectionFactsPort _selection;
 }
 
+final class _SelectedMoveStartReadContext {
+  const _SelectedMoveStartReadContext({required this.selection});
+
+  final SelectionFacts selection;
+}
+
 final class _InteractionReadContext {
   const _InteractionReadContext({required this.selection});
 

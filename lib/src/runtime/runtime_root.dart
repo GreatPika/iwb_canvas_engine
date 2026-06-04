@@ -888,6 +888,7 @@ final class RuntimeRoot
   void handleSurfaceInteractiveDisabled() {
     ensureRuntimeMutationAllowed();
     final outcome = _interactionEngine.interactiveDisabledCleanup();
+    _applyPointerCleanupSelection(outcome);
     if (outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
@@ -901,6 +902,7 @@ final class RuntimeRoot
       mode,
       cleanupSelectionMode: previousMode == CanvasInteractionMode.move,
     );
+    _applyPointerCleanupSelection(outcome);
     final didChangeMode = previousMode != mode;
     final didClearSelection =
         didChangeMode &&
@@ -916,6 +918,7 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     final previous = _interactionEngine.drawStyle;
     final outcome = _interactionEngine.setDrawStyle(style);
+    _applyPointerCleanupSelection(outcome);
     if (previous != style || outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
@@ -925,6 +928,7 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     final previous = _interactionEngine.pointerPolicy;
     final outcome = _interactionEngine.setPointerPolicy(policy);
+    _applyPointerCleanupSelection(outcome);
     if (previous != policy || outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
@@ -975,9 +979,20 @@ final class RuntimeRoot
       InteractionPointerContext(
         viewCameraOffset: viewCameraOffset,
         controllerEpoch: _epochRevision,
+        selectedIds: _selection.selectedElementIds,
+        selectionRevision: _selection.selectionFacts.selectionRevision,
         resolveOutputTimestamp: _actionFinalizer.reserveTimestamp,
       ),
     );
+    final replacementApplied = _applySelectionReplacement(
+      admission.selectionReplacement,
+    );
+    if (replacementApplied &&
+        admission.markProvisionalSelectionReplacementApplied) {
+      _interactionEngine.markActiveProvisionalSelectionReplacementApplied(
+        selectionRevision: _selection.selectionFacts.selectionRevision,
+      );
+    }
     if (_deliverPointerCommitAdmission(
       admission,
       timestampHintMs: sample.timestampMs,
@@ -1076,6 +1091,7 @@ final class RuntimeRoot
     }
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
+    _applyPointerCleanupSelection(cleanupOutcome);
     _interactionEngine.clearInteractionRequests();
     _isDisposed = true;
     _dropActiveSurfaceResourceSession();
@@ -1246,6 +1262,31 @@ final class RuntimeRoot
         elementIds,
       ),
     };
+  }
+
+  bool _applySelectionReplacement(
+    InteractionSelectionReplacement? replacement,
+  ) {
+    if (replacement == null) {
+      return false;
+    }
+    final expectedCurrentIds = replacement.expectedCurrentIds;
+    if (expectedCurrentIds != null &&
+        !_sameIdSet(_selection.selectedElementIds, expectedCurrentIds)) {
+      return false;
+    }
+    final expectedCurrentRevision = replacement.expectedCurrentRevision;
+    if (expectedCurrentRevision != null &&
+        _selection.selectionFacts.selectionRevision !=
+            expectedCurrentRevision) {
+      return false;
+    }
+
+    return _selection.setSelection(replacement.elementIds);
+  }
+
+  bool _applyPointerCleanupSelection(InteractionCleanupOutcome outcome) {
+    return _applySelectionReplacement(outcome.selectionReplacement);
   }
 
   void _deliverEditCommitResult(CommitDeliveryResult applyResult) {
@@ -1461,6 +1502,7 @@ final class RuntimeRoot
     bool publish = true,
   }) {
     final outcome = _interactionEngine.finishSelectedMove(reason);
+    _applyPointerCleanupSelection(outcome);
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
@@ -1688,7 +1730,7 @@ final class RuntimeRoot
     );
   }
 
-  PointerCleanupOutcome _cleanupEraser(
+  InteractionCleanupOutcome _cleanupEraser(
     PointerCleanupReason reason, {
     bool publish = true,
   }) {
@@ -1702,7 +1744,7 @@ final class RuntimeRoot
 
   CommitDeliveryResult _withPointerCleanupEffects(
     CommitDeliveryResult result,
-    PointerCleanupOutcome cleanup,
+    InteractionCleanupOutcome cleanup,
   ) {
     return CommitDeliveryResult(
       shouldPublishState:
@@ -1717,7 +1759,7 @@ final class RuntimeRoot
   }
 
   List<CommitDeliveryEffect> _cleanupDeliveryEffects(
-    PointerCleanupOutcome cleanup,
+    InteractionCleanupOutcome cleanup,
   ) {
     final repaint = _cleanupRepaintEffect(cleanup.repaintTarget);
 
@@ -2081,6 +2123,16 @@ List<CommitDeliveryEffect> _resourceDirtyEffects(ResourceDirtyOutcome outcome) {
     const RepaintDeliveryEffect(mainCanvas: true),
     const PublicStateDeliveryEffect(),
   ]);
+}
+
+bool _sameIdSet(
+  Iterable<CanvasElementId> left,
+  Iterable<CanvasElementId> right,
+) {
+  final leftSet = left.toSet();
+  final rightSet = right.toSet();
+
+  return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
 }
 
 CanvasRuntimeState _runtimeState(

@@ -14,17 +14,31 @@ final class MoveMachine {
 
   SelectedMoveStartDecision start(SelectedMoveStartFacts facts) {
     if (facts.selectedIds.isEmpty || facts.movableSelectedIds.isEmpty) {
-      return const SelectedMoveStartDecision.rejected();
+      final unselectedMovableHit = _unselectedMovableHitDecision(facts);
+      if (unselectedMovableHit.admitted) {
+        return unselectedMovableHit;
+      }
+
+      return SelectedMoveStartDecision.rejected(
+        suppressMarqueeDrag: facts.topmostHitId != null,
+      );
     }
     if (facts.hitSelectedMovable || _admitsGroupUnionStart(facts)) {
       return SelectedMoveStartDecision.admitted(
         selectedIds: facts.selectedIds,
         movableIds: facts.movableSelectedIds,
+        previousSelectionIds: facts.selectedIds,
         selectionRevision: facts.selectionRevision,
       );
     }
+    final unselectedMovableHit = _unselectedMovableHitDecision(facts);
+    if (unselectedMovableHit.admitted) {
+      return unselectedMovableHit;
+    }
 
-    return const SelectedMoveStartDecision.rejected();
+    return SelectedMoveStartDecision.rejected(
+      suppressMarqueeDrag: facts.topmostHitId != null,
+    );
   }
 
   SelectedMovePreviewDecision preview({
@@ -45,7 +59,8 @@ final class MoveMachine {
     final selectionCapture = session.selectionCapture;
     if (proposedDelta == Offset.zero ||
         facts.movableIds.isEmpty ||
-        facts.selectionRevision != selectionCapture.revision ||
+        facts.selectionRevision != selectionCapture.revision &&
+            !session.provisionalSelectionReplacementApplied ||
         facts.controllerEpoch != session.controllerEpoch.value ||
         !facts.hasDocumentChangesAvailable) {
       return const SelectedMoveTerminalDecision.cleanupOnly();
@@ -61,6 +76,22 @@ final class MoveMachine {
       selectionBoundsWorld: facts.selectionBoundsWorld,
     );
   }
+}
+
+SelectedMoveStartDecision _unselectedMovableHitDecision(
+  SelectedMoveStartFacts facts,
+) {
+  final hitId = facts.topmostMovableHitId;
+  if (hitId == null || facts.selectedIds.contains(hitId)) {
+    return const SelectedMoveStartDecision.rejected();
+  }
+
+  return SelectedMoveStartDecision.admitted(
+    selectedIds: [hitId],
+    movableIds: [hitId],
+    previousSelectionIds: facts.selectedIds,
+    selectionRevision: facts.selectionRevision,
+  );
 }
 
 bool _admitsGroupUnionStart(SelectedMoveStartFacts facts) {
@@ -86,24 +117,30 @@ bool _isFiniteNonEmptyRect(Rect rect) {
 }
 
 final class SelectedMoveStartDecision {
-  const SelectedMoveStartDecision.rejected()
+  const SelectedMoveStartDecision.rejected({this.suppressMarqueeDrag = false})
     : admitted = false,
       selectedIds = const [],
       movableIds = const [],
+      previousSelectionIds = const [],
       selectionRevision = 0;
 
   SelectedMoveStartDecision.admitted({
     required Iterable<CanvasElementId> selectedIds,
     required Iterable<CanvasElementId> movableIds,
+    required Iterable<CanvasElementId> previousSelectionIds,
     required this.selectionRevision,
+    this.suppressMarqueeDrag = false,
   }) : admitted = true,
        selectedIds = List.unmodifiable(selectedIds),
-       movableIds = List.unmodifiable(movableIds);
+       movableIds = List.unmodifiable(movableIds),
+       previousSelectionIds = List.unmodifiable(previousSelectionIds);
 
   final bool admitted;
   final List<CanvasElementId> selectedIds;
   final List<CanvasElementId> movableIds;
+  final List<CanvasElementId> previousSelectionIds;
   final int selectionRevision;
+  final bool suppressMarqueeDrag;
 }
 
 final class SelectedMovePreviewDecision {

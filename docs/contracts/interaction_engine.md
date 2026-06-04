@@ -170,25 +170,62 @@ port must not expose mutation, draft access, `CanvasDocument` projection, store
 internals, or resource/session internals.
 
 Selected-move start admission is decided from one pointer-down snapshot. The
-read-port facts preserve the ordinary exact topmost hit id/order and whether
-that exact hit is a movable selected element. For multi-select, the same read
-also derives selected group union bounds, selected top order token, whether the
-pointer is inside that union, and whether a higher-order exact content hit
-occludes union-only admission. `MoveMachine` may start selected move from an
-exact movable selected hit, or from reliable multi-select group-union facts with
-no higher-order occluder. It must reject empty selection, empty movable set,
-single-selection bounds-only misses, stale or otherwise unreliable hit-query
-facts, non-finite group bounds, and occluded union-only starts. Rejected starts
-fall through to existing move-mode behavior and produce no selected-move
-preview, resolver call, action, or document mutation.
+read-port facts preserve the ordinary exact topmost hit id/order, whether that
+exact hit is a movable selected element, and whether the topmost hit is a
+movable unselected element. For multi-select, the same read also derives
+selected group union bounds, selected top order token, whether the pointer is
+inside that union, and whether a higher-order exact content hit occludes
+union-only admission. `MoveMachine` may start selected move from an exact
+movable selected hit, from reliable multi-select group-union facts with no
+higher-order occluder, or from a movable unselected topmost hit. Empty canvas
+starts move-mode marquee. Locked, hidden, non-transformable, or otherwise
+non-movable topmost hits do not start selected move and do not fall through to
+marquee drag; their click selection behavior remains terminal tap behavior.
+`MoveMachine` must reject empty selection, empty movable set, single-selection
+bounds-only misses, stale or otherwise unreliable hit-query facts, non-finite
+group bounds, and occluded union-only starts. Rejected selected-move starts
+produce no selected-move preview, resolver call, action, or document mutation.
 
-A move-mode click that stays within pointer slop is a point-selection commit
+Unselected movable-hit drag uses provisional selection. Pointer-down captures
+the hit as a pending single-object move candidate while preserving the previous
+selection ids. Before the pointer exits effective drag-start slop the gesture is
+still a tap candidate and must not emit a move action. When the first move exits
+effective drag-start slop, runtime conditionally applies a provisional
+selection replacement to the hit next to selected-move preview publication;
+this replacement is not a select action and only applies if the previous
+selection is still current. If the gesture later commits as a move, selection
+remains on the dragged object and the only action is `moveSelection`. If the
+pointer is cancelled, the mode/tool/pointer policy is changed, a resolver
+cancels or throws, or edit application fails before a successful move commit,
+cleanup conditionally restores the previous selection without emitting a select
+action only while the provisional selection is still current; later public
+selection changes are not overwritten by provisional rollback.
+
+A move-mode click that stays within `tapSlop` is a point-selection commit
 through the marquee/select owner, not a direct selection-owner mutation from
 the surface. For zero-area marquee commit rectangles, the runtime interaction
 read adapter performs a bounded point hit query, resolves immutable candidates,
 uses the hit-test policy to choose the topmost selectable hit, and returns that
 single id in document/action order. Non-zero marquee rectangles keep the
 rectangle-overlap selection path.
+If an unselected movable-hit gesture has already published provisional
+selected-move preview but terminals within `tapSlop`, the terminal selection
+target is still resolved through this zero-area read path at the terminal
+point. It must not reuse the pointer-down hit capture as the terminal selection
+target. The provisional selection may be rolled back first so the commit/action
+records the original selection as the previous selection, while the terminal
+topmost selectable hit determines the next selection.
+
+Pointer threshold ownership is split by outcome. The effective drag-start slop
+is `CanvasPointerPolicy.dragStartSlop ?? CanvasPointerPolicy.tapSlop` and
+starts visible selected-move, marquee, and first-pointer line drag previews.
+After a selected-move or marquee preview has started, drag-start slop no longer
+suppresses move samples; the active preview continues to update when the
+pointer returns inside the start radius or crosses the original start point.
+Terminal point-selection and context-tap checks continue to use `tapSlop`, so a
+gesture can publish a preview after effective drag-start slop and still resolve
+as a tap if the terminal sample remains within `tapSlop`. Double-tap matching
+uses `doubleTapSlop` only.
 
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed
@@ -233,12 +270,16 @@ hit testing, spatial candidate selection, exact eraser checks, commit-intent
 creation, committed document mutation, committed selection mutation, or resource
 mutation.
 
-`PointerCleanupOutcome` is effect-only. It records previous preview kind,
-whether preview changed, whether public state is needed, repaint target, active
-token/session release, pending line cleared or preserved, pending context tap
-cleared, and load/dispose sequencing facts. Runtime/public signal aggregation
-may consume the outcome after cleanup completes, but it must not re-read stale
-active session state to decide cleanup effects.
+`PointerCleanupOutcome` is pointer-only and effect-only. It records previous
+preview kind, whether preview changed, whether public state is needed, repaint
+target, active token/session release, pending line cleared or preserved,
+pending context tap cleared, and load/dispose sequencing facts. It must not
+carry element ids, selection rollback intent, Flutter types, or
+selection-owner dependencies. Interaction-level cleanup may pair that
+pointer-only outcome with a conditional selection replacement for provisional
+unselected-drag rollback, and runtime/public signal aggregation may consume the
+paired outcome after cleanup completes. Runtime must not re-read stale active
+session state to decide cleanup effects.
 For successful `loadDocument`, the load cleanup outcome is produced before
 RuntimeRoot crosses the document install commit point. RuntimeRoot may consume
 that prepared outcome after install for publication and repaint aggregation, but
@@ -252,12 +293,13 @@ dispose, or a terminal line decision. Pending context tap cleanup clears tap
 history without preview, repaint, action, context request, document, selection,
 spatial, or projection effects.
 
-The line tool supports two commit paths. A tap within pointer slop stores a
+The line tool supports two commit paths. A tap within `tapSlop` stores a
 timestamped `CanvasPendingLineStartPreview` and waits for a later endpoint tap.
-A first pointer drag that exits pointer slop converts the active first-tap
-session directly into a line endpoint session, publishes `CanvasLinePreview`,
-and commits on the terminal up sample. Both paths keep line previews
-overlay-only, create no document mutation before the terminal commit intent,
+A first pointer drag that exits effective drag-start slop converts the active
+first-tap session directly into a line endpoint session, publishes
+`CanvasLinePreview`, and commits on the terminal up sample. Both paths keep
+line previews overlay-only, create no document mutation before the terminal
+commit intent,
 and use line-owned cleanup for pending start or endpoint state.
 
 The coordinator may depend only on interaction-owned state models and public

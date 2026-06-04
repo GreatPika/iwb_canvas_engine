@@ -23,6 +23,10 @@ void main() {
     expect(_verifyFirstPointerDragLifecycle, returnsNormally);
   });
 
+  test('first pointer line drag starts after dragStartSlop', () {
+    expect(_verifyFirstPointerDragUsesDragStartSlop, returnsNormally);
+  });
+
   test('same-point endpoint returns line commit intent', () {
     expect(_verifySamePointEndpointCommit, returnsNormally);
   });
@@ -192,6 +196,32 @@ void _verifyFirstPointerDragLifecycle() {
   expect(engine.hasPendingLine, isFalse);
 }
 
+void _verifyFirstPointerDragUsesDragStartSlop() {
+  final timestamps = <int?>[];
+  final engine = _engine(
+    pointerPolicy: CanvasPointerPolicy(tapSlop: 8, dragStartSlop: 2),
+  );
+
+  engine.handlePointerSample(
+    _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+    _context(1, timestamps),
+  );
+  final belowDragSlop = engine.handlePointerSample(
+    _sample(1, const Offset(2, 0), CanvasPointerLifecyclePhase.move),
+    _context(1, timestamps),
+  );
+  final aboveDragSlop = engine.handlePointerSample(
+    _sample(1, const Offset(3, 0), CanvasPointerLifecyclePhase.move),
+    _context(1, timestamps),
+  );
+
+  expect(belowDragSlop.kind, InteractionPointerAdmissionKind.ignored);
+  expect(aboveDragSlop.kind, InteractionPointerAdmissionKind.admitted);
+  final preview = engine.preview as CanvasLinePreview;
+  expect(preview.start, Offset.zero);
+  expect(preview.end, const Offset(3, 0));
+}
+
 void _expectDragStartLinePreview(CanvasLinePreview preview) {
   expect(preview.start, const Offset(2, 3));
   expect(preview.end, const Offset(9, 11));
@@ -338,7 +368,7 @@ InteractionEngine _engineWithPendingLine() {
   );
 }
 
-InteractionEngine _engine() {
+InteractionEngine _engine({CanvasPointerPolicy? pointerPolicy}) {
   return InteractionEngine(
     initialMode: CanvasInteractionMode.draw,
     initialDrawStyle: CanvasDrawStyle(
@@ -346,7 +376,7 @@ InteractionEngine _engine() {
       color: const Color(0xFF112233),
       lineThickness: 6,
     ),
-    pointerPolicy: CanvasPointerPolicy(tapSlop: 5),
+    pointerPolicy: pointerPolicy ?? CanvasPointerPolicy(tapSlop: 5),
   );
 }
 

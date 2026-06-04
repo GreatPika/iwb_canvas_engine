@@ -13,6 +13,8 @@ final class InteractionPointerAdmission {
     required this.kind,
     required this.sample,
     this.publishRuntimeState = true,
+    this.selectionReplacement,
+    this.markProvisionalSelectionReplacementApplied = false,
     this.cleanupDecision,
     this.selectedMoveCommit,
     this.marqueeCommit,
@@ -25,6 +27,8 @@ final class InteractionPointerAdmission {
   final InteractionPointerAdmissionKind kind;
   final NormalizedPointerSample sample;
   final bool publishRuntimeState;
+  final InteractionSelectionReplacement? selectionReplacement;
+  final bool markProvisionalSelectionReplacementApplied;
   final InvalidTerminalCleanupDecision? cleanupDecision;
   final SelectedMoveCommitIntent? selectedMoveCommit;
   final MarqueeCommitIntent? marqueeCommit;

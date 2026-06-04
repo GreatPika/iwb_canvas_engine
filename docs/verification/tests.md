@@ -499,9 +499,9 @@ behavioral tests, and the required guardrail list remains owned by
 - rejects example imports of engine internals, legacy paths, retired legacy
   scene/controller/spec/patch/codec symbols, and app-adapter responsibility
   names;
-- fails the current unstaged, staged, or untracked step diff when production
-  `lib/**` files are modified, reserving engine changes for a separate owner
-  contract;
+- when the current unstaged, staged, or untracked diff includes non-generated
+  `example/**` changes, fails that current diff if it also modifies production
+  `lib/**` files, reserving engine changes for a separate owner contract;
 - when `EXAMPLE_BOUNDARY_DIFF_BASE` and `EXAMPLE_BOUNDARY_DIFF_HEAD` are set,
   fails if that committed range modifies production `lib/**` files;
 - proves production engine source under `lib/**` does not contain

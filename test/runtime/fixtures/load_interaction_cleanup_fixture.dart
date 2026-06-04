@@ -61,6 +61,10 @@ void _registerDisposeCleanupTests() {
     expect(_verifyDisposeCleanupPublication, returnsNormally);
   });
 
+  test('dispose restores provisional unselected-drag selection', () {
+    expect(_verifyDisposeRestoresProvisionalSelection, returnsNormally);
+  });
+
   test('dispose clears live context request facts', () {
     return expectLater(_verifyDisposeClearsLiveRequestFacts(), completes);
   });
@@ -272,6 +276,51 @@ void _expectDisposeWithInteractionPublishesCleanup() {
   _expectDisposeCleanupRevisions(before, root.state.value);
 }
 
+void _verifyDisposeRestoresProvisionalSelection() {
+  final actionEvents = <CanvasActionCommitted>[];
+  final root = _unselectedMoveRuntimeRoot((_) {});
+  root.actions.listen(actionEvents.add);
+  _startProvisionalUnselectedMove(root);
+  final listenerProbe = _recordSelectionSnapshots(root);
+
+  root.dispose();
+
+  _expectDisposeRestoredSelection(root, listenerProbe, actionEvents);
+}
+
+void _startProvisionalUnselectedMove(RuntimeRoot root) {
+  root.selection.setSelection([CanvasElementId('previous')]);
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(5, 0)),
+  );
+  expect(root.selection.selectedElementIds, {CanvasElementId('dragged')});
+}
+
+({List<CanvasRuntimeState> snapshots, List<Set<CanvasElementId>> selections})
+_recordSelectionSnapshots(RuntimeRoot root) {
+  final snapshots = <CanvasRuntimeState>[];
+  final selections = <Set<CanvasElementId>>[];
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+    selections.add(root.selectedElementIds);
+  });
+
+  return (snapshots: snapshots, selections: selections);
+}
+
+void _expectDisposeRestoredSelection(
+  RuntimeRoot root,
+  ({List<CanvasRuntimeState> snapshots, List<Set<CanvasElementId>> selections})
+  listenerProbe,
+  List<CanvasActionCommitted> actionEvents,
+) {
+  expect(root.selection.selectedElementIds, {CanvasElementId('previous')});
+  expect(listenerProbe.snapshots, hasLength(1));
+  expect(listenerProbe.selections.single, {CanvasElementId('previous')});
+  expect(actionEvents, isEmpty);
+}
+
 ({List<CanvasRuntimeState> snapshots, List<Object> listenerErrors})
 _recordDisposeCleanupListener(RuntimeRoot root) {
   final snapshots = <CanvasRuntimeState>[];
@@ -341,6 +390,16 @@ RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
   );
 }
 
+RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
+  return RuntimeRoot(
+    initialDocument: _unselectedMoveDocument(),
+    config: CanvasRuntimeConfig(
+      pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
+    ),
+    commitEffectObserver: observer,
+  );
+}
+
 void _startPointerSession(RuntimeRoot root) {
   root.selection.setSelection([CanvasElementId('old')]);
   root.handlePointer(
@@ -405,6 +464,18 @@ void _startPendingContextTap(RuntimeRoot root) {
   expect(root.interactionEngine.activeSession, isNull);
 }
 
+CanvasPointerSample _pointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) {
+  return CanvasPointerSample(
+    pointerId: 1,
+    position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+  );
+}
+
 CanvasDocument _initialDocument() {
   return CanvasDocument(
     layers: [
@@ -412,6 +483,27 @@ CanvasDocument _initialDocument() {
         id: CanvasLayerId('old-layer'),
         elements: [
           CanvasRectElement(id: CanvasElementId('old'), size: const Size(1, 1)),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _unselectedMoveDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('old-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('dragged'),
+            size: const Size(10, 10),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('previous'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
         ],
       ),
     ],

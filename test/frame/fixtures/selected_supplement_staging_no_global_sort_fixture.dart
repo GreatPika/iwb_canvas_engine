@@ -49,6 +49,7 @@ void main() {
     reason: FrameSpatialPaintRejectionReason.staleCandidate,
   );
   _testValidEmptyShiftedAdmission();
+  _testZeroDeltaSelectedMoveUsesOrdinaryPlan();
   test('selected move supplement merges by order without ordinary writes', () {
     final selected = SelectionFacts(
       selectedElementIds: [
@@ -129,6 +130,42 @@ void main() {
     expect(supplement.probe.skippedStaleCount, 1);
     expect(supplement.probe.globalSortCount, 0);
     expect(supplement.probe.ordinaryCacheWritesDuringSupplement, 0);
+    expect(supplement.probe.rejectedAdmissionReason, isNull);
+  });
+}
+
+void _testZeroDeltaSelectedMoveUsesOrdinaryPlan() {
+  test('zero-delta selected move preview keeps ordinary paint records', () {
+    final scenario = _selectedMoveScenario(delta: Offset.zero);
+    final ordinaryPlanner = OrdinaryPaintPlanner();
+    final ordinary =
+        ordinaryPlanner.buildOrdinaryPlan(scenario.frame)
+            as OrdinaryPaintPlanReady;
+    final queriedWindows = <SpatialQueryWindow>[];
+    final supplementPlanner = SelectedMoveSupplementPlanner(
+      frameFacts: scenario.frameFacts,
+      queryPaint: (window) {
+        queriedWindows.add(window);
+
+        return SpatialCandidatesResult(
+          orderedCandidates: scenario.frameFacts.spatialCandidates,
+        );
+      },
+    );
+
+    final supplement = supplementPlanner.build(
+      frame: scenario.frame,
+      ordinaryPlan: ordinary.plan,
+    );
+
+    expect(queriedWindows, isEmpty);
+    expect(
+      supplement.mergedRecords,
+      orderedEquals(ordinary.plan.ordinaryRecords),
+    );
+    expect(supplement.probe.selectedFilteredCount, 0);
+    expect(supplement.probe.supplementCount, 0);
+    expect(supplement.probe.skippedStaleCount, 0);
     expect(supplement.probe.rejectedAdmissionReason, isNull);
   });
 }

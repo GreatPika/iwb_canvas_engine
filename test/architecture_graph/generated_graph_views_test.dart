@@ -6,7 +6,7 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
-const _selectedArchitectureGraphPhase = 'P12';
+const _selectedArchitectureGraphPhase = 'P13';
 
 void main() {
   group('rendered views', () {
@@ -75,6 +75,10 @@ void _expectCurrentPhaseView(Map<String, String> views) {
   );
   expect(
     views['docs/diagrams/generated/current_phase.mmd'],
+    contains('flutter_surface'),
+  );
+  expect(
+    views['docs/diagrams/generated/current_phase.mmd'],
     isNot(contains(r'\n')),
   );
   expect(
@@ -86,11 +90,19 @@ void _expectCurrentPhaseView(Map<String, String> views) {
 void _expectFutureView(Map<String, String> views) {
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('flutter_surface'),
+    contains('planned reports errors to by P14'),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('planned drives public runtime ports by P13'),
+    contains('diagnostics_hub'),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    isNot(contains('flutter_surface')),
+  );
+  expect(
+    views['docs/diagrams/generated/future_target.mmd'],
+    isNot(contains('planned drives public runtime ports by P13')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],

@@ -67,6 +67,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       candidates: candidates.handles,
       resolve: _frame.resolveElement,
     );
+    final hitFacts = hit == null
+        ? null
+        : interactionFactsForId(candidates, hit.id);
     final contentQuery = _spatial.queryContext(
       SpatialQueryWindow(
         boundsWorld: _pointQueryWindow(request.worldPosition),
@@ -102,6 +105,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
       hitSelectedMovable: hit != null && movableIds.contains(hit.id),
+      topmostMovableHitId: _movableHitId(hitFacts),
       topmostHitId: hit?.id,
       topmostHitOrderToken: hit?.orderToken,
       selectedGroupBoundsWorld: selectedGroup.boundsWorld,
@@ -143,7 +147,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       controllerEpoch: context.controllerEpoch,
       selectionRevision: context.selection.selectionRevision,
       hasDocumentChangesAvailable:
-          context.selection.selectionRevision == request.selectionRevision &&
+          _selectedMoveCommitSelectionIsCurrent(context.selection, request) &&
           movableIds.isNotEmpty,
       skippedSessionIds: skippedIds,
     );
@@ -608,6 +612,42 @@ List<CanvasElementId> _documentOrderIds({
 
 Rect _pointQueryWindow(Offset point) {
   return Rect.fromCircle(center: point, radius: 0.5);
+}
+
+CanvasElementId? _movableHitId(FrameElementFacts? facts) {
+  if (facts == null || facts.isLocked || !facts.isTransformable) {
+    return null;
+  }
+
+  return facts.id;
+}
+
+bool _selectedMoveCommitSelectionIsCurrent(
+  SelectionFacts selection,
+  SelectedMoveCommitReadRequest request,
+) {
+  if (selection.selectionRevision == request.selectionRevision) {
+    return true;
+  }
+  if (!request.provisionalSelectionReplacementApplied) {
+    return false;
+  }
+  if (selection.selectionRevision !=
+      request.provisionalSelectionReplacementRevision) {
+    return false;
+  }
+
+  return _sameIdSet(selection.selectedElementIds, request.sessionSelectedIds);
+}
+
+bool _sameIdSet(
+  Iterable<CanvasElementId> left,
+  Iterable<CanvasElementId> right,
+) {
+  final leftSet = left.toSet();
+  final rightSet = right.toSet();
+
+  return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
 }
 
 void _insertHandleByOrder(
