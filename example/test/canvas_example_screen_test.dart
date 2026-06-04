@@ -8,6 +8,7 @@ import 'package:iwb_canvas_engine_example/src/canvas_example_defaults.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_screen.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_example_view_model.dart';
 import 'package:iwb_canvas_engine_example/src/canvas_pending_line_overlay.dart';
+import 'package:iwb_canvas_engine_example/src/canvas_text_edit_overlay.dart';
 
 void main() {
   _registerSurfaceAndPointerTests();
@@ -17,7 +18,6 @@ void main() {
   _registerDrawToolDockTest();
   _registerDrawColorDockTest();
   _registerCameraPanControlTest();
-  _registerCameraResetControlTest();
   _registerGridDockTest();
   _registerBackgroundDockTest();
   _registerClearDockTest();
@@ -190,21 +190,6 @@ void _registerCameraPanControlTest() {
   });
 }
 
-void _registerCameraResetControlTest() {
-  testWidgets('camera reset control updates public camera state', (
-    tester,
-  ) async {
-    final viewModel = CanvasExampleViewModel();
-    addTearDown(viewModel.dispose);
-    await _pumpScreen(tester, viewModel);
-    viewModel.panCameraBy(const Offset(25, 25));
-    await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('camera.reset')));
-    await tester.pump();
-    expect(viewModel.cameraOffset, Offset.zero);
-  });
-}
-
 void _registerGridDockTest() {
   testWidgets(
     'grid toggle and every grid size control mutate public document',
@@ -213,16 +198,16 @@ void _registerGridDockTest() {
       addTearDown(viewModel.dispose);
       await _pumpScreen(tester, viewModel);
 
-      await tester.tap(find.byKey(const ValueKey('grid.toggle')));
+      await tester.tap(find.byKey(const ValueKey('grid.menu')));
+      await tester.pump();
+      await tester.tap(find.byType(Switch));
       await tester.pump();
 
       expect(viewModel.grid.enabled, isTrue);
 
       for (final size in viewModel.gridSizes) {
-        await tester.tap(find.byKey(const ValueKey('grid.size.menu')));
-        await tester.pumpAndSettle();
         await tester.tap(find.text(size.toStringAsFixed(0)).last);
-        await tester.pumpAndSettle();
+        await tester.pump();
         expect(viewModel.grid.cellSize, size);
       }
     },
@@ -236,12 +221,14 @@ void _registerBackgroundDockTest() {
     final viewModel = CanvasExampleViewModel();
     addTearDown(viewModel.dispose);
     await _pumpScreen(tester, viewModel);
+    await tester.tap(find.byKey(const ValueKey('system.menu')));
+    await tester.pump();
 
     for (final color in viewModel.backgroundColors) {
-      await tester.tap(find.byKey(const ValueKey('background.color.menu')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(_colorLabel(color)).last);
-      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(ValueKey('background.color.${color.toARGB32()}')),
+      );
+      await tester.pump();
       expect(viewModel.background.color, color);
     }
   });
@@ -254,6 +241,8 @@ void _registerClearDockTest() {
     _addRect(viewModel.runtime, 'clear-from-dock');
     await _pumpScreen(tester, viewModel);
 
+    await tester.tap(find.byKey(const ValueKey('system.menu')));
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('canvas.clear')));
     await tester.pump();
 
@@ -411,7 +400,7 @@ void _registerInlineTextEditOverlayCommitTest() {
         find.byKey(const ValueKey('text.edit.field')),
         'updated',
       );
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.tap(find.byKey(canvasExampleTextEditDismissOverlayKey));
       await tester.pump();
 
       expect(
@@ -458,20 +447,19 @@ void _registerInlineTextEditOverlayCoverageTest() {
 
     await _openTextOverlay(tester, viewModel);
 
-    final overlaySize = tester.getSize(
-      find
-          .ancestor(
-            of: find.byKey(const ValueKey('text.edit.field')),
-            matching: find.byType(ConstrainedBox),
-          )
-          .first,
+    final overlaySize = _textEditBoundsSize(tester);
+    final targetBounds = _activeTextEditBounds(viewModel);
+    expect(overlaySize.width, greaterThan(0));
+    expect(overlaySize.width, lessThanOrEqualTo(targetBounds.width));
+    expect(overlaySize.height, greaterThan(0));
+
+    await tester.enterText(
+      find.byKey(const ValueKey('text.edit.field')),
+      'wide editable text\nwrapped line',
     );
-    final targetBounds = viewModel.activeTextEdit?.boundsWorld;
-    if (targetBounds == null) {
-      fail('Expected active text edit bounds.');
-    }
-    expect(overlaySize.width, greaterThanOrEqualTo(targetBounds.width));
-    expect(overlaySize.height, greaterThanOrEqualTo(targetBounds.height));
+    await tester.pump();
+    final resizedOverlaySize = _textEditBoundsSize(tester);
+    expect(resizedOverlaySize.height, greaterThan(overlaySize.height));
   });
 }
 
@@ -489,12 +477,12 @@ void _registerInlineTextEditOverlayDismissTest() {
       find.byKey(const ValueKey('text.edit.field')),
       'ignored',
     );
-    await tester.tap(find.byKey(const ValueKey('text.edit.dismiss')));
+    await tester.tap(find.byKey(canvasExampleTextEditDismissOverlayKey));
     await tester.pump();
 
     expect(
       (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-      'hello',
+      'ignored',
     );
     expect(find.byKey(const ValueKey('text.edit.field')), findsNothing);
   });
@@ -789,55 +777,34 @@ Future<void> _tapTool(
   expect(viewModel.drawTool, expected);
 }
 
-Future<void> _tapScrollableControl(
-  WidgetTester tester,
-  ValueKey<String> key,
-) async {
-  final finder = find.byKey(key);
-  await tester.scrollUntilVisible(
-    finder,
-    80,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.tap(finder);
-  await tester.pump();
-}
-
-Future<void> _selectTextMenuValue(
-  WidgetTester tester, {
-  required ValueKey<String> menuKey,
-  required Finder option,
-}) async {
-  await _tapScrollableControl(tester, menuKey);
-  await tester.pumpAndSettle();
-  await tester.tap(option);
-  await tester.pumpAndSettle();
-}
-
 Future<void> _applyTextStyleDockControls(WidgetTester tester) async {
-  await _tapScrollableControl(tester, const ValueKey('text.bold'));
-  await _tapScrollableControl(tester, const ValueKey('text.italic'));
-  await _tapScrollableControl(tester, const ValueKey('text.underline'));
-  await _selectTextMenuValue(
-    tester,
-    menuKey: const ValueKey('text.align.menu'),
-    option: find.byIcon(Icons.format_align_center).last,
-  );
-  await _selectTextMenuValue(
-    tester,
-    menuKey: const ValueKey('text.font.size.menu'),
-    option: find.text('32').last,
-  );
-  await _selectTextMenuValue(
-    tester,
-    menuKey: const ValueKey('text.line.height.menu'),
-    option: find.text('1.5').last,
-  );
-  await _selectTextMenuValue(
-    tester,
-    menuKey: const ValueKey('text.color.menu'),
-    option: find.text(_colorLabel(const Color(0xFFE53935))).last,
-  );
+  await tester.tap(find.byKey(const ValueKey('text.bold')));
+  await tester.pump();
+  await tester.tap(find.byKey(const ValueKey('text.italic')));
+  await tester.pump();
+  await tester.tap(find.byKey(const ValueKey('text.underline')));
+  await tester.pump();
+  await tester.tap(find.byKey(const ValueKey('text.align.center')));
+  await tester.pump();
+  tester
+      .widget<Slider>(find.byKey(const ValueKey('text.font.size.slider')))
+      .onChanged
+      ?.call(32);
+  await tester.pump();
+  tester
+      .widget<Slider>(find.byKey(const ValueKey('text.line.height.slider')))
+      .onChanged
+      ?.call(1.5);
+  await tester.pump();
+  tester
+      .widget<GestureDetector>(
+        find.byKey(
+          ValueKey('text.color.${const Color(0xFFE53935).toARGB32()}'),
+        ),
+      )
+      .onTap
+      ?.call();
+  await tester.pump();
 }
 
 void _expectUpdatedTextStyle(CanvasDocument document, CanvasElementId textId) {
@@ -861,15 +828,21 @@ String _textFieldValue(ValueKey<String> key, WidgetTester tester) {
   return controller.text;
 }
 
-String _exportDialogJson(WidgetTester tester) {
-  final text = tester.widget<SelectableText>(
-    find.descendant(
-      of: find.byKey(const ValueKey('json.export.text')),
-      matching: find.byType(SelectableText),
-    ),
-  );
+Size _textEditBoundsSize(WidgetTester tester) {
+  return tester.getSize(find.byKey(const ValueKey('text.edit.bounds')));
+}
 
-  return text.data ?? '';
+Rect _activeTextEditBounds(CanvasExampleViewModel viewModel) {
+  final bounds = viewModel.activeTextEdit?.boundsWorld;
+  if (bounds == null) {
+    fail('Expected active text edit bounds.');
+  }
+
+  return bounds;
+}
+
+String _exportDialogJson(WidgetTester tester) {
+  return _textFieldValue(const ValueKey('json.export.text'), tester);
 }
 
 void _installClipboardRecorder(_ClipboardRecorder recorder) {
@@ -888,17 +861,17 @@ void _installClipboardRecorder(_ClipboardRecorder recorder) {
   });
 }
 
-String _colorLabel(Color color) {
-  return '#${color.toARGB32().toRadixString(16).padLeft(8, '0')}';
-}
-
 Future<void> _openJsonExportDialog(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('system.menu')));
+  await tester.pump();
   await tester.tap(find.byKey(const ValueKey('json.export')));
   await tester.pumpAndSettle();
   expect(find.byKey(const ValueKey('json.export.text')), findsOneWidget);
 }
 
 Future<void> _openJsonImportDialog(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('system.menu')));
+  await tester.pump();
   await tester.tap(find.byKey(const ValueKey('json.import')));
   await tester.pumpAndSettle();
   expect(find.byKey(const ValueKey('json.import.text')), findsOneWidget);

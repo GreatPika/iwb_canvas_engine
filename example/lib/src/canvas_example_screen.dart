@@ -5,6 +5,7 @@ import 'canvas_controls_dock.dart';
 import 'canvas_example_view_model.dart';
 import 'canvas_pending_line_overlay.dart';
 import 'canvas_text_edit_overlay.dart';
+import 'canvas_text_options_panel.dart';
 
 final class CanvasExampleScreen extends StatefulWidget {
   const CanvasExampleScreen({this.viewModel, super.key});
@@ -49,8 +50,7 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F8),
-      appBar: AppBar(title: const Text('IWB Canvas Engine')),
+      backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(child: _CanvasExampleContent(viewModel: _viewModel)),
     );
   }
@@ -111,15 +111,12 @@ final class _CanvasExampleContent extends StatelessWidget {
     return Stack(
       children: [
         Positioned.fill(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: CanvasSurface(
-              runtime: viewModel.runtime,
-              resourceResolver: viewModel.resourceResolver,
-              selectionStyle: CanvasSelectionStyle(
-                color: const Color(0xFFFFFF00),
-                strokeWidth: 4,
-              ),
+          child: CanvasSurface(
+            runtime: viewModel.runtime,
+            resourceResolver: viewModel.resourceResolver,
+            selectionStyle: CanvasSelectionStyle(
+              color: const Color(0xFFFFFF00),
+              strokeWidth: 4,
             ),
           ),
         ),
@@ -156,23 +153,20 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
 
   Widget _surfaceOverlays() {
     return Positioned.fill(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Stack(
-          children: [
-            CanvasPendingLineOverlay(
-              preview: viewModel.preview,
+      child: Stack(
+        children: [
+          CanvasPendingLineOverlay(
+            preview: viewModel.preview,
+            cameraOffset: viewModel.cameraOffset,
+          ),
+          if (viewModel.activeTextEdit case final session?)
+            CanvasTextEditOverlay(
+              session: session,
               cameraOffset: viewModel.cameraOffset,
+              onCommit: viewModel.commitActiveTextEdit,
+              onDismiss: viewModel.dismissActiveTextEdit,
             ),
-            if (viewModel.activeTextEdit case final session?)
-              CanvasTextEditOverlay(
-                session: session,
-                cameraOffset: viewModel.cameraOffset,
-                onCommit: viewModel.commitActiveTextEdit,
-                onDismiss: viewModel.dismissActiveTextEdit,
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -181,7 +175,7 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
     return Positioned(
       top: 20,
       left: 20,
-      child: CanvasCameraIndicator(cameraOffset: viewModel.cameraOffset),
+      child: CanvasCameraIndicator(cameraX: viewModel.cameraOffset.dx),
     );
   }
 
@@ -189,19 +183,47 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
     return Positioned(
       top: 20,
       right: 20,
-      child: CanvasCameraPanControls(
-        onPan: viewModel.panCameraBy,
-        onReset: viewModel.resetCamera,
-      ),
+      child: CanvasCameraPanControls(onPan: viewModel.panCameraBy),
     );
   }
 
   Widget _controlsDock() {
-    return Positioned(
-      left: 20,
-      right: 20,
-      bottom: 20,
-      child: CanvasControlsDock(viewModel: viewModel),
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          if (viewModel.selectedTextElement case final text?)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 120,
+              child: CanvasTextOptionsPanel(
+                element: text,
+                paletteColors: viewModel.penColors,
+                lineHeightMinMultiplier:
+                    CanvasExampleViewModel.lineHeightMinMultiplier,
+                lineHeightMaxMultiplier:
+                    CanvasExampleViewModel.lineHeightMaxMultiplier,
+                lineHeightMultiplier: viewModel.lineHeightMultiplierForText(
+                  text,
+                ),
+                onToggleBold: viewModel.toggleSelectedTextBold,
+                onToggleItalic: viewModel.toggleSelectedTextItalic,
+                onToggleUnderline: viewModel.toggleSelectedTextUnderline,
+                onAlignChanged: viewModel.setSelectedTextAlign,
+                onFontSizeChanged: viewModel.setSelectedTextFontSize,
+                onLineHeightMultiplierChanged:
+                    viewModel.setSelectedTextLineHeightMultiplier,
+                onColorChanged: viewModel.setSelectedTextColor,
+              ),
+            ),
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: CanvasControlsDock(viewModel: viewModel),
+          ),
+        ],
+      ),
     );
   }
 }

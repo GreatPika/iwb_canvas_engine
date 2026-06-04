@@ -326,7 +326,7 @@ void _registerTextStyleCommandTests() {
 
 void _registerInlineTextEditCommitTest() {
   test(
-    'text context request opens app session and commit uses public command',
+    'text context request opens app session and commit restores hidden text',
     () async {
       final viewModel = CanvasExampleViewModel();
       addTearDown(viewModel.dispose);
@@ -343,7 +343,7 @@ void _registerInlineTextEditCommitTest() {
       final beforeCommit =
           _findElement(viewModel.document, textId) as CanvasTextElement;
       expect(beforeCommit.text, 'hello');
-      expect(beforeCommit.isVisible, isTrue);
+      expect(beforeCommit.isVisible, isFalse);
 
       expect(viewModel.commitActiveTextEdit('updated'), isTrue);
 
@@ -357,25 +357,18 @@ void _registerInlineTextEditCommitTest() {
 }
 
 void _registerInlineTextEditNoOpTest() {
-  test(
-    'same-text commit closes overlay without manual document mutation',
-    () async {
-      final viewModel = CanvasExampleViewModel();
-      addTearDown(viewModel.dispose);
-      final textId = _addText(viewModel.runtime, 'noop-text');
-      final before = viewModel.document;
+  test('same-text commit closes overlay and restores hidden text', () async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'noop-text');
+    await _openTextEdit(viewModel);
 
-      await _openTextEdit(viewModel);
-
-      expect(viewModel.commitActiveTextEdit('hello'), isTrue);
-      expect(viewModel.document, same(before));
-      expect(
-        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-        'hello',
-      );
-      expect(viewModel.activeTextEdit, isNull);
-    },
-  );
+    expect(viewModel.commitActiveTextEdit('hello'), isTrue);
+    final text = _findElement(viewModel.document, textId) as CanvasTextElement;
+    expect(text.text, 'hello');
+    expect(text.isVisible, isTrue);
+    expect(viewModel.activeTextEdit, isNull);
+  });
 }
 
 void _registerInlineTextEditStaleTest() {
@@ -404,25 +397,18 @@ void _registerInlineTextEditStaleTest() {
 }
 
 void _registerInlineTextEditDismissTest() {
-  test(
-    'dismiss closes inline text overlay without document mutation',
-    () async {
-      final viewModel = CanvasExampleViewModel();
-      addTearDown(viewModel.dispose);
-      final textId = _addText(viewModel.runtime, 'dismiss-text');
-      final before = viewModel.document;
+  test('dismiss closes inline text overlay and restores hidden text', () async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    final textId = _addText(viewModel.runtime, 'dismiss-text');
+    await _openTextEdit(viewModel);
+    viewModel.dismissActiveTextEdit();
 
-      await _openTextEdit(viewModel);
-      viewModel.dismissActiveTextEdit();
-
-      expect(viewModel.activeTextEdit, isNull);
-      expect(viewModel.document, same(before));
-      expect(
-        (_findElement(viewModel.document, textId) as CanvasTextElement).text,
-        'hello',
-      );
-    },
-  );
+    expect(viewModel.activeTextEdit, isNull);
+    final text = _findElement(viewModel.document, textId) as CanvasTextElement;
+    expect(text.text, 'hello');
+    expect(text.isVisible, isTrue);
+  });
 }
 
 void _registerJsonExportImportTest() {

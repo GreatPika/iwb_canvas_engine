@@ -4,78 +4,82 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'canvas_example_view_model.dart';
 import 'canvas_json_dialogs.dart';
 
-// Camera label composition is clearer inline than split into tiny text/icon
-// wrappers solely to lower Flutter widget coupling.
-// ignore: coupling-between-object-classes
 final class CanvasCameraIndicator extends StatelessWidget {
-  const CanvasCameraIndicator({required this.cameraOffset, super.key});
+  const CanvasCameraIndicator({required this.cameraX, super.key});
 
-  final Offset cameraOffset;
+  final double cameraX;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _panelDecoration,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.videocam_outlined, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'X ${cameraOffset.dx.toStringAsFixed(0)}  '
-              'Y ${cameraOffset.dy.toStringAsFixed(0)}',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.videocam_outlined, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Camera X: ${cameraX.toStringAsFixed(0)}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
 }
 
 final class CanvasCameraPanControls extends StatelessWidget {
-  const CanvasCameraPanControls({
-    required this.onPan,
-    required this.onReset,
-    super.key,
-  });
+  const CanvasCameraPanControls({required this.onPan, super.key});
 
   final ValueChanged<Offset> onPan;
-  final VoidCallback onReset;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _panelDecoration,
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _panButton('left', Icons.arrow_back, const Offset(-50, 0)),
-            _panButton('right', Icons.arrow_forward, const Offset(50, 0)),
-            _panButton('up', Icons.arrow_upward, const Offset(0, -50)),
-            _panButton('down', Icons.arrow_downward, const Offset(0, 50)),
-            _IconCommandButton(
-              key: const ValueKey('camera.reset'),
-              icon: Icons.center_focus_strong,
-              tooltip: 'Reset camera',
-              onPressed: onReset,
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
       ),
-    );
-  }
-
-  Widget _panButton(String direction, IconData icon, Offset delta) {
-    return _IconCommandButton(
-      key: ValueKey('camera.pan.$direction'),
-      icon: icon,
-      tooltip: 'Pan $direction',
-      onPressed: () => onPan(delta),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: const ValueKey('camera.pan.left'),
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => onPan(const Offset(-50, 0)),
+            iconSize: 18,
+            tooltip: 'Pan left',
+          ),
+          IconButton(
+            key: const ValueKey('camera.pan.right'),
+            icon: const Icon(Icons.arrow_forward),
+            onPressed: () => onPan(const Offset(50, 0)),
+            iconSize: 18,
+            tooltip: 'Pan right',
+          ),
+          IconButton(
+            key: const ValueKey('camera.pan.up'),
+            icon: const Icon(Icons.arrow_upward),
+            onPressed: () => onPan(const Offset(0, -50)),
+            iconSize: 18,
+            tooltip: 'Pan up',
+          ),
+          IconButton(
+            key: const ValueKey('camera.pan.down'),
+            icon: const Icon(Icons.arrow_downward),
+            onPressed: () => onPan(const Offset(0, 50)),
+            iconSize: 18,
+            tooltip: 'Pan down',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -89,542 +93,619 @@ final class CanvasControlsDock extends StatelessWidget {
   final CanvasExampleViewModel viewModel;
 
   @override
-  // The move dock lists selection commands in their visual order; splitting
-  // that row further would hide the command sequence the user scans.
+  // The dock mirrors the legacy example command order; splitting each command
+  // group would hide the visual contract this file owns.
   // ignore: source-lines-of-code
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _dockDecoration,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            _ModeButtons(viewModel: viewModel),
-            const VerticalDivider(width: 20),
-            Expanded(child: _ModeSpecificControls(viewModel: viewModel)),
-            const VerticalDivider(width: 20),
-            _DocumentControls(viewModel: viewModel),
-          ],
-        ),
+    return Container(
+      height: 84,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-final class _ModeButtons extends StatelessWidget {
-  const _ModeButtons({required this.viewModel});
-
-  final CanvasExampleViewModel viewModel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _ToggleCommandButton(
-          key: const ValueKey('mode.move'),
-          icon: Icons.pan_tool_alt,
-          tooltip: 'Move mode',
-          selected: viewModel.mode == CanvasInteractionMode.move,
-          onPressed: () =>
-              viewModel.setInteractionMode(CanvasInteractionMode.move),
-        ),
-        _ToggleCommandButton(
-          key: const ValueKey('mode.draw'),
-          icon: Icons.edit,
-          tooltip: 'Draw mode',
-          selected: viewModel.mode == CanvasInteractionMode.draw,
-          onPressed: () =>
-              viewModel.setInteractionMode(CanvasInteractionMode.draw),
-        ),
-      ],
-    );
-  }
-}
-
-final class _ModeSpecificControls extends StatelessWidget {
-  const _ModeSpecificControls({required this.viewModel});
-
-  final CanvasExampleViewModel viewModel;
-
-  @override
-  // Selection commands are kept as one visual row so their user-facing order is
-  // visible at the dock boundary.
-  // ignore: source-lines-of-code
-  Widget build(BuildContext context) {
-    if (viewModel.mode == CanvasInteractionMode.draw) {
-      return _DrawControls(viewModel: viewModel);
-    }
-
-    return _MoveControls(viewModel: viewModel);
-  }
-}
-
-// Draw controls keep tool buttons and palette together because their selected
-// state is one public draw-style projection.
-// ignore: coupling-between-object-classes
-final class _DrawControls extends StatelessWidget {
-  const _DrawControls({required this.viewModel});
-
-  final CanvasExampleViewModel viewModel;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _DrawToolButton(
-            key: const ValueKey('tool.pencil'),
-            icon: Icons.brush,
-            tool: CanvasDrawTool.pencil,
-            viewModel: viewModel,
-          ),
-          _DrawToolButton(
-            key: const ValueKey('tool.marker'),
-            icon: Icons.border_color,
-            tool: CanvasDrawTool.marker,
-            viewModel: viewModel,
-          ),
-          _DrawToolButton(
-            key: const ValueKey('tool.line'),
-            icon: Icons.show_chart,
-            tool: CanvasDrawTool.line,
-            viewModel: viewModel,
-          ),
-          _DrawToolButton(
-            key: const ValueKey('tool.eraser'),
-            icon: Icons.auto_fix_normal,
-            tool: CanvasDrawTool.eraser,
-            viewModel: viewModel,
-          ),
-          const SizedBox(width: 8),
-          for (final color in viewModel.penColors)
-            _ColorSwatchButton(
-              key: ValueKey('draw.color.${color.toARGB32()}'),
-              color: color,
-              selected: viewModel.drawColor == color,
-              onPressed: () => viewModel.setDrawColor(color),
+          _ModeToggle(viewModel: viewModel),
+          const VerticalDivider(indent: 20, endIndent: 20, width: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: viewModel.mode == CanvasInteractionMode.draw
+                    ? _drawControls()
+                    : _moveControls(),
+              ),
             ),
+          ),
+          const VerticalDivider(indent: 20, endIndent: 20, width: 24),
+          _GridMenu(viewModel: viewModel),
+          _SystemMenu(viewModel: viewModel),
         ],
       ),
     );
   }
+
+  List<Widget> _drawControls() {
+    return [
+      _DrawToolButton(
+        key: const ValueKey('tool.pencil'),
+        tool: CanvasDrawTool.pencil,
+        currentTool: viewModel.drawTool,
+        icon: Icons.brush,
+        label: 'Pen',
+        onPressed: viewModel.setDrawTool,
+      ),
+      _DrawToolButton(
+        key: const ValueKey('tool.marker'),
+        tool: CanvasDrawTool.marker,
+        currentTool: viewModel.drawTool,
+        icon: Icons.border_color,
+        label: 'Marker',
+        onPressed: viewModel.setDrawTool,
+      ),
+      _DrawToolButton(
+        key: const ValueKey('tool.line'),
+        tool: CanvasDrawTool.line,
+        currentTool: viewModel.drawTool,
+        icon: Icons.show_chart,
+        label: 'Line',
+        onPressed: viewModel.setDrawTool,
+      ),
+      _DrawToolButton(
+        key: const ValueKey('tool.eraser'),
+        tool: CanvasDrawTool.eraser,
+        currentTool: viewModel.drawTool,
+        icon: Icons.auto_fix_normal,
+        label: 'Eraser',
+        onPressed: viewModel.setDrawTool,
+      ),
+      const VerticalDivider(indent: 25, endIndent: 25, width: 20),
+      _ColorPalette(
+        keyPrefix: 'draw.color',
+        colors: viewModel.penColors,
+        selected: viewModel.drawColor,
+        onSelected: viewModel.setDrawColor,
+      ),
+    ];
+  }
+
+  List<Widget> _moveControls() {
+    return [
+      _ActionButton(
+        key: const ValueKey('selection.rotate.ccw'),
+        icon: Icons.rotate_left,
+        label: 'Rotate L',
+        onTap: viewModel.hasSelection
+            ? viewModel.rotateSelectionCounterClockwise
+            : null,
+      ),
+      _ActionButton(
+        key: const ValueKey('selection.rotate.cw'),
+        icon: Icons.rotate_right,
+        label: 'Rotate R',
+        onTap: viewModel.hasSelection
+            ? viewModel.rotateSelectionClockwise
+            : null,
+      ),
+      _ActionButton(
+        key: const ValueKey('selection.flip.vertical'),
+        icon: Icons.flip,
+        label: 'Flip V',
+        onTap: viewModel.hasSelection ? viewModel.flipSelectionVertical : null,
+        quarterTurns: 1,
+      ),
+      _ActionButton(
+        key: const ValueKey('selection.flip.horizontal'),
+        icon: Icons.flip,
+        label: 'Flip H',
+        onTap: viewModel.hasSelection
+            ? viewModel.flipSelectionHorizontal
+            : null,
+      ),
+      _ActionButton(
+        key: const ValueKey('selection.delete'),
+        icon: Icons.delete_outline,
+        label: 'Delete',
+        onTap: viewModel.hasSelection ? viewModel.deleteSelection : null,
+        color: Colors.red,
+      ),
+      _ActionButton(
+        key: const ValueKey('sample.add'),
+        icon: Icons.add_box_outlined,
+        label: 'Add Sample',
+        onTap: viewModel.requestAddSample,
+      ),
+    ];
+  }
 }
 
-final class _MoveControls extends StatelessWidget {
-  const _MoveControls({required this.viewModel});
+final class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({required this.viewModel});
 
   final CanvasExampleViewModel viewModel;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(4),
       child: Row(
         children: [
-          _selectionButton(
-            key: 'selection.rotate.ccw',
-            icon: Icons.rotate_left,
-            tooltip: 'Rotate left',
-            action: viewModel.rotateSelectionCounterClockwise,
+          _SmallModeButton(
+            key: const ValueKey('mode.move'),
+            mode: CanvasInteractionMode.move,
+            currentMode: viewModel.mode,
+            icon: Icons.pan_tool_alt,
+            onTap: viewModel.setInteractionMode,
           ),
-          _selectionButton(
-            key: 'selection.rotate.cw',
-            icon: Icons.rotate_right,
-            tooltip: 'Rotate right',
-            action: viewModel.rotateSelectionClockwise,
+          _SmallModeButton(
+            key: const ValueKey('mode.draw'),
+            mode: CanvasInteractionMode.draw,
+            currentMode: viewModel.mode,
+            icon: Icons.edit,
+            onTap: viewModel.setInteractionMode,
           ),
-          _selectionButton(
-            key: 'selection.flip.vertical',
-            icon: Icons.flip,
-            tooltip: 'Flip vertical',
-            quarterTurns: 1,
-            action: viewModel.flipSelectionVertical,
-          ),
-          _selectionButton(
-            key: 'selection.flip.horizontal',
-            icon: Icons.flip,
-            tooltip: 'Flip horizontal',
-            action: viewModel.flipSelectionHorizontal,
-          ),
-          _selectionButton(
-            key: 'selection.delete',
-            icon: Icons.delete_outline,
-            tooltip: 'Delete selection',
-            action: viewModel.deleteSelection,
-          ),
-          _TextStyleControls(viewModel: viewModel),
-          _addSampleButton(),
         ],
       ),
     );
   }
-
-  VoidCallback? _selectionAction(VoidCallback action) {
-    return viewModel.hasSelection ? action : null;
-  }
-
-  Widget _addSampleButton() {
-    return _IconCommandButton(
-      key: const ValueKey('sample.add'),
-      icon: Icons.add_box_outlined,
-      tooltip: 'Add sample',
-      onPressed: viewModel.requestAddSample,
-    );
-  }
-
-  // Button identity, display, and callback stay explicit because tests and
-  // visual command order depend on the same local declaration.
-  // ignore: number-of-parameters
-  Widget _selectionButton({
-    required String key,
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback action,
-    int quarterTurns = 0,
-  }) {
-    return _IconCommandButton(
-      key: ValueKey(key),
-      icon: icon,
-      tooltip: tooltip,
-      quarterTurns: quarterTurns,
-      onPressed: _selectionAction(action),
-    );
-  }
 }
 
-// Text controls are a separate move-mode group because they are shown only for
-// a selected public text element and mutate text fields, not selection state.
-// ignore: coupling-between-object-classes
-final class _TextStyleControls extends StatelessWidget {
-  const _TextStyleControls({required this.viewModel});
+final class _SmallModeButton extends StatelessWidget {
+  const _SmallModeButton({
+    required this.mode,
+    required this.currentMode,
+    required this.icon,
+    required this.onTap,
+    super.key,
+  });
 
-  final CanvasExampleViewModel viewModel;
+  final CanvasInteractionMode mode;
+  final CanvasInteractionMode currentMode;
+  final IconData icon;
+  final ValueChanged<CanvasInteractionMode> onTap;
 
   @override
   Widget build(BuildContext context) {
-    final text = viewModel.selectedTextElement;
-    if (text == null) {
-      return const SizedBox.shrink();
-    }
+    final isSelected = currentMode == mode;
 
-    return Row(
-      children: [
-        const SizedBox(width: 8),
-        _ToggleCommandButton(
-          key: const ValueKey('text.bold'),
-          icon: Icons.format_bold,
-          tooltip: 'Bold',
-          selected: text.isBold,
-          onPressed: viewModel.toggleSelectedTextBold,
+    return GestureDetector(
+      onTap: () => onTap(mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isSelected
+              ? [const BoxShadow(color: Colors.black12, blurRadius: 4)]
+              : null,
         ),
-        _ToggleCommandButton(
-          key: const ValueKey('text.italic'),
-          icon: Icons.format_italic,
-          tooltip: 'Italic',
-          selected: text.isItalic,
-          onPressed: viewModel.toggleSelectedTextItalic,
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.blue[800] : Colors.grey[600],
         ),
-        _ToggleCommandButton(
-          key: const ValueKey('text.underline'),
-          icon: Icons.format_underline,
-          tooltip: 'Underline',
-          selected: text.isUnderline,
-          onPressed: viewModel.toggleSelectedTextUnderline,
-        ),
-        _textAlignMenu(),
-        _textFontSizeMenu(),
-        _textLineHeightMenu(),
-        _textColorMenu(),
-      ],
-    );
-  }
-
-  Widget _textAlignMenu() {
-    return PopupMenuButton<TextAlign>(
-      key: const ValueKey('text.align.menu'),
-      icon: const Icon(Icons.format_align_left),
-      tooltip: 'Text alignment',
-      onSelected: viewModel.setSelectedTextAlign,
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: TextAlign.left,
-          child: Icon(Icons.format_align_left),
-        ),
-        PopupMenuItem(
-          value: TextAlign.center,
-          child: Icon(Icons.format_align_center),
-        ),
-        PopupMenuItem(
-          value: TextAlign.right,
-          child: Icon(Icons.format_align_right),
-        ),
-      ],
-    );
-  }
-
-  Widget _textFontSizeMenu() {
-    return PopupMenuButton<double>(
-      key: const ValueKey('text.font.size.menu'),
-      icon: const Icon(Icons.format_size),
-      tooltip: 'Font size',
-      onSelected: viewModel.setSelectedTextFontSize,
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: 16, child: Text('16')),
-        PopupMenuItem(value: 20, child: Text('20')),
-        PopupMenuItem(value: 24, child: Text('24')),
-        PopupMenuItem(value: 32, child: Text('32')),
-      ],
-    );
-  }
-
-  Widget _textLineHeightMenu() {
-    return PopupMenuButton<double>(
-      key: const ValueKey('text.line.height.menu'),
-      icon: const Icon(Icons.format_line_spacing),
-      tooltip: 'Line height',
-      onSelected: viewModel.setSelectedTextLineHeight,
-      itemBuilder: (context) => const [
-        PopupMenuItem(value: 1, child: Text('1.0')),
-        PopupMenuItem(value: 1.2, child: Text('1.2')),
-        PopupMenuItem(value: 1.5, child: Text('1.5')),
-        PopupMenuItem(value: 2, child: Text('2.0')),
-      ],
-    );
-  }
-
-  Widget _textColorMenu() {
-    return PopupMenuButton<Color>(
-      key: const ValueKey('text.color.menu'),
-      icon: const Icon(Icons.format_color_text),
-      tooltip: 'Text color',
-      onSelected: viewModel.setSelectedTextColor,
-      itemBuilder: (context) => [
-        for (final color in viewModel.penColors)
-          PopupMenuItem(
-            value: color,
-            child: _ColorMenuItem(color: color),
-          ),
-      ],
-    );
-  }
-}
-
-// Document controls are grouped because grid/background/clear are the global
-// document commands users scan together in the dock.
-// ignore: coupling-between-object-classes
-final class _DocumentControls extends StatelessWidget {
-  const _DocumentControls({required this.viewModel});
-
-  final CanvasExampleViewModel viewModel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _gridToggle(),
-        _gridSizeMenu(),
-        _backgroundColorMenu(),
-        _IconCommandButton(
-          key: const ValueKey('json.export'),
-          icon: Icons.upload_file,
-          tooltip: 'Export JSON',
-          onPressed: () => showCanvasJsonExportDialog(context, viewModel),
-        ),
-        _IconCommandButton(
-          key: const ValueKey('json.import'),
-          icon: Icons.download,
-          tooltip: 'Import JSON',
-          onPressed: () => showCanvasJsonImportDialog(context, viewModel),
-        ),
-        _IconCommandButton(
-          key: const ValueKey('canvas.clear'),
-          icon: Icons.layers_clear,
-          tooltip: 'Clear canvas',
-          onPressed: viewModel.clearCanvas,
-        ),
-      ],
-    );
-  }
-
-  Widget _gridToggle() {
-    return _IconCommandButton(
-      key: const ValueKey('grid.toggle'),
-      icon: viewModel.grid.enabled ? Icons.grid_on : Icons.grid_off,
-      tooltip: 'Toggle grid',
-      onPressed: () =>
-          viewModel.setGridEnabled(enabled: !viewModel.grid.enabled),
-    );
-  }
-
-  Widget _gridSizeMenu() {
-    return PopupMenuButton<double>(
-      key: const ValueKey('grid.size.menu'),
-      icon: const Icon(Icons.apps),
-      tooltip: 'Grid size',
-      onSelected: viewModel.setGridCellSize,
-      itemBuilder: (context) => [
-        for (final size in viewModel.gridSizes)
-          PopupMenuItem(value: size, child: Text(size.toStringAsFixed(0))),
-      ],
-    );
-  }
-
-  Widget _backgroundColorMenu() {
-    return PopupMenuButton<Color>(
-      key: const ValueKey('background.color.menu'),
-      icon: const Icon(Icons.format_color_fill),
-      tooltip: 'Background color',
-      onSelected: viewModel.setBackgroundColor,
-      itemBuilder: (context) => [
-        for (final color in viewModel.backgroundColors)
-          PopupMenuItem(
-            value: color,
-            child: _ColorMenuItem(color: color),
-          ),
-      ],
+      ),
     );
   }
 }
 
 final class _DrawToolButton extends StatelessWidget {
   const _DrawToolButton({
-    required this.icon,
     required this.tool,
-    required this.viewModel,
+    required this.currentTool,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
     super.key,
   });
 
-  final IconData icon;
   final CanvasDrawTool tool;
-  final CanvasExampleViewModel viewModel;
-
-  @override
-  Widget build(BuildContext context) {
-    return _ToggleCommandButton(
-      icon: icon,
-      tooltip: tool.name,
-      selected: viewModel.drawTool == tool,
-      onPressed: () => viewModel.setDrawTool(tool),
-    );
-  }
-}
-
-final class _ToggleCommandButton extends StatelessWidget {
-  const _ToggleCommandButton({
-    required this.icon,
-    required this.tooltip,
-    required this.selected,
-    required this.onPressed,
-    super.key,
-  });
-
+  final CanvasDrawTool currentTool;
   final IconData icon;
-  final String tooltip;
-  final bool selected;
-  final VoidCallback onPressed;
+  final String label;
+  final ValueChanged<CanvasDrawTool> onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton.filledTonal(
-      isSelected: selected,
+    final isSelected = currentTool == tool;
+
+    return IconButton(
       icon: Icon(icon),
-      tooltip: tooltip,
-      onPressed: onPressed,
+      onPressed: () => onPressed(tool),
+      color: isSelected ? Colors.blue : Colors.grey[700],
+      iconSize: 28,
+      tooltip: label,
     );
   }
 }
 
-final class _IconCommandButton extends StatelessWidget {
-  const _IconCommandButton({
+final class _ActionButton extends StatelessWidget {
+  const _ActionButton({
     required this.icon,
-    required this.tooltip,
-    required this.onPressed,
+    required this.label,
+    required this.onTap,
+    this.color,
     this.quarterTurns = 0,
     super.key,
   });
 
   final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
+  final String label;
+  final VoidCallback? onTap;
+  final Color? color;
   final int quarterTurns;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: RotatedBox(quarterTurns: quarterTurns, child: Icon(icon)),
-      tooltip: tooltip,
-      onPressed: onPressed,
+      icon: RotatedBox(
+        quarterTurns: quarterTurns,
+        child: Icon(
+          icon,
+          color: onTap == null ? Colors.grey[300] : (color ?? Colors.grey[800]),
+        ),
+      ),
+      onPressed: onTap,
+      tooltip: label,
+      iconSize: 28,
     );
   }
 }
 
-final class _ColorSwatchButton extends StatelessWidget {
-  const _ColorSwatchButton({
-    required this.color,
-    required this.selected,
-    required this.onPressed,
-    super.key,
-  });
+final class _GridMenu extends StatelessWidget {
+  const _GridMenu({required this.viewModel});
 
-  final Color color;
-  final bool selected;
-  final VoidCallback onPressed;
+  final CanvasExampleViewModel viewModel;
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? Colors.black : Colors.white,
-            width: selected ? 3 : 1,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final gridSizes = viewModel.gridSizes.isEmpty
+        ? [viewModel.grid.cellSize]
+        : viewModel.gridSizes;
+
+    return MenuAnchor(
+      alignmentOffset: const Offset(-240, 0),
+      style: MenuStyle(
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(vertical: 12),
+        ),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        elevation: WidgetStateProperty.all(12),
+      ),
+      builder: (context, controller, child) {
+        return IconButton(
+          key: const ValueKey('grid.menu'),
+          icon: Icon(
+            viewModel.grid.enabled ? Icons.grid_4x4 : Icons.grid_off,
+            color: viewModel.grid.enabled
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+          tooltip: 'Grid Settings',
+          iconSize: 28,
+        );
+      },
+      menuChildren: [
+        SizedBox(
+          width: 340,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer.withValues(
+                          alpha: 0.4,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.grid_on,
+                        size: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Grid Appearance',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Display Grid',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Enable alignment guides',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: viewModel.grid.enabled,
+                      onChanged: (enabled) {
+                        viewModel.setGridEnabled(enabled: enabled);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Cell Size',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<double>(
+                    key: const ValueKey('grid.size.menu'),
+                    showSelectedIcon: false,
+                    segments: gridSizes.map((size) {
+                      return ButtonSegment<double>(
+                        value: size,
+                        label: Text(
+                          size.toInt().toString(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
+                    selected: {viewModel.grid.cellSize},
+                    onSelectionChanged: (selection) {
+                      viewModel.setGridCellSize(selection.first);
+                    },
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.comfortable,
+                      selectedBackgroundColor: colorScheme.primary,
+                      selectedForegroundColor: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
           ),
         ),
-        child: const SizedBox(width: 18, height: 18),
-      ),
-      tooltip: 'Color ${color.toARGB32().toRadixString(16)}',
-      onPressed: onPressed,
-    );
-  }
-}
-
-final class _ColorMenuItem extends StatelessWidget {
-  const _ColorMenuItem({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        DecoratedBox(
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          child: const SizedBox(width: 18, height: 18),
-        ),
-        const SizedBox(width: 8),
-        Text('#${color.toARGB32().toRadixString(16).padLeft(8, '0')}'),
       ],
     );
   }
 }
 
-final _panelDecoration = BoxDecoration(
-  color: Colors.white.withValues(alpha: 0.9),
-  borderRadius: BorderRadius.circular(8),
-  border: Border.all(color: Colors.black12),
-);
+final class _SystemMenu extends StatelessWidget {
+  const _SystemMenu({required this.viewModel});
 
-final _dockDecoration = BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.circular(8),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.15),
-      blurRadius: 18,
-      offset: const Offset(0, 4),
-    ),
-  ],
-);
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return MenuAnchor(
+      alignmentOffset: const Offset(-240, 0),
+      style: MenuStyle(
+        padding: WidgetStateProperty.all(
+          const EdgeInsets.symmetric(vertical: 12),
+        ),
+        shape: WidgetStateProperty.all(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        ),
+        elevation: WidgetStateProperty.all(12),
+      ),
+      builder: (context, controller, child) {
+        return IconButton(
+          key: const ValueKey('system.menu'),
+          icon: Icon(Icons.settings, color: colorScheme.onSurfaceVariant),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+          tooltip: 'System Menu',
+          iconSize: 28,
+        );
+      },
+      menuChildren: [
+        SizedBox(
+          width: 280,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.palette_outlined,
+                      size: 18,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Background',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: viewModel.backgroundColors.map((color) {
+                    final isSelected = viewModel.background.color == color;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        key: ValueKey('background.color.${color.toARGB32()}'),
+                        onTap: () => viewModel.setBackgroundColor(color),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : Colors.black12,
+                              width: isSelected ? 2 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: color.computeLuminance() > 0.5
+                                      ? Colors.black
+                                      : Colors.white,
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const Divider(indent: 16, endIndent: 16),
+              MenuItemButton(
+                key: const ValueKey('json.export'),
+                leadingIcon: const Icon(Icons.download_outlined, size: 20),
+                onPressed: () => showCanvasJsonExportDialog(context, viewModel),
+                child: const Text('Export (JSON)'),
+              ),
+              MenuItemButton(
+                key: const ValueKey('json.import'),
+                leadingIcon: const Icon(Icons.upload_outlined, size: 20),
+                onPressed: () => showCanvasJsonImportDialog(context, viewModel),
+                child: const Text('Import (JSON)'),
+              ),
+              const Divider(indent: 16, endIndent: 16),
+              MenuItemButton(
+                key: const ValueKey('canvas.clear'),
+                leadingIcon: Icon(
+                  Icons.delete_sweep_outlined,
+                  color: colorScheme.error,
+                  size: 20,
+                ),
+                onPressed: viewModel.clearCanvas,
+                child: Text(
+                  'Clear Canvas',
+                  style: TextStyle(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+final class _ColorPalette extends StatelessWidget {
+  const _ColorPalette({
+    required this.keyPrefix,
+    required this.colors,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String keyPrefix;
+  final List<Color> colors;
+  final Color selected;
+  final ValueChanged<Color> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      children: List<Widget>.generate(colors.length, (index) {
+        final color = colors[index];
+
+        return GestureDetector(
+          key: ValueKey('$keyPrefix.${color.toARGB32()}'),
+          onTap: () => onSelected(color),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color == selected ? Colors.black : Colors.black12,
+                width: color == selected ? 3 : 1,
+              ),
+              boxShadow: color == selected
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.4),
+                        blurRadius: 4,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}

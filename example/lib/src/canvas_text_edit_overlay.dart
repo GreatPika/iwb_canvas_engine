@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'canvas_example_view_model.dart';
+
+const Key canvasExampleTextEditDismissOverlayKey = Key(
+  'canvas-example-text-edit-dismiss-overlay',
+);
 
 final class CanvasTextEditOverlay extends StatefulWidget {
   const CanvasTextEditOverlay({
@@ -21,8 +26,7 @@ final class CanvasTextEditOverlay extends StatefulWidget {
 }
 
 // The state keeps the controller, focus node, request-session swap, and
-// positioned panel together so app-owned editor lifecycle is disposed in one
-// place instead of split across indirect owner widgets.
+// positioned editor together so lifecycle and commit ordering remain explicit.
 // ignore: coupling-between-object-classes
 final class _CanvasTextEditOverlayState extends State<CanvasTextEditOverlay> {
   late TextEditingController _controller;
@@ -54,26 +58,77 @@ final class _CanvasTextEditOverlayState extends State<CanvasTextEditOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final element = widget.session.elementSnapshot;
     final bounds = widget.session.boundsWorld;
-    final left = bounds.left - widget.cameraOffset.dx;
-    final top = bounds.top - widget.cameraOffset.dy;
+    final viewPosition = bounds.topLeft - widget.cameraOffset;
+    final textHeight = _measureTextHeight(
+      element: element,
+      text: _controller.text,
+      maxWidth: bounds.width,
+    ).clamp(bounds.height, double.infinity);
 
-    return Positioned(
-      left: left,
-      top: top,
-      child: _TextEditPanel(
-        width: bounds.width.clamp(160, double.infinity).toDouble(),
-        minHeight: bounds.height,
-        controller: _controller,
-        focusNode: _focusNode,
-        onCommit: widget.onCommit,
-        onDismiss: widget.onDismiss,
-      ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            key: canvasExampleTextEditDismissOverlayKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: () => widget.onCommit(_controller.text),
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Positioned(
+          left: viewPosition.dx,
+          top: viewPosition.dy,
+          child: SizedBox(
+            key: const ValueKey('text.edit.bounds'),
+            width: bounds.width,
+            height: textHeight,
+            child: TextField(
+              key: const ValueKey('text.edit.field'),
+              controller: _controller,
+              focusNode: _focusNode,
+              minLines: 1,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              textAlign: element.align,
+              scrollPadding: EdgeInsets.zero,
+              textInputAction: TextInputAction.done,
+              strutStyle: StrutStyle(
+                fontSize: element.fontSize,
+                height: _lineHeightMultiplier(element),
+                forceStrutHeight: true,
+              ),
+              style: TextStyle(
+                fontSize: element.fontSize,
+                color: element.color,
+                fontWeight: element.isBold
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+                fontStyle: element.isItalic
+                    ? FontStyle.italic
+                    : FontStyle.normal,
+                decoration: element.isUnderline
+                    ? TextDecoration.underline
+                    : null,
+                fontFamily: element.fontFamily,
+                height: _lineHeightMultiplier(element),
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   void _installEditorState() {
     _controller = TextEditingController(text: widget.session.initialText);
+    _controller.addListener(_handleTextChanged);
     _focusNode = FocusNode();
   }
 
@@ -86,98 +141,45 @@ final class _CanvasTextEditOverlayState extends State<CanvasTextEditOverlay> {
   }
 
   void _disposeEditorState() {
+    _controller.removeListener(_handleTextChanged);
     _controller.dispose();
     _focusNode.dispose();
   }
-}
 
-// This panel intentionally owns the inline editor controls in one small row so
-// tab order and commit/dismiss affordances are visible at the app UI boundary.
-// ignore: coupling-between-object-classes
-final class _TextEditPanel extends StatelessWidget {
-  const _TextEditPanel({
-    required this.width,
-    required this.minHeight,
-    required this.controller,
-    required this.focusNode,
-    required this.onCommit,
-    required this.onDismiss,
-  });
-
-  final double width;
-  final double minHeight;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final ValueChanged<String> onCommit;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: _editorDecoration,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: width,
-          maxWidth: width,
-          minHeight: minHeight,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _textField()),
-            _commitButton(),
-            _dismissButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _textField() {
-    return TextField(
-      key: const ValueKey('text.edit.field'),
-      controller: controller,
-      focusNode: focusNode,
-      minLines: 1,
-      maxLines: 4,
-      textInputAction: TextInputAction.done,
-      onSubmitted: onCommit,
-      decoration: const InputDecoration(
-        isDense: true,
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.all(10),
-      ),
-    );
-  }
-
-  Widget _commitButton() {
-    return IconButton(
-      key: const ValueKey('text.edit.commit'),
-      icon: const Icon(Icons.check),
-      tooltip: 'Commit text',
-      onPressed: () => onCommit(controller.text),
-    );
-  }
-
-  Widget _dismissButton() {
-    return IconButton(
-      key: const ValueKey('text.edit.dismiss'),
-      icon: const Icon(Icons.close),
-      tooltip: 'Dismiss text edit',
-      onPressed: onDismiss,
-    );
+  void _handleTextChanged() {
+    setState(() {});
   }
 }
 
-final _editorDecoration = BoxDecoration(
-  color: Colors.white,
-  border: Border.all(color: Colors.black54),
-  borderRadius: BorderRadius.circular(4),
-  boxShadow: [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.18),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
+double _measureTextHeight({
+  required CanvasTextElement element,
+  required String text,
+  required double maxWidth,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: text.isEmpty ? ' ' : text,
+      style: TextStyle(
+        color: element.color,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fontWeight: element.isBold ? FontWeight.bold : FontWeight.normal,
+        fontStyle: element.isItalic ? FontStyle.italic : FontStyle.normal,
+        decoration: element.isUnderline
+            ? TextDecoration.underline
+            : TextDecoration.none,
+        height: _lineHeightMultiplier(element),
+      ),
     ),
-  ],
-);
+    textAlign: element.align,
+    textDirection: element.textDirection,
+    maxLines: null,
+  );
+  painter.layout(maxWidth: maxWidth);
+
+  return painter.height;
+}
+
+double? _lineHeightMultiplier(CanvasTextElement element) {
+  return element.lineHeight;
+}

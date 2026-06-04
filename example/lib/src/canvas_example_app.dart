@@ -7,9 +7,15 @@ final class CanvasExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'IWB Canvas Engine Example',
-      home: CanvasExampleScreen(),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'IWB Canvas Engine',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF1565C0),
+        brightness: Brightness.light,
+      ),
+      home: const CanvasExampleScreen(),
     );
   }
 }

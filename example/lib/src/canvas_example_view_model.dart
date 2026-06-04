@@ -32,6 +32,10 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     );
   }
 
+  static const double lineHeightMinMultiplier = 0.8;
+  static const double lineHeightMaxMultiplier = 3.0;
+  static const double defaultLineHeightMultiplier = 1.2;
+
   final CanvasRuntime _runtime;
   final bool _ownsRuntime;
   final VoidCallback? _addSampleCommand;
@@ -265,6 +269,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
           CanvasTextElementUpdate(
             id: text.id,
             fontSize: CanvasFieldSet(fontSize),
+            lineHeight: _lineHeightUpdateForFontSizeChange(text),
           ),
         );
   }
@@ -277,6 +282,18 @@ final class CanvasExampleViewModel extends ChangeNotifier {
           CanvasTextElementUpdate(
             id: text.id,
             lineHeight: CanvasFieldSet(lineHeight),
+          ),
+        );
+  }
+
+  bool setSelectedTextLineHeightMultiplier(double multiplier) {
+    final text = selectedTextElement;
+
+    return text != null &&
+        _updateSelectedText(
+          CanvasTextElementUpdate(
+            id: text.id,
+            lineHeight: CanvasFieldSet(multiplier),
           ),
         );
   }
@@ -294,23 +311,55 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     return _runtime.commands.clearContent(removeUnusedResources: true);
   }
 
+  double lineHeightMultiplierForText(CanvasTextElement text) {
+    final lineHeight = text.lineHeight;
+    if (lineHeight == null) {
+      return defaultLineHeightMultiplier;
+    }
+
+    if (!lineHeight.isFinite || lineHeight <= 0) {
+      return defaultLineHeightMultiplier;
+    }
+
+    return lineHeight;
+  }
+
   bool commitActiveTextEdit(String text) {
     final session = _activeTextEdit;
     if (session == null) {
       return false;
     }
-    final didCommit = _runtime.commands.commitTextEdit(session.requestId, text);
     _activeTextEdit = null;
+    final current = _findTextElement(session.elementId);
+    if (current == null || current.revision != session.editingRevision) {
+      _notifyIfActive();
+
+      return false;
+    }
+    final didCommit = _updateTextEditElement(
+      session: session,
+      text: text,
+      isVisible: true,
+    );
     _notifyIfActive();
 
     return didCommit;
   }
 
   void dismissActiveTextEdit() {
-    if (_activeTextEdit == null) {
+    final session = _activeTextEdit;
+    if (session == null) {
       return;
     }
     _activeTextEdit = null;
+    final current = _findTextElement(session.elementId);
+    if (current != null && current.revision == session.editingRevision) {
+      _updateTextEditElement(
+        session: session,
+        text: session.initialText,
+        isVisible: true,
+      );
+    }
     _notifyIfActive();
   }
 
@@ -389,6 +438,17 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     });
 
     return didUpdate;
+  }
+
+  CanvasFieldUpdate<double?> _lineHeightUpdateForFontSizeChange(
+    CanvasTextElement text,
+  ) {
+    final lineHeight = text.lineHeight;
+    if (lineHeight == null) {
+      return const CanvasFieldUpdate<double?>.absent();
+    }
+
+    return CanvasFieldSet(lineHeightMultiplierForText(text));
   }
 
   Future<void> _loadSampleImage() async {
@@ -518,11 +578,11 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   void _handleContextActionRequested(CanvasContextActionRequested request) {
     _lastContextRequest = request;
-    _activeTextEdit = _textEditSessionFromRequest(request);
+    _activeTextEdit = _beginTextEditSession(request);
     _notifyIfActive();
   }
 
-  CanvasExampleTextEditSession? _textEditSessionFromRequest(
+  CanvasExampleTextEditSession? _beginTextEditSession(
     CanvasContextActionRequested request,
   ) {
     final target = request.target;
@@ -533,14 +593,44 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     if (element is! CanvasTextElement) {
       return null;
     }
+    _runtime.edits.edit((edit) {
+      edit.updateElement(
+        CanvasTextElementUpdate(
+          id: element.id,
+          isVisible: const CanvasFieldSet(false),
+        ),
+      );
+    });
+    final hiddenElement = _findTextElement(element.id);
+    if (hiddenElement == null || hiddenElement.isVisible) {
+      return null;
+    }
 
     return CanvasExampleTextEditSession(
       requestId: request.requestId,
-      elementId: element.id,
-      initialText: element.text,
+      elementSnapshot: element,
       boundsWorld: target.boundsWorld,
-      viewPosition: request.viewPosition,
+      editingRevision: hiddenElement.revision,
     );
+  }
+
+  bool _updateTextEditElement({
+    required CanvasExampleTextEditSession session,
+    required String text,
+    required bool isVisible,
+  }) {
+    var didUpdate = false;
+    _runtime.edits.edit((edit) {
+      didUpdate = edit.updateElement(
+        CanvasTextElementUpdate(
+          id: session.elementId,
+          text: CanvasFieldSet(text),
+          isVisible: CanvasFieldSet(isVisible),
+        ),
+      );
+    });
+
+    return didUpdate;
   }
 
   void _notifyIfActive() {
@@ -553,15 +643,15 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 final class CanvasExampleTextEditSession {
   const CanvasExampleTextEditSession({
     required this.requestId,
-    required this.elementId,
-    required this.initialText,
+    required this.elementSnapshot,
     required this.boundsWorld,
-    required this.viewPosition,
+    required this.editingRevision,
   });
 
   final CanvasInteractionRequestId requestId;
-  final CanvasElementId elementId;
-  final String initialText;
+  final CanvasTextElement elementSnapshot;
   final ui.Rect boundsWorld;
-  final ui.Offset viewPosition;
+  final int editingRevision;
+  CanvasElementId get elementId => elementSnapshot.id;
+  String get initialText => elementSnapshot.text;
 }
