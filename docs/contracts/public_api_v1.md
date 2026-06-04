@@ -1598,7 +1598,7 @@ final class CanvasPointerPolicy {
     doubleTapSlop: 24.0,
     doubleTapMaxDelayMs: 300,
     deferSingleTap: true,
-    dragStartSlop: null,
+    dragStartSlop: 1.0,
   );
 
   const CanvasPointerPolicy._({

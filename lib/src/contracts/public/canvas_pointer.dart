@@ -57,7 +57,7 @@ final class CanvasPointerPolicy {
     this.dragStartSlop,
   });
 
-  static const defaultPolicy = CanvasPointerPolicy._();
+  static const defaultPolicy = CanvasPointerPolicy._(dragStartSlop: 1.0);
   final double tapSlop;
   final double doubleTapSlop;
   final int doubleTapMaxDelayMs;

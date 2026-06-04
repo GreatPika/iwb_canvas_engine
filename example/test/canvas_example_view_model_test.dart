@@ -127,6 +127,7 @@ void _registerDefaultProjectionTest() {
     expect(viewModel.drawTool, CanvasDrawTool.pencil);
     expect(viewModel.drawColor.toARGB32(), 0xFF000000);
     expect(viewModel.pointerPolicy.tapSlop, 16);
+    expect(viewModel.pointerPolicy.dragStartSlop, 1.0);
     expect(viewModel.cameraOffset, Offset.zero);
     expect(viewModel.grid.enabled, isFalse);
     expect(viewModel.background.color.toARGB32(), 0xFFFFFFFF);

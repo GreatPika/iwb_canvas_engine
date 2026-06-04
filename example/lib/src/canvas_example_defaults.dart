@@ -44,6 +44,7 @@ CanvasRuntimeConfig createCanvasExampleRuntimeConfig() {
       tapSlop: 16,
       doubleTapSlop: 32,
       doubleTapMaxDelayMs: 450,
+      dragStartSlop: 1.0,
     ),
   );
 }

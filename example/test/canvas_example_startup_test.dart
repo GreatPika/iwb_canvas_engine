@@ -49,6 +49,7 @@ void _registerRuntimePolicyTests() {
     expect(config.pointerPolicy.tapSlop, 16);
     expect(config.pointerPolicy.doubleTapSlop, 32);
     expect(config.pointerPolicy.doubleTapMaxDelayMs, 450);
+    expect(config.pointerPolicy.dragStartSlop, 1.0);
   });
 
   test('runtime is constructed from public DTOs and exposes initial state', () {
@@ -61,6 +62,7 @@ void _registerRuntimePolicyTests() {
     expect(runtime.state.value.summary.elementCount, 0);
     expect(runtime.state.value.summary.resourceCount, 0);
     expect(runtime.tools.pointerPolicy.tapSlop, 16);
+    expect(runtime.tools.pointerPolicy.dragStartSlop, 1.0);
   });
 }
 
