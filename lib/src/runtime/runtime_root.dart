@@ -1031,11 +1031,18 @@ final class RuntimeRoot
     if (prepareOverride != null) {
       return prepareOverride(input);
     }
+    final transform = _textEditAnchorPreservingTransform(
+      input.targetElementId,
+      input.newText,
+    );
 
     return _editKernel.prepareInteractionCommit(
       (edit) => edit.updateElement(
         CanvasTextElementUpdate(
           id: input.targetElementId,
+          transform: transform == null
+              ? const CanvasFieldUpdate.absent()
+              : CanvasFieldSet(transform),
           text: CanvasFieldSet(input.newText),
         ),
       ),
@@ -1049,6 +1056,75 @@ final class RuntimeRoot
         ),
       ]),
     );
+  }
+
+  CanvasTransform? _textEditAnchorPreservingTransform(
+    CanvasElementId elementId,
+    String newText,
+  ) {
+    final anchorInputs = _textEditAnchorInputsFor(elementId, newText);
+    if (anchorInputs == null) {
+      return null;
+    }
+    final current = anchorInputs.current;
+    final delta = _textEditAnchorWorldDelta(
+      current,
+      anchorInputs.currentLayout,
+      anchorInputs.nextLayout,
+    );
+    if (delta == Offset.zero) {
+      return null;
+    }
+
+    return current.transform.withTranslation(
+      current.transform.translation + delta,
+    );
+  }
+
+  ({
+    FrameElementFacts current,
+    MeasuredTextLayout currentLayout,
+    MeasuredTextLayout nextLayout,
+  })?
+  _textEditAnchorInputsFor(CanvasElementId elementId, String newText) {
+    final current = _frameFactsForElement(elementId);
+    final currentLayout = current?.measuredTextLayout;
+    if (current == null ||
+        current.kind != CanvasElementKind.text ||
+        currentLayout == null ||
+        current.text == newText) {
+      return null;
+    }
+    final nextLayout = _textFrameFactsWithLiveText(
+      current,
+      newText,
+    ).measuredTextLayout;
+    if (nextLayout == null) {
+      return null;
+    }
+
+    return (
+      current: current,
+      currentLayout: currentLayout,
+      nextLayout: nextLayout,
+    );
+  }
+
+  Offset _textEditAnchorWorldDelta(
+    FrameElementFacts current,
+    MeasuredTextLayout currentLayout,
+    MeasuredTextLayout nextLayout,
+  ) {
+    final align = current.textAlign ?? TextAlign.left;
+    final direction = current.textDirection ?? TextDirection.ltr;
+    final oldAnchorWorld = current.transform.applyToPoint(
+      _textEditAnchorLocalFor(currentLayout.paintBoundsLocal, align, direction),
+    );
+    final nextAnchorWorld = current.transform.applyToPoint(
+      _textEditAnchorLocalFor(nextLayout.paintBoundsLocal, align, direction),
+    );
+
+    return oldAnchorWorld - nextAnchorWorld;
   }
 
   // Surface interaction lifecycle.
@@ -2240,6 +2316,39 @@ void _validateTextEditCommandInput(
     text: CanvasFieldSet(newText),
   );
 }
+
+Offset _textEditAnchorLocalFor(
+  Rect bounds,
+  TextAlign align,
+  TextDirection direction,
+) {
+  return switch (_resolvedHorizontalTextAnchor(align, direction)) {
+    _TextEditHorizontalAnchor.left => Offset(bounds.left, bounds.center.dy),
+    _TextEditHorizontalAnchor.center => bounds.center,
+    _TextEditHorizontalAnchor.right => Offset(bounds.right, bounds.center.dy),
+  };
+}
+
+_TextEditHorizontalAnchor _resolvedHorizontalTextAnchor(
+  TextAlign align,
+  TextDirection direction,
+) {
+  return switch (align) {
+    TextAlign.left => _TextEditHorizontalAnchor.left,
+    TextAlign.right => _TextEditHorizontalAnchor.right,
+    TextAlign.center => _TextEditHorizontalAnchor.center,
+    TextAlign.justify || TextAlign.start => switch (direction) {
+      TextDirection.ltr => _TextEditHorizontalAnchor.left,
+      TextDirection.rtl => _TextEditHorizontalAnchor.right,
+    },
+    TextAlign.end => switch (direction) {
+      TextDirection.ltr => _TextEditHorizontalAnchor.right,
+      TextDirection.rtl => _TextEditHorizontalAnchor.left,
+    },
+  };
+}
+
+enum _TextEditHorizontalAnchor { left, center, right }
 
 CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
   return CanvasTransform.translation(

@@ -16,6 +16,7 @@ void main() {
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
   _testSessionCommitDelegatesToCommandPath();
+  _testCommitPreservesTextAlignmentAnchor();
   _testDirectCommandCommitClearsActiveSession();
   _testSessionNoOpCommitUsesCommandPath();
   _testCandidateStateReusedAndPrunedAfterCommit();
@@ -211,6 +212,16 @@ void _testSessionCommitDelegatesToCommandPath() {
   });
 }
 
+void _testCommitPreservesTextAlignmentAnchor() {
+  test('commit preserves the aligned text anchor when width changes', () async {
+    await _expectCommitPreservesAnchorFor(TextAlign.left);
+    await _expectCommitPreservesAnchorFor(TextAlign.right);
+    await _expectCommitPreservesAnchorFor(TextAlign.center);
+
+    expect(TextAlign.values, contains(TextAlign.center));
+  });
+}
+
 void _testDirectCommandCommitClearsActiveSession() {
   test('direct command commit clears matching active session', () async {
     final scenario = _Scenario();
@@ -236,6 +247,43 @@ void _testDirectCommandCommitClearsActiveSession() {
       await scenario.dispose();
     }
   });
+}
+
+Future<void> _expectCommitPreservesAnchorFor(TextAlign align) async {
+  final scenario = _Scenario(document: _document(align: align, maxWidth: null));
+  try {
+    final request = await scenario.issueTextRequest();
+    final session = _expectSession(
+      scenario.root.textEditing.startFromContextAction(request),
+    );
+    final beforeAnchor = _anchorValueFor(
+      session.geometry.editBoundsWorld,
+      align,
+    );
+
+    session.updateText('hello with more text');
+    expect(session.commit(timestampMs: 43), isTrue);
+
+    final nextRequest = await scenario.issueTextRequest();
+    final nextSession = _expectSession(
+      scenario.root.textEditing.sessionCandidateFor(nextRequest),
+    );
+    final afterAnchor = _anchorValueFor(
+      nextSession.geometry.editBoundsWorld,
+      align,
+    );
+    expect(afterAnchor, moreOrLessEquals(beforeAnchor, epsilon: 0.001));
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+double _anchorValueFor(Rect bounds, TextAlign align) {
+  return switch (align) {
+    TextAlign.left || TextAlign.start || TextAlign.justify => bounds.left,
+    TextAlign.right || TextAlign.end => bounds.right,
+    TextAlign.center => bounds.center.dx,
+  };
 }
 
 void _testSessionNoOpCommitUsesCommandPath() {
@@ -659,9 +707,9 @@ void _expectRequestFactsLive(
 }
 
 final class _Scenario {
-  _Scenario()
+  _Scenario({CanvasDocument? document})
     : root = RuntimeRoot(
-        initialDocument: _document(),
+        initialDocument: document ?? _document(),
         config: const CanvasRuntimeConfig(),
       ) {
     actionSubscription = root.actions.listen(actions.add);
@@ -738,7 +786,10 @@ String _textValue(RuntimeRoot root) {
   return text.text;
 }
 
-CanvasDocument _document() {
+CanvasDocument _document({
+  TextAlign align = TextAlign.left,
+  double? maxWidth = 120,
+}) {
   return CanvasDocument(
     layers: [
       CanvasLayer(
@@ -750,7 +801,8 @@ CanvasDocument _document() {
             fontSize: 16,
             color: const Color(0xFF111111),
             textDirection: TextDirection.ltr,
-            maxWidth: 120,
+            align: align,
+            maxWidth: maxWidth,
           ),
           CanvasRectElement(
             id: _rectId,
