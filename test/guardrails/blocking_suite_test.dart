@@ -162,6 +162,9 @@ void main() {
         'frame.no_global_scene_sort',
         'frame.paint_plan_excludes_preview_delta',
         'frame.paint_plan_excludes_selection_state',
+        'text.single_measured_layout_source',
+        'text.no_overlay_textpainter_measurement',
+        'surface.editable_text_surface_only',
         'cache.keys_use_next_revisions_only',
         'cache.background_grid_not_element_visual',
         'cache.hot_caches_have_capacity_eviction',
@@ -429,6 +432,30 @@ const _runnerStructuralScanCases = [
       'test/surface/interactive_false_state_isolation_test.dart',
     ],
     violationPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+  ),
+  _StructuralScanCase(
+    id: 'text.single_measured_layout_source',
+    proofPaths: [
+      'test/frame/measured_text_layout_test.dart',
+      'test/guardrails/text_surface_guardrail_checks_test.dart',
+    ],
+    violationPath: 'lib/src/geometry/geometry_policy.dart',
+  ),
+  _StructuralScanCase(
+    id: 'text.no_overlay_textpainter_measurement',
+    proofPaths: [
+      'test/surface/text_editing_overlay_test.dart',
+      'test/guardrails/text_surface_guardrail_checks_test.dart',
+    ],
+    violationPath: 'example/lib/src/canvas_text_edit_overlay.dart',
+  ),
+  _StructuralScanCase(
+    id: 'surface.editable_text_surface_only',
+    proofPaths: [
+      'test/surface/text_editing_overlay_test.dart',
+      'test/guardrails/text_surface_guardrail_checks_test.dart',
+    ],
+    violationPath: 'lib/src/runtime/runtime_root.dart',
   ),
   _StructuralScanCase(
     id: 'geometry.no_legacy_scene_order',

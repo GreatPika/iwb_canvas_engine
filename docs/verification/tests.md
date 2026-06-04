@@ -149,6 +149,8 @@ Required tests:
 - `test.interaction.pointer_sample_normalizer`
 - `test.interaction.interaction_read_port`
 - `test.interaction.context_action_request`
+- `test.runtime.text_editing_port`
+- `test.surface.text_editing_overlay`
 - `test.surface.interactive_false_pointer_routing`
 - `test.surface.interactive_false_active_session_cancel`
 - `test.surface.interactive_false_pending_line_preserved`
@@ -198,6 +200,8 @@ Required tests:
 - `test.surface.selection_chrome_topmost_paint`
 - `test.surface.selection_chrome_hit_target_boundary`
 - `test.frame.paint_plan_write_all_or_nothing`
+- `test.frame.measured_text_layout`
+- `test.guardrails.text_surface_guardrail_checks`
 - `test.guardrails.geometry_no_legacy_scene_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
 - `test.guardrails.spatial_no_full_clone_ordinary_edit`
@@ -310,6 +314,8 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/interaction/pointer_sample_normalizer_test.dart`
 - `test/interaction/interaction_read_port_test.dart`
 - `test/interaction/context_action_request_test.dart`
+- `test/runtime/text_editing_port_test.dart`
+- `test/surface/text_editing_overlay_test.dart`
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
@@ -363,6 +369,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/paint_asset_binding_service_test.dart`
 - `test/frame/repaint_bus_output_test.dart`
 - `test/frame/static_background_plan_test.dart`
+- `test/frame/measured_text_layout_test.dart`
 - `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
 - `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test/frame/paint_plan_excludes_preview_delta_test.dart`
@@ -395,6 +402,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`
 - `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`
 - `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`
+- `test/guardrails/text_surface_guardrail_checks_test.dart`
 - `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
 
 ### Behavioral Coverage Notes
@@ -416,6 +424,21 @@ owned by later interaction phases.
 at public DTO construction and schema decode: non-invertible element
 transforms reject with `fieldMustBeInvertible`, while `CanvasTransform` remains
 the general affine value type.
+
+`test.frame.measured_text_layout` covers the single measured text layout source:
+frame-owned `FrameTextLayoutMeasurer` produces the local text bounds that
+geometry, spatial membership, frame painting, and live edit geometry consume.
+
+`test.runtime.text_editing_port` and `test.surface.text_editing_overlay` cover
+runtime-owned active text editing sessions, stale/read-only admission, guarded
+commit/dismiss behavior, public custom-overlay replacement, multiline growth
+from session geometry, and paint suppression without document visibility
+mutation.
+
+`test.guardrails.text_surface_guardrail_checks` proves the runner-backed
+structural checks for formula-based text bounds, duplicate overlay
+`TextPainter` measurement, and `EditableText` imports outside the surface
+production owner.
 
 `test.edit.field_update_admission_effects` covers field-update admission and
 effects: nullable clears, dynamic non-nullable clear rejection,

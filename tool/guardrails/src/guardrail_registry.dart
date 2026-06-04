@@ -291,6 +291,21 @@ const _blockingEntries = [
     suites: {'blocking', 'frame'},
   ),
   GuardrailEntry(
+    id: 'text.single_measured_layout_source',
+    suites: {'blocking', 'text', 'frame', 'geometry'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'text.no_overlay_textpainter_measurement',
+    suites: {'blocking', 'text', 'surface'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
+    id: 'surface.editable_text_surface_only',
+    suites: {'blocking', 'surface'},
+    requiresRunnerStructuralProof: true,
+  ),
+  GuardrailEntry(
     id: 'cache.keys_use_next_revisions_only',
     suites: {'blocking', 'cache'},
   ),

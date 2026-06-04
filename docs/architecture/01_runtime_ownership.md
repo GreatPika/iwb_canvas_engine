@@ -61,6 +61,7 @@ Canvas engine state
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
+| CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | владеть app domain assets, resolved image references или committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
@@ -182,6 +183,13 @@ delegating accepted mutations to `EditKernel`. The registry is not an active
 text-input session, not a context menu or app overlay state owner, and not
 `CanvasPreviewState`.
 
+`CanvasTextEditingPort` is the runtime-owned active inline text editing
+boundary. It admits only current text content-action requests, exposes one
+`ValueListenable<CanvasTextEditSession?>`, derives live session geometry from
+the frame-measured text layout source, and commits through the guarded command
+path. It does not own Flutter `EditableText`, app decoration, context menus, or
+visibility hiding; active paint suppression is frame output behavior.
+
 Composition root:
 
 ```text
@@ -194,6 +202,7 @@ RuntimeRoot
   │  └─ PointerToolCleanupCoordinator (internal interaction collaborator)
   ├─ InteractionReadPort
   ├─ InteractionRequestRegistry
+  ├─ CanvasTextEditingPort
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel
   ├─ ResourceKernel

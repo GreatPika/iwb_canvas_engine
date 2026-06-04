@@ -15,6 +15,7 @@ import 'public_api_guardrail_checks.dart';
 import 'selection_boundary_checks.dart';
 import 'selection_move_guardrail_suite.dart';
 import 'store_projection_checks.dart';
+import 'text_surface_guardrail_checks.dart';
 
 typedef GuardrailProofRunner =
     Future<int> Function(String guardrailId, String path);
@@ -364,6 +365,18 @@ const _testProofPaths = {
   'frame.paint_plan_excludes_selection_state': [
     'test/frame/paint_plan_excludes_selection_state_test.dart',
   ],
+  textSingleMeasuredLayoutSourceGuardrailId: [
+    'test/frame/measured_text_layout_test.dart',
+    'test/guardrails/text_surface_guardrail_checks_test.dart',
+  ],
+  textNoOverlayTextPainterMeasurementGuardrailId: [
+    'test/surface/text_editing_overlay_test.dart',
+    'test/guardrails/text_surface_guardrail_checks_test.dart',
+  ],
+  surfaceEditableTextSurfaceOnlyGuardrailId: [
+    'test/surface/text_editing_overlay_test.dart',
+    'test/guardrails/text_surface_guardrail_checks_test.dart',
+  ],
   'cache.keys_use_next_revisions_only': [
     'test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart',
   ],
@@ -429,6 +442,11 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
   framePaintPlanExcludesPreviewGuardrailId: checkPaintPlanExcludesPreviewDelta,
   framePaintPlanExcludesSelectionGuardrailId:
       checkPaintPlanExcludesSelectionState,
+  textSingleMeasuredLayoutSourceGuardrailId:
+      checkTextSingleMeasuredLayoutSource,
+  textNoOverlayTextPainterMeasurementGuardrailId:
+      checkNoOverlayTextPainterMeasurement,
+  surfaceEditableTextSurfaceOnlyGuardrailId: checkEditableTextSurfaceOnly,
   cacheKeysUseNextRevisionsGuardrailId: checkCacheKeysUseNextRevisionsOnly,
   cacheBackgroundGridGuardrailId: checkCacheBackgroundGridNotElementVisual,
   cacheHotCachesCapacityGuardrailId: checkCacheHotCachesHaveCapacityEviction,
@@ -487,6 +505,12 @@ const _structuralDescriptions = {
       'ordinary paint-plan preview exclusion check',
   framePaintPlanExcludesSelectionGuardrailId:
       'ordinary paint-plan selection exclusion check',
+  textSingleMeasuredLayoutSourceGuardrailId:
+      'single measured text layout source structural check',
+  textNoOverlayTextPainterMeasurementGuardrailId:
+      'surface/example overlay TextPainter measurement exclusion check',
+  surfaceEditableTextSurfaceOnlyGuardrailId:
+      'EditableText production owner boundary check',
   cacheKeysUseNextRevisionsGuardrailId:
       'frame cache key legacy snapshot-shape check',
   cacheBackgroundGridGuardrailId:

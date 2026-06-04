@@ -420,6 +420,8 @@ String _guardRejectedBranchPrepareFixture(String source) {
   return source.replaceFirst(
     '''
 if (guard.kind != TextEditGuardDecisionKind.accepted) {
+      _textEditingPort.clearConsumedRequest(requestId);
+
       return false;
     }
 ''',
@@ -469,6 +471,13 @@ String _deliverBeforeConsumeFixture(String source) {
   return source.replaceFirst(
     '''
 _interactionEngine.consumeTextEditRequest(requestId);
+    final didClearTextEditSuppression = _textEditingPort.clearAcceptedRequest(
+      requestId,
+      publishState: false,
+    );
+    if (didClearTextEditSuppression) {
+      _markTextEditInteractionChanged();
+    }
     _deliverEditCommitResult(applyResult);
 ''',
     '''
@@ -489,6 +498,13 @@ String _consumeUsesWrongRequestIdFixture(String source) {
   return source.replaceFirst(
     '''
 _interactionEngine.consumeTextEditRequest(requestId);
+    final didClearTextEditSuppression = _textEditingPort.clearAcceptedRequest(
+      requestId,
+      publishState: false,
+    );
+    if (didClearTextEditSuppression) {
+      _markTextEditInteractionChanged();
+    }
     _deliverEditCommitResult(applyResult);
 ''',
     '''

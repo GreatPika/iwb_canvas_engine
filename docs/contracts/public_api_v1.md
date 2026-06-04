@@ -47,6 +47,9 @@ Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
+- `test.runtime.text_editing_port`
+- `test.surface.text_editing_overlay`
+- `test.guardrails.text_surface_guardrail_checks`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.interaction_settings_state`
@@ -71,6 +74,8 @@ Guardrails:
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
 - `interaction.text_edit_stale_commit_guard`
+- `text.no_overlay_textpainter_measurement`
+- `surface.editable_text_surface_only`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
 - no legacy public API shape
@@ -2364,32 +2369,152 @@ Context-action and text editing model:
 - content-element targets carry an immutable public CanvasElement snapshot and
   boundsWorld;
 - empty-canvas targets carry no element snapshot;
-- application decides whether to display a context menu first or immediately
-  show a Flutter text editor overlay when the content target snapshot is a
-  CanvasTextElement;
-- application may visually cover or hide the text element in app-owned overlay
-  UI, but must not mutate the target element to hide it as part of the
-  request-originated edit flow because changing the target elementRevision makes
-  the issued request stale;
+- application decides whether to display a context menu first, call
+  CanvasRuntime.textEditing.startFromContextAction(request), or mount the
+  official CanvasTextEditingOverlay with inlineEditOnDoubleTap enabled;
+- CanvasRuntime owns one active CanvasTextEditSession through
+  CanvasTextEditingPort.activeSession; starting a text session consumes only
+  current text content-target requests and returns null for empty-canvas,
+  non-text, stale, family-mismatched, read-only, unknown, or already-consumed
+  requests;
+- active editing suppresses the original frame text paint through frame output
+  and must not mutate CanvasTextElement.isVisible, remove the element from hit
+  or context membership, or change document visibility as a hide/show bridge;
+- CanvasTextEditSession.updateText updates live session text and live measured
+  geometry without committing document state; commit() delegates to the guarded
+  text command path and dismiss() exits without document or action effects;
 - application commits request-originated text changes through
-  CanvasCommandPort.commitTextEdit(requestId, newText);
-- until P12 creates `InteractionRequestRegistry`, every commitTextEdit request
-  id is unknown and returns false without side effects;
-- after P12, request facts are live and consumed/removed once rather than kept
-  as durable retired registry state; unknown and already-consumed ids are
-  no-effect false results;
+  CanvasCommandPort.commitTextEdit(requestId, newText) or the active session
+  commit() helper;
+- request facts are live and consumed/removed once rather than kept as durable
+  retired registry state; unknown and already-consumed ids are no-effect false
+  results;
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;
 - documentRevision is emitted as an observation and diagnostics fact, not a
   DiagnosticsHub write and not a stale-rejection guard; unrelated document
   edits do not reject a still-current text edit;
-- engine does not store active text-input session;
-- context menus, editor overlay lifetime, IME, focus, accessibility, text
-  selection, and hide/show policy are application responsibilities;
+- CanvasTextEditingOverlay is a public Flutter helper owned by surface; it uses
+  EditableText, consumes CanvasTextEditingPort.activeSession, supports
+  configurable auto-start, max-height scroll, cursor/selection hooks, escape
+  dismissal, focus-loss commit, and multiline growth from session geometry;
+- custom overlays may replace CanvasTextEditingOverlay using only
+  CanvasTextEditingPort.activeSession plus session geometry/style/liveText
+  without importing src/**, recomputing text bounds, or mutating visibility;
+- context menus, app-specific editor decoration, focus policy choices,
+  accessibility presentation, and text selection controls remain application
+  responsibilities;
 - loadDocument success changes controllerEpoch, which makes existing
   interaction request ids stale; after runtime disposal, commitTextEdit follows
   the existing mutating public operation rule and throws
   StateError('CanvasRuntime is disposed.').
+```
+
+Text editing public surface:
+
+```dart
+final class CanvasTextEditGeometry {
+  const CanvasTextEditGeometry({
+    required this.paintBoundsWorld,
+    required this.editBoundsWorld,
+    required this.transform,
+    required this.maxWidth,
+    this.editBoundsLocal,
+  });
+
+  final Rect paintBoundsWorld;
+  final Rect editBoundsWorld;
+  final CanvasTransform transform;
+  final double? maxWidth;
+  final Rect? editBoundsLocal;
+}
+
+final class CanvasTextEditStyle {
+  const CanvasTextEditStyle({
+    required this.fontSize,
+    required this.fontFamily,
+    required this.isBold,
+    required this.isItalic,
+    required this.isUnderline,
+    required this.color,
+    required this.textAlign,
+    required this.textDirection,
+    required this.lineHeight,
+  });
+
+  final double fontSize;
+  final String? fontFamily;
+  final bool isBold;
+  final bool isItalic;
+  final bool isUnderline;
+  final Color color;
+  final TextAlign textAlign;
+  final TextDirection textDirection;
+  final double? lineHeight;
+}
+
+final class CanvasTextEditSession {
+  final CanvasElementId elementId;
+  final CanvasInteractionRequestId requestId;
+  final int documentRevision;
+  final int elementRevision;
+  final int generation;
+  final String initialText;
+  String get liveText;
+  CanvasTextEditGeometry get geometry;
+  CanvasTextEditStyle get style;
+  bool get isActive;
+  bool get isStale;
+
+  void updateText(String text);
+  bool commit({int? timestampMs});
+  void dismiss();
+}
+
+abstract interface class CanvasTextEditingPort {
+  ValueListenable<CanvasTextEditSession?> get activeSession;
+  bool get readOnly;
+
+  CanvasTextEditSession? sessionCandidateFor(
+    CanvasContextActionRequested request,
+  );
+  CanvasTextEditSession? start(CanvasTextEditSession session);
+  CanvasTextEditSession? startFromContextAction(
+    CanvasContextActionRequested request,
+  );
+  void setReadOnly(bool value);
+  void dismissActive();
+}
+
+final class CanvasTextEditingOverlay extends StatefulWidget {
+  const CanvasTextEditingOverlay({
+    required this.runtime,
+    this.inlineEditOnDoubleTap = false,
+    this.maxEditorHeight,
+    this.cursorColor = const Color(0xFF1565C0),
+    this.selectionColor = const Color(0x331565C0),
+    this.backgroundCursorColor = const Color(0x00000000),
+    this.selectionControls,
+    this.autofocus = true,
+    this.commitOnFocusLoss = true,
+    this.dismissOnEscape = true,
+    super.key,
+  });
+
+  final CanvasRuntime runtime;
+  final bool inlineEditOnDoubleTap;
+  final double? maxEditorHeight;
+  final Color cursorColor;
+  final Color selectionColor;
+  final Color backgroundCursorColor;
+  final TextSelectionControls? selectionControls;
+  final bool autofocus;
+  final bool commitOnFocusLoss;
+  final bool dismissOnEscape;
+}
+
+// CanvasRuntime exposes:
+// CanvasTextEditingPort get textEditing;
 ```
 
 ### 4.20 Move commit resolver

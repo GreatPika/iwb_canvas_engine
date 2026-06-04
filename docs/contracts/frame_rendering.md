@@ -46,6 +46,8 @@ Required tests:
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.paint_plan_excludes_selection_state`
+- `test.frame.measured_text_layout`
+- `test.guardrails.text_surface_guardrail_checks`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.api_contract.preview_state_sealed_union`
@@ -57,6 +59,8 @@ Guardrails:
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
+- `text.single_measured_layout_source`
+- `text.no_overlay_textpainter_measurement`
 - `cache.background_grid_not_element_visual`
 Do not assume:
 - no live runtime reads in painters
@@ -138,6 +142,15 @@ Rules:
 - background/grid document changes use internal backgroundRevision/gridRevision
   facts and captured grid style values where they affect static background
   output, and must not invalidate ordinary committed element paint plans.
+- `FrameTextLayoutMeasurer` is the single TextPainter owner for committed and
+  live text layout measurement. It produces immutable `MeasuredTextLayout`
+  bounds for paint, hit, selection, edit, and context geometry, and frame code
+  hands those metrics to geometry/spatial/frame consumers instead of allowing
+  downstream formula bounds or duplicate overlay measurement.
+- active inline text editing suppresses matching original text records and
+  selection decoration in frame output using runtime-owned active session facts.
+  Suppression must not mutate `CanvasTextElement.isVisible`, remove the element
+  from hit/context membership, or change committed document state.
 ```
 
 Accepted internal split:

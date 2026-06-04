@@ -9,6 +9,7 @@ void main() {
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
   _testApiBridgeAndPassiveSurfaceAllowances();
+  _testSurfaceFacadeAllowances();
   _testSurfaceReservedRuntimeBoundaries();
   _testApiContractWrapperExports();
   _testRetiredFlutterBridgeOwnerCannotBeImported();
@@ -112,19 +113,41 @@ void _testApiBridgeAndPassiveSurfaceAllowances() {
     );
     expect(
       checkCoreBoundaryFile(
-        path: 'lib/src/surface/canvas_surface_widget.dart',
-        content: "import '../api/canvas_runtime.dart';\n",
-      ),
-      isEmpty,
-    );
-    expect(
-      checkCoreBoundaryFile(
         path: 'lib/src/surface/bad_runtime_import.dart',
         content: "import '../runtime/runtime_root.dart';\n",
       ),
       contains(isA<GuardrailViolation>()),
     );
   });
+}
+
+void _testSurfaceFacadeAllowances() {
+  test(
+    'surface facade exports and runtime constructor types are allowlisted',
+    () {
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/api/canvas_surface.dart',
+          content: "export '../surface/text_editing_overlay.dart';\n",
+        ),
+        isEmpty,
+      );
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/surface/canvas_surface_widget.dart',
+          content: "import '../api/canvas_runtime.dart';\n",
+        ),
+        isEmpty,
+      );
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/surface/text_editing_overlay.dart',
+          content: "import '../api/canvas_runtime.dart';\n",
+        ),
+        isEmpty,
+      );
+    },
+  );
 }
 
 void _testSurfaceReservedRuntimeBoundaries() {

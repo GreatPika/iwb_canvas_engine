@@ -376,9 +376,10 @@ before it resolves the current target.
 
 Content-element targets carry an immutable public `CanvasElement` snapshot and
 `boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is
-an application-owned choice after delivery: the application may open a context
-menu first or immediately show a text editor when the content target snapshot
-is a `CanvasTextElement`.
+a separate runtime text-editing decision after delivery: the application may
+open a context menu first, call `CanvasRuntime.textEditing.startFromContextAction`,
+or mount `CanvasTextEditingOverlay` with inline auto-start when the content
+target snapshot is a `CanvasTextElement`.
 
 Context request emission records a live issued request in
 `InteractionRequestRegistry` with a generated `CanvasInteractionRequestId`,
@@ -394,9 +395,12 @@ is current and live, the request target is a text content element, and
 controllerEpoch, element generation, elementRevision, and element family remain
 current.
 
-The registry is not an active text-input session and not CanvasPreviewState.
-The application owns context menus, the Flutter text editor overlay, IME,
-focus, accessibility, text selection, hide/show policy, and editor lifetime.
+The registry is not itself an active text-input session and not
+CanvasPreviewState. `CanvasTextEditingPort` owns the single active text session
+value and consumes registry facts only through the guarded request boundary.
+The application owns context menus, optional custom editor decoration, IME
+presentation, focus policy choices, accessibility presentation, and text
+selection controls.
 
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.

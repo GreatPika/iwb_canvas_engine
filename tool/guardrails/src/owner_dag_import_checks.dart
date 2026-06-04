@@ -256,7 +256,8 @@ bool _isAcyclicFacadeWrapperExport(OwnerEdge edge) {
   return edge.source == apiOwner &&
       edge.target == surfaceOwner &&
       edge.sourcePath == 'lib/src/api/canvas_surface.dart' &&
-      edge.targetPath == 'lib/src/surface/canvas_surface_widget.dart' &&
+      (edge.targetPath == 'lib/src/surface/canvas_surface_widget.dart' ||
+          edge.targetPath == 'lib/src/surface/text_editing_overlay.dart') &&
       edge.directiveKinds.length == 1 &&
       edge.directiveKinds.contains('export');
 }
@@ -391,6 +392,13 @@ const ownerDagAllowedEdges = [
   ),
   OwnerEdge(
     source: apiOwner,
+    target: surfaceOwner,
+    sourcePath: 'lib/src/api/canvas_surface.dart',
+    targetPath: 'lib/src/surface/text_editing_overlay.dart',
+    directiveKinds: {'export'},
+  ),
+  OwnerEdge(
+    source: apiOwner,
     target: codecOwner,
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
@@ -422,6 +430,12 @@ const ownerDagAllowedEdges = [
     targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
   ),
   OwnerEdge(source: runtimeOwner, target: editOwner),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: spatialOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
+  ),
   OwnerEdge(
     source: runtimeOwner,
     target: spatialOwner,
@@ -480,6 +494,12 @@ const ownerDagAllowedEdges = [
     source: runtimeOwner,
     target: frameOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/frame/frame_text_layout_measurer.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: frameOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/frame/captured_frame.dart',
   ),
   OwnerEdge(
@@ -513,6 +533,12 @@ const ownerDagAllowedEdges = [
     target: interactionOwner,
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_read_port.dart',
+  ),
+  OwnerEdge(
+    source: runtimeOwner,
+    target: interactionOwner,
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_request_registry.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,
@@ -668,6 +694,12 @@ const ownerDagAllowedEdges = [
     target: apiOwner,
     sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
     targetPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+  ),
+  OwnerEdge(
+    source: surfaceOwner,
+    target: apiOwner,
+    sourcePath: 'lib/src/surface/text_editing_overlay.dart',
+    targetPath: 'lib/src/api/canvas_runtime.dart',
   ),
   OwnerEdge(
     source: surfaceOwner,

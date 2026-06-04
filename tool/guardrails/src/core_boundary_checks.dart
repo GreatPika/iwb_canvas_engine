@@ -537,7 +537,8 @@ List<GuardrailViolation> _checkApiFacadeExport(String path, String uri) {
   }
 
   if (path == 'lib/src/api/canvas_surface.dart' &&
-      target == 'lib/src/surface/canvas_surface_widget.dart') {
+      (target == 'lib/src/surface/canvas_surface_widget.dart' ||
+          target == 'lib/src/surface/text_editing_overlay.dart')) {
     return const [];
   }
 
@@ -1061,13 +1062,19 @@ bool _isAllowedBoundaryImport(String path, String target) {
   }
 
   if (path == 'lib/src/api/canvas_surface.dart' &&
-      target == 'lib/src/surface/canvas_surface_widget.dart') {
+      (target == 'lib/src/surface/canvas_surface_widget.dart' ||
+          target == 'lib/src/surface/text_editing_overlay.dart')) {
     return true;
   }
 
   if (path == 'lib/src/surface/canvas_surface_widget.dart' &&
       (target == 'lib/src/api/canvas_runtime.dart' ||
           target == 'lib/src/api/canvas_runtime_surface_bridge.dart')) {
+    return true;
+  }
+
+  if (path == 'lib/src/surface/text_editing_overlay.dart' &&
+      target == 'lib/src/api/canvas_runtime.dart') {
     return true;
   }
 

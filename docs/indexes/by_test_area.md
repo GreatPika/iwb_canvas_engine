@@ -203,6 +203,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
+## test.frame.measured_text_layout
+
+- Sections: `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_23_tests`
+
 ## test.frame.paint_plan_excludes_preview_delta
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
@@ -310,6 +314,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.guardrails.store_projection_checks
 
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.guardrails.text_surface_guardrail_checks
+
+- Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_23_tests`
 
 ## test.interaction.commands_emit_user_actions
 
@@ -431,6 +439,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_11_edit_kernel`, `section_23_tests`
 
+## test.runtime.text_editing_port
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
 ## test.selection.runtime_owner_separation
 
 - Sections: `section_02_architecture_model`, `section_10_runtime_data_model`
@@ -528,6 +540,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.surface.surface_resource_session_lifecycle
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.surface.text_editing_overlay
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 

@@ -279,6 +279,13 @@ const _bridgeFixtures = [
   ),
   _OwnerDagFixture(
     sourceOwner: 'api',
+    targetOwner: 'surface',
+    sourcePath: 'lib/src/api/canvas_surface.dart',
+    targetPath: 'lib/src/surface/text_editing_overlay.dart',
+    directiveKind: 'export',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'api',
     targetOwner: 'codec',
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
@@ -296,6 +303,13 @@ const _bridgeFixtures = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/geometry/spatial_kernel.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -391,6 +405,13 @@ const _bridgeFixtures = [
   ),
   _OwnerDagFixture(
     sourceOwner: 'runtime',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/frame/frame_text_layout_measurer.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_engine.dart',
@@ -415,6 +436,13 @@ const _bridgeFixtures = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_runtime_intents.dart',
+    directiveKind: 'import',
+  ),
+  _OwnerDagFixture(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_request_registry.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -543,6 +571,13 @@ const _bridgeFixtures = [
     targetPath: 'lib/src/resources/surface_resource_session.dart',
     directiveKind: 'import',
   ),
+  _OwnerDagFixture(
+    sourceOwner: 'surface',
+    targetOwner: 'api',
+    sourcePath: 'lib/src/surface/text_editing_overlay.dart',
+    targetPath: 'lib/src/api/canvas_runtime.dart',
+    directiveKind: 'import',
+  ),
 ];
 
 const _expectedAllowedOwnerEdges = [
@@ -607,6 +642,13 @@ const _expectedAllowedOwnerEdges = [
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'api',
+    targetOwner: 'surface',
+    sourcePath: 'lib/src/api/canvas_surface.dart',
+    targetPath: 'lib/src/surface/text_editing_overlay.dart',
+    directiveKinds: {'export'},
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'api',
     targetOwner: 'codec',
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
@@ -631,6 +673,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/geometry/spatial_kernel.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'spatial',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/geometry/geometry_policy.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
@@ -716,6 +764,12 @@ const _expectedAllowedOwnerEdges = [
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/frame/frame_paint_output.dart',
   ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'frame',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/frame/frame_text_layout_measurer.dart',
+  ),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'selection'),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'store'),
   _ExpectedAllowedOwnerEdge(
@@ -741,6 +795,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'interaction',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
     targetPath: 'lib/src/interaction/interaction_runtime_intents.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'runtime',
+    targetOwner: 'interaction',
+    sourcePath: 'lib/src/runtime/runtime_root.dart',
+    targetPath: 'lib/src/interaction/interaction_request_registry.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
@@ -947,6 +1007,12 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'api',
     sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
     targetPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'surface',
+    targetOwner: 'api',
+    sourcePath: 'lib/src/surface/text_editing_overlay.dart',
+    targetPath: 'lib/src/api/canvas_runtime.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'surface',

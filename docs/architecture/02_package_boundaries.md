@@ -18,6 +18,7 @@ Required tests:
 - `test.guardrails.import_boundaries`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.selection_boundary_imports`
+- `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
 - `core.no_legacy_imports`
 - `api.no_legacy_public_types`
@@ -25,6 +26,7 @@ Guardrails:
 - `core.no_unapproved_part_files`
 - `frame.committed_facts_via_frame_facts_port`
 - `interaction.no_concrete_selection_imports`
+- `surface.editable_text_surface_only`
 Do not assume:
 - no legacy package import
 - no app adapters in package
@@ -185,7 +187,10 @@ The new package is rooted at the repository top level:
 `lib/src/api/**` are facade or wrapper-export files: stable declarations live
 under `lib/src/contracts/public/**`, non-exported cross-owner seams live under
 `lib/src/contracts/internal/**`, and implementation owners consume those
-contract files instead of using the API facade as a type library.
+contract files instead of using the API facade as a type library. The
+`lib/src/api/canvas_surface.dart` facade is the narrow public widget exception:
+it re-exports only the surface-owned public widgets `CanvasSurface` and
+`CanvasTextEditingOverlay` plus public surface style contracts.
 
 The target frame collaborator files listed under `lib/src/frame/**` are
 implementation layout names for the `FrameEngine` internal split, not files
@@ -226,6 +231,8 @@ production lib/**               -> no `part` or `part of` files unless generated
 all lib/**                      -> may not import another package's `src/**`
 lib/src/frame/**                -> obtains committed document facts through `contracts/internal/frame_facts_port.dart`, not concrete store files
 lib/src/frame/**                -> keeps frame collaborators package-internal; no root barrel export for collaborator files
+lib/src/frame/frame_text_layout_measurer.dart -> owns TextPainter measurement for engine text layout; geometry, surface overlays, and example code consume measured geometry instead of remeasuring
+lib/src/surface/**              -> may host Flutter widgets, including CanvasSurface and CanvasTextEditingOverlay
 lib/src/contracts/public/**     -> declaration-only public DTOs, values, errors, policies, runtime state/config types, and public port interfaces; no API or implementation imports
 lib/src/contracts/internal/**   -> declaration-only owner ports, immutable facts, delivery effects, resource dirty outcomes, and resolver mutation guards; may depend on contracts/public but not API or implementation owners
 ```
@@ -286,11 +293,15 @@ lib/src/interaction/pointer_sample_normalizer.dart -> may not import document, s
 lib/src/interaction/pointer_tool_cleanup_coordinator.dart -> may not import resolver callbacks, EditKernel, repaint buses, Flutter bridge, resource sessions, concrete store internals, or concrete selection internals
 lib/src/frame/**             -> may not import public document projection as paint input or ResourceCatalogPort as an asset-binding seam
 lib/src/geometry/**          -> may use only typed geometry/spatial delta/read ports, not concrete store tables or interaction/frame state
+lib/src/geometry/**          -> may consume measured text layout facts but must not calculate text bounds with formula estimates or TextPainter
 lib/src/resources/**         -> may not import runtime, store, frame, surface, interaction, Flutter, or cache/session owners outside resource-owned seams
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/tools/**             -> may not import runtime, frame, or surface internals
 lib/src/surface/**           -> may not import legacy iwb_canvas_engine package
+lib/src/surface/**           -> may use CanvasRuntime public facade type for public widget constructor signatures, but runtime internals still go through named surface bridges
+lib/src/surface/**           -> may use EditableText only for public surface widgets; non-surface production owners must not import or construct EditableText
+example/lib/**               -> may consume the public package barrel and example-local files only; inline text editing must use CanvasTextEditingOverlay or CanvasTextEditingPort without src/** imports, visibility hiding, or duplicate TextPainter measurement
 all lib/**                   -> may not import legacy package or legacy runtime paths
 ```
 

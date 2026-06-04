@@ -295,6 +295,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
+## surface.editable_text_surface_only
+
+- Sections: `section_03_package_layout`, `section_04_public_api_v1`, `section_22_guardrails_machine_checks`
+
 ## surface.interactive_false_pending_line_preserved
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
@@ -302,6 +306,14 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 ## surface.pointer_samples_normalized_before_runtime
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## text.no_overlay_textpainter_measurement
+
+- Sections: `section_04_public_api_v1`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`
+
+## text.single_measured_layout_source
+
+- Sections: `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_22_guardrails_machine_checks`
 
 ## tools.p10_compatibility
 

@@ -82,11 +82,13 @@
     - core.no_unapproved_part_files
     - frame.committed_facts_via_frame_facts_port
     - interaction.no_concrete_selection_imports
+    - surface.editable_text_surface_only
   tests:
     - test.api_contract.no_legacy_public_symbols
     - test.guardrails.import_boundaries
     - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.guardrails.selection_boundary_imports
+    - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
     - no legacy package import
     - no app adapters in package
@@ -139,6 +141,8 @@
     - api.equality_policy_explicit
     - api.id_validation_no_extension_type_escape
     - interaction.text_edit_stale_commit_guard
+    - text.no_overlay_textpainter_measurement
+    - surface.editable_text_surface_only
     - surface.interactive_false_pending_line_preserved
   tests:
     - test.api_contract.public_readable_union_variants
@@ -158,6 +162,9 @@
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.interaction.context_action_request
     - test.interaction.text_edit_stale_commit_guard
+    - test.runtime.text_editing_port
+    - test.surface.text_editing_overlay
+    - test.guardrails.text_surface_guardrail_checks
     - test.runtime.dispose_lifecycle
     - test.runtime.runtime_state_publication
     - test.runtime.interaction_settings_state
@@ -639,6 +646,8 @@
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
+    - text.single_measured_layout_source
+    - text.no_overlay_textpainter_measurement
     - cache.background_grid_not_element_visual
   tests:
     - test.store.no_projection_hot_path
@@ -657,6 +666,8 @@
     - test.frame.paint_plan_write_all_or_nothing
     - test.frame.paint_plan_excludes_preview_delta
     - test.frame.paint_plan_excludes_selection_state
+    - test.frame.measured_text_layout
+    - test.guardrails.text_surface_guardrail_checks
     - test.frame.camera_pan_preserves_ordinary_paint_plan
     - test.frame.selected_supplement_staging_no_global_sort
     - test.api_contract.preview_state_sealed_union
@@ -697,12 +708,15 @@
   guardrails:
     - geometry.no_legacy_scene_order
     - geometry.eraser_exact_budget_no_partial
+    - text.single_measured_layout_source
   tests:
     - test.geometry.hit_policy
     - test.interaction.context_action_request
     - test.geometry.no_legacy_scene_order
     - test.geometry.eraser_exact_budget_inputs
     - test.geometry.eraser_exact_budget_no_partial_commit
+    - test.frame.measured_text_layout
+    - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
     - do not port legacy SceneNode traversal
     - do not copy legacy scene order logic
@@ -924,6 +938,9 @@
     - frame.no_global_scene_sort
     - frame.paint_plan_excludes_preview_delta
     - frame.paint_plan_excludes_selection_state
+    - text.single_measured_layout_source
+    - text.no_overlay_textpainter_measurement
+    - surface.editable_text_surface_only
     - cache.keys_use_next_revisions_only
     - cache.background_grid_not_element_visual
     - cache.hot_caches_have_capacity_eviction
@@ -945,6 +962,7 @@
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.frame_committed_facts_via_frame_facts_port
+    - test.guardrails.text_surface_guardrail_checks
     - test.guardrails.blocking_suite
   do_not_assume:
     - no non-blocking critical guardrail
@@ -1102,6 +1120,8 @@
     - test.interaction.pointer_sample_normalizer
     - test.interaction.interaction_read_port
     - test.interaction.context_action_request
+    - test.runtime.text_editing_port
+    - test.surface.text_editing_overlay
     - test.surface.interactive_false_pointer_routing
     - test.surface.interactive_false_active_session_cancel
     - test.surface.interactive_false_pending_line_preserved
@@ -1151,6 +1171,8 @@
     - test.surface.selection_chrome_topmost_paint
     - test.surface.selection_chrome_hit_target_boundary
     - test.frame.paint_plan_write_all_or_nothing
+    - test.frame.measured_text_layout
+    - test.guardrails.text_surface_guardrail_checks
     - test.guardrails.geometry_no_legacy_scene_order
     - test.guardrails.geometry_eraser_exact_budget_inputs
     - test.guardrails.spatial_no_full_clone_ordinary_edit

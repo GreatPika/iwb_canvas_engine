@@ -17,6 +17,7 @@ Related diagrams:
 Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.guardrails.text_surface_guardrail_checks`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
@@ -77,6 +78,9 @@ Guardrails:
 - `frame.no_global_scene_sort`
 - `frame.paint_plan_excludes_preview_delta`
 - `frame.paint_plan_excludes_selection_state`
+- `text.single_measured_layout_source`
+- `text.no_overlay_textpainter_measurement`
+- `surface.editable_text_surface_only`
 - `cache.keys_use_next_revisions_only`
 - `cache.background_grid_not_element_visual`
 - `cache.hot_caches_have_capacity_eviction`
@@ -225,6 +229,9 @@ Mandatory guardrails:
 | `frame.no_global_scene_sort` | selected supplement staging merges by orderToken and does not globally sort all scene elements; the analyzer-backed proof rejects whole-scene sort bypasses through direct sort calls, cascades, multi-line statements, and named comparator/helper indirection |
 | `frame.paint_plan_excludes_preview_delta` | OrdinaryPaintRecordCache stores ordinary committed records only and excludes selectedMoveDelta/previewDelta from keys and values across ordinary-cache storage surfaces such as `PaintPlanKey`, `OrdinaryPaintRecordKey`, `OrdinaryPaintRecordCacheEntry`, `PaintPlan`, and registered render-row payloads |
 | `frame.paint_plan_excludes_selection_state` | OrdinaryPaintRecordCache stores ordinary committed records only and excludes selected ids, selectionRevision, and selection flags from keys and values across ordinary-cache storage surfaces such as `PaintPlanKey`, `OrdinaryPaintRecordKey`, `OrdinaryPaintRecordCacheEntry`, `PaintPlan`, and registered render-row payloads |
+| `text.single_measured_layout_source` | `FrameTextLayoutMeasurer` remains the single TextPainter-backed text layout source, while geometry consumes measured text layout facts instead of formula bounds based on text length, font size, maxWidth, or lineHeight |
+| `text.no_overlay_textpainter_measurement` | surface and example text editing overlays must not construct a duplicate TextPainter measurement path; editor size and placement come from session geometry |
+| `surface.editable_text_surface_only` | production `EditableText` use is confined to surface-owned widgets, with example code allowed as an application consumer and tests allowed as proof code |
 | `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
 | `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |

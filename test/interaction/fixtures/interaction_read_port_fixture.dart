@@ -398,7 +398,7 @@ void _testContextTargetReadFacts() {
 
       final empty =
           root.interactionReadPort.directContextTargetFacts(
-                const ContextTargetReadRequest(worldPosition: Offset(82, 2)),
+                const ContextTargetReadRequest(worldPosition: Offset(200, 200)),
               )
               as AdmittedContextTargetRead;
       final emptyFacts = empty.facts;

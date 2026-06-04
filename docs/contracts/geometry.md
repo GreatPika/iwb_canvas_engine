@@ -33,9 +33,12 @@ Required tests:
 - `test.geometry.no_legacy_scene_order`
 - `test.geometry.eraser_exact_budget_inputs`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
+- `test.frame.measured_text_layout`
+- `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
 - `geometry.no_legacy_scene_order`
 - `geometry.eraser_exact_budget_no_partial`
+- `text.single_measured_layout_source`
 Do not assume:
 - do not port legacy SceneNode traversal
 - do not copy legacy scene order logic
@@ -96,6 +99,9 @@ Box/image/text/rect hit:
 ```text
 - coarse bounds = transformed local bounds inflated by hitPadding + 4.0;
 - exact hit uses inverse transform and local bounds inflated by scene padding mapped into local space;
+- text local paint, hit, selection, edit, and context bounds come from
+  frame-measured `MeasuredTextLayout` facts; geometry must not calculate text
+  bounds from string length, font size, maxWidth, or a second TextPainter;
 - if a committed row has a non-invertible transform, treat it as corrupted
   internal state: the `section_20_diagnostics_hub` routing table classifies
   the deferred corrupted-row route as policy-gated `spatial` diagnostics;
@@ -141,6 +147,9 @@ Paint admission:
 ```text
 - paint bounds are separate from hit bounds;
 - invisible elements are not painted;
+- active text editing suppresses only frame paint output for the active text
+  element; it does not change geometry visibility, hit membership, context
+  membership, or document `CanvasTextElement.isVisible`;
 - background elements are included in paint scope;
 - content elements are included in paint scope;
 - candidate admitted if queryRect overlaps paintBoundsWorld;
