@@ -22,6 +22,9 @@ final class CanvasExampleViewModel extends ChangeNotifier {
            sampleImageAssetService ?? SampleImageAssetService(),
        _runtime = runtime ?? createCanvasExampleRuntime(),
        _ownsRuntime = runtime == null {
+    _resourceResolver = SampleImageResolver(
+      sampleCatImage: () => _sampleCatImage,
+    );
     _runtime.state.addListener(_handleRuntimeChanged);
     _actionsSubscription = _runtime.actions.listen(_handleActionCommitted);
     _contextRequestSubscription = _runtime.contextActionRequests.listen(
@@ -33,6 +36,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   final bool _ownsRuntime;
   final VoidCallback? _addSampleCommand;
   final SampleImageAssetService _sampleImageAssetService;
+  late final CanvasResourceResolver _resourceResolver;
 
   late final StreamSubscription<CanvasActionCommitted> _actionsSubscription;
   late final StreamSubscription<CanvasContextActionRequested>
@@ -89,9 +93,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
   int get jsonImportErrorRevision => _jsonImportErrorRevision;
   String? get sampleImageError => _sampleImageError;
   int get sampleImageErrorRevision => _sampleImageErrorRevision;
-  CanvasResourceResolver get resourceResolver {
-    return SampleImageResolver(sampleCatImage: _sampleCatImage);
-  }
+  CanvasResourceResolver get resourceResolver => _resourceResolver;
 
   void rememberLastExportedJson(String json) {
     _lastExportedJson = json;

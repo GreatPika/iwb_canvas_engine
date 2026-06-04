@@ -13,6 +13,7 @@ void main() {
   _registerSurfaceAndPointerTests();
   _registerLineDragSurfaceTest();
   _registerSurfaceStyleTest();
+  _registerSurfaceStabilityTest();
   _registerDrawToolDockTest();
   _registerDrawColorDockTest();
   _registerCameraPanControlTest();
@@ -92,6 +93,30 @@ void _registerSurfaceStyleTest() {
 
     expect(surface.selectionStyle.color.toARGB32(), 0xFFFFFF00);
     expect(surface.selectionStyle.strokeWidth, 4);
+  });
+}
+
+void _registerSurfaceStabilityTest() {
+  testWidgets('runtime notifications do not recreate CanvasSurface', (
+    tester,
+  ) async {
+    final viewModel = CanvasExampleViewModel();
+    addTearDown(viewModel.dispose);
+    await _pumpScreen(tester, viewModel);
+    final surfaceBefore = tester.widget<CanvasSurface>(
+      find.byType(CanvasSurface),
+    );
+    final resolverBefore = surfaceBefore.resourceResolver;
+
+    viewModel.panCameraBy(const Offset(5, 0));
+    await tester.pump();
+
+    final surfaceAfter = tester.widget<CanvasSurface>(
+      find.byType(CanvasSurface),
+    );
+    expect(viewModel.cameraOffset, const Offset(5, 0));
+    expect(surfaceAfter, same(surfaceBefore));
+    expect(surfaceAfter.resourceResolver, same(resolverBefore));
   });
 }
 

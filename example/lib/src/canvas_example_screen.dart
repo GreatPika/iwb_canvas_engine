@@ -51,12 +51,7 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F8),
       appBar: AppBar(title: const Text('IWB Canvas Engine')),
-      body: SafeArea(
-        child: AnimatedBuilder(
-          animation: _viewModel,
-          builder: (context, _) => _CanvasExampleContent(viewModel: _viewModel),
-        ),
-      ),
+      body: SafeArea(child: _CanvasExampleContent(viewModel: _viewModel)),
     );
   }
 
@@ -76,9 +71,6 @@ final class _CanvasExampleScreenState extends State<CanvasExampleScreen> {
   void _handleViewModelChanged() {
     _showSampleImageErrorIfNeeded();
     _showJsonImportErrorIfNeeded();
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   void _showSampleImageErrorIfNeeded() {
@@ -121,55 +113,95 @@ final class _CanvasExampleContent extends StatelessWidget {
         Positioned.fill(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: _surfaceStack(),
+            child: CanvasSurface(
+              runtime: viewModel.runtime,
+              resourceResolver: viewModel.resourceResolver,
+              selectionStyle: CanvasSelectionStyle(
+                color: const Color(0xFFFFFF00),
+                strokeWidth: 4,
+              ),
+            ),
           ),
         ),
-        Positioned(
-          top: 20,
-          left: 20,
-          child: CanvasCameraIndicator(cameraOffset: viewModel.cameraOffset),
-        ),
-        Positioned(
-          top: 20,
-          right: 20,
-          child: CanvasCameraPanControls(
-            onPan: viewModel.panCameraBy,
-            onReset: viewModel.resetCamera,
-          ),
-        ),
-        Positioned(
-          left: 20,
-          right: 20,
-          bottom: 20,
-          child: CanvasControlsDock(viewModel: viewModel),
+        AnimatedBuilder(
+          animation: viewModel,
+          builder: (context, _) {
+            return _CanvasExampleReactiveLayer(viewModel: viewModel);
+          },
         ),
       ],
     );
   }
+}
 
-  Widget _surfaceStack() {
+// The reactive layer owns the moving screen chrome above the stable surface so
+// runtime ticks rebuild controls and overlays without recreating CanvasSurface.
+// ignore: coupling-between-object-classes
+final class _CanvasExampleReactiveLayer extends StatelessWidget {
+  const _CanvasExampleReactiveLayer({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
-        CanvasSurface(
-          runtime: viewModel.runtime,
-          resourceResolver: viewModel.resourceResolver,
-          selectionStyle: CanvasSelectionStyle(
-            color: const Color(0xFFFFFF00),
-            strokeWidth: 4,
-          ),
-        ),
-        CanvasPendingLineOverlay(
-          preview: viewModel.preview,
-          cameraOffset: viewModel.cameraOffset,
-        ),
-        if (viewModel.activeTextEdit case final session?)
-          CanvasTextEditOverlay(
-            session: session,
-            cameraOffset: viewModel.cameraOffset,
-            onCommit: viewModel.commitActiveTextEdit,
-            onDismiss: viewModel.dismissActiveTextEdit,
-          ),
+        _surfaceOverlays(),
+        _cameraIndicator(),
+        _cameraPanControls(),
+        _controlsDock(),
       ],
+    );
+  }
+
+  Widget _surfaceOverlays() {
+    return Positioned.fill(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            CanvasPendingLineOverlay(
+              preview: viewModel.preview,
+              cameraOffset: viewModel.cameraOffset,
+            ),
+            if (viewModel.activeTextEdit case final session?)
+              CanvasTextEditOverlay(
+                session: session,
+                cameraOffset: viewModel.cameraOffset,
+                onCommit: viewModel.commitActiveTextEdit,
+                onDismiss: viewModel.dismissActiveTextEdit,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cameraIndicator() {
+    return Positioned(
+      top: 20,
+      left: 20,
+      child: CanvasCameraIndicator(cameraOffset: viewModel.cameraOffset),
+    );
+  }
+
+  Widget _cameraPanControls() {
+    return Positioned(
+      top: 20,
+      right: 20,
+      child: CanvasCameraPanControls(
+        onPan: viewModel.panCameraBy,
+        onReset: viewModel.resetCamera,
+      ),
+    );
+  }
+
+  Widget _controlsDock() {
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: 20,
+      child: CanvasControlsDock(viewModel: viewModel),
     );
   }
 }

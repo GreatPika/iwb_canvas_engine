@@ -133,11 +133,13 @@ void _registerResolverAndDisposalTest() {
       final viewModel = CanvasExampleViewModel(
         sampleImageAssetService: _fileBackedService(),
       );
+      final resolver = viewModel.resourceResolver;
 
       await viewModel.addSampleObjects();
+      expect(viewModel.resourceResolver, same(resolver));
       final resource =
           viewModel.document.resources.single as CanvasImageResource;
-      final image = viewModel.resourceResolver.resolveImage(resource);
+      final image = resolver.resolveImage(resource);
 
       if (image == null) {
         fail('Expected the app resolver to return the sample cat image.');
