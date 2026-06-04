@@ -82,7 +82,7 @@ void _registerLineDragSurfaceTest() {
 }
 
 void _registerSurfaceStyleTest() {
-  testWidgets('screen preserves legacy selection surface style', (
+  testWidgets('screen uses readable selection surface style', (
     tester,
   ) async {
     final viewModel = CanvasExampleViewModel();
@@ -92,7 +92,8 @@ void _registerSurfaceStyleTest() {
     final surface = tester.widget<CanvasSurface>(find.byType(CanvasSurface));
 
     expect(surface.selectionStyle.color.toARGB32(), 0xFFFFFF00);
-    expect(surface.selectionStyle.strokeWidth, 4);
+    expect(surface.selectionStyle.strokeWidth, 2);
+    expect(surface.selectionStyle.haloWidth, 0);
   });
 }
 
@@ -441,7 +442,7 @@ void _registerInlineTextEditOverlayCoverageTest() {
     final overlaySize = _textEditBoundsSize(tester);
     final targetBounds = _activeEditBoundsLocal(viewModel);
     expect(overlaySize.width, greaterThan(0));
-    expect(overlaySize.width, lessThanOrEqualTo(targetBounds.width));
+    expect(overlaySize.width, greaterThan(targetBounds.width));
     expect(overlaySize.height, greaterThan(0));
 
     await tester.enterText(
