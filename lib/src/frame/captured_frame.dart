@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
+import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_surface_styles.dart';
@@ -16,6 +17,7 @@ final class FrameCaptureInputs {
     required this.preview,
     required this.previewRevision,
     this.viewCameraOffset = Offset.zero,
+    this.textEditSuppression,
   });
 
   final Rect viewportWorldBounds;
@@ -25,6 +27,7 @@ final class FrameCaptureInputs {
   final CanvasGridStyle gridStyle;
   final CanvasPreviewState preview;
   final int previewRevision;
+  final TextEditPaintSuppression? textEditSuppression;
 
   Rect get effectiveWorldBounds => viewportWorldBounds.shift(viewCameraOffset);
 }

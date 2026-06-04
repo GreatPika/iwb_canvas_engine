@@ -101,9 +101,11 @@ final class FrameEngine {
   }) {
     final frame = captureMainFrame(inputs);
     final ordinary = _ordinaryPlanFor(frame);
+    final suppressedIds = _suppressedTextEditIds(frame);
+    final paintPlan = _suppressActiveTextEdit(ordinary.plan, suppressedIds);
     final selectedMoveSupplement = _selectedMoveSupplementPlanner.build(
       frame: frame,
-      ordinaryPlan: ordinary.plan,
+      ordinaryPlan: paintPlan,
     );
     final staticBackgroundPlan = _staticBackgroundPlanner.build(
       frame,
@@ -122,7 +124,7 @@ final class FrameEngine {
 
     return MainFramePaintOutput(
       capturedFrame: frame,
-      ordinaryPlan: ordinary.plan,
+      ordinaryPlan: paintPlan,
       staticBackgroundPlan: staticBackgroundPlan,
       selectionDecorationPlan: selectionDecorationPlan,
       selectedOrderSnapshot: selectedOrderSnapshot,
@@ -194,6 +196,42 @@ final class FrameEngine {
           : 'selected_move_preview',
     );
   }
+}
+
+PaintPlan _suppressActiveTextEdit(
+  PaintPlan plan,
+  Set<CanvasElementId> suppressedIds,
+) {
+  if (suppressedIds.isEmpty) {
+    return plan;
+  }
+  final records = [
+    for (final record in plan.ordinaryRecords)
+      if (!suppressedIds.contains(record.id)) record,
+  ];
+  if (records.length == plan.ordinaryRecords.length) {
+    return plan;
+  }
+
+  return PaintPlan(key: plan.key, ordinaryRecords: records);
+}
+
+Set<CanvasElementId> _suppressedTextEditIds(CapturedMainFrame frame) {
+  final suppression = frame.snapshot.inputs.textEditSuppression;
+  if (suppression == null) {
+    return const {};
+  }
+
+  return {
+    for (final facts in frame.snapshot.elements)
+      if (suppression.matchesTextElement(
+        id: facts.id,
+        kind: facts.kind,
+        revision: facts.revision,
+        generation: facts.generation,
+      ))
+        facts.id,
+  };
 }
 
 final class _OrdinaryMainPlan {

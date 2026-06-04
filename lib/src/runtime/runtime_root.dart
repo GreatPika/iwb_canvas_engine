@@ -22,6 +22,7 @@ import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
 import '../contracts/internal/surface_resource_session_lifecycle.dart';
+import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
@@ -186,6 +187,7 @@ final class RuntimeRoot
   // Runtime revision counters.
   int _viewCameraRevision = 0;
   int _epochRevision = 0;
+  int _textEditInteractionRevision = 0;
 
   // Mutation and lifecycle guards.
   bool _isDisposed = false;
@@ -299,6 +301,9 @@ final class RuntimeRoot
   ({
     CanvasInteractionRequestId requestId,
     CanvasElementId elementId,
+    TextEditSuppressionFamily family,
+    CanvasElementKind elementKind,
+    int controllerEpoch,
     int elementRevision,
     int generation,
   })?
@@ -426,6 +431,7 @@ final class RuntimeRoot
       preview: preview,
       previewRevision: _interactionEngine.previewRevision,
       viewCameraOffset: _viewCamera.offset,
+      textEditSuppression: _textEditingPort.activeFrameSuppression,
     );
   }
 
@@ -1008,8 +1014,14 @@ final class RuntimeRoot
       return false;
     }
     _interactionEngine.consumeTextEditRequest(requestId);
+    final didClearTextEditSuppression = _textEditingPort.clearAcceptedRequest(
+      requestId,
+      publishState: false,
+    );
+    if (didClearTextEditSuppression) {
+      _markTextEditInteractionChanged();
+    }
     _deliverEditCommitResult(applyResult);
-    _textEditingPort.clearAcceptedRequest(requestId);
 
     return true;
   }
@@ -1368,9 +1380,20 @@ final class RuntimeRoot
         preview: _interactionEngine.previewRevision,
         epoch: _epochRevision,
         resourceVisual: _resourceKernel.resourceVisualRevision,
-        interaction: _interactionEngine.interactionRevision,
+        interaction:
+            _interactionEngine.interactionRevision +
+            _textEditInteractionRevision,
       ),
     );
+  }
+
+  void _markTextEditInteractionChanged() {
+    _textEditInteractionRevision += 1;
+  }
+
+  void _publishTextEditInteractionState() {
+    _markTextEditInteractionChanged();
+    _publishRuntimeState();
   }
 
   // Load pipeline.
@@ -1391,7 +1414,7 @@ final class RuntimeRoot
     if (testBoundary != null) {
       testBoundary.prepareLoadCleanup();
     }
-    _textEditingPort.clearTransientState();
+    _textEditingPort.clearTransientState(publishState: false);
     _interactionEngine.prepareLoadCleanup();
     _interactionEngine.clearInteractionRequests();
   }
@@ -2376,6 +2399,15 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   bool get readOnly => _readOnly;
 
   _TextEditSuppressionToken? get activeSuppressionToken => _suppressionToken;
+  TextEditPaintSuppression? get activeFrameSuppression {
+    final state = _active;
+    if (state == null || _isStale(state)) {
+      return null;
+    }
+
+    return _suppressionToken?.frameSuppression;
+  }
+
   int get candidateStateCount => _ownedStates.length;
 
   @override
@@ -2428,6 +2460,7 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _active = state;
     _suppressionToken = _TextEditSuppressionToken.fromState(state);
     _activeSession.value = state.session;
+    _root._publishTextEditInteractionState();
 
     return state.session;
   }
@@ -2456,12 +2489,12 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _dismissActiveWithoutGuard();
   }
 
-  void _dismissActiveWithoutGuard() {
+  bool _dismissActiveWithoutGuard({bool publishState = true}) {
     final state = _active;
     if (state == null) {
       _pruneExpiredCandidateStates();
 
-      return;
+      return false;
     }
     state.active = false;
     _active = null;
@@ -2469,9 +2502,14 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     _activeSession.value = null;
     _discardCandidateState(state);
     _pruneExpiredCandidateStates();
+    if (publishState) {
+      _root._publishTextEditInteractionState();
+    }
+
+    return true;
   }
 
-  void clearTransientState() {
+  bool clearTransientState({bool publishState = true}) {
     final state = _active;
     if (state != null) {
       state.active = false;
@@ -2480,34 +2518,48 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       _activeSession.value = null;
     }
     _ownedStates.clear();
+    if (state == null) {
+      return false;
+    }
+    if (publishState) {
+      _root._publishTextEditInteractionState();
+    }
+
+    return true;
   }
 
   void _ensurePublicOperationAllowed() {
     _root.ensureRuntimeMutationAllowed();
   }
 
-  void clearAcceptedRequest(CanvasInteractionRequestId requestId) {
+  bool clearAcceptedRequest(
+    CanvasInteractionRequestId requestId, {
+    bool publishState = true,
+  }) {
     final state = _active;
     if (state != null && state.requestId == requestId) {
-      _dismissActiveWithoutGuard();
-
-      return;
+      return _dismissActiveWithoutGuard(publishState: publishState);
     }
     _pruneExpiredCandidateStates();
+
+    return false;
   }
 
-  void clearConsumedRequest(CanvasInteractionRequestId requestId) {
+  bool clearConsumedRequest(
+    CanvasInteractionRequestId requestId, {
+    bool publishState = true,
+  }) {
     final state = _active;
     if (state != null && state.requestId == requestId && _isStale(state)) {
-      _dismissActiveWithoutGuard();
-
-      return;
+      return _dismissActiveWithoutGuard(publishState: publishState);
     }
     _pruneExpiredCandidateStates();
+
+    return false;
   }
 
   void dispose() {
-    clearTransientState();
+    clearTransientState(publishState: false);
     _activeSession.dispose();
   }
 
@@ -2539,6 +2591,8 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
       requestId: guard.requestId,
       elementId: targetElementId,
       documentRevision: guard.documentRevision,
+      elementKind: guard.contentElementKind as CanvasElementKind,
+      controllerEpoch: guard.controllerEpoch,
       elementRevision: guard.elementRevision as int,
       generation: guard.generation as int,
       initialText: initialText,
@@ -2662,6 +2716,8 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   ) {
     return left.requestId == right.requestId &&
         left.elementId == right.elementId &&
+        left.elementKind == right.elementKind &&
+        left.controllerEpoch == right.controllerEpoch &&
         left.elementRevision == right.elementRevision &&
         left.generation == right.generation;
   }
@@ -2748,6 +2804,8 @@ final class _RuntimeTextEditSessionState {
     required this.requestId,
     required this.elementId,
     required this.documentRevision,
+    required this.elementKind,
+    required this.controllerEpoch,
     required this.elementRevision,
     required this.generation,
     required this.initialText,
@@ -2759,6 +2817,8 @@ final class _RuntimeTextEditSessionState {
   final CanvasInteractionRequestId requestId;
   final CanvasElementId elementId;
   final int documentRevision;
+  final CanvasElementKind elementKind;
+  final int controllerEpoch;
   final int elementRevision;
   final int generation;
   final String initialText;
@@ -2772,6 +2832,9 @@ final class _TextEditSuppressionToken {
   const _TextEditSuppressionToken({
     required this.requestId,
     required this.elementId,
+    required this.family,
+    required this.elementKind,
+    required this.controllerEpoch,
     required this.elementRevision,
     required this.generation,
   });
@@ -2782,6 +2845,9 @@ final class _TextEditSuppressionToken {
     return _TextEditSuppressionToken(
       requestId: state.requestId,
       elementId: state.elementId,
+      family: TextEditSuppressionFamily.text,
+      elementKind: state.elementKind,
+      controllerEpoch: state.controllerEpoch,
       elementRevision: state.elementRevision,
       generation: state.generation,
     );
@@ -2789,12 +2855,30 @@ final class _TextEditSuppressionToken {
 
   final CanvasInteractionRequestId requestId;
   final CanvasElementId elementId;
+  final TextEditSuppressionFamily family;
+  final CanvasElementKind elementKind;
+  final int controllerEpoch;
   final int elementRevision;
   final int generation;
+
+  TextEditPaintSuppression get frameSuppression {
+    return TextEditPaintSuppression(
+      requestId: requestId,
+      elementId: elementId,
+      family: family,
+      elementKind: elementKind,
+      controllerEpoch: controllerEpoch,
+      elementRevision: elementRevision,
+      generation: generation,
+    );
+  }
 
   ({
     CanvasInteractionRequestId requestId,
     CanvasElementId elementId,
+    TextEditSuppressionFamily family,
+    CanvasElementKind elementKind,
+    int controllerEpoch,
     int elementRevision,
     int generation,
   })
@@ -2802,6 +2886,9 @@ final class _TextEditSuppressionToken {
     return (
       requestId: requestId,
       elementId: elementId,
+      family: family,
+      elementKind: elementKind,
+      controllerEpoch: controllerEpoch,
       elementRevision: elementRevision,
       generation: generation,
     );

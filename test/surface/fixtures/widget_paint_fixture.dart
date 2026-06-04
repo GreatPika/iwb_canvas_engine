@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -28,6 +29,13 @@ void main() {
     tester,
   ) async {
     await _expectMainAndOverlayPreviewRouting(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface rebuilds for inline text paint suppression', (
+    tester,
+  ) async {
+    await _expectInlineTextSuppressionSurfaceRepaint(tester);
     expect(_paintHosts(), findsOneWidget);
   });
 }
@@ -97,6 +105,27 @@ Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
   await _expectSelectedMoveMainRepaint(tester, runtime);
   await _expectMarqueeOverlayOnly(tester, runtime);
   expect(resolver.calls, 0);
+}
+
+Future<void> _expectInlineTextSuppressionSurfaceRepaint(
+  WidgetTester tester,
+) async {
+  final scenario = _InlineTextSurfaceScenario();
+  addTearDown(scenario.dispose);
+
+  await tester.pumpWidget(_surfaceHost(scenario.runtime, scenario.resolver));
+  expect(_mainRecordIds(tester), contains(_surfaceTextId));
+
+  final session = await scenario.startTextSession(tester);
+  await tester.pump();
+
+  expect(_mainRecordIds(tester), isNot(contains(_surfaceTextId)));
+  expect(_mainRecordIds(tester), contains(_surfaceRectId));
+
+  session.dismiss();
+  await tester.pump();
+
+  expect(_mainRecordIds(tester), contains(_surfaceTextId));
 }
 
 Future<void> _expectSelectedMoveMainRepaint(
@@ -172,6 +201,15 @@ OverlayFramePainter _overlayPainter(WidgetTester tester) {
   return painter as OverlayFramePainter;
 }
 
+List<CanvasElementId> _mainRecordIds(WidgetTester tester) {
+  return [
+    for (final record in _mainPainter(
+      tester,
+    ).output.ordinaryPlan.ordinaryRecords)
+      record.id,
+  ];
+}
+
 RuntimeRoot _rootFor(CanvasRuntime runtime) {
   final root = canvasRuntimeFrameRootForSurface(runtime);
   if (root != null) {
@@ -179,6 +217,36 @@ RuntimeRoot _rootFor(CanvasRuntime runtime) {
   }
 
   throw StateError('CanvasRuntime frame root is not attached.');
+}
+
+final class _InlineTextSurfaceScenario {
+  _InlineTextSurfaceScenario() {
+    subscription = runtime.contextActionRequests.listen(requests.add);
+  }
+
+  final CanvasRuntime runtime = CanvasRuntime(
+    initialDocument: _textAndRectDocument(),
+  );
+  final _RecordingResolver resolver = _RecordingResolver((_) => null);
+  final List<CanvasContextActionRequested> requests = [];
+  late final StreamSubscription<CanvasContextActionRequested> subscription;
+
+  Future<CanvasTextEditSession> startTextSession(WidgetTester tester) async {
+    _rootFor(runtime).handleDoubleTap(position: Offset.zero, timestampMs: 1);
+    await tester.pump();
+    final session = runtime.textEditing.startFromContextAction(requests.single);
+    requests.clear();
+    if (session == null) {
+      throw StateError('CanvasSurface text edit request was not admitted.');
+    }
+
+    return session;
+  }
+
+  Future<void> dispose() async {
+    await subscription.cancel();
+    runtime.dispose();
+  }
 }
 
 CanvasDocument _rectDocument() {
@@ -197,6 +265,33 @@ CanvasDocument _rectDocument() {
     ],
   );
 }
+
+CanvasDocument _textAndRectDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasTextElement(
+            id: _surfaceTextId,
+            text: 'surface',
+            fontSize: 16,
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+          ),
+          CanvasRectElement(
+            id: _surfaceRectId,
+            size: const Size(20, 20),
+            transform: CanvasTransform.translation(const Offset(60, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+final _surfaceTextId = CanvasElementId('surface-text-a');
+final _surfaceRectId = CanvasElementId('surface-rect-a');
 
 CanvasDocument _resourceDescriptorOnlyDocument() {
   return CanvasDocument(

@@ -134,10 +134,12 @@ final class SelectedMoveSupplementPlanner {
 
   Set<CanvasElementId> _movableSelectedIds(CapturedMainFrame frame) {
     final selectedIds = frame.snapshot.selection.selectedElementIds;
+    final suppressedIds = _suppressedTextEditIds(frame);
 
     return {
       for (final facts in frame.snapshot.elements)
         if (selectedIds.contains(facts.id) &&
+            !suppressedIds.contains(facts.id) &&
             facts.isTransformable &&
             !facts.isLocked)
           facts.id,
@@ -249,6 +251,24 @@ final class SelectedMoveSupplementPlanner {
 
     return merged;
   }
+}
+
+Set<CanvasElementId> _suppressedTextEditIds(CapturedMainFrame frame) {
+  final suppression = frame.snapshot.inputs.textEditSuppression;
+  if (suppression == null) {
+    return const {};
+  }
+
+  return {
+    for (final facts in frame.snapshot.elements)
+      if (suppression.matchesTextElement(
+        id: facts.id,
+        kind: facts.kind,
+        revision: facts.revision,
+        generation: facts.generation,
+      ))
+        facts.id,
+  };
 }
 
 bool _shiftedRecordBoundsOverlap(

@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
+import '../contracts/internal/frame_facts_port.dart';
+import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import 'captured_frame.dart';
@@ -15,6 +17,7 @@ final class SelectionDecorationKey {
     required this.structuralRevision,
     required this.boundsRevision,
     required this.hiddenForSelectedMovePreview,
+    required this.textEditSuppression,
     required this.selectionStyle,
     required this.devicePixelRatio,
   }) : selectedElementIds = Set.unmodifiable(selectedElementIds);
@@ -24,6 +27,7 @@ final class SelectionDecorationKey {
   final int structuralRevision;
   final int boundsRevision;
   final bool hiddenForSelectedMovePreview;
+  final TextEditPaintSuppression? textEditSuppression;
   final CanvasSelectionStyle selectionStyle;
   final double devicePixelRatio;
 
@@ -35,6 +39,7 @@ final class SelectionDecorationKey {
         other.structuralRevision == structuralRevision &&
         other.boundsRevision == boundsRevision &&
         other.hiddenForSelectedMovePreview == hiddenForSelectedMovePreview &&
+        other.textEditSuppression == textEditSuppression &&
         other.selectionStyle == selectionStyle &&
         other.devicePixelRatio == devicePixelRatio;
   }
@@ -47,6 +52,7 @@ final class SelectionDecorationKey {
       structuralRevision,
       boundsRevision,
       hiddenForSelectedMovePreview,
+      textEditSuppression,
       selectionStyle,
       devicePixelRatio,
     );
@@ -134,6 +140,7 @@ SelectionDecorationKey _selectionDecorationKeyFor(CapturedMainFrame frame) {
     structuralRevision: frame.snapshot.revisions.structuralRevision,
     boundsRevision: frame.snapshot.revisions.boundsRevision,
     hiddenForSelectedMovePreview: frame.selectedMovePreview != null,
+    textEditSuppression: frame.snapshot.inputs.textEditSuppression,
     selectionStyle: frame.snapshot.inputs.selectionStyle,
     devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
   );
@@ -186,10 +193,23 @@ List<RenderElementRecord> _selectedRenderRecords(CapturedMainFrame frame) {
     if (!selectedIds.contains(facts.id)) {
       continue;
     }
+    if (_isSuppressedTextEdit(facts, frame)) {
+      continue;
+    }
     records.add(RenderElementRecord.fromFacts(facts));
   }
 
   return records;
+}
+
+bool _isSuppressedTextEdit(FrameElementFacts facts, CapturedMainFrame frame) {
+  return frame.snapshot.inputs.textEditSuppression?.matchesTextElement(
+        id: facts.id,
+        kind: facts.kind,
+        revision: facts.revision,
+        generation: facts.generation,
+      ) ??
+      false;
 }
 
 Rect _selectionDecorationBoundsFor(RenderElementRecord record) {
