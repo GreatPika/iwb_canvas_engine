@@ -69,6 +69,7 @@ final class _CanvasTextEditingOverlayState
   TextEditingController? _controller;
   FocusNode? _focusNode;
   ScrollController? _scrollController;
+  Rect? _sessionAnchorEditBoundsLocal;
   StreamSubscription<CanvasContextActionRequested>? _contextSubscription;
   var _syncingController = false;
 
@@ -141,6 +142,12 @@ final class _CanvasTextEditingOverlayState
     }
     final cameraOffset = widget.runtime.camera.offset;
     final editorSize = _editorSizeFor(editBounds.size);
+    final editorLeft = _alignedEditorLeftFor(
+      align: session.style.textAlign,
+      direction: session.style.textDirection,
+      anchor: _sessionAnchorEditBoundsLocal ?? editBounds,
+      editorWidth: editorSize.width,
+    );
 
     return SizedBox.expand(
       child: CallbackShortcuts(
@@ -171,7 +178,7 @@ final class _CanvasTextEditingOverlayState
                   clipBehavior: Clip.none,
                   children: [
                     Positioned(
-                      left: editBounds.left,
+                      left: editorLeft,
                       top: editBounds.top,
                       child: SizedBox(
                         key: canvasTextEditingOverlayEditorHostKey,
@@ -260,6 +267,7 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _installEditorState(CanvasTextEditSession session) {
+    _sessionAnchorEditBoundsLocal = session.geometry.editBoundsLocal;
     _controller = TextEditingController(text: session.liveText)
       ..addListener(_handleControllerChanged);
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
@@ -280,6 +288,7 @@ final class _CanvasTextEditingOverlayState
     _controller = null;
     _focusNode = null;
     _scrollController = null;
+    _sessionAnchorEditBoundsLocal = null;
     controller?.removeListener(_handleControllerChanged);
     controller?.dispose();
     focusNode?.removeListener(_handleFocusChanged);
@@ -378,6 +387,40 @@ final class _InlineTextEditorScrollBehavior extends ScrollBehavior {
     return child;
   }
 }
+
+double _alignedEditorLeftFor({
+  required TextAlign align,
+  required TextDirection direction,
+  required Rect anchor,
+  required double editorWidth,
+}) {
+  return switch (_resolvedHorizontalTextAnchor(align, direction)) {
+    _HorizontalTextAnchor.left => anchor.left,
+    _HorizontalTextAnchor.center => anchor.center.dx - editorWidth / 2,
+    _HorizontalTextAnchor.right => anchor.right - editorWidth,
+  };
+}
+
+_HorizontalTextAnchor _resolvedHorizontalTextAnchor(
+  TextAlign align,
+  TextDirection direction,
+) {
+  return switch (align) {
+    TextAlign.left => _HorizontalTextAnchor.left,
+    TextAlign.right => _HorizontalTextAnchor.right,
+    TextAlign.center => _HorizontalTextAnchor.center,
+    TextAlign.justify || TextAlign.start => switch (direction) {
+      TextDirection.ltr => _HorizontalTextAnchor.left,
+      TextDirection.rtl => _HorizontalTextAnchor.right,
+    },
+    TextAlign.end => switch (direction) {
+      TextDirection.ltr => _HorizontalTextAnchor.right,
+      TextDirection.rtl => _HorizontalTextAnchor.left,
+    },
+  };
+}
+
+enum _HorizontalTextAnchor { left, center, right }
 
 Rect? _localEditBoundsFor(CanvasTextEditGeometry geometry) {
   return geometry.editBoundsLocal;

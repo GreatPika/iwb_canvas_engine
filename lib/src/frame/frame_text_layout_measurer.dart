@@ -33,7 +33,7 @@ final class FrameTextLayoutMeasurer implements MeasuredTextLayoutPort {
     final entry = TextLayoutCacheEntry(
       debugLabel: debugLabel ?? input.text,
       painter: painter,
-      layout: _measuredLayoutFor(painter),
+      layout: _measuredLayoutFor(painter, input),
     );
     cache.write(key, entry);
 
@@ -92,11 +92,15 @@ TextPainter _textPainterFor(MeasuredTextLayoutInput input) {
   )..layout(maxWidth: input.maxWidth ?? double.infinity);
 }
 
-MeasuredTextLayout _measuredLayoutFor(TextPainter painter) {
-  final bounds = Rect.fromCenter(
-    center: Offset.zero,
+MeasuredTextLayout _measuredLayoutFor(
+  TextPainter painter,
+  MeasuredTextLayoutInput input,
+) {
+  final bounds = _alignedTextBoundsFor(
     width: painter.width,
     height: painter.height,
+    align: input.align,
+    direction: input.direction,
   );
 
   return MeasuredTextLayout(
@@ -115,3 +119,40 @@ MeasuredTextLayout _measuredLayoutFor(TextPainter painter) {
     ],
   );
 }
+
+Rect _alignedTextBoundsFor({
+  required double width,
+  required double height,
+  required TextAlign align,
+  required TextDirection direction,
+}) {
+  final top = -height / 2;
+  final left = switch (_resolvedHorizontalTextAnchor(align, direction)) {
+    _HorizontalTextAnchor.left => 0.0,
+    _HorizontalTextAnchor.center => -width / 2,
+    _HorizontalTextAnchor.right => -width,
+  };
+
+  return Rect.fromLTWH(left, top, width, height);
+}
+
+_HorizontalTextAnchor _resolvedHorizontalTextAnchor(
+  TextAlign align,
+  TextDirection direction,
+) {
+  return switch (align) {
+    TextAlign.left => _HorizontalTextAnchor.left,
+    TextAlign.right => _HorizontalTextAnchor.right,
+    TextAlign.center => _HorizontalTextAnchor.center,
+    TextAlign.justify || TextAlign.start => switch (direction) {
+      TextDirection.ltr => _HorizontalTextAnchor.left,
+      TextDirection.rtl => _HorizontalTextAnchor.right,
+    },
+    TextAlign.end => switch (direction) {
+      TextDirection.ltr => _HorizontalTextAnchor.right,
+      TextDirection.rtl => _HorizontalTextAnchor.left,
+    },
+  };
+}
+
+enum _HorizontalTextAnchor { left, center, right }

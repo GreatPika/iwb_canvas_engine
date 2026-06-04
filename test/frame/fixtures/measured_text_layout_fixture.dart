@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_entry.dart';
 
 void main() {
   _testTextCacheEntryMetrics();
+  _testTextAlignmentAnchors();
   _testBoundedMeasurementFailure();
   _testGeometryAndRenderRecords();
   _testSpatialMemberships();
@@ -32,13 +33,35 @@ void _testTextCacheEntryMetrics() {
 
       expect(entry.painter.width, closeTo(bounds.width, 0.001));
       expect(entry.painter.height, closeTo(bounds.height, 0.001));
-      expect(bounds.center, Offset.zero);
+      expect(bounds.left, 0);
       expect(entry.layout.hitBoundsLocal, bounds);
       expect(entry.layout.selectionBoundsLocal, bounds);
       expect(entry.layout.editBoundsLocal, bounds);
       expect(entry.layout.lines, isNotEmpty);
     },
   );
+}
+
+void _testTextAlignmentAnchors() {
+  test('text measured bounds anchor to horizontal text alignment', () {
+    final measurer = FrameTextLayoutMeasurer();
+    final left = _readyLayoutWith(
+      measurer,
+      _input(const _TextInputSpec(text: 'anchor', align: TextAlign.left)),
+    );
+    final right = _readyLayoutWith(
+      measurer,
+      _input(const _TextInputSpec(text: 'anchor', align: TextAlign.right)),
+    );
+    final center = _readyLayoutWith(
+      measurer,
+      _input(const _TextInputSpec(text: 'anchor', align: TextAlign.center)),
+    );
+
+    expect(left.paintBoundsLocal.left, 0);
+    expect(right.paintBoundsLocal.right, 0);
+    expect(center.paintBoundsLocal.center.dx, 0);
+  });
 }
 
 void _testBoundedMeasurementFailure() {

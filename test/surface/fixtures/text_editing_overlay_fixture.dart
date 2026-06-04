@@ -9,6 +9,7 @@ import 'package:iwb_canvas_engine/src/surface/text_editing_overlay.dart';
 
 void main() {
   _testOverlayUsesEditableTextAndSessionGeometry();
+  _testOverlayAnchorsLiveWidthToTextAlignment();
   _testOverlayAppliesSessionTransform();
   _testAutoStartPolicy();
   _testReadOnlyPolicy();
@@ -17,6 +18,18 @@ void main() {
   _testMultilineGrowthAndMaxHeightPolicy();
   _testDisposesListeners();
   _testOverlayDoesNotMeasureText();
+}
+
+void _testOverlayAnchorsLiveWidthToTextAlignment() {
+  testWidgets('overlay grows live text from the aligned horizontal edge', (
+    tester,
+  ) async {
+    await _expectLiveWidthAnchorFor(tester, TextAlign.left);
+    await _expectLiveWidthAnchorFor(tester, TextAlign.right);
+    await _expectLiveWidthAnchorFor(tester, TextAlign.center);
+
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsOneWidget);
+  });
 }
 
 // This proof keeps geometry placement and style adoption together because the
@@ -55,10 +68,15 @@ void _testOverlayUsesEditableTextAndSessionGeometry() {
     final session = scenario.activeSession;
     final localEditBounds = _localEditBoundsFor(session.geometry);
     final worldEditBounds = session.geometry.editBoundsWorld;
+    final hostRect = _editorHostRect(tester);
 
     expect(
-      hostTopLeft,
-      worldEditBounds.topLeft - scenario.runtime.camera.offset,
+      hostTopLeft.dy,
+      worldEditBounds.top - scenario.runtime.camera.offset.dy,
+    );
+    expect(
+      hostRect.center.dx,
+      worldEditBounds.center.dx - scenario.runtime.camera.offset.dx,
     );
     _expectEditorHostExtendsMeasuredWidth(tester, localEditBounds);
 
@@ -418,6 +436,45 @@ void _expectInlineEditorDisablesScrollbar(
     const ScrollableDetails.vertical(),
   );
   expect(child.key, const ValueKey<String>('inline-text-scroll-child'));
+}
+
+Future<void> _expectLiveWidthAnchorFor(
+  WidgetTester tester,
+  TextAlign align,
+) async {
+  final scenario = _OverlayScenario(
+    document: _document(text: 'edge', align: align),
+    inlineEditOnDoubleTap: true,
+  );
+  addTearDown(scenario.dispose);
+
+  await scenario.pump(tester);
+  await scenario.doubleTapText(tester);
+  final before = _editorHostRect(tester);
+
+  await tester.enterText(
+    find.byKey(canvasTextEditingOverlayEditableTextKey),
+    'edge grows much wider',
+  );
+  await tester.pump();
+  final after = _editorHostRect(tester);
+  expect(after.width, greaterThan(before.width));
+
+  switch (align) {
+    case TextAlign.left:
+    case TextAlign.start:
+    case TextAlign.justify:
+      expect(after.left, moreOrLessEquals(before.left));
+    case TextAlign.right:
+    case TextAlign.end:
+      expect(after.right, moreOrLessEquals(before.right));
+    case TextAlign.center:
+      expect(after.center.dx, moreOrLessEquals(before.center.dx));
+  }
+}
+
+Rect _editorHostRect(WidgetTester tester) {
+  return tester.getRect(find.byKey(canvasTextEditingOverlayEditorHostKey));
 }
 
 Rect _localEditBoundsFor(CanvasTextEditGeometry geometry) {
