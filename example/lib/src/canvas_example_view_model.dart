@@ -116,6 +116,7 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     try {
       final document = decodeCanvasDocumentFromJson(json);
       _runtime.edits.loadDocument(document);
+      _loadImportedSampleImageIfNeeded(document);
       _lastExportedJson = json;
       _jsonImportError = null;
       _notifyIfActive();
@@ -463,6 +464,51 @@ final class CanvasExampleViewModel extends ChangeNotifier {
     } finally {
       _sampleImageLoad = null;
     }
+  }
+
+  void _loadImportedSampleImageIfNeeded(CanvasDocument document) {
+    if (!_hasSampleCatResource(document)) {
+      return;
+    }
+
+    unawaited(_ensureImportedSampleImageLoaded());
+  }
+
+  Future<void> _ensureImportedSampleImageLoaded() async {
+    try {
+      await ensureSampleImageLoaded();
+      if (_disposed) {
+        return;
+      }
+      _runtime.resources.markResourceDirty(
+        SampleImageResolver.sampleCatResourceId,
+      );
+      _sampleImageError = null;
+      _notifyIfActive();
+    } on Object {
+      _sampleImageError = 'Unable to load sample cat image.';
+      _sampleImageErrorRevision += 1;
+      _notifyIfActive();
+    }
+  }
+
+  bool _hasSampleCatResource(CanvasDocument document) {
+    for (final resource in document.resources) {
+      if (resource is CanvasImageResource &&
+          resource.id == SampleImageResolver.sampleCatResourceId &&
+          _isSampleCatSource(resource.source)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _isSampleCatSource(CanvasResourceSource source) {
+    return switch (source) {
+      CanvasAppKeyResourceSource(key: 'sample-cat') => true,
+      CanvasAppKeyResourceSource() => false,
+    };
   }
 
   void _insertSampleObjects() {

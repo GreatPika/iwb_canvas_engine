@@ -17,6 +17,7 @@ void main() {
   _registerAddSampleIdCollisionTest();
   _registerAddSampleFailureTest();
   _registerResolverAndDisposalTest();
+  _registerImportLoadsSampleResourceTest();
   _registerSurfaceReceivesResolverTest();
   _registerSurfaceRenderingResolverTest();
   _registerFailureSnackbarTest();
@@ -152,6 +153,27 @@ void _registerResolverAndDisposalTest() {
   );
 }
 
+void _registerImportLoadsSampleResourceTest() {
+  test(
+    'imported sample-cat JSON loads the app-owned cat image without Add Sample',
+    () async {
+      final viewModel = CanvasExampleViewModel(
+        sampleImageAssetService: _fileBackedService(),
+      );
+      addTearDown(viewModel.dispose);
+      final json = encodeCanvasDocumentToJson(_sampleImageDocument());
+
+      expect(viewModel.importDocumentJson(json), isTrue);
+      final resource =
+          viewModel.document.resources.single as CanvasImageResource;
+
+      await _waitForResolvedSampleImage(viewModel, resource);
+
+      expect(viewModel.sampleImageError, isNull);
+    },
+  );
+}
+
 void _registerSurfaceReceivesResolverTest() {
   testWidgets('screen passes app resolver to CanvasSurface', (tester) async {
     final viewModel = CanvasExampleViewModel();
@@ -240,6 +262,21 @@ Future<ByteData> _byteDataForFile(File file) async {
   final data = Uint8List.fromList(bytes);
 
   return ByteData.sublistView(data);
+}
+
+Future<void> _waitForResolvedSampleImage(
+  CanvasExampleViewModel viewModel,
+  CanvasImageResource resource,
+) async {
+  for (var attempt = 0; attempt < 20; attempt += 1) {
+    final image = viewModel.resourceResolver.resolveImage(resource);
+    if (image != null) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+
+  throw StateError('Expected imported sample-cat resource to resolve.');
 }
 
 List<CanvasElement> _elements(CanvasDocument document) {
