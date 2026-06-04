@@ -12,6 +12,12 @@ const _measuredLayoutSourcePath =
 final _textPainterConstructorPattern = RegExp(
   r'\bTextPainter\s*(?:\.new)?\s*\(',
 );
+final _textBoundsFactoryPattern = RegExp(
+  r'\b(?:Rect\.(?:fromLTWH|fromLTRB|fromCenter|fromCircle|fromPoints)|Size)\s*\(',
+);
+final _lengthBasedTextSizeFormulaPattern = RegExp(
+  r'\b(?:text|liveText)\.length\b[\s\S]*?\bfontSize\b|\bfontSize\b[\s\S]*?\b(?:text|liveText)\.length\b',
+);
 
 Future<List<GuardrailViolation>> checkTextSingleMeasuredLayoutSource() {
   return Future.value(
@@ -129,14 +135,8 @@ bool _hasTextGeometryMarker(String source) {
 
 bool _hasFormulaToken(String source) {
   return _containsTextPainterConstructor(source) ||
-      source.contains('Rect.fromLTWH') &&
-          _containsAny(source, const [
-            '.length',
-            'fontSize',
-            'maxWidth',
-            'lineHeight',
-            'liveText',
-          ]);
+      _containsTextBoundsFactory(source) &&
+          _containsLengthBasedTextSizeFormula(source);
 }
 
 bool _isForbiddenEditableTextOwner(String path) {
@@ -150,6 +150,14 @@ bool _containsUnauthorizedTextPainter(String path, String source) {
 
 bool _containsTextPainterConstructor(String source) {
   return _textPainterConstructorPattern.hasMatch(source);
+}
+
+bool _containsTextBoundsFactory(String source) {
+  return _textBoundsFactoryPattern.hasMatch(source);
+}
+
+bool _containsLengthBasedTextSizeFormula(String source) {
+  return _lengthBasedTextSizeFormulaPattern.hasMatch(source);
 }
 
 bool _isTextGeometryConsumerSource(String path) {

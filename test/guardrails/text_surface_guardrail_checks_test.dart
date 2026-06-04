@@ -74,6 +74,17 @@ double _estimatedHeight(FrameElementFacts facts) {
   return facts.lineHeight;
 }
 ''',
+      'lib/src/runtime/runtime_root.dart': '''
+CanvasTextEditGeometry _geometryFor(_RuntimeTextEditSessionState state) {
+  return CanvasTextEditGeometry(
+    paintBoundsWorld: Rect.zero,
+    editBoundsWorld: Rect.fromLTRB(0, 0, state.liveText.length * state.style.fontSize, state.style.lineHeight),
+    transform: CanvasTransform.identity,
+    maxWidth: state.style.maxWidth,
+    editBoundsLocal: Rect.zero,
+  );
+}
+''',
     });
 
     expect(_guardrailIds(violations), {
