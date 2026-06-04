@@ -13,17 +13,18 @@ final class MoveMachine {
   const MoveMachine();
 
   SelectedMoveStartDecision start(SelectedMoveStartFacts facts) {
-    if (facts.selectedIds.isEmpty ||
-        facts.movableSelectedIds.isEmpty ||
-        !facts.hitSelectedMovable) {
+    if (facts.selectedIds.isEmpty || facts.movableSelectedIds.isEmpty) {
       return const SelectedMoveStartDecision.rejected();
     }
+    if (facts.hitSelectedMovable || _admitsGroupUnionStart(facts)) {
+      return SelectedMoveStartDecision.admitted(
+        selectedIds: facts.selectedIds,
+        movableIds: facts.movableSelectedIds,
+        selectionRevision: facts.selectionRevision,
+      );
+    }
 
-    return SelectedMoveStartDecision.admitted(
-      selectedIds: facts.selectedIds,
-      movableIds: facts.movableSelectedIds,
-      selectionRevision: facts.selectionRevision,
-    );
+    return const SelectedMoveStartDecision.rejected();
   }
 
   SelectedMovePreviewDecision preview({
@@ -60,6 +61,26 @@ final class MoveMachine {
       selectionBoundsWorld: facts.selectionBoundsWorld,
     );
   }
+}
+
+bool _admitsGroupUnionStart(SelectedMoveStartFacts facts) {
+  final bounds = facts.selectedGroupBoundsWorld;
+
+  return facts.selectedIds.length > 1 &&
+      facts.insideSelectedGroupUnion &&
+      !facts.groupUnionOccludedByHigherOrderHit &&
+      facts.query.status == InteractionReadQueryStatus.candidates &&
+      facts.selectedTopOrderToken != null &&
+      bounds != null &&
+      _isFiniteNonEmptyRect(bounds);
+}
+
+bool _isFiniteNonEmptyRect(Rect rect) {
+  return rect.left.isFinite &&
+      rect.top.isFinite &&
+      rect.right.isFinite &&
+      rect.bottom.isFinite &&
+      !rect.isEmpty;
 }
 
 final class SelectedMoveStartDecision {

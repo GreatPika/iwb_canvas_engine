@@ -2,21 +2,38 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
+import 'package:iwb_canvas_engine/src/interaction/move_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 const _selectedMoveDragEnd = Offset(9, 0);
+const _groupMoveStart = Offset(10, 0);
+const _groupMoveEnd = Offset(19, 0);
 
 void main() {
+  _testMoveMachineGroupAdmissionFacts();
+  _testMoveMachineRejectsOccludedGroupFacts();
+  _testMoveMachineRejectsSingleSelectionGroupFacts();
+  _testMoveMachineRejectsNonFiniteGroupFacts();
+  _testMoveMachineRejectsUnreliableGroupOcclusionFacts();
   _testSelectedMoveAdmissionAndPreview();
+  _testGroupInteriorSelectedMoveAdmissionAndPreview();
+  _testOccludedGroupInteriorDoesNotStartSelectedMove();
+  _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove();
   _testSameDeltaMoveKeepsPreviewRevision();
   _testSelectedMoveZeroDeltaDoesNotResolve();
+  _testGroupInteriorZeroDeltaDoesNotResolve();
   _testSelectedMoveStaleSelectionDoesNotResolve();
+  _testGroupInteriorStaleSelectionDoesNotResolve();
   _testSelectedMoveInvalidTerminalDoesNotResolve();
   _testSelectedMoveEmptyMovableSetDoesNotResolve();
   _testSelectedMoveCommitWithResolver();
+  _testGroupInteriorSelectedMoveCommitWithResolver();
   _testSelectedMoveResolverCancelDoesNotCommit();
+  _testGroupInteriorResolverCancelDoesNotCommit();
   _testSelectedMoveResolverErrorCleansPreview();
+  _testGroupInteriorResolverErrorCleansPreview();
   _testSelectedMoveNonFiniteResolverDeltaCleansPreview();
   _testSelectedMoveCancelDoesNotResolve();
   _testSelectedMoveModeChangeDoesNotResolve();
@@ -25,6 +42,67 @@ void main() {
   _testSelectedMoveEditFailureCleansPreview();
   _testSelectedMoveResolverReentrancy();
   _testSelectedMoveResolverDisposeReentrancy();
+}
+
+void _testMoveMachineGroupAdmissionFacts() {
+  test('move machine admits complete multi-select group union facts', () {
+    final decision = const MoveMachine().start(_groupStartFacts());
+
+    expect(decision.admitted, isTrue);
+    expect(decision.selectedIds, [CanvasElementId('a'), CanvasElementId('b')]);
+    expect(decision.movableIds, [CanvasElementId('a'), CanvasElementId('b')]);
+  });
+}
+
+void _testMoveMachineRejectsOccludedGroupFacts() {
+  test('move machine rejects occluded selected group union facts', () {
+    expect(
+      const MoveMachine().start(_groupStartFacts(occluded: true)).admitted,
+      isFalse,
+    );
+  });
+}
+
+void _testMoveMachineRejectsSingleSelectionGroupFacts() {
+  test('move machine rejects single-selection group union facts', () {
+    expect(
+      const MoveMachine()
+          .start(_groupStartFacts(singleSelection: true))
+          .admitted,
+      isFalse,
+    );
+  });
+}
+
+void _testMoveMachineRejectsNonFiniteGroupFacts() {
+  test('move machine rejects non-finite selected group union facts', () {
+    expect(
+      const MoveMachine()
+          .start(
+            _groupStartFacts(
+              bounds: const Rect.fromLTRB(-5, -5, double.infinity, 5),
+            ),
+          )
+          .admitted,
+      isFalse,
+    );
+  });
+}
+
+void _testMoveMachineRejectsUnreliableGroupOcclusionFacts() {
+  test(
+    'move machine rejects group union facts without candidate query proof',
+    () {
+      expect(
+        const MoveMachine()
+            .start(
+              _groupStartFacts(query: const InteractionReadQueryFacts.notRun()),
+            )
+            .admitted,
+        isFalse,
+      );
+    },
+  );
 }
 
 void _testSelectedMoveAdmissionAndPreview() {
@@ -48,6 +126,68 @@ void _testSelectedMoveAdmissionAndPreview() {
       expect(root.state.value.revisions.preview, 1);
     },
   );
+}
+
+void _testGroupInteriorSelectedMoveAdmissionAndPreview() {
+  test('selected move admits empty space inside selected group union', () {
+    final root = _runtimeRoot();
+    addTearDown(root.dispose);
+    root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, _groupMoveStart),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, _groupMoveEnd),
+    );
+
+    expect(root.interactionEngine.activeSession, isNotNull);
+    final preview = root.preview as CanvasSelectedMovePreview;
+    expect(preview.delta, _groupMoveEnd - _groupMoveStart);
+  });
+}
+
+void _testOccludedGroupInteriorDoesNotStartSelectedMove() {
+  test(
+    'higher order exact hit blocks selected group union admission',
+    () async {
+      final scenario = _occludedNoCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, const Offset(15, 0)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, const Offset(24, 0)),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isNot(isA<CanvasSelectedMovePreview>()));
+      expect(scenario.resolverCalls(), 0);
+      expect(scenario.actions, isEmpty);
+      _expectOccludedDocumentUnmoved(root);
+    },
+  );
+}
+
+void _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove() {
+  test('single selected line bounds miss does not start selected move', () {
+    final root = RuntimeRoot(
+      initialDocument: _singleLineDocument(),
+      config: const CanvasRuntimeConfig(),
+    )..selection.setSelection([CanvasElementId('line-a')]);
+    addTearDown(root.dispose);
+
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(80, 20)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(89, 20)),
+    );
+
+    expect(root.preview, isNot(isA<CanvasSelectedMovePreview>()));
+  });
 }
 
 void _testSameDeltaMoveKeepsPreviewRevision() {
@@ -85,6 +225,28 @@ void _testSelectedMoveZeroDeltaDoesNotResolve() {
   );
 }
 
+void _testGroupInteriorZeroDeltaDoesNotResolve() {
+  test(
+    'selected group interior zero delta terminal cleans up without resolver',
+    () async {
+      final scenario = _noCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, _groupMoveStart),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _groupMoveStart),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 0);
+      _expectNoMoveEffects(scenario);
+    },
+  );
+}
+
 void _testSelectedMoveStaleSelectionDoesNotResolve() {
   test('selected move stale selection terminal cannot edit or act', () async {
     final scenario = _noCommitScenario();
@@ -104,6 +266,32 @@ void _testSelectedMoveStaleSelectionDoesNotResolve() {
     expect(scenario.resolverCalls(), 0);
     _expectNoMoveEffects(scenario);
   });
+}
+
+void _testGroupInteriorStaleSelectionDoesNotResolve() {
+  test(
+    'selected group interior stale selection terminal cannot edit or act',
+    () async {
+      final scenario = _noCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, _groupMoveStart),
+      );
+      root.selection.clearSelection();
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, _groupMoveEnd),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _groupMoveEnd),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 0);
+      _expectNoMoveEffects(scenario);
+    },
+  );
 }
 
 void _testSelectedMoveInvalidTerminalDoesNotResolve() {
@@ -181,6 +369,29 @@ void _testSelectedMoveCommitWithResolver() {
   );
 }
 
+void _testGroupInteriorSelectedMoveCommitWithResolver() {
+  test(
+    'selected group interior terminal uses existing move commit path',
+    () async {
+      final scenario = _commitScenario();
+      final root = scenario.root;
+      final actions = scenario.actions;
+      root.selection.setSelection([CanvasElementId('b'), CanvasElementId('a')]);
+
+      _dragSelectedMove(root, start: _groupMoveStart, end: _groupMoveEnd);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      final request = scenario.request() as CanvasMoveCommitRequest;
+      expect(request.proposedDelta, _groupMoveEnd - _groupMoveStart);
+      _expectGroupResolverRequest(request);
+      _expectCommittedTransforms(root);
+      _expectMoveAction(actions.single);
+      expect(root.preview, isA<CanvasNoPreview>());
+    },
+  );
+}
+
 _CommitScenario _commitScenario() {
   CanvasMoveCommitRequest? request;
   var resolverCalls = 0;
@@ -218,6 +429,14 @@ void _expectResolverRequest(CanvasMoveCommitRequest? request) {
   expect(value.timestampMs, 0);
 }
 
+void _expectGroupResolverRequest(CanvasMoveCommitRequest request) {
+  expect(request.movedElements.map((element) => element.id), [
+    CanvasElementId('a'),
+    CanvasElementId('b'),
+  ]);
+  expect(request.selectionBoundsWorld, const Rect.fromLTRB(-5, -5, 25, 5));
+}
+
 void _expectCommittedTransforms(RuntimeRoot root) {
   final elements = root.readDocument().layers.single.elements;
   final a = elements.whereType<CanvasRectElement>().firstWhere(
@@ -229,6 +448,14 @@ void _expectCommittedTransforms(RuntimeRoot root) {
 
   expect(a.transform, CanvasTransform.translation(const Offset(7, 8)));
   expect(b.transform, CanvasTransform.translation(const Offset(27, 8)));
+}
+
+void _expectOccludedDocumentUnmoved(RuntimeRoot root) {
+  expect(_rect(root, 'a').transform, CanvasTransform.identity);
+  expect(
+    _rect(root, 'b').transform,
+    CanvasTransform.translation(const Offset(30, 0)),
+  );
 }
 
 void _expectMoveAction(CanvasActionCommitted action) {
@@ -257,6 +484,25 @@ void _testSelectedMoveResolverCancelDoesNotCommit() {
   });
 }
 
+void _testGroupInteriorResolverCancelDoesNotCommit() {
+  test(
+    'selected group interior resolver cancel cleans preview without action',
+    () async {
+      final scenario = _noCommitScenario(
+        resolver: (_) => const CanvasMoveCancel(),
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+      _dragSelectedMove(root, start: _groupMoveStart, end: _groupMoveEnd);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    },
+  );
+}
+
 void _testSelectedMoveResolverErrorCleansPreview() {
   test('selected move resolver error cleans preview and rethrows', () {
     final scenario = _noCommitScenario(
@@ -274,6 +520,28 @@ void _testSelectedMoveResolverErrorCleansPreview() {
     );
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
   });
+}
+
+void _testGroupInteriorResolverErrorCleansPreview() {
+  test(
+    'selected group interior resolver error cleans preview and rethrows',
+    () {
+      final scenario = _noCommitScenario(
+        resolver: (_) => throw StateError('resolver failed'),
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+      _startGroupInteriorSelectedMove(root);
+
+      expect(
+        () => root.handlePointer(
+          _sample(CanvasPointerLifecyclePhase.up, _groupMoveEnd),
+        ),
+        throwsStateError,
+      );
+      _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    },
+  );
 }
 
 void _testSelectedMoveNonFiniteResolverDeltaCleansPreview() {
@@ -436,6 +704,32 @@ _NoCommitScenario _noCommitScenario({CanvasMoveCommitResolver? resolver}) {
   );
 }
 
+_NoCommitScenario _occludedNoCommitScenario() {
+  var resolverCalls = 0;
+  final root = RuntimeRoot(
+    initialDocument: _occludedGroupDocument(),
+    config: CanvasRuntimeConfig(
+      moveCommitResolver: (request) {
+        resolverCalls += 1;
+
+        return const CanvasMoveCommit(delta: Offset(1, 1));
+      },
+    ),
+  );
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(() async {
+    await subscription.cancel();
+    root.dispose();
+  });
+
+  return _NoCommitScenario(
+    root: root,
+    actions: actions,
+    resolverCalls: () => resolverCalls,
+  );
+}
+
 void _expectNoMoveEffects(
   _NoCommitScenario scenario, {
   int expectedResolverCalls = 0,
@@ -521,6 +815,13 @@ void _startSelectedMove(RuntimeRoot root) {
   );
 }
 
+void _startGroupInteriorSelectedMove(RuntimeRoot root) {
+  root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.down, _groupMoveStart),
+  );
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.move, _groupMoveEnd));
+}
+
 void _cleanupSelectedMove(
   RuntimeRoot root, {
   required PointerCleanupReason reason,
@@ -591,6 +892,75 @@ CanvasDocument _document() {
         ],
       ),
     ],
+  );
+}
+
+CanvasDocument _occludedGroupDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasRectElement(id: CanvasElementId('a'), size: const Size(10, 10)),
+          CanvasRectElement(
+            id: CanvasElementId('b'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(30, 0)),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('occluder'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(15, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _singleLineDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasLineElement(
+            id: CanvasElementId('line-a'),
+            start: Offset.zero,
+            end: const Offset(100, 100),
+            thickness: 2,
+            color: const Color(0xFF111111),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+SelectedMoveStartFacts _groupStartFacts({
+  bool occluded = false,
+  bool singleSelection = false,
+  Rect? bounds = const Rect.fromLTRB(-5, -5, 25, 5),
+  InteractionReadQueryFacts query = const InteractionReadQueryFacts.candidates(
+    candidateCount: 0,
+    skippedCandidateCount: 0,
+  ),
+}) {
+  final selectedIds = singleSelection
+      ? [CanvasElementId('a')]
+      : [CanvasElementId('a'), CanvasElementId('b')];
+
+  return SelectedMoveStartFacts(
+    selectedIds: selectedIds,
+    movableSelectedIds: selectedIds,
+    controllerEpoch: 0,
+    selectionRevision: 0,
+    hitSelectedMovable: false,
+    selectedGroupBoundsWorld: bounds,
+    selectedTopOrderToken: 1,
+    insideSelectedGroupUnion: true,
+    groupUnionOccludedByHigherOrderHit: occluded,
+    query: query,
   );
 }
 
