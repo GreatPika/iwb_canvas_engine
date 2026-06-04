@@ -41,7 +41,7 @@ Required tests:
 - `test.surface.overlay_drawable_policy`
 - `test.surface.marquee_captured_style`
 - `test.frame.selection_decoration_plan`
-- `test.surface.selection_chrome_ordered_paint`
+- `test.surface.selection_chrome_topmost_paint`
 - `test.surface.selection_chrome_hit_target_boundary`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
@@ -152,7 +152,7 @@ frame-private collaborators:
 | `FrameCaptureService` | one-time capture of main/overlay live frame facts into `CapturedMainFrame` and `CapturedOverlayFrame` | record planning, resolver/session calls, cache mutation beyond captured-frame construction |
 | `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record cache lookup/build inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
 | `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
-| `SelectionDecorationPlanner` | single-element or multi-select group selection UI decoration, chrome order/placement metadata, and `SelectionDecorationPlan` key including `boundsRevision`, structural/order invalidation, plus selected-move preview delta/revision for decoration movement | ordinary record cache identity, selected move supplement records, static background identity |
+| `SelectionDecorationPlanner` | single-element or multi-select group selection UI decoration, chrome placement metadata, and `SelectionDecorationPlan` key including `boundsRevision`, structural invalidation, plus selected-move preview chrome suppression | ordinary record cache identity, selected move supplement records, static background identity |
 | `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
@@ -213,14 +213,13 @@ RenderElementRecord
   row-specific immutable view
 ```
 
-Ordinary `RenderElementRecord` values cached in `OrdinaryPaintRecordCache` do not include
-selection membership, selection flags, selected-move preview deltas, viewport
-admission results, or any other selection-only state. Selection UI is built as
-separate decoration primitives and painted from immutable frame output
-interleaved with the ordinary main-record stream by captured paint order token;
-it is not a global after-pass above all content. Selected-move supplement
-records are per-frame values that are never stored in the ordinary paint plan
-cache.
+Ordinary `RenderElementRecord` values cached in `OrdinaryPaintRecordCache` do
+not include selection membership, selection flags, selected-move preview deltas,
+viewport admission results, or any other selection-only state. Selection UI is
+built as separate decoration primitives and painted from immutable frame output
+after the ordinary main-record stream so selected chrome remains above all main
+scene content. Selected-move supplement records are per-frame values that are
+never stored in the ordinary paint plan cache.
 
 Family row views:
 
@@ -286,27 +285,28 @@ Selection decoration reads selected ids and selectionRevision through the same
 captured selection facts boundary and is invalidated separately from ordinary
 paint plans. Its decoration key includes `boundsRevision` because selected
 element bounds can change without changing selection membership, and it includes
-structural/order facts that can change selected chrome paint order without
-changing selected ids. When `CanvasSelectedMovePreview` is active, the key also
-includes the selected-move preview delta and previewRevision, and the decoration
-bounds are shifted by the captured delta for that frame only. Single selection
-emits one primitive for that element. Multi-select emits one group-box primitive
-whose bounds are the union of selected paint bounds and whose paint order token
-is the maximum selected element order token. Group-box chrome, single rect
-chrome, and single image chrome use inside-box stroke placement; single line,
-stroke, text, and path chrome remain bounds/outline placement unless a later
-owner-specific decoration contract changes them. This keeps the selection UI
-visually aligned with the selected-move supplement without adding preview state
-to ordinary paint cache identity. `selectedOrder` is derived data or a bounded
-cache keyed by `selectionRevision` and `structuralRevision`; it is not a second
-stored selection source of truth and is not the chrome paint-order source.
-Accepted internal ownership: `SelectionDecorationPlanner` owns the decoration
-key, primitive grouping, order/placement metadata, and selected-move decoration
-movement facts, and keeps selection decoration state out of ordinary record
-cache identity, selected move supplement records, and static background
-identity. `MainFramePainter` consumes those immutable primitives by merging them
-into the existing main-record paint stream so higher-order content can cover
-selection chrome.
+structural facts that can change selected chrome family placement without
+changing selected ids. When `CanvasSelectedMovePreview` is active, the key
+records that selection chrome is hidden and the decoration plan emits no
+primitives; selected-move delta and previewRevision churn while active does not
+rebuild a visually empty decoration plan. Single selection emits one primitive
+for that element when no selected-move preview is active. Multi-select emits one
+group-box primitive whose bounds are the union of selected paint bounds.
+Group-box chrome, single rect chrome, and single image chrome use outside-box
+stroke placement so their stroke inner edge aligns with the primitive bounds;
+single line, stroke, text, and path chrome remain bounds/outline placement
+unless a later owner-specific decoration contract changes them. This keeps
+selected-move visual feedback owned by the selected-move supplement without
+adding preview state to ordinary paint cache identity. `selectedOrder` is
+derived data or a bounded cache keyed by `selectionRevision` and
+`structuralRevision`; it is not a second stored selection source of truth and is
+not the chrome paint-order source. Accepted internal ownership:
+`SelectionDecorationPlanner` owns the decoration key, primitive grouping,
+placement metadata, and selected-move chrome suppression facts, and keeps
+selection decoration state out of ordinary record cache identity, selected move
+supplement records, and static background identity. `MainFramePainter` consumes
+those immutable primitives after the main-record stream so selection chrome
+stays topmost within the main scene.
 
 ### 15.4 Render primitive cache misses
 

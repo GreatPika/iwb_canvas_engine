@@ -14,9 +14,7 @@ final class SelectionDecorationKey {
     required Iterable<CanvasElementId> selectedElementIds,
     required this.structuralRevision,
     required this.boundsRevision,
-    required this.selectedTopOrderToken,
-    required this.selectedMoveDelta,
-    required this.previewRevision,
+    required this.hiddenForSelectedMovePreview,
     required this.selectionStyle,
     required this.devicePixelRatio,
   }) : selectedElementIds = Set.unmodifiable(selectedElementIds);
@@ -25,9 +23,7 @@ final class SelectionDecorationKey {
   final Set<CanvasElementId> selectedElementIds;
   final int structuralRevision;
   final int boundsRevision;
-  final int? selectedTopOrderToken;
-  final Offset selectedMoveDelta;
-  final int previewRevision;
+  final bool hiddenForSelectedMovePreview;
   final CanvasSelectionStyle selectionStyle;
   final double devicePixelRatio;
 
@@ -38,9 +34,7 @@ final class SelectionDecorationKey {
         setEquals(other.selectedElementIds, selectedElementIds) &&
         other.structuralRevision == structuralRevision &&
         other.boundsRevision == boundsRevision &&
-        other.selectedTopOrderToken == selectedTopOrderToken &&
-        other.selectedMoveDelta == selectedMoveDelta &&
-        other.previewRevision == previewRevision &&
+        other.hiddenForSelectedMovePreview == hiddenForSelectedMovePreview &&
         other.selectionStyle == selectionStyle &&
         other.devicePixelRatio == devicePixelRatio;
   }
@@ -52,9 +46,7 @@ final class SelectionDecorationKey {
       Object.hashAllUnordered(selectedElementIds),
       structuralRevision,
       boundsRevision,
-      selectedTopOrderToken,
-      selectedMoveDelta,
-      previewRevision,
+      hiddenForSelectedMovePreview,
       selectionStyle,
       devicePixelRatio,
     );
@@ -75,12 +67,11 @@ final class SelectionDecorationPlan {
 
 enum SelectionDecorationChromeForm { singleElement, groupBox }
 
-enum SelectionDecorationStrokePlacement { insideBox, boundsOutline }
+enum SelectionDecorationStrokePlacement { outsideBox, boundsOutline }
 
 final class SelectionDecorationPrimitive {
   const SelectionDecorationPrimitive({
     required this.boundsWorld,
-    required this.paintOrderToken,
     required this.selectedElementCount,
     required this.chromeForm,
     required this.strokePlacement,
@@ -90,7 +81,6 @@ final class SelectionDecorationPrimitive {
   });
 
   final Rect boundsWorld;
-  final int paintOrderToken;
   final int selectedElementCount;
   final SelectionDecorationChromeForm chromeForm;
   final SelectionDecorationStrokePlacement strokePlacement;
@@ -138,18 +128,12 @@ final class SelectionDecorationPlanner {
 }
 
 SelectionDecorationKey _selectionDecorationKeyFor(CapturedMainFrame frame) {
-  final selectedMovePreview = frame.selectedMovePreview;
-
   return SelectionDecorationKey(
     selectionRevision: frame.snapshot.selection.selectionRevision,
     selectedElementIds: frame.snapshot.selection.selectedElementIds,
     structuralRevision: frame.snapshot.revisions.structuralRevision,
     boundsRevision: frame.snapshot.revisions.boundsRevision,
-    selectedTopOrderToken: _selectedTopOrderToken(frame),
-    selectedMoveDelta: selectedMovePreview?.delta ?? Offset.zero,
-    previewRevision: selectedMovePreview == null
-        ? 0
-        : frame.snapshot.previewRevision,
+    hiddenForSelectedMovePreview: frame.selectedMovePreview != null,
     selectionStyle: frame.snapshot.inputs.selectionStyle,
     devicePixelRatio: frame.snapshot.inputs.devicePixelRatio,
   );
@@ -158,6 +142,9 @@ SelectionDecorationKey _selectionDecorationKeyFor(CapturedMainFrame frame) {
 Iterable<SelectionDecorationPrimitive> _selectionDecorationPrimitivesFor(
   CapturedMainFrame frame,
 ) {
+  if (frame.selectedMovePreview != null) {
+    return const [];
+  }
   final style = frame.snapshot.inputs.selectionStyle;
   final selectedRecords = _selectedRenderRecords(frame);
   if (selectedRecords.isEmpty) {
@@ -168,8 +155,7 @@ Iterable<SelectionDecorationPrimitive> _selectionDecorationPrimitivesFor(
 
     return [
       SelectionDecorationPrimitive(
-        boundsWorld: _selectionDecorationBoundsFor(record, frame),
-        paintOrderToken: record.orderToken,
+        boundsWorld: _selectionDecorationBoundsFor(record),
         selectedElementCount: 1,
         chromeForm: SelectionDecorationChromeForm.singleElement,
         strokePlacement: _strokePlacementFor(record.family),
@@ -182,11 +168,10 @@ Iterable<SelectionDecorationPrimitive> _selectionDecorationPrimitivesFor(
 
   return [
     SelectionDecorationPrimitive(
-      boundsWorld: _unionSelectionDecorationBounds(selectedRecords, frame),
-      paintOrderToken: _topOrderToken(selectedRecords),
+      boundsWorld: _unionSelectionDecorationBounds(selectedRecords),
       selectedElementCount: selectedRecords.length,
       chromeForm: SelectionDecorationChromeForm.groupBox,
-      strokePlacement: SelectionDecorationStrokePlacement.insideBox,
+      strokePlacement: SelectionDecorationStrokePlacement.outsideBox,
       color: style.color,
       strokeWidth: style.strokeWidth,
       haloWidth: style.haloWidth,
@@ -207,24 +192,14 @@ List<RenderElementRecord> _selectedRenderRecords(CapturedMainFrame frame) {
   return records;
 }
 
-Rect _selectionDecorationBoundsFor(
-  RenderElementRecord record,
-  CapturedMainFrame frame,
-) {
-  final delta = frame.selectedMovePreview?.delta ?? Offset.zero;
-
-  return record.paintBoundsWorld.shift(delta);
+Rect _selectionDecorationBoundsFor(RenderElementRecord record) {
+  return record.paintBoundsWorld;
 }
 
-Rect _unionSelectionDecorationBounds(
-  List<RenderElementRecord> records,
-  CapturedMainFrame frame,
-) {
-  var bounds = _selectionDecorationBoundsFor(records.first, frame);
+Rect _unionSelectionDecorationBounds(List<RenderElementRecord> records) {
+  var bounds = _selectionDecorationBoundsFor(records.first);
   for (final record in records.skip(1)) {
-    bounds = bounds.expandToInclude(
-      _selectionDecorationBoundsFor(record, frame),
-    );
+    bounds = bounds.expandToInclude(_selectionDecorationBoundsFor(record));
   }
 
   return bounds;
@@ -235,31 +210,11 @@ SelectionDecorationStrokePlacement _strokePlacementFor(
 ) {
   return switch (family) {
     RenderElementFamily.image ||
-    RenderElementFamily.rect => SelectionDecorationStrokePlacement.insideBox,
+    RenderElementFamily.rect => SelectionDecorationStrokePlacement.outsideBox,
     RenderElementFamily.line ||
     RenderElementFamily.path ||
     RenderElementFamily.stroke ||
     RenderElementFamily.text =>
       SelectionDecorationStrokePlacement.boundsOutline,
   };
-}
-
-int _selectedTopOrderToken(CapturedMainFrame frame) {
-  return _topOrderToken([
-    for (final facts in frame.snapshot.elements)
-      if (frame.snapshot.selection.selectedElementIds.contains(facts.id))
-        RenderElementRecord.fromFacts(facts),
-  ]);
-}
-
-int _topOrderToken(Iterable<RenderElementRecord> records) {
-  int? topOrderToken;
-  for (final record in records) {
-    final orderToken = record.orderToken;
-    topOrderToken = topOrderToken == null
-        ? orderToken
-        : (topOrderToken > orderToken ? topOrderToken : orderToken);
-  }
-
-  return topOrderToken ?? 0;
 }

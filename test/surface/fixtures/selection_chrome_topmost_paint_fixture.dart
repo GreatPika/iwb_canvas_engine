@@ -12,14 +12,14 @@ import '../../frame/fixtures/ordinary_paint_test_support.dart';
 
 void main() {
   _registerSelectionChromePaintBoundaryTests();
-  _registerOrderedChromeTest();
+  _registerTopmostChromeTest();
   _registerPaintOrderTests();
-  _registerInsideBoxChromeTests();
+  _registerOutsideBoxChromeTests();
   _registerOutlineChromeTest();
 }
 
 void _registerSelectionChromePaintBoundaryTests() {
-  test('main painter consumes ordered selection chrome frame plans', () {
+  test('main painter consumes topmost selection chrome frame plans', () {
     final mainPainterSource = File(
       'lib/src/surface/main_painter.dart',
     ).readAsStringSync();
@@ -29,10 +29,8 @@ void _registerSelectionChromePaintBoundaryTests() {
       mainPainterSource,
       contains('paintMainFrameRecordsAndSelectionDecorations(canvas, output)'),
     );
-    expect(
-      mainPainterSource,
-      isNot(contains('void _paintSelectionDecorations(')),
-    );
+    expect(mainPainterSource, isNot(contains('paintOrderToken')));
+    expect(mainPainterSource, isNot(contains('nextDecorationIndex')));
     expect(mainPainterSource, isNot(contains('.sort(')));
     expect(mainPainterSource, isNot(contains('SelectedOrderSnapshot')));
     expect(mainPainterSource, isNot(contains('selectedOrderSnapshot')));
@@ -41,8 +39,8 @@ void _registerSelectionChromePaintBoundaryTests() {
   });
 }
 
-void _registerOrderedChromeTest() {
-  testWidgets('higher-order records cover ordered selection chrome', (
+void _registerTopmostChromeTest() {
+  testWidgets('selection chrome paints above higher-order records', (
     tester,
   ) async {
     final output = await _selectedFrameOutput(
@@ -57,10 +55,10 @@ void _registerOrderedChromeTest() {
       (await _pixelAt(
         tester,
         output,
-        selectedBounds.left.round() + 1,
+        selectedBounds.left.round() - 2,
         selectedBounds.center.dy.round(),
-      )).rgba,
-      _redRgba,
+      )).isBlueStroke,
+      isTrue,
     );
   });
 }
@@ -83,8 +81,8 @@ void _registerPaintOrderTests() {
   });
 }
 
-void _registerInsideBoxChromeTests() {
-  testWidgets('box chrome strokes stay inside primitive bounds', (
+void _registerOutsideBoxChromeTests() {
+  testWidgets('box chrome strokes stay outside primitive bounds', (
     tester,
   ) async {
     final rect = await _selectedFrameOutput(
@@ -103,18 +101,44 @@ void _registerInsideBoxChromeTests() {
       selectedIds: [CanvasElementId('line'), CanvasElementId('stroke')],
     );
 
-    final outsidePixels = [
-      await _pixelAt(tester, rect, 18, 20),
-      await _pixelAt(tester, image, 18, 20),
-      await _pixelAt(tester, group, 8, 20),
-      await _pixelAt(tester, group, 20, 18),
-    ];
+    final samples = await _sampleOutsideBoxChromePixels(
+      tester,
+      rect: rect,
+      image: image,
+      group: group,
+    );
 
     expect(
-      outsidePixels.map((pixel) => pixel.isBlueStroke),
+      samples.outside.map((pixel) => pixel.isBlueStroke),
+      everyElement(isTrue),
+    );
+    expect(
+      samples.inside.map((pixel) => pixel.isBlueStroke),
       everyElement(isFalse),
     );
   });
+}
+
+Future<({List<_Pixel> outside, List<_Pixel> inside})>
+_sampleOutsideBoxChromePixels(
+  WidgetTester tester, {
+  required MainFramePaintOutput rect,
+  required MainFramePaintOutput image,
+  required MainFramePaintOutput group,
+}) async {
+  return (
+    outside: await _samplePixels(tester, [
+      _PaintSample(rect, 18, 20),
+      _PaintSample(image, 18, 20),
+      _PaintSample(group, 8, 20),
+      _PaintSample(group, 20, 18),
+    ]),
+    inside: await _samplePixels(tester, [
+      _PaintSample(rect, 22, 22),
+      _PaintSample(image, 22, 22),
+      _PaintSample(group, 20, 20),
+    ]),
+  );
 }
 
 void _registerOutlineChromeTest() {
@@ -182,10 +206,23 @@ Future<_Pixel> _pixelAt(
 ) async {
   final pixel = await tester.runAsync(() => _recordedPixelAt(output, x, y));
   if (pixel == null) {
-    throw StateError('selection chrome ordered paint test produced no pixel');
+    throw StateError('selection chrome topmost paint test produced no pixel');
   }
 
   return pixel;
+}
+
+Future<List<_Pixel>> _samplePixels(
+  WidgetTester tester,
+  List<_PaintSample> samples,
+) async {
+  final pixels = <_Pixel>[];
+  for (final sample in samples) {
+    final pixel = await _pixelAt(tester, sample.output, sample.x, sample.y);
+    pixels.add(pixel);
+  }
+
+  return pixels;
 }
 
 Future<_Pixel> _recordedPixelAt(
@@ -200,7 +237,7 @@ Future<_Pixel> _recordedPixelAt(
   final image = await recorder.endRecording().toImage(64, 64);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
   if (bytes == null) {
-    throw StateError('selection chrome ordered paint test produced no pixels');
+    throw StateError('selection chrome topmost paint test produced no pixels');
   }
 
   return _pixelFrom(bytes.buffer.asUint8List(), x, y);
@@ -230,7 +267,8 @@ CanvasDocument _overlappingDocument() {
           ),
           _rect(
             'cover',
-            translation: const Offset(30, 20),
+            translation: const Offset(26, 16),
+            size: const Size(28, 28),
             fillColor: const Color(0xFFFF0000),
           ),
         ],
@@ -332,7 +370,13 @@ CanvasRectElement _rect(
   );
 }
 
-const _redRgba = [255, 0, 0, 255];
+final class _PaintSample {
+  const _PaintSample(this.output, this.x, this.y);
+
+  final MainFramePaintOutput output;
+  final int x;
+  final int y;
+}
 
 final class _Pixel {
   const _Pixel({

@@ -61,78 +61,18 @@ void paintMainFrameRecordsAndSelectionDecorations(
   MainFramePaintOutput output,
 ) {
   final imageBindings = resolvedMainFrameImages(output);
-  final pendingDecorations = output.selectionDecorationPlan.primitives;
-  var nextDecorationIndex = 0;
   for (final record in mainFrameRecordsInPaintOrder(
     output.selectedMoveSupplementPlan.mergedRecords,
   )) {
-    nextDecorationIndex = _paintSelectionDecorationsBeforeRecord(
-      canvas,
-      pendingDecorations,
-      nextDecorationIndex,
-      record,
-    );
     paintMainFrameRecord(
       canvas,
       record,
       imageBindings,
       output.renderPrimitiveSnapshot,
     );
-    nextDecorationIndex = _paintSelectionDecorationsAtRecord(
-      canvas,
-      pendingDecorations,
-      nextDecorationIndex,
-      record,
-    );
   }
-  _paintSelectionDecorationRange(
-    canvas,
-    pendingDecorations,
-    nextDecorationIndex,
-    pendingDecorations.length,
-  );
-}
-
-int _paintSelectionDecorationsBeforeRecord(
-  Canvas canvas,
-  List<SelectionDecorationPrimitive> primitives,
-  int startIndex,
-  RenderElementRecord record,
-) {
-  var index = startIndex;
-  while (index < primitives.length &&
-      primitives[index].paintOrderToken < record.orderToken) {
-    _paintSelectionDecoration(canvas, primitives[index]);
-    index += 1;
-  }
-
-  return index;
-}
-
-int _paintSelectionDecorationsAtRecord(
-  Canvas canvas,
-  List<SelectionDecorationPrimitive> primitives,
-  int startIndex,
-  RenderElementRecord record,
-) {
-  var index = startIndex;
-  while (index < primitives.length &&
-      primitives[index].paintOrderToken <= record.orderToken) {
-    _paintSelectionDecoration(canvas, primitives[index]);
-    index += 1;
-  }
-
-  return index;
-}
-
-void _paintSelectionDecorationRange(
-  Canvas canvas,
-  List<SelectionDecorationPrimitive> primitives,
-  int startIndex,
-  int endIndex,
-) {
-  for (var index = startIndex; index < endIndex; index += 1) {
-    _paintSelectionDecoration(canvas, primitives[index]);
+  for (final primitive in output.selectionDecorationPlan.primitives) {
+    _paintSelectionDecoration(canvas, primitive);
   }
 }
 
@@ -142,56 +82,32 @@ void _paintSelectionDecoration(
 ) {
   final haloWidth = primitive.haloWidth;
   if (haloWidth > 0) {
-    final effectiveHaloWidth = _effectiveSelectionStrokeWidth(
-      primitive,
-      haloWidth,
-    );
     canvas.drawRect(
       _selectionDecorationStrokeRectFor(
         primitive,
-        strokeWidth: effectiveHaloWidth,
+        strokeWidth: haloWidth,
         isHalo: true,
       ),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = effectiveHaloWidth
+        ..strokeWidth = haloWidth
         ..color = primitive.color.withAlpha(48),
     );
   }
   final strokeWidth = primitive.strokeWidth;
   if (strokeWidth > 0) {
-    final effectiveStrokeWidth = _effectiveSelectionStrokeWidth(
-      primitive,
-      strokeWidth,
-    );
     canvas.drawRect(
       _selectionDecorationStrokeRectFor(
         primitive,
-        strokeWidth: effectiveStrokeWidth,
+        strokeWidth: strokeWidth,
         isHalo: false,
       ),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = effectiveStrokeWidth
+        ..strokeWidth = strokeWidth
         ..color = primitive.color,
     );
   }
-}
-
-double _effectiveSelectionStrokeWidth(
-  SelectionDecorationPrimitive primitive,
-  double strokeWidth,
-) {
-  if (primitive.strokePlacement ==
-      SelectionDecorationStrokePlacement.boundsOutline) {
-    return strokeWidth;
-  }
-  final maxInsideWidth = _minPositive(
-    primitive.boundsWorld.width,
-    primitive.boundsWorld.height,
-  );
-
-  return strokeWidth <= maxInsideWidth ? strokeWidth : maxInsideWidth;
 }
 
 Rect _selectionDecorationStrokeRectFor(
@@ -200,26 +116,11 @@ Rect _selectionDecorationStrokeRectFor(
   required bool isHalo,
 }) {
   final bounds = primitive.boundsWorld;
-  if (primitive.strokePlacement ==
-      SelectionDecorationStrokePlacement.boundsOutline) {
-    return isHalo ? bounds.inflate(strokeWidth / 2) : bounds;
+  switch (primitive.strokePlacement) {
+    case SelectionDecorationStrokePlacement.outsideBox:
+      final outerGap = isHalo ? primitive.strokeWidth : 0;
+      return bounds.inflate(outerGap + strokeWidth / 2);
+    case SelectionDecorationStrokePlacement.boundsOutline:
+      return isHalo ? bounds.inflate(strokeWidth / 2) : bounds;
   }
-  final inset = _insideStrokeInset(bounds, strokeWidth);
-
-  return bounds.deflate(inset);
-}
-
-double _insideStrokeInset(Rect bounds, double strokeWidth) {
-  final halfStroke = strokeWidth / 2;
-  final maxInset = _minPositive(bounds.width, bounds.height) / 2;
-
-  return halfStroke <= maxInset ? halfStroke : maxInset;
-}
-
-double _minPositive(double left, double right) {
-  if (left <= 0 || right <= 0) {
-    return 0;
-  }
-
-  return left < right ? left : right;
 }

@@ -103,10 +103,14 @@ sequenceDiagram
     Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
   end
 
-  Frame->>Decoration: build selection decoration plan
-  Decoration-->>Frame: selection UI primitives
   Frame->>Background: build static background plan
   Background-->>Frame: static background primitive
+  Frame->>Decoration: build selection decoration plan
+  alt selected move preview is active
+    Decoration-->>Frame: empty selection chrome plan
+  else no selected move preview
+    Decoration-->>Frame: selection UI primitives
+  end
   Note over Supplement: No full-scene sort and no CanvasDocument materialization.
   Note over Decoration,SelectionFacts: Selection decoration and selected move supplements are per-frame render concerns outside the OrdinaryPaintRecordCache.
 
@@ -137,6 +141,7 @@ sequenceDiagram
 
   Frame->>Painter: paint immutable records, resolved assets, and bounded frame render caches
   Note over Frame,Painter: Ordinary element and stroke opacity is applied through primitive paint alpha. It must not call Canvas.saveLayer in the hot ordinary opacity path.
+  Note over Frame,Painter: Painter draws selection chrome after main records so selected chrome remains above all main scene content.
   Note over Frame,Painter: Any future saveLayer-producing effect must be explicit in RenderElementRecord, budgeted, counted by the frame.paint_candidates offscreen-layer metric, and guarded by a contract update before implementation.
   Painter-->>Surface: draw main scene
 

@@ -57,8 +57,8 @@ flowchart LR
     SupplementRecordBuilder["SelectedMoveSupplementPlanner\nsupplement record builder\nresolve shifted handles by revision/generation/orderToken"]
     FilterOrdinary["SelectedMoveSupplementPlanner\nfilter selected movable ids\nfrom ordinary stream for this frame"]
     Merge["Order-token merge\nno full-scene sort"]
-    SelectionDecoration["SelectionDecorationPlanner\nselection decoration plan\nseparate from ordinary records"]
-    Records["Immutable frame record list\nordinary row views plus per-frame\nselection decoration/supplements"]
+    SelectionDecoration["SelectionDecorationPlanner\nselection decoration plan\noutside-box chrome,\nhidden during selected move preview"]
+    Records["Immutable frame output\nordinary row views,\nselected move supplements,\nand topmost selection chrome"]
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundPlanner\nStaticBackgroundCache\nbackgroundRevision + gridRevision\n+ gridStrokeWidth + view camera bucket\n+ viewportRect + devicePixelRatio"]
     AssetBinding["PaintAssetBindingService\ndescriptor-to-asset binding\nthrough SurfaceResourceSession"]
@@ -108,7 +108,7 @@ flowchart LR
 
   OrdinaryPlan -->|"ordinary stream"| FilterOrdinary
   CapturedFrame -->|"selection ids and preview delta"| FilterOrdinary
-  CapturedFrame -->|"selection ids, selectionRevision,\nboundsRevision, selectionStyle,\nand devicePixelRatio"| SelectionDecoration
+  CapturedFrame -->|"selection ids, selectionRevision,\nboundsRevision, selectionStyle,\ndevicePixelRatio, and selected-move active flag"| SelectionDecoration
   CapturedFrame -->|"selectedMoveDelta for this frame"| SupplementStage
   SupplementStage -->|"shifted visibility query only"| ShiftedCandidates
   ShiftedCandidates -->|"selected candidate ids with generations and order tokens"| SupplementStage
@@ -118,7 +118,7 @@ flowchart LR
   SupplementRecordBuilder -->|"per-frame supplement records\nwith previewDelta"| Merge
   FilterOrdinary -->|"ordinary records excluding\nmoved selected ids"| Merge
   Merge -->|"ordered ordinary and supplement records\nnot stored in OrdinaryPaintRecordCache"| Records
-  SelectionDecoration -->|"selection UI primitives"| Records
+  SelectionDecoration -->|"topmost selection UI primitives"| Records
 
   Records -->|"text/path/stroke keys"| RenderCaches
   CapturedFrame -->|"backgroundRevision, gridRevision, gridStrokeWidth,\nviewCameraBucket, viewportRect, devicePixelRatio"| StaticBackgroundCache

@@ -178,7 +178,7 @@ flowchart LR
   BoundsRevision -->|"selection bounds changed"| SelectionDecorationInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
   SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
-  StructuralRevision -->|"selected order may change"| SelectionDecorationInvalidation
+  StructuralRevision -->|"selected chrome family may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
   LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
   ViewCameraCall -->|"runtime view camera only"| ViewCameraDispatch

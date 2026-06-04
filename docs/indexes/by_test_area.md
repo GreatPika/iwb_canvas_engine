@@ -519,7 +519,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
-## test.surface.selection_chrome_ordered_paint
+## test.surface.selection_chrome_topmost_paint
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
