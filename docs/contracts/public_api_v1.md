@@ -1521,7 +1521,9 @@ Rules:
 - commitTextEdit returns true, consumes the request id, and emits no document
   revision, repaint, or action event when newText equals the current text;
 - commitTextEdit changed-text commits run through EditKernel, consume the
-  request after successful prepare, and emit editText after atomic install;
+  request after successful prepare, may compensate the target text element
+  transform to preserve the resolved horizontal text anchor and top edit edge
+  when measured text bounds change, and emit editText after atomic install;
 - CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;
 - if only unused resources are removed and no elements are removed, no user
   action event is emitted;
@@ -2398,10 +2400,11 @@ Context-action and text editing model:
   EditableText, consumes CanvasTextEditingPort.activeSession, supports
   configurable auto-start, max-height scroll, cursor/selection hooks, escape
   dismissal, focus-loss commit, and multiline growth from session geometry;
-- while an inline text session is active, the official overlay preserves the
-  session-start resolved horizontal text anchor and the top edge of the edit
-  bounds as live text width or line count changes; committing the session
-  applies the same anchor-preserving behavior to the committed text element;
+- while an inline text session is active, CanvasTextEditSession.geometry
+  preserves the session-start resolved horizontal text anchor and the top edge
+  of the edit bounds as live text width or line count changes; committing the
+  session applies the same anchor-preserving behavior to the committed text
+  element;
 - custom overlays may replace CanvasTextEditingOverlay using only
   CanvasTextEditingPort.activeSession plus session geometry/style/liveText
   without importing src/**, recomputing text bounds, mutating visibility, or

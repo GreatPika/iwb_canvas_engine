@@ -13,6 +13,7 @@ void main() {
   _testReadOnlyAdmission();
   _testSingleActiveAdmission();
   _testLiveUpdateRemeasuresGeometry();
+  _testLiveGeometryPreservesTextAlignmentAnchor();
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
   _testSessionCommitDelegatesToCommandPath();
@@ -183,6 +184,19 @@ void _testLiveUpdateRemeasuresGeometry() {
   });
 }
 
+void _testLiveGeometryPreservesTextAlignmentAnchor() {
+  test(
+    'live geometry preserves the aligned text anchor before commit',
+    () async {
+      await _expectLiveGeometryPreservesAnchorFor(TextAlign.left);
+      await _expectLiveGeometryPreservesAnchorFor(TextAlign.right);
+      await _expectLiveGeometryPreservesAnchorFor(TextAlign.center);
+
+      expect(TextAlign.values, contains(TextAlign.center));
+    },
+  );
+}
+
 void _testSessionCommitDelegatesToCommandPath() {
   test('session commit delegates to guarded command path', () async {
     final scenario = _Scenario();
@@ -247,6 +261,33 @@ void _testDirectCommandCommitClearsActiveSession() {
       await scenario.dispose();
     }
   });
+}
+
+Future<void> _expectLiveGeometryPreservesAnchorFor(TextAlign align) async {
+  final scenario = _Scenario(document: _document(align: align, maxWidth: null));
+  try {
+    final request = await scenario.issueTextRequest();
+    final session = _expectSession(
+      scenario.root.textEditing.startFromContextAction(request),
+    );
+    final beforeAnchor = _anchorValueFor(
+      session.geometry.editBoundsWorld,
+      align,
+    );
+    final beforeTop = session.geometry.editBoundsWorld.top;
+
+    session.updateText('hello with more text\nsecond line');
+
+    final liveAnchor = _anchorValueFor(session.geometry.editBoundsWorld, align);
+    expect(liveAnchor, moreOrLessEquals(beforeAnchor, epsilon: 0.001));
+    expect(
+      session.geometry.editBoundsWorld.top,
+      moreOrLessEquals(beforeTop, epsilon: 0.001),
+    );
+    expect(_textValue(scenario.root), 'hello');
+  } finally {
+    await scenario.dispose();
+  }
 }
 
 Future<void> _expectCommitPreservesAnchorFor(TextAlign align) async {

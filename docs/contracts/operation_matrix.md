@@ -152,6 +152,9 @@ Notes:
   `CanvasActionType.editText` with
   `CanvasTextEditActionPayload`; the payload contains text lengths and never
   raw text.
+- Changed text commits may update the target text element transform to preserve
+  the resolved horizontal text anchor and top edit edge when measured text
+  bounds change.
 - Bounds-affecting text layout changes must compile `boundsRevision` and touched
   spatial updates just like other geometry/bounds edits.
 - Rows that name `runtime_created_timestamps_monotonic` resolve timestampMs

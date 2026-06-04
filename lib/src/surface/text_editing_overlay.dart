@@ -69,7 +69,6 @@ final class _CanvasTextEditingOverlayState
   TextEditingController? _controller;
   FocusNode? _focusNode;
   ScrollController? _scrollController;
-  Rect? _sessionAnchorEditBoundsLocal;
   StreamSubscription<CanvasContextActionRequested>? _contextSubscription;
   var _syncingController = false;
 
@@ -145,10 +144,10 @@ final class _CanvasTextEditingOverlayState
     final editorLeft = _alignedEditorLeftFor(
       align: session.style.textAlign,
       direction: session.style.textDirection,
-      anchor: _sessionAnchorEditBoundsLocal ?? editBounds,
+      anchor: editBounds,
       editorWidth: editorSize.width,
     );
-    final editorTop = _sessionAnchorEditBoundsLocal?.top ?? editBounds.top;
+    final editorTop = editBounds.top;
 
     return SizedBox.expand(
       child: CallbackShortcuts(
@@ -268,7 +267,6 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _installEditorState(CanvasTextEditSession session) {
-    _sessionAnchorEditBoundsLocal = session.geometry.editBoundsLocal;
     _controller = TextEditingController(text: session.liveText)
       ..addListener(_handleControllerChanged);
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
@@ -289,7 +287,6 @@ final class _CanvasTextEditingOverlayState
     _controller = null;
     _focusNode = null;
     _scrollController = null;
-    _sessionAnchorEditBoundsLocal = null;
     controller?.removeListener(_handleControllerChanged);
     controller?.dispose();
     focusNode?.removeListener(_handleFocusChanged);

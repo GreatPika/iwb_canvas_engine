@@ -620,9 +620,12 @@ final class RuntimeRoot
   // ignore: halstead-volume, source-lines-of-code
   FrameElementFacts _textFrameFactsWithLiveText(
     FrameElementFacts source,
-    String text,
-  ) {
-    final layout = _measuredTextLayoutFromFrameFacts(source, text);
+    String text, {
+    CanvasTransform? transform,
+    MeasuredTextLayout? measuredTextLayout,
+  }) {
+    final layout =
+        measuredTextLayout ?? _measuredTextLayoutFromFrameFacts(source, text);
 
     return FrameElementFacts(
       id: source.id,
@@ -631,7 +634,7 @@ final class RuntimeRoot
       generation: source.generation,
       orderToken: source.orderToken,
       locationKind: source.locationKind,
-      transform: source.transform,
+      transform: transform ?? source.transform,
       opacity: source.opacity,
       hitPadding: source.hitPadding,
       isVisible: source.isVisible,
@@ -1074,6 +1077,21 @@ final class RuntimeRoot
     );
     if (delta == Offset.zero) {
       return null;
+    }
+
+    return current.transform.withTranslation(
+      current.transform.translation + delta,
+    );
+  }
+
+  CanvasTransform _textEditAnchorPreservingTransformForLayout(
+    FrameElementFacts current,
+    MeasuredTextLayout currentLayout,
+    MeasuredTextLayout nextLayout,
+  ) {
+    final delta = _textEditAnchorWorldDelta(current, currentLayout, nextLayout);
+    if (delta == Offset.zero) {
+      return current.transform;
     }
 
     return current.transform.withTranslation(
@@ -2879,9 +2897,23 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
   }
 
   CanvasTextEditGeometry _geometryFor(_RuntimeTextEditSessionState state) {
+    final measuredTextLayout = _root._measuredTextLayoutFromFrameFacts(
+      state.baseFacts,
+      state.liveText,
+    );
+    final baseLayout = state.baseFacts.measuredTextLayout;
+    final transform = baseLayout == null
+        ? state.baseFacts.transform
+        : _root._textEditAnchorPreservingTransformForLayout(
+            state.baseFacts,
+            baseLayout,
+            measuredTextLayout,
+          );
     final facts = _root._textFrameFactsWithLiveText(
       state.baseFacts,
       state.liveText,
+      transform: transform,
+      measuredTextLayout: measuredTextLayout,
     );
     final bounds = const GeometryPolicy().boundsFor(facts);
 
