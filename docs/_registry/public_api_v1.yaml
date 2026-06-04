@@ -38,6 +38,10 @@ public_exports:
   - CanvasToolPort
   - CanvasCommandPort
   - CanvasCameraPort
+  - CanvasTextEditSession
+  - CanvasTextEditGeometry
+  - CanvasTextEditStyle
+  - CanvasTextEditingPort
   - CanvasResourcePort
   - CanvasResource
   - CanvasImageResource

@@ -12,6 +12,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../contracts/public/canvas_text_editing.dart';
 import '../contracts/public/canvas_tools.dart';
 import '../runtime/runtime_root.dart';
 import 'canvas_runtime_frame_bridge.dart';
@@ -44,6 +45,7 @@ final class CanvasRuntime {
   CanvasCommandPort get commands => _root.commandPort();
   CanvasCameraPort get camera => _root.cameraPort();
   CanvasResourcePort get resources => _root.resources;
+  CanvasTextEditingPort get textEditing => _root.textEditing;
   CanvasPreviewState get preview => _root.preview;
   Stream<CanvasActionCommitted> get actions => _root.actions;
   Stream<CanvasContextActionRequested> get contextActionRequests =>

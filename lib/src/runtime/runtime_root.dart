@@ -36,6 +36,7 @@ import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_surface_styles.dart';
+import '../contracts/public/canvas_text_editing.dart';
 import '../contracts/public/canvas_tools.dart';
 import '../contracts/public/canvas_value_validators.dart';
 import '../diagnostics/diagnostics_hub.dart';
@@ -236,6 +237,8 @@ final class RuntimeRoot
   late final CanvasToolPort _toolPort = _RuntimeToolPort(this);
   late final CanvasCommandPort _commandPort = _RuntimeCommandPort(this);
   late final CanvasCameraPort _cameraPort = _RuntimeCameraPort(this);
+  late final _InactiveTextEditingPort _textEditingPort =
+      _InactiveTextEditingPort();
 
   // Public state.
   ValueListenable<CanvasRuntimeState> get state => _state;
@@ -248,6 +251,7 @@ final class RuntimeRoot
   CanvasToolPort get tools => _toolPort;
   CanvasCommandPort get commands => _commandPort;
   CanvasResourcePort get resources => _resourceKernel;
+  CanvasTextEditingPort get textEditing => _textEditingPort;
   ResourceCatalogPort get resourceCatalogPort => _resourceCatalogPort;
   CanvasCameraPort cameraPort() => _cameraPort;
 
@@ -1136,6 +1140,7 @@ final class RuntimeRoot
       _publishRuntimeState();
     }
     _frameEngine.dispose();
+    _textEditingPort.dispose();
     _state.dispose();
     unawaited(_actions.close());
     unawaited(_contextActionRequests.close());
@@ -2222,4 +2227,47 @@ final class _RuntimeRevisionFacts {
   final int epoch;
   final int resourceVisual;
   final int interaction;
+}
+
+final class _InactiveTextEditingPort implements CanvasTextEditingPort {
+  final ValueNotifier<CanvasTextEditSession?> _activeSession =
+      ValueNotifier<CanvasTextEditSession?>(null);
+  bool _readOnly = false;
+
+  @override
+  ValueListenable<CanvasTextEditSession?> get activeSession => _activeSession;
+
+  @override
+  bool get readOnly => _readOnly;
+
+  @override
+  CanvasTextEditSession? sessionCandidateFor(
+    CanvasContextActionRequested request,
+  ) {
+    return null;
+  }
+
+  @override
+  CanvasTextEditSession? start(CanvasTextEditSession session) {
+    return null;
+  }
+
+  @override
+  CanvasTextEditSession? startFromContextAction(
+    CanvasContextActionRequested request,
+  ) {
+    return null;
+  }
+
+  @override
+  void setReadOnly(bool value) {
+    _readOnly = value;
+  }
+
+  @override
+  void dismissActive() {}
+
+  void dispose() {
+    _activeSession.dispose();
+  }
 }

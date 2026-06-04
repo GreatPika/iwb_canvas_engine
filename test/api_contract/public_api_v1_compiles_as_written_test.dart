@@ -240,6 +240,7 @@ void _exerciseP2ContractSurface() {
   );
 
   final ValueListenable<CanvasRuntimeState> state = runtime.state;
+  final CanvasTextEditingPort textEditing = runtime.textEditing;
   final CanvasRuntimeState snapshot = state.value;
   final CanvasRuntimeRevisions revisions = snapshot.revisions;
   final CanvasRuntimeSummary summary = snapshot.summary;
@@ -261,6 +262,7 @@ void _exerciseP2ContractSurface() {
     resourceCount: 1,
     selectedCount: 0,
   ));
+  _exerciseInlineTextEditingContractSurface(textEditing, requestId, elementId);
 
   final transform = CanvasTransform.trs(
     translation: const Offset(1, 2),
@@ -602,6 +604,53 @@ void _exerciseP2ContractSurface() {
   );
   _use(selectionStyle);
   _use(surface);
+}
+
+void _exerciseInlineTextEditingContractSurface(
+  CanvasTextEditingPort textEditing,
+  CanvasInteractionRequestId requestId,
+  CanvasElementId elementId,
+) {
+  final geometry = CanvasTextEditGeometry(
+    paintBoundsWorld: const Rect.fromLTWH(1, 2, 3, 4),
+    editBoundsWorld: const Rect.fromLTWH(1, 2, 3, 4),
+    transform: CanvasTransform.identity,
+    maxWidth: 120,
+  );
+  final style = CanvasTextEditStyle(
+    fontSize: 16,
+    fontFamily: 'Roboto',
+    isBold: true,
+    isItalic: false,
+    isUnderline: false,
+    color: const Color(0xFF111111),
+    textAlign: TextAlign.left,
+    textDirection: TextDirection.ltr,
+    lineHeight: 1.2,
+  );
+  final ValueListenable<CanvasTextEditSession?> active =
+      textEditing.activeSession;
+  final CanvasTextEditSession? session = active.value;
+  _use(textEditing.readOnly);
+  _use(textEditing.sessionCandidateFor);
+  _use(textEditing.start);
+  _use(textEditing.startFromContextAction);
+  textEditing.setReadOnly(true);
+  _use(textEditing.dismissActive);
+  _use(session?.geometry ?? geometry);
+  _use(session?.style ?? style);
+  _use(session?.requestId ?? requestId);
+  _use(session?.elementId ?? elementId);
+  _use(session?.documentRevision);
+  _use(session?.elementRevision);
+  _use(session?.generation);
+  _use(session?.initialText);
+  _use(session?.liveText);
+  _use(session?.isActive);
+  _use(session?.isStale);
+  session?.updateText('draft text');
+  _use(session?.commit(timestampMs: 11));
+  session?.dismiss();
 }
 
 CanvasMoveResolution _resolveMove(CanvasMoveCommitRequest request) {

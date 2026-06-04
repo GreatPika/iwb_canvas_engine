@@ -14,4 +14,5 @@ export 'src/api/canvas_preview.dart';
 export 'src/api/canvas_resource.dart';
 export 'src/api/canvas_runtime.dart';
 export 'src/api/canvas_surface.dart';
+export 'src/api/canvas_text_editing.dart';
 export 'src/api/canvas_tools.dart';
