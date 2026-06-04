@@ -150,7 +150,7 @@ No new document mutation boundary is introduced. Decoration planning computes de
 
 ## Execution Units
 
-### [ ] Unit 1: Selection decoration group primitive and order-aware key
+### [x] Unit 1: Selection decoration group primitive and order-aware key
 
 Owner:
 
@@ -172,7 +172,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Main painter ordered chrome and inside-box stroke output
+### [x] Unit 2: Main painter ordered chrome and inside-box stroke output
 
 Owner:
 
@@ -194,7 +194,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Read-port selected move start facts and occlusion-aware group union
+### [x] Unit 3: Read-port selected move start facts and occlusion-aware group union
 
 Owner:
 
@@ -216,7 +216,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Move-machine admission and runtime selected-move behavior
+### [x] Unit 4: Move-machine admission and runtime selected-move behavior
 
 Owner:
 
@@ -238,7 +238,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Durable docs, diagrams, and generated verification inventory
+### [x] Unit 5: Durable docs, diagrams, and generated verification inventory
 
 Owner:
 
@@ -260,7 +260,7 @@ Depends On:
 
 Units 1, 2, 3, and 4.
 
-### [ ] Unit 6: Compatibility proof, metrics, and final repository checks
+### [x] Unit 6: Compatibility proof, metrics, and final repository checks
 
 Owner:
 
