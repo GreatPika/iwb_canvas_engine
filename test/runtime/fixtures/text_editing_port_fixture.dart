@@ -260,8 +260,9 @@ Future<void> _expectCommitPreservesAnchorFor(TextAlign align) async {
       session.geometry.editBoundsWorld,
       align,
     );
+    final beforeTop = session.geometry.editBoundsWorld.top;
 
-    session.updateText('hello with more text');
+    session.updateText('hello with more text\nsecond line');
     expect(session.commit(timestampMs: 43), isTrue);
 
     final nextRequest = await scenario.issueTextRequest();
@@ -273,6 +274,10 @@ Future<void> _expectCommitPreservesAnchorFor(TextAlign align) async {
       align,
     );
     expect(afterAnchor, moreOrLessEquals(beforeAnchor, epsilon: 0.001));
+    expect(
+      nextSession.geometry.editBoundsWorld.top,
+      moreOrLessEquals(beforeTop, epsilon: 0.001),
+    );
   } finally {
     await scenario.dispose();
   }

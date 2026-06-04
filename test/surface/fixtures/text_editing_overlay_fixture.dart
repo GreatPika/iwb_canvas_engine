@@ -256,6 +256,7 @@ void _testMultilineGrowthAndMaxHeightPolicy() {
     addTearDown(scenario.dispose);
     await scenario.pump(tester);
     await scenario.doubleTapText(tester);
+    final initialTop = _editorHostRect(tester).top;
     final initialHeight = tester
         .getSize(find.byKey(canvasTextEditingOverlayEditorHostKey))
         .height;
@@ -269,6 +270,7 @@ void _testMultilineGrowthAndMaxHeightPolicy() {
     final liveHeight = tester
         .getSize(find.byKey(canvasTextEditingOverlayEditorHostKey))
         .height;
+    expect(_editorHostRect(tester).top, moreOrLessEquals(initialTop));
     expect(liveHeight, greaterThan(initialHeight));
     expect(
       liveHeight,

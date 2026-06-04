@@ -2323,9 +2323,9 @@ Offset _textEditAnchorLocalFor(
   TextDirection direction,
 ) {
   return switch (_resolvedHorizontalTextAnchor(align, direction)) {
-    _TextEditHorizontalAnchor.left => Offset(bounds.left, bounds.center.dy),
-    _TextEditHorizontalAnchor.center => bounds.center,
-    _TextEditHorizontalAnchor.right => Offset(bounds.right, bounds.center.dy),
+    _TextEditHorizontalAnchor.left => Offset(bounds.left, bounds.top),
+    _TextEditHorizontalAnchor.center => Offset(bounds.center.dx, bounds.top),
+    _TextEditHorizontalAnchor.right => Offset(bounds.right, bounds.top),
   };
 }
 

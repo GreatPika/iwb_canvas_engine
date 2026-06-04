@@ -148,6 +148,7 @@ final class _CanvasTextEditingOverlayState
       anchor: _sessionAnchorEditBoundsLocal ?? editBounds,
       editorWidth: editorSize.width,
     );
+    final editorTop = _sessionAnchorEditBoundsLocal?.top ?? editBounds.top;
 
     return SizedBox.expand(
       child: CallbackShortcuts(
@@ -179,7 +180,7 @@ final class _CanvasTextEditingOverlayState
                   children: [
                     Positioned(
                       left: editorLeft,
-                      top: editBounds.top,
+                      top: editorTop,
                       child: SizedBox(
                         key: canvasTextEditingOverlayEditorHostKey,
                         width: editorSize.width,
