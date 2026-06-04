@@ -41,7 +41,7 @@ CanvasRuntimeConfig createCanvasExampleRuntimeConfig() {
   return CanvasRuntimeConfig(
     clearSelectionOnDrawModeEnter: true,
     pointerPolicy: CanvasPointerPolicy(
-      tapSlop: 1,
+      tapSlop: 16,
       doubleTapSlop: 32,
       doubleTapMaxDelayMs: 450,
       dragStartSlop: 1.0,

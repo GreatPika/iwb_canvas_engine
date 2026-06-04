@@ -7,6 +7,7 @@ import 'fixtures/runner_backed_guardrail_test_support.dart';
 void main() {
   _testRunnerBackedRegistration();
   _testFormulaTextBoundsRejection();
+  _testMetricFormulaTextBoundsRejection();
   _testHelperExtractedFormulaTextBoundsRejection();
   _testRuntimeFormulaTextBoundsRejection();
   _testUnauthorizedTextPainterRejection();
@@ -38,6 +39,38 @@ void _testFormulaTextBoundsRejection() {
 Rect _textBounds(FrameElementFacts facts) {
   if (facts.kind == CanvasElementKind.text) {
     return Rect.fromLTWH(0, 0, facts.text.length * facts.fontSize, facts.lineHeight);
+  }
+  return Rect.zero;
+}
+''',
+    });
+
+    expect(_guardrailIds(violations), {
+      textSingleMeasuredLayoutSourceGuardrailId,
+    });
+    expect(
+      await _violationsAreRunnerRejected(
+        id: textSingleMeasuredLayoutSourceGuardrailId,
+        violations: violations,
+      ),
+      isTrue,
+    );
+  });
+}
+
+void _testMetricFormulaTextBoundsRejection() {
+  test('metric formula text bounds fixture is rejected structurally', () async {
+    final violations = checkTextSingleMeasuredLayoutSourceSources({
+      'lib/src/frame/frame_text_layout_measurer.dart': _validMeasurerSource,
+      'lib/src/geometry/geometry_policy.dart': '''
+Rect _textBounds(FrameElementFacts facts) {
+  if (facts.kind == CanvasElementKind.text) {
+    return Rect.fromLTWH(
+      0,
+      0,
+      facts.maxWidth ?? facts.fontSize * 12,
+      facts.lineHeight ?? facts.fontSize,
+    );
   }
   return Rect.zero;
 }
