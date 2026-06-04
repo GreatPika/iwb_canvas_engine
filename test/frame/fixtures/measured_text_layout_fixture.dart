@@ -33,7 +33,7 @@ void _testTextCacheEntryMetrics() {
 
       expect(entry.painter.width, closeTo(bounds.width, 0.001));
       expect(entry.painter.height, closeTo(bounds.height, 0.001));
-      expect(bounds.left, 0);
+      expect(bounds.center, Offset.zero);
       expect(entry.layout.hitBoundsLocal, bounds);
       expect(entry.layout.selectionBoundsLocal, bounds);
       expect(entry.layout.editBoundsLocal, bounds);
@@ -43,7 +43,7 @@ void _testTextCacheEntryMetrics() {
 }
 
 void _testTextAlignmentAnchors() {
-  test('text measured bounds anchor to horizontal text alignment', () {
+  test('text measured bounds stay stable across horizontal alignment', () {
     final measurer = FrameTextLayoutMeasurer();
     final left = _readyLayoutWith(
       measurer,
@@ -58,9 +58,8 @@ void _testTextAlignmentAnchors() {
       _input(const _TextInputSpec(text: 'anchor', align: TextAlign.center)),
     );
 
-    expect(left.paintBoundsLocal.left, 0);
-    expect(right.paintBoundsLocal.right, 0);
-    expect(center.paintBoundsLocal.center.dx, 0);
+    expect(right.paintBoundsLocal, left.paintBoundsLocal);
+    expect(center.paintBoundsLocal, left.paintBoundsLocal);
   });
 }
 
