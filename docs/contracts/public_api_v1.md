@@ -2398,9 +2398,14 @@ Context-action and text editing model:
   EditableText, consumes CanvasTextEditingPort.activeSession, supports
   configurable auto-start, max-height scroll, cursor/selection hooks, escape
   dismissal, focus-loss commit, and multiline growth from session geometry;
+- while an inline text session is active, the official overlay preserves the
+  session-start resolved horizontal text anchor and the top edge of the edit
+  bounds as live text width or line count changes; committing the session
+  applies the same anchor-preserving behavior to the committed text element;
 - custom overlays may replace CanvasTextEditingOverlay using only
   CanvasTextEditingPort.activeSession plus session geometry/style/liveText
-  without importing src/**, recomputing text bounds, or mutating visibility;
+  without importing src/**, recomputing text bounds, mutating visibility, or
+  changing the inline-edit anchor contract above;
 - context menus, app-specific editor decoration, focus policy choices,
   accessibility presentation, and text selection controls remain application
   responsibilities;

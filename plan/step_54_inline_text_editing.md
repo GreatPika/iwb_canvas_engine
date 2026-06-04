@@ -189,7 +189,7 @@ The irreversible document mutation point remains the existing `EditKernel` atomi
 
 ## Execution Units
 
-### [ ] Unit 1: Frame-measured text layout and geometry migration
+### [x] Unit 1: Frame-measured text layout and geometry migration
 
 Owner:
 
@@ -211,7 +211,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Public text editing API declarations and exports
+### [x] Unit 2: Public text editing API declarations and exports
 
 Owner:
 
@@ -233,7 +233,7 @@ Depends On:
 
 Unit 1 for final geometry fields and measured-layout contract shape.
 
-### [ ] Unit 3: Runtime text editing port, sessions, and guarded lifecycle
+### [x] Unit 3: Runtime text editing port, sessions, and guarded lifecycle
 
 Owner:
 
@@ -255,7 +255,7 @@ Depends On:
 
 Unit 1, Unit 2.
 
-### [ ] Unit 4: Active edit paint suppression in frame output
+### [x] Unit 4: Active edit paint suppression in frame output
 
 Owner:
 
@@ -277,7 +277,7 @@ Depends On:
 
 Unit 3.
 
-### [ ] Unit 5: Public Flutter text editing overlay
+### [x] Unit 5: Public Flutter text editing overlay
 
 Owner:
 
@@ -299,7 +299,7 @@ Depends On:
 
 Unit 2, Unit 3, Unit 4.
 
-### [ ] Unit 6: Example migration to public inline editing
+### [x] Unit 6: Example migration to public inline editing
 
 Owner:
 
@@ -321,7 +321,7 @@ Depends On:
 
 Unit 5.
 
-### [ ] Unit 7: Durable docs, guardrails, generated outputs, and final verification
+### [x] Unit 7: Durable docs, guardrails, generated outputs, and final verification
 
 Owner:
 

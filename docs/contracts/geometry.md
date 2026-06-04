@@ -102,6 +102,10 @@ Box/image/text/rect hit:
 - text local paint, hit, selection, edit, and context bounds come from
   frame-measured `MeasuredTextLayout` facts; geometry must not calculate text
   bounds from string length, font size, maxWidth, or a second TextPainter;
+- measured text bounds are stable relative to the element transform when only
+  `TextAlign` changes, so selection/edit frames do not jump between left,
+  center, and right alignment; alignment affects glyph placement inside the
+  measured layout, not the owning geometry anchor;
 - if a committed row has a non-invertible transform, treat it as corrupted
   internal state: the `section_20_diagnostics_hub` routing table classifies
   the deferred corrupted-row route as policy-gated `spatial` diagnostics;

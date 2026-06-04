@@ -427,13 +427,15 @@ the general affine value type.
 
 `test.frame.measured_text_layout` covers the single measured text layout source:
 frame-owned `FrameTextLayoutMeasurer` produces the local text bounds that
-geometry, spatial membership, frame painting, and live edit geometry consume.
+geometry, spatial membership, frame painting, and live edit geometry consume,
+and those bounds stay stable across left, center, and right alignment changes.
 
 `test.runtime.text_editing_port` and `test.surface.text_editing_overlay` cover
 runtime-owned active text editing sessions, stale/read-only admission, guarded
 commit/dismiss behavior, public custom-overlay replacement, multiline growth
-from session geometry, and paint suppression without document visibility
-mutation.
+from session geometry, live preservation of the resolved horizontal anchor and
+top edit edge, committed preservation of the same anchors after text size
+changes, and paint suppression without document visibility mutation.
 
 `test.guardrails.text_surface_guardrail_checks` proves the runner-backed
 structural checks for formula-based text bounds, duplicate overlay
