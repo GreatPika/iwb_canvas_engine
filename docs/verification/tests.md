@@ -196,6 +196,7 @@ Required tests:
 - `test.surface.marquee_captured_style`
 - `test.frame.selection_decoration_plan`
 - `test.surface.selection_chrome_ordered_paint`
+- `test.surface.selection_chrome_hit_target_boundary`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.guardrails.geometry_no_legacy_scene_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`

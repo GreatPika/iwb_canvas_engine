@@ -68,6 +68,7 @@ bool _admitsGroupUnionStart(SelectedMoveStartFacts facts) {
 
   return facts.selectedIds.length > 1 &&
       facts.insideSelectedGroupUnion &&
+      facts.groupUnionOcclusionReliable &&
       !facts.groupUnionOccludedByHigherOrderHit &&
       facts.query.status == InteractionReadQueryStatus.candidates &&
       facts.query.skippedCandidateCount == 0 &&

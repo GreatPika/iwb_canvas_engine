@@ -16,10 +16,13 @@ void main() {
   _testMoveMachineRejectsOccludedGroupFacts();
   _testMoveMachineRejectsSingleSelectionGroupFacts();
   _testMoveMachineRejectsNonFiniteGroupFacts();
-  _testMoveMachineRejectsUnreliableGroupOcclusionFacts();
+  _testMoveMachineRejectsGroupUnionWithoutCandidateQueryProof();
+  _testMoveMachineRejectsGroupUnionWithSkippedCandidates();
+  _testMoveMachineRejectsGroupUnionWithUnreliableOcclusionRead();
   _testSelectedMoveAdmissionAndPreview();
   _testGroupInteriorSelectedMoveAdmissionAndPreview();
   _testOccludedGroupInteriorDoesNotStartSelectedMove();
+  _testNonSelectableOccludedGroupInteriorDoesNotStartSelectedMove();
   _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove();
   _testSameDeltaMoveKeepsPreviewRevision();
   _testSelectedMoveZeroDeltaDoesNotResolve();
@@ -89,7 +92,7 @@ void _testMoveMachineRejectsNonFiniteGroupFacts() {
   });
 }
 
-void _testMoveMachineRejectsUnreliableGroupOcclusionFacts() {
+void _testMoveMachineRejectsGroupUnionWithoutCandidateQueryProof() {
   test(
     'move machine rejects group union facts without candidate query proof',
     () {
@@ -103,7 +106,9 @@ void _testMoveMachineRejectsUnreliableGroupOcclusionFacts() {
       );
     },
   );
+}
 
+void _testMoveMachineRejectsGroupUnionWithSkippedCandidates() {
   test('move machine rejects group union facts with skipped candidates', () {
     expect(
       const MoveMachine()
@@ -112,6 +117,33 @@ void _testMoveMachineRejectsUnreliableGroupOcclusionFacts() {
               query: const InteractionReadQueryFacts.candidates(
                 candidateCount: 2,
                 skippedCandidateCount: 1,
+              ),
+            ),
+          )
+          .admitted,
+      isFalse,
+    );
+  });
+}
+
+void _testMoveMachineRejectsGroupUnionWithUnreliableOcclusionRead() {
+  test('move machine rejects group union facts with unreliable occlusion', () {
+    expect(
+      const MoveMachine()
+          .start(
+            SelectedMoveStartFacts(
+              selectedIds: [CanvasElementId('a'), CanvasElementId('b')],
+              movableSelectedIds: [CanvasElementId('a'), CanvasElementId('b')],
+              controllerEpoch: 0,
+              selectionRevision: 0,
+              hitSelectedMovable: false,
+              selectedGroupBoundsWorld: const Rect.fromLTRB(-5, -5, 25, 5),
+              selectedTopOrderToken: 1,
+              insideSelectedGroupUnion: true,
+              groupUnionOcclusionReliable: false,
+              query: const InteractionReadQueryFacts.candidates(
+                candidateCount: 0,
+                skippedCandidateCount: 0,
               ),
             ),
           )
@@ -168,6 +200,30 @@ void _testOccludedGroupInteriorDoesNotStartSelectedMove() {
     'higher order exact hit blocks selected group union admission',
     () async {
       final scenario = _occludedNoCommitScenario();
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, const Offset(15, 0)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, const Offset(24, 0)),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.preview, isNot(isA<CanvasSelectedMovePreview>()));
+      expect(scenario.resolverCalls(), 0);
+      expect(scenario.actions, isEmpty);
+      _expectOccludedDocumentUnmoved(root);
+    },
+  );
+}
+
+void _testNonSelectableOccludedGroupInteriorDoesNotStartSelectedMove() {
+  test(
+    'higher order non-selectable content blocks selected group union admission',
+    () async {
+      final scenario = _occludedNoCommitScenario(occluderSelectable: false);
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
 
@@ -720,10 +776,12 @@ _NoCommitScenario _noCommitScenario({CanvasMoveCommitResolver? resolver}) {
   );
 }
 
-_NoCommitScenario _occludedNoCommitScenario() {
+_NoCommitScenario _occludedNoCommitScenario({bool occluderSelectable = true}) {
   var resolverCalls = 0;
   final root = RuntimeRoot(
-    initialDocument: _occludedGroupDocument(),
+    initialDocument: _occludedGroupDocument(
+      occluderSelectable: occluderSelectable,
+    ),
     config: CanvasRuntimeConfig(
       moveCommitResolver: (request) {
         resolverCalls += 1;
@@ -911,7 +969,7 @@ CanvasDocument _document() {
   );
 }
 
-CanvasDocument _occludedGroupDocument() {
+CanvasDocument _occludedGroupDocument({bool occluderSelectable = true}) {
   return CanvasDocument(
     layers: [
       CanvasLayer(
@@ -927,6 +985,7 @@ CanvasDocument _occludedGroupDocument() {
             id: CanvasElementId('occluder'),
             size: const Size(10, 10),
             transform: CanvasTransform.translation(const Offset(15, 0)),
+            isSelectable: occluderSelectable,
           ),
         ],
       ),

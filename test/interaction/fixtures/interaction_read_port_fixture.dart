@@ -14,6 +14,7 @@ void main() {
   _testSelectedMoveStartFacts();
   _testSelectedMoveStartGroupUnionFacts();
   _testSelectedMoveStartOccludedGroupUnionFacts();
+  _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts();
   _testSingleLineMoveStartDoesNotExposeGroupUnionFacts();
   testSelectedMoveStartUsesSelectedHandleLookups();
   _testSelectedMoveCommitFiltersStaleFacts();
@@ -142,6 +143,38 @@ void _testSelectedMoveStartOccludedGroupUnionFacts() {
         const Rect.fromLTRB(-5, -5, 35, 5),
       );
       expect(facts.insideSelectedGroupUnion, isTrue);
+      expect(facts.groupUnionOccludedByHigherOrderHit, isTrue);
+    },
+  );
+}
+
+void _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts() {
+  test(
+    'selected group union facts use content hits for non-selectable occlusion',
+    () {
+      final root =
+          RuntimeRoot(
+              initialDocument: _groupSelectionDocument(
+                includeOccluder: true,
+                occluderSelectable: false,
+              ),
+              config: const CanvasRuntimeConfig(),
+            )
+            ..selection.setSelection([
+              CanvasElementId('selected-left'),
+              CanvasElementId('selected-right'),
+            ]);
+      addTearDown(root.dispose);
+
+      final facts = root.interactionReadPort.selectedMoveStartFacts(
+        const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
+      );
+
+      expect(facts.hitSelectedMovable, isFalse);
+      expect(facts.topmostHitId, isNull);
+      expect(facts.topmostHitOrderToken, isNull);
+      expect(facts.insideSelectedGroupUnion, isTrue);
+      expect(facts.groupUnionOcclusionReliable, isTrue);
       expect(facts.groupUnionOccludedByHigherOrderHit, isTrue);
     },
   );
@@ -504,7 +537,10 @@ RuntimeRoot _runtimeRoot() {
   );
 }
 
-CanvasDocument _groupSelectionDocument({required bool includeOccluder}) {
+CanvasDocument _groupSelectionDocument({
+  required bool includeOccluder,
+  bool occluderSelectable = true,
+}) {
   return CanvasDocument(
     layers: [
       CanvasLayer(
@@ -512,7 +548,10 @@ CanvasDocument _groupSelectionDocument({required bool includeOccluder}) {
         elements: [
           _rect('selected-left', const Offset(0, 0)),
           _rect('selected-right', const Offset(30, 0)),
-          if (includeOccluder) _rect('occluder-a', const Offset(15, 0)),
+          if (includeOccluder)
+            occluderSelectable
+                ? _rect('occluder-a', const Offset(15, 0))
+                : _nonselectableRect('occluder-a', const Offset(15, 0)),
         ],
       ),
     ],

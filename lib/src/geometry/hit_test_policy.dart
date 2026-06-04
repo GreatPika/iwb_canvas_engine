@@ -63,6 +63,18 @@ final class HitTestPolicy {
     required Iterable<FrameElementHandle> candidates,
     required FrameElementResolver resolve,
   }) {
+    return topmostContextHitResult(
+      point: point,
+      candidates: candidates,
+      resolve: resolve,
+    )?.id;
+  }
+
+  HitTestResult? topmostContextHitResult({
+    required Offset point,
+    required Iterable<FrameElementHandle> candidates,
+    required FrameElementResolver resolve,
+  }) {
     final ordered = candidates.toList(growable: false)
       ..sort((left, right) => right.orderToken.compareTo(left.orderToken));
     for (final handle in ordered) {
@@ -73,7 +85,7 @@ final class HitTestPolicy {
         continue;
       }
 
-      return facts.id;
+      return HitTestResult(id: facts.id, orderToken: handle.orderToken);
     }
 
     return null;

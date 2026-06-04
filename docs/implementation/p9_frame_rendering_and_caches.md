@@ -181,6 +181,7 @@ without exposing frame collaborators through the package barrel. At minimum:
 - `test.surface.overlay_drawable_policy` -> `test/surface/overlay_drawable_policy_test.dart`
 - `test.surface.marquee_captured_style` -> `test/surface/marquee_captured_style_test.dart`
 - `test.frame.paint_plan_write_all_or_nothing` -> `test/frame/paint_plan_write_all_or_nothing_test.dart`
+- `test.surface.selection_chrome_hit_target_boundary` -> `test/surface/selection_chrome_hit_target_boundary_test.dart`
 - `test.frame.paint_asset_binding_service` -> `test/frame/paint_asset_binding_service_test.dart`
 - `test.frame.repaint_bus_output` -> `test/frame/repaint_bus_output_test.dart`
 - `test.frame.static_background_plan` -> `test/frame/static_background_plan_test.dart`

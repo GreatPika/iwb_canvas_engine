@@ -67,11 +67,33 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       candidates: candidates.handles,
       resolve: _frame.resolveElement,
     );
+    final contentQuery = _spatial.queryContext(
+      SpatialQueryWindow(
+        boundsWorld: _pointQueryWindow(request.worldPosition),
+        structuralRevision: context.structuralRevision,
+      ),
+    );
+    final contentCandidates = resolveInteractionCandidates(
+      contentQuery,
+      resolve: _frame.resolveElement,
+    );
+    final contentQueryFacts = interactionQueryFacts(
+      contentQuery,
+      contentCandidates,
+    );
+    final contentHit = _hitTestPolicy.topmostContextHitResult(
+      point: request.worldPosition,
+      candidates: contentCandidates.handles,
+      resolve: _frame.resolveElement,
+    );
     final selectedGroup = _selectedGroupFacts(
       selectedHandles: selectedHandles,
       selectedIds: selectedIds,
       point: request.worldPosition,
-      topmostHit: hit,
+      occlusion: (
+        topmostContentHit: contentHit,
+        isReliable: _hasReliableCandidateFacts(contentQueryFacts),
+      ),
     );
 
     return SelectedMoveStartFacts(
@@ -86,6 +108,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       selectedTopOrderToken: selectedGroup.topOrderToken,
       insideSelectedGroupUnion: selectedGroup.insideUnion,
       groupUnionOccludedByHigherOrderHit: selectedGroup.occluded,
+      groupUnionOcclusionReliable: selectedGroup.occlusionReliable,
       query: interactionQueryFacts(query, candidates),
     );
   }
@@ -518,7 +541,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     required List<FrameElementHandle> selectedHandles,
     required List<CanvasElementId> selectedIds,
     required Offset point,
-    required HitTestResult? topmostHit,
+    required _SelectedGroupOcclusionRead occlusion,
   }) {
     if (selectedIds.isEmpty) {
       return const _SelectedGroupMoveStartFacts.none();
@@ -537,23 +560,36 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         topOrderToken: topOrderToken,
         insideUnion: false,
         occluded: false,
+        occlusionReliable: occlusion.isReliable,
       );
     }
     final bounds = _unionPaintBounds(facts, policy: _hitTestPolicy);
     final insideUnion = _rectContainsPointInclusive(bounds, point);
+    final topmostContentHit = occlusion.topmostContentHit;
     final occluded =
         insideUnion &&
-        topmostHit != null &&
-        topmostHit.orderToken > topOrderToken &&
-        !selected.contains(topmostHit.id);
+        topmostContentHit != null &&
+        topmostContentHit.orderToken > topOrderToken &&
+        !selected.contains(topmostContentHit.id);
 
     return _SelectedGroupMoveStartFacts(
       boundsWorld: bounds,
       topOrderToken: topOrderToken,
       insideUnion: insideUnion,
       occluded: occluded,
+      occlusionReliable: occlusion.isReliable,
     );
   }
+}
+
+typedef _SelectedGroupOcclusionRead = ({
+  bool isReliable,
+  HitTestResult? topmostContentHit,
+});
+
+bool _hasReliableCandidateFacts(InteractionReadQueryFacts query) {
+  return query.status == InteractionReadQueryStatus.candidates &&
+      query.skippedCandidateCount == 0;
 }
 
 typedef _EraserExactBudget = ({int candidateLimit, int exactCheckLimit});
@@ -634,18 +670,21 @@ final class _SelectedGroupMoveStartFacts {
     required this.topOrderToken,
     required this.insideUnion,
     required this.occluded,
+    required this.occlusionReliable,
   });
 
   const _SelectedGroupMoveStartFacts.none()
     : boundsWorld = null,
       topOrderToken = null,
       insideUnion = false,
-      occluded = false;
+      occluded = false,
+      occlusionReliable = false;
 
   final Rect? boundsWorld;
   final int? topOrderToken;
   final bool insideUnion;
   final bool occluded;
+  final bool occlusionReliable;
 }
 
 final class _SelectedMoveStartReadContext {

@@ -62,6 +62,7 @@ final class SelectedMoveStartFacts {
     this.selectedTopOrderToken,
     this.insideSelectedGroupUnion = false,
     this.groupUnionOccludedByHigherOrderHit = false,
+    this.groupUnionOcclusionReliable = true,
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : selectedIds = List.unmodifiable(selectedIds),
        movableSelectedIds = List.unmodifiable(movableSelectedIds);
@@ -77,6 +78,7 @@ final class SelectedMoveStartFacts {
   final int? selectedTopOrderToken;
   final bool insideSelectedGroupUnion;
   final bool groupUnionOccludedByHigherOrderHit;
+  final bool groupUnionOcclusionReliable;
   final InteractionReadQueryFacts query;
 }
 

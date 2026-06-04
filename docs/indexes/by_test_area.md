@@ -515,6 +515,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
+## test.surface.selection_chrome_hit_target_boundary
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.surface.selection_chrome_ordered_paint
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
