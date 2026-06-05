@@ -234,7 +234,7 @@ Depends On:
 
 Unit 1, Unit 2, and Unit 3.
 
-### [ ] Unit 6: Release gate, guardrail, compatibility, and final proof closure
+### [x] Unit 6: Release gate, guardrail, compatibility, and final proof closure
 
 Owner:
 

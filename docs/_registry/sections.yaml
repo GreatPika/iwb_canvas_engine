@@ -956,6 +956,7 @@
     - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
     - diagnostics.sanitized_public_projection
+    - release.benchmark_readiness
     - tools.p10_compatibility
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
@@ -963,6 +964,7 @@
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.frame_committed_facts_via_frame_facts_port
     - test.guardrails.text_surface_guardrail_checks
+    - test.guardrails.release_readiness
     - test.guardrails.blocking_suite
   do_not_assume:
     - no non-blocking critical guardrail
@@ -1197,6 +1199,8 @@
     - test.guardrails.action_after_state
     - test.guardrails.interaction_guardrail_enforcement
     - test.surface.widget_paint
+    - test.guardrails.release_readiness
+    - test.benchmarks.benchmark_diff
     - test.benchmarks.required_cases
     - test.guardrails.blocking_suite
   do_not_assume:
@@ -1219,8 +1223,10 @@
   diagrams:
     - "none"
   guardrails:
-    - "none"
+    - release.benchmark_readiness
   tests:
+    - test.benchmarks.benchmark_diff
+    - test.guardrails.release_readiness
     - test.benchmarks.required_cases
   do_not_assume:
     - no unapproved legacy feature path regression
@@ -1382,12 +1388,14 @@
     - codec.no_runtime_side_effects
     - diagnostics.disabled_no_alloc_hot_path
     - diagnostics.sanitized_public_projection
+    - release.benchmark_readiness
     - tools.p10_compatibility
     - surface.pointer_samples_normalized_before_runtime
     - surface.interactive_false_pending_line_preserved
   tests:
     - test.api_contract.app_next_engine_adapter_compile_fixture
     - test.guardrails.frame_committed_facts_via_frame_facts_port
+    - test.guardrails.release_readiness
     - test.guardrails.blocking_suite
   do_not_assume:
     - no release with legacy imports, legacy facade, or unlinked donor reuse

@@ -129,6 +129,12 @@ void main() {
       suiteGuardrailIds('tools'),
     );
   });
+  test('release suite selection routes only release guardrails', () async {
+    expect(
+      await _selectedGuardrailIds(['--suite=release']),
+      suiteGuardrailIds('release'),
+    );
+  });
   test('selection and move guardrails are blocking', () {
     expect(
       blockingGuardrailIds(),
@@ -491,5 +497,13 @@ const _runnerStructuralScanCases = [
       'test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart',
     ],
     violationPath: 'lib/src/geometry/bad_runner_fallback_budget.dart',
+  ),
+  _StructuralScanCase(
+    id: 'release.benchmark_readiness',
+    proofPaths: [
+      'test/benchmarks/benchmark_diff_test.dart',
+      'test/guardrails/release_readiness_guardrail_test.dart',
+    ],
+    violationPath: '.github/workflows/release_benchmarks.yml',
   ),
 ];

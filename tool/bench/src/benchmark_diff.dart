@@ -29,7 +29,7 @@ final class BenchmarkDiffOptions {
   final String current;
   final String output;
 
-  static BenchmarkDiffOptions parse(List<String> args) {
+  factory BenchmarkDiffOptions.parse(List<String> args) {
     final values = _parseNamedArgs(
       args,
       requiredKeys: const {'profile', 'baseline', 'current', 'output'},
@@ -54,7 +54,7 @@ final class BenchmarkBaselineUpdateOptions {
   final String candidate;
   final String approved;
 
-  static BenchmarkBaselineUpdateOptions parse(List<String> args) {
+  factory BenchmarkBaselineUpdateOptions.parse(List<String> args) {
     final values = _parseNamedArgs(
       args,
       requiredKeys: const {'profile', 'candidate', 'approved'},
@@ -304,7 +304,10 @@ final class ParsedBenchmarkReport {
     for (final benchmarkCase in cases) benchmarkCase.key: benchmarkCase,
   };
 
-  static ParsedBenchmarkReport parse(Map<String, Object?> json, String source) {
+  factory ParsedBenchmarkReport.parse(
+    Map<String, Object?> json,
+    String source,
+  ) {
     final profile = _map(json, 'profile', source);
     final runtime = _map(json, 'runtime', source);
     final cases = _list(json, 'cases', source);
@@ -368,7 +371,7 @@ final class ParsedProfileReport {
     };
   }
 
-  static ParsedProfileReport parse(Map<String, Object?> json, String source) {
+  factory ParsedProfileReport.parse(Map<String, Object?> json, String source) {
     return ParsedProfileReport(
       id: _string(json, 'id', '$source profile'),
       warmups: _int(json, 'warmups', '$source profile'),
@@ -437,7 +440,7 @@ final class ParsedRuntimeReport {
     };
   }
 
-  static ParsedRuntimeReport parse(Map<String, Object?> json, String source) {
+  factory ParsedRuntimeReport.parse(Map<String, Object?> json, String source) {
     return ParsedRuntimeReport(
       runnerLabel: _string(json, 'runnerLabel', '$source runtime'),
       osName: _string(json, 'osName', '$source runtime'),
@@ -481,7 +484,7 @@ final class ParsedReleaseContour {
     };
   }
 
-  static ParsedReleaseContour parse(Map<String, Object?> json, String source) {
+  factory ParsedReleaseContour.parse(Map<String, Object?> json, String source) {
     return ParsedReleaseContour(
       runnerLabel: _string(json, 'runnerLabel', '$source releaseContour'),
       osName: _string(json, 'osName', '$source releaseContour'),
@@ -513,7 +516,7 @@ final class ParsedCaseReport {
 
   String get key => '$id/$scale';
 
-  static ParsedCaseReport parse(Map<String, Object?> json, String source) {
+  factory ParsedCaseReport.parse(Map<String, Object?> json, String source) {
     return ParsedCaseReport(
       id: _string(json, 'id', '$source case'),
       classification: _optionalString(json, 'classification', '$source case'),
@@ -567,7 +570,10 @@ final class ParsedInvariantReport {
     return {'metric': metric, 'actual': actual, 'passed': passed};
   }
 
-  static ParsedInvariantReport parse(Map<String, Object?> json, String source) {
+  factory ParsedInvariantReport.parse(
+    Map<String, Object?> json,
+    String source,
+  ) {
     return ParsedInvariantReport(
       metric: _string(json, 'metric', '$source exact invariant'),
       actual: json['actual'],

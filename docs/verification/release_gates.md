@@ -83,6 +83,7 @@ Related diagrams:
 Required tests:
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
+- `test.guardrails.release_readiness`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
@@ -158,6 +159,7 @@ Guardrails:
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
+- `release.benchmark_readiness`
 - `tools.p10_compatibility`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
@@ -231,7 +233,9 @@ obligations before continuing dependent phase work.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-36. benchmark gates pass.
+36. benchmark gates pass through the pinned release workflow: release profile
+    run, read-only release diff, P14 graph check, generated-view check, and
+    guardrail runner.
 37. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 

@@ -102,6 +102,11 @@ const _blockingEntries = [
     id: 'diagnostics.sanitized_public_projection',
     suites: {'blocking', 'diagnostics'},
   ),
+  GuardrailEntry(
+    id: 'release.benchmark_readiness',
+    suites: {'blocking', 'release'},
+    requiresRunnerStructuralProof: true,
+  ),
   GuardrailEntry(id: 'core.no_legacy_imports', suites: {'blocking', 'core'}),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
   GuardrailEntry(

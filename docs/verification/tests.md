@@ -226,6 +226,8 @@ Required tests:
 - `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.surface.widget_paint`
+- `test.guardrails.release_readiness`
+- `test.benchmarks.benchmark_diff`
 - `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
 Guardrails:
@@ -266,6 +268,8 @@ Required tests:
 - `test/architecture_graph/phase_closure_checker_test.dart`
 - `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
+- `test/guardrails/release_readiness_guardrail_test.dart`
+- `test/benchmarks/benchmark_diff_test.dart`
 - `test/benchmarks/required_cases_test.dart`
 
 The owner-DAG proof is split intentionally: `owner_dag_import_boundaries_test`
@@ -606,6 +610,13 @@ behavioral tests, and the required guardrail list remains owned by
   explicit `--guardrail=<id>` selection modes execute the intended P0 ids;
 - proves unknown or empty suite selection fails instead of silently running
   an unintended guardrail set.
+
+#### `test/guardrails/release_readiness_guardrail_test.dart`
+- proves `release.benchmark_readiness` is runner-backed in the blocking and
+  release suites without running the full benchmark matrix;
+- rejects missing release diff routing, public benchmark exports, app adapter
+  names in production source, legacy benchmark proof imports, and approved
+  baseline writes outside the manual update workflow.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
 - proves runtime dispose keeps state.value readable;

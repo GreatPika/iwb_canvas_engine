@@ -15,9 +15,11 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
+- `test.benchmarks.benchmark_diff`
+- `test.guardrails.release_readiness`
 - `test.benchmarks.required_cases`
 Guardrails:
-- `none`
+- `release.benchmark_readiness`
 Do not assume:
 - no unapproved legacy feature path regression
 <!-- CONTEXT:END -->
