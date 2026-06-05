@@ -119,27 +119,15 @@ void main() {
 
       final metricChanged = _withFirstCase(
         manifest,
-        BenchmarkCase(
-          id: benchmarkCase.id,
-          classification: benchmarkCase.classification,
-          budgetClasses: benchmarkCase.budgetClasses,
-          memoryScope: benchmarkCase.memoryScope,
-          docsMetricsLabel: benchmarkCase.docsMetricsLabel,
+        _copyCase(
+          benchmarkCase,
           requiredMetrics: [...benchmarkCase.requiredMetrics, 'new_metric'],
-          exactInvariants: benchmarkCase.exactInvariants,
-          scales: benchmarkCase.scales,
         ),
       );
       final scaleChanged = _withFirstCase(
         manifest,
-        BenchmarkCase(
-          id: benchmarkCase.id,
-          classification: benchmarkCase.classification,
-          budgetClasses: benchmarkCase.budgetClasses,
-          memoryScope: benchmarkCase.memoryScope,
-          docsMetricsLabel: benchmarkCase.docsMetricsLabel,
-          requiredMetrics: benchmarkCase.requiredMetrics,
-          exactInvariants: benchmarkCase.exactInvariants,
+        _copyCase(
+          benchmarkCase,
           scales: [
             BenchmarkScale(
               id: scale.id,
@@ -150,9 +138,14 @@ void main() {
           ],
         ),
       );
+      final fixtureChanged = _withFirstCase(
+        manifest,
+        _copyCaseWithFixtureShape(benchmarkCase, 'hot_pointer'),
+      );
 
       expect(benchmarkManifestFingerprint(metricChanged), isNot(baseline));
       expect(benchmarkManifestFingerprint(scaleChanged), isNot(baseline));
+      expect(benchmarkManifestFingerprint(fixtureChanged), isNot(baseline));
     });
 
     test('rejects exact invariants without checkable semantics', () {
@@ -160,13 +153,8 @@ void main() {
       final benchmarkCase = manifest.cases.first;
       final uncheckedInvariantManifest = _withFirstCase(
         _singleCaseManifest(),
-        BenchmarkCase(
-          id: benchmarkCase.id,
-          classification: benchmarkCase.classification,
-          budgetClasses: benchmarkCase.budgetClasses,
-          memoryScope: benchmarkCase.memoryScope,
-          docsMetricsLabel: benchmarkCase.docsMetricsLabel,
-          requiredMetrics: benchmarkCase.requiredMetrics,
+        _copyCase(
+          benchmarkCase,
           exactInvariants: [
             const BenchmarkExactInvariant(
               name: 'unchecked_test_invariant',
@@ -199,14 +187,8 @@ void main() {
       final benchmarkCase = manifest.cases.first;
       final unsupportedScaleManifest = _withFirstCase(
         _singleCaseManifest(),
-        BenchmarkCase(
-          id: benchmarkCase.id,
-          classification: benchmarkCase.classification,
-          budgetClasses: benchmarkCase.budgetClasses,
-          memoryScope: benchmarkCase.memoryScope,
-          docsMetricsLabel: benchmarkCase.docsMetricsLabel,
-          requiredMetrics: benchmarkCase.requiredMetrics,
-          exactInvariants: benchmarkCase.exactInvariants,
+        _copyCase(
+          benchmarkCase,
           scales: [
             const BenchmarkScale(
               id: 'unknown_scale',
@@ -293,16 +275,7 @@ BenchmarkManifest _multiReleaseScaleManifest() {
     budgetClasses: manifest.budgetClasses,
     memoryScopes: manifest.memoryScopes,
     cases: [
-      BenchmarkCase(
-        id: benchmarkCase.id,
-        classification: benchmarkCase.classification,
-        budgetClasses: benchmarkCase.budgetClasses,
-        memoryScope: benchmarkCase.memoryScope,
-        docsMetricsLabel: benchmarkCase.docsMetricsLabel,
-        requiredMetrics: benchmarkCase.requiredMetrics,
-        exactInvariants: benchmarkCase.exactInvariants,
-        scales: benchmarkCase.scales.take(2).toList(),
-      ),
+      _copyCase(benchmarkCase, scales: benchmarkCase.scales.take(2).toList()),
     ],
     postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
     bootstrapLegacyEquivalence: manifest.bootstrapLegacyEquivalence,
@@ -320,18 +293,47 @@ BenchmarkManifest _singleCaseManifest() {
     budgetClasses: manifest.budgetClasses,
     memoryScopes: manifest.memoryScopes,
     cases: [
-      BenchmarkCase(
-        id: benchmarkCase.id,
-        classification: benchmarkCase.classification,
-        budgetClasses: benchmarkCase.budgetClasses,
-        memoryScope: benchmarkCase.memoryScope,
-        docsMetricsLabel: benchmarkCase.docsMetricsLabel,
-        requiredMetrics: benchmarkCase.requiredMetrics,
-        exactInvariants: benchmarkCase.exactInvariants,
-        scales: [benchmarkCase.scales.first],
-      ),
+      _copyCase(benchmarkCase, scales: [benchmarkCase.scales.first]),
     ],
     postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
     bootstrapLegacyEquivalence: manifest.bootstrapLegacyEquivalence,
+  );
+}
+
+BenchmarkCase _copyCase(
+  BenchmarkCase benchmarkCase, {
+  List<String>? requiredMetrics,
+  List<BenchmarkExactInvariant>? exactInvariants,
+  List<BenchmarkScale>? scales,
+}) {
+  return BenchmarkCase(
+    id: benchmarkCase.id,
+    classification: benchmarkCase.classification,
+    budgetClasses: benchmarkCase.budgetClasses,
+    memoryScope: benchmarkCase.memoryScope,
+    measurementBoundary: benchmarkCase.measurementBoundary,
+    fixtureShape: benchmarkCase.fixtureShape,
+    docsMetricsLabel: benchmarkCase.docsMetricsLabel,
+    requiredMetrics: requiredMetrics ?? benchmarkCase.requiredMetrics,
+    exactInvariants: exactInvariants ?? benchmarkCase.exactInvariants,
+    scales: scales ?? benchmarkCase.scales,
+  );
+}
+
+BenchmarkCase _copyCaseWithFixtureShape(
+  BenchmarkCase benchmarkCase,
+  String fixtureShape,
+) {
+  return BenchmarkCase(
+    id: benchmarkCase.id,
+    classification: benchmarkCase.classification,
+    budgetClasses: benchmarkCase.budgetClasses,
+    memoryScope: benchmarkCase.memoryScope,
+    measurementBoundary: benchmarkCase.measurementBoundary,
+    fixtureShape: fixtureShape,
+    docsMetricsLabel: benchmarkCase.docsMetricsLabel,
+    requiredMetrics: benchmarkCase.requiredMetrics,
+    exactInvariants: benchmarkCase.exactInvariants,
+    scales: benchmarkCase.scales,
   );
 }

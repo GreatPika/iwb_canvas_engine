@@ -187,6 +187,7 @@ FutureOr<Map<String, Object?>> _runOperation(String caseId, String scaleId) {
     'load_document.success' => _loadDocumentSuccess(scaleId),
     'load_document.failure' => _loadDocumentFailure(scaleId),
     'spatial.query_point' => _spatialQuery(scaleId),
+    'spatial.query_point_dense_stress' => _spatialQuery(scaleId),
     'spatial.touched_update' => _spatialTouchedUpdate(scaleId),
     'runtime.dispose_during_gesture' => _disposeDuringGesture(scaleId),
     'diagnostics.disabled_pointer' => _disabledPointer(scaleId),

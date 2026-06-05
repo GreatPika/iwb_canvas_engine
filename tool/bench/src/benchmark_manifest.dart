@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 const benchmarkManifestPath = 'docs/_registry/benchmarks.yaml';
+const benchmarkManifestVersion = 'p14_benchmark_measurement_boundary_v2';
+const benchmarkToolSchemaVersion = 2;
 
 final class BenchmarkManifest {
   const BenchmarkManifest({
@@ -109,6 +111,8 @@ final class BenchmarkCase {
     required this.classification,
     required this.budgetClasses,
     required this.memoryScope,
+    required this.measurementBoundary,
+    required this.fixtureShape,
     required this.docsMetricsLabel,
     required this.requiredMetrics,
     required this.exactInvariants,
@@ -119,6 +123,8 @@ final class BenchmarkCase {
   final String classification;
   final List<String> budgetClasses;
   final String memoryScope;
+  final BenchmarkMeasurementBoundary measurementBoundary;
+  final String fixtureShape;
   final String docsMetricsLabel;
   final List<String> requiredMetrics;
   final List<BenchmarkExactInvariant> exactInvariants;
@@ -147,6 +153,26 @@ final class BenchmarkCase {
   }
 }
 
+final class BenchmarkMeasurementBoundary {
+  const BenchmarkMeasurementBoundary({
+    required this.timedScope,
+    required this.setupScope,
+    required this.teardownScope,
+    required this.primaryTiming,
+    required this.primaryMemory,
+    required this.setupMetrics,
+    required this.setupMemoryMetrics,
+  });
+
+  final String timedScope;
+  final String setupScope;
+  final String teardownScope;
+  final String primaryTiming;
+  final String primaryMemory;
+  final List<String> setupMetrics;
+  final List<String> setupMemoryMetrics;
+}
+
 final class BenchmarkScale {
   const BenchmarkScale({
     required this.id,
@@ -173,6 +199,24 @@ final class BenchmarkExactInvariant {
   final num? max;
 }
 
+final class _ExpectedBenchmarkBoundary {
+  const _ExpectedBenchmarkBoundary({
+    required this.timedScope,
+    required this.setupScope,
+    required this.teardownScope,
+    required this.primaryTiming,
+    required this.primaryMemory,
+    required this.fixtureShape,
+  });
+
+  final String timedScope;
+  final String setupScope;
+  final String teardownScope;
+  final String primaryTiming;
+  final String primaryMemory;
+  final String fixtureShape;
+}
+
 // The parser keeps the benchmark manifest schema in one owner so validation
 // errors are reported against a single source-of-truth reader.
 // ignore: number-of-methods, response-for-class, weighted-methods-per-class
@@ -180,11 +224,153 @@ final class _BenchmarkManifestParser {
   _BenchmarkManifestParser(this.root, this.source);
 
   static const _classifications = {'equivalent_legacy', 'new_only'};
+  static const _timedScopes = {'action_only', 'lifecycle', 'projection_split'};
+  static const _setupScopes = {
+    'none',
+    'per_run_prepared_fixture',
+    'per_sample_prepared_fixture',
+  };
+  static const _teardownScopes = {'excluded', 'measured_lifecycle'};
+  static const _primaryTimings = {
+    'action',
+    'lifecycle',
+    'projection_action_total',
+  };
+  static const _primaryMemories = {'action', 'lifecycle', 'none'};
+  static const _fixtureShapes = {
+    'normal_spread',
+    'dense_stress',
+    'resource_set',
+    'active_preview',
+    'invalid_document',
+    'codec_fixture',
+    'hot_pointer',
+  };
+  static const _selectedBoundaryTable = {
+    'edit.add_element': _normalActionPerSample,
+    'edit.update_visual': _normalActionPerSample,
+    'edit.update_transform': _normalActionPerSample,
+    'edit.move_selection': _normalActionPerSample,
+    'edit.set_camera_offset': _normalActionPerSample,
+    'edit.add_line': _normalActionPerSample,
+    'input.selected_move_preview': _normalActionPerSample,
+    'input.marquee_preview': _normalActionPerSample,
+    'input.draw_preview': _normalActionPerSample,
+    'input.line_preview': _normalActionPerSample,
+    'input.eraser_preview': _normalActionPerSample,
+    'input.eraser_budget_exceeded': _ExpectedBenchmarkBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'dense_stress',
+    ),
+    'frame.selected_move_preview_cached_ordinary_plan': _normalActionPerRun,
+    'frame.main_capture': _normalActionPerRun,
+    'frame.overlay_capture': _ExpectedBenchmarkBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'active_preview',
+    ),
+    'frame.paint_candidates': _normalActionPerRun,
+    'resources.resolve_sync': _resourceAction,
+    'resources.resolve_sync_cold_budget': _resourceAction,
+    'resources.mark_dirty': _resourceAction,
+    'resources.mark_all_dirty': _resourceAction,
+    'projection.read_document': _ExpectedBenchmarkBoundary(
+      timedScope: 'projection_split',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'projection_action_total',
+      primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
+    ),
+    'codec.decode_v1': _ExpectedBenchmarkBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'codec_fixture',
+    ),
+    'load_document.success': _ExpectedBenchmarkBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'normal_spread',
+    ),
+    'load_document.failure': _ExpectedBenchmarkBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'invalid_document',
+    ),
+    'spatial.query_point': _normalActionPerRun,
+    'spatial.query_point_dense_stress': _ExpectedBenchmarkBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'dense_stress',
+    ),
+    'spatial.touched_update': _normalActionPerSample,
+    'runtime.dispose_during_gesture': _ExpectedBenchmarkBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'active_preview',
+    ),
+    'diagnostics.disabled_pointer': _ExpectedBenchmarkBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'hot_pointer',
+    ),
+  };
+  static const _normalActionPerSample = _ExpectedBenchmarkBoundary(
+    timedScope: 'action_only',
+    setupScope: 'per_sample_prepared_fixture',
+    teardownScope: 'excluded',
+    primaryTiming: 'action',
+    primaryMemory: 'action',
+    fixtureShape: 'normal_spread',
+  );
+  static const _normalActionPerRun = _ExpectedBenchmarkBoundary(
+    timedScope: 'action_only',
+    setupScope: 'per_run_prepared_fixture',
+    teardownScope: 'excluded',
+    primaryTiming: 'action',
+    primaryMemory: 'action',
+    fixtureShape: 'normal_spread',
+  );
+  static const _resourceAction = _ExpectedBenchmarkBoundary(
+    timedScope: 'action_only',
+    setupScope: 'per_sample_prepared_fixture',
+    teardownScope: 'excluded',
+    primaryTiming: 'action',
+    primaryMemory: 'action',
+    fixtureShape: 'resource_set',
+  );
 
   final YamlMap root;
   final String source;
 
   BenchmarkManifest parse() {
+    final manifestVersion = _manifestVersion();
+    final toolSchemaVersion = _toolSchemaVersion();
     final profiles = _profiles();
     final profileIds = profiles.map((profile) => profile.id).toSet();
     final budgetClasses = _budgetClasses();
@@ -198,8 +384,8 @@ final class _BenchmarkManifestParser {
     );
 
     return BenchmarkManifest(
-      manifestVersion: _string(root, 'manifest_version', source),
-      toolSchemaVersion: _int(root, 'tool_schema_version', source),
+      manifestVersion: manifestVersion,
+      toolSchemaVersion: toolSchemaVersion,
       releaseContour: _releaseContour(),
       profiles: profiles,
       budgetClasses: budgetClasses,
@@ -216,6 +402,28 @@ final class _BenchmarkManifestParser {
         source,
       ),
     );
+  }
+
+  String _manifestVersion() {
+    final manifestVersion = _string(root, 'manifest_version', source);
+    if (manifestVersion != benchmarkManifestVersion) {
+      _fail(
+        'manifest_version must be $benchmarkManifestVersion, '
+        'found $manifestVersion',
+      );
+    }
+    return manifestVersion;
+  }
+
+  int _toolSchemaVersion() {
+    final toolSchemaVersion = _int(root, 'tool_schema_version', source);
+    if (toolSchemaVersion != benchmarkToolSchemaVersion) {
+      _fail(
+        'tool_schema_version must be $benchmarkToolSchemaVersion, '
+        'found $toolSchemaVersion',
+      );
+    }
+    return toolSchemaVersion;
   }
 
   BenchmarkReleaseContour _releaseContour() {
@@ -299,7 +507,9 @@ final class _BenchmarkManifestParser {
 
   // Case parsing validates identity, classification, budgets, metrics,
   // invariants, and scales together because they form one manifest row schema.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  // Keeping this row admission together prevents partial manifest acceptance
+  // where boundary policy is parsed separately from the case it governs.
+  // ignore: cyclomatic-complexity, halstead-volume, maintainability-index, source-lines-of-code
   List<BenchmarkCase> _cases({
     required Set<String> profileIds,
     required Set<String> budgetClassIds,
@@ -342,6 +552,13 @@ final class _BenchmarkManifestParser {
           _fail('$id exact invariant ${invariant.name} uses unknown metric');
         }
       }
+      final measurementBoundary = _measurementBoundary(entry, id);
+      final fixtureShape = _fixtureShape(entry, id);
+      _validateCaseBoundary(
+        id: id,
+        boundary: measurementBoundary,
+        fixtureShape: fixtureShape,
+      );
       final scales = _scales(entry, id, profileIds);
       cases.add(
         BenchmarkCase(
@@ -349,6 +566,8 @@ final class _BenchmarkManifestParser {
           classification: classification,
           budgetClasses: budgetClasses,
           memoryScope: memoryScope,
+          measurementBoundary: measurementBoundary,
+          fixtureShape: fixtureShape,
           docsMetricsLabel: _string(entry, 'docs_metrics_label', id),
           requiredMetrics: requiredMetrics,
           exactInvariants: exactInvariants,
@@ -356,8 +575,174 @@ final class _BenchmarkManifestParser {
         ),
       );
     }
+    if (!cases.any(
+      (benchmarkCase) =>
+          benchmarkCase.id == 'spatial.query_point_dense_stress' &&
+          benchmarkCase.fixtureShape == 'dense_stress',
+    )) {
+      _fail(
+        'spatial dense fallback must declare spatial.query_point_dense_stress '
+        'with fixture_shape dense_stress',
+      );
+    }
 
     return cases;
+  }
+
+  // Measurement boundary parsing keeps every required boundary field in one
+  // admission point so missing-field errors cannot drift across helper owners.
+  // ignore: source-lines-of-code
+  BenchmarkMeasurementBoundary _measurementBoundary(
+    YamlMap entry,
+    String owner,
+  ) {
+    final boundary = _map(entry, 'measurement_boundary', owner);
+    final setupMetrics = _setupMetrics(boundary, owner);
+    final setupMemoryMetrics = _setupMemoryMetrics(boundary, owner);
+    final setupScope = _enumString(
+      boundary,
+      'setup_scope',
+      '$owner measurement_boundary',
+      _setupScopes,
+    );
+    _validateSetupDiagnostics(
+      owner: owner,
+      setupScope: setupScope,
+      setupMetrics: setupMetrics,
+      setupMemoryMetrics: setupMemoryMetrics,
+    );
+    return BenchmarkMeasurementBoundary(
+      timedScope: _enumString(
+        boundary,
+        'timed_scope',
+        '$owner measurement_boundary',
+        _timedScopes,
+      ),
+      setupScope: setupScope,
+      teardownScope: _enumString(
+        boundary,
+        'teardown_scope',
+        '$owner measurement_boundary',
+        _teardownScopes,
+      ),
+      primaryTiming: _enumString(
+        boundary,
+        'primary_timing',
+        '$owner measurement_boundary',
+        _primaryTimings,
+      ),
+      primaryMemory: _enumString(
+        boundary,
+        'primary_memory',
+        '$owner measurement_boundary',
+        _primaryMemories,
+      ),
+      setupMetrics: setupMetrics,
+      setupMemoryMetrics: setupMemoryMetrics,
+    );
+  }
+
+  void _validateSetupDiagnostics({
+    required String owner,
+    required String setupScope,
+    required List<String> setupMetrics,
+    required List<String> setupMemoryMetrics,
+  }) {
+    if (setupScope == 'none') {
+      if (setupMetrics.isNotEmpty || setupMemoryMetrics.isNotEmpty) {
+        _fail('$owner setup metrics require a prepared fixture setup scope');
+      }
+    } else if (setupMetrics.isEmpty || setupMemoryMetrics.isEmpty) {
+      _fail('$owner prepared fixture setup must declare setup diagnostics');
+    }
+    if (setupScope != 'none' &&
+        (!_hasPrefix(setupMemoryMetrics, 'setup_allocation_bytes') ||
+            !_hasPrefix(setupMemoryMetrics, 'setup_rss_delta_bytes'))) {
+      _fail(
+        '$owner prepared fixture setup must declare setup allocation and '
+        'setup RSS diagnostics',
+      );
+    }
+  }
+
+  List<String> _setupMetrics(YamlMap boundary, String owner) {
+    final setupMetrics = _stringList(
+      boundary,
+      'setup_metrics',
+      '$owner measurement_boundary',
+    );
+    _validateMetricPrefixes(
+      values: setupMetrics,
+      prefixes: const ['setup_us'],
+      owner: '$owner measurement_boundary.setup_metrics',
+    );
+    return setupMetrics;
+  }
+
+  List<String> _setupMemoryMetrics(YamlMap boundary, String owner) {
+    final setupMemoryMetrics = _stringList(
+      boundary,
+      'setup_memory_metrics',
+      '$owner measurement_boundary',
+    );
+    _validateMetricPrefixes(
+      values: setupMemoryMetrics,
+      prefixes: const ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
+      owner: '$owner measurement_boundary.setup_memory_metrics',
+    );
+    return setupMemoryMetrics;
+  }
+
+  String _fixtureShape(YamlMap entry, String owner) {
+    return _enumString(entry, 'fixture_shape', owner, _fixtureShapes);
+  }
+
+  void _validateCaseBoundary({
+    required String id,
+    required BenchmarkMeasurementBoundary boundary,
+    required String fixtureShape,
+  }) {
+    final expected = _selectedBoundaryTable[id];
+    if (expected == null) {
+      _fail('$id has no selected measurement boundary policy');
+    }
+    if (boundary.timedScope != expected.timedScope ||
+        boundary.setupScope != expected.setupScope ||
+        boundary.teardownScope != expected.teardownScope ||
+        boundary.primaryTiming != expected.primaryTiming ||
+        boundary.primaryMemory != expected.primaryMemory ||
+        fixtureShape != expected.fixtureShape) {
+      _fail('$id measurement boundary must match the selected boundary table');
+    }
+  }
+
+  String _enumString(
+    YamlMap map,
+    String field,
+    String owner,
+    Set<String> allowed,
+  ) {
+    final value = _string(map, field, owner);
+    if (!allowed.contains(value)) {
+      _fail('$owner field $field has unsupported value $value');
+    }
+    return value;
+  }
+
+  void _validateMetricPrefixes({
+    required List<String> values,
+    required List<String> prefixes,
+    required String owner,
+  }) {
+    for (final value in values) {
+      if (!prefixes.any((prefix) => value.startsWith(prefix))) {
+        _fail('$owner contains unsupported metric $value');
+      }
+    }
+  }
+
+  bool _hasPrefix(List<String> values, String prefix) {
+    return values.any((value) => value.startsWith(prefix));
   }
 
   List<BenchmarkExactInvariant> _exactInvariants(YamlMap entry, String owner) {

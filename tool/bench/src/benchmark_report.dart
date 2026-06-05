@@ -225,7 +225,7 @@ String benchmarkManifestFingerprint(BenchmarkManifest manifest) {
 
 // The fingerprint projection mirrors the full policy surface; keeping every
 // manifest-owned field here prevents partial hashes from missing drift.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
   return {
     'manifest_version': manifest.manifestVersion,
@@ -274,6 +274,17 @@ Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
           'classification': benchmarkCase.classification,
           'budget_classes': benchmarkCase.budgetClasses,
           'memory_scope': benchmarkCase.memoryScope,
+          'measurement_boundary': {
+            'timed_scope': benchmarkCase.measurementBoundary.timedScope,
+            'setup_scope': benchmarkCase.measurementBoundary.setupScope,
+            'teardown_scope': benchmarkCase.measurementBoundary.teardownScope,
+            'primary_timing': benchmarkCase.measurementBoundary.primaryTiming,
+            'primary_memory': benchmarkCase.measurementBoundary.primaryMemory,
+            'setup_metrics': benchmarkCase.measurementBoundary.setupMetrics,
+            'setup_memory_metrics':
+                benchmarkCase.measurementBoundary.setupMemoryMetrics,
+          },
+          'fixture_shape': benchmarkCase.fixtureShape,
           'docs_metrics_label': benchmarkCase.docsMetricsLabel,
           'required_metrics': benchmarkCase.requiredMetrics,
           'exact_invariants': [

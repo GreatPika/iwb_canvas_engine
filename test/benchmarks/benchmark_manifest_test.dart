@@ -12,9 +12,9 @@ void main() {
     test('loads the P14 source of truth with the required inventory', () {
       final manifest = BenchmarkManifest.load();
 
-      expect(manifest.manifestVersion, 'p14_release_readiness_benchmarks_v1');
-      expect(manifest.toolSchemaVersion, 1);
-      expect(manifest.cases, hasLength(28));
+      expect(manifest.manifestVersion, benchmarkManifestVersion);
+      expect(manifest.toolSchemaVersion, benchmarkToolSchemaVersion);
+      expect(manifest.cases, hasLength(29));
       expect(manifest.profiles.map((profile) => profile.id), [
         'dry_run',
         'smoke',
@@ -96,6 +96,10 @@ void main() {
         _casePolicyFingerprints(manifest),
         _expectedCasePolicyFingerprints,
       );
+      expect(
+        _caseBoundaryFingerprints(manifest),
+        _expectedCaseBoundaryFingerprints,
+      );
     });
 
     test('rejects duplicate case ids', () {
@@ -163,6 +167,150 @@ void main() {
       );
 
       expect(error.message, contains('unsupported classification legacyish'));
+    });
+
+    test('rejects stale manifest and tool schema versions', () {
+      final manifestError = _parseFailure(
+        _manifestText().replaceFirst(
+          benchmarkManifestVersion,
+          'p14_release_readiness_benchmarks_v1',
+        ),
+      );
+      final schemaError = _parseFailure(
+        _manifestText().replaceFirst(
+          'tool_schema_version: 2',
+          'tool_schema_version: 1',
+        ),
+      );
+
+      expect(manifestError.message, contains('manifest_version must be'));
+      expect(schemaError.message, contains('tool_schema_version must be'));
+    });
+
+    test('rejects missing measurement boundary fields', () {
+      final error = _parseFailure(
+        _manifestText().replaceFirst(
+          '      timed_scope: action_only',
+          '      timing_scope: action_only',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'edit.add_element measurement_boundary must have non-empty string field timed_scope',
+        ),
+      );
+    });
+
+    test('rejects unknown measurement boundary enum values', () {
+      final error = _parseFailure(
+        _manifestText().replaceFirst(
+          '      timed_scope: action_only',
+          '      timed_scope: full_run',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'measurement_boundary field timed_scope has unsupported value full_run',
+        ),
+      );
+    });
+
+    test('rejects missing fixture shape', () {
+      final error = _parseFailure(
+        _manifestText().replaceFirst('    fixture_shape: normal_spread\n', ''),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'edit.add_element must have non-empty string field fixture_shape',
+        ),
+      );
+    });
+
+    test('rejects hot cases that opt into lifecycle boundary semantics', () {
+      final error = _parseFailure(
+        _replaceInCase(
+          _manifestText(),
+          'edit.add_element',
+          '      timed_scope: action_only',
+          '      timed_scope: lifecycle',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'edit.add_element measurement boundary must match the selected boundary table',
+        ),
+      );
+    });
+
+    test('rejects dense fixture shape under ordinary spatial query', () {
+      final error = _parseFailure(
+        _replaceInCase(
+          _manifestText(),
+          'spatial.query_point',
+          '    fixture_shape: normal_spread',
+          '    fixture_shape: dense_stress',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'spatial.query_point measurement boundary must match the selected boundary table',
+        ),
+      );
+    });
+
+    test('requires dense spatial fallback policy', () {
+      final error = _parseFailure(
+        _removeCase(_manifestText(), 'spatial.query_point_dense_stress'),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'spatial dense fallback must declare spatial.query_point_dense_stress',
+        ),
+      );
+    });
+
+    test('requires setup diagnostics for prepared fixture scopes', () {
+      final error = _parseFailure(
+        _manifestText().replaceFirst(
+          '      setup_metrics: [setup_us]',
+          '      setup_metrics: []',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'edit.add_element prepared fixture setup must declare setup diagnostics',
+        ),
+      );
+    });
+
+    test('requires setup allocation and RSS diagnostics together', () {
+      final error = _parseFailure(
+        _manifestText().replaceFirst(
+          'setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]',
+          'setup_memory_metrics: [setup_allocation_bytes]',
+        ),
+      );
+
+      expect(
+        error.message,
+        contains(
+          'edit.add_element prepared fixture setup must declare setup allocation and setup RSS diagnostics',
+        ),
+      );
     });
 
     test('rejects non-canonical dry-run spelling', () {
@@ -305,6 +453,23 @@ List<String> _casePolicyFingerprints(BenchmarkManifest manifest) {
   ];
 }
 
+List<String> _caseBoundaryFingerprints(BenchmarkManifest manifest) {
+  return [
+    for (final benchmarkCase in manifest.cases)
+      [
+        benchmarkCase.id,
+        benchmarkCase.measurementBoundary.timedScope,
+        benchmarkCase.measurementBoundary.setupScope,
+        benchmarkCase.measurementBoundary.teardownScope,
+        benchmarkCase.measurementBoundary.primaryTiming,
+        benchmarkCase.measurementBoundary.primaryMemory,
+        benchmarkCase.measurementBoundary.setupMetrics.join(','),
+        benchmarkCase.measurementBoundary.setupMemoryMetrics.join(','),
+        benchmarkCase.fixtureShape,
+      ].join('|'),
+  ];
+}
+
 String _profilePolicyFingerprint(BenchmarkManifest manifest) {
   return [
     for (final profile in manifest.profiles)
@@ -341,6 +506,36 @@ FormatException _parseFailure(String text) {
   throw StateError('Expected benchmark manifest parsing to fail.');
 }
 
+String _removeCase(String text, String caseId) {
+  final casePattern = _casePattern(caseId);
+  if (!casePattern.hasMatch(text)) {
+    throw StateError('Missing manifest case $caseId.');
+  }
+  return text.replaceFirst(casePattern, '');
+}
+
+String _replaceInCase(String text, String caseId, String from, String to) {
+  final casePattern = _casePattern(caseId);
+  final match = casePattern.firstMatch(text);
+  if (match == null) {
+    throw StateError('Missing manifest case $caseId.');
+  }
+  final body = match.group(0);
+  if (body == null) {
+    throw StateError('Missing manifest case $caseId.');
+  }
+  if (!body.contains(from)) {
+    throw StateError('Manifest case $caseId does not contain "$from".');
+  }
+  return text.replaceFirst(body, body.replaceFirst(from, to));
+}
+
+RegExp _casePattern(String caseId) {
+  return RegExp(
+    '  - id: ${RegExp.escape(caseId)}\\n[\\s\\S]*?(?=\\n  - id:|\\z)',
+  );
+}
+
 const _requiredCaseIds = [
   'edit.add_element',
   'edit.update_visual',
@@ -367,6 +562,7 @@ const _requiredCaseIds = [
   'load_document.success',
   'load_document.failure',
   'spatial.query_point',
+  'spatial.query_point_dense_stress',
   'spatial.touched_update',
   'runtime.dispose_during_gesture',
   'diagnostics.disabled_pointer',
@@ -460,6 +656,38 @@ const _expectedProfilePolicyFingerprint =
 const _expectedReleaseContourFingerprint =
     'ubuntu-24.04|Ubuntu|24.04|stable|3.38.0';
 
+const _expectedCaseBoundaryFingerprints = [
+  'edit.add_element|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'edit.update_visual|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'edit.update_transform|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'edit.move_selection|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'edit.set_camera_offset|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'edit.add_line|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.selected_move_preview|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'frame.selected_move_preview_cached_ordinary_plan|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.marquee_preview|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.draw_preview|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.line_preview|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.eraser_preview|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'input.eraser_budget_exceeded|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|dense_stress',
+  'frame.main_capture|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'frame.overlay_capture|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|active_preview',
+  'frame.paint_candidates|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'resources.resolve_sync|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
+  'resources.resolve_sync_cold_budget|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
+  'resources.mark_dirty|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
+  'resources.mark_all_dirty|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
+  'projection.read_document|projection_split|per_sample_prepared_fixture|excluded|projection_action_total|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'codec.decode_v1|lifecycle|per_run_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|codec_fixture',
+  'load_document.success|lifecycle|per_sample_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'load_document.failure|lifecycle|per_sample_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|invalid_document',
+  'spatial.query_point|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'spatial.query_point_dense_stress|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|dense_stress',
+  'spatial.touched_update|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'runtime.dispose_during_gesture|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|active_preview',
+  'diagnostics.disabled_pointer|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|hot_pointer',
+];
+
 const _expectedCasePolicyFingerprints = [
   'edit.add_element|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
   'edit.update_visual|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,touched_count||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
@@ -486,6 +714,7 @@ const _expectedCasePolicyFingerprints = [
   'load_document.success|equivalent_legacy|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,rebuild_cost,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
   'load_document.failure|equivalent_legacy|bulk_io,allocation_budget,exact_invariant|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,committed_mutation_count|committed_mutation_count_zero:committed_mutation_count:0:|invalid_1k:dry_run,smoke,release;invalid_10k:dry_run,release;invalid_50k:dry_run,release',
   'spatial.query_point|equivalent_legacy|query_read,exact_invariant|hot_or_query|tile_count,fallback_count|fallback_count_bounded:fallback_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'spatial.query_point_dense_stress|new_only|query_read,exact_invariant|hot_or_query|fallback_count|fallback_count_bounded:fallback_count::|dense_50k:dry_run,smoke,release',
   'spatial.touched_update|equivalent_legacy|query_read,incremental_edit,exact_invariant|incremental_owner_update|rebuilt_ids,rebuilt_pages|rebuilt_pages_match_touched_set:rebuilt_pages::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
   'runtime.dispose_during_gesture|new_only|hot_input,exact_invariant|hot_or_query|avg_us,p95_us,max_us,resolver_calls,action_events|resolver_calls_zero:resolver_calls:0:,action_events_zero:action_events:0:|active_selected_overlay_previews:dry_run,smoke,release',
   'diagnostics.disabled_pointer|new_only|hot_input,exact_invariant,allocation_budget|zero_allocation|allocation_records,allocation_bytes|allocation_records_zero:allocation_records:0:,allocation_bytes_zero:allocation_bytes:0:|hot_pointer:dry_run,smoke,release',

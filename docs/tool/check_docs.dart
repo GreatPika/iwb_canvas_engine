@@ -24,8 +24,9 @@ const _diagramCatalogMarker =
 const _generatedIndexMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
 const _benchmarkPolicySourceNote =
-    'The structured source of truth for section 24 benchmark cases, scales, metrics,\n'
-    'numeric budget classes, exact invariants, and profile membership is\n'
+    'The structured source of truth for section 24 benchmark cases, scales,\n'
+    'measurement boundaries, fixture shapes, metrics, numeric budget classes,\n'
+    'exact invariants, and profile membership is\n'
     '`docs/_registry/benchmarks.yaml`. This section is a checked human projection of\n'
     'that manifest.';
 const _benchmarkFingerprintPrefix = '<!-- BENCHMARK-MANIFEST-FINGERPRINT: ';
@@ -169,6 +170,8 @@ void _checkBenchmarkDocsProjection() {
       _BenchmarkDocsRow(
         caseId: benchmarkCase.id,
         scales: benchmarkCase.docsScaleLabel,
+        boundary: benchmarkCase.measurementBoundary.timedScope,
+        fixtureShape: benchmarkCase.fixtureShape,
         metrics: benchmarkCase.docsMetricsLabel,
       ),
   ];
@@ -228,7 +231,7 @@ String _benchmarkManifestFingerprint(BenchmarkManifest manifest) {
 // Benchmark docs fingerprinting must serialize the complete manifest policy in
 // one stable shape; splitting this projection would obscure the checked source
 // of truth and make drift failures harder to diagnose.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
   return {
     'manifest_version': manifest.manifestVersion,
@@ -270,6 +273,17 @@ Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
           'classification': benchmarkCase.classification,
           'budget_classes': benchmarkCase.budgetClasses,
           'memory_scope': benchmarkCase.memoryScope,
+          'measurement_boundary': {
+            'timed_scope': benchmarkCase.measurementBoundary.timedScope,
+            'setup_scope': benchmarkCase.measurementBoundary.setupScope,
+            'teardown_scope': benchmarkCase.measurementBoundary.teardownScope,
+            'primary_timing': benchmarkCase.measurementBoundary.primaryTiming,
+            'primary_memory': benchmarkCase.measurementBoundary.primaryMemory,
+            'setup_metrics': benchmarkCase.measurementBoundary.setupMetrics,
+            'setup_memory_metrics':
+                benchmarkCase.measurementBoundary.setupMemoryMetrics,
+          },
+          'fixture_shape': benchmarkCase.fixtureShape,
           'docs_metrics_label': benchmarkCase.docsMetricsLabel,
           'required_metrics': benchmarkCase.requiredMetrics,
           'exact_invariants': [
@@ -321,12 +335,13 @@ BenchmarkManifest _loadBenchmarkManifest() {
 
 // The markdown parser validates the whole human-facing benchmark table as one
 // boundary check so row-shape errors report from the same docs invariant.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 List<_BenchmarkDocsRow> _benchmarkRowsFromMarkdown() {
   final text = _read('docs/verification/benchmarks.md');
   final table = RegExp(
-    r'Required benchmark cases:\s*\n\n(\| Case \| Nodes \| Metrics \|\n'
-    r'\|---\|---:\|---\|\n(?:(?:\|.*\|\n)+))',
+    r'Required benchmark cases:\s*\n\n'
+    r'(\| Case \| Nodes \| Boundary \| Fixture \| Metrics \|\n'
+    r'\|---\|---:\|---\|---\|---\|\n(?:(?:\|.*\|\n)+))',
   ).firstMatch(text);
   if (table == null) {
     _fail(
@@ -341,10 +356,10 @@ List<_BenchmarkDocsRow> _benchmarkRowsFromMarkdown() {
     final cells = line
         .split('|')
         .skip(1)
-        .take(3)
+        .take(5)
         .map((cell) => cell.trim())
         .toList();
-    if (cells.length != 3) {
+    if (cells.length != 5) {
       _fail('malformed benchmark docs row: $line');
       continue;
     }
@@ -357,7 +372,9 @@ List<_BenchmarkDocsRow> _benchmarkRowsFromMarkdown() {
       _BenchmarkDocsRow(
         caseId: _matchGroup(caseMatch, 1, 'benchmark docs case id'),
         scales: cells[1],
-        metrics: cells[2],
+        boundary: cells[2],
+        fixtureShape: cells[3],
+        metrics: cells[4],
       ),
     );
   }
@@ -368,18 +385,25 @@ final class _BenchmarkDocsRow {
   const _BenchmarkDocsRow({
     required this.caseId,
     required this.scales,
+    required this.boundary,
+    required this.fixtureShape,
     required this.metrics,
   });
 
   final String caseId;
   final String scales;
+  final String boundary;
+  final String fixtureShape;
   final String metrics;
 
-  String describe() => '`$caseId` | $scales | $metrics';
+  String describe() =>
+      '`$caseId` | $scales | $boundary | $fixtureShape | $metrics';
 
   bool matches(_BenchmarkDocsRow other) {
     return other.caseId == caseId &&
         other.scales == scales &&
+        other.boundary == boundary &&
+        other.fixtureShape == fixtureShape &&
         other.metrics == metrics;
   }
 }

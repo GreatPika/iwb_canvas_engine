@@ -30,45 +30,47 @@ Do not assume:
 
 Benchmark policy:
 
-The structured source of truth for section 24 benchmark cases, scales, metrics,
-numeric budget classes, exact invariants, and profile membership is
+The structured source of truth for section 24 benchmark cases, scales,
+measurement boundaries, fixture shapes, metrics, numeric budget classes,
+exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: 96aca8a0 -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 4037b51d -->
 
 Required benchmark cases:
 
-| Case | Nodes | Metrics |
-|---|---:|---|
-| `edit.add_element` | 1k/10k/50k/100k | avg/P95/max us, alloc bytes |
-| `edit.update_visual` | 1k/10k/50k/100k | avg/P95/max us, touched count |
-| `edit.update_transform` | 1k/10k/50k/100k | spatial touched pages, alloc bytes |
-| `edit.move_selection` | 1k/10k/50k | selected count, avg/P95/max |
-| `edit.set_camera_offset` | 1k/10k/50k/100k | avg/P95/max us, ordinary paint-plan invalidations = 0 |
-| `edit.add_line` | 1k/10k/50k | avg/P95/max us, alloc bytes |
-| `input.selected_move_preview` | 1k/10k/50k | scene repaint count, avg/max |
-| `frame.selected_move_preview_cached_ordinary_plan` | 1k/10k/50k | ordinary plan hit rate, supplement count, no cached previewDelta |
-| `input.marquee_preview` | 1k/10k/50k | overlay repaint count, avg/max |
-| `input.draw_preview` | 1k/10k | point count, avg/max |
-| `input.line_preview` | 1k/10k/50k | overlay repaint count, avg/max |
-| `input.eraser_preview` | 1k/10k/50k | candidate count, exact checks |
-| `input.eraser_budget_exceeded` | dense 50k | budget-exceeded count, partial erase count = 0 |
-| `frame.main_capture` | 1k/10k/50k/100k | avg/P95/max, alloc bytes |
-| `frame.overlay_capture` | active previews | avg/P95/max, alloc bytes |
-| `frame.paint_candidates` | 1k/10k/50k/100k | candidate count, offscreen-layer/saveLayer count |
-| `resources.resolve_sync` | 1k resources | SurfaceResourceSession resolver calls, session cache hits, repaint count |
-| `resources.resolve_sync_cold_budget` | 1k uncached image records | session budget resolver calls <= 128, budget placeholders, throttled repaint count |
-| `resources.mark_dirty` | 1k resources | repaint count, target session cache invalidation cost |
-| `resources.mark_all_dirty` | 1k resources | repaint count, all-entry session cache invalidation cost |
-| `projection.read_document` | 1k/10k/50k/100k | first read/cache hit |
-| `codec.decode_v1` | all fixtures | avg/P95/max, error payload |
-| `load_document.success` | 1k/10k/50k/100k | avg/P95/max, rebuild cost, alloc bytes |
-| `load_document.failure` | invalid 1k/10k/50k inputs | avg/P95/max, committed mutation count = 0 |
-| `spatial.query_point` | 1k/10k/50k/100k | tile count, fallback count |
-| `spatial.touched_update` | 1k/10k/50k | rebuilt ids/pages |
-| `runtime.dispose_during_gesture` | active selected/overlay previews | avg/P95/max, resolver calls = 0, action events = 0 |
-| `diagnostics.disabled_pointer` | hot pointer | allocations = 0 records |
+| Case | Nodes | Boundary | Fixture | Metrics |
+|---|---:|---|---|---|
+| `edit.add_element` | 1k/10k/50k/100k | action_only | normal_spread | avg/P95/max us, alloc bytes |
+| `edit.update_visual` | 1k/10k/50k/100k | action_only | normal_spread | avg/P95/max us, touched count |
+| `edit.update_transform` | 1k/10k/50k/100k | action_only | normal_spread | spatial touched pages, alloc bytes |
+| `edit.move_selection` | 1k/10k/50k | action_only | normal_spread | selected count, avg/P95/max |
+| `edit.set_camera_offset` | 1k/10k/50k/100k | action_only | normal_spread | avg/P95/max us, ordinary paint-plan invalidations = 0 |
+| `edit.add_line` | 1k/10k/50k | action_only | normal_spread | avg/P95/max us, alloc bytes |
+| `input.selected_move_preview` | 1k/10k/50k | action_only | normal_spread | scene repaint count, avg/max |
+| `frame.selected_move_preview_cached_ordinary_plan` | 1k/10k/50k | action_only | normal_spread | ordinary plan hit rate, supplement count, no cached previewDelta |
+| `input.marquee_preview` | 1k/10k/50k | action_only | normal_spread | overlay repaint count, avg/max |
+| `input.draw_preview` | 1k/10k | action_only | normal_spread | point count, avg/max |
+| `input.line_preview` | 1k/10k/50k | action_only | normal_spread | overlay repaint count, avg/max |
+| `input.eraser_preview` | 1k/10k/50k | action_only | normal_spread | candidate count, exact checks |
+| `input.eraser_budget_exceeded` | dense 50k | action_only | dense_stress | budget-exceeded count, partial erase count = 0 |
+| `frame.main_capture` | 1k/10k/50k/100k | action_only | normal_spread | avg/P95/max, alloc bytes |
+| `frame.overlay_capture` | active previews | action_only | active_preview | avg/P95/max, alloc bytes |
+| `frame.paint_candidates` | 1k/10k/50k/100k | action_only | normal_spread | candidate count, offscreen-layer/saveLayer count |
+| `resources.resolve_sync` | 1k resources | action_only | resource_set | SurfaceResourceSession resolver calls, session cache hits, repaint count |
+| `resources.resolve_sync_cold_budget` | 1k uncached image records | action_only | resource_set | session budget resolver calls <= 128, budget placeholders, throttled repaint count |
+| `resources.mark_dirty` | 1k resources | action_only | resource_set | repaint count, target session cache invalidation cost |
+| `resources.mark_all_dirty` | 1k resources | action_only | resource_set | repaint count, all-entry session cache invalidation cost |
+| `projection.read_document` | 1k/10k/50k/100k | projection_split | normal_spread | first read/cache hit |
+| `codec.decode_v1` | all fixtures | lifecycle | codec_fixture | avg/P95/max, error payload |
+| `load_document.success` | 1k/10k/50k/100k | lifecycle | normal_spread | avg/P95/max, rebuild cost, alloc bytes |
+| `load_document.failure` | invalid 1k/10k/50k inputs | lifecycle | invalid_document | avg/P95/max, committed mutation count = 0 |
+| `spatial.query_point` | 1k/10k/50k/100k | action_only | normal_spread | tile count, fallback count |
+| `spatial.query_point_dense_stress` | dense 50k | action_only | dense_stress | dense fallback count |
+| `spatial.touched_update` | 1k/10k/50k | action_only | normal_spread | rebuilt ids/pages |
+| `runtime.dispose_during_gesture` | active selected/overlay previews | action_only | active_preview | avg/P95/max, resolver calls = 0, action events = 0 |
+| `diagnostics.disabled_pointer` | hot pointer | action_only | hot_pointer | allocations = 0 records |
 
 ---
 

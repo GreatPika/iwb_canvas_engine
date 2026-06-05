@@ -49,13 +49,11 @@ void main() {
     });
 
     test('report records schema, profile, runtime, and manifest metadata', () {
-      final report = runBenchmarks(
-        manifest: BenchmarkManifest.load(),
-        profileId: 'dry_run',
-      );
+      final manifest = BenchmarkManifest.load();
+      final report = runBenchmarks(manifest: manifest, profileId: 'dry_run');
       final encoded = report.toJson();
 
-      expect(encoded['schemaVersion'], 1);
+      expect(encoded['schemaVersion'], manifest.toolSchemaVersion);
       expect(encoded['manifestVersion'], isA<String>());
       expect(encoded['manifestFingerprint'], isA<String>());
       expect(encoded['profile'], isA<Map<String, Object?>>());

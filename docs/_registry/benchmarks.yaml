@@ -1,5 +1,5 @@
-manifest_version: "p14_release_readiness_benchmarks_v1"
-tool_schema_version: 1
+manifest_version: "p14_benchmark_measurement_boundary_v2"
+tool_schema_version: 2
 release_contour:
   runner_label: "ubuntu-24.04"
   os_name: "Ubuntu"
@@ -116,6 +116,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max us, alloc bytes"
     required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
     exact_invariants: []
@@ -128,6 +137,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max us, touched count"
     required_metrics: [avg_us, p95_us, max_us, touched_count]
     exact_invariants: []
@@ -140,6 +158,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "spatial touched pages, alloc bytes"
     required_metrics: [spatial_touched_pages, allocation_bytes]
     exact_invariants: []
@@ -152,6 +179,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [hot_input, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "selected count, avg/P95/max"
     required_metrics: [selected_count, avg_us, p95_us, max_us]
     exact_invariants:
@@ -164,6 +200,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [hot_input, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max us, ordinary paint-plan invalidations = 0"
     required_metrics: [avg_us, p95_us, max_us, ordinary_paint_plan_invalidations]
     exact_invariants:
@@ -177,6 +222,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max us, alloc bytes"
     required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
     exact_invariants: []
@@ -188,6 +242,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "scene repaint count, avg/max"
     required_metrics: [scene_repaint_count, avg_us, max_us]
     exact_invariants:
@@ -200,6 +263,15 @@ cases:
     classification: new_only
     budget_classes: [frame_capture, query_read, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "ordinary plan hit rate, supplement count, no cached previewDelta"
     required_metrics: [ordinary_plan_hit_rate, supplement_count, cached_preview_delta_count]
     exact_invariants:
@@ -212,6 +284,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "overlay repaint count, avg/max"
     required_metrics: [overlay_repaint_count, avg_us, max_us]
     exact_invariants:
@@ -224,6 +305,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "point count, avg/max"
     required_metrics: [point_count, avg_us, max_us]
     exact_invariants:
@@ -235,6 +325,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "overlay repaint count, avg/max"
     required_metrics: [overlay_repaint_count, avg_us, max_us]
     exact_invariants:
@@ -247,6 +346,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "candidate count, exact checks"
     required_metrics: [candidate_count, exact_check_count]
     exact_invariants:
@@ -259,6 +367,15 @@ cases:
     classification: new_only
     budget_classes: [frame_capture, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: dense_stress
     docs_metrics_label: "budget-exceeded count, partial erase count = 0"
     required_metrics: [budget_exceeded_count, partial_erase_count]
     exact_invariants:
@@ -269,6 +386,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [frame_capture, allocation_budget]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max, alloc bytes"
     required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
     exact_invariants: []
@@ -281,6 +407,15 @@ cases:
     classification: new_only
     budget_classes: [frame_capture, allocation_budget]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: active_preview
     docs_metrics_label: "avg/P95/max, alloc bytes"
     required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
     exact_invariants: []
@@ -290,6 +425,15 @@ cases:
     classification: new_only
     budget_classes: [frame_capture, allocation_budget, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "candidate count, offscreen-layer/saveLayer count"
     required_metrics: [candidate_count, offscreen_layer_count, save_layer_count]
     exact_invariants:
@@ -304,6 +448,15 @@ cases:
     classification: new_only
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: resource_set
     docs_metrics_label: "SurfaceResourceSession resolver calls, session cache hits, repaint count"
     required_metrics: [surface_resource_session_resolver_calls, session_cache_hits, repaint_count]
     exact_invariants:
@@ -314,6 +467,15 @@ cases:
     classification: new_only
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: resource_set
     docs_metrics_label: "session budget resolver calls <= 128, budget placeholders, throttled repaint count"
     required_metrics: [session_budget_resolver_calls, budget_placeholders, throttled_repaint_count]
     exact_invariants:
@@ -324,6 +486,15 @@ cases:
     classification: new_only
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: resource_set
     docs_metrics_label: "repaint count, target session cache invalidation cost"
     required_metrics: [repaint_count, target_session_cache_invalidation_cost]
     exact_invariants:
@@ -334,6 +505,15 @@ cases:
     classification: new_only
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: resource_set
     docs_metrics_label: "repaint count, all-entry session cache invalidation cost"
     required_metrics: [repaint_count, all_entry_session_cache_invalidation_cost]
     exact_invariants:
@@ -344,6 +524,15 @@ cases:
     classification: new_only
     budget_classes: [query_read]
     memory_scope: bulk_document_1k_10k_50k_100k
+    measurement_boundary:
+      timed_scope: projection_split
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: projection_action_total
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "first read/cache hit"
     required_metrics: [first_read_us, cache_hit_us]
     exact_invariants: []
@@ -356,6 +545,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [bulk_io, allocation_budget, exact_invariant]
     memory_scope: codec_fixture_bulk
+    measurement_boundary:
+      timed_scope: lifecycle
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: measured_lifecycle
+      primary_timing: lifecycle
+      primary_memory: lifecycle
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: codec_fixture
     docs_metrics_label: "avg/P95/max, error payload"
     required_metrics: [avg_us, p95_us, max_us, error_payload]
     exact_invariants:
@@ -366,6 +564,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [bulk_io, allocation_budget]
     memory_scope: bulk_document_1k_10k_50k_100k
+    measurement_boundary:
+      timed_scope: lifecycle
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: measured_lifecycle
+      primary_timing: lifecycle
+      primary_memory: lifecycle
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "avg/P95/max, rebuild cost, alloc bytes"
     required_metrics: [avg_us, p95_us, max_us, rebuild_cost, allocation_bytes]
     exact_invariants: []
@@ -378,6 +585,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [bulk_io, allocation_budget, exact_invariant]
     memory_scope: bulk_document_1k_10k_50k_100k
+    measurement_boundary:
+      timed_scope: lifecycle
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: measured_lifecycle
+      primary_timing: lifecycle
+      primary_memory: lifecycle
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: invalid_document
     docs_metrics_label: "avg/P95/max, committed mutation count = 0"
     required_metrics: [avg_us, p95_us, max_us, committed_mutation_count]
     exact_invariants:
@@ -390,6 +606,15 @@ cases:
     classification: equivalent_legacy
     budget_classes: [query_read, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "tile count, fallback count"
     required_metrics: [tile_count, fallback_count]
     exact_invariants:
@@ -399,10 +624,38 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: spatial.query_point_dense_stress
+    classification: new_only
+    budget_classes: [query_read, exact_invariant]
+    memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: dense_stress
+    docs_metrics_label: "dense fallback count"
+    required_metrics: [fallback_count]
+    exact_invariants:
+      - {name: fallback_count_bounded, metric: fallback_count}
+    scales:
+      - {id: "dense_50k", label: "dense 50k", profiles: [dry_run, smoke, release]}
   - id: spatial.touched_update
     classification: equivalent_legacy
     budget_classes: [query_read, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
     docs_metrics_label: "rebuilt ids/pages"
     required_metrics: [rebuilt_ids, rebuilt_pages]
     exact_invariants:
@@ -415,6 +668,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: active_preview
     docs_metrics_label: "avg/P95/max, resolver calls = 0, action events = 0"
     required_metrics: [avg_us, p95_us, max_us, resolver_calls, action_events]
     exact_invariants:
@@ -426,6 +688,15 @@ cases:
     classification: new_only
     budget_classes: [hot_input, exact_invariant, allocation_budget]
     memory_scope: zero_allocation
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: hot_pointer
     docs_metrics_label: "allocations = 0 records"
     required_metrics: [allocation_records, allocation_bytes]
     exact_invariants:
