@@ -175,12 +175,8 @@ FutureOr<Map<String, Object?>> _runOperation(String caseId, String scaleId) {
     ),
     'input.eraser_preview' => _eraserPreview(scaleId),
     'input.eraser_budget_exceeded' => _eraserPreview(scaleId),
-    'frame.main_capture' => _readDocument(scaleId),
-    'frame.overlay_capture' => _drawToolPreview(
-      scaleId,
-      tool: CanvasDrawTool.line,
-      metric: 'overlay_display_list_ops',
-    ),
+    'frame.main_capture' => _mainFrameCapture(scaleId),
+    'frame.overlay_capture' => _overlayFrameCapture(scaleId),
     'frame.paint_candidates' => _framePaintCandidates(scaleId),
     'resources.resolve_sync' => _resourceLookup(scaleId),
     'resources.resolve_sync_cold_budget' => _resourceColdBudget(scaleId),
@@ -353,6 +349,57 @@ Map<String, Object?> _selectedMovePreviewFrame(String scaleId) {
   }
 }
 
+Map<String, Object?> _mainFrameCapture(String scaleId) {
+  final runtime = _runtime(scaleId);
+  try {
+    final capture = FrameCaptureService(
+      frameFacts: runtime.frameFactsPort,
+      selectionFacts: _RuntimeSelectionFactsPort(runtime),
+      queryPaint: runtime.spatialKernel.queryPaint,
+    );
+    final frame = capture.captureMainFrame(
+      _frameInputs(runtime, preview: const CanvasNoPreview()),
+    );
+
+    return {
+      'captured_handle_count': frame.snapshot.capturedHandles.length,
+      'captured_element_count': frame.snapshot.elements.length,
+      'resource_descriptor_count': frame.snapshot.resourceDescriptors.length,
+    };
+  } finally {
+    runtime.dispose();
+  }
+}
+
+Map<String, Object?> _overlayFrameCapture(String scaleId) {
+  final runtime = _runtime(scaleId);
+  try {
+    final capture = FrameCaptureService(
+      frameFacts: runtime.frameFactsPort,
+      selectionFacts: _RuntimeSelectionFactsPort(runtime),
+      queryPaint: runtime.spatialKernel.queryPaint,
+    );
+    final frame = capture.captureOverlayFrame(
+      _frameInputs(
+        runtime,
+        preview: const CanvasLinePreview(
+          start: Offset.zero,
+          end: Offset(16, 16),
+          color: Color(0xFF000000),
+          thickness: 1,
+        ),
+      ),
+    );
+
+    return {
+      'captured_handle_count': frame.snapshot.capturedHandles.length,
+      'overlay_preview_count': frame.overlayPreview == null ? 0 : 1,
+    };
+  } finally {
+    runtime.dispose();
+  }
+}
+
 Map<String, Object?> _drawToolPreview(
   String scaleId, {
   required CanvasDrawTool tool,
@@ -393,16 +440,6 @@ Map<String, Object?> _eraserPreview(String scaleId) {
       'budget_exceeded_count': count,
       'partial_erase_count': 0,
     };
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _readDocument(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final projection = runtime.readDocument();
-    return {'candidate_count': projection.layers.single.elements.length};
   } finally {
     runtime.dispose();
   }

@@ -108,7 +108,6 @@ _BenchmarkCaseRun _runCase(
     }
   }
   metrics.addAll(adapterResult.metrics);
-  _addBootstrapLegacyMetrics(benchmarkCase, metrics);
   final invariants = <String, BenchmarkInvariantReport>{};
   for (final invariant in benchmarkCase.exactInvariants) {
     final actual = metrics[invariant.metric];
@@ -146,19 +145,6 @@ _BenchmarkCaseRun _runCase(
     ),
     runtime: adapterResult.runtime,
   );
-}
-
-void _addBootstrapLegacyMetrics(
-  BenchmarkCase benchmarkCase,
-  Map<String, Object?> metrics,
-) {
-  if (benchmarkCase.classification != 'equivalent_legacy') {
-    return;
-  }
-  final avgUs = metrics['avg_us'];
-  if (avgUs is num) {
-    metrics.putIfAbsent('legacy_avg_us', () => avgUs);
-  }
 }
 
 BenchmarkProbeRuntime _sharedProbeRuntime(List<_BenchmarkCaseRun> caseRuns) {
