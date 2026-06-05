@@ -7,6 +7,8 @@ import 'benchmark_report.dart';
 const approvedReleaseBaselinePath =
     'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json';
 
+const manualBenchmarkBaselineRoot = 'tool/bench/baselines/manual';
+
 const releaseCurrentReportPath =
     'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
 
@@ -91,6 +93,7 @@ BenchmarkDiffResult diffBenchmarkReports({
   required Map<String, Object?> currentJson,
   required String baselinePath,
   required String currentPath,
+  bool enforceAbsoluteCaps = true,
 }) {
   final unapprovedFailure = _unapprovedBaselineFailure(baselineJson);
   if (unapprovedFailure != null) {
@@ -116,6 +119,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: false,
       requireObservedReleaseContour: false,
+      enforceAbsoluteCaps: enforceAbsoluteCaps,
     ),
   );
   failures.addAll(
@@ -128,6 +132,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: true,
       requireObservedReleaseContour: false,
+      enforceAbsoluteCaps: enforceAbsoluteCaps,
     ),
   );
   if (failures.isEmpty) {
@@ -181,6 +186,7 @@ BenchmarkDiffResult validateFirstBaselineCandidate({
     requireFirstBaselineMemoryCaps: true,
     requireCasePolicyFields: true,
     requireObservedReleaseContour: true,
+    enforceAbsoluteCaps: true,
   );
 
   return _result(
@@ -203,7 +209,7 @@ Future<int> runBenchmarkDiffCli(
       'Benchmark diff supports only profile=release.',
     );
   }
-  _validateApprovedBaselinePath(options.baseline);
+  _validateDiffBaselinePath(options.baseline);
   _validateCurrentReleaseReportPath(options.current);
   _validateTransientOutputPath(options.output);
   final loadedManifest = manifest ?? BenchmarkManifest.load();
@@ -214,6 +220,7 @@ Future<int> runBenchmarkDiffCli(
     currentJson: _readJsonObject(options.current),
     baselinePath: options.baseline,
     currentPath: options.current,
+    enforceAbsoluteCaps: !_isManualBaselinePath(options.baseline),
   );
   _writeJsonObject(options.output, result.report);
   if (!result.passed) {
@@ -238,7 +245,7 @@ Future<int> runBenchmarkBaselineUpdateCli(
     );
   }
   _validateCandidatePath(options.candidate);
-  _validateApprovedBaselinePath(options.approved);
+  _validateApprovedBaselineWritePath(options.approved);
   final loadedManifest = manifest ?? BenchmarkManifest.load();
   final candidateJson = _readJsonObject(options.candidate);
   final result = validateFirstBaselineCandidate(
@@ -397,6 +404,7 @@ final class ParsedRuntimeReport {
     required this.runtimeMode,
     required this.assertionsEnabled,
     required this.debugInvariantMode,
+    required this.deviceId,
   });
 
   final String runnerLabel;
@@ -409,6 +417,7 @@ final class ParsedRuntimeReport {
   final String runtimeMode;
   final bool assertionsEnabled;
   final bool debugInvariantMode;
+  final String? deviceId;
 
   Map<String, Object?> toJson() {
     return {
@@ -422,6 +431,7 @@ final class ParsedRuntimeReport {
       'runtimeMode': runtimeMode,
       'assertionsEnabled': assertionsEnabled,
       'debugInvariantMode': debugInvariantMode,
+      'deviceId': deviceId,
     };
   }
 
@@ -436,6 +446,7 @@ final class ParsedRuntimeReport {
       'runtimeMode': runtimeMode,
       'assertionsEnabled': assertionsEnabled,
       'debugInvariantMode': debugInvariantMode,
+      'deviceId': deviceId,
       'releaseContour': releaseContour.toJson(),
     };
   }
@@ -455,6 +466,7 @@ final class ParsedRuntimeReport {
       runtimeMode: _string(json, 'runtimeMode', '$source runtime'),
       assertionsEnabled: _bool(json, 'assertionsEnabled', '$source runtime'),
       debugInvariantMode: _bool(json, 'debugInvariantMode', '$source runtime'),
+      deviceId: _optionalString(json, 'deviceId', '$source runtime'),
     );
   }
 }
@@ -596,6 +608,7 @@ List<String> _validateReportForPolicy({
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
   required bool requireObservedReleaseContour,
+  required bool enforceAbsoluteCaps,
 }) {
   final failures = <String>[];
   final manifestProfile = manifest.profilesById[profile];
@@ -667,6 +680,7 @@ List<String> _validateReportForPolicy({
           requireLegacyBootstrapMetrics: requireLegacyBootstrapMetrics,
           requireFirstBaselineMemoryCaps: requireFirstBaselineMemoryCaps,
           requireCasePolicyFields: requireCasePolicyFields,
+          enforceAbsoluteCaps: enforceAbsoluteCaps,
         ),
       );
     }
@@ -686,6 +700,7 @@ List<String> _validateCaseForPolicy({
   required bool requireLegacyBootstrapMetrics,
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
+  required bool enforceAbsoluteCaps,
 }) {
   final failures = <String>[];
   final caseName = '$sourceRole ${actual.key}';
@@ -717,15 +732,17 @@ List<String> _validateCaseForPolicy({
     }
   }
   failures.addAll(_validateExactInvariants(benchmarkCase, actual, caseName));
-  failures.addAll(
-    _validateAbsoluteCaps(
-      manifest: manifest,
-      benchmarkCase: benchmarkCase,
-      scale: scale,
-      actual: actual,
-      caseName: caseName,
-    ),
-  );
+  if (enforceAbsoluteCaps) {
+    failures.addAll(
+      _validateAbsoluteCaps(
+        manifest: manifest,
+        benchmarkCase: benchmarkCase,
+        scale: scale,
+        actual: actual,
+        caseName: caseName,
+      ),
+    );
+  }
   if (requireFirstBaselineMemoryCaps) {
     failures.addAll(
       _validateFirstBaselineMemoryCaps(
@@ -1563,26 +1580,62 @@ void _validateCandidatePath(String path) {
   _validateContainedPath(path, rootPath: releaseCandidateRoot);
 }
 
-void _validateApprovedBaselinePath(String path) {
+void _validateDiffBaselinePath(String path) {
+  final approved = File(
+    approvedReleaseBaselinePath,
+  ).absolute.uri.normalizePath();
+  final target = File(path).absolute.uri.normalizePath();
+  final manualBaseline = _isManualBaselinePath(path);
+  if (target.path != approved.path && !manualBaseline) {
+    throw const FormatException(
+      'Approved benchmark baseline path must be '
+      '$approvedReleaseBaselinePath or a JSON file under '
+      '$manualBenchmarkBaselineRoot.',
+    );
+  }
+}
+
+void _validateApprovedBaselineWritePath(String path) {
   final approved = File(
     approvedReleaseBaselinePath,
   ).absolute.uri.normalizePath();
   final target = File(path).absolute.uri.normalizePath();
   if (target.path != approved.path) {
     throw const FormatException(
-      'Approved benchmark baseline path must be '
+      'Approved benchmark baseline write path must be '
       '$approvedReleaseBaselinePath.',
     );
   }
 }
 
+bool _isManualBaselinePath(String path) {
+  final target = File(path).absolute.uri.normalizePath();
+  final manualRoot = Directory(
+    manualBenchmarkBaselineRoot,
+  ).absolute.uri.normalizePath().path;
+  final normalizedManualRoot = manualRoot.endsWith('/')
+      ? manualRoot.replaceFirst(RegExp(r'/$'), '')
+      : manualRoot;
+  return target.path.startsWith('$normalizedManualRoot/') &&
+      target.path.endsWith('.json');
+}
+
 void _validateCurrentReleaseReportPath(String path) {
   final current = File(releaseCurrentReportPath).absolute.uri.normalizePath();
   final target = File(path).absolute.uri.normalizePath();
-  if (target.path != current.path) {
+  final currentRoot = Directory(
+    'build/bench/current',
+  ).absolute.uri.normalizePath().path;
+  final normalizedCurrentRoot = currentRoot.endsWith('/')
+      ? currentRoot.replaceFirst(RegExp(r'/$'), '')
+      : currentRoot;
+  final currentReport =
+      target.path.startsWith('$normalizedCurrentRoot/') &&
+      target.path.endsWith('.json');
+  if (target.path != current.path && !currentReport) {
     throw const FormatException(
       'Current benchmark release report path must be '
-      '$releaseCurrentReportPath.',
+      '$releaseCurrentReportPath or a JSON file under build/bench/current.',
     );
   }
 }

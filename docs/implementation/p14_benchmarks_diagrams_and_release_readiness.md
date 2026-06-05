@@ -104,6 +104,9 @@ architecture.
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
+- `test.benchmarks.benchmark_manifest` -> `test/benchmarks/benchmark_manifest_test.dart`
+- `test.benchmarks.benchmark_diff` -> `test/benchmarks/benchmark_diff_test.dart`
+- `test.benchmarks.benchmark_runner` -> `test/benchmarks/benchmark_runner_test.dart`
 - `test.benchmarks.required_cases` -> `test/benchmarks/required_cases_test.dart`
 - `test.guardrails.blocking_suite` -> `test/guardrails/blocking_suite_test.dart`
 - `dart run tool/guardrails/run.dart` -> full blocking guardrail suite
@@ -116,7 +119,9 @@ architecture.
 
 - schema tests green
 - interaction/frame/spatial/resource tests green
-- benchmarks pass
+- benchmark manifest, required-case, diff, and runner proofs green
+- root package CI runs benchmark proofs separately from the non-benchmark
+  Flutter test suite so every test uses the correct runner
 - no legacy imports
 - no legacy facade
 - phase guardrail alignment green

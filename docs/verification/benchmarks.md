@@ -15,7 +15,9 @@ Related donors:
 Related diagrams:
 - `none`
 Required tests:
+- `test.benchmarks.benchmark_manifest`
 - `test.benchmarks.benchmark_diff`
+- `test.benchmarks.benchmark_runner`
 - `test.guardrails.release_readiness`
 - `test.benchmarks.required_cases`
 Guardrails:
@@ -83,12 +85,25 @@ Release benchmark interpretation:
   is read-only with respect to approved baselines.
 - `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json`
   is the manual approved-baseline write path after first-baseline acceptance.
+- Manual device baselines for optimization work live under
+  `tool/bench/baselines/manual/`. They are committed comparison anchors for a
+  named local device and toolchain, not release-approval baselines.
+- The Pixel 6 Android 16 baseline is
+  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`.
+- To refresh the current Pixel 6 report, run
+  `dart run tool/bench/run.dart --profile=release --device=23081FDF6000L2 --output=build/bench/current/pixel6_release.json`.
+- To compare a new Pixel 6 report against the committed manual baseline, run
+  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json --current=build/bench/current/pixel6_release.json --output=build/bench/diff/pixel6_release.json`.
+- Manual device-baseline diff is for regression tracking during optimization;
+  it must preserve same-contour runtime metadata, including `deviceId`, but it
+  does not replace the approved Ubuntu release baseline or release workflow.
 
 Benchmark CI routing:
 
-- Root PR CI runs deterministic benchmark machinery checks only: manifest tests,
-  required-case dry-run proof, diff fixtures, docs projection checks, analyze,
-  and guardrails.
+- Root PR CI runs the deterministic benchmark machinery checks first: manifest
+  tests, required-case dry-run proof, diff fixtures, benchmark runner proof, and
+  docs projection checks. It then runs all non-benchmark Flutter tests with
+  `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
 - Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.38.0` stable,
   writes the current release report, runs the read-only release diff, and then
   blocks on P14 graph, generated-view, and guardrail checks.

@@ -977,6 +977,10 @@ final class _DelegationTargetVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
+// Route extraction keeps direct calls, routed throws, and materialization
+// promotion in one recorder so helper verification and caller promotion share
+// one route state. Splitting this only for metrics would duplicate that state.
+// ignore: coupling-between-object-classes, weighted-methods-per-class
 final class _ThrowRouteRecorder {
   const _ThrowRouteRecorder(
     this.path,
@@ -1007,6 +1011,7 @@ final class _ThrowRouteRecorder {
       );
     }
     _pendingMaterializationRoute(member: member, owner: owner, node: node);
+    _verifiedStackTraceMaterializationRouteHelper(member, node);
   }
 
   void recordThrow({
@@ -1084,6 +1089,24 @@ final class _ThrowRouteRecorder {
         _materializationRouteHelperKey(helperName, route),
       );
     }
+  }
+
+  void _verifiedStackTraceMaterializationRouteHelper(
+    String? member,
+    MethodInvocation node,
+  ) {
+    if (member != '_materialize' ||
+        node.methodName.name != 'throwWithStackTrace' ||
+        node.target?.toSource() != 'Error' ||
+        node.argumentList.arguments.isEmpty) {
+      return;
+    }
+    final expression = node.argumentList.arguments.first;
+    final exception = _throwType(expression, options, path);
+    if (exception == null) {
+      return;
+    }
+    _verifiedMaterializationRouteHelper(member, expression, exception);
   }
 
   String? _sensitiveThrowRouteException(String methodName) {

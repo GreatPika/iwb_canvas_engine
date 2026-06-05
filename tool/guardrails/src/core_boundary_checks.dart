@@ -556,9 +556,14 @@ List<GuardrailViolation> _checkApiFacadeExport(String path, String uri) {
 
 List<GuardrailViolation> _checkSourceBoundary(String path, String target) {
   final violations = <GuardrailViolation>[];
+  final reportedGuardrails = <String>{};
 
   for (final rule in _boundaryRules) {
-    violations.addAll(rule.check(path, target));
+    for (final violation in rule.check(path, target)) {
+      if (reportedGuardrails.add(violation.guardrailId)) {
+        violations.add(violation);
+      }
+    }
   }
 
   return violations;

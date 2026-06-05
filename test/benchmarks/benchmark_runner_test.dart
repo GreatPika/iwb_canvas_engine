@@ -94,9 +94,22 @@ void main() {
         expect(decoded['runtime'], containsPair('osName', isNot('Ubuntu')));
         expect(decoded['runtime'], containsPair('runtimeMode', 'flutter_test'));
         expect(decoded['runtime'], containsPair('assertionsEnabled', isTrue));
+        expect(decoded['runtime'], containsPair('deviceId', isNull));
         output.deleteSync();
       },
     );
+
+    test('accepts an explicit device target for real-device probes', () {
+      final options = BenchmarkRunOptions.parse([
+        '--profile=smoke',
+        '--device=23081FDF6000L2',
+        '--output=build/bench/current/pixel6_smoke.json',
+      ]);
+
+      expect(options.profile, 'smoke');
+      expect(options.device, '23081FDF6000L2');
+      expect(options.output, 'build/bench/current/pixel6_smoke.json');
+    });
 
     test('manifest fingerprint covers policy and scale membership', () {
       final manifest = BenchmarkManifest.load();
@@ -241,6 +254,10 @@ void main() {
             '--profile=smoke',
             '--output=build/bench2/report.json',
           ]),
+          throwsA(isA<FormatException>()),
+        );
+        expect(
+          () => BenchmarkRunOptions.parse(['--profile=smoke', '--device=']),
           throwsA(isA<FormatException>()),
         );
       },

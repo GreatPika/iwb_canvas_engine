@@ -1200,7 +1200,9 @@
     - test.guardrails.interaction_guardrail_enforcement
     - test.surface.widget_paint
     - test.guardrails.release_readiness
+    - test.benchmarks.benchmark_manifest
     - test.benchmarks.benchmark_diff
+    - test.benchmarks.benchmark_runner
     - test.benchmarks.required_cases
     - test.guardrails.blocking_suite
   do_not_assume:
@@ -1225,7 +1227,9 @@
   guardrails:
     - release.benchmark_readiness
   tests:
+    - test.benchmarks.benchmark_manifest
     - test.benchmarks.benchmark_diff
+    - test.benchmarks.benchmark_runner
     - test.guardrails.release_readiness
     - test.benchmarks.required_cases
   do_not_assume:

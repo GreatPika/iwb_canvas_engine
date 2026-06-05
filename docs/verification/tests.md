@@ -227,7 +227,9 @@ Required tests:
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.surface.widget_paint`
 - `test.guardrails.release_readiness`
+- `test.benchmarks.benchmark_manifest`
 - `test.benchmarks.benchmark_diff`
+- `test.benchmarks.benchmark_runner`
 - `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
 Guardrails:
@@ -269,7 +271,9 @@ Required tests:
 - `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
 - `test/guardrails/release_readiness_guardrail_test.dart`
+- `test/benchmarks/benchmark_manifest_test.dart`
 - `test/benchmarks/benchmark_diff_test.dart`
+- `test/benchmarks/benchmark_runner_test.dart`
 - `test/benchmarks/required_cases_test.dart`
 
 The owner-DAG proof is split intentionally: `owner_dag_import_boundaries_test`
@@ -497,11 +501,13 @@ it must not replace the behavioral test that proves the rule.
 ### Guardrail Test Ownership
 
 `test/guardrails/**` owns executable proof tests that make cross-cutting
-guardrails part of normal `dart test` and CI. `tool/guardrails/**` owns the
-guardrail runner, runner metadata or manifests, and reusable structural check
-logic. Simple guardrails may live entirely as tests. Shared scanner logic or
-logic used by both tests and the runner belongs under `tool/guardrails/**`,
-with a thin test under `test/guardrails/**`.
+guardrails part of the normal package test gates and CI. Dart-only guardrail and
+benchmark proof may run through `dart test`; Flutter-dependent package tests run
+through `flutter test`. `tool/guardrails/**` owns the guardrail runner, runner
+metadata or manifests, and reusable structural check logic. Simple guardrails
+may live entirely as tests. Shared scanner logic or logic used by both tests and
+the runner belongs under `tool/guardrails/**`, with a thin test under
+`test/guardrails/**`.
 
 The runner is only a dispatcher over proof commands. It must not replace
 behavioral tests, and the required guardrail list remains owned by

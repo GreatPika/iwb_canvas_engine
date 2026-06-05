@@ -446,6 +446,56 @@ void main() {
       expect(result.failures, isEmpty);
     });
 
+    test(
+      'manual device baseline diff tracks regressions without release caps',
+      () async {
+        final manifest = BenchmarkManifest.load();
+        final baseline = _releaseReport(manifest);
+        final current = _clone(baseline);
+        baseline._runtime['deviceId'] = 'pixel-fixture';
+        current._runtime['deviceId'] = 'pixel-fixture';
+        _metrics(baseline, 'edit.add_element', '1k')['avg_us'] = 50000;
+        _metrics(baseline, 'edit.add_element', '1k')['p95_us'] = 60000;
+        _metrics(baseline, 'edit.add_element', '1k')['max_us'] = 70000;
+        _metrics(current, 'edit.add_element', '1k')['avg_us'] = 50000;
+        _metrics(current, 'edit.add_element', '1k')['p95_us'] = 60000;
+        _metrics(current, 'edit.add_element', '1k')['max_us'] = 70000;
+
+        const manualBaselinePath =
+            '$manualBenchmarkBaselineRoot/manual_diff_test.json';
+        const currentPath = 'build/bench/current/manual_diff_test_current.json';
+        const outputPath = 'build/bench/diff/manual_diff_test.json';
+        for (final path in [manualBaselinePath, currentPath, outputPath]) {
+          addTearDown(() {
+            final file = File(path);
+            if (file.existsSync()) {
+              file.deleteSync();
+            }
+          });
+        }
+        File(manualBaselinePath)
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync(jsonEncode(baseline));
+        File(currentPath)
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync(jsonEncode(current));
+
+        final exitCode = await runBenchmarkDiffCli([
+          '--profile=release',
+          '--baseline=$manualBaselinePath',
+          '--current=$currentPath',
+          '--output=$outputPath',
+        ], manifest: manifest);
+
+        expect(exitCode, 0);
+        final diffReport =
+            jsonDecode(File(outputPath).readAsStringSync())
+                as Map<String, Object?>;
+        expect(diffReport['status'], 'pass');
+        expect(diffReport['summary'], containsPair('comparedCaseCount', 74));
+      },
+    );
+
     test('diff is read-only and update_baseline is the write path', () async {
       final manifest = BenchmarkManifest.load();
       final temp = Directory.systemTemp.createTempSync('bench_diff_test_');
@@ -507,6 +557,14 @@ void main() {
           '--profile=release',
           '--candidate=$currentPath',
           '--approved=${temp.path}/approved.json',
+        ], manifest: manifest),
+        throwsA(isA<FormatException>()),
+      );
+      expect(
+        () => runBenchmarkBaselineUpdateCli([
+          '--profile=release',
+          '--candidate=$currentPath',
+          '--approved=$manualBenchmarkBaselineRoot/update_rejected.json',
         ], manifest: manifest),
         throwsA(isA<FormatException>()),
       );
@@ -673,6 +731,7 @@ Map<String, Object?> _releaseReport(BenchmarkManifest manifest) {
       'runtimeMode': 'flutter_test',
       'assertionsEnabled': true,
       'debugInvariantMode': false,
+      'deviceId': null,
     },
     'caseCount': cases.length,
     'cases': cases,

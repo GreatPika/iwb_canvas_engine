@@ -34,10 +34,12 @@ BenchmarkAdapterResult runBenchmarkAdapter(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
   BenchmarkProfile profile,
+  BenchmarkDeviceTarget? deviceTarget,
 ) {
   final result = Process.runSync(Platform.resolvedExecutable, [
     'run',
     benchmarkProbePath,
+    if (deviceTarget != null) '--device=${deviceTarget.id}',
     '--case=${benchmarkCase.id}',
     '--scale=${scale.id}',
     '--profile=${profile.id}',
@@ -55,6 +57,12 @@ BenchmarkAdapterResult runBenchmarkAdapter(
     );
   }
   return _decodeProbeResult(benchmarkCase, scale, result.stdout.toString());
+}
+
+final class BenchmarkDeviceTarget {
+  const BenchmarkDeviceTarget(this.id);
+
+  final String id;
 }
 
 BenchmarkAdapterResult _decodeProbeResult(

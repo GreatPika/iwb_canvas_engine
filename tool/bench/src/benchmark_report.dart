@@ -79,6 +79,7 @@ final class BenchmarkRuntimeReport {
     required this.runtimeMode,
     required this.assertionsEnabled,
     required this.debugInvariantMode,
+    required this.deviceId,
   });
 
   final String runnerLabel;
@@ -91,6 +92,7 @@ final class BenchmarkRuntimeReport {
   final String runtimeMode;
   final bool assertionsEnabled;
   final bool debugInvariantMode;
+  final String? deviceId;
 
   Map<String, Object?> toJson() {
     return {
@@ -104,6 +106,7 @@ final class BenchmarkRuntimeReport {
       'runtimeMode': runtimeMode,
       'assertionsEnabled': assertionsEnabled,
       'debugInvariantMode': debugInvariantMode,
+      'deviceId': deviceId,
     };
   }
 }

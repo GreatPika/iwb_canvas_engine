@@ -87,6 +87,14 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_23_tests`, `section_24_benchmarks`
 
+## test.benchmarks.benchmark_manifest
+
+- Sections: `section_23_tests`, `section_24_benchmarks`
+
+## test.benchmarks.benchmark_runner
+
+- Sections: `section_23_tests`, `section_24_benchmarks`
+
 ## test.benchmarks.required_cases
 
 - Sections: `section_23_tests`, `section_24_benchmarks`

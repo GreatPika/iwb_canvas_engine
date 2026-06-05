@@ -16,9 +16,11 @@ Future<String> runBenchmarkCli(
   final loadedManifest = manifest ?? BenchmarkManifest.load();
   final outputPath = options.output ?? _defaultOutputPath(options.profile);
   _validateOutputPath(outputPath);
+  final device = options.device;
   final report = runBenchmarks(
     manifest: loadedManifest,
     profileId: options.profile,
+    deviceTarget: device == null ? null : BenchmarkDeviceTarget(device),
   );
   final outputFile = File(outputPath)..parent.createSync(recursive: true);
   outputFile.writeAsStringSync(
@@ -33,6 +35,7 @@ Future<String> runBenchmarkCli(
 BenchmarkReport runBenchmarks({
   required BenchmarkManifest manifest,
   required String profileId,
+  BenchmarkDeviceTarget? deviceTarget,
 }) {
   final profile = manifest.profilesById[profileId];
   if (profile == null) {
@@ -45,7 +48,7 @@ BenchmarkReport runBenchmarks({
       if (!scale.profiles.contains(profileId)) {
         continue;
       }
-      caseRuns.add(_runCase(benchmarkCase, scale, profile));
+      caseRuns.add(_runCase(benchmarkCase, scale, profile, deviceTarget));
     }
   }
   if (caseRuns.isEmpty) {
@@ -85,6 +88,7 @@ BenchmarkReport runBenchmarks({
       runtimeMode: probeRuntime.runtimeMode,
       assertionsEnabled: probeRuntime.assertionsEnabled,
       debugInvariantMode: probeRuntime.debugInvariantMode,
+      deviceId: deviceTarget?.id,
     ),
     cases: cases,
   );
@@ -97,8 +101,14 @@ _BenchmarkCaseRun _runCase(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
   BenchmarkProfile profile,
+  BenchmarkDeviceTarget? deviceTarget,
 ) {
-  final adapterResult = runBenchmarkAdapter(benchmarkCase, scale, profile);
+  final adapterResult = runBenchmarkAdapter(
+    benchmarkCase,
+    scale,
+    profile,
+    deviceTarget,
+  );
   final metrics = <String, Object?>{};
   for (final metric in benchmarkCase.requiredMetrics) {
     if (!adapterResult.metrics.containsKey(metric)) {
@@ -304,19 +314,27 @@ String _withoutTrailingSlash(String path) {
 }
 
 final class BenchmarkRunOptions {
-  const BenchmarkRunOptions({required this.profile, required this.output});
+  const BenchmarkRunOptions({
+    required this.profile,
+    required this.output,
+    required this.device,
+  });
 
   final String profile;
   final String? output;
+  final String? device;
 
   factory BenchmarkRunOptions.parse(List<String> args) {
     String? profile;
     String? output;
+    String? device;
     for (final arg in args) {
       if (arg.startsWith('--profile=')) {
         profile = _argumentValue(arg, '--profile=');
       } else if (arg.startsWith('--output=')) {
         output = _argumentValue(arg, '--output=');
+      } else if (arg.startsWith('--device=')) {
+        device = _argumentValue(arg, '--device=');
       } else {
         throw FormatException('Unsupported benchmark runner argument "$arg".');
       }
@@ -324,7 +342,14 @@ final class BenchmarkRunOptions {
     if (profile == null || profile.isEmpty) {
       throw const FormatException('Missing required --profile=<profile>.');
     }
-    return BenchmarkRunOptions(profile: profile, output: output);
+    if (device != null && device.isEmpty) {
+      throw const FormatException('--device must not be empty.');
+    }
+    return BenchmarkRunOptions(
+      profile: profile,
+      output: output,
+      device: device,
+    );
   }
 }
 

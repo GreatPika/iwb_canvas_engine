@@ -80,6 +80,13 @@ void _expectRootPackageChecks(List<YamlMap> steps) {
   expect(usedActions, contains('actions/checkout@v4'));
   expect(usedActions, contains('subosito/flutter-action@v2'));
   expect(runCommands, contains('flutter pub get'));
+  expect(
+    runCommands,
+    contains(
+      "flutter test --concurrency=1 "
+      r"$(find test -path test/benchmarks -prune -o -name '*_test.dart' -print)",
+    ),
+  );
   expect(runCommands, contains('dart analyze'));
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
 }
@@ -106,6 +113,10 @@ void _expectRootPackageBenchmarkChecks(
   expect(
     runCommands,
     contains('dart test test/benchmarks/benchmark_diff_test.dart'),
+  );
+  expect(
+    runCommands,
+    contains('dart test test/benchmarks/benchmark_runner_test.dart'),
   );
   expect(workflowContent, isNot(contains('tool/bench/update_baseline.dart')));
   expect(

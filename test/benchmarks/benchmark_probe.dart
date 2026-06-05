@@ -5,6 +5,7 @@ const _probeTestPath = 'test/benchmarks/benchmark_probe_flutter.dart';
 const _probeTestName = 'benchmark probe executes requested case';
 
 Future<void> main(List<String> args) async {
+  final deviceId = _extractDeviceId(args);
   await Directory('.dart_tool').create(recursive: true);
   final lockFile = File(
     '.dart_tool/benchmark_probe.lock',
@@ -14,10 +15,18 @@ Future<void> main(List<String> args) async {
     _ensureNativeAssetsManifest();
     final result = await Process.run(
       'flutter',
-      ['test', _probeTestPath, '--plain-name', _probeTestName],
+      [
+        'test',
+        if (deviceId != null) ...['-d', deviceId],
+        _probeTestPath,
+        '--plain-name',
+        _probeTestName,
+      ],
       environment: {
         ...Platform.environment,
-        'BENCHMARK_PROBE_ARGS': jsonEncode(args),
+        'BENCHMARK_PROBE_ARGS': jsonEncode(
+          args.where((arg) => !arg.startsWith('--device=')).toList(),
+        ),
       },
     );
     stdout.write(result.stdout);
@@ -27,6 +36,19 @@ Future<void> main(List<String> args) async {
     lockFile.unlockSync();
     lockFile.closeSync();
   }
+}
+
+String? _extractDeviceId(List<String> args) {
+  for (final arg in args) {
+    if (arg.startsWith('--device=')) {
+      final value = arg.replaceFirst('--device=', '');
+      if (value.isEmpty) {
+        throw const FormatException('--device must not be empty.');
+      }
+      return value;
+    }
+  }
+  return null;
 }
 
 Future<void> _lockProbe(RandomAccessFile lockFile) async {
