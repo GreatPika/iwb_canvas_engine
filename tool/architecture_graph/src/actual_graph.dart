@@ -1187,7 +1187,7 @@ String normalizeDirectiveUri({
   }
   const packagePrefix = 'package:iwb_canvas_engine/';
   if (uri.startsWith(packagePrefix)) {
-    return 'lib/${uri.substring(packagePrefix.length)}';
+    return 'lib/${uri.replaceFirst(packagePrefix, '')}';
   }
   if (uri.startsWith('package:')) {
     return uri;
@@ -1226,9 +1226,8 @@ List<String> _coveredDartPaths(
 
 List<String> _expandPattern(String pattern, String repositoryRoot) {
   if (pattern.endsWith('/**')) {
-    final directory = Directory(
-      '$repositoryRoot/${pattern.substring(0, pattern.length - 3)}',
-    );
+    final directoryPattern = pattern.replaceFirst(RegExp(r'/\*\*$'), '');
+    final directory = Directory('$repositoryRoot/$directoryPattern');
     if (!directory.existsSync()) {
       return const [];
     }
@@ -1265,12 +1264,12 @@ String _relativePath(String path, String repositoryRoot) {
   final absolutePath = File(path).absolute.path;
 
   return absolutePath.startsWith(rootPrefix)
-      ? absolutePath.substring(rootPrefix.length)
+      ? absolutePath.replaceFirst(rootPrefix, '')
       : path;
 }
 
 String _withoutNullability(String type) {
-  return type.endsWith('?') ? type.substring(0, type.length - 1) : type;
+  return type.endsWith('?') ? type.replaceFirst(RegExp(r'\?$'), '') : type;
 }
 
 int _line(LineInfo lineInfo, AstNode node) {
@@ -1279,7 +1278,7 @@ int _line(LineInfo lineInfo, AstNode node) {
 
 bool _matchesGlob(String path, String pattern) {
   if (pattern.endsWith('/**')) {
-    return path.startsWith(pattern.substring(0, pattern.length - 3));
+    return path.startsWith(pattern.replaceFirst(RegExp(r'/\*\*$'), ''));
   }
 
   return path == pattern;

@@ -78,8 +78,11 @@ Set<CanvasElementId> _validatedElementIds(
         element.transform,
         path: 'element.transform',
       );
-    } on CanvasDataException catch (error) {
-      throw recordSchemaV1FailureDiagnostic(diagnostics, error);
+    } on CanvasDataException catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        recordSchemaV1FailureDiagnostic(diagnostics, error),
+        stackTrace,
+      );
     }
     if (!ids.add(element.id)) {
       throw recordSchemaV1FailureDiagnostic(

@@ -52,11 +52,11 @@ List<String>? _selectGuardrails(List<String> arguments) {
 
   final argument = arguments.single;
   if (argument.startsWith('--suite=')) {
-    return _selectSuite(argument.substring('--suite='.length));
+    return _selectSuite(argument.replaceFirst('--suite=', ''));
   }
 
   if (argument.startsWith('--guardrail=')) {
-    return _selectGuardrail(argument.substring('--guardrail='.length));
+    return _selectGuardrail(argument.replaceFirst('--guardrail=', ''));
   }
 
   stderr.writeln('Unknown argument: $argument');

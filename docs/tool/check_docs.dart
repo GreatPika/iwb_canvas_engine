@@ -506,7 +506,7 @@ void _checkReadmeShape({
   } else {
     _checkIntroParagraph(
       path,
-      text.substring(titleMatch.end, firstGroup.start),
+      _codeUnitSlice(text, titleMatch.end, firstGroup.start),
     );
   }
   _checkReadmeNestedHeadings(path, text);
@@ -1022,9 +1022,18 @@ String? _markdownSection(String path, String heading) {
     _fail('$path has no "$heading" section');
     return null;
   }
-  final rest = text.substring(headingMatch.end);
+  final rest = _codeUnitSlice(text, headingMatch.end);
   final nextHeading = RegExp(r'^##\s+', multiLine: true).firstMatch(rest);
-  return nextHeading == null ? rest : rest.substring(0, nextHeading.start);
+  return nextHeading == null
+      ? rest
+      : _codeUnitSlice(rest, 0, nextHeading.start);
+}
+
+String _codeUnitSlice(String text, int start, [int? end]) {
+  // RegExp match indexes are String code-unit offsets; substring is the exact
+  // operation for slicing around those structural markers.
+  // ignore: avoid-substring
+  return text.substring(start, end);
 }
 
 void _checkNoneSentinel(String owner, String field, List<String> values) {

@@ -179,7 +179,7 @@ String _displayPath(String? libraryPath) {
   final prefix = '$repositoryRoot/';
 
   return libraryPath.startsWith(prefix)
-      ? libraryPath.substring(prefix.length)
+      ? libraryPath.replaceFirst(prefix, '')
       : libraryPath;
 }
 

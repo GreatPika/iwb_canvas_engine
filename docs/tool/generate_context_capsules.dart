@@ -187,7 +187,7 @@ void _syncSectionFile(
     return;
   }
 
-  final actual = text.substring(match.start, match.end);
+  final actual = _codeUnitSlice(text, match.start, match.end);
   if (actual == expected) {
     return;
   }
@@ -201,6 +201,13 @@ void _syncSectionFile(
 
   file.writeAsStringSync(text.replaceRange(match.start, match.end, expected));
   changedFiles.add(section.file);
+}
+
+String _codeUnitSlice(String text, int start, int end) {
+  // RegExp match indexes are String code-unit offsets; substring preserves the
+  // exact source block selected by the parser.
+  // ignore: avoid-substring
+  return text.substring(start, end);
 }
 
 void _writeLiteralList(StringBuffer buffer, List<String> values) {

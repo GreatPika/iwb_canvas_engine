@@ -1,3 +1,5 @@
+import 'package:characters/characters.dart';
+
 import 'canvas_diagnostic_policy_limits.dart';
 
 const int _maxDiagnosticDetailDepth = 8;
@@ -119,7 +121,7 @@ String _sanitizeString(String value, {required int maxPreviewLength}) {
     return value;
   }
 
-  return '${value.substring(0, maxPreviewLength)}'
+  return '${value.characters.take(maxPreviewLength)}'
       '$_truncatedMarker';
 }
 

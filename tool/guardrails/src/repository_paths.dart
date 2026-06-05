@@ -25,7 +25,7 @@ String relativePath(File file) {
   final path = file.absolute.path;
   final prefix = '$repositoryRoot/';
 
-  return path.startsWith(prefix) ? path.substring(prefix.length) : path;
+  return path.startsWith(prefix) ? path.replaceFirst(prefix, '') : path;
 }
 
 Iterable<GuardrailSourceFile> dartSourceFilesUnder(String relativeDirectory) {

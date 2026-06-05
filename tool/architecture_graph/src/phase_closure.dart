@@ -582,7 +582,7 @@ final class _ExpectationOwnerMatcher {
 
   bool delegationMatches(DelegationFact fact, ArchitectureNode? fromNode) {
     final declaration = fact.member.contains('.')
-        ? fact.member.substring(0, fact.member.indexOf('.'))
+        ? fact.member.split('.').first
         : fact.member;
 
     return _matchesFromDeclaration(
@@ -695,12 +695,12 @@ int _phaseIndex(String phase) {
     return -1;
   }
 
-  return int.tryParse(phase.substring(1)) ?? -1;
+  return int.tryParse(phase.replaceFirst('P', '')) ?? -1;
 }
 
 bool _matchesGlob(String path, String pattern) {
   if (pattern.endsWith('/**')) {
-    return path.startsWith(pattern.substring(0, pattern.length - 3));
+    return path.startsWith(pattern.replaceFirst(RegExp(r'/\*\*$'), ''));
   }
 
   return path == pattern;

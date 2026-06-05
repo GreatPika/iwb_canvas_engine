@@ -427,7 +427,11 @@ bool _sessionConstructorHasNoFallibleCollaborators() {
   ).readAsStringSync();
   final constructorStart = source.indexOf('SurfaceResourceSession({');
   final constructorEnd = source.indexOf('final ResolverMutationGuard');
-  final constructorSource = source.substring(constructorStart, constructorEnd);
+  final constructorSource = _codeUnitSlice(
+    source,
+    constructorStart,
+    constructorEnd,
+  );
 
   expect(constructorSource, isNot(contains('resolveImage')));
   expect(constructorSource, isNot(contains('runResolverCallback')));
@@ -446,7 +450,7 @@ bool _surfaceInstallRollbackIsGuarded() {
     'void _attachSurface(CanvasRuntime runtime)',
   );
   final detachStart = source.indexOf('void _detachSurface()');
-  final attachSource = source.substring(attachStart, detachStart);
+  final attachSource = _codeUnitSlice(source, attachStart, detachStart);
   final attachIndex = attachSource.indexOf(
     'port.attachSurface(_surfaceToken);',
   );
@@ -472,6 +476,13 @@ bool _surfaceInstallRollbackIsGuarded() {
   expect(rethrowIndex, greaterThan(detachIndex));
 
   return true;
+}
+
+String _codeUnitSlice(String source, int start, int end) {
+  // Source marker indexes are String code-unit offsets; substring keeps the
+  // checked source region aligned with those marker positions.
+  // ignore: avoid-substring
+  return source.substring(start, end);
 }
 
 SurfaceResourceSession _activeSession(CanvasRuntime runtime) {

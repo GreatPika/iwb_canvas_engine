@@ -86,7 +86,7 @@ bool _operationRowsContainEditMethod(Set<String> rows, String method) {
 String? _editMethodNameFromOperationRow(String row) {
   const qualifiedPrefix = 'CanvasEdit.';
   final operation = row.startsWith(qualifiedPrefix)
-      ? row.substring(qualifiedPrefix.length)
+      ? row.replaceFirst(qualifiedPrefix, '')
       : row;
   final method = operation.split(' ').first;
   if (!RegExp(r'^[a-z][A-Za-z0-9]+$').hasMatch(method)) {
@@ -102,7 +102,7 @@ Set<String> _operationMatrixOperationRows() {
   final tableEnd = source.indexOf('\nNotes:', tableStart);
 
   return _markdownTableFirstColumnFromSource(
-    source.substring(tableStart, tableEnd),
+    _codeUnitSlice(source, tableStart, tableEnd),
   );
 }
 
@@ -148,7 +148,7 @@ Set<String> _updateElementTaxonomyTokens() {
     '`CommitCompiler` may implement',
     taxonomyStart,
   );
-  final taxonomy = source.substring(taxonomyStart, taxonomyEnd);
+  final taxonomy = _codeUnitSlice(source, taxonomyStart, taxonomyEnd);
   final rows = _markdownTableFirstColumnFromSource(taxonomy);
   final tokenPattern = RegExp(r'`([^`]+)`');
 
@@ -156,6 +156,13 @@ Set<String> _updateElementTaxonomyTokens() {
     for (final row in rows)
       for (final match in tokenPattern.allMatches(row)) ?match.group(1),
   };
+}
+
+String _codeUnitSlice(String source, int start, int end) {
+  // Markdown marker indexes are String code-unit offsets; substring preserves
+  // that contract and avoids converting source offsets to user-facing text.
+  // ignore: avoid-substring
+  return source.substring(start, end);
 }
 
 Set<String> _markdownTableFirstColumnFromSource(String source) {

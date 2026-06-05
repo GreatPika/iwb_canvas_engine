@@ -39,7 +39,7 @@ List<String> _actionAfterStateViolations(List<String> events) {
     }
     if (event.startsWith('action:') && !acceptedStatePublished) {
       violations.add(
-        'action ${event.substring('action:'.length)} emitted before accepted public state',
+        'action ${event.replaceFirst('action:', '')} emitted before accepted public state',
       );
     }
   }

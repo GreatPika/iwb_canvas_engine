@@ -46,8 +46,8 @@ String topLevelMaterializesThroughRoute() => _materialize(() => 'ok');
 T _materialize<T>(T Function() create) {
   try {
     return create();
-  } on FixtureException catch (_) {
-    throw recordFixtureRoute();
+  } on FixtureException catch (_, stackTrace) {
+    Error.throwWithStackTrace(recordFixtureRoute(), stackTrace);
   }
 }
 

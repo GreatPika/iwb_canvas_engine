@@ -616,7 +616,7 @@ String? _resolvedFrameImportPath(String sourcePath, ImportDirective directive) {
     return null;
   }
   if (uri.startsWith('package:iwb_canvas_engine/src/frame/')) {
-    return 'lib/${uri.substring('package:iwb_canvas_engine/'.length)}';
+    return 'lib/${uri.replaceFirst('package:iwb_canvas_engine/', '')}';
   }
   if (uri.startsWith('dart:') ||
       uri.startsWith('package:') ||
@@ -626,7 +626,7 @@ String? _resolvedFrameImportPath(String sourcePath, ImportDirective directive) {
   final directoryEnd = sourcePath.lastIndexOf('/');
   final directory = directoryEnd < 0
       ? ''
-      : sourcePath.substring(0, directoryEnd);
+      : sourcePath.replaceRange(directoryEnd, sourcePath.length, '');
   final rawPath = directory.isEmpty ? uri : '$directory/$uri';
 
   return _normalizeRelativePath(rawPath);
@@ -965,8 +965,9 @@ Map<String, Set<String>> _helperMethodsByClass(Set<String> qualifiedNames) {
     if (separator <= 0 || separator == qualifiedName.length - 1) {
       continue;
     }
-    final className = qualifiedName.substring(0, separator);
-    final methodName = qualifiedName.substring(separator + 1);
+    final parts = qualifiedName.split('.');
+    final className = parts.first;
+    final methodName = parts.last;
     methodsByClass.putIfAbsent(className, () => {}).add(methodName);
   }
 
@@ -1345,6 +1346,9 @@ String? _balancedBody(String source, int bodyStart) {
     } else if (character == '}') {
       depth -= 1;
       if (depth == 0) {
+        // Body indexes are derived from source code-unit positions; substring
+        // keeps the extracted method body aligned with those parser offsets.
+        // ignore: avoid-substring
         return source.substring(bodyStart + 1, index);
       }
     }

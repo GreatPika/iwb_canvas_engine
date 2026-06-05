@@ -33,7 +33,7 @@ String? _phaseArgument(List<String> arguments) {
       return arguments[index + 1];
     }
     if (argument.startsWith('--phase=')) {
-      return argument.substring('--phase='.length);
+      return argument.replaceFirst('--phase=', '');
     }
   }
 

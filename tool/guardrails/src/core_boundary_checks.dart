@@ -627,19 +627,23 @@ bool _importsAnotherPackageSrc(String uri) {
 
 String? _targetPath(String sourcePath, String uri) {
   if (uri.startsWith('package:iwb_canvas_engine/')) {
-    return 'lib/${uri.substring('package:iwb_canvas_engine/'.length)}';
+    return 'lib/${uri.replaceFirst('package:iwb_canvas_engine/', '')}';
   }
   if (uri.startsWith('package:')) {
     return null;
   }
 
-  final sourceDirectory = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+  final sourceDirectory = sourcePath.replaceRange(
+    sourcePath.lastIndexOf('/'),
+    sourcePath.length,
+    '',
+  );
   final resolved = File(
     '$repositoryRoot/$sourceDirectory/$uri',
   ).absolute.uri.normalizePath().toFilePath();
   final prefix = '$repositoryRoot/';
 
-  return resolved.startsWith(prefix) ? resolved.substring(prefix.length) : null;
+  return resolved.startsWith(prefix) ? resolved.replaceFirst(prefix, '') : null;
 }
 
 final class _RetiredShapeVisitor extends RecursiveAstVisitor<void> {

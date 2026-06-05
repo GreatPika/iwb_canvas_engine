@@ -556,7 +556,7 @@ String _mermaidId(String id) {
 }
 
 int _phaseIndex(String phase) {
-  return int.tryParse(phase.substring(1)) ?? -1;
+  return int.tryParse(phase.replaceFirst('P', '')) ?? -1;
 }
 
 String _relativePath(String path, String repositoryRoot) {
@@ -564,6 +564,6 @@ String _relativePath(String path, String repositoryRoot) {
   final absolutePath = File(path).absolute.path;
 
   return absolutePath.startsWith(rootPrefix)
-      ? absolutePath.substring(rootPrefix.length)
+      ? absolutePath.replaceFirst(rootPrefix, '')
       : path;
 }

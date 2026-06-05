@@ -328,7 +328,7 @@ Iterable<String> _directiveUris(String content) sync* {
 
 String? _targetPath(String sourcePath, String uri) {
   if (uri.startsWith('package:iwb_canvas_engine/')) {
-    return uri.substring('package:iwb_canvas_engine/'.length);
+    return uri.replaceFirst('package:iwb_canvas_engine/', '');
   }
   if (!uri.startsWith('.')) {
     return null;

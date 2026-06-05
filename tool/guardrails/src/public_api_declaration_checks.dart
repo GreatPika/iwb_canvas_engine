@@ -102,18 +102,18 @@ String _dartdocSummaryText(String? comment) {
 String _dartdocLineText(String line) {
   var text = line.trim();
   if (text.startsWith('///')) {
-    return text.substring(3).trim();
+    return text.replaceFirst('///', '').trim();
   }
   if (text.startsWith('/**')) {
-    text = text.substring(3).trim();
+    text = text.replaceFirst('/**', '').trim();
   } else if (text.startsWith('/*')) {
-    text = text.substring(2).trim();
+    text = text.replaceFirst('/*', '').trim();
   }
   if (text.endsWith('*/')) {
-    text = text.substring(0, text.length - 2).trim();
+    text = text.replaceFirst(RegExp(r'\*/$'), '').trim();
   }
   if (text.startsWith('*')) {
-    text = text.substring(1).trim();
+    text = text.replaceFirst('*', '').trim();
   }
 
   return text.trim();

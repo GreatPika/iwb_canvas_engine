@@ -921,7 +921,7 @@ int _phaseIndex(String phase) {
     return -1;
   }
 
-  return int.parse(phase.substring(1));
+  return int.parse(phase.replaceFirst('P', ''));
 }
 
 ExpectedArchitectureGraph _fixtureGraph() {

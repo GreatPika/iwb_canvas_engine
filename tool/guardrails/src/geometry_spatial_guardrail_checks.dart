@@ -771,6 +771,9 @@ String? _classSource(String content, String className) {
   for (final declaration in parsed.unit.declarations) {
     if (declaration is ClassDeclaration &&
         declaration.namePart.typeName.lexeme == className) {
+      // Analyzer offsets are String code-unit offsets; substring preserves the
+      // exact declaration range reported by the parser.
+      // ignore: avoid-substring
       return content.substring(declaration.offset, declaration.end);
     }
   }

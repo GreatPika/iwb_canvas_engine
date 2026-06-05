@@ -178,7 +178,7 @@ Owner? ownerForPath(String path) {
 String? _targetPath(String sourcePath, String uri) {
   if (uri.startsWith('package:iwb_canvas_engine/')) {
     return _normalizeRepoPath(
-      'lib/${uri.substring('package:iwb_canvas_engine/'.length)}',
+      'lib/${uri.replaceFirst('package:iwb_canvas_engine/', '')}',
     );
   }
   if (uri.startsWith('dart:') || uri.startsWith('package:')) {
@@ -188,7 +188,11 @@ String? _targetPath(String sourcePath, String uri) {
     return null;
   }
 
-  final sourceDirectory = sourcePath.substring(0, sourcePath.lastIndexOf('/'));
+  final sourceDirectory = sourcePath.replaceRange(
+    sourcePath.lastIndexOf('/'),
+    sourcePath.length,
+    '',
+  );
 
   return _normalizeRepoPath('$sourceDirectory/$uri');
 }

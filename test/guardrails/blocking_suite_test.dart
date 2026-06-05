@@ -257,9 +257,9 @@ Set<String> _ranGuardrailIds(ProcessResult result) {
       .split('\n')
       .where((line) => line.startsWith('would run '))
       .map((line) {
-        final withoutPrefix = line.substring('would run '.length);
+        final withoutPrefix = line.replaceFirst('would run ', '');
 
-        return withoutPrefix.substring(0, withoutPrefix.indexOf(' via '));
+        return withoutPrefix.split(' via ').first;
       })
       .toSet();
 }

@@ -86,20 +86,26 @@ CanvasDocument decodeSchemaV1DocumentFromJson(
 }) {
   try {
     validateRawJsonLength(json);
-  } on CanvasDataException catch (exception) {
-    throw recordSchemaV1FailureDiagnostic(diagnostics, exception);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
   }
   final Object? decoded;
   try {
     decoded = jsonDecode(json);
-  } on FormatException catch (_) {
-    throw recordSchemaV1FailureDiagnostic(
-      diagnostics,
-      CanvasDataException(
-        code: CanvasDataErrorCode.invalidJson,
-        message: 'canvas document JSON is malformed.',
-        path: r'$',
+  } on FormatException catch (_, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(
+        diagnostics,
+        CanvasDataException(
+          code: CanvasDataErrorCode.invalidJson,
+          message: 'canvas document JSON is malformed.',
+          path: r'$',
+        ),
       ),
+      stackTrace,
     );
   }
   if (decoded is! Map<String, Object?>) {
@@ -1065,7 +1071,7 @@ Color _readColor(
   if (value is! String ||
       value.length != 9 ||
       !value.startsWith('#') ||
-      int.tryParse(value.substring(1), radix: 16) == null) {
+      int.tryParse(value.replaceFirst('#', ''), radix: 16) == null) {
     throw recordSchemaV1FailureDiagnostic(
       diagnostics,
       CanvasDataException(
@@ -1076,7 +1082,7 @@ Color _readColor(
     );
   }
 
-  return Color(int.parse(value.substring(1), radix: 16));
+  return Color(int.parse(value.replaceFirst('#', ''), radix: 16));
 }
 
 Color? _readNullableColor(
@@ -1416,8 +1422,11 @@ CanvasElementId _readElementId(
 T _materialize<T>(DiagnosticsHub? diagnostics, T Function() create) {
   try {
     return create();
-  } on CanvasDataException catch (exception) {
-    throw recordSchemaV1FailureDiagnostic(diagnostics, exception);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
   }
 }
 

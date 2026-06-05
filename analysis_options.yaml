@@ -108,6 +108,13 @@ dcm:
     - avoid-missed-calls
     - avoid-commented-out-code:
         min-lines: 2
+    - avoid-cascade-after-if-null
+    - avoid-double-slash-imports
+    - avoid-duplicate-mixins
+    - avoid-empty-spread
+    - avoid-generics-shadowing
+    - avoid-throw-in-catch-block
+    - avoid-substring
     - avoid-returning-widgets
     - avoid-unnecessary-setstate
     - prefer-commenting-analyzer-ignores:

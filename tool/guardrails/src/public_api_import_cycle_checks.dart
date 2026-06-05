@@ -83,7 +83,7 @@ String? resolvePublicApiImportTarget({
       return null;
     }
 
-    final packagePath = importUri.substring(_packageImportPrefix.length);
+    final packagePath = importUri.replaceFirst(_packageImportPrefix, '');
 
     return _publicReachabilityTargetOrNull('lib/$packagePath');
   }
@@ -194,7 +194,7 @@ bool _isPublicReachabilitySource(String path) {
 String _repoRelativePath(String path) {
   final prefix = '$repositoryRoot/';
   if (path.startsWith(prefix)) {
-    return _normalizeRepoPath(path.substring(prefix.length));
+    return _normalizeRepoPath(path.replaceFirst(prefix, ''));
   }
 
   return _normalizeRepoPath(path);
@@ -206,7 +206,7 @@ String _directoryName(String path) {
     return '.';
   }
 
-  return path.substring(0, index);
+  return path.replaceRange(index, path.length, '');
 }
 
 String _normalizeRepoPath(String path) {
