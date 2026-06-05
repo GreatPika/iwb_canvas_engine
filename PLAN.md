@@ -75,3 +75,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 53. Selection chrome and move hit area](plan/step_53_selection_chrome_and_move_hit_area.md)
 - [x] [Step 54. Inline text editing](plan/step_54_inline_text_editing.md)
 - [x] [Step 55. P14 release readiness benchmarks](plan/step_55_p14_release_readiness_benchmarks.md)
+- [ ] [Step 56. P14 benchmark measurement boundary](plan/step_56_p14_benchmark_measurement_boundary.md)
