@@ -808,9 +808,10 @@ List<String> _validateExactInvariants(
   return failures;
 }
 
-// Absolute cap checks need the full manifest/case/scale/report context to emit
-// actionable policy failures without hiding the owning benchmark case.
-// ignore: number-of-parameters
+// Absolute cap checks keep cap-key selection, scale mapping, missing-metric
+// fail-closed handling, and comparison in one pass so report-policy drift is
+// visible at the owning benchmark case instead of split across helper branches.
+// ignore: cyclomatic-complexity, halstead-volume, number-of-parameters
 List<String> _validateAbsoluteCaps({
   required BenchmarkManifest manifest,
   required BenchmarkCase benchmarkCase,
@@ -839,9 +840,15 @@ List<String> _validateAbsoluteCaps({
         continue;
       }
       if (!actual.metrics.containsKey(metric)) {
+        if (_mustRequireAbsoluteCapMetric(benchmarkCase, metric)) {
+          failures.add('$caseName missing metric $metric');
+        }
         continue;
       }
-      final value = actual.metrics[metric];
+      final value = _requiredMetricNumber(actual, metric, caseName, failures);
+      if (value == null) {
+        continue;
+      }
       if (!_withinCap(value, cap)) {
         failures.add('$caseName $metric=$value exceeds absolute cap $cap');
       }
@@ -960,10 +967,7 @@ List<String> _compareAgainstApprovedBaseline({
       if (baselineCase == null || currentCase == null) {
         continue;
       }
-      for (final metric in benchmarkCase.requiredMetrics) {
-        if (!_regressionMetricKeys.contains(metric)) {
-          continue;
-        }
+      for (final metric in _regressionMetricsForCase(benchmarkCase)) {
         final baselineValue = _requiredMetricNumber(
           baselineCase,
           metric,
@@ -1068,6 +1072,38 @@ const _regressionMetricKeys = {
   'max_us',
   'allocation_bytes',
   'rss_delta_bytes',
+};
+
+Iterable<String> _regressionMetricsForCase(BenchmarkCase benchmarkCase) {
+  return {
+    for (final metric in benchmarkCase.requiredMetrics)
+      if (_regressionMetricKeys.contains(metric)) metric,
+    for (final metric in _absoluteCapMetricsForCase(benchmarkCase)) metric,
+  };
+}
+
+Iterable<String> _absoluteCapMetricsForCase(BenchmarkCase benchmarkCase) {
+  return switch (_hasTimeBudgetClass(benchmarkCase)) {
+    true => const ['avg_us', 'p95_us', 'max_us'],
+    false => const <String>[],
+  };
+}
+
+bool _hasTimeBudgetClass(BenchmarkCase benchmarkCase) {
+  return benchmarkCase.budgetClasses.any(_timeBudgetClassIds.contains);
+}
+
+bool _mustRequireAbsoluteCapMetric(BenchmarkCase benchmarkCase, String metric) {
+  return _absoluteCapMetricsForCase(benchmarkCase).contains(metric);
+}
+
+const _timeBudgetClassIds = {
+  'hot_input',
+  'incremental_edit',
+  'frame_capture',
+  'query_read',
+  'resource_budgeted',
+  'bulk_io',
 };
 
 bool _mustCompareMetric({

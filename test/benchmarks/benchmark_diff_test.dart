@@ -207,6 +207,22 @@ void main() {
         contains('absolute cap'),
       );
 
+      final missingTimeReport = _releaseReport(manifest);
+      _metrics(
+        missingTimeReport,
+        'projection.read_document',
+        '1k',
+      ).remove('avg_us');
+      expect(
+        validateFirstBaselineCandidate(
+          manifest: manifest,
+          profile: 'release',
+          candidateJson: missingTimeReport,
+          candidatePath: 'candidate.json',
+        ).failures.join('\n'),
+        contains('candidate projection.read_document/1k missing metric avg_us'),
+      );
+
       final memoryReport = _releaseReport(manifest);
       _metrics(memoryReport, 'edit.add_element', '1k')['allocation_bytes'] =
           1000000;
@@ -342,6 +358,24 @@ void main() {
           currentPath: 'current.json',
         ).failures.join('\n'),
         contains('edit.update_visual/1k allocation_bytes regression'),
+      );
+
+      final nonRequiredTimeMetric = _clone(baseline);
+      _metrics(
+        nonRequiredTimeMetric,
+        'projection.read_document',
+        '1k',
+      )['avg_us'] = 116;
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: nonRequiredTimeMetric,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('projection.read_document/1k avg_us regression'),
       );
 
       final nonNumeric = _clone(baseline);
@@ -684,6 +718,12 @@ Map<String, Object?> _metricsForCase(
   for (final metric in benchmarkCase.requiredMetrics) {
     metrics[metric] = _metricValue(metric);
   }
+  if (_hasTimeBudgetClass(benchmarkCase)) {
+    metrics
+      ..putIfAbsent('avg_us', () => 100)
+      ..putIfAbsent('p95_us', () => 100)
+      ..putIfAbsent('max_us', () => 100);
+  }
   for (final invariant in benchmarkCase.exactInvariants) {
     metrics[invariant.metric] = _invariantMetricValue(
       invariant.name,
@@ -706,6 +746,19 @@ Map<String, Object?> _metricsForCase(
   }
   return metrics;
 }
+
+bool _hasTimeBudgetClass(BenchmarkCase benchmarkCase) {
+  return benchmarkCase.budgetClasses.any(_timeBudgetClassIds.contains);
+}
+
+const _timeBudgetClassIds = {
+  'hot_input',
+  'incremental_edit',
+  'frame_capture',
+  'query_read',
+  'resource_budgeted',
+  'bulk_io',
+};
 
 Object _metricValue(String metric) {
   return switch (metric) {
