@@ -67,3 +67,17 @@ Required benchmark cases:
 | `diagnostics.disabled_pointer` | hot pointer | allocations = 0 records |
 
 ---
+
+Release benchmark interpretation:
+
+- Current release reports are transient under `build/bench/current/`.
+- Diff reports are transient under `build/bench/diff/`.
+- The approved release baseline path is
+  `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json`.
+- Until a pinned release/manual update accepts real measurements, that path may
+  contain only an uninitialized fail-closed placeholder and release diff must
+  fail rather than infer baseline numbers.
+- `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_38_0.json`
+  is read-only with respect to approved baselines.
+- `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json`
+  is the manual approved-baseline write path after first-baseline acceptance.

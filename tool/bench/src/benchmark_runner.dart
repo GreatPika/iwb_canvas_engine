@@ -66,7 +66,7 @@ BenchmarkReport runBenchmarks({
       scaleSelection: profile.scaleSelection,
     ),
     runtime: BenchmarkRuntimeReport(
-      runnerLabel: _runnerLabel(),
+      runnerLabel: _runnerLabel(manifest.releaseContour),
       osName: Platform.operatingSystem,
       osVersion: Platform.operatingSystemVersion,
       dartVersion: Platform.version,
@@ -215,10 +215,12 @@ int _boundedScaleForInvariant(String scaleId, {required int max}) {
   return count > max ? max : count;
 }
 
-String _runnerLabel() {
-  return Platform.environment['RUNNER_NAME'] ??
-      Platform.environment['RUNNER_OS'] ??
-      'local';
+String _runnerLabel(BenchmarkReleaseContour releaseContour) {
+  final imageOs = Platform.environment['ImageOS'];
+  if (imageOs == 'ubuntu24') {
+    return releaseContour.runnerLabel;
+  }
+  return Platform.environment['RUNNER_OS'] ?? 'local';
 }
 
 String _flutterChannel() {

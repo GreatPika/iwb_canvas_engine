@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "status": "unapproved",
+  "profile": "release",
+  "message": "No measured release baseline has been approved yet. Replace this fail-closed placeholder only through tool/bench/update_baseline.dart after a pinned release candidate passes first-baseline acceptance."
+}
