@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter example (macOS)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "example",
+      "program": "lib/main.dart",
+      "deviceId": "macos"
+    },
+    {
+      "name": "Flutter example (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "example",
+      "program": "lib/main.dart",
+      "deviceId": "chrome"
+    }
+  ]
+}
