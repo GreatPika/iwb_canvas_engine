@@ -173,6 +173,9 @@ final class BenchmarkExactInvariant {
   final num? max;
 }
 
+// The parser keeps the benchmark manifest schema in one owner so validation
+// errors are reported against a single source-of-truth reader.
+// ignore: number-of-methods, response-for-class, weighted-methods-per-class
 final class _BenchmarkManifestParser {
   _BenchmarkManifestParser(this.root, this.source);
 
@@ -294,6 +297,9 @@ final class _BenchmarkManifestParser {
     return scopes;
   }
 
+  // Case parsing validates identity, classification, budgets, metrics,
+  // invariants, and scales together because they form one manifest row schema.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   List<BenchmarkCase> _cases({
     required Set<String> profileIds,
     required Set<String> budgetClassIds,
@@ -383,6 +389,9 @@ final class _BenchmarkManifestParser {
     return invariants;
   }
 
+  // Scale parsing owns profile membership and smoke coverage as one row-level
+  // gate so malformed benchmark scales fail before runner selection.
+  // ignore: halstead-volume
   List<BenchmarkScale> _scales(
     YamlMap entry,
     String owner,

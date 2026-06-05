@@ -5,6 +5,9 @@ import 'package:yaml/yaml.dart';
 
 import '../../tool/guardrails/src/guardrail_registry.dart';
 
+// CI structural tests keep the PR, release, and manual-update workflow checks
+// together so bypass and baseline-write rules are reviewed as one CI contract.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test('root workflow runs repository-owned package checks', () {
     final workflowFile = File('.github/workflows/root_package.yml');

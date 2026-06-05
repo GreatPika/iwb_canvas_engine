@@ -1,3 +1,7 @@
+// The Flutter probe intentionally imports every owner surface it measures so
+// benchmark setup stays executable without benchmark-only production exports.
+// ignore_for_file: number-of-external-imports, number-of-imports
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -140,6 +144,9 @@ Future<_ProbeSample> _measureOperation(String caseId, String scaleId) async {
   );
 }
 
+// Operation dispatch is a closed manifest-owned registry; a single switch makes
+// missing benchmark cases fail at the probe boundary with the case id intact.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 FutureOr<Map<String, Object?>> _runOperation(String caseId, String scaleId) {
   return switch (caseId) {
     'edit.add_element' => _editAddElement(scaleId),
@@ -298,6 +305,9 @@ Map<String, Object?> _selectedMovePreview(String scaleId) {
   }
 }
 
+// This probe keeps capture, ordinary-plan reuse, and supplement construction in
+// one operation because those metrics describe one owner-observable frame path.
+// ignore: halstead-volume
 Map<String, Object?> _selectedMovePreviewFrame(String scaleId) {
   final runtime = _runtime(scaleId);
   try {
@@ -434,6 +444,9 @@ Map<String, Object?> _framePaintCandidates(String scaleId) {
   }
 }
 
+// Resource lookup measures resolver calls, session cache hits, and repaint in
+// one session so the observable cache path stays intact.
+// ignore: halstead-volume
 Future<Map<String, Object?>> _resourceLookup(String scaleId) async {
   final runtime = _runtime(scaleId);
   final image = await _createResourceProbeImage();
@@ -861,6 +874,9 @@ List<CanvasElementId> _selectedIds(String scaleId) {
   ];
 }
 
+// Scale ids are a closed benchmark manifest vocabulary; the switch is the
+// boundary check that rejects unsupported probe scales.
+// ignore: cyclomatic-complexity
 int _scaleElementCount(String scaleId) {
   return switch (scaleId) {
     '100k' => 100000,
@@ -913,6 +929,9 @@ final class _ProbeOptions {
   final int minimumSamples;
   final bool timingClaims;
 
+  // Probe argument parsing keeps defaults and required fields next to the
+  // command boundary so missing setup fails before any timing loop starts.
+  // ignore: halstead-volume
   factory _ProbeOptions.parse(List<String> args) {
     final values = <String, String>{};
     for (final arg in args) {

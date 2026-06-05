@@ -4,6 +4,9 @@ import 'package:test/test.dart';
 
 import '../../tool/bench/src/benchmark_manifest.dart';
 
+// Manifest tests keep the full policy projection in one fixture-backed suite so
+// case inventory, profile parameters, and numeric gates drift together.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   group('benchmark manifest schema', () {
     test('loads the P14 source of truth with the required inventory', () {

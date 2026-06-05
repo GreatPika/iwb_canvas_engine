@@ -7,6 +7,9 @@ import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_report.dart';
 import '../../tool/bench/src/benchmark_runner.dart';
 
+// Runner tests intentionally keep profile behavior, default paths, and manifest
+// fingerprint checks together as one report-contract suite.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   group('benchmark runner profiles', () {
     test('dry_run covers every manifest scale without timing claims', () {

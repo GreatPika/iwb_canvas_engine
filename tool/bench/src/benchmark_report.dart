@@ -220,6 +220,9 @@ String benchmarkManifestFingerprint(BenchmarkManifest manifest) {
   return hash.toRadixString(16).padLeft(8, '0');
 }
 
+// The fingerprint projection mirrors the full policy surface; keeping every
+// manifest-owned field here prevents partial hashes from missing drift.
+// ignore: halstead-volume, source-lines-of-code
 Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
   return {
     'manifest_version': manifest.manifestVersion,

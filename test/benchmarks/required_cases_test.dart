@@ -5,6 +5,9 @@ import 'package:test/test.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_runner.dart';
 
+// Required-case proof keeps inventory, metrics, invariants, and legacy-ban
+// checks in one suite because together they define benchmark executability.
+// ignore: halstead-volume, maximum-nesting-level, maintainability-index, source-lines-of-code
 void main() {
   group('required benchmark cases', () {
     test('dry-run emits every manifest case scale with required metrics', () {

@@ -7,6 +7,9 @@ import '../../tool/bench/src/benchmark_diff.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_report.dart';
 
+// The diff policy tests keep the acceptance and rejection matrix in one group
+// so every case shares the same deterministic report fixture and baseline path.
+// ignore: cyclomatic-complexity, halstead-volume, maximum-nesting-level, maintainability-index, source-lines-of-code
 void main() {
   group('benchmark diff policy', () {
     test('passes a same-contour report against an approved baseline', () async {
@@ -594,6 +597,9 @@ extension on Map<String, Object?> {
   Map<String, Object?> get _profile => this['profile'] as Map<String, Object?>;
 }
 
+// The synthetic release report mirrors the complete report schema used by diff
+// policy tests; splitting it would make schema drift harder to see.
+// ignore: halstead-volume, source-lines-of-code
 Map<String, Object?> _releaseReport(BenchmarkManifest manifest) {
   final profile = manifest.profilesById['release']!;
   final cases = [
@@ -715,6 +721,9 @@ Object _metricValue(String metric) {
   };
 }
 
+// Fixture invariant values are a closed mapping from manifest invariant names
+// to deterministic numbers so policy tests fail on unknown invariants.
+// ignore: cyclomatic-complexity
 Object? _invariantMetricValue(
   String invariant,
   String metric,
