@@ -62,6 +62,9 @@ final class _JsonImportDialog extends StatefulWidget {
   State<_JsonImportDialog> createState() => _JsonImportDialogState();
 }
 
+// The dialog state owns one text controller plus the import/close UI boundary.
+// splitting it would separate lifecycle and submit behavior that must stay tied.
+// ignore: coupling-between-object-classes
 final class _JsonImportDialogState extends State<_JsonImportDialog> {
   late final TextEditingController _controller;
 

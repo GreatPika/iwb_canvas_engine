@@ -40,71 +40,185 @@ final class CanvasTextOptionsPanel extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _TextStyleToggle(
-                key: const ValueKey('text.bold'),
-                icon: Icons.format_bold,
-                active: element.isBold,
-                onTap: onToggleBold,
-              ),
-              _TextStyleToggle(
-                key: const ValueKey('text.italic'),
-                icon: Icons.format_italic,
-                active: element.isItalic,
-                onTap: onToggleItalic,
-              ),
-              _TextStyleToggle(
-                key: const ValueKey('text.underline'),
-                icon: Icons.format_underline,
-                active: element.isUnderline,
-                onTap: onToggleUnderline,
-              ),
-              const VerticalDivider(width: 20),
-              _AlignSelector(
-                current: element.align,
-                onAlignChanged: onAlignChanged,
-              ),
-              const VerticalDivider(width: 20),
-              const Text(
-                'Size: ',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Slider(
-                key: const ValueKey('text.font.size.slider'),
-                value: element.fontSize.clamp(10, 72).toDouble(),
-                min: 10,
-                max: 72,
-                divisions: 10,
-                onChanged: onFontSizeChanged,
-              ),
-              const VerticalDivider(width: 20),
-              const Text(
-                'Line Height: ',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Slider(
-                key: const ValueKey('text.line.height.slider'),
-                value: lineHeightMultiplier.clamp(
-                  lineHeightMinMultiplier,
-                  lineHeightMaxMultiplier,
-                ),
-                min: lineHeightMinMultiplier,
-                max: lineHeightMaxMultiplier,
-                divisions: 22,
-                label: '${lineHeightMultiplier.toStringAsFixed(2)}x',
-                onChanged: onLineHeightMultiplierChanged,
-              ),
-              const VerticalDivider(width: 20),
-              _ColorPalette(
-                colors: paletteColors,
-                selected: element.color,
-                onSelected: onColorChanged,
-              ),
-            ],
+          child: _TextOptionsRow(
+            element: element,
+            paletteColors: paletteColors,
+            lineHeightMinMultiplier: lineHeightMinMultiplier,
+            lineHeightMaxMultiplier: lineHeightMaxMultiplier,
+            lineHeightMultiplier: lineHeightMultiplier,
+            onToggleBold: onToggleBold,
+            onToggleItalic: onToggleItalic,
+            onToggleUnderline: onToggleUnderline,
+            onAlignChanged: onAlignChanged,
+            onFontSizeChanged: onFontSizeChanged,
+            onLineHeightMultiplierChanged: onLineHeightMultiplierChanged,
+            onColorChanged: onColorChanged,
           ),
         ),
       ),
+    );
+  }
+}
+
+final class _TextOptionsRow extends StatelessWidget {
+  const _TextOptionsRow({
+    required this.element,
+    required this.paletteColors,
+    required this.lineHeightMinMultiplier,
+    required this.lineHeightMaxMultiplier,
+    required this.lineHeightMultiplier,
+    required this.onToggleBold,
+    required this.onToggleItalic,
+    required this.onToggleUnderline,
+    required this.onAlignChanged,
+    required this.onFontSizeChanged,
+    required this.onLineHeightMultiplierChanged,
+    required this.onColorChanged,
+  });
+
+  final CanvasTextElement element;
+  final List<Color> paletteColors;
+  final double lineHeightMinMultiplier;
+  final double lineHeightMaxMultiplier;
+  final double lineHeightMultiplier;
+  final VoidCallback onToggleBold;
+  final VoidCallback onToggleItalic;
+  final VoidCallback onToggleUnderline;
+  final ValueChanged<TextAlign> onAlignChanged;
+  final ValueChanged<double> onFontSizeChanged;
+  final ValueChanged<double> onLineHeightMultiplierChanged;
+  final ValueChanged<Color> onColorChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _TextFormattingButtons(
+          element: element,
+          onToggleBold: onToggleBold,
+          onToggleItalic: onToggleItalic,
+          onToggleUnderline: onToggleUnderline,
+        ),
+        const VerticalDivider(width: 20),
+        _AlignSelector(current: element.align, onAlignChanged: onAlignChanged),
+        const VerticalDivider(width: 20),
+        _TextFontSizeSlider(
+          fontSize: element.fontSize,
+          onChanged: onFontSizeChanged,
+        ),
+        const VerticalDivider(width: 20),
+        _TextLineHeightSlider(
+          min: lineHeightMinMultiplier,
+          max: lineHeightMaxMultiplier,
+          multiplier: lineHeightMultiplier,
+          onChanged: onLineHeightMultiplierChanged,
+        ),
+        const VerticalDivider(width: 20),
+        _ColorPalette(
+          colors: paletteColors,
+          selected: element.color,
+          onSelected: onColorChanged,
+        ),
+      ],
+    );
+  }
+}
+
+final class _TextFormattingButtons extends StatelessWidget {
+  const _TextFormattingButtons({
+    required this.element,
+    required this.onToggleBold,
+    required this.onToggleItalic,
+    required this.onToggleUnderline,
+  });
+
+  final CanvasTextElement element;
+  final VoidCallback onToggleBold;
+  final VoidCallback onToggleItalic;
+  final VoidCallback onToggleUnderline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _TextStyleToggle(
+          key: const ValueKey('text.bold'),
+          icon: Icons.format_bold,
+          active: element.isBold,
+          onTap: onToggleBold,
+        ),
+        _TextStyleToggle(
+          key: const ValueKey('text.italic'),
+          icon: Icons.format_italic,
+          active: element.isItalic,
+          onTap: onToggleItalic,
+        ),
+        _TextStyleToggle(
+          key: const ValueKey('text.underline'),
+          icon: Icons.format_underline,
+          active: element.isUnderline,
+          onTap: onToggleUnderline,
+        ),
+      ],
+    );
+  }
+}
+
+final class _TextFontSizeSlider extends StatelessWidget {
+  const _TextFontSizeSlider({required this.fontSize, required this.onChanged});
+
+  final double fontSize;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text('Size: ', style: TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          key: const ValueKey('text.font.size.slider'),
+          value: fontSize.clamp(10, 72).toDouble(),
+          min: 10,
+          max: 72,
+          divisions: 10,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+}
+
+final class _TextLineHeightSlider extends StatelessWidget {
+  const _TextLineHeightSlider({
+    required this.min,
+    required this.max,
+    required this.multiplier,
+    required this.onChanged,
+  });
+
+  final double min;
+  final double max;
+  final double multiplier;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Text(
+          'Line Height: ',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        Slider(
+          key: const ValueKey('text.line.height.slider'),
+          value: multiplier.clamp(min, max),
+          min: min,
+          max: max,
+          divisions: 22,
+          label: '${multiplier.toStringAsFixed(2)}x',
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

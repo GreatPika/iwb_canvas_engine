@@ -20,7 +20,7 @@ final class CanvasDocument {
     Iterable<CanvasElement> backgroundElements = const [],
     Iterable<CanvasLayer> layers = const [],
     this.metadata = const CanvasMetadata.empty(),
-  }) : palette = palette ?? CanvasPalette.defaults(),
+  }) : palette = palette ?? const CanvasPalette.defaults(),
        _resources = List.unmodifiable(resources),
        _backgroundElements = List.unmodifiable(backgroundElements),
        _layers = List.unmodifiable(layers) {

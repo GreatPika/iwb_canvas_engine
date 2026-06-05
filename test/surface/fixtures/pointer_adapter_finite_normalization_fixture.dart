@@ -136,7 +136,7 @@ Future<void> _expectSurfaceRuntimeWorldNormalization(
   runtime.tools.setMode(CanvasInteractionMode.draw);
   runtime.camera.setOffset(const Offset(20, 30));
 
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final topLeft = tester.getTopLeft(_paintHosts());
   final gesture = await tester.createGesture(kind: PointerDeviceKind.touch);
   await gesture.down(topLeft + const Offset(5, 6));
@@ -151,7 +151,7 @@ Future<void> _expectNoRouteWhenInteractiveFalse(WidgetTester tester) async {
   final runtime = CanvasRuntime(initialDocument: CanvasDocument());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
 
   expect(find.byType(CanvasSurfacePointerAdapter), findsNothing);
   final before = runtime.state.value;
@@ -172,9 +172,9 @@ Future<void> _expectStaleCallbackNoOpsAfterRuntimeSwap(
   oldRuntime.tools.setMode(CanvasInteractionMode.draw);
   newRuntime.tools.setMode(CanvasInteractionMode.draw);
 
-  await tester.pumpWidget(_surfaceHost(oldRuntime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: oldRuntime, interactive: true));
   final staleListener = tester.widget<Listener>(find.byType(Listener));
-  await tester.pumpWidget(_surfaceHost(newRuntime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: newRuntime, interactive: true));
 
   _onPointerDown(staleListener)(
     const PointerDownEvent(
@@ -192,7 +192,7 @@ Future<void> _expectStaleCallbackNoOpsAfterDispose(WidgetTester tester) async {
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
 
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final staleListener = tester.widget<Listener>(find.byType(Listener));
   await tester.pumpWidget(const SizedBox.shrink());
 
@@ -215,7 +215,7 @@ Future<void> _expectNonFiniteSurfaceEventHasNoRuntimeEffects(
   final observer = _RuntimeSideEffectObserver(runtime);
   addTearDown(observer.dispose);
 
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final listener = tester.widget<Listener>(find.byType(Listener));
   _routeNonFiniteSurfaceEvents(listener);
   await tester.pump();
@@ -281,15 +281,23 @@ Finder _paintHosts() {
   return find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host'));
 }
 
-Widget _surfaceHost(CanvasRuntime runtime, {required bool interactive}) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(
-      width: 100,
-      height: 100,
-      child: CanvasSurface(runtime: runtime, interactive: interactive),
-    ),
-  );
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.runtime, required this.interactive});
+
+  final CanvasRuntime runtime;
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: CanvasSurface(runtime: runtime, interactive: interactive),
+      ),
+    );
+  }
 }
 
 final class _RuntimeSideEffectObserver {

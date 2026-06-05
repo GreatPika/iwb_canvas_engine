@@ -162,28 +162,35 @@ Future<MainFramePaintOutput> _selectedFrameOutput(
   addTearDown(runtime.dispose);
   runtime.selection.setSelection(selectedIds);
 
-  await tester.pumpWidget(_surfaceHost(runtime));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime));
 
   return _mainPainter(tester).output;
 }
 
-Widget _surfaceHost(CanvasRuntime runtime) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(
-      width: 64,
-      height: 64,
-      child: CanvasSurface(
-        runtime: runtime,
-        interactive: false,
-        selectionStyle: CanvasSelectionStyle(
-          color: const Color(0xFF0000FF),
-          strokeWidth: 4,
-          haloWidth: 0,
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.runtime});
+
+  final CanvasRuntime runtime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 64,
+        height: 64,
+        child: CanvasSurface(
+          runtime: runtime,
+          interactive: false,
+          selectionStyle: CanvasSelectionStyle(
+            color: const Color(0xFF0000FF),
+            strokeWidth: 4,
+            haloWidth: 0,
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 MainFramePainter _mainPainter(WidgetTester tester) {

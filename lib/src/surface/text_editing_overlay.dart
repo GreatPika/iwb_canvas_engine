@@ -81,7 +81,7 @@ final class _CanvasTextEditingOverlayState
     );
     widget.runtime.state.addListener(_handleRuntimeStateChanged);
     _installContextSubscription();
-    _installSession(widget.runtime.textEditing.activeSession.value);
+    _replaceSessionState(widget.runtime.textEditing.activeSession.value);
   }
 
   @override
@@ -98,7 +98,7 @@ final class _CanvasTextEditingOverlayState
       );
       widget.runtime.state.addListener(_handleRuntimeStateChanged);
       _replaceContextSubscription();
-      _installSession(widget.runtime.textEditing.activeSession.value);
+      _replaceSessionState(widget.runtime.textEditing.activeSession.value);
 
       return;
     }
@@ -257,14 +257,18 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _installSession(CanvasTextEditSession? session) {
+    _replaceSessionState(session);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _replaceSessionState(CanvasTextEditSession? session) {
     _focusLossCommitGeneration += 1;
     _disposeEditorState();
     _session = session;
     if (session != null) {
       _installEditorState(session);
-    }
-    if (mounted) {
-      setState(() {});
     }
   }
 

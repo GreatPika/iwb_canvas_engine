@@ -81,7 +81,7 @@ void _testOverlayUsesEditableTextAndSessionGeometry() {
     );
     _expectEditorHostExtendsMeasuredWidth(tester, localEditBounds);
 
-    final editable = _editableText(tester);
+    final editable = tester.widget<EditableText>(_editableTextFinder());
     _expectInlineEditorDisablesScrollbar(tester, editable);
     expect(editable.style.fontSize, 18);
     expect(editable.style.color, const Color(0xFF884422));
@@ -217,7 +217,10 @@ void _testCommitAndDismiss() {
         'committed',
       );
       await tester.pump();
-      _editableText(tester).onEditingComplete?.call();
+      tester
+          .widget<EditableText>(_editableTextFinder())
+          .onEditingComplete
+          ?.call();
       await tester.pump();
 
       expect(_textElement(committed.runtime).text, 'committed');
@@ -258,7 +261,10 @@ void _testFocusLossCommit() {
     addTearDown(scenario.dispose);
     await scenario.pump(tester);
     await scenario.doubleTapText(tester);
-    expect(_editableText(tester).focusNode.hasFocus, isTrue);
+    expect(
+      tester.widget<EditableText>(_editableTextFinder()).focusNode.hasFocus,
+      isTrue,
+    );
 
     await tester.enterText(
       find.byKey(canvasTextEditingOverlayEditableTextKey),
@@ -310,9 +316,10 @@ void _testMultilineGrowthAndMaxHeightPolicy() {
       liveHeight,
       _localEditBoundsFor(scenario.activeSession.geometry).height,
     );
-    expect(_editableText(tester).scrollController, isNull);
-    expect(_editableText(tester).textInputAction, TextInputAction.newline);
-    expect(_editableText(tester).onSubmitted, isNull);
+    final editable = tester.widget<EditableText>(_editableTextFinder());
+    expect(editable.scrollController, isNull);
+    expect(editable.textInputAction, TextInputAction.newline);
+    expect(editable.onSubmitted, isNull);
     expect(scenario.runtime.textEditing.activeSession.value, isNotNull);
     expect(scenario.actions, isEmpty);
   });
@@ -341,7 +348,10 @@ void _testMultilineGrowthAndMaxHeightPolicy() {
             .height,
         maxHeight,
       );
-      expect(_editableText(tester).scrollController, isNotNull);
+      expect(
+        tester.widget<EditableText>(_editableTextFinder()).scrollController,
+        isNotNull,
+      );
     },
   );
 }
@@ -450,10 +460,8 @@ final class _OverlayScenario {
   }
 }
 
-EditableText _editableText(WidgetTester tester) {
-  return tester.widget<EditableText>(
-    find.byKey(canvasTextEditingOverlayEditableTextKey),
-  );
+Finder _editableTextFinder() {
+  return find.byKey(canvasTextEditingOverlayEditableTextKey);
 }
 
 void _expectEditorHostExtendsMeasuredWidth(

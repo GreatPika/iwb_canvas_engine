@@ -82,7 +82,7 @@ final class AppNextEngineAdapterCompileFixture {
       edit.removeUnusedResource(resourceId);
       edit.setBackgroundColor(_compileOnly());
       edit.setGrid(CanvasGrid());
-      edit.setPalette(CanvasPalette.defaults());
+      edit.setPalette(const CanvasPalette.defaults());
       edit.setCameraOffset(_compileOnly());
       final clearResult = edit.clearContent(removeUnusedResources: true);
       _use(clearResult.removedElementIds);

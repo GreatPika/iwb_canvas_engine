@@ -20,7 +20,7 @@ Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
   final runtime = CanvasRuntime(initialDocument: _document());
   addTearDown(runtime.dispose);
 
-  await tester.pumpWidget(_surfaceHost(runtime));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime));
   final beforeOutput = _mainPainter(tester).output;
   final beforePan = beforeOutput.ordinaryPlan;
 
@@ -72,19 +72,26 @@ CanvasDocument _document() {
   );
 }
 
-Widget _surfaceHost(CanvasRuntime runtime) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(
-      width: 100,
-      height: 100,
-      child: CanvasSurface(
-        runtime: runtime,
-        resourceResolver: _NoopResolver(),
-        interactive: false,
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.runtime});
+
+  final CanvasRuntime runtime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: CanvasSurface(
+          runtime: runtime,
+          resourceResolver: _NoopResolver(),
+          interactive: false,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 MainFramePainter _mainPainter(WidgetTester tester) {

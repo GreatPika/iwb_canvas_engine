@@ -4,6 +4,9 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'canvas_example_view_model.dart';
 import 'canvas_json_dialogs.dart';
 
+// The indicator is a compact visual shell. Splitting its Flutter decoration
+// would make the example harder to scan without reducing runtime risk.
+// ignore: coupling-between-object-classes
 final class CanvasCameraIndicator extends StatelessWidget {
   const CanvasCameraIndicator({required this.cameraX, super.key});
 
@@ -33,6 +36,9 @@ final class CanvasCameraIndicator extends StatelessWidget {
   }
 }
 
+// The four pan buttons are one cohesive camera affordance. Extra wrappers would
+// only hide the key mapping between directions and offsets.
+// ignore: coupling-between-object-classes
 final class CanvasCameraPanControls extends StatelessWidget {
   const CanvasCameraPanControls({required this.onPan, super.key});
 
@@ -49,37 +55,68 @@ final class CanvasCameraPanControls extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            key: const ValueKey('camera.pan.left'),
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => onPan(const Offset(-50, 0)),
-            iconSize: 18,
-            tooltip: 'Pan left',
-          ),
-          IconButton(
-            key: const ValueKey('camera.pan.right'),
-            icon: const Icon(Icons.arrow_forward),
-            onPressed: () => onPan(const Offset(50, 0)),
-            iconSize: 18,
-            tooltip: 'Pan right',
-          ),
-          IconButton(
-            key: const ValueKey('camera.pan.up'),
-            icon: const Icon(Icons.arrow_upward),
-            onPressed: () => onPan(const Offset(0, -50)),
-            iconSize: 18,
-            tooltip: 'Pan up',
-          ),
-          IconButton(
-            key: const ValueKey('camera.pan.down'),
-            icon: const Icon(Icons.arrow_downward),
-            onPressed: () => onPan(const Offset(0, 50)),
-            iconSize: 18,
-            tooltip: 'Pan down',
-          ),
-        ],
+        children: _cameraPanCommands.map((command) {
+          return _CameraPanButton(
+            key: ValueKey(command.key),
+            icon: command.icon,
+            offset: command.offset,
+            tooltip: command.tooltip,
+            onPan: onPan,
+          );
+        }).toList(),
       ),
+    );
+  }
+}
+
+const _cameraPanCommands = [
+  (
+    key: 'camera.pan.left',
+    icon: Icons.arrow_back,
+    offset: Offset(-50, 0),
+    tooltip: 'Pan left',
+  ),
+  (
+    key: 'camera.pan.right',
+    icon: Icons.arrow_forward,
+    offset: Offset(50, 0),
+    tooltip: 'Pan right',
+  ),
+  (
+    key: 'camera.pan.up',
+    icon: Icons.arrow_upward,
+    offset: Offset(0, -50),
+    tooltip: 'Pan up',
+  ),
+  (
+    key: 'camera.pan.down',
+    icon: Icons.arrow_downward,
+    offset: Offset(0, 50),
+    tooltip: 'Pan down',
+  ),
+];
+
+final class _CameraPanButton extends StatelessWidget {
+  const _CameraPanButton({
+    required this.icon,
+    required this.offset,
+    required this.tooltip,
+    required this.onPan,
+    super.key,
+  });
+
+  final IconData icon;
+  final Offset offset;
+  final String tooltip;
+  final ValueChanged<Offset> onPan;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon),
+      onPressed: () => onPan(offset),
+      iconSize: 18,
+      tooltip: tooltip,
     );
   }
 }
@@ -93,7 +130,7 @@ final class CanvasControlsDock extends StatelessWidget {
   final CanvasExampleViewModel viewModel;
 
   @override
-  // The dock mirrors the legacy example command order; splitting each command
+  // The dock mirrors the legacy example command order. Splitting each command
   // group would hide the visual contract this file owns.
   // ignore: source-lines-of-code
   Widget build(BuildContext context) {
@@ -115,16 +152,7 @@ final class CanvasControlsDock extends StatelessWidget {
         children: [
           _ModeToggle(viewModel: viewModel),
           const VerticalDivider(indent: 20, endIndent: 20, width: 24),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: viewModel.mode == CanvasInteractionMode.draw
-                    ? _drawControls()
-                    : _moveControls(),
-              ),
-            ),
-          ),
+          Expanded(child: _ModeControlsStrip(viewModel: viewModel)),
           const VerticalDivider(indent: 20, endIndent: 20, width: 24),
           _GridMenu(viewModel: viewModel),
           _SystemMenu(viewModel: viewModel),
@@ -132,101 +160,170 @@ final class CanvasControlsDock extends StatelessWidget {
       ),
     );
   }
+}
 
-  List<Widget> _drawControls() {
-    return [
-      _DrawToolButton(
-        key: const ValueKey('tool.pencil'),
-        tool: CanvasDrawTool.pencil,
-        currentTool: viewModel.drawTool,
-        icon: Icons.brush,
-        label: 'Pen',
-        onPressed: viewModel.setDrawTool,
-      ),
-      _DrawToolButton(
-        key: const ValueKey('tool.marker'),
-        tool: CanvasDrawTool.marker,
-        currentTool: viewModel.drawTool,
-        icon: Icons.border_color,
-        label: 'Marker',
-        onPressed: viewModel.setDrawTool,
-      ),
-      _DrawToolButton(
-        key: const ValueKey('tool.line'),
-        tool: CanvasDrawTool.line,
-        currentTool: viewModel.drawTool,
-        icon: Icons.show_chart,
-        label: 'Line',
-        onPressed: viewModel.setDrawTool,
-      ),
-      _DrawToolButton(
-        key: const ValueKey('tool.eraser'),
-        tool: CanvasDrawTool.eraser,
-        currentTool: viewModel.drawTool,
-        icon: Icons.auto_fix_normal,
-        label: 'Eraser',
-        onPressed: viewModel.setDrawTool,
-      ),
-      const VerticalDivider(indent: 25, endIndent: 25, width: 20),
-      _ColorPalette(
-        keyPrefix: 'draw.color',
-        colors: viewModel.penColors,
-        selected: viewModel.drawColor,
-        onSelected: viewModel.setDrawColor,
-      ),
-    ];
-  }
+final class _ModeControlsStrip extends StatelessWidget {
+  const _ModeControlsStrip({required this.viewModel});
 
-  List<Widget> _moveControls() {
-    return [
-      _ActionButton(
-        key: const ValueKey('selection.rotate.ccw'),
-        icon: Icons.rotate_left,
-        label: 'Rotate L',
-        onTap: viewModel.hasSelection
-            ? viewModel.rotateSelectionCounterClockwise
-            : null,
-      ),
-      _ActionButton(
-        key: const ValueKey('selection.rotate.cw'),
-        icon: Icons.rotate_right,
-        label: 'Rotate R',
-        onTap: viewModel.hasSelection
-            ? viewModel.rotateSelectionClockwise
-            : null,
-      ),
-      _ActionButton(
-        key: const ValueKey('selection.flip.vertical'),
-        icon: Icons.flip,
-        label: 'Flip V',
-        onTap: viewModel.hasSelection ? viewModel.flipSelectionVertical : null,
-        quarterTurns: 1,
-      ),
-      _ActionButton(
-        key: const ValueKey('selection.flip.horizontal'),
-        icon: Icons.flip,
-        label: 'Flip H',
-        onTap: viewModel.hasSelection
-            ? viewModel.flipSelectionHorizontal
-            : null,
-      ),
-      _ActionButton(
-        key: const ValueKey('selection.delete'),
-        icon: Icons.delete_outline,
-        label: 'Delete',
-        onTap: viewModel.hasSelection ? viewModel.deleteSelection : null,
-        color: Colors.red,
-      ),
-      _ActionButton(
-        key: const ValueKey('sample.add'),
-        icon: Icons.add_box_outlined,
-        label: 'Add Sample',
-        onTap: viewModel.requestAddSample,
-      ),
-    ];
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: viewModel.mode == CanvasInteractionMode.draw
+          ? _DrawControlsStrip(viewModel: viewModel)
+          : _MoveControlsStrip(viewModel: viewModel),
+    );
   }
 }
 
+final class _DrawControlsStrip extends StatelessWidget {
+  const _DrawControlsStrip({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _DrawToolStrip(viewModel: viewModel),
+        const VerticalDivider(indent: 25, endIndent: 25, width: 20),
+        _ColorPalette(
+          keyPrefix: 'draw.color',
+          colors: viewModel.penColors,
+          selected: viewModel.drawColor,
+          onSelected: viewModel.setDrawColor,
+        ),
+      ],
+    );
+  }
+}
+
+final class _DrawToolStrip extends StatelessWidget {
+  const _DrawToolStrip({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _DrawToolButton(
+          key: const ValueKey('tool.pencil'),
+          tool: CanvasDrawTool.pencil,
+          currentTool: viewModel.drawTool,
+          icon: Icons.brush,
+          label: 'Pen',
+          onPressed: viewModel.setDrawTool,
+        ),
+        _DrawToolButton(
+          key: const ValueKey('tool.marker'),
+          tool: CanvasDrawTool.marker,
+          currentTool: viewModel.drawTool,
+          icon: Icons.border_color,
+          label: 'Marker',
+          onPressed: viewModel.setDrawTool,
+        ),
+        _DrawToolButton(
+          key: const ValueKey('tool.line'),
+          tool: CanvasDrawTool.line,
+          currentTool: viewModel.drawTool,
+          icon: Icons.show_chart,
+          label: 'Line',
+          onPressed: viewModel.setDrawTool,
+        ),
+        _DrawToolButton(
+          key: const ValueKey('tool.eraser'),
+          tool: CanvasDrawTool.eraser,
+          currentTool: viewModel.drawTool,
+          icon: Icons.auto_fix_normal,
+          label: 'Eraser',
+          onPressed: viewModel.setDrawTool,
+        ),
+      ],
+    );
+  }
+}
+
+final class _MoveControlsStrip extends StatelessWidget {
+  const _MoveControlsStrip({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _SelectionTransformButtons(viewModel: viewModel),
+        _ActionButton(
+          key: const ValueKey('selection.delete'),
+          icon: Icons.delete_outline,
+          label: 'Delete',
+          onTap: viewModel.hasSelection ? viewModel.deleteSelection : null,
+          color: Colors.red,
+        ),
+        _ActionButton(
+          key: const ValueKey('sample.add'),
+          icon: Icons.add_box_outlined,
+          label: 'Add Sample',
+          onTap: viewModel.requestAddSample,
+        ),
+      ],
+    );
+  }
+}
+
+final class _SelectionTransformButtons extends StatelessWidget {
+  const _SelectionTransformButtons({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _ActionButton(
+          key: const ValueKey('selection.rotate.ccw'),
+          icon: Icons.rotate_left,
+          label: 'Rotate L',
+          onTap: viewModel.hasSelection
+              ? viewModel.rotateSelectionCounterClockwise
+              : null,
+        ),
+        _ActionButton(
+          key: const ValueKey('selection.rotate.cw'),
+          icon: Icons.rotate_right,
+          label: 'Rotate R',
+          onTap: viewModel.hasSelection
+              ? viewModel.rotateSelectionClockwise
+              : null,
+        ),
+        _ActionButton(
+          key: const ValueKey('selection.flip.vertical'),
+          icon: Icons.flip,
+          label: 'Flip V',
+          onTap: viewModel.hasSelection
+              ? viewModel.flipSelectionVertical
+              : null,
+          quarterTurns: 1,
+        ),
+        _ActionButton(
+          key: const ValueKey('selection.flip.horizontal'),
+          icon: Icons.flip,
+          label: 'Flip H',
+          onTap: viewModel.hasSelection
+              ? viewModel.flipSelectionHorizontal
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
+// The mode toggle is a compact Material control. Splitting the shell from the
+// two buttons would only obscure the mode-switching affordance.
+// ignore: coupling-between-object-classes
 final class _ModeToggle extends StatelessWidget {
   const _ModeToggle({required this.viewModel});
 
@@ -262,6 +359,9 @@ final class _ModeToggle extends StatelessWidget {
   }
 }
 
+// This leaf widget owns one selectable icon button state, so its Material
+// styling types are clearer inline than behind extra wrappers.
+// ignore: coupling-between-object-classes
 final class _SmallModeButton extends StatelessWidget {
   const _SmallModeButton({
     required this.mode,
@@ -363,6 +463,9 @@ final class _ActionButton extends StatelessWidget {
   }
 }
 
+// The menu anchor must compose Material menu style, trigger state, and icon
+// state together for the popup entry point to remain easy to audit.
+// ignore: coupling-between-object-classes
 final class _GridMenu extends StatelessWidget {
   const _GridMenu({required this.viewModel});
 
@@ -370,11 +473,7 @@ final class _GridMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final gridSizes = viewModel.gridSizes.isEmpty
-        ? [viewModel.grid.cellSize]
-        : viewModel.gridSizes;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return MenuAnchor(
       alignmentOffset: const Offset(-240, 0),
@@ -403,109 +502,70 @@ final class _GridMenu extends StatelessWidget {
         );
       },
       menuChildren: [
-        SizedBox(
-          width: 340,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withValues(
-                          alpha: 0.4,
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.grid_on,
-                        size: 18,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Grid Appearance',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Display Grid',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Enable alignment guides',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: viewModel.grid.enabled,
-                      onChanged: (enabled) {
-                        viewModel.setGridEnabled(enabled: enabled);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Cell Size',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<double>(
-                    key: const ValueKey('grid.size.menu'),
-                    showSelectedIcon: false,
-                    segments: gridSizes.map((size) {
-                      return ButtonSegment<double>(
-                        value: size,
-                        label: Text(
-                          size.toInt().toString(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      );
-                    }).toList(),
-                    selected: {viewModel.grid.cellSize},
-                    onSelectionChanged: (selection) {
-                      viewModel.setGridCellSize(selection.first);
-                    },
-                    style: SegmentedButton.styleFrom(
-                      visualDensity: VisualDensity.comfortable,
-                      selectedBackgroundColor: colorScheme.primary,
-                      selectedForegroundColor: colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
+        SizedBox(width: 340, child: _GridMenuBody(viewModel: viewModel)),
+      ],
+    );
+  }
+}
+
+// The body keeps the three grid menu sections in their visual order. Another
+// container layer would not reduce behavioral coupling.
+// ignore: coupling-between-object-classes
+final class _GridMenuBody extends StatelessWidget {
+  const _GridMenuBody({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _MenuHeader(icon: Icons.grid_on, title: 'Grid Appearance'),
+          const SizedBox(height: 24),
+          _GridEnabledRow(viewModel: viewModel),
+          const SizedBox(height: 24),
+          _GridSizeSelector(viewModel: viewModel),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+// Menu headers intentionally own their icon, label, and theme styling as one
+// visual unit used by menu bodies.
+// ignore: coupling-between-object-classes
+final class _MenuHeader extends StatelessWidget {
+  const _MenuHeader({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 18, color: colorScheme.primary),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
@@ -513,8 +573,11 @@ final class _GridMenu extends StatelessWidget {
   }
 }
 
-final class _SystemMenu extends StatelessWidget {
-  const _SystemMenu({required this.viewModel});
+// The grid switch row keeps label copy and the boundary callback together so
+// the enabled-state control stays readable.
+// ignore: coupling-between-object-classes
+final class _GridEnabledRow extends StatelessWidget {
+  const _GridEnabledRow({required this.viewModel});
 
   final CanvasExampleViewModel viewModel;
 
@@ -522,6 +585,123 @@ final class _SystemMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Display Grid',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Enable alignment guides',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch(
+          value: viewModel.grid.enabled,
+          onChanged: (enabled) {
+            viewModel.setGridEnabled(enabled: enabled);
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// Segmented grid-size selection needs Material segments and theme colors in one
+// place to keep the selected-value contract obvious.
+// ignore: coupling-between-object-classes
+final class _GridSizeSelector extends StatelessWidget {
+  const _GridSizeSelector({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final gridSizes = viewModel.gridSizes.isEmpty
+        ? [viewModel.grid.cellSize]
+        : viewModel.gridSizes;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _GridSizeLabel(colorScheme: colorScheme),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<double>(
+            key: const ValueKey('grid.size.menu'),
+            showSelectedIcon: false,
+            segments: _gridSizeSegments(gridSizes),
+            selected: {viewModel.grid.cellSize},
+            onSelectionChanged: (selection) {
+              viewModel.setGridCellSize(selection.first);
+            },
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.comfortable,
+              selectedBackgroundColor: colorScheme.primary,
+              selectedForegroundColor: colorScheme.onPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<ButtonSegment<double>> _gridSizeSegments(List<double> gridSizes) {
+    return gridSizes.map((size) {
+      return ButtonSegment<double>(
+        value: size,
+        label: Text(
+          size.toInt().toString(),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      );
+    }).toList();
+  }
+}
+
+final class _GridSizeLabel extends StatelessWidget {
+  const _GridSizeLabel({required this.colorScheme});
+
+  final ColorScheme colorScheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Cell Size',
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+}
+
+// The system menu entry point composes only the Material anchor and trigger.
+// moving style pieces out would hide the popup boundary.
+// ignore: coupling-between-object-classes
+final class _SystemMenu extends StatelessWidget {
+  const _SystemMenu({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
 
     return MenuAnchor(
       alignmentOffset: const Offset(-240, 0),
@@ -547,116 +727,216 @@ final class _SystemMenu extends StatelessWidget {
       menuChildren: [
         SizedBox(
           width: 280,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.palette_outlined,
-                      size: 18,
-                      color: colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Background',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: viewModel.backgroundColors.map((color) {
-                    final isSelected = viewModel.background.color == color;
+          child: _SystemMenuBody(viewModel: viewModel, dialogContext: context),
+        ),
+      ],
+    );
+  }
+}
 
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        key: ValueKey('background.color.${color.toARGB32()}'),
-                        onTap: () => viewModel.setBackgroundColor(color),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : Colors.black12,
-                              width: isSelected ? 2 : 1,
-                            ),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: colorScheme.primary.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      blurRadius: 4,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: isSelected
-                              ? Icon(
-                                  Icons.check,
-                                  size: 16,
-                                  color: color.computeLuminance() > 0.5
-                                      ? Colors.black
-                                      : Colors.white,
-                                )
-                              : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const Divider(indent: 16, endIndent: 16),
-              MenuItemButton(
-                key: const ValueKey('json.export'),
-                leadingIcon: const Icon(Icons.download_outlined, size: 20),
-                onPressed: () => showCanvasJsonExportDialog(context, viewModel),
-                child: const Text('Export (JSON)'),
-              ),
-              MenuItemButton(
-                key: const ValueKey('json.import'),
-                leadingIcon: const Icon(Icons.upload_outlined, size: 20),
-                onPressed: () => showCanvasJsonImportDialog(context, viewModel),
-                child: const Text('Import (JSON)'),
-              ),
-              const Divider(indent: 16, endIndent: 16),
-              MenuItemButton(
-                key: const ValueKey('canvas.clear'),
-                leadingIcon: Icon(
-                  Icons.delete_sweep_outlined,
-                  color: colorScheme.error,
-                  size: 20,
-                ),
-                onPressed: viewModel.clearCanvas,
-                child: Text(
-                  'Clear Canvas',
-                  style: TextStyle(
-                    color: colorScheme.error,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
+final class _SystemMenuBody extends StatelessWidget {
+  const _SystemMenuBody({required this.viewModel, required this.dialogContext});
+
+  final CanvasExampleViewModel viewModel;
+  final BuildContext dialogContext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _BackgroundColorSection(viewModel: viewModel),
+        const Divider(indent: 16, endIndent: 16),
+        _JsonMenuActions(viewModel: viewModel, dialogContext: dialogContext),
+        const Divider(indent: 16, endIndent: 16),
+        _ClearCanvasMenuAction(onPressed: viewModel.clearCanvas),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// Background colors are a small visual palette. Keeping the scroll row with its
+// source list makes the menu behavior easier to verify.
+// ignore: coupling-between-object-classes
+final class _BackgroundColorSection extends StatelessWidget {
+  const _BackgroundColorSection({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _BackgroundHeader(),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            children: viewModel.backgroundColors.map((color) {
+              return _BackgroundColorButton(
+                color: color,
+                isSelected: viewModel.background.color == color,
+                onSelected: viewModel.setBackgroundColor,
+              );
+            }).toList(),
           ),
         ),
       ],
+    );
+  }
+}
+
+// The background header is a single visual label with themed icon styling. More
+// wrappers would add indirection without reducing risk.
+// ignore: coupling-between-object-classes
+final class _BackgroundHeader extends StatelessWidget {
+  const _BackgroundHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      child: Row(
+        children: [
+          Icon(Icons.palette_outlined, size: 18, color: colorScheme.primary),
+          const SizedBox(width: 12),
+          Text(
+            'Background',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// The color swatch owns its selected decoration and tap target together because
+// that is the stable UI responsibility.
+// ignore: coupling-between-object-classes
+final class _BackgroundColorButton extends StatelessWidget {
+  const _BackgroundColorButton({
+    required this.color,
+    required this.isSelected,
+    required this.onSelected,
+  });
+
+  final Color color;
+  final bool isSelected;
+  final ValueChanged<Color> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        key: ValueKey('background.color.${color.toARGB32()}'),
+        onTap: () => onSelected(color),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: _backgroundDecoration(colorScheme),
+          child: isSelected ? _SelectedColorIcon(color: color) : null,
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _backgroundDecoration(ColorScheme colorScheme) {
+    return BoxDecoration(
+      color: color,
+      shape: BoxShape.circle,
+      border: Border.all(
+        color: isSelected ? colorScheme.primary : Colors.black12,
+        width: isSelected ? 2 : 1,
+      ),
+      boxShadow: isSelected
+          ? [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.3),
+                blurRadius: 4,
+              ),
+            ]
+          : null,
+    );
+  }
+}
+
+final class _SelectedColorIcon extends StatelessWidget {
+  const _SelectedColorIcon({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.check,
+      size: 16,
+      color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+    );
+  }
+}
+
+final class _JsonMenuActions extends StatelessWidget {
+  const _JsonMenuActions({
+    required this.viewModel,
+    required this.dialogContext,
+  });
+
+  final CanvasExampleViewModel viewModel;
+  final BuildContext dialogContext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MenuItemButton(
+          key: const ValueKey('json.export'),
+          leadingIcon: const Icon(Icons.download_outlined, size: 20),
+          onPressed: () => showCanvasJsonExportDialog(dialogContext, viewModel),
+          child: const Text('Export (JSON)'),
+        ),
+        MenuItemButton(
+          key: const ValueKey('json.import'),
+          leadingIcon: const Icon(Icons.upload_outlined, size: 20),
+          onPressed: () => showCanvasJsonImportDialog(dialogContext, viewModel),
+          child: const Text('Import (JSON)'),
+        ),
+      ],
+    );
+  }
+}
+
+final class _ClearCanvasMenuAction extends StatelessWidget {
+  const _ClearCanvasMenuAction({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return MenuItemButton(
+      key: const ValueKey('canvas.clear'),
+      leadingIcon: Icon(
+        Icons.delete_sweep_outlined,
+        color: colorScheme.error,
+        size: 20,
+      ),
+      onPressed: onPressed,
+      child: Text(
+        'Clear Canvas',
+        style: TextStyle(color: colorScheme.error, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

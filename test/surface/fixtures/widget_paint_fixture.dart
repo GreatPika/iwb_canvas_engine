@@ -44,7 +44,9 @@ Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
   final emptyRuntime = CanvasRuntime(initialDocument: CanvasDocument());
   final emptyResolver = _RecordingResolver((_) => null);
   addTearDown(emptyRuntime.dispose);
-  await tester.pumpWidget(_surfaceHost(emptyRuntime, emptyResolver));
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: emptyRuntime, resolver: emptyResolver),
+  );
   _expectPaintHost();
   expect(emptyResolver.calls, 0);
 
@@ -52,7 +54,7 @@ Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
   final resourceFreeResolver = _RecordingResolver((_) => null);
   addTearDown(resourceFreeRuntime.dispose);
   await tester.pumpWidget(
-    _surfaceHost(resourceFreeRuntime, resourceFreeResolver),
+    _SurfaceHost(runtime: resourceFreeRuntime, resolver: resourceFreeResolver),
   );
   _expectPaintHost();
   expect(resourceFreeResolver.calls, 0);
@@ -63,7 +65,10 @@ Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
   final descriptorOnlyResolver = _RecordingResolver((_) => null);
   addTearDown(descriptorOnlyRuntime.dispose);
   await tester.pumpWidget(
-    _surfaceHost(descriptorOnlyRuntime, descriptorOnlyResolver),
+    _SurfaceHost(
+      runtime: descriptorOnlyRuntime,
+      resolver: descriptorOnlyResolver,
+    ),
   );
   _expectPaintHost();
   expect(descriptorOnlyResolver.calls, 0);
@@ -77,7 +82,7 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   final resolver = _RecordingResolver((_) => image);
   addTearDown(runtime.dispose);
 
-  await tester.pumpWidget(_surfaceHost(runtime, resolver));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
 
   _expectPaintHost();
   expect(resolver.calls, 1);
@@ -101,7 +106,7 @@ Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
   final resolver = _RecordingResolver((_) => null);
   addTearDown(runtime.dispose);
 
-  await tester.pumpWidget(_surfaceHost(runtime, resolver));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
   await _expectSelectedMoveMainRepaint(tester, runtime);
   await _expectMarqueeOverlayOnly(tester, runtime);
   expect(resolver.calls, 0);
@@ -113,7 +118,9 @@ Future<void> _expectInlineTextSuppressionSurfaceRepaint(
   final scenario = _InlineTextSurfaceScenario();
   addTearDown(scenario.dispose);
 
-  await tester.pumpWidget(_surfaceHost(scenario.runtime, scenario.resolver));
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: scenario.runtime, resolver: scenario.resolver),
+  );
   expect(_mainRecordIds(tester), contains(_surfaceTextId));
 
   final session = await scenario.startTextSession(tester);
@@ -161,19 +168,27 @@ Future<void> _expectMarqueeOverlayOnly(
   );
 }
 
-Widget _surfaceHost(CanvasRuntime runtime, CanvasResourceResolver resolver) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(
-      width: 100,
-      height: 100,
-      child: CanvasSurface(
-        runtime: runtime,
-        resourceResolver: resolver,
-        interactive: false,
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.runtime, required this.resolver});
+
+  final CanvasRuntime runtime;
+  final CanvasResourceResolver resolver;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: CanvasSurface(
+          runtime: runtime,
+          resourceResolver: resolver,
+          interactive: false,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 void _expectPaintHost() {

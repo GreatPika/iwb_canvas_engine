@@ -45,8 +45,8 @@ Future<void> _mountFirstSurface(
   required _RecordingResolver resolver,
 }) async {
   await tester.pumpWidget(
-    _surfaceHost(
-      _sameRuntimeSlots(
+    _SurfaceHost(
+      child: _SameRuntimeSlots(
         runtime: runtime,
         resolver: resolver,
         secondSlot: const SizedBox.shrink(),
@@ -65,8 +65,8 @@ Future<void> _expectSecondSurfaceRejected(
   required _RuntimeNotificationCounter notificationCounter,
 }) async {
   await tester.pumpWidget(
-    _surfaceHost(
-      _sameRuntimeSlots(
+    _SurfaceHost(
+      child: _SameRuntimeSlots(
         runtime: runtime,
         resolver: resolver,
         secondSlot: CanvasSurface(
@@ -96,8 +96,8 @@ Future<void> _expectFirstSurfaceStillUsable(
   _RecordingResolver resolver,
 ) async {
   await tester.pumpWidget(
-    _surfaceHost(
-      _sameRuntimeSlots(
+    _SurfaceHost(
+      child: _SameRuntimeSlots(
         runtime: runtime,
         resolver: resolver,
         secondSlot: const SizedBox.shrink(),
@@ -124,8 +124,8 @@ Future<void> _expectAttachAfterDetach(
 ) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
-    _surfaceHost(
-      CanvasSurface(
+    _SurfaceHost(
+      child: CanvasSurface(
         key: const ValueKey<String>('surface-c'),
         runtime: runtime,
         resourceResolver: resolver,
@@ -172,35 +172,51 @@ Future<void> _testIndependentRuntimeSurfaces(WidgetTester tester) async {
   expect(tester.takeException(), isNull);
 }
 
-Widget _sameRuntimeSlots({
-  required CanvasRuntime runtime,
-  required CanvasResourceResolver resolver,
-  required Widget secondSlot,
-}) {
-  return Column(
-    children: [
-      Expanded(
-        child: CanvasSurface(
-          key: const ValueKey<String>('surface-a'),
-          runtime: runtime,
-          resourceResolver: resolver,
-          interactive: false,
+final class _SameRuntimeSlots extends StatelessWidget {
+  const _SameRuntimeSlots({
+    required this.runtime,
+    required this.resolver,
+    required this.secondSlot,
+  });
+
+  final CanvasRuntime runtime;
+  final CanvasResourceResolver resolver;
+  final Widget secondSlot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: CanvasSurface(
+            key: const ValueKey<String>('surface-a'),
+            runtime: runtime,
+            resourceResolver: resolver,
+            interactive: false,
+          ),
         ),
-      ),
-      Expanded(child: secondSlot),
-    ],
-  );
+        Expanded(child: secondSlot),
+      ],
+    );
+  }
 }
 
 Finder _paintHosts() {
   return find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host'));
 }
 
-Widget _surfaceHost(Widget child) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(width: 160, height: 120, child: child),
-  );
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(width: 160, height: 120, child: child),
+    );
+  }
 }
 
 CanvasDocument _document(String elementId) {

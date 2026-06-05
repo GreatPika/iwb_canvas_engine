@@ -82,8 +82,8 @@ Future<void> _mountAcceptedSurface(
   RecordingResourceResolver acceptedResolver,
 ) async {
   await tester.pumpWidget(
-    _host(
-      _sameRuntimeSlots(
+    _Host(
+      child: _SameRuntimeSlots(
         runtime: runtime,
         firstResolver: acceptedResolver,
         secondSlot: const SizedBox.shrink(),
@@ -97,8 +97,8 @@ Future<void> _expectSecondAttachRejected(
   _RejectedAttachScenario scenario,
 ) async {
   await tester.pumpWidget(
-    _host(
-      _sameRuntimeSlots(
+    _Host(
+      child: _SameRuntimeSlots(
         runtime: scenario.runtime,
         firstResolver: scenario.acceptedResolver,
         secondSlot: CanvasSurface(
@@ -162,8 +162,8 @@ Future<SurfaceResourceSession> _mountSurfaceWithResolver(
   required CanvasResourceResolver resolver,
 }) async {
   await tester.pumpWidget(
-    _host(
-      CanvasSurface(
+    _Host(
+      child: CanvasSurface(
         runtime: runtime,
         resourceResolver: resolver,
         interactive: false,
@@ -180,8 +180,8 @@ Future<void> _replaceSurfaceResolver(
   required CanvasResourceResolver resolver,
 }) async {
   await tester.pumpWidget(
-    _host(
-      CanvasSurface(
+    _Host(
+      child: CanvasSurface(
         runtime: runtime,
         resourceResolver: resolver,
         interactive: false,
@@ -205,16 +205,11 @@ Future<void> _expectRuntimeSwapDropsOldSession(WidgetTester tester) async {
   addTearDown(oldRuntime.dispose);
   addTearDown(newRuntime.dispose);
 
-  await tester.pumpWidget(
-    _host(
-      CanvasSurface(
-        runtime: oldRuntime,
-        resourceResolver: oldResolver,
-        interactive: false,
-      ),
-    ),
+  final oldSession = await _mountSurfaceWithResolver(
+    tester,
+    runtime: oldRuntime,
+    resolver: oldResolver,
   );
-  final oldSession = _activeSession(oldRuntime);
   _expectSessionResolvesImage(
     oldSession,
     descriptorRequest(id: 'resource-a'),
@@ -222,7 +217,7 @@ Future<void> _expectRuntimeSwapDropsOldSession(WidgetTester tester) async {
   );
 
   await tester.pumpWidget(
-    _host(CanvasSurface(runtime: newRuntime, interactive: false)),
+    _Host(child: CanvasSurface(runtime: newRuntime, interactive: false)),
   );
 
   expect(_rootFor(oldRuntime).activeSurfaceResourceSessionForTesting, isNull);
@@ -243,8 +238,8 @@ Future<void> _expectRuntimeDisposeDropsSessionBeforeWidgetDetach(
   final resolver = RecordingResourceResolver((_) => image);
 
   await tester.pumpWidget(
-    _host(
-      CanvasSurface(
+    _Host(
+      child: CanvasSurface(
         runtime: runtime,
         resourceResolver: resolver,
         interactive: false,
@@ -283,8 +278,8 @@ Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
   required CanvasResourceResolver resolver,
 }) async {
   await tester.pumpWidget(
-    _host(
-      CanvasSurface(
+    _Host(
+      child: CanvasSurface(
         runtime: runtime,
         resourceResolver: resolver,
         interactive: false,
@@ -501,31 +496,47 @@ Finder _paintHosts() {
   return find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host'));
 }
 
-Widget _host(Widget child) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(width: 160, height: 120, child: child),
-  );
+final class _Host extends StatelessWidget {
+  const _Host({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(width: 160, height: 120, child: child),
+    );
+  }
 }
 
-Widget _sameRuntimeSlots({
-  required CanvasRuntime runtime,
-  required CanvasResourceResolver firstResolver,
-  required Widget secondSlot,
-}) {
-  return Column(
-    children: [
-      Expanded(
-        child: CanvasSurface(
-          key: const ValueKey<String>('surface-a'),
-          runtime: runtime,
-          resourceResolver: firstResolver,
-          interactive: false,
+final class _SameRuntimeSlots extends StatelessWidget {
+  const _SameRuntimeSlots({
+    required this.runtime,
+    required this.firstResolver,
+    required this.secondSlot,
+  });
+
+  final CanvasRuntime runtime;
+  final CanvasResourceResolver firstResolver;
+  final Widget secondSlot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Expanded(
+          child: CanvasSurface(
+            key: const ValueKey<String>('surface-a'),
+            runtime: runtime,
+            resourceResolver: firstResolver,
+            interactive: false,
+          ),
         ),
-      ),
-      Expanded(child: secondSlot),
-    ],
-  );
+        Expanded(child: secondSlot),
+      ],
+    );
+  }
 }
 
 CanvasDocument _documentWithResource([String resourceId = 'resource-a']) {

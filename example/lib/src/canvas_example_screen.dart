@@ -143,15 +143,22 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        _surfaceOverlays(),
-        _cameraIndicator(),
-        _cameraPanControls(),
-        _controlsDock(),
+        _SurfaceOverlays(viewModel: viewModel),
+        _CameraIndicatorOverlay(viewModel: viewModel),
+        _CameraPanControlsOverlay(viewModel: viewModel),
+        _ControlsDockOverlay(viewModel: viewModel),
       ],
     );
   }
+}
 
-  Widget _surfaceOverlays() {
+final class _SurfaceOverlays extends StatelessWidget {
+  const _SurfaceOverlays({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
     return Positioned.fill(
       child: Stack(
         children: [
@@ -167,24 +174,45 @@ final class _CanvasExampleReactiveLayer extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _cameraIndicator() {
+final class _CameraIndicatorOverlay extends StatelessWidget {
+  const _CameraIndicatorOverlay({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
     return Positioned(
       top: 20,
       left: 20,
       child: CanvasCameraIndicator(cameraX: viewModel.cameraOffset.dx),
     );
   }
+}
 
-  Widget _cameraPanControls() {
+final class _CameraPanControlsOverlay extends StatelessWidget {
+  const _CameraPanControlsOverlay({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
     return Positioned(
       top: 20,
       right: 20,
       child: CanvasCameraPanControls(onPan: viewModel.panCameraBy),
     );
   }
+}
 
-  Widget _controlsDock() {
+final class _ControlsDockOverlay extends StatelessWidget {
+  const _ControlsDockOverlay({required this.viewModel});
+
+  final CanvasExampleViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
     return Positioned.fill(
       child: Stack(
         children: [

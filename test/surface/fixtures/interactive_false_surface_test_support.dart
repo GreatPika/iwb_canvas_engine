@@ -13,7 +13,7 @@ Future<void> expectInteractiveFalsePointerRouting(WidgetTester tester) async {
   final monitor = _RuntimeMonitor(runtime);
   addTearDown(monitor.dispose);
 
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
   expect(find.byType(CanvasSurfacePointerAdapter), findsNothing);
   await _tapPaintHost(tester, const Offset(8, 9));
   await tester.pump();
@@ -82,7 +82,7 @@ Future<TestGesture> _startActiveStrokeSession(
   WidgetTester tester,
   CanvasRuntime runtime,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final gesture = await _downOnPaintHost(tester, const Offset(4, 5));
   await tester.pump();
   expect(runtime.preview, isA<CanvasPencilStrokePreview>());
@@ -96,7 +96,7 @@ Future<void> _expectInteractiveFalseCancelsActiveSession(
 ) async {
   final monitor = _RuntimeMonitor(runtime);
   addTearDown(monitor.dispose);
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
   await tester.pump();
 
   expect(runtime.preview, isA<CanvasNoPreview>());
@@ -114,7 +114,7 @@ Future<void> _expectInteractiveTrueResumesOnlyFutureEvents(
   CanvasRuntime runtime, {
   required TestGesture staleGesture,
 }) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   await tester.pump();
   expect(runtime.preview, isA<CanvasNoPreview>());
 
@@ -134,7 +134,7 @@ Future<CanvasPendingLineStartPreview> _createPendingLine(
   WidgetTester tester,
   CanvasRuntime runtime,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   await _tapPaintHost(tester, const Offset(11, 12), timestampMs: 30);
   final pendingLine = runtime.preview as CanvasPendingLineStartPreview;
   expect(pendingLine.start, const Offset(11, 12));
@@ -147,7 +147,7 @@ Future<void> _expectPendingLineSurvivesInteractiveFalse(
   CanvasRuntime runtime,
   _PendingLineProbe probe,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
   await tester.pump();
   _expectSamePendingLine(runtime.preview, probe.pendingLine);
   probe.monitor.expectNoRuntimeEffects(runtime);
@@ -159,8 +159,10 @@ Future<void> _expectPendingLineSurvivesRuntimeSwap(
   CanvasRuntime replacementRuntime,
   _PendingLineProbe probe,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
-  await tester.pumpWidget(_surfaceHost(replacementRuntime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: replacementRuntime, interactive: true),
+  );
   await tester.pump();
   _expectSamePendingLine(runtime.preview, probe.pendingLine);
   probe.monitor.expectNoRuntimeEffects(runtime);
@@ -170,10 +172,10 @@ Future<void> _expectNoActiveCleanupHasNoEffects(
   WidgetTester tester,
   CanvasRuntime runtime,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final monitor = _RuntimeMonitor(runtime);
   addTearDown(monitor.dispose);
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
   await tester.pump();
   monitor.expectNoRuntimeEffects(runtime);
 }
@@ -182,12 +184,12 @@ Future<void> _expectActiveCleanupKeepsCoreState(
   WidgetTester tester,
   CanvasRuntime runtime,
 ) async {
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: true));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
   final gesture = await _downOnPaintHost(tester, const Offset(13, 14));
   await tester.pump();
   final monitor = _RuntimeMonitor(runtime);
   addTearDown(monitor.dispose);
-  await tester.pumpWidget(_surfaceHost(runtime, interactive: false));
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
   await tester.pump();
 
   expect(runtime.preview, isA<CanvasNoPreview>());
@@ -239,15 +241,23 @@ void _expectSamePendingLine(
   expect(pendingLine.thickness, expected.thickness);
 }
 
-Widget _surfaceHost(CanvasRuntime runtime, {required bool interactive}) {
-  return Directionality(
-    textDirection: TextDirection.ltr,
-    child: SizedBox(
-      width: 100,
-      height: 100,
-      child: CanvasSurface(runtime: runtime, interactive: interactive),
-    ),
-  );
+final class _SurfaceHost extends StatelessWidget {
+  const _SurfaceHost({required this.runtime, required this.interactive});
+
+  final CanvasRuntime runtime;
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: CanvasSurface(runtime: runtime, interactive: interactive),
+      ),
+    );
+  }
 }
 
 CanvasRuntime _runtime() {
