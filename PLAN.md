@@ -74,4 +74,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [ ] [Step 52. Legacy example full parity port](plan/step_52_legacy_example_full_parity_port.md)
 - [x] [Step 53. Selection chrome and move hit area](plan/step_53_selection_chrome_and_move_hit_area.md)
 - [x] [Step 54. Inline text editing](plan/step_54_inline_text_editing.md)
-- [ ] [Step 55. P14 release readiness benchmarks](plan/step_55_p14_release_readiness_benchmarks.md)
+- [x] [Step 55. P14 release readiness benchmarks](plan/step_55_p14_release_readiness_benchmarks.md)

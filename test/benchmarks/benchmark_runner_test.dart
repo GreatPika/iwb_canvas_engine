@@ -76,6 +76,10 @@ void main() {
         expect(caseScales, ['edit.add_element/1k', 'edit.add_element/10k']);
         expect(firstMetrics, containsPair('rss_delta_bytes', isA<int>()));
         expect(
+          firstMetrics,
+          containsPair('legacy_avg_us', firstMetrics['avg_us']),
+        );
+        expect(
           decoded['runtime'],
           containsPair(
             'releaseContour',

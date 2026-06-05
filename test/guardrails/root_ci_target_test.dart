@@ -235,13 +235,17 @@ void _expectNoBaselineWrites(String workflowContent) {
 
 void _expectNoDcmCommandsInCi() {
   for (final workflow in Directory('.github/workflows').listSync()) {
-    if (workflow is! File || !workflow.path.endsWith('.yml')) {
+    if (workflow is! File || !_isWorkflowFile(workflow)) {
       continue;
     }
     final content = workflow.readAsStringSync();
     expect(content, isNot(contains('dcm analyze')));
     expect(content, isNot(contains('dcm calculate-metrics')));
   }
+}
+
+bool _isWorkflowFile(File workflow) {
+  return workflow.path.endsWith('.yml') || workflow.path.endsWith('.yaml');
 }
 
 YamlMap _rootPackageJob(String workflowContent) {

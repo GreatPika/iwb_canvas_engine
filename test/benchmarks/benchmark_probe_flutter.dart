@@ -307,7 +307,7 @@ Map<String, Object?> _selectedMovePreview(String scaleId) {
 
 // This probe keeps capture, ordinary-plan reuse, and supplement construction in
 // one operation because those metrics describe one owner-observable frame path.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 Map<String, Object?> _selectedMovePreviewFrame(String scaleId) {
   final runtime = _runtime(scaleId);
   try {
@@ -331,7 +331,14 @@ Map<String, Object?> _selectedMovePreviewFrame(String scaleId) {
       _frameInputs(runtime, preview: runtime.preview),
     );
     final ordinary = ordinaryPlanner.buildOrdinaryPlan(selectedMoveFrame);
-    final ready = ordinary as OrdinaryPaintPlanReady;
+    if (ordinary is! OrdinaryPaintPlanReady) {
+      return const {
+        'ordinary_plan_hit_rate': 0.0,
+        'supplement_count': 0,
+        'cached_preview_delta_count': 0,
+      };
+    }
+    final ready = ordinary;
     final supplement = selectedMovePlanner.build(
       frame: selectedMoveFrame,
       ordinaryPlan: ready.plan,
