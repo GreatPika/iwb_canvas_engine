@@ -146,7 +146,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Current-package runner, profiles, and required-case dry-run proof
+### [x] Unit 2: Current-package runner, profiles, and required-case dry-run proof
 
 Owner:
 
