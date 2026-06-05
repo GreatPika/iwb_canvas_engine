@@ -1,0 +1,435 @@
+manifest_version: "p14_release_readiness_benchmarks_v1"
+tool_schema_version: 1
+release_contour:
+  runner_label: "ubuntu-24.04"
+  os_name: "Ubuntu"
+  os_version: "24.04"
+  flutter_channel: "stable"
+  flutter_version: "3.38.0"
+profiles:
+  - id: dry_run
+    warmups: 0
+    repetitions: 1
+    iterations: 1
+    timing_claims: false
+    scale_selection: all_required_scales
+  - id: smoke
+    warmups: 1
+    repetitions: 3
+    minimum_measured_ms: 500
+    minimum_samples: 100
+    timing_claims: true
+    scale_selection: smallest_required_scale_preserve_dense
+  - id: release
+    warmups: 1
+    repetitions: 5
+    minimum_measured_ms: 2000
+    minimum_samples: 0
+    timing_claims: true
+    scale_selection: all_required_scales
+post_baseline_regression_caps:
+  avg_us_percent: 15
+  p95_us_percent: 15
+  max_us_percent: 30
+  allocation_or_rss_percent: 10
+  allocation_floor_bytes: 65536
+  rss_floor_bytes: 1048576
+bootstrap_legacy_equivalence:
+  avg_us_multiplier: 1.35
+budget_classes:
+  - id: hot_input
+    absolute_caps:
+      avg_us: 500
+      p95_us: 2000
+      max_us: 4000
+  - id: incremental_edit
+    absolute_caps:
+      avg_us: 1000
+      p95_us: 4000
+      max_us: 8000
+  - id: frame_capture
+    absolute_caps:
+      avg_us: 4000
+      p95_us: 8000
+      max_us: 16000
+  - id: query_read
+    absolute_caps:
+      avg_us: 500
+      p95_us: 2000
+      max_us: 4000
+  - id: resource_budgeted
+    absolute_caps:
+      avg_us: 1000
+      p95_us: 4000
+      max_us: 8000
+      cold_sync_resolver_calls: 128
+  - id: bulk_io
+    absolute_caps:
+      p95_us_by_scale:
+        "1k": 100000
+        "10k": 500000
+        "50k": 1000000
+        "100k": 2000000
+      failure_mutation_count: 0
+  - id: exact_invariant
+    absolute_caps:
+      required_counts_match_manifest: true
+      positive_drift_allowed: false
+  - id: allocation_budget
+    absolute_caps:
+      zero_allocation_records: 0
+      zero_allocation_bytes: 0
+      zero_rss_delta_bytes: 0
+memory_scopes:
+  - id: zero_allocation
+    allocation_bytes_cap: 0
+    rss_delta_bytes_cap: 0
+  - id: hot_or_query
+    allocation_bytes_cap: 65536
+    rss_delta_bytes_cap: 1048576
+  - id: incremental_owner_update
+    allocation_base_bytes: 262144
+    allocation_per_reported_item_bytes: 512
+    rss_delta_bytes_cap: 2097152
+  - id: frame_or_resource
+    allocation_base_bytes: 524288
+    allocation_per_reported_item_bytes: 128
+    rss_delta_bytes_cap: 4194304
+  - id: bulk_document_1k_10k_50k_100k
+    allocation_bytes_cap_by_scale:
+      "1k": 8388608
+      "10k": 25165824
+      "50k": 125829120
+      "100k": 251658240
+    rss_delta_bytes_cap_by_scale:
+      "1k": 16777216
+      "10k": 33554432
+      "50k": 167772160
+      "100k": 335544320
+  - id: codec_fixture_bulk
+    allocation_min_bytes: 4194304
+    allocation_encoded_input_multiplier: 4
+    rss_min_bytes: 16777216
+    rss_encoded_input_multiplier: 2
+cases:
+  - id: edit.add_element
+    classification: equivalent_legacy
+    budget_classes: [incremental_edit, allocation_budget]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "avg/P95/max us, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: edit.update_visual
+    classification: equivalent_legacy
+    budget_classes: [incremental_edit, allocation_budget]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "avg/P95/max us, touched count"
+    required_metrics: [avg_us, p95_us, max_us, touched_count]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: edit.update_transform
+    classification: equivalent_legacy
+    budget_classes: [incremental_edit, allocation_budget]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "spatial touched pages, alloc bytes"
+    required_metrics: [spatial_touched_pages, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: edit.move_selection
+    classification: equivalent_legacy
+    budget_classes: [hot_input, incremental_edit, exact_invariant]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "selected count, avg/P95/max"
+    required_metrics: [selected_count, avg_us, p95_us, max_us]
+    exact_invariants:
+      - {name: selected_count_matches_input, metric: selected_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: edit.set_camera_offset
+    classification: equivalent_legacy
+    budget_classes: [hot_input, incremental_edit, exact_invariant]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "avg/P95/max us, ordinary paint-plan invalidations = 0"
+    required_metrics: [avg_us, p95_us, max_us, ordinary_paint_plan_invalidations]
+    exact_invariants:
+      - {name: ordinary_paint_plan_invalidations_zero, metric: ordinary_paint_plan_invalidations, expected: 0}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: edit.add_line
+    classification: equivalent_legacy
+    budget_classes: [incremental_edit, allocation_budget]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "avg/P95/max us, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: input.selected_move_preview
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "scene repaint count, avg/max"
+    required_metrics: [scene_repaint_count, avg_us, max_us]
+    exact_invariants:
+      - {name: scene_repaint_count_bounded, metric: scene_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: frame.selected_move_preview_cached_ordinary_plan
+    classification: new_only
+    budget_classes: [frame_capture, query_read, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "ordinary plan hit rate, supplement count, no cached previewDelta"
+    required_metrics: [ordinary_plan_hit_rate, supplement_count, cached_preview_delta_count]
+    exact_invariants:
+      - {name: cached_preview_delta_absent, metric: cached_preview_delta_count, expected: 0}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: input.marquee_preview
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "overlay repaint count, avg/max"
+    required_metrics: [overlay_repaint_count, avg_us, max_us]
+    exact_invariants:
+      - {name: overlay_repaint_count_bounded, metric: overlay_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: input.draw_preview
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "point count, avg/max"
+    required_metrics: [point_count, avg_us, max_us]
+    exact_invariants:
+      - {name: point_count_matches_input, metric: point_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+  - id: input.line_preview
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "overlay repaint count, avg/max"
+    required_metrics: [overlay_repaint_count, avg_us, max_us]
+    exact_invariants:
+      - {name: overlay_repaint_count_bounded, metric: overlay_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: input.eraser_preview
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "candidate count, exact checks"
+    required_metrics: [candidate_count, exact_check_count]
+    exact_invariants:
+      - {name: eraser_exact_checks_match_candidates, metric: exact_check_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: input.eraser_budget_exceeded
+    classification: new_only
+    budget_classes: [frame_capture, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "budget-exceeded count, partial erase count = 0"
+    required_metrics: [budget_exceeded_count, partial_erase_count]
+    exact_invariants:
+      - {name: partial_erase_count_zero, metric: partial_erase_count, expected: 0}
+    scales:
+      - {id: "dense_50k", label: "dense 50k", profiles: [dry_run, smoke, release]}
+  - id: frame.main_capture
+    classification: equivalent_legacy
+    budget_classes: [frame_capture, allocation_budget]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "avg/P95/max, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: frame.overlay_capture
+    classification: new_only
+    budget_classes: [frame_capture, allocation_budget]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "avg/P95/max, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "active_previews", label: "active previews", profiles: [dry_run, smoke, release]}
+  - id: frame.paint_candidates
+    classification: new_only
+    budget_classes: [frame_capture, allocation_budget, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "candidate count, offscreen-layer/saveLayer count"
+    required_metrics: [candidate_count, offscreen_layer_count, save_layer_count]
+    exact_invariants:
+      - {name: save_layer_count_zero, metric: save_layer_count, expected: 0}
+      - {name: offscreen_layer_count_zero, metric: offscreen_layer_count, expected: 0}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: resources.resolve_sync
+    classification: new_only
+    budget_classes: [resource_budgeted, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "SurfaceResourceSession resolver calls, session cache hits, repaint count"
+    required_metrics: [surface_resource_session_resolver_calls, session_cache_hits, repaint_count]
+    exact_invariants:
+      - {name: resolver_calls_bounded, metric: surface_resource_session_resolver_calls}
+    scales:
+      - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
+  - id: resources.resolve_sync_cold_budget
+    classification: new_only
+    budget_classes: [resource_budgeted, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "session budget resolver calls <= 128, budget placeholders, throttled repaint count"
+    required_metrics: [session_budget_resolver_calls, budget_placeholders, throttled_repaint_count]
+    exact_invariants:
+      - {name: session_budget_resolver_calls_lte_128, metric: session_budget_resolver_calls, max: 128}
+    scales:
+      - {id: "1k_uncached_image_records", label: "1k uncached image records", profiles: [dry_run, smoke, release]}
+  - id: resources.mark_dirty
+    classification: new_only
+    budget_classes: [resource_budgeted, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "repaint count, target session cache invalidation cost"
+    required_metrics: [repaint_count, target_session_cache_invalidation_cost]
+    exact_invariants:
+      - {name: target_session_cache_invalidation_bounded, metric: target_session_cache_invalidation_cost}
+    scales:
+      - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
+  - id: resources.mark_all_dirty
+    classification: new_only
+    budget_classes: [resource_budgeted, exact_invariant]
+    memory_scope: frame_or_resource
+    docs_metrics_label: "repaint count, all-entry session cache invalidation cost"
+    required_metrics: [repaint_count, all_entry_session_cache_invalidation_cost]
+    exact_invariants:
+      - {name: all_entry_session_cache_invalidation_bounded, metric: all_entry_session_cache_invalidation_cost}
+    scales:
+      - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
+  - id: projection.read_document
+    classification: new_only
+    budget_classes: [query_read]
+    memory_scope: bulk_document_1k_10k_50k_100k
+    docs_metrics_label: "first read/cache hit"
+    required_metrics: [first_read_us, cache_hit_us]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: codec.decode_v1
+    classification: equivalent_legacy
+    budget_classes: [bulk_io, allocation_budget, exact_invariant]
+    memory_scope: codec_fixture_bulk
+    docs_metrics_label: "avg/P95/max, error payload"
+    required_metrics: [avg_us, p95_us, max_us, error_payload]
+    exact_invariants:
+      - {name: error_payload_matches_fixture, metric: error_payload}
+    scales:
+      - {id: "all_fixtures", label: "all fixtures", profiles: [dry_run, smoke, release]}
+  - id: load_document.success
+    classification: equivalent_legacy
+    budget_classes: [bulk_io, allocation_budget]
+    memory_scope: bulk_document_1k_10k_50k_100k
+    docs_metrics_label: "avg/P95/max, rebuild cost, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, rebuild_cost, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: load_document.failure
+    classification: equivalent_legacy
+    budget_classes: [bulk_io, allocation_budget, exact_invariant]
+    memory_scope: bulk_document_1k_10k_50k_100k
+    docs_metrics_label: "avg/P95/max, committed mutation count = 0"
+    required_metrics: [avg_us, p95_us, max_us, committed_mutation_count]
+    exact_invariants:
+      - {name: committed_mutation_count_zero, metric: committed_mutation_count, expected: 0}
+    scales:
+      - {id: "invalid_1k", label: "invalid 1k inputs", profiles: [dry_run, smoke, release]}
+      - {id: "invalid_10k", label: "invalid 10k inputs", profiles: [dry_run, release]}
+      - {id: "invalid_50k", label: "invalid 50k inputs", profiles: [dry_run, release]}
+  - id: spatial.query_point
+    classification: equivalent_legacy
+    budget_classes: [query_read, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "tile count, fallback count"
+    required_metrics: [tile_count, fallback_count]
+    exact_invariants:
+      - {name: fallback_count_bounded, metric: fallback_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+      - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: spatial.touched_update
+    classification: equivalent_legacy
+    budget_classes: [query_read, incremental_edit, exact_invariant]
+    memory_scope: incremental_owner_update
+    docs_metrics_label: "rebuilt ids/pages"
+    required_metrics: [rebuilt_ids, rebuilt_pages]
+    exact_invariants:
+      - {name: rebuilt_pages_match_touched_set, metric: rebuilt_pages}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: runtime.dispose_during_gesture
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    docs_metrics_label: "avg/P95/max, resolver calls = 0, action events = 0"
+    required_metrics: [avg_us, p95_us, max_us, resolver_calls, action_events]
+    exact_invariants:
+      - {name: resolver_calls_zero, metric: resolver_calls, expected: 0}
+      - {name: action_events_zero, metric: action_events, expected: 0}
+    scales:
+      - {id: "active_selected_overlay_previews", label: "active selected/overlay previews", profiles: [dry_run, smoke, release]}
+  - id: diagnostics.disabled_pointer
+    classification: new_only
+    budget_classes: [hot_input, exact_invariant, allocation_budget]
+    memory_scope: zero_allocation
+    docs_metrics_label: "allocations = 0 records"
+    required_metrics: [allocation_records, allocation_bytes]
+    exact_invariants:
+      - {name: allocation_records_zero, metric: allocation_records, expected: 0}
+      - {name: allocation_bytes_zero, metric: allocation_bytes, expected: 0}
+    scales:
+      - {id: "hot_pointer", label: "hot pointer", profiles: [dry_run, smoke, release]}

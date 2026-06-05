@@ -124,7 +124,7 @@ The irreversible points are approved baseline write/approval and release accepta
 
 ## Execution Units
 
-### [ ] Unit 1: Benchmark manifest and docs source of truth
+### [x] Unit 1: Benchmark manifest and docs source of truth
 
 Owner:
 

@@ -26,13 +26,12 @@ Do not assume:
 
 Benchmark policy:
 
-```text
-equivalent legacy feature path -> no unapproved regression;
-new-only feature path -> own baseline;
-hot input path -> avg + P95 + max gates;
-paint path -> bounded by candidate count, not total scene size;
-memory path -> RSS + allocation budget.
-```
+The structured source of truth for section 24 benchmark cases, scales, metrics,
+numeric budget classes, exact invariants, and profile membership is
+`docs/_registry/benchmarks.yaml`. This section is a checked human projection of
+that manifest.
+
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 96aca8a0 -->
 
 Required benchmark cases:
 

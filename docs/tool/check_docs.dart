@@ -6,19 +6,29 @@
 // architecture invariants. Those constraints belong in structured registries,
 // generated documentation, analyzer/lint rules, Dart tests, or benchmarks.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
+import '../../tool/bench/src/benchmark_manifest.dart';
+
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
+const _benchmarksRegistryPath = 'docs/_registry/benchmarks.yaml';
 const _diagramCatalogPath = 'docs/diagrams/catalog.md';
 const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
 const _diagramCatalogMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _generatedIndexMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
+const _benchmarkPolicySourceNote =
+    'The structured source of truth for section 24 benchmark cases, scales, metrics,\n'
+    'numeric budget classes, exact invariants, and profile membership is\n'
+    '`docs/_registry/benchmarks.yaml`. This section is a checked human projection of\n'
+    'that manifest.';
+const _benchmarkFingerprintPrefix = '<!-- BENCHMARK-MANIFEST-FINGERPRINT: ';
 
 const _phaseDocs = {
   'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
@@ -132,6 +142,7 @@ void main() {
   _checkSectionReferences(sections, sectionIds, donorIds);
   _checkDonorReferences(sections, donors, sectionIds);
   _checkDiagramCatalogRegistrySymmetry(sections, sectionIds, diagrams);
+  _checkBenchmarkDocsProjection();
   _checkImplementationDiagramPhaseReferences(diagrams);
   _checkMarkdownPaths(sectionIds);
   _checkMustReadGraph(sections, sectionIds);
@@ -147,6 +158,223 @@ void main() {
   }
 
   stdout.writeln('Docs check passed.');
+}
+
+void _checkBenchmarkDocsProjection() {
+  final manifest = _loadBenchmarkManifest();
+  _checkBenchmarkPolicySourceNote(manifest);
+  final actualRows = _benchmarkRowsFromMarkdown();
+  final expectedRows = [
+    for (final benchmarkCase in manifest.cases)
+      _BenchmarkDocsRow(
+        caseId: benchmarkCase.id,
+        scales: benchmarkCase.docsScaleLabel,
+        metrics: benchmarkCase.docsMetricsLabel,
+      ),
+  ];
+
+  if (actualRows.length != expectedRows.length) {
+    _fail(
+      'docs/verification/benchmarks.md section 24 must list exactly '
+      '${expectedRows.length} manifest benchmark cases; found '
+      '${actualRows.length}',
+    );
+    return;
+  }
+  for (var index = 0; index < expectedRows.length; index++) {
+    final actual = actualRows[index];
+    final expected = expectedRows[index];
+    if (!actual.matches(expected)) {
+      _fail(
+        'benchmark docs row ${index + 1} must match '
+        '$_benchmarksRegistryPath: expected ${expected.describe()}, '
+        'found ${actual.describe()}',
+      );
+    }
+  }
+}
+
+void _checkBenchmarkPolicySourceNote(BenchmarkManifest manifest) {
+  final text = _read('docs/verification/benchmarks.md');
+  final match = RegExp(
+    r'Benchmark policy:\s*\n\n([\s\S]*?)\nRequired benchmark cases:',
+  ).firstMatch(text);
+  if (match == null) {
+    _fail('docs/verification/benchmarks.md must name benchmark policy source');
+    return;
+  }
+  final policyText = _matchGroup(match, 1, 'benchmark policy source note');
+  final expected =
+      '$_benchmarkPolicySourceNote\n\n'
+      '$_benchmarkFingerprintPrefix${_benchmarkManifestFingerprint(manifest)} -->';
+  if (policyText.trim() != expected) {
+    _fail(
+      'benchmark policy prose must be only the manifest source note and '
+      'fingerprint: $expected',
+    );
+  }
+}
+
+String _benchmarkManifestFingerprint(BenchmarkManifest manifest) {
+  final encoded = jsonEncode(_benchmarkManifestProjection(manifest));
+  var hash = 0x811c9dc5;
+  for (final codeUnit in encoded.codeUnits) {
+    hash ^= codeUnit;
+    hash = (hash * 0x01000193) & 0xffffffff;
+  }
+  return hash.toRadixString(16).padLeft(8, '0');
+}
+
+Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
+  return {
+    'manifest_version': manifest.manifestVersion,
+    'tool_schema_version': manifest.toolSchemaVersion,
+    'release_contour': {
+      'runner_label': manifest.releaseContour.runnerLabel,
+      'os_name': manifest.releaseContour.osName,
+      'os_version': manifest.releaseContour.osVersion,
+      'flutter_channel': manifest.releaseContour.flutterChannel,
+      'flutter_version': manifest.releaseContour.flutterVersion,
+    },
+    'profiles': [
+      for (final profile in manifest.profiles)
+        {
+          'id': profile.id,
+          'warmups': profile.warmups,
+          'repetitions': profile.repetitions,
+          'iterations': profile.iterations,
+          'minimum_measured_ms': profile.minimumMeasuredMs,
+          'minimum_samples': profile.minimumSamples,
+          'timing_claims': profile.timingClaims,
+          'scale_selection': profile.scaleSelection,
+        },
+    ],
+    'post_baseline_regression_caps': manifest.postBaselineRegressionCaps,
+    'bootstrap_legacy_equivalence': manifest.bootstrapLegacyEquivalence,
+    'budget_classes': [
+      for (final budget in manifest.budgetClasses)
+        {'id': budget.id, 'absolute_caps': budget.absoluteCaps},
+    ],
+    'memory_scopes': [
+      for (final scope in manifest.memoryScopes)
+        {'id': scope.id, 'caps': scope.caps},
+    ],
+    'cases': [
+      for (final benchmarkCase in manifest.cases)
+        {
+          'id': benchmarkCase.id,
+          'classification': benchmarkCase.classification,
+          'budget_classes': benchmarkCase.budgetClasses,
+          'memory_scope': benchmarkCase.memoryScope,
+          'docs_metrics_label': benchmarkCase.docsMetricsLabel,
+          'required_metrics': benchmarkCase.requiredMetrics,
+          'exact_invariants': [
+            for (final invariant in benchmarkCase.exactInvariants)
+              {
+                'name': invariant.name,
+                'metric': invariant.metric,
+                'expected': invariant.expected,
+                'max': invariant.max,
+              },
+          ],
+          'scales': [
+            for (final scale in benchmarkCase.scales)
+              {
+                'id': scale.id,
+                'label': scale.label,
+                'profiles': scale.profiles,
+              },
+          ],
+        },
+    ],
+  };
+}
+
+BenchmarkManifest _loadBenchmarkManifest() {
+  try {
+    return BenchmarkManifest.load(path: _benchmarksRegistryPath);
+  } on FormatException catch (error) {
+    _fail(error.message);
+    return const BenchmarkManifest(
+      manifestVersion: '',
+      toolSchemaVersion: 0,
+      releaseContour: BenchmarkReleaseContour(
+        runnerLabel: '',
+        osName: '',
+        osVersion: '',
+        flutterChannel: '',
+        flutterVersion: '',
+      ),
+      profiles: [],
+      budgetClasses: [],
+      memoryScopes: [],
+      cases: [],
+      postBaselineRegressionCaps: {},
+      bootstrapLegacyEquivalence: {},
+    );
+  }
+}
+
+List<_BenchmarkDocsRow> _benchmarkRowsFromMarkdown() {
+  final text = _read('docs/verification/benchmarks.md');
+  final table = RegExp(
+    r'Required benchmark cases:\s*\n\n(\| Case \| Nodes \| Metrics \|\n'
+    r'\|---\|---:\|---\|\n(?:(?:\|.*\|\n)+))',
+  ).firstMatch(text);
+  if (table == null) {
+    _fail(
+      'docs/verification/benchmarks.md must contain the section 24 cases table',
+    );
+    return const [];
+  }
+
+  final rows = <_BenchmarkDocsRow>[];
+  final tableText = _matchGroup(table, 1, 'benchmark cases table');
+  for (final line in tableText.trim().split('\n').skip(2)) {
+    final cells = line
+        .split('|')
+        .skip(1)
+        .take(3)
+        .map((cell) => cell.trim())
+        .toList();
+    if (cells.length != 3) {
+      _fail('malformed benchmark docs row: $line');
+      continue;
+    }
+    final caseMatch = RegExp(r'^`([^`]+)`$').firstMatch(cells[0]);
+    if (caseMatch == null) {
+      _fail('benchmark docs case cell must contain one code span: $line');
+      continue;
+    }
+    rows.add(
+      _BenchmarkDocsRow(
+        caseId: _matchGroup(caseMatch, 1, 'benchmark docs case id'),
+        scales: cells[1],
+        metrics: cells[2],
+      ),
+    );
+  }
+  return rows;
+}
+
+final class _BenchmarkDocsRow {
+  const _BenchmarkDocsRow({
+    required this.caseId,
+    required this.scales,
+    required this.metrics,
+  });
+
+  final String caseId;
+  final String scales;
+  final String metrics;
+
+  String describe() => '`$caseId` | $scales | $metrics';
+
+  bool matches(_BenchmarkDocsRow other) {
+    return other.caseId == caseId &&
+        other.scales == scales &&
+        other.metrics == metrics;
+  }
 }
 
 class _SectionEntry {
@@ -222,6 +450,7 @@ void _checkRequiredEntrypoints() {
     _sectionsRegistryPath,
     _donorsRegistryPath,
     _diagramsRegistryPath,
+    _benchmarksRegistryPath,
     _diagramCatalogPath,
   ];
   const requiredDirs = [
