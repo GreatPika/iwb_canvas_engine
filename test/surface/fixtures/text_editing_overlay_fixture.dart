@@ -15,6 +15,7 @@ void main() {
   _testReadOnlyPolicy();
   _testCameraPanRepositionsActiveEditor();
   _testCommitAndDismiss();
+  _testFocusLossCommit();
   _testMultilineGrowthAndMaxHeightPolicy();
   _testDisposesListeners();
   _testOverlayDoesNotMeasureText();
@@ -242,6 +243,39 @@ void _testCommitAndDismiss() {
   );
 }
 
+void _testFocusLossCommit() {
+  testWidgets('overlay commits focus loss after focus notification completes', (
+    tester,
+  ) async {
+    final otherFocusNode = FocusNode();
+    addTearDown(otherFocusNode.dispose);
+    final scenario = _OverlayScenario(
+      inlineEditOnDoubleTap: true,
+      autofocus: true,
+      commitOnFocusLoss: true,
+      trailingFocusNode: otherFocusNode,
+    );
+    addTearDown(scenario.dispose);
+    await scenario.pump(tester);
+    await scenario.doubleTapText(tester);
+    expect(_editableText(tester).focusNode.hasFocus, isTrue);
+
+    await tester.enterText(
+      find.byKey(canvasTextEditingOverlayEditableTextKey),
+      'committed on blur',
+    );
+    await tester.pump();
+    otherFocusNode.requestFocus();
+    await tester.pump();
+    await tester.pump();
+
+    expect(_textElement(scenario.runtime).text, 'committed on blur');
+    expect(scenario.runtime.textEditing.activeSession.value, isNull);
+    expect(find.byKey(canvasTextEditingOverlayEditableTextKey), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+}
+
 // Default growth and max-height scroll are the two sides of one sizing policy,
 // keeping them adjacent makes the contrast explicit.
 // ignore: halstead-volume, source-lines-of-code
@@ -347,6 +381,9 @@ final class _OverlayScenario {
     required this.inlineEditOnDoubleTap,
     CanvasDocument? document,
     this.maxEditorHeight,
+    this.autofocus = false,
+    this.commitOnFocusLoss = false,
+    this.trailingFocusNode,
   }) : runtime = CanvasRuntime(initialDocument: document ?? _document()) {
     actionSubscription = runtime.actions.listen(actions.add);
   }
@@ -354,6 +391,9 @@ final class _OverlayScenario {
   final CanvasRuntime runtime;
   final bool inlineEditOnDoubleTap;
   final double? maxEditorHeight;
+  final bool autofocus;
+  final bool commitOnFocusLoss;
+  final FocusNode? trailingFocusNode;
   final List<CanvasActionCommitted> actions = [];
   late final StreamSubscription<CanvasActionCommitted> actionSubscription;
 
@@ -380,9 +420,14 @@ final class _OverlayScenario {
                 runtime: runtime,
                 inlineEditOnDoubleTap: inlineEditOnDoubleTap,
                 maxEditorHeight: maxEditorHeight,
-                autofocus: false,
-                commitOnFocusLoss: false,
+                autofocus: autofocus,
+                commitOnFocusLoss: commitOnFocusLoss,
               ),
+              if (trailingFocusNode case final focusNode?)
+                Focus(
+                  focusNode: focusNode,
+                  child: const SizedBox(width: 1, height: 1),
+                ),
             ],
           ),
         ),

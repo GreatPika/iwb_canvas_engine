@@ -71,6 +71,7 @@ final class _CanvasTextEditingOverlayState
   ScrollController? _scrollController;
   StreamSubscription<CanvasContextActionRequested>? _contextSubscription;
   var _syncingController = false;
+  var _focusLossCommitGeneration = 0;
 
   @override
   void initState() {
@@ -256,6 +257,7 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _installSession(CanvasTextEditSession? session) {
+    _focusLossCommitGeneration += 1;
     _disposeEditorState();
     _session = session;
     if (session != null) {
@@ -281,6 +283,7 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _disposeEditorState() {
+    _focusLossCommitGeneration += 1;
     final controller = _controller;
     final focusNode = _focusNode;
     final scrollController = _scrollController;
@@ -338,10 +341,33 @@ final class _CanvasTextEditingOverlayState
   }
 
   void _handleFocusChanged() {
-    if (!widget.commitOnFocusLoss || (_focusNode?.hasFocus ?? true)) {
+    final session = _session;
+    final focusNode = _focusNode;
+    if (!widget.commitOnFocusLoss ||
+        session == null ||
+        focusNode == null ||
+        focusNode.hasFocus) {
       return;
     }
-    _commitSession();
+    _scheduleFocusLossCommit(session, focusNode);
+  }
+
+  void _scheduleFocusLossCommit(
+    CanvasTextEditSession session,
+    FocusNode focusNode,
+  ) {
+    final generation = _focusLossCommitGeneration;
+    scheduleMicrotask(() {
+      if (!mounted ||
+          generation != _focusLossCommitGeneration ||
+          !identical(_session, session) ||
+          !identical(_focusNode, focusNode) ||
+          focusNode.hasFocus ||
+          !session.isActive) {
+        return;
+      }
+      _commitSession();
+    });
   }
 
   void _commitSession() {
