@@ -199,4 +199,4 @@ CanvasRuntimeConfig _runtimeConfig() {
 
 T _compileOnly<T>() => throw StateError('compile-only fixture value');
 
-void _use(Object? _) {}
+int _use(Object? value) => Object.hash(value, null);

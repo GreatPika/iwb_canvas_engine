@@ -19,6 +19,7 @@ Future<List<GuardrailViolation>> checkSelectionOwnerSeparation({
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
     includedPaths: analysisIncludedPaths ?? ['$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   final sourceFiles = sources ?? dartSourceFilesUnder('lib');
 

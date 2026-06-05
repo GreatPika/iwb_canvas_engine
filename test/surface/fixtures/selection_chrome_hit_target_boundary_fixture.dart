@@ -20,7 +20,12 @@ void main() {
       'build',
     ).toSource();
     final nonPainterSurfaceSource = _surfaceOwnerSource(
-      excludedBasenames: {'main_painter.dart', 'overlay_painter.dart'},
+      excludedBasenames: {
+        'main_painter.dart',
+        'overlay_painter.dart',
+        'pointer_adapter.dart',
+        'text_editing_overlay.dart',
+      },
     );
 
     expect(
@@ -32,7 +37,7 @@ void main() {
     _expectNoPointerBridgeConstructors(buildPaintHost, allowedListenerCount: 0);
     _expectNoPointerBridgeConstructors(
       nonPainterSurfaceSource,
-      allowedListenerCount: 1,
+      allowedListenerCount: 0,
     );
     expect(_constructorCallCount(adapterBuild, 'Listener'), 1);
     expect(adapterBuild, contains('child: child'));

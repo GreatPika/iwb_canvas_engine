@@ -8,6 +8,7 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:test/test.dart';
 
 import '../support/flutter_in_package_test_harness.dart';
+import '../../tool/guardrails/src/repository_paths.dart';
 
 // The structural check uses analyzer resolution so aliases and helper wrappers
 // cannot hide reads from the retired SpatialQueryResult candidate seam.
@@ -39,6 +40,7 @@ Future<List<String>> _baseSpatialCandidateAccessViolations() async {
       '$root/test/frame',
       '$root/test/spatial',
     ],
+    sdkPath: analysisDartSdkPath,
   );
   final violations = <String>[];
 

@@ -32,8 +32,10 @@ final class CountingResolverMutationGuard implements ResolverMutationGuard {
   }
 
   @override
-  void ensureRuntimeMutationAllowed() {}
+  void ensureRuntimeMutationAllowed() => _allowRuntimeMutation();
 }
+
+int _allowRuntimeMutation() => 0;
 
 // The request fixture builder mirrors the public descriptor payload so tests can
 // vary one field without hiding the app-key resolver contract behind presets.

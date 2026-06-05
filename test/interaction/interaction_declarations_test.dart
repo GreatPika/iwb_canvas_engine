@@ -178,6 +178,8 @@ void _verifyPointerAdmissionFields() {
     'kind',
     'sample',
     'publishRuntimeState',
+    'selectionReplacement',
+    'markProvisionalSelectionReplacementApplied',
     'cleanupDecision',
     'selectedMoveCommit',
     'marqueeCommit',

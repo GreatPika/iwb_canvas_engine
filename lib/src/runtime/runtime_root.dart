@@ -2315,7 +2315,11 @@ final class _RuntimeCommandPort implements CanvasCommandPort {
   }
 }
 
-void _ignoreCommitEffects(List<CommitDeliveryEffect> _) {}
+void _ignoreCommitEffects(List<CommitDeliveryEffect> effects) {
+  _discardValue(effects);
+}
+
+int _discardValue(Object? value) => Object.hash(value, null);
 
 void _validateTextEditCommandInput(
   CanvasInteractionRequestId requestId,

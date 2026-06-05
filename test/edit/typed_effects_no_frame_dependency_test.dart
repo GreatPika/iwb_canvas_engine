@@ -9,6 +9,7 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:test/test.dart';
 
 import '../support/flutter_in_package_test_harness.dart';
+import '../../tool/guardrails/src/repository_paths.dart';
 
 // This guardrail uses analyzer resolution directly so relative imports,
 // re-exports, and helper type references cannot bypass the dependency boundary
@@ -36,6 +37,7 @@ void main() {
 Future<List<String>> _concreteDownstreamViolations() async {
   final collection = AnalysisContextCollection(
     includedPaths: ['${Directory.current.path}/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   final violations = <String>[];
 

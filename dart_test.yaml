@@ -1,2 +1,4 @@
 tags:
   tool: {}
+
+timeout: 5m

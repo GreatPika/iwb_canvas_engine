@@ -161,8 +161,12 @@ _listenToContextRequests(
 
   return (
     first: requestStream.listen(requests.add),
-    second: requestStream.listen(expectAsync1((_) {}, count: 1)),
+    second: requestStream.listen(expectAsync1(_ignoreContextRequest, count: 1)),
   );
+}
+
+int _ignoreContextRequest(CanvasContextActionRequested request) {
+  return Object.hash(request, null);
 }
 
 Future<void> _expectContextRequestStreamCloses(

@@ -95,7 +95,7 @@ final class _AllowingMutationGuard implements ResolverMutationGuard {
   const _AllowingMutationGuard();
 
   @override
-  void ensureRuntimeMutationAllowed() {}
+  void ensureRuntimeMutationAllowed() => _allowRuntimeMutation();
 
   @override
   T runResolverCallback<T>(T Function() callback) => callback();
@@ -103,7 +103,14 @@ final class _AllowingMutationGuard implements ResolverMutationGuard {
 
 final class _IgnoringDirtySink implements ResourceDirtyOutcomeSink {
   @override
-  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) {}
+  void deliverResourceDirtyOutcome(ResourceDirtyOutcome outcome) =>
+      _ignoreResourceDirtyOutcome(outcome);
+}
+
+int _allowRuntimeMutation() => 0;
+
+int _ignoreResourceDirtyOutcome(ResourceDirtyOutcome outcome) {
+  return Object.hash(outcome, null);
 }
 
 CanvasDocument _document() {

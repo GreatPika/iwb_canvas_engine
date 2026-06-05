@@ -28,6 +28,7 @@ Future<PublicApiSurface> resolvePublicApiSurface({String? libraryPath}) async {
     includedPaths: [
       if (libraryPath == null) repositoryRoot else resolvedLibraryPath,
     ],
+    sdkPath: analysisDartSdkPath,
   );
   try {
     final context = collection.contextFor(resolvedLibraryPath);

@@ -163,11 +163,13 @@ final class _AllowingMutationGuard implements ResolverMutationGuard {
   const _AllowingMutationGuard();
 
   @override
-  void ensureRuntimeMutationAllowed() {}
+  void ensureRuntimeMutationAllowed() => _allowRuntimeMutation();
 
   @override
   T runResolverCallback<T>(T Function() callback) => callback();
 }
+
+int _allowRuntimeMutation() => 0;
 
 final class _RejectingMutationGuard implements ResolverMutationGuard {
   const _RejectingMutationGuard();

@@ -36,7 +36,10 @@ Future<List<GuardrailViolation>> checkApiFacadesDoNotExportInternal({
   List<String>? facadePaths,
 }) async {
   final paths = facadePaths ?? _apiFacadePaths();
-  final collection = AnalysisContextCollection(includedPaths: [repositoryRoot]);
+  final collection = AnalysisContextCollection(
+    includedPaths: [repositoryRoot],
+    sdkPath: analysisDartSdkPath,
+  );
   final violations = <GuardrailViolation>[];
 
   try {

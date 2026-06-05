@@ -151,6 +151,7 @@ Future<void> _expectCommandFactsPortSurface(
 Future<CompilationUnit> _resolve(String path) async {
   final collection = AnalysisContextCollection(
     includedPaths: ['$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   try {
     final absolutePath = '$repositoryRoot/$path';
@@ -174,6 +175,7 @@ Future<CompilationUnit> _resolveFixture(String content) async {
 
   final collection = AnalysisContextCollection(
     includedPaths: [file.absolute.path, '$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   try {
     final context = collection.contextFor(file.absolute.path);

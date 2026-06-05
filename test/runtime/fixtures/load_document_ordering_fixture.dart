@@ -180,7 +180,7 @@ void _expectInteractionAlreadyCleaned(RuntimeRoot root) {
 }
 
 void _expectDeliveryGuards(RuntimeRoot root) {
-  _expectGuarded(() => root.edits.edit((_) {}));
+  _expectGuarded(() => root.edits.edit(_ignoreEditMutation));
   _expectGuarded(() => root.edits.loadDocument(CanvasDocument()));
   _expectGuarded(() => root.selection.setSelection([CanvasElementId('new')]));
   _expectGuarded(() => root.cameraPort().setOffset(const Offset(1, 1)));
@@ -189,6 +189,8 @@ void _expectDeliveryGuards(RuntimeRoot root) {
   _expectGuarded(root.generateResourceId);
   _expectGuarded(root.dispose);
 }
+
+int _ignoreEditMutation(Object edit) => Object.hash(edit, null);
 
 void _expectGuarded(void Function() action) {
   expect(

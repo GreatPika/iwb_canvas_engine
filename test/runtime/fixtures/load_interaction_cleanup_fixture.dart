@@ -127,7 +127,7 @@ void _verifyLoadFailurePreservesInteraction() {
 
 void _verifyLoadSuccessCleansEraserInteraction() {
   final actionEvents = <CanvasActionCommitted>[];
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   root.actions.listen(actionEvents.add);
   _startEraserSession(root);
   final before = root.state.value;
@@ -148,7 +148,7 @@ void _verifyLoadSuccessCleansEraserInteraction() {
 void _verifyLoadSuccessCleansPendingContextTap() {
   final actionEvents = <CanvasActionCommitted>[];
   final contextRequests = <CanvasContextActionRequested>[];
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   root.actions.listen(actionEvents.add);
   root.contextActionRequests.listen(contextRequests.add);
   _startPendingContextTap(root);
@@ -164,7 +164,7 @@ void _verifyLoadSuccessCleansPendingContextTap() {
 void _verifyLoadFailurePreservesPendingContextTap() {
   final actionEvents = <CanvasActionCommitted>[];
   final contextRequests = <CanvasContextActionRequested>[];
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   root.actions.listen(actionEvents.add);
   root.contextActionRequests.listen(contextRequests.add);
   _startPendingContextTap(root);
@@ -188,7 +188,7 @@ void _verifyLoadFailurePreservesPendingContextTap() {
 }
 
 Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   try {
     final request = await _issueContextRequest(root);
     expect(
@@ -206,7 +206,7 @@ Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
 }
 
 Future<void> _verifyDisposeClearsLiveRequestFacts() async {
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   final request = await _issueContextRequest(root);
   expect(root.interactionEngine.requestFactsFor(request.requestId), isNotNull);
 
@@ -244,7 +244,7 @@ void _verifyDisposeCleanupPublication() {
 }
 
 void _expectDisposeWithoutInteractionSilent() {
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   var publications = 0;
   root.state.addListener(() {
     publications += 1;
@@ -259,7 +259,7 @@ void _expectDisposeWithoutInteractionSilent() {
 
 void _expectDisposeWithInteractionPublishesCleanup() {
   final actionEvents = <CanvasActionCommitted>[];
-  final root = _runtimeRoot((_) {});
+  final root = _runtimeRoot(_ignoreCommitEffects);
   root.actions.listen(actionEvents.add);
   _startPointerSession(root);
   root.replaceInteractionPreview(
@@ -278,7 +278,7 @@ void _expectDisposeWithInteractionPublishesCleanup() {
 
 void _verifyDisposeRestoresProvisionalSelection() {
   final actionEvents = <CanvasActionCommitted>[];
-  final root = _unselectedMoveRuntimeRoot((_) {});
+  final root = _unselectedMoveRuntimeRoot(_ignoreCommitEffects);
   root.actions.listen(actionEvents.add);
   _startProvisionalUnselectedMove(root);
   final listenerProbe = _recordSelectionSnapshots(root);
@@ -398,6 +398,10 @@ RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
     ),
     commitEffectObserver: observer,
   );
+}
+
+int _ignoreCommitEffects(List<CommitDeliveryEffect> effects) {
+  return Object.hash(effects, null);
 }
 
 void _startPointerSession(RuntimeRoot root) {

@@ -115,6 +115,7 @@ dcm:
     - avoid-generics-shadowing
     - avoid-throw-in-catch-block
     - avoid-substring
+    - no-empty-block
     - avoid-returning-widgets
     - avoid-unnecessary-setstate
     - prefer-commenting-analyzer-ignores:

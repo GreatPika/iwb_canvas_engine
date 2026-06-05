@@ -21,6 +21,7 @@ Future<List<GuardrailViolation>> checkNoPublicDocumentLiveState({
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
     includedPaths: analysisIncludedPaths ?? ['$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   final sourceFiles = sources ?? dartSourceFilesUnder('lib');
 
@@ -65,6 +66,7 @@ Future<List<GuardrailViolation>> checkProjectionOnlyExplicitReadPaths({
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
     includedPaths: analysisIncludedPaths ?? ['$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
   final sourceFiles = sources ?? dartSourceFilesUnder('lib');
 

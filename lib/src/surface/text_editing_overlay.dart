@@ -245,6 +245,9 @@ final class _CanvasTextEditingOverlayState
     }
     _syncControllerFromSession(next);
     if (mounted) {
+      // Rebuild from runtime-owned session state; there is no local field to
+      // mutate because build reads the current session geometry and style.
+      // ignore: no-empty-block
       setState(() {});
     }
   }
@@ -253,12 +256,18 @@ final class _CanvasTextEditingOverlayState
     if (_session == null || !mounted) {
       return;
     }
+    // Rebuild from runtime state after external document/camera changes.
+    // ignore: no-empty-block
     setState(() {});
   }
 
   void _installSession(CanvasTextEditSession? session) {
     _replaceSessionState(session);
     if (mounted) {
+      // Rebuild after replacing controller/focus/session objects owned by this
+      // state; the mutation happens before setState so disposal ordering stays
+      // explicit.
+      // ignore: no-empty-block
       setState(() {});
     }
   }
@@ -322,6 +331,9 @@ final class _CanvasTextEditingOverlayState
     }
     session.updateText(controller.text);
     if (mounted) {
+      // Rebuild after the session accepts edited text; text state is owned by
+      // the runtime session, not duplicated in this widget state.
+      // ignore: no-empty-block
       setState(() {});
     }
   }

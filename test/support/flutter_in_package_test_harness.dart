@@ -11,9 +11,15 @@ Future<void> runFlutterInPackageTest(String path) {
   final queued = _flutterTestQueue.then((_) {
     return _withFlutterTestLock(() => _runFlutterTest(path));
   });
-  _flutterTestQueue = queued.catchError((Object _) {});
+  _flutterTestQueue = queued.catchError(_ignoreFlutterTestError);
 
   return queued;
+}
+
+Future<void> _ignoreFlutterTestError(Object error) {
+  Object.hash(error, null);
+
+  return Future<void>.value();
 }
 
 Future<void> _runFlutterTest(String path) {

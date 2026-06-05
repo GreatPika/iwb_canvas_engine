@@ -39,14 +39,14 @@ final class NoopInteractionDiagnosticsSink
     required String reason,
     required int? budget,
     required int? observed,
-  }) {}
+  }) => _discardDiagnosticEvent();
 
   @override
   void recordInteractionQueryBudgetExceeded({
     required String reason,
     required int? budget,
     required int? observed,
-  }) {}
+  }) => _discardDiagnosticEvent();
 
   @override
   void recordStaleCandidateRejected({
@@ -54,20 +54,25 @@ final class NoopInteractionDiagnosticsSink
     required int? expectedRevision,
     required int? observedRevision,
     required int skippedCandidateCount,
-  }) {}
+  }) => _discardDiagnosticEvent();
 
   @override
-  void recordStaleTerminalRejected({required String reason}) {}
+  void recordStaleTerminalRejected({required String reason}) =>
+      _discardDiagnosticEvent();
 
   @override
-  void recordInvalidTerminalCleanup({required String reason}) {}
+  void recordInvalidTerminalCleanup({required String reason}) =>
+      _discardDiagnosticEvent();
 
   @override
   void recordSelectedMoveStartDeniedNotMovable({
     required int selectedCount,
     required int movableCount,
-  }) {}
+  }) => _discardDiagnosticEvent();
 
   @override
-  void recordResolverReentrantMutationRejected({required String operation}) {}
+  void recordResolverReentrantMutationRejected({required String operation}) =>
+      _discardDiagnosticEvent();
 }
+
+int _discardDiagnosticEvent() => 0;

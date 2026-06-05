@@ -21,6 +21,7 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
   final violations = <GuardrailViolation>[];
   final collection = AnalysisContextCollection(
     includedPaths: ['$repositoryRoot/lib'],
+    sdkPath: analysisDartSdkPath,
   );
 
   try {
