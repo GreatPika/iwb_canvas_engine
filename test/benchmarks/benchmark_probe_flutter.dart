@@ -35,16 +35,211 @@ import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+import '../../tool/bench/src/benchmark_manifest.dart';
+
 void main() {
-  test('benchmark probe executes requested case', () async {
-    final args = _probeArgs();
-    final options = _ProbeOptions.parse(args);
-    final result = await _runProbe(options);
-    expect(result['elapsedUsSamples'], isNotEmpty);
-    // Machine-readable stdout is the probe protocol consumed by tool/bench.
-    // ignore: avoid_print
-    print('BENCHMARK_PROBE_JSON:${jsonEncode(result)}');
+  // Lifecycle proof assertions live in named helpers so each scenario remains
+  // independently reviewable instead of one oversized test body.
+  // ignore: missing-test-assertion
+  test('benchmark probe executes requested case', _probeExecutesRequestedCase);
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan separates setup timing from action samples',
+    _casePlanSeparatesSetupTimingFromActionSamples,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan runs cleanup after action failure',
+    _casePlanRunsCleanupAfterActionFailure,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan fails before timing claims when prepare fails',
+    _casePlanFailsBeforeTimingClaimsWhenPrepareFails,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test('case plan fails when cleanup fails', _casePlanFailsWhenCleanupFails);
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan fails closed for missing boundary registry entries',
+    _casePlanFailsClosedForMissingBoundaryRegistryEntries,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan fails when operation lacks boundary metadata',
+    _casePlanFailsWhenOperationLacksBoundaryMetadata,
+  );
+}
+
+Future<void> _probeExecutesRequestedCase() async {
+  final args = _probeArgs();
+  final options = _ProbeOptions.parse(args);
+  final result = await _runProbe(options);
+  expect(result['elapsedUsSamples'], isNotEmpty);
+  // Machine-readable stdout is the probe protocol consumed by tool/bench.
+  // ignore: avoid_print
+  print('BENCHMARK_PROBE_JSON:${jsonEncode(result)}');
+}
+
+Future<void> _casePlanSeparatesSetupTimingFromActionSamples() async {
+  final events = <String>[];
+  final result = await _runProbePlan(
+    _fakeOptions(warmups: 1, repetitions: 1),
+    _BenchmarkCasePlan(
+      prepare: () {
+        events.add('prepare');
+        return const _PreparedProbeFixture(
+          value: 'fixture',
+          setupMetrics: {'setup_allocation_bytes': 1000},
+        );
+      },
+      measure: (fixture) {
+        expect(fixture, 'fixture');
+        events.add('measure');
+        return const {'allocation_bytes': 10};
+      },
+      cleanup: (fixture) {
+        expect(fixture, 'fixture');
+        events.add('cleanup');
+      },
+      setupElapsedUsOverride: 5000,
+      actionElapsedUsOverride: 7,
+      setupRssDeltaOverride: 2000,
+      actionRssDeltaOverride: 20,
+    ),
+  );
+
+  expect(events, [
+    'prepare',
+    'measure',
+    'cleanup',
+    'prepare',
+    'measure',
+    'cleanup',
+  ]);
+  _expectActionAndSetupSamples(result);
+  _expectActionAndSetupMetrics(result);
+}
+
+void _expectActionAndSetupSamples(Map<String, Object?> result) {
+  expect(result['elapsedUsSamples'], [7]);
+  expect(result['setupUsSamples'], [5000]);
+}
+
+void _expectActionAndSetupMetrics(Map<String, Object?> result) {
+  expect(result['metrics'], containsPair('avg_us', 7));
+  expect(result['metrics'], containsPair('p95_us', 7));
+  expect(result['metrics'], containsPair('max_us', 7));
+  expect(result['metrics'], containsPair('setup_us', 5000));
+  expect(result['metrics'], containsPair('allocation_bytes', 10));
+  expect(result['metrics'], containsPair('rss_delta_bytes', 20));
+  expect(result['metrics'], containsPair('setup_allocation_bytes', 1000));
+  expect(result['metrics'], containsPair('setup_rss_delta_bytes', 2000));
+}
+
+Future<void> _casePlanRunsCleanupAfterActionFailure() async {
+  final events = <String>[];
+
+  await expectLater(
+    _runProbePlan(
+      _fakeOptions(),
+      _BenchmarkCasePlan(
+        prepare: () {
+          events.add('prepare');
+          return const _PreparedProbeFixture();
+        },
+        measure: (_) {
+          events.add('measure');
+          throw StateError('action failed');
+        },
+        cleanup: (_) {
+          events.add('cleanup');
+        },
+      ),
+    ),
+    throwsA(isA<StateError>()),
+  );
+  expect(events, ['prepare', 'measure', 'cleanup']);
+}
+
+Future<void> _casePlanFailsBeforeTimingClaimsWhenPrepareFails() async {
+  final events = <String>[];
+
+  await expectLater(
+    _runProbePlan(
+      _fakeOptions(),
+      _BenchmarkCasePlan(
+        prepare: () {
+          events.add('prepare');
+          throw StateError('prepare failed');
+        },
+        measure: (_) {
+          events.add('measure');
+          return const {};
+        },
+        cleanup: (_) {
+          events.add('cleanup');
+        },
+      ),
+    ),
+    throwsA(isA<StateError>()),
+  );
+  expect(events, ['prepare']);
+}
+
+Future<void> _casePlanFailsWhenCleanupFails() async {
+  await expectLater(
+    _runProbePlan(
+      _fakeOptions(),
+      _BenchmarkCasePlan(
+        prepare: () => const _PreparedProbeFixture(),
+        measure: (_) => const {},
+        cleanup: (_) => throw StateError('cleanup failed'),
+      ),
+    ),
+    throwsA(isA<StateError>()),
+  );
+}
+
+void _casePlanFailsClosedForMissingBoundaryRegistryEntries() {
+  expect(
+    () => _casePlan('fake.unregistered', '1k'),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('has no benchmark measurement boundary'),
+      ),
+    ),
+  );
+}
+
+void _casePlanFailsWhenOperationLacksBoundaryMetadata() {
+  const registry = _CaseBoundaryRegistry({
+    'edit.add_element': _CaseBoundaryRegistryEntry(
+      timedScope: 'action_only',
+      setupScope: '',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+    ),
   });
+
+  expect(
+    () => _casePlan('edit.add_element', '1k', boundaryRegistry: registry),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('has incomplete benchmark measurement boundary'),
+      ),
+    ),
+  );
 }
 
 List<String> _probeArgs() {
@@ -61,18 +256,27 @@ List<String> _probeArgs() {
   ];
 }
 
-Future<Map<String, Object?>> _runProbe(_ProbeOptions options) async {
+Future<Map<String, Object?>> _runProbe(_ProbeOptions options) =>
+    _runProbePlan(options, _casePlan(options.caseId, options.scaleId));
+
+Future<Map<String, Object?>> _runProbePlan(
+  _ProbeOptions options,
+  _BenchmarkCasePlan plan,
+) async {
   for (var index = 0; index < options.warmups; index++) {
-    await _measureOperation(options.caseId, options.scaleId);
+    await _measurePlan(plan);
   }
 
   final samples = <int>[];
+  final setupUsSamples = <int>[];
   final metrics = <String, Object?>{};
   final total = Stopwatch()..start();
   do {
-    final sample = await _measureOperation(options.caseId, options.scaleId);
+    final sample = await _measurePlan(plan);
     samples.add(sample.elapsedUs);
+    setupUsSamples.add(sample.setupUs);
     metrics.addAll(sample.metrics);
+    metrics.addAll(sample.setupMetrics);
   } while (_needsMoreSamples(
     options,
     samples.length,
@@ -80,9 +284,11 @@ Future<Map<String, Object?>> _runProbe(_ProbeOptions options) async {
   ));
   total.stop();
   metrics.addAll(_timingMetrics(samples));
+  metrics['setup_us'] = _avgUs(setupUsSamples);
 
   return {
     'elapsedUsSamples': samples,
+    'setupUsSamples': setupUsSamples,
     'metrics': metrics,
     'runtime': {
       'runtimeMode': 'flutter_test',
@@ -103,10 +309,13 @@ bool _assertionsEnabled() {
 
 Map<String, Object?> _timingMetrics(List<int> samples) {
   final sortedSamples = [...samples]..sort();
-  final avgUs = (samples.reduce((a, b) => a + b) / samples.length).round();
   final p95Us = sortedSamples[((sortedSamples.length - 1) * 0.95).round()];
   final maxUs = sortedSamples.last;
-  return {'avg_us': avgUs, 'p95_us': p95Us, 'max_us': maxUs};
+  return {'avg_us': _avgUs(samples), 'p95_us': p95Us, 'max_us': maxUs};
+}
+
+int _avgUs(List<int> samples) {
+  return (samples.reduce((a, b) => a + b) / samples.length).round();
 }
 
 bool _needsMoreSamples(
@@ -128,19 +337,71 @@ bool _needsMoreSamples(
   return !durationSatisfied && !sampleFallbackSatisfied;
 }
 
-Future<_ProbeSample> _measureOperation(String caseId, String scaleId) async {
-  final rssBefore = ProcessInfo.currentRss;
-  final stopwatch = Stopwatch()..start();
-  final metrics = Map<String, Object?>.of(await _runOperation(caseId, scaleId));
-  stopwatch.stop();
-  final rssDelta = math.max(ProcessInfo.currentRss - rssBefore, 0);
+Future<_ProbeSample> _measurePlan(_BenchmarkCasePlan plan) async {
+  final setup = await _measureSetup(plan);
+  try {
+    return await _measureAction(plan, setup);
+  } finally {
+    await plan.cleanup(setup.prepared.value);
+  }
+}
+
+Future<_MeasuredSetup> _measureSetup(_BenchmarkCasePlan plan) async {
+  final setupRssBefore = ProcessInfo.currentRss;
+  final setupStopwatch = Stopwatch()..start();
+  final prepared = await plan.prepare();
+  setupStopwatch.stop();
+  final setupRssDelta =
+      plan.setupRssDeltaOverride ??
+      math.max(ProcessInfo.currentRss - setupRssBefore, 0);
+  final setupElapsedUs =
+      plan.setupElapsedUsOverride ?? setupStopwatch.elapsedMicroseconds;
+  final setupMetrics = Map<String, Object?>.of(prepared.setupMetrics)
+    ..putIfAbsent('setup_allocation_bytes', () => setupRssDelta)
+    ..putIfAbsent('setup_rss_delta_bytes', () => setupRssDelta);
+  return _MeasuredSetup(
+    prepared: prepared,
+    setupUs: setupElapsedUs == 0 ? 1 : setupElapsedUs,
+    setupMetrics: setupMetrics,
+  );
+}
+
+Future<_ProbeSample> _measureAction(
+  _BenchmarkCasePlan plan,
+  _MeasuredSetup setup,
+) async {
+  final actionRssBefore = ProcessInfo.currentRss;
+  final actionStopwatch = Stopwatch()..start();
+  final metrics = Map<String, Object?>.of(
+    await plan.measure(setup.prepared.value),
+  );
+  actionStopwatch.stop();
+  final actionRssDelta =
+      plan.actionRssDeltaOverride ??
+      math.max(ProcessInfo.currentRss - actionRssBefore, 0);
+  final elapsedUs =
+      plan.actionElapsedUsOverride ?? actionStopwatch.elapsedMicroseconds;
   metrics
-    ..putIfAbsent('allocation_bytes', () => rssDelta)
-    ..putIfAbsent('rss_delta_bytes', () => rssDelta);
-  final elapsedUs = stopwatch.elapsedMicroseconds;
+    ..putIfAbsent('allocation_bytes', () => actionRssDelta)
+    ..putIfAbsent('rss_delta_bytes', () => actionRssDelta);
   return _ProbeSample(
     elapsedUs: elapsedUs == 0 ? 1 : elapsedUs,
+    setupUs: setup.setupUs,
     metrics: metrics,
+    setupMetrics: setup.setupMetrics,
+  );
+}
+
+_BenchmarkCasePlan _casePlan(
+  String caseId,
+  String scaleId, {
+  _CaseBoundaryRegistry? boundaryRegistry,
+}) {
+  (boundaryRegistry ?? _caseBoundaryRegistry()).validate(caseId);
+  return _BenchmarkCasePlan(
+    prepare: () => const _PreparedProbeFixture(),
+    measure: (_) => _runOperation(caseId, scaleId),
+    cleanup: (_) => null,
   );
 }
 
@@ -948,11 +1209,125 @@ CanvasElementId _elementId(int index) => CanvasElementId('e$index');
 
 final _layerId = CanvasLayerId('layer-0');
 
+_CaseBoundaryRegistry _caseBoundaryRegistry() {
+  final manifest = BenchmarkManifest.load();
+  return _CaseBoundaryRegistry({
+    for (final benchmarkCase in manifest.cases)
+      benchmarkCase.id: _CaseBoundaryRegistryEntry(
+        timedScope: benchmarkCase.measurementBoundary.timedScope,
+        setupScope: benchmarkCase.measurementBoundary.setupScope,
+        primaryTiming: benchmarkCase.measurementBoundary.primaryTiming,
+        primaryMemory: benchmarkCase.measurementBoundary.primaryMemory,
+      ),
+  });
+}
+
+final class _CaseBoundaryRegistry {
+  const _CaseBoundaryRegistry(this.entries);
+
+  final Map<String, _CaseBoundaryRegistryEntry> entries;
+
+  void validate(String caseId) {
+    final entry = entries[caseId];
+    if (entry == null) {
+      throw StateError('$caseId has no benchmark measurement boundary.');
+    }
+    if (!entry.isComplete) {
+      throw StateError(
+        '$caseId has incomplete benchmark measurement boundary.',
+      );
+    }
+  }
+}
+
+final class _CaseBoundaryRegistryEntry {
+  const _CaseBoundaryRegistryEntry({
+    required this.timedScope,
+    required this.setupScope,
+    required this.primaryTiming,
+    required this.primaryMemory,
+  });
+
+  final String timedScope;
+  final String setupScope;
+  final String primaryTiming;
+  final String primaryMemory;
+
+  bool get isComplete {
+    return timedScope.isNotEmpty &&
+        setupScope.isNotEmpty &&
+        primaryTiming.isNotEmpty &&
+        primaryMemory.isNotEmpty;
+  }
+}
+
+final class _BenchmarkCasePlan {
+  const _BenchmarkCasePlan({
+    required this.prepare,
+    required this.measure,
+    required this.cleanup,
+    this.setupElapsedUsOverride,
+    this.actionElapsedUsOverride,
+    this.setupRssDeltaOverride,
+    this.actionRssDeltaOverride,
+  });
+
+  final FutureOr<_PreparedProbeFixture> Function() prepare;
+  final FutureOr<Map<String, Object?>> Function(Object? fixture) measure;
+  final FutureOr<void> Function(Object? fixture) cleanup;
+  final int? setupElapsedUsOverride;
+  final int? actionElapsedUsOverride;
+  final int? setupRssDeltaOverride;
+  final int? actionRssDeltaOverride;
+}
+
+final class _PreparedProbeFixture {
+  const _PreparedProbeFixture({this.value, this.setupMetrics = const {}});
+
+  final Object? value;
+  final Map<String, Object?> setupMetrics;
+}
+
+final class _MeasuredSetup {
+  const _MeasuredSetup({
+    required this.prepared,
+    required this.setupUs,
+    required this.setupMetrics,
+  });
+
+  final _PreparedProbeFixture prepared;
+  final int setupUs;
+  final Map<String, Object?> setupMetrics;
+}
+
 final class _ProbeSample {
-  const _ProbeSample({required this.elapsedUs, required this.metrics});
+  const _ProbeSample({
+    required this.elapsedUs,
+    required this.setupUs,
+    required this.metrics,
+    required this.setupMetrics,
+  });
 
   final int elapsedUs;
+  final int setupUs;
   final Map<String, Object?> metrics;
+  final Map<String, Object?> setupMetrics;
+}
+
+_ProbeOptions _fakeOptions({
+  String caseId = 'fake.case',
+  int warmups = 0,
+  int repetitions = 1,
+}) {
+  return _ProbeOptions(
+    caseId: caseId,
+    scaleId: 'fake',
+    warmups: warmups,
+    repetitions: repetitions,
+    minimumMeasuredMs: 0,
+    minimumSamples: 0,
+    timingClaims: false,
+  );
 }
 
 final class _ProbeOptions {
