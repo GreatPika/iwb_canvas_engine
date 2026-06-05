@@ -108,6 +108,7 @@ coverage:
     - lib/src/interaction/**
     - lib/src/tools/**
     - lib/src/surface/**
+    - tool/bench/src/release_readiness.dart
   sensitiveThrows:
     - owner: codec.schema_v1
       under: lib/src/codec/**

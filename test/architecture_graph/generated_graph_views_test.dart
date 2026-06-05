@@ -6,7 +6,7 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
-const _selectedArchitectureGraphPhase = 'P13';
+const _selectedArchitectureGraphPhase = 'P14';
 
 void main() {
   group('rendered views', () {
@@ -90,11 +90,7 @@ void _expectCurrentPhaseView(Map<String, String> views) {
 void _expectFutureView(Map<String, String> views) {
   expect(
     views['docs/diagrams/generated/future_target.mmd'],
-    contains('planned reports errors to by P14'),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    contains('diagnostics_hub'),
+    isNot(contains('planned reports errors to by P14')),
   );
   expect(
     views['docs/diagrams/generated/future_target.mmd'],

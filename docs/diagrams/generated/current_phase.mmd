@@ -1,7 +1,7 @@
 %% GENERATED FILE. Do not edit by hand.
 %% Source: docs/architecture/architecture_graph.yaml
 %% View: Selected phase architecture graph
-%% Selected phase: P13
+%% Selected phase: P14
 flowchart LR
   api_camera_port["Public camera port<br/>required by P4"]
   api_canvas_runtime["Canvas runtime facade<br/>required by P4"]
@@ -44,12 +44,14 @@ flowchart LR
   runtime_root -->|uses interaction target geometry through by P12| geometry_spatial_index
   flutter_surface -->|planned drives public runtime ports by P13| api_canvas_runtime
   frame_renderer -->|resolves resources through by P9| resource_surface_session
+  geometry_spatial_index -->|planned reports errors to by P14| diagnostics_hub
   interaction_engine -->|reports errors to by P10| diagnostics_hub
   load_document_pipeline -->|changes data through by P6| store_document_kernel
   runtime_root -->|owns and creates by P8| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort by P9| frame_renderer
   runtime_root -->|emits user actions by P10| api_canvas_runtime
   runtime_root -->|invalidates resource session through by P7| resource_surface_session
+  runtime_root -->|planned reports errors to by P14| diagnostics_hub
   runtime_root -->|composition by P7| resource_kernel
   runtime_root -->|owns and creates by P4| selection_kernel
   runtime_root -->|owns and creates by P4| store_document_kernel

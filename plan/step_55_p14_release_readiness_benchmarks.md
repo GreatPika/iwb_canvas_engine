@@ -212,7 +212,7 @@ Depends On:
 
 Unit 2 and Unit 3.
 
-### [ ] Unit 5: ReleaseReadiness graph bridge and P14 generated view closure
+### [x] Unit 5: ReleaseReadiness graph bridge and P14 generated view closure
 
 Owner:
 
