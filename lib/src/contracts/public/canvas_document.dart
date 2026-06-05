@@ -236,7 +236,7 @@ final class CanvasPalette {
     }
   }
 
-  CanvasPalette.defaults()
+  const CanvasPalette.defaults()
     : _penColors = const [],
       _backgroundColors = const [],
       _gridSizes = const [];

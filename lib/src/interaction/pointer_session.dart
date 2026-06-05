@@ -42,7 +42,7 @@ final class PointerSessionSelectionCapture {
 // those variants in this value keeps token/session identity updates atomic.
 // ignore: coupling-between-object-classes, number-of-methods
 final class PointerSession {
-  PointerSession._({
+  const PointerSession._({
     required this.kind,
     required this.token,
     required this.controllerEpoch,
@@ -589,7 +589,7 @@ final class _DrawStrokePointerPayload extends _PointerSessionPayload {
 }
 
 final class _EraserPointerPayload extends _PointerSessionPayload {
-  _EraserPointerPayload({
+  const _EraserPointerPayload({
     required super.startWorld,
     required super.currentWorld,
     required this.eraser,

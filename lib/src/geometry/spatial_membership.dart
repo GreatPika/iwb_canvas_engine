@@ -6,7 +6,7 @@ import 'geometry_policy.dart';
 import 'spatial_query_policy.dart';
 
 final class SpatialMembership {
-  SpatialMembership._({
+  const SpatialMembership._({
     required this.handle,
     required this.boundsWorld,
     required this.indexKind,

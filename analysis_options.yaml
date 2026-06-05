@@ -108,6 +108,8 @@ dcm:
     - avoid-missed-calls
     - avoid-commented-out-code:
         min-lines: 2
+    - avoid-returning-widgets
+    - avoid-unnecessary-setstate
     - prefer-commenting-analyzer-ignores:
         ignore-global: true
     - avoid-global-state

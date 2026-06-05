@@ -27,7 +27,7 @@ CanvasRuntimeSurfacePort? canvasRuntimeSurfacePortFor(Object runtime) {
 }
 
 final class CanvasRuntimeSurfacePort {
-  CanvasRuntimeSurfacePort._(this._root);
+  const CanvasRuntimeSurfacePort._(this._root);
 
   final RuntimeRoot _root;
 

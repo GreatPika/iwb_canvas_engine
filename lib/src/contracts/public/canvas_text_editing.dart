@@ -106,7 +106,7 @@ final class CanvasTextEditStyle {
 // invariant less explicit for custom overlay consumers.
 // ignore: number-of-methods
 final class CanvasTextEditSession {
-  CanvasTextEditSession._({
+  const CanvasTextEditSession._({
     required this.elementId,
     required this.requestId,
     required this.documentRevision,

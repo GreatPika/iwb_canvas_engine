@@ -46,7 +46,7 @@ final class SelectedMoveSupplementPlan {
 // stage remains visibly outside ordinary cache writes.
 // ignore: coupling-between-object-classes
 final class SelectedMoveSupplementPlanner {
-  SelectedMoveSupplementPlanner({
+  const SelectedMoveSupplementPlanner({
     required FrameFactsPort frameFacts,
     required SelectedMovePaintQuery queryPaint,
   }) : _frameFacts = frameFacts,

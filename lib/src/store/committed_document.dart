@@ -37,7 +37,7 @@ final class CommittedDocument {
     );
   }
 
-  CommittedDocument._({
+  const CommittedDocument._({
     required this.camera,
     required this.background,
     required this.palette,
