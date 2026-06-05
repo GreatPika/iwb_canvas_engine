@@ -190,7 +190,7 @@ Depends On:
 
 Unit 1 and Unit 2.
 
-### [ ] Unit 4: CI benchmark lanes and fail-closed workflow proof
+### [x] Unit 4: CI benchmark lanes and fail-closed workflow proof
 
 Owner:
 

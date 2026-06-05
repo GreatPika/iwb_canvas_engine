@@ -22,6 +22,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check generated docs
+        run: dart run docs/tool/sync_generated_docs.dart --check
+
+      - name: Check docs
+        run: dart run docs/tool/check_docs.dart
+
+      - name: Test benchmark manifest
+        run: dart test test/benchmarks/benchmark_manifest_test.dart
+
+      - name: Test benchmark required cases
+        run: dart test test/benchmarks/required_cases_test.dart
+
+      - name: Test benchmark diff fixtures
+        run: dart test test/benchmarks/benchmark_diff_test.dart
+
       - name: Analyze Dart
         run: dart analyze
 

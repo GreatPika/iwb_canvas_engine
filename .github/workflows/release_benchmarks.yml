@@ -1,0 +1,37 @@
+name: Release benchmarks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  release-benchmarks:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.38.0
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run release benchmarks
+        run: dart run tool/bench/run.dart --profile=release
+
+      - name: Diff release benchmarks
+        run: dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_38_0.json
+
+      - name: Check P14 architecture graph
+        run: dart run tool/architecture_graph/check.dart --phase P14
+
+      - name: Check P14 generated graph views
+        run: dart run tool/architecture_graph/generate_views.dart --phase P14 --check
+
+      - name: Run guardrails
+        run: dart run tool/guardrails/run.dart

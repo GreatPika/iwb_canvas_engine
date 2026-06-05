@@ -81,3 +81,15 @@ Release benchmark interpretation:
   is read-only with respect to approved baselines.
 - `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json`
   is the manual approved-baseline write path after first-baseline acceptance.
+
+Benchmark CI routing:
+
+- Root PR CI runs deterministic benchmark machinery checks only: manifest tests,
+  required-case dry-run proof, diff fixtures, docs projection checks, analyze,
+  and guardrails.
+- Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.38.0` stable,
+  writes the current release report, runs the read-only release diff, and then
+  blocks on P14 graph, generated-view, and guardrail checks.
+- Manual baseline update is a separate `workflow_dispatch` route that writes a
+  candidate under `build/bench/candidates/`, runs `update_baseline`, and uploads
+  the accepted baseline artifact without auto-committing it.
