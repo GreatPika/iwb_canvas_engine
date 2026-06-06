@@ -234,6 +234,7 @@ void main() {
           containsPair('releaseContour', containsPair('osVersion', '24.04')),
         );
         expect(decoded['runtime'], containsPair('osName', isNot('Ubuntu')));
+        expect(decoded['runtime'], containsPair('profileId', 'release'));
         expect(decoded['runtime'], containsPair('runtimeMode', 'flutter_test'));
         expect(decoded['runtime'], containsPair('assertionsEnabled', isTrue));
         expect(decoded['runtime'], containsPair('deviceId', isNull));
@@ -509,6 +510,7 @@ BenchmarkCaseAdapter _fakeAdapter({
       measurementBoundary: benchmarkCase.measurementBoundary,
       fixtureShape: benchmarkCase.fixtureShape,
       runtime: const BenchmarkProbeRuntime(
+        profileId: 'dry_run',
         runtimeMode: 'flutter_test',
         assertionsEnabled: true,
         debugInvariantMode: false,

@@ -21,12 +21,23 @@ final class FamilyTables {
   }) : this._(_admitElements(elements, resourceIds));
 
   FamilyTables._(_AdmittedRows admitted)
-    : imageRows = Map.unmodifiable(admitted.imageRows),
-      pathRows = Map.unmodifiable(admitted.pathRows),
-      textRows = Map.unmodifiable(admitted.textRows),
-      strokeRows = Map.unmodifiable(admitted.strokeRows),
-      lineRows = Map.unmodifiable(admitted.lineRows),
-      rectRows = Map.unmodifiable(admitted.rectRows);
+    : this._fromTables(
+        imageRows: Map.unmodifiable(admitted.imageRows),
+        pathRows: Map.unmodifiable(admitted.pathRows),
+        textRows: Map.unmodifiable(admitted.textRows),
+        strokeRows: Map.unmodifiable(admitted.strokeRows),
+        lineRows: Map.unmodifiable(admitted.lineRows),
+        rectRows: Map.unmodifiable(admitted.rectRows),
+      );
+
+  const FamilyTables._fromTables({
+    required this.imageRows,
+    required this.pathRows,
+    required this.textRows,
+    required this.strokeRows,
+    required this.lineRows,
+    required this.rectRows,
+  });
 
   final Map<String, ImageRow> imageRows;
   final Map<String, PathRow> pathRows;
@@ -56,10 +67,16 @@ final class FamilyTables {
   }
 
   FamilyTables addElement(CanvasElement element, Set<String> resourceIds) {
-    final admitted = _copyRows();
-    admitted.add(element, resourceIds);
+    if (_commonById(element.id.value) != null) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.duplicateElementId,
+        message: 'duplicate element id.',
+        path: 'elements.id',
+      );
+    }
+    _validateElementResourceReferences(element, resourceIds);
 
-    return FamilyTables._(admitted);
+    return _withSameFamilyElement(element);
   }
 
   FamilyTables removeElement(CanvasElementId id) {
@@ -88,10 +105,8 @@ final class FamilyTables {
       return null;
     }
     _validateElementResourceReferences(after, resourceIds);
-    final admitted = _copyRows()..remove(before.id.value);
-    admitted.add(after, resourceIds);
 
-    return FamilyTables._(admitted);
+    return _withSameFamilyElement(after);
   }
 
   // The lookup deliberately checks every family table in one place so missing
@@ -240,6 +255,68 @@ final class FamilyTables {
       ..lineRows.addAll(lineRows)
       ..rectRows.addAll(rectRows)
       ..ids.addAll(admittedElementIds);
+  }
+
+  // This single switch is the family-table insertion owner; splitting per row
+  // kind would duplicate admission/projection rules and obscure sparse updates.
+  // ignore: halstead-volume, source-lines-of-code
+  FamilyTables _withSameFamilyElement(CanvasElement element) {
+    final id = element.id.value;
+
+    return switch (element) {
+      CanvasImageElement() => FamilyTables._fromTables(
+        imageRows: Map.unmodifiable(
+          Map.of(imageRows)..[id] = ImageRow(element),
+        ),
+        pathRows: pathRows,
+        textRows: textRows,
+        strokeRows: strokeRows,
+        lineRows: lineRows,
+        rectRows: rectRows,
+      ),
+      CanvasPathElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        pathRows: Map.unmodifiable(Map.of(pathRows)..[id] = PathRow(element)),
+        textRows: textRows,
+        strokeRows: strokeRows,
+        lineRows: lineRows,
+        rectRows: rectRows,
+      ),
+      CanvasTextElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        pathRows: pathRows,
+        textRows: Map.unmodifiable(Map.of(textRows)..[id] = TextRow(element)),
+        strokeRows: strokeRows,
+        lineRows: lineRows,
+        rectRows: rectRows,
+      ),
+      CanvasStrokeElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        pathRows: pathRows,
+        textRows: textRows,
+        strokeRows: Map.unmodifiable(
+          Map.of(strokeRows)..[id] = StrokeRow(element),
+        ),
+        lineRows: lineRows,
+        rectRows: rectRows,
+      ),
+      CanvasLineElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        pathRows: pathRows,
+        textRows: textRows,
+        strokeRows: strokeRows,
+        lineRows: Map.unmodifiable(Map.of(lineRows)..[id] = LineRow(element)),
+        rectRows: rectRows,
+      ),
+      CanvasRectElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        pathRows: pathRows,
+        textRows: textRows,
+        strokeRows: strokeRows,
+        lineRows: lineRows,
+        rectRows: Map.unmodifiable(Map.of(rectRows)..[id] = RectRow(element)),
+      ),
+    };
   }
 }
 

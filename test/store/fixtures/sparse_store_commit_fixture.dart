@@ -46,6 +46,10 @@ void _registerSparseInstallTests() {
     ),
   );
   test(
+    'admits sparse ids without scanning the installed document',
+    () => expect(_admitsSparseIdsWithoutDocumentScan, returnsNormally),
+  );
+  test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
   );
@@ -364,6 +368,41 @@ void _normalizesSelectionAgainstPreparedSparseCommit() {
     ]),
     throwsStateError,
   );
+}
+
+void _admitsSparseIdsWithoutDocumentScan() {
+  final store = DocumentStoreKernel(_baseDocument());
+
+  store.installSparseCommit(
+    store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.structural().merge(
+          const StoreRevisionDelta.resource(),
+        ),
+        mutations: [
+          StoreSparseEnsureLayer(CanvasLayerId('l0')),
+          StoreSparseAddElement(
+            element: CanvasRectElement(
+              id: CanvasElementId('e0'),
+              size: const Size(1, 1),
+            ),
+            layerId: CanvasLayerId('l0'),
+          ),
+          StoreSparseUpsertResource(
+            CanvasImageResource(
+              id: CanvasResourceId('r0'),
+              source: CanvasResourceSource.appKey('new-resource'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  expect(store.generateElementId(), CanvasElementId('e1'));
+  expect(store.generateLayerId(), CanvasLayerId('l1'));
+  expect(store.generateResourceId(), CanvasResourceId('r1'));
+  expect(store.projectionBuildCount, 0);
 }
 
 void _replacementFallbackInstallsFullFacts() {

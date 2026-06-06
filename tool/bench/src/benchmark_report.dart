@@ -76,6 +76,7 @@ final class BenchmarkRuntimeReport {
     required this.flutterChannel,
     required this.flutterVersion,
     required this.releaseContour,
+    required this.profileId,
     required this.runtimeMode,
     required this.assertionsEnabled,
     required this.debugInvariantMode,
@@ -89,6 +90,7 @@ final class BenchmarkRuntimeReport {
   final String flutterChannel;
   final String flutterVersion;
   final BenchmarkReleaseContourReport releaseContour;
+  final String profileId;
   final String runtimeMode;
   final bool assertionsEnabled;
   final bool debugInvariantMode;
@@ -103,6 +105,7 @@ final class BenchmarkRuntimeReport {
       'flutterChannel': flutterChannel,
       'flutterVersion': flutterVersion,
       'releaseContour': releaseContour.toJson(),
+      'profileId': profileId,
       'runtimeMode': runtimeMode,
       'assertionsEnabled': assertionsEnabled,
       'debugInvariantMode': debugInvariantMode,

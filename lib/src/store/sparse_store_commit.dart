@@ -21,11 +21,17 @@ final class PreparedSparseStoreCommit {
     required this.baseRevisions,
     required this.document,
     required this.revisionDelta,
+    this.admittedElementIds = const [],
+    this.admittedLayerIds = const [],
+    this.admittedResourceIds = const [],
   });
 
   final RevisionState baseRevisions;
   final CommittedDocument document;
   final StoreRevisionDelta revisionDelta;
+  final List<String> admittedElementIds;
+  final List<String> admittedLayerIds;
+  final List<String> admittedResourceIds;
 
   bool get hasChanges => revisionDelta.hasChanges;
 }

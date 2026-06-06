@@ -96,6 +96,7 @@ BenchmarkReport runBenchmarks({
         flutterChannel: manifest.releaseContour.flutterChannel,
         flutterVersion: manifest.releaseContour.flutterVersion,
       ),
+      profileId: profile.id,
       runtimeMode: probeRuntime.runtimeMode,
       assertionsEnabled: probeRuntime.assertionsEnabled,
       debugInvariantMode: probeRuntime.debugInvariantMode,
@@ -310,7 +311,8 @@ BenchmarkProbeRuntime _sharedProbeRuntime(List<_BenchmarkCaseRun> caseRuns) {
   final first = caseRuns.first.runtime;
   for (final run in caseRuns.skip(1)) {
     final runtime = run.runtime;
-    if (runtime.runtimeMode != first.runtimeMode ||
+    if (runtime.profileId != first.profileId ||
+        runtime.runtimeMode != first.runtimeMode ||
         runtime.assertionsEnabled != first.assertionsEnabled ||
         runtime.debugInvariantMode != first.debugInvariantMode) {
       throw StateError('Benchmark probes reported inconsistent runtime modes.');

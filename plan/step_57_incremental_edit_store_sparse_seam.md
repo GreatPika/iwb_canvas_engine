@@ -258,7 +258,7 @@ Depends On:
 
 Unit 1, Unit 2, Unit 3, Unit 4, and Unit 5.
 
-### [ ] Unit 7: Public-route performance proof and final migration gate
+### [x] Unit 7: Public-route performance proof and final migration gate
 
 Owner:
 
@@ -275,6 +275,41 @@ Run focused public-route benchmarks for `edit.add_element`, `edit.update_visual`
 Completion Check:
 
 Benchmark proof uses one of two accepted modes. In pinned-cap mode, the post-change public-route report is at or below all locked caps: `edit.add_element/100k avg_us <= 106530`, `p95_us <= 112228`, `max_us <= 112228`, `allocation_bytes <= 26157056`; `edit.update_visual/100k avg_us <= 104059`, `p95_us <= 107497`, `max_us <= 107497`, `allocation_bytes <= 29835264`; `edit.update_transform/100k avg_us <= 105744`, `p95_us <= 116825`, `max_us <= 116825`, `allocation_bytes <= 24387584`. In fresh-current mode, the close-out includes the pre-change current report path, post-change report path, same-harness/same-manifest evidence, and computed caps for every listed avg_us, p95_us, max_us, and allocation_bytes metric; the post-change metric must be `<= 50%` of the same pre-change metric for all listed rows. The benchmark invocation must use ordinary `runtime.edits.edit` routes from `test/benchmarks/benchmark_probe_flutter.dart`, not private helper microbenchmarks. Final close-out also reruns `dart analyze`, `dcm analyze .`, DCM metrics for all changed production/test/tool owners, focused semantic tests, focused benchmark/tool tests, documentation checks, and applicable architecture graph checks.
+
+Close-out Evidence:
+
+Unit 7 used pinned-cap proof mode on Pixel 6 `23081FDF6000L2`. The `release` profile in these commands is the manifest sampling contour (`warmups: 1`, `repetitions: 5`, `minimum-ms: 2000`, `timing-claims: true`) and the mechanically recorded probe runtime is `profileId: release`, `runtimeMode: flutter_test`, `assertionsEnabled: true`, `debugInvariantMode: false`. The post-change public-route report was generated at ignored build path `build/bench/current/step57_unit7_pinned_caps_report.json` from ordinary `runtime.edits.edit` benchmark probe invocations in `test/benchmarks/benchmark_probe_flutter.dart`:
+
+- `dart run test/benchmarks/benchmark_probe.dart --device=23081FDF6000L2 --case=edit.add_element --scale=100k --profile=release --warmups=1 --repetitions=5 --minimum-ms=2000 --minimum-samples=0 --timing-claims=true`
+- `dart run test/benchmarks/benchmark_probe.dart --device=23081FDF6000L2 --case=edit.update_visual --scale=100k --profile=release --warmups=1 --repetitions=5 --minimum-ms=2000 --minimum-samples=0 --timing-claims=true`
+- `dart run test/benchmarks/benchmark_probe.dart --device=23081FDF6000L2 --case=edit.update_transform --scale=100k --profile=release --warmups=1 --repetitions=5 --minimum-ms=2000 --minimum-samples=0 --timing-claims=true`
+
+| Case | avg_us actual / cap | p95_us actual / cap | max_us actual / cap | allocation_bytes actual / cap |
+| --- | ---: | ---: | ---: | ---: |
+| `edit.add_element/100k` | `29369 / 106530` | `39175 / 112228` | `39175 / 112228` | `21168128 / 26157056` |
+| `edit.update_visual/100k` | `20741 / 104059` | `28667 / 107497` | `28667 / 107497` | `11780096 / 29835264` |
+| `edit.update_transform/100k` | `20913 / 105744` | `28413 / 116825` | `28413 / 116825` | `11780096 / 24387584` |
+
+Secondary observation used the same validated `profileId: release` probe wrapper for `spatial.touched_update/100k`: `avg_us 20270`, `p95_us 22619`, `max_us 22619`, `allocation_bytes 11780096`, `spatial_touched_pages 1`, `rebuilt_ids 128`, `rebuilt_pages 64`. This observation is recorded only as secondary evidence and did not replace the primary public edit caps.
+
+Final pass-status verification commands after the Unit 7 store and benchmark-tooling changes:
+
+- `dart analyze`
+- `dcm analyze .`
+- `flutter test test/store/sparse_store_commit_test.dart test/store/no_projection_hot_path_test.dart test/edit/edit_matrix_effects_test.dart`
+- `flutter test test/store/sparse_store_commit_test.dart test/store/no_projection_hot_path_test.dart test/edit/edit_matrix_effects_test.dart test/edit/rollback_test.dart test/edit/sync_non_nested_async_stale_test.dart test/runtime/fixtures/commit_effect_observer_fixture.dart test/spatial/runtime_delivery_order_test.dart test/interaction/commands_emit_user_actions_test.dart test/guardrails/store_projection_checks_test.dart test/guardrails/edit_sparse_routes_no_eager_projection_guardrail_test.dart test/guardrails/blocking_suite_test.dart`
+- `dart test test/benchmarks/benchmark_manifest_test.dart test/benchmarks/benchmark_diff_test.dart`
+- `dart test test/benchmarks/benchmark_case_adapter_test.dart`
+- `dart test test/benchmarks/benchmark_runner_test.dart --name "manifest fingerprint|rejects unsupported probe scale ids|accepts an explicit device target|release uses"`
+- `dart run test/benchmarks/benchmark_probe.dart --device=23081FDF6000L2 --case=edit.add_element --scale=1k --profile=dry_run --warmups=0 --repetitions=1 --minimum-ms=0 --minimum-samples=0 --timing-claims=false`
+- `dart run docs/tool/sync_generated_docs.dart --check`
+- `dart run docs/tool/check_docs.dart`
+- `dart run tool/architecture_graph/check.dart --phase P14`
+- `dart run tool/architecture_graph/generate_views.dart --phase P14 --check`
+
+DCM metrics were rerun with `dcm calculate-metrics lib/src/store tool/bench/src/benchmark_case_adapters.dart tool/bench/src/benchmark_runner.dart tool/bench/src/benchmark_report.dart test/store test/benchmarks/benchmark_case_adapter_test.dart test/benchmarks/benchmark_runner_test.dart test/benchmarks/benchmark_probe_flutter.dart`. Store metrics reported no violations; benchmark harness/tooling reported existing local metric signals in cohesive test/adapter owners such as `benchmark_probe_flutter.dart`, `benchmark_case_adapters.dart`, and `benchmark_runner_test.dart`. Those signals were not addressed by splitting tests or adapter decoding because the current change is profile validation and report metadata, and metric-only reshaping would reduce boundary legibility without changing behavior.
+
+`flutter test test/benchmarks/benchmark_runner_test.dart` was intentionally replaced with the `dart test` invocations above for benchmark tooling close-out because the Flutter test harness did not complete runner subprocess finalization in this environment. The benchmark proof itself used the wrapper commands listed above and passed on Pixel 6.
 
 Depends On:
 

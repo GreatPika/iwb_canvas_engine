@@ -28,11 +28,13 @@ final class BenchmarkAdapterResult {
 
 final class BenchmarkProbeRuntime {
   const BenchmarkProbeRuntime({
+    required this.profileId,
     required this.runtimeMode,
     required this.assertionsEnabled,
     required this.debugInvariantMode,
   });
 
+  final String profileId;
   final String runtimeMode;
   final bool assertionsEnabled;
   final bool debugInvariantMode;
@@ -68,6 +70,7 @@ BenchmarkAdapterResult runBenchmarkAdapter(
     benchmarkCase,
     scale,
     result.stdout.toString(),
+    expectedProfileId: profile.id,
   );
 }
 
@@ -80,8 +83,9 @@ final class BenchmarkDeviceTarget {
 BenchmarkAdapterResult decodeBenchmarkProbeResult(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
-  String stdout,
-) {
+  String stdout, {
+  String? expectedProfileId,
+}) {
   final jsonLine = stdout
       .split('\n')
       .lastWhere(
@@ -141,7 +145,12 @@ BenchmarkAdapterResult decodeBenchmarkProbeResult(
       '${benchmarkCase.id}/${scale.id} emitted invalid fixtureShape.',
     );
   }
-  final runtime = _decodeProbeRuntime(benchmarkCase, scale, decoded['runtime']);
+  final runtime = _decodeProbeRuntime(
+    benchmarkCase,
+    scale,
+    decoded['runtime'],
+    expectedProfileId: expectedProfileId,
+  );
   return BenchmarkAdapterResult(
     actionUsSamples: actionUsSamples,
     setupUsSamples: setupUsSamples,
@@ -305,14 +314,23 @@ List<String> _boundaryStringList(
 BenchmarkProbeRuntime _decodeProbeRuntime(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
-  Object? runtime,
-) {
+  Object? runtime, {
+  String? expectedProfileId,
+}) {
   if (runtime is! Map<String, Object?>) {
     throw StateError(
       '${benchmarkCase.id}/${scale.id} emitted invalid runtime metadata.',
     );
   }
+  final profileId = _runtimeString(benchmarkCase, scale, runtime, 'profileId');
+  if (expectedProfileId != null && profileId != expectedProfileId) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted profileId $profileId '
+      'for expected profile $expectedProfileId.',
+    );
+  }
   return BenchmarkProbeRuntime(
+    profileId: profileId,
     runtimeMode: _runtimeString(benchmarkCase, scale, runtime, 'runtimeMode'),
     assertionsEnabled: _runtimeBool(
       benchmarkCase,

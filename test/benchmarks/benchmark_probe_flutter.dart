@@ -45,6 +45,9 @@ void main() {
   test('benchmark probe executes requested case', _probeExecutesRequestedCase);
   // Assertions live in the named helper; see comment above.
   // ignore: missing-test-assertion
+  test('probe options validate profile ids', _probeOptionsValidateProfileIds);
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
   test(
     'case plan separates setup timing from action samples',
     _casePlanSeparatesSetupTimingFromActionSamples,
@@ -146,6 +149,28 @@ Future<void> _probeExecutesRequestedCase() async {
   // Machine-readable stdout is the probe protocol consumed by tool/bench.
   // ignore: avoid_print
   print('BENCHMARK_PROBE_JSON:${jsonEncode(result)}');
+}
+
+void _probeOptionsValidateProfileIds() {
+  final options = _ProbeOptions.parse([
+    '--case=edit.add_element',
+    '--scale=1k',
+    '--profile=release',
+  ]);
+  expect(options.profileId, 'release');
+
+  expect(
+    () => _ProbeOptions.parse(['--case=edit.add_element', '--scale=1k']),
+    throwsFormatException,
+  );
+  expect(
+    () => _ProbeOptions.parse([
+      '--case=edit.add_element',
+      '--scale=1k',
+      '--profile=prod',
+    ]),
+    throwsFormatException,
+  );
 }
 
 Future<void> _casePlanSeparatesSetupTimingFromActionSamples() async {
@@ -698,6 +723,7 @@ Future<Map<String, Object?>> _runProbePlan(
     'measurementBoundary': plan.measurementBoundaryJson(),
     'fixtureShape': plan.fixtureShape,
     'runtime': {
+      'profileId': options.profileId,
       'runtimeMode': 'flutter_test',
       'assertionsEnabled': _assertionsEnabled(),
       'debugInvariantMode': false,
@@ -2162,6 +2188,7 @@ _ProbeOptions _fakeOptions({
   return _ProbeOptions(
     caseId: caseId,
     scaleId: 'fake',
+    profileId: 'dry_run',
     warmups: warmups,
     repetitions: repetitions,
     minimumMeasuredMs: 0,
@@ -2174,6 +2201,7 @@ final class _ProbeOptions {
   const _ProbeOptions({
     required this.caseId,
     required this.scaleId,
+    required this.profileId,
     required this.warmups,
     required this.repetitions,
     required this.minimumMeasuredMs,
@@ -2183,6 +2211,7 @@ final class _ProbeOptions {
 
   final String caseId;
   final String scaleId;
+  final String profileId;
   final int warmups;
   final int repetitions;
   final int minimumMeasuredMs;
@@ -2210,6 +2239,7 @@ final class _ProbeOptions {
     return _ProbeOptions(
       caseId: _required(values, 'case'),
       scaleId: _required(values, 'scale'),
+      profileId: _profileId(values),
       warmups: int.parse(values['warmups'] ?? '0'),
       repetitions: int.parse(values['repetitions'] ?? '1'),
       minimumMeasuredMs: int.parse(values['minimum-ms'] ?? '0'),
@@ -2217,6 +2247,15 @@ final class _ProbeOptions {
       timingClaims: (values['timing-claims'] ?? 'false') == 'true',
     );
   }
+}
+
+String _profileId(Map<String, String> values) {
+  final profileId = _required(values, 'profile');
+  if (!{'dry_run', 'smoke', 'release'}.contains(profileId)) {
+    throw FormatException('Unsupported --profile=$profileId.');
+  }
+
+  return profileId;
 }
 
 String _required(Map<String, String> values, String key) {

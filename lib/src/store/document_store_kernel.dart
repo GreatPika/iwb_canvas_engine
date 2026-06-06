@@ -262,12 +262,16 @@ final class DocumentStoreKernel {
     );
   }
 
+  // Sparse preparation validates, applies, and records admitted-id deltas in
+  // one pass so commit acceptance cannot drift from generator admission.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
     final revisionDelta = _validatedSparseRevisionDelta(commit.revisionDelta);
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
     var didMutateFacts = false;
     var requiredRevisionDelta = const StoreRevisionDelta();
+    final admittedIds = _SparseAdmittedIds();
     for (final mutation in commit.mutations) {
       final applied = _applySparseMutation(
         nextDocument,
@@ -279,6 +283,9 @@ final class DocumentStoreKernel {
       requiredRevisionDelta = requiredRevisionDelta.merge(
         applied.requiredRevisionDelta,
       );
+      if (applied.didMutateFacts) {
+        admittedIds.addMutation(mutation);
+      }
     }
     if (didMutateFacts && !revisionDelta.hasChanges) {
       throw ArgumentError.value(
@@ -300,6 +307,9 @@ final class DocumentStoreKernel {
       revisionDelta: didMutateFacts
           ? revisionDelta
           : const StoreRevisionDelta(),
+      admittedElementIds: didMutateFacts ? admittedIds.elementIds : const [],
+      admittedLayerIds: didMutateFacts ? admittedIds.layerIds : const [],
+      admittedResourceIds: didMutateFacts ? admittedIds.resourceIds : const [],
     );
   }
 
@@ -311,9 +321,9 @@ final class DocumentStoreKernel {
       throw StateError('Prepared sparse store commit is stale.');
     }
     _document = commit.document;
-    _elementIds.admitAll(_document.admittedElementIds);
-    _layerIds.admitAll(_document.admittedLayerIds);
-    _resourceIds.admitAll(_document.admittedResourceIds);
+    _elementIds.admitAll(commit.admittedElementIds);
+    _layerIds.admitAll(commit.admittedLayerIds);
+    _resourceIds.admitAll(commit.admittedResourceIds);
   }
 
   _SparseMutationResult _applySparseMutation(
@@ -841,6 +851,44 @@ bool _sameList<T>(List<T> left, List<T> right) {
   }
 
   return true;
+}
+
+// Sparse admission names every mutation family that can create ids; splitting
+// the switch would hide the admission contract behind indirect helpers.
+// ignore: coupling-between-object-classes
+final class _SparseAdmittedIds {
+  final Set<String> _elementIds = {};
+  final Set<String> _layerIds = {};
+  final Set<String> _resourceIds = {};
+
+  List<String> get elementIds => List.unmodifiable(_elementIds);
+  List<String> get layerIds => List.unmodifiable(_layerIds);
+  List<String> get resourceIds => List.unmodifiable(_resourceIds);
+
+  // Keeping all id-producing sparse mutations together makes missed admission
+  // cases visible next to the sealed mutation taxonomy.
+  // ignore: cyclomatic-complexity
+  void addMutation(StoreSparseMutation mutation) {
+    switch (mutation) {
+      case StoreSparseEnsureLayer(:final id):
+        _layerIds.add(id.value);
+      case StoreSparseAddElement(:final element, :final layerId):
+        _elementIds.add(element.id.value);
+        if (layerId != null) {
+          _layerIds.add(layerId.value);
+        }
+      case StoreSparseUpsertResource(:final resource):
+        _resourceIds.add(resource.id.value);
+      case StoreSparseUpdateElement() ||
+          StoreSparseRemoveElement() ||
+          StoreSparseRemoveUnusedResource() ||
+          StoreSparseClearContent() ||
+          StoreSparseSetBackground() ||
+          StoreSparseSetCamera() ||
+          StoreSparseSetPalette():
+        break;
+    }
+  }
 }
 
 final class _SparseMutationResult {

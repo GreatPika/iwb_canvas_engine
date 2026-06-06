@@ -18,6 +18,7 @@ void main() {
       );
 
       expect(result.actionUsSamples, [7]);
+      expect(result.runtime.profileId, 'dry_run');
       expect(result.setupUsSamples, [5000]);
       expect(result.metrics, containsPair('avg_us', 7));
       expect(result.setupMetrics, containsPair('setup_us', 5000));
@@ -73,6 +74,31 @@ void main() {
       expect(result.measurementBoundary.setupMetrics, isEmpty);
       expect(result.measurementBoundary.setupMemoryMetrics, isEmpty);
     });
+
+    test('rejects mismatched probe profile id', () {
+      final manifest = BenchmarkManifest.load();
+      final benchmarkCase = manifest.cases.first;
+      final scale = benchmarkCase.scales.first;
+
+      expect(
+        () => decodeBenchmarkProbeResult(
+          benchmarkCase,
+          scale,
+          _probeStdout(benchmarkCase, includeOldElapsedSamples: false),
+          expectedProfileId: 'release',
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains(
+              '${benchmarkCase.id}/${scale.id} emitted profileId dry_run '
+              'for expected profile release',
+            ),
+          ),
+        ),
+      );
+    });
   });
 }
 
@@ -95,6 +121,7 @@ String _probeStdout(
     'measurementBoundary': _boundaryJson(benchmarkCase.measurementBoundary),
     'fixtureShape': benchmarkCase.fixtureShape,
     'runtime': {
+      'profileId': 'dry_run',
       'runtimeMode': 'flutter_test',
       'assertionsEnabled': true,
       'debugInvariantMode': false,
