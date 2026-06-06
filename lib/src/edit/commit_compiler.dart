@@ -31,7 +31,7 @@ final class CommitCompiler {
   }) {
     final delta = _elementRevisionDelta(before: before, after: after);
 
-    return ElementUpdateCompileResult(
+    return ElementUpdateCompileResult._(
       revisionDelta: delta,
       touchesGeometry: delta.bounds,
       touchesSpatial: delta.bounds || before.isSelectable != after.isSelectable,
@@ -43,7 +43,7 @@ final class CommitCompiler {
 }
 
 final class ElementUpdateCompileResult {
-  const ElementUpdateCompileResult({
+  const ElementUpdateCompileResult._({
     required this.revisionDelta,
     required this.touchesGeometry,
     required this.touchesSpatial,

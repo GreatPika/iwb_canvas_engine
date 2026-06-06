@@ -548,10 +548,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _elementOverrides[after.id] = after;
     _journal.add((draft) => draft.updateElement(update));
     _mutations.add(
-      StoreSparseUpdateElement(
-        element: after,
-        requiredRevisionDelta: compiledUpdate.revisionDelta,
-      ),
+      StoreSparseUpdateElement(element: after, compiledUpdate: compiledUpdate),
     );
     _recordSparseElementUpdate(after: after, compiledUpdate: compiledUpdate);
 

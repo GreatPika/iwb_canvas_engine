@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
@@ -211,14 +212,17 @@ void _installSparseTransform(DocumentStoreKernel store) {
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
         mutations: [
-          StoreSparseUpdateElement(
-            element: CanvasRectElement(
+          _sparseUpdate(
+            before: CanvasRectElement(
+              id: CanvasElementId('element-a'),
+              size: const Size(1, 1),
+            ),
+            after: CanvasRectElement(
               id: CanvasElementId('element-a'),
               size: const Size(1, 1),
               revision: 1,
               transform: CanvasTransform.translation(const Offset(1, 1)),
             ),
-            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
           ),
         ],
       ),
@@ -232,17 +236,35 @@ void _installSparseTransformNoOp(DocumentStoreKernel store) {
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
         mutations: [
-          StoreSparseUpdateElement(
-            element: CanvasRectElement(
+          _sparseUpdate(
+            before: CanvasRectElement(
               id: CanvasElementId('element-a'),
               size: const Size(1, 1),
               revision: 1,
               transform: CanvasTransform.translation(const Offset(1, 1)),
             ),
-            requiredRevisionDelta: const StoreRevisionDelta(),
+            after: CanvasRectElement(
+              id: CanvasElementId('element-a'),
+              size: const Size(1, 1),
+              revision: 1,
+              transform: CanvasTransform.translation(const Offset(1, 1)),
+            ),
           ),
         ],
       ),
+    ),
+  );
+}
+
+StoreSparseUpdateElement _sparseUpdate({
+  required CanvasElement before,
+  required CanvasElement after,
+}) {
+  return StoreSparseUpdateElement(
+    element: after,
+    compiledUpdate: const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
     ),
   );
 }

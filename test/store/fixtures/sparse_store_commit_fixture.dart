@@ -82,8 +82,8 @@ void _registerSparseValidationTests() {
     () => expect(_rejectsSparseRevisionDeltaFamilyMismatch, returnsNormally),
   );
   test(
-    'rejects sparse update mutations with mismatched compiler delta',
-    () => expect(_rejectsSparseUpdateMutationDeltaMismatch, returnsNormally),
+    'rejects revision-only sparse update mutations',
+    () => expect(_rejectsRevisionOnlySparseUpdateBeforeSwap, returnsNormally),
   );
   test(
     'validates image update resources before swap',
@@ -203,21 +203,18 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
-        StoreSparseUpdateElement(
-          element: CanvasRectElement(
-            id: CanvasElementId('e-content'),
-            size: const Size(4, 5),
-            fillColor: const Color(0xFFFF0000),
-          ),
-          requiredRevisionDelta: const StoreRevisionDelta(),
-        ),
-        StoreSparseUpdateElement(
-          element: CanvasRectElement(
+        _sparseUpdate(before: _contentRect(), after: _contentRect()),
+        _sparseUpdate(
+          before: CanvasRectElement(
             id: CanvasElementId('missing'),
             size: const Size(1, 1),
+          ),
+          after: CanvasRectElement(
+            id: CanvasElementId('missing'),
+            size: const Size(1, 1),
+            revision: 1,
             fillColor: const Color(0xFF123456),
           ),
-          requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
         ),
       ],
     ),
@@ -336,7 +333,7 @@ void _expectElementBoundsDeltaRejected() {
   );
 }
 
-void _rejectsSparseUpdateMutationDeltaMismatch() {
+void _rejectsRevisionOnlySparseUpdateBeforeSwap() {
   final store = DocumentStoreKernel(_baseDocument());
   final beforeFacts = _requireFacts(store, CanvasElementId('e-content'));
 
@@ -345,14 +342,18 @@ void _rejectsSparseUpdateMutationDeltaMismatch() {
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
-          StoreSparseUpdateElement(
-            element: CanvasRectElement(
+          _sparseUpdate(
+            before: CanvasRectElement(
               id: CanvasElementId('e-content'),
-              size: const Size(44, 55),
+              size: const Size(4, 5),
+              fillColor: const Color(0xFFFF0000),
+            ),
+            after: CanvasRectElement(
+              id: CanvasElementId('e-content'),
+              size: const Size(4, 5),
               revision: 1,
               fillColor: const Color(0xFFFF0000),
             ),
-            requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
           ),
         ],
       ),
@@ -402,13 +403,9 @@ void _rejectsStaleElementRevisionBeforeSwap() {
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
-          StoreSparseUpdateElement(
-            element: CanvasRectElement(
-              id: CanvasElementId('e-content'),
-              size: const Size(4, 5),
-              fillColor: const Color(0xFF00FF00),
-            ),
-            requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
+          _sparseUpdate(
+            before: _contentRect(),
+            after: _contentRect(fillColor: const Color(0xFF00FF00)),
           ),
         ],
       ),
@@ -606,6 +603,11 @@ void _validatesUnderlineVisualUpdate() {
 void _validatesPathPaintedStrokeBoundsUpdate() {
   _expectPaintedStrokeBoundsUpdate(
     id: CanvasElementId('path'),
+    before: CanvasPathElement(
+      id: CanvasElementId('path'),
+      svgPathData: 'M 0 0 L 1 1',
+      strokeWidth: 2,
+    ),
     update: CanvasPathElement(
       id: CanvasElementId('path'),
       svgPathData: 'M 0 0 L 1 1',
@@ -620,6 +622,11 @@ void _validatesPathPaintedStrokeBoundsUpdate() {
 void _validatesRectPaintedStrokeBoundsUpdate() {
   _expectPaintedStrokeBoundsUpdate(
     id: CanvasElementId('rect'),
+    before: CanvasRectElement(
+      id: CanvasElementId('rect'),
+      size: const Size(2, 3),
+      strokeWidth: 2,
+    ),
     update: CanvasRectElement(
       id: CanvasElementId('rect'),
       size: const Size(2, 3),
@@ -633,6 +640,7 @@ void _validatesRectPaintedStrokeBoundsUpdate() {
 
 void _expectPaintedStrokeBoundsUpdate({
   required CanvasElementId id,
+  required CanvasElement before,
   required CanvasElement update,
   required Color? Function(StoreElementFacts facts) strokeColorOf,
 }) {
@@ -644,7 +652,10 @@ void _expectPaintedStrokeBoundsUpdate({
         mutations: [
           StoreSparseUpdateElement(
             element: update,
-            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
+            compiledUpdate: const CommitCompiler().compileElementUpdate(
+              before: before,
+              after: update,
+            ),
           ),
         ],
       ),
@@ -658,7 +669,10 @@ void _expectPaintedStrokeBoundsUpdate({
         mutations: [
           StoreSparseUpdateElement(
             element: update,
-            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
+            compiledUpdate: const CommitCompiler().compileElementUpdate(
+              before: before,
+              after: update,
+            ),
           ),
         ],
       ),
@@ -742,7 +756,18 @@ void Function() _prepareMissingResourceUpdate(DocumentStoreKernel store) {
             resourceId: CanvasResourceId('missing'),
             size: const Size(6, 7),
           ),
-          requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
+          compiledUpdate: const CommitCompiler().compileElementUpdate(
+            before: CanvasImageElement(
+              id: CanvasElementId('e-image'),
+              resourceId: CanvasResourceId('r-image'),
+              size: const Size(6, 7),
+            ),
+            after: CanvasImageElement(
+              id: CanvasElementId('e-image'),
+              resourceId: CanvasResourceId('missing'),
+              size: const Size(6, 7),
+            ),
+          ),
         ),
       ],
     ),
@@ -762,9 +787,10 @@ StoreSparseUpdateElement _sparseUpdate({
 }) {
   return StoreSparseUpdateElement(
     element: after,
-    requiredRevisionDelta: const CommitCompiler()
-        .compileElementUpdate(before: before, after: after)
-        .revisionDelta,
+    compiledUpdate: const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
+    ),
   );
 }
 
@@ -781,6 +807,18 @@ StoreSparseUpdateElement _sparseRectFillColorUpdate({
       fillColor: fillColor,
       revision: 1,
     ),
+  );
+}
+
+CanvasRectElement _contentRect({
+  Color fillColor = const Color(0xFFFF0000),
+  int revision = 0,
+}) {
+  return CanvasRectElement(
+    id: CanvasElementId('e-content'),
+    size: const Size(4, 5),
+    revision: revision,
+    fillColor: fillColor,
   );
 }
 
