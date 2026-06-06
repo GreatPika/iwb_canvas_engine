@@ -175,12 +175,18 @@ final class DocumentStoreKernel {
   }
 
   Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids) {
-    final selectable = _document.elements.selectableElementIds;
+    return _normalizeSelectionInCommittedDocument(_document, ids);
+  }
 
-    return {
-      for (final id in ids)
-        if (selectable.contains(id)) id,
-    };
+  Set<CanvasElementId> normalizeSelectionForSparseCommit(
+    PreparedSparseStoreCommit commit,
+    Iterable<CanvasElementId> ids,
+  ) {
+    if (commit.baseRevisions != _document.revisions) {
+      throw StateError('Prepared sparse store commit is stale.');
+    }
+
+    return _normalizeSelectionInCommittedDocument(commit.document, ids);
   }
 
   CanvasElementId generateElementId() {
@@ -467,6 +473,18 @@ final class DocumentStoreKernel {
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
+}
+
+Set<CanvasElementId> _normalizeSelectionInCommittedDocument(
+  CommittedDocument document,
+  Iterable<CanvasElementId> ids,
+) {
+  final selectable = document.elements.selectableElementIds;
+
+  return {
+    for (final id in ids)
+      if (selectable.contains(id)) id,
+  };
 }
 
 StoreRevisionDelta _validatedSparseRevisionDelta(StoreRevisionDelta delta) {

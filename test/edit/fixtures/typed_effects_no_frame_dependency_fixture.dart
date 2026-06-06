@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/prepared_selection_effect.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
@@ -55,29 +56,47 @@ void _expectPostInstallApplyResult() {
     effects: effects,
   );
 
-  final result = const CommitApplier().apply(
-    document: CanvasDocument(),
+  final result = _applyPostInstallPlan(plan, events);
+
+  _expectPostInstallEvents(events, result);
+  _expectDeliveryEffects(result.effects);
+}
+
+CommitDeliveryResult _applyPostInstallPlan(
+  CommitPlan plan,
+  List<String> events,
+) {
+  return const CommitApplier().apply(
+    document: AcceptedMaterializedDocument(
+      document: CanvasDocument(),
+      revisionDelta: plan.revisionDelta,
+    ),
     plan: plan,
     documentInstallers: CommitDocumentInstallers(
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
+      installSparseCommit: (_) => events.add('sparse-document'),
     ),
-    installSelectionEffects: (_) {
-      events.add('selection');
+    selectionInstallers: CommitSelectionInstallers(
+      prepareSelectionEffect: (_, _) {
+        events.add('prepare-selection');
 
-      return true;
-    },
+        return PreparedSelectionEffect(const []);
+      },
+      installSelectionEffect: (_) {
+        events.add('selection');
+
+        return true;
+      },
+    ),
   );
-
-  _expectPostInstallEvents(events, result);
-  _expectDeliveryEffects(result.effects);
 }
 
 void _expectPostInstallEvents(
   List<String> events,
   CommitDeliveryResult result,
 ) {
-  expect(events, ['document', 'selection']);
+  expect(events, ['prepare-selection', 'document', 'selection']);
   expect(result.shouldPublishState, isTrue);
 }
 
@@ -94,17 +113,28 @@ void _expectEmptyApplyResult() {
   final events = <String>[];
 
   final result = const CommitApplier().apply(
-    document: CanvasDocument(),
+    document: AcceptedMaterializedDocument(
+      document: CanvasDocument(),
+      revisionDelta: const StoreRevisionDelta(),
+    ),
     plan: CommitPlan.empty(),
     documentInstallers: CommitDocumentInstallers(
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
+      installSparseCommit: (_) => events.add('sparse-document'),
     ),
-    installSelectionEffects: (_) {
-      events.add('selection');
+    selectionInstallers: CommitSelectionInstallers(
+      prepareSelectionEffect: (_, _) {
+        events.add('prepare-selection');
 
-      return true;
-    },
+        return PreparedSelectionEffect(const []);
+      },
+      installSelectionEffect: (_) {
+        events.add('selection');
+
+        return true;
+      },
+    ),
   );
 
   expect(events, isEmpty);

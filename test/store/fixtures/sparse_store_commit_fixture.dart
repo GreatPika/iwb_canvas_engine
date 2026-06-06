@@ -39,6 +39,13 @@ void _registerSparseInstallTests() {
     () => expect(_clearsContentAndResources, returnsNormally),
   );
   test(
+    'normalizes selection against prepared sparse commit before install',
+    () => expect(
+      _normalizesSelectionAgainstPreparedSparseCommit,
+      returnsNormally,
+    ),
+  );
+  test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
   );
@@ -330,6 +337,33 @@ void _clearsContentAndResources() {
     ),
   );
   expect(noOpClear.hasChanges, isFalse);
+}
+
+void _normalizesSelectionAgainstPreparedSparseCommit() {
+  final store = DocumentStoreKernel(_baseDocument());
+  final prepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.structural(),
+      mutations: [StoreSparseRemoveElement(CanvasElementId('e-content'))],
+    ),
+  );
+
+  expect(
+    store.normalizeSelectionForSparseCommit(prepared, [
+      CanvasElementId('e-content'),
+      CanvasElementId('e-image'),
+    ]),
+    {CanvasElementId('e-image')},
+  );
+  expect(store.projectionBuildCount, 0);
+
+  store.installSparseCommit(prepared);
+  expect(
+    () => store.normalizeSelectionForSparseCommit(prepared, [
+      CanvasElementId('e-image'),
+    ]),
+    throwsStateError,
+  );
 }
 
 void _replacementFallbackInstallsFullFacts() {

@@ -1,14 +1,23 @@
 import 'dart:ui';
 
+// This fixture intentionally names commit, selection, and runtime boundaries in
+// one proof surface so prepared-selection ordering is validated end to end.
+// ignore_for_file: number-of-imports
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/prepared_selection_effect.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_membership_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   test('selection replacement commits without document delta', () {
@@ -25,6 +34,14 @@ void main() {
 
   test('document remove and clear prune selection atomically', () {
     expect(_verifyDocumentEditsPruneSelection, returnsNormally);
+  });
+
+  test('prepared selection install does not read membership', () {
+    expect(_verifyPreparedSelectionInstallSkipsMembership, returnsNormally);
+  });
+
+  test('sparse commit prepares selection from accepted store facts', () {
+    expect(_verifySparseCommitPreparesSelectionFromStoreFacts, returnsNormally);
   });
 }
 
@@ -45,7 +62,7 @@ void _verifySelectionReplacementCommit() {
   final result = _applyPlan(plan, selection, events);
 
   expect(plan.revisionDelta.hasChanges, isFalse);
-  expect(events, ['selection']);
+  expect(events, ['prepare-selection', 'selection']);
   _expectReplacementSelectionInstalled(selection);
   _expectReplacementDelivery(result);
 }
@@ -90,7 +107,7 @@ void _verifySelectionNoOpDropsActionIntents() {
 
   final result = _applyPlan(plan, selection, events);
 
-  expect(events, ['selection']);
+  expect(events, ['prepare-selection', 'selection']);
   expect(selection.selectionFacts.selectionRevision, 1);
   expect(result.shouldPublishState, isFalse);
   expect(result.effects, isEmpty);
@@ -194,6 +211,25 @@ void _verifyDocumentEditsPruneSelection() {
   _verifyClearPrunesSelection();
 }
 
+void _verifyPreparedSelectionInstallSkipsMembership() {
+  final selection = SelectionKernel(membership: const _ThrowingMembership());
+
+  expect(
+    selection.installPreparedEffect(
+      PreparedSelectionEffect([CanvasElementId('prepared')]),
+    ),
+    isTrue,
+  );
+  expect(selection.selectedElementIds, {CanvasElementId('prepared')});
+}
+
+void _verifySparseCommitPreparesSelectionFromStoreFacts() {
+  final proof = _SparseSelectionCommitProof();
+
+  proof.apply();
+  proof.expectAccepted();
+}
+
 void _verifyRemovePrunesSelection() {
   final root = _runtimeRoot();
   root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
@@ -229,23 +265,113 @@ CommitDeliveryResult _applyPlan(
   List<String> events,
 ) {
   return const CommitApplier().apply(
-    document: CanvasDocument(),
+    document: AcceptedMaterializedDocument(
+      document: CanvasDocument(),
+      revisionDelta: plan.revisionDelta,
+    ),
     plan: plan,
     documentInstallers: CommitDocumentInstallers(
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
+      installSparseCommit: (_) => events.add('sparse-document'),
     ),
-    installSelectionEffects: (effect) {
-      events.add('selection');
+    selectionInstallers: CommitSelectionInstallers(
+      prepareSelectionEffect: (effect, _) {
+        events.add('prepare-selection');
 
-      return switch (effect) {
-        PruneSelectionEffect() => selection.pruneSelection(),
-        ReplaceSelectionEffect(:final elementIds) => selection.setSelection(
-          elementIds,
-        ),
-      };
-    },
+        return switch (effect) {
+          PruneSelectionEffect() => PreparedSelectionEffect(
+            selection.selectedElementIds,
+          ),
+          ReplaceSelectionEffect(:final elementIds) => PreparedSelectionEffect(
+            elementIds,
+          ),
+        };
+      },
+      installSelectionEffect: (effect) {
+        events.add('selection');
+
+        return selection.installPreparedEffect(effect);
+      },
+    ),
   );
+}
+
+// This proof object deliberately spans commit, store, and selection owners so
+// the sparse accepted-document handoff is tested as one boundary.
+// ignore: coupling-between-object-classes
+final class _SparseSelectionCommitProof {
+  final DocumentStoreKernel store = DocumentStoreKernel(_document());
+  final SelectionKernel selection = _selectionKernel()
+    ..setSelection([CanvasElementId('a'), CanvasElementId('b')]);
+  final List<String> events = [];
+
+  late final PreparedSparseStoreCommit prepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.structural(),
+      mutations: [StoreSparseRemoveElement(CanvasElementId('a'))],
+    ),
+  );
+
+  late final CommitPlan plan = CommitPlan(
+    revisionDelta: prepared.revisionDelta,
+    touchedSet: TouchedSet(selection: true),
+    selectionEffect: const PruneSelectionEffect(),
+    effects: const [SelectionEffect(), PublicStateEffect()],
+  );
+
+  void apply() {
+    const CommitApplier().apply(
+      document: AcceptedSparseStoreDocument(commit: prepared),
+      plan: plan,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: (_, _) => events.add('document'),
+        replaceDocument: (_, _) => events.add('replacement'),
+        installSparseCommit: _installSparseCommit,
+      ),
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: _prepareSelectionEffect,
+        installSelectionEffect: _installSelectionEffect,
+      ),
+    );
+  }
+
+  void expectAccepted() {
+    expect(events, ['prepare-selection', 'sparse-document', 'selection']);
+    expect(selection.selectedElementIds, {CanvasElementId('b')});
+    expect(store.projectionBuildCount, 0);
+  }
+
+  void _installSparseCommit(PreparedSparseStoreCommit commit) {
+    events.add('sparse-document');
+    store.installSparseCommit(commit);
+  }
+
+  PreparedSelectionEffect _prepareSelectionEffect(
+    CommitSelectionEffect effect,
+    AcceptedCommitDocument document,
+  ) {
+    events.add('prepare-selection');
+    final commit = (document as AcceptedSparseStoreDocument).commit;
+
+    return switch (effect) {
+      PruneSelectionEffect() => PreparedSelectionEffect(
+        store.normalizeSelectionForSparseCommit(
+          commit,
+          selection.selectedElementIds,
+        ),
+      ),
+      ReplaceSelectionEffect(:final elementIds) => PreparedSelectionEffect(
+        store.normalizeSelectionForSparseCommit(commit, elementIds),
+      ),
+    };
+  }
+
+  bool _installSelectionEffect(PreparedSelectionEffect effect) {
+    events.add('selection');
+
+    return selection.installPreparedEffect(effect);
+  }
 }
 
 RuntimeRoot _runtimeRoot() {
@@ -284,5 +410,19 @@ final class _SelectionMembership implements SelectionMembershipPort {
   @override
   Set<CanvasElementId> selectAllElementIds({required bool onlySelectable}) {
     return {CanvasElementId('a'), CanvasElementId('b'), CanvasElementId('c')};
+  }
+}
+
+final class _ThrowingMembership implements SelectionMembershipPort {
+  const _ThrowingMembership();
+
+  @override
+  Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids) {
+    throw StateError('membership should not be read.');
+  }
+
+  @override
+  Set<CanvasElementId> selectAllElementIds({required bool onlySelectable}) {
+    throw StateError('membership should not be read.');
   }
 }

@@ -15,6 +15,7 @@ import '../contracts/internal/document_facts_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/load_interaction_boundary.dart';
 import '../contracts/internal/measured_text_layout.dart';
+import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/resource_dirty_outcome.dart';
 import '../contracts/internal/resource_session_invalidation_sink.dart';
@@ -1519,22 +1520,60 @@ final class RuntimeRoot
     CommitPlan plan,
   ) {
     return _commitApplier.apply(
-      document: document,
+      document: AcceptedMaterializedDocument(
+        document: document,
+        revisionDelta: plan.revisionDelta,
+      ),
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
         installDocument: _store.installDocument,
         replaceDocument: _store.replaceDocument,
+        installSparseCommit: _store.installSparseCommit,
       ),
-      installSelectionEffects: _applyCommitSelectionEffect,
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: _prepareCommitSelectionEffect,
+        installSelectionEffect: _applyCommitSelectionEffect,
+      ),
     );
   }
 
-  bool _applyCommitSelectionEffect(CommitSelectionEffect effect) {
-    return switch (effect) {
-      PruneSelectionEffect() => _selection.pruneSelection(),
-      ReplaceSelectionEffect(:final elementIds) => _selection.setSelection(
-        elementIds,
-      ),
+  PreparedSelectionEffect _prepareCommitSelectionEffect(
+    CommitSelectionEffect effect,
+    AcceptedCommitDocument document,
+  ) {
+    final elementIds = switch (effect) {
+      PruneSelectionEffect() => _selection.selectedElementIds,
+      ReplaceSelectionEffect(:final elementIds) => elementIds,
+    };
+    final acceptedIds = switch (document) {
+      AcceptedMaterializedDocument(:final document, :final revisionDelta) =>
+        revisionDelta.hasChanges
+            ? _normalizeSelectionInDocument(elementIds, document)
+            : _store.normalizeSelection(elementIds),
+      AcceptedSparseStoreDocument(:final commit) =>
+        _store.normalizeSelectionForSparseCommit(commit, elementIds),
+    };
+
+    return PreparedSelectionEffect(acceptedIds);
+  }
+
+  bool _applyCommitSelectionEffect(PreparedSelectionEffect effect) {
+    return _selection.installPreparedEffect(effect);
+  }
+
+  Set<CanvasElementId> _normalizeSelectionInDocument(
+    Iterable<CanvasElementId> ids,
+    CanvasDocument document,
+  ) {
+    final selectable = <CanvasElementId>{
+      for (final layer in document.layers)
+        for (final element in layer.elements)
+          if (element.isVisible && element.isSelectable) element.id,
+    };
+
+    return {
+      for (final id in ids)
+        if (selectable.contains(id)) id,
     };
   }
 

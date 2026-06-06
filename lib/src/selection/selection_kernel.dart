@@ -1,9 +1,13 @@
 import 'dart:collection';
 
+import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
 import '../contracts/public/canvas_ids.dart';
 
+// Selection state and revision advance must stay in one owner; moving prepared
+// effect installation elsewhere would create selection-state sync glue.
+// ignore: number-of-methods
 final class SelectionKernel implements SelectionFactsPort {
   SelectionKernel({required SelectionMembershipPort membership})
     : _membership = membership;
@@ -66,6 +70,10 @@ final class SelectionKernel implements SelectionFactsPort {
 
   bool pruneSelection() {
     return _replaceSelection(_membership.normalizeSelection(_selectedIds));
+  }
+
+  bool installPreparedEffect(PreparedSelectionEffect effect) {
+    return _replaceSelection(effect.elementIds);
   }
 
   bool _replaceSelection(Iterable<CanvasElementId> ids) {
