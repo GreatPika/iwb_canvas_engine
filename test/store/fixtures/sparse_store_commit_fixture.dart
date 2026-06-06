@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
@@ -651,11 +650,8 @@ void _expectPaintedStrokeBoundsUpdate({
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
           StoreSparseUpdateElement(
+            before: before,
             element: update,
-            compiledUpdate: const CommitCompiler().compileElementUpdate(
-              before: before,
-              after: update,
-            ),
           ),
         ],
       ),
@@ -668,11 +664,8 @@ void _expectPaintedStrokeBoundsUpdate({
         revisionDelta: const StoreRevisionDelta.elementBounds(),
         mutations: [
           StoreSparseUpdateElement(
+            before: before,
             element: update,
-            compiledUpdate: const CommitCompiler().compileElementUpdate(
-              before: before,
-              after: update,
-            ),
           ),
         ],
       ),
@@ -751,22 +744,15 @@ void Function() _prepareMissingResourceUpdate(DocumentStoreKernel store) {
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
         StoreSparseUpdateElement(
+          before: CanvasImageElement(
+            id: CanvasElementId('e-image'),
+            resourceId: CanvasResourceId('r-image'),
+            size: const Size(6, 7),
+          ),
           element: CanvasImageElement(
             id: CanvasElementId('e-image'),
             resourceId: CanvasResourceId('missing'),
             size: const Size(6, 7),
-          ),
-          compiledUpdate: const CommitCompiler().compileElementUpdate(
-            before: CanvasImageElement(
-              id: CanvasElementId('e-image'),
-              resourceId: CanvasResourceId('r-image'),
-              size: const Size(6, 7),
-            ),
-            after: CanvasImageElement(
-              id: CanvasElementId('e-image'),
-              resourceId: CanvasResourceId('missing'),
-              size: const Size(6, 7),
-            ),
           ),
         ),
       ],
@@ -786,11 +772,8 @@ StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement after,
 }) {
   return StoreSparseUpdateElement(
+    before: before,
     element: after,
-    compiledUpdate: const CommitCompiler().compileElementUpdate(
-      before: before,
-      after: after,
-    ),
   );
 }
 

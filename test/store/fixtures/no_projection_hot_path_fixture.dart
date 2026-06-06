@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
@@ -261,10 +260,7 @@ StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement after,
 }) {
   return StoreSparseUpdateElement(
+    before: before,
     element: after,
-    compiledUpdate: const CommitCompiler().compileElementUpdate(
-      before: before,
-      after: after,
-    ),
   );
 }

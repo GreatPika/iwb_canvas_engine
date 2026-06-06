@@ -63,7 +63,20 @@ final class StoreSparseAddElement extends StoreSparseMutation {
 }
 
 final class StoreSparseUpdateElement extends StoreSparseMutation {
-  const StoreSparseUpdateElement({
+  factory StoreSparseUpdateElement({
+    required CanvasElement before,
+    required CanvasElement element,
+  }) {
+    return StoreSparseUpdateElement._(
+      element: element,
+      compiledUpdate: const CommitCompiler().compileElementUpdate(
+        before: before,
+        after: element,
+      ),
+    );
+  }
+
+  const StoreSparseUpdateElement._({
     required this.element,
     required this.compiledUpdate,
   });
