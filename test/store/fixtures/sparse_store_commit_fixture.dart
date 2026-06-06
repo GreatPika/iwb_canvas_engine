@@ -85,6 +85,10 @@ void _registerSparseValidationTests() {
     () => expect(_rejectsRevisionOnlySparseUpdateBeforeSwap, returnsNormally),
   );
   test(
+    'rejects sparse update taxonomy from non-committed rows',
+    () => expect(_rejectsSparseUpdateSourceMismatchBeforeSwap, returnsNormally),
+  );
+  test(
     'validates image update resources before swap',
     () => expect(_validatesUpdateFailuresBeforeSwap, returnsNormally),
   );
@@ -364,6 +368,46 @@ void _rejectsRevisionOnlySparseUpdateBeforeSwap() {
   expect(afterFacts.fillColor, beforeFacts.fillColor);
   expect(afterFacts.revision, beforeFacts.revision);
   expect(store.projectionBuildCount, 0);
+}
+
+void _rejectsSparseUpdateSourceMismatchBeforeSwap() {
+  final store = DocumentStoreKernel(_baseDocument());
+  final beforeFacts = _requireFacts(store, CanvasElementId('e-content'));
+  final beforeBoundsRevision = store.boundsRevision;
+  final beforeVisualRevision = store.elementVisualRevision;
+
+  expect(
+    () => store.prepareSparseCommit(_sparseUpdateWithMismatchedBefore()),
+    throwsA(isA<ArgumentError>()),
+  );
+  final afterFacts = _requireFacts(store, CanvasElementId('e-content'));
+  expect(afterFacts.size, beforeFacts.size);
+  expect(afterFacts.fillColor, beforeFacts.fillColor);
+  expect(afterFacts.revision, beforeFacts.revision);
+  expect(store.boundsRevision, beforeBoundsRevision);
+  expect(store.elementVisualRevision, beforeVisualRevision);
+  expect(store.projectionBuildCount, 0);
+}
+
+StoreSparseCommit _sparseUpdateWithMismatchedBefore() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.elementVisual(),
+    mutations: [
+      StoreSparseUpdateElement(
+        before: CanvasRectElement(
+          id: CanvasElementId('e-content'),
+          size: const Size(44, 55),
+          fillColor: const Color(0xFFFF0000),
+        ),
+        element: CanvasRectElement(
+          id: CanvasElementId('e-content'),
+          size: const Size(44, 55),
+          revision: 1,
+          fillColor: const Color(0xFF00FF00),
+        ),
+      ),
+    ],
+  );
 }
 
 void _expectRevisionDeltaRejected(StoreSparseCommit commit) {
@@ -648,12 +692,7 @@ void _expectPaintedStrokeBoundsUpdate({
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
-        mutations: [
-          StoreSparseUpdateElement(
-            before: before,
-            element: update,
-          ),
-        ],
+        mutations: [StoreSparseUpdateElement(before: before, element: update)],
       ),
     ),
     throwsA(isA<ArgumentError>()),
@@ -662,12 +701,7 @@ void _expectPaintedStrokeBoundsUpdate({
     store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
-        mutations: [
-          StoreSparseUpdateElement(
-            before: before,
-            element: update,
-          ),
-        ],
+        mutations: [StoreSparseUpdateElement(before: before, element: update)],
       ),
     ),
   );
@@ -746,7 +780,7 @@ void Function() _prepareMissingResourceUpdate(DocumentStoreKernel store) {
         StoreSparseUpdateElement(
           before: CanvasImageElement(
             id: CanvasElementId('e-image'),
-            resourceId: CanvasResourceId('r-image'),
+            resourceId: CanvasResourceId('resource-a'),
             size: const Size(6, 7),
           ),
           element: CanvasImageElement(
@@ -771,10 +805,7 @@ StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement before,
   required CanvasElement after,
 }) {
-  return StoreSparseUpdateElement(
-    before: before,
-    element: after,
-  );
+  return StoreSparseUpdateElement(before: before, element: after);
 }
 
 StoreSparseUpdateElement _sparseRectFillColorUpdate({

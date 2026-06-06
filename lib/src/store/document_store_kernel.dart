@@ -12,6 +12,7 @@ import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
+import 'canvas_element_snapshot.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'element_registry.dart';
@@ -497,6 +498,7 @@ final class DocumentStoreKernel {
       if (before == null) {
         continue;
       }
+      _validateSparseElementUpdateSource(before: before, update: update);
       if (_isSparseElementUpdateNoOp(before: before, update: update)) {
         continue;
       }
@@ -787,6 +789,19 @@ bool _isSparseElementUpdateNoOp({
 }) {
   return !update.compiledUpdate.revisionDelta.hasChanges &&
       update.element.revision == before.revision;
+}
+
+void _validateSparseElementUpdateSource({
+  required CanvasElement before,
+  required StoreSparseUpdateElement update,
+}) {
+  if (!sameCanvasElementSnapshot(update.before, before)) {
+    throw ArgumentError.value(
+      update.before,
+      'before',
+      'sparse element update taxonomy must be compiled from the committed row.',
+    );
+  }
 }
 
 void _validateSparseElementUpdate({

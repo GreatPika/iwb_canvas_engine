@@ -68,6 +68,7 @@ final class StoreSparseUpdateElement extends StoreSparseMutation {
     required CanvasElement element,
   }) {
     return StoreSparseUpdateElement._(
+      before: before,
       element: element,
       compiledUpdate: const CommitCompiler().compileElementUpdate(
         before: before,
@@ -77,10 +78,12 @@ final class StoreSparseUpdateElement extends StoreSparseMutation {
   }
 
   const StoreSparseUpdateElement._({
+    required this.before,
     required this.element,
     required this.compiledUpdate,
   });
 
+  final CanvasElement before;
   final CanvasElement element;
   final ElementUpdateCompileResult compiledUpdate;
 }
