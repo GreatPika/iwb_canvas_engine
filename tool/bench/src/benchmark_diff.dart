@@ -514,7 +514,12 @@ final class ParsedCaseReport {
     required this.scale,
     required this.budgetClasses,
     required this.memoryScope,
+    required this.measurementBoundary,
+    required this.fixtureShape,
+    required this.actionUsSamples,
+    required this.setupUsSamples,
     required this.metrics,
+    required this.setupMetrics,
     required this.exactInvariants,
   });
 
@@ -523,7 +528,12 @@ final class ParsedCaseReport {
   final String scale;
   final List<String>? budgetClasses;
   final String? memoryScope;
+  final ParsedMeasurementBoundary? measurementBoundary;
+  final String? fixtureShape;
+  final List<int>? actionUsSamples;
+  final List<int>? setupUsSamples;
   final Map<String, Object?> metrics;
+  final Map<String, Object?>? setupMetrics;
   final Map<String, ParsedInvariantReport> exactInvariants;
 
   String get key => '$id/$scale';
@@ -535,7 +545,19 @@ final class ParsedCaseReport {
       scale: _string(json, 'scale', '$source case'),
       budgetClasses: _optionalStringList(json, 'budgetClasses', '$source case'),
       memoryScope: _optionalString(json, 'memoryScope', '$source case'),
+      measurementBoundary: ParsedMeasurementBoundary.parseOptional(
+        json,
+        '$source case',
+      ),
+      fixtureShape: _optionalString(json, 'fixtureShape', '$source case'),
+      actionUsSamples: _optionalIntList(
+        json,
+        'actionUsSamples',
+        '$source case',
+      ),
+      setupUsSamples: _optionalIntList(json, 'setupUsSamples', '$source case'),
       metrics: Map<String, Object?>.from(_map(json, 'metrics', '$source case')),
+      setupMetrics: _optionalMap(json, 'setupMetrics', '$source case'),
       exactInvariants: {
         for (final entry in _map(
           json,
@@ -554,12 +576,96 @@ final class ParsedCaseReport {
     return {
       'id': id,
       'scale': scale,
+      'measurementBoundary': measurementBoundary?.toJson(),
+      'fixtureShape': fixtureShape,
+      'actionUsSamples': actionUsSamples,
+      'setupUsSamples': setupUsSamples,
       'metrics': metrics,
+      'setupMetrics': setupMetrics,
       'exactInvariants': {
         for (final entry in exactInvariants.entries)
           entry.key: entry.value.toBaselineJson(),
       },
     };
+  }
+}
+
+final class ParsedMeasurementBoundary {
+  const ParsedMeasurementBoundary({
+    required this.timedScope,
+    required this.setupScope,
+    required this.teardownScope,
+    required this.primaryTiming,
+    required this.primaryMemory,
+    required this.setupMetrics,
+    required this.setupMemoryMetrics,
+  });
+
+  final String timedScope;
+  final String setupScope;
+  final String teardownScope;
+  final String primaryTiming;
+  final String primaryMemory;
+  final List<String> setupMetrics;
+  final List<String> setupMemoryMetrics;
+
+  Map<String, Object?> toJson() {
+    return {
+      'timedScope': timedScope,
+      'setupScope': setupScope,
+      'teardownScope': teardownScope,
+      'primaryTiming': primaryTiming,
+      'primaryMemory': primaryMemory,
+      'setupMetrics': setupMetrics,
+      'setupMemoryMetrics': setupMemoryMetrics,
+    };
+  }
+
+  static ParsedMeasurementBoundary? parseOptional(
+    Map<String, Object?> json,
+    String source,
+  ) {
+    final boundary = _optionalMap(json, 'measurementBoundary', source);
+    if (boundary == null) {
+      return null;
+    }
+    return ParsedMeasurementBoundary(
+      timedScope: _string(
+        boundary,
+        'timedScope',
+        '$source measurementBoundary',
+      ),
+      setupScope: _string(
+        boundary,
+        'setupScope',
+        '$source measurementBoundary',
+      ),
+      teardownScope: _string(
+        boundary,
+        'teardownScope',
+        '$source measurementBoundary',
+      ),
+      primaryTiming: _string(
+        boundary,
+        'primaryTiming',
+        '$source measurementBoundary',
+      ),
+      primaryMemory: _string(
+        boundary,
+        'primaryMemory',
+        '$source measurementBoundary',
+      ),
+      setupMetrics: _stringList(
+        boundary,
+        'setupMetrics',
+        '$source measurementBoundary',
+      ),
+      setupMemoryMetrics: _stringList(
+        boundary,
+        'setupMemoryMetrics',
+        '$source measurementBoundary',
+      ),
+    );
   }
 }
 
@@ -726,6 +832,13 @@ List<String> _validateCaseForPolicy({
       );
     }
   }
+  failures.addAll(
+    _validateCaseBoundaryFields(
+      benchmarkCase: benchmarkCase,
+      actual: actual,
+      caseName: caseName,
+    ),
+  );
   for (final metric in benchmarkCase.requiredMetrics) {
     if (!actual.metrics.containsKey(metric)) {
       failures.add('$caseName missing metric $metric');
@@ -772,6 +885,150 @@ List<String> _validateCaseForPolicy({
     }
   }
   return failures;
+}
+
+List<String> _validateCaseBoundaryFields({
+  required BenchmarkCase benchmarkCase,
+  required ParsedCaseReport actual,
+  required String caseName,
+}) {
+  final failures = <String>[];
+  final boundary = actual.measurementBoundary;
+  if (boundary == null) {
+    failures.add('$caseName missing measurementBoundary');
+  } else {
+    _expectEqual(
+      failures,
+      '$caseName measurementBoundary.timedScope',
+      boundary.timedScope,
+      benchmarkCase.measurementBoundary.timedScope,
+    );
+    _expectEqual(
+      failures,
+      '$caseName measurementBoundary.setupScope',
+      boundary.setupScope,
+      benchmarkCase.measurementBoundary.setupScope,
+    );
+    _expectEqual(
+      failures,
+      '$caseName measurementBoundary.teardownScope',
+      boundary.teardownScope,
+      benchmarkCase.measurementBoundary.teardownScope,
+    );
+    _expectEqual(
+      failures,
+      '$caseName measurementBoundary.primaryTiming',
+      boundary.primaryTiming,
+      benchmarkCase.measurementBoundary.primaryTiming,
+    );
+    _expectEqual(
+      failures,
+      '$caseName measurementBoundary.primaryMemory',
+      boundary.primaryMemory,
+      benchmarkCase.measurementBoundary.primaryMemory,
+    );
+    _expectStringList(
+      failures,
+      '$caseName measurementBoundary.setupMetrics',
+      boundary.setupMetrics,
+      benchmarkCase.measurementBoundary.setupMetrics,
+    );
+    _expectStringList(
+      failures,
+      '$caseName measurementBoundary.setupMemoryMetrics',
+      boundary.setupMemoryMetrics,
+      benchmarkCase.measurementBoundary.setupMemoryMetrics,
+    );
+  }
+  _expectEqual(
+    failures,
+    '$caseName fixtureShape',
+    actual.fixtureShape,
+    benchmarkCase.fixtureShape,
+  );
+  _validateCaseSamples(
+    failures: failures,
+    benchmarkCase: benchmarkCase,
+    actual: actual,
+    caseName: caseName,
+  );
+  _validatePrimaryMemoryMetrics(benchmarkCase, actual, caseName, failures);
+  _validateSetupMetrics(benchmarkCase, actual, caseName, failures);
+  return failures;
+}
+
+void _validateCaseSamples({
+  required List<String> failures,
+  required BenchmarkCase benchmarkCase,
+  required ParsedCaseReport actual,
+  required String caseName,
+}) {
+  final actionSamples = actual.actionUsSamples;
+  if (actionSamples == null) {
+    failures.add('$caseName missing actionUsSamples');
+  } else if (actionSamples.isEmpty) {
+    failures.add('$caseName actionUsSamples must not be empty');
+  }
+  final setupSamples = actual.setupUsSamples;
+  if (setupSamples == null) {
+    failures.add('$caseName missing setupUsSamples');
+  } else if (benchmarkCase.measurementBoundary.setupScope != 'none' &&
+      setupSamples.isEmpty) {
+    failures.add('$caseName setupUsSamples must not be empty');
+  }
+}
+
+void _validatePrimaryMemoryMetrics(
+  BenchmarkCase benchmarkCase,
+  ParsedCaseReport actual,
+  String caseName,
+  List<String> failures,
+) {
+  if (benchmarkCase.measurementBoundary.primaryMemory == 'none') {
+    return;
+  }
+  for (final metric in _primaryMemoryMetricsForCase(benchmarkCase)) {
+    _requiredMetricNumber(actual, metric, caseName, failures);
+  }
+}
+
+void _validateSetupMetrics(
+  BenchmarkCase benchmarkCase,
+  ParsedCaseReport actual,
+  String caseName,
+  List<String> failures,
+) {
+  final setupMetrics = actual.setupMetrics;
+  if (setupMetrics == null) {
+    failures.add('$caseName missing setupMetrics');
+    return;
+  }
+  if (benchmarkCase.measurementBoundary.setupScope == 'none') {
+    if (setupMetrics.isNotEmpty) {
+      failures.add('$caseName setupMetrics must be empty for setupScope none');
+    }
+    return;
+  }
+  final requiredSetupMetrics = [
+    ...benchmarkCase.measurementBoundary.setupMetrics,
+    ...benchmarkCase.measurementBoundary.setupMemoryMetrics,
+  ];
+  for (final metric in requiredSetupMetrics) {
+    final value = setupMetrics[metric];
+    if (value == null) {
+      failures.add('$caseName missing setup metric $metric');
+    } else if (value is! num) {
+      failures.add('$caseName setup metric $metric must be numeric');
+    }
+  }
+  for (final metric in benchmarkCase.measurementBoundary.setupMetrics) {
+    final value = actual.metrics[metric];
+    if (value == null) {
+      failures.add('$caseName missing metric $metric');
+    } else if (value is! num) {
+      failures.add('$caseName metric $metric must be numeric');
+    }
+  }
 }
 
 // Exact-invariant validation intentionally keeps missing, mismatched, and
@@ -1011,66 +1268,6 @@ List<String> _compareAgainstApprovedBaseline({
           failures.add(failure);
         }
       }
-      if (_mustCompareMetric(
-        baselineCase: baselineCase,
-        currentCase: currentCase,
-        metric: 'rss_delta_bytes',
-      )) {
-        final baselineValue = _requiredMetricNumber(
-          baselineCase,
-          'rss_delta_bytes',
-          'baseline $key',
-          failures,
-        );
-        final currentValue = _requiredMetricNumber(
-          currentCase,
-          'rss_delta_bytes',
-          'current $key',
-          failures,
-        );
-        if (baselineValue != null && currentValue != null) {
-          final failure = _regressionFailure(
-            key: key,
-            metric: 'rss_delta_bytes',
-            baselineValue: baselineValue,
-            currentValue: currentValue,
-            caps: caps,
-          );
-          if (failure != null) {
-            failures.add(failure);
-          }
-        }
-      }
-      if (_mustCompareMetric(
-        baselineCase: baselineCase,
-        currentCase: currentCase,
-        metric: 'allocation_bytes',
-      )) {
-        final baselineValue = _requiredMetricNumber(
-          baselineCase,
-          'allocation_bytes',
-          'baseline $key',
-          failures,
-        );
-        final currentValue = _requiredMetricNumber(
-          currentCase,
-          'allocation_bytes',
-          'current $key',
-          failures,
-        );
-        if (baselineValue != null && currentValue != null) {
-          final failure = _regressionFailure(
-            key: key,
-            metric: 'allocation_bytes',
-            baselineValue: baselineValue,
-            currentValue: currentValue,
-            caps: caps,
-          );
-          if (failure != null) {
-            failures.add(failure);
-          }
-        }
-      }
       failures.addAll(
         _validateExactInvariantRegression(
           benchmarkCase: benchmarkCase,
@@ -1096,6 +1293,7 @@ Iterable<String> _regressionMetricsForCase(BenchmarkCase benchmarkCase) {
     for (final metric in benchmarkCase.requiredMetrics)
       if (_regressionMetricKeys.contains(metric)) metric,
     for (final metric in _absoluteCapMetricsForCase(benchmarkCase)) metric,
+    for (final metric in _primaryMemoryMetricsForCase(benchmarkCase)) metric,
   };
 }
 
@@ -1123,13 +1321,12 @@ const _timeBudgetClassIds = {
   'bulk_io',
 };
 
-bool _mustCompareMetric({
-  required ParsedCaseReport baselineCase,
-  required ParsedCaseReport currentCase,
-  required String metric,
-}) {
-  return baselineCase.metrics.containsKey(metric) ||
-      currentCase.metrics.containsKey(metric);
+Iterable<String> _primaryMemoryMetricsForCase(BenchmarkCase benchmarkCase) {
+  return switch (benchmarkCase.measurementBoundary.primaryMemory) {
+    'action' || 'lifecycle' => const ['allocation_bytes', 'rss_delta_bytes'],
+    'none' => const <String>[],
+    _ => const <String>[],
+  };
 }
 
 num? _requiredMetricNumber(
@@ -1517,9 +1714,32 @@ void _expectEqual(
   }
 }
 
+void _expectStringList(
+  List<String> failures,
+  String field,
+  List<String> actual,
+  List<String> expected,
+) {
+  if (!_sameStringList(actual, expected)) {
+    failures.add('$field mismatch: actual=$actual expected=$expected');
+  }
+}
+
 bool _sameStringSet(List<String> actual, List<String> expected) {
   return actual.toSet().containsAll(expected) &&
       expected.toSet().containsAll(actual);
+}
+
+bool _sameStringList(List<String> actual, List<String> expected) {
+  if (actual.length != expected.length) {
+    return false;
+  }
+  for (var index = 0; index < actual.length; index++) {
+    if (actual[index] != expected[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 num? _metricNumber(ParsedCaseReport report, String metric) {
@@ -1710,6 +1930,17 @@ Map<String, Object?> _map(
   return _requireMap(json[key], '$source $key');
 }
 
+Map<String, Object?>? _optionalMap(
+  Map<String, Object?> json,
+  String key,
+  String source,
+) {
+  if (!json.containsKey(key) || json[key] == null) {
+    return null;
+  }
+  return _requireMap(json[key], '$source $key');
+}
+
 Map<String, Object?> _requireMap(Object? value, String source) {
   if (value is Map<String, Object?>) {
     return value;
@@ -1797,4 +2028,25 @@ List<String>? _optionalStringList(
     return null;
   }
   return _stringList(json, key, source);
+}
+
+List<int>? _optionalIntList(
+  Map<String, Object?> json,
+  String key,
+  String source,
+) {
+  if (!json.containsKey(key) || json[key] == null) {
+    return null;
+  }
+  final value = json[key];
+  if (value is! List<Object?>) {
+    throw FormatException('$source $key must be a list.');
+  }
+  return [
+    for (final item in value)
+      if (item is int)
+        item
+      else
+        throw FormatException('$source $key must contain integers.'),
+  ];
 }

@@ -193,6 +193,144 @@ void main() {
       );
     });
 
+    test('rejects old-schema reports and baseline payloads', () {
+      final manifest = BenchmarkManifest.load();
+      final oldPixel6Report =
+          jsonDecode(
+                File(
+                  '$manualBenchmarkBaselineRoot/'
+                  'pixel6_android16_flutter_3_44_0.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
+      final current = _releaseReport(manifest);
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: oldPixel6Report,
+          currentJson: current,
+          baselinePath: 'tool/bench/baselines/manual/pixel6.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        allOf(
+          contains('baseline schemaVersion mismatch'),
+          contains('baseline manifestVersion mismatch'),
+        ),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: current,
+          currentJson: oldPixel6Report,
+          baselinePath: 'baseline.json',
+          currentPath: 'build/bench/current/pixel6.json',
+        ).failures.join('\n'),
+        allOf(
+          contains('current schemaVersion mismatch'),
+          contains('current manifestVersion mismatch'),
+        ),
+      );
+    });
+
+    test('rejects missing boundary metadata and setup diagnostics', () {
+      final manifest = BenchmarkManifest.load();
+      final baseline = _releaseReport(manifest);
+      final missingBoundary = _clone(baseline);
+      _case(
+        missingBoundary,
+        'edit.add_element',
+        '1k',
+      ).remove('measurementBoundary');
+      final missingSetupDiagnostics = _clone(baseline);
+      (_case(missingSetupDiagnostics, 'edit.add_element', '1k')['setupMetrics']
+              as Map<String, Object?>)
+          .remove('setup_allocation_bytes');
+      final missingReportSetupMetric = _clone(baseline);
+      _metrics(
+        missingReportSetupMetric,
+        'edit.add_element',
+        '1k',
+      ).remove('setup_us');
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: missingBoundary,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('current edit.add_element/1k missing measurementBoundary'),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: missingSetupDiagnostics,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains(
+          'current edit.add_element/1k missing setup metric '
+          'setup_allocation_bytes',
+        ),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: missingReportSetupMetric,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('current edit.add_element/1k missing metric setup_us'),
+      );
+    });
+
+    test('rejects boundary drift and missing primary memory metrics', () {
+      final manifest = BenchmarkManifest.load();
+      final baseline = _releaseReport(manifest);
+      final boundaryDrift = _clone(baseline);
+      (_case(boundaryDrift, 'edit.add_element', '1k')['measurementBoundary']
+              as Map<String, Object?>)['primaryMemory'] =
+          'lifecycle';
+      final missingPrimaryMemory = _clone(baseline);
+      _metrics(
+        missingPrimaryMemory,
+        'edit.add_element',
+        '1k',
+      ).remove('rss_delta_bytes');
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: boundaryDrift,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('measurementBoundary.primaryMemory mismatch'),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: missingPrimaryMemory,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('current edit.add_element/1k missing metric rss_delta_bytes'),
+      );
+    });
+
     test('rejects absolute time caps and first-baseline memory caps', () {
       final manifest = BenchmarkManifest.load();
       final report = _releaseReport(manifest);
@@ -425,6 +563,24 @@ void main() {
         ).failures.join('\n'),
         contains('rss_delta_bytes regression'),
       );
+
+      final lifecycleMemory = _clone(baseline);
+      _metrics(
+        lifecycleMemory,
+        'load_document.success',
+        '1k',
+      )['allocation_bytes'] = 70000;
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: lifecycleMemory,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('load_document.success/1k allocation_bytes regression'),
+      );
     });
 
     test('does not apply first-baseline memory caps during ordinary diff', () {
@@ -433,6 +589,30 @@ void main() {
       final current = _clone(baseline);
       _metrics(baseline, 'edit.add_element', '1k')['allocation_bytes'] = 262000;
       _metrics(current, 'edit.add_element', '1k')['allocation_bytes'] = 327000;
+
+      final result = diffBenchmarkReports(
+        manifest: manifest,
+        profile: 'release',
+        baselineJson: baseline,
+        currentJson: current,
+        baselinePath: 'baseline.json',
+        currentPath: 'current.json',
+      );
+
+      expect(result.failures, isEmpty);
+    });
+
+    test('ignores setup diagnostics for hot gate regressions', () {
+      final manifest = BenchmarkManifest.load();
+      final baseline = _releaseReport(manifest);
+      final current = _clone(baseline);
+      _metrics(current, 'edit.add_element', '1k')['setup_us'] = 1000000;
+      final setupMetrics =
+          _case(current, 'edit.add_element', '1k')['setupMetrics']
+              as Map<String, Object?>;
+      setupMetrics['setup_us'] = 1000000;
+      setupMetrics['setup_allocation_bytes'] = 1000000;
+      setupMetrics['setup_rss_delta_bytes'] = 1000000;
 
       final result = diffBenchmarkReports(
         manifest: manifest,
@@ -492,7 +672,13 @@ void main() {
             jsonDecode(File(outputPath).readAsStringSync())
                 as Map<String, Object?>;
         expect(diffReport['status'], 'pass');
-        expect(diffReport['summary'], containsPair('comparedCaseCount', 74));
+        expect(
+          diffReport['summary'],
+          containsPair(
+            'comparedCaseCount',
+            (baseline['cases'] as List<Object?>).length,
+          ),
+        );
       },
     );
 
@@ -643,6 +829,11 @@ void main() {
       expect(approvedCase, isNot(contains('classification')));
       expect(approvedCase, isNot(contains('budgetClasses')));
       expect(approvedCase, isNot(contains('memoryScope')));
+      expect(approvedCase, contains('measurementBoundary'));
+      expect(approvedCase, contains('fixtureShape'));
+      expect(approvedCase, contains('actionUsSamples'));
+      expect(approvedCase, contains('setupUsSamples'));
+      expect(approvedCase, contains('setupMetrics'));
       final invariantBearing = (approvedJson['cases'] as List<Object?>)
           .cast<Map<String, Object?>>()
           .firstWhere(
@@ -744,6 +935,10 @@ Map<String, Object?> _caseReport(
   BenchmarkProfile profile,
 ) {
   final metrics = _metricsForCase(benchmarkCase, scale);
+  final setupMetrics = _setupMetricsForCase(benchmarkCase);
+  final setupUsSamples = benchmarkCase.measurementBoundary.setupScope == 'none'
+      ? const <int>[]
+      : const [10];
   return {
     'id': benchmarkCase.id,
     'classification': benchmarkCase.classification,
@@ -751,11 +946,16 @@ Map<String, Object?> _caseReport(
     'scaleLabel': scale.label,
     'budgetClasses': benchmarkCase.budgetClasses,
     'memoryScope': benchmarkCase.memoryScope,
+    'measurementBoundary': _boundaryJson(benchmarkCase.measurementBoundary),
+    'fixtureShape': benchmarkCase.fixtureShape,
+    'actionUsSamples': const [100],
+    'setupUsSamples': setupUsSamples,
     'warmups': profile.warmups,
     'repetitions': profile.repetitions,
     'iterations': profile.iterations ?? 1,
     'timingClaims': profile.timingClaims,
     'metrics': metrics,
+    'setupMetrics': setupMetrics,
     'exactInvariants': {
       for (final invariant in benchmarkCase.exactInvariants)
         invariant.name: {
@@ -803,7 +1003,33 @@ Map<String, Object?> _metricsForCase(
       metrics.containsKey('avg_us')) {
     metrics['legacy_avg_us'] = 100;
   }
+  if (benchmarkCase.measurementBoundary.setupScope != 'none') {
+    metrics['setup_us'] = 10;
+  }
   return metrics;
+}
+
+Map<String, Object?> _setupMetricsForCase(BenchmarkCase benchmarkCase) {
+  if (benchmarkCase.measurementBoundary.setupScope == 'none') {
+    return const {};
+  }
+  return {
+    'setup_us': 10,
+    'setup_allocation_bytes': 64,
+    'setup_rss_delta_bytes': 64,
+  };
+}
+
+Map<String, Object?> _boundaryJson(BenchmarkMeasurementBoundary boundary) {
+  return {
+    'timedScope': boundary.timedScope,
+    'setupScope': boundary.setupScope,
+    'teardownScope': boundary.teardownScope,
+    'primaryTiming': boundary.primaryTiming,
+    'primaryMemory': boundary.primaryMemory,
+    'setupMetrics': boundary.setupMetrics,
+    'setupMemoryMetrics': boundary.setupMemoryMetrics,
+  };
 }
 
 bool _hasTimeBudgetClass(BenchmarkCase benchmarkCase) {
@@ -879,10 +1105,18 @@ Map<String, Object?> _metrics(
   String id,
   String scale,
 ) {
+  return _case(report, id, scale)['metrics'] as Map<String, Object?>;
+}
+
+Map<String, Object?> _case(
+  Map<String, Object?> report,
+  String id,
+  String scale,
+) {
   final cases = report['cases'] as List<Object?>;
   for (final entry in cases.cast<Map<String, Object?>>()) {
     if (entry['id'] == id && entry['scale'] == scale) {
-      return entry['metrics'] as Map<String, Object?>;
+      return entry;
     }
   }
   throw StateError('Missing fixture case $id/$scale.');
