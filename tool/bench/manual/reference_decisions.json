@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-06T19:51:00.000Z",
+  "updatedAtUtc": "2026-06-06T22:04:07.674409Z",
   "records": [
     {
       "referencePath": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json",
@@ -13,11 +13,13 @@
     },
     {
       "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
-      "acceptedAtUtc": "2026-06-06T19:51:00.000Z",
-      "acceptedReason": "Bootstrap Xiaomi manual reference from existing local full-device report; stable window not available yet.",
-      "selectionPolicy": "bootstrap_single_run_v1",
+      "acceptedAtUtc": "2026-06-06T22:04:07.674409Z",
+      "acceptedReason": "Before load projection lifecycle optimization",
+      "selectionPolicy": "stable_window_median_v1",
       "acceptedFromRuns": [
-        "tool/bench/manual/run_history/2026-06-06_xiaomi_22081283g_unrecord_existing_full_release_report.json"
+        "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_1.json",
+        "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_2.json",
+        "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_3.json"
       ]
     }
   ]

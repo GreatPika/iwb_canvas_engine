@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-06T19:46:00.000Z",
+  "updatedAtUtc": "2026-06-06T22:04:01.483036Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -33,6 +33,45 @@
       "label": "existing-full-release-report",
       "recordedAtUtc": "2026-06-06T19:46:00.000Z",
       "subjectGitHead": "unrecorded-existing-local-report",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "22081283G",
+        "os": "Android 14"
+      },
+      "caseCount": 78
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_1.json",
+      "label": "load_projection_run_1",
+      "recordedAtUtc": "2026-06-06T22:03:46.616248Z",
+      "subjectGitHead": "7bf70870eebe127b38c2e6025129f1455c4b18a2",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "22081283G",
+        "os": "Android 14"
+      },
+      "caseCount": 78
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_2.json",
+      "label": "load_projection_run_2",
+      "recordedAtUtc": "2026-06-06T22:03:53.152980Z",
+      "subjectGitHead": "7bf70870eebe127b38c2e6025129f1455c4b18a2",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "22081283G",
+        "os": "Android 14"
+      },
+      "caseCount": 78
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-07_xiaomi_22081283g_load_projection_run_3.json",
+      "label": "load_projection_run_3",
+      "recordedAtUtc": "2026-06-06T22:04:01.483036Z",
+      "subjectGitHead": "7bf70870eebe127b38c2e6025129f1455c4b18a2",
       "repositoryDirty": true,
       "device": {
         "name": "Xiaomi 22081283G",
