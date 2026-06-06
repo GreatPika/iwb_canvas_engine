@@ -40,7 +40,7 @@ Do not assume:
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
-| DocumentProjectionCache | Store | projectionRevision | document/projection change | 1 committed projection per revision | replace on projectionRevision | projection read hit/miss | no in pointer/paint/hit |
+| DocumentProjectionCache | Store | projectionRevision | document/projection change, including accepted sparse commits | 1 committed projection per revision | replace on projectionRevision | projection read hit/miss | no in pointer/paint/hit/edit commit |
 | TextLayoutCache | Frame | text/style/font/width/direction/lineHeight | text/style update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | PathGeometryCache | Geometry/Frame | pathData/fillRule/strokeWidth | path update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
@@ -56,6 +56,14 @@ Do not assume:
 Cache miss in hot path must be bounded by candidate count, not total scene size.
 Hot caches must declare capacity, eviction, key components, invalidation owner,
 and a metric/probe before implementation.
+
+Accepted sparse edits invalidate `projectionRevision` through store revision
+state when the operation changes public document projection. They must not call
+`readDocument` or build `DocumentProjectionCache` during ordinary callback
+open, sparse commit preparation, sparse install, selection-only interaction
+commit, or no-op routing. The cache may be populated only by explicit public
+projection reads, explicit `CanvasEdit.readDraftDocument` materialization, or
+tests/tools that intentionally inspect the projection.
 
 Text/path/stroke render cache misses are local to the current render record key:
 one miss can fill one bounded cache entry and record hit/miss/eviction probes,

@@ -23,7 +23,8 @@ flowchart LR
   subgraph EditKernel["EditKernel"]
     SessionGate["Session gate\nreject disposed, nested, stale"]
     Finalize["Session finalization\ncallback value, throw, or rejected Future"]
-    Draft["DraftDocument\nrollback-safe mutable copy"]
+    SparseJournal["Sparse edit journal\ncallback-local mutations and store facts"]
+    MaterializedFallback["DraftDocument fallback\nexplicit readDraftDocument or replacement"]
     Touched["TouchedSet\nexact changed state"]
     NoOp["Empty touched set\nno revisions, cache eviction, repaint, or events"]
     Compiler["CommitCompiler\ncompile touched state, preflight,\nand prepare typed effects"]
@@ -59,22 +60,26 @@ flowchart LR
   ActionDescriptor -->|"augment commit plan only for high-level runtime commit"| Compiler
   EditPort -->|"open edit session"| SessionGate
   SessionGate -->|"committed revision snapshot"| Committed
-  Committed -->|"draft source data"| Draft
+  Committed -->|"sparse committed facts"| SparseJournal
+  Committed -->|"projection only for explicit materialization"| MaterializedFallback
   SessionGate -->|"valid live handle"| EditHandle
-  EditHandle -->|"low-level document/resource mutations\nand selection requests"| Draft
+  EditHandle -->|"ordinary document/resource mutations\nand selection requests"| SparseJournal
+  EditHandle -.->|"explicit draft projection/replacement"| MaterializedFallback
   EditHandle -->|"callback completes"| Finalize
   Finalize -->|"synchronous callback value"| Touched
   Finalize -.->|"Future returned after callback"| Rollback
   Finalize -.->|"callback throws"| Rollback
-  Draft -->|"mutation facts"| Touched
+  SparseJournal -->|"mutation facts"| Touched
+  MaterializedFallback -->|"fallback mutation facts"| Touched
   Touched -->|"empty touched set"| NoOp
   NoOp -->|"return without install or side effects"| EditResult
   Touched -->|"non-empty exact invalidation inputs"| Compiler
   Compiler -->|"produces immutable payload"| Plan
-  Compiler -->|"preflight invariants before install"| Committed
+  Compiler -->|"prepare sparse commit/materialized fallback before install"| Committed
   Plan -->|"commit payload for atomic install"| Install
+  Install -->|"prepare accepted selection before store swap"| SelectionEffects
   Install -->|"replace committed tables atomically"| Committed
-  Install -->|"apply selection effects atomically"| SelectionEffects
+  Install -->|"apply prepared selection effects atomically"| SelectionEffects
   SelectionEffects -->|"update selected ids/revision"| SelectionState
 
   Install -->|"apply spatial update scope"| SpatialDelta
@@ -89,7 +94,7 @@ flowchart LR
   EditResult -->|"callback result"| App
 
   SessionGate -.->|"StateError before callback"| Rollback
-  Rollback -.->|"discard draft, events, repaint, spatial/resource/projection effects"| App
+  Rollback -.->|"discard sparse journal/fallback draft, events, repaint, spatial/resource/projection effects"| App
   SessionGate -->|"validation/runtime failure"| ErrorProjection
   Compiler -->|"preflight failure before atomic install"| ErrorProjection
   ErrorProjection -->|"projected exception"| App

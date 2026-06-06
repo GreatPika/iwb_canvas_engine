@@ -65,6 +65,16 @@ Selection is runtime view state owned by `SelectionKernel`, not committed
 document content. `CommittedDocument` stores no selected ids, selected order, or
 selection revision.
 
+Sparse public edits prepare and install against these committed tables. The
+edit session records sparse mutations and asks `DocumentStoreKernel` to build
+the accepted next `CommittedDocument` snapshot before the irreversible swap.
+The store validates id admission, layer/resource membership, image references,
+row placement, revision-family alignment, and projection invalidation in that
+prepare step. A successful sparse install swaps committed tables and revision
+state directly; it does not create or retain a public `CanvasDocument`.
+Materialized fallback remains available only for explicit draft projection
+requests such as `CanvasEdit.readDraftDocument` and whole-draft replacement.
+
 `DocumentMetaRecord` stores persisted document facts:
 
 ```text
@@ -211,6 +221,12 @@ registered.
 - never built in overlay paint;
 - built only by readDocument, encodeCanvasDocument, tests/tools, or explicit edit.readDraftDocument.
 ```
+
+Ordinary sparse edits increment the internal projection revision when their
+accepted operation affects public document projection, but they must not build
+the projection cache. Projection materialization happens only at the explicit
+read paths listed above. This keeps `DocumentStoreKernel` as the committed
+source of truth and `CanvasDocument` as a read DTO.
 
 Projection DTOs must deep-copy all public collections and materialize frozen
 `CanvasMetadata` values. Runtime tables may store compact metadata facts, but

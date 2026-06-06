@@ -236,7 +236,7 @@ Depends On:
 
 Unit 1, Unit 2, Unit 3, and Unit 4.
 
-### [ ] Unit 6: Source-of-truth docs and durable diagrams
+### [x] Unit 6: Source-of-truth docs and durable diagrams
 
 Owner:
 

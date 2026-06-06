@@ -66,17 +66,21 @@ sequenceDiagram
   Caller->>API: edit(fn)
   API->>EK: open session
   EK->>EK: reject disposed/nested
-  EK->>Draft: create draft from committed revision
+  EK->>Store: read sparse committed facts
   EK-->>Caller: CanvasEdit handle
-  Caller->>Draft: synchronous mutations
+  Caller->>EK: synchronous sparse journal mutations
+  opt explicit readDraftDocument or replaceDraftDocument
+    EK->>Draft: materialize draft from committed projection and sparse journal
+    Caller->>Draft: compatible draft mutation
+  end
   EK->>EK: reject Future result
   EK->>CC: compile touched set + invalidation
-  CC->>Store: preflight invariants
-  CC->>Selection: preflight selection effects
+  EK->>Store: prepare sparse commit or materialized fallback
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
-  Applier->>Store: install document effects
-  Applier->>Selection: install selection effects
+  Applier->>Selection: prepare accepted selection effects before store install
+  Applier->>Store: install sparse commit or materialized document
+  Applier->>Selection: install prepared selection effects
   Store-->>Applier: committed document revision facts
   Selection-->>Applier: committed selection revision facts
   Applier->>Events: commit buffered events
@@ -88,14 +92,31 @@ sequenceDiagram
   EK-->>Caller: return callback result
 ```
 
+Ordinary public edit, command, and interaction commit routes open a sparse edit
+session. The session records a callback-local sparse journal, reads committed
+facts from `DocumentStoreKernel`, and compiles exact touched-set/revision
+deltas without building a public `CanvasDocument` projection. `draftSummary`
+uses the committed summary plus sparse deltas. `readDraftDocument` and
+`replaceDraftDocument` are explicit compatibility fallbacks: they materialize a
+rollback-safe `DraftDocument`, replay prior sparse mutations, and then commit
+through the materialized payload path.
+
+`DocumentStoreKernel` prepares accepted sparse commits before the irreversible
+store swap. Duplicate ids, resource references, update-kind compatibility,
+revision-family alignment, and projection invalidation are validated against
+the accepted next committed tables. Selection effects are also prepared before
+the swap from accepted next-document facts. After the swap, `SelectionKernel`
+installs only the prepared selected ids; it does not re-read public document
+membership from the current store.
+
 `CommitApplier` returns the contract-owned immutable commit delivery payloads
 after document and selection effects have both installed. The runtime/applier
 seam lives in `lib/src/contracts/internal/commit_delivery.dart`: it carries the
-public-state publication decision and immutable typed post-install delivery
-effects selected by the accepted edit plan. Spatial and resource delivery
-effects carry the shared immutable `TouchedSet` from
-`lib/src/contracts/internal/touched_set.dart`; edit keeps only the mutable
-builder and store revision deltas private.
+accepted sparse/materialized document payload, public-state publication
+decision, and immutable typed post-install delivery effects selected by the
+accepted edit plan. Spatial and resource delivery effects carry the shared
+immutable `TouchedSet` from `lib/src/contracts/internal/touched_set.dart`; edit
+keeps only the mutable builder and store revision deltas private.
 
 `EditKernel` closes and stales the active edit handle, clears the active-session
 state, and only then asks `RuntimeRoot` to consume the accepted apply result.
@@ -180,6 +201,12 @@ CommitCompiler must not depend on concrete `FrameEngine`. It produces a
 `CommitPlan` containing typed `RepaintIntent` and invalidation effects. The
 post-install runtime/applier boundary dispatches those effects to frame,
 spatial, resource, projection, and public state publication owners.
+
+Sparse and materialized edit sessions both use `CommitCompiler` as the typed
+taxonomy owner. Sparse sessions build `TouchedSet` and `StoreRevisionDelta`
+directly from accepted sparse mutations; materialized sessions compile from the
+`DraftDocument` touched set. Both routes must produce the same operation-matrix
+effects for the same accepted public edit.
 
 ### 11.4 Element update field-effect taxonomy
 

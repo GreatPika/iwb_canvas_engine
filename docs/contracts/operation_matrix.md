@@ -112,6 +112,12 @@ Notes:
   `state.revisions.document`, evict projection, or update spatial indexes.
 - Rows that touch both document content and selection publish one atomic
   `CanvasRuntimeState` through the runtime/applier boundary.
+- Edit-backed document rows may execute through the ordinary sparse route or
+  through explicit materialized fallback after `readDraftDocument` or
+  `replaceDraftDocument`. The row outcomes do not change: both implementations
+  must compile the same revision families, touched-set categories, selection
+  effects, projection invalidation, repaint intent, and action/no-action
+  behavior.
 - Runtime view camera rows do not mutate persisted document camera and do not
   invalidate public document projection. Persisted camera edits remain document
   edits through `CanvasEdit.setCameraOffset`.
