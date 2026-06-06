@@ -26,6 +26,10 @@ void main() {
         expect(_ordinaryPublicEditRouteDoesNotBuildProjection, returnsNormally),
   );
   test(
+    'draftSummary public edit route does not build projection',
+    () => expect(_draftSummaryRouteDoesNotBuildProjection, returnsNormally),
+  );
+  test(
     'selection-only route does not build projection',
     () => expect(_selectionOnlyRouteDoesNotBuildProjection, returnsNormally),
   );
@@ -122,6 +126,42 @@ void _ordinaryPublicEditRouteDoesNotBuildProjection() {
     edit.readDraftDocument();
   });
   expect(root.projectionBuildCount, 1);
+}
+
+void _draftSummaryRouteDoesNotBuildProjection() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(
+      resources: [
+        CanvasImageResource(
+          id: CanvasResourceId('resource-a'),
+          source: CanvasResourceSource.appKey('resource-a'),
+        ),
+      ],
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [_rect('element-a')],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  final summary = root.edits.edit((edit) {
+    edit.addElement(_rect('element-b'), layerId: CanvasLayerId('layer-a'));
+
+    return edit.draftSummary;
+  });
+
+  expect(
+    summary,
+    const CanvasDocumentSummary(
+      elementCount: 2,
+      layerCount: 1,
+      resourceCount: 1,
+    ),
+  );
+  expect(root.projectionBuildCount, 0);
 }
 
 void _selectionOnlyRouteDoesNotBuildProjection() {

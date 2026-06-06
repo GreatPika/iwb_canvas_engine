@@ -214,7 +214,7 @@ Depends On:
 
 Unit 1, Unit 2, and Unit 3.
 
-### [ ] Unit 5: Semantic, temporal, and negative-proof hardening
+### [x] Unit 5: Semantic, temporal, and negative-proof hardening
 
 Owner:
 

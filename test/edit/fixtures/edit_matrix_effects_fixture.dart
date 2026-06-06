@@ -10,6 +10,12 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
+  _registerBasicEditRows();
+  _registerOperationMatrixRows();
+  _registerTaxonomyRows();
+}
+
+void _registerBasicEditRows() {
   test('accepted content add installs after callback commit', () {
     expect(_expectAddElementInstallsAfterCommit, returnsNormally);
   });
@@ -33,9 +39,15 @@ void main() {
   test('removeUnusedResource removes only unused descriptors', () {
     expect(_expectUnusedResourceRemovalInstalls, returnsNormally);
   });
+}
 
+void _registerOperationMatrixRows() {
   test('edit operation matrix rows install expected public effects', () {
     expect(_expectEditOperationRowsInstallEffects, returnsNormally);
+  });
+
+  test('edit operation matrix coverage lists every required row once', () {
+    expect(_expectEditOperationMatrixCoverage, returnsNormally);
   });
 
   test('edit operation matrix rows compile expected typed effects', () {
@@ -49,7 +61,9 @@ void main() {
   test('edit operation matrix rows emit no user actions', () {
     return expectLater(_expectEditOperationRowsEmitNoActions(), completes);
   });
+}
 
+void _registerTaxonomyRows() {
   test('updateElement taxonomy tokens compile expected effects', () {
     expect(_expectUpdateTaxonomyEffects, returnsNormally);
   });
@@ -179,6 +193,24 @@ final _editOperationMatrixCases = [
     _ExpectedPlanEffects.empty(),
   ),
 ];
+
+const _requiredEditOperationRows = {
+  'addElement content',
+  'addBackgroundElement',
+  'CanvasEdit.updateElement',
+  'CanvasEdit.removeElement',
+  'ensureLayer no-op',
+  'ensureLayer changed',
+  'CanvasEdit.clearContent',
+  'CanvasEdit.setCameraOffset',
+  'setBackgroundColor',
+  'setGrid',
+  'setPalette',
+  'upsertResource new/changed',
+  'removeUnusedResource removed',
+  'CanvasEdit.replaceDraftDocument',
+  'no-op edit',
+};
 
 final _updateTaxonomyCases = [
   _UpdateTaxonomyCase(
@@ -574,6 +606,15 @@ void _expectEditOperationRowsInstallEffects() {
     expect(operationCase.row, isNotEmpty);
     operationCase.run();
   }
+}
+
+void _expectEditOperationMatrixCoverage() {
+  final rows = [
+    for (final operationCase in _editOperationMatrixCases) operationCase.row,
+  ];
+
+  expect(rows.toSet(), _requiredEditOperationRows);
+  expect(rows, hasLength(rows.toSet().length));
 }
 
 void _expectEditOperationRowsCompileEffects() {

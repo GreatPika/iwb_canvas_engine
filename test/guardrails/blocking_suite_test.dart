@@ -344,6 +344,7 @@ const _runnerStructuralScanCases = [
     proofPaths: [
       'test/store/no_projection_hot_path_test.dart',
       'test/guardrails/store_projection_checks_test.dart',
+      'test/guardrails/edit_sparse_routes_no_eager_projection_guardrail_test.dart',
     ],
     violationPath: 'lib/src/runtime/bad_runner_projection.dart',
   ),
