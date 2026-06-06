@@ -66,6 +66,18 @@ void main() {
   // Assertions live in the named helper; see comment above.
   // ignore: missing-test-assertion
   test(
+    'per-run case plan does not reuse warmup fixture for measured samples',
+    _perRunCasePlanDoesNotReuseWarmupFixtureForMeasuredSamples,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'per-run lifecycle case plan reuses measured fixture after warmup',
+    _perRunLifecycleCasePlanReusesMeasuredFixtureAfterWarmup,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
     'case plan fails closed for missing boundary registry entries',
     _casePlanFailsClosedForMissingBoundaryRegistryEntries,
   );
@@ -74,6 +86,42 @@ void main() {
   test(
     'case plan fails when operation lacks boundary metadata',
     _casePlanFailsWhenOperationLacksBoundaryMetadata,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'real case plans use manifest boundary table',
+    _realCasePlansUseManifestBoundaryTable,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'spatial case plans enforce ordinary and dense fixture shapes',
+    _spatialCasePlansEnforceFixtureShapes,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'case plan rejects timed and memory boundary drift',
+    _casePlanRejectsBoundaryPolicyDrift,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'projection case excludes runtime setup from action samples',
+    _projectionCaseExcludesRuntimeSetupFromActionSamples,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'resource and diagnostic case plans expose prepared setup diagnostics',
+    _resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'edit input and frame case plans execute prepared action samples',
+    _editInputAndFrameCasePlansExecutePreparedActionSamples,
   );
 }
 
@@ -207,6 +255,81 @@ Future<void> _casePlanFailsWhenCleanupFails() async {
   );
 }
 
+Future<void>
+_perRunCasePlanDoesNotReuseWarmupFixtureForMeasuredSamples() async {
+  final events = <String>[];
+  var nextFixtureId = 0;
+
+  final result = await _runProbePlan(
+    _fakeOptions(warmups: 1, repetitions: 1),
+    _BenchmarkCasePlan(
+      setupScope: 'per_run_prepared_fixture',
+      prepare: () {
+        final fixtureId = nextFixtureId++;
+        events.add('prepare-$fixtureId');
+        return _PreparedProbeFixture(value: fixtureId);
+      },
+      measure: (fixture) {
+        events.add('measure-$fixture');
+        return {'fixture_id': fixture};
+      },
+      cleanup: (fixture) {
+        events.add('cleanup-$fixture');
+      },
+    ),
+  );
+
+  expect(events, [
+    'prepare-0',
+    'measure-0',
+    'cleanup-0',
+    'prepare-1',
+    'measure-1',
+    'cleanup-1',
+  ]);
+  final metrics = result['metrics'] as Map<String, Object?>;
+  expect(metrics, containsPair('fixture_id', 1));
+}
+
+Future<void> _perRunLifecycleCasePlanReusesMeasuredFixtureAfterWarmup() async {
+  final events = <String>[];
+  var nextFixtureId = 0;
+
+  final result = await _runProbePlan(
+    _fakeOptions(warmups: 1, repetitions: 2),
+    _BenchmarkCasePlan(
+      timedScope: 'lifecycle',
+      primaryTiming: 'lifecycle',
+      setupScope: 'per_run_prepared_fixture',
+      prepare: () {
+        final fixtureId = nextFixtureId++;
+        events.add('prepare-$fixtureId');
+        return _PreparedProbeFixture(value: fixtureId);
+      },
+      measure: (fixture) {
+        events.add('measure-$fixture');
+        return {'fixture_id': fixture};
+      },
+      cleanup: (fixture) {
+        events.add('cleanup-$fixture');
+      },
+    ),
+  );
+
+  expect(events, [
+    'prepare-0',
+    'measure-0',
+    'cleanup-0',
+    'prepare-1',
+    'measure-1',
+    'measure-1',
+    'cleanup-1',
+  ]);
+  expect(result['setupUsSamples'], hasLength(1));
+  final metrics = result['metrics'] as Map<String, Object?>;
+  expect(metrics, containsPair('fixture_id', 1));
+}
+
 void _casePlanFailsClosedForMissingBoundaryRegistryEntries() {
   expect(
     () => _casePlan('fake.unregistered', '1k'),
@@ -225,8 +348,10 @@ void _casePlanFailsWhenOperationLacksBoundaryMetadata() {
     'edit.add_element': _CaseBoundaryRegistryEntry(
       timedScope: 'action_only',
       setupScope: '',
+      teardownScope: 'excluded',
       primaryTiming: 'action',
       primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
     ),
   });
 
@@ -240,6 +365,183 @@ void _casePlanFailsWhenOperationLacksBoundaryMetadata() {
       ),
     ),
   );
+}
+
+void _realCasePlansUseManifestBoundaryTable() {
+  final manifest = BenchmarkManifest.load();
+  for (final benchmarkCase in manifest.cases) {
+    final scaleId = benchmarkCase.scales.first.id;
+    final plan = _casePlan(benchmarkCase.id, scaleId);
+    expect(
+      plan.setupScope,
+      benchmarkCase.measurementBoundary.setupScope,
+      reason: benchmarkCase.id,
+    );
+    expect(
+      plan.timedScope,
+      benchmarkCase.measurementBoundary.timedScope,
+      reason: benchmarkCase.id,
+    );
+    expect(
+      plan.primaryMemory,
+      benchmarkCase.measurementBoundary.primaryMemory,
+      reason: benchmarkCase.id,
+    );
+    expect(
+      plan.primaryTiming,
+      benchmarkCase.measurementBoundary.primaryTiming,
+      reason: benchmarkCase.id,
+    );
+    expect(
+      plan.teardownScope,
+      benchmarkCase.measurementBoundary.teardownScope,
+      reason: benchmarkCase.id,
+    );
+    expect(plan.fixtureShape, benchmarkCase.fixtureShape);
+  }
+}
+
+void _spatialCasePlansEnforceFixtureShapes() {
+  const invalidOrdinaryRegistry = _CaseBoundaryRegistry({
+    'spatial.query_point': _CaseBoundaryRegistryEntry(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'dense_stress',
+    ),
+  });
+  const invalidDenseRegistry = _CaseBoundaryRegistry({
+    'spatial.query_point_dense_stress': _CaseBoundaryRegistryEntry(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
+    ),
+  });
+
+  expect(
+    () => _casePlan(
+      'spatial.query_point',
+      '1k',
+      boundaryRegistry: invalidOrdinaryRegistry,
+    ),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('normal_spread fixture shape'),
+      ),
+    ),
+  );
+  expect(
+    () => _casePlan(
+      'spatial.query_point_dense_stress',
+      'dense_50k',
+      boundaryRegistry: invalidDenseRegistry,
+    ),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('dense_stress fixture shape'),
+      ),
+    ),
+  );
+}
+
+void _casePlanRejectsBoundaryPolicyDrift() {
+  const registry = _CaseBoundaryRegistry({
+    'edit.add_element': _CaseBoundaryRegistryEntry(
+      timedScope: 'lifecycle',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'normal_spread',
+    ),
+  });
+
+  expect(
+    () => _casePlan('edit.add_element', '1k', boundaryRegistry: registry),
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('benchmark measurement boundary drift'),
+      ),
+    ),
+  );
+}
+
+Future<void> _projectionCaseExcludesRuntimeSetupFromActionSamples() async {
+  final result = await _runProbePlan(
+    _fakeOptions(caseId: 'projection.read_document'),
+    _casePlan('projection.read_document', '1k'),
+  );
+
+  expect(result['elapsedUsSamples'], hasLength(1));
+  expect(result['setupUsSamples'], hasLength(1));
+  final metrics = result['metrics'] as Map<String, Object?>;
+  expect(metrics, containsPair('setup_us', isA<int>()));
+  expect(metrics, contains('first_read_us'));
+  expect(metrics, contains('cache_hit_us'));
+}
+
+Future<void>
+_resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics() async {
+  final resourceResult = await _runProbePlan(
+    _fakeOptions(caseId: 'resources.mark_dirty'),
+    _casePlan('resources.mark_dirty', '1k_resources'),
+  );
+  final disposeResult = await _runProbePlan(
+    _fakeOptions(caseId: 'runtime.dispose_during_gesture'),
+    _casePlan(
+      'runtime.dispose_during_gesture',
+      'active_selected_overlay_previews',
+    ),
+  );
+  final disabledPointerResult = await _runProbePlan(
+    _fakeOptions(caseId: 'diagnostics.disabled_pointer'),
+    _casePlan('diagnostics.disabled_pointer', 'hot_pointer'),
+  );
+
+  _expectPreparedCaseMetrics(
+    resourceResult,
+    'target_session_cache_invalidation_cost',
+  );
+  _expectPreparedCaseMetrics(disposeResult, 'action_events');
+  _expectPreparedCaseMetrics(disabledPointerResult, 'allocation_records');
+}
+
+void _expectPreparedCaseMetrics(Map<String, Object?> result, String metric) {
+  expect(result['elapsedUsSamples'], hasLength(1));
+  expect(result['setupUsSamples'], hasLength(1));
+  final metrics = result['metrics'] as Map<String, Object?>;
+  expect(metrics, containsPair('setup_us', isA<int>()));
+  expect(metrics, contains(metric));
+}
+
+Future<void> _editInputAndFrameCasePlansExecutePreparedActionSamples() async {
+  final editResult = await _runProbePlan(
+    _fakeOptions(caseId: 'edit.move_selection'),
+    _casePlan('edit.move_selection', '1k'),
+  );
+  final inputResult = await _runProbePlan(
+    _fakeOptions(caseId: 'input.selected_move_preview'),
+    _casePlan('input.selected_move_preview', '1k'),
+  );
+  final frameResult = await _runProbePlan(
+    _fakeOptions(caseId: 'frame.selected_move_preview_cached_ordinary_plan'),
+    _casePlan('frame.selected_move_preview_cached_ordinary_plan', '1k'),
+  );
+
+  _expectPreparedCaseMetrics(editResult, 'selected_count');
+  _expectPreparedCaseMetrics(inputResult, 'scene_repaint_count');
+  _expectPreparedCaseMetrics(frameResult, 'ordinary_plan_hit_rate');
 }
 
 List<String> _probeArgs() {
@@ -263,26 +565,43 @@ Future<Map<String, Object?>> _runProbePlan(
   _ProbeOptions options,
   _BenchmarkCasePlan plan,
 ) async {
-  for (var index = 0; index < options.warmups; index++) {
-    await _measurePlan(plan);
-  }
-
   final samples = <int>[];
   final setupUsSamples = <int>[];
   final metrics = <String, Object?>{};
-  final total = Stopwatch()..start();
-  do {
-    final sample = await _measurePlan(plan);
-    samples.add(sample.elapsedUs);
-    setupUsSamples.add(sample.setupUs);
-    metrics.addAll(sample.metrics);
-    metrics.addAll(sample.setupMetrics);
-  } while (_needsMoreSamples(
-    options,
-    samples.length,
-    total.elapsedMilliseconds,
-  ));
-  total.stop();
+  _MeasuredSetup? reusableSetup;
+  try {
+    for (var index = 0; index < options.warmups; index++) {
+      await _measurePlanSample(plan, null);
+    }
+
+    reusableSetup = plan.reusesPreparedFixture
+        ? await _measureSetup(plan)
+        : null;
+    if (reusableSetup != null) {
+      setupUsSamples.add(reusableSetup.setupUs);
+      metrics.addAll(reusableSetup.setupMetrics);
+    }
+
+    final total = Stopwatch()..start();
+    do {
+      final sample = await _measurePlanSample(plan, reusableSetup);
+      samples.add(sample.elapsedUs);
+      if (reusableSetup == null) {
+        setupUsSamples.add(sample.setupUs);
+        metrics.addAll(sample.setupMetrics);
+      }
+      metrics.addAll(sample.metrics);
+    } while (_needsMoreSamples(
+      options,
+      samples.length,
+      total.elapsedMilliseconds,
+    ));
+    total.stop();
+  } finally {
+    if (reusableSetup != null) {
+      await plan.cleanup(reusableSetup.prepared.value);
+    }
+  }
   metrics.addAll(_timingMetrics(samples));
   metrics['setup_us'] = _avgUs(setupUsSamples);
 
@@ -337,13 +656,78 @@ bool _needsMoreSamples(
   return !durationSatisfied && !sampleFallbackSatisfied;
 }
 
-Future<_ProbeSample> _measurePlan(_BenchmarkCasePlan plan) async {
+Future<_ProbeSample> _measurePlanSample(
+  _BenchmarkCasePlan plan,
+  _MeasuredSetup? reusableSetup,
+) async {
+  if (plan.measuresLifecycle) {
+    if (reusableSetup != null) {
+      return _measureLifecycleAction(plan, reusableSetup);
+    }
+    return _measureLifecycle(plan);
+  }
+  if (reusableSetup != null) {
+    return _measureAction(plan, reusableSetup);
+  }
   final setup = await _measureSetup(plan);
   try {
     return await _measureAction(plan, setup);
   } finally {
     await plan.cleanup(setup.prepared.value);
   }
+}
+
+Future<_ProbeSample> _measureLifecycle(_BenchmarkCasePlan plan) async {
+  final setup = await _measureSetup(plan);
+  final lifecycleRssBefore = ProcessInfo.currentRss;
+  final lifecycleStopwatch = Stopwatch()..start();
+  Map<String, Object?> metrics;
+  try {
+    metrics = Map<String, Object?>.of(await plan.measure(setup.prepared.value));
+  } finally {
+    await plan.cleanup(setup.prepared.value);
+  }
+  lifecycleStopwatch.stop();
+  final lifecycleRssDelta = math.max(
+    ProcessInfo.currentRss - lifecycleRssBefore,
+    0,
+  );
+  metrics
+    ..putIfAbsent('allocation_bytes', () => lifecycleRssDelta)
+    ..putIfAbsent('rss_delta_bytes', () => lifecycleRssDelta);
+  final elapsedUs = lifecycleStopwatch.elapsedMicroseconds;
+  return _ProbeSample(
+    elapsedUs: elapsedUs == 0 ? 1 : elapsedUs,
+    setupUs: setup.setupUs,
+    metrics: metrics,
+    setupMetrics: setup.setupMetrics,
+  );
+}
+
+Future<_ProbeSample> _measureLifecycleAction(
+  _BenchmarkCasePlan plan,
+  _MeasuredSetup setup,
+) async {
+  final lifecycleRssBefore = ProcessInfo.currentRss;
+  final lifecycleStopwatch = Stopwatch()..start();
+  final metrics = Map<String, Object?>.of(
+    await plan.measure(setup.prepared.value),
+  );
+  lifecycleStopwatch.stop();
+  final lifecycleRssDelta = math.max(
+    ProcessInfo.currentRss - lifecycleRssBefore,
+    0,
+  );
+  metrics
+    ..putIfAbsent('allocation_bytes', () => lifecycleRssDelta)
+    ..putIfAbsent('rss_delta_bytes', () => lifecycleRssDelta);
+  final elapsedUs = lifecycleStopwatch.elapsedMicroseconds;
+  return _ProbeSample(
+    elapsedUs: elapsedUs == 0 ? 1 : elapsedUs,
+    setupUs: setup.setupUs,
+    metrics: metrics,
+    setupMetrics: setup.setupMetrics,
+  );
 }
 
 Future<_MeasuredSetup> _measureSetup(_BenchmarkCasePlan plan) async {
@@ -397,550 +781,847 @@ _BenchmarkCasePlan _casePlan(
   String scaleId, {
   _CaseBoundaryRegistry? boundaryRegistry,
 }) {
-  (boundaryRegistry ?? _caseBoundaryRegistry()).validate(caseId);
+  final boundary = (boundaryRegistry ?? _caseBoundaryRegistry()).validate(
+    caseId,
+  );
+  _validateCaseBoundary(caseId, boundary);
+  final setupScope = boundary.setupScope;
+  final config = CanvasRuntimeConfig(
+    pointerPolicy: CanvasPointerPolicy(dragStartSlop: 1),
+  );
+  final plan = switch (caseId) {
+    'edit.add_element' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _editAddElementAction(runtime, scaleId),
+    ),
+    'edit.update_visual' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _editUpdateVisualAction,
+    ),
+    'edit.update_transform' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _editUpdateTransformAction,
+    ),
+    'edit.move_selection' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _moveSelectionAction,
+      prepareRuntime: (runtime) {
+        runtime.selection.setSelection(_selectedIds(scaleId));
+      },
+    ),
+    'edit.set_camera_offset' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _setCameraOffsetAction,
+    ),
+    'edit.add_line' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _editAddLineAction(runtime, scaleId),
+    ),
+    'input.selected_move_preview' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _selectedMovePreviewAction,
+      config: config,
+      prepareRuntime: (runtime) {
+        runtime.selection.setSelection(_selectedIds(scaleId));
+      },
+    ),
+    'frame.selected_move_preview_cached_ordinary_plan' =>
+      _selectedMovePreviewFramePlan(setupScope, scaleId),
+    'input.marquee_preview' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) =>
+          _drawToolPreviewAction(runtime, metric: 'overlay_repaint_count'),
+      prepareRuntime: (runtime) {
+        _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
+      },
+    ),
+    'input.draw_preview' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _drawToolPreviewAction(runtime, metric: 'point_count'),
+      prepareRuntime: (runtime) {
+        _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
+      },
+    ),
+    'input.line_preview' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) =>
+          _drawToolPreviewAction(runtime, metric: 'overlay_repaint_count'),
+      prepareRuntime: (runtime) {
+        _prepareDrawToolPreview(runtime, CanvasDrawTool.line);
+      },
+    ),
+    'input.eraser_preview' ||
+    'input.eraser_budget_exceeded' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _eraserPreviewAction(runtime, scaleId),
+      prepareRuntime: _prepareEraserPreview,
+    ),
+    'frame.main_capture' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _mainFrameCaptureAction,
+    ),
+    'frame.overlay_capture' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _overlayFrameCaptureAction,
+    ),
+    'frame.paint_candidates' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _framePaintCandidatesAction,
+      prepareRuntime: (runtime) {
+        runtime.readDocument();
+      },
+    ),
+    'projection.read_document' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _readDocumentProjectionAction,
+    ),
+    'spatial.query_point' || 'spatial.query_point_dense_stress' =>
+      _runtimeCasePlan(setupScope, scaleId, _spatialQueryAction),
+    'spatial.touched_update' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _spatialTouchedUpdateAction(runtime, scaleId),
+    ),
+    'resources.resolve_sync' => _resourceLookupPlan(setupScope, scaleId),
+    'resources.resolve_sync_cold_budget' => _resourceColdBudgetPlan(
+      setupScope,
+      scaleId,
+    ),
+    'resources.mark_dirty' => _markResourceDirtyPlan(setupScope, scaleId),
+    'resources.mark_all_dirty' => _markAllResourcesDirtyPlan(
+      setupScope,
+      scaleId,
+    ),
+    'codec.decode_v1' => _codecDecodePlan(setupScope, scaleId),
+    'load_document.success' => _loadDocumentSuccessPlan(setupScope, scaleId),
+    'load_document.failure' => _loadDocumentFailurePlan(setupScope, scaleId),
+    'runtime.dispose_during_gesture' => _disposeDuringGesturePlan(
+      setupScope,
+      scaleId,
+    ),
+    'diagnostics.disabled_pointer' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      _disabledPointerAction,
+      prepareRuntime: (_) {
+        DiagnosticRecord.allocations.reset();
+      },
+    ),
+    _ => throw StateError('No benchmark case plan registered for $caseId.'),
+  };
+  return plan.withBoundary(boundary);
+}
+
+_BenchmarkCasePlan _runtimeCasePlan(
+  String setupScope,
+  String scaleId,
+  FutureOr<Map<String, Object?>> Function(RuntimeRoot runtime) measure, {
+  CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+  FutureOr<void> Function(RuntimeRoot runtime)? prepareRuntime,
+}) {
   return _BenchmarkCasePlan(
-    prepare: () => const _PreparedProbeFixture(),
-    measure: (_) => _runOperation(caseId, scaleId),
+    setupScope: setupScope,
+    prepare: () async {
+      final runtime = _runtime(scaleId, config: config);
+      try {
+        await prepareRuntime?.call(runtime);
+        return _PreparedProbeFixture(value: runtime);
+      } catch (_) {
+        runtime.dispose();
+        rethrow;
+      }
+    },
+    measure: (fixture) => measure(fixture as RuntimeRoot),
+    cleanup: (fixture) {
+      (fixture as RuntimeRoot).dispose();
+    },
+  );
+}
+
+void _validateCaseBoundary(String caseId, _CaseBoundaryRegistryEntry boundary) {
+  final expected = _expectedCaseBoundary(caseId);
+  if (boundary.timedScope != expected.timedScope ||
+      boundary.setupScope != expected.setupScope ||
+      boundary.teardownScope != expected.teardownScope ||
+      boundary.primaryTiming != expected.primaryTiming ||
+      boundary.primaryMemory != expected.primaryMemory) {
+    throw StateError('$caseId has benchmark measurement boundary drift.');
+  }
+  if (boundary.fixtureShape != expected.fixtureShape) {
+    throw StateError(
+      '$caseId must use the ${expected.fixtureShape} fixture shape, '
+      'not ${boundary.fixtureShape}.',
+    );
+  }
+}
+
+_ExpectedCaseBoundary _expectedCaseBoundary(String caseId) {
+  return switch (caseId) {
+    'codec.decode_v1' => const _ExpectedCaseBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'codec_fixture',
+    ),
+    'load_document.success' => const _ExpectedCaseBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'normal_spread',
+    ),
+    'load_document.failure' => const _ExpectedCaseBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'invalid_document',
+    ),
+    'projection.read_document' => const _ExpectedCaseBoundary(
+      timedScope: 'projection_split',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'projection_action_total',
+      primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
+    ),
+    'input.eraser_budget_exceeded' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'dense_stress',
+    ),
+    'spatial.query_point_dense_stress' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'dense_stress',
+    ),
+    'frame.selected_move_preview_cached_ordinary_plan' ||
+    'frame.main_capture' ||
+    'frame.paint_candidates' ||
+    'spatial.query_point' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
+    ),
+    'frame.overlay_capture' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'active_preview',
+    ),
+    'runtime.dispose_during_gesture' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'active_preview',
+    ),
+    'resources.resolve_sync' ||
+    'resources.resolve_sync_cold_budget' ||
+    'resources.mark_dirty' ||
+    'resources.mark_all_dirty' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'resource_set',
+    ),
+    'diagnostics.disabled_pointer' => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'hot_pointer',
+    ),
+    _ => const _ExpectedCaseBoundary(
+      timedScope: 'action_only',
+      setupScope: 'per_sample_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      fixtureShape: 'normal_spread',
+    ),
+  };
+}
+
+_BenchmarkCasePlan _resourceLookupPlan(String setupScope, String scaleId) {
+  return _resourceSessionPlan(
+    setupScope,
+    scaleId,
+    (fixture) => _resourceLookupAction(fixture),
+  );
+}
+
+_BenchmarkCasePlan _resourceColdBudgetPlan(String setupScope, String scaleId) {
+  return _resourceSessionPlan(
+    setupScope,
+    scaleId,
+    (fixture) => _resourceColdBudgetAction(fixture),
+  );
+}
+
+_BenchmarkCasePlan _markResourceDirtyPlan(String setupScope, String scaleId) {
+  return _resourceSessionPlan(
+    setupScope,
+    scaleId,
+    _markResourceDirtyAction,
+    attachInvalidationSink: true,
+    prepareAction: (fixture) {
+      final resource = fixture.runtime.resources.resources.first;
+      final request = _resourceRequest(resource);
+      fixture.session.resolveImage(request);
+      fixture.session.resolveImage(request);
+      fixture
+        ..actionResourceId = resource.id
+        ..actionRequests = [request]
+        ..callsBeforeAction = fixture.resolver.callCount;
+    },
+  );
+}
+
+_BenchmarkCasePlan _markAllResourcesDirtyPlan(
+  String setupScope,
+  String scaleId,
+) {
+  return _resourceSessionPlan(
+    setupScope,
+    scaleId,
+    _markAllResourcesDirtyAction,
+    attachInvalidationSink: true,
+    prepareAction: (fixture) {
+      final requests = [
+        for (final resource in fixture.runtime.resources.resources.take(2))
+          _resourceRequest(resource),
+      ];
+      for (final request in requests) {
+        fixture.session.resolveImage(request);
+      }
+      fixture
+        ..actionRequests = requests
+        ..callsBeforeAction = fixture.resolver.callCount;
+    },
+  );
+}
+
+_BenchmarkCasePlan _resourceSessionPlan(
+  String setupScope,
+  String scaleId,
+  FutureOr<Map<String, Object?>> Function(_ResourceSessionFixture fixture)
+  measure, {
+  bool attachInvalidationSink = false,
+  FutureOr<void> Function(_ResourceSessionFixture fixture)? prepareAction,
+}) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () async {
+      final runtime = _runtime(scaleId);
+      final image = await _createResourceProbeImage();
+      final resolver = _CountingResourceResolver((_) => image);
+      final session = SurfaceResourceSession(
+        resolver: resolver,
+        mutationGuard: runtime,
+      );
+      if (attachInvalidationSink) {
+        runtime.attachResourceSessionInvalidationSink(session);
+      }
+      final fixture = _ResourceSessionFixture(
+        runtime: runtime,
+        image: image,
+        resolver: resolver,
+        session: session,
+        invalidationSinkAttached: attachInvalidationSink,
+      );
+      try {
+        await prepareAction?.call(fixture);
+      } catch (_) {
+        fixture.dispose();
+        rethrow;
+      }
+      return _PreparedProbeFixture(value: fixture);
+    },
+    measure: (fixture) => measure(fixture as _ResourceSessionFixture),
+    cleanup: (fixture) {
+      (fixture as _ResourceSessionFixture).dispose();
+    },
+  );
+}
+
+_BenchmarkCasePlan _codecDecodePlan(String setupScope, String scaleId) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      return _PreparedProbeFixture(
+        value: encodeCanvasDocumentToJson(_document(scaleId)),
+      );
+    },
+    measure: (fixture) {
+      final encoded = fixture as String;
+      decodeCanvasDocumentFromJson(encoded);
+      return {
+        'decoded_element_count': _scaleElementCount(scaleId),
+        'allocation_bytes': utf8.encode(encoded).length,
+        'error_payload': 'valid',
+      };
+    },
     cleanup: (_) => null,
   );
 }
 
-// Operation dispatch is a closed manifest-owned registry; a single switch makes
-// missing benchmark cases fail at the probe boundary with the case id intact.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
-FutureOr<Map<String, Object?>> _runOperation(String caseId, String scaleId) {
-  return switch (caseId) {
-    'edit.add_element' => _editAddElement(scaleId),
-    'edit.update_visual' => _editUpdateVisual(scaleId),
-    'edit.update_transform' => _editUpdateTransform(scaleId),
-    'edit.move_selection' => _moveSelection(scaleId),
-    'edit.set_camera_offset' => _setCameraOffset(scaleId),
-    'edit.add_line' => _editAddLine(scaleId),
-    'input.selected_move_preview' => _selectedMovePreview(scaleId),
-    'frame.selected_move_preview_cached_ordinary_plan' =>
-      _selectedMovePreviewFrame(scaleId),
-    'input.marquee_preview' => _drawToolPreview(
-      scaleId,
-      tool: CanvasDrawTool.pencil,
-      metric: 'overlay_repaint_count',
-    ),
-    'input.draw_preview' => _drawToolPreview(
-      scaleId,
-      tool: CanvasDrawTool.pencil,
-      metric: 'point_count',
-    ),
-    'input.line_preview' => _drawToolPreview(
-      scaleId,
-      tool: CanvasDrawTool.line,
-      metric: 'overlay_repaint_count',
-    ),
-    'input.eraser_preview' => _eraserPreview(scaleId),
-    'input.eraser_budget_exceeded' => _eraserPreview(scaleId),
-    'frame.main_capture' => _mainFrameCapture(scaleId),
-    'frame.overlay_capture' => _overlayFrameCapture(scaleId),
-    'frame.paint_candidates' => _framePaintCandidates(scaleId),
-    'resources.resolve_sync' => _resourceLookup(scaleId),
-    'resources.resolve_sync_cold_budget' => _resourceColdBudget(scaleId),
-    'resources.mark_dirty' => _markResourceDirty(scaleId),
-    'resources.mark_all_dirty' => _markAllResourcesDirty(scaleId),
-    'projection.read_document' => _readDocumentProjection(scaleId),
-    'codec.decode_v1' => _codecDecode(scaleId),
-    'load_document.success' => _loadDocumentSuccess(scaleId),
-    'load_document.failure' => _loadDocumentFailure(scaleId),
-    'spatial.query_point' => _spatialQuery(scaleId),
-    'spatial.query_point_dense_stress' => _spatialQuery(scaleId),
-    'spatial.touched_update' => _spatialTouchedUpdate(scaleId),
-    'runtime.dispose_during_gesture' => _disposeDuringGesture(scaleId),
-    'diagnostics.disabled_pointer' => _disabledPointer(scaleId),
-    _ => throw StateError('No benchmark operation registered for $caseId.'),
-  };
-}
-
-Map<String, Object?> _editAddElement(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.edits.edit((edit) {
-      edit.addElement(_rect('added-$scaleId'), layerId: _layerId);
-    });
-    return const {};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _editUpdateVisual(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.edits.edit((edit) {
-      edit.updateElement(
-        CanvasRectElementUpdate(
-          id: _elementId(0),
-          opacity: const CanvasFieldSet(0.5),
+_BenchmarkCasePlan _loadDocumentSuccessPlan(String setupScope, String scaleId) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      return _PreparedProbeFixture(
+        value: _LoadDocumentSuccessFixture(
+          runtime: RuntimeRoot(
+            initialDocument: CanvasDocument(),
+            config: const CanvasRuntimeConfig(),
+          ),
+          document: _document(scaleId),
         ),
       );
-    });
-    return {'touched_count': 1};
-  } finally {
-    runtime.dispose();
-  }
+    },
+    measure: (fixture) {
+      final loadFixture = fixture as _LoadDocumentSuccessFixture;
+      loadFixture.runtime.edits.loadDocument(loadFixture.document);
+      return {
+        'loaded_element_count': _scaleElementCount(scaleId),
+        'rebuild_cost': _boundedScale(scaleId, max: 128),
+      };
+    },
+    cleanup: (fixture) {
+      (fixture as _LoadDocumentSuccessFixture).runtime.dispose();
+    },
+  );
 }
 
-Map<String, Object?> _editUpdateTransform(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.edits.edit((edit) {
-      edit.updateElement(
-        CanvasRectElementUpdate(
-          id: _elementId(0),
-          transform: CanvasFieldSet(
-            CanvasTransform.translation(const Offset(3, 4)),
+_BenchmarkCasePlan _loadDocumentFailurePlan(String setupScope, String scaleId) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      return _PreparedProbeFixture(
+        value: _LoadDocumentFailureFixture(
+          runtime: _runtime(scaleId),
+          document: CanvasDocument(
+            layers: [
+              CanvasLayer(
+                id: _layerId,
+                elements: [_rect('duplicate'), _rect('duplicate')],
+              ),
+            ],
           ),
         ),
       );
-    });
-    return {'spatial_touched_pages': 1};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _moveSelection(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final selectedIds = _selectedIds(scaleId);
-    runtime.selection.setSelection(selectedIds);
-    runtime.selection.moveSelection(const Offset(1, 1), timestampMs: 1);
-    return {'selected_count': selectedIds.length};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _setCameraOffset(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.cameraPort().setOffset(const Offset(10, 12));
-    return {'ordinary_paint_plan_invalidations': 0};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _editAddLine(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.edits.edit((edit) {
-      edit.addElement(
-        CanvasLineElement(
-          id: CanvasElementId('line-$scaleId'),
-          start: Offset.zero,
-          end: const Offset(10, 10),
-          thickness: 1,
-          color: const Color(0xFF000000),
-        ),
-        layerId: _layerId,
-      );
-    });
-    return const {};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _selectedMovePreview(String scaleId) {
-  final runtime = _runtime(
-    scaleId,
-    config: CanvasRuntimeConfig(
-      pointerPolicy: CanvasPointerPolicy(dragStartSlop: 1),
-    ),
+    },
+    measure: (fixture) {
+      final loadFixture = fixture as _LoadDocumentFailureFixture;
+      try {
+        loadFixture.runtime.edits.loadDocument(loadFixture.document);
+      } on CanvasDataException catch (error) {
+        return {
+          'failure_mutation_count': 0,
+          'committed_mutation_count': 0,
+          'error_payload': error.code.name,
+        };
+      }
+      throw StateError('Invalid load_document.failure setup did not fail.');
+    },
+    cleanup: (fixture) {
+      (fixture as _LoadDocumentFailureFixture).runtime.dispose();
+    },
   );
-  try {
-    runtime.selection.setSelection(_selectedIds(scaleId));
-    _sendMoveGesture(runtime);
-    return {'scene_repaint_count': runtime.state.value.revisions.preview};
-  } finally {
-    runtime.dispose();
-  }
 }
 
-// This probe keeps capture, ordinary-plan reuse, and supplement construction in
-// one operation because those metrics describe one owner-observable frame path.
-// ignore: halstead-volume, source-lines-of-code
-Map<String, Object?> _selectedMovePreviewFrame(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.selection.setSelection(_selectedIds(scaleId));
-    final capture = FrameCaptureService(
-      frameFacts: runtime.frameFactsPort,
-      selectionFacts: _RuntimeSelectionFactsPort(runtime),
-      queryPaint: runtime.spatialKernel.queryPaint,
-    );
-    final ordinaryPlanner = OrdinaryPaintPlanner();
-    final selectedMovePlanner = SelectedMoveSupplementPlanner(
-      frameFacts: runtime.frameFactsPort,
-      queryPaint: runtime.spatialKernel.queryPaint,
-    );
-    final noPreviewFrame = capture.captureMainFrame(
-      _frameInputs(runtime, preview: const CanvasNoPreview()),
-    );
-    ordinaryPlanner.buildOrdinaryPlan(noPreviewFrame);
-    _sendMoveGesture(runtime);
-    final selectedMoveFrame = capture.captureMainFrame(
-      _frameInputs(runtime, preview: runtime.preview),
-    );
-    final ordinary = ordinaryPlanner.buildOrdinaryPlan(selectedMoveFrame);
-    if (ordinary is! OrdinaryPaintPlanReady) {
-      return const {
-        'ordinary_plan_hit_rate': 0.0,
-        'supplement_count': 0,
-        'cached_preview_delta_count': 0,
-      };
-    }
-    final ready = ordinary;
-    final supplement = selectedMovePlanner.build(
-      frame: selectedMoveFrame,
-      ordinaryPlan: ready.plan,
-    );
-    return {
-      'ordinary_plan_hit_rate': ready.cacheHit ? 1.0 : 0.0,
-      'supplement_count': supplement.probe.supplementCount,
-      'cached_preview_delta_count': ready.cacheHit ? 0 : 1,
-    };
-  } finally {
-    runtime.dispose();
-  }
+_BenchmarkCasePlan _disposeDuringGesturePlan(
+  String setupScope,
+  String scaleId,
+) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      final runtime = _runtime(scaleId);
+      runtime.tools.handlePointer(
+        _pointer(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+      return _PreparedProbeFixture(value: runtime);
+    },
+    measure: (fixture) {
+      (fixture as RuntimeRoot).dispose();
+      return const {'resolver_calls': 0, 'action_events': 0};
+    },
+    cleanup: (_) => null,
+  );
 }
 
-Map<String, Object?> _mainFrameCapture(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final capture = FrameCaptureService(
-      frameFacts: runtime.frameFactsPort,
-      selectionFacts: _RuntimeSelectionFactsPort(runtime),
-      queryPaint: runtime.spatialKernel.queryPaint,
-    );
-    final frame = capture.captureMainFrame(
-      _frameInputs(runtime, preview: const CanvasNoPreview()),
-    );
-
-    return {
-      'captured_handle_count': frame.snapshot.capturedHandles.length,
-      'captured_element_count': frame.snapshot.elements.length,
-      'resource_descriptor_count': frame.snapshot.resourceDescriptors.length,
-    };
-  } finally {
-    runtime.dispose();
-  }
+Map<String, Object?> _editAddElementAction(
+  RuntimeRoot runtime,
+  String scaleId,
+) {
+  runtime.edits.edit((edit) {
+    edit.addElement(_rect('added-$scaleId'), layerId: _layerId);
+  });
+  return const {};
 }
 
-Map<String, Object?> _overlayFrameCapture(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final capture = FrameCaptureService(
-      frameFacts: runtime.frameFactsPort,
-      selectionFacts: _RuntimeSelectionFactsPort(runtime),
-      queryPaint: runtime.spatialKernel.queryPaint,
+Map<String, Object?> _editUpdateVisualAction(RuntimeRoot runtime) {
+  runtime.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: _elementId(0),
+        opacity: const CanvasFieldSet(0.5),
+      ),
     );
-    final frame = capture.captureOverlayFrame(
-      _frameInputs(
-        runtime,
-        preview: const CanvasLinePreview(
-          start: Offset.zero,
-          end: Offset(16, 16),
-          color: Color(0xFF000000),
-          thickness: 1,
+  });
+  return {'touched_count': 1};
+}
+
+Map<String, Object?> _editUpdateTransformAction(RuntimeRoot runtime) {
+  runtime.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: _elementId(0),
+        transform: CanvasFieldSet(
+          CanvasTransform.translation(const Offset(3, 4)),
         ),
       ),
     );
-
-    return {
-      'captured_handle_count': frame.snapshot.capturedHandles.length,
-      'overlay_preview_count': frame.overlayPreview == null ? 0 : 1,
-    };
-  } finally {
-    runtime.dispose();
-  }
+  });
+  return {'spatial_touched_pages': 1};
 }
 
-Map<String, Object?> _drawToolPreview(
-  String scaleId, {
-  required CanvasDrawTool tool,
+Map<String, Object?> _moveSelectionAction(RuntimeRoot runtime) {
+  final selectedIds = runtime.selectionFacts.selectedElementIds;
+  runtime.selection.moveSelection(const Offset(1, 1), timestampMs: 1);
+  return {'selected_count': selectedIds.length};
+}
+
+Map<String, Object?> _setCameraOffsetAction(RuntimeRoot runtime) {
+  runtime.cameraPort().setOffset(const Offset(10, 12));
+  return {'ordinary_paint_plan_invalidations': 0};
+}
+
+Map<String, Object?> _editAddLineAction(RuntimeRoot runtime, String scaleId) {
+  runtime.edits.edit((edit) {
+    edit.addElement(
+      CanvasLineElement(
+        id: CanvasElementId('line-$scaleId'),
+        start: Offset.zero,
+        end: const Offset(10, 10),
+        thickness: 1,
+        color: const Color(0xFF000000),
+      ),
+      layerId: _layerId,
+    );
+  });
+  return const {};
+}
+
+Map<String, Object?> _selectedMovePreviewAction(RuntimeRoot runtime) {
+  _sendMoveGesture(runtime);
+  return {'scene_repaint_count': runtime.state.value.revisions.preview};
+}
+
+_BenchmarkCasePlan _selectedMovePreviewFramePlan(
+  String setupScope,
+  String scaleId,
+) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      final runtime = _runtime(scaleId);
+      runtime.selection.setSelection(_selectedIds(scaleId));
+      final capture = _frameCaptureService(runtime);
+      final ordinaryPlanner = OrdinaryPaintPlanner();
+      final selectedMovePlanner = SelectedMoveSupplementPlanner(
+        frameFacts: runtime.frameFactsPort,
+        queryPaint: runtime.spatialKernel.queryPaint,
+      );
+      final noPreviewFrame = capture.captureMainFrame(
+        _frameInputs(runtime, preview: const CanvasNoPreview()),
+      );
+      ordinaryPlanner.buildOrdinaryPlan(noPreviewFrame);
+      _sendMoveGesture(runtime);
+      return _PreparedProbeFixture(
+        value: _SelectedMoveFrameFixture(
+          runtime: runtime,
+          capture: capture,
+          ordinaryPlanner: ordinaryPlanner,
+          selectedMovePlanner: selectedMovePlanner,
+        ),
+      );
+    },
+    measure: (fixture) {
+      return _selectedMovePreviewFrameAction(
+        fixture as _SelectedMoveFrameFixture,
+      );
+    },
+    cleanup: (fixture) {
+      (fixture as _SelectedMoveFrameFixture).runtime.dispose();
+    },
+  );
+}
+
+Map<String, Object?> _selectedMovePreviewFrameAction(
+  _SelectedMoveFrameFixture fixture,
+) {
+  final selectedMoveFrame = fixture.capture.captureMainFrame(
+    _frameInputs(fixture.runtime, preview: fixture.runtime.preview),
+  );
+  final ordinary = fixture.ordinaryPlanner.buildOrdinaryPlan(selectedMoveFrame);
+  if (ordinary is! OrdinaryPaintPlanReady) {
+    return const {
+      'ordinary_plan_hit_rate': 0.0,
+      'supplement_count': 0,
+      'cached_preview_delta_count': 0,
+    };
+  }
+  final ready = ordinary;
+  final supplement = fixture.selectedMovePlanner.build(
+    frame: selectedMoveFrame,
+    ordinaryPlan: ready.plan,
+  );
+  return {
+    'ordinary_plan_hit_rate': ready.cacheHit ? 1.0 : 0.0,
+    'supplement_count': supplement.probe.supplementCount,
+    'cached_preview_delta_count': ready.cacheHit ? 0 : 1,
+  };
+}
+
+Map<String, Object?> _mainFrameCaptureAction(RuntimeRoot runtime) {
+  final frame = _frameCaptureService(
+    runtime,
+  ).captureMainFrame(_frameInputs(runtime, preview: const CanvasNoPreview()));
+
+  return {
+    'captured_handle_count': frame.snapshot.capturedHandles.length,
+    'captured_element_count': frame.snapshot.elements.length,
+    'resource_descriptor_count': frame.snapshot.resourceDescriptors.length,
+  };
+}
+
+Map<String, Object?> _overlayFrameCaptureAction(RuntimeRoot runtime) {
+  final frame = _frameCaptureService(runtime).captureOverlayFrame(
+    _frameInputs(
+      runtime,
+      preview: const CanvasLinePreview(
+        start: Offset.zero,
+        end: Offset(16, 16),
+        color: Color(0xFF000000),
+        thickness: 1,
+      ),
+    ),
+  );
+
+  return {
+    'captured_handle_count': frame.snapshot.capturedHandles.length,
+    'overlay_preview_count': frame.overlayPreview == null ? 0 : 1,
+  };
+}
+
+void _prepareDrawToolPreview(RuntimeRoot runtime, CanvasDrawTool tool) {
+  runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawTool(tool);
+}
+
+Map<String, Object?> _drawToolPreviewAction(
+  RuntimeRoot runtime, {
   required String metric,
 }) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.tools
-      ..setMode(CanvasInteractionMode.draw)
-      ..setDrawTool(tool)
-      ..handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero))
-      ..handlePointer(
-        _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
-      );
-    final count = metric == 'point_count'
-        ? _previewPointCount(runtime.preview)
-        : runtime.state.value.revisions.preview;
-    return {metric: count};
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _eraserPreview(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.tools
-      ..setMode(CanvasInteractionMode.draw)
-      ..setDrawTool(CanvasDrawTool.eraser)
-      ..handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero))
-      ..handlePointer(
-        _pointer(CanvasPointerLifecyclePhase.move, const Offset(8, 0)),
-      );
-    final count = _boundedScale(scaleId, max: 128);
-    return {
-      'candidate_count': count,
-      'exact_check_count': count,
-      'budget_exceeded_count': count,
-      'partial_erase_count': 0,
-    };
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _readDocumentProjection(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final firstRead = Stopwatch()..start();
-    runtime.readDocument();
-    firstRead.stop();
-    final cacheHit = Stopwatch()..start();
-    runtime.readDocument();
-    cacheHit.stop();
-    return {
-      'first_read_us': _nonZeroElapsedUs(firstRead),
-      'cache_hit_us': _nonZeroElapsedUs(cacheHit),
-    };
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _framePaintCandidates(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    runtime.readDocument();
-    final output = runtime.buildResourceFreeMainFrame(
-      viewportWorldBounds: const Rect.fromLTWH(0, 0, 512, 512),
-      devicePixelRatio: 1,
-      selectionStyle: CanvasSelectionStyle.defaultStyle,
-      gridStyle: CanvasGridStyle.defaultStyle,
+  runtime.tools
+    ..handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero))
+    ..handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
     );
-    final records = output.ordinaryPlan.ordinaryRecords;
-    return {
-      'candidate_count': output.ordinaryPlan.candidateCount,
-      'offscreen_layer_count': records
-          .where((record) => record.requiresSaveLayer)
-          .length,
-      'save_layer_count': records
-          .where((record) => record.requiresSaveLayer)
-          .length,
-    };
-  } finally {
-    runtime.dispose();
-  }
+  final count = metric == 'point_count'
+      ? _previewPointCount(runtime.preview)
+      : runtime.state.value.revisions.preview;
+  return {metric: count};
+}
+
+void _prepareEraserPreview(RuntimeRoot runtime) {
+  runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawTool(CanvasDrawTool.eraser);
+}
+
+Map<String, Object?> _eraserPreviewAction(RuntimeRoot runtime, String scaleId) {
+  runtime.tools
+    ..handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero))
+    ..handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.move, const Offset(8, 0)),
+    );
+  final count = _boundedScale(scaleId, max: 128);
+  return {
+    'candidate_count': count,
+    'exact_check_count': count,
+    'budget_exceeded_count': count,
+    'partial_erase_count': 0,
+  };
+}
+
+Map<String, Object?> _readDocumentProjectionAction(RuntimeRoot runtime) {
+  final firstRead = Stopwatch()..start();
+  runtime.readDocument();
+  firstRead.stop();
+  final cacheHit = Stopwatch()..start();
+  runtime.readDocument();
+  cacheHit.stop();
+  return {
+    'first_read_us': _nonZeroElapsedUs(firstRead),
+    'cache_hit_us': _nonZeroElapsedUs(cacheHit),
+  };
+}
+
+Map<String, Object?> _framePaintCandidatesAction(RuntimeRoot runtime) {
+  final output = runtime.buildResourceFreeMainFrame(
+    viewportWorldBounds: const Rect.fromLTWH(0, 0, 512, 512),
+    devicePixelRatio: 1,
+    selectionStyle: CanvasSelectionStyle.defaultStyle,
+    gridStyle: CanvasGridStyle.defaultStyle,
+  );
+  final records = output.ordinaryPlan.ordinaryRecords;
+  return {
+    'candidate_count': output.ordinaryPlan.candidateCount,
+    'offscreen_layer_count': records
+        .where((record) => record.requiresSaveLayer)
+        .length,
+    'save_layer_count': records
+        .where((record) => record.requiresSaveLayer)
+        .length,
+  };
 }
 
 // Resource lookup measures resolver calls, session cache hits, and repaint in
 // one session so the observable cache path stays intact.
 // ignore: halstead-volume
-Future<Map<String, Object?>> _resourceLookup(String scaleId) async {
-  final runtime = _runtime(scaleId);
-  final image = await _createResourceProbeImage();
-  final resolver = _CountingResourceResolver((_) => image);
-  final session = SurfaceResourceSession(
-    resolver: resolver,
-    mutationGuard: runtime,
-  );
-  try {
-    final resources = runtime.resources.resources;
-    final requests = [
-      for (final resource in resources) _resourceRequest(resource),
-    ];
-    for (var index = 0; index < requests.length; index++) {
-      if (index % kMaxSyncResourceResolverCallsPerFrame == 0) {
-        session.beginFrameResourcePass();
-      }
-      session.resolveImage(requests[index]);
+Map<String, Object?> _resourceLookupAction(_ResourceSessionFixture fixture) {
+  final resources = fixture.runtime.resources.resources;
+  final requests = [
+    for (final resource in resources) _resourceRequest(resource),
+  ];
+  for (var index = 0; index < requests.length; index++) {
+    if (index % kMaxSyncResourceResolverCallsPerFrame == 0) {
+      fixture.session.beginFrameResourcePass();
     }
-    final callsAfterFill = resolver.callCount;
-    var cacheHits = 0;
-    for (var index = 0; index < requests.length; index++) {
-      if (index % kMaxSyncResourceResolverCallsPerFrame == 0) {
-        session.beginFrameResourcePass();
-      }
-      final result = session.resolveImage(requests[index]);
-      if (result is ResolvedResourceImage) {
-        cacheHits += 1;
-      }
-    }
-    return {
-      'surface_resource_session_resolver_calls': callsAfterFill,
-      'session_cache_hits': cacheHits,
-      'repaint_count': session.hasPendingBudgetFollowUpRepaint ? 1 : 0,
-      'cold_sync_resolver_calls': callsAfterFill,
-    };
-  } finally {
-    session.dispose();
-    image.dispose();
-    runtime.dispose();
+    fixture.session.resolveImage(requests[index]);
   }
-}
-
-Future<Map<String, Object?>> _resourceColdBudget(String scaleId) async {
-  final runtime = _runtime(scaleId);
-  final image = await _createResourceProbeImage();
-  final resolver = _CountingResourceResolver((_) => image);
-  final session = SurfaceResourceSession(
-    resolver: resolver,
-    mutationGuard: runtime,
-  );
-  try {
-    session.beginFrameResourcePass();
-    for (
-      var index = 0;
-      index < kMaxSyncResourceResolverCallsPerFrame;
-      index++
-    ) {
-      session.resolveImage(_resourceRequestById('cold-resource-$index'));
+  final callsAfterFill = fixture.resolver.callCount;
+  var cacheHits = 0;
+  for (var index = 0; index < requests.length; index++) {
+    if (index % kMaxSyncResourceResolverCallsPerFrame == 0) {
+      fixture.session.beginFrameResourcePass();
     }
-    final budgetResult = session.resolveImage(
-      _resourceRequestById(
-        'cold-resource-$kMaxSyncResourceResolverCallsPerFrame',
-      ),
-    );
-    return {
-      'session_budget_resolver_calls': resolver.callCount,
-      'budget_placeholders':
-          budgetResult is BudgetExceededResourceImagePlaceholder ? 1 : 0,
-      'throttled_repaint_count': session.hasPendingBudgetFollowUpRepaint
-          ? 1
-          : 0,
-      'cold_sync_resolver_calls': resolver.callCount,
-    };
-  } finally {
-    session.dispose();
-    image.dispose();
-    runtime.dispose();
-  }
-}
-
-Future<Map<String, Object?>> _markResourceDirty(String scaleId) async {
-  final runtime = _runtime(scaleId);
-  final image = await _createResourceProbeImage();
-  final resolver = _CountingResourceResolver((_) => image);
-  final session = SurfaceResourceSession(
-    resolver: resolver,
-    mutationGuard: runtime,
-  );
-  runtime.attachResourceSessionInvalidationSink(session);
-  try {
-    final resource = runtime.resources.resources.first;
-    final request = _resourceRequest(resource);
-    session.resolveImage(request);
-    session.resolveImage(request);
-    final callsBeforeDirty = resolver.callCount;
-    runtime.resources.markResourceDirty(resource.id);
-    session.resolveImage(request);
-    return {
-      'repaint_count': runtime.state.value.revisions.resourceVisual,
-      'target_session_cache_invalidation_cost':
-          resolver.callCount - callsBeforeDirty,
-    };
-  } finally {
-    runtime.clearResourceSessionInvalidationSink(session);
-    session.dispose();
-    image.dispose();
-    runtime.dispose();
-  }
-}
-
-Future<Map<String, Object?>> _markAllResourcesDirty(String scaleId) async {
-  final runtime = _runtime(scaleId);
-  final image = await _createResourceProbeImage();
-  final resolver = _CountingResourceResolver((_) => image);
-  final session = SurfaceResourceSession(
-    resolver: resolver,
-    mutationGuard: runtime,
-  );
-  runtime.attachResourceSessionInvalidationSink(session);
-  try {
-    final requests = [
-      for (final resource in runtime.resources.resources.take(2))
-        _resourceRequest(resource),
-    ];
-    for (final request in requests) {
-      session.resolveImage(request);
+    final result = fixture.session.resolveImage(requests[index]);
+    if (result is ResolvedResourceImage) {
+      cacheHits += 1;
     }
-    final callsBeforeDirty = resolver.callCount;
-    runtime.resources.markAllResourcesDirty();
-    for (final request in requests) {
-      session.resolveImage(request);
-    }
-    return {
-      'repaint_count': runtime.state.value.revisions.resourceVisual,
-      'all_entry_session_cache_invalidation_cost':
-          resolver.callCount - callsBeforeDirty,
-    };
-  } finally {
-    runtime.clearResourceSessionInvalidationSink(session);
-    session.dispose();
-    image.dispose();
-    runtime.dispose();
   }
-}
-
-Map<String, Object?> _codecDecode(String scaleId) {
-  final encoded = encodeCanvasDocumentToJson(_document(scaleId));
-  decodeCanvasDocumentFromJson(encoded);
   return {
-    'decoded_element_count': _scaleElementCount(scaleId),
-    'allocation_bytes': utf8.encode(encoded).length,
-    'error_payload': 'valid',
+    'surface_resource_session_resolver_calls': callsAfterFill,
+    'session_cache_hits': cacheHits,
+    'repaint_count': fixture.session.hasPendingBudgetFollowUpRepaint ? 1 : 0,
+    'cold_sync_resolver_calls': callsAfterFill,
   };
 }
 
-Map<String, Object?> _loadDocumentSuccess(String scaleId) {
-  final runtime = RuntimeRoot(
-    initialDocument: CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
-  );
-  try {
-    runtime.edits.loadDocument(_document(scaleId));
-    return {
-      'loaded_element_count': _scaleElementCount(scaleId),
-      'rebuild_cost': _boundedScale(scaleId, max: 128),
-    };
-  } finally {
-    runtime.dispose();
+Map<String, Object?> _resourceColdBudgetAction(
+  _ResourceSessionFixture fixture,
+) {
+  fixture.session.beginFrameResourcePass();
+  for (var index = 0; index < kMaxSyncResourceResolverCallsPerFrame; index++) {
+    fixture.session.resolveImage(_resourceRequestById('cold-resource-$index'));
   }
+  final budgetResult = fixture.session.resolveImage(
+    _resourceRequestById(
+      'cold-resource-$kMaxSyncResourceResolverCallsPerFrame',
+    ),
+  );
+  return {
+    'session_budget_resolver_calls': fixture.resolver.callCount,
+    'budget_placeholders':
+        budgetResult is BudgetExceededResourceImagePlaceholder ? 1 : 0,
+    'throttled_repaint_count': fixture.session.hasPendingBudgetFollowUpRepaint
+        ? 1
+        : 0,
+    'cold_sync_resolver_calls': fixture.resolver.callCount,
+  };
 }
 
-Map<String, Object?> _spatialQuery(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    final window = SpatialQueryWindow(
-      boundsWorld: const Rect.fromLTWH(0, 0, 512, 512),
-      structuralRevision:
-          runtime.frameFactsPort.frameRevisions.structuralRevision,
-    );
-    final result = runtime.spatialKernel.queryHit(window);
-    return {
-      'tile_count': spatialTileCountFor(window.boundsWorld),
-      'fallback_count': _spatialFallbackCount(result),
-    };
-  } finally {
-    runtime.dispose();
+Map<String, Object?> _markResourceDirtyAction(_ResourceSessionFixture fixture) {
+  final resourceId = fixture.actionResourceId;
+  if (resourceId == null) {
+    throw StateError('resources.mark_dirty fixture was not prepared.');
   }
+  fixture.runtime.resources.markResourceDirty(resourceId);
+  for (final request in fixture.actionRequests) {
+    fixture.session.resolveImage(request);
+  }
+  return {
+    'repaint_count': fixture.runtime.state.value.revisions.resourceVisual,
+    'target_session_cache_invalidation_cost':
+        fixture.resolver.callCount - fixture.callsBeforeAction,
+  };
+}
+
+Map<String, Object?> _markAllResourcesDirtyAction(
+  _ResourceSessionFixture fixture,
+) {
+  fixture.runtime.resources.markAllResourcesDirty();
+  for (final request in fixture.actionRequests) {
+    fixture.session.resolveImage(request);
+  }
+  return {
+    'repaint_count': fixture.runtime.state.value.revisions.resourceVisual,
+    'all_entry_session_cache_invalidation_cost':
+        fixture.resolver.callCount - fixture.callsBeforeAction,
+  };
+}
+
+Map<String, Object?> _spatialQueryAction(RuntimeRoot runtime) {
+  final window = SpatialQueryWindow(
+    boundsWorld: const Rect.fromLTWH(0, 0, 512, 512),
+    structuralRevision:
+        runtime.frameFactsPort.frameRevisions.structuralRevision,
+  );
+  final result = runtime.spatialKernel.queryHit(window);
+  return {
+    'tile_count': spatialTileCountFor(window.boundsWorld),
+    'fallback_count': _spatialFallbackCount(result),
+  };
 }
 
 int _spatialFallbackCount(SpatialQueryResult result) {
@@ -957,8 +1638,11 @@ int _spatialFallbackCount(SpatialQueryResult result) {
   };
 }
 
-Map<String, Object?> _spatialTouchedUpdate(String scaleId) {
-  final metrics = _editUpdateTransform(scaleId);
+Map<String, Object?> _spatialTouchedUpdateAction(
+  RuntimeRoot runtime,
+  String scaleId,
+) {
+  final metrics = _editUpdateTransformAction(runtime);
   return {
     ...metrics,
     'rebuilt_ids': _boundedScale(scaleId, max: 128),
@@ -966,58 +1650,16 @@ Map<String, Object?> _spatialTouchedUpdate(String scaleId) {
   };
 }
 
-Map<String, Object?> _loadDocumentFailure(String scaleId) {
-  final runtime = _runtime(scaleId);
-  try {
-    try {
-      runtime.edits.loadDocument(
-        CanvasDocument(
-          layers: [
-            CanvasLayer(
-              id: _layerId,
-              elements: [_rect('duplicate'), _rect('duplicate')],
-            ),
-          ],
-        ),
-      );
-    } on CanvasDataException catch (error) {
-      return {
-        'failure_mutation_count': 0,
-        'committed_mutation_count': 0,
-        'error_payload': error.code.name,
-      };
-    }
-    throw StateError('Invalid load_document.failure setup did not fail.');
-  } finally {
-    runtime.dispose();
-  }
-}
-
-Map<String, Object?> _disposeDuringGesture(String scaleId) {
-  final runtime = _runtime(scaleId);
-  runtime.tools.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.down, Offset.zero),
-  );
-  runtime.dispose();
-  return {'resolver_calls': 0, 'action_events': 0};
-}
-
-Map<String, Object?> _disabledPointer(String scaleId) {
-  final runtime = _runtime(scaleId);
-  DiagnosticRecord.allocations.reset();
+Map<String, Object?> _disabledPointerAction(RuntimeRoot runtime) {
   final before = DiagnosticRecord.allocations.count;
-  try {
-    runtime.tools.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.cancel, Offset.zero),
-    );
-    final allocationRecords = DiagnosticRecord.allocations.count - before;
-    return {
-      'allocation_records': allocationRecords,
-      'allocation_bytes': allocationRecords,
-    };
-  } finally {
-    runtime.dispose();
-  }
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.cancel, Offset.zero),
+  );
+  final allocationRecords = DiagnosticRecord.allocations.count - before;
+  return {
+    'allocation_records': allocationRecords,
+    'allocation_bytes': allocationRecords,
+  };
 }
 
 CanvasDocument _document(String scaleId) {
@@ -1095,6 +1737,14 @@ FrameCaptureInputs _frameInputs(
   );
 }
 
+FrameCaptureService _frameCaptureService(RuntimeRoot runtime) {
+  return FrameCaptureService(
+    frameFacts: runtime.frameFactsPort,
+    selectionFacts: _RuntimeSelectionFactsPort(runtime),
+    queryPaint: runtime.spatialKernel.queryPaint,
+  );
+}
+
 int _nonZeroElapsedUs(Stopwatch stopwatch) {
   final elapsed = stopwatch.elapsedMicroseconds;
   return elapsed == 0 ? 1 : elapsed;
@@ -1157,6 +1807,68 @@ final class _CountingResourceResolver implements CanvasResourceResolver {
   }
 }
 
+final class _SelectedMoveFrameFixture {
+  const _SelectedMoveFrameFixture({
+    required this.runtime,
+    required this.capture,
+    required this.ordinaryPlanner,
+    required this.selectedMovePlanner,
+  });
+
+  final RuntimeRoot runtime;
+  final FrameCaptureService capture;
+  final OrdinaryPaintPlanner ordinaryPlanner;
+  final SelectedMoveSupplementPlanner selectedMovePlanner;
+}
+
+final class _ResourceSessionFixture {
+  _ResourceSessionFixture({
+    required this.runtime,
+    required this.image,
+    required this.resolver,
+    required this.session,
+    required this.invalidationSinkAttached,
+  });
+
+  final RuntimeRoot runtime;
+  final Image image;
+  final _CountingResourceResolver resolver;
+  final SurfaceResourceSession session;
+  final bool invalidationSinkAttached;
+  CanvasResourceId? actionResourceId;
+  List<ResourceImageResolveRequest> actionRequests = const [];
+  int callsBeforeAction = 0;
+
+  void dispose() {
+    if (invalidationSinkAttached) {
+      runtime.clearResourceSessionInvalidationSink(session);
+    }
+    session.dispose();
+    image.dispose();
+    runtime.dispose();
+  }
+}
+
+final class _LoadDocumentSuccessFixture {
+  const _LoadDocumentSuccessFixture({
+    required this.runtime,
+    required this.document,
+  });
+
+  final RuntimeRoot runtime;
+  final CanvasDocument document;
+}
+
+final class _LoadDocumentFailureFixture {
+  const _LoadDocumentFailureFixture({
+    required this.runtime,
+    required this.document,
+  });
+
+  final RuntimeRoot runtime;
+  final CanvasDocument document;
+}
+
 final class _RuntimeSelectionFactsPort implements SelectionFactsPort {
   const _RuntimeSelectionFactsPort(this._runtime);
 
@@ -1216,8 +1928,10 @@ _CaseBoundaryRegistry _caseBoundaryRegistry() {
       benchmarkCase.id: _CaseBoundaryRegistryEntry(
         timedScope: benchmarkCase.measurementBoundary.timedScope,
         setupScope: benchmarkCase.measurementBoundary.setupScope,
+        teardownScope: benchmarkCase.measurementBoundary.teardownScope,
         primaryTiming: benchmarkCase.measurementBoundary.primaryTiming,
         primaryMemory: benchmarkCase.measurementBoundary.primaryMemory,
+        fixtureShape: benchmarkCase.fixtureShape,
       ),
   });
 }
@@ -1227,7 +1941,7 @@ final class _CaseBoundaryRegistry {
 
   final Map<String, _CaseBoundaryRegistryEntry> entries;
 
-  void validate(String caseId) {
+  _CaseBoundaryRegistryEntry validate(String caseId) {
     final entry = entries[caseId];
     if (entry == null) {
       throw StateError('$caseId has no benchmark measurement boundary.');
@@ -1237,6 +1951,7 @@ final class _CaseBoundaryRegistry {
         '$caseId has incomplete benchmark measurement boundary.',
       );
     }
+    return entry;
   }
 }
 
@@ -1244,21 +1959,45 @@ final class _CaseBoundaryRegistryEntry {
   const _CaseBoundaryRegistryEntry({
     required this.timedScope,
     required this.setupScope,
+    required this.teardownScope,
     required this.primaryTiming,
     required this.primaryMemory,
+    required this.fixtureShape,
   });
 
   final String timedScope;
   final String setupScope;
+  final String teardownScope;
   final String primaryTiming;
   final String primaryMemory;
+  final String fixtureShape;
 
   bool get isComplete {
     return timedScope.isNotEmpty &&
         setupScope.isNotEmpty &&
+        teardownScope.isNotEmpty &&
         primaryTiming.isNotEmpty &&
-        primaryMemory.isNotEmpty;
+        primaryMemory.isNotEmpty &&
+        fixtureShape.isNotEmpty;
   }
+}
+
+final class _ExpectedCaseBoundary {
+  const _ExpectedCaseBoundary({
+    required this.timedScope,
+    required this.setupScope,
+    required this.teardownScope,
+    required this.primaryTiming,
+    required this.primaryMemory,
+    required this.fixtureShape,
+  });
+
+  final String timedScope;
+  final String setupScope;
+  final String teardownScope;
+  final String primaryTiming;
+  final String primaryMemory;
+  final String fixtureShape;
 }
 
 final class _BenchmarkCasePlan {
@@ -1266,6 +2005,12 @@ final class _BenchmarkCasePlan {
     required this.prepare,
     required this.measure,
     required this.cleanup,
+    this.timedScope = 'action_only',
+    this.setupScope = 'per_sample_prepared_fixture',
+    this.teardownScope = 'excluded',
+    this.primaryTiming = 'action',
+    this.primaryMemory = 'action',
+    this.fixtureShape = 'normal_spread',
     this.setupElapsedUsOverride,
     this.actionElapsedUsOverride,
     this.setupRssDeltaOverride,
@@ -1275,10 +2020,38 @@ final class _BenchmarkCasePlan {
   final FutureOr<_PreparedProbeFixture> Function() prepare;
   final FutureOr<Map<String, Object?>> Function(Object? fixture) measure;
   final FutureOr<void> Function(Object? fixture) cleanup;
+  final String timedScope;
+  final String setupScope;
+  final String teardownScope;
+  final String primaryTiming;
+  final String primaryMemory;
+  final String fixtureShape;
   final int? setupElapsedUsOverride;
   final int? actionElapsedUsOverride;
   final int? setupRssDeltaOverride;
   final int? actionRssDeltaOverride;
+
+  bool get reusesPreparedFixture => setupScope == 'per_run_prepared_fixture';
+  bool get measuresLifecycle =>
+      timedScope == 'lifecycle' || primaryTiming == 'lifecycle';
+
+  _BenchmarkCasePlan withBoundary(_CaseBoundaryRegistryEntry boundary) {
+    return _BenchmarkCasePlan(
+      timedScope: boundary.timedScope,
+      setupScope: boundary.setupScope,
+      teardownScope: boundary.teardownScope,
+      primaryTiming: boundary.primaryTiming,
+      primaryMemory: boundary.primaryMemory,
+      fixtureShape: boundary.fixtureShape,
+      prepare: prepare,
+      measure: measure,
+      cleanup: cleanup,
+      setupElapsedUsOverride: setupElapsedUsOverride,
+      actionElapsedUsOverride: actionElapsedUsOverride,
+      setupRssDeltaOverride: setupRssDeltaOverride,
+      actionRssDeltaOverride: actionRssDeltaOverride,
+    );
+  }
 }
 
 final class _PreparedProbeFixture {
