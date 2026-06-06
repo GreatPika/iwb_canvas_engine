@@ -95,14 +95,14 @@ BenchmarkDiffResult diffBenchmarkReports({
   required String currentPath,
   bool enforceAbsoluteCaps = true,
 }) {
-  final unapprovedFailure = _unapprovedBaselineFailure(baselineJson);
-  if (unapprovedFailure != null) {
+  final unavailableFailure = _unavailableBaselineFailure(baselineJson);
+  if (unavailableFailure != null) {
     return _result(
       profile: profile,
       operation: 'diff',
       baselinePath: baselinePath,
       currentPath: currentPath,
-      failures: [unapprovedFailure],
+      failures: [unavailableFailure],
       comparedCaseCount: 0,
     );
   }
@@ -159,15 +159,17 @@ BenchmarkDiffResult diffBenchmarkReports({
   );
 }
 
-String? _unapprovedBaselineFailure(Map<String, Object?> baselineJson) {
-  if (baselineJson['status'] != 'unapproved') {
-    return null;
-  }
+String? _unavailableBaselineFailure(Map<String, Object?> baselineJson) {
+  final status = baselineJson['status'];
   final message = baselineJson['message'];
-  if (message is String && message.isNotEmpty) {
-    return 'approved baseline is not initialized: $message';
+  final suffix = message is String && message.isNotEmpty ? ': $message' : '';
+  if (status == 'unapproved') {
+    return 'approved baseline is not initialized$suffix';
   }
-  return 'approved baseline is not initialized';
+  if (status == 'invalidated_old_schema') {
+    return 'benchmark baseline is invalidated old schema$suffix';
+  }
+  return null;
 }
 
 BenchmarkDiffResult validateFirstBaselineCandidate({

@@ -136,7 +136,7 @@ The irreversible points are emitting a successful report row and accepting a rel
 
 ## Execution Units
 
-### [ ] Unit 1: Manifest boundary schema and docs source of truth
+### [x] Unit 1: Manifest boundary schema and docs source of truth
 
 Owner:
 
@@ -158,7 +158,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Probe case lifecycle seam and fake boundary proof
+### [x] Unit 2: Probe case lifecycle seam and fake boundary proof
 
 Owner:
 
@@ -180,7 +180,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Real case migration and fixture-shape enforcement
+### [x] Unit 3: Real case migration and fixture-shape enforcement
 
 Owner:
 
@@ -202,7 +202,7 @@ Depends On:
 
 Unit 1 and Unit 2.
 
-### [ ] Unit 4: Versioned report schema, adapter decoding, runner validation, and required-case proof
+### [x] Unit 4: Versioned report schema, adapter decoding, runner validation, and required-case proof
 
 Owner:
 
@@ -224,7 +224,7 @@ Depends On:
 
 Unit 1, Unit 2, and Unit 3.
 
-### [ ] Unit 5: Diff, baseline compatibility, and gate interpretation
+### [x] Unit 5: Diff, baseline compatibility, and gate interpretation
 
 Owner:
 
@@ -246,7 +246,7 @@ Depends On:
 
 Unit 1 and Unit 4.
 
-### [ ] Unit 6: Final boundary closure, docs projection, generated report refresh, and repository verification
+### [x] Unit 6: Final boundary closure, docs projection, generated report refresh, and repository verification
 
 Owner:
 

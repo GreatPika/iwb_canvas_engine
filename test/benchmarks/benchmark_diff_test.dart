@@ -58,6 +58,34 @@ void main() {
       );
     });
 
+    test('invalidated old-schema manual baseline fails closed', () {
+      final manifest = BenchmarkManifest.load();
+      final invalidated =
+          jsonDecode(
+                File(
+                  '$manualBenchmarkBaselineRoot/'
+                  'pixel6_android16_flutter_3_44_0.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
+
+      expect(invalidated, containsPair('status', 'invalidated_old_schema'));
+      expect(invalidated, isNot(contains('cases')));
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: invalidated,
+          currentJson: _releaseReport(manifest),
+          baselinePath:
+              '$manualBenchmarkBaselineRoot/'
+              'pixel6_android16_flutter_3_44_0.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains('benchmark baseline is invalidated old schema'),
+      );
+    });
+
     test('rejects release contour and schema metadata mismatches', () {
       final manifest = BenchmarkManifest.load();
       final baseline = _releaseReport(manifest);
@@ -195,21 +223,14 @@ void main() {
 
     test('rejects old-schema reports and baseline payloads', () {
       final manifest = BenchmarkManifest.load();
-      final oldPixel6Report =
-          jsonDecode(
-                File(
-                  '$manualBenchmarkBaselineRoot/'
-                  'pixel6_android16_flutter_3_44_0.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, Object?>;
+      final oldReport = _oldSchemaReport(manifest);
       final current = _releaseReport(manifest);
 
       expect(
         diffBenchmarkReports(
           manifest: manifest,
           profile: 'release',
-          baselineJson: oldPixel6Report,
+          baselineJson: oldReport,
           currentJson: current,
           baselinePath: 'tool/bench/baselines/manual/pixel6.json',
           currentPath: 'current.json',
@@ -224,7 +245,7 @@ void main() {
           manifest: manifest,
           profile: 'release',
           baselineJson: current,
-          currentJson: oldPixel6Report,
+          currentJson: oldReport,
           baselinePath: 'baseline.json',
           currentPath: 'build/bench/current/pixel6.json',
         ).failures.join('\n'),
@@ -927,6 +948,23 @@ Map<String, Object?> _releaseReport(BenchmarkManifest manifest) {
     'caseCount': cases.length,
     'cases': cases,
   };
+}
+
+Map<String, Object?> _oldSchemaReport(BenchmarkManifest manifest) {
+  final report = _releaseReport(manifest);
+  report['schemaVersion'] = 1;
+  report['manifestVersion'] = 'p14_release_readiness_benchmarks_v1';
+  report['manifestFingerprint'] = 'old-schema';
+  for (final entry
+      in (report['cases'] as List<Object?>).cast<Map<String, Object?>>()) {
+    entry
+      ..remove('measurementBoundary')
+      ..remove('fixtureShape')
+      ..remove('actionUsSamples')
+      ..remove('setupUsSamples')
+      ..remove('setupMetrics');
+  }
+  return report;
 }
 
 Map<String, Object?> _caseReport(

@@ -90,12 +90,16 @@ Release benchmark interpretation:
 - Manual device baselines for optimization work live under
   `tool/bench/baselines/manual/`. They are committed comparison anchors for a
   named local device and toolchain, not release-approval baselines.
-- The Pixel 6 Android 16 baseline is
-  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`.
+- The previous Pixel 6 Android 16 baseline at
+  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`
+  is intentionally invalidated because it used the pre-boundary report schema.
+  It must not be used as a comparison anchor until a new schemaVersion 3 Pixel 6
+  report is captured and accepted through the manual baseline path.
 - To refresh the current Pixel 6 report, run
   `dart run tool/bench/run.dart --profile=release --device=23081FDF6000L2 --output=build/bench/current/pixel6_release.json`.
-- To compare a new Pixel 6 report against the committed manual baseline, run
-  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json --current=build/bench/current/pixel6_release.json --output=build/bench/diff/pixel6_release.json`.
+- After a new schemaVersion 3 manual baseline exists for the same device and
+  toolchain, compare a new Pixel 6 report with
+  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/<schema-v3-pixel6-baseline>.json --current=build/bench/current/pixel6_release.json --output=build/bench/diff/pixel6_release.json`.
 - Manual device-baseline diff is for regression tracking during optimization;
   it must preserve same-contour runtime metadata, including `deviceId`, but it
   does not replace the approved Ubuntu release baseline or release workflow.
