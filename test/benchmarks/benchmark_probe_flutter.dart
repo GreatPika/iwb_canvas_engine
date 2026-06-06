@@ -90,6 +90,12 @@ void main() {
   // Assertions live in the named helper; see comment above.
   // ignore: missing-test-assertion
   test(
+    'case plan accepts no setup boundary metadata',
+    _casePlanAcceptsNoSetupBoundaryMetadata,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
     'real case plans use manifest boundary table',
     _realCasePlansUseManifestBoundaryTable,
   );
@@ -129,7 +135,7 @@ Future<void> _probeExecutesRequestedCase() async {
   final args = _probeArgs();
   final options = _ProbeOptions.parse(args);
   final result = await _runProbe(options);
-  expect(result['elapsedUsSamples'], isNotEmpty);
+  expect(result['actionUsSamples'], isNotEmpty);
   // Machine-readable stdout is the probe protocol consumed by tool/bench.
   // ignore: avoid_print
   print('BENCHMARK_PROBE_JSON:${jsonEncode(result)}');
@@ -176,7 +182,7 @@ Future<void> _casePlanSeparatesSetupTimingFromActionSamples() async {
 }
 
 void _expectActionAndSetupSamples(Map<String, Object?> result) {
-  expect(result['elapsedUsSamples'], [7]);
+  expect(result['actionUsSamples'], [7]);
   expect(result['setupUsSamples'], [5000]);
 }
 
@@ -187,8 +193,8 @@ void _expectActionAndSetupMetrics(Map<String, Object?> result) {
   expect(result['metrics'], containsPair('setup_us', 5000));
   expect(result['metrics'], containsPair('allocation_bytes', 10));
   expect(result['metrics'], containsPair('rss_delta_bytes', 20));
-  expect(result['metrics'], containsPair('setup_allocation_bytes', 1000));
-  expect(result['metrics'], containsPair('setup_rss_delta_bytes', 2000));
+  expect(result['setupMetrics'], containsPair('setup_allocation_bytes', 1000));
+  expect(result['setupMetrics'], containsPair('setup_rss_delta_bytes', 2000));
 }
 
 Future<void> _casePlanRunsCleanupAfterActionFailure() async {
@@ -351,6 +357,8 @@ void _casePlanFailsWhenOperationLacksBoundaryMetadata() {
       teardownScope: 'excluded',
       primaryTiming: 'action',
       primaryMemory: 'action',
+      setupMetrics: ['setup_us'],
+      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
       fixtureShape: 'normal_spread',
     ),
   });
@@ -364,6 +372,47 @@ void _casePlanFailsWhenOperationLacksBoundaryMetadata() {
         contains('has incomplete benchmark measurement boundary'),
       ),
     ),
+  );
+}
+
+Future<void> _casePlanAcceptsNoSetupBoundaryMetadata() async {
+  const boundary = _CaseBoundaryRegistryEntry(
+    timedScope: 'action_only',
+    setupScope: 'none',
+    teardownScope: 'excluded',
+    primaryTiming: 'action',
+    primaryMemory: 'action',
+    setupMetrics: [],
+    setupMemoryMetrics: [],
+    fixtureShape: 'normal_spread',
+  );
+  expect(boundary.isComplete, isTrue);
+
+  final result = await _runProbePlan(
+    _fakeOptions(),
+    _BenchmarkCasePlan(
+      setupScope: boundary.setupScope,
+      setupMetricKeys: boundary.setupMetrics,
+      setupMemoryMetricKeys: boundary.setupMemoryMetrics,
+      prepare: () => const _PreparedProbeFixture(value: 'fixture'),
+      measure: (fixture) {
+        expect(fixture, 'fixture');
+        return const {'allocation_bytes': 10, 'rss_delta_bytes': 20};
+      },
+      cleanup: (fixture) => expect(fixture, 'fixture'),
+    ),
+  );
+  final metrics = result['metrics'] as Map<String, Object?>;
+  final setupMetrics = result['setupMetrics'] as Map<String, Object?>;
+
+  expect(result['actionUsSamples'], isNotEmpty);
+  expect(result['setupUsSamples'], isEmpty);
+  expect(metrics.containsKey('setup_us'), isFalse);
+  expect(setupMetrics, isEmpty);
+  expect(result['measurementBoundary'], containsPair('setupMetrics', isEmpty));
+  expect(
+    result['measurementBoundary'],
+    containsPair('setupMemoryMetrics', isEmpty),
   );
 }
 
@@ -409,6 +458,8 @@ void _spatialCasePlansEnforceFixtureShapes() {
       teardownScope: 'excluded',
       primaryTiming: 'action',
       primaryMemory: 'action',
+      setupMetrics: ['setup_us'],
+      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
       fixtureShape: 'dense_stress',
     ),
   });
@@ -419,6 +470,8 @@ void _spatialCasePlansEnforceFixtureShapes() {
       teardownScope: 'excluded',
       primaryTiming: 'action',
       primaryMemory: 'action',
+      setupMetrics: ['setup_us'],
+      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
       fixtureShape: 'normal_spread',
     ),
   });
@@ -461,6 +514,8 @@ void _casePlanRejectsBoundaryPolicyDrift() {
       teardownScope: 'measured_lifecycle',
       primaryTiming: 'lifecycle',
       primaryMemory: 'lifecycle',
+      setupMetrics: ['setup_us'],
+      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
       fixtureShape: 'normal_spread',
     ),
   });
@@ -483,7 +538,7 @@ Future<void> _projectionCaseExcludesRuntimeSetupFromActionSamples() async {
     _casePlan('projection.read_document', '1k'),
   );
 
-  expect(result['elapsedUsSamples'], hasLength(1));
+  expect(result['actionUsSamples'], hasLength(1));
   expect(result['setupUsSamples'], hasLength(1));
   final metrics = result['metrics'] as Map<String, Object?>;
   expect(metrics, containsPair('setup_us', isA<int>()));
@@ -518,7 +573,7 @@ _resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics() async {
 }
 
 void _expectPreparedCaseMetrics(Map<String, Object?> result, String metric) {
-  expect(result['elapsedUsSamples'], hasLength(1));
+  expect(result['actionUsSamples'], hasLength(1));
   expect(result['setupUsSamples'], hasLength(1));
   final metrics = result['metrics'] as Map<String, Object?>;
   expect(metrics, containsPair('setup_us', isA<int>()));
@@ -568,6 +623,7 @@ Future<Map<String, Object?>> _runProbePlan(
   final samples = <int>[];
   final setupUsSamples = <int>[];
   final metrics = <String, Object?>{};
+  final setupMetrics = <String, Object?>{};
   _MeasuredSetup? reusableSetup;
   try {
     for (var index = 0; index < options.warmups; index++) {
@@ -577,18 +633,18 @@ Future<Map<String, Object?>> _runProbePlan(
     reusableSetup = plan.reusesPreparedFixture
         ? await _measureSetup(plan)
         : null;
-    if (reusableSetup != null) {
+    if (reusableSetup != null && plan.setupScope != 'none') {
       setupUsSamples.add(reusableSetup.setupUs);
-      metrics.addAll(reusableSetup.setupMetrics);
+      setupMetrics.addAll(reusableSetup.setupMetrics);
     }
 
     final total = Stopwatch()..start();
     do {
       final sample = await _measurePlanSample(plan, reusableSetup);
       samples.add(sample.elapsedUs);
-      if (reusableSetup == null) {
+      if (reusableSetup == null && plan.setupScope != 'none') {
         setupUsSamples.add(sample.setupUs);
-        metrics.addAll(sample.setupMetrics);
+        setupMetrics.addAll(sample.setupMetrics);
       }
       metrics.addAll(sample.metrics);
     } while (_needsMoreSamples(
@@ -603,12 +659,20 @@ Future<Map<String, Object?>> _runProbePlan(
     }
   }
   metrics.addAll(_timingMetrics(samples));
-  metrics['setup_us'] = _avgUs(setupUsSamples);
+  if (setupUsSamples.isNotEmpty) {
+    final setupUs = _avgUs(setupUsSamples);
+    metrics['setup_us'] = setupUs;
+    setupMetrics['setup_us'] = setupUs;
+  }
 
   return {
-    'elapsedUsSamples': samples,
+    'probeSchemaVersion': benchmarkToolSchemaVersion,
+    'actionUsSamples': samples,
     'setupUsSamples': setupUsSamples,
     'metrics': metrics,
+    'setupMetrics': setupMetrics,
+    'measurementBoundary': plan.measurementBoundaryJson(),
+    'fixtureShape': plan.fixtureShape,
     'runtime': {
       'runtimeMode': 'flutter_test',
       'assertionsEnabled': _assertionsEnabled(),
@@ -1931,6 +1995,9 @@ _CaseBoundaryRegistry _caseBoundaryRegistry() {
         teardownScope: benchmarkCase.measurementBoundary.teardownScope,
         primaryTiming: benchmarkCase.measurementBoundary.primaryTiming,
         primaryMemory: benchmarkCase.measurementBoundary.primaryMemory,
+        setupMetrics: benchmarkCase.measurementBoundary.setupMetrics,
+        setupMemoryMetrics:
+            benchmarkCase.measurementBoundary.setupMemoryMetrics,
         fixtureShape: benchmarkCase.fixtureShape,
       ),
   });
@@ -1962,6 +2029,8 @@ final class _CaseBoundaryRegistryEntry {
     required this.teardownScope,
     required this.primaryTiming,
     required this.primaryMemory,
+    required this.setupMetrics,
+    required this.setupMemoryMetrics,
     required this.fixtureShape,
   });
 
@@ -1970,14 +2039,20 @@ final class _CaseBoundaryRegistryEntry {
   final String teardownScope;
   final String primaryTiming;
   final String primaryMemory;
+  final List<String> setupMetrics;
+  final List<String> setupMemoryMetrics;
   final String fixtureShape;
 
   bool get isComplete {
+    final setupDiagnosticsComplete = setupScope == 'none'
+        ? setupMetrics.isEmpty && setupMemoryMetrics.isEmpty
+        : setupMetrics.isNotEmpty && setupMemoryMetrics.isNotEmpty;
     return timedScope.isNotEmpty &&
         setupScope.isNotEmpty &&
         teardownScope.isNotEmpty &&
         primaryTiming.isNotEmpty &&
         primaryMemory.isNotEmpty &&
+        setupDiagnosticsComplete &&
         fixtureShape.isNotEmpty;
   }
 }
@@ -2010,6 +2085,11 @@ final class _BenchmarkCasePlan {
     this.teardownScope = 'excluded',
     this.primaryTiming = 'action',
     this.primaryMemory = 'action',
+    this.setupMetricKeys = const ['setup_us'],
+    this.setupMemoryMetricKeys = const [
+      'setup_allocation_bytes',
+      'setup_rss_delta_bytes',
+    ],
     this.fixtureShape = 'normal_spread',
     this.setupElapsedUsOverride,
     this.actionElapsedUsOverride,
@@ -2025,6 +2105,8 @@ final class _BenchmarkCasePlan {
   final String teardownScope;
   final String primaryTiming;
   final String primaryMemory;
+  final List<String> setupMetricKeys;
+  final List<String> setupMemoryMetricKeys;
   final String fixtureShape;
   final int? setupElapsedUsOverride;
   final int? actionElapsedUsOverride;
@@ -2042,6 +2124,8 @@ final class _BenchmarkCasePlan {
       teardownScope: boundary.teardownScope,
       primaryTiming: boundary.primaryTiming,
       primaryMemory: boundary.primaryMemory,
+      setupMetricKeys: boundary.setupMetrics,
+      setupMemoryMetricKeys: boundary.setupMemoryMetrics,
       fixtureShape: boundary.fixtureShape,
       prepare: prepare,
       measure: measure,
@@ -2051,6 +2135,18 @@ final class _BenchmarkCasePlan {
       setupRssDeltaOverride: setupRssDeltaOverride,
       actionRssDeltaOverride: actionRssDeltaOverride,
     );
+  }
+
+  Map<String, Object?> measurementBoundaryJson() {
+    return {
+      'timedScope': timedScope,
+      'setupScope': setupScope,
+      'teardownScope': teardownScope,
+      'primaryTiming': primaryTiming,
+      'primaryMemory': primaryMemory,
+      'setupMetrics': setupMetricKeys,
+      'setupMemoryMetrics': setupMemoryMetricKeys,
+    };
   }
 }
 

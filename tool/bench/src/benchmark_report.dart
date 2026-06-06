@@ -149,7 +149,12 @@ final class BenchmarkCaseReport {
     required this.repetitions,
     required this.iterations,
     required this.timingClaims,
+    required this.measurementBoundary,
+    required this.fixtureShape,
+    required this.actionUsSamples,
+    required this.setupUsSamples,
     required this.metrics,
+    required this.setupMetrics,
     required this.exactInvariants,
   });
 
@@ -163,7 +168,12 @@ final class BenchmarkCaseReport {
   final int repetitions;
   final int iterations;
   final bool timingClaims;
+  final BenchmarkMeasurementBoundary measurementBoundary;
+  final String fixtureShape;
+  final List<int> actionUsSamples;
+  final List<int> setupUsSamples;
   final Map<String, Object?> metrics;
+  final Map<String, Object?> setupMetrics;
   final Map<String, BenchmarkInvariantReport> exactInvariants;
 
   Map<String, Object?> toJson() {
@@ -178,13 +188,32 @@ final class BenchmarkCaseReport {
       'repetitions': repetitions,
       'iterations': iterations,
       'timingClaims': timingClaims,
+      'measurementBoundary': _measurementBoundaryJson(measurementBoundary),
+      'fixtureShape': fixtureShape,
+      'actionUsSamples': actionUsSamples,
+      'setupUsSamples': setupUsSamples,
       'metrics': metrics,
+      'setupMetrics': setupMetrics,
       'exactInvariants': {
         for (final entry in exactInvariants.entries)
           entry.key: entry.value.toJson(),
       },
     };
   }
+}
+
+Map<String, Object?> _measurementBoundaryJson(
+  BenchmarkMeasurementBoundary boundary,
+) {
+  return {
+    'timedScope': boundary.timedScope,
+    'setupScope': boundary.setupScope,
+    'teardownScope': boundary.teardownScope,
+    'primaryTiming': boundary.primaryTiming,
+    'primaryMemory': boundary.primaryMemory,
+    'setupMetrics': boundary.setupMetrics,
+    'setupMemoryMetrics': boundary.setupMemoryMetrics,
+  };
 }
 
 final class BenchmarkInvariantReport {

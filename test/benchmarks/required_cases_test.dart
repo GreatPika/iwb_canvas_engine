@@ -34,6 +34,30 @@ void main() {
             reportCase.metrics.keys,
             containsAll(manifestCase.requiredMetrics),
           );
+          expect(reportCase.actionUsSamples, isNotEmpty);
+          expect(reportCase.setupUsSamples, isNotEmpty);
+          expect(
+            reportCase.measurementBoundary.timedScope,
+            manifestCase.measurementBoundary.timedScope,
+          );
+          expect(
+            reportCase.measurementBoundary.setupScope,
+            manifestCase.measurementBoundary.setupScope,
+          );
+          expect(
+            reportCase.measurementBoundary.primaryMemory,
+            manifestCase.measurementBoundary.primaryMemory,
+          );
+          expect(reportCase.fixtureShape, manifestCase.fixtureShape);
+          if (manifestCase.measurementBoundary.setupScope != 'none') {
+            expect(
+              reportCase.setupMetrics.keys,
+              containsAll([
+                ...manifestCase.measurementBoundary.setupMetrics,
+                ...manifestCase.measurementBoundary.setupMemoryMetrics,
+              ]),
+            );
+          }
           expect(reportCase.timingClaims, isFalse);
           for (final invariant in manifestCase.exactInvariants) {
             final invariantReport = reportCase.exactInvariants[invariant.name];

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
+import '../../tool/bench/src/benchmark_case_adapters.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_report.dart';
 import '../../tool/bench/src/benchmark_runner.dart';
@@ -28,6 +29,147 @@ void main() {
       expect(
         report.cases.every((benchmarkCase) => !benchmarkCase.timingClaims),
         isTrue,
+      );
+    });
+
+    test('case report records boundary metadata and setup diagnostics', () {
+      final manifest = _singleCaseManifest();
+      final report = runBenchmarks(manifest: manifest, profileId: 'dry_run');
+      final benchmarkCase = manifest.cases.first;
+      final reportCase = report.cases.first;
+      final encodedCase = reportCase.toJson();
+
+      expect(reportCase.actionUsSamples, isNotEmpty);
+      expect(reportCase.setupUsSamples, isNotEmpty);
+      expect(reportCase.fixtureShape, benchmarkCase.fixtureShape);
+      expect(
+        reportCase.measurementBoundary.timedScope,
+        benchmarkCase.measurementBoundary.timedScope,
+      );
+      expect(reportCase.setupMetrics, contains('setup_us'));
+      expect(
+        encodedCase,
+        containsPair('measurementBoundary', isA<Map<String, Object?>>()),
+      );
+      expect(encodedCase, containsPair('actionUsSamples', isA<List<int>>()));
+      expect(encodedCase, containsPair('setupUsSamples', isA<List<int>>()));
+      expect(
+        encodedCase,
+        containsPair('setupMetrics', isA<Map<String, Object?>>()),
+      );
+      expect(
+        encodedCase,
+        containsPair('fixtureShape', benchmarkCase.fixtureShape),
+      );
+    });
+
+    test('derives timing metrics only from action samples', () {
+      final manifest = _singleCaseManifest();
+      final report = runBenchmarks(
+        manifest: manifest,
+        profileId: 'dry_run',
+        adapter: _fakeAdapter(
+          metrics: {'avg_us': 5000, 'p95_us': 5000, 'max_us': 5000},
+          actionUsSamples: [7],
+        ),
+      );
+
+      expect(report.cases.single.metrics, containsPair('avg_us', 7));
+      expect(report.cases.single.metrics, containsPair('p95_us', 7));
+      expect(report.cases.single.metrics, containsPair('max_us', 7));
+    });
+
+    test('requires setup samples and setup diagnostics', () {
+      final manifest = _singleCaseManifest();
+
+      expect(
+        () => runBenchmarks(
+          manifest: manifest,
+          profileId: 'dry_run',
+          adapter: _fakeAdapter(setupUsSamples: const []),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('emitted no setup samples'),
+          ),
+        ),
+      );
+
+      expect(
+        () => runBenchmarks(
+          manifest: manifest,
+          profileId: 'dry_run',
+          adapter: _fakeAdapter(
+            setupMetrics: const {
+              'setup_allocation_bytes': 100,
+              'setup_rss_delta_bytes': 100,
+            },
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('missing setup metric setup_us'),
+          ),
+        ),
+      );
+
+      expect(
+        () => runBenchmarks(
+          manifest: manifest,
+          profileId: 'dry_run',
+          adapter: _fakeAdapter(setupMetrics: const {'setup_us': 5}),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('missing setup metric setup_allocation_bytes'),
+          ),
+        ),
+      );
+
+      expect(
+        () => runBenchmarks(
+          manifest: manifest,
+          profileId: 'dry_run',
+          adapter: _fakeAdapter(
+            setupMetrics: const {
+              'setup_us': 5,
+              'setup_allocation_bytes': '100',
+              'setup_rss_delta_bytes': 100,
+            },
+          ),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('invalid setup metric setup_allocation_bytes'),
+          ),
+        ),
+      );
+    });
+
+    test('requires primary memory metrics from boundary policy', () {
+      final manifest = _singleCaseManifest();
+
+      expect(
+        () => runBenchmarks(
+          manifest: manifest,
+          profileId: 'dry_run',
+          adapter: _fakeAdapter(includeRssDeltaBytes: false),
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            contains('missing primary memory metric rss_delta_bytes'),
+          ),
+        ),
       );
     });
 
@@ -336,4 +478,41 @@ BenchmarkCase _copyCaseWithFixtureShape(
     exactInvariants: benchmarkCase.exactInvariants,
     scales: benchmarkCase.scales,
   );
+}
+
+BenchmarkCaseAdapter _fakeAdapter({
+  Map<String, Object?> metrics = const {},
+  Map<String, Object?> setupMetrics = const {
+    'setup_us': 5,
+    'setup_allocation_bytes': 100,
+    'setup_rss_delta_bytes': 100,
+  },
+  List<int> actionUsSamples = const [5],
+  List<int> setupUsSamples = const [5],
+  bool includeRssDeltaBytes = true,
+}) {
+  return (
+    BenchmarkCase benchmarkCase,
+    BenchmarkScale scale,
+    BenchmarkProfile profile,
+    BenchmarkDeviceTarget? deviceTarget,
+  ) {
+    final primaryMetrics = <String, Object?>{'allocation_bytes': 10};
+    if (includeRssDeltaBytes) {
+      primaryMetrics['rss_delta_bytes'] = 10;
+    }
+    return BenchmarkAdapterResult(
+      actionUsSamples: actionUsSamples,
+      setupUsSamples: setupUsSamples,
+      metrics: {...primaryMetrics, ...metrics},
+      setupMetrics: setupMetrics,
+      measurementBoundary: benchmarkCase.measurementBoundary,
+      fixtureShape: benchmarkCase.fixtureShape,
+      runtime: const BenchmarkProbeRuntime(
+        runtimeMode: 'flutter_test',
+        assertionsEnabled: true,
+        debugInvariantMode: false,
+      ),
+    );
+  };
 }

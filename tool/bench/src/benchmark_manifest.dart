@@ -4,7 +4,7 @@ import 'package:yaml/yaml.dart';
 
 const benchmarkManifestPath = 'docs/_registry/benchmarks.yaml';
 const benchmarkManifestVersion = 'p14_benchmark_measurement_boundary_v2';
-const benchmarkToolSchemaVersion = 2;
+const benchmarkToolSchemaVersion = 3;
 
 final class BenchmarkManifest {
   const BenchmarkManifest({

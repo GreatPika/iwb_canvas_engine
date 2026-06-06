@@ -8,13 +8,21 @@ const _probeJsonPrefix = 'BENCHMARK_PROBE_JSON:';
 
 final class BenchmarkAdapterResult {
   const BenchmarkAdapterResult({
-    required this.elapsedUsSamples,
+    required this.actionUsSamples,
+    required this.setupUsSamples,
     required this.metrics,
+    required this.setupMetrics,
+    required this.measurementBoundary,
+    required this.fixtureShape,
     required this.runtime,
   });
 
-  final List<int> elapsedUsSamples;
+  final List<int> actionUsSamples;
+  final List<int> setupUsSamples;
   final Map<String, Object?> metrics;
+  final Map<String, Object?> setupMetrics;
+  final BenchmarkMeasurementBoundary measurementBoundary;
+  final String fixtureShape;
   final BenchmarkProbeRuntime runtime;
 }
 
@@ -56,7 +64,11 @@ BenchmarkAdapterResult runBenchmarkAdapter(
       '${result.stdout}\n${result.stderr}',
     );
   }
-  return _decodeProbeResult(benchmarkCase, scale, result.stdout.toString());
+  return decodeBenchmarkProbeResult(
+    benchmarkCase,
+    scale,
+    result.stdout.toString(),
+  );
 }
 
 final class BenchmarkDeviceTarget {
@@ -65,7 +77,7 @@ final class BenchmarkDeviceTarget {
   final String id;
 }
 
-BenchmarkAdapterResult _decodeProbeResult(
+BenchmarkAdapterResult decodeBenchmarkProbeResult(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
   String stdout,
@@ -80,25 +92,214 @@ BenchmarkAdapterResult _decodeProbeResult(
       )
       .replaceFirst(_probeJsonPrefix, '');
   final decoded = jsonDecode(jsonLine) as Map<String, Object?>;
-  final elapsedUsSamples = [
-    for (final value in decoded['elapsedUsSamples'] as List<Object?>)
-      if (value is int) value else _invalidSample(value),
-  ];
-  if (elapsedUsSamples.isEmpty) {
+  if (decoded.containsKey('elapsedUsSamples')) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} old elapsedUsSamples probe payload.',
+    );
+  }
+  final probeSchemaVersion = decoded['probeSchemaVersion'];
+  if (probeSchemaVersion != benchmarkToolSchemaVersion) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid probeSchemaVersion.',
+    );
+  }
+  final actionUsSamples = _sampleList(
+    benchmarkCase,
+    scale,
+    decoded,
+    'actionUsSamples',
+  );
+  if (actionUsSamples.isEmpty) {
     throw StateError('${benchmarkCase.id}/${scale.id} emitted no samples.');
   }
+  final setupUsSamples = _sampleList(
+    benchmarkCase,
+    scale,
+    decoded,
+    'setupUsSamples',
+  );
   final decodedMetrics = decoded['metrics'];
   if (decodedMetrics is! Map<String, Object?>) {
     throw StateError(
       '${benchmarkCase.id}/${scale.id} emitted invalid metrics.',
     );
   }
+  final setupMetrics = decoded['setupMetrics'];
+  if (setupMetrics is! Map<String, Object?>) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid setupMetrics.',
+    );
+  }
+  final boundary = _decodeMeasurementBoundary(
+    benchmarkCase,
+    scale,
+    decoded['measurementBoundary'],
+  );
+  final fixtureShape = decoded['fixtureShape'];
+  if (fixtureShape != benchmarkCase.fixtureShape) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid fixtureShape.',
+    );
+  }
   final runtime = _decodeProbeRuntime(benchmarkCase, scale, decoded['runtime']);
   return BenchmarkAdapterResult(
-    elapsedUsSamples: elapsedUsSamples,
+    actionUsSamples: actionUsSamples,
+    setupUsSamples: setupUsSamples,
     metrics: decodedMetrics,
+    setupMetrics: setupMetrics,
+    measurementBoundary: boundary,
+    fixtureShape: fixtureShape as String,
     runtime: runtime,
   );
+}
+
+List<int> _sampleList(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Map<String, Object?> decoded,
+  String key,
+) {
+  final samples = decoded[key];
+  if (samples is! List<Object?>) {
+    throw StateError('${benchmarkCase.id}/${scale.id} emitted invalid $key.');
+  }
+  return [
+    for (final value in samples)
+      if (value is int) value else _invalidSample(key, value),
+  ];
+}
+
+BenchmarkMeasurementBoundary _decodeMeasurementBoundary(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Object? boundary,
+) {
+  if (boundary is! Map<String, Object?>) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.',
+    );
+  }
+  final setupScope = _boundaryString(
+    benchmarkCase,
+    scale,
+    boundary,
+    'setupScope',
+  );
+  final decoded = BenchmarkMeasurementBoundary(
+    timedScope: _boundaryString(benchmarkCase, scale, boundary, 'timedScope'),
+    setupScope: setupScope,
+    teardownScope: _boundaryString(
+      benchmarkCase,
+      scale,
+      boundary,
+      'teardownScope',
+    ),
+    primaryTiming: _boundaryString(
+      benchmarkCase,
+      scale,
+      boundary,
+      'primaryTiming',
+    ),
+    primaryMemory: _boundaryString(
+      benchmarkCase,
+      scale,
+      boundary,
+      'primaryMemory',
+    ),
+    setupMetrics: _boundaryStringList(
+      benchmarkCase,
+      scale,
+      boundary,
+      'setupMetrics',
+      allowEmpty: setupScope == 'none',
+    ),
+    setupMemoryMetrics: _boundaryStringList(
+      benchmarkCase,
+      scale,
+      boundary,
+      'setupMemoryMetrics',
+      allowEmpty: setupScope == 'none',
+    ),
+  );
+  if (!_sameBoundary(decoded, benchmarkCase.measurementBoundary)) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted measurementBoundary drift.',
+    );
+  }
+  return decoded;
+}
+
+bool _sameBoundary(
+  BenchmarkMeasurementBoundary left,
+  BenchmarkMeasurementBoundary right,
+) {
+  return left.timedScope == right.timedScope &&
+      left.setupScope == right.setupScope &&
+      left.teardownScope == right.teardownScope &&
+      left.primaryTiming == right.primaryTiming &&
+      left.primaryMemory == right.primaryMemory &&
+      _sameStringList(left.setupMetrics, right.setupMetrics) &&
+      _sameStringList(left.setupMemoryMetrics, right.setupMemoryMetrics);
+}
+
+bool _sameStringList(List<String> left, List<String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+String _boundaryString(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Map<String, Object?> boundary,
+  String key,
+) {
+  final value = boundary[key];
+  if (value is String && value.isNotEmpty) {
+    return value;
+  }
+  throw StateError(
+    '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+  );
+}
+
+List<String> _boundaryStringList(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Map<String, Object?> boundary,
+  String key, {
+  required bool allowEmpty,
+}) {
+  final values = boundary[key];
+  if (values is! List<Object?>) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+    );
+  }
+  if (values.isEmpty) {
+    if (allowEmpty) {
+      return const [];
+    }
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+    );
+  }
+  return [
+    for (final value in values)
+      if (value is String && value.isNotEmpty)
+        value
+      else
+        throw StateError(
+          '${benchmarkCase.id}/${scale.id} emitted invalid '
+          'measurementBoundary.$key.',
+        ),
+  ];
 }
 
 BenchmarkProbeRuntime _decodeProbeRuntime(
@@ -154,6 +355,6 @@ bool _runtimeBool(
   throw StateError('${benchmarkCase.id}/${scale.id} emitted invalid $key.');
 }
 
-Never _invalidSample(Object? value) {
-  throw StateError('Benchmark probe emitted invalid elapsed sample $value.');
+Never _invalidSample(String key, Object? value) {
+  throw StateError('Benchmark probe emitted invalid $key sample $value.');
 }

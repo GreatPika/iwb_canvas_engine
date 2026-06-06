@@ -1,5 +1,5 @@
 manifest_version: "p14_benchmark_measurement_boundary_v2"
-tool_schema_version: 2
+tool_schema_version: 3
 release_contour:
   runner_label: "ubuntu-24.04"
   os_name: "Ubuntu"

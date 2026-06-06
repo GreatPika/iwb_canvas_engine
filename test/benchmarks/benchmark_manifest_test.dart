@@ -178,8 +178,8 @@ void main() {
       );
       final schemaError = _parseFailure(
         _manifestText().replaceFirst(
+          'tool_schema_version: 3',
           'tool_schema_version: 2',
-          'tool_schema_version: 1',
         ),
       );
 

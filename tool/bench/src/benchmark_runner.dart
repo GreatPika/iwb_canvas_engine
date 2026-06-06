@@ -8,6 +8,14 @@ import 'benchmark_report.dart';
 const releaseReportPath =
     'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
 
+typedef BenchmarkCaseAdapter =
+    BenchmarkAdapterResult Function(
+      BenchmarkCase benchmarkCase,
+      BenchmarkScale scale,
+      BenchmarkProfile profile,
+      BenchmarkDeviceTarget? deviceTarget,
+    );
+
 Future<String> runBenchmarkCli(
   List<String> args, {
   BenchmarkManifest? manifest,
@@ -36,6 +44,7 @@ BenchmarkReport runBenchmarks({
   required BenchmarkManifest manifest,
   required String profileId,
   BenchmarkDeviceTarget? deviceTarget,
+  BenchmarkCaseAdapter adapter = runBenchmarkAdapter,
 }) {
   final profile = manifest.profilesById[profileId];
   if (profile == null) {
@@ -48,7 +57,9 @@ BenchmarkReport runBenchmarks({
       if (!scale.profiles.contains(profileId)) {
         continue;
       }
-      caseRuns.add(_runCase(benchmarkCase, scale, profile, deviceTarget));
+      caseRuns.add(
+        _runCase(benchmarkCase, scale, profile, deviceTarget, adapter),
+      );
     }
   }
   if (caseRuns.isEmpty) {
@@ -102,22 +113,31 @@ _BenchmarkCaseRun _runCase(
   BenchmarkScale scale,
   BenchmarkProfile profile,
   BenchmarkDeviceTarget? deviceTarget,
+  BenchmarkCaseAdapter adapter,
 ) {
-  final adapterResult = runBenchmarkAdapter(
-    benchmarkCase,
-    scale,
-    profile,
-    deviceTarget,
+  final adapterResult = adapter(benchmarkCase, scale, profile, deviceTarget);
+  _validateAdapterBoundary(benchmarkCase, scale, adapterResult);
+  final metrics = <String, Object?>{
+    ...adapterResult.metrics,
+    ..._timingMetrics(adapterResult.actionUsSamples),
+  };
+  final setupMetrics = <String, Object?>{...adapterResult.setupMetrics};
+  _validateSetupDiagnostics(benchmarkCase, scale, setupMetrics);
+  _applySetupTiming(
+    benchmarkCase: benchmarkCase,
+    scale: scale,
+    adapterResult: adapterResult,
+    metrics: metrics,
+    setupMetrics: setupMetrics,
   );
-  final metrics = <String, Object?>{};
   for (final metric in benchmarkCase.requiredMetrics) {
-    if (!adapterResult.metrics.containsKey(metric)) {
+    if (!metrics.containsKey(metric)) {
       throw StateError(
         '${benchmarkCase.id}/${scale.id} missing metric $metric.',
       );
     }
   }
-  metrics.addAll(adapterResult.metrics);
+  _validatePrimaryMemoryMetrics(benchmarkCase, scale, metrics);
   final invariants = <String, BenchmarkInvariantReport>{};
   for (final invariant in benchmarkCase.exactInvariants) {
     final actual = metrics[invariant.metric];
@@ -150,11 +170,140 @@ _BenchmarkCaseRun _runCase(
       repetitions: profile.repetitions,
       iterations: profile.iterations ?? 1,
       timingClaims: profile.timingClaims,
+      measurementBoundary: adapterResult.measurementBoundary,
+      fixtureShape: adapterResult.fixtureShape,
+      actionUsSamples: adapterResult.actionUsSamples,
+      setupUsSamples: adapterResult.setupUsSamples,
       metrics: metrics,
+      setupMetrics: setupMetrics,
       exactInvariants: invariants,
     ),
     runtime: adapterResult.runtime,
   );
+}
+
+Map<String, int> _timingMetrics(List<int> samples) {
+  final sortedSamples = [...samples]..sort();
+  final p95Us = sortedSamples[((sortedSamples.length - 1) * 0.95).round()];
+  final maxUs = sortedSamples.last;
+  return {'avg_us': _avgUs(samples), 'p95_us': p95Us, 'max_us': maxUs};
+}
+
+void _applySetupTiming({
+  required BenchmarkCase benchmarkCase,
+  required BenchmarkScale scale,
+  required BenchmarkAdapterResult adapterResult,
+  required Map<String, Object?> metrics,
+  required Map<String, Object?> setupMetrics,
+}) {
+  if (benchmarkCase.measurementBoundary.setupScope == 'none') {
+    return;
+  }
+  if (adapterResult.setupUsSamples.isEmpty) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} emitted no setup samples.',
+    );
+  }
+  final setupUs = _avgUs(adapterResult.setupUsSamples);
+  if (setupMetrics['setup_us'] != setupUs) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} invalid setup metric setup_us.',
+    );
+  }
+  metrics['setup_us'] = setupUs;
+}
+
+int _avgUs(List<int> samples) {
+  return (samples.reduce((a, b) => a + b) / samples.length).round();
+}
+
+void _validateAdapterBoundary(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  BenchmarkAdapterResult adapterResult,
+) {
+  final boundary = adapterResult.measurementBoundary;
+  final expected = benchmarkCase.measurementBoundary;
+  if (boundary.timedScope != expected.timedScope ||
+      boundary.setupScope != expected.setupScope ||
+      boundary.teardownScope != expected.teardownScope ||
+      boundary.primaryTiming != expected.primaryTiming ||
+      boundary.primaryMemory != expected.primaryMemory ||
+      !_sameStringList(boundary.setupMetrics, expected.setupMetrics) ||
+      !_sameStringList(
+        boundary.setupMemoryMetrics,
+        expected.setupMemoryMetrics,
+      ) ||
+      adapterResult.fixtureShape != benchmarkCase.fixtureShape) {
+    throw StateError(
+      '${benchmarkCase.id}/${scale.id} benchmark boundary metadata drift.',
+    );
+  }
+  if (adapterResult.actionUsSamples.isEmpty) {
+    throw StateError('${benchmarkCase.id}/${scale.id} missing action samples.');
+  }
+}
+
+void _validateSetupDiagnostics(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Map<String, Object?> setupMetrics,
+) {
+  if (benchmarkCase.measurementBoundary.setupScope == 'none') {
+    return;
+  }
+  final requiredSetupMetrics = [
+    ...benchmarkCase.measurementBoundary.setupMetrics,
+    ...benchmarkCase.measurementBoundary.setupMemoryMetrics,
+  ];
+  for (final metric in requiredSetupMetrics) {
+    final value = setupMetrics[metric];
+    if (value == null) {
+      throw StateError(
+        '${benchmarkCase.id}/${scale.id} missing setup metric $metric.',
+      );
+    }
+    if (value is! num) {
+      throw StateError(
+        '${benchmarkCase.id}/${scale.id} invalid setup metric $metric.',
+      );
+    }
+  }
+}
+
+void _validatePrimaryMemoryMetrics(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+  Map<String, Object?> metrics,
+) {
+  if (benchmarkCase.measurementBoundary.primaryMemory == 'none') {
+    return;
+  }
+  for (final metric in const ['allocation_bytes', 'rss_delta_bytes']) {
+    final value = metrics[metric];
+    if (value == null) {
+      throw StateError(
+        '${benchmarkCase.id}/${scale.id} missing primary memory metric $metric.',
+      );
+    }
+    if (value is! num) {
+      throw StateError(
+        '${benchmarkCase.id}/${scale.id} invalid primary memory metric $metric.',
+      );
+    }
+  }
+}
+
+bool _sameStringList(List<String> left, List<String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 BenchmarkProbeRuntime _sharedProbeRuntime(List<_BenchmarkCaseRun> caseRuns) {
