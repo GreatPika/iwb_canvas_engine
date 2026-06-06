@@ -20,6 +20,15 @@ void main() {
       returnsNormally,
     ),
   );
+  test(
+    'ordinary public edit route does not build projection before explicit read',
+    () =>
+        expect(_ordinaryPublicEditRouteDoesNotBuildProjection, returnsNormally),
+  );
+  test(
+    'selection-only route does not build projection',
+    () => expect(_selectionOnlyRouteDoesNotBuildProjection, returnsNormally),
+  );
 }
 
 void _projectionCacheBuildsOnlyThroughExplicitRead() {
@@ -75,6 +84,65 @@ void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
   expect(store.projectionBuildCount, 1);
 }
 
+void _ordinaryPublicEditRouteDoesNotBuildProjection() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('element-a'),
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  root.edits.edit((edit) {
+    edit.addElement(_rect('element-b'), layerId: CanvasLayerId('layer-a'));
+  });
+  root.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('element-a'),
+        fillColor: const CanvasFieldSet(Color(0xFF00FF00)),
+      ),
+    );
+  });
+  root.edits.edit((edit) {
+    expect(edit.ensureLayer(CanvasLayerId('layer-a')), isFalse);
+  });
+  expect(root.projectionBuildCount, 0);
+
+  root.edits.edit((edit) {
+    edit.readDraftDocument();
+  });
+  expect(root.projectionBuildCount, 1);
+}
+
+void _selectionOnlyRouteDoesNotBuildProjection() {
+  final root = RuntimeRoot(
+    initialDocument: CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [_rect('element-a')],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  root.selection.setSelection([CanvasElementId('element-a')]);
+
+  expect(root.selectedElementIds, {CanvasElementId('element-a')});
+  expect(root.projectionBuildCount, 0);
+}
+
 void _installSparseAdd(DocumentStoreKernel store) {
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -91,6 +159,10 @@ void _installSparseAdd(DocumentStoreKernel store) {
       ),
     ),
   );
+}
+
+CanvasRectElement _rect(String id) {
+  return CanvasRectElement(id: CanvasElementId(id), size: const Size(2, 2));
 }
 
 void _installSparseTransform(DocumentStoreKernel store) {

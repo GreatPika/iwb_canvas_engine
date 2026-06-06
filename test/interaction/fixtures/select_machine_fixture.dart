@@ -221,6 +221,7 @@ void _testChangedSelectionCommitsAndEmitsAction() {
       final scenario = _scenario();
       final root = scenario.root;
       root.selection.setSelection([CanvasElementId('a')]);
+      expect(root.projectionBuildCount, 0);
 
       _dragMarquee(
         root,
@@ -237,6 +238,7 @@ void _testChangedSelectionCommitsAndEmitsAction() {
         CanvasElementId('b'),
         CanvasElementId('locked'),
       });
+      expect(root.projectionBuildCount, 0);
       _expectMarqueeAction(scenario.actions.single);
     },
   );

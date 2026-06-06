@@ -58,6 +58,8 @@ final class DocumentStoreKernel {
   int get gridRevision => _document.revisions.gridRevision;
   int get resourceRevision => _document.revisions.resourceRevision;
   CanvasBackground get background => _document.background;
+  CanvasCamera get camera => _document.camera;
+  CanvasPalette get palette => _document.palette;
   int get projectionBuildCount => _projectionCache.buildCount;
   int get resourceCount => _document.resourceTable.rows.length;
   List<CanvasResource> get resources {
@@ -74,6 +76,30 @@ final class DocumentStoreKernel {
     }
 
     return null;
+  }
+
+  CanvasElement? elementById(CanvasElementId id) {
+    return _document.elements.elementById(id);
+  }
+
+  Iterable<CanvasElementId> get backgroundElementIds {
+    return _document.elements.backgroundElementIds;
+  }
+
+  bool hasLayer(CanvasLayerId id) {
+    return _document.elements.containsLayer(id);
+  }
+
+  bool isResourceReferenced(CanvasResourceId id) {
+    return _document.elements.referencesResource(id);
+  }
+
+  Iterable<CanvasElementId> get elementIds {
+    return _document.elements.frameElementOrder;
+  }
+
+  Iterable<CanvasResourceId> get resourceIds {
+    return _document.resourceTable.rows.map((resource) => resource.id);
   }
 
   Set<CanvasElementId> get selectableElementIds {
@@ -322,6 +348,12 @@ final class DocumentStoreKernel {
         removeUnusedResources: removeUnusedResources,
         acceptedRevisions: acceptedRevisions,
       ),
+      StoreSparseSetBackground(:final background) => _setBackground(
+        document,
+        background,
+      ),
+      StoreSparseSetCamera(:final camera) => _setCamera(document, camera),
+      StoreSparseSetPalette(:final palette) => _setPalette(document, palette),
     };
   }
 
@@ -471,6 +503,60 @@ final class DocumentStoreKernel {
         resourceTable: clearedResources,
       ),
       requiredRevisionDelta: requiredRevisionDelta,
+    );
+  }
+
+  _SparseMutationResult _setBackground(
+    CommittedDocument document,
+    CanvasBackground background,
+  ) {
+    if (document.background == background) {
+      return _SparseMutationResult.unchanged(document);
+    }
+
+    var requiredRevisionDelta = const StoreRevisionDelta();
+    if (document.background.color != background.color) {
+      requiredRevisionDelta = requiredRevisionDelta.merge(
+        const StoreRevisionDelta.background(),
+      );
+    }
+    if (document.background.grid != background.grid) {
+      requiredRevisionDelta = requiredRevisionDelta.merge(
+        const StoreRevisionDelta.grid(),
+      );
+    }
+
+    return _SparseMutationResult.changed(
+      document.copyWith(background: background),
+      requiredRevisionDelta: requiredRevisionDelta,
+    );
+  }
+
+  _SparseMutationResult _setCamera(
+    CommittedDocument document,
+    CanvasCamera camera,
+  ) {
+    if (document.camera == camera) {
+      return _SparseMutationResult.unchanged(document);
+    }
+
+    return _SparseMutationResult.changed(
+      document.copyWith(camera: camera),
+      requiredRevisionDelta: const StoreRevisionDelta.projectionOnly(),
+    );
+  }
+
+  _SparseMutationResult _setPalette(
+    CommittedDocument document,
+    CanvasPalette palette,
+  ) {
+    if (_samePalette(document.palette, palette)) {
+      return _SparseMutationResult.unchanged(document);
+    }
+
+    return _SparseMutationResult.changed(
+      document.copyWith(palette: palette),
+      requiredRevisionDelta: const StoreRevisionDelta.projectionOnly(),
     );
   }
 }
@@ -735,6 +821,12 @@ StoreRevisionDelta _rectReplacementRevisionDelta(
   }
 
   return delta;
+}
+
+bool _samePalette(CanvasPalette left, CanvasPalette right) {
+  return _sameList(left.penColors, right.penColors) &&
+      _sameList(left.backgroundColors, right.backgroundColors) &&
+      _sameList(left.gridSizes, right.gridSizes);
 }
 
 bool _sameList<T>(List<T> left, List<T> right) {

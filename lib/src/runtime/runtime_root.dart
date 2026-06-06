@@ -45,6 +45,7 @@ import '../diagnostics/diagnostics_hub.dart';
 import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
+import '../edit/edit_session.dart';
 import '../edit/staged_document_load.dart';
 import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
@@ -210,7 +211,9 @@ final class RuntimeRoot
   late final EditKernel _editKernel = EditKernel(
     mutationGuard: this,
     readDocument: _store.readDocument,
+    readSparseFacts: () => _StoreSparseEditFacts(_store),
     selectedElementIds: () => _selection.selectedElementIds,
+    prepareSparseCommit: _store.prepareSparseCommit,
     installCommit: _applyEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
     installLoadedDocument: _loadDocument,
@@ -1432,7 +1435,13 @@ final class RuntimeRoot
     required CanvasDocument document,
   }) {
     ensureRuntimeMutationAllowed();
-    final applyResult = _applyEditCommit(document, plan);
+    final applyResult = _applyEditCommit(
+      AcceptedMaterializedDocument(
+        document: document,
+        revisionDelta: plan.revisionDelta,
+      ),
+      plan,
+    );
     _deliverEditCommitResult(applyResult);
   }
 
@@ -1516,14 +1525,11 @@ final class RuntimeRoot
 
   // Commit delivery pipeline.
   CommitDeliveryResult _applyEditCommit(
-    CanvasDocument document,
+    AcceptedCommitDocument document,
     CommitPlan plan,
   ) {
     return _commitApplier.apply(
-      document: AcceptedMaterializedDocument(
-        document: document,
-        revisionDelta: plan.revisionDelta,
-      ),
+      document: document,
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
         installDocument: _store.installDocument,
@@ -1552,6 +1558,7 @@ final class RuntimeRoot
             : _store.normalizeSelection(elementIds),
       AcceptedSparseStoreDocument(:final commit) =>
         _store.normalizeSelectionForSparseCommit(commit, elementIds),
+      AcceptedUnchangedStoreDocument() => _store.normalizeSelection(elementIds),
     };
 
     return PreparedSelectionEffect(acceptedIds);
@@ -2143,6 +2150,52 @@ final class _StoreSelectionMembership implements SelectionMembershipPort {
     return onlySelectable
         ? store.selectableElementIds
         : store.contentElementIds;
+  }
+}
+
+// The adapter implements the complete sparse edit facts port so runtime can
+// hand edit sessions store-owned facts without a public document projection.
+// ignore: number-of-methods
+final class _StoreSparseEditFacts implements SparseEditSessionFacts {
+  const _StoreSparseEditFacts(this.store);
+
+  final DocumentStoreKernel store;
+
+  @override
+  CanvasDocumentSummary get summary => store.documentSummary;
+
+  @override
+  CanvasBackground get background => store.background;
+
+  @override
+  CanvasCamera get camera => store.camera;
+
+  @override
+  CanvasPalette get palette => store.palette;
+
+  @override
+  bool hasLayer(CanvasLayerId id) => store.hasLayer(id);
+
+  @override
+  Iterable<CanvasElementId> get backgroundElementIds {
+    return store.backgroundElementIds;
+  }
+
+  @override
+  Iterable<CanvasElementId> get elementIds => store.elementIds;
+
+  @override
+  Iterable<CanvasResourceId> get resourceIds => store.resourceIds;
+
+  @override
+  CanvasElement? elementById(CanvasElementId id) => store.elementById(id);
+
+  @override
+  CanvasResource? resourceById(CanvasResourceId id) => store.resourceById(id);
+
+  @override
+  bool isResourceReferenced(CanvasResourceId id) {
+    return store.isResourceReferenced(id);
   }
 }
 

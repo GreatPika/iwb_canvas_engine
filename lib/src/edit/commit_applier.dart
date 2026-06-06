@@ -61,6 +61,11 @@ final class AcceptedSparseStoreDocument extends AcceptedCommitDocument {
   final PreparedSparseStoreCommit commit;
 }
 
+final class AcceptedUnchangedStoreDocument extends AcceptedCommitDocument {
+  const AcceptedUnchangedStoreDocument()
+    : super(revisionDelta: const StoreRevisionDelta());
+}
+
 final class CommitApplier {
   const CommitApplier();
 
@@ -117,6 +122,8 @@ void _installAcceptedDocument(
       }
     case AcceptedSparseStoreDocument():
       documentInstallers.installSparseCommit(document.commit);
+    case AcceptedUnchangedStoreDocument():
+      break;
   }
 }
 

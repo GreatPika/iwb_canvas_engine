@@ -12,10 +12,13 @@ import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
+import 'commit_compiler.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'element_update_application.dart';
+import 'touched_set_builder.dart';
 
 // CanvasEdit is intentionally represented by one session handle: the stale
 // guard and draft reference must stay uniform across every public entry point.
@@ -27,7 +30,12 @@ final class EditSession implements CanvasEdit {
   EditSession.sparse({
     required SparseEditSessionFacts facts,
     required DraftDocument Function() promoteDraft,
-  }) : _backing = _SparseEditBacking(facts: facts, promoteDraft: promoteDraft);
+    required Iterable<CanvasElementId> selectedElementIds,
+  }) : _backing = _SparseEditBacking(
+         facts: facts,
+         promoteDraft: promoteDraft,
+         selectedElementIds: selectedElementIds,
+       );
 
   final _EditSessionBacking _backing;
   bool _isClosed = false;
@@ -35,6 +43,8 @@ final class EditSession implements CanvasEdit {
   bool get didChange => _backing.didChange;
   StoreRevisionDelta get revisionDelta => _backing.revisionDelta;
   CommitPlan get commitPlan => _backing.commitPlan;
+  bool get hasMaterializedDraft => _backing.isMaterialized;
+  StoreSparseCommit get sparseCommit => _backing.sparseCommit;
 
   void close() {
     _isClosed = true;
@@ -143,12 +153,17 @@ final class EditSession implements CanvasEdit {
   }
 }
 
+// Sparse edit sessions need the complete committed fact surface to avoid
+// materializing public projections; splitting this port would add sync glue
+// between facts that must be read from one store snapshot.
+// ignore: number-of-methods
 abstract interface class SparseEditSessionFacts {
   CanvasDocumentSummary get summary;
   CanvasBackground get background;
   CanvasCamera get camera;
   CanvasPalette get palette;
   bool hasLayer(CanvasLayerId id);
+  Iterable<CanvasElementId> get backgroundElementIds;
   Iterable<CanvasElementId> get elementIds;
   Iterable<CanvasResourceId> get resourceIds;
   CanvasElement? elementById(CanvasElementId id);
@@ -161,8 +176,10 @@ abstract interface class SparseEditSessionFacts {
 // ignore: coupling-between-object-classes, number-of-methods
 abstract interface class _EditSessionBacking {
   bool get didChange;
+  bool get isMaterialized;
   StoreRevisionDelta get revisionDelta;
   CommitPlan get commitPlan;
+  StoreSparseCommit get sparseCommit;
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
   bool ensureLayer(CanvasLayerId id, {int? index});
@@ -196,10 +213,20 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   bool get didChange => _draft.didChange;
 
   @override
+  bool get isMaterialized => true;
+
+  @override
   StoreRevisionDelta get revisionDelta => _draft.revisionDelta;
 
   @override
   CommitPlan get commitPlan => _draft.commitPlan;
+
+  @override
+  StoreSparseCommit get sparseCommit {
+    throw StateError(
+      'Materialized edit sessions do not expose sparse commits.',
+    );
+  }
 
   @override
   CanvasDocument readDraftDocument() => _draft.readDocument();
@@ -285,17 +312,24 @@ final class _SparseEditBacking implements _EditSessionBacking {
   _SparseEditBacking({
     required SparseEditSessionFacts facts,
     required DraftDocument Function() promoteDraft,
+    required Iterable<CanvasElementId> selectedElementIds,
   }) : _facts = facts,
        _promoteDraft = promoteDraft,
-       _committedSummary = facts.summary;
+       _committedSummary = facts.summary,
+       _selectedElementIds = Set.unmodifiable(selectedElementIds);
 
   final SparseEditSessionFacts _facts;
   final DraftDocument Function() _promoteDraft;
   final CanvasDocumentSummary _committedSummary;
   final List<void Function(DraftDocument draft)> _journal = [];
+  final List<StoreSparseMutation> _mutations = [];
+  final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
+  StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
+  final Set<CanvasElementId> _selectedElementIds;
   DraftDocument? _draft;
   final Set<CanvasLayerId> _addedLayerIds = {};
   final Map<CanvasElementId, CanvasElement> _elementOverrides = {};
+  final Map<CanvasElementId, bool> _elementBackgroundLocationOverrides = {};
   final Set<CanvasElementId> _addedElementIds = {};
   final Set<CanvasElementId> _removedCommittedElementIds = {};
   final Map<CanvasResourceId, CanvasResource> _resourceOverrides = {};
@@ -325,6 +359,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
   bool get _isMaterialized => _draft != null;
 
   @override
+  bool get isMaterialized => _isMaterialized;
+
+  @override
   bool get didChange {
     return _draft?.didChange ??
         _journal.isNotEmpty ||
@@ -335,11 +372,35 @@ final class _SparseEditBacking implements _EditSessionBacking {
 
   @override
   StoreRevisionDelta get revisionDelta {
-    return _materializedDraft.revisionDelta;
+    return _draft?.revisionDelta ?? _revisionDelta;
   }
 
   @override
-  CommitPlan get commitPlan => _materializedDraft.commitPlan;
+  CommitPlan get commitPlan {
+    final draft = _draft;
+    if (draft != null) {
+      return draft.commitPlan;
+    }
+
+    return const CommitCompiler().compile(
+      revisionDelta: _revisionDelta,
+      touchedSet: _touchedSet.build(),
+    );
+  }
+
+  @override
+  StoreSparseCommit get sparseCommit {
+    if (_isMaterialized) {
+      throw StateError(
+        'Materialized edit sessions do not expose sparse commits.',
+      );
+    }
+
+    return StoreSparseCommit(
+      mutations: _mutations,
+      revisionDelta: _revisionDelta,
+    );
+  }
 
   @override
   CanvasDocument readDraftDocument() => _materializedDraft.readDocument();
@@ -367,6 +428,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return false;
     }
     _journal.add((draft) => draft.ensureLayer(id, index: index));
+    _mutations.add(StoreSparseEnsureLayer(id, index: index));
+    _touchedSet.touchLayer(id);
+    _mergeRevisionDelta(const StoreRevisionDelta.layerStructural());
 
     return true;
   }
@@ -386,15 +450,26 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     _admitSparseElement(element);
     if (layerId != null) {
-      _admitSparseLayer(layerId);
+      if (_admitSparseLayer(layerId)) {
+        _touchedSet.touchLayer(layerId);
+      }
     } else if (_sparseLayerCount == 0) {
-      _admitSparseLayer(CanvasLayerId('default-layer'));
+      final defaultLayerId = CanvasLayerId('default-layer');
+      if (_admitSparseLayer(defaultLayerId)) {
+        _touchedSet.touchLayer(defaultLayerId);
+      }
     }
     _trackSparseElementAdd(element.id);
+    _elementBackgroundLocationOverrides[element.id] = false;
     _elementOverrides[element.id] = element;
     _journal.add(
       (draft) => draft.addElement(element, layerId: layerId, index: index),
     );
+    _mutations.add(
+      StoreSparseAddElement(element: element, layerId: layerId, index: index),
+    );
+    _touchedSet.touchAddedElement(element.id);
+    _mergeRevisionDelta(const StoreRevisionDelta.structural());
 
     return element.id;
   }
@@ -406,8 +481,15 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     _admitSparseElement(element);
     _trackSparseElementAdd(element.id);
+    _elementBackgroundLocationOverrides[element.id] = true;
     _elementOverrides[element.id] = element;
     _journal.add((draft) => draft.addBackgroundElement(element, index: index));
+    _mutations.add(
+      StoreSparseAddElement(element: element, index: index, background: true),
+    );
+    _touchedSet.touchAddedElement(element.id);
+    _touchedSet.touchBackgroundLayer();
+    _mergeRevisionDelta(const StoreRevisionDelta.structural());
 
     return element.id;
   }
@@ -435,6 +517,8 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _validateSparseElementResourceReferences(after);
     _elementOverrides[after.id] = after;
     _journal.add((draft) => draft.updateElement(update));
+    _mutations.add(StoreSparseUpdateElement(after));
+    _recordSparseElementUpdate(before: before, after: after);
 
     return true;
   }
@@ -447,13 +531,24 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (_elementById(id) == null) {
       return false;
     }
+    final removesBackgroundElement = _isBackgroundElementId(id);
     _elementOverrides.remove(id);
+    _elementBackgroundLocationOverrides.remove(id);
     if (!_addedElementIds.remove(id) &&
         !_elementsCleared &&
         _facts.elementById(id) != null) {
       _removedCommittedElementIds.add(id);
     }
     _journal.add((draft) => draft.removeElement(id));
+    _mutations.add(StoreSparseRemoveElement(id));
+    _touchedSet.touchRemovedElement(id);
+    if (removesBackgroundElement) {
+      _touchedSet.touchBackgroundLayer();
+    }
+    if (_selectedElementIds.contains(id)) {
+      _touchedSet.touchSelection();
+    }
+    _mergeRevisionDelta(const StoreRevisionDelta.structural());
 
     return true;
   }
@@ -470,6 +565,12 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _trackSparseResourceUpsert(resource.id);
     _resourceOverrides[resource.id] = resource;
     _journal.add((draft) => draft.upsertResource(resource));
+    _mutations.add(StoreSparseUpsertResource(resource));
+    _touchedSet.touchResourceDescriptor(resource.id);
+    if (_isResourceReferenced(resource.id)) {
+      _touchedSet.touchResourceVisual(resource.id);
+    }
+    _mergeRevisionDelta(const StoreRevisionDelta.resource());
 
     return true;
   }
@@ -489,6 +590,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
       _removedCommittedResourceIds.add(id);
     }
     _journal.add((draft) => draft.removeUnusedResource(id));
+    _mutations.add(StoreSparseRemoveUnusedResource(id));
+    _touchedSet.touchResourceDescriptor(id);
+    _mergeRevisionDelta(const StoreRevisionDelta.resource());
 
     return true;
   }
@@ -504,8 +608,12 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (current.color == color) {
       return;
     }
-    _backgroundOverride = CanvasBackground(color: color, grid: current.grid);
+    final nextBackground = CanvasBackground(color: color, grid: current.grid);
+    _backgroundOverride = nextBackground;
     _journal.add((draft) => draft.setBackgroundColor(color));
+    _mutations.add(StoreSparseSetBackground(nextBackground));
+    _touchedSet.touchBackground();
+    _mergeRevisionDelta(const StoreRevisionDelta.background());
   }
 
   @override
@@ -519,8 +627,12 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (current.grid == grid) {
       return;
     }
-    _backgroundOverride = CanvasBackground(color: current.color, grid: grid);
+    final nextBackground = CanvasBackground(color: current.color, grid: grid);
+    _backgroundOverride = nextBackground;
     _journal.add((draft) => draft.setGrid(grid));
+    _mutations.add(StoreSparseSetBackground(nextBackground));
+    _touchedSet.touchGrid();
+    _mergeRevisionDelta(const StoreRevisionDelta.grid());
   }
 
   @override
@@ -536,6 +648,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     _paletteOverride = palette;
     _journal.add((draft) => draft.setPalette(palette));
+    _mutations.add(StoreSparseSetPalette(palette));
+    _touchedSet.touchPalette();
+    _mergeRevisionDelta(const StoreRevisionDelta.projectionOnly());
   }
 
   @override
@@ -552,6 +667,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     _cameraOverride = next;
     _journal.add((draft) => draft.setCameraOffset(offset));
+    _mutations.add(StoreSparseSetCamera(next));
+    _touchedSet.touchPersistedCamera();
+    _mergeRevisionDelta(const StoreRevisionDelta.projectionOnly());
   }
 
   @override
@@ -561,46 +679,135 @@ final class _SparseEditBacking implements _EditSessionBacking {
         removeUnusedResources: removeUnusedResources,
       );
     }
-    final removedElementIds = List<CanvasElementId>.unmodifiable(
-      _currentElementIds(),
+    final candidate = _sparseClearCandidate(
+      removeUnusedResources: removeUnusedResources,
     );
-    final removedResourceIds = removeUnusedResources
-        ? List<CanvasResourceId>.unmodifiable(_currentResourceIds())
-        : const <CanvasResourceId>[];
     final didClearContent =
-        removedElementIds.isNotEmpty || removedResourceIds.isNotEmpty;
+        candidate.removedElementIds.isNotEmpty ||
+        candidate.removedResourceIds.isNotEmpty;
     if (!didClearContent) {
       return CanvasClearResult(
-        removedElementIds: removedElementIds,
-        removedResourceIds: removedResourceIds,
+        removedElementIds: candidate.removedElementIds,
+        removedResourceIds: candidate.removedResourceIds,
         didClearContent: false,
       );
     }
-    _elementsCleared = true;
-    _addedElementIds.clear();
-    _removedCommittedElementIds.clear();
-    _elementOverrides.clear();
-    if (removeUnusedResources) {
-      _resourcesCleared = true;
-      _addedResourceIds.clear();
-      _removedCommittedResourceIds.clear();
-      _resourceOverrides.clear();
-    }
-    _journal.add(
-      (draft) =>
-          draft.clearContent(removeUnusedResources: removeUnusedResources),
+    _installSparseClear(
+      candidate,
+      removeUnusedResources: removeUnusedResources,
     );
 
     return CanvasClearResult(
-      removedElementIds: removedElementIds,
-      removedResourceIds: removedResourceIds,
-      didClearContent: didClearContent,
+      removedElementIds: candidate.removedElementIds,
+      removedResourceIds: candidate.removedResourceIds,
+      didClearContent: true,
     );
   }
 
   @override
   void replaceDraftDocument(CanvasDocument document) {
     _materializedDraft.replaceDocument(document);
+  }
+
+  _SparseClearCandidate _sparseClearCandidate({
+    required bool removeUnusedResources,
+  }) {
+    return _SparseClearCandidate(
+      removedElementIds: List.unmodifiable(_currentElementIds()),
+      removedBackgroundElementIds: List.unmodifiable(
+        _currentBackgroundElementIds(),
+      ),
+      removedResourceIds: removeUnusedResources
+          ? List.unmodifiable(_currentResourceIds())
+          : const <CanvasResourceId>[],
+    );
+  }
+
+  void _installSparseClear(
+    _SparseClearCandidate candidate, {
+    required bool removeUnusedResources,
+  }) {
+    _applySparseClearOverlay(removeUnusedResources: removeUnusedResources);
+    _journal.add(
+      (draft) =>
+          draft.clearContent(removeUnusedResources: removeUnusedResources),
+    );
+    _mutations.add(
+      StoreSparseClearContent(removeUnusedResources: removeUnusedResources),
+    );
+    _recordSparseClear(
+      removedElementIds: candidate.removedElementIds,
+      removedBackgroundElementIds: candidate.removedBackgroundElementIds,
+      removedResourceIds: candidate.removedResourceIds,
+    );
+  }
+
+  void _mergeRevisionDelta(StoreRevisionDelta delta) {
+    _revisionDelta = _revisionDelta.merge(delta);
+  }
+
+  void _recordSparseElementUpdate({
+    required CanvasElement before,
+    required CanvasElement after,
+  }) {
+    final compiledUpdate = const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
+    );
+    _touchedSet.touchUpdatedElement(after.id);
+    if (compiledUpdate.touchesSpatial) {
+      _touchedSet.touchGeometryElement(after.id);
+    }
+    if (compiledUpdate.transformsElement) {
+      _touchedSet.touchTransformedElement(after.id);
+    }
+    if (compiledUpdate.touchesVisual) {
+      _touchedSet.touchVisualElement(after.id);
+    }
+    if (compiledUpdate.prunesSelection &&
+        _selectedElementIds.contains(after.id)) {
+      _touchedSet.touchSelection();
+    }
+    _mergeRevisionDelta(compiledUpdate.revisionDelta);
+  }
+
+  void _recordSparseClear({
+    required List<CanvasElementId> removedElementIds,
+    required List<CanvasElementId> removedBackgroundElementIds,
+    required List<CanvasResourceId> removedResourceIds,
+  }) {
+    if (removedElementIds.isNotEmpty) {
+      _touchedSet.touchRemovedElements(removedElementIds);
+      if (removedBackgroundElementIds.isNotEmpty) {
+        _touchedSet.touchBackgroundLayer();
+      }
+      if (_intersectsSelection(removedElementIds)) {
+        _touchedSet.touchSelection();
+      }
+      _mergeRevisionDelta(const StoreRevisionDelta.structural());
+    }
+    if (removedResourceIds.isNotEmpty) {
+      _touchedSet.touchResourceDescriptors(removedResourceIds);
+      _mergeRevisionDelta(const StoreRevisionDelta.resource());
+    }
+  }
+
+  void _applySparseClearOverlay({required bool removeUnusedResources}) {
+    _elementsCleared = true;
+    _addedElementIds.clear();
+    _removedCommittedElementIds.clear();
+    _elementOverrides.clear();
+    _elementBackgroundLocationOverrides.clear();
+    if (removeUnusedResources) {
+      _resourcesCleared = true;
+      _addedResourceIds.clear();
+      _removedCommittedResourceIds.clear();
+      _resourceOverrides.clear();
+    }
+  }
+
+  bool _intersectsSelection(Iterable<CanvasElementId> ids) {
+    return ids.any(_selectedElementIds.contains);
   }
 
   void _admitSparseElement(CanvasElement element) {
@@ -744,6 +951,23 @@ final class _SparseEditBacking implements _EditSessionBacking {
     yield* _addedElementIds;
   }
 
+  Iterable<CanvasElementId> _currentBackgroundElementIds() sync* {
+    for (final id in _currentElementIds()) {
+      if (_isBackgroundElementId(id)) {
+        yield id;
+      }
+    }
+  }
+
+  bool _isBackgroundElementId(CanvasElementId id) {
+    final override = _elementBackgroundLocationOverrides[id];
+    if (override != null) {
+      return override;
+    }
+
+    return _facts.backgroundElementIds.contains(id);
+  }
+
   Iterable<CanvasResourceId> _currentResourceIds() sync* {
     if (!_resourcesCleared) {
       for (final id in _facts.resourceIds) {
@@ -763,6 +987,18 @@ final class _SparseEditBacking implements _EditSessionBacking {
       }
     }
   }
+}
+
+final class _SparseClearCandidate {
+  const _SparseClearCandidate({
+    required this.removedElementIds,
+    required this.removedBackgroundElementIds,
+    required this.removedResourceIds,
+  });
+
+  final List<CanvasElementId> removedElementIds;
+  final List<CanvasElementId> removedBackgroundElementIds;
+  final List<CanvasResourceId> removedResourceIds;
 }
 
 bool _sameResource(CanvasResource left, CanvasResource right) {

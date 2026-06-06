@@ -126,7 +126,7 @@ The irreversible point is swapping the committed store snapshot. Fallible work b
 
 ## Execution Units
 
-### [ ] Unit 1: Store sparse committed preparation seam
+### [x] Unit 1: Store sparse committed preparation seam
 
 Owner:
 
@@ -148,7 +148,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Sparse edit session and materialized fallback
+### [x] Unit 2: Sparse edit session and materialized fallback
 
 Owner:
 
@@ -170,7 +170,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Typed commit and prepared selection boundary
+### [x] Unit 3: Typed commit and prepared selection boundary
 
 Owner:
 
@@ -192,7 +192,7 @@ Depends On:
 
 Unit 1 and Unit 2.
 
-### [ ] Unit 4: Runtime route migration and eager-draft retirement
+### [x] Unit 4: Runtime route migration and eager-draft retirement
 
 Owner:
 
@@ -208,7 +208,7 @@ Route ordinary `CanvasEditPort.edit`, command mutations, and interaction prepare
 
 Completion Check:
 
-Route tests prove ordinary edit, command remove/clear/update paths, draw-tool commits, eraser/context-action commits, no-op edits, and explicit materialized edits all publish the same accepted results as before. Public route temporal tests explicitly attempt nested edit inside an edit callback, return a `Future` from an edit callback, and use stale handles after callback close in both sparse and materialized routes; each forbidden action throws `StateError` and leaves no extra document, selection, revision, projection, spatial, public-state, action, or observer mutation. A structural search or guardrail fails if ordinary edit open or interaction commit open still constructs `DraftDocument(_readDocument())` or calls `session.readDraftDocument()` for sparse commits. Runtime tests prove accepted sparse commits publish exactly one coherent public `CanvasRuntimeState` when required and no publication on no-op. `dart analyze`, `dcm analyze .`, `dcm calculate-metrics lib/src/runtime lib/src/edit test/runtime test/interaction`, focused runtime/interaction tests, and architecture graph checks for the affected P5 edit/store graph surfaces pass.
+Route tests prove ordinary edit, command remove/clear/update paths, draw-tool commits, eraser/context-action commits, no-op edits, and explicit materialized edits all publish the same accepted results as before. Public route temporal tests explicitly attempt nested edit inside an edit callback, return a `Future` from an edit callback, and use stale handles after callback close in both sparse and materialized routes; each forbidden action throws `StateError` and leaves no extra document, selection, revision, projection, spatial, public-state, action, or observer mutation. A structural search or guardrail fails if ordinary edit open or interaction commit open still constructs `DraftDocument(_readDocument())` or calls `session.readDraftDocument()` for sparse commits. Runtime tests prove accepted sparse commits publish exactly one coherent public `CanvasRuntimeState` when required and no publication on no-op. `dart analyze`, `dcm analyze .`, `dcm calculate-metrics lib/src/runtime lib/src/edit test/runtime test/interaction`, focused runtime/interaction tests, and architecture graph checks for the affected P14 graph surfaces pass.
 
 Depends On:
 
@@ -252,7 +252,7 @@ Update `docs/contracts/edit_kernel.md` to describe sparse ordinary edit, materia
 
 Completion Check:
 
-Documentation checks prove docs and generated projections are synchronized: `dart run docs/tool/sync_generated_docs.dart --check` and `dart run docs/tool/check_docs.dart` pass after any required generated-doc refresh. Architecture graph checks prove the affected P5 edit/store graph surfaces remain current: `dart run tool/architecture_graph/check.dart --phase P5` and `dart run tool/architecture_graph/generate_views.dart --phase P5 --check` pass. Contract text review verifies no new durable doc exists solely to record task progress and no docs prose contradicts `DocumentStoreKernel` as committed source of truth, public `CanvasDocument` as projection, `CommitCompiler` as taxonomy owner, or `SelectionKernel` as selected-id owner.
+Documentation checks prove docs and generated projections are synchronized: `dart run docs/tool/sync_generated_docs.dart --check` and `dart run docs/tool/check_docs.dart` pass after any required generated-doc refresh. Architecture graph checks prove the affected P14 graph surfaces remain current: `dart run tool/architecture_graph/check.dart --phase P14` and `dart run tool/architecture_graph/generate_views.dart --phase P14 --check` pass. Contract text review verifies no new durable doc exists solely to record task progress and no docs prose contradicts `DocumentStoreKernel` as committed source of truth, public `CanvasDocument` as projection, `CommitCompiler` as taxonomy owner, or `SelectionKernel` as selected-id owner.
 
 Depends On:
 

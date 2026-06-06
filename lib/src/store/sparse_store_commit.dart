@@ -1,4 +1,5 @@
 import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
@@ -82,4 +83,22 @@ final class StoreSparseClearContent extends StoreSparseMutation {
   const StoreSparseClearContent({this.removeUnusedResources = false});
 
   final bool removeUnusedResources;
+}
+
+final class StoreSparseSetBackground extends StoreSparseMutation {
+  const StoreSparseSetBackground(this.background);
+
+  final CanvasBackground background;
+}
+
+final class StoreSparseSetCamera extends StoreSparseMutation {
+  const StoreSparseSetCamera(this.camera);
+
+  final CanvasCamera camera;
+}
+
+final class StoreSparseSetPalette extends StoreSparseMutation {
+  const StoreSparseSetPalette(this.palette);
+
+  final CanvasPalette palette;
 }

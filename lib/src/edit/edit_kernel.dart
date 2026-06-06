@@ -1,38 +1,61 @@
 import 'dart:async';
 
+// EditKernel is the public edit lifecycle boundary and now names both
+// materialized and sparse accepted commit seams directly so route ownership is
+// auditable.
+// ignore_for_file: number-of-imports
+
 import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../store/sparse_store_commit.dart';
+import 'commit_applier.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'edit_session.dart';
 
 typedef DraftDocumentReader = CanvasDocument Function();
+typedef SparseEditFactsReader = SparseEditSessionFacts Function();
 typedef SelectedElementIdsReader = Set<CanvasElementId> Function();
 typedef CommitInstaller =
-    CommitDeliveryResult Function(CanvasDocument document, CommitPlan plan);
+    CommitDeliveryResult Function(
+      AcceptedCommitDocument document,
+      CommitPlan plan,
+    );
+typedef SparseCommitPreparer =
+    PreparedSparseStoreCommit Function(StoreSparseCommit commit);
 typedef DocumentLoadInstaller = void Function(CanvasDocument document);
 
+// EditKernel owns the route handoff between public callbacks, sparse session
+// preparation, materialized fallback, and commit delivery; splitting those
+// collaborators would hide the all-or-nothing transaction boundary.
+// ignore: coupling-between-object-classes
 final class EditKernel {
   EditKernel({
     required ResolverMutationGuard mutationGuard,
     required DraftDocumentReader readDocument,
+    required SparseEditFactsReader readSparseFacts,
     required SelectedElementIdsReader selectedElementIds,
+    required SparseCommitPreparer prepareSparseCommit,
     required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
     required DocumentLoadInstaller installLoadedDocument,
   }) : _mutationGuard = mutationGuard,
        _readDocument = readDocument,
+       _readSparseFacts = readSparseFacts,
        _selectedElementIds = selectedElementIds,
+       _prepareSparseCommit = prepareSparseCommit,
        _installCommit = installCommit,
        _deliverApplyResult = deliverApplyResult,
        _installLoadedDocument = installLoadedDocument;
 
   final ResolverMutationGuard _mutationGuard;
   final DraftDocumentReader _readDocument;
+  final SparseEditFactsReader _readSparseFacts;
   final SelectedElementIdsReader _selectedElementIds;
+  final SparseCommitPreparer _prepareSparseCommit;
   final CommitInstaller _installCommit;
   final CommitApplyResultDelivery _deliverApplyResult;
   final DocumentLoadInstaller _installLoadedDocument;
@@ -47,12 +70,8 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final session = EditSession(
-      draft: DraftDocument(
-        _readDocument(),
-        selectedElementIds: _selectedElementIds(),
-      ),
-    );
+    final selectedElementIds = _selectedElementIds();
+    final session = _openSparseSession(selectedElementIds);
 
     try {
       final result = fn(session);
@@ -64,7 +83,7 @@ final class EditKernel {
       final plan = session.commitPlan;
       if (plan.hasChanges) {
         final applyResult = _installCommittedDocument(
-          session.readDraftDocument(),
+          _acceptedDocumentFor(session),
           plan,
         );
         session.close();
@@ -89,12 +108,8 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final session = EditSession(
-      draft: DraftDocument(
-        _readDocument(),
-        selectedElementIds: _selectedElementIds(),
-      ),
-    );
+    final selectedElementIds = _selectedElementIds();
+    final session = _openSparseSession(selectedElementIds);
 
     try {
       final result = fn(session);
@@ -107,7 +122,7 @@ final class EditKernel {
       if (plan.hasChanges) {
         plan = augmentPlan?.call(plan) ?? plan;
         final applyResult = _installCommittedDocument(
-          session.readDraftDocument(),
+          _acceptedDocumentFor(session),
           plan,
         );
         session.close();
@@ -132,7 +147,15 @@ final class EditKernel {
       return CommitDeliveryResult(shouldPublishState: false);
     }
 
-    return _installCommittedDocument(_readDocument(), plan);
+    return _installCommittedDocument(
+      plan.revisionDelta.hasChanges
+          ? AcceptedMaterializedDocument(
+              document: _readDocument(),
+              revisionDelta: plan.revisionDelta,
+            )
+          : const AcceptedUnchangedStoreDocument(),
+      plan,
+    );
   }
 
   void loadDocument(CanvasDocument document) {
@@ -146,9 +169,33 @@ final class EditKernel {
   }
 
   CommitDeliveryResult _installCommittedDocument(
-    CanvasDocument document,
+    AcceptedCommitDocument document,
     CommitPlan plan,
   ) => _installCommit.call(document, plan);
+
+  EditSession _openSparseSession(Set<CanvasElementId> selectedElementIds) {
+    return EditSession.sparse(
+      facts: _readSparseFacts(),
+      promoteDraft: () => DraftDocument(
+        _readDocument(),
+        selectedElementIds: selectedElementIds,
+      ),
+      selectedElementIds: selectedElementIds,
+    );
+  }
+
+  AcceptedCommitDocument _acceptedDocumentFor(EditSession session) {
+    if (session.hasMaterializedDraft) {
+      return AcceptedMaterializedDocument(
+        document: session.readDraftDocument(),
+        revisionDelta: session.revisionDelta,
+      );
+    }
+
+    return AcceptedSparseStoreDocument(
+      commit: _prepareSparseCommit(session.sparseCommit),
+    );
+  }
 }
 
 final class _EditKernelPort implements CanvasEditPort {

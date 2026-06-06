@@ -22,6 +22,20 @@ void main() {
       () =>
           expect(_sparseResourceReferencesUseAcceptedOverlay, returnsNormally),
     );
+    test(
+      'sparse clear touches background layer only for background removals',
+      () => expect(
+        _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals,
+        returnsNormally,
+      ),
+    );
+    test(
+      'sparse remove touches background layer only for background removals',
+      () => expect(
+        _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals,
+        returnsNormally,
+      ),
+    );
   });
 }
 
@@ -59,7 +73,11 @@ void _registerSparsePromotionTests() {
 
 void _draftSummaryOpensWithoutCommittedIdEnumeration() {
   final facts = _SparseFixtureFacts(_baseDocument());
-  final session = EditSession.sparse(facts: facts, promoteDraft: _baseDraft);
+  final session = EditSession.sparse(
+    facts: facts,
+    promoteDraft: _baseDraft,
+    selectedElementIds: const [],
+  );
 
   _expectSparseSummary(
     session,
@@ -334,6 +352,40 @@ void _expectReferencedResourceRemovalNoOp() {
   );
 }
 
+void _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals() {
+  final contentOnly = _sparseSessionForDocument(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [_rect('content-a')],
+        ),
+      ],
+    ),
+  );
+  contentOnly.clearContent();
+  expect(contentOnly.commitPlan.touchedSet.backgroundLayerChanged, isFalse);
+
+  final withBackground = _sparseSessionForDocument(
+    CanvasDocument(backgroundElements: [_rect('background-a')]),
+  );
+  withBackground.clearContent();
+  expect(withBackground.commitPlan.touchedSet.backgroundLayerChanged, isTrue);
+}
+
+void _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals() {
+  final contentRemove = _sparseSessionForDocument(_baseDocument());
+  expect(contentRemove.removeElement(CanvasElementId('content-a')), isTrue);
+  expect(contentRemove.commitPlan.touchedSet.backgroundLayerChanged, isFalse);
+
+  final backgroundRemove = _sparseSessionForDocument(_baseDocument());
+  expect(
+    backgroundRemove.removeElement(CanvasElementId('background-a')),
+    isTrue,
+  );
+  expect(backgroundRemove.commitPlan.touchedSet.backgroundLayerChanged, isTrue);
+}
+
 void _expectSparseValidationFailures() {
   final session = _sparseSession(_baseDraft);
 
@@ -438,6 +490,7 @@ EditSession _sparseSessionForDocument(
   return EditSession.sparse(
     facts: _SparseFixtureFacts(document),
     promoteDraft: promoteDraft ?? () => DraftDocument(document),
+    selectedElementIds: const [],
   );
 }
 
@@ -524,6 +577,11 @@ final class _SparseFixtureFacts implements SparseEditSessionFacts {
       0,
       (count, layer) => count + layer.elements.length,
     );
+  }
+
+  @override
+  Iterable<CanvasElementId> get backgroundElementIds {
+    return [for (final element in document.backgroundElements) element.id];
   }
 
   @override
