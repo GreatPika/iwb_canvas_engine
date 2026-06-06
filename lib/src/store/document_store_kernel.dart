@@ -13,6 +13,7 @@ import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
+import 'element_revision_delta.dart';
 import 'element_registry.dart';
 import 'family_tables.dart';
 import 'resource_table.dart';
@@ -425,7 +426,7 @@ final class DocumentStoreKernel {
 
     return _SparseMutationResult.changed(
       document.copyWith(elements: elements),
-      requiredRevisionDelta: _elementReplacementRevisionDelta(
+      requiredRevisionDelta: elementRevisionDelta(
         before: before,
         after: element,
       ),
@@ -674,163 +675,6 @@ bool _changesCommittedFacts(StoreRevisionDelta delta) {
     delta.grid,
     delta.resource,
   ].contains(true);
-}
-
-StoreRevisionDelta _elementReplacementRevisionDelta({
-  required CanvasElement before,
-  required CanvasElement after,
-}) {
-  var delta = const StoreRevisionDelta();
-  if (before.transform != after.transform ||
-      before.isVisible != after.isVisible) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.opacity != after.opacity) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-  if (before.hitPadding != after.hitPadding) {
-    delta = delta.merge(const StoreRevisionDelta.elementBoundsOnly());
-  }
-  if (before.isSelectable != after.isSelectable ||
-      before.isLocked != after.isLocked ||
-      before.isDeletable != after.isDeletable ||
-      before.isTransformable != after.isTransformable ||
-      before.metadata != after.metadata) {
-    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
-  }
-
-  return delta.merge(_familyReplacementRevisionDelta(before, after));
-}
-
-StoreRevisionDelta _familyReplacementRevisionDelta(
-  CanvasElement before,
-  CanvasElement after,
-) {
-  return switch ((before, after)) {
-    (final CanvasImageElement before, final CanvasImageElement after) =>
-      _imageReplacementRevisionDelta(before, after),
-    (final CanvasPathElement before, final CanvasPathElement after) =>
-      _pathReplacementRevisionDelta(before, after),
-    (final CanvasTextElement before, final CanvasTextElement after) =>
-      _textReplacementRevisionDelta(before, after),
-    (final CanvasStrokeElement before, final CanvasStrokeElement after) =>
-      _strokeReplacementRevisionDelta(before, after),
-    (final CanvasLineElement before, final CanvasLineElement after) =>
-      _lineReplacementRevisionDelta(before, after),
-    (final CanvasRectElement before, final CanvasRectElement after) =>
-      _rectReplacementRevisionDelta(before, after),
-    _ => const StoreRevisionDelta(),
-  };
-}
-
-StoreRevisionDelta _imageReplacementRevisionDelta(
-  CanvasImageElement before,
-  CanvasImageElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.size != after.size) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.resourceId != after.resourceId ||
-      before.naturalSize != after.naturalSize) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _pathReplacementRevisionDelta(
-  CanvasPathElement before,
-  CanvasPathElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.svgPathData != after.svgPathData ||
-      before.strokeWidth != after.strokeWidth) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.fillColor != after.fillColor ||
-      before.fillRule != after.fillRule ||
-      before.strokeColor != after.strokeColor) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
-}
-
-StoreRevisionDelta _textReplacementRevisionDelta(
-  CanvasTextElement before,
-  CanvasTextElement after,
-) {
-  if (_changesTextLayout(before, after)) {
-    return const StoreRevisionDelta.elementBounds();
-  }
-  if (before.color != after.color) {
-    return const StoreRevisionDelta.elementVisual();
-  }
-
-  return const StoreRevisionDelta();
-}
-
-bool _changesTextLayout(CanvasTextElement before, CanvasTextElement after) {
-  return [
-    before.text != after.text,
-    before.fontSize != after.fontSize,
-    before.align != after.align,
-    before.textDirection != after.textDirection,
-    before.isBold != after.isBold,
-    before.isItalic != after.isItalic,
-    before.isUnderline != after.isUnderline,
-    before.fontFamily != after.fontFamily,
-    before.maxWidth != after.maxWidth,
-    before.lineHeight != after.lineHeight,
-  ].contains(true);
-}
-
-StoreRevisionDelta _strokeReplacementRevisionDelta(
-  CanvasStrokeElement before,
-  CanvasStrokeElement after,
-) {
-  if (!_sameList(before.points, after.points) ||
-      before.thickness != after.thickness) {
-    return const StoreRevisionDelta.elementBounds();
-  }
-  if (before.color != after.color) {
-    return const StoreRevisionDelta.elementVisual();
-  }
-
-  return const StoreRevisionDelta();
-}
-
-StoreRevisionDelta _lineReplacementRevisionDelta(
-  CanvasLineElement before,
-  CanvasLineElement after,
-) {
-  if (before.start != after.start ||
-      before.end != after.end ||
-      before.thickness != after.thickness) {
-    return const StoreRevisionDelta.elementBounds();
-  }
-  if (before.color != after.color) {
-    return const StoreRevisionDelta.elementVisual();
-  }
-
-  return const StoreRevisionDelta();
-}
-
-StoreRevisionDelta _rectReplacementRevisionDelta(
-  CanvasRectElement before,
-  CanvasRectElement after,
-) {
-  var delta = const StoreRevisionDelta();
-  if (before.size != after.size || before.strokeWidth != after.strokeWidth) {
-    delta = delta.merge(const StoreRevisionDelta.elementBounds());
-  }
-  if (before.fillColor != after.fillColor ||
-      before.strokeColor != after.strokeColor) {
-    delta = delta.merge(const StoreRevisionDelta.elementVisual());
-  }
-
-  return delta;
 }
 
 bool _samePalette(CanvasPalette left, CanvasPalette right) {

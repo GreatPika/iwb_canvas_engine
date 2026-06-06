@@ -50,6 +50,10 @@ void _registerSparseInstallTests() {
     () => expect(_admitsSparseIdsWithoutDocumentScan, returnsNormally),
   );
   test(
+    'validates sparse updates through the shared element taxonomy',
+    () => expect(_validatesSparseUpdatesThroughSharedTaxonomy, returnsNormally),
+  );
+  test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
   );
@@ -405,6 +409,124 @@ void _admitsSparseIdsWithoutDocumentScan() {
   expect(store.projectionBuildCount, 0);
 }
 
+void _validatesSparseUpdatesThroughSharedTaxonomy() {
+  _validatesUnderlineVisualUpdate();
+  _validatesPathPaintedStrokeBoundsUpdate();
+  _validatesRectPaintedStrokeBoundsUpdate();
+}
+
+void _validatesUnderlineVisualUpdate() {
+  final underlineStore = DocumentStoreKernel(_textDocument());
+  underlineStore.installSparseCommit(
+    underlineStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasTextElement(
+              id: CanvasElementId('text'),
+              text: 'label',
+              color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
+              isUnderline: true,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  expect(
+    _requireFacts(underlineStore, CanvasElementId('text')).isUnderline,
+    isTrue,
+  );
+}
+
+void _validatesPathPaintedStrokeBoundsUpdate() {
+  final pathStore = DocumentStoreKernel(_paintedStrokeDocument());
+  expect(
+    () => pathStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasPathElement(
+              id: CanvasElementId('path'),
+              svgPathData: 'M 0 0 L 1 1',
+              strokeColor: const Color(0xFF00FF00),
+              strokeWidth: 2,
+            ),
+          ),
+        ],
+      ),
+    ),
+    throwsA(isA<ArgumentError>()),
+  );
+  pathStore.installSparseCommit(
+    pathStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementBounds(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasPathElement(
+              id: CanvasElementId('path'),
+              svgPathData: 'M 0 0 L 1 1',
+              strokeColor: const Color(0xFF00FF00),
+              strokeWidth: 2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  expect(
+    _requireFacts(pathStore, CanvasElementId('path')).strokeColor,
+    const Color(0xFF00FF00),
+  );
+}
+
+void _validatesRectPaintedStrokeBoundsUpdate() {
+  final rectStore = DocumentStoreKernel(_paintedStrokeDocument());
+  expect(
+    () => rectStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasRectElement(
+              id: CanvasElementId('rect'),
+              size: const Size(2, 3),
+              strokeColor: const Color(0xFF00FF00),
+              strokeWidth: 2,
+            ),
+          ),
+        ],
+      ),
+    ),
+    throwsA(isA<ArgumentError>()),
+  );
+  rectStore.installSparseCommit(
+    rectStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementBounds(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasRectElement(
+              id: CanvasElementId('rect'),
+              size: const Size(2, 3),
+              strokeColor: const Color(0xFF00FF00),
+              strokeWidth: 2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  expect(
+    _requireFacts(rectStore, CanvasElementId('rect')).strokeColor,
+    const Color(0xFF00FF00),
+  );
+}
+
 void _replacementFallbackInstallsFullFacts() {
   final store = DocumentStoreKernel(_baseDocument());
 
@@ -520,6 +642,46 @@ CanvasDocument _baseDocument() {
             id: CanvasElementId('e-image'),
             resourceId: CanvasResourceId('resource-a'),
             size: const Size(6, 7),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _textDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasTextElement(
+            id: CanvasElementId('text'),
+            text: 'label',
+            color: const Color(0xFF000000),
+            textDirection: TextDirection.ltr,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _paintedStrokeDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasPathElement(
+            id: CanvasElementId('path'),
+            svgPathData: 'M 0 0 L 1 1',
+            strokeWidth: 2,
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('rect'),
+            size: const Size(2, 3),
+            strokeWidth: 2,
           ),
         ],
       ),
