@@ -518,11 +518,17 @@ final class DocumentStoreKernel {
           )
         : document.resourceTable;
 
-    final requiredRevisionDelta = didClearResources
-        ? const StoreRevisionDelta.structural().merge(
-            const StoreRevisionDelta.resource(),
-          )
-        : const StoreRevisionDelta.structural();
+    var requiredRevisionDelta = const StoreRevisionDelta();
+    if (didClearElements) {
+      requiredRevisionDelta = requiredRevisionDelta.merge(
+        const StoreRevisionDelta.structural(),
+      );
+    }
+    if (didClearResources) {
+      requiredRevisionDelta = requiredRevisionDelta.merge(
+        const StoreRevisionDelta.resource(),
+      );
+    }
 
     return _SparseMutationResult.changed(
       document.copyWith(

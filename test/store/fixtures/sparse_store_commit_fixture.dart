@@ -360,6 +360,11 @@ void _resourceDescriptorsUseAcceptedRevision() {
 }
 
 void _clearsContentAndResources() {
+  _clearsContentWithResources();
+  _clearsResourceOnlyDocument();
+}
+
+void _clearsContentWithResources() {
   final store = documentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
@@ -391,6 +396,21 @@ void _clearsContentAndResources() {
     ),
   );
   expect(noOpClear.hasChanges, isFalse);
+}
+
+void _clearsResourceOnlyDocument() {
+  final resourceOnlyStore = documentStoreKernel(_resourceOnlyDocument());
+  resourceOnlyStore.installSparseCommit(
+    resourceOnlyStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.resource(),
+        mutations: const [StoreSparseClearContent(removeUnusedResources: true)],
+      ),
+    ),
+  );
+  expect(resourceOnlyStore.documentSummary.resourceCount, 0);
+  expect(resourceOnlyStore.documentSummary.elementCount, 0);
+  expect(resourceOnlyStore.resourceRevision, 1);
 }
 
 void _normalizesSelectionAgainstPreparedSparseCommit() {
@@ -677,6 +697,17 @@ CanvasDocument _textDocument() {
             textDirection: TextDirection.ltr,
           ),
         ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _resourceOnlyDocument() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-only'),
+        source: CanvasResourceSource.appKey('asset-only'),
       ),
     ],
   );
