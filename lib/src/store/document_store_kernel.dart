@@ -12,6 +12,7 @@ import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
+import '../edit/commit_compiler.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'element_registry.dart';
@@ -89,6 +90,20 @@ final class DocumentStoreKernel {
 
   bool hasLayer(CanvasLayerId id) {
     return _document.elements.containsLayer(id);
+  }
+
+  Iterable<CanvasLayerId> get layerIds {
+    return _document.elements.layerTable.rows.map((row) => row.id);
+  }
+
+  Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
+    for (final row in _document.elements.layerTable.rows) {
+      if (row.id == id) {
+        return row.elementIds;
+      }
+    }
+
+    return const <CanvasElementId>[];
   }
 
   bool isResourceReferenced(CanvasResourceId id) {
@@ -480,16 +495,28 @@ final class DocumentStoreKernel {
       final element = update.element;
       final before =
           changedById[element.id] ?? document.elements.elementById(element.id);
-      if (before == null || _isSparseElementUpdateNoOp(before, update)) {
+      if (before == null) {
+        continue;
+      }
+      final compiledUpdate = const CommitCompiler().compileElementUpdate(
+        before: before,
+        after: element,
+      );
+      if (_isSparseElementUpdateNoOp(
+        before: before,
+        update: update,
+        compiledUpdate: compiledUpdate,
+      )) {
         continue;
       }
       _validateSparseElementUpdate(
         before: before,
         update: update,
+        compiledUpdate: compiledUpdate,
         resourceIds: document.resourceTable.admittedIds,
       );
       requiredRevisionDelta = requiredRevisionDelta.merge(
-        update.requiredRevisionDelta,
+        compiledUpdate.revisionDelta,
       );
       changedById[element.id] = element;
     }
@@ -764,17 +791,34 @@ void _validateSparseElementRevision({
   }
 }
 
-bool _isSparseElementUpdateNoOp(
-  CanvasElement before,
-  StoreSparseUpdateElement update,
-) {
-  return !update.requiredRevisionDelta.hasChanges &&
+bool _isSparseElementUpdateNoOp({
+  required CanvasElement before,
+  required StoreSparseUpdateElement update,
+  required ElementUpdateCompileResult compiledUpdate,
+}) {
+  return !compiledUpdate.revisionDelta.hasChanges &&
+      !update.requiredRevisionDelta.hasChanges &&
       update.element.revision == before.revision;
+}
+
+bool _sameStoreRevisionDelta(
+  StoreRevisionDelta left,
+  StoreRevisionDelta right,
+) {
+  return left.document == right.document &&
+      left.projection == right.projection &&
+      left.structural == right.structural &&
+      left.bounds == right.bounds &&
+      left.elementVisual == right.elementVisual &&
+      left.background == right.background &&
+      left.grid == right.grid &&
+      left.resource == right.resource;
 }
 
 void _validateSparseElementUpdate({
   required CanvasElement before,
   required StoreSparseUpdateElement update,
+  required ElementUpdateCompileResult compiledUpdate,
   required Set<String> resourceIds,
 }) {
   final after = update.element;
@@ -786,11 +830,14 @@ void _validateSparseElementUpdate({
     );
   }
   _validateSparseUpdateResourceReferences(after, resourceIds);
-  if (!update.requiredRevisionDelta.hasChanges) {
+  if (!_sameStoreRevisionDelta(
+    update.requiredRevisionDelta,
+    compiledUpdate.revisionDelta,
+  )) {
     throw ArgumentError.value(
       update.requiredRevisionDelta,
       'requiredRevisionDelta',
-      'changed sparse element updates must carry a compiler-produced revision delta.',
+      'sparse element updates must carry the compiler-produced revision delta.',
     );
   }
   _validateSparseElementRevision(before: before, after: after);

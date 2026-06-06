@@ -82,6 +82,10 @@ void _registerSparseValidationTests() {
     () => expect(_rejectsSparseRevisionDeltaFamilyMismatch, returnsNormally),
   );
   test(
+    'rejects sparse update mutations with mismatched compiler delta',
+    () => expect(_rejectsSparseUpdateMutationDeltaMismatch, returnsNormally),
+  );
+  test(
     'validates image update resources before swap',
     () => expect(_validatesUpdateFailuresBeforeSwap, returnsNormally),
   );
@@ -330,6 +334,36 @@ void _expectElementBoundsDeltaRejected() {
       ],
     ),
   );
+}
+
+void _rejectsSparseUpdateMutationDeltaMismatch() {
+  final store = DocumentStoreKernel(_baseDocument());
+  final beforeFacts = _requireFacts(store, CanvasElementId('e-content'));
+
+  expect(
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            element: CanvasRectElement(
+              id: CanvasElementId('e-content'),
+              size: const Size(44, 55),
+              revision: 1,
+              fillColor: const Color(0xFFFF0000),
+            ),
+            requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
+          ),
+        ],
+      ),
+    ),
+    throwsA(isA<ArgumentError>()),
+  );
+  final afterFacts = _requireFacts(store, CanvasElementId('e-content'));
+  expect(afterFacts.size, beforeFacts.size);
+  expect(afterFacts.fillColor, beforeFacts.fillColor);
+  expect(afterFacts.revision, beforeFacts.revision);
+  expect(store.projectionBuildCount, 0);
 }
 
 void _expectRevisionDeltaRejected(StoreSparseCommit commit) {

@@ -2169,6 +2169,14 @@ final class _StoreSparseEditFacts implements SparseEditSessionFacts {
   Iterable<CanvasElementId> get elementIds => store.elementIds;
 
   @override
+  Iterable<CanvasLayerId> get layerIds => store.layerIds;
+
+  @override
+  Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
+    return store.elementIdsInLayer(id);
+  }
+
+  @override
   Iterable<CanvasResourceId> get resourceIds => store.resourceIds;
 
   @override

@@ -30,6 +30,13 @@ void main() {
       ),
     );
     test(
+      'sparse clear reports indexed insertions in draft order',
+      () => expect(
+        _sparseClearReportsIndexedInsertionsInDraftOrder,
+        returnsNormally,
+      ),
+    );
+    test(
       'sparse remove touches background layer only for background removals',
       () => expect(
         _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals,
@@ -159,6 +166,32 @@ void _expectSparseClearWithoutMaterialization(EditSession session) {
     layerCount: 1,
     resourceCount: 0,
   );
+}
+
+void _sparseClearReportsIndexedInsertionsInDraftOrder() {
+  var materializations = 0;
+  final session = _sparseSession(() {
+    materializations += 1;
+
+    return _baseDraft();
+  });
+
+  session.addBackgroundElement(_rect('background-first'), index: 0);
+  session.addElement(
+    _rect('content-first'),
+    layerId: CanvasLayerId('layer-a'),
+    index: 0,
+  );
+
+  final clear = session.clearContent();
+
+  expect(clear.removedElementIds, [
+    CanvasElementId('background-first'),
+    CanvasElementId('background-a'),
+    CanvasElementId('content-first'),
+    CanvasElementId('content-a'),
+  ]);
+  expect(materializations, 0);
 }
 
 void _readDraftDocumentPromotesAndReplays() {
@@ -593,6 +626,22 @@ final class _SparseFixtureFacts implements SparseEditSessionFacts {
       for (final layer in document.layers)
         for (final element in layer.elements) element.id,
     ];
+  }
+
+  @override
+  Iterable<CanvasLayerId> get layerIds {
+    return [for (final layer in document.layers) layer.id];
+  }
+
+  @override
+  Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
+    for (final layer in document.layers) {
+      if (layer.id == id) {
+        return [for (final element in layer.elements) element.id];
+      }
+    }
+
+    return const <CanvasElementId>[];
   }
 
   @override
