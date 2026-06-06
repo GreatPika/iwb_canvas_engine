@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
+import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
@@ -287,7 +288,26 @@ final class DocumentStoreKernel {
     var didMutateFacts = false;
     var requiredRevisionDelta = const StoreRevisionDelta();
     final admittedIds = _SparseAdmittedIds();
-    for (final mutation in commit.mutations) {
+    for (var index = 0; index < commit.mutations.length;) {
+      final mutation = commit.mutations[index];
+      if (mutation is StoreSparseUpdateElement) {
+        final updates = <CanvasElement>[];
+        while (index < commit.mutations.length) {
+          final current = commit.mutations[index];
+          if (current is! StoreSparseUpdateElement) {
+            break;
+          }
+          updates.add(current.element);
+          index += 1;
+        }
+        final applied = _updateElements(nextDocument, updates);
+        nextDocument = applied.document;
+        didMutateFacts = didMutateFacts || applied.didMutateFacts;
+        requiredRevisionDelta = requiredRevisionDelta.merge(
+          applied.requiredRevisionDelta,
+        );
+        continue;
+      }
       final applied = _applySparseMutation(
         nextDocument,
         mutation,
@@ -301,6 +321,7 @@ final class DocumentStoreKernel {
       if (applied.didMutateFacts) {
         admittedIds.addMutation(mutation);
       }
+      index += 1;
     }
     if (didMutateFacts && !revisionDelta.hasChanges) {
       throw ArgumentError.value(
@@ -426,26 +447,57 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     CanvasElement element,
   ) {
-    final before = document.elements.elementById(element.id);
-    if (before == null) {
+    return _updateElements(document, [element]);
+  }
+
+  _SparseMutationResult _updateElements(
+    CommittedDocument document,
+    List<CanvasElement> updates,
+  ) {
+    final batch = _prepareSparseElementUpdateBatch(document, updates);
+    if (!batch.hasChanges) {
       return _SparseMutationResult.unchanged(document);
     }
-    final elements = document.elements.updateElement(
-      element,
+    final elements = document.elements.updateElements(
+      batch.elements,
       resourceIds: document.resourceTable.admittedIds,
-      sameElement: _sameElement,
     );
     if (elements == null) {
       return _SparseMutationResult.unchanged(document);
     }
-    _validateSparseElementRevision(before: before, after: element);
 
     return _SparseMutationResult.changed(
       document.copyWith(elements: elements),
-      requiredRevisionDelta: _elementRevisionDeltaClassifier(
+      requiredRevisionDelta: batch.requiredRevisionDelta,
+    );
+  }
+
+  _SparseElementUpdateBatch _prepareSparseElementUpdateBatch(
+    CommittedDocument document,
+    List<CanvasElement> updates,
+  ) {
+    final changedById = <CanvasElementId, CanvasElement>{};
+    var requiredRevisionDelta = const StoreRevisionDelta();
+    for (final element in updates) {
+      final before =
+          changedById[element.id] ?? document.elements.elementById(element.id);
+      if (before == null || _sameElement(before, element)) {
+        continue;
+      }
+      _validateSparseElementUpdate(
         before: before,
         after: element,
-      ),
+        resourceIds: document.resourceTable.admittedIds,
+      );
+      requiredRevisionDelta = requiredRevisionDelta.merge(
+        _elementRevisionDeltaClassifier(before: before, after: element),
+      );
+      changedById[element.id] = element;
+    }
+
+    return _SparseElementUpdateBatch(
+      elements: changedById.values,
+      requiredRevisionDelta: requiredRevisionDelta,
     );
   }
 
@@ -713,6 +765,37 @@ void _validateSparseElementRevision({
   }
 }
 
+void _validateSparseElementUpdate({
+  required CanvasElement before,
+  required CanvasElement after,
+  required Set<String> resourceIds,
+}) {
+  if (before.kind != after.kind) {
+    throw ArgumentError.value(
+      after,
+      'element',
+      'element update kind does not match the target element.',
+    );
+  }
+  _validateSparseUpdateResourceReferences(after, resourceIds);
+  _validateSparseElementRevision(before: before, after: after);
+}
+
+void _validateSparseUpdateResourceReferences(
+  CanvasElement element,
+  Set<String> resourceIds,
+) {
+  if (element case CanvasImageElement(:final resourceId)) {
+    if (!resourceIds.contains(resourceId.value)) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.missingResourceReference,
+        message: 'image element references a missing resource.',
+        path: 'image.resourceId',
+      );
+    }
+  }
+}
+
 bool _samePalette(CanvasPalette left, CanvasPalette right) {
   return _sameList(left.penColors, right.penColors) &&
       _sameList(left.backgroundColors, right.backgroundColors) &&
@@ -769,6 +852,18 @@ final class _SparseAdmittedIds {
         break;
     }
   }
+}
+
+final class _SparseElementUpdateBatch {
+  _SparseElementUpdateBatch({
+    required Iterable<CanvasElement> elements,
+    required this.requiredRevisionDelta,
+  }) : elements = List.unmodifiable(elements);
+
+  final List<CanvasElement> elements;
+  final StoreRevisionDelta requiredRevisionDelta;
+
+  bool get hasChanges => elements.isNotEmpty;
 }
 
 final class _SparseMutationResult {

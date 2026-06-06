@@ -24,14 +24,7 @@ void _registerSparseInstallTests() {
     'adds elements and layers without building public projection',
     () => expect(_addsElementsAndLayersWithoutProjection, returnsNormally),
   );
-  test(
-    'updates visual and transform facts in place',
-    () => expect(_updatesFactsInPlace, returnsNormally),
-  );
-  test(
-    'no-op and missing-id updates leave committed facts unchanged',
-    () => expect(_noOpAndMissingIdUpdatesLeaveFactsUnchanged, returnsNormally),
-  );
+  _registerSparseUpdateInstallTests();
   test(
     'resource upsert descriptors use accepted resource revision',
     () => expect(_resourceDescriptorsUseAcceptedRevision, returnsNormally),
@@ -58,6 +51,21 @@ void _registerSparseInstallTests() {
   test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
+  );
+}
+
+void _registerSparseUpdateInstallTests() {
+  test(
+    'updates visual and transform facts in place',
+    () => expect(_updatesFactsInPlace, returnsNormally),
+  );
+  test(
+    'installs batched sparse element updates',
+    () => expect(_installsBatchedSparseElementUpdates, returnsNormally),
+  );
+  test(
+    'no-op and missing-id updates leave committed facts unchanged',
+    () => expect(_noOpAndMissingIdUpdatesLeaveFactsUnchanged, returnsNormally),
   );
 }
 
@@ -141,6 +149,47 @@ void _updatesFactsInPlace() {
   expect(facts.fillColor, const Color(0xFF00FF00));
   expect(facts.revision, 1);
   expect(store.projectionBuildCount, 0);
+}
+
+void _installsBatchedSparseElementUpdates() {
+  final store = documentStoreKernel(_multiRectDocument());
+
+  store.installSparseCommit(
+    store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasRectElement(
+              id: CanvasElementId('rect-a'),
+              size: const Size(2, 2),
+              fillColor: const Color(0xFF00FF00),
+              revision: 1,
+            ),
+          ),
+          StoreSparseUpdateElement(
+            CanvasRectElement(
+              id: CanvasElementId('rect-b'),
+              size: const Size(3, 3),
+              fillColor: const Color(0xFF0000FF),
+              revision: 1,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  expect(
+    _requireFacts(store, CanvasElementId('rect-a')).fillColor,
+    const Color(0xFF00FF00),
+  );
+  expect(
+    _requireFacts(store, CanvasElementId('rect-b')).fillColor,
+    const Color(0xFF0000FF),
+  );
+  expect(_requireFacts(store, CanvasElementId('rect-a')).revision, 1);
+  expect(_requireFacts(store, CanvasElementId('rect-b')).revision, 1);
 }
 
 void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
@@ -708,6 +757,26 @@ CanvasDocument _resourceOnlyDocument() {
       CanvasImageResource(
         id: CanvasResourceId('resource-only'),
         source: CanvasResourceSource.appKey('asset-only'),
+      ),
+    ],
+  );
+}
+
+CanvasDocument _multiRectDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('rect-a'),
+            size: const Size(2, 2),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('rect-b'),
+            size: const Size(3, 3),
+          ),
+        ],
       ),
     ],
   );

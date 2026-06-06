@@ -234,6 +234,32 @@ final class ElementRegistry {
     );
   }
 
+  ElementRegistry? updateElements(
+    Iterable<CanvasElement> elements, {
+    required Set<String> resourceIds,
+  }) {
+    final updateList = List<CanvasElement>.unmodifiable(elements);
+    if (updateList.isEmpty) {
+      return null;
+    }
+    final updatedFamilyTables = familyTables.replaceElements(
+      updateList,
+      resourceIds,
+    );
+
+    return ElementRegistry._withUpdatedFamilies(
+      familyTables: updatedFamilyTables,
+      layerTable: layerTable,
+      backgroundElementIds: backgroundElementIds,
+      contentElementOrder: contentElementOrder,
+      frameElementOrder: frameElementOrder,
+      frameOrderTokensById: frameOrderTokensById,
+      elementLocationFacts: elementLocationFacts,
+      admittedElementIds: admittedElementIds,
+      admittedLayerIds: admittedLayerIds,
+    );
+  }
+
   ElementRegistry removeElement(CanvasElementId id) {
     return ElementRegistry._(
       backgroundElementIds: [

@@ -110,6 +110,19 @@ final class FamilyTables {
     return _withSameFamilyElement(after);
   }
 
+  FamilyTables replaceElements(
+    Iterable<CanvasElement> elements,
+    Set<String> resourceIds,
+  ) {
+    final batchRows = _MutableFamilyRows.fromTables(this);
+
+    for (final element in elements) {
+      batchRows.replace(element, resourceIds);
+    }
+
+    return batchRows.toFamilyTables();
+  }
+
   // The lookup deliberately checks every family table in one place so missing
   // ids fail at the caller-owned admission boundary.
   // ignore: cyclomatic-complexity
@@ -318,6 +331,57 @@ final class FamilyTables {
         rectRows: Map.unmodifiable(Map.of(rectRows)..[id] = RectRow(element)),
       ),
     };
+  }
+}
+
+// Batch replacement must keep every family row map in one mutable snapshot; a
+// per-family split would reintroduce synchronization across maps during sparse
+// update preparation.
+// ignore: coupling-between-object-classes
+final class _MutableFamilyRows {
+  _MutableFamilyRows.fromTables(FamilyTables tables)
+    : imageRows = Map<String, ImageRow>.of(tables.imageRows),
+      pathRows = Map<String, PathRow>.of(tables.pathRows),
+      textRows = Map<String, TextRow>.of(tables.textRows),
+      strokeRows = Map<String, StrokeRow>.of(tables.strokeRows),
+      lineRows = Map<String, LineRow>.of(tables.lineRows),
+      rectRows = Map<String, RectRow>.of(tables.rectRows);
+
+  final Map<String, ImageRow> imageRows;
+  final Map<String, PathRow> pathRows;
+  final Map<String, TextRow> textRows;
+  final Map<String, StrokeRow> strokeRows;
+  final Map<String, LineRow> lineRows;
+  final Map<String, RectRow> rectRows;
+
+  void replace(CanvasElement element, Set<String> resourceIds) {
+    _validateElementResourceReferences(element, resourceIds);
+    final id = element.id.value;
+    switch (element) {
+      case CanvasImageElement():
+        imageRows[id] = ImageRow(element);
+      case CanvasPathElement():
+        pathRows[id] = PathRow(element);
+      case CanvasTextElement():
+        textRows[id] = TextRow(element);
+      case CanvasStrokeElement():
+        strokeRows[id] = StrokeRow(element);
+      case CanvasLineElement():
+        lineRows[id] = LineRow(element);
+      case CanvasRectElement():
+        rectRows[id] = RectRow(element);
+    }
+  }
+
+  FamilyTables toFamilyTables() {
+    return FamilyTables._fromTables(
+      imageRows: Map.unmodifiable(imageRows),
+      pathRows: Map.unmodifiable(pathRows),
+      textRows: Map.unmodifiable(textRows),
+      strokeRows: Map.unmodifiable(strokeRows),
+      lineRows: Map.unmodifiable(lineRows),
+      rectRows: Map.unmodifiable(rectRows),
+    );
   }
 }
 

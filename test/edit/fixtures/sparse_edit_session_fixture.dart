@@ -145,8 +145,8 @@ void _expectSparseClearWithoutMaterialization(EditSession session) {
   expect(clear.didClearContent, isTrue);
   expect(clear.removedElementIds, [
     CanvasElementId('background-a'),
-    CanvasElementId('content-a'),
     CanvasElementId('background-added'),
+    CanvasElementId('content-a'),
     CanvasElementId('content-added'),
   ]);
   expect(clear.removedResourceIds, [

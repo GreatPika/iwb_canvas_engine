@@ -712,10 +712,13 @@ final class _SparseEditBacking implements _EditSessionBacking {
   _SparseClearCandidate _sparseClearCandidate({
     required bool removeUnusedResources,
   }) {
+    final removedElementIds = List<CanvasElementId>.unmodifiable(
+      _currentDocumentOrderElementIds(),
+    );
     return _SparseClearCandidate(
-      removedElementIds: List.unmodifiable(_currentElementIds()),
+      removedElementIds: removedElementIds,
       removedBackgroundElementIds: List.unmodifiable(
-        _currentBackgroundElementIds(),
+        removedElementIds.where(_isBackgroundElementId),
       ),
       removedResourceIds: removeUnusedResources
           ? List.unmodifiable(_currentResourceIds())
@@ -951,9 +954,15 @@ final class _SparseEditBacking implements _EditSessionBacking {
     yield* _addedElementIds;
   }
 
-  Iterable<CanvasElementId> _currentBackgroundElementIds() sync* {
-    for (final id in _currentElementIds()) {
+  Iterable<CanvasElementId> _currentDocumentOrderElementIds() sync* {
+    final currentIds = List<CanvasElementId>.unmodifiable(_currentElementIds());
+    for (final id in currentIds) {
       if (_isBackgroundElementId(id)) {
+        yield id;
+      }
+    }
+    for (final id in currentIds) {
+      if (!_isBackgroundElementId(id)) {
         yield id;
       }
     }
