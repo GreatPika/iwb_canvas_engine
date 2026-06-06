@@ -70,4 +70,24 @@ final class CommittedDocument {
   StoreResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
     return resourceTable.descriptors[id];
   }
+
+  CommittedDocument copyWith({
+    CanvasCamera? camera,
+    CanvasBackground? background,
+    CanvasPalette? palette,
+    ElementRegistry? elements,
+    CanvasMetadata? metadata,
+    ResourceTable? resourceTable,
+    RevisionState? revisions,
+  }) {
+    return CommittedDocument._(
+      camera: camera ?? this.camera,
+      background: background ?? this.background,
+      palette: palette ?? this.palette,
+      elements: elements ?? this.elements,
+      metadata: metadata ?? this.metadata,
+      resourceTable: resourceTable ?? this.resourceTable,
+      revisions: revisions ?? this.revisions,
+    );
+  }
 }

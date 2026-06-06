@@ -11,7 +11,9 @@ import '../contracts/public/canvas_metadata.dart';
 
 // The family tables are the single admission and projection owner for all
 // element kinds; splitting by kind would reintroduce cross-table drift.
-// ignore: coupling-between-object-classes, weighted-methods-per-class
+// Sparse row mutation belongs with family admission so updates cannot drift
+// from duplicate-id and resource-reference validation.
+// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
 final class FamilyTables {
   FamilyTables(
     Iterable<CanvasElement> elements, {
@@ -32,6 +34,65 @@ final class FamilyTables {
   final Map<String, StrokeRow> strokeRows;
   final Map<String, LineRow> lineRows;
   final Map<String, RectRow> rectRows;
+
+  bool contains(CanvasElementId id) => admittedElementIds.contains(id.value);
+
+  bool referencesResource(CanvasResourceId id) {
+    return imageRows.values.any((row) => row.resourceId == id);
+  }
+
+  // Family lookup stays explicit so projection, sparse updates, and frame facts
+  // all preserve the same family precedence in one audited place.
+  // ignore: cyclomatic-complexity
+  CanvasElement? elementByCanvasId(CanvasElementId id) {
+    final value = id.value;
+
+    return imageRows[value]?.toElement() ??
+        pathRows[value]?.toElement() ??
+        textRows[value]?.toElement() ??
+        strokeRows[value]?.toElement() ??
+        lineRows[value]?.toElement() ??
+        rectRows[value]?.toElement();
+  }
+
+  FamilyTables addElement(CanvasElement element, Set<String> resourceIds) {
+    final admitted = _copyRows();
+    admitted.add(element, resourceIds);
+
+    return FamilyTables._(admitted);
+  }
+
+  FamilyTables removeElement(CanvasElementId id) {
+    final admitted = _copyRows()..remove(id.value);
+
+    return FamilyTables._(admitted);
+  }
+
+  FamilyTables clearElements() {
+    return FamilyTables._(_AdmittedRows());
+  }
+
+  FamilyTables? replaceElement(
+    CanvasElement before,
+    CanvasElement after,
+    Set<String> resourceIds,
+  ) {
+    if (before.kind != after.kind) {
+      throw ArgumentError.value(
+        after,
+        'after',
+        'element update kind does not match the target element.',
+      );
+    }
+    if (_sameElement(before, after)) {
+      return null;
+    }
+    _validateElementResourceReferences(after, resourceIds);
+    final admitted = _copyRows()..remove(before.id.value);
+    admitted.add(after, resourceIds);
+
+    return FamilyTables._(admitted);
+  }
 
   // The lookup deliberately checks every family table in one place so missing
   // ids fail at the caller-owned admission boundary.
@@ -169,6 +230,17 @@ final class FamilyTables {
         lineRows[id]?.common ??
         rectRows[id]?.common;
   }
+
+  _AdmittedRows _copyRows() {
+    return _AdmittedRows()
+      ..imageRows.addAll(imageRows)
+      ..pathRows.addAll(pathRows)
+      ..textRows.addAll(textRows)
+      ..strokeRows.addAll(strokeRows)
+      ..lineRows.addAll(lineRows)
+      ..rectRows.addAll(rectRows)
+      ..ids.addAll(admittedElementIds);
+  }
 }
 
 final class FamilyElementFacts {
@@ -294,6 +366,18 @@ final class _AdmittedRows {
       case CanvasRectElement():
         rectRows[id] = RectRow(element);
     }
+  }
+
+  void remove(String id) {
+    if (!ids.remove(id)) {
+      return;
+    }
+    imageRows.remove(id);
+    pathRows.remove(id);
+    textRows.remove(id);
+    strokeRows.remove(id);
+    lineRows.remove(id);
+    rectRows.remove(id);
   }
 }
 
@@ -562,4 +646,99 @@ final class RectRow {
       metadata: common.metadata,
     );
   }
+}
+
+void _validateElementResourceReferences(
+  CanvasElement element,
+  Set<String> resourceIds,
+) {
+  if (element case CanvasImageElement(:final resourceId)) {
+    if (!resourceIds.contains(resourceId.value)) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.missingResourceReference,
+        message: 'image element references a missing resource.',
+        path: 'image.resourceId',
+      );
+    }
+  }
+}
+
+// Equality for no-op detection intentionally mirrors all public element
+// families in one place so a missed field cannot silently create commits.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+bool _sameElement(CanvasElement left, CanvasElement right) {
+  if (!_sameCommonElementFields(left, right)) {
+    return false;
+  }
+
+  return switch ((left, right)) {
+    (final CanvasImageElement left, final CanvasImageElement right) =>
+      left.resourceId == right.resourceId &&
+          left.size == right.size &&
+          left.naturalSize == right.naturalSize,
+    (final CanvasPathElement left, final CanvasPathElement right) =>
+      left.svgPathData == right.svgPathData &&
+          left.fillColor == right.fillColor &&
+          left.strokeColor == right.strokeColor &&
+          left.strokeWidth == right.strokeWidth &&
+          left.fillRule == right.fillRule,
+    (final CanvasTextElement left, final CanvasTextElement right) =>
+      left.text == right.text &&
+          left.fontSize == right.fontSize &&
+          left.color == right.color &&
+          left.align == right.align &&
+          left.textDirection == right.textDirection &&
+          left.isBold == right.isBold &&
+          left.isItalic == right.isItalic &&
+          left.isUnderline == right.isUnderline &&
+          left.fontFamily == right.fontFamily &&
+          left.maxWidth == right.maxWidth &&
+          left.lineHeight == right.lineHeight,
+    (final CanvasStrokeElement left, final CanvasStrokeElement right) =>
+      _sameList(left.points, right.points) &&
+          left.thickness == right.thickness &&
+          left.color == right.color,
+    (final CanvasLineElement left, final CanvasLineElement right) =>
+      left.start == right.start &&
+          left.end == right.end &&
+          left.thickness == right.thickness &&
+          left.color == right.color,
+    (final CanvasRectElement left, final CanvasRectElement right) =>
+      left.size == right.size &&
+          left.fillColor == right.fillColor &&
+          left.strokeColor == right.strokeColor &&
+          left.strokeWidth == right.strokeWidth,
+    _ => false,
+  };
+}
+
+// Common-field comparison stays whole because these fields are shared by every
+// element family and define whether an update is a real sparse-store change.
+// ignore: cyclomatic-complexity
+bool _sameCommonElementFields(CanvasElement left, CanvasElement right) {
+  return left.id == right.id &&
+      left.kind == right.kind &&
+      left.transform == right.transform &&
+      left.opacity == right.opacity &&
+      left.hitPadding == right.hitPadding &&
+      left.isVisible == right.isVisible &&
+      left.isSelectable == right.isSelectable &&
+      left.isLocked == right.isLocked &&
+      left.isDeletable == right.isDeletable &&
+      left.isTransformable == right.isTransformable &&
+      left.metadata == right.metadata;
+}
+
+bool _sameList<T>(List<T> left, List<T> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+
+  for (var index = 0; index < left.length; index += 1) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+
+  return true;
 }

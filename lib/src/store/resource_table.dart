@@ -48,6 +48,33 @@ final class ResourceTable {
   final Set<String> admittedIds;
   final Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors;
 
+  bool contains(CanvasResourceId id) => admittedIds.contains(id.value);
+
+  ResourceTable upsert(CanvasResource resource, {required int revision}) {
+    final nextRows = rows.map(copy).toList();
+    final index = nextRows.indexWhere((row) => row.id == resource.id);
+    if (index == -1) {
+      nextRows.add(copy(resource));
+    } else {
+      nextRows[index] = copy(resource);
+    }
+
+    return ResourceTable(nextRows, resourceRevision: revision);
+  }
+
+  ResourceTable remove(CanvasResourceId id, {required int revision}) {
+    final nextRows = [
+      for (final row in rows)
+        if (row.id != id) copy(row),
+    ];
+
+    return ResourceTable(nextRows, resourceRevision: revision);
+  }
+
+  ResourceTable clear({required int revision}) {
+    return ResourceTable(const [], resourceRevision: revision);
+  }
+
   static CanvasResource copy(CanvasResource resource) {
     return switch (resource) {
       CanvasImageResource() => CanvasImageResource(
