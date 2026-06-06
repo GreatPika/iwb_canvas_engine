@@ -68,8 +68,8 @@ void main() {
       final report = runBenchmarks(
         manifest: manifest,
         profileId: 'dry_run',
-        adapter: _fakeAdapter(
-          metrics: {'avg_us': 5000, 'p95_us': 5000, 'max_us': 5000},
+        adapter: _fakeAdapterWithMetrics(
+          {'avg_us': 5000, 'p95_us': 5000, 'max_us': 5000},
           actionUsSamples: [7],
         ),
       );
@@ -86,7 +86,7 @@ void main() {
         () => runBenchmarks(
           manifest: manifest,
           profileId: 'dry_run',
-          adapter: _fakeAdapter(setupUsSamples: const []),
+          adapter: _fakeAdapterWithSetupSamples(const []),
         ),
         throwsA(
           isA<StateError>().having(
@@ -101,12 +101,10 @@ void main() {
         () => runBenchmarks(
           manifest: manifest,
           profileId: 'dry_run',
-          adapter: _fakeAdapter(
-            setupMetrics: const {
-              'setup_allocation_bytes': 100,
-              'setup_rss_delta_bytes': 100,
-            },
-          ),
+          adapter: _fakeAdapterWithSetupMetrics(const {
+            'setup_allocation_bytes': 100,
+            'setup_rss_delta_bytes': 100,
+          }),
         ),
         throwsA(
           isA<StateError>().having(
@@ -121,7 +119,7 @@ void main() {
         () => runBenchmarks(
           manifest: manifest,
           profileId: 'dry_run',
-          adapter: _fakeAdapter(setupMetrics: const {'setup_us': 5}),
+          adapter: _fakeAdapterWithSetupMetrics(const {'setup_us': 5}),
         ),
         throwsA(
           isA<StateError>().having(
@@ -136,13 +134,11 @@ void main() {
         () => runBenchmarks(
           manifest: manifest,
           profileId: 'dry_run',
-          adapter: _fakeAdapter(
-            setupMetrics: const {
-              'setup_us': 5,
-              'setup_allocation_bytes': '100',
-              'setup_rss_delta_bytes': 100,
-            },
-          ),
+          adapter: _fakeAdapterWithSetupMetrics(const {
+            'setup_us': 5,
+            'setup_allocation_bytes': '100',
+            'setup_rss_delta_bytes': 100,
+          }),
         ),
         throwsA(
           isA<StateError>().having(
@@ -161,7 +157,7 @@ void main() {
         () => runBenchmarks(
           manifest: manifest,
           profileId: 'dry_run',
-          adapter: _fakeAdapter(includeRssDeltaBytes: false),
+          adapter: _fakeAdapterWithoutRssDelta(),
         ),
         throwsA(
           isA<StateError>().having(
@@ -242,16 +238,60 @@ void main() {
       },
     );
 
+    test('writes compact manual history when requested', () async {
+      final reportPath = 'build/bench/current/auto_history_report.json';
+      final historyRoot = Directory('build/bench/history_test');
+      final historyPath = '${historyRoot.path}/auto_history.json';
+      _deleteFileIfExists(reportPath);
+      if (historyRoot.existsSync()) {
+        historyRoot.deleteSync(recursive: true);
+      }
+
+      final result = await runBenchmarkCliDetailed([
+        '--profile=dry_run',
+        '--output=$reportPath',
+        '--history-label=auto-history',
+        '--history-device-name=Pixel 6',
+        '--history-device-os=Android 16',
+        '--history-output=$historyPath',
+        '--history-root=${historyRoot.path}',
+        '--history-allow-dirty',
+        '--history-overwrite',
+      ], manifest: _singleCaseManifest());
+      final historyJson =
+          jsonDecode(File(historyPath).readAsStringSync())
+              as Map<String, Object?>;
+      final historyCase =
+          (historyJson['cases'] as List<Object?>).single
+              as Map<String, Object?>;
+
+      expect(result.reportPath, reportPath);
+      expect(result.historyPath, historyPath);
+      expect(historyJson['kind'], 'manual_benchmark_history');
+      expect(historyJson['label'], 'auto-history');
+      expect(historyCase, isNot(contains('actionUsSamples')));
+      expect(historyCase, contains('sampleSummary'));
+      expect(
+        (historyJson['sources'] as List<Object?>).single,
+        containsPair('source', containsPair('sha256', isA<String>())),
+      );
+
+      _deleteFileIfExists(reportPath);
+      historyRoot.deleteSync(recursive: true);
+    });
+
     test('accepts an explicit device target for real-device probes', () {
       final options = BenchmarkRunOptions.parse([
         '--profile=smoke',
         '--device=23081FDF6000L2',
         '--output=build/bench/current/pixel6_smoke.json',
+        '--history-label=device-smoke',
       ]);
 
       expect(options.profile, 'smoke');
       expect(options.device, '23081FDF6000L2');
       expect(options.output, 'build/bench/current/pixel6_smoke.json');
+      expect(options.history?.deviceId, '23081FDF6000L2');
     });
 
     test('manifest fingerprint covers policy and scale membership', () {
@@ -385,9 +425,24 @@ void main() {
           () => BenchmarkRunOptions.parse(['--profile=smoke', '--device=']),
           throwsA(isA<FormatException>()),
         );
+        expect(
+          () => BenchmarkRunOptions.parse([
+            '--profile=smoke',
+            '--history-label=run',
+            '--history-typo=value',
+          ]),
+          throwsA(isA<FormatException>()),
+        );
       },
     );
   });
+}
+
+void _deleteFileIfExists(String path) {
+  final file = File(path);
+  if (file.existsSync()) {
+    file.deleteSync();
+  }
 }
 
 BenchmarkManifest _withFirstCase(
@@ -481,17 +536,72 @@ BenchmarkCase _copyCaseWithFixtureShape(
   );
 }
 
-BenchmarkCaseAdapter _fakeAdapter({
-  Map<String, Object?> metrics = const {},
-  Map<String, Object?> setupMetrics = const {
+typedef _FakeAdapterData = ({
+  Map<String, Object?> metrics,
+  Map<String, Object?> setupMetrics,
+  List<int> actionUsSamples,
+  List<int> setupUsSamples,
+  bool includeRssDeltaBytes,
+});
+
+BenchmarkCaseAdapter _fakeAdapterWithMetrics(
+  Map<String, Object?> metrics, {
+  List<int> actionUsSamples = const [5],
+}) {
+  return _fakeAdapterFrom((
+    metrics: metrics,
+    setupMetrics: _defaultFakeAdapterData.setupMetrics,
+    actionUsSamples: actionUsSamples,
+    setupUsSamples: _defaultFakeAdapterData.setupUsSamples,
+    includeRssDeltaBytes: true,
+  ));
+}
+
+BenchmarkCaseAdapter _fakeAdapterWithSetupSamples(List<int> setupUsSamples) {
+  return _fakeAdapterFrom((
+    metrics: _defaultFakeAdapterData.metrics,
+    setupMetrics: _defaultFakeAdapterData.setupMetrics,
+    actionUsSamples: _defaultFakeAdapterData.actionUsSamples,
+    setupUsSamples: setupUsSamples,
+    includeRssDeltaBytes: true,
+  ));
+}
+
+BenchmarkCaseAdapter _fakeAdapterWithSetupMetrics(
+  Map<String, Object?> setupMetrics,
+) {
+  return _fakeAdapterFrom((
+    metrics: _defaultFakeAdapterData.metrics,
+    setupMetrics: setupMetrics,
+    actionUsSamples: _defaultFakeAdapterData.actionUsSamples,
+    setupUsSamples: _defaultFakeAdapterData.setupUsSamples,
+    includeRssDeltaBytes: true,
+  ));
+}
+
+BenchmarkCaseAdapter _fakeAdapterWithoutRssDelta() {
+  return _fakeAdapterFrom((
+    metrics: _defaultFakeAdapterData.metrics,
+    setupMetrics: _defaultFakeAdapterData.setupMetrics,
+    actionUsSamples: _defaultFakeAdapterData.actionUsSamples,
+    setupUsSamples: _defaultFakeAdapterData.setupUsSamples,
+    includeRssDeltaBytes: false,
+  ));
+}
+
+const _FakeAdapterData _defaultFakeAdapterData = (
+  metrics: {},
+  setupMetrics: {
     'setup_us': 5,
     'setup_allocation_bytes': 100,
     'setup_rss_delta_bytes': 100,
   },
-  List<int> actionUsSamples = const [5],
-  List<int> setupUsSamples = const [5],
-  bool includeRssDeltaBytes = true,
-}) {
+  actionUsSamples: [5],
+  setupUsSamples: [5],
+  includeRssDeltaBytes: true,
+);
+
+BenchmarkCaseAdapter _fakeAdapterFrom(_FakeAdapterData data) {
   return (
     BenchmarkCase benchmarkCase,
     BenchmarkScale scale,
@@ -499,14 +609,14 @@ BenchmarkCaseAdapter _fakeAdapter({
     BenchmarkDeviceTarget? deviceTarget,
   ) {
     final primaryMetrics = <String, Object?>{'allocation_bytes': 10};
-    if (includeRssDeltaBytes) {
+    if (data.includeRssDeltaBytes) {
       primaryMetrics['rss_delta_bytes'] = 10;
     }
     return BenchmarkAdapterResult(
-      actionUsSamples: actionUsSamples,
-      setupUsSamples: setupUsSamples,
-      metrics: {...primaryMetrics, ...metrics},
-      setupMetrics: setupMetrics,
+      actionUsSamples: data.actionUsSamples,
+      setupUsSamples: data.setupUsSamples,
+      metrics: {...primaryMetrics, ...data.metrics},
+      setupMetrics: data.setupMetrics,
       measurementBoundary: benchmarkCase.measurementBoundary,
       fixtureShape: benchmarkCase.fixtureShape,
       runtime: const BenchmarkProbeRuntime(

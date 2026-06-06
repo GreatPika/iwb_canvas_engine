@@ -1,0 +1,4852 @@
+{
+  "schemaVersion": 1,
+  "kind": "manual_benchmark_history",
+  "recordedAtUtc": "2026-06-06T19:45:00.000Z",
+  "label": "existing-full-release-report",
+  "subjectGitHead": "unrecorded-existing-local-report",
+  "repositoryDirty": true,
+  "device": {
+    "name": "Pixel 6",
+    "id": "23081FDF6000L2",
+    "os": "Android 16"
+  },
+  "profile": {
+    "id": "release",
+    "warmups": 1,
+    "repetitions": 5,
+    "iterations": null,
+    "minimumMeasuredMs": 2000,
+    "minimumSamples": 0,
+    "timingClaims": true,
+    "scaleSelection": "all_required_scales"
+  },
+  "toolchain": {
+    "profileId": "release",
+    "runtimeMode": "flutter_test",
+    "assertionsEnabled": true,
+    "debugInvariantMode": false,
+    "runnerLabel": "local",
+    "osName": "macos",
+    "osVersion": "Version 15.5 (Build 24F74)",
+    "dartVersion": "3.12.0 (stable) (Fri May 8 01:51:14 2026 -0700) on \"macos_arm64\"",
+    "flutterChannel": "stable",
+    "flutterVersion": "3.44.0",
+    "releaseContour": {
+      "runnerLabel": "ubuntu-24.04",
+      "osName": "Ubuntu",
+      "osVersion": "24.04",
+      "flutterChannel": "stable",
+      "flutterVersion": "3.38.0"
+    }
+  },
+  "referenceReport": {
+    "kind": "manual",
+    "path": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json"
+  },
+  "sources": [
+    {
+      "path": "build/bench/current/pixel6_release.json",
+      "kind": "report",
+      "source": {
+        "path": "build/bench/current/pixel6_release.json",
+        "sizeBytes": 4769958,
+        "sha256": "20a13e7ac8063a6ed4402b9104cd4c47865806328675defc106cae82b273c2b6"
+      },
+      "manifestVersion": "p14_benchmark_measurement_boundary_v2",
+      "manifestFingerprint": "e244be03",
+      "caseCount": 78
+    }
+  ],
+  "caseCount": 78,
+  "cases": [
+    {
+      "id": "edit.add_element",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 282,
+          "min_us": 225,
+          "avg_us": 352,
+          "p50_us": 309,
+          "p95_us": 567,
+          "max_us": 1535
+        },
+        "setupUs": {
+          "available": true,
+          "count": 282,
+          "min_us": 5860,
+          "avg_us": 6684,
+          "p50_us": 6469,
+          "p95_us": 7355,
+          "max_us": 25225
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 352,
+        "p95_us": 567,
+        "max_us": 1535,
+        "setup_us": 6684
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6684
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.add_element",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 2012,
+          "avg_us": 2344,
+          "p50_us": 2216,
+          "p95_us": 3108,
+          "max_us": 3336
+        },
+        "setupUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 82360,
+          "avg_us": 90452,
+          "p50_us": 89453,
+          "p95_us": 104022,
+          "max_us": 105244
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 557056,
+        "rss_delta_bytes": 557056,
+        "avg_us": 2344,
+        "p95_us": 3108,
+        "max_us": 3336,
+        "setup_us": 90452
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 90452
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.add_element",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 11184,
+          "avg_us": 15635,
+          "p50_us": 12112,
+          "p95_us": 26424,
+          "max_us": 26424
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 454263,
+          "avg_us": 472354,
+          "p50_us": 474296,
+          "p95_us": 485960,
+          "max_us": 485960
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 10305536,
+        "rss_delta_bytes": 10305536,
+        "avg_us": 15635,
+        "p95_us": 26424,
+        "max_us": 26424,
+        "setup_us": 472354
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 472354
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.add_element",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 25454,
+          "avg_us": 29030,
+          "p50_us": 29430,
+          "p95_us": 32634,
+          "max_us": 32634
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 973615,
+          "avg_us": 1011906,
+          "p50_us": 992386,
+          "p95_us": 1071979,
+          "max_us": 1071979
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 21987328,
+        "rss_delta_bytes": 21987328,
+        "avg_us": 29030,
+        "p95_us": 32634,
+        "max_us": 32634,
+        "setup_us": 1011906
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1011906
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_visual",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 284,
+          "min_us": 189,
+          "avg_us": 280,
+          "p50_us": 270,
+          "p95_us": 397,
+          "max_us": 1200
+        },
+        "setupUs": {
+          "available": true,
+          "count": 284,
+          "min_us": 5872,
+          "avg_us": 6696,
+          "p50_us": 6514,
+          "p95_us": 7324,
+          "max_us": 25561
+        }
+      },
+      "metrics": {
+        "touched_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 280,
+        "p95_us": 397,
+        "max_us": 1200,
+        "setup_us": 6696
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6696
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_visual",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 1629,
+          "avg_us": 1937,
+          "p50_us": 1792,
+          "p95_us": 2745,
+          "max_us": 2897
+        },
+        "setupUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 80001,
+          "avg_us": 89004,
+          "p50_us": 89440,
+          "p95_us": 98686,
+          "max_us": 99924
+        }
+      },
+      "metrics": {
+        "touched_count": 1,
+        "allocation_bytes": 557056,
+        "rss_delta_bytes": 557056,
+        "avg_us": 1937,
+        "p95_us": 2745,
+        "max_us": 2897,
+        "setup_us": 89004
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 15024128,
+        "setup_rss_delta_bytes": 15024128,
+        "setup_us": 89004
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_visual",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 9196,
+          "avg_us": 11181,
+          "p50_us": 10209,
+          "p95_us": 16521,
+          "max_us": 16521
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 461887,
+          "avg_us": 494058,
+          "p50_us": 497664,
+          "p95_us": 517939,
+          "max_us": 517939
+        }
+      },
+      "metrics": {
+        "touched_count": 1,
+        "allocation_bytes": 5423104,
+        "rss_delta_bytes": 5423104,
+        "avg_us": 11181,
+        "p95_us": 16521,
+        "max_us": 16521,
+        "setup_us": 494058
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 494058
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_visual",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 18319,
+          "avg_us": 21165,
+          "p50_us": 19865,
+          "p95_us": 26318,
+          "max_us": 26318
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 1002261,
+          "avg_us": 1121599,
+          "p50_us": 1083819,
+          "p95_us": 1361521,
+          "max_us": 1361521
+        }
+      },
+      "metrics": {
+        "touched_count": 1,
+        "allocation_bytes": 11780096,
+        "rss_delta_bytes": 11780096,
+        "avg_us": 21165,
+        "p95_us": 26318,
+        "max_us": 26318,
+        "setup_us": 1121599
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1121599
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_transform",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 255,
+          "min_us": 222,
+          "avg_us": 383,
+          "p50_us": 375,
+          "p95_us": 513,
+          "max_us": 882
+        },
+        "setupUs": {
+          "available": true,
+          "count": 255,
+          "min_us": 6013,
+          "avg_us": 7397,
+          "p50_us": 6964,
+          "p95_us": 8585,
+          "max_us": 30251
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 383,
+        "p95_us": 513,
+        "max_us": 882,
+        "setup_us": 7397
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 524288,
+        "setup_rss_delta_bytes": 524288,
+        "setup_us": 7397
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_transform",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 1732,
+          "avg_us": 2036,
+          "p50_us": 1904,
+          "p95_us": 2461,
+          "max_us": 3279
+        },
+        "setupUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 85761,
+          "avg_us": 99043,
+          "p50_us": 97684,
+          "p95_us": 109280,
+          "max_us": 122573
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "allocation_bytes": 557056,
+        "rss_delta_bytes": 557056,
+        "avg_us": 2036,
+        "p95_us": 2461,
+        "max_us": 3279,
+        "setup_us": 99043
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3915776,
+        "setup_rss_delta_bytes": 3915776,
+        "setup_us": 99043
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_transform",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 9090,
+          "avg_us": 11342,
+          "p50_us": 10148,
+          "p95_us": 15062,
+          "max_us": 15062
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 514853,
+          "avg_us": 573324,
+          "p50_us": 586870,
+          "p95_us": 618415,
+          "max_us": 618415
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "allocation_bytes": 5783552,
+        "rss_delta_bytes": 5783552,
+        "avg_us": 11342,
+        "p95_us": 15062,
+        "max_us": 15062,
+        "setup_us": 573324
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 573324
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_transform",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 19404,
+          "avg_us": 25083,
+          "p50_us": 21317,
+          "p95_us": 35763,
+          "max_us": 35763
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 1038054,
+          "avg_us": 1091031,
+          "p50_us": 1077201,
+          "p95_us": 1210729,
+          "max_us": 1210729
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "allocation_bytes": 11780096,
+        "rss_delta_bytes": 11780096,
+        "avg_us": 25083,
+        "p95_us": 35763,
+        "max_us": 35763,
+        "setup_us": 1091031
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1091031
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.move_selection",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 248,
+          "min_us": 506,
+          "avg_us": 786,
+          "p50_us": 694,
+          "p95_us": 1373,
+          "max_us": 2737
+        },
+        "setupUs": {
+          "available": true,
+          "count": 248,
+          "min_us": 6082,
+          "avg_us": 7183,
+          "p50_us": 6889,
+          "p95_us": 8127,
+          "max_us": 28316
+        }
+      },
+      "metrics": {
+        "selected_count": 16,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 786,
+        "p95_us": 1373,
+        "max_us": 2737,
+        "setup_us": 7183
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 7183
+      },
+      "exactInvariants": {
+        "selected_count_matches_input": {
+          "metric": "selected_count",
+          "actual": 16,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.move_selection",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 3000,
+          "avg_us": 3814,
+          "p50_us": 3327,
+          "p95_us": 5738,
+          "max_us": 6356
+        },
+        "setupUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 89162,
+          "avg_us": 96863,
+          "p50_us": 96646,
+          "p95_us": 108171,
+          "max_us": 109326
+        }
+      },
+      "metrics": {
+        "selected_count": 16,
+        "allocation_bytes": 3620864,
+        "rss_delta_bytes": 3620864,
+        "avg_us": 3814,
+        "p95_us": 5738,
+        "max_us": 6356,
+        "setup_us": 96863
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1179648,
+        "setup_rss_delta_bytes": 1179648,
+        "setup_us": 96863
+      },
+      "exactInvariants": {
+        "selected_count_matches_input": {
+          "metric": "selected_count",
+          "actual": 16,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.move_selection",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 17732,
+          "avg_us": 20609,
+          "p50_us": 19392,
+          "p95_us": 24049,
+          "max_us": 24049
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 463786,
+          "avg_us": 529068,
+          "p50_us": 547662,
+          "p95_us": 582745,
+          "max_us": 582745
+        }
+      },
+      "metrics": {
+        "selected_count": 16,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 20609,
+        "p95_us": 24049,
+        "max_us": 24049,
+        "setup_us": 529068
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 2424832,
+        "setup_rss_delta_bytes": 2424832,
+        "setup_us": 529068
+      },
+      "exactInvariants": {
+        "selected_count_matches_input": {
+          "metric": "selected_count",
+          "actual": 16,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.set_camera_offset",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 283,
+          "min_us": 27,
+          "avg_us": 50,
+          "p50_us": 49,
+          "p95_us": 73,
+          "max_us": 148
+        },
+        "setupUs": {
+          "available": true,
+          "count": 283,
+          "min_us": 6025,
+          "avg_us": 6949,
+          "p50_us": 6637,
+          "p95_us": 7913,
+          "max_us": 24549
+        }
+      },
+      "metrics": {
+        "ordinary_paint_plan_invalidations": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 50,
+        "p95_us": 73,
+        "max_us": 148,
+        "setup_us": 6949
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 6949
+      },
+      "exactInvariants": {
+        "ordinary_paint_plan_invalidations_zero": {
+          "metric": "ordinary_paint_plan_invalidations",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.set_camera_offset",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 69,
+          "avg_us": 82,
+          "p50_us": 81,
+          "p95_us": 95,
+          "max_us": 137
+        },
+        "setupUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 84683,
+          "avg_us": 94155,
+          "p50_us": 93033,
+          "p95_us": 105027,
+          "max_us": 118742
+        }
+      },
+      "metrics": {
+        "ordinary_paint_plan_invalidations": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 82,
+        "p95_us": 95,
+        "max_us": 137,
+        "setup_us": 94155
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 94155
+      },
+      "exactInvariants": {
+        "ordinary_paint_plan_invalidations_zero": {
+          "metric": "ordinary_paint_plan_invalidations",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.set_camera_offset",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 74,
+          "avg_us": 94,
+          "p50_us": 83,
+          "p95_us": 146,
+          "max_us": 146
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 479666,
+          "avg_us": 514935,
+          "p50_us": 518743,
+          "p95_us": 545742,
+          "max_us": 545742
+        }
+      },
+      "metrics": {
+        "ordinary_paint_plan_invalidations": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 94,
+        "p95_us": 146,
+        "max_us": 146,
+        "setup_us": 514935
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1818624,
+        "setup_rss_delta_bytes": 1818624,
+        "setup_us": 514935
+      },
+      "exactInvariants": {
+        "ordinary_paint_plan_invalidations_zero": {
+          "metric": "ordinary_paint_plan_invalidations",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.set_camera_offset",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 84,
+          "avg_us": 92,
+          "p50_us": 92,
+          "p95_us": 99,
+          "max_us": 99
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 955448,
+          "avg_us": 999987,
+          "p50_us": 1006979,
+          "p95_us": 1043807,
+          "max_us": 1043807
+        }
+      },
+      "metrics": {
+        "ordinary_paint_plan_invalidations": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 92,
+        "p95_us": 99,
+        "max_us": 99,
+        "setup_us": 999987
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3522560,
+        "setup_rss_delta_bytes": 3522560,
+        "setup_us": 999987
+      },
+      "exactInvariants": {
+        "ordinary_paint_plan_invalidations_zero": {
+          "metric": "ordinary_paint_plan_invalidations",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "edit.add_line",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 279,
+          "min_us": 146,
+          "avg_us": 276,
+          "p50_us": 238,
+          "p95_us": 470,
+          "max_us": 1457
+        },
+        "setupUs": {
+          "available": true,
+          "count": 279,
+          "min_us": 5910,
+          "avg_us": 6813,
+          "p50_us": 6585,
+          "p95_us": 7560,
+          "max_us": 26153
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 276,
+        "p95_us": 470,
+        "max_us": 1457,
+        "setup_us": 6813
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 229376,
+        "setup_rss_delta_bytes": 229376,
+        "setup_us": 6813
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.add_line",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 21,
+          "min_us": 687,
+          "avg_us": 848,
+          "p50_us": 797,
+          "p95_us": 976,
+          "max_us": 1733
+        },
+        "setupUs": {
+          "available": true,
+          "count": 21,
+          "min_us": 86550,
+          "avg_us": 94734,
+          "p50_us": 92238,
+          "p95_us": 100807,
+          "max_us": 125705
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 848,
+        "p95_us": 976,
+        "max_us": 1733,
+        "setup_us": 94734
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 94734
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.add_line",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 3861,
+          "avg_us": 4676,
+          "p50_us": 4282,
+          "p95_us": 6412,
+          "max_us": 6412
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 482848,
+          "avg_us": 516757,
+          "p50_us": 526346,
+          "p95_us": 564425,
+          "max_us": 564425
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 4898816,
+        "rss_delta_bytes": 4898816,
+        "avg_us": 4676,
+        "p95_us": 6412,
+        "max_us": 6412,
+        "setup_us": 516757
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 516757
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "input.selected_move_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 197,
+          "min_us": 2908,
+          "avg_us": 3228,
+          "p50_us": 3141,
+          "p95_us": 3445,
+          "max_us": 13033
+        },
+        "setupUs": {
+          "available": true,
+          "count": 197,
+          "min_us": 6054,
+          "avg_us": 6721,
+          "p50_us": 6521,
+          "p95_us": 7112,
+          "max_us": 24912
+        }
+      },
+      "metrics": {
+        "scene_repaint_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 3228,
+        "p95_us": 3445,
+        "max_us": 13033,
+        "setup_us": 6721
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6721
+      },
+      "exactInvariants": {
+        "scene_repaint_count_bounded": {
+          "metric": "scene_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.selected_move_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 3704,
+          "avg_us": 4997,
+          "p50_us": 4680,
+          "p95_us": 7353,
+          "max_us": 7811
+        },
+        "setupUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 84965,
+          "avg_us": 98144,
+          "p50_us": 94532,
+          "p95_us": 130503,
+          "max_us": 131861
+        }
+      },
+      "metrics": {
+        "scene_repaint_count": 1,
+        "allocation_bytes": 622592,
+        "rss_delta_bytes": 622592,
+        "avg_us": 4997,
+        "p95_us": 7353,
+        "max_us": 7811,
+        "setup_us": 98144
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 98144
+      },
+      "exactInvariants": {
+        "scene_repaint_count_bounded": {
+          "metric": "scene_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.selected_move_preview",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 27601,
+          "avg_us": 32677,
+          "p50_us": 31976,
+          "p95_us": 38726,
+          "max_us": 38726
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 548740,
+          "avg_us": 586148,
+          "p50_us": 579309,
+          "p95_us": 615128,
+          "max_us": 615128
+        }
+      },
+      "metrics": {
+        "scene_repaint_count": 1,
+        "allocation_bytes": 9764864,
+        "rss_delta_bytes": 9764864,
+        "avg_us": 32677,
+        "p95_us": 38726,
+        "max_us": 38726,
+        "setup_us": 586148
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 586148
+      },
+      "exactInvariants": {
+        "scene_repaint_count_bounded": {
+          "metric": "scene_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.selected_move_preview_cached_ordinary_plan",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 516,
+          "min_us": 3534,
+          "avg_us": 3869,
+          "p50_us": 3822,
+          "p95_us": 4319,
+          "max_us": 7729
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 26800,
+          "avg_us": 26800,
+          "p50_us": 26800,
+          "p95_us": 26800,
+          "max_us": 26800
+        }
+      },
+      "metrics": {
+        "ordinary_plan_hit_rate": 1.0,
+        "supplement_count": 1,
+        "cached_preview_delta_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 3869,
+        "p95_us": 4319,
+        "max_us": 7729,
+        "setup_us": 26800
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3784704,
+        "setup_rss_delta_bytes": 3784704,
+        "setup_us": 26800
+      },
+      "exactInvariants": {
+        "cached_preview_delta_absent": {
+          "metric": "cached_preview_delta_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.selected_move_preview_cached_ordinary_plan",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 3856,
+          "min_us": 332,
+          "avg_us": 510,
+          "p50_us": 392,
+          "p95_us": 1157,
+          "max_us": 3476
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 105374,
+          "avg_us": 105374,
+          "p50_us": 105374,
+          "p95_us": 105374,
+          "max_us": 105374
+        }
+      },
+      "metrics": {
+        "ordinary_plan_hit_rate": 0.0,
+        "supplement_count": 0,
+        "cached_preview_delta_count": 0,
+        "allocation_bytes": 278528,
+        "rss_delta_bytes": 278528,
+        "avg_us": 510,
+        "p95_us": 1157,
+        "max_us": 3476,
+        "setup_us": 105374
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3194880,
+        "setup_rss_delta_bytes": 3194880,
+        "setup_us": 105374
+      },
+      "exactInvariants": {
+        "cached_preview_delta_absent": {
+          "metric": "cached_preview_delta_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.selected_move_preview_cached_ordinary_plan",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1298,
+          "min_us": 985,
+          "avg_us": 1526,
+          "p50_us": 1152,
+          "p95_us": 2779,
+          "max_us": 17645
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 495113,
+          "avg_us": 495113,
+          "p50_us": 495113,
+          "p95_us": 495113,
+          "max_us": 495113
+        }
+      },
+      "metrics": {
+        "ordinary_plan_hit_rate": 0.0,
+        "supplement_count": 0,
+        "cached_preview_delta_count": 0,
+        "allocation_bytes": 1605632,
+        "rss_delta_bytes": 1605632,
+        "avg_us": 1526,
+        "p95_us": 2779,
+        "max_us": 17645,
+        "setup_us": 495113
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 495113
+      },
+      "exactInvariants": {
+        "cached_preview_delta_absent": {
+          "metric": "cached_preview_delta_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.marquee_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 300,
+          "min_us": 43,
+          "avg_us": 61,
+          "p50_us": 54,
+          "p95_us": 89,
+          "max_us": 375
+        },
+        "setupUs": {
+          "available": true,
+          "count": 300,
+          "min_us": 5818,
+          "avg_us": 6542,
+          "p50_us": 6318,
+          "p95_us": 7239,
+          "max_us": 22648
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 61,
+        "p95_us": 89,
+        "max_us": 375,
+        "setup_us": 6542
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6542
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.marquee_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 98,
+          "avg_us": 115,
+          "p50_us": 114,
+          "p95_us": 141,
+          "max_us": 163
+        },
+        "setupUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 79252,
+          "avg_us": 85209,
+          "p50_us": 83659,
+          "p95_us": 93803,
+          "max_us": 100662
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 115,
+        "p95_us": 141,
+        "max_us": 163,
+        "setup_us": 85209
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3211264,
+        "setup_rss_delta_bytes": 3211264,
+        "setup_us": 85209
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.marquee_preview",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 110,
+          "avg_us": 146,
+          "p50_us": 137,
+          "p95_us": 183,
+          "max_us": 183
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 427841,
+          "avg_us": 467827,
+          "p50_us": 459202,
+          "p95_us": 506151,
+          "max_us": 506151
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 146,
+        "p95_us": 183,
+        "max_us": 183,
+        "setup_us": 467827
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 131072,
+        "setup_rss_delta_bytes": 131072,
+        "setup_us": 467827
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.draw_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 298,
+          "min_us": 44,
+          "avg_us": 60,
+          "p50_us": 55,
+          "p95_us": 85,
+          "max_us": 433
+        },
+        "setupUs": {
+          "available": true,
+          "count": 298,
+          "min_us": 5881,
+          "avg_us": 6592,
+          "p50_us": 6367,
+          "p95_us": 7354,
+          "max_us": 23283
+        }
+      },
+      "metrics": {
+        "point_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 60,
+        "p95_us": 85,
+        "max_us": 433,
+        "setup_us": 6592
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6592
+      },
+      "exactInvariants": {
+        "point_count_matches_input": {
+          "metric": "point_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.draw_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 89,
+          "avg_us": 111,
+          "p50_us": 109,
+          "p95_us": 126,
+          "max_us": 167
+        },
+        "setupUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 77826,
+          "avg_us": 85770,
+          "p50_us": 84558,
+          "p95_us": 96426,
+          "max_us": 104030
+        }
+      },
+      "metrics": {
+        "point_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 111,
+        "p95_us": 126,
+        "max_us": 167,
+        "setup_us": 85770
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 85770
+      },
+      "exactInvariants": {
+        "point_count_matches_input": {
+          "metric": "point_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.line_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 301,
+          "min_us": 37,
+          "avg_us": 52,
+          "p50_us": 47,
+          "p95_us": 76,
+          "max_us": 392
+        },
+        "setupUs": {
+          "available": true,
+          "count": 301,
+          "min_us": 5846,
+          "avg_us": 6541,
+          "p50_us": 6342,
+          "p95_us": 7287,
+          "max_us": 23358
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 52,
+        "p95_us": 76,
+        "max_us": 392,
+        "setup_us": 6541
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6541
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.line_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 82,
+          "avg_us": 103,
+          "p50_us": 99,
+          "p95_us": 123,
+          "max_us": 191
+        },
+        "setupUs": {
+          "available": true,
+          "count": 24,
+          "min_us": 78683,
+          "avg_us": 85680,
+          "p50_us": 84800,
+          "p95_us": 95438,
+          "max_us": 95815
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 103,
+        "p95_us": 123,
+        "max_us": 191,
+        "setup_us": 85680
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 85680
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.line_preview",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 100,
+          "avg_us": 106,
+          "p50_us": 104,
+          "p95_us": 115,
+          "max_us": 115
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 420805,
+          "avg_us": 445562,
+          "p50_us": 442092,
+          "p95_us": 478666,
+          "max_us": 478666
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 106,
+        "p95_us": 115,
+        "max_us": 115,
+        "setup_us": 445562
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 445562
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.eraser_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 163,
+          "min_us": 4118,
+          "avg_us": 5057,
+          "p50_us": 4542,
+          "p95_us": 7255,
+          "max_us": 12073
+        },
+        "setupUs": {
+          "available": true,
+          "count": 163,
+          "min_us": 5998,
+          "avg_us": 7169,
+          "p50_us": 6828,
+          "p95_us": 9378,
+          "max_us": 22745
+        }
+      },
+      "metrics": {
+        "candidate_count": 128,
+        "exact_check_count": 128,
+        "budget_exceeded_count": 128,
+        "partial_erase_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 5057,
+        "p95_us": 7255,
+        "max_us": 12073,
+        "setup_us": 7169
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 901120,
+        "setup_rss_delta_bytes": 901120,
+        "setup_us": 7169
+      },
+      "exactInvariants": {
+        "eraser_exact_checks_match_candidates": {
+          "metric": "exact_check_count",
+          "actual": 128,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.eraser_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 3648,
+          "avg_us": 4781,
+          "p50_us": 4687,
+          "p95_us": 6276,
+          "max_us": 6395
+        },
+        "setupUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 79004,
+          "avg_us": 87534,
+          "p50_us": 87219,
+          "p95_us": 95569,
+          "max_us": 101941
+        }
+      },
+      "metrics": {
+        "candidate_count": 128,
+        "exact_check_count": 128,
+        "budget_exceeded_count": 128,
+        "partial_erase_count": 0,
+        "allocation_bytes": 557056,
+        "rss_delta_bytes": 557056,
+        "avg_us": 4781,
+        "p95_us": 6276,
+        "max_us": 6395,
+        "setup_us": 87534
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 87534
+      },
+      "exactInvariants": {
+        "eraser_exact_checks_match_candidates": {
+          "metric": "exact_check_count",
+          "actual": 128,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.eraser_preview",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 23111,
+          "avg_us": 28875,
+          "p50_us": 25732,
+          "p95_us": 36597,
+          "max_us": 36597
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 444481,
+          "avg_us": 457070,
+          "p50_us": 456821,
+          "p95_us": 476078,
+          "max_us": 476078
+        }
+      },
+      "metrics": {
+        "candidate_count": 128,
+        "exact_check_count": 128,
+        "budget_exceeded_count": 128,
+        "partial_erase_count": 0,
+        "allocation_bytes": 1425408,
+        "rss_delta_bytes": 1425408,
+        "avg_us": 28875,
+        "p95_us": 36597,
+        "max_us": 36597,
+        "setup_us": 457070
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 457070
+      },
+      "exactInvariants": {
+        "eraser_exact_checks_match_candidates": {
+          "metric": "exact_check_count",
+          "actual": 128,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.eraser_budget_exceeded",
+      "scale": "dense_50k",
+      "classification": "new_only",
+      "fixtureShape": "dense_stress",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 22560,
+          "avg_us": 26571,
+          "p50_us": 26365,
+          "p95_us": 33966,
+          "max_us": 33966
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 447172,
+          "avg_us": 461642,
+          "p50_us": 460618,
+          "p95_us": 470861,
+          "max_us": 470861
+        }
+      },
+      "metrics": {
+        "candidate_count": 128,
+        "exact_check_count": 128,
+        "budget_exceeded_count": 128,
+        "partial_erase_count": 0,
+        "allocation_bytes": 2932736,
+        "rss_delta_bytes": 2932736,
+        "avg_us": 26571,
+        "p95_us": 33966,
+        "max_us": 33966,
+        "setup_us": 461642
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 461642
+      },
+      "exactInvariants": {
+        "partial_erase_count_zero": {
+          "metric": "partial_erase_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.main_capture",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1564,
+          "min_us": 1163,
+          "avg_us": 1271,
+          "p50_us": 1214,
+          "p95_us": 1452,
+          "max_us": 10581
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 22737,
+          "avg_us": 22737,
+          "p50_us": 22737,
+          "p95_us": 22737,
+          "max_us": 22737
+        }
+      },
+      "metrics": {
+        "captured_handle_count": 1000,
+        "captured_element_count": 1000,
+        "resource_descriptor_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 1271,
+        "p95_us": 1452,
+        "max_us": 10581,
+        "setup_us": 22737
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 3817472,
+        "setup_rss_delta_bytes": 3817472,
+        "setup_us": 22737
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "frame.main_capture",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 4307,
+          "min_us": 309,
+          "avg_us": 457,
+          "p50_us": 351,
+          "p95_us": 994,
+          "max_us": 4542
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 92640,
+          "avg_us": 92640,
+          "p50_us": 92640,
+          "p95_us": 92640,
+          "max_us": 92640
+        }
+      },
+      "metrics": {
+        "captured_handle_count": 0,
+        "captured_element_count": 0,
+        "resource_descriptor_count": 0,
+        "allocation_bytes": 278528,
+        "rss_delta_bytes": 278528,
+        "avg_us": 457,
+        "p95_us": 994,
+        "max_us": 4542,
+        "setup_us": 92640
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1212416,
+        "setup_rss_delta_bytes": 1212416,
+        "setup_us": 92640
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "frame.main_capture",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1285,
+          "min_us": 1009,
+          "avg_us": 1541,
+          "p50_us": 1192,
+          "p95_us": 2741,
+          "max_us": 21816
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 468035,
+          "avg_us": 468035,
+          "p50_us": 468035,
+          "p95_us": 468035,
+          "max_us": 468035
+        }
+      },
+      "metrics": {
+        "captured_handle_count": 0,
+        "captured_element_count": 0,
+        "resource_descriptor_count": 0,
+        "allocation_bytes": 1605632,
+        "rss_delta_bytes": 1605632,
+        "avg_us": 1541,
+        "p95_us": 2741,
+        "max_us": 21816,
+        "setup_us": 468035
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1572864,
+        "setup_rss_delta_bytes": 1572864,
+        "setup_us": 468035
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "frame.main_capture",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 740,
+          "min_us": 1679,
+          "avg_us": 2686,
+          "p50_us": 2052,
+          "p95_us": 4737,
+          "max_us": 23800
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 933835,
+          "avg_us": 933835,
+          "p50_us": 933835,
+          "p95_us": 933835,
+          "max_us": 933835
+        }
+      },
+      "metrics": {
+        "captured_handle_count": 0,
+        "captured_element_count": 0,
+        "resource_descriptor_count": 0,
+        "allocation_bytes": 3178496,
+        "rss_delta_bytes": 3178496,
+        "avg_us": 2686,
+        "p95_us": 4737,
+        "max_us": 23800,
+        "setup_us": 933835
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 2670592,
+        "setup_rss_delta_bytes": 2670592,
+        "setup_us": 933835
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "frame.overlay_capture",
+      "scale": "active_previews",
+      "classification": "new_only",
+      "fixtureShape": "active_preview",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 153700,
+          "min_us": 8,
+          "avg_us": 11,
+          "p50_us": 9,
+          "p95_us": 16,
+          "max_us": 697
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 393,
+          "avg_us": 393,
+          "p50_us": 393,
+          "p95_us": 393,
+          "max_us": 393
+        }
+      },
+      "metrics": {
+        "captured_handle_count": 1,
+        "overlay_preview_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 11,
+        "p95_us": 16,
+        "max_us": 697,
+        "setup_us": 393
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 393
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "frame.paint_candidates",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 575,
+          "min_us": 3205,
+          "avg_us": 3473,
+          "p50_us": 3383,
+          "p95_us": 3778,
+          "max_us": 17268
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 23422,
+          "avg_us": 23422,
+          "p50_us": 23422,
+          "p95_us": 23422,
+          "max_us": 23422
+        }
+      },
+      "metrics": {
+        "candidate_count": 1000,
+        "offscreen_layer_count": 0,
+        "save_layer_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 3473,
+        "p95_us": 3778,
+        "max_us": 17268,
+        "setup_us": 23422
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 6914048,
+        "setup_rss_delta_bytes": 6914048,
+        "setup_us": 23422
+      },
+      "exactInvariants": {
+        "save_layer_count_zero": {
+          "metric": "save_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "offscreen_layer_count_zero": {
+          "metric": "offscreen_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.paint_candidates",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 4325,
+          "min_us": 310,
+          "avg_us": 455,
+          "p50_us": 356,
+          "p95_us": 967,
+          "max_us": 5757
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 102914,
+          "avg_us": 102914,
+          "p50_us": 102914,
+          "p95_us": 102914,
+          "max_us": 102914
+        }
+      },
+      "metrics": {
+        "candidate_count": 0,
+        "offscreen_layer_count": 0,
+        "save_layer_count": 0,
+        "allocation_bytes": 278528,
+        "rss_delta_bytes": 278528,
+        "avg_us": 455,
+        "p95_us": 967,
+        "max_us": 5757,
+        "setup_us": 102914
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1654784,
+        "setup_rss_delta_bytes": 1654784,
+        "setup_us": 102914
+      },
+      "exactInvariants": {
+        "save_layer_count_zero": {
+          "metric": "save_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "offscreen_layer_count_zero": {
+          "metric": "offscreen_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.paint_candidates",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1348,
+          "min_us": 940,
+          "avg_us": 1469,
+          "p50_us": 1080,
+          "p95_us": 2736,
+          "max_us": 13845
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 494808,
+          "avg_us": 494808,
+          "p50_us": 494808,
+          "p95_us": 494808,
+          "max_us": 494808
+        }
+      },
+      "metrics": {
+        "candidate_count": 0,
+        "offscreen_layer_count": 0,
+        "save_layer_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 1469,
+        "p95_us": 2736,
+        "max_us": 13845,
+        "setup_us": 494808
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 13025280,
+        "setup_rss_delta_bytes": 13025280,
+        "setup_us": 494808
+      },
+      "exactInvariants": {
+        "save_layer_count_zero": {
+          "metric": "save_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "offscreen_layer_count_zero": {
+          "metric": "offscreen_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "frame.paint_candidates",
+      "scale": "100k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 647,
+          "min_us": 1803,
+          "avg_us": 3073,
+          "p50_us": 2248,
+          "p95_us": 5821,
+          "max_us": 27461
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 1127703,
+          "avg_us": 1127703,
+          "p50_us": 1127703,
+          "p95_us": 1127703,
+          "max_us": 1127703
+        }
+      },
+      "metrics": {
+        "candidate_count": 0,
+        "offscreen_layer_count": 0,
+        "save_layer_count": 0,
+        "allocation_bytes": 3178496,
+        "rss_delta_bytes": 3178496,
+        "avg_us": 3073,
+        "p95_us": 5821,
+        "max_us": 27461,
+        "setup_us": 1127703
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1127703
+      },
+      "exactInvariants": {
+        "save_layer_count_zero": {
+          "metric": "save_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "offscreen_layer_count_zero": {
+          "metric": "offscreen_layer_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "resources.resolve_sync",
+      "scale": "1k_resources",
+      "classification": "new_only",
+      "fixtureShape": "resource_set",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 300,
+          "min_us": 37,
+          "avg_us": 69,
+          "p50_us": 52,
+          "p95_us": 111,
+          "max_us": 798
+        },
+        "setupUs": {
+          "available": true,
+          "count": 300,
+          "min_us": 5856,
+          "avg_us": 6528,
+          "p50_us": 6348,
+          "p95_us": 7021,
+          "max_us": 23394
+        }
+      },
+      "metrics": {
+        "surface_resource_session_resolver_calls": 32,
+        "session_cache_hits": 32,
+        "repaint_count": 0,
+        "cold_sync_resolver_calls": 32,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 69,
+        "p95_us": 111,
+        "max_us": 798,
+        "setup_us": 6528
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 524288,
+        "setup_rss_delta_bytes": 524288,
+        "setup_us": 6528
+      },
+      "exactInvariants": {
+        "resolver_calls_bounded": {
+          "metric": "surface_resource_session_resolver_calls",
+          "actual": 32,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "resources.resolve_sync_cold_budget",
+      "scale": "1k_uncached_image_records",
+      "classification": "new_only",
+      "fixtureShape": "resource_set",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 291,
+          "min_us": 85,
+          "avg_us": 132,
+          "p50_us": 102,
+          "p95_us": 276,
+          "max_us": 940
+        },
+        "setupUs": {
+          "available": true,
+          "count": 291,
+          "min_us": 5853,
+          "avg_us": 6663,
+          "p50_us": 6395,
+          "p95_us": 7529,
+          "max_us": 25418
+        }
+      },
+      "metrics": {
+        "session_budget_resolver_calls": 128,
+        "budget_placeholders": 1,
+        "throttled_repaint_count": 1,
+        "cold_sync_resolver_calls": 128,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 132,
+        "p95_us": 276,
+        "max_us": 940,
+        "setup_us": 6663
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 524288,
+        "setup_rss_delta_bytes": 524288,
+        "setup_us": 6663
+      },
+      "exactInvariants": {
+        "session_budget_resolver_calls_lte_128": {
+          "metric": "session_budget_resolver_calls",
+          "actual": 128,
+          "expected": null,
+          "max": 128,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "resources.mark_dirty",
+      "scale": "1k_resources",
+      "classification": "new_only",
+      "fixtureShape": "resource_set",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 289,
+          "min_us": 34,
+          "avg_us": 69,
+          "p50_us": 47,
+          "p95_us": 86,
+          "max_us": 1422
+        },
+        "setupUs": {
+          "available": true,
+          "count": 289,
+          "min_us": 5916,
+          "avg_us": 6779,
+          "p50_us": 6531,
+          "p95_us": 7623,
+          "max_us": 26818
+        }
+      },
+      "metrics": {
+        "repaint_count": 1,
+        "target_session_cache_invalidation_cost": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 69,
+        "p95_us": 86,
+        "max_us": 1422,
+        "setup_us": 6779
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6779
+      },
+      "exactInvariants": {
+        "target_session_cache_invalidation_bounded": {
+          "metric": "target_session_cache_invalidation_cost",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "resources.mark_all_dirty",
+      "scale": "1k_resources",
+      "classification": "new_only",
+      "fixtureShape": "resource_set",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 276,
+          "min_us": 30,
+          "avg_us": 77,
+          "p50_us": 49,
+          "p95_us": 86,
+          "max_us": 2006
+        },
+        "setupUs": {
+          "available": true,
+          "count": 276,
+          "min_us": 5926,
+          "avg_us": 7077,
+          "p50_us": 6741,
+          "p95_us": 8033,
+          "max_us": 25437
+        }
+      },
+      "metrics": {
+        "repaint_count": 1,
+        "all_entry_session_cache_invalidation_cost": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 77,
+        "p95_us": 86,
+        "max_us": 2006,
+        "setup_us": 7077
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 540672,
+        "setup_rss_delta_bytes": 540672,
+        "setup_us": 7077
+      },
+      "exactInvariants": {
+        "all_entry_session_cache_invalidation_bounded": {
+          "metric": "all_entry_session_cache_invalidation_cost",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "projection.read_document",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "projection_split",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "projection_action_total",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 255,
+          "min_us": 759,
+          "avg_us": 1100,
+          "p50_us": 844,
+          "p95_us": 1885,
+          "max_us": 2679
+        },
+        "setupUs": {
+          "available": true,
+          "count": 255,
+          "min_us": 5906,
+          "avg_us": 6673,
+          "p50_us": 6463,
+          "p95_us": 7359,
+          "max_us": 23243
+        }
+      },
+      "metrics": {
+        "first_read_us": 781,
+        "cache_hit_us": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 1100,
+        "p95_us": 1885,
+        "max_us": 2679,
+        "setup_us": 6673
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6673
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "projection.read_document",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "projection_split",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "projection_action_total",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 8691,
+          "avg_us": 11105,
+          "p50_us": 10277,
+          "p95_us": 15706,
+          "max_us": 17838
+        },
+        "setupUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 81358,
+          "avg_us": 92409,
+          "p50_us": 92425,
+          "p95_us": 102975,
+          "max_us": 104303
+        }
+      },
+      "metrics": {
+        "first_read_us": 9582,
+        "cache_hit_us": 3,
+        "allocation_bytes": 2637824,
+        "rss_delta_bytes": 2637824,
+        "avg_us": 11105,
+        "p95_us": 15706,
+        "max_us": 17838,
+        "setup_us": 92409
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 92409
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "projection.read_document",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "projection_split",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "projection_action_total",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 46932,
+          "avg_us": 50763,
+          "p50_us": 48253,
+          "p95_us": 62052,
+          "max_us": 62052
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 479853,
+          "avg_us": 488691,
+          "p50_us": 489695,
+          "p95_us": 496772,
+          "max_us": 496772
+        }
+      },
+      "metrics": {
+        "first_read_us": 48116,
+        "cache_hit_us": 2,
+        "allocation_bytes": 6684672,
+        "rss_delta_bytes": 6684672,
+        "avg_us": 50763,
+        "p95_us": 62052,
+        "max_us": 62052,
+        "setup_us": 488691
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 488691
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "projection.read_document",
+      "scale": "100k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "projection_split",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "projection_action_total",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 94583,
+          "avg_us": 99237,
+          "p50_us": 99311,
+          "p95_us": 103465,
+          "max_us": 103465
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 958691,
+          "avg_us": 1031615,
+          "p50_us": 1013973,
+          "p95_us": 1088014,
+          "max_us": 1088014
+        }
+      },
+      "metrics": {
+        "first_read_us": 99466,
+        "cache_hit_us": 3,
+        "allocation_bytes": 13762560,
+        "rss_delta_bytes": 13762560,
+        "avg_us": 99237,
+        "p95_us": 103465,
+        "max_us": 103465,
+        "setup_us": 1031615
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1031615
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "codec.decode_v1",
+      "scale": "all_fixtures",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "codec_fixture",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 66062,
+          "min_us": 20,
+          "avg_us": 27,
+          "p50_us": 22,
+          "p95_us": 43,
+          "max_us": 1773
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 199,
+          "avg_us": 199,
+          "p50_us": 199,
+          "p95_us": 199,
+          "max_us": 199
+        }
+      },
+      "metrics": {
+        "decoded_element_count": 1,
+        "allocation_bytes": 809,
+        "error_payload": "valid",
+        "rss_delta_bytes": 0,
+        "avg_us": 27,
+        "p95_us": 43,
+        "max_us": 1773,
+        "setup_us": 199
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 199
+      },
+      "exactInvariants": {
+        "error_payload_matches_fixture": {
+          "metric": "error_payload",
+          "actual": "valid",
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "load_document.success",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 250,
+          "min_us": 5348,
+          "avg_us": 6531,
+          "p50_us": 6298,
+          "p95_us": 7413,
+          "max_us": 22361
+        },
+        "setupUs": {
+          "available": true,
+          "count": 250,
+          "min_us": 1237,
+          "avg_us": 1436,
+          "p50_us": 1351,
+          "p95_us": 1673,
+          "max_us": 4959
+        }
+      },
+      "metrics": {
+        "loaded_element_count": 1000,
+        "rebuild_cost": 128,
+        "allocation_bytes": 16384,
+        "rss_delta_bytes": 16384,
+        "avg_us": 6531,
+        "p95_us": 7413,
+        "max_us": 22361,
+        "setup_us": 1436
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1436
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.success",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 69445,
+          "avg_us": 82535,
+          "p50_us": 82344,
+          "p95_us": 104276,
+          "max_us": 109407
+        },
+        "setupUs": {
+          "available": true,
+          "count": 20,
+          "min_us": 14293,
+          "avg_us": 20487,
+          "p50_us": 16365,
+          "p95_us": 24455,
+          "max_us": 88885
+        }
+      },
+      "metrics": {
+        "loaded_element_count": 10000,
+        "rebuild_cost": 128,
+        "allocation_bytes": 8273920,
+        "rss_delta_bytes": 8273920,
+        "avg_us": 82535,
+        "p95_us": 104276,
+        "max_us": 109407,
+        "setup_us": 20487
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 20487
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.success",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 449791,
+          "avg_us": 468264,
+          "p50_us": 467285,
+          "p95_us": 500281,
+          "max_us": 500281
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 77302,
+          "avg_us": 83529,
+          "p50_us": 82261,
+          "p95_us": 91271,
+          "max_us": 91271
+        }
+      },
+      "metrics": {
+        "loaded_element_count": 50000,
+        "rebuild_cost": 128,
+        "allocation_bytes": 93667328,
+        "rss_delta_bytes": 93667328,
+        "avg_us": 468264,
+        "p95_us": 500281,
+        "max_us": 500281,
+        "setup_us": 83529
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 83529
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.success",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 884133,
+          "avg_us": 967492,
+          "p50_us": 969159,
+          "p95_us": 1035041,
+          "max_us": 1035041
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 138263,
+          "avg_us": 146027,
+          "p50_us": 145506,
+          "p95_us": 153867,
+          "max_us": 153867
+        }
+      },
+      "metrics": {
+        "loaded_element_count": 100000,
+        "rebuild_cost": 128,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 967492,
+        "p95_us": 1035041,
+        "max_us": 1035041,
+        "setup_us": 146027
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 27262976,
+        "setup_rss_delta_bytes": 27262976,
+        "setup_us": 146027
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.breakdown",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "codec_fixture",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 134,
+          "min_us": 12350,
+          "avg_us": 14998,
+          "p50_us": 14180,
+          "p95_us": 19709,
+          "max_us": 50055
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 14066,
+          "avg_us": 14066,
+          "p50_us": 14066,
+          "p95_us": 14066,
+          "max_us": 14066
+        }
+      },
+      "metrics": {
+        "decode_us": 6921,
+        "runtime_construct_us": 98,
+        "load_document_us": 5733,
+        "first_projection_us": 2684,
+        "loaded_element_count": 1000,
+        "projected_element_count": 1000,
+        "encoded_byte_count": 340405,
+        "allocation_bytes": 1228800,
+        "rss_delta_bytes": 1228800,
+        "avg_us": 14998,
+        "p95_us": 19709,
+        "max_us": 50055,
+        "setup_us": 14066
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 4063232,
+        "setup_rss_delta_bytes": 4063232,
+        "setup_us": 14066
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.breakdown",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "codec_fixture",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 11,
+          "min_us": 153257,
+          "avg_us": 189357,
+          "p50_us": 183207,
+          "p95_us": 236042,
+          "max_us": 236042
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 96784,
+          "avg_us": 96784,
+          "p50_us": 96784,
+          "p95_us": 96784,
+          "max_us": 96784
+        }
+      },
+      "metrics": {
+        "decode_us": 78357,
+        "runtime_construct_us": 146,
+        "load_document_us": 84870,
+        "first_projection_us": 8952,
+        "loaded_element_count": 10000,
+        "projected_element_count": 10000,
+        "encoded_byte_count": 3369551,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 189357,
+        "p95_us": 236042,
+        "max_us": 236042,
+        "setup_us": 96784
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 96784
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.breakdown",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "codec_fixture",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 924430,
+          "avg_us": 952821,
+          "p50_us": 955841,
+          "p95_us": 977087,
+          "max_us": 977087
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 417308,
+          "avg_us": 417308,
+          "p50_us": 417308,
+          "p95_us": 417308,
+          "max_us": 417308
+        }
+      },
+      "metrics": {
+        "decode_us": 371778,
+        "runtime_construct_us": 156,
+        "load_document_us": 499286,
+        "first_projection_us": 51942,
+        "loaded_element_count": 50000,
+        "projected_element_count": 50000,
+        "encoded_byte_count": 16872388,
+        "allocation_bytes": 22413312,
+        "rss_delta_bytes": 22413312,
+        "avg_us": 952821,
+        "p95_us": 977087,
+        "max_us": 977087,
+        "setup_us": 417308
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 417308
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "load_document.failure",
+      "scale": "invalid_1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "invalid_document",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 287,
+          "min_us": 59,
+          "avg_us": 108,
+          "p50_us": 96,
+          "p95_us": 148,
+          "max_us": 1214
+        },
+        "setupUs": {
+          "available": true,
+          "count": 287,
+          "min_us": 5919,
+          "avg_us": 6833,
+          "p50_us": 6549,
+          "p95_us": 7565,
+          "max_us": 26327
+        }
+      },
+      "metrics": {
+        "failure_mutation_count": 0,
+        "committed_mutation_count": 0,
+        "error_payload": "duplicateElementId",
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 108,
+        "p95_us": 148,
+        "max_us": 1214,
+        "setup_us": 6833
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 540672,
+        "setup_rss_delta_bytes": 540672,
+        "setup_us": 6833
+      },
+      "exactInvariants": {
+        "committed_mutation_count_zero": {
+          "metric": "committed_mutation_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "load_document.failure",
+      "scale": "invalid_10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "invalid_document",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 142,
+          "avg_us": 163,
+          "p50_us": 161,
+          "p95_us": 187,
+          "max_us": 196
+        },
+        "setupUs": {
+          "available": true,
+          "count": 22,
+          "min_us": 82734,
+          "avg_us": 91706,
+          "p50_us": 90468,
+          "p95_us": 106396,
+          "max_us": 106506
+        }
+      },
+      "metrics": {
+        "failure_mutation_count": 0,
+        "committed_mutation_count": 0,
+        "error_payload": "duplicateElementId",
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 163,
+        "p95_us": 187,
+        "max_us": 196,
+        "setup_us": 91706
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 91706
+      },
+      "exactInvariants": {
+        "committed_mutation_count_zero": {
+          "metric": "committed_mutation_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "load_document.failure",
+      "scale": "invalid_50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "invalid_document",
+      "measurementBoundary": {
+        "timedScope": "lifecycle",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "measured_lifecycle",
+        "primaryTiming": "lifecycle",
+        "primaryMemory": "lifecycle",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 151,
+          "avg_us": 163,
+          "p50_us": 160,
+          "p95_us": 179,
+          "max_us": 179
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 456816,
+          "avg_us": 474438,
+          "p50_us": 468524,
+          "p95_us": 511921,
+          "max_us": 511921
+        }
+      },
+      "metrics": {
+        "failure_mutation_count": 0,
+        "committed_mutation_count": 0,
+        "error_payload": "duplicateElementId",
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 163,
+        "p95_us": 179,
+        "max_us": 179,
+        "setup_us": 474438
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1540096,
+        "setup_rss_delta_bytes": 1540096,
+        "setup_us": 474438
+      },
+      "exactInvariants": {
+        "committed_mutation_count_zero": {
+          "metric": "committed_mutation_count",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.query_point",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 12151,
+          "min_us": 141,
+          "avg_us": 160,
+          "p50_us": 152,
+          "p95_us": 206,
+          "max_us": 1581
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 29215,
+          "avg_us": 29215,
+          "p50_us": 29215,
+          "p95_us": 29215,
+          "max_us": 29215
+        }
+      },
+      "metrics": {
+        "tile_count": 4,
+        "fallback_count": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 160,
+        "p95_us": 206,
+        "max_us": 1581,
+        "setup_us": 29215
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 2490368,
+        "setup_rss_delta_bytes": 2490368,
+        "setup_us": 29215
+      },
+      "exactInvariants": {
+        "fallback_count_bounded": {
+          "metric": "fallback_count",
+          "actual": 0,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.query_point",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 3467,
+          "min_us": 340,
+          "avg_us": 565,
+          "p50_us": 428,
+          "p95_us": 1261,
+          "max_us": 24931
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 107962,
+          "avg_us": 107962,
+          "p50_us": 107962,
+          "p95_us": 107962,
+          "max_us": 107962
+        }
+      },
+      "metrics": {
+        "tile_count": 4,
+        "fallback_count": 4097,
+        "allocation_bytes": 278528,
+        "rss_delta_bytes": 278528,
+        "avg_us": 565,
+        "p95_us": 1261,
+        "max_us": 24931,
+        "setup_us": 107962
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 107962
+      },
+      "exactInvariants": {
+        "fallback_count_bounded": {
+          "metric": "fallback_count",
+          "actual": 4097,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.query_point",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1153,
+          "min_us": 1049,
+          "avg_us": 1705,
+          "p50_us": 1373,
+          "p95_us": 3194,
+          "max_us": 12558
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 482938,
+          "avg_us": 482938,
+          "p50_us": 482938,
+          "p95_us": 482938,
+          "max_us": 482938
+        }
+      },
+      "metrics": {
+        "tile_count": 4,
+        "fallback_count": 4097,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 1705,
+        "p95_us": 3194,
+        "max_us": 12558,
+        "setup_us": 482938
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 294912,
+        "setup_rss_delta_bytes": 294912,
+        "setup_us": 482938
+      },
+      "exactInvariants": {
+        "fallback_count_bounded": {
+          "metric": "fallback_count",
+          "actual": 4097,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.query_point",
+      "scale": "100k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 658,
+          "min_us": 1871,
+          "avg_us": 3022,
+          "p50_us": 2387,
+          "p95_us": 5358,
+          "max_us": 28851
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 1056269,
+          "avg_us": 1056269,
+          "p50_us": 1056269,
+          "p95_us": 1056269,
+          "max_us": 1056269
+        }
+      },
+      "metrics": {
+        "tile_count": 4,
+        "fallback_count": 4097,
+        "allocation_bytes": 3178496,
+        "rss_delta_bytes": 3178496,
+        "avg_us": 3022,
+        "p95_us": 5358,
+        "max_us": 28851,
+        "setup_us": 1056269
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1056269
+      },
+      "exactInvariants": {
+        "fallback_count_bounded": {
+          "metric": "fallback_count",
+          "actual": 4097,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.query_point_dense_stress",
+      "scale": "dense_50k",
+      "classification": "new_only",
+      "fixtureShape": "dense_stress",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_run_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 1136,
+          "min_us": 1058,
+          "avg_us": 1743,
+          "p50_us": 1378,
+          "p95_us": 3393,
+          "max_us": 15194
+        },
+        "setupUs": {
+          "available": true,
+          "count": 1,
+          "min_us": 499864,
+          "avg_us": 499864,
+          "p50_us": 499864,
+          "p95_us": 499864,
+          "max_us": 499864
+        }
+      },
+      "metrics": {
+        "tile_count": 4,
+        "fallback_count": 4097,
+        "allocation_bytes": 1605632,
+        "rss_delta_bytes": 1605632,
+        "avg_us": 1743,
+        "p95_us": 3393,
+        "max_us": 15194,
+        "setup_us": 499864
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 1359872,
+        "setup_rss_delta_bytes": 1359872,
+        "setup_us": 499864
+      },
+      "exactInvariants": {
+        "fallback_count_bounded": {
+          "metric": "fallback_count",
+          "actual": 4097,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.touched_update",
+      "scale": "1k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 276,
+          "min_us": 211,
+          "avg_us": 328,
+          "p50_us": 318,
+          "p95_us": 466,
+          "max_us": 972
+        },
+        "setupUs": {
+          "available": true,
+          "count": 276,
+          "min_us": 5828,
+          "avg_us": 6860,
+          "p50_us": 6551,
+          "p95_us": 7558,
+          "max_us": 30424
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "rebuilt_ids": 128,
+        "rebuilt_pages": 64,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 328,
+        "p95_us": 466,
+        "max_us": 972,
+        "setup_us": 6860
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 6860
+      },
+      "exactInvariants": {
+        "rebuilt_pages_match_touched_set": {
+          "metric": "rebuilt_pages",
+          "actual": 64,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.touched_update",
+      "scale": "10k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 21,
+          "min_us": 1802,
+          "avg_us": 2184,
+          "p50_us": 1907,
+          "p95_us": 2713,
+          "max_us": 3867
+        },
+        "setupUs": {
+          "available": true,
+          "count": 21,
+          "min_us": 84714,
+          "avg_us": 94269,
+          "p50_us": 92827,
+          "p95_us": 106766,
+          "max_us": 112002
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "rebuilt_ids": 128,
+        "rebuilt_pages": 64,
+        "allocation_bytes": 557056,
+        "rss_delta_bytes": 557056,
+        "avg_us": 2184,
+        "p95_us": 2713,
+        "max_us": 3867,
+        "setup_us": 94269
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 94269
+      },
+      "exactInvariants": {
+        "rebuilt_pages_match_touched_set": {
+          "metric": "rebuilt_pages",
+          "actual": 64,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "spatial.touched_update",
+      "scale": "50k",
+      "classification": "equivalent_legacy",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 8382,
+          "avg_us": 9839,
+          "p50_us": 10309,
+          "p95_us": 10830,
+          "max_us": 10830
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 453694,
+          "avg_us": 507568,
+          "p50_us": 525089,
+          "p95_us": 541526,
+          "max_us": 541526
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "rebuilt_ids": 128,
+        "rebuilt_pages": 64,
+        "allocation_bytes": 5423104,
+        "rss_delta_bytes": 5423104,
+        "avg_us": 9839,
+        "p95_us": 10830,
+        "max_us": 10830,
+        "setup_us": 507568
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 507568
+      },
+      "exactInvariants": {
+        "rebuilt_pages_match_touched_set": {
+          "metric": "rebuilt_pages",
+          "actual": 64,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "runtime.dispose_during_gesture",
+      "scale": "active_selected_overlay_previews",
+      "classification": "new_only",
+      "fixtureShape": "active_preview",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 27508,
+          "min_us": 11,
+          "avg_us": 16,
+          "p50_us": 12,
+          "p95_us": 32,
+          "max_us": 695
+        },
+        "setupUs": {
+          "available": true,
+          "count": 27508,
+          "min_us": 33,
+          "avg_us": 47,
+          "p50_us": 35,
+          "p95_us": 103,
+          "max_us": 1507
+        }
+      },
+      "metrics": {
+        "resolver_calls": 0,
+        "action_events": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 16,
+        "p95_us": 32,
+        "max_us": 695,
+        "setup_us": 47
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 47
+      },
+      "exactInvariants": {
+        "resolver_calls_zero": {
+          "metric": "resolver_calls",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "action_events_zero": {
+          "metric": "action_events",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "diagnostics.disabled_pointer",
+      "scale": "hot_pointer",
+      "classification": "new_only",
+      "fixtureShape": "hot_pointer",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 35046,
+          "min_us": 7,
+          "avg_us": 9,
+          "p50_us": 7,
+          "p95_us": 17,
+          "max_us": 310
+        },
+        "setupUs": {
+          "available": true,
+          "count": 35046,
+          "min_us": 24,
+          "avg_us": 32,
+          "p50_us": 25,
+          "p95_us": 59,
+          "max_us": 895
+        }
+      },
+      "metrics": {
+        "allocation_records": 0,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 9,
+        "p95_us": 17,
+        "max_us": 310,
+        "setup_us": 32
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 32
+      },
+      "exactInvariants": {
+        "allocation_records_zero": {
+          "metric": "allocation_records",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        },
+        "allocation_bytes_zero": {
+          "metric": "allocation_bytes",
+          "actual": 0,
+          "expected": 0,
+          "max": null,
+          "passed": true
+        }
+      }
+    }
+  ]
+}

@@ -7,99 +7,119 @@ import '../../tool/bench/src/benchmark_manifest.dart';
 
 void main() {
   group('benchmark probe adapter', () {
-    test('decodes new-schema action and setup payload', () {
-      final manifest = BenchmarkManifest.load();
-      final benchmarkCase = manifest.cases.first;
-      final scale = benchmarkCase.scales.first;
-      final result = decodeBenchmarkProbeResult(
-        benchmarkCase,
-        scale,
-        _probeStdout(benchmarkCase, includeOldElapsedSamples: false),
-      );
-
-      expect(result.actionUsSamples, [7]);
-      expect(result.runtime.profileId, 'dry_run');
-      expect(result.setupUsSamples, [5000]);
-      expect(result.metrics, containsPair('avg_us', 7));
-      expect(result.setupMetrics, containsPair('setup_us', 5000));
-      expect(result.fixtureShape, benchmarkCase.fixtureShape);
-      expect(
-        result.measurementBoundary.timedScope,
-        benchmarkCase.measurementBoundary.timedScope,
-      );
-    });
-
-    test('rejects old elapsedUsSamples probe payload', () {
-      final manifest = BenchmarkManifest.load();
-      final benchmarkCase = manifest.cases.first;
-      final scale = benchmarkCase.scales.first;
-
-      expect(
-        () => decodeBenchmarkProbeResult(
-          benchmarkCase,
-          scale,
-          _probeStdout(benchmarkCase, includeOldElapsedSamples: true),
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            contains(
-              '${benchmarkCase.id}/${scale.id} old elapsedUsSamples '
-              'probe payload',
-            ),
-          ),
-        ),
-      );
-    });
-
-    test('accepts setup-scope none with empty boundary diagnostic lists', () {
-      final manifest = BenchmarkManifest.load();
-      final benchmarkCase = _withoutSetup(manifest.cases.first);
-      final scale = benchmarkCase.scales.first;
-      final result = decodeBenchmarkProbeResult(
-        benchmarkCase,
-        scale,
-        _probeStdout(
-          benchmarkCase,
-          includeOldElapsedSamples: false,
-          setupUsSamples: const [],
-          setupMetrics: const {},
-        ),
-      );
-
-      expect(result.setupUsSamples, isEmpty);
-      expect(result.setupMetrics, isEmpty);
-      expect(result.measurementBoundary.setupScope, 'none');
-      expect(result.measurementBoundary.setupMetrics, isEmpty);
-      expect(result.measurementBoundary.setupMemoryMetrics, isEmpty);
-    });
-
-    test('rejects mismatched probe profile id', () {
-      final manifest = BenchmarkManifest.load();
-      final benchmarkCase = manifest.cases.first;
-      final scale = benchmarkCase.scales.first;
-
-      expect(
-        () => decodeBenchmarkProbeResult(
-          benchmarkCase,
-          scale,
-          _probeStdout(benchmarkCase, includeOldElapsedSamples: false),
-          expectedProfileId: 'release',
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            contains(
-              '${benchmarkCase.id}/${scale.id} emitted profileId dry_run '
-              'for expected profile release',
-            ),
-          ),
-        ),
-      );
-    });
+    _registerProbeAdapterTests();
   });
+}
+
+void _registerProbeAdapterTests() {
+  test('decodes new-schema action and setup payload', () {
+    final result = _decodesNewSchemaPayload();
+    expect(result.runtime.profileId, 'dry_run');
+  });
+  test('rejects old elapsedUsSamples probe payload', () {
+    expect(_oldPayloadDecode, throwsA(_oldPayloadError()));
+  });
+  test('accepts setup-scope none with empty boundary diagnostic lists', () {
+    final result = _acceptsSetupScopeNone();
+    expect(result.measurementBoundary.setupScope, 'none');
+  });
+  test('rejects mismatched probe profile id', () {
+    expect(_mismatchedProfileDecode, throwsA(_mismatchedProfileError()));
+  });
+}
+
+BenchmarkAdapterResult _decodesNewSchemaPayload() {
+  final context = _firstCaseContext();
+  final result = decodeBenchmarkProbeResult(
+    context.benchmarkCase,
+    context.scale,
+    _probeStdout(context.benchmarkCase, includeOldElapsedSamples: false),
+  );
+
+  expect(result.actionUsSamples, [7]);
+  expect(result.runtime.profileId, 'dry_run');
+  expect(result.setupUsSamples, [5000]);
+  expect(result.metrics, containsPair('avg_us', 7));
+  expect(result.setupMetrics, containsPair('setup_us', 5000));
+  expect(result.fixtureShape, context.benchmarkCase.fixtureShape);
+  expect(
+    result.measurementBoundary.timedScope,
+    context.benchmarkCase.measurementBoundary.timedScope,
+  );
+  return result;
+}
+
+void _oldPayloadDecode() {
+  final context = _firstCaseContext();
+  decodeBenchmarkProbeResult(
+    context.benchmarkCase,
+    context.scale,
+    _probeStdout(context.benchmarkCase, includeOldElapsedSamples: true),
+  );
+}
+
+Matcher _oldPayloadError() {
+  final context = _firstCaseContext();
+  return isA<StateError>().having(
+    (error) => error.message,
+    'message',
+    contains(
+      '${context.benchmarkCase.id}/${context.scale.id} old '
+      'elapsedUsSamples probe payload',
+    ),
+  );
+}
+
+BenchmarkAdapterResult _acceptsSetupScopeNone() {
+  final manifest = BenchmarkManifest.load();
+  final benchmarkCase = _withoutSetup(manifest.cases.first);
+  final scale = benchmarkCase.scales.first;
+  final result = decodeBenchmarkProbeResult(
+    benchmarkCase,
+    scale,
+    _probeStdout(
+      benchmarkCase,
+      includeOldElapsedSamples: false,
+      setupUsSamples: const [],
+      setupMetrics: const {},
+    ),
+  );
+
+  expect(result.setupUsSamples, isEmpty);
+  expect(result.setupMetrics, isEmpty);
+  expect(result.measurementBoundary.setupScope, 'none');
+  expect(result.measurementBoundary.setupMetrics, isEmpty);
+  expect(result.measurementBoundary.setupMemoryMetrics, isEmpty);
+  return result;
+}
+
+void _mismatchedProfileDecode() {
+  final context = _firstCaseContext();
+  decodeBenchmarkProbeResult(
+    context.benchmarkCase,
+    context.scale,
+    _probeStdout(context.benchmarkCase, includeOldElapsedSamples: false),
+    expectedProfileId: 'release',
+  );
+}
+
+Matcher _mismatchedProfileError() {
+  final context = _firstCaseContext();
+  return isA<StateError>().having(
+    (error) => error.message,
+    'message',
+    contains(
+      '${context.benchmarkCase.id}/${context.scale.id} emitted profileId '
+      'dry_run for expected profile release',
+    ),
+  );
+}
+
+({BenchmarkCase benchmarkCase, BenchmarkScale scale}) _firstCaseContext() {
+  final manifest = BenchmarkManifest.load();
+  final benchmarkCase = manifest.cases.first;
+
+  return (benchmarkCase: benchmarkCase, scale: benchmarkCase.scales.first);
 }
 
 String _probeStdout(

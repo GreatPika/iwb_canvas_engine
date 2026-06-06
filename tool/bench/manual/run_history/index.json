@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "updatedAtUtc": "2026-06-06T19:46:00.000Z",
+  "records": [
+    {
+      "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
+      "label": "sparse-update-source-validation",
+      "recordedAtUtc": "2026-06-06T19:42:00.000Z",
+      "subjectGitHead": "9369b6f2",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Pixel 6",
+        "id": "23081FDF6000L2",
+        "os": "Android 16"
+      },
+      "caseCount": 3
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_unrecord_existing_full_release_report.json",
+      "label": "existing-full-release-report",
+      "recordedAtUtc": "2026-06-06T19:45:00.000Z",
+      "subjectGitHead": "unrecorded-existing-local-report",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Pixel 6",
+        "id": "23081FDF6000L2",
+        "os": "Android 16"
+      },
+      "caseCount": 78
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-06_xiaomi_22081283g_unrecord_existing_full_release_report.json",
+      "label": "existing-full-release-report",
+      "recordedAtUtc": "2026-06-06T19:46:00.000Z",
+      "subjectGitHead": "unrecorded-existing-local-report",
+      "repositoryDirty": true,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "22081283G",
+        "os": "Android 14"
+      },
+      "caseCount": 78
+    }
+  ]
+}

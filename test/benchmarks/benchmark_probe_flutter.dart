@@ -39,106 +39,101 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 
 void main() {
-  // Lifecycle proof assertions live in named helpers so each scenario remains
-  // independently reviewable instead of one oversized test body.
-  // ignore: missing-test-assertion
-  test('benchmark probe executes requested case', _probeExecutesRequestedCase);
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test('probe options validate profile ids', _probeOptionsValidateProfileIds);
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _registerProbeProtocolTests();
+  _registerProbeLifecycleTests();
+  _registerCaseRegistryTests();
+  _registerPreparedCaseTests();
+}
+
+void _registerProbeProtocolTests() {
+  _helperTest(
+    'benchmark probe executes requested case',
+    _probeExecutesRequestedCase,
+  );
+  _helperTest(
+    'probe options validate profile ids',
+    _probeOptionsValidateProfileIds,
+  );
+}
+
+void _registerProbeLifecycleTests() {
+  _helperTest(
     'case plan separates setup timing from action samples',
     _casePlanSeparatesSetupTimingFromActionSamples,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'case plan runs cleanup after action failure',
     _casePlanRunsCleanupAfterActionFailure,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'case plan fails before timing claims when prepare fails',
     _casePlanFailsBeforeTimingClaimsWhenPrepareFails,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test('case plan fails when cleanup fails', _casePlanFailsWhenCleanupFails);
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
+    'case plan fails when cleanup fails',
+    _casePlanFailsWhenCleanupFails,
+  );
+  _helperTest(
     'per-run case plan does not reuse warmup fixture for measured samples',
     _perRunCasePlanDoesNotReuseWarmupFixtureForMeasuredSamples,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'per-run lifecycle case plan reuses measured fixture after warmup',
     _perRunLifecycleCasePlanReusesMeasuredFixtureAfterWarmup,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+}
+
+void _registerCaseRegistryTests() {
+  _helperTest(
     'case plan fails closed for missing boundary registry entries',
     _casePlanFailsClosedForMissingBoundaryRegistryEntries,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'case plan fails when operation lacks boundary metadata',
     _casePlanFailsWhenOperationLacksBoundaryMetadata,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'case plan accepts no setup boundary metadata',
     _casePlanAcceptsNoSetupBoundaryMetadata,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'real case plans use manifest boundary table',
     _realCasePlansUseManifestBoundaryTable,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'spatial case plans enforce ordinary and dense fixture shapes',
     _spatialCasePlansEnforceFixtureShapes,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'case plan rejects timed and memory boundary drift',
     _casePlanRejectsBoundaryPolicyDrift,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+}
+
+void _registerPreparedCaseTests() {
+  _helperTest(
     'projection case excludes runtime setup from action samples',
     _projectionCaseExcludesRuntimeSetupFromActionSamples,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'resource and diagnostic case plans expose prepared setup diagnostics',
     _resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'load document breakdown records public load phases',
     _loadDocumentBreakdownRecordsPublicLoadPhases,
   );
-  // Assertions live in the named helper; see comment above.
-  // ignore: missing-test-assertion
-  test(
+  _helperTest(
     'edit input and frame case plans execute prepared action samples',
     _editInputAndFrameCasePlansExecutePreparedActionSamples,
   );
+}
+
+void _helperTest(String description, FutureOr<void> Function() body) {
+  // Assertions live in named helpers so each scenario remains independently
+  // reviewable while the test registration stays compact.
+  // ignore: missing-test-assertion
+  test(description, body);
 }
 
 Future<void> _probeExecutesRequestedCase() async {
@@ -420,20 +415,25 @@ Future<void> _casePlanAcceptsNoSetupBoundaryMetadata() async {
   );
   expect(boundary.isComplete, isTrue);
 
-  final result = await _runProbePlan(
-    _fakeOptions(),
-    _BenchmarkCasePlan(
-      setupScope: boundary.setupScope,
-      setupMetricKeys: boundary.setupMetrics,
-      setupMemoryMetricKeys: boundary.setupMemoryMetrics,
-      prepare: () => const _PreparedProbeFixture(value: 'fixture'),
-      measure: (fixture) {
-        expect(fixture, 'fixture');
-        return const {'allocation_bytes': 10, 'rss_delta_bytes': 20};
-      },
-      cleanup: (fixture) => expect(fixture, 'fixture'),
-    ),
+  final result = await _runProbePlan(_fakeOptions(), _noSetupPlan(boundary));
+  _expectNoSetupResult(result);
+}
+
+_BenchmarkCasePlan _noSetupPlan(_CaseBoundaryRegistryEntry boundary) {
+  return _BenchmarkCasePlan(
+    setupScope: boundary.setupScope,
+    setupMetricKeys: boundary.setupMetrics,
+    setupMemoryMetricKeys: boundary.setupMemoryMetrics,
+    prepare: () => const _PreparedProbeFixture(value: 'fixture'),
+    measure: (fixture) {
+      expect(fixture, 'fixture');
+      return const {'allocation_bytes': 10, 'rss_delta_bytes': 20};
+    },
+    cleanup: (fixture) => expect(fixture, 'fixture'),
   );
+}
+
+void _expectNoSetupResult(Map<String, Object?> result) {
   final metrics = result['metrics'] as Map<String, Object?>;
   final setupMetrics = result['setupMetrics'] as Map<String, Object?>;
 
@@ -483,6 +483,11 @@ void _realCasePlansUseManifestBoundaryTable() {
 }
 
 void _spatialCasePlansEnforceFixtureShapes() {
+  _ordinarySpatialQueryRejectsDenseFixtureShape();
+  _denseSpatialQueryRejectsOrdinaryFixtureShape();
+}
+
+void _ordinarySpatialQueryRejectsDenseFixtureShape() {
   const invalidOrdinaryRegistry = _CaseBoundaryRegistry({
     'spatial.query_point': _CaseBoundaryRegistryEntry(
       timedScope: 'action_only',
@@ -493,18 +498,6 @@ void _spatialCasePlansEnforceFixtureShapes() {
       setupMetrics: ['setup_us'],
       setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
       fixtureShape: 'dense_stress',
-    ),
-  });
-  const invalidDenseRegistry = _CaseBoundaryRegistry({
-    'spatial.query_point_dense_stress': _CaseBoundaryRegistryEntry(
-      timedScope: 'action_only',
-      setupScope: 'per_run_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      setupMetrics: ['setup_us'],
-      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
-      fixtureShape: 'normal_spread',
     ),
   });
 
@@ -522,6 +515,22 @@ void _spatialCasePlansEnforceFixtureShapes() {
       ),
     ),
   );
+}
+
+void _denseSpatialQueryRejectsOrdinaryFixtureShape() {
+  const invalidDenseRegistry = _CaseBoundaryRegistry({
+    'spatial.query_point_dense_stress': _CaseBoundaryRegistryEntry(
+      timedScope: 'action_only',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
+      setupMetrics: ['setup_us'],
+      setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
+      fixtureShape: 'normal_spread',
+    ),
+  });
+
   expect(
     () => _casePlan(
       'spatial.query_point_dense_stress',
@@ -669,57 +678,79 @@ Future<Map<String, Object?>> _runProbePlan(
   _ProbeOptions options,
   _BenchmarkCasePlan plan,
 ) async {
-  final samples = <int>[];
-  final setupUsSamples = <int>[];
-  final metrics = <String, Object?>{};
-  final setupMetrics = <String, Object?>{};
+  final state = _ProbeRunState();
   _MeasuredSetup? reusableSetup;
   try {
-    for (var index = 0; index < options.warmups; index++) {
-      await _measurePlanSample(plan, null);
-    }
-
-    reusableSetup = plan.reusesPreparedFixture
-        ? await _measureSetup(plan)
-        : null;
-    if (reusableSetup != null && plan.setupScope != 'none') {
-      setupUsSamples.add(reusableSetup.setupUs);
-      setupMetrics.addAll(reusableSetup.setupMetrics);
-    }
-
-    final total = Stopwatch()..start();
-    do {
-      final sample = await _measurePlanSample(plan, reusableSetup);
-      samples.add(sample.elapsedUs);
-      if (reusableSetup == null && plan.setupScope != 'none') {
-        setupUsSamples.add(sample.setupUs);
-        setupMetrics.addAll(sample.setupMetrics);
-      }
-      metrics.addAll(sample.metrics);
-    } while (_needsMoreSamples(
-      options,
-      samples.length,
-      total.elapsedMilliseconds,
-    ));
-    total.stop();
+    await _runWarmupSamples(options, plan);
+    reusableSetup = await _prepareReusableSetup(plan, state);
+    await _runMeasuredSamples(options, plan, state, reusableSetup);
   } finally {
     if (reusableSetup != null) {
       await plan.cleanup(reusableSetup.prepared.value);
     }
   }
-  metrics.addAll(_timingMetrics(samples));
-  if (setupUsSamples.isNotEmpty) {
-    final setupUs = _avgUs(setupUsSamples);
-    metrics['setup_us'] = setupUs;
-    setupMetrics['setup_us'] = setupUs;
+
+  return _probeResultJson(options, plan, state);
+}
+
+Future<void> _runWarmupSamples(
+  _ProbeOptions options,
+  _BenchmarkCasePlan plan,
+) async {
+  for (var index = 0; index < options.warmups; index++) {
+    await _measurePlanSample(plan, null);
   }
+}
+
+Future<_MeasuredSetup?> _prepareReusableSetup(
+  _BenchmarkCasePlan plan,
+  _ProbeRunState state,
+) async {
+  if (!plan.reusesPreparedFixture) {
+    return null;
+  }
+  final reusableSetup = await _measureSetup(plan);
+  if (plan.setupScope != 'none') {
+    state.recordSetup(reusableSetup);
+  }
+
+  return reusableSetup;
+}
+
+Future<void> _runMeasuredSamples(
+  _ProbeOptions options,
+  _BenchmarkCasePlan plan,
+  _ProbeRunState state,
+  _MeasuredSetup? reusableSetup,
+) async {
+  final total = Stopwatch()..start();
+  do {
+    final sample = await _measurePlanSample(plan, reusableSetup);
+    state.recordSample(
+      sample,
+      includeSetup: reusableSetup == null && plan.setupScope != 'none',
+    );
+  } while (_needsMoreSamples(
+    options,
+    state.samples.length,
+    total.elapsedMilliseconds,
+  ));
+  total.stop();
+}
+
+Map<String, Object?> _probeResultJson(
+  _ProbeOptions options,
+  _BenchmarkCasePlan plan,
+  _ProbeRunState state,
+) {
+  state.finalizeMetrics();
 
   return {
     'probeSchemaVersion': benchmarkToolSchemaVersion,
-    'actionUsSamples': samples,
-    'setupUsSamples': setupUsSamples,
-    'metrics': metrics,
-    'setupMetrics': setupMetrics,
+    'actionUsSamples': state.samples,
+    'setupUsSamples': state.setupUsSamples,
+    'metrics': state.metrics,
+    'setupMetrics': state.setupMetrics,
     'measurementBoundary': plan.measurementBoundaryJson(),
     'fixtureShape': plan.fixtureShape,
     'runtime': {
@@ -729,6 +760,37 @@ Future<Map<String, Object?>> _runProbePlan(
       'debugInvariantMode': false,
     },
   };
+}
+
+final class _ProbeRunState {
+  final List<int> samples = [];
+  final List<int> setupUsSamples = [];
+  final Map<String, Object?> metrics = {};
+  final Map<String, Object?> setupMetrics = {};
+
+  void recordSetup(_MeasuredSetup setup) {
+    setupUsSamples.add(setup.setupUs);
+    setupMetrics.addAll(setup.setupMetrics);
+  }
+
+  void recordSample(_ProbeSample sample, {required bool includeSetup}) {
+    samples.add(sample.elapsedUs);
+    if (includeSetup) {
+      setupUsSamples.add(sample.setupUs);
+      setupMetrics.addAll(sample.setupMetrics);
+    }
+    metrics.addAll(sample.metrics);
+  }
+
+  void finalizeMetrics() {
+    metrics.addAll(_timingMetrics(samples));
+    if (setupUsSamples.isEmpty) {
+      return;
+    }
+    final setupUs = _avgUs(setupUsSamples);
+    metrics['setup_us'] = setupUs;
+    setupMetrics['setup_us'] = setupUs;
+  }
 }
 
 bool _assertionsEnabled() {
@@ -903,7 +965,61 @@ _BenchmarkCasePlan _casePlan(
   final config = CanvasRuntimeConfig(
     pointerPolicy: CanvasPointerPolicy(dragStartSlop: 1),
   );
-  final plan = switch (caseId) {
+  final plan = _casePlanForDomain(caseId, setupScope, scaleId, config);
+
+  return plan.withBoundary(boundary);
+}
+
+final _casePlanFactoriesByDomain =
+    <
+      String,
+      _BenchmarkCasePlan Function(
+        String caseId,
+        String setupScope,
+        String scaleId,
+        CanvasRuntimeConfig config,
+      )
+    >{
+      'edit': (caseId, setupScope, scaleId, _) =>
+          _editCasePlan(caseId, setupScope, scaleId),
+      'input': _inputCasePlan,
+      'frame': (caseId, setupScope, scaleId, _) =>
+          _frameCasePlan(caseId, setupScope, scaleId),
+      'projection': (caseId, setupScope, scaleId, _) =>
+          _projectionCasePlan(caseId, setupScope, scaleId),
+      'spatial': (caseId, setupScope, scaleId, _) =>
+          _spatialCasePlan(caseId, setupScope, scaleId),
+      'resources': (caseId, setupScope, scaleId, _) =>
+          _resourceCasePlan(caseId, setupScope, scaleId),
+      'codec': (caseId, setupScope, scaleId, _) =>
+          _codecCasePlan(caseId, setupScope, scaleId),
+      'load_document': (caseId, setupScope, scaleId, _) =>
+          _loadDocumentCasePlan(caseId, setupScope, scaleId),
+      'runtime': (caseId, setupScope, scaleId, _) =>
+          _runtimeAndDiagnosticCasePlan(caseId, setupScope, scaleId),
+      'diagnostics': (caseId, setupScope, scaleId, _) =>
+          _runtimeAndDiagnosticCasePlan(caseId, setupScope, scaleId),
+    };
+
+_BenchmarkCasePlan _casePlanForDomain(
+  String caseId,
+  String setupScope,
+  String scaleId,
+  CanvasRuntimeConfig config,
+) {
+  final factory = _casePlanFactoriesByDomain[caseId.split('.').first];
+  if (factory == null) {
+    throw StateError('No benchmark case plan registered for $caseId.');
+  }
+  return factory(caseId, setupScope, scaleId, config);
+}
+
+_BenchmarkCasePlan _editCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'edit.add_element' => _runtimeCasePlan(
       setupScope,
       scaleId,
@@ -923,9 +1039,11 @@ _BenchmarkCasePlan _casePlan(
       setupScope,
       scaleId,
       _moveSelectionAction,
-      prepareRuntime: (runtime) {
-        runtime.selection.setSelection(_selectedIds(scaleId));
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (runtime) {
+          runtime.selection.setSelection(_selectedIds(scaleId));
+        },
+      ),
     ),
     'edit.set_camera_offset' => _runtimeCasePlan(
       setupScope,
@@ -937,50 +1055,92 @@ _BenchmarkCasePlan _casePlan(
       scaleId,
       (runtime) => _editAddLineAction(runtime, scaleId),
     ),
+    _ => throw StateError('No edit benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _inputCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+  CanvasRuntimeConfig config,
+) {
+  return switch (caseId) {
     'input.selected_move_preview' => _runtimeCasePlan(
       setupScope,
       scaleId,
       _selectedMovePreviewAction,
-      config: config,
-      prepareRuntime: (runtime) {
-        runtime.selection.setSelection(_selectedIds(scaleId));
-      },
+      options: _RuntimeCaseOptions(
+        config: config,
+        prepareRuntime: (runtime) {
+          runtime.selection.setSelection(_selectedIds(scaleId));
+        },
+      ),
     ),
-    'frame.selected_move_preview_cached_ordinary_plan' =>
-      _selectedMovePreviewFramePlan(setupScope, scaleId),
+    'input.marquee_preview' ||
+    'input.draw_preview' ||
+    'input.line_preview' => _drawInputCasePlan(caseId, setupScope, scaleId),
+    'input.eraser_preview' ||
+    'input.eraser_budget_exceeded' => _runtimeCasePlan(
+      setupScope,
+      scaleId,
+      (runtime) => _eraserPreviewAction(runtime, scaleId),
+      options: const _RuntimeCaseOptions(prepareRuntime: _prepareEraserPreview),
+    ),
+    _ => throw StateError('No input benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _drawInputCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'input.marquee_preview' => _runtimeCasePlan(
       setupScope,
       scaleId,
       (runtime) =>
           _drawToolPreviewAction(runtime, metric: 'overlay_repaint_count'),
-      prepareRuntime: (runtime) {
-        _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (runtime) {
+          _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
+        },
+      ),
     ),
     'input.draw_preview' => _runtimeCasePlan(
       setupScope,
       scaleId,
       (runtime) => _drawToolPreviewAction(runtime, metric: 'point_count'),
-      prepareRuntime: (runtime) {
-        _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (runtime) {
+          _prepareDrawToolPreview(runtime, CanvasDrawTool.pencil);
+        },
+      ),
     ),
     'input.line_preview' => _runtimeCasePlan(
       setupScope,
       scaleId,
       (runtime) =>
           _drawToolPreviewAction(runtime, metric: 'overlay_repaint_count'),
-      prepareRuntime: (runtime) {
-        _prepareDrawToolPreview(runtime, CanvasDrawTool.line);
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (runtime) {
+          _prepareDrawToolPreview(runtime, CanvasDrawTool.line);
+        },
+      ),
     ),
-    'input.eraser_preview' ||
-    'input.eraser_budget_exceeded' => _runtimeCasePlan(
-      setupScope,
-      scaleId,
-      (runtime) => _eraserPreviewAction(runtime, scaleId),
-      prepareRuntime: _prepareEraserPreview,
-    ),
+    _ => throw StateError('No draw-input benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _frameCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
+    'frame.selected_move_preview_cached_ordinary_plan' =>
+      _selectedMovePreviewFramePlan(setupScope, scaleId),
     'frame.main_capture' => _runtimeCasePlan(
       setupScope,
       scaleId,
@@ -995,15 +1155,37 @@ _BenchmarkCasePlan _casePlan(
       setupScope,
       scaleId,
       _framePaintCandidatesAction,
-      prepareRuntime: (runtime) {
-        runtime.readDocument();
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (runtime) {
+          runtime.readDocument();
+        },
+      ),
     ),
+    _ => throw StateError('No frame benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _projectionCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'projection.read_document' => _runtimeCasePlan(
       setupScope,
       scaleId,
       _readDocumentProjectionAction,
     ),
+    _ => throw StateError('No projection benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _spatialCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'spatial.query_point' || 'spatial.query_point_dense_stress' =>
       _runtimeCasePlan(setupScope, scaleId, _spatialQueryAction),
     'spatial.touched_update' => _runtimeCasePlan(
@@ -1011,6 +1193,16 @@ _BenchmarkCasePlan _casePlan(
       scaleId,
       (runtime) => _spatialTouchedUpdateAction(runtime, scaleId),
     ),
+    _ => throw StateError('No spatial benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _resourceCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'resources.resolve_sync' => _resourceLookupPlan(setupScope, scaleId),
     'resources.resolve_sync_cold_budget' => _resourceColdBudgetPlan(
       setupScope,
@@ -1021,13 +1213,43 @@ _BenchmarkCasePlan _casePlan(
       setupScope,
       scaleId,
     ),
+    _ => throw StateError('No resource benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _codecCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'codec.decode_v1' => _codecDecodePlan(setupScope, scaleId),
+    _ => throw StateError('No codec benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _loadDocumentCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'load_document.success' => _loadDocumentSuccessPlan(setupScope, scaleId),
     'load_document.breakdown' => _loadDocumentBreakdownPlan(
       setupScope,
       scaleId,
     ),
     'load_document.failure' => _loadDocumentFailurePlan(setupScope, scaleId),
+    _ => throw StateError('No load document benchmark case plan for $caseId.'),
+  };
+}
+
+_BenchmarkCasePlan _runtimeAndDiagnosticCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
     'runtime.dispose_during_gesture' => _disposeDuringGesturePlan(
       setupScope,
       scaleId,
@@ -1036,28 +1258,30 @@ _BenchmarkCasePlan _casePlan(
       setupScope,
       scaleId,
       _disabledPointerAction,
-      prepareRuntime: (_) {
-        DiagnosticRecord.allocations.reset();
-      },
+      options: _RuntimeCaseOptions(
+        prepareRuntime: (_) {
+          DiagnosticRecord.allocations.reset();
+        },
+      ),
     ),
-    _ => throw StateError('No benchmark case plan registered for $caseId.'),
+    _ => throw StateError(
+      'No runtime/diagnostic benchmark case plan for $caseId.',
+    ),
   };
-  return plan.withBoundary(boundary);
 }
 
 _BenchmarkCasePlan _runtimeCasePlan(
   String setupScope,
   String scaleId,
   FutureOr<Map<String, Object?>> Function(RuntimeRoot runtime) measure, {
-  CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
-  FutureOr<void> Function(RuntimeRoot runtime)? prepareRuntime,
+  _RuntimeCaseOptions options = const _RuntimeCaseOptions(),
 }) {
   return _BenchmarkCasePlan(
     setupScope: setupScope,
     prepare: () async {
-      final runtime = _runtime(scaleId, config: config);
+      final runtime = _runtime(scaleId, config: options.config);
       try {
-        await prepareRuntime?.call(runtime);
+        await options.prepareRuntime?.call(runtime);
         return _PreparedProbeFixture(value: runtime);
       } catch (_) {
         runtime.dispose();
@@ -1069,6 +1293,16 @@ _BenchmarkCasePlan _runtimeCasePlan(
       (fixture as RuntimeRoot).dispose();
     },
   );
+}
+
+final class _RuntimeCaseOptions {
+  const _RuntimeCaseOptions({
+    this.config = const CanvasRuntimeConfig(),
+    this.prepareRuntime,
+  });
+
+  final CanvasRuntimeConfig config;
+  final FutureOr<void> Function(RuntimeRoot runtime)? prepareRuntime;
 }
 
 void _validateCaseBoundary(
@@ -1114,17 +1348,19 @@ _BenchmarkCasePlan _markResourceDirtyPlan(String setupScope, String scaleId) {
     setupScope,
     scaleId,
     _markResourceDirtyAction,
-    attachInvalidationSink: true,
-    prepareAction: (fixture) {
-      final resource = fixture.runtime.resources.resources.first;
-      final request = _resourceRequest(resource);
-      fixture.session.resolveImage(request);
-      fixture.session.resolveImage(request);
-      fixture
-        ..actionResourceId = resource.id
-        ..actionRequests = [request]
-        ..callsBeforeAction = fixture.resolver.callCount;
-    },
+    options: _ResourceSessionOptions(
+      attachInvalidationSink: true,
+      prepareAction: (fixture) {
+        final resource = fixture.runtime.resources.resources.first;
+        final request = _resourceRequest(resource);
+        fixture.session.resolveImage(request);
+        fixture.session.resolveImage(request);
+        fixture
+          ..actionResourceId = resource.id
+          ..actionRequests = [request]
+          ..callsBeforeAction = fixture.resolver.callCount;
+      },
+    ),
   );
 }
 
@@ -1136,19 +1372,21 @@ _BenchmarkCasePlan _markAllResourcesDirtyPlan(
     setupScope,
     scaleId,
     _markAllResourcesDirtyAction,
-    attachInvalidationSink: true,
-    prepareAction: (fixture) {
-      final requests = [
-        for (final resource in fixture.runtime.resources.resources.take(2))
-          _resourceRequest(resource),
-      ];
-      for (final request in requests) {
-        fixture.session.resolveImage(request);
-      }
-      fixture
-        ..actionRequests = requests
-        ..callsBeforeAction = fixture.resolver.callCount;
-    },
+    options: _ResourceSessionOptions(
+      attachInvalidationSink: true,
+      prepareAction: (fixture) {
+        final requests = [
+          for (final resource in fixture.runtime.resources.resources.take(2))
+            _resourceRequest(resource),
+        ];
+        for (final request in requests) {
+          fixture.session.resolveImage(request);
+        }
+        fixture
+          ..actionRequests = requests
+          ..callsBeforeAction = fixture.resolver.callCount;
+      },
+    ),
   );
 }
 
@@ -1157,8 +1395,7 @@ _BenchmarkCasePlan _resourceSessionPlan(
   String scaleId,
   FutureOr<Map<String, Object?>> Function(_ResourceSessionFixture fixture)
   measure, {
-  bool attachInvalidationSink = false,
-  FutureOr<void> Function(_ResourceSessionFixture fixture)? prepareAction,
+  _ResourceSessionOptions options = const _ResourceSessionOptions(),
 }) {
   return _BenchmarkCasePlan(
     setupScope: setupScope,
@@ -1170,7 +1407,7 @@ _BenchmarkCasePlan _resourceSessionPlan(
         resolver: resolver,
         mutationGuard: runtime,
       );
-      if (attachInvalidationSink) {
+      if (options.attachInvalidationSink) {
         runtime.attachResourceSessionInvalidationSink(session);
       }
       final fixture = _ResourceSessionFixture(
@@ -1178,10 +1415,10 @@ _BenchmarkCasePlan _resourceSessionPlan(
         image: image,
         resolver: resolver,
         session: session,
-        invalidationSinkAttached: attachInvalidationSink,
+        invalidationSinkAttached: options.attachInvalidationSink,
       );
       try {
-        await prepareAction?.call(fixture);
+        await options.prepareAction?.call(fixture);
       } catch (_) {
         fixture.dispose();
         rethrow;
@@ -1193,6 +1430,16 @@ _BenchmarkCasePlan _resourceSessionPlan(
       (fixture as _ResourceSessionFixture).dispose();
     },
   );
+}
+
+final class _ResourceSessionOptions {
+  const _ResourceSessionOptions({
+    this.attachInvalidationSink = false,
+    this.prepareAction,
+  });
+
+  final bool attachInvalidationSink;
+  final FutureOr<void> Function(_ResourceSessionFixture fixture)? prepareAction;
 }
 
 _BenchmarkCasePlan _codecDecodePlan(String setupScope, String scaleId) {
@@ -1256,43 +1503,71 @@ _BenchmarkCasePlan _loadDocumentBreakdownPlan(
       );
     },
     measure: (fixture) {
-      final encoded = fixture as String;
-
-      final decodeStopwatch = Stopwatch()..start();
-      final document = decodeCanvasDocumentFromJson(encoded);
-      decodeStopwatch.stop();
-
-      final runtimeStopwatch = Stopwatch()..start();
-      final runtime = RuntimeRoot(
-        initialDocument: CanvasDocument(),
-        config: const CanvasRuntimeConfig(),
-      );
-      runtimeStopwatch.stop();
-
-      try {
-        final loadStopwatch = Stopwatch()..start();
-        runtime.edits.loadDocument(document);
-        loadStopwatch.stop();
-
-        final projectionStopwatch = Stopwatch()..start();
-        final projection = runtime.readDocument();
-        projectionStopwatch.stop();
-
-        return {
-          'decode_us': _nonZeroUs(decodeStopwatch),
-          'runtime_construct_us': _nonZeroUs(runtimeStopwatch),
-          'load_document_us': _nonZeroUs(loadStopwatch),
-          'first_projection_us': _nonZeroUs(projectionStopwatch),
-          'loaded_element_count': _documentElementCount(document),
-          'projected_element_count': _documentElementCount(projection),
-          'encoded_byte_count': utf8.encode(encoded).length,
-        };
-      } finally {
-        runtime.dispose();
-      }
+      return _measureLoadDocumentBreakdown(fixture as String);
     },
     cleanup: (_) => null,
   );
+}
+
+Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
+  final decoded = _timedDecodeDocument(encoded);
+  final runtime = _timedRuntimeConstruction();
+
+  try {
+    final loaded = _timedLoadDocument(runtime.value, decoded.value);
+    final projected = _timedFirstProjection(runtime.value);
+
+    return {
+      'decode_us': _nonZeroUs(decoded.stopwatch),
+      'runtime_construct_us': _nonZeroUs(runtime.stopwatch),
+      'load_document_us': _nonZeroUs(loaded),
+      'first_projection_us': _nonZeroUs(projected.stopwatch),
+      'loaded_element_count': _documentElementCount(decoded.value),
+      'projected_element_count': _documentElementCount(projected.value),
+      'encoded_byte_count': utf8.encode(encoded).length,
+    };
+  } finally {
+    runtime.value.dispose();
+  }
+}
+
+({CanvasDocument value, Stopwatch stopwatch}) _timedDecodeDocument(
+  String encoded,
+) {
+  final stopwatch = Stopwatch()..start();
+  final document = decodeCanvasDocumentFromJson(encoded);
+  stopwatch.stop();
+
+  return (value: document, stopwatch: stopwatch);
+}
+
+({RuntimeRoot value, Stopwatch stopwatch}) _timedRuntimeConstruction() {
+  final stopwatch = Stopwatch()..start();
+  final runtime = RuntimeRoot(
+    initialDocument: CanvasDocument(),
+    config: const CanvasRuntimeConfig(),
+  );
+  stopwatch.stop();
+
+  return (value: runtime, stopwatch: stopwatch);
+}
+
+Stopwatch _timedLoadDocument(RuntimeRoot runtime, CanvasDocument document) {
+  final stopwatch = Stopwatch()..start();
+  runtime.edits.loadDocument(document);
+  stopwatch.stop();
+
+  return stopwatch;
+}
+
+({CanvasDocument value, Stopwatch stopwatch}) _timedFirstProjection(
+  RuntimeRoot runtime,
+) {
+  final stopwatch = Stopwatch()..start();
+  final projection = runtime.readDocument();
+  stopwatch.stop();
+
+  return (value: projection, stopwatch: stopwatch);
 }
 
 _BenchmarkCasePlan _loadDocumentFailurePlan(String setupScope, String scaleId) {

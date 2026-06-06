@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "updatedAtUtc": "2026-06-06T19:51:00.000Z",
+  "records": [
+    {
+      "referencePath": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json",
+      "acceptedAtUtc": "2026-06-06T19:50:00.000Z",
+      "acceptedReason": "Bootstrap Pixel 6 manual reference from existing local full-device report; stable window not available yet.",
+      "selectionPolicy": "bootstrap_single_run_v1",
+      "acceptedFromRuns": [
+        "tool/bench/manual/run_history/2026-06-06_pixel_6_unrecord_existing_full_release_report.json"
+      ]
+    },
+    {
+      "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
+      "acceptedAtUtc": "2026-06-06T19:51:00.000Z",
+      "acceptedReason": "Bootstrap Xiaomi manual reference from existing local full-device report; stable window not available yet.",
+      "selectionPolicy": "bootstrap_single_run_v1",
+      "acceptedFromRuns": [
+        "tool/bench/manual/run_history/2026-06-06_xiaomi_22081283g_unrecord_existing_full_release_report.json"
+      ]
+    }
+  ]
+}

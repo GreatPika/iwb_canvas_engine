@@ -3,11 +3,12 @@ import 'dart:io';
 
 import 'benchmark_manifest.dart';
 import 'benchmark_report.dart';
+import 'benchmark_sample_summary.dart';
 
 const approvedReleaseBaselinePath =
     'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json';
 
-const manualBenchmarkBaselineRoot = 'tool/bench/baselines/manual';
+const manualBenchmarkReferenceRoot = 'tool/bench/manual/reference_reports';
 
 const releaseCurrentReportPath =
     'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
@@ -120,6 +121,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       requireLegacyBootstrapMetrics: false,
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: false,
+      requireSamples: false,
       requireObservedReleaseContour: false,
       enforceAbsoluteCaps: enforceAbsoluteCaps,
     ),
@@ -133,6 +135,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       requireLegacyBootstrapMetrics: false,
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: true,
+      requireSamples: true,
       requireObservedReleaseContour: false,
       enforceAbsoluteCaps: enforceAbsoluteCaps,
     ),
@@ -189,6 +192,7 @@ BenchmarkDiffResult validateFirstBaselineCandidate({
     requireLegacyBootstrapMetrics: true,
     requireFirstBaselineMemoryCaps: true,
     requireCasePolicyFields: true,
+    requireSamples: true,
     requireObservedReleaseContour: true,
     enforceAbsoluteCaps: true,
   );
@@ -249,27 +253,13 @@ Future<int> runBenchmarkBaselineUpdateCli(
     );
   }
   _validateApprovedBaselineWritePath(options.approved);
-  _validateBaselineUpdateCandidatePath(
-    candidate: options.candidate,
-    approved: options.approved,
-  );
-  final loadedManifest = manifest ?? BenchmarkManifest.load();
+  _validateBaselineUpdateCandidatePath(options.candidate);
   final candidateJson = _readJsonObject(options.candidate);
-  final manualBaseline = _isManualBaselinePath(options.approved);
-  final result = manualBaseline
-      ? validateManualBaselineCandidate(
-          manifest: loadedManifest,
-          profile: options.profile,
-          candidateJson: candidateJson,
-          candidatePath: options.candidate,
-          approvedPath: options.approved,
-        )
-      : validateFirstBaselineCandidate(
-          manifest: loadedManifest,
-          profile: options.profile,
-          candidateJson: candidateJson,
-          candidatePath: options.candidate,
-        );
+  final result = _validateBaselineUpdateCandidate(
+    options: options,
+    manifest: manifest ?? BenchmarkManifest.load(),
+    candidateJson: candidateJson,
+  );
   if (!result.passed) {
     stderr.writeln('FAIL: candidate baseline rejected.');
     for (final failure in result.failures) {
@@ -277,76 +267,32 @@ Future<int> runBenchmarkBaselineUpdateCli(
     }
     return 1;
   }
-  _writeJsonObject(
-    options.approved,
-    approvedBaselinePayload(candidateJson, sourcePath: options.candidate),
-  );
+  _writeApprovedBaseline(options, candidateJson);
   stdout.writeln('Benchmark baseline written: ${options.approved}');
   return 0;
 }
 
-BenchmarkDiffResult validateManualBaselineCandidate({
+BenchmarkDiffResult _validateBaselineUpdateCandidate({
+  required BenchmarkBaselineUpdateOptions options,
   required BenchmarkManifest manifest,
-  required String profile,
   required Map<String, Object?> candidateJson,
-  required String candidatePath,
-  required String approvedPath,
 }) {
-  final candidate = ParsedBenchmarkReport.parse(candidateJson, candidatePath);
-  final failures = _validateReportForPolicy(
+  return validateFirstBaselineCandidate(
     manifest: manifest,
-    report: candidate,
-    profile: profile,
-    sourceRole: 'candidate',
-    requireLegacyBootstrapMetrics: false,
-    requireFirstBaselineMemoryCaps: false,
-    requireCasePolicyFields: true,
-    requireObservedReleaseContour: false,
-    enforceAbsoluteCaps: false,
-  );
-  _validateManualBaselineDeviceId(failures, candidate.runtime);
-  final approved = File(approvedPath);
-  if (approved.existsSync()) {
-    failures.addAll(
-      _validateExistingManualBaselineContour(
-        candidate: candidate,
-        approvedJson: _readJsonObject(approvedPath),
-        approvedPath: approvedPath,
-      ),
-    );
-  }
-
-  return _result(
-    profile: profile,
-    operation: 'manual_baseline_acceptance',
-    baselinePath: null,
-    currentPath: candidatePath,
-    failures: failures,
-    comparedCaseCount: candidate.casesByKey.length,
+    profile: options.profile,
+    candidateJson: candidateJson,
+    candidatePath: options.candidate,
   );
 }
 
-void _validateManualBaselineDeviceId(
-  List<String> failures,
-  ParsedRuntimeReport runtime,
+void _writeApprovedBaseline(
+  BenchmarkBaselineUpdateOptions options,
+  Map<String, Object?> candidateJson,
 ) {
-  final deviceId = runtime.deviceId;
-  if (deviceId == null || deviceId.isEmpty) {
-    failures.add('candidate manual baseline requires runtime.deviceId');
-  }
-}
-
-List<String> _validateExistingManualBaselineContour({
-  required ParsedBenchmarkReport candidate,
-  required Map<String, Object?> approvedJson,
-  required String approvedPath,
-}) {
-  final unavailableFailure = _unavailableBaselineFailure(approvedJson);
-  if (unavailableFailure != null) {
-    return [unavailableFailure];
-  }
-  final approved = ParsedBenchmarkReport.parse(approvedJson, approvedPath);
-  return _validateSameContour(baseline: approved, current: candidate);
+  _writeJsonObject(
+    options.approved,
+    approvedBaselinePayload(candidateJson, sourcePath: options.candidate),
+  );
 }
 
 Map<String, Object?> approvedBaselinePayload(
@@ -360,6 +306,7 @@ Map<String, Object?> approvedBaselinePayload(
     'manifestFingerprint': candidate.manifestFingerprint,
     'profile': candidate.profile.toJson(),
     'runtime': candidate.runtime.toJson(),
+    'sourceReport': benchmarkSourceFingerprint(sourcePath),
     'caseCount': candidate.cases.length,
     'cases': [
       for (final benchmarkCase in candidate.cases)
@@ -619,36 +566,22 @@ final class ParsedCaseReport {
   String get key => '$id/$scale';
 
   factory ParsedCaseReport.parse(Map<String, Object?> json, String source) {
+    final caseSource = '$source case';
+    final metadata = _parseCaseMetadata(json, caseSource);
+    final samples = _parseCaseSamples(json, caseSource);
     return ParsedCaseReport(
-      id: _string(json, 'id', '$source case'),
-      classification: _optionalString(json, 'classification', '$source case'),
-      scale: _string(json, 'scale', '$source case'),
-      budgetClasses: _optionalStringList(json, 'budgetClasses', '$source case'),
-      memoryScope: _optionalString(json, 'memoryScope', '$source case'),
-      measurementBoundary: ParsedMeasurementBoundary.parseOptional(
-        json,
-        '$source case',
-      ),
-      fixtureShape: _optionalString(json, 'fixtureShape', '$source case'),
-      actionUsSamples: _optionalIntList(
-        json,
-        'actionUsSamples',
-        '$source case',
-      ),
-      setupUsSamples: _optionalIntList(json, 'setupUsSamples', '$source case'),
-      metrics: Map<String, Object?>.from(_map(json, 'metrics', '$source case')),
-      setupMetrics: _optionalMap(json, 'setupMetrics', '$source case'),
-      exactInvariants: {
-        for (final entry in _map(
-          json,
-          'exactInvariants',
-          '$source case',
-        ).entries)
-          entry.key: ParsedInvariantReport.parse(
-            _requireMap(entry.value, '$source exact invariant ${entry.key}'),
-            source,
-          ),
-      },
+      id: metadata.id,
+      classification: metadata.classification,
+      scale: metadata.scale,
+      budgetClasses: metadata.budgetClasses,
+      memoryScope: metadata.memoryScope,
+      measurementBoundary: metadata.measurementBoundary,
+      fixtureShape: metadata.fixtureShape,
+      actionUsSamples: samples.actionUsSamples,
+      setupUsSamples: samples.setupUsSamples,
+      metrics: Map<String, Object?>.from(_map(json, 'metrics', caseSource)),
+      setupMetrics: _optionalMap(json, 'setupMetrics', caseSource),
+      exactInvariants: _parseExactInvariants(json, source, caseSource),
     );
   }
 
@@ -658,8 +591,10 @@ final class ParsedCaseReport {
       'scale': scale,
       'measurementBoundary': measurementBoundary?.toJson(),
       'fixtureShape': fixtureShape,
-      'actionUsSamples': actionUsSamples,
-      'setupUsSamples': setupUsSamples,
+      'sampleSummary': {
+        'actionUs': benchmarkSampleSummary(actionUsSamples),
+        'setupUs': benchmarkSampleSummary(setupUsSamples),
+      },
       'metrics': metrics,
       'setupMetrics': setupMetrics,
       'exactInvariants': {
@@ -668,6 +603,54 @@ final class ParsedCaseReport {
       },
     };
   }
+}
+
+({
+  String id,
+  String? classification,
+  String scale,
+  List<String>? budgetClasses,
+  String? memoryScope,
+  ParsedMeasurementBoundary? measurementBoundary,
+  String? fixtureShape,
+})
+_parseCaseMetadata(Map<String, Object?> json, String caseSource) {
+  return (
+    id: _string(json, 'id', caseSource),
+    classification: _optionalString(json, 'classification', caseSource),
+    scale: _string(json, 'scale', caseSource),
+    budgetClasses: _optionalStringList(json, 'budgetClasses', caseSource),
+    memoryScope: _optionalString(json, 'memoryScope', caseSource),
+    measurementBoundary: ParsedMeasurementBoundary.parseOptional(
+      json,
+      caseSource,
+    ),
+    fixtureShape: _optionalString(json, 'fixtureShape', caseSource),
+  );
+}
+
+({List<int>? actionUsSamples, List<int>? setupUsSamples}) _parseCaseSamples(
+  Map<String, Object?> json,
+  String caseSource,
+) {
+  return (
+    actionUsSamples: _optionalIntList(json, 'actionUsSamples', caseSource),
+    setupUsSamples: _optionalIntList(json, 'setupUsSamples', caseSource),
+  );
+}
+
+Map<String, ParsedInvariantReport> _parseExactInvariants(
+  Map<String, Object?> json,
+  String source,
+  String caseSource,
+) {
+  return {
+    for (final entry in _map(json, 'exactInvariants', caseSource).entries)
+      entry.key: ParsedInvariantReport.parse(
+        _requireMap(entry.value, '$source exact invariant ${entry.key}'),
+        source,
+      ),
+  };
 }
 
 final class ParsedMeasurementBoundary {
@@ -709,44 +692,23 @@ final class ParsedMeasurementBoundary {
     if (boundary == null) {
       return null;
     }
-    return ParsedMeasurementBoundary(
-      timedScope: _string(
-        boundary,
-        'timedScope',
-        '$source measurementBoundary',
-      ),
-      setupScope: _string(
-        boundary,
-        'setupScope',
-        '$source measurementBoundary',
-      ),
-      teardownScope: _string(
-        boundary,
-        'teardownScope',
-        '$source measurementBoundary',
-      ),
-      primaryTiming: _string(
-        boundary,
-        'primaryTiming',
-        '$source measurementBoundary',
-      ),
-      primaryMemory: _string(
-        boundary,
-        'primaryMemory',
-        '$source measurementBoundary',
-      ),
-      setupMetrics: _stringList(
-        boundary,
-        'setupMetrics',
-        '$source measurementBoundary',
-      ),
-      setupMemoryMetrics: _stringList(
-        boundary,
-        'setupMemoryMetrics',
-        '$source measurementBoundary',
-      ),
-    );
+    return _parseMeasurementBoundary(boundary, '$source measurementBoundary');
   }
+}
+
+ParsedMeasurementBoundary _parseMeasurementBoundary(
+  Map<String, Object?> boundary,
+  String source,
+) {
+  return ParsedMeasurementBoundary(
+    timedScope: _string(boundary, 'timedScope', source),
+    setupScope: _string(boundary, 'setupScope', source),
+    teardownScope: _string(boundary, 'teardownScope', source),
+    primaryTiming: _string(boundary, 'primaryTiming', source),
+    primaryMemory: _string(boundary, 'primaryMemory', source),
+    setupMetrics: _stringList(boundary, 'setupMetrics', source),
+    setupMemoryMetrics: _stringList(boundary, 'setupMemoryMetrics', source),
+  );
 }
 
 final class ParsedInvariantReport {
@@ -793,6 +755,7 @@ List<String> _validateReportForPolicy({
   required bool requireLegacyBootstrapMetrics,
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
+  required bool requireSamples,
   required bool requireObservedReleaseContour,
   required bool enforceAbsoluteCaps,
 }) {
@@ -866,6 +829,7 @@ List<String> _validateReportForPolicy({
           requireLegacyBootstrapMetrics: requireLegacyBootstrapMetrics,
           requireFirstBaselineMemoryCaps: requireFirstBaselineMemoryCaps,
           requireCasePolicyFields: requireCasePolicyFields,
+          requireSamples: requireSamples,
           enforceAbsoluteCaps: enforceAbsoluteCaps,
         ),
       );
@@ -874,9 +838,9 @@ List<String> _validateReportForPolicy({
   return failures;
 }
 
-// Per-case policy validation keeps schema, invariant, cap, memory, and legacy
-// checks together because they define one accepted/rejected report row.
-// ignore: cyclomatic-complexity, halstead-volume, number-of-parameters, source-lines-of-code
+// Per-case policy validation keeps the accepted/rejected report-row order stable
+// while delegating each policy family to a focused helper.
+// ignore: number-of-parameters
 List<String> _validateCaseForPolicy({
   required BenchmarkManifest manifest,
   required BenchmarkCase benchmarkCase,
@@ -886,155 +850,272 @@ List<String> _validateCaseForPolicy({
   required bool requireLegacyBootstrapMetrics,
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
+  required bool requireSamples,
   required bool enforceAbsoluteCaps,
 }) {
   final failures = <String>[];
   final caseName = '$sourceRole ${actual.key}';
   if (requireCasePolicyFields) {
-    _expectEqual(
-      failures,
-      '$caseName classification',
-      actual.classification,
-      benchmarkCase.classification,
-    );
-    _expectEqual(
-      failures,
-      '$caseName memoryScope',
-      actual.memoryScope,
-      benchmarkCase.memoryScope,
-    );
-    final budgetClasses = actual.budgetClasses;
-    if (budgetClasses == null ||
-        !_sameStringSet(budgetClasses, benchmarkCase.budgetClasses)) {
-      failures.add(
-        '$caseName budgetClasses mismatch: actual=$budgetClasses '
-        'expected=${benchmarkCase.budgetClasses}',
-      );
-    }
+    _validateCasePolicyFields(failures, benchmarkCase, actual, caseName);
   }
   failures.addAll(
     _validateCaseBoundaryFields(
       benchmarkCase: benchmarkCase,
       actual: actual,
       caseName: caseName,
+      requireSamples: requireSamples,
     ),
   );
+  _validateRequiredMetrics(failures, benchmarkCase, actual, caseName);
+  failures.addAll(_validateExactInvariants(benchmarkCase, actual, caseName));
+  _validateCaseCaps((
+    failures: failures,
+    manifest: manifest,
+    benchmarkCase: benchmarkCase,
+    scale: scale,
+    actual: actual,
+    caseName: caseName,
+    enforceAbsoluteCaps: enforceAbsoluteCaps,
+    requireFirstBaselineMemoryCaps: requireFirstBaselineMemoryCaps,
+  ));
+  if (requireLegacyBootstrapMetrics) {
+    _validateLegacyBootstrapMetrics((
+      failures: failures,
+      manifest: manifest,
+      benchmarkCase: benchmarkCase,
+      actual: actual,
+      caseName: caseName,
+    ));
+  }
+  return failures;
+}
+
+void _validateCasePolicyFields(
+  List<String> failures,
+  BenchmarkCase benchmarkCase,
+  ParsedCaseReport actual,
+  String caseName,
+) {
+  _expectEqual(
+    failures,
+    '$caseName classification',
+    actual.classification,
+    benchmarkCase.classification,
+  );
+  _expectEqual(
+    failures,
+    '$caseName memoryScope',
+    actual.memoryScope,
+    benchmarkCase.memoryScope,
+  );
+  final budgetClasses = actual.budgetClasses;
+  if (budgetClasses == null ||
+      !_sameStringSet(budgetClasses, benchmarkCase.budgetClasses)) {
+    failures.add(
+      '$caseName budgetClasses mismatch: actual=$budgetClasses '
+      'expected=${benchmarkCase.budgetClasses}',
+    );
+  }
+}
+
+void _validateRequiredMetrics(
+  List<String> failures,
+  BenchmarkCase benchmarkCase,
+  ParsedCaseReport actual,
+  String caseName,
+) {
   for (final metric in benchmarkCase.requiredMetrics) {
     if (!actual.metrics.containsKey(metric)) {
       failures.add('$caseName missing metric $metric');
     }
   }
-  failures.addAll(_validateExactInvariants(benchmarkCase, actual, caseName));
-  if (enforceAbsoluteCaps) {
-    failures.addAll(
+}
+
+void _validateCaseCaps(
+  ({
+    List<String> failures,
+    BenchmarkManifest manifest,
+    BenchmarkCase benchmarkCase,
+    BenchmarkScale scale,
+    ParsedCaseReport actual,
+    String caseName,
+    bool enforceAbsoluteCaps,
+    bool requireFirstBaselineMemoryCaps,
+  })
+  input,
+) {
+  if (input.enforceAbsoluteCaps) {
+    input.failures.addAll(
       _validateAbsoluteCaps(
-        manifest: manifest,
-        benchmarkCase: benchmarkCase,
-        scale: scale,
-        actual: actual,
-        caseName: caseName,
+        manifest: input.manifest,
+        benchmarkCase: input.benchmarkCase,
+        scale: input.scale,
+        actual: input.actual,
+        caseName: input.caseName,
       ),
     );
   }
-  if (requireFirstBaselineMemoryCaps) {
-    failures.addAll(
+  if (input.requireFirstBaselineMemoryCaps) {
+    input.failures.addAll(
       _validateFirstBaselineMemoryCaps(
-        manifest: manifest,
-        benchmarkCase: benchmarkCase,
-        scale: scale,
-        actual: actual,
-        caseName: caseName,
+        manifest: input.manifest,
+        benchmarkCase: input.benchmarkCase,
+        scale: input.scale,
+        actual: input.actual,
+        caseName: input.caseName,
       ),
     );
   }
-  if (requireLegacyBootstrapMetrics &&
-      benchmarkCase.classification == 'equivalent_legacy' &&
-      actual.metrics.containsKey('avg_us')) {
-    final avg = _metricNumber(actual, 'avg_us');
-    final legacy = _metricNumber(actual, 'legacy_avg_us');
-    if (legacy == null) {
-      failures.add('$caseName missing metric legacy_avg_us');
-    } else if (avg != null) {
-      final multiplier =
-          manifest.bootstrapLegacyEquivalence['avg_us_multiplier']!;
-      if (avg > legacy * multiplier) {
-        failures.add(
-          '$caseName avg_us $avg exceeds legacy_avg_us $legacy * $multiplier',
-        );
-      }
-    }
+}
+
+void _validateLegacyBootstrapMetrics(
+  ({
+    List<String> failures,
+    BenchmarkManifest manifest,
+    BenchmarkCase benchmarkCase,
+    ParsedCaseReport actual,
+    String caseName,
+  })
+  input,
+) {
+  final actual = input.actual;
+  if (input.benchmarkCase.classification != 'equivalent_legacy' ||
+      !actual.metrics.containsKey('avg_us')) {
+    return;
   }
-  return failures;
+  final avg = _metricNumber(actual, 'avg_us');
+  final legacy = _metricNumber(actual, 'legacy_avg_us');
+  if (legacy == null) {
+    input.failures.add('${input.caseName} missing metric legacy_avg_us');
+    return;
+  }
+  if (avg == null) {
+    return;
+  }
+  final multiplier =
+      input.manifest.bootstrapLegacyEquivalence['avg_us_multiplier']!;
+  if (avg > legacy * multiplier) {
+    input.failures.add(
+      '${input.caseName} avg_us $avg exceeds legacy_avg_us $legacy * $multiplier',
+    );
+  }
 }
 
 List<String> _validateCaseBoundaryFields({
   required BenchmarkCase benchmarkCase,
   required ParsedCaseReport actual,
   required String caseName,
+  required bool requireSamples,
 }) {
   final failures = <String>[];
-  final boundary = actual.measurementBoundary;
-  if (boundary == null) {
-    failures.add('$caseName missing measurementBoundary');
-  } else {
-    _expectEqual(
-      failures,
-      '$caseName measurementBoundary.timedScope',
-      boundary.timedScope,
-      benchmarkCase.measurementBoundary.timedScope,
-    );
-    _expectEqual(
-      failures,
-      '$caseName measurementBoundary.setupScope',
-      boundary.setupScope,
-      benchmarkCase.measurementBoundary.setupScope,
-    );
-    _expectEqual(
-      failures,
-      '$caseName measurementBoundary.teardownScope',
-      boundary.teardownScope,
-      benchmarkCase.measurementBoundary.teardownScope,
-    );
-    _expectEqual(
-      failures,
-      '$caseName measurementBoundary.primaryTiming',
-      boundary.primaryTiming,
-      benchmarkCase.measurementBoundary.primaryTiming,
-    );
-    _expectEqual(
-      failures,
-      '$caseName measurementBoundary.primaryMemory',
-      boundary.primaryMemory,
-      benchmarkCase.measurementBoundary.primaryMemory,
-    );
-    _expectStringList(
-      failures,
-      '$caseName measurementBoundary.setupMetrics',
-      boundary.setupMetrics,
-      benchmarkCase.measurementBoundary.setupMetrics,
-    );
-    _expectStringList(
-      failures,
-      '$caseName measurementBoundary.setupMemoryMetrics',
-      boundary.setupMemoryMetrics,
-      benchmarkCase.measurementBoundary.setupMemoryMetrics,
-    );
-  }
+  _validateMeasurementBoundaryFields(
+    failures: failures,
+    benchmarkCase: benchmarkCase,
+    actual: actual,
+    caseName: caseName,
+  );
   _expectEqual(
     failures,
     '$caseName fixtureShape',
     actual.fixtureShape,
     benchmarkCase.fixtureShape,
   );
-  _validateCaseSamples(
-    failures: failures,
-    benchmarkCase: benchmarkCase,
-    actual: actual,
-    caseName: caseName,
-  );
+  if (requireSamples) {
+    _validateCaseSamples(
+      failures: failures,
+      benchmarkCase: benchmarkCase,
+      actual: actual,
+      caseName: caseName,
+    );
+  }
   _validatePrimaryMemoryMetrics(benchmarkCase, actual, caseName, failures);
   _validateSetupMetrics(benchmarkCase, actual, caseName, failures);
   return failures;
+}
+
+void _validateMeasurementBoundaryFields({
+  required List<String> failures,
+  required BenchmarkCase benchmarkCase,
+  required ParsedCaseReport actual,
+  required String caseName,
+}) {
+  final boundary = actual.measurementBoundary;
+  if (boundary == null) {
+    failures.add('$caseName missing measurementBoundary');
+    return;
+  }
+  _validateMeasurementBoundaryScalars(
+    failures: failures,
+    benchmarkCase: benchmarkCase,
+    boundary: boundary,
+    caseName: caseName,
+  );
+  _validateMeasurementBoundaryLists(
+    failures: failures,
+    benchmarkCase: benchmarkCase,
+    boundary: boundary,
+    caseName: caseName,
+  );
+}
+
+void _validateMeasurementBoundaryScalars({
+  required List<String> failures,
+  required BenchmarkCase benchmarkCase,
+  required ParsedMeasurementBoundary boundary,
+  required String caseName,
+}) {
+  final expected = benchmarkCase.measurementBoundary;
+  _expectEqual(
+    failures,
+    '$caseName measurementBoundary.timedScope',
+    boundary.timedScope,
+    expected.timedScope,
+  );
+  _expectEqual(
+    failures,
+    '$caseName measurementBoundary.setupScope',
+    boundary.setupScope,
+    expected.setupScope,
+  );
+  _expectEqual(
+    failures,
+    '$caseName measurementBoundary.teardownScope',
+    boundary.teardownScope,
+    expected.teardownScope,
+  );
+  _expectEqual(
+    failures,
+    '$caseName measurementBoundary.primaryTiming',
+    boundary.primaryTiming,
+    expected.primaryTiming,
+  );
+  _expectEqual(
+    failures,
+    '$caseName measurementBoundary.primaryMemory',
+    boundary.primaryMemory,
+    expected.primaryMemory,
+  );
+}
+
+void _validateMeasurementBoundaryLists({
+  required List<String> failures,
+  required BenchmarkCase benchmarkCase,
+  required ParsedMeasurementBoundary boundary,
+  required String caseName,
+}) {
+  final expected = benchmarkCase.measurementBoundary;
+  _expectStringList(
+    failures,
+    '$caseName measurementBoundary.setupMetrics',
+    boundary.setupMetrics,
+    expected.setupMetrics,
+  );
+  _expectStringList(
+    failures,
+    '$caseName measurementBoundary.setupMemoryMetrics',
+    boundary.setupMemoryMetrics,
+    expected.setupMemoryMetrics,
+  );
 }
 
 void _validateCaseSamples({
@@ -1880,14 +1961,7 @@ void _validateCandidatePath(String path) {
   _validateContainedPath(path, rootPath: releaseCandidateRoot);
 }
 
-void _validateBaselineUpdateCandidatePath({
-  required String candidate,
-  required String approved,
-}) {
-  if (_isManualBaselinePath(approved)) {
-    _validateContainedPath(candidate, rootPath: benchmarkCurrentRoot);
-    return;
-  }
+void _validateBaselineUpdateCandidatePath(String candidate) {
   _validateCandidatePath(candidate);
 }
 
@@ -1901,7 +1975,7 @@ void _validateDiffBaselinePath(String path) {
     throw const FormatException(
       'Approved benchmark baseline path must be '
       '$approvedReleaseBaselinePath or a JSON file under '
-      '$manualBenchmarkBaselineRoot.',
+      '$manualBenchmarkReferenceRoot.',
     );
   }
 }
@@ -1912,12 +1986,11 @@ void _validateApprovedBaselineWritePath(String path) {
     approvedReleaseBaselinePath,
   ).absolute.uri.normalizePath();
   final target = File(path).absolute.uri.normalizePath();
-  final manualBaseline = _isManualBaselinePath(path);
-  if (target.path != approved.path && !manualBaseline) {
+  if (target.path != approved.path) {
     throw const FormatException(
       'Approved benchmark baseline write path must be '
-      '$approvedReleaseBaselinePath or a JSON file under '
-      '$manualBenchmarkBaselineRoot.',
+      '$approvedReleaseBaselinePath. Manual device references must be accepted '
+      'through tool/bench/accept_manual_reference.dart.',
     );
   }
   _validateNoSymlinkWritePath(path);
@@ -1932,7 +2005,7 @@ void _validateNoParentTraversal(String path) {
 bool _isManualBaselinePath(String path) {
   final target = File(path).absolute.uri.normalizePath();
   final manualRoot = Directory(
-    manualBenchmarkBaselineRoot,
+    manualBenchmarkReferenceRoot,
   ).absolute.uri.normalizePath().path;
   final normalizedManualRoot = manualRoot.endsWith('/')
       ? manualRoot.replaceFirst(RegExp(r'/$'), '')

@@ -88,22 +88,67 @@ Release benchmark interpretation:
   is read-only with respect to approved baselines.
 - `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json`
   is the manual approved-baseline write path after first-baseline acceptance.
-- Manual device baselines for optimization work live under
-  `tool/bench/baselines/manual/`. They are committed comparison anchors for a
-  named local device and toolchain, not release-approval baselines.
-- The Pixel 6 Android 16 Flutter 3.44.0 manual baseline is
-  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`.
-- The Xiaomi 22081283G Android 14 Flutter 3.44.0 manual baseline is
-  `tool/bench/baselines/manual/xiaomi_22081283g_android14_flutter_3_44_0.json`.
+- Manual device reference reports for optimization work live under
+  `tool/bench/manual/reference_reports/`. They are accepted comparison inputs for
+  a named local device and toolchain, not release-approval baselines.
+- Manual reference decisions are recorded in
+  `tool/bench/manual/reference_decisions.json`. A reference report is valid only
+  when that decision log says which history run or run window produced it.
+- The Pixel 6 Android 16 Flutter 3.44.0 manual reference report is
+  `tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json`.
+- The Xiaomi 22081283G Android 14 Flutter 3.44.0 manual reference report is
+  `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json`.
 - Refresh a device report with
   `dart run tool/bench/run.dart --profile=release --device=<device-id> --output=build/bench/current/<device>_release.json`.
-- Accept that report as that device's manual baseline with
-  `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/current/<device>_release.json --approved=tool/bench/baselines/manual/<device>_<os>_flutter_<version>.json`.
-- Compare a new device report with its committed manual baseline with
-  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
-- Manual device-baseline diff is for regression tracking during optimization;
+- Record that report in manual run history with
+  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
+- Accept a manual reference report from history with
+  `dart run tool/bench/accept_manual_reference.dart --policy=stable_window_median_v1 --run=<history-run-1> --run=<history-run-2> --run=<history-run-3> --output=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --reason="<why this run window is accepted>"`.
+- `stable_window_median_v1` requires at least three compatible history runs and
+  writes median numeric metrics across that run window. Use
+  `bootstrap_single_run_v1` only for initial device setup when no stable window
+  exists yet; it must say that in `--reason`.
+- Compare a new device report with its committed manual reference report with
+  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
+- Manual device-reference diff is for regression tracking during optimization;
   it must preserve same-contour runtime metadata, including `deviceId`, but it
   does not replace the approved Ubuntu release baseline or release workflow.
+
+Manual benchmark history ledger:
+
+- Local files under `build/bench/**` are temporary working files and must not be
+  treated as the historical record.
+- Accepted manual benchmark observations live under
+  `tool/bench/manual/run_history/` and are indexed by
+  `tool/bench/manual/run_history/index.json`.
+- History records are committed decision traces: they store the run label,
+  recorded UTC time, subject git head, dirty flag, device identity, toolchain
+  contour, reference report path, source file paths, source size, source SHA-256,
+  metrics, and compact sample summaries.
+- History records do not replace manual reference reports. Reference reports
+  under `tool/bench/manual/reference_reports/` are the accepted comparison
+  inputs; history records explain which local observations supported an
+  optimization or regression decision.
+- Archive a full manual device report with
+  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
+- Archive focused single-case probe logs with
+  `dart run tool/bench/archive_manual_run.dart --label=<reason> --probe-log=build/bench/current/<probe>.log --probe-log=build/bench/current/<probe-rerun>.log --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
+- To write history automatically after a benchmark run, pass
+  `--history-label=<reason>` to `tool/bench/run.dart`. Optional history fields
+  are `--history-device-name`, `--history-device-id`, `--history-device-os`,
+  `--history-reference`, `--history-root`, and `--history-output`.
+  `--history-baseline` remains accepted only as a compatibility alias for older
+  local commands.
+- History records and manual reference reports must not store raw
+  `actionUsSamples` or `setupUsSamples` arrays. Store `sampleSummary` instead:
+  `count`, `min_us`, `avg_us`, `p50_us`, `p95_us`, and `max_us`.
+- Pass `--subject-git-head=<sha>` when archiving an already-completed run whose
+  measured code commit is not the current `HEAD`.
+- Pass `--allow-dirty` only when the history intentionally records that the
+  working tree was dirty at archive time. Prefer archiving from a clean tree
+  after the measured code is committed.
+- Pass `--overwrite` only to repair a malformed history record for the same
+  run; do not overwrite history to hide a changed measurement.
 
 Benchmark CI routing:
 
@@ -114,6 +159,6 @@ Benchmark CI routing:
 - Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.38.0` stable,
   writes the current release report, runs the read-only release diff, and then
   blocks on P14 graph, generated-view, and guardrail checks.
-- Manual baseline update is a separate `workflow_dispatch` route that writes a
+- Release baseline update is a separate `workflow_dispatch` route that writes a
   candidate under `build/bench/candidates/`, runs `update_baseline`, and uploads
-  the accepted baseline artifact without auto-committing it.
+  the accepted release-baseline artifact without auto-committing it.

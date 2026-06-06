@@ -4,8 +4,12 @@ import 'src/benchmark_runner.dart';
 
 Future<void> main(List<String> args) async {
   try {
-    final outputPath = await runBenchmarkCli(args);
-    stdout.writeln('Benchmark report written to $outputPath');
+    final result = await runBenchmarkCliDetailed(args);
+    stdout.writeln('Benchmark report written to ${result.reportPath}');
+    final historyPath = result.historyPath;
+    if (historyPath != null) {
+      stdout.writeln('Benchmark history written to $historyPath');
+    }
   } on FormatException catch (error) {
     stderr.writeln(error.message);
     exitCode = 64;

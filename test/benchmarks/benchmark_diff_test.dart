@@ -75,7 +75,7 @@ void main() {
           baselineJson: invalidated,
           currentJson: _releaseReport(manifest),
           baselinePath:
-              '$manualBenchmarkBaselineRoot/'
+              '$manualBenchmarkReferenceRoot/'
               'pixel6_android16_flutter_3_44_0.json',
           currentPath: 'current.json',
         ).failures.join('\n'),
@@ -83,12 +83,12 @@ void main() {
       );
     });
 
-    test('committed manual baselines are initialized as schema v3', () {
+    test('committed manual references are initialized as schema v3', () {
       const expectedDeviceIds = {
         'pixel6_android16_flutter_3_44_0.json': '23081FDF6000L2',
-        'xiaomi_22081283g_android14_flutter_3_44_0.json': 'Z9NBMVIRY5KRGAJF',
+        'xiaomi_22081283g_android14_flutter_3_44_0.json': '22081283G',
       };
-      final files = Directory(manualBenchmarkBaselineRoot)
+      final files = Directory(manualBenchmarkReferenceRoot)
           .listSync()
           .whereType<File>()
           .map((file) => file.uri.pathSegments.last)
@@ -99,7 +99,7 @@ void main() {
         final baseline =
             jsonDecode(
                   File(
-                    '$manualBenchmarkBaselineRoot/${entry.key}',
+                    '$manualBenchmarkReferenceRoot/${entry.key}',
                   ).readAsStringSync(),
                 )
                 as Map<String, Object?>;
@@ -258,7 +258,7 @@ void main() {
           profile: 'release',
           baselineJson: oldReport,
           currentJson: current,
-          baselinePath: 'tool/bench/baselines/manual/pixel6.json',
+          baselinePath: 'tool/bench/manual/reference_reports/pixel6.json',
           currentPath: 'current.json',
         ).failures.join('\n'),
         allOf(
@@ -689,7 +689,7 @@ void main() {
         _metrics(current, 'edit.add_element', '1k')['max_us'] = 70000;
 
         const manualBaselinePath =
-            '$manualBenchmarkBaselineRoot/manual_diff_test.json';
+            '$manualBenchmarkReferenceRoot/manual_diff_test.json';
         const currentPath = 'build/bench/current/manual_diff_test_current.json';
         const outputPath = 'build/bench/diff/manual_diff_test.json';
         for (final path in [manualBaselinePath, currentPath, outputPath]) {
@@ -729,260 +729,208 @@ void main() {
       },
     );
 
-    test('diff is read-only and update_baseline is the write path', () async {
-      final manifest = BenchmarkManifest.load();
-      final temp = Directory.systemTemp.createTempSync('bench_diff_test_');
-      addTearDown(() => temp.deleteSync(recursive: true));
+    test(
+      'diff is read-only and update_baseline is the release write path',
+      () async {
+        final manifest = BenchmarkManifest.load();
+        final temp = Directory.systemTemp.createTempSync('bench_diff_test_');
+        addTearDown(() => temp.deleteSync(recursive: true));
 
-      final baselinePath = '${temp.path}/baseline.json';
-      final currentPath = '${temp.path}/current.json';
-      final releaseCurrent = File(releaseCurrentReportPath);
-      const outputPath = 'build/bench/diff/benchmark_diff_test.json';
-      addTearDown(() {
-        final output = File(outputPath);
-        if (output.existsSync()) {
-          output.deleteSync();
-        }
-      });
-      final releaseCurrentBefore = releaseCurrent.existsSync()
-          ? releaseCurrent.readAsStringSync()
-          : null;
-      addTearDown(() {
-        if (releaseCurrentBefore == null) {
-          if (releaseCurrent.existsSync()) {
-            releaseCurrent.deleteSync();
+        final baselinePath = '${temp.path}/baseline.json';
+        final currentPath = '${temp.path}/current.json';
+        final releaseCurrent = File(releaseCurrentReportPath);
+        const outputPath = 'build/bench/diff/benchmark_diff_test.json';
+        addTearDown(() {
+          final output = File(outputPath);
+          if (output.existsSync()) {
+            output.deleteSync();
           }
-        } else {
-          releaseCurrent.writeAsStringSync(releaseCurrentBefore);
+        });
+        final releaseCurrentBefore = releaseCurrent.existsSync()
+            ? releaseCurrent.readAsStringSync()
+            : null;
+        addTearDown(() {
+          if (releaseCurrentBefore == null) {
+            if (releaseCurrent.existsSync()) {
+              releaseCurrent.deleteSync();
+            }
+          } else {
+            releaseCurrent.writeAsStringSync(releaseCurrentBefore);
+          }
+        });
+        File(
+          baselinePath,
+        ).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+        File(
+          currentPath,
+        ).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+        final releaseCurrentReport = _releaseReport(manifest)
+          .._runtime['deviceId'] = 'device-fixture';
+        releaseCurrent
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync(jsonEncode(releaseCurrentReport));
+        final before = File(baselinePath).readAsStringSync();
+
+        await expectLater(
+          runBenchmarkDiffCli([
+            '--profile=release',
+            '--baseline=$baselinePath',
+            '--current=$currentPath',
+            '--output=$outputPath',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
+        await expectLater(
+          runBenchmarkDiffCli([
+            '--profile=release',
+            '--baseline=$approvedReleaseBaselinePath',
+            '--current=$currentPath',
+            '--output=$outputPath',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
+
+        expect(File(baselinePath).readAsStringSync(), before);
+        expect(
+          () => runBenchmarkBaselineUpdateCli([
+            '--profile=release',
+            '--candidate=$currentPath',
+            '--approved=${temp.path}/approved.json',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
+        expect(
+          () => runBenchmarkBaselineUpdateCli([
+            '--profile=release',
+            '--candidate=$currentPath',
+            '--approved=$manualBenchmarkReferenceRoot/update_rejected.json',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
+
+        final symlinkDirectory = Link(
+          '$manualBenchmarkReferenceRoot/update_link',
+        );
+        addTearDown(() {
+          if (symlinkDirectory.existsSync()) {
+            symlinkDirectory.deleteSync();
+          }
+        });
+        symlinkDirectory.createSync(temp.absolute.path);
+        expect(
+          () => runBenchmarkBaselineUpdateCli([
+            '--profile=release',
+            '--candidate=$releaseCurrentReportPath',
+            '--approved=${symlinkDirectory.path}/../update_parent.json',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
+
+        final symlinkOutput = File('build/bench/diff/symlink_output.json');
+        if (symlinkOutput.existsSync()) {
+          symlinkOutput.deleteSync();
         }
-      });
-      File(
-        baselinePath,
-      ).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
-      File(currentPath).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
-      final releaseCurrentReport = _releaseReport(manifest)
-        .._runtime['deviceId'] = 'device-fixture';
-      releaseCurrent
-        ..parent.createSync(recursive: true)
-        ..writeAsStringSync(jsonEncode(releaseCurrentReport));
-      final before = File(baselinePath).readAsStringSync();
+        Link(
+          symlinkOutput.path,
+        ).createSync(File(approvedReleaseBaselinePath).absolute.path);
+        addTearDown(() {
+          final link = Link(symlinkOutput.path);
+          if (link.existsSync()) {
+            link.deleteSync();
+          }
+        });
+        await expectLater(
+          runBenchmarkDiffCli([
+            '--profile=release',
+            '--baseline=$approvedReleaseBaselinePath',
+            '--current=$releaseCurrentReportPath',
+            '--output=${symlinkOutput.path}',
+          ], manifest: manifest),
+          throwsA(isA<FormatException>()),
+        );
 
-      await expectLater(
-        runBenchmarkDiffCli([
+        const candidatePath =
+            '$releaseCandidateRoot/benchmark_diff_test_candidate.json';
+        final approved = File(approvedReleaseBaselinePath);
+        final candidate = File(candidatePath)
+          ..parent.createSync(recursive: true);
+        final approvedExisted = approved.existsSync();
+        final approvedBefore = approvedExisted
+            ? approved.readAsStringSync()
+            : null;
+        addTearDown(() {
+          if (approvedBefore == null) {
+            if (approved.existsSync()) {
+              approved.deleteSync();
+            }
+          } else {
+            approved.writeAsStringSync(approvedBefore);
+          }
+          if (candidate.existsSync()) {
+            candidate.deleteSync();
+          }
+        });
+        candidate.writeAsStringSync(jsonEncode(releaseCurrentReport));
+
+        final updateExit = await runBenchmarkBaselineUpdateCli([
           '--profile=release',
-          '--baseline=$baselinePath',
-          '--current=$currentPath',
-          '--output=$outputPath',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-      await expectLater(
-        runBenchmarkDiffCli([
-          '--profile=release',
-          '--baseline=$approvedReleaseBaselinePath',
-          '--current=$currentPath',
-          '--output=$outputPath',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
+          '--candidate=$candidatePath',
+          '--approved=$approvedReleaseBaselinePath',
+        ], manifest: manifest);
 
-      expect(File(baselinePath).readAsStringSync(), before);
-      expect(
-        () => runBenchmarkBaselineUpdateCli([
-          '--profile=release',
-          '--candidate=$currentPath',
-          '--approved=${temp.path}/approved.json',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-      expect(
-        () => runBenchmarkBaselineUpdateCli([
-          '--profile=release',
-          '--candidate=$currentPath',
-          '--approved=$manualBenchmarkBaselineRoot/update_rejected.json',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-
-      final manualApproved = File(
-        '$manualBenchmarkBaselineRoot/update_accepted.json',
-      );
-      addTearDown(() {
-        if (manualApproved.existsSync()) {
-          manualApproved.deleteSync();
-        }
-      });
-      final manualUpdateExit = await runBenchmarkBaselineUpdateCli([
-        '--profile=release',
-        '--candidate=$releaseCurrentReportPath',
-        '--approved=${manualApproved.path}',
-      ], manifest: manifest);
-      expect(manualUpdateExit, 0);
-      final manualApprovedJson =
-          jsonDecode(manualApproved.readAsStringSync()) as Map<String, Object?>;
-      expect(manualApprovedJson['schemaVersion'], benchmarkToolSchemaVersion);
-      expect(manualApprovedJson['runtime'], releaseCurrentReport['runtime']);
-      final conflictingCurrent = _releaseReport(manifest)
-        .._runtime['deviceId'] = 'other-device';
-      releaseCurrent.writeAsStringSync(jsonEncode(conflictingCurrent));
-      final manualBeforeConflict = manualApproved.readAsStringSync();
-      final conflictingManualUpdateExit = await runBenchmarkBaselineUpdateCli([
-        '--profile=release',
-        '--candidate=$releaseCurrentReportPath',
-        '--approved=${manualApproved.path}',
-      ], manifest: manifest);
-      expect(conflictingManualUpdateExit, 1);
-      expect(manualApproved.readAsStringSync(), manualBeforeConflict);
-
-      final missingDeviceManual = File(
-        '$manualBenchmarkBaselineRoot/update_missing_device.json',
-      );
-      addTearDown(() {
-        if (missingDeviceManual.existsSync()) {
-          missingDeviceManual.deleteSync();
-        }
-      });
-      releaseCurrent.writeAsStringSync(jsonEncode(_releaseReport(manifest)));
-      final missingDeviceUpdateExit = await runBenchmarkBaselineUpdateCli([
-        '--profile=release',
-        '--candidate=$releaseCurrentReportPath',
-        '--approved=${missingDeviceManual.path}',
-      ], manifest: manifest);
-      expect(missingDeviceUpdateExit, 1);
-      expect(missingDeviceManual.existsSync(), isFalse);
-      releaseCurrent.writeAsStringSync(jsonEncode(releaseCurrentReport));
-
-      final symlinkManual = Link(
-        '$manualBenchmarkBaselineRoot/update_symlink.json',
-      );
-      final symlinkTarget = File('${temp.path}/manual_symlink_target.json')
-        ..writeAsStringSync('{}');
-      addTearDown(() {
-        if (symlinkManual.existsSync()) {
-          symlinkManual.deleteSync();
-        }
-      });
-      symlinkManual.createSync(symlinkTarget.absolute.path);
-      expect(
-        () => runBenchmarkBaselineUpdateCli([
-          '--profile=release',
-          '--candidate=$releaseCurrentReportPath',
-          '--approved=${symlinkManual.path}',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-
-      final symlinkDirectory = Link('$manualBenchmarkBaselineRoot/update_link');
-      addTearDown(() {
-        if (symlinkDirectory.existsSync()) {
-          symlinkDirectory.deleteSync();
-        }
-      });
-      symlinkDirectory.createSync(temp.absolute.path);
-      expect(
-        () => runBenchmarkBaselineUpdateCli([
-          '--profile=release',
-          '--candidate=$releaseCurrentReportPath',
-          '--approved=${symlinkDirectory.path}/../update_parent.json',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-
-      final symlinkOutput = File('build/bench/diff/symlink_output.json');
-      if (symlinkOutput.existsSync()) {
-        symlinkOutput.deleteSync();
-      }
-      Link(
-        symlinkOutput.path,
-      ).createSync(File(approvedReleaseBaselinePath).absolute.path);
-      addTearDown(() {
-        final link = Link(symlinkOutput.path);
-        if (link.existsSync()) {
-          link.deleteSync();
-        }
-      });
-      await expectLater(
-        runBenchmarkDiffCli([
+        expect(updateExit, 0);
+        final approvedBeforeDiff = approved.readAsStringSync();
+        final diffExit = await runBenchmarkDiffCli([
           '--profile=release',
           '--baseline=$approvedReleaseBaselinePath',
           '--current=$releaseCurrentReportPath',
-          '--output=${symlinkOutput.path}',
-        ], manifest: manifest),
-        throwsA(isA<FormatException>()),
-      );
-
-      const candidatePath =
-          '$releaseCandidateRoot/benchmark_diff_test_candidate.json';
-      final approved = File(approvedReleaseBaselinePath);
-      final candidate = File(candidatePath)..parent.createSync(recursive: true);
-      final approvedExisted = approved.existsSync();
-      final approvedBefore = approvedExisted
-          ? approved.readAsStringSync()
-          : null;
-      addTearDown(() {
-        if (approvedBefore == null) {
-          if (approved.existsSync()) {
-            approved.deleteSync();
-          }
-        } else {
-          approved.writeAsStringSync(approvedBefore);
-        }
-        if (candidate.existsSync()) {
-          candidate.deleteSync();
-        }
-      });
-      candidate.writeAsStringSync(jsonEncode(releaseCurrentReport));
-
-      final updateExit = await runBenchmarkBaselineUpdateCli([
-        '--profile=release',
-        '--candidate=$candidatePath',
-        '--approved=$approvedReleaseBaselinePath',
-      ], manifest: manifest);
-
-      expect(updateExit, 0);
-      final approvedBeforeDiff = approved.readAsStringSync();
-      final diffExit = await runBenchmarkDiffCli([
-        '--profile=release',
-        '--baseline=$approvedReleaseBaselinePath',
-        '--current=$releaseCurrentReportPath',
-        '--output=$outputPath',
-      ], manifest: manifest);
-      expect(diffExit, 0);
-      expect(approved.readAsStringSync(), approvedBeforeDiff);
-      expect(File(outputPath).existsSync(), isTrue);
-      final approvedJson =
-          jsonDecode(approved.readAsStringSync()) as Map<String, Object?>;
-      final candidateJson =
-          jsonDecode(candidate.readAsStringSync()) as Map<String, Object?>;
-      expect(approvedJson['runtime'], candidateJson['runtime']);
-      expect(approvedJson['caseCount'], candidateJson['caseCount']);
-      final approvedCase =
-          (approvedJson['cases'] as List<Object?>).first
-              as Map<String, Object?>;
-      expect(approvedCase, isNot(contains('classification')));
-      expect(approvedCase, isNot(contains('budgetClasses')));
-      expect(approvedCase, isNot(contains('memoryScope')));
-      expect(approvedCase, contains('measurementBoundary'));
-      expect(approvedCase, contains('fixtureShape'));
-      expect(approvedCase, contains('actionUsSamples'));
-      expect(approvedCase, contains('setupUsSamples'));
-      expect(approvedCase, contains('setupMetrics'));
-      final invariantBearing = (approvedJson['cases'] as List<Object?>)
-          .cast<Map<String, Object?>>()
-          .firstWhere(
-            (entry) =>
-                (entry['exactInvariants'] as Map<String, Object?>).isNotEmpty,
-          );
-      final invariant =
-          ((invariantBearing['exactInvariants'] as Map<String, Object?>)
-                  .values
-                  .first)
-              as Map<String, Object?>;
-      expect(invariant, contains('actual'));
-      expect(invariant, contains('passed'));
-      expect(invariant, isNot(contains('expected')));
-      expect(invariant, isNot(contains('max')));
-    });
+          '--output=$outputPath',
+        ], manifest: manifest);
+        expect(diffExit, 0);
+        expect(approved.readAsStringSync(), approvedBeforeDiff);
+        expect(File(outputPath).existsSync(), isTrue);
+        final approvedJson =
+            jsonDecode(approved.readAsStringSync()) as Map<String, Object?>;
+        final candidateJson =
+            jsonDecode(candidate.readAsStringSync()) as Map<String, Object?>;
+        expect(approvedJson['runtime'], candidateJson['runtime']);
+        expect(approvedJson['caseCount'], candidateJson['caseCount']);
+        final approvedCase =
+            (approvedJson['cases'] as List<Object?>).first
+                as Map<String, Object?>;
+        expect(approvedCase, isNot(contains('classification')));
+        expect(approvedCase, isNot(contains('budgetClasses')));
+        expect(approvedCase, isNot(contains('memoryScope')));
+        expect(approvedCase, contains('measurementBoundary'));
+        expect(approvedCase, contains('fixtureShape'));
+        expect(approvedCase, isNot(contains('actionUsSamples')));
+        expect(approvedCase, isNot(contains('setupUsSamples')));
+        expect(
+          approvedCase['sampleSummary'],
+          containsPair('actionUs', containsPair('count', 1)),
+        );
+        expect(approvedCase, contains('setupMetrics'));
+        expect(
+          approvedJson['sourceReport'],
+          containsPair('sha256', isA<String>()),
+        );
+        final invariantBearing = (approvedJson['cases'] as List<Object?>)
+            .cast<Map<String, Object?>>()
+            .firstWhere(
+              (entry) =>
+                  (entry['exactInvariants'] as Map<String, Object?>).isNotEmpty,
+            );
+        final invariant =
+            ((invariantBearing['exactInvariants'] as Map<String, Object?>)
+                    .values
+                    .first)
+                as Map<String, Object?>;
+        expect(invariant, contains('actual'));
+        expect(invariant, contains('passed'));
+        expect(invariant, isNot(contains('expected')));
+        expect(invariant, isNot(contains('max')));
+      },
+    );
   });
 }
 
@@ -1085,10 +1033,23 @@ Map<String, Object?> _caseReport(
   BenchmarkProfile profile,
 ) {
   final metrics = _metricsForCase(benchmarkCase, scale);
-  final setupMetrics = _setupMetricsForCase(benchmarkCase);
-  final setupUsSamples = benchmarkCase.measurementBoundary.setupScope == 'none'
-      ? const <int>[]
-      : const [10];
+  return {
+    ..._caseIdentityJson(benchmarkCase, scale),
+    ..._caseExecutionJson(benchmarkCase),
+    'warmups': profile.warmups,
+    'repetitions': profile.repetitions,
+    'iterations': profile.iterations ?? 1,
+    'timingClaims': profile.timingClaims,
+    'metrics': metrics,
+    'setupMetrics': _setupMetricsForCase(benchmarkCase),
+    'exactInvariants': _exactInvariantJson(benchmarkCase, metrics),
+  };
+}
+
+Map<String, Object?> _caseIdentityJson(
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+) {
   return {
     'id': benchmarkCase.id,
     'classification': benchmarkCase.classification,
@@ -1096,26 +1057,33 @@ Map<String, Object?> _caseReport(
     'scaleLabel': scale.label,
     'budgetClasses': benchmarkCase.budgetClasses,
     'memoryScope': benchmarkCase.memoryScope,
+  };
+}
+
+Map<String, Object?> _caseExecutionJson(BenchmarkCase benchmarkCase) {
+  return {
     'measurementBoundary': _boundaryJson(benchmarkCase.measurementBoundary),
     'fixtureShape': benchmarkCase.fixtureShape,
     'actionUsSamples': const [100],
-    'setupUsSamples': setupUsSamples,
-    'warmups': profile.warmups,
-    'repetitions': profile.repetitions,
-    'iterations': profile.iterations ?? 1,
-    'timingClaims': profile.timingClaims,
-    'metrics': metrics,
-    'setupMetrics': setupMetrics,
-    'exactInvariants': {
-      for (final invariant in benchmarkCase.exactInvariants)
-        invariant.name: {
-          'metric': invariant.metric,
-          'actual': metrics[invariant.metric],
-          'expected': invariant.expected,
-          'max': invariant.max,
-          'passed': true,
-        },
-    },
+    'setupUsSamples': benchmarkCase.measurementBoundary.setupScope == 'none'
+        ? const <int>[]
+        : const [10],
+  };
+}
+
+Map<String, Object?> _exactInvariantJson(
+  BenchmarkCase benchmarkCase,
+  Map<String, Object?> metrics,
+) {
+  return {
+    for (final invariant in benchmarkCase.exactInvariants)
+      invariant.name: {
+        'metric': invariant.metric,
+        'actual': metrics[invariant.metric],
+        'expected': invariant.expected,
+        'max': invariant.max,
+        'passed': true,
+      },
   };
 }
 
@@ -1124,15 +1092,42 @@ Map<String, Object?> _metricsForCase(
   BenchmarkScale scale,
 ) {
   final metrics = <String, Object?>{};
+  _addRequiredMetrics(metrics, benchmarkCase);
+  _addTimingMetrics(metrics, benchmarkCase);
+  _addInvariantMetrics(metrics, benchmarkCase, scale);
+  _addMemoryMetrics(metrics, benchmarkCase);
+  _addLegacyMetrics(metrics, benchmarkCase);
+  _addSetupTimingMetric(metrics, benchmarkCase);
+  return metrics;
+}
+
+void _addRequiredMetrics(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+) {
   for (final metric in benchmarkCase.requiredMetrics) {
     metrics[metric] = _metricValue(metric);
   }
-  if (_hasTimeBudgetClass(benchmarkCase)) {
-    metrics
-      ..putIfAbsent('avg_us', () => 100)
-      ..putIfAbsent('p95_us', () => 100)
-      ..putIfAbsent('max_us', () => 100);
+}
+
+void _addTimingMetrics(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+) {
+  if (!_hasTimeBudgetClass(benchmarkCase)) {
+    return;
   }
+  metrics
+    ..putIfAbsent('avg_us', () => 100)
+    ..putIfAbsent('p95_us', () => 100)
+    ..putIfAbsent('max_us', () => 100);
+}
+
+void _addInvariantMetrics(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+  BenchmarkScale scale,
+) {
   for (final invariant in benchmarkCase.exactInvariants) {
     metrics[invariant.metric] = _invariantMetricValue(
       invariant.name,
@@ -1141,6 +1136,12 @@ Map<String, Object?> _metricsForCase(
       scale.id,
     );
   }
+}
+
+void _addMemoryMetrics(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+) {
   metrics.putIfAbsent(
     'allocation_bytes',
     () => benchmarkCase.memoryScope == 'zero_allocation' ? 0 : 1024,
@@ -1149,14 +1150,25 @@ Map<String, Object?> _metricsForCase(
     'rss_delta_bytes',
     () => benchmarkCase.memoryScope == 'zero_allocation' ? 0 : 1024,
   );
+}
+
+void _addLegacyMetrics(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+) {
   if (benchmarkCase.classification == 'equivalent_legacy' &&
       metrics.containsKey('avg_us')) {
     metrics['legacy_avg_us'] = 100;
   }
+}
+
+void _addSetupTimingMetric(
+  Map<String, Object?> metrics,
+  BenchmarkCase benchmarkCase,
+) {
   if (benchmarkCase.measurementBoundary.setupScope != 'none') {
     metrics['setup_us'] = 10;
   }
-  return metrics;
 }
 
 Map<String, Object?> _setupMetricsForCase(BenchmarkCase benchmarkCase) {

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'benchmark_case_adapters.dart';
 import 'benchmark_manifest.dart';
 import 'benchmark_report.dart';
+import 'manual_benchmark_history.dart';
 
 const releaseReportPath =
     'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
@@ -17,6 +18,14 @@ typedef BenchmarkCaseAdapter =
     );
 
 Future<String> runBenchmarkCli(
+  List<String> args, {
+  BenchmarkManifest? manifest,
+}) async {
+  final result = await runBenchmarkCliDetailed(args, manifest: manifest);
+  return result.reportPath;
+}
+
+Future<BenchmarkRunCliResult> runBenchmarkCliDetailed(
   List<String> args, {
   BenchmarkManifest? manifest,
 }) async {
@@ -34,7 +43,32 @@ Future<String> runBenchmarkCli(
   outputFile.writeAsStringSync(
     const JsonEncoder.withIndent('  ').convert(report),
   );
-  return outputPath;
+  final historyPath = await _writeHistoryIfRequested(options, outputPath);
+  return BenchmarkRunCliResult(
+    reportPath: outputPath,
+    historyPath: historyPath,
+  );
+}
+
+Future<String?> _writeHistoryIfRequested(
+  BenchmarkRunOptions options,
+  String reportPath,
+) {
+  final history = options.history;
+  if (history == null) {
+    return Future.value();
+  }
+  return recordManualBenchmarkHistory(history.toHistoryOptions(reportPath));
+}
+
+final class BenchmarkRunCliResult {
+  const BenchmarkRunCliResult({
+    required this.reportPath,
+    required this.historyPath,
+  });
+
+  final String reportPath;
+  final String? historyPath;
 }
 
 // The runner builds one report from one manifest/profile pass; splitting the
@@ -58,7 +92,13 @@ BenchmarkReport runBenchmarks({
         continue;
       }
       caseRuns.add(
-        _runCase(benchmarkCase, scale, profile, deviceTarget, adapter),
+        _runCase((
+          benchmarkCase: benchmarkCase,
+          scale: scale,
+          profile: profile,
+          deviceTarget: deviceTarget,
+          adapter: adapter,
+        )),
       );
     }
   }
@@ -110,13 +150,24 @@ BenchmarkReport runBenchmarks({
 // construction so the adapter boundary remains all-or-nothing per case.
 // ignore: halstead-volume, source-lines-of-code
 _BenchmarkCaseRun _runCase(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
-  BenchmarkProfile profile,
-  BenchmarkDeviceTarget? deviceTarget,
-  BenchmarkCaseAdapter adapter,
+  ({
+    BenchmarkCase benchmarkCase,
+    BenchmarkScale scale,
+    BenchmarkProfile profile,
+    BenchmarkDeviceTarget? deviceTarget,
+    BenchmarkCaseAdapter adapter,
+  })
+  input,
 ) {
-  final adapterResult = adapter(benchmarkCase, scale, profile, deviceTarget);
+  final benchmarkCase = input.benchmarkCase;
+  final scale = input.scale;
+  final profile = input.profile;
+  final adapterResult = input.adapter(
+    benchmarkCase,
+    scale,
+    profile,
+    input.deviceTarget,
+  );
   _validateAdapterBoundary(benchmarkCase, scale, adapterResult);
   final metrics = <String, Object?>{
     ...adapterResult.metrics,
@@ -124,13 +175,13 @@ _BenchmarkCaseRun _runCase(
   };
   final setupMetrics = <String, Object?>{...adapterResult.setupMetrics};
   _validateSetupDiagnostics(benchmarkCase, scale, setupMetrics);
-  _applySetupTiming(
-    benchmarkCase: benchmarkCase,
-    scale: scale,
+  _applySetupTiming((
     adapterResult: adapterResult,
     metrics: metrics,
     setupMetrics: setupMetrics,
-  );
+    caseKey: '${benchmarkCase.id}/${scale.id}',
+    setupScope: benchmarkCase.measurementBoundary.setupScope,
+  ));
   for (final metric in benchmarkCase.requiredMetrics) {
     if (!metrics.containsKey(metric)) {
       throw StateError(
@@ -190,28 +241,27 @@ Map<String, int> _timingMetrics(List<int> samples) {
   return {'avg_us': _avgUs(samples), 'p95_us': p95Us, 'max_us': maxUs};
 }
 
-void _applySetupTiming({
-  required BenchmarkCase benchmarkCase,
-  required BenchmarkScale scale,
-  required BenchmarkAdapterResult adapterResult,
-  required Map<String, Object?> metrics,
-  required Map<String, Object?> setupMetrics,
-}) {
-  if (benchmarkCase.measurementBoundary.setupScope == 'none') {
+void _applySetupTiming(
+  ({
+    BenchmarkAdapterResult adapterResult,
+    Map<String, Object?> metrics,
+    Map<String, Object?> setupMetrics,
+    String caseKey,
+    String setupScope,
+  })
+  input,
+) {
+  if (input.setupScope == 'none') {
     return;
   }
-  if (adapterResult.setupUsSamples.isEmpty) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted no setup samples.',
-    );
+  if (input.adapterResult.setupUsSamples.isEmpty) {
+    throw StateError('${input.caseKey} emitted no setup samples.');
   }
-  final setupUs = _avgUs(adapterResult.setupUsSamples);
-  if (setupMetrics['setup_us'] != setupUs) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} invalid setup metric setup_us.',
-    );
+  final setupUs = _avgUs(input.adapterResult.setupUsSamples);
+  if (input.setupMetrics['setup_us'] != setupUs) {
+    throw StateError('${input.caseKey} invalid setup metric setup_us.');
   }
-  metrics['setup_us'] = setupUs;
+  input.metrics['setup_us'] = setupUs;
 }
 
 int _avgUs(List<int> samples) {
@@ -469,16 +519,19 @@ final class BenchmarkRunOptions {
     required this.profile,
     required this.output,
     required this.device,
+    required this.history,
   });
 
   final String profile;
   final String? output;
   final String? device;
+  final BenchmarkRunHistoryOptions? history;
 
   factory BenchmarkRunOptions.parse(List<String> args) {
     String? profile;
     String? output;
     String? device;
+    final history = BenchmarkRunHistoryOptionsBuilder();
     for (final arg in args) {
       if (arg.startsWith('--profile=')) {
         profile = _argumentValue(arg, '--profile=');
@@ -486,6 +539,8 @@ final class BenchmarkRunOptions {
         output = _argumentValue(arg, '--output=');
       } else if (arg.startsWith('--device=')) {
         device = _argumentValue(arg, '--device=');
+      } else if (history.accepts(arg)) {
+        history.add(arg);
       } else {
         throw FormatException('Unsupported benchmark runner argument "$arg".');
       }
@@ -500,6 +555,106 @@ final class BenchmarkRunOptions {
       profile: profile,
       output: output,
       device: device,
+      history: history.build(defaultDeviceId: device),
+    );
+  }
+}
+
+final class BenchmarkRunHistoryOptions {
+  const BenchmarkRunHistoryOptions({
+    required this.label,
+    required this.deviceName,
+    required this.deviceId,
+    required this.deviceOs,
+    required this.referencePath,
+    required this.output,
+    required this.historyRoot,
+    required this.subjectGitHead,
+    required this.allowDirty,
+    required this.overwrite,
+  });
+
+  final String label;
+  final String? deviceName;
+  final String? deviceId;
+  final String? deviceOs;
+  final String? referencePath;
+  final String? output;
+  final String historyRoot;
+  final String? subjectGitHead;
+  final bool allowDirty;
+  final bool overwrite;
+
+  ManualBenchmarkHistoryOptions toHistoryOptions(String reportPath) {
+    return ManualBenchmarkHistoryOptions(
+      label: label,
+      reportPaths: [reportPath],
+      deviceName: deviceName,
+      deviceId: deviceId,
+      deviceOs: deviceOs,
+      referencePath: referencePath,
+      output: output,
+      historyRoot: historyRoot,
+      subjectGitHead: subjectGitHead,
+      allowDirty: allowDirty,
+      overwrite: overwrite,
+    );
+  }
+}
+
+final class BenchmarkRunHistoryOptionsBuilder {
+  final _values = <String, String>{};
+  final _flags = <String>{};
+
+  bool accepts(String arg) => arg.startsWith('--history-');
+
+  void add(String arg) {
+    const flagOptions = {'--history-allow-dirty', '--history-overwrite'};
+    const valueOptions = {
+      '--history-label',
+      '--history-device-name',
+      '--history-device-id',
+      '--history-device-os',
+      '--history-baseline',
+      '--history-reference',
+      '--history-output',
+      '--history-root',
+      '--history-subject-git-head',
+    };
+    if (flagOptions.contains(arg)) {
+      _flags.add(arg);
+      return;
+    }
+    final parts = arg.split('=');
+    if (parts.length < 2) {
+      throw FormatException('Unsupported benchmark runner argument "$arg".');
+    }
+    if (!valueOptions.contains(parts.first)) {
+      throw FormatException('Unsupported benchmark runner argument "$arg".');
+    }
+    _values[parts.first] = parts.skip(1).join('=');
+  }
+
+  BenchmarkRunHistoryOptions? build({required String? defaultDeviceId}) {
+    final label = _values['--history-label'];
+    if (label == null) {
+      return null;
+    }
+    if (label.isEmpty) {
+      throw const FormatException('--history-label must not be empty.');
+    }
+    return BenchmarkRunHistoryOptions(
+      label: label,
+      deviceName: _values['--history-device-name'],
+      deviceId: _values['--history-device-id'] ?? defaultDeviceId,
+      deviceOs: _values['--history-device-os'],
+      referencePath:
+          _values['--history-reference'] ?? _values['--history-baseline'],
+      output: _values['--history-output'],
+      historyRoot: _values['--history-root'] ?? manualBenchmarkHistoryRoot,
+      subjectGitHead: _values['--history-subject-git-head'],
+      allowDirty: _flags.contains('--history-allow-dirty'),
+      overwrite: _flags.contains('--history-overwrite'),
     );
   }
 }

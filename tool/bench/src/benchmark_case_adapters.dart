@@ -80,97 +80,111 @@ final class BenchmarkDeviceTarget {
   final String id;
 }
 
+final class _ProbeDecodeContext {
+  const _ProbeDecodeContext({required this.benchmarkCase, required this.scale});
+
+  final BenchmarkCase benchmarkCase;
+  final BenchmarkScale scale;
+
+  String get caseKey => '${benchmarkCase.id}/${scale.id}';
+}
+
 BenchmarkAdapterResult decodeBenchmarkProbeResult(
   BenchmarkCase benchmarkCase,
   BenchmarkScale scale,
   String stdout, {
   String? expectedProfileId,
 }) {
-  final jsonLine = stdout
-      .split('\n')
-      .lastWhere(
-        (line) => line.startsWith(_probeJsonPrefix),
-        orElse: () => throw StateError(
-          '${benchmarkCase.id}/${scale.id} emitted no probe JSON.',
-        ),
-      )
-      .replaceFirst(_probeJsonPrefix, '');
-  final decoded = jsonDecode(jsonLine) as Map<String, Object?>;
-  if (decoded.containsKey('elapsedUsSamples')) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} old elapsedUsSamples probe payload.',
-    );
-  }
-  final probeSchemaVersion = decoded['probeSchemaVersion'];
-  if (probeSchemaVersion != benchmarkToolSchemaVersion) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid probeSchemaVersion.',
-    );
-  }
-  final actionUsSamples = _sampleList(
-    benchmarkCase,
-    scale,
-    decoded,
-    'actionUsSamples',
+  final context = _ProbeDecodeContext(
+    benchmarkCase: benchmarkCase,
+    scale: scale,
   );
-  if (actionUsSamples.isEmpty) {
-    throw StateError('${benchmarkCase.id}/${scale.id} emitted no samples.');
-  }
-  final setupUsSamples = _sampleList(
-    benchmarkCase,
-    scale,
-    decoded,
-    'setupUsSamples',
-  );
-  final decodedMetrics = decoded['metrics'];
-  if (decodedMetrics is! Map<String, Object?>) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid metrics.',
-    );
-  }
-  final setupMetrics = decoded['setupMetrics'];
-  if (setupMetrics is! Map<String, Object?>) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid setupMetrics.',
-    );
-  }
-  final boundary = _decodeMeasurementBoundary(
-    benchmarkCase,
-    scale,
-    decoded['measurementBoundary'],
-  );
-  final fixtureShape = decoded['fixtureShape'];
-  if (fixtureShape != benchmarkCase.fixtureShape) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid fixtureShape.',
-    );
-  }
+  final decoded = _decodeProbePayload(context, stdout);
+  final payload = _probePayloadFields(context, decoded);
   final runtime = _decodeProbeRuntime(
-    benchmarkCase,
-    scale,
+    context,
     decoded['runtime'],
     expectedProfileId: expectedProfileId,
   );
+
   return BenchmarkAdapterResult(
-    actionUsSamples: actionUsSamples,
-    setupUsSamples: setupUsSamples,
-    metrics: decodedMetrics,
-    setupMetrics: setupMetrics,
-    measurementBoundary: boundary,
-    fixtureShape: fixtureShape as String,
+    actionUsSamples: payload.actionUsSamples,
+    setupUsSamples: payload.setupUsSamples,
+    metrics: payload.metrics,
+    setupMetrics: payload.setupMetrics,
+    measurementBoundary: payload.boundary,
+    fixtureShape: payload.fixtureShape,
     runtime: runtime,
   );
 }
 
+Map<String, Object?> _decodeProbePayload(
+  _ProbeDecodeContext context,
+  String stdout,
+) {
+  final jsonLine = stdout
+      .split('\n')
+      .lastWhere(
+        (line) => line.startsWith(_probeJsonPrefix),
+        orElse: () =>
+            throw StateError('${context.caseKey} emitted no probe JSON.'),
+      )
+      .replaceFirst(_probeJsonPrefix, '');
+  final decoded = jsonDecode(jsonLine) as Map<String, Object?>;
+  if (decoded.containsKey('elapsedUsSamples')) {
+    throw StateError('${context.caseKey} old elapsedUsSamples probe payload.');
+  }
+  final probeSchemaVersion = decoded['probeSchemaVersion'];
+  if (probeSchemaVersion != benchmarkToolSchemaVersion) {
+    throw StateError('${context.caseKey} emitted invalid probeSchemaVersion.');
+  }
+
+  return decoded;
+}
+
+({
+  List<int> actionUsSamples,
+  List<int> setupUsSamples,
+  Map<String, Object?> metrics,
+  Map<String, Object?> setupMetrics,
+  BenchmarkMeasurementBoundary boundary,
+  String fixtureShape,
+})
+_probePayloadFields(_ProbeDecodeContext context, Map<String, Object?> decoded) {
+  final actionUsSamples = _sampleList(context, decoded, 'actionUsSamples');
+  if (actionUsSamples.isEmpty) {
+    throw StateError('${context.caseKey} emitted no samples.');
+  }
+  final setupUsSamples = _sampleList(context, decoded, 'setupUsSamples');
+  final decodedMetrics = _objectMap(context, decoded, 'metrics');
+  final setupMetrics = _objectMap(context, decoded, 'setupMetrics');
+  final boundary = _decodeMeasurementBoundary(
+    context,
+    decoded['measurementBoundary'],
+  );
+  final fixtureShape = decoded['fixtureShape'];
+  if (fixtureShape != context.benchmarkCase.fixtureShape) {
+    throw StateError('${context.caseKey} emitted invalid fixtureShape.');
+  }
+
+  return (
+    actionUsSamples: actionUsSamples,
+    setupUsSamples: setupUsSamples,
+    metrics: decodedMetrics,
+    setupMetrics: setupMetrics,
+    boundary: boundary,
+    fixtureShape: fixtureShape as String,
+  );
+}
+
 List<int> _sampleList(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Map<String, Object?> decoded,
   String key,
 ) {
   final samples = decoded[key];
   if (samples is! List<Object?>) {
-    throw StateError('${benchmarkCase.id}/${scale.id} emitted invalid $key.');
+    throw StateError('${context.caseKey} emitted invalid $key.');
   }
   return [
     for (final value in samples)
@@ -178,62 +192,48 @@ List<int> _sampleList(
   ];
 }
 
+Map<String, Object?> _objectMap(
+  _ProbeDecodeContext context,
+  Map<String, Object?> decoded,
+  String key,
+) {
+  final value = decoded[key];
+  if (value is Map<String, Object?>) {
+    return value;
+  }
+
+  throw StateError('${context.caseKey} emitted invalid $key.');
+}
+
 BenchmarkMeasurementBoundary _decodeMeasurementBoundary(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Object? boundary,
 ) {
   if (boundary is! Map<String, Object?>) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.',
-    );
+    throw StateError('${context.caseKey} emitted invalid measurementBoundary.');
   }
-  final setupScope = _boundaryString(
-    benchmarkCase,
-    scale,
-    boundary,
-    'setupScope',
-  );
+  final setupScope = _boundaryString(context, boundary, 'setupScope');
   final decoded = BenchmarkMeasurementBoundary(
-    timedScope: _boundaryString(benchmarkCase, scale, boundary, 'timedScope'),
+    timedScope: _boundaryString(context, boundary, 'timedScope'),
     setupScope: setupScope,
-    teardownScope: _boundaryString(
-      benchmarkCase,
-      scale,
-      boundary,
-      'teardownScope',
-    ),
-    primaryTiming: _boundaryString(
-      benchmarkCase,
-      scale,
-      boundary,
-      'primaryTiming',
-    ),
-    primaryMemory: _boundaryString(
-      benchmarkCase,
-      scale,
-      boundary,
-      'primaryMemory',
-    ),
-    setupMetrics: _boundaryStringList(
-      benchmarkCase,
-      scale,
-      boundary,
-      'setupMetrics',
+    teardownScope: _boundaryString(context, boundary, 'teardownScope'),
+    primaryTiming: _boundaryString(context, boundary, 'primaryTiming'),
+    primaryMemory: _boundaryString(context, boundary, 'primaryMemory'),
+    setupMetrics: _boundaryStringList((
+      context: context,
+      boundary: boundary,
+      key: 'setupMetrics',
       allowEmpty: setupScope == 'none',
-    ),
-    setupMemoryMetrics: _boundaryStringList(
-      benchmarkCase,
-      scale,
-      boundary,
-      'setupMemoryMetrics',
+    )),
+    setupMemoryMetrics: _boundaryStringList((
+      context: context,
+      boundary: boundary,
+      key: 'setupMemoryMetrics',
       allowEmpty: setupScope == 'none',
-    ),
+    )),
   );
-  if (!_sameBoundary(decoded, benchmarkCase.measurementBoundary)) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted measurementBoundary drift.',
-    );
+  if (!_sameBoundary(decoded, context.benchmarkCase.measurementBoundary)) {
+    throw StateError('${context.caseKey} emitted measurementBoundary drift.');
   }
   return decoded;
 }
@@ -264,8 +264,7 @@ bool _sameStringList(List<String> left, List<String> right) {
 }
 
 String _boundaryString(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Map<String, Object?> boundary,
   String key,
 ) {
@@ -274,29 +273,31 @@ String _boundaryString(
     return value;
   }
   throw StateError(
-    '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+    '${context.caseKey} emitted invalid measurementBoundary.$key.',
   );
 }
 
 List<String> _boundaryStringList(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
-  Map<String, Object?> boundary,
-  String key, {
-  required bool allowEmpty,
-}) {
-  final values = boundary[key];
+  ({
+    _ProbeDecodeContext context,
+    Map<String, Object?> boundary,
+    String key,
+    bool allowEmpty,
+  })
+  input,
+) {
+  final values = input.boundary[input.key];
   if (values is! List<Object?>) {
     throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+      '${input.context.caseKey} emitted invalid measurementBoundary.${input.key}.',
     );
   }
   if (values.isEmpty) {
-    if (allowEmpty) {
+    if (input.allowEmpty) {
       return const [];
     }
     throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid measurementBoundary.$key.',
+      '${input.context.caseKey} emitted invalid measurementBoundary.${input.key}.',
     );
   }
   return [
@@ -305,51 +306,37 @@ List<String> _boundaryStringList(
         value
       else
         throw StateError(
-          '${benchmarkCase.id}/${scale.id} emitted invalid '
-          'measurementBoundary.$key.',
+          '${input.context.caseKey} emitted invalid '
+          'measurementBoundary.${input.key}.',
         ),
   ];
 }
 
 BenchmarkProbeRuntime _decodeProbeRuntime(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Object? runtime, {
   String? expectedProfileId,
 }) {
   if (runtime is! Map<String, Object?>) {
-    throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted invalid runtime metadata.',
-    );
+    throw StateError('${context.caseKey} emitted invalid runtime metadata.');
   }
-  final profileId = _runtimeString(benchmarkCase, scale, runtime, 'profileId');
+  final profileId = _runtimeString(context, runtime, 'profileId');
   if (expectedProfileId != null && profileId != expectedProfileId) {
     throw StateError(
-      '${benchmarkCase.id}/${scale.id} emitted profileId $profileId '
+      '${context.caseKey} emitted profileId $profileId '
       'for expected profile $expectedProfileId.',
     );
   }
   return BenchmarkProbeRuntime(
     profileId: profileId,
-    runtimeMode: _runtimeString(benchmarkCase, scale, runtime, 'runtimeMode'),
-    assertionsEnabled: _runtimeBool(
-      benchmarkCase,
-      scale,
-      runtime,
-      'assertionsEnabled',
-    ),
-    debugInvariantMode: _runtimeBool(
-      benchmarkCase,
-      scale,
-      runtime,
-      'debugInvariantMode',
-    ),
+    runtimeMode: _runtimeString(context, runtime, 'runtimeMode'),
+    assertionsEnabled: _runtimeBool(context, runtime, 'assertionsEnabled'),
+    debugInvariantMode: _runtimeBool(context, runtime, 'debugInvariantMode'),
   );
 }
 
 String _runtimeString(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Map<String, Object?> runtime,
   String key,
 ) {
@@ -357,12 +344,11 @@ String _runtimeString(
   if (value is String && value.isNotEmpty) {
     return value;
   }
-  throw StateError('${benchmarkCase.id}/${scale.id} emitted invalid $key.');
+  throw StateError('${context.caseKey} emitted invalid $key.');
 }
 
 bool _runtimeBool(
-  BenchmarkCase benchmarkCase,
-  BenchmarkScale scale,
+  _ProbeDecodeContext context,
   Map<String, Object?> runtime,
   String key,
 ) {
@@ -370,7 +356,7 @@ bool _runtimeBool(
   if (value is bool) {
     return value;
   }
-  throw StateError('${benchmarkCase.id}/${scale.id} emitted invalid $key.');
+  throw StateError('${context.caseKey} emitted invalid $key.');
 }
 
 Never _invalidSample(String key, Object? value) {

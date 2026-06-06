@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "kind": "manual_benchmark_history",
+  "recordedAtUtc": "2026-06-06T19:42:00.000Z",
+  "label": "sparse-update-source-validation",
+  "subjectGitHead": "9369b6f2",
+  "repositoryDirty": true,
+  "device": {
+    "name": "Pixel 6",
+    "id": "23081FDF6000L2",
+    "os": "Android 16"
+  },
+  "profile": null,
+  "toolchain": {
+    "profileId": "release",
+    "runtimeMode": "flutter_test",
+    "assertionsEnabled": true,
+    "debugInvariantMode": false,
+    "runnerLabel": null,
+    "osName": null,
+    "osVersion": null,
+    "dartVersion": null,
+    "flutterChannel": null,
+    "flutterVersion": null,
+    "releaseContour": null
+  },
+  "referenceReport": {
+    "kind": "manual",
+    "path": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json"
+  },
+  "sources": [
+    {
+      "path": "build/bench/current/step57_after_source_bound_edit_add_element_100k.log",
+      "kind": "probe_log",
+      "source": {
+        "path": "build/bench/current/step57_after_source_bound_edit_add_element_100k.log",
+        "sizeBytes": 1559,
+        "sha256": "71171d9a1e8db41b86ca4a2d0b21bd421e342e2ec650d32a42988454693ca8ea"
+      },
+      "manifestVersion": null,
+      "manifestFingerprint": null,
+      "caseCount": 1
+    },
+    {
+      "path": "build/bench/current/step57_after_source_bound_edit_update_transform_100k.log",
+      "kind": "probe_log",
+      "source": {
+        "path": "build/bench/current/step57_after_source_bound_edit_update_transform_100k.log",
+        "sizeBytes": 1582,
+        "sha256": "b8e55ce3290d08d609aab89a430f41e39c51b4b0909e08f16f07b7148c3ba1fa"
+      },
+      "manifestVersion": null,
+      "manifestFingerprint": null,
+      "caseCount": 1
+    },
+    {
+      "path": "build/bench/current/step57_after_source_bound_edit_update_visual_rerun_100k.log",
+      "kind": "probe_log",
+      "source": {
+        "path": "build/bench/current/step57_after_source_bound_edit_update_visual_rerun_100k.log",
+        "sizeBytes": 1571,
+        "sha256": "2794a2ac9facd9d6c502c40896fab3cedd15e0f8ecb10c09e54706bc750c784a"
+      },
+      "manifestVersion": null,
+      "manifestFingerprint": null,
+      "caseCount": 1
+    }
+  ],
+  "caseCount": 3,
+  "cases": [
+    {
+      "id": "edit.add_element",
+      "scale": "100k",
+      "classification": null,
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 28279,
+          "avg_us": 29978,
+          "p50_us": 29604,
+          "p95_us": 32398,
+          "max_us": 32398
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 1039678,
+          "avg_us": 1091631,
+          "p50_us": 1053585,
+          "p95_us": 1193219,
+          "max_us": 1193219
+        }
+      },
+      "metrics": {
+        "allocation_bytes": 21970944,
+        "rss_delta_bytes": 21970944,
+        "avg_us": 29978,
+        "p95_us": 32398,
+        "max_us": 32398,
+        "setup_us": 1091631
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1091631
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_transform",
+      "scale": "100k",
+      "classification": null,
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 17264,
+          "avg_us": 19814,
+          "p50_us": 20066,
+          "p95_us": 21492,
+          "max_us": 21492
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 944421,
+          "avg_us": 1006171,
+          "p50_us": 976209,
+          "p95_us": 1094797,
+          "max_us": 1094797
+        }
+      },
+      "metrics": {
+        "spatial_touched_pages": 1,
+        "allocation_bytes": 11780096,
+        "rss_delta_bytes": 11780096,
+        "avg_us": 19814,
+        "p95_us": 21492,
+        "max_us": 21492,
+        "setup_us": 1006171
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1006171
+      },
+      "exactInvariants": {}
+    },
+    {
+      "id": "edit.update_visual",
+      "scale": "100k",
+      "classification": null,
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 19487,
+          "avg_us": 19947,
+          "p50_us": 20006,
+          "p95_us": 20356,
+          "max_us": 20356
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 971792,
+          "avg_us": 994829,
+          "p50_us": 988343,
+          "p95_us": 1043334,
+          "max_us": 1043334
+        }
+      },
+      "metrics": {
+        "touched_count": 1,
+        "allocation_bytes": 11780096,
+        "rss_delta_bytes": 11780096,
+        "avg_us": 19947,
+        "p95_us": 20356,
+        "max_us": 20356,
+        "setup_us": 994829
+      },
+      "setupMetrics": {
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 994829
+      },
+      "exactInvariants": {}
+    }
+  ]
+}
