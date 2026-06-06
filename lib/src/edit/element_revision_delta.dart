@@ -1,5 +1,5 @@
 import '../contracts/public/canvas_element.dart';
-import 'store_revision_delta.dart';
+import '../store/store_revision_delta.dart';
 
 StoreRevisionDelta elementRevisionDelta({
   required CanvasElement before,
