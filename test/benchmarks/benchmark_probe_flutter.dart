@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_codec.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
@@ -122,6 +123,12 @@ void main() {
   test(
     'resource and diagnostic case plans expose prepared setup diagnostics',
     _resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics,
+  );
+  // Assertions live in the named helper; see comment above.
+  // ignore: missing-test-assertion
+  test(
+    'load document breakdown records public load phases',
+    _loadDocumentBreakdownRecordsPublicLoadPhases,
   );
   // Assertions live in the named helper; see comment above.
   // ignore: missing-test-assertion
@@ -580,6 +587,23 @@ void _expectPreparedCaseMetrics(Map<String, Object?> result, String metric) {
   expect(metrics, contains(metric));
 }
 
+Future<void> _loadDocumentBreakdownRecordsPublicLoadPhases() async {
+  final result = await _runProbePlan(
+    _fakeOptions(warmups: 0, repetitions: 1),
+    _casePlan('load_document.breakdown', '1k'),
+  );
+  final metrics = result['metrics'] as Map<String, Object?>;
+
+  expect(metrics, containsPair('decode_us', isA<int>()));
+  expect(metrics, containsPair('runtime_construct_us', isA<int>()));
+  expect(metrics, containsPair('load_document_us', isA<int>()));
+  expect(metrics, containsPair('first_projection_us', isA<int>()));
+  expect(metrics, containsPair('loaded_element_count', 1000));
+  expect(metrics, containsPair('projected_element_count', 1000));
+  expect(metrics, containsPair('encoded_byte_count', isA<int>()));
+  expect(result['setupUsSamples'], hasLength(1));
+}
+
 Future<void> _editInputAndFrameCasePlansExecutePreparedActionSamples() async {
   final editResult = await _runProbePlan(
     _fakeOptions(caseId: 'edit.move_selection'),
@@ -845,10 +869,10 @@ _BenchmarkCasePlan _casePlan(
   String scaleId, {
   _CaseBoundaryRegistry? boundaryRegistry,
 }) {
-  final boundary = (boundaryRegistry ?? _caseBoundaryRegistry()).validate(
-    caseId,
-  );
-  _validateCaseBoundary(caseId, boundary);
+  final manifestBoundaries = _caseBoundaryRegistry();
+  final boundary = (boundaryRegistry ?? manifestBoundaries).validate(caseId);
+  final manifestBoundary = manifestBoundaries.validate(caseId);
+  _validateCaseBoundary(caseId, boundary, manifestBoundary);
   final setupScope = boundary.setupScope;
   final config = CanvasRuntimeConfig(
     pointerPolicy: CanvasPointerPolicy(dragStartSlop: 1),
@@ -973,6 +997,10 @@ _BenchmarkCasePlan _casePlan(
     ),
     'codec.decode_v1' => _codecDecodePlan(setupScope, scaleId),
     'load_document.success' => _loadDocumentSuccessPlan(setupScope, scaleId),
+    'load_document.breakdown' => _loadDocumentBreakdownPlan(
+      setupScope,
+      scaleId,
+    ),
     'load_document.failure' => _loadDocumentFailurePlan(setupScope, scaleId),
     'runtime.dispose_during_gesture' => _disposeDuringGesturePlan(
       setupScope,
@@ -1017,13 +1045,18 @@ _BenchmarkCasePlan _runtimeCasePlan(
   );
 }
 
-void _validateCaseBoundary(String caseId, _CaseBoundaryRegistryEntry boundary) {
-  final expected = _expectedCaseBoundary(caseId);
+void _validateCaseBoundary(
+  String caseId,
+  _CaseBoundaryRegistryEntry boundary,
+  _CaseBoundaryRegistryEntry expected,
+) {
   if (boundary.timedScope != expected.timedScope ||
       boundary.setupScope != expected.setupScope ||
       boundary.teardownScope != expected.teardownScope ||
       boundary.primaryTiming != expected.primaryTiming ||
-      boundary.primaryMemory != expected.primaryMemory) {
+      boundary.primaryMemory != expected.primaryMemory ||
+      !listEquals(boundary.setupMetrics, expected.setupMetrics) ||
+      !listEquals(boundary.setupMemoryMetrics, expected.setupMemoryMetrics)) {
     throw StateError('$caseId has benchmark measurement boundary drift.');
   }
   if (boundary.fixtureShape != expected.fixtureShape) {
@@ -1032,113 +1065,6 @@ void _validateCaseBoundary(String caseId, _CaseBoundaryRegistryEntry boundary) {
       'not ${boundary.fixtureShape}.',
     );
   }
-}
-
-_ExpectedCaseBoundary _expectedCaseBoundary(String caseId) {
-  return switch (caseId) {
-    'codec.decode_v1' => const _ExpectedCaseBoundary(
-      timedScope: 'lifecycle',
-      setupScope: 'per_run_prepared_fixture',
-      teardownScope: 'measured_lifecycle',
-      primaryTiming: 'lifecycle',
-      primaryMemory: 'lifecycle',
-      fixtureShape: 'codec_fixture',
-    ),
-    'load_document.success' => const _ExpectedCaseBoundary(
-      timedScope: 'lifecycle',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'measured_lifecycle',
-      primaryTiming: 'lifecycle',
-      primaryMemory: 'lifecycle',
-      fixtureShape: 'normal_spread',
-    ),
-    'load_document.failure' => const _ExpectedCaseBoundary(
-      timedScope: 'lifecycle',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'measured_lifecycle',
-      primaryTiming: 'lifecycle',
-      primaryMemory: 'lifecycle',
-      fixtureShape: 'invalid_document',
-    ),
-    'projection.read_document' => const _ExpectedCaseBoundary(
-      timedScope: 'projection_split',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'projection_action_total',
-      primaryMemory: 'action',
-      fixtureShape: 'normal_spread',
-    ),
-    'input.eraser_budget_exceeded' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'dense_stress',
-    ),
-    'spatial.query_point_dense_stress' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_run_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'dense_stress',
-    ),
-    'frame.selected_move_preview_cached_ordinary_plan' ||
-    'frame.main_capture' ||
-    'frame.paint_candidates' ||
-    'spatial.query_point' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_run_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'normal_spread',
-    ),
-    'frame.overlay_capture' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_run_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'active_preview',
-    ),
-    'runtime.dispose_during_gesture' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'active_preview',
-    ),
-    'resources.resolve_sync' ||
-    'resources.resolve_sync_cold_budget' ||
-    'resources.mark_dirty' ||
-    'resources.mark_all_dirty' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'resource_set',
-    ),
-    'diagnostics.disabled_pointer' => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'hot_pointer',
-    ),
-    _ => const _ExpectedCaseBoundary(
-      timedScope: 'action_only',
-      setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'excluded',
-      primaryTiming: 'action',
-      primaryMemory: 'action',
-      fixtureShape: 'normal_spread',
-    ),
-  };
 }
 
 _BenchmarkCasePlan _resourceLookupPlan(String setupScope, String scaleId) {
@@ -1289,6 +1215,57 @@ _BenchmarkCasePlan _loadDocumentSuccessPlan(String setupScope, String scaleId) {
     cleanup: (fixture) {
       (fixture as _LoadDocumentSuccessFixture).runtime.dispose();
     },
+  );
+}
+
+_BenchmarkCasePlan _loadDocumentBreakdownPlan(
+  String setupScope,
+  String scaleId,
+) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () {
+      return _PreparedProbeFixture(
+        value: encodeCanvasDocumentToJson(_document(scaleId)),
+      );
+    },
+    measure: (fixture) {
+      final encoded = fixture as String;
+
+      final decodeStopwatch = Stopwatch()..start();
+      final document = decodeCanvasDocumentFromJson(encoded);
+      decodeStopwatch.stop();
+
+      final runtimeStopwatch = Stopwatch()..start();
+      final runtime = RuntimeRoot(
+        initialDocument: CanvasDocument(),
+        config: const CanvasRuntimeConfig(),
+      );
+      runtimeStopwatch.stop();
+
+      try {
+        final loadStopwatch = Stopwatch()..start();
+        runtime.edits.loadDocument(document);
+        loadStopwatch.stop();
+
+        final projectionStopwatch = Stopwatch()..start();
+        final projection = runtime.readDocument();
+        projectionStopwatch.stop();
+
+        return {
+          'decode_us': _nonZeroUs(decodeStopwatch),
+          'runtime_construct_us': _nonZeroUs(runtimeStopwatch),
+          'load_document_us': _nonZeroUs(loadStopwatch),
+          'first_projection_us': _nonZeroUs(projectionStopwatch),
+          'loaded_element_count': _documentElementCount(document),
+          'projected_element_count': _documentElementCount(projection),
+          'encoded_byte_count': utf8.encode(encoded).length,
+        };
+      } finally {
+        runtime.dispose();
+      }
+    },
+    cleanup: (_) => null,
   );
 }
 
@@ -1749,6 +1726,18 @@ CanvasDocument _document(String scaleId) {
   );
 }
 
+int _documentElementCount(CanvasDocument document) {
+  return document.layers.fold<int>(
+    document.backgroundElements.length,
+    (count, layer) => count + layer.elements.length,
+  );
+}
+
+int _nonZeroUs(Stopwatch stopwatch) {
+  final elapsedUs = stopwatch.elapsedMicroseconds;
+  return elapsedUs == 0 ? 1 : elapsedUs;
+}
+
 RuntimeRoot _runtime(
   String scaleId, {
   CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
@@ -2055,24 +2044,6 @@ final class _CaseBoundaryRegistryEntry {
         setupDiagnosticsComplete &&
         fixtureShape.isNotEmpty;
   }
-}
-
-final class _ExpectedCaseBoundary {
-  const _ExpectedCaseBoundary({
-    required this.timedScope,
-    required this.setupScope,
-    required this.teardownScope,
-    required this.primaryTiming,
-    required this.primaryMemory,
-    required this.fixtureShape,
-  });
-
-  final String timedScope;
-  final String setupScope;
-  final String teardownScope;
-  final String primaryTiming;
-  final String primaryMemory;
-  final String fixtureShape;
 }
 
 final class _BenchmarkCasePlan {

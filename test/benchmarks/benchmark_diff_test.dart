@@ -58,16 +58,13 @@ void main() {
       );
     });
 
-    test('invalidated old-schema manual baseline fails closed', () {
+    test('invalidated old-schema baseline payload fails closed', () {
       final manifest = BenchmarkManifest.load();
-      final invalidated =
-          jsonDecode(
-                File(
-                  '$manualBenchmarkBaselineRoot/'
-                  'pixel6_android16_flutter_3_44_0.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, Object?>;
+      const invalidated = {
+        'schemaVersion': 1,
+        'status': 'invalidated_old_schema',
+        'profile': 'release',
+      };
 
       expect(invalidated, containsPair('status', 'invalidated_old_schema'));
       expect(invalidated, isNot(contains('cases')));
@@ -84,6 +81,35 @@ void main() {
         ).failures.join('\n'),
         contains('benchmark baseline is invalidated old schema'),
       );
+    });
+
+    test('committed manual baselines are initialized as schema v3', () {
+      const expectedDeviceIds = {
+        'pixel6_android16_flutter_3_44_0.json': '23081FDF6000L2',
+        'xiaomi_22081283g_android14_flutter_3_44_0.json': 'Z9NBMVIRY5KRGAJF',
+      };
+      final files = Directory(manualBenchmarkBaselineRoot)
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.uri.pathSegments.last)
+          .toSet();
+
+      expect(files, expectedDeviceIds.keys.toSet());
+      for (final entry in expectedDeviceIds.entries) {
+        final baseline =
+            jsonDecode(
+                  File(
+                    '$manualBenchmarkBaselineRoot/${entry.key}',
+                  ).readAsStringSync(),
+                )
+                as Map<String, Object?>;
+        final runtime = baseline['runtime'] as Map<String, Object?>;
+
+        expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
+        expect(baseline['profile'], isA<Map<String, Object?>>());
+        expect(baseline['cases'], isA<List<Object?>>());
+        expect(runtime['deviceId'], entry.value);
+      }
     });
 
     test('rejects release contour and schema metadata mismatches', () {
@@ -734,9 +760,11 @@ void main() {
         baselinePath,
       ).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
       File(currentPath).writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+      final releaseCurrentReport = _releaseReport(manifest)
+        .._runtime['deviceId'] = 'device-fixture';
       releaseCurrent
         ..parent.createSync(recursive: true)
-        ..writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+        ..writeAsStringSync(jsonEncode(releaseCurrentReport));
       final before = File(baselinePath).readAsStringSync();
 
       await expectLater(
@@ -772,6 +800,90 @@ void main() {
           '--profile=release',
           '--candidate=$currentPath',
           '--approved=$manualBenchmarkBaselineRoot/update_rejected.json',
+        ], manifest: manifest),
+        throwsA(isA<FormatException>()),
+      );
+
+      final manualApproved = File(
+        '$manualBenchmarkBaselineRoot/update_accepted.json',
+      );
+      addTearDown(() {
+        if (manualApproved.existsSync()) {
+          manualApproved.deleteSync();
+        }
+      });
+      final manualUpdateExit = await runBenchmarkBaselineUpdateCli([
+        '--profile=release',
+        '--candidate=$releaseCurrentReportPath',
+        '--approved=${manualApproved.path}',
+      ], manifest: manifest);
+      expect(manualUpdateExit, 0);
+      final manualApprovedJson =
+          jsonDecode(manualApproved.readAsStringSync()) as Map<String, Object?>;
+      expect(manualApprovedJson['schemaVersion'], benchmarkToolSchemaVersion);
+      expect(manualApprovedJson['runtime'], releaseCurrentReport['runtime']);
+      final conflictingCurrent = _releaseReport(manifest)
+        .._runtime['deviceId'] = 'other-device';
+      releaseCurrent.writeAsStringSync(jsonEncode(conflictingCurrent));
+      final manualBeforeConflict = manualApproved.readAsStringSync();
+      final conflictingManualUpdateExit = await runBenchmarkBaselineUpdateCli([
+        '--profile=release',
+        '--candidate=$releaseCurrentReportPath',
+        '--approved=${manualApproved.path}',
+      ], manifest: manifest);
+      expect(conflictingManualUpdateExit, 1);
+      expect(manualApproved.readAsStringSync(), manualBeforeConflict);
+
+      final missingDeviceManual = File(
+        '$manualBenchmarkBaselineRoot/update_missing_device.json',
+      );
+      addTearDown(() {
+        if (missingDeviceManual.existsSync()) {
+          missingDeviceManual.deleteSync();
+        }
+      });
+      releaseCurrent.writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+      final missingDeviceUpdateExit = await runBenchmarkBaselineUpdateCli([
+        '--profile=release',
+        '--candidate=$releaseCurrentReportPath',
+        '--approved=${missingDeviceManual.path}',
+      ], manifest: manifest);
+      expect(missingDeviceUpdateExit, 1);
+      expect(missingDeviceManual.existsSync(), isFalse);
+      releaseCurrent.writeAsStringSync(jsonEncode(releaseCurrentReport));
+
+      final symlinkManual = Link(
+        '$manualBenchmarkBaselineRoot/update_symlink.json',
+      );
+      final symlinkTarget = File('${temp.path}/manual_symlink_target.json')
+        ..writeAsStringSync('{}');
+      addTearDown(() {
+        if (symlinkManual.existsSync()) {
+          symlinkManual.deleteSync();
+        }
+      });
+      symlinkManual.createSync(symlinkTarget.absolute.path);
+      expect(
+        () => runBenchmarkBaselineUpdateCli([
+          '--profile=release',
+          '--candidate=$releaseCurrentReportPath',
+          '--approved=${symlinkManual.path}',
+        ], manifest: manifest),
+        throwsA(isA<FormatException>()),
+      );
+
+      final symlinkDirectory = Link('$manualBenchmarkBaselineRoot/update_link');
+      addTearDown(() {
+        if (symlinkDirectory.existsSync()) {
+          symlinkDirectory.deleteSync();
+        }
+      });
+      symlinkDirectory.createSync(temp.absolute.path);
+      expect(
+        () => runBenchmarkBaselineUpdateCli([
+          '--profile=release',
+          '--candidate=$releaseCurrentReportPath',
+          '--approved=${symlinkDirectory.path}/../update_parent.json',
         ], manifest: manifest),
         throwsA(isA<FormatException>()),
       );
@@ -819,7 +931,7 @@ void main() {
           candidate.deleteSync();
         }
       });
-      candidate.writeAsStringSync(jsonEncode(_releaseReport(manifest)));
+      candidate.writeAsStringSync(jsonEncode(releaseCurrentReport));
 
       final updateExit = await runBenchmarkBaselineUpdateCli([
         '--profile=release',

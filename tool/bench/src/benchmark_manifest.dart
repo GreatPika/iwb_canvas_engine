@@ -305,6 +305,14 @@ final class _BenchmarkManifestParser {
       primaryMemory: 'lifecycle',
       fixtureShape: 'normal_spread',
     ),
+    'load_document.breakdown': _ExpectedBenchmarkBoundary(
+      timedScope: 'lifecycle',
+      setupScope: 'per_run_prepared_fixture',
+      teardownScope: 'measured_lifecycle',
+      primaryTiming: 'lifecycle',
+      primaryMemory: 'lifecycle',
+      fixtureShape: 'codec_fixture',
+    ),
     'load_document.failure': _ExpectedBenchmarkBoundary(
       timedScope: 'lifecycle',
       setupScope: 'per_sample_prepared_fixture',

@@ -14,7 +14,7 @@ void main() {
 
       expect(manifest.manifestVersion, benchmarkManifestVersion);
       expect(manifest.toolSchemaVersion, benchmarkToolSchemaVersion);
-      expect(manifest.cases, hasLength(29));
+      expect(manifest.cases, hasLength(30));
       expect(manifest.profiles.map((profile) => profile.id), [
         'dry_run',
         'smoke',
@@ -560,6 +560,7 @@ const _requiredCaseIds = [
   'projection.read_document',
   'codec.decode_v1',
   'load_document.success',
+  'load_document.breakdown',
   'load_document.failure',
   'spatial.query_point',
   'spatial.query_point_dense_stress',
@@ -680,6 +681,7 @@ const _expectedCaseBoundaryFingerprints = [
   'projection.read_document|projection_split|per_sample_prepared_fixture|excluded|projection_action_total|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
   'codec.decode_v1|lifecycle|per_run_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|codec_fixture',
   'load_document.success|lifecycle|per_sample_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'load_document.breakdown|lifecycle|per_run_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|codec_fixture',
   'load_document.failure|lifecycle|per_sample_prepared_fixture|measured_lifecycle|lifecycle|lifecycle|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|invalid_document',
   'spatial.query_point|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
   'spatial.query_point_dense_stress|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|dense_stress',
@@ -712,6 +714,7 @@ const _expectedCasePolicyFingerprints = [
   'projection.read_document|new_only|query_read|bulk_document_1k_10k_50k_100k|first_read_us,cache_hit_us||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
   'codec.decode_v1|equivalent_legacy|bulk_io,allocation_budget,exact_invariant|codec_fixture_bulk|avg_us,p95_us,max_us,error_payload|error_payload_matches_fixture:error_payload::|all_fixtures:dry_run,smoke,release',
   'load_document.success|equivalent_legacy|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,rebuild_cost,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'load_document.breakdown|new_only|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,decode_us,runtime_construct_us,load_document_us,first_projection_us,loaded_element_count,projected_element_count,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
   'load_document.failure|equivalent_legacy|bulk_io,allocation_budget,exact_invariant|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,committed_mutation_count|committed_mutation_count_zero:committed_mutation_count:0:|invalid_1k:dry_run,smoke,release;invalid_10k:dry_run,release;invalid_50k:dry_run,release',
   'spatial.query_point|equivalent_legacy|query_read,exact_invariant|hot_or_query|tile_count,fallback_count|fallback_count_bounded:fallback_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
   'spatial.query_point_dense_stress|new_only|query_read,exact_invariant|hot_or_query|fallback_count|fallback_count_bounded:fallback_count::|dense_50k:dry_run,smoke,release',

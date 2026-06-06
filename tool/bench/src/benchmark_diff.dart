@@ -18,6 +18,8 @@ const releaseDiffPath =
 const releaseCandidateRoot =
     'build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0';
 
+const benchmarkCurrentRoot = 'build/bench/current';
+
 final class BenchmarkDiffOptions {
   const BenchmarkDiffOptions({
     required this.profile,
@@ -246,16 +248,28 @@ Future<int> runBenchmarkBaselineUpdateCli(
       'Baseline update supports only profile=release.',
     );
   }
-  _validateCandidatePath(options.candidate);
   _validateApprovedBaselineWritePath(options.approved);
+  _validateBaselineUpdateCandidatePath(
+    candidate: options.candidate,
+    approved: options.approved,
+  );
   final loadedManifest = manifest ?? BenchmarkManifest.load();
   final candidateJson = _readJsonObject(options.candidate);
-  final result = validateFirstBaselineCandidate(
-    manifest: loadedManifest,
-    profile: options.profile,
-    candidateJson: candidateJson,
-    candidatePath: options.candidate,
-  );
+  final manualBaseline = _isManualBaselinePath(options.approved);
+  final result = manualBaseline
+      ? validateManualBaselineCandidate(
+          manifest: loadedManifest,
+          profile: options.profile,
+          candidateJson: candidateJson,
+          candidatePath: options.candidate,
+          approvedPath: options.approved,
+        )
+      : validateFirstBaselineCandidate(
+          manifest: loadedManifest,
+          profile: options.profile,
+          candidateJson: candidateJson,
+          candidatePath: options.candidate,
+        );
   if (!result.passed) {
     stderr.writeln('FAIL: candidate baseline rejected.');
     for (final failure in result.failures) {
@@ -267,8 +281,72 @@ Future<int> runBenchmarkBaselineUpdateCli(
     options.approved,
     approvedBaselinePayload(candidateJson, sourcePath: options.candidate),
   );
-  stdout.writeln('Approved benchmark baseline written: ${options.approved}');
+  stdout.writeln('Benchmark baseline written: ${options.approved}');
   return 0;
+}
+
+BenchmarkDiffResult validateManualBaselineCandidate({
+  required BenchmarkManifest manifest,
+  required String profile,
+  required Map<String, Object?> candidateJson,
+  required String candidatePath,
+  required String approvedPath,
+}) {
+  final candidate = ParsedBenchmarkReport.parse(candidateJson, candidatePath);
+  final failures = _validateReportForPolicy(
+    manifest: manifest,
+    report: candidate,
+    profile: profile,
+    sourceRole: 'candidate',
+    requireLegacyBootstrapMetrics: false,
+    requireFirstBaselineMemoryCaps: false,
+    requireCasePolicyFields: true,
+    requireObservedReleaseContour: false,
+    enforceAbsoluteCaps: false,
+  );
+  _validateManualBaselineDeviceId(failures, candidate.runtime);
+  final approved = File(approvedPath);
+  if (approved.existsSync()) {
+    failures.addAll(
+      _validateExistingManualBaselineContour(
+        candidate: candidate,
+        approvedJson: _readJsonObject(approvedPath),
+        approvedPath: approvedPath,
+      ),
+    );
+  }
+
+  return _result(
+    profile: profile,
+    operation: 'manual_baseline_acceptance',
+    baselinePath: null,
+    currentPath: candidatePath,
+    failures: failures,
+    comparedCaseCount: candidate.casesByKey.length,
+  );
+}
+
+void _validateManualBaselineDeviceId(
+  List<String> failures,
+  ParsedRuntimeReport runtime,
+) {
+  final deviceId = runtime.deviceId;
+  if (deviceId == null || deviceId.isEmpty) {
+    failures.add('candidate manual baseline requires runtime.deviceId');
+  }
+}
+
+List<String> _validateExistingManualBaselineContour({
+  required ParsedBenchmarkReport candidate,
+  required Map<String, Object?> approvedJson,
+  required String approvedPath,
+}) {
+  final unavailableFailure = _unavailableBaselineFailure(approvedJson);
+  if (unavailableFailure != null) {
+    return [unavailableFailure];
+  }
+  final approved = ParsedBenchmarkReport.parse(approvedJson, approvedPath);
+  return _validateSameContour(baseline: approved, current: candidate);
 }
 
 Map<String, Object?> approvedBaselinePayload(
@@ -1802,6 +1880,17 @@ void _validateCandidatePath(String path) {
   _validateContainedPath(path, rootPath: releaseCandidateRoot);
 }
 
+void _validateBaselineUpdateCandidatePath({
+  required String candidate,
+  required String approved,
+}) {
+  if (_isManualBaselinePath(approved)) {
+    _validateContainedPath(candidate, rootPath: benchmarkCurrentRoot);
+    return;
+  }
+  _validateCandidatePath(candidate);
+}
+
 void _validateDiffBaselinePath(String path) {
   final approved = File(
     approvedReleaseBaselinePath,
@@ -1818,15 +1907,25 @@ void _validateDiffBaselinePath(String path) {
 }
 
 void _validateApprovedBaselineWritePath(String path) {
+  _validateNoParentTraversal(path);
   final approved = File(
     approvedReleaseBaselinePath,
   ).absolute.uri.normalizePath();
   final target = File(path).absolute.uri.normalizePath();
-  if (target.path != approved.path) {
+  final manualBaseline = _isManualBaselinePath(path);
+  if (target.path != approved.path && !manualBaseline) {
     throw const FormatException(
       'Approved benchmark baseline write path must be '
-      '$approvedReleaseBaselinePath.',
+      '$approvedReleaseBaselinePath or a JSON file under '
+      '$manualBenchmarkBaselineRoot.',
     );
+  }
+  _validateNoSymlinkWritePath(path);
+}
+
+void _validateNoParentTraversal(String path) {
+  if (path.split(RegExp(r'[\\/]')).contains('..')) {
+    throw FormatException('Path $path must not contain parent traversal.');
   }
 }
 

@@ -581,6 +581,26 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: load_document.breakdown
+    classification: new_only
+    budget_classes: [bulk_io, allocation_budget]
+    memory_scope: bulk_document_1k_10k_50k_100k
+    measurement_boundary:
+      timed_scope: lifecycle
+      setup_scope: per_run_prepared_fixture
+      teardown_scope: measured_lifecycle
+      primary_timing: lifecycle
+      primary_memory: lifecycle
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: codec_fixture
+    docs_metrics_label: "decode/runtime/load/first projection phase us"
+    required_metrics: [avg_us, p95_us, max_us, decode_us, runtime_construct_us, load_document_us, first_projection_us, loaded_element_count, projected_element_count, allocation_bytes]
+    exact_invariants: []
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: load_document.failure
     classification: equivalent_legacy
     budget_classes: [bulk_io, allocation_budget, exact_invariant]

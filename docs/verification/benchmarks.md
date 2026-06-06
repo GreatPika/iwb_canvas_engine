@@ -36,7 +36,7 @@ exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: cb283b7a -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 42fbf853 -->
 
 Required benchmark cases:
 
@@ -65,6 +65,7 @@ Required benchmark cases:
 | `projection.read_document` | 1k/10k/50k/100k | projection_split | normal_spread | first read/cache hit |
 | `codec.decode_v1` | all fixtures | lifecycle | codec_fixture | avg/P95/max, error payload |
 | `load_document.success` | 1k/10k/50k/100k | lifecycle | normal_spread | avg/P95/max, rebuild cost, alloc bytes |
+| `load_document.breakdown` | 1k/10k/50k | lifecycle | codec_fixture | decode/runtime/load/first projection phase us |
 | `load_document.failure` | invalid 1k/10k/50k inputs | lifecycle | invalid_document | avg/P95/max, committed mutation count = 0 |
 | `spatial.query_point` | 1k/10k/50k/100k | action_only | normal_spread | tile count, fallback count |
 | `spatial.query_point_dense_stress` | dense 50k | action_only | dense_stress | dense fallback count |
@@ -90,16 +91,16 @@ Release benchmark interpretation:
 - Manual device baselines for optimization work live under
   `tool/bench/baselines/manual/`. They are committed comparison anchors for a
   named local device and toolchain, not release-approval baselines.
-- The previous Pixel 6 Android 16 baseline at
-  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`
-  is intentionally invalidated because it used the pre-boundary report schema.
-  It must not be used as a comparison anchor until a new schemaVersion 3 Pixel 6
-  report is captured and accepted through the manual baseline path.
-- To refresh the current Pixel 6 report, run
-  `dart run tool/bench/run.dart --profile=release --device=23081FDF6000L2 --output=build/bench/current/pixel6_release.json`.
-- After a new schemaVersion 3 manual baseline exists for the same device and
-  toolchain, compare a new Pixel 6 report with
-  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/<schema-v3-pixel6-baseline>.json --current=build/bench/current/pixel6_release.json --output=build/bench/diff/pixel6_release.json`.
+- The Pixel 6 Android 16 Flutter 3.44.0 manual baseline is
+  `tool/bench/baselines/manual/pixel6_android16_flutter_3_44_0.json`.
+- The Xiaomi 22081283G Android 14 Flutter 3.44.0 manual baseline is
+  `tool/bench/baselines/manual/xiaomi_22081283g_android14_flutter_3_44_0.json`.
+- Refresh a device report with
+  `dart run tool/bench/run.dart --profile=release --device=<device-id> --output=build/bench/current/<device>_release.json`.
+- Accept that report as that device's manual baseline with
+  `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/current/<device>_release.json --approved=tool/bench/baselines/manual/<device>_<os>_flutter_<version>.json`.
+- Compare a new device report with its committed manual baseline with
+  `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/manual/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
 - Manual device-baseline diff is for regression tracking during optimization;
   it must preserve same-contour runtime metadata, including `deviceId`, but it
   does not replace the approved Ubuntu release baseline or release workflow.
