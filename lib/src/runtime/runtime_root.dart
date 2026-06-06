@@ -46,6 +46,8 @@ import '../edit/commit_applier.dart';
 import '../edit/commit_plan.dart';
 import '../edit/edit_kernel.dart';
 import '../edit/edit_session.dart';
+import '../edit/element_revision_delta.dart';
+import '../edit/element_update_application.dart';
 import '../edit/staged_document_load.dart';
 import '../frame/captured_frame.dart';
 import '../frame/frame_engine.dart';
@@ -96,7 +98,11 @@ final class RuntimeRoot
     required CanvasRuntimeConfig config,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
-         store: DocumentStoreKernel(initialDocument),
+         store: DocumentStoreKernel(
+           initialDocument,
+           elementRevisionDeltaClassifier: elementRevisionDelta,
+           sameElement: sameCanvasElement,
+         ),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
@@ -114,7 +120,11 @@ final class RuntimeRoot
     TextEditPrepareOverride? textEditPrepareOverride,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
-         store: DocumentStoreKernel(initialDocument),
+         store: DocumentStoreKernel(
+           initialDocument,
+           elementRevisionDeltaClassifier: elementRevisionDelta,
+           sameElement: sameCanvasElement,
+         ),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,

@@ -6,6 +6,8 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import '../../support/document_store_kernel_factory.dart';
+
 void main() {
   _registerSparseStoreCommitTests();
 }
@@ -76,10 +78,14 @@ void _registerSparseValidationTests() {
     'validates image update resources before swap',
     () => expect(_validatesUpdateFailuresBeforeSwap, returnsNormally),
   );
+  test(
+    'rejects stale element revision updates before swap',
+    () => expect(_rejectsStaleElementRevisionBeforeSwap, returnsNormally),
+  );
 }
 
 void _addsElementsAndLayersWithoutProjection() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   final prepared = store.prepareSparseCommit(
     StoreSparseCommit(
@@ -109,7 +115,7 @@ void _addsElementsAndLayersWithoutProjection() {
 }
 
 void _updatesFactsInPlace() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -138,7 +144,7 @@ void _updatesFactsInPlace() {
 }
 
 void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   final beforeRevision = store.documentRevision;
   final beforeProjectionBuilds = store.projectionBuildCount;
 
@@ -173,7 +179,7 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
 }
 
 void _validatesAddFailuresBeforeSwap() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   final beforeSummary = store.documentSummary;
 
   expect(_prepareDuplicateAdd(store), throwsA(isA<CanvasDataException>()));
@@ -188,7 +194,7 @@ void _validatesAddFailuresBeforeSwap() {
 }
 
 void _rejectsSparseRevisionDeltaWithoutProjection() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   store.readDocument();
   expect(store.projectionBuildCount, 1);
 
@@ -217,6 +223,12 @@ void _rejectsSparseRevisionDeltaWithoutProjection() {
 }
 
 void _rejectsSparseRevisionDeltaFamilyMismatch() {
+  _expectStructuralDeltaRejected();
+  _expectResourceDeltaRejected();
+  _expectElementBoundsDeltaRejected();
+}
+
+void _expectStructuralDeltaRejected() {
   _expectRevisionDeltaRejected(
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -230,6 +242,9 @@ void _rejectsSparseRevisionDeltaFamilyMismatch() {
       ],
     ),
   );
+}
+
+void _expectResourceDeltaRejected() {
   _expectRevisionDeltaRejected(
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -243,6 +258,9 @@ void _rejectsSparseRevisionDeltaFamilyMismatch() {
       ],
     ),
   );
+}
+
+void _expectElementBoundsDeltaRejected() {
   _expectRevisionDeltaRejected(
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -251,6 +269,7 @@ void _rejectsSparseRevisionDeltaFamilyMismatch() {
           CanvasRectElement(
             id: CanvasElementId('e-content'),
             size: const Size(44, 55),
+            revision: 1,
             fillColor: const Color(0xFFFF0000),
           ),
         ),
@@ -260,7 +279,7 @@ void _rejectsSparseRevisionDeltaFamilyMismatch() {
 }
 
 void _expectRevisionDeltaRejected(StoreSparseCommit commit) {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   final beforeSummary = store.documentSummary;
 
   expect(
@@ -272,7 +291,7 @@ void _expectRevisionDeltaRejected(StoreSparseCommit commit) {
 }
 
 void _validatesUpdateFailuresBeforeSwap() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   final beforeFacts = _requireFacts(store, CanvasElementId('e-image'));
 
   expect(
@@ -286,8 +305,35 @@ void _validatesUpdateFailuresBeforeSwap() {
   expect(store.projectionBuildCount, 0);
 }
 
+void _rejectsStaleElementRevisionBeforeSwap() {
+  final store = documentStoreKernel(_baseDocument());
+  final beforeFacts = _requireFacts(store, CanvasElementId('e-content'));
+
+  expect(
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementVisual(),
+        mutations: [
+          StoreSparseUpdateElement(
+            CanvasRectElement(
+              id: CanvasElementId('e-content'),
+              size: const Size(4, 5),
+              fillColor: const Color(0xFF00FF00),
+            ),
+          ),
+        ],
+      ),
+    ),
+    throwsA(isA<ArgumentError>()),
+  );
+  final afterFacts = _requireFacts(store, CanvasElementId('e-content'));
+  expect(afterFacts.fillColor, beforeFacts.fillColor);
+  expect(afterFacts.revision, beforeFacts.revision);
+  expect(store.projectionBuildCount, 0);
+}
+
 void _resourceDescriptorsUseAcceptedRevision() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -314,7 +360,7 @@ void _resourceDescriptorsUseAcceptedRevision() {
 }
 
 void _clearsContentAndResources() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -348,7 +394,7 @@ void _clearsContentAndResources() {
 }
 
 void _normalizesSelectionAgainstPreparedSparseCommit() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
   final prepared = store.prepareSparseCommit(
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.structural(),
@@ -375,7 +421,7 @@ void _normalizesSelectionAgainstPreparedSparseCommit() {
 }
 
 void _admitsSparseIdsWithoutDocumentScan() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -416,7 +462,7 @@ void _validatesSparseUpdatesThroughSharedTaxonomy() {
 }
 
 void _validatesUnderlineVisualUpdate() {
-  final underlineStore = DocumentStoreKernel(_textDocument());
+  final underlineStore = documentStoreKernel(_textDocument());
   underlineStore.installSparseCommit(
     underlineStore.prepareSparseCommit(
       StoreSparseCommit(
@@ -428,6 +474,7 @@ void _validatesUnderlineVisualUpdate() {
               text: 'label',
               color: const Color(0xFF000000),
               textDirection: TextDirection.ltr,
+              revision: 1,
               isUnderline: true,
             ),
           ),
@@ -442,93 +489,61 @@ void _validatesUnderlineVisualUpdate() {
 }
 
 void _validatesPathPaintedStrokeBoundsUpdate() {
-  final pathStore = DocumentStoreKernel(_paintedStrokeDocument());
-  expect(
-    () => pathStore.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: const StoreRevisionDelta.elementVisual(),
-        mutations: [
-          StoreSparseUpdateElement(
-            CanvasPathElement(
-              id: CanvasElementId('path'),
-              svgPathData: 'M 0 0 L 1 1',
-              strokeColor: const Color(0xFF00FF00),
-              strokeWidth: 2,
-            ),
-          ),
-        ],
-      ),
+  _expectPaintedStrokeBoundsUpdate(
+    id: CanvasElementId('path'),
+    update: CanvasPathElement(
+      id: CanvasElementId('path'),
+      svgPathData: 'M 0 0 L 1 1',
+      strokeColor: const Color(0xFF00FF00),
+      strokeWidth: 2,
+      revision: 1,
     ),
-    throwsA(isA<ArgumentError>()),
-  );
-  pathStore.installSparseCommit(
-    pathStore.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: const StoreRevisionDelta.elementBounds(),
-        mutations: [
-          StoreSparseUpdateElement(
-            CanvasPathElement(
-              id: CanvasElementId('path'),
-              svgPathData: 'M 0 0 L 1 1',
-              strokeColor: const Color(0xFF00FF00),
-              strokeWidth: 2,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-  expect(
-    _requireFacts(pathStore, CanvasElementId('path')).strokeColor,
-    const Color(0xFF00FF00),
+    strokeColorOf: (facts) => facts.strokeColor,
   );
 }
 
 void _validatesRectPaintedStrokeBoundsUpdate() {
-  final rectStore = DocumentStoreKernel(_paintedStrokeDocument());
+  _expectPaintedStrokeBoundsUpdate(
+    id: CanvasElementId('rect'),
+    update: CanvasRectElement(
+      id: CanvasElementId('rect'),
+      size: const Size(2, 3),
+      strokeColor: const Color(0xFF00FF00),
+      strokeWidth: 2,
+      revision: 1,
+    ),
+    strokeColorOf: (facts) => facts.strokeColor,
+  );
+}
+
+void _expectPaintedStrokeBoundsUpdate({
+  required CanvasElementId id,
+  required CanvasElement update,
+  required Color? Function(StoreElementFacts facts) strokeColorOf,
+}) {
+  final store = documentStoreKernel(_paintedStrokeDocument());
   expect(
-    () => rectStore.prepareSparseCommit(
+    () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
-        mutations: [
-          StoreSparseUpdateElement(
-            CanvasRectElement(
-              id: CanvasElementId('rect'),
-              size: const Size(2, 3),
-              strokeColor: const Color(0xFF00FF00),
-              strokeWidth: 2,
-            ),
-          ),
-        ],
+        mutations: [StoreSparseUpdateElement(update)],
       ),
     ),
     throwsA(isA<ArgumentError>()),
   );
-  rectStore.installSparseCommit(
-    rectStore.prepareSparseCommit(
+  store.installSparseCommit(
+    store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
-        mutations: [
-          StoreSparseUpdateElement(
-            CanvasRectElement(
-              id: CanvasElementId('rect'),
-              size: const Size(2, 3),
-              strokeColor: const Color(0xFF00FF00),
-              strokeWidth: 2,
-            ),
-          ),
-        ],
+        mutations: [StoreSparseUpdateElement(update)],
       ),
     ),
   );
-  expect(
-    _requireFacts(rectStore, CanvasElementId('rect')).strokeColor,
-    const Color(0xFF00FF00),
-  );
+  expect(strokeColorOf(_requireFacts(store, id)), const Color(0xFF00FF00));
 }
 
 void _replacementFallbackInstallsFullFacts() {
-  final store = DocumentStoreKernel(_baseDocument());
+  final store = documentStoreKernel(_baseDocument());
 
   store.replaceDocument(
     CanvasDocument(

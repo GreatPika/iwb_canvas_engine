@@ -11,7 +11,6 @@ import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
-import '../edit/element_revision_delta.dart';
 import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'element_registry.dart';
@@ -21,13 +20,26 @@ import 'revision_state.dart';
 import 'sparse_store_commit.dart';
 import 'store_revision_delta.dart';
 
+typedef StoreElementRevisionDeltaClassifier =
+    StoreRevisionDelta Function({
+      required CanvasElement before,
+      required CanvasElement after,
+    });
+typedef StoreElementEquality =
+    bool Function(CanvasElement left, CanvasElement right);
+
 // DocumentStoreKernel is the single owner for committed document facts, read
 // projection, id admission, and selection normalization inputs; splitting these
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
-  DocumentStoreKernel(CanvasDocument initialDocument)
-    : _document = CommittedDocument(initialDocument) {
+  DocumentStoreKernel(
+    CanvasDocument initialDocument, {
+    required StoreElementRevisionDeltaClassifier elementRevisionDeltaClassifier,
+    required StoreElementEquality sameElement,
+  }) : _elementRevisionDeltaClassifier = elementRevisionDeltaClassifier,
+       _sameElement = sameElement,
+       _document = CommittedDocument(initialDocument) {
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
@@ -43,6 +55,8 @@ final class DocumentStoreKernel {
   }
 
   CommittedDocument _document;
+  final StoreElementRevisionDeltaClassifier _elementRevisionDeltaClassifier;
+  final StoreElementEquality _sameElement;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
   late _IdAdmission _elementIds;
   late _IdAdmission _layerIds;
@@ -412,21 +426,23 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     CanvasElement element,
   ) {
-    final elements = document.elements.updateElement(
-      element,
-      resourceIds: document.resourceTable.admittedIds,
-    );
-    if (elements == null) {
-      return _SparseMutationResult.unchanged(document);
-    }
     final before = document.elements.elementById(element.id);
     if (before == null) {
       return _SparseMutationResult.unchanged(document);
     }
+    final elements = document.elements.updateElement(
+      element,
+      resourceIds: document.resourceTable.admittedIds,
+      sameElement: _sameElement,
+    );
+    if (elements == null) {
+      return _SparseMutationResult.unchanged(document);
+    }
+    _validateSparseElementRevision(before: before, after: element);
 
     return _SparseMutationResult.changed(
       document.copyWith(elements: elements),
-      requiredRevisionDelta: elementRevisionDelta(
+      requiredRevisionDelta: _elementRevisionDeltaClassifier(
         before: before,
         after: element,
       ),
@@ -675,6 +691,20 @@ bool _changesCommittedFacts(StoreRevisionDelta delta) {
     delta.grid,
     delta.resource,
   ].contains(true);
+}
+
+void _validateSparseElementRevision({
+  required CanvasElement before,
+  required CanvasElement after,
+}) {
+  final expectedRevision = before.revision + 1;
+  if (after.revision != expectedRevision) {
+    throw ArgumentError.value(
+      after.revision,
+      'element.revision',
+      'sparse element updates must carry the next committed element revision.',
+    );
+  }
 }
 
 bool _samePalette(CanvasPalette left, CanvasPalette right) {

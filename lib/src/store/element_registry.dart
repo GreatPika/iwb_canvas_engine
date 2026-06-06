@@ -205,6 +205,7 @@ final class ElementRegistry {
   ElementRegistry? updateElement(
     CanvasElement element, {
     required Set<String> resourceIds,
+    required bool Function(CanvasElement left, CanvasElement right) sameElement,
   }) {
     final before = familyTables.elementByCanvasId(element.id);
     if (before == null) {
@@ -214,6 +215,7 @@ final class ElementRegistry {
       before,
       element,
       resourceIds,
+      sameElement: sameElement,
     );
     if (updatedFamilyTables == null) {
       return null;

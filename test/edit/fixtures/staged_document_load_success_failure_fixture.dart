@@ -7,6 +7,8 @@ import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/edit/staged_document_load.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
+import '../../support/document_store_kernel_factory.dart';
+
 void main() {
   test('successful preparation is immutable and consume installs once', () {
     expect(_expectSuccessfulPreparationAndConsume, returnsNormally);
@@ -37,7 +39,7 @@ void main() {
 }
 
 void _expectSuccessfulPreparationAndConsume() {
-  final store = DocumentStoreKernel(_initialDocument());
+  final store = documentStoreKernel(_initialDocument());
   final pipeline = LoadDocumentPipeline(store: store);
 
   final prepared = pipeline.prepare(_replacementDocument());
@@ -59,8 +61,8 @@ void _expectSuccessfulPreparationAndConsume() {
 }
 
 void _expectWrongPipelineRejected() {
-  final firstStore = DocumentStoreKernel(_initialDocument());
-  final secondStore = DocumentStoreKernel(_initialDocument());
+  final firstStore = documentStoreKernel(_initialDocument());
+  final secondStore = documentStoreKernel(_initialDocument());
   final prepared = LoadDocumentPipeline(
     store: firstStore,
   ).prepare(_replacementDocument());
@@ -80,7 +82,7 @@ void _expectFailedPreparationLeavesStoreUnchanged() {
   ];
 
   for (final failure in failures) {
-    final store = DocumentStoreKernel(_initialDocument());
+    final store = documentStoreKernel(_initialDocument());
     final pipeline = LoadDocumentPipeline(store: store);
 
     expect(
@@ -96,7 +98,7 @@ void _expectFailedPreparationLeavesStoreUnchanged() {
 
 void _expectDiagnosticsRouting() {
   final enabled = LoadDocumentPipeline(
-    store: DocumentStoreKernel(_initialDocument()),
+    store: documentStoreKernel(_initialDocument()),
     diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
   );
 
@@ -113,7 +115,7 @@ void _expectDiagnosticsRouting() {
 
   DiagnosticRecord.allocations.reset();
   final disabled = LoadDocumentPipeline(
-    store: DocumentStoreKernel(_initialDocument()),
+    store: documentStoreKernel(_initialDocument()),
   );
   final before = DiagnosticRecord.allocations.count;
 
@@ -128,7 +130,7 @@ void _expectDiagnosticsRouting() {
 }
 
 void _expectPublicDtoInvalidInputRejectedEarly() {
-  final store = DocumentStoreKernel(_initialDocument());
+  final store = documentStoreKernel(_initialDocument());
   final longMetadataValue = 'x' * 65537;
   final singularTransform = CanvasTransform.scale(0, 1);
 
@@ -165,7 +167,7 @@ void _expectPublicDtoInvalidInputRejectedEarly() {
 void _expectPreparedDtoOwnershipFrozen() {
   final parts = _MutableDocumentParts.create();
   final pipeline = LoadDocumentPipeline(
-    store: DocumentStoreKernel(_initialDocument()),
+    store: documentStoreKernel(_initialDocument()),
   );
 
   final prepared = pipeline.prepare(parts.document);
