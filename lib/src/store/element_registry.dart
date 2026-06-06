@@ -202,38 +202,6 @@ final class ElementRegistry {
     );
   }
 
-  ElementRegistry? updateElement(
-    CanvasElement element, {
-    required Set<String> resourceIds,
-    required bool Function(CanvasElement left, CanvasElement right) sameElement,
-  }) {
-    final before = familyTables.elementByCanvasId(element.id);
-    if (before == null) {
-      return null;
-    }
-    final updatedFamilyTables = familyTables.replaceElement(
-      before,
-      element,
-      resourceIds,
-      sameElement: sameElement,
-    );
-    if (updatedFamilyTables == null) {
-      return null;
-    }
-
-    return ElementRegistry._withUpdatedFamilies(
-      familyTables: updatedFamilyTables,
-      layerTable: layerTable,
-      backgroundElementIds: backgroundElementIds,
-      contentElementOrder: contentElementOrder,
-      frameElementOrder: frameElementOrder,
-      frameOrderTokensById: frameOrderTokensById,
-      elementLocationFacts: elementLocationFacts,
-      admittedElementIds: admittedElementIds,
-      admittedLayerIds: admittedLayerIds,
-    );
-  }
-
   ElementRegistry? updateElements(
     Iterable<CanvasElement> elements, {
     required Set<String> resourceIds,

@@ -62,9 +62,13 @@ final class StoreSparseAddElement extends StoreSparseMutation {
 }
 
 final class StoreSparseUpdateElement extends StoreSparseMutation {
-  const StoreSparseUpdateElement(this.element);
+  const StoreSparseUpdateElement({
+    required this.element,
+    required this.requiredRevisionDelta,
+  });
 
   final CanvasElement element;
+  final StoreRevisionDelta requiredRevisionDelta;
 }
 
 final class StoreSparseRemoveElement extends StoreSparseMutation {

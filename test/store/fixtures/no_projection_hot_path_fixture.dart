@@ -7,8 +7,6 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
-import '../../support/document_store_kernel_factory.dart';
-
 void main() {
   test(
     'projection cache is touched only by explicit readDocument',
@@ -61,7 +59,7 @@ void _projectionCacheBuildsOnlyThroughExplicitRead() {
 }
 
 void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
-  final store = documentStoreKernel(
+  final store = DocumentStoreKernel(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -83,7 +81,7 @@ void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
   _installSparseTransform(store);
   expect(store.projectionBuildCount, 0);
 
-  _installSparseTransform(store);
+  _installSparseTransformNoOp(store);
   expect(store.projectionBuildCount, 0);
 
   store.readDocument();
@@ -214,12 +212,34 @@ void _installSparseTransform(DocumentStoreKernel store) {
         revisionDelta: const StoreRevisionDelta.elementBounds(),
         mutations: [
           StoreSparseUpdateElement(
-            CanvasRectElement(
+            element: CanvasRectElement(
               id: CanvasElementId('element-a'),
               size: const Size(1, 1),
               revision: 1,
               transform: CanvasTransform.translation(const Offset(1, 1)),
             ),
+            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _installSparseTransformNoOp(DocumentStoreKernel store) {
+  store.installSparseCommit(
+    store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.elementBounds(),
+        mutations: [
+          StoreSparseUpdateElement(
+            element: CanvasRectElement(
+              id: CanvasElementId('element-a'),
+              size: const Size(1, 1),
+              revision: 1,
+              transform: CanvasTransform.translation(const Offset(1, 1)),
+            ),
+            requiredRevisionDelta: const StoreRevisionDelta(),
           ),
         ],
       ),

@@ -19,8 +19,6 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
-import '../../support/document_store_kernel_factory.dart';
-
 void main() {
   test('selection replacement commits without document delta', () {
     expect(_verifySelectionReplacementCommit, returnsNormally);
@@ -303,7 +301,7 @@ CommitDeliveryResult _applyPlan(
 // the sparse accepted-document handoff is tested as one boundary.
 // ignore: coupling-between-object-classes
 final class _SparseSelectionCommitProof {
-  final DocumentStoreKernel store = documentStoreKernel(_document());
+  final DocumentStoreKernel store = DocumentStoreKernel(_document());
   final SelectionKernel selection = _selectionKernel()
     ..setSelection([CanvasElementId('a'), CanvasElementId('b')]);
   final List<String> events = [];

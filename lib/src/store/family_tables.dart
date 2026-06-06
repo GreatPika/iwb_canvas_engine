@@ -89,27 +89,6 @@ final class FamilyTables {
     return FamilyTables._(_AdmittedRows());
   }
 
-  FamilyTables? replaceElement(
-    CanvasElement before,
-    CanvasElement after,
-    Set<String> resourceIds, {
-    required bool Function(CanvasElement left, CanvasElement right) sameElement,
-  }) {
-    if (before.kind != after.kind) {
-      throw ArgumentError.value(
-        after,
-        'after',
-        'element update kind does not match the target element.',
-      );
-    }
-    if (sameElement(before, after)) {
-      return null;
-    }
-    _validateElementResourceReferences(after, resourceIds);
-
-    return _withSameFamilyElement(after);
-  }
-
   FamilyTables replaceElements(
     Iterable<CanvasElement> elements,
     Set<String> resourceIds,

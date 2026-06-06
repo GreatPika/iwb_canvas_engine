@@ -2,11 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
-
-import '../../support/document_store_kernel_factory.dart';
 
 void main() {
   _registerSparseStoreCommitTests();
@@ -93,7 +92,7 @@ void _registerSparseValidationTests() {
 }
 
 void _addsElementsAndLayersWithoutProjection() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   final prepared = store.prepareSparseCommit(
     StoreSparseCommit(
@@ -123,15 +122,20 @@ void _addsElementsAndLayersWithoutProjection() {
 }
 
 void _updatesFactsInPlace() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
         mutations: [
-          StoreSparseUpdateElement(
-            CanvasRectElement(
+          _sparseUpdate(
+            before: CanvasRectElement(
+              id: CanvasElementId('e-content'),
+              size: const Size(4, 5),
+              fillColor: const Color(0xFFFF0000),
+            ),
+            after: CanvasRectElement(
               id: CanvasElementId('e-content'),
               size: const Size(4, 5),
               revision: 1,
@@ -152,28 +156,22 @@ void _updatesFactsInPlace() {
 }
 
 void _installsBatchedSparseElementUpdates() {
-  final store = documentStoreKernel(_multiRectDocument());
+  final store = DocumentStoreKernel(_multiRectDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
-          StoreSparseUpdateElement(
-            CanvasRectElement(
-              id: CanvasElementId('rect-a'),
-              size: const Size(2, 2),
-              fillColor: const Color(0xFF00FF00),
-              revision: 1,
-            ),
+          _sparseRectFillColorUpdate(
+            id: 'rect-a',
+            size: const Size(2, 2),
+            fillColor: const Color(0xFF00FF00),
           ),
-          StoreSparseUpdateElement(
-            CanvasRectElement(
-              id: CanvasElementId('rect-b'),
-              size: const Size(3, 3),
-              fillColor: const Color(0xFF0000FF),
-              revision: 1,
-            ),
+          _sparseRectFillColorUpdate(
+            id: 'rect-b',
+            size: const Size(3, 3),
+            fillColor: const Color(0xFF0000FF),
           ),
         ],
       ),
@@ -193,7 +191,7 @@ void _installsBatchedSparseElementUpdates() {
 }
 
 void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final beforeRevision = store.documentRevision;
   final beforeProjectionBuilds = store.projectionBuildCount;
 
@@ -202,18 +200,20 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
         StoreSparseUpdateElement(
-          CanvasRectElement(
+          element: CanvasRectElement(
             id: CanvasElementId('e-content'),
             size: const Size(4, 5),
             fillColor: const Color(0xFFFF0000),
           ),
+          requiredRevisionDelta: const StoreRevisionDelta(),
         ),
         StoreSparseUpdateElement(
-          CanvasRectElement(
+          element: CanvasRectElement(
             id: CanvasElementId('missing'),
             size: const Size(1, 1),
             fillColor: const Color(0xFF123456),
           ),
+          requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
         ),
       ],
     ),
@@ -228,7 +228,7 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
 }
 
 void _validatesAddFailuresBeforeSwap() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final beforeSummary = store.documentSummary;
 
   expect(_prepareDuplicateAdd(store), throwsA(isA<CanvasDataException>()));
@@ -243,7 +243,7 @@ void _validatesAddFailuresBeforeSwap() {
 }
 
 void _rejectsSparseRevisionDeltaWithoutProjection() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   store.readDocument();
   expect(store.projectionBuildCount, 1);
 
@@ -314,8 +314,13 @@ void _expectElementBoundsDeltaRejected() {
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
-        StoreSparseUpdateElement(
-          CanvasRectElement(
+        _sparseUpdate(
+          before: CanvasRectElement(
+            id: CanvasElementId('e-content'),
+            size: const Size(4, 5),
+            fillColor: const Color(0xFFFF0000),
+          ),
+          after: CanvasRectElement(
             id: CanvasElementId('e-content'),
             size: const Size(44, 55),
             revision: 1,
@@ -328,7 +333,7 @@ void _expectElementBoundsDeltaRejected() {
 }
 
 void _expectRevisionDeltaRejected(StoreSparseCommit commit) {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final beforeSummary = store.documentSummary;
 
   expect(
@@ -340,7 +345,7 @@ void _expectRevisionDeltaRejected(StoreSparseCommit commit) {
 }
 
 void _validatesUpdateFailuresBeforeSwap() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final beforeFacts = _requireFacts(store, CanvasElementId('e-image'));
 
   expect(
@@ -355,7 +360,7 @@ void _validatesUpdateFailuresBeforeSwap() {
 }
 
 void _rejectsStaleElementRevisionBeforeSwap() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final beforeFacts = _requireFacts(store, CanvasElementId('e-content'));
 
   expect(
@@ -364,11 +369,12 @@ void _rejectsStaleElementRevisionBeforeSwap() {
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
           StoreSparseUpdateElement(
-            CanvasRectElement(
+            element: CanvasRectElement(
               id: CanvasElementId('e-content'),
               size: const Size(4, 5),
               fillColor: const Color(0xFF00FF00),
             ),
+            requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
           ),
         ],
       ),
@@ -382,7 +388,7 @@ void _rejectsStaleElementRevisionBeforeSwap() {
 }
 
 void _resourceDescriptorsUseAcceptedRevision() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -414,7 +420,7 @@ void _clearsContentAndResources() {
 }
 
 void _clearsContentWithResources() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -448,7 +454,7 @@ void _clearsContentWithResources() {
 }
 
 void _clearsResourceOnlyDocument() {
-  final resourceOnlyStore = documentStoreKernel(_resourceOnlyDocument());
+  final resourceOnlyStore = DocumentStoreKernel(_resourceOnlyDocument());
   resourceOnlyStore.installSparseCommit(
     resourceOnlyStore.prepareSparseCommit(
       StoreSparseCommit(
@@ -463,7 +469,7 @@ void _clearsResourceOnlyDocument() {
 }
 
 void _normalizesSelectionAgainstPreparedSparseCommit() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
   final prepared = store.prepareSparseCommit(
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.structural(),
@@ -490,7 +496,7 @@ void _normalizesSelectionAgainstPreparedSparseCommit() {
 }
 
 void _admitsSparseIdsWithoutDocumentScan() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   store.installSparseCommit(
     store.prepareSparseCommit(
@@ -531,14 +537,20 @@ void _validatesSparseUpdatesThroughSharedTaxonomy() {
 }
 
 void _validatesUnderlineVisualUpdate() {
-  final underlineStore = documentStoreKernel(_textDocument());
+  final underlineStore = DocumentStoreKernel(_textDocument());
   underlineStore.installSparseCommit(
     underlineStore.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
         mutations: [
-          StoreSparseUpdateElement(
-            CanvasTextElement(
+          _sparseUpdate(
+            before: CanvasTextElement(
+              id: CanvasElementId('text'),
+              text: 'label',
+              color: const Color(0xFF000000),
+              textDirection: TextDirection.ltr,
+            ),
+            after: CanvasTextElement(
               id: CanvasElementId('text'),
               text: 'label',
               color: const Color(0xFF000000),
@@ -590,12 +602,17 @@ void _expectPaintedStrokeBoundsUpdate({
   required CanvasElement update,
   required Color? Function(StoreElementFacts facts) strokeColorOf,
 }) {
-  final store = documentStoreKernel(_paintedStrokeDocument());
+  final store = DocumentStoreKernel(_paintedStrokeDocument());
   expect(
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
-        mutations: [StoreSparseUpdateElement(update)],
+        mutations: [
+          StoreSparseUpdateElement(
+            element: update,
+            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
+          ),
+        ],
       ),
     ),
     throwsA(isA<ArgumentError>()),
@@ -604,7 +621,12 @@ void _expectPaintedStrokeBoundsUpdate({
     store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
-        mutations: [StoreSparseUpdateElement(update)],
+        mutations: [
+          StoreSparseUpdateElement(
+            element: update,
+            requiredRevisionDelta: const StoreRevisionDelta.elementBounds(),
+          ),
+        ],
       ),
     ),
   );
@@ -612,7 +634,7 @@ void _expectPaintedStrokeBoundsUpdate({
 }
 
 void _replacementFallbackInstallsFullFacts() {
-  final store = documentStoreKernel(_baseDocument());
+  final store = DocumentStoreKernel(_baseDocument());
 
   store.replaceDocument(
     CanvasDocument(
@@ -681,11 +703,12 @@ void Function() _prepareMissingResourceUpdate(DocumentStoreKernel store) {
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
         StoreSparseUpdateElement(
-          CanvasImageElement(
+          element: CanvasImageElement(
             id: CanvasElementId('e-image'),
             resourceId: CanvasResourceId('missing'),
             size: const Size(6, 7),
           ),
+          requiredRevisionDelta: const StoreRevisionDelta.elementVisual(),
         ),
       ],
     ),
@@ -697,6 +720,34 @@ StoreElementFacts _requireFacts(DocumentStoreKernel store, CanvasElementId id) {
   expect(facts, isNotNull);
 
   return facts as StoreElementFacts;
+}
+
+StoreSparseUpdateElement _sparseUpdate({
+  required CanvasElement before,
+  required CanvasElement after,
+}) {
+  return StoreSparseUpdateElement(
+    element: after,
+    requiredRevisionDelta: const CommitCompiler()
+        .compileElementUpdate(before: before, after: after)
+        .revisionDelta,
+  );
+}
+
+StoreSparseUpdateElement _sparseRectFillColorUpdate({
+  required String id,
+  required Size size,
+  required Color fillColor,
+}) {
+  return _sparseUpdate(
+    before: CanvasRectElement(id: CanvasElementId(id), size: size),
+    after: CanvasRectElement(
+      id: CanvasElementId(id),
+      size: size,
+      fillColor: fillColor,
+      revision: 1,
+    ),
+  );
 }
 
 CanvasDocument _baseDocument() {

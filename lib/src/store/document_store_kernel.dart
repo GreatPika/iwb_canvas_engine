@@ -21,26 +21,13 @@ import 'revision_state.dart';
 import 'sparse_store_commit.dart';
 import 'store_revision_delta.dart';
 
-typedef StoreElementRevisionDeltaClassifier =
-    StoreRevisionDelta Function({
-      required CanvasElement before,
-      required CanvasElement after,
-    });
-typedef StoreElementEquality =
-    bool Function(CanvasElement left, CanvasElement right);
-
 // DocumentStoreKernel is the single owner for committed document facts, read
 // projection, id admission, and selection normalization inputs; splitting these
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
-  DocumentStoreKernel(
-    CanvasDocument initialDocument, {
-    required StoreElementRevisionDeltaClassifier elementRevisionDeltaClassifier,
-    required StoreElementEquality sameElement,
-  }) : _elementRevisionDeltaClassifier = elementRevisionDeltaClassifier,
-       _sameElement = sameElement,
-       _document = CommittedDocument(initialDocument) {
+  DocumentStoreKernel(CanvasDocument initialDocument)
+    : _document = CommittedDocument(initialDocument) {
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
@@ -56,8 +43,6 @@ final class DocumentStoreKernel {
   }
 
   CommittedDocument _document;
-  final StoreElementRevisionDeltaClassifier _elementRevisionDeltaClassifier;
-  final StoreElementEquality _sameElement;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
   late _IdAdmission _elementIds;
   late _IdAdmission _layerIds;
@@ -231,6 +216,19 @@ final class DocumentStoreKernel {
     return _normalizeSelectionInCommittedDocument(commit.document, ids);
   }
 
+  Set<CanvasElementId> normalizeSelectionForDocument(
+    CanvasDocument document,
+    Iterable<CanvasElementId> ids,
+  ) {
+    return _normalizeSelectionInCommittedDocument(
+      CommittedDocument.withRevisions(
+        document,
+        revisions: const RevisionState(),
+      ),
+      ids,
+    );
+  }
+
   CanvasElementId generateElementId() {
     return CanvasElementId(_elementIds.nextValue());
   }
@@ -291,13 +289,13 @@ final class DocumentStoreKernel {
     for (var index = 0; index < commit.mutations.length;) {
       final mutation = commit.mutations[index];
       if (mutation is StoreSparseUpdateElement) {
-        final updates = <CanvasElement>[];
+        final updates = <StoreSparseUpdateElement>[];
         while (index < commit.mutations.length) {
           final current = commit.mutations[index];
           if (current is! StoreSparseUpdateElement) {
             break;
           }
-          updates.add(current.element);
+          updates.add(current);
           index += 1;
         }
         final applied = _updateElements(nextDocument, updates);
@@ -374,9 +372,9 @@ final class DocumentStoreKernel {
         index: index,
       ),
       final StoreSparseAddElement mutation => _addElement(document, mutation),
-      StoreSparseUpdateElement(:final element) => _updateElement(
+      final StoreSparseUpdateElement mutation => _updateElement(
         document,
-        element,
+        mutation,
       ),
       StoreSparseRemoveElement(:final id) => _removeElement(document, id),
       StoreSparseUpsertResource(:final resource) => _upsertResource(
@@ -445,14 +443,14 @@ final class DocumentStoreKernel {
 
   _SparseMutationResult _updateElement(
     CommittedDocument document,
-    CanvasElement element,
+    StoreSparseUpdateElement mutation,
   ) {
-    return _updateElements(document, [element]);
+    return _updateElements(document, [mutation]);
   }
 
   _SparseMutationResult _updateElements(
     CommittedDocument document,
-    List<CanvasElement> updates,
+    List<StoreSparseUpdateElement> updates,
   ) {
     final batch = _prepareSparseElementUpdateBatch(document, updates);
     if (!batch.hasChanges) {
@@ -474,23 +472,24 @@ final class DocumentStoreKernel {
 
   _SparseElementUpdateBatch _prepareSparseElementUpdateBatch(
     CommittedDocument document,
-    List<CanvasElement> updates,
+    List<StoreSparseUpdateElement> updates,
   ) {
     final changedById = <CanvasElementId, CanvasElement>{};
     var requiredRevisionDelta = const StoreRevisionDelta();
-    for (final element in updates) {
+    for (final update in updates) {
+      final element = update.element;
       final before =
           changedById[element.id] ?? document.elements.elementById(element.id);
-      if (before == null || _sameElement(before, element)) {
+      if (before == null || _isSparseElementUpdateNoOp(before, update)) {
         continue;
       }
       _validateSparseElementUpdate(
         before: before,
-        after: element,
+        update: update,
         resourceIds: document.resourceTable.admittedIds,
       );
       requiredRevisionDelta = requiredRevisionDelta.merge(
-        _elementRevisionDeltaClassifier(before: before, after: element),
+        update.requiredRevisionDelta,
       );
       changedById[element.id] = element;
     }
@@ -765,11 +764,20 @@ void _validateSparseElementRevision({
   }
 }
 
+bool _isSparseElementUpdateNoOp(
+  CanvasElement before,
+  StoreSparseUpdateElement update,
+) {
+  return !update.requiredRevisionDelta.hasChanges &&
+      update.element.revision == before.revision;
+}
+
 void _validateSparseElementUpdate({
   required CanvasElement before,
-  required CanvasElement after,
+  required StoreSparseUpdateElement update,
   required Set<String> resourceIds,
 }) {
+  final after = update.element;
   if (before.kind != after.kind) {
     throw ArgumentError.value(
       after,
@@ -778,6 +786,13 @@ void _validateSparseElementUpdate({
     );
   }
   _validateSparseUpdateResourceReferences(after, resourceIds);
+  if (!update.requiredRevisionDelta.hasChanges) {
+    throw ArgumentError.value(
+      update.requiredRevisionDelta,
+      'requiredRevisionDelta',
+      'changed sparse element updates must carry a compiler-produced revision delta.',
+    );
+  }
   _validateSparseElementRevision(before: before, after: after);
 }
 

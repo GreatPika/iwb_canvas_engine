@@ -515,10 +515,19 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return false;
     }
     _validateSparseElementResourceReferences(after);
+    final compiledUpdate = const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
+    );
     _elementOverrides[after.id] = after;
     _journal.add((draft) => draft.updateElement(update));
-    _mutations.add(StoreSparseUpdateElement(after));
-    _recordSparseElementUpdate(before: before, after: after);
+    _mutations.add(
+      StoreSparseUpdateElement(
+        element: after,
+        requiredRevisionDelta: compiledUpdate.revisionDelta,
+      ),
+    );
+    _recordSparseElementUpdate(after: after, compiledUpdate: compiledUpdate);
 
     return true;
   }
@@ -750,13 +759,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   void _recordSparseElementUpdate({
-    required CanvasElement before,
     required CanvasElement after,
+    required ElementUpdateCompileResult compiledUpdate,
   }) {
-    final compiledUpdate = const CommitCompiler().compileElementUpdate(
-      before: before,
-      after: after,
-    );
     _touchedSet.touchUpdatedElement(after.id);
     if (compiledUpdate.touchesSpatial) {
       _touchedSet.touchGeometryElement(after.id);
