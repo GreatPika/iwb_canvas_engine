@@ -146,7 +146,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: Codec-owned schema import events
+### [x] Unit 3: Codec-owned schema import events
 
 Owner:
 

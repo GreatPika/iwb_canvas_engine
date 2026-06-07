@@ -20,6 +20,7 @@ void main() {
     for (final path in [
       'lib/src/codec/schema_v1_decoder.dart',
       'lib/src/codec/schema_v1_diagnostics.dart',
+      'lib/src/codec/schema_v1_import_events.dart',
       'lib/src/codec/schema_v1_validation.dart',
     ]) {
       final source = File(path).readAsStringSync();
@@ -41,7 +42,7 @@ import 'package:flutter_test/flutter_test.dart';
 	import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 
 void main() {
-  test('public decode functions stay parameter-free and preserve failures', () {
+  test('internal decode functions stay parameter-free and preserve failures', () {
     final CanvasDocument Function(Map<String, Object?>) decodeMap =
         decodeSchemaV1Document;
     final CanvasDocument Function(String) decodeJson =

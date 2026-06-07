@@ -2,8 +2,8 @@ import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
-import '../edit/commit_compiler.dart';
 import 'committed_document.dart';
+import 'element_update_compiler.dart';
 import 'revision_state.dart';
 import 'store_revision_delta.dart';
 
@@ -70,7 +70,7 @@ final class StoreSparseUpdateElement extends StoreSparseMutation {
     return StoreSparseUpdateElement._(
       before: before,
       element: element,
-      compiledUpdate: const CommitCompiler().compileElementUpdate(
+      compiledUpdate: const ElementUpdateCompiler().compileElementUpdate(
         before: before,
         after: element,
       ),

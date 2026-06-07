@@ -18,6 +18,7 @@ void main() {
 const _rejectUnknownElementKindSource = r'''
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 
 void main() {
   test('unknown element kind fails before DTO exposure', () {
