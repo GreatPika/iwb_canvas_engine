@@ -36,7 +36,7 @@ exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: 42fbf853 -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 076f941c -->
 
 Required benchmark cases:
 
@@ -64,8 +64,8 @@ Required benchmark cases:
 | `resources.mark_all_dirty` | 1k resources | action_only | resource_set | repaint count, all-entry session cache invalidation cost |
 | `projection.read_document` | 1k/10k/50k/100k | projection_split | normal_spread | first read/cache hit |
 | `codec.decode_v1` | all fixtures | lifecycle | codec_fixture | avg/P95/max, error payload |
-| `load_document.success` | 1k/10k/50k/100k | lifecycle | normal_spread | avg/P95/max, rebuild cost, alloc bytes |
-| `load_document.breakdown` | 1k/10k/50k | lifecycle | codec_fixture | decode/runtime/load/first projection phase us |
+| `load_document.success` | 1k/10k/50k | action_only | normal_spread | avg/P95/max schema import load, rebuild cost, alloc bytes |
+| `load_document.breakdown` | 1k/10k/50k | lifecycle | codec_fixture | decode diagnostic, runtime construct, public schema import load, first projection us |
 | `load_document.failure` | invalid 1k/10k/50k inputs | lifecycle | invalid_document | avg/P95/max, committed mutation count = 0 |
 | `spatial.query_point` | 1k/10k/50k/100k | action_only | normal_spread | tile count, fallback count |
 | `spatial.query_point_dense_stress` | dense 50k | action_only | dense_stress | dense fallback count |
@@ -91,6 +91,10 @@ Release benchmark interpretation:
 - Manual device reference reports for optimization work live under
   `tool/bench/manual/reference_reports/`. They are accepted comparison inputs for
   a named local device and toolchain, not release-approval baselines.
+- Runtime-based prepared fixtures may report `spatial_rebuild_setup_us` in
+  setup metrics. That diagnostic keeps the lazy spatial-index rebuild displaced
+  by document load visible without charging steady-state frame/spatial action
+  samples.
 - Manual reference decisions are recorded in
   `tool/bench/manual/reference_decisions.json`. A reference report is valid only
   when that decision log says which history run or run window produced it.

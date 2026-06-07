@@ -339,9 +339,11 @@ proof surface, or review consequence it supports.
   - accepted Xiaomi 50k breakdown `decode_us` is 347810, and
   `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3899`
   records `load_document_us` as 471105 -> supports the derived
-  `schema_import_load_us` proxy 818915 us for the old split route. The selected
-  design gate rounds this to the strict threshold `schema_import_load_us <
-  820000` for the new public JSON route.
+  `schema_import_load_us` proxy 818915 us for the old split route.
+- User Xiaomi bridge threshold update, chat on 2026-06-08 (named user-input
+  exception) - the new public JSON route must be at least 30% below the accepted
+  Xiaomi bridge proxy 818915 us -> supports the strict threshold
+  `schema_import_load_us < 574000` for the new public JSON route.
 - `lib/src/api/canvas_runtime.dart:28` - current public runtime facade accepts
   `CanvasDocument? initialDocument` -> supports the constructor public API
   retirement.
@@ -540,7 +542,7 @@ proof surface, or review consequence it supports.
 | Store tables currently still accept public resource/document inputs in key constructors and replacement paths. | `lib/src/store/document_store_kernel.dart:30`; `lib/src/store/document_store_kernel.dart:272`; `lib/src/store/resource_table.dart:7` | Store gains an internal prepared row/snapshot install input; public DTO inputs remain only for projection/draft helper paths until retired or quarantined. | Store constructor and fixtures will need migration; draft replacement may need separate handling if it continues to accept `CanvasDocument`. |
 | Resources must import without constructing `CanvasImageResource`, but resolvers still consume public resource projections. | `docs/contracts/public_api_v1.md:1896`; `docs/contracts/resources.md:92`; `lib/src/store/resource_table.dart:78` | Load creates store-owned descriptor rows; read/resource ports and resolver adapter project public `CanvasImageResource` only when explicitly read/resolved. | Projection/resource read performance remains separate from load acceptance. |
 | Load atomicity spans document, selection, camera, revisions, effects, observers, and interaction cleanup. | `docs/contracts/load_document.md:74`; `docs/contracts/load_document.md:97`; `lib/src/runtime/runtime_root.dart:1618`; `test/runtime/fixtures/load_document_ordering_fixture.dart:55` | All fallible JSON parse/validation/import and prepared cleanup work occurs before the irreversible install; after prepare, store install, selection clear, camera update, revision advance, cache invalidation, and delivery assembly must be infallible or failure-contained. | Future contract must add forced-failure tests around import and prepared cleanup, not only invalid schema tests. |
-| Performance acceptance must measure the new public JSON load API at 50k, while first projection remains separate. | `docs/_registry/benchmarks.yaml:523`; `docs/_registry/benchmarks.yaml:563`; `test/benchmarks/benchmark_probe_flutter.dart:1512`; `test/benchmarks/benchmark_probe_flutter.dart:1563`; `docs/verification/benchmarks.md:99`; `tool/bench/manual/reference_decisions.json:18`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3897`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3899`; user performance acceptance update, 2026-06-07 | Migrates success/failure/breakdown benchmark subjects to `loadDocumentFromJson(String)` and requires the Xiaomi 50k success gate `schema_import_load_us < 820000`, with projection only as separate `projection.read_document` or diagnostic breakdown. | Existing benchmark baselines and report interpretation will be invalidated for load cases; the future contract cannot pass by only recording a slow timing. |
+| Performance acceptance must measure the new public JSON load API at 50k, while first projection remains separate. | `docs/_registry/benchmarks.yaml:523`; `docs/_registry/benchmarks.yaml:563`; `test/benchmarks/benchmark_probe_flutter.dart:1512`; `test/benchmarks/benchmark_probe_flutter.dart:1563`; `docs/verification/benchmarks.md:99`; `tool/bench/manual/reference_decisions.json:18`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3897`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3899`; user performance acceptance update, 2026-06-07 | Migrates success/failure/breakdown benchmark subjects to `loadDocumentFromJson(String)` and requires the Xiaomi 50k success gate `schema_import_load_us < 574000`, with projection only as separate `projection.read_document` or diagnostic breakdown. | Existing benchmark baselines and report interpretation will be invalidated for load cases; the future contract cannot pass by only recording a slow timing. |
 | 100k raw JSON is currently constrained by the 32 MiB raw JSON limit. | `docs/contracts/validation_limits.md:36`; `lib/src/contracts/public/canvas_contract_limits.dart:1` | Limits this phase's raw JSON performance acceptance to 50k and routes 100k to a later streaming/chunked import or raw-limit memory-proof design gate. | 100k load remains unpromised even though other in-memory benchmark cases still use 100k scales. |
 | Public API guardrails enforce registry/barrel completeness and prevent internal exports. | `docs/contracts/public_api_v1.md:93`; `docs/verification/guardrails.md:177`; `docs/verification/guardrails.md:178` | Requires future public registry/barrel tests to prove only JSON load names are exported and internal rows/sinks remain hidden. | Contract must include both positive public API compile proof and negative internal export proof. |
 | Active Step 52 and the current example import workflow still require the retired decode-then-load route. | `PLAN.md:74`; `plan/step_52_legacy_example_full_parity_port.md:291`; `example/lib/src/canvas_example_view_model.dart:115`; `example/lib/src/canvas_example_view_model.dart:116` | Future Change Contract must either update/supersede Step 52 before implementation or include Step 52/example workflow migration in the same source-of-truth unit before public API removal. The example import action must call `runtime.edits.loadDocumentFromJson(json)` directly and handle invalid JSON without document mutation. | The active roadmap step and example tests must change with the public API; this is intentional churn caused by retiring a now-invalid canonical load route. |
@@ -637,7 +639,7 @@ It must not include a first `readDocument()` projection as the success acceptanc
 metric. A breakdown may report first projection separately, and
 `projection.read_document` remains the separate read/projection benchmark. Eager
 projection is forbidden as a performance solution. The required 50k success gate
-is `schema_import_load_us < 820000`, measured on
+is `schema_import_load_us < 574000`, measured on
 `runtime.edits.loadDocumentFromJson(json)` and failing the future contract if the
 threshold is not met. The Xiaomi accepted old-route proxy is 818915 us
 (`decode_us` 347810 + `load_document_us` 471105), so the selected strict gate is
@@ -665,7 +667,7 @@ them forward.
 | D7 | Resources import as store-owned descriptor rows and do not construct `CanvasImageResource` on the load path. | `docs/contracts/resources.md:53`; `docs/contracts/resources.md:92`; `lib/src/codec/schema_v1_decoder.dart:281`; `lib/src/store/resource_table.dart:78` | Resource import unit; resolver/read projection proof; allocation/semantic search proof |
 | D8 | JSON load is atomic: all fallible parse/validation/import/prepared-cleanup work occurs before the irreversible install; failure leaves document, selection, camera, revisions, effects, observers, and interaction state unchanged. | `docs/contracts/load_document.md:74`; `docs/contracts/load_document.md:97`; `test/runtime/fixtures/load_document_ordering_fixture.dart:55`; `lib/src/runtime/runtime_root.dart:1618` | `All-Or-Nothing Failure Boundary`; runtime failure fixtures; observer/effect negative proof |
 | D9 | Store install preserves id-admission reset and revision behavior without eager projection. | `docs/contracts/public_api_v1.md:326`; `docs/contracts/load_document.md:77`; `lib/src/store/document_store_kernel.dart:272`; `docs/architecture/03_data_model.md:216` | Store install unit; id generator proof; projection build-count proof |
-| D10 | Performance acceptance measures the new public JSON load API at 50k on the Xiaomi 22081283G manual reference contour, excludes first projection from the success promise, and gates success on `schema_import_load_us < 820000`. | `docs/_registry/benchmarks.yaml:523`; `docs/_registry/benchmarks.yaml:563`; `test/benchmarks/benchmark_probe_flutter.dart:1512`; `test/benchmarks/benchmark_probe_flutter.dart:1563`; `docs/verification/benchmarks.md:99`; `tool/bench/manual/reference_decisions.json:15`; `tool/bench/manual/reference_decisions.json:18`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3897`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3899`; user performance acceptance update, 2026-06-07 | Benchmark manifest/probe unit; release diff interpretation; numeric acceptance proof |
+| D10 | Performance acceptance measures the new public JSON load API at 50k on the Xiaomi 22081283G manual reference contour, excludes first projection from the success promise, and gates success on `schema_import_load_us < 574000`. | `docs/_registry/benchmarks.yaml:523`; `docs/_registry/benchmarks.yaml:563`; `test/benchmarks/benchmark_probe_flutter.dart:1512`; `test/benchmarks/benchmark_probe_flutter.dart:1563`; `docs/verification/benchmarks.md:99`; `tool/bench/manual/reference_decisions.json:15`; `tool/bench/manual/reference_decisions.json:18`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3897`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json:3899`; user performance acceptance update, 2026-06-07 | Benchmark manifest/probe unit; release diff interpretation; numeric acceptance proof |
 | D11 | 100k raw JSON is not accepted in this phase under the current 32 MiB raw JSON limit. | `docs/contracts/validation_limits.md:36`; `lib/src/contracts/public/canvas_contract_limits.dart:1`; `lib/src/contracts/public/canvas_value_validators.dart:223` | Scope constraints; benchmark scale migration; future design-gate note |
 | D12 | Durable source-of-truth docs, diagrams, registries, guardrails, and benchmarks must be updated by the future Change Contract before implementation is complete. | `docs/contracts/public_api_v1.md:93`; `docs/verification/benchmarks.md:33`; `docs/contracts/load_document.md:36`; `docs/contracts/codec_boundary.md:50` | `Source-Of-Truth Impact`; docs/registry/diagram/benchmark units |
 
@@ -680,7 +682,7 @@ them forward.
 | Load failure leaves runtime unchanged. | Invalid JSON and forced pre-install failures preserve committed document, selection, camera, revisions, preview/interaction facts, effect batches, action events, and state listener notifications. | Checking only committed document count could miss selection, camera, observer, or preview mutation. | Snapshot-based runtime failure fixture covering all public runtime state domains and observer/effect/action lists. |
 | Accepted load installs atomically. | One public state publication observes replacement document summary, cleared selection, runtime view camera initialized from persisted JSON camera, revision increments, and prepared cleanup effects together. | Observing final state only could miss intermediate publications or post-install cleanup. | Ordered listener/effect fixture and load interaction ordering fixture with no intermediate public observations. |
 | JSON load does not build public projection eagerly. | Projection build count stays unchanged during successful JSON load and first projection occurs only on explicit `readDocument()`/projection benchmark. | Faster load timings could be achieved by hiding projection in setup or benchmark exclusions. | Store projection build-count fixture and benchmark probe boundary check. |
-| 50k performance acceptance measures new public JSON load. | Benchmark manifest/probe invokes the public JSON load API with a 50k JSON fixture on the Xiaomi manual-reference contour and fails unless `schema_import_load_us < 820000`, excluding first projection. | A benchmark could time internal importer only, old decode/load route, Pixel-derived threshold, or merely report a slow timing without failing acceptance. | Benchmark manifest required-case test and probe code assertion checking the public call route, metric name, Xiaomi contour/provenance, exclusion boundary, and numeric threshold. |
+| 50k performance acceptance measures new public JSON load. | Benchmark manifest/probe invokes the public JSON load API with a 50k JSON fixture on the Xiaomi manual-reference contour and fails unless `schema_import_load_us < 574000`, excluding first projection. | A benchmark could time internal importer only, old decode/load route, Pixel-derived threshold, or merely report a slow timing without failing acceptance. | Benchmark manifest required-case test and probe code assertion checking the public call route, metric name, Xiaomi contour/provenance, exclusion boundary, and numeric threshold. |
 | 100k raw JSON remains out of scope. | Benchmark manifest does not require raw JSON 100k for load success; oversized raw JSON is rejected by length validation unless a later design changes the limit. | In-memory 100k document benchmarks could be mistaken for raw JSON acceptance. | Manifest scale assertions and validation-limit tests for oversized raw JSON rejection. |
 
 ## Hard Gate Check
@@ -871,7 +873,7 @@ before claiming implementation completion:
 - `docs/_registry/benchmarks.yaml`, `docs/verification/benchmarks.md`,
   `tool/bench`, and benchmark tests: make the load success/failure/breakdown
   cases measure the new public JSON load API at accepted scales, require
-  `schema_import_load_us < 820000` for Xiaomi 50k success, and keep first projection
+  `schema_import_load_us < 574000` for Xiaomi 50k success, and keep first projection
   separate.
 - `docs/verification/guardrails.md`, `tool/guardrails`, and guardrail registry:
   add or update checks for old load input retirement, decode-helper route
@@ -929,7 +931,7 @@ Future proof surfaces:
   to `decodeCanvasDocumentFromJson`, `decodeCanvasDocument`, or
   `loadDocument(CanvasDocument)`.
 - Benchmark manifest/probe tests proving 50k success uses the public JSON load
-  API, `schema_import_load_us < 820000` is the pass/fail threshold, failure uses
+  API, `schema_import_load_us < 574000` is the pass/fail threshold, failure uses
   invalid JSON with committed mutation count zero, breakdown separates
   parse/import/install/projection metrics, and 100k raw JSON is not a required
   acceptance scale under the 32 MiB limit.
@@ -953,7 +955,7 @@ runtime behavior:
    runtime observations.
 6. Migrate benchmarks last, after the public JSON load route exists, so
    performance acceptance measures the actual public route and fails when
-   `schema_import_load_us >= 820000` at 50k.
+   `schema_import_load_us >= 574000` at 50k.
 
 Do not treat final element counts, benchmark timing alone, or docs wording as
 sufficient proof. Required proof must target direct outcomes: public signature
@@ -993,7 +995,7 @@ new public API with the numeric 50k gate.
   - Place every fallible load step before the irreversible runtime install.
   - Preserve lazy projection and keep first projection outside load performance
     acceptance.
-  - Gate Xiaomi 50k public JSON load success on `schema_import_load_us < 820000`.
+  - Gate Xiaomi 50k public JSON load success on `schema_import_load_us < 574000`.
   - Limit this phase's raw JSON load acceptance to 50k; require a future design
     gate for 100k raw JSON.
 - Required proof surfaces:

@@ -1,6 +1,9 @@
+import 'dart:collection';
+
+import '../contracts/internal/schema_v1_import_events.dart';
+import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
-import '../contracts/public/canvas_errors.dart';
 
 final class LayerRow {
   LayerRow({
@@ -8,6 +11,12 @@ final class LayerRow {
     required Iterable<CanvasElementId> elementIds,
     required this.metadata,
   }) : elementIds = List.unmodifiable(elementIds);
+
+  LayerRow._owned({
+    required this.id,
+    required List<CanvasElementId> elementIds,
+    required this.metadata,
+  }) : elementIds = UnmodifiableListView(elementIds);
 
   final CanvasLayerId id;
   final List<CanvasElementId> elementIds;
@@ -19,6 +28,8 @@ final class LayerTable {
 
   LayerTable(Iterable<LayerRow> rows)
     : rows = List.unmodifiable(_admitRows(rows));
+
+  LayerTable._owned(List<LayerRow> rows) : rows = UnmodifiableListView(rows);
 
   final List<LayerRow> rows;
 
@@ -111,6 +122,71 @@ final class LayerTable {
         LayerRow(id: row.id, elementIds: const [], metadata: row.metadata),
     ]);
   }
+}
+
+final class LayerTableSchemaV1ImportBuilder {
+  List<_PendingLayerRow>? _rows = [];
+  final Set<String> _admittedLayerIds = {};
+  _PendingLayerRow? _currentLayer;
+
+  void addLayer(SchemaV1LayerImportEvent event) {
+    final rows = _liveRows;
+    if (!_admittedLayerIds.add(event.id.value)) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.duplicateLayerId,
+        message: 'duplicate layer id.',
+        path: 'layers.id',
+      );
+    }
+    final row = _PendingLayerRow(id: event.id, metadata: event.metadata);
+    rows.add(row);
+    _currentLayer = row;
+  }
+
+  void addElement(CanvasLayerId layerId, CanvasElementId elementId) {
+    _ensureNotConsumed();
+    final layer = _currentLayer;
+    if (layer == null || layer.id != layerId) {
+      throw StateError('schema v1 layer element arrived before its layer.');
+    }
+    layer.elementIds.add(elementId);
+  }
+
+  LayerTable consume() {
+    final rows = _liveRows;
+    _rows = null;
+    _currentLayer = null;
+
+    return LayerTable._owned([
+      for (final row in rows)
+        LayerRow._owned(
+          id: row.id,
+          elementIds: row.elementIds,
+          metadata: row.metadata,
+        ),
+    ]);
+  }
+
+  List<_PendingLayerRow> get _liveRows {
+    final rows = _rows;
+    if (rows == null) {
+      throw StateError('LayerTableSchemaV1ImportBuilder was consumed.');
+    }
+
+    return rows;
+  }
+
+  void _ensureNotConsumed() {
+    _liveRows;
+  }
+}
+
+final class _PendingLayerRow {
+  _PendingLayerRow({required this.id, required this.metadata});
+
+  final CanvasLayerId id;
+  final CanvasMetadata metadata;
+  final List<CanvasElementId> elementIds = [];
 }
 
 List<LayerRow> _admitRows(Iterable<LayerRow> rows) {

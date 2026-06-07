@@ -22,6 +22,12 @@ final class SpatialKernelQueryState {
     isInvalid = false;
   }
 
+  void markRebuildNeeded(int revision) {
+    structuralRevision = revision;
+    isInvalid = true;
+    invalidReason = SpatialInvalidIndexReason.rebuildNeeded;
+  }
+
   void markFailedUpdate() {
     isInvalid = true;
     invalidReason = SpatialInvalidIndexReason.failedUpdate;

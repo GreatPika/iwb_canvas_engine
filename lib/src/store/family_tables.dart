@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 
 // Family-specific row tables stay together so admission and projection cannot
@@ -44,6 +45,16 @@ final class FamilyTables {
         strokeRows: Map.unmodifiable(admitted.strokeRows),
         lineRows: Map.unmodifiable(admitted.lineRows),
         rectRows: Map.unmodifiable(admitted.rectRows),
+      );
+
+  FamilyTables._owned(_AdmittedRows admitted)
+    : this._fromTables(
+        imageRows: UnmodifiableMapView(admitted.imageRows),
+        pathRows: UnmodifiableMapView(admitted.pathRows),
+        textRows: UnmodifiableMapView(admitted.textRows),
+        strokeRows: UnmodifiableMapView(admitted.strokeRows),
+        lineRows: UnmodifiableMapView(admitted.lineRows),
+        rectRows: UnmodifiableMapView(admitted.rectRows),
       );
 
   const FamilyTables._fromTables({
@@ -377,6 +388,30 @@ final class _MutableFamilyRows {
       lineRows: Map.unmodifiable(lineRows),
       rectRows: Map.unmodifiable(rectRows),
     );
+  }
+}
+
+final class FamilyTablesSchemaV1ImportBuilder {
+  _AdmittedRows? _rows = _AdmittedRows();
+
+  void add(SchemaV1ElementImportEvent event, Set<String> resourceIds) {
+    _liveRows.addSchemaV1Import(event, resourceIds);
+  }
+
+  FamilyTables consume() {
+    final rows = _liveRows;
+    _rows = null;
+
+    return FamilyTables._owned(rows);
+  }
+
+  _AdmittedRows get _liveRows {
+    final rows = _rows;
+    if (rows == null) {
+      throw StateError('FamilyTablesSchemaV1ImportBuilder was consumed.');
+    }
+
+    return rows;
   }
 }
 

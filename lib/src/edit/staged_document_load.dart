@@ -25,13 +25,18 @@ final class PreparedDocumentLoad {
     required this.metadata,
     required this.resourceIds,
     required this.layerIds,
-    required this.elementIds,
     required this.revisionDelta,
     required Object ownerToken,
+    Set<CanvasElementId>? elementIds,
+    int? elementCount,
+    Set<CanvasElementId> Function()? readElementIds,
     CommittedDocument? storeDocument,
     PreparedStoreDocumentImport? storeImport,
   }) : _storeDocument = storeDocument,
        _storeImport = storeImport,
+       _elementIds = elementIds,
+       _readElementIds = readElementIds,
+       _elementCount = _preparedElementCount(elementCount, elementIds),
        _ownerToken = ownerToken;
 
   final CanvasCamera camera;
@@ -40,7 +45,9 @@ final class PreparedDocumentLoad {
   final CanvasMetadata metadata;
   final Set<CanvasResourceId> resourceIds;
   final Set<CanvasLayerId> layerIds;
-  final Set<CanvasElementId> elementIds;
+  Set<CanvasElementId>? _elementIds;
+  final Set<CanvasElementId> Function()? _readElementIds;
+  final int _elementCount;
   final StoreRevisionDelta revisionDelta;
   final CommittedDocument? _storeDocument;
   final PreparedStoreDocumentImport? _storeImport;
@@ -53,13 +60,44 @@ final class PreparedDocumentLoad {
     );
   }
 
+  Set<CanvasElementId> get elementIds {
+    final cached = _elementIds;
+    if (cached != null) {
+      return cached;
+    }
+    final readElementIds = _readElementIds;
+    if (readElementIds == null) {
+      throw StateError('PreparedDocumentLoad has no element id reader.');
+    }
+
+    return _elementIds = readElementIds();
+  }
+
+  PreparedStoreDocumentImport? get storeImportForTesting => _storeImport;
+
   CanvasDocumentSummary get summary {
     return CanvasDocumentSummary(
-      elementCount: elementIds.length,
+      elementCount: _elementCount,
       layerCount: layerIds.length,
       resourceCount: resourceIds.length,
     );
   }
+}
+
+int _preparedElementCount(
+  int? explicitCount,
+  Set<CanvasElementId>? elementIds,
+) {
+  if (explicitCount != null) {
+    return explicitCount;
+  }
+  if (elementIds == null) {
+    throw ArgumentError(
+      'PreparedDocumentLoad requires elementCount or elementIds.',
+    );
+  }
+
+  return elementIds.length;
 }
 
 // LoadDocumentPipeline is the composition boundary between codec validation,
@@ -108,7 +146,8 @@ final class LoadDocumentPipeline {
       metadata: committed.metadata,
       resourceIds: preparedStoreImport.resourceIds,
       layerIds: preparedStoreImport.layerIds,
-      elementIds: preparedStoreImport.elementIds,
+      elementCount: preparedStoreImport.elementCount,
+      readElementIds: () => preparedStoreImport.elementIds,
       revisionDelta: _replacementRevisionDelta,
       storeImport: preparedStoreImport,
       ownerToken: _ownerToken,

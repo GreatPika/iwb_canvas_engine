@@ -267,7 +267,15 @@ CanvasRectElement _rect(String id, {Offset translation = Offset.zero}) {
 }
 
 List<CanvasElementId> _spatialIds(RuntimeRoot root, SpatialQueryWindow window) {
-  return _spatialIdsFromResult(root.spatialKernel.queryHit(window));
+  return _spatialIdsFromResult(
+    root.spatialKernel.queryHit(
+      SpatialQueryWindow(
+        boundsWorld: window.boundsWorld,
+        structuralRevision:
+            root.frameFactsPort.frameRevisions.structuralRevision,
+      ),
+    ),
+  );
 }
 
 List<CanvasElementId> _spatialIdsFromResult(SpatialQueryResult result) {

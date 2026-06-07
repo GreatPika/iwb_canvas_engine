@@ -26,6 +26,7 @@ const _documentLoadInputOwnerPaths = [
   'lib/src/runtime/runtime_root.dart',
   'lib/src/edit/staged_document_load.dart',
   'lib/src/store/document_store_kernel.dart',
+  'lib/src/store/schema_v1_store_import.dart',
 ];
 
 Set<String> _canvasDocumentLoadInputHits({

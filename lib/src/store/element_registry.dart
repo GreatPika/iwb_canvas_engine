@@ -52,26 +52,16 @@ final class ElementRegistry {
     required this.familyTables,
     required this.layerTable,
   }) {
-    final backgroundElementList = List<CanvasElementId>.unmodifiable(
+    final orderFacts = _ElementRegistryOrderFacts.build(
       backgroundElementIds,
-    );
-    final contentOrder = List<CanvasElementId>.unmodifiable([
-      for (final row in layerTable.rows)
-        for (final id in row.elementIds) id,
-    ]);
-    final frameOrder = List<CanvasElementId>.unmodifiable([
-      ...backgroundElementList,
-      ...contentOrder,
-    ]);
-    this.backgroundElementIds = backgroundElementList;
-    contentElementOrder = contentOrder;
-    frameElementOrder = frameOrder;
-    frameOrderTokensById = _frameOrderTokensById(frameOrder);
-    elementLocationFacts = _elementLocationFacts(
-      backgroundElementList,
       layerTable,
     );
-    admittedElementIds = Set.unmodifiable(familyTables.admittedElementIds);
+    this.backgroundElementIds = orderFacts.backgroundElementIds;
+    contentElementOrder = orderFacts.contentElementOrder;
+    frameElementOrder = orderFacts.frameElementOrder;
+    frameOrderTokensById = orderFacts.frameOrderTokensById;
+    elementLocationFacts = orderFacts.elementLocationFacts;
+    admittedElementIds = orderFacts.admittedElementIds;
     admittedLayerIds = Set.unmodifiable(layerTable.admittedIds);
   }
 
@@ -99,6 +89,24 @@ final class ElementRegistry {
     );
   }
 
+  factory ElementRegistry.fromSchemaV1ImportTables({
+    required FamilyTables familyTables,
+    required LayerTable layerTable,
+    required ElementRegistryOrderImportFacts orderFacts,
+  }) {
+    return ElementRegistry._withUpdatedFamilies(
+      familyTables: familyTables,
+      layerTable: layerTable,
+      backgroundElementIds: orderFacts.backgroundElementIds,
+      contentElementOrder: orderFacts.contentElementOrder,
+      frameElementOrder: orderFacts.frameElementOrder,
+      frameOrderTokensById: orderFacts.frameOrderTokensById,
+      elementLocationFacts: orderFacts.elementLocationFacts,
+      admittedElementIds: orderFacts.admittedElementIds,
+      admittedLayerIds: Set.unmodifiable(layerTable.admittedIds),
+    );
+  }
+
   late final List<CanvasElementId> backgroundElementIds;
   late final FamilyTables familyTables;
   late final LayerTable layerTable;
@@ -110,11 +118,7 @@ final class ElementRegistry {
   late final Set<String> admittedLayerIds;
 
   int get elementCount {
-    return backgroundElementIds.length +
-        layerTable.rows.fold<int>(
-          0,
-          (count, row) => count + row.elementIds.length,
-        );
+    return frameElementOrder.length;
   }
 
   Set<CanvasElementId> get contentElementIds {
@@ -306,27 +310,6 @@ final class ElementRegistry {
   }
 }
 
-Map<CanvasElementId, int> _frameOrderTokensById(
-  Iterable<CanvasElementId> frameOrder,
-) {
-  return Map.unmodifiable({
-    for (final indexed in frameOrder.indexed) indexed.$2: indexed.$1,
-  });
-}
-
-Map<CanvasElementId, ElementLocationFacts> _elementLocationFacts(
-  Iterable<CanvasElementId> backgroundElementIds,
-  LayerTable layerTable,
-) {
-  return Map.unmodifiable({
-    for (final id in backgroundElementIds)
-      id: const ElementLocationFacts.background(),
-    for (final layer in layerTable.rows)
-      for (final id in layer.elementIds)
-        id: ElementLocationFacts.content(layer.id),
-  });
-}
-
 int _clampedInsertIndex(int? requestedIndex, int length) {
   final index = requestedIndex ?? length;
   if (index < 0) {
@@ -337,6 +320,168 @@ int _clampedInsertIndex(int? requestedIndex, int length) {
   }
 
   return index;
+}
+
+final class _ElementRegistryOrderFacts {
+  const _ElementRegistryOrderFacts({
+    required this.backgroundElementIds,
+    required this.contentElementOrder,
+    required this.frameElementOrder,
+    required this.frameOrderTokensById,
+    required this.elementLocationFacts,
+    required this.admittedElementIds,
+  });
+
+  final List<CanvasElementId> backgroundElementIds;
+  final List<CanvasElementId> contentElementOrder;
+  final List<CanvasElementId> frameElementOrder;
+  final Map<CanvasElementId, int> frameOrderTokensById;
+  final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
+  final Set<String> admittedElementIds;
+
+  factory _ElementRegistryOrderFacts.build(
+    Iterable<CanvasElementId> backgroundElementIds,
+    LayerTable layerTable,
+  ) {
+    final accumulator = _ElementRegistryOrderAccumulator();
+
+    for (final id in backgroundElementIds) {
+      accumulator.addBackground(id);
+    }
+    for (final layer in layerTable.rows) {
+      final location = ElementLocationFacts.content(layer.id);
+      for (final id in layer.elementIds) {
+        accumulator.addContent(id, location);
+      }
+    }
+
+    return accumulator.freeze();
+  }
+}
+
+final class _ElementRegistryOrderAccumulator {
+  final _background = <CanvasElementId>[];
+  final _content = <CanvasElementId>[];
+  final _frame = <CanvasElementId>[];
+  final _tokens = <CanvasElementId, int>{};
+  final _locations = <CanvasElementId, ElementLocationFacts>{};
+  final _admittedIds = <String>{};
+
+  void addBackground(CanvasElementId id) {
+    _background.add(id);
+    _admit(id, const ElementLocationFacts.background());
+  }
+
+  void addContent(CanvasElementId id, ElementLocationFacts location) {
+    _content.add(id);
+    _admit(id, location);
+  }
+
+  void _admit(CanvasElementId id, ElementLocationFacts location) {
+    _tokens[id] = _frame.length;
+    _locations[id] = location;
+    _admittedIds.add(id.value);
+    _frame.add(id);
+  }
+
+  _ElementRegistryOrderFacts freeze() {
+    return _ElementRegistryOrderFacts(
+      backgroundElementIds: List.unmodifiable(_background),
+      contentElementOrder: List.unmodifiable(_content),
+      frameElementOrder: List.unmodifiable(_frame),
+      frameOrderTokensById: Map.unmodifiable(_tokens),
+      elementLocationFacts: Map.unmodifiable(_locations),
+      admittedElementIds: Set.unmodifiable(_admittedIds),
+    );
+  }
+}
+
+final class ElementRegistrySchemaV1OrderImportBuilder {
+  List<CanvasElementId>? _background = [];
+  List<CanvasElementId>? _content = [];
+  List<CanvasElementId>? _frame = [];
+  Map<CanvasElementId, int>? _tokens = {};
+  Map<CanvasElementId, ElementLocationFacts>? _locations = {};
+  Set<String>? _admittedIds = {};
+
+  void addBackground(CanvasElementId id) {
+    _live(_background).add(id);
+    _admit(id, const ElementLocationFacts.background());
+  }
+
+  void addContent(CanvasLayerId layerId, CanvasElementId id) {
+    _live(_content).add(id);
+    _admit(id, ElementLocationFacts.content(layerId));
+  }
+
+  ElementRegistryOrderImportFacts consume() {
+    final background = _live(_background);
+    final content = _live(_content);
+    final frame = _live(_frame);
+    final tokens = _live(_tokens);
+    final locations = _live(_locations);
+    final admittedIds = _live(_admittedIds);
+    _background = null;
+    _content = null;
+    _frame = null;
+    _tokens = null;
+    _locations = null;
+    _admittedIds = null;
+
+    return ElementRegistryOrderImportFacts._owned(
+      backgroundElementIds: background,
+      contentElementOrder: content,
+      frameElementOrder: frame,
+      frameOrderTokensById: tokens,
+      elementLocationFacts: locations,
+      admittedElementIds: admittedIds,
+    );
+  }
+
+  void ensureNotConsumed() {
+    _live(_frame);
+  }
+
+  void _admit(CanvasElementId id, ElementLocationFacts location) {
+    final frame = _live(_frame);
+    _live(_tokens)[id] = frame.length;
+    _live(_locations)[id] = location;
+    _live(_admittedIds).add(id.value);
+    frame.add(id);
+  }
+
+  T _live<T extends Object>(T? value) {
+    if (value == null) {
+      throw StateError(
+        'ElementRegistrySchemaV1OrderImportBuilder was consumed.',
+      );
+    }
+
+    return value;
+  }
+}
+
+final class ElementRegistryOrderImportFacts {
+  ElementRegistryOrderImportFacts._owned({
+    required List<CanvasElementId> backgroundElementIds,
+    required List<CanvasElementId> contentElementOrder,
+    required List<CanvasElementId> frameElementOrder,
+    required Map<CanvasElementId, int> frameOrderTokensById,
+    required Map<CanvasElementId, ElementLocationFacts> elementLocationFacts,
+    required Set<String> admittedElementIds,
+  }) : backgroundElementIds = UnmodifiableListView(backgroundElementIds),
+       contentElementOrder = UnmodifiableListView(contentElementOrder),
+       frameElementOrder = UnmodifiableListView(frameElementOrder),
+       frameOrderTokensById = UnmodifiableMapView(frameOrderTokensById),
+       elementLocationFacts = UnmodifiableMapView(elementLocationFacts),
+       admittedElementIds = UnmodifiableSetView(admittedElementIds);
+
+  final List<CanvasElementId> backgroundElementIds;
+  final List<CanvasElementId> contentElementOrder;
+  final List<CanvasElementId> frameElementOrder;
+  final Map<CanvasElementId, int> frameOrderTokensById;
+  final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
+  final Set<String> admittedElementIds;
 }
 
 enum ElementLocationKind { background, content }

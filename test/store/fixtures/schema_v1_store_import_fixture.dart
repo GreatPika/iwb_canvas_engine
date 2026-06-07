@@ -1,7 +1,13 @@
+import 'dart:ui' show Color, Size;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/family_tables.dart';
+import 'package:iwb_canvas_engine/src/store/layer_table.dart';
+import 'package:iwb_canvas_engine/src/store/resource_table.dart';
 import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
@@ -9,6 +15,7 @@ void main() {
   _testValidImportPreparesAndInstallsRows();
   _testStorePreparationRejectsInvalidRows();
   _testPreparedImportsAreConsumeOnceAndStaleGuarded();
+  _testImportBuildersAreConsumeOnce();
 }
 
 void _testValidImportPreparesAndInstallsRows() {
@@ -109,6 +116,44 @@ void _testPreparedImportsAreConsumeOnceAndStaleGuarded() {
       () => store.installPreparedSchemaV1Import(noOp),
       throwsA(isA<StateError>()),
     );
+  });
+}
+
+void _testImportBuildersAreConsumeOnce() {
+  test('store import row builders are consume-once', () {
+    final resourceBuilder = StoreResourceDescriptorImportBuilder()
+      ..addSchemaV1Import(_resourceEvent('resource-a'));
+    resourceBuilder.consume(resourceRevision: 1);
+    expect(
+      () => resourceBuilder.addSchemaV1Import(_resourceEvent('resource-b')),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => resourceBuilder.consume(resourceRevision: 1),
+      throwsA(isA<StateError>()),
+    );
+
+    final familyBuilder = FamilyTablesSchemaV1ImportBuilder()
+      ..add(_rectEvent('rect-a'), const {});
+    familyBuilder.consume();
+    expect(
+      () => familyBuilder.add(_rectEvent('rect-b'), const {}),
+      throwsA(isA<StateError>()),
+    );
+    expect(() => familyBuilder.consume(), throwsA(isA<StateError>()));
+
+    final layerBuilder = LayerTableSchemaV1ImportBuilder()
+      ..addLayer(_layerEvent('layer-a'));
+    layerBuilder.addElement(
+      CanvasLayerId('layer-a'),
+      CanvasElementId('rect-a'),
+    );
+    layerBuilder.consume();
+    expect(
+      () => layerBuilder.addLayer(_layerEvent('layer-b')),
+      throwsA(isA<StateError>()),
+    );
+    expect(() => layerBuilder.consume(), throwsA(isA<StateError>()));
   });
 }
 
@@ -281,6 +326,47 @@ Map<String, Object?> _resource(String id) {
     'byteLength': 12,
     'metadata': {'owner': 'resource'},
   };
+}
+
+SchemaV1ImageResourceImportEvent _resourceEvent(String id) {
+  return SchemaV1ImageResourceImportEvent(
+    id: CanvasResourceId(id),
+    appKey: 'asset/$id',
+    mimeType: 'image/png',
+    contentHash: 'hash-$id',
+    byteLength: 12,
+    metadata: const CanvasMetadata.empty(),
+  );
+}
+
+SchemaV1LayerImportEvent _layerEvent(String id) {
+  return SchemaV1LayerImportEvent(
+    id: CanvasLayerId(id),
+    metadata: const CanvasMetadata.empty(),
+  );
+}
+
+SchemaV1RectElementImportEvent _rectEvent(String id) {
+  return SchemaV1RectElementImportEvent(
+    common: SchemaV1ElementCommonImport(
+      id: CanvasElementId(id),
+      kind: CanvasElementKind.rect,
+      revision: 0,
+      transform: CanvasTransform.identity,
+      opacity: 1,
+      hitPadding: 0,
+      isVisible: true,
+      isSelectable: true,
+      isLocked: false,
+      isDeletable: true,
+      isTransformable: true,
+      metadata: const CanvasMetadata.empty(),
+    ),
+    size: const Size(3, 4),
+    fillColor: const Color(0xFF0000FF),
+    strokeColor: null,
+    strokeWidth: 0,
+  );
 }
 
 Map<String, Object?> _rect(String id) {

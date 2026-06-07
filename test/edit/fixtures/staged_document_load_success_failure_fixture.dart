@@ -61,10 +61,17 @@ void _expectPreparedReplacementFacts(PreparedDocumentLoad prepared) {
   expect(prepared.summary.resourceCount, 1);
   expect(prepared.background.color, const Color(0xFF112233));
   expect(prepared.background.grid, CanvasGrid.disabled);
-  expect(prepared.elementIds.map((id) => id.value), {'load-bg', 'load-img'});
+  final storeImport = prepared.storeImportForTesting;
+  if (storeImport == null) {
+    fail('Expected JSON load preparation to expose a store import fixture.');
+  }
+  final storeElementIds = storeImport.elementIds;
+  final loadElementIds = prepared.elementIds;
+  expect(loadElementIds, same(storeElementIds));
+  expect(loadElementIds.map((id) => id.value), {'load-bg', 'load-img'});
   expect(prepared.layerIds.map((id) => id.value), {'load-layer'});
   expect(prepared.resourceIds.map((id) => id.value), {'load-resource'});
-  expect(() => prepared.elementIds.clear(), throwsUnsupportedError);
+  expect(() => loadElementIds.clear(), throwsUnsupportedError);
   expect(() => prepared.layerIds.clear(), throwsUnsupportedError);
   expect(() => prepared.resourceIds.clear(), throwsUnsupportedError);
 }

@@ -69,13 +69,7 @@ final class DocumentStoreKernel {
   }
 
   CanvasResource? resourceById(CanvasResourceId id) {
-    for (final resource in _document.resourceTable.projectResources()) {
-      if (resource.id == id) {
-        return ResourceTable.copy(resource);
-      }
-    }
-
-    return null;
+    return _document.resourceTable.projectResource(id);
   }
 
   CanvasElement? elementById(CanvasElementId id) {
@@ -1137,17 +1131,20 @@ enum StoreElementLocationKind { background, content }
 
 final class _IdAdmission {
   _IdAdmission({required this.prefix, required Iterable<String> admittedIds})
-    : _reserved = Set.of(admittedIds);
+    : _admittedIds = admittedIds is Set<String>
+          ? admittedIds
+          : Set.of(admittedIds);
 
   final String prefix;
-  final Set<String> _reserved;
+  final Set<String> _admittedIds;
+  final Set<String> _reserved = {};
   int _next = 0;
 
   String nextValue() {
     while (true) {
       final candidate = '$prefix$_next';
       _next += 1;
-      if (!_reserved.add(candidate)) {
+      if (_admittedIds.contains(candidate) || !_reserved.add(candidate)) {
         continue;
       }
 

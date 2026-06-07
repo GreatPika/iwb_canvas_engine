@@ -152,6 +152,23 @@ void applyAndExpectSpatialClearReset(SpatialKernel kernel) {
   );
 }
 
+void expectReplacementScheduledForLazyRebuild(
+  SpatialKernel kernel,
+  SpatialFrameFactsPortFixture loaded,
+) {
+  expect(loaded.elementHandlesCalls, 0);
+  expect(loaded.elementHandleForIdCalls, 0);
+  expect(kernel.snapshot.isInvalid, isTrue);
+  expect(kernel.snapshot.entryCount, 0);
+  expect(spatialCandidateIds(kernel.queryHit(spatialWindowNearOrigin(1))), [
+    CanvasElementId('new-a'),
+  ]);
+  expect(loaded.elementHandlesCalls, 1);
+  expect(loaded.elementHandleForIdCalls, 1);
+  expect(kernel.snapshot.isInvalid, isFalse);
+  expect(kernel.snapshot.entryCount, 2);
+}
+
 void expectInvalidSpatialDeltaTriggersRebuild(SpatialKernel kernel) {
   final recovered = SpatialFrameFactsPortFixture([
     spatialRect('a', order: 1),

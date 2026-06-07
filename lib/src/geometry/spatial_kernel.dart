@@ -13,10 +13,11 @@ final class SpatialKernel {
   SpatialKernel({this.geometryPolicy = const GeometryPolicy()});
 
   final GeometryPolicy geometryPolicy;
-  final SpatialIndexSet _indexes = SpatialIndexSet();
+  SpatialIndexSet _indexes = SpatialIndexSet();
   final SpatialKernelQueryState _queryState = SpatialKernelQueryState();
   final SpatialCandidateHandleMapper _candidateMapper =
       SpatialCandidateHandleMapper();
+  FrameFactsPort? _pendingReplacementFrame;
 
   SpatialKernelSnapshot get snapshot {
     final indexes = _indexes.snapshot;
@@ -35,6 +36,7 @@ final class SpatialKernel {
   }
 
   void rebuild(FrameFactsPort frame) {
+    _pendingReplacementFrame = null;
     final structuralRevision = frame.frameRevisions.structuralRevision;
     try {
       final entries = spatialEntriesForFrame(
@@ -57,6 +59,7 @@ final class SpatialKernel {
   }
 
   void resetEmpty(int structuralRevision) {
+    _pendingReplacementFrame = null;
     _indexes.clear();
     _queryState.markValid(structuralRevision);
   }
@@ -71,6 +74,11 @@ final class SpatialKernel {
     );
     if (touchedSet.documentReplaced ||
         (!isClearContentReset && _requiresRebuild(touchedSet))) {
+      if (touchedSet.documentReplaced) {
+        _scheduleReplacementRebuild(frame, structuralRevision);
+
+        return;
+      }
       rebuild(frame);
 
       return;
@@ -126,6 +134,11 @@ final class SpatialKernel {
     SpatialQueryWindow window,
     SpatialIndexQuery query,
   ) {
+    final pendingReplacementFrame = _pendingReplacementFrame;
+    if (pendingReplacementFrame != null) {
+      rebuild(pendingReplacementFrame);
+    }
+
     return _queryState.runQuery(
       SpatialKernelQueryContext(
         window: window,
@@ -135,6 +148,18 @@ final class SpatialKernel {
         query: query,
       ),
     );
+  }
+
+  void _scheduleReplacementRebuild(
+    FrameFactsPort frame,
+    int structuralRevision,
+  ) {
+    // Replacement drops the old index in O(1); the next spatial query rebuilds
+    // against committed frame facts before exposing candidates.
+    _indexes = SpatialIndexSet();
+    _candidateMapper.bind(frame, structuralRevision);
+    _pendingReplacementFrame = frame;
+    _queryState.markRebuildNeeded(structuralRevision);
   }
 }
 

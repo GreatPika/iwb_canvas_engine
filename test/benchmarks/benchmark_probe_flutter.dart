@@ -8,6 +8,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_codec.dart';
@@ -121,12 +122,20 @@ void _registerPreparedCaseTests() {
     _resourceAndDiagnosticCasePlansExposePreparedSetupDiagnostics,
   );
   _helperTest(
-    'load document breakdown records public load phases',
-    _loadDocumentBreakdownRecordsPublicLoadPhases,
+    'load document breakdown records public load diagnostics',
+    _loadDocumentBreakdownRecordsPublicLoadDiagnostics,
+  );
+  _helperTest(
+    'load document timings exclude fixture encoding',
+    _loadDocumentTimingsExcludeFixtureEncoding,
   );
   _helperTest(
     'edit input and frame case plans execute prepared action samples',
     _editInputAndFrameCasePlansExecutePreparedActionSamples,
+  );
+  _helperTest(
+    'runtime case plans prepare spatial state outside action samples',
+    _runtimeCasePlansPrepareSpatialStateOutsideActionSamples,
   );
 }
 
@@ -622,7 +631,7 @@ void _expectPreparedCaseMetrics(Map<String, Object?> result, String metric) {
   expect(metrics, contains(metric));
 }
 
-Future<void> _loadDocumentBreakdownRecordsPublicLoadPhases() async {
+Future<void> _loadDocumentBreakdownRecordsPublicLoadDiagnostics() async {
   final result = await _runProbePlan(
     _fakeOptions(warmups: 0, repetitions: 1),
     _casePlan('load_document.breakdown', '1k'),
@@ -631,12 +640,196 @@ Future<void> _loadDocumentBreakdownRecordsPublicLoadPhases() async {
 
   expect(metrics, containsPair('decode_us', isA<int>()));
   expect(metrics, containsPair('runtime_construct_us', isA<int>()));
-  expect(metrics, containsPair('load_document_us', isA<int>()));
+  expect(metrics, containsPair('schema_import_load_us', isA<int>()));
   expect(metrics, containsPair('first_projection_us', isA<int>()));
   expect(metrics, containsPair('loaded_element_count', 1000));
   expect(metrics, containsPair('projected_element_count', 1000));
   expect(metrics, containsPair('encoded_byte_count', isA<int>()));
   expect(result['setupUsSamples'], hasLength(1));
+}
+
+void _loadDocumentTimingsExcludeFixtureEncoding() {
+  _expectRuntimeConstructionExcludesLoad();
+  _expectLoadDocumentSourceShape();
+}
+
+void _expectRuntimeConstructionExcludesLoad() {
+  final runtime = _timedRuntimeConstruction();
+  try {
+    expect(runtime.value.state.value.revisions.document, 0);
+    expect(runtime.value.projectionBuildCount, 0);
+  } finally {
+    runtime.value.dispose();
+  }
+
+  final source = _benchmarkProbeSource();
+  _expectBenchmarkSourceExcludesRetiredLoadRoutes(source);
+  _expectFunctionExcludes(
+    source,
+    '_timedRuntimeConstruction',
+    forbidden: [
+      'runtimeRootWithDocument',
+      'loadDocumentFromJson',
+      'encodeCanvasDocumentToJson',
+    ],
+  );
+}
+
+void _expectLoadDocumentSourceShape() {
+  final source = _benchmarkProbeSource();
+  _expectBenchmarkSourceExcludesRetiredLoadRoutes(source);
+  final timedLoadBody = _declarationBody(source, '_timedLoadDocument');
+  expect(
+    timedLoadBody,
+    contains('runtime.edits.loadDocumentFromJson(encodedJson);'),
+  );
+  _expectFunctionExcludes(
+    source,
+    '_timedLoadDocument',
+    forbidden: [
+      'encodeCanvasDocumentToJson',
+      '_document(',
+      'readDocument',
+      '_timedFirstProjection',
+      'importSchemaV1Document',
+      'prepareSchemaV1Import',
+    ],
+  );
+  _expectClosureExcludes(
+    source,
+    '_loadDocumentSuccessPlan',
+    'measure:',
+    forbidden: [
+      'encodeCanvasDocumentToJson',
+      'readDocument',
+      '_timedFirstProjection',
+    ],
+  );
+  _expectClosureExcludes(
+    source,
+    '_loadDocumentFailurePlan',
+    'measure:',
+    forbidden: ['encodeCanvasDocumentToJson'],
+  );
+}
+
+void _expectBenchmarkSourceExcludesRetiredLoadRoutes(String source) {
+  expect(
+    source,
+    isNot(
+      contains(
+        'decodeCanvasDocument'
+        'FromJson',
+      ),
+    ),
+  );
+  expect(
+    source,
+    isNot(
+      contains(
+        '.load'
+        'Document(',
+      ),
+    ),
+  );
+}
+
+String _benchmarkProbeSource() {
+  return File(
+    'test/benchmarks/benchmark_probe_flutter.dart',
+  ).readAsStringSync();
+}
+
+void _expectFunctionExcludes(
+  String source,
+  String functionName, {
+  required List<String> forbidden,
+}) {
+  final body = _declarationBody(source, functionName);
+  for (final pattern in forbidden) {
+    expect(body, isNot(contains(pattern)), reason: functionName);
+  }
+}
+
+void _expectClosureExcludes(
+  String source,
+  String functionName,
+  String marker, {
+  required List<String> forbidden,
+}) {
+  final functionBody = _declarationBody(source, functionName);
+  final markerIndex = functionBody.indexOf(marker);
+  expect(markerIndex, isNonNegative, reason: functionName);
+  final closureBody = _balancedBodyFrom(functionBody, markerIndex);
+  for (final pattern in forbidden) {
+    expect(closureBody, isNot(contains(pattern)), reason: functionName);
+  }
+}
+
+String _declarationBody(String source, String declarationName) {
+  final declarationIndex = _declarationIndex(source, declarationName);
+  expect(declarationIndex, isNonNegative, reason: declarationName);
+
+  return _balancedBodyFrom(source, declarationIndex);
+}
+
+int _declarationIndex(String source, String declarationName) {
+  for (final prefix in _topLevelDeclarationPrefixes) {
+    final index = source.indexOf('$prefix $declarationName');
+    if (index != -1) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+const _topLevelDeclarationPrefixes = [
+  '_BenchmarkCasePlan',
+  'Future<void>',
+  'int',
+  'Map<String, Object?>',
+  'Stopwatch',
+  'String',
+  'void',
+  '({CanvasDocument value, Stopwatch stopwatch})',
+  '({RuntimeRoot value, Stopwatch stopwatch})',
+];
+
+String _balancedBodyFrom(String source, int searchFrom) {
+  final openIndex = source.indexOf('{', searchFrom);
+  expect(openIndex, isNonNegative);
+  var depth = 0;
+  for (var index = openIndex; index < source.length; index += 1) {
+    final character = source[index];
+    if (character == '{') {
+      depth += 1;
+    } else if (character == '}') {
+      depth -= 1;
+      if (depth == 0) {
+        return _sourceRange(source, openIndex, index + 1);
+      }
+    }
+  }
+
+  throw StateError('Could not find balanced body from $searchFrom.');
+}
+
+String _sourceRange(String source, int start, int end) {
+  final buffer = StringBuffer();
+  var offset = 0;
+  for (final character in source.characters) {
+    final nextOffset = offset + character.length;
+    if (nextOffset > start && offset < end) {
+      buffer.write(character);
+    }
+    if (nextOffset >= end) {
+      break;
+    }
+    offset = nextOffset;
+  }
+
+  return buffer.toString();
 }
 
 Future<void> _editInputAndFrameCasePlansExecutePreparedActionSamples() async {
@@ -656,6 +849,27 @@ Future<void> _editInputAndFrameCasePlansExecutePreparedActionSamples() async {
   _expectPreparedCaseMetrics(editResult, 'selected_count');
   _expectPreparedCaseMetrics(inputResult, 'scene_repaint_count');
   _expectPreparedCaseMetrics(frameResult, 'ordinary_plan_hit_rate');
+}
+
+Future<void> _runtimeCasePlansPrepareSpatialStateOutsideActionSamples() async {
+  final result = await _runProbePlan(
+    _fakeOptions(caseId: 'spatial.query_point'),
+    _runtimeCasePlan(
+      'per_run_prepared_fixture',
+      '1k',
+      (runtime) => {
+        'spatial_invalid_at_action': runtime.spatialKernel.snapshot.isInvalid
+            ? 1
+            : 0,
+      },
+    ),
+  );
+
+  expect(result['metrics'], containsPair('spatial_invalid_at_action', 0));
+  expect(
+    result['setupMetrics'],
+    containsPair('spatial_rebuild_setup_us', isA<int>()),
+  );
 }
 
 List<String> _probeArgs() {
@@ -765,6 +979,7 @@ Map<String, Object?> _probeResultJson(
 
 final class _ProbeRunState {
   final List<int> samples = [];
+  final List<int> schemaImportLoadUsSamples = [];
   final List<int> setupUsSamples = [];
   final Map<String, Object?> metrics = {};
   final Map<String, Object?> setupMetrics = {};
@@ -780,11 +995,24 @@ final class _ProbeRunState {
       setupUsSamples.add(sample.setupUs);
       setupMetrics.addAll(sample.setupMetrics);
     }
-    metrics.addAll(sample.metrics);
+    final sampleMetrics = Map<String, Object?>.of(sample.metrics);
+    final schemaImportLoadUs = sampleMetrics.remove('schema_import_load_us');
+    if (schemaImportLoadUs != null) {
+      if (schemaImportLoadUs is! num) {
+        throw StateError('schema_import_load_us sample must be numeric.');
+      }
+      schemaImportLoadUsSamples.add(schemaImportLoadUs.round());
+    }
+    metrics.addAll(sampleMetrics);
   }
 
   void finalizeMetrics() {
     metrics.addAll(_timingMetrics(samples));
+    if (schemaImportLoadUsSamples.isNotEmpty) {
+      metrics['schema_import_load_us'] = _timingMetrics(
+        schemaImportLoadUsSamples,
+      )['p95_us'];
+    }
     if (setupUsSamples.isEmpty) {
       return;
     }
@@ -1283,7 +1511,11 @@ _BenchmarkCasePlan _runtimeCasePlan(
       final runtime = _runtime(scaleId, config: options.config);
       try {
         await options.prepareRuntime?.call(runtime);
-        return _PreparedProbeFixture(value: runtime);
+        final spatialRebuildSetupUs = _prepareSpatialBenchmarkFixture(runtime);
+        return _PreparedProbeFixture(
+          value: runtime,
+          setupMetrics: {'spatial_rebuild_setup_us': spatialRebuildSetupUs},
+        );
       } catch (_) {
         runtime.dispose();
         rethrow;
@@ -1477,8 +1709,12 @@ _BenchmarkCasePlan _loadDocumentSuccessPlan(String setupScope, String scaleId) {
     },
     measure: (fixture) {
       final loadFixture = fixture as _LoadDocumentSuccessFixture;
-      loadFixture.runtime.edits.loadDocumentFromJson(loadFixture.encodedJson);
+      final loaded = _timedLoadDocument(
+        loadFixture.runtime,
+        loadFixture.encodedJson,
+      );
       return {
+        'schema_import_load_us': loaded,
         'loaded_element_count': _scaleElementCount(scaleId),
         'rebuild_cost': _boundedScale(scaleId, max: 128),
       };
@@ -1518,7 +1754,7 @@ Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
     return {
       'decode_us': _nonZeroUs(decoded.stopwatch),
       'runtime_construct_us': _nonZeroUs(runtime.stopwatch),
-      'load_document_us': _nonZeroUs(loaded),
+      'schema_import_load_us': loaded,
       'first_projection_us': _nonZeroUs(projected.stopwatch),
       'loaded_element_count': _documentElementCount(decoded.value),
       'projected_element_count': _documentElementCount(projected.value),
@@ -1547,12 +1783,12 @@ Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
   return (value: runtime, stopwatch: stopwatch);
 }
 
-Stopwatch _timedLoadDocument(RuntimeRoot runtime, String encodedJson) {
+int _timedLoadDocument(RuntimeRoot runtime, String encodedJson) {
   final stopwatch = Stopwatch()..start();
   runtime.edits.loadDocumentFromJson(encodedJson);
   stopwatch.stop();
 
-  return stopwatch;
+  return _nonZeroUs(stopwatch);
 }
 
 ({CanvasDocument value, Stopwatch stopwatch}) _timedFirstProjection(
@@ -2038,6 +2274,14 @@ RuntimeRoot _runtime(
   });
 
   return runtime;
+}
+
+int _prepareSpatialBenchmarkFixture(RuntimeRoot runtime) {
+  final stopwatch = Stopwatch()..start();
+  runtime.spatialKernel.rebuild(runtime.frameFactsPort);
+  stopwatch.stop();
+
+  return _nonZeroUs(stopwatch);
 }
 
 String _duplicateElementJson() {

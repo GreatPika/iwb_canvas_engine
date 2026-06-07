@@ -77,4 +77,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 55. P14 release readiness benchmarks](plan/step_55_p14_release_readiness_benchmarks.md)
 - [x] [Step 56. P14 benchmark measurement boundary](plan/step_56_p14_benchmark_measurement_boundary.md)
 - [x] [Step 57. Incremental edit store sparse seam](plan/step_57_incremental_edit_store_sparse_seam.md)
-- [ ] [Step 58. Canonical schema v1 JSON load API](plan/step_58_canonical_schema_v1_json_load_api.md)
+- [x] [Step 58. Canonical schema v1 JSON load API](plan/step_58_canonical_schema_v1_json_load_api.md)

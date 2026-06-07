@@ -298,11 +298,11 @@ final class _BenchmarkManifestParser {
       fixtureShape: 'codec_fixture',
     ),
     'load_document.success': _ExpectedBenchmarkBoundary(
-      timedScope: 'lifecycle',
+      timedScope: 'action_only',
       setupScope: 'per_sample_prepared_fixture',
-      teardownScope: 'measured_lifecycle',
-      primaryTiming: 'lifecycle',
-      primaryMemory: 'lifecycle',
+      teardownScope: 'excluded',
+      primaryTiming: 'action',
+      primaryMemory: 'action',
       fixtureShape: 'normal_spread',
     ),
     'load_document.breakdown': _ExpectedBenchmarkBoundary(

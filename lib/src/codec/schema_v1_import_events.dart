@@ -35,7 +35,11 @@ void importSchemaV1Document(
   DiagnosticsHub? diagnostics,
 }) {
   validateSchemaV1Root(json, diagnostics: diagnostics);
-  sink.beginDocument(_readDocumentEvent(json, diagnostics: diagnostics));
+  _deliverDocumentEvent(
+    sink,
+    _readDocumentEvent(json, diagnostics: diagnostics),
+    diagnostics,
+  );
 
   final resources = _readList(
     json,
@@ -52,7 +56,11 @@ void importSchemaV1Document(
     );
   }
   for (final resource in resources) {
-    sink.imageResource(_readResource(resource, diagnostics: diagnostics));
+    _deliverResourceEvent(
+      sink,
+      _readResource(resource, diagnostics: diagnostics),
+      diagnostics,
+    );
   }
 
   var elementCount = 0;
@@ -62,7 +70,11 @@ void importSchemaV1Document(
   )) {
     elementCount += 1;
     _validateElementCount(elementCount, diagnostics);
-    sink.backgroundElement(_readElement(element, diagnostics: diagnostics));
+    _deliverBackgroundElementEvent(
+      sink,
+      _readElement(element, diagnostics: diagnostics),
+      diagnostics,
+    );
   }
 
   final layers = _readList(
@@ -81,18 +93,121 @@ void importSchemaV1Document(
   }
   for (final value in layers) {
     final layer = _readLayer(value, diagnostics: diagnostics);
-    sink.layer(layer.event);
+    _deliverLayerEvent(sink, layer.event, diagnostics);
     for (final element in layer.elements) {
       elementCount += 1;
       _validateElementCount(elementCount, diagnostics);
-      sink.layerElement(
+      _deliverLayerElementEvent(
+        sink,
         layer.event.id,
         _readElement(element, diagnostics: diagnostics),
+        diagnostics,
       );
     }
   }
 
   sink.endDocument();
+}
+
+void _deliverDocumentEvent(
+  SchemaV1ImportSink sink,
+  SchemaV1DocumentImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  if (diagnostics == null) {
+    sink.beginDocument(event);
+
+    return;
+  }
+  try {
+    sink.beginDocument(event);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
+  }
+}
+
+void _deliverResourceEvent(
+  SchemaV1ImportSink sink,
+  SchemaV1ImageResourceImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  if (diagnostics == null) {
+    sink.imageResource(event);
+
+    return;
+  }
+  try {
+    sink.imageResource(event);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
+  }
+}
+
+void _deliverBackgroundElementEvent(
+  SchemaV1ImportSink sink,
+  SchemaV1ElementImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  if (diagnostics == null) {
+    sink.backgroundElement(event);
+
+    return;
+  }
+  try {
+    sink.backgroundElement(event);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
+  }
+}
+
+void _deliverLayerEvent(
+  SchemaV1ImportSink sink,
+  SchemaV1LayerImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  if (diagnostics == null) {
+    sink.layer(event);
+
+    return;
+  }
+  try {
+    sink.layer(event);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
+  }
+}
+
+void _deliverLayerElementEvent(
+  SchemaV1ImportSink sink,
+  CanvasLayerId layerId,
+  SchemaV1ElementImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  if (diagnostics == null) {
+    sink.layerElement(layerId, event);
+
+    return;
+  }
+  try {
+    sink.layerElement(layerId, event);
+  } on CanvasDataException catch (exception, stackTrace) {
+    Error.throwWithStackTrace(
+      recordSchemaV1FailureDiagnostic(diagnostics, exception),
+      stackTrace,
+    );
+  }
 }
 
 Map<String, Object?> _decodeRoot(

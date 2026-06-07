@@ -628,6 +628,36 @@ void main() {
         ).failures.join('\n'),
         contains('load_document.success/1k allocation_bytes regression'),
       );
+
+      final schemaImportLoad = _clone(baseline);
+      _metrics(
+        schemaImportLoad,
+        'load_document.success',
+        '50k',
+      )['schema_import_load_us'] = 900000;
+      _case(
+        schemaImportLoad,
+        'load_document.success',
+        '50k',
+      )['actionUsSamples'] = [
+        900000,
+        900000,
+        100000,
+      ];
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: schemaImportLoad,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains(
+          'current load_document.success/50k '
+          'schema_import_load_us=900000 must be < 574000',
+        ),
+      );
     });
 
     test('does not apply first-baseline memory caps during ordinary diff', () {

@@ -64,7 +64,9 @@ maxFallbackCandidates = 4096;
 normal element is not duplicated into all tiles when marked outlier;
 queries union tile candidates + outliers;
 ordinary edit updates only touched ids;
-document replacement or staged load rebuilds full index;
+document replacement or staged load invalidates the current index and schedules
+the next spatial query to rebuild against committed frame facts before returning
+candidates;
 operation-matrix `clearContent` may reset to an empty index without a generic full-scene clone.
 ```
 
@@ -83,8 +85,10 @@ Staged update algorithm:
 10. fallback candidate union that would exceed maxFallbackCandidates returns a typed budget-exceeded result instead of partial candidates.
 ```
 
-Full clone of spatial index for ordinary edit is forbidden. Page-level copy is allowed only for touched pages.
-Full rebuild/reset is allowed only for replacement/load paths or the operation-matrix `clearContent` empty reset.
+Full clone of spatial index for ordinary edit is forbidden. Page-level copy is
+allowed only for touched pages. Full rebuild/reset is allowed only for
+replacement/load query recovery paths or the operation-matrix `clearContent`
+empty reset.
 
 Fallback budget behavior:
 

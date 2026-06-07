@@ -166,6 +166,18 @@ void _registerDocumentLoadStoreInputTests() {
     );
     expect(violations.single.message, contains('DocumentStoreKernel'));
   });
+
+  test('store import document inputs are rejected', () async {
+    final violations = await checkNoUnapprovedDocumentLoadInputs(
+      sourceOverrides: _storeImportDocumentInputSources(),
+    );
+
+    expect(
+      violations.single.guardrailId,
+      'api.no_unapproved_document_load_inputs',
+    );
+    expect(violations.single.message, contains('StoreSchemaV1ImportBuilder'));
+  });
 }
 
 void _registerDocumentLoadTestingInputTests() {
@@ -261,6 +273,7 @@ final class ValidatedImportDraft {
     'lib/src/runtime/runtime_root.dart': '',
     'lib/src/edit/staged_document_load.dart': '',
     'lib/src/store/document_store_kernel.dart': '',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }
 
@@ -274,6 +287,7 @@ final class EditKernel {
     'lib/src/runtime/runtime_root.dart': '',
     'lib/src/edit/staged_document_load.dart': '',
     'lib/src/store/document_store_kernel.dart': '',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }
 
@@ -285,6 +299,7 @@ typedef DocumentLoadInstaller = void Function(CanvasDocument document);
     'lib/src/runtime/runtime_root.dart': '',
     'lib/src/edit/staged_document_load.dart': '',
     'lib/src/store/document_store_kernel.dart': '',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }
 
@@ -296,7 +311,7 @@ final class RuntimeRoot {
   RuntimeRoot({required CanvasDocument initialDocument});
   void _loadDocument(CanvasDocument document) {}
 }
-''',
+    ''',
     'lib/src/edit/staged_document_load.dart': '''
 final class LoadDocumentPipeline {
   PreparedDocumentLoad prepare(CanvasDocument document) => throw '';
@@ -310,6 +325,7 @@ final class DocumentStoreKernel {
   DocumentStoreKernel(CanvasDocument initialDocument);
 }
 ''',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }
 
@@ -322,6 +338,21 @@ Map<String, String> _storeInstallerDocumentInputSources() {
 final class DocumentStoreKernel {
   void installDocument(CanvasDocument document, StoreRevisionDelta delta) {}
   void replaceDocument(CanvasDocument document, StoreRevisionDelta delta) {}
+}
+''',
+    'lib/src/store/schema_v1_store_import.dart': '',
+  };
+}
+
+Map<String, String> _storeImportDocumentInputSources() {
+  return {
+    'lib/src/edit/edit_kernel.dart': '',
+    'lib/src/runtime/runtime_root.dart': '',
+    'lib/src/edit/staged_document_load.dart': '',
+    'lib/src/store/document_store_kernel.dart': '',
+    'lib/src/store/schema_v1_store_import.dart': '''
+final class StoreSchemaV1ImportBuilder {
+  void addDocument(CanvasDocument document) {}
 }
 ''',
   };
@@ -338,6 +369,7 @@ final class RuntimeRoot {
 ''',
     'lib/src/edit/staged_document_load.dart': '',
     'lib/src/store/document_store_kernel.dart': '',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }
 
@@ -354,11 +386,12 @@ final class LoadDocumentPipeline {
   PreparedDocumentLoad prepareDocument(CanvasDocument document) => throw '';
 }
 PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) => throw '';
-''',
+    ''',
     'lib/src/store/document_store_kernel.dart': '''
 final class DocumentStoreKernel {
   void replaceDocument(CanvasDocument document, StoreRevisionDelta delta) {}
 }
 ''',
+    'lib/src/store/schema_v1_store_import.dart': '',
   };
 }

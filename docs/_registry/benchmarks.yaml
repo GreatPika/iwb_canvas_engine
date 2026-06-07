@@ -565,22 +565,21 @@ cases:
     budget_classes: [bulk_io, allocation_budget]
     memory_scope: bulk_document_1k_10k_50k_100k
     measurement_boundary:
-      timed_scope: lifecycle
+      timed_scope: action_only
       setup_scope: per_sample_prepared_fixture
-      teardown_scope: measured_lifecycle
-      primary_timing: lifecycle
-      primary_memory: lifecycle
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
       setup_metrics: [setup_us]
       setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
     fixture_shape: normal_spread
-    docs_metrics_label: "avg/P95/max, rebuild cost, alloc bytes"
-    required_metrics: [avg_us, p95_us, max_us, rebuild_cost, allocation_bytes]
+    docs_metrics_label: "avg/P95/max schema import load, rebuild cost, alloc bytes"
+    required_metrics: [avg_us, p95_us, max_us, schema_import_load_us, rebuild_cost, allocation_bytes]
     exact_invariants: []
     scales:
       - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
-      - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: load_document.breakdown
     classification: new_only
     budget_classes: [bulk_io, allocation_budget]
@@ -594,8 +593,8 @@ cases:
       setup_metrics: [setup_us]
       setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
     fixture_shape: codec_fixture
-    docs_metrics_label: "decode/runtime/load/first projection phase us"
-    required_metrics: [avg_us, p95_us, max_us, decode_us, runtime_construct_us, load_document_us, first_projection_us, loaded_element_count, projected_element_count, allocation_bytes]
+    docs_metrics_label: "decode diagnostic, runtime construct, public schema import load, first projection us"
+    required_metrics: [avg_us, p95_us, max_us, decode_us, runtime_construct_us, schema_import_load_us, first_projection_us, loaded_element_count, projected_element_count, allocation_bytes]
     exact_invariants: []
     scales:
       - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}

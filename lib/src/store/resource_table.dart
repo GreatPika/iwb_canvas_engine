@@ -1,8 +1,10 @@
+import 'dart:collection';
+
+import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
-import '../contracts/internal/schema_v1_import_events.dart';
 
 // ResourceTable owns descriptor admission, mutation, and public projection for
 // one table; splitting these methods would duplicate descriptor invariants.
@@ -53,6 +55,8 @@ final class ResourceTable {
   }
 
   const ResourceTable._({required this.descriptors});
+  ResourceTable._owned(Map<CanvasResourceId, StoreResourceDescriptorFacts> rows)
+    : descriptors = UnmodifiableMapView(rows);
 
   final Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors;
 
@@ -65,7 +69,16 @@ final class ResourceTable {
     return List.unmodifiable(descriptors.values.map(_resourceForDescriptor));
   }
 
-  bool contains(CanvasResourceId id) => admittedIds.contains(id.value);
+  CanvasResource? projectResource(CanvasResourceId id) {
+    final descriptor = descriptors[id];
+    if (descriptor == null) {
+      return null;
+    }
+
+    return _resourceForDescriptor(descriptor);
+  }
+
+  bool contains(CanvasResourceId id) => descriptors.containsKey(id);
 
   ResourceTable upsert(CanvasResource resource, {required int revision}) {
     final descriptor = descriptorFor(resource, resourceRevision: revision);
@@ -125,9 +138,107 @@ final class ResourceTable {
   }
 }
 
+final class StoreResourceDescriptorImportBuilder {
+  Map<CanvasResourceId, _PendingStoreResourceDescriptor>? _descriptors = {};
+  final Set<String> _admittedIds = {};
+  late final Set<String> _admittedIdsView = UnmodifiableSetView(_admittedIds);
+
+  Set<String> get admittedIds {
+    _ensureNotConsumed();
+
+    return _admittedIdsView;
+  }
+
+  void addSchemaV1Import(SchemaV1ImageResourceImportEvent event) {
+    final descriptors = _liveDescriptors;
+    _admitPendingDescriptor(
+      descriptors,
+      _PendingStoreResourceDescriptor(
+        id: event.id,
+        appKey: event.appKey,
+        mimeType: event.mimeType,
+        contentHash: event.contentHash,
+        byteLength: event.byteLength,
+        metadata: event.metadata,
+      ),
+    );
+    _admittedIds.add(event.id.value);
+  }
+
+  ResourceTable consume({required int resourceRevision}) {
+    final pending = _liveDescriptors;
+    _descriptors = null;
+    final descriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
+    for (final descriptor in pending.values) {
+      descriptors[descriptor.id] = descriptor.toFacts(
+        resourceRevision: resourceRevision,
+      );
+    }
+
+    return ResourceTable._owned(descriptors);
+  }
+
+  Map<CanvasResourceId, _PendingStoreResourceDescriptor> get _liveDescriptors {
+    final descriptors = _descriptors;
+    if (descriptors == null) {
+      throw StateError('StoreResourceDescriptorImportBuilder was consumed.');
+    }
+
+    return descriptors;
+  }
+
+  void _ensureNotConsumed() {
+    _liveDescriptors;
+  }
+}
+
+final class _PendingStoreResourceDescriptor {
+  const _PendingStoreResourceDescriptor({
+    required this.id,
+    required this.appKey,
+    required this.mimeType,
+    required this.contentHash,
+    required this.byteLength,
+    required this.metadata,
+  });
+
+  final CanvasResourceId id;
+  final String appKey;
+  final String? mimeType;
+  final String? contentHash;
+  final int? byteLength;
+  final CanvasMetadata metadata;
+
+  StoreResourceDescriptorFacts toFacts({required int resourceRevision}) {
+    return StoreResourceDescriptorFacts(
+      id: id,
+      appKey: appKey,
+      mimeType: mimeType,
+      contentHash: contentHash,
+      byteLength: byteLength,
+      resourceRevision: resourceRevision,
+      metadata: metadata,
+    );
+  }
+}
+
 void _admitDescriptor(
   Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors,
   StoreResourceDescriptorFacts descriptor,
+) {
+  if (descriptors.containsKey(descriptor.id)) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.duplicateResourceId,
+      message: 'duplicate resource id.',
+      path: 'resources.id',
+    );
+  }
+  descriptors[descriptor.id] = descriptor;
+}
+
+void _admitPendingDescriptor(
+  Map<CanvasResourceId, _PendingStoreResourceDescriptor> descriptors,
+  _PendingStoreResourceDescriptor descriptor,
 ) {
   if (descriptors.containsKey(descriptor.id)) {
     throw CanvasDataException(

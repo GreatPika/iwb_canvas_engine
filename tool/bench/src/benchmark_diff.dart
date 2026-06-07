@@ -20,6 +20,7 @@ const releaseCandidateRoot =
     'build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0';
 
 const benchmarkCurrentRoot = 'build/bench/current';
+const schemaImportLoadSuccess50kMaxUs = 574000;
 
 final class BenchmarkDiffOptions {
   const BenchmarkDiffOptions({
@@ -944,6 +945,12 @@ void _validateCaseCaps(
   })
   input,
 ) {
+  input.failures.addAll(
+    _validateSchemaImportLoadAcceptanceGate(
+      actual: input.actual,
+      caseName: input.caseName,
+    ),
+  );
   if (input.enforceAbsoluteCaps) {
     input.failures.addAll(
       _validateAbsoluteCaps(
@@ -966,6 +973,31 @@ void _validateCaseCaps(
       ),
     );
   }
+}
+
+List<String> _validateSchemaImportLoadAcceptanceGate({
+  required ParsedCaseReport actual,
+  required String caseName,
+}) {
+  if (actual.id != 'load_document.success' || actual.scale != '50k') {
+    return const [];
+  }
+  const metric = 'schema_import_load_us';
+  if (!actual.metrics.containsKey(metric)) {
+    return const [];
+  }
+  final value = actual.metrics[metric];
+  if (value is! num) {
+    return ['$caseName metric $metric must be numeric'];
+  }
+  if (value >= schemaImportLoadSuccess50kMaxUs) {
+    return [
+      '$caseName $metric=$value must be < '
+          '$schemaImportLoadSuccess50kMaxUs',
+    ];
+  }
+
+  return const [];
 }
 
 void _validateLegacyBootstrapMetrics(

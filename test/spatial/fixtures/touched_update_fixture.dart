@@ -8,6 +8,7 @@ import 'spatial_kernel_test_support.dart';
 void main() {
   _testOrdinaryTouchedUpdate();
   _testReplacementRebuild();
+  _testClearResetCancelsPendingReplacementRebuild();
   _testStructuralElementChangesTouchedUpdate();
   _testUpdateThenRemove();
   _testStructuralRevisionRebase();
@@ -39,7 +40,7 @@ void _testOrdinaryTouchedUpdate() {
 }
 
 void _testReplacementRebuild() {
-  test('document replacement rebuilds the full spatial index', () {
+  test('document replacement rebuilds lazily on the first spatial query', () {
     final kernel = SpatialKernel();
     kernel.rebuild(
       SpatialFrameFactsPortFixture([spatialRect('old', order: 1)]),
@@ -51,12 +52,38 @@ void _testReplacementRebuild() {
 
     kernel.applyTouched(loaded, TouchedSet(documentReplaced: true));
 
-    expect(loaded.elementHandlesCalls, 1);
-    expect(loaded.elementHandleForIdCalls, 0);
-    expect(kernel.snapshot.entryCount, 2);
-    expect(spatialCandidateIds(kernel.queryHit(spatialWindowNearOrigin(1))), [
-      CanvasElementId('new-a'),
-    ]);
+    expect(kernel.snapshot.isInvalid, isTrue);
+    expectReplacementScheduledForLazyRebuild(kernel, loaded);
+  });
+}
+
+void _testClearResetCancelsPendingReplacementRebuild() {
+  test('clear reset cancels pending replacement rebuild', () {
+    final kernel = SpatialKernel();
+    kernel.rebuild(
+      SpatialFrameFactsPortFixture([spatialRect('old', order: 1)]),
+    );
+    final loaded = SpatialFrameFactsPortFixture([
+      spatialRect('loaded', order: 1),
+    ], structuralRevision: 1);
+    final cleared = SpatialFrameFactsPortFixture(
+      const [],
+      structuralRevision: 2,
+    );
+
+    kernel.applyTouched(loaded, TouchedSet(documentReplaced: true));
+    kernel.applyTouched(
+      cleared,
+      TouchedSet(removedElementIds: [CanvasElementId('loaded')]),
+    );
+
+    expect(kernel.snapshot.isInvalid, isFalse);
+    expect(kernel.snapshot.entryCount, 0);
+    expect(
+      spatialCandidateIds(kernel.queryHit(spatialWindowNearOrigin(2))),
+      <CanvasElementId>[],
+    );
+    expect(loaded.elementHandlesCalls, 0);
   });
 }
 
