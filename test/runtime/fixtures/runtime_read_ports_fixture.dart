@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -8,8 +9,8 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test('document and frame ports return committed facts only', () {
-    final root = RuntimeRoot(
-      initialDocument: _document(),
+    final root = runtimeRootWithDocument(
+      _document(),
       config: const CanvasRuntimeConfig(),
     );
 

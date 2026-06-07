@@ -16,6 +16,7 @@ void main() {
 }
 
 const _publicIncrementalSmokeSource = r'''
+import 'dart:convert';
 import 'dart:ui' hide Image;
 import 'dart:ui' as ui show Image;
 
@@ -25,8 +26,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   testWidgets('schema v1 document reaches runtime state and selection', (tester) async {
-    final decodedDocument = decodeCanvasDocument(_smallSchemaV1Document());
-    final runtime = CanvasRuntime(initialDocument: decodedDocument);
+    final runtime = CanvasRuntime();
+    runtime.edits.loadDocumentFromJson(jsonEncode(_smallSchemaV1Document()));
     final resolver = _NoopResolver();
     addTearDown(runtime.dispose);
 
@@ -54,7 +55,10 @@ void main() {
     expect(resolver.calls, 0);
 
     final initialState = runtime.state.value;
-    expect(initialState.revisions, _runtimeRevisions(document: 0, selection: 0));
+    expect(
+      initialState.revisions,
+      _runtimeRevisions(document: 1, selection: 1, viewCamera: 1, epoch: 1),
+    );
     expect(
       initialState.summary,
       const CanvasRuntimeSummary(
@@ -77,8 +81,8 @@ void main() {
 
     final selectedState = runtime.state.value;
     expect(selectedState.summary.selectedCount, 1);
-    expect(selectedState.revisions.selection, 1);
-    expect(selectedState.revisions.document, 0);
+    expect(selectedState.revisions.selection, 2);
+    expect(selectedState.revisions.document, 1);
     expect(runtime.selection.selectedElementIds, {CanvasElementId('element-a')});
 
     final imageResource = CanvasImageResource(
@@ -105,8 +109,8 @@ void main() {
     final editedState = runtime.state.value;
     expect(editedState.summary.elementCount, 2);
     expect(editedState.summary.resourceCount, 1);
-    expect(editedState.revisions.document, 1);
-    expect(editedState.revisions.selection, 1);
+    expect(editedState.revisions.document, 2);
+    expect(editedState.revisions.selection, 2);
     final editedDocument = runtime.readDocument();
     expect(editedDocument.layers.single.elements, hasLength(2));
     expect(editedDocument.resources.single.id, CanvasResourceId('resource-a'));
@@ -135,13 +139,12 @@ void main() {
     expect(dirtyState.revisions.interaction, editedState.revisions.interaction);
     expect(dirtyState.revisions.epoch, editedState.revisions.epoch);
 
-    final secondDocument = decodeCanvasDocument(_secondSchemaV1Document());
     final loadSnapshots = <CanvasRuntimeState>[];
     runtime.state.addListener(() {
       loadSnapshots.add(runtime.state.value);
     });
 
-    runtime.edits.loadDocument(secondDocument);
+    runtime.edits.loadDocumentFromJson(jsonEncode(_secondSchemaV1Document()));
 
     expect(loadSnapshots, hasLength(1));
     final loadedState = loadSnapshots.single;
@@ -154,10 +157,10 @@ void main() {
         selectedCount: 0,
       ),
     );
-    expect(loadedState.revisions.document, 2);
-    expect(loadedState.revisions.selection, 2);
-    expect(loadedState.revisions.viewCamera, 1);
-    expect(loadedState.revisions.epoch, 1);
+    expect(loadedState.revisions.document, 3);
+    expect(loadedState.revisions.selection, 3);
+    expect(loadedState.revisions.viewCamera, 2);
+    expect(loadedState.revisions.epoch, 2);
     expect(runtime.selection.selectedElementIds, isEmpty);
     expect(runtime.camera.offset, const Offset(-8, 12));
 
@@ -170,8 +173,8 @@ void main() {
     );
     expect(loadedDocument.metadata['source'], 'public incremental smoke load');
 
-    runtime.edits.loadDocument(
-      decodeCanvasDocument(_geometryRichSchemaV1Document()),
+    runtime.edits.loadDocumentFromJson(
+      jsonEncode(_geometryRichSchemaV1Document()),
     );
 
     final geometryState = runtime.state.value;
@@ -184,8 +187,8 @@ void main() {
         selectedCount: 0,
       ),
     );
-    expect(geometryState.revisions.document, 3);
-    expect(geometryState.revisions.selection, 3);
+    expect(geometryState.revisions.document, 4);
+    expect(geometryState.revisions.selection, 4);
 
     final geometryDocument = runtime.readDocument();
     expect(geometryDocument.backgroundElements.single.id, CanvasElementId('geometry-bg'));
@@ -221,14 +224,14 @@ void main() {
 
     final geometryEditedState = runtime.state.value;
     expect(geometryEditedState.summary.elementCount, 3);
-    expect(geometryEditedState.revisions.document, 4);
+    expect(geometryEditedState.revisions.document, 5);
     final geometryEditedDocument = runtime.readDocument();
     final movedTop = geometryEditedDocument.layers.single.elements.last as CanvasRectElement;
     expect(movedTop.transform.translation, const Offset(24, 18));
     expect(movedTop.size, const Size(44, 24));
 
-    runtime.edits.loadDocument(
-      decodeCanvasDocument(_replacementGeometryRichSchemaV1Document()),
+    runtime.edits.loadDocumentFromJson(
+      jsonEncode(_replacementGeometryRichSchemaV1Document()),
     );
 
     final replacementState = runtime.state.value;
@@ -241,7 +244,7 @@ void main() {
         selectedCount: 0,
       ),
     );
-    expect(replacementState.revisions.document, 5);
+    expect(replacementState.revisions.document, 6);
     expect(runtime.selection.selectedElementIds, isEmpty);
     final replacementDocument = runtime.readDocument();
     expect(
@@ -545,7 +548,6 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
   CanvasMoveCommitRequest? moveRequest;
   var resolverCalls = 0;
   final runtime = CanvasRuntime(
-    initialDocument: _selectionMoveCommandDocument(),
     config: CanvasRuntimeConfig(
       clearSelectionOnDrawModeEnter: true,
       moveCommitResolver: (request) {
@@ -555,6 +557,9 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
         return const CanvasMoveCommit(delta: Offset(7, 8));
       },
     ),
+  );
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_selectionMoveCommandDocument()),
   );
   final actions = <CanvasActionCommitted>[];
   final contextRequests = <CanvasContextActionRequested>[];
@@ -841,8 +846,9 @@ Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
 Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(
-    initialDocument: _eraserContextRequestDocument(),
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_eraserContextRequestDocument()),
   );
   final actions = <CanvasActionCommitted>[];
   final requests = <CanvasContextActionRequested>[];
@@ -924,10 +930,11 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
 Future<void> _exercisePublicCustomTextEditingOverlay(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(
-    initialDocument: _eraserContextRequestDocument(
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_eraserContextRequestDocument(
       cameraOffset: const Offset(5, 3),
-    ),
+    )),
   );
   final requests = <CanvasContextActionRequested>[];
   final requestSubscription = runtime.contextActionRequests.listen(requests.add);
@@ -990,7 +997,10 @@ Future<void> _exercisePublicCustomTextEditingOverlay(
 Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   WidgetTester tester,
 ) async {
-  final resourceFreeRuntime = CanvasRuntime(initialDocument: _surfaceShapeDocument());
+  final resourceFreeRuntime = CanvasRuntime();
+  resourceFreeRuntime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_surfaceShapeDocument()),
+  );
   final resourceFreeResolver = _NoopResolver();
   addTearDown(resourceFreeRuntime.dispose);
   await tester.pumpWidget(
@@ -1003,7 +1013,10 @@ Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   expect(_paintHosts(), findsOneWidget);
   expect(resourceFreeResolver.calls, 0);
 
-  final runtime = CanvasRuntime(initialDocument: _surfaceImageDocument());
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_surfaceImageDocument()),
+  );
   final actions = <CanvasActionCommitted>[];
   final actionSubscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -1545,15 +1558,17 @@ CanvasDocument _eraserContextRequestDocument({Offset cameraOffset = Offset.zero}
 CanvasRuntimeRevisions _runtimeRevisions({
   required int document,
   required int selection,
+  int viewCamera = 0,
+  int epoch = 0,
 }) {
   return CanvasRuntimeRevisions(
     document: document,
     selection: selection,
     preview: 0,
-    viewCamera: 0,
+    viewCamera: viewCamera,
     resourceVisual: 0,
     interaction: 0,
-    epoch: 0,
+    epoch: epoch,
   );
 }
 

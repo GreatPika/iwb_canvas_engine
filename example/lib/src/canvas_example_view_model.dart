@@ -112,9 +112,8 @@ final class CanvasExampleViewModel extends ChangeNotifier {
 
   bool importDocumentJson(String json) {
     try {
-      final document = decodeCanvasDocumentFromJson(json);
-      _runtime.edits.loadDocument(document);
-      _loadImportedSampleImageIfNeeded(document);
+      _runtime.edits.loadDocumentFromJson(json);
+      _loadImportedSampleImageIfNeeded(_runtime.readDocument());
       _lastExportedJson = json;
       _jsonImportError = null;
       _notifyIfActive();

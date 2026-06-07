@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -47,8 +48,8 @@ void main() {
 }
 
 void _verifyPreviewOnlyPublication() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   final actions = <CanvasActionCommitted>[];
@@ -86,8 +87,8 @@ void _expectSelectedMovePreview(CanvasPreviewState preview) {
 }
 
 void _verifySilentNoOpPreviewChanges() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   addTearDown(root.dispose);
@@ -215,8 +216,8 @@ _DrawPreviewScenario _drawPreviewScenario() {
 }
 
 RuntimeRoot _drawRuntimeRoot() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);
@@ -228,8 +229,8 @@ RuntimeRoot _drawRuntimeRoot() {
 }
 
 _DrawPreviewScenario _linePreviewScenario() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);
@@ -255,8 +256,8 @@ _DrawPreviewScenario _linePreviewScenario() {
 }
 
 _DrawPreviewScenario _eraserPreviewScenario() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);

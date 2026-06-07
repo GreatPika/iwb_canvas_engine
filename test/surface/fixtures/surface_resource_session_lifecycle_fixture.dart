@@ -1,8 +1,15 @@
+// This surface lifecycle fixture spans widget mounting, runtime attachment, and
+// resource session seams; keeping the imports together makes session ownership
+// and rollback behavior visible in one test owner.
+// ignore_for_file: number-of-imports
+
 import 'dart:io';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/surface_resource_session_lifecycle.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
@@ -58,7 +65,7 @@ void main() {
 }
 
 Future<void> _expectAcceptedAndRejectedAttach(WidgetTester tester) async {
-  final runtime = CanvasRuntime(initialDocument: _documentWithResource());
+  final runtime = runtimeWithDocument(_documentWithResource());
   final acceptedResolver = RecordingResourceResolver((_) => null);
   final rejectedResolver = RecordingResourceResolver((_) => null);
   addTearDown(runtime.dispose);
@@ -127,7 +134,7 @@ Future<void> _expectResolverReplacementReusesSession(
 ) async {
   final firstImage = await createResourceTestImage(0xff00aa00);
   final secondImage = await createResourceTestImage(0xff0000aa);
-  final runtime = CanvasRuntime(initialDocument: _documentWithResource());
+  final runtime = runtimeWithDocument(_documentWithResource());
   final firstResolver = RecordingResourceResolver((_) => firstImage);
   final secondResolver = RecordingResourceResolver((_) => secondImage);
   addTearDown(runtime.dispose);
@@ -197,10 +204,8 @@ Future<void> _expectSurfaceDetachPathsDropSessions(WidgetTester tester) async {
 
 Future<void> _expectRuntimeSwapDropsOldSession(WidgetTester tester) async {
   final oldImage = await createResourceTestImage(0xff00aa00);
-  final oldRuntime = CanvasRuntime(initialDocument: _documentWithResource());
-  final newRuntime = CanvasRuntime(
-    initialDocument: _documentWithResource('resource-b'),
-  );
+  final oldRuntime = runtimeWithDocument(_documentWithResource());
+  final newRuntime = runtimeWithDocument(_documentWithResource('resource-b'));
   final oldResolver = RecordingResourceResolver((_) => oldImage);
   addTearDown(oldRuntime.dispose);
   addTearDown(newRuntime.dispose);
@@ -234,7 +239,7 @@ Future<void> _expectRuntimeDisposeDropsSessionBeforeWidgetDetach(
   WidgetTester tester,
 ) async {
   final image = await createResourceTestImage(0xff0000aa);
-  final runtime = CanvasRuntime(initialDocument: _documentWithResource());
+  final runtime = runtimeWithDocument(_documentWithResource());
   final resolver = RecordingResourceResolver((_) => image);
 
   await tester.pumpWidget(
@@ -291,8 +296,8 @@ Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
 }
 
 bool _runtimeTokenGuardedSessionInstall() {
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
   final activeToken = Object();
@@ -328,8 +333,8 @@ bool _dirtyInvalidatesInstalledSessionBeforePublish() {
 }
 
 void _expectTargetDirtyInvalidatesBeforePublish() {
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
   final token = Object();
@@ -349,8 +354,8 @@ void _expectTargetDirtyInvalidatesBeforePublish() {
 }
 
 void _expectMarkAllInvalidatesBeforePublish() {
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
   final token = Object();
@@ -370,8 +375,8 @@ void _expectMarkAllInvalidatesBeforePublish() {
 }
 
 void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
   final activeToken = Object();
@@ -605,4 +610,11 @@ final class _RecordingLifecycleSession
   void drop() {
     dropCount += 1;
   }
+}
+
+CanvasRuntime runtimeWithDocument(CanvasDocument document) {
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
+
+  return runtime;
 }

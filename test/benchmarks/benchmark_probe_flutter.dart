@@ -11,6 +11,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_codec.dart';
+import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
@@ -1452,7 +1453,7 @@ _BenchmarkCasePlan _codecDecodePlan(String setupScope, String scaleId) {
     },
     measure: (fixture) {
       final encoded = fixture as String;
-      decodeCanvasDocumentFromJson(encoded);
+      decodeSchemaV1DocumentFromJson(encoded);
       return {
         'decoded_element_count': _scaleElementCount(scaleId),
         'allocation_bytes': utf8.encode(encoded).length,
@@ -1469,17 +1470,14 @@ _BenchmarkCasePlan _loadDocumentSuccessPlan(String setupScope, String scaleId) {
     prepare: () {
       return _PreparedProbeFixture(
         value: _LoadDocumentSuccessFixture(
-          runtime: RuntimeRoot(
-            initialDocument: CanvasDocument(),
-            config: const CanvasRuntimeConfig(),
-          ),
-          document: _document(scaleId),
+          runtime: RuntimeRoot(config: const CanvasRuntimeConfig()),
+          encodedJson: encodeCanvasDocumentToJson(_document(scaleId)),
         ),
       );
     },
     measure: (fixture) {
       final loadFixture = fixture as _LoadDocumentSuccessFixture;
-      loadFixture.runtime.edits.loadDocument(loadFixture.document);
+      loadFixture.runtime.edits.loadDocumentFromJson(loadFixture.encodedJson);
       return {
         'loaded_element_count': _scaleElementCount(scaleId),
         'rebuild_cost': _boundedScale(scaleId, max: 128),
@@ -1514,7 +1512,7 @@ Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
   final runtime = _timedRuntimeConstruction();
 
   try {
-    final loaded = _timedLoadDocument(runtime.value, decoded.value);
+    final loaded = _timedLoadDocument(runtime.value, encoded);
     final projected = _timedFirstProjection(runtime.value);
 
     return {
@@ -1535,7 +1533,7 @@ Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
   String encoded,
 ) {
   final stopwatch = Stopwatch()..start();
-  final document = decodeCanvasDocumentFromJson(encoded);
+  final document = decodeSchemaV1DocumentFromJson(encoded);
   stopwatch.stop();
 
   return (value: document, stopwatch: stopwatch);
@@ -1543,18 +1541,15 @@ Map<String, Object?> _measureLoadDocumentBreakdown(String encoded) {
 
 ({RuntimeRoot value, Stopwatch stopwatch}) _timedRuntimeConstruction() {
   final stopwatch = Stopwatch()..start();
-  final runtime = RuntimeRoot(
-    initialDocument: CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
-  );
+  final runtime = RuntimeRoot(config: const CanvasRuntimeConfig());
   stopwatch.stop();
 
   return (value: runtime, stopwatch: stopwatch);
 }
 
-Stopwatch _timedLoadDocument(RuntimeRoot runtime, CanvasDocument document) {
+Stopwatch _timedLoadDocument(RuntimeRoot runtime, String encodedJson) {
   final stopwatch = Stopwatch()..start();
-  runtime.edits.loadDocument(document);
+  runtime.edits.loadDocumentFromJson(encodedJson);
   stopwatch.stop();
 
   return stopwatch;
@@ -1577,21 +1572,14 @@ _BenchmarkCasePlan _loadDocumentFailurePlan(String setupScope, String scaleId) {
       return _PreparedProbeFixture(
         value: _LoadDocumentFailureFixture(
           runtime: _runtime(scaleId),
-          document: CanvasDocument(
-            layers: [
-              CanvasLayer(
-                id: _layerId,
-                elements: [_rect('duplicate'), _rect('duplicate')],
-              ),
-            ],
-          ),
+          encodedJson: _duplicateElementJson(),
         ),
       );
     },
     measure: (fixture) {
       final loadFixture = fixture as _LoadDocumentFailureFixture;
       try {
-        loadFixture.runtime.edits.loadDocument(loadFixture.document);
+        loadFixture.runtime.edits.loadDocumentFromJson(loadFixture.encodedJson);
       } on CanvasDataException catch (error) {
         return {
           'failure_mutation_count': 0,
@@ -2043,7 +2031,30 @@ RuntimeRoot _runtime(
   String scaleId, {
   CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
 }) {
-  return RuntimeRoot(initialDocument: _document(scaleId), config: config);
+  final runtime = RuntimeRoot(config: config);
+  final document = _document(scaleId);
+  runtime.edits.edit((edit) {
+    edit.replaceDraftDocument(document);
+  });
+
+  return runtime;
+}
+
+String _duplicateElementJson() {
+  final json = encodeCanvasDocument(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(id: _layerId, elements: [_rect('duplicate')]),
+      ],
+    ),
+  );
+  final layers = json['layers'] as List<Object?>;
+  final layer = layers.single as Map<String, Object?>;
+  final elements = layer['elements'] as List<Object?>;
+  final element = elements.single;
+  layer['elements'] = [element, element];
+
+  return jsonEncode(json);
 }
 
 CanvasRectElement _rect(String id) {
@@ -2206,21 +2217,21 @@ final class _ResourceSessionFixture {
 final class _LoadDocumentSuccessFixture {
   const _LoadDocumentSuccessFixture({
     required this.runtime,
-    required this.document,
+    required this.encodedJson,
   });
 
   final RuntimeRoot runtime;
-  final CanvasDocument document;
+  final String encodedJson;
 }
 
 final class _LoadDocumentFailureFixture {
   const _LoadDocumentFailureFixture({
     required this.runtime,
-    required this.document,
+    required this.encodedJson,
   });
 
   final RuntimeRoot runtime;
-  final CanvasDocument document;
+  final String encodedJson;
 }
 
 final class _RuntimeSelectionFactsPort implements SelectionFactsPort {

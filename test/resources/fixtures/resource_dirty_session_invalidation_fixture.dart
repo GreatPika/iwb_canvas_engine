@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
-import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import "../../support/runtime_root_with_document.dart";
 
 import 'surface_resource_session_test_support.dart';
 
@@ -18,8 +18,8 @@ void _testTargetDirtyActiveSessionInvalidation() {
     final image = await createResourceTestImage();
     final resolver = RecordingResourceResolver((_) => image);
     final effects = <List<CommitDeliveryEffect>>[];
-    final root = RuntimeRoot(
-      initialDocument: _document(),
+    final root = runtimeRootWithDocument(
+      _document(),
       config: const CanvasRuntimeConfig(),
       commitEffectObserver: effects.add,
     );

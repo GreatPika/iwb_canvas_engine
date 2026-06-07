@@ -22,7 +22,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   test('unknown element kind fails before DTO exposure', () {
     expect(
-      () => decodeCanvasDocument({
+      () => decodeSchemaV1Document({
         'schemaVersion': 1,
         'backgroundLayer': {
           'elements': [
@@ -42,7 +42,7 @@ void main() {
   });
 
   test('legacy root backgroundElements is ignored as an unknown field', () {
-    final document = decodeCanvasDocument({
+    final document = decodeSchemaV1Document({
       'schemaVersion': 1,
       'backgroundElements': [
         {

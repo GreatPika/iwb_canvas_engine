@@ -217,10 +217,10 @@ void main() {
     _expectKeys(elements[3] as Map<String, Object?>, _strokeElementKeys);
     _expectKeys(elements[4] as Map<String, Object?>, _lineElementKeys);
 
-    final decoded = decodeCanvasDocument(encoded);
+    final decoded = decodeSchemaV1Document(encoded);
     _expectDocumentEquivalent(decoded, document);
     _expectDocumentEquivalent(
-      decodeCanvasDocumentFromJson(encodeCanvasDocumentToJson(document)),
+      decodeSchemaV1DocumentFromJson(encodeCanvasDocumentToJson(document)),
       document,
     );
     expect(jsonDecode(encodeCanvasDocumentToJson(document)), isA<Map<String, Object?>>());

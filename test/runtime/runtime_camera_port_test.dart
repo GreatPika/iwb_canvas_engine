@@ -24,9 +24,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   test('camera starts from document and updates only view camera revision', () {
     final persistedCamera = CanvasCamera(offset: const Offset(4, 8));
-    final runtime = CanvasRuntime(
-      initialDocument: CanvasDocument(camera: persistedCamera),
-    );
+    final runtime = runtimeWithDocument(CanvasDocument(camera: persistedCamera));
     final notifications = <CanvasRuntimeState>[];
     runtime.state.addListener(() {
       notifications.add(runtime.state.value);

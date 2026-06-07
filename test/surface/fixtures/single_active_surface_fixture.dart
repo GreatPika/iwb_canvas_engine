@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   testWidgets('same runtime admits one active CanvasSurface', (tester) async {
     await _testSameRuntimeActiveGate(tester);
@@ -19,7 +21,7 @@ void main() {
 }
 
 Future<void> _testSameRuntimeActiveGate(WidgetTester tester) async {
-  final runtime = CanvasRuntime(initialDocument: _document('rect-a'));
+  final runtime = runtimeWithDocument(_document('rect-a'));
   final resolver = _RecordingResolver();
   addTearDown(runtime.dispose);
 
@@ -139,8 +141,8 @@ Future<void> _expectAttachAfterDetach(
 }
 
 Future<void> _testIndependentRuntimeSurfaces(WidgetTester tester) async {
-  final runtimeA = CanvasRuntime(initialDocument: _document('rect-a'));
-  final runtimeB = CanvasRuntime(initialDocument: _document('rect-b'));
+  final runtimeA = runtimeWithDocument(_document('rect-a'));
+  final runtimeB = runtimeWithDocument(_document('rect-b'));
   addTearDown(runtimeA.dispose);
   addTearDown(runtimeB.dispose);
 

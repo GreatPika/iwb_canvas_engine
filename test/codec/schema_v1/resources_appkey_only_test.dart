@@ -21,7 +21,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   test('appKey source is accepted and required for image resources', () {
-    final document = decodeCanvasDocument({
+    final document = decodeSchemaV1Document({
       'schemaVersion': 1,
       'resources': [
         {
@@ -43,7 +43,7 @@ void main() {
     expect((image.source as CanvasAppKeyResourceSource).key, 'image-1');
 
     expect(
-      () => decodeCanvasDocument({
+      () => decodeSchemaV1Document({
         'schemaVersion': 1,
         'resources': [
           {

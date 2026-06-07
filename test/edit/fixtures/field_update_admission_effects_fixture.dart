@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -33,8 +34,8 @@ void main() {
 }
 
 void _expectNullableClearUpdatesField() {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
 
@@ -119,8 +120,8 @@ void _expectMismatchedUpdateKindRejected() {
 }
 
 void _expectGeometryUpdateAdvancesBoundsRevision() {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
 
@@ -175,8 +176,8 @@ CanvasDocument _document() {
 }
 
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,
   );

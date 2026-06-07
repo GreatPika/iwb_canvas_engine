@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test('document summary coherence matches initial projection counts', () {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
 
     final document = runtime.readDocument();
 

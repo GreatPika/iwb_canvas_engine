@@ -101,9 +101,9 @@ validated at public construction and at the engine boundary that generates
 request ids for emitted interaction requests.
 
 The raw JSON limit applies to `CanvasEditPort.loadDocumentFromJson(String json)`
-before parse. Under the current `32 * 1024 * 1024` character limit, 100k raw
-JSON load acceptance is outside v1 release readiness unless a later design
-changes the limit with memory proof.
+before parse. Under current 32 * 1024 * 1024 character limit, 100k raw JSON load
+acceptance is outside v1 release readiness unless a later design changes the
+limit with memory proof.
 
 `CanvasMetadata.fromMap` applies the metadata depth, key, string, and total
 encoded-byte limits at public construction and deep-freezes nested list/map

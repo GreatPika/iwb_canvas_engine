@@ -43,9 +43,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('public decode functions stay parameter-free and preserve failures', () {
     final CanvasDocument Function(Map<String, Object?>) decodeMap =
-        decodeCanvasDocument;
+        decodeSchemaV1Document;
     final CanvasDocument Function(String) decodeJson =
-        decodeCanvasDocumentFromJson;
+        decodeSchemaV1DocumentFromJson;
     final invalid = _invalidResourceKindDocument();
 
     final publicFailure = _captureFailure(() => decodeMap(invalid));

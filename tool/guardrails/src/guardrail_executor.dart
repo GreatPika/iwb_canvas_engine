@@ -413,6 +413,8 @@ const _testProofPaths = {
 final Map<String, GuardrailViolationRunner> _violationChecks = {
   'api.no_legacy_public_types': checkNoLegacyPublicTypes,
   'api.public_exports_complete': checkPublicExportsComplete,
+  'api.no_retired_public_load_routes': checkNoRetiredPublicLoadRoutes,
+  'api.no_unapproved_document_load_inputs': checkNoUnapprovedDocumentLoadInputs,
   'api.facades_do_not_export_internal': checkApiFacadesDoNotExportInternal,
   'api.public_types_complete': checkPublicTypesComplete,
   'api.public_signature_shape': checkPublicSignatureShape,
@@ -467,6 +469,10 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
 const _structuralDescriptions = {
   'api.no_legacy_public_types': 'resolved public legacy symbol check',
   'api.public_exports_complete': 'public registry parity check',
+  'api.no_retired_public_load_routes':
+      'public load/decode route retirement check',
+  'api.no_unapproved_document_load_inputs':
+      'production CanvasDocument load-input allowlist check',
   'api.facades_do_not_export_internal':
       'resolved src/api facade internal export check',
   'api.public_types_complete': 'resolved public type closure check',

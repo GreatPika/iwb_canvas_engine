@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
@@ -158,7 +160,7 @@ Future<MainFramePaintOutput> _selectedFrameOutput(
   required CanvasDocument document,
   required Iterable<CanvasElementId> selectedIds,
 }) async {
-  final runtime = CanvasRuntime(initialDocument: document);
+  final runtime = runtimeWithDocument(document);
   addTearDown(runtime.dispose);
   runtime.selection.setSelection(selectedIds);
 

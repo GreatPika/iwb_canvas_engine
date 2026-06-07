@@ -34,6 +34,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../support/runtime_with_document.dart';
+
 void main() {
   test('state.value is readable immediately after construction', () {
     final document = CanvasDocument(
@@ -61,7 +63,7 @@ void main() {
         ),
       ],
     );
-    final runtime = CanvasRuntime(initialDocument: document);
+    final runtime = runtimeWithDocument(document);
 
     expect(runtime.state.value, isA<CanvasRuntimeState>());
     expect(runtime.state.value.revisions, _zeroRevisions());
@@ -115,7 +117,7 @@ void main() {
   });
 
   test('document edits publish exactly one coherent state snapshot', () {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
     final snapshots = <CanvasRuntimeState>[];
     runtime.state.addListener(() {
       snapshots.add(runtime.state.value);
@@ -140,7 +142,7 @@ void main() {
   });
 
   test('persisted camera edits do not mutate runtime view camera', () {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
     final beforeViewCameraRevision = runtime.state.value.revisions.viewCamera;
 
     runtime.edits.edit((edit) {

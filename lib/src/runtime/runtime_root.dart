@@ -62,6 +62,7 @@ import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
+import '../store/committed_document.dart';
 import '../store/document_store_kernel.dart';
 import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
@@ -92,35 +93,33 @@ final class RuntimeRoot
         ResolverMutationGuard,
         ResourceDirtyOutcomeSink {
   RuntimeRoot({
-    required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
-         store: DocumentStoreKernel(initialDocument),
+         store: DocumentStoreKernel(),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: null,
          textEditPrepareOverride: null,
-         initialViewCamera: initialDocument.camera,
+         initialViewCamera: CanvasCamera(),
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
 
   @visibleForTesting
   RuntimeRoot.test({
-    required CanvasDocument initialDocument,
     required CanvasRuntimeConfig config,
     LoadInteractionBoundary? loadInteractionBoundary,
     TextEditPrepareOverride? textEditPrepareOverride,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
-         store: DocumentStoreKernel(initialDocument),
+         store: DocumentStoreKernel(),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: loadInteractionBoundary,
          textEditPrepareOverride: textEditPrepareOverride,
-         initialViewCamera: initialDocument.camera,
+         initialViewCamera: CanvasCamera(),
          commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
        );
 
@@ -216,7 +215,7 @@ final class RuntimeRoot
     prepareSparseCommit: _store.prepareSparseCommit,
     installCommit: _applyEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
-    installLoadedDocument: _loadDocument,
+    installLoadedDocument: _loadDocumentFromJson,
   );
   late final ResourceCatalogPort _resourceCatalogPort = _StoreResourceCatalog(
     _store,
@@ -1501,8 +1500,8 @@ final class RuntimeRoot
   }
 
   // Load pipeline.
-  void _loadDocument(CanvasDocument document) {
-    final preparedLoad = _loadPipeline.prepare(document);
+  void _loadDocumentFromJson(String json) {
+    final preparedLoad = _loadPipeline.prepareFromJson(json);
 
     _prepareLoadInteractionCleanup();
     _loadPipeline.consume(preparedLoad);
@@ -1554,7 +1553,10 @@ final class RuntimeRoot
     final acceptedIds = switch (document) {
       AcceptedMaterializedDocument(:final document, :final revisionDelta) =>
         revisionDelta.hasChanges
-            ? _store.normalizeSelectionForDocument(document, elementIds)
+            ? _store.normalizeSelectionForCommittedDocument(
+                CommittedDocument(document),
+                elementIds,
+              )
             : _store.normalizeSelection(elementIds),
       AcceptedSparseStoreDocument(:final commit) =>
         _store.normalizeSelectionForSparseCommit(commit, elementIds),

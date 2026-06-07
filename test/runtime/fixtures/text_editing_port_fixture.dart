@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -539,7 +540,9 @@ void _testSuccessfulLoadClearsActiveSession() {
         scenario.root.textEditing.startFromContextAction(request),
       );
 
-      scenario.root.edits.loadDocument(CanvasDocument());
+      scenario.root.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(CanvasDocument()),
+      );
 
       expect(session.isActive, isFalse);
       expect(scenario.root.textEditing.activeSession.value, isNull);
@@ -566,7 +569,9 @@ void _testFailedLoadPreservesActiveSession() {
       );
 
       expect(
-        () => scenario.root.edits.loadDocument(_invalidReplacementDocument()),
+        () => scenario.root.edits.loadDocumentFromJson(
+          encodeCanvasDocumentToJson(_invalidReplacementDocument()),
+        ),
         throwsA(isA<CanvasDataException>()),
       );
 
@@ -754,8 +759,8 @@ void _expectRequestFactsLive(
 
 final class _Scenario {
   _Scenario({CanvasDocument? document})
-    : root = RuntimeRoot(
-        initialDocument: document ?? _document(),
+    : root = runtimeRootWithDocument(
+        document ?? _document(),
         config: const CanvasRuntimeConfig(),
       ) {
     actionSubscription = root.actions.listen(actions.add);
@@ -763,8 +768,8 @@ final class _Scenario {
   }
 
   _Scenario.failedTextPrepare()
-    : root = RuntimeRoot.test(
-        initialDocument: _document(),
+    : root = runtimeRootWithDocument(
+        _document(),
         config: const CanvasRuntimeConfig(),
         textEditPrepareOverride: (_) {
           return CommitDeliveryResult(shouldPublishState: false);

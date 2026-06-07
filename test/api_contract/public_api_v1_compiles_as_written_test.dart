@@ -8,34 +8,81 @@ import '../../tool/guardrails/src/repository_paths.dart';
 void main() {
   test('public API compiles from an empty consumer package', () async {
     final registryNames = readPublicApiRegistry();
-    final packageDir = await Directory.systemTemp.createTemp(
-      'iwb_canvas_engine_public_api_consumer_',
+    final analyze = await _analyzeConsumerSource(
+      _consumerSource(registryNames),
     );
+    expect(analyze.exitCode, 0, reason: _processOutput(analyze));
+  });
 
-    try {
-      await Directory('${packageDir.path}/lib').create();
-      await File(
-        '${packageDir.path}/pubspec.yaml',
-      ).writeAsString(_pubspecSource());
-      await File(
-        '${packageDir.path}/lib/public_api_consumer.dart',
-      ).writeAsString(_consumerSource(registryNames));
-
-      final pubGet = await Process.run('flutter', [
-        'pub',
-        'get',
-      ], workingDirectory: packageDir.path);
-      expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
-
-      final analyze = await Process.run('dart', [
-        'analyze',
-        'lib/public_api_consumer.dart',
-      ], workingDirectory: packageDir.path);
-      expect(analyze.exitCode, 0, reason: _processOutput(analyze));
-    } finally {
-      await packageDir.delete(recursive: true);
+  test('retired public load and decode routes do not compile', () async {
+    for (final source in _retiredPublicRouteSources()) {
+      final analyze = await _analyzeConsumerSource(source);
+      expect(analyze.exitCode, isNot(0), reason: _processOutput(analyze));
     }
   });
+}
+
+Future<ProcessResult> _analyzeConsumerSource(String source) async {
+  final packageDir = await Directory.systemTemp.createTemp(
+    'iwb_canvas_engine_public_api_consumer_',
+  );
+
+  try {
+    await Directory('${packageDir.path}/lib').create();
+    await File(
+      '${packageDir.path}/pubspec.yaml',
+    ).writeAsString(_pubspecSource());
+    await File(
+      '${packageDir.path}/lib/public_api_consumer.dart',
+    ).writeAsString(source);
+
+    final pubGet = await Process.run('flutter', [
+      'pub',
+      'get',
+    ], workingDirectory: packageDir.path);
+    expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
+
+    return await Process.run(Platform.resolvedExecutable, [
+      'analyze',
+      'lib/public_api_consumer.dart',
+    ], workingDirectory: packageDir.path);
+  } finally {
+    await packageDir.delete(recursive: true);
+  }
+}
+
+List<String> _retiredPublicRouteSources() {
+  const prefix = '''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void main() {
+''';
+  const suffix = '''
+}
+''';
+
+  return [
+    '''
+$prefix
+  CanvasRuntime(initialDocument: CanvasDocument());
+$suffix
+''',
+    '''
+$prefix
+  CanvasRuntime().edits.loadDocument(CanvasDocument());
+$suffix
+''',
+    '''
+$prefix
+  decodeCanvasDocument({'schemaVersion': 1});
+$suffix
+''',
+    '''
+$prefix
+  decodeCanvasDocumentFromJson('{"schemaVersion":1}');
+$suffix
+''',
+  ];
 }
 
 String _pubspecSource() {
@@ -211,7 +258,6 @@ void _exerciseP2ContractSurface() {
   _use(documentSummary);
 
   final runtime = CanvasRuntime(
-    initialDocument: document,
     config: CanvasRuntimeConfig(
       pointerPolicy: CanvasPointerPolicy(
         tapSlop: 9,
@@ -238,6 +284,7 @@ void _exerciseP2ContractSurface() {
       ),
     ),
   );
+  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   final ValueListenable<CanvasRuntimeState> state = runtime.state;
   final CanvasTextEditingPort textEditing = runtime.textEditing;
@@ -565,12 +612,8 @@ void _exerciseP2ContractSurface() {
 
   final encode = encodeCanvasDocument;
   final encodeJson = encodeCanvasDocumentToJson;
-  final decode = decodeCanvasDocument;
-  final decodeJson = decodeCanvasDocumentFromJson;
   _use(encode);
   _use(encodeJson);
-  _use(decode);
-  _use(decodeJson);
   _use(canvasSchemaVersionWrite);
   _use(canvasSchemaVersionsRead);
 
@@ -701,7 +744,7 @@ final class _ConsumerEditPort implements CanvasEditPort {
   T edit<T>(T Function(CanvasEdit edit) fn) => fn(_ConsumerEdit(_document));
 
   @override
-  void loadDocument(CanvasDocument document) {}
+  void loadDocumentFromJson(String json) {}
 }
 
 final class _ConsumerEdit implements CanvasEdit {

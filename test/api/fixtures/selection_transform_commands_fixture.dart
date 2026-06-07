@@ -7,6 +7,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 final _moveTransform = CanvasTransform.translation(const Offset(3, 4));
 
 void main() {
@@ -30,7 +32,7 @@ void main() {
 // together because they are one public move command contract.
 // ignore: halstead-volume, source-lines-of-code
 Future<void> _moveValidatesDeltaAndMovesOnlyEligibleSelectedElements() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -92,7 +94,7 @@ Future<void> _moveValidatesDeltaAndMovesOnlyEligibleSelectedElements() async {
 // ignore: halstead-volume
 Future<void>
 _rotateAndFlipUseSelectionCenterPivotAndDocumentOrderActions() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -132,7 +134,7 @@ _rotateAndFlipUseSelectionCenterPivotAndDocumentOrderActions() async {
 // Deletion pruning and no-op silence are one observable command contract.
 // ignore: halstead-volume
 Future<void> _deleteSelectionPrunesRemovedIdsAndStaysSilentForNoop() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {

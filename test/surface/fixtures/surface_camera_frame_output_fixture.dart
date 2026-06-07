@@ -3,6 +3,8 @@ import 'dart:ui' as ui show Image;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 
@@ -17,7 +19,7 @@ void main() {
 Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   addTearDown(runtime.dispose);
 
   await tester.pumpWidget(_SurfaceHost(runtime: runtime));

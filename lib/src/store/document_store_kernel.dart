@@ -27,8 +27,7 @@ import 'store_revision_delta.dart';
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
-  DocumentStoreKernel(CanvasDocument initialDocument)
-    : _document = CommittedDocument(initialDocument) {
+  DocumentStoreKernel() : _document = CommittedDocument(CanvasDocument()) {
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
@@ -231,17 +230,11 @@ final class DocumentStoreKernel {
     return _normalizeSelectionInCommittedDocument(commit.document, ids);
   }
 
-  Set<CanvasElementId> normalizeSelectionForDocument(
-    CanvasDocument document,
+  Set<CanvasElementId> normalizeSelectionForCommittedDocument(
+    CommittedDocument document,
     Iterable<CanvasElementId> ids,
   ) {
-    return _normalizeSelectionInCommittedDocument(
-      CommittedDocument.withRevisions(
-        document,
-        revisions: const RevisionState(),
-      ),
-      ids,
-    );
+    return _normalizeSelectionInCommittedDocument(document, ids);
   }
 
   CanvasElementId generateElementId() {
@@ -256,12 +249,11 @@ final class DocumentStoreKernel {
     return CanvasResourceId(_resourceIds.nextValue());
   }
 
-  void installDocument(CanvasDocument document, StoreRevisionDelta delta) {
+  void installDocument(CommittedDocument document, StoreRevisionDelta delta) {
     if (!delta.hasChanges) {
       return;
     }
-    _document = CommittedDocument.withRevisions(
-      document,
+    _document = document.copyWith(
       revisions: delta.advance(_document.revisions),
     );
     _elementIds.admitAll(_document.admittedElementIds);
@@ -269,12 +261,35 @@ final class DocumentStoreKernel {
     _resourceIds.admitAll(_document.admittedResourceIds);
   }
 
-  void replaceDocument(CanvasDocument document, StoreRevisionDelta delta) {
+  void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
     if (!delta.hasChanges) {
       return;
     }
-    _document = CommittedDocument.withRevisions(
-      document,
+    _document = document.copyWith(
+      revisions: delta.advance(_document.revisions),
+    );
+    _elementIds = _IdAdmission(
+      prefix: 'e',
+      admittedIds: _document.admittedElementIds,
+    );
+    _layerIds = _IdAdmission(
+      prefix: 'l',
+      admittedIds: _document.admittedLayerIds,
+    );
+    _resourceIds = _IdAdmission(
+      prefix: 'r',
+      admittedIds: _document.admittedResourceIds,
+    );
+  }
+
+  void replacePreparedLoadDocument(
+    CommittedDocument document,
+    StoreRevisionDelta delta,
+  ) {
+    if (!delta.hasChanges) {
+      return;
+    }
+    _document = document.copyWith(
       revisions: delta.advance(_document.revisions),
     );
     _elementIds = _IdAdmission(

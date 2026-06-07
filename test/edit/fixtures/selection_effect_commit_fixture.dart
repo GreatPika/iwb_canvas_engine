@@ -1,4 +1,6 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
+import "../../support/document_store_with_document.dart";
 
 // This fixture intentionally names commit, selection, and runtime boundaries in
 // one proof surface so prepared-selection ordering is validated end to end.
@@ -301,7 +303,7 @@ CommitDeliveryResult _applyPlan(
 // the sparse accepted-document handoff is tested as one boundary.
 // ignore: coupling-between-object-classes
 final class _SparseSelectionCommitProof {
-  final DocumentStoreKernel store = DocumentStoreKernel(_document());
+  final DocumentStoreKernel store = documentStoreWithDocument(_document());
   final SelectionKernel selection = _selectionKernel()
     ..setSelection([CanvasElementId('a'), CanvasElementId('b')]);
   final List<String> events = [];
@@ -375,8 +377,8 @@ final class _SparseSelectionCommitProof {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
 }

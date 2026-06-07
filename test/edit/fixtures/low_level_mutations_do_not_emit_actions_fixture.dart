@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test('removeElement and clearContent are not user action events', () async {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
     final actions = <CanvasActionCommitted>[];
     final subscription = runtime.actions.listen(actions.add);
 

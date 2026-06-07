@@ -3,12 +3,14 @@
 // ignore_for_file: missing-test-assertion
 
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
-import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test(
@@ -38,8 +40,8 @@ void main() {
 }
 
 Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
   final actions = <CanvasActionCommitted>[];
@@ -84,8 +86,8 @@ void _expectDrawActionPayloads(List<CanvasActionCommitted> actions) {
 }
 
 Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
   final actions = <CanvasActionCommitted>[];
@@ -115,8 +117,8 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
 // the terminal marquee action shape from one runtime interaction.
 // ignore: halstead-volume
 Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
   final actions = <CanvasActionCommitted>[];
@@ -158,7 +160,7 @@ Future<void> _publicSelectionAndCommandPortsEmitP10PayloadFamilies() async {
 
 Future<void>
 _commitTextEditEmitsPayloadWithoutRawTextAndIgnoresNoOpTimestamps() async {
-  final runtime = CanvasRuntime(initialDocument: _documentWithText());
+  final runtime = runtimeWithDocument(_documentWithText());
   final actions = <CanvasActionCommitted>[];
   final requests = <CanvasContextActionRequested>[];
   final actionSubscription = runtime.actions.listen(actions.add);
@@ -321,7 +323,7 @@ Future<void> _expectSinglePublicAction(
   void Function(CanvasRuntime runtime) mutate,
   void Function(CanvasActionCommitted action) expectAction,
 ) async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   try {

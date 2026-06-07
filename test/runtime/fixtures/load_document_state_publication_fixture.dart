@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -33,7 +34,9 @@ void _expectSuccessfulLoadStatePublication() {
     snapshots.add(root.state.value);
   });
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
   expect(snapshots, hasLength(1));
   _expectReplacementDocumentInstalled(root);
@@ -45,9 +48,11 @@ void _expectSuccessfulLoadClearsEmptySelection() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
-  expect(root.state.value.revisions.selection, 1);
+  expect(root.state.value.revisions.selection, 2);
   _expectLoadEffects(effectBatches.single);
 }
 
@@ -67,7 +72,9 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
     snapshots.add(root.state.value);
   });
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
   expect(snapshots, hasLength(1));
   final loadedState = snapshots.single;
@@ -104,7 +111,9 @@ void _expectFailedLoadHasNoSideEffects() {
 
 void _expectDuplicateElementLoadRejected(RuntimeRoot root) {
   expect(
-    () => root.edits.loadDocument(_documentWithDuplicateElements()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_documentWithDuplicateElements()),
+    ),
     throwsA(
       isA<CanvasDataException>().having(
         (error) => error.code,
@@ -120,16 +129,16 @@ RuntimeRoot _runtimeRoot(
   LoadInteractionBoundary? loadInteractionBoundary,
 }) {
   if (loadInteractionBoundary != null) {
-    return RuntimeRoot.test(
-      initialDocument: _initialDocument(),
+    return runtimeRootWithDocument(
+      _initialDocument(),
       config: const CanvasRuntimeConfig(),
       loadInteractionBoundary: loadInteractionBoundary,
       commitEffectObserver: effectBatches.add,
     );
   }
 
-  return RuntimeRoot(
-    initialDocument: _initialDocument(),
+  return runtimeRootWithDocument(
+    _initialDocument(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,
   );
@@ -157,10 +166,10 @@ void _expectReplacementState(
       selectedCount: 0,
     ),
   );
-  expect(state.revisions.document, 1);
-  expect(state.revisions.selection, 2);
-  expect(state.revisions.viewCamera, 1);
-  expect(state.revisions.epoch, 1);
+  expect(state.revisions.document, 2);
+  expect(state.revisions.selection, 3);
+  expect(state.revisions.viewCamera, 2);
+  expect(state.revisions.epoch, 2);
   expect(state.revisions.preview, expectedPreviewRevision);
 }
 

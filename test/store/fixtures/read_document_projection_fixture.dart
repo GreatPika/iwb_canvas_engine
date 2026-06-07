@@ -3,10 +3,12 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test('readDocument projects committed document facts', () {
     final initial = _document();
-    final runtime = CanvasRuntime(initialDocument: initial);
+    final runtime = runtimeWithDocument(initial);
 
     final projection = runtime.readDocument();
 

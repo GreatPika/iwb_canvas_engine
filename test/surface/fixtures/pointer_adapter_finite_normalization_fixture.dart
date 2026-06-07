@@ -5,6 +5,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/surface/pointer_adapter.dart';
 
 void main() {
@@ -131,7 +133,7 @@ void _routeNonFiniteEvents(Listener listener) {
 Future<void> _expectSurfaceRuntimeWorldNormalization(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(initialDocument: CanvasDocument());
+  final runtime = runtimeWithDocument(CanvasDocument());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
   runtime.camera.setOffset(const Offset(20, 30));
@@ -148,7 +150,7 @@ Future<void> _expectSurfaceRuntimeWorldNormalization(
 }
 
 Future<void> _expectNoRouteWhenInteractiveFalse(WidgetTester tester) async {
-  final runtime = CanvasRuntime(initialDocument: CanvasDocument());
+  final runtime = runtimeWithDocument(CanvasDocument());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
   await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: false));
@@ -165,8 +167,8 @@ Future<void> _expectNoRouteWhenInteractiveFalse(WidgetTester tester) async {
 Future<void> _expectStaleCallbackNoOpsAfterRuntimeSwap(
   WidgetTester tester,
 ) async {
-  final oldRuntime = CanvasRuntime(initialDocument: CanvasDocument());
-  final newRuntime = CanvasRuntime(initialDocument: CanvasDocument());
+  final oldRuntime = runtimeWithDocument(CanvasDocument());
+  final newRuntime = runtimeWithDocument(CanvasDocument());
   addTearDown(oldRuntime.dispose);
   addTearDown(newRuntime.dispose);
   oldRuntime.tools.setMode(CanvasInteractionMode.draw);
@@ -188,7 +190,7 @@ Future<void> _expectStaleCallbackNoOpsAfterRuntimeSwap(
 }
 
 Future<void> _expectStaleCallbackNoOpsAfterDispose(WidgetTester tester) async {
-  final runtime = CanvasRuntime(initialDocument: CanvasDocument());
+  final runtime = runtimeWithDocument(CanvasDocument());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
 
@@ -209,7 +211,7 @@ Future<void> _expectStaleCallbackNoOpsAfterDispose(WidgetTester tester) async {
 Future<void> _expectNonFiniteSurfaceEventHasNoRuntimeEffects(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime(initialDocument: CanvasDocument());
+  final runtime = runtimeWithDocument(CanvasDocument());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
   final observer = _RuntimeSideEffectObserver(runtime);

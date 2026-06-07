@@ -3,6 +3,7 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../codec/validated_import_draft.dart';
 import '../diagnostics/diagnostics_hub.dart';
+import '../store/committed_document.dart';
 import '../store/document_store_kernel.dart';
 import '../store/store_revision_delta.dart';
 
@@ -13,14 +14,17 @@ final class PreparedDocumentLoad {
     required this.layerIds,
     required this.elementIds,
     required this.revisionDelta,
+    required CommittedDocument storeDocument,
     required Object ownerToken,
-  }) : _ownerToken = ownerToken;
+  }) : _storeDocument = storeDocument,
+       _ownerToken = ownerToken;
 
   final CanvasDocument document;
   final Set<CanvasResourceId> resourceIds;
   final Set<CanvasLayerId> layerIds;
   final Set<CanvasElementId> elementIds;
   final StoreRevisionDelta revisionDelta;
+  final CommittedDocument _storeDocument;
   final Object _ownerToken;
   bool _isConsumed = false;
 
@@ -51,9 +55,9 @@ final class LoadDocumentPipeline {
     return _diagnostics?.records ?? const [];
   }
 
-  PreparedDocumentLoad prepare(CanvasDocument document) {
-    final draft = ValidatedImportDraft.fromDocument(
-      document,
+  PreparedDocumentLoad prepareFromJson(String json) {
+    final draft = ValidatedImportDraft.fromSchemaV1Json(
+      json,
       diagnostics: _diagnostics,
     );
 
@@ -63,6 +67,7 @@ final class LoadDocumentPipeline {
       layerIds: draft.layerIds,
       elementIds: draft.elementIds,
       revisionDelta: _replacementRevisionDelta,
+      storeDocument: CommittedDocument(draft.document),
       ownerToken: _ownerToken,
     );
   }
@@ -78,12 +83,12 @@ final class LoadDocumentPipeline {
     }
     load._isConsumed = true;
 
-    _store.replaceDocument(load.document, load.revisionDelta);
+    _store.replacePreparedLoadDocument(load._storeDocument, load.revisionDelta);
   }
 }
 
 PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
-  final draft = ValidatedImportDraft.fromDocument(document);
+  final draft = ValidatedImportDraft.fromDraftReplacement(document);
 
   return PreparedDocumentLoad._(
     document: draft.document,
@@ -91,6 +96,7 @@ PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
     layerIds: draft.layerIds,
     elementIds: draft.elementIds,
     revisionDelta: _replacementRevisionDelta,
+    storeDocument: CommittedDocument(draft.document),
     ownerToken: _draftReplacementOwnerToken,
   );
 }

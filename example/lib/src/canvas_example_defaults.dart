@@ -50,8 +50,10 @@ CanvasRuntimeConfig createCanvasExampleRuntimeConfig() {
 }
 
 CanvasRuntime createCanvasExampleRuntime() {
-  return CanvasRuntime(
-    initialDocument: createCanvasExampleDocument(),
-    config: createCanvasExampleRuntimeConfig(),
+  final runtime = CanvasRuntime(config: createCanvasExampleRuntimeConfig());
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(createCanvasExampleDocument()),
   );
+
+  return runtime;
 }

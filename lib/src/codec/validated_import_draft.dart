@@ -6,17 +6,97 @@ import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_transform_admission.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
+import 'schema_v1_decoder.dart';
 
 final class ValidatedImportDraft {
-  ValidatedImportDraft.fromDocument(
-    this.document, {
+  factory ValidatedImportDraft.fromSchemaV1Json(
+    String json, {
     DiagnosticsHub? diagnostics,
-  }) : resourceIds = _validatedResourceIds(
-         document.resources,
-         diagnostics: diagnostics,
-       ),
-       layerIds = _validatedLayerIds(document.layers, diagnostics: diagnostics),
-       elementIds = _validatedElementIds(document, diagnostics: diagnostics);
+  }) {
+    final document = decodeSchemaV1DocumentFromJson(
+      json,
+      diagnostics: diagnostics,
+    );
+    final resourceIds = _validatedResourceIds(
+      document.resources,
+      diagnostics: diagnostics,
+    );
+    final layerIds = _validatedLayerIds(
+      document.layers,
+      diagnostics: diagnostics,
+    );
+    final elementIds = _validatedElementIds(
+      _allElements(document.backgroundElements, document.layers),
+      resourceIds: resourceIds,
+      diagnostics: diagnostics,
+    );
+
+    return ValidatedImportDraft._(
+      document: document,
+      resourceIds: resourceIds,
+      layerIds: layerIds,
+      elementIds: elementIds,
+    );
+  }
+
+  factory ValidatedImportDraft.fromDraftReplacement(
+    CanvasDocument document, {
+    DiagnosticsHub? diagnostics,
+  }) {
+    final resourceIds = _validatedResourceIds(
+      document.resources,
+      diagnostics: diagnostics,
+    );
+    final layerIds = _validatedLayerIds(
+      document.layers,
+      diagnostics: diagnostics,
+    );
+    final elementIds = _validatedElementIds(
+      _allElements(document.backgroundElements, document.layers),
+      resourceIds: resourceIds,
+      diagnostics: diagnostics,
+    );
+
+    return ValidatedImportDraft._(
+      document: document,
+      resourceIds: resourceIds,
+      layerIds: layerIds,
+      elementIds: elementIds,
+    );
+  }
+
+  factory ValidatedImportDraft.fromEncodeDocument(
+    CanvasDocument document, {
+    DiagnosticsHub? diagnostics,
+  }) {
+    final resourceIds = _validatedResourceIds(
+      document.resources,
+      diagnostics: diagnostics,
+    );
+    final layerIds = _validatedLayerIds(
+      document.layers,
+      diagnostics: diagnostics,
+    );
+    final elementIds = _validatedElementIds(
+      _allElements(document.backgroundElements, document.layers),
+      resourceIds: resourceIds,
+      diagnostics: diagnostics,
+    );
+
+    return ValidatedImportDraft._(
+      document: document,
+      resourceIds: resourceIds,
+      layerIds: layerIds,
+      elementIds: elementIds,
+    );
+  }
+
+  const ValidatedImportDraft._({
+    required this.document,
+    required this.resourceIds,
+    required this.layerIds,
+    required this.elementIds,
+  });
 
   final CanvasDocument document;
   final Set<CanvasResourceId> resourceIds;
@@ -67,12 +147,12 @@ Set<CanvasLayerId> _validatedLayerIds(
 }
 
 Set<CanvasElementId> _validatedElementIds(
-  CanvasDocument document, {
+  Iterable<CanvasElement> elements, {
+  required Set<CanvasResourceId> resourceIds,
   required DiagnosticsHub? diagnostics,
 }) {
   final ids = <CanvasElementId>{};
-  final resourceIds = document.resources.map((resource) => resource.id).toSet();
-  for (final element in _allElements(document)) {
+  for (final element in elements) {
     try {
       validateElementTransformAdmission(
         element.transform,
@@ -110,9 +190,12 @@ Set<CanvasElementId> _validatedElementIds(
   return Set.unmodifiable(ids);
 }
 
-Iterable<CanvasElement> _allElements(CanvasDocument document) sync* {
-  yield* document.backgroundElements;
-  for (final layer in document.layers) {
+Iterable<CanvasElement> _allElements(
+  Iterable<CanvasElement> backgroundElements,
+  Iterable<CanvasLayer> layers,
+) sync* {
+  yield* backgroundElements;
+  for (final layer in layers) {
     yield* layer.elements;
   }
 }

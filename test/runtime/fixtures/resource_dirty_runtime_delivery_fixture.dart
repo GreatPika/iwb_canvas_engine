@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -96,8 +97,8 @@ Future<void> _expectDirtyMutationGuards() async {
 Future<void> _expectDirtyObserverFailureContainment() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final actions = <CanvasActionCommitted>[];
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (effects) {
       effectBatches.add(effects);
@@ -124,8 +125,8 @@ Future<void> _expectDirtyObserverFailureContainment() async {
 Future<void> _expectActiveSessionInvalidatesBeforePublish() {
   final sink = _RecordingResourceSessionInvalidationSink();
   late RuntimeRoot root;
-  root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (_) {
       sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
@@ -147,8 +148,8 @@ Future<void> _expectActiveSessionInvalidatesBeforePublish() {
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
   final sink = _RecordingResourceSessionInvalidationSink();
-  final root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  final root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
   root.attachResourceSessionInvalidationSink(sink);
@@ -171,8 +172,8 @@ Future<void> _expectClearedActiveSessionIsIgnored() {
 // ignore: coupling-between-object-classes
 final class _DirtyRuntimeScenario {
   _DirtyRuntimeScenario.withDocument(CanvasDocument document) {
-    root = RuntimeRoot(
-      initialDocument: document,
+    root = runtimeRootWithDocument(
+      document,
       config: const CanvasRuntimeConfig(),
       commitEffectObserver: effectBatches.add,
     );
@@ -343,8 +344,8 @@ Future<void> _expectActiveEditGuard() async {
 void _expectPostCommitDeliveryGuard() {
   final effects = <List<CommitDeliveryEffect>>[];
   late RuntimeRoot root;
-  root = RuntimeRoot(
-    initialDocument: _documentWithResource(),
+  root = runtimeRootWithDocument(
+    _documentWithResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (batch) {
       effects.add(batch);

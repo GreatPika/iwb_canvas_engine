@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -159,7 +160,9 @@ void _testSuccessfulLoadClearsSuppressionBeforeNextFrame() {
     try {
       await scenario.startTextSession();
 
-      scenario.root.edits.loadDocument(_document(text: 'loaded'));
+      scenario.root.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(_document(text: 'loaded')),
+      );
 
       expect(scenario.root.activeTextEditSuppressionForTesting, isNull);
       _expectFramePaint(scenario.root, textVisible: true);
@@ -185,8 +188,8 @@ void _testMainFramePainterDoesNotReadRuntime() {
 
 final class _Scenario {
   _Scenario()
-    : root = RuntimeRoot(
-        initialDocument: _document(),
+    : root = runtimeRootWithDocument(
+        _document(),
         config: const CanvasRuntimeConfig(),
       ) {
     requestSubscription = root.contextActionRequests.listen(requests.add);

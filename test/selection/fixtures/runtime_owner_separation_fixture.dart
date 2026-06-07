@@ -1,15 +1,18 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test(
     'selection changes publish selection facts without document effects',
     () {
-      final root = RuntimeRoot(
-        initialDocument: _document(),
+      final root = runtimeRootWithDocument(
+        _document(),
         config: const CanvasRuntimeConfig(),
       );
       final selection = root.selection;
@@ -27,7 +30,7 @@ void main() {
   );
 
   test('public facade exposes the selection port', () {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
 
     runtime.selection.setSelection([CanvasElementId('element-a')]);
 

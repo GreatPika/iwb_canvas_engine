@@ -2,11 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import "../../support/runtime_root_with_document.dart";
 
 void main() {
   test('catalog reads return copied committed resources', () {
-    final root = RuntimeRoot(
-      initialDocument: _document(),
+    final root = runtimeRootWithDocument(
+      _document(),
       config: const CanvasRuntimeConfig(),
     );
 

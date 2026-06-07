@@ -1,7 +1,10 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
@@ -65,7 +68,7 @@ void _expectSynchronousResultPreserved() {
 }
 
 void _expectDisposedRuntimeRejected() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   runtime.dispose();
 
   expect(
@@ -232,7 +235,9 @@ void _expectExternalLoadRejectedDuringEdit() {
 
   runtime.edits.edit((edit) {
     expect(
-      () => runtime.edits.loadDocument(CanvasDocument()),
+      () => runtime.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(CanvasDocument()),
+      ),
       throwsStateError,
     );
     _expectSameDocumentShape(edit.readDraftDocument(), runtime.readDocument());
@@ -272,8 +277,8 @@ void _expectReplacementCommitsInsideEdit() {
 }
 
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,
   );

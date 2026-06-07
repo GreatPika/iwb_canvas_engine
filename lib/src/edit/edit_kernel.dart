@@ -26,7 +26,7 @@ typedef CommitInstaller =
     );
 typedef SparseCommitPreparer =
     PreparedSparseStoreCommit Function(StoreSparseCommit commit);
-typedef DocumentLoadInstaller = void Function(CanvasDocument document);
+typedef DocumentLoadInstaller = void Function(String json);
 
 // EditKernel owns the route handoff between public callbacks, sparse session
 // preparation, materialized fallback, and commit delivery; splitting those
@@ -158,16 +158,6 @@ final class EditKernel {
     );
   }
 
-  void loadDocument(CanvasDocument document) {
-    _mutationGuard.ensureRuntimeMutationAllowed();
-    if (_isSessionOpen) {
-      throw StateError(
-        'CanvasRuntime public mutations cannot run inside an active edit callback.',
-      );
-    }
-    _installLoadedDocument(document);
-  }
-
   CommitDeliveryResult _installCommittedDocument(
     AcceptedCommitDocument document,
     CommitPlan plan,
@@ -207,7 +197,13 @@ final class _EditKernelPort implements CanvasEditPort {
   T edit<T>(T Function(CanvasEdit edit) fn) => kernel.edit(fn);
 
   @override
-  void loadDocument(CanvasDocument document) {
-    kernel.loadDocument(document);
+  void loadDocumentFromJson(String json) {
+    kernel._mutationGuard.ensureRuntimeMutationAllowed();
+    if (kernel._isSessionOpen) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run inside an active edit callback.',
+      );
+    }
+    kernel._installLoadedDocument(json);
   }
 }

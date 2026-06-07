@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../codec/schema_v1_decoder.dart';
 import '../codec/schema_v1_encoder.dart';
 import 'canvas_document.dart';
 
@@ -17,11 +16,3 @@ Map<String, Object?> encodeCanvasDocument(CanvasDocument document) =>
 /// Public API v1 declaration for [encodeCanvasDocumentToJson].
 String encodeCanvasDocumentToJson(CanvasDocument document) =>
     jsonEncode(encodeCanvasDocument(document));
-
-/// Public API v1 declaration for [decodeCanvasDocument].
-CanvasDocument decodeCanvasDocument(Map<String, Object?> json) =>
-    decodeSchemaV1Document(json);
-
-/// Public API v1 declaration for [decodeCanvasDocumentFromJson].
-CanvasDocument decodeCanvasDocumentFromJson(String json) =>
-    decodeSchemaV1DocumentFromJson(json);

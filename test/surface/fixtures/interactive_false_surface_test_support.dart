@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/surface/pointer_adapter.dart';
 
 Future<void> expectInteractiveFalsePointerRouting(WidgetTester tester) async {
@@ -261,7 +263,7 @@ final class _SurfaceHost extends StatelessWidget {
 }
 
 CanvasRuntime _runtime() {
-  return CanvasRuntime(initialDocument: _document());
+  return runtimeWithDocument(_document());
 }
 
 CanvasDocument _document() {

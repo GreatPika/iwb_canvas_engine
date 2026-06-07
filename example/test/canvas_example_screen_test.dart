@@ -82,9 +82,7 @@ void _registerLineDragSurfaceTest() {
 }
 
 void _registerSurfaceStyleTest() {
-  testWidgets('screen uses readable selection surface style', (
-    tester,
-  ) async {
+  testWidgets('screen uses readable selection surface style', (tester) async {
     final viewModel = CanvasExampleViewModel();
     addTearDown(viewModel.dispose);
     await _pumpScreen(tester, viewModel);
@@ -490,8 +488,8 @@ void _registerInlineTextEditOverlayStaleCommitTest() {
     _expectSurfaceTextSuppressed();
     await tester.enterText(find.byType(EditableText), 'stale update');
     await tester.pump();
-    viewModel.runtime.edits.loadDocument(
-      _documentWithText(textId, 'replacement'),
+    viewModel.runtime.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_documentWithText(textId, 'replacement')),
     );
     await tester.pump();
 

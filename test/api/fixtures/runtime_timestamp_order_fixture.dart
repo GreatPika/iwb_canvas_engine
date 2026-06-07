@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -30,8 +31,8 @@ final class _TimestampScenario {
     subscription = root.actions.listen(actions.add);
   }
 
-  final RuntimeRoot root = RuntimeRoot(
-    initialDocument: _document(),
+  final RuntimeRoot root = runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
   final List<CanvasActionCommitted> actions = <CanvasActionCommitted>[];
@@ -62,7 +63,7 @@ final class _TimestampScenario {
   }
 
   Future<void> expectLoadAndDisposeSilence() async {
-    root.edits.loadDocument(_document());
+    root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(_document()));
     await _flushActions();
     expect(actions, isEmpty);
 

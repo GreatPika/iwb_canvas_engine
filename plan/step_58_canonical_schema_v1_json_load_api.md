@@ -124,7 +124,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Public API shape and retirement guardrails
+### [x] Unit 2: Public API shape and retirement guardrails
 
 Owner:
 

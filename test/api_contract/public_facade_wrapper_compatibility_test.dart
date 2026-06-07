@@ -22,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
-  test('decode runtime edit load and selection stay root-barrel reachable', () {
+  test('json runtime edit load and selection stay root-barrel reachable', () {
     final source = CanvasDocument(
       layers: [
         CanvasLayer(
@@ -36,8 +36,8 @@ void main() {
         ),
       ],
     );
-    final decoded = decodeCanvasDocument(encodeCanvasDocument(source));
-    final runtime = CanvasRuntime(initialDocument: decoded);
+    final runtime = CanvasRuntime();
+    runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(source));
 
     expect(runtime.state.value.summary.elementCount, 1);
     runtime.selection.setSelection([CanvasElementId('rect-1')]);
@@ -54,7 +54,7 @@ void main() {
     });
     expect(runtime.state.value.summary.elementCount, 2);
 
-    runtime.edits.loadDocument(CanvasDocument());
+    runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(CanvasDocument()));
     expect(runtime.state.value.summary.elementCount, 0);
     runtime.dispose();
   });

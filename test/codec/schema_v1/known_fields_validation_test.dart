@@ -27,37 +27,37 @@ void main() {
 
   test('schemaVersion must be the exact integer v1', () {
     expect(
-      decodeCanvasDocument({'schemaVersion': 1, 'unknownRootField': true}),
+      decodeSchemaV1Document({'schemaVersion': 1, 'unknownRootField': true}),
       isA<CanvasDocument>(),
     );
     expect(
-      () => decodeCanvasDocument({'schemaVersion': 2}),
+      () => decodeSchemaV1Document({'schemaVersion': 2}),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({'schemaVersion': 1.0}),
+      () => decodeSchemaV1Document({'schemaVersion': 1.0}),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({'schemaVersion': '1'}),
+      () => decodeSchemaV1Document({'schemaVersion': '1'}),
       throwsA(isA<CanvasDataException>()),
     );
   });
 
   test('known root and nested fields reject invalid shapes', () {
     expect(
-      () => decodeCanvasDocument({'schemaVersion': 1, 'camera': null}),
+      () => decodeSchemaV1Document({'schemaVersion': 1, 'camera': null}),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => decodeSchemaV1Document({
         'schemaVersion': 1,
         'background': {'grid': {'enabled': 'yes'}},
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => decodeSchemaV1Document({
         'schemaVersion': 1,
         'layers': [
           {'id': 'layer-1', 'elements': null},

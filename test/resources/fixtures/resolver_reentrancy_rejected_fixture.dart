@@ -1,4 +1,5 @@
 import 'dart:ui' show Offset, Rect, Size;
+import "../../support/runtime_root_with_document.dart";
 
 // This resource fixture now covers both the session boundary and the asset binding caller, so the imports intentionally span frame and resource seams.
 // ignore_for_file: number-of-imports
@@ -103,7 +104,9 @@ void _testPublicRuntimeMutationsRejected() {
           ),
         );
       }),
-      (root) => root.edits.loadDocument(CanvasDocument()),
+      (root) => root.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(CanvasDocument()),
+      ),
     ];
 
     expect(mutations, hasLength(10));
@@ -165,8 +168,8 @@ Future<void> _expectRejectedMutation(
 }
 
 RuntimeRoot _runtime() {
-  return RuntimeRoot(
-    initialDocument: CanvasDocument(
+  return runtimeRootWithDocument(
+    CanvasDocument(
       resources: [
         CanvasImageResource(
           id: CanvasResourceId('resource-a'),

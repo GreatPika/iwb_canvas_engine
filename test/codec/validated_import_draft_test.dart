@@ -45,7 +45,7 @@ void main() {
       ],
     );
 
-    final draft = ValidatedImportDraft.fromDocument(document);
+    final draft = ValidatedImportDraft.fromDraftReplacement(document);
     expect(draft.document, same(document));
     expect(draft.resourceIds.map((id) => id.value), {'image-a'});
     expect(draft.layerIds.map((id) => id.value), {'layer-a'});
@@ -53,7 +53,7 @@ void main() {
     expect(() => draft.elementIds.clear(), throwsUnsupportedError);
 
     expect(
-      () => ValidatedImportDraft.fromDocument(
+      () => ValidatedImportDraft.fromDraftReplacement(
         CanvasDocument(
           backgroundElements: [
             CanvasImageElement(

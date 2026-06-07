@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -662,8 +663,8 @@ void _testNonSelectableOccludedGroupInteriorDoesNotStartSelectedMove() {
 
 void _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove() {
   test('single selected line bounds miss does not start selected move', () {
-    final root = RuntimeRoot(
-      initialDocument: _singleLineDocument(),
+    final root = runtimeRootWithDocument(
+      _singleLineDocument(),
       config: const CanvasRuntimeConfig(),
     )..selection.setSelection([CanvasElementId('line-a')]);
     addTearDown(root.dispose);
@@ -1105,7 +1106,9 @@ void _testSelectedMoveLoadAndDisposeDoNotResolve() {
     final loadScenario = _noCommitScenario();
     loadScenario.root.selection.setSelection([CanvasElementId('a')]);
     _startSelectedMove(loadScenario.root);
-    loadScenario.root.edits.loadDocument(_document());
+    loadScenario.root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_document()),
+    );
     _expectNoMoveEffects(loadScenario);
 
     final disposeScenario = _noCommitScenario();
@@ -1198,8 +1201,8 @@ _NoCommitScenario _occludedNoCommitScenario({
   bool occluderLocked = false,
 }) {
   var resolverCalls = 0;
-  final root = RuntimeRoot(
-    initialDocument: _occludedGroupDocument(
+  final root = runtimeRootWithDocument(
+    _occludedGroupDocument(
       occluderSelectable: occluderSelectable,
       occluderLocked: occluderLocked,
     ),
@@ -1434,8 +1437,8 @@ RuntimeRoot _runtimeRoot({
   CanvasMoveCommitResolver? resolver,
   CanvasRuntimeConfig? config,
 }) {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
   );
 }

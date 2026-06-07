@@ -22,7 +22,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   test('unknown resource source kind fails before DTO exposure', () {
     expect(
-      () => decodeCanvasDocument({
+      () => decodeSchemaV1Document({
         'schemaVersion': 1,
         'resources': [
           {

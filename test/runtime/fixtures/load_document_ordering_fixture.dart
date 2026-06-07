@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -31,7 +32,9 @@ Future<void> _expectFailedLoadDoesNotInterrupt() async {
   root.actions.listen(actionEvents.add);
 
   expect(
-    () => root.edits.loadDocument(_invalidReplacementDocument()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_invalidReplacementDocument()),
+    ),
     throwsA(
       isA<CanvasDataException>().having(
         (error) => error.code,
@@ -84,17 +87,19 @@ final class _SuccessfulLoadOrderingScenario {
   late final RuntimeRoot root;
 
   void run() {
-    boundary.onPrepareCleanup = () =>
-        _recordSuccessfulPrepareCleanup(events, root);
     root = _runtimeRoot(
       boundary,
       observeEffects: (effects) =>
           _recordSuccessfulObserver(events, root, effects),
     );
+    boundary.onPrepareCleanup = () =>
+        _recordSuccessfulPrepareCleanup(events, root);
     _prepareActiveInteraction(root);
     root.state.addListener(() => _recordSuccessfulState(events, root));
 
-    root.edits.loadDocument(_replacementDocument());
+    root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_replacementDocument()),
+    );
 
     expect(events, ['prepared-cleanup', 'state', 'observer']);
     expect(boundary.events, ['prepared-cleanup']);
@@ -105,7 +110,7 @@ final class _SuccessfulLoadOrderingScenario {
 void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
   events.add('prepared-cleanup');
   expect(root.readDocument().layers.single.elements.single.id.value, 'old');
-  expect(root.state.value.revisions.document, 0);
+  expect(root.state.value.revisions.document, 1);
 }
 
 void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
@@ -144,19 +149,22 @@ RuntimeRoot _runtimeRoot(
   _RecordingLoadBoundary boundary, {
   void Function(List<CommitDeliveryEffect> effects)? observeEffects,
 }) {
-  return RuntimeRoot.test(
-    initialDocument: _initialDocument(),
+  final root = runtimeRootWithDocument(
+    _initialDocument(),
     config: const CanvasRuntimeConfig(),
     loadInteractionBoundary: boundary,
     commitEffectObserver: observeEffects,
   );
+  boundary.events.clear();
+
+  return root;
 }
 
 void _expectPublishedLoadState(RuntimeRoot root) {
   expect(root.readDocument().backgroundElements.single.id.value, 'new');
   expect(root.state.value.summary.elementCount, 1);
-  expect(root.state.value.revisions.document, 1);
-  expect(root.state.value.revisions.epoch, 1);
+  expect(root.state.value.revisions.document, 2);
+  expect(root.state.value.revisions.epoch, 2);
   _expectInteractionAlreadyCleaned(root);
 }
 
@@ -181,7 +189,11 @@ void _expectInteractionAlreadyCleaned(RuntimeRoot root) {
 
 void _expectDeliveryGuards(RuntimeRoot root) {
   _expectGuarded(() => root.edits.edit(_ignoreEditMutation));
-  _expectGuarded(() => root.edits.loadDocument(CanvasDocument()));
+  _expectGuarded(
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(CanvasDocument()),
+    ),
+  );
   _expectGuarded(() => root.selection.setSelection([CanvasElementId('new')]));
   _expectGuarded(() => root.cameraPort().setOffset(const Offset(1, 1)));
   _expectGuarded(root.generateElementId);
@@ -240,7 +252,9 @@ Never _throwFromPreparedCleanup(List<String> events) {
 
 void _expectPreparedCleanupLoadThrows(RuntimeRoot root) {
   expect(
-    () => root.edits.loadDocument(_replacementDocument()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_replacementDocument()),
+    ),
     throwsA(
       isA<StateError>().having(
         (error) => error.message,

@@ -25,12 +25,8 @@ export '../contracts/public/canvas_runtime.dart';
 // public entrypoint; splitting it would fragment the consumer contract.
 // ignore: coupling-between-object-classes, number-of-methods
 final class CanvasRuntime {
-  CanvasRuntime({
-    CanvasDocument? initialDocument,
-    CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
-  }) {
-    final document = initialDocument ?? CanvasDocument();
-    _root = RuntimeRoot(initialDocument: document, config: config);
+  CanvasRuntime({CanvasRuntimeConfig config = const CanvasRuntimeConfig()}) {
+    _root = RuntimeRoot(config: config);
     attachCanvasRuntimeFrameRoot(this, _root);
     attachCanvasRuntimeSurfacePort(this, _root);
   }

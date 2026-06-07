@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
@@ -41,7 +42,7 @@ void main() {
 }
 
 Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
-  final emptyRuntime = CanvasRuntime(initialDocument: CanvasDocument());
+  final emptyRuntime = runtimeWithDocument(CanvasDocument());
   final emptyResolver = _RecordingResolver((_) => null);
   addTearDown(emptyRuntime.dispose);
   await tester.pumpWidget(
@@ -50,7 +51,7 @@ Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
   _expectPaintHost();
   expect(emptyResolver.calls, 0);
 
-  final resourceFreeRuntime = CanvasRuntime(initialDocument: _rectDocument());
+  final resourceFreeRuntime = runtimeWithDocument(_rectDocument());
   final resourceFreeResolver = _RecordingResolver((_) => null);
   addTearDown(resourceFreeRuntime.dispose);
   await tester.pumpWidget(
@@ -59,8 +60,8 @@ Future<void> _expectEmptyAndResourceFreePaint(WidgetTester tester) async {
   _expectPaintHost();
   expect(resourceFreeResolver.calls, 0);
 
-  final descriptorOnlyRuntime = CanvasRuntime(
-    initialDocument: _resourceDescriptorOnlyDocument(),
+  final descriptorOnlyRuntime = runtimeWithDocument(
+    _resourceDescriptorOnlyDocument(),
   );
   final descriptorOnlyResolver = _RecordingResolver((_) => null);
   addTearDown(descriptorOnlyRuntime.dispose);
@@ -78,7 +79,7 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   WidgetTester tester,
 ) async {
   final image = await _createImage();
-  final runtime = CanvasRuntime(initialDocument: _imageDocument());
+  final runtime = runtimeWithDocument(_imageDocument());
   final resolver = _RecordingResolver((_) => image);
   addTearDown(runtime.dispose);
 
@@ -102,7 +103,7 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
 }
 
 Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
-  final runtime = CanvasRuntime(initialDocument: _rectDocument());
+  final runtime = runtimeWithDocument(_rectDocument());
   final resolver = _RecordingResolver((_) => null);
   addTearDown(runtime.dispose);
 
@@ -239,9 +240,7 @@ final class _InlineTextSurfaceScenario {
     subscription = runtime.contextActionRequests.listen(requests.add);
   }
 
-  final CanvasRuntime runtime = CanvasRuntime(
-    initialDocument: _textAndRectDocument(),
-  );
+  final CanvasRuntime runtime = runtimeWithDocument(_textAndRectDocument());
   final _RecordingResolver resolver = _RecordingResolver((_) => null);
   final List<CanvasContextActionRequested> requests = [];
   late final StreamSubscription<CanvasContextActionRequested> subscription;
@@ -379,4 +378,11 @@ final class _RecordingResolver implements CanvasResourceResolver {
 
     return _resolve(resource);
   }
+}
+
+CanvasRuntime runtimeWithDocument(CanvasDocument document) {
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
+
+  return runtime;
 }

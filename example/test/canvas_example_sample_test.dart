@@ -192,7 +192,10 @@ void _registerSurfaceRenderingResolverTest() {
   testWidgets('CanvasSurface asks resolver for the sample-cat descriptor', (
     tester,
   ) async {
-    final runtime = CanvasRuntime(initialDocument: _sampleImageDocument());
+    final runtime = CanvasRuntime();
+    runtime.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_sampleImageDocument()),
+    );
     final resolver = _RecordingResourceResolver();
     addTearDown(runtime.dispose);
 

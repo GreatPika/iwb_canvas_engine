@@ -69,7 +69,7 @@ final class AppNextEngineAdapterCompileFixture {
     required CanvasLayerId layerId,
     required CanvasResourceId resourceId,
   }) {
-    runtime.edits.loadDocument(document);
+    runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
     runtime.edits.edit((edit) {
       _use(edit.readDraftDocument());
       _use(edit.draftSummary);

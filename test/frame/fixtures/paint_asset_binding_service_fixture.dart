@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 // The asset-binding fixture imports the frame model, resource session, resolver
 // adapter, and public descriptor payloads together to prove the exact seam.
@@ -19,7 +20,6 @@ import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
-import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
 import 'ordinary_paint_test_support.dart';
@@ -31,8 +31,8 @@ void main() {
 
 void _testReentrantResolverRejectedThroughAssetBinding() {
   test('asset binding rejects public runtime mutations from resolver', () {
-    final root = RuntimeRoot(
-      initialDocument: CanvasDocument(),
+    final root = runtimeRootWithDocument(
+      CanvasDocument(),
       config: const CanvasRuntimeConfig(),
     );
     final resolver = RecordingResourceResolver((_) {

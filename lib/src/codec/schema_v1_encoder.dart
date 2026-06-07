@@ -16,7 +16,7 @@ Map<String, Object?> encodeSchemaV1Document(
   CanvasDocument document, {
   DiagnosticsHub? diagnostics,
 }) {
-  ValidatedImportDraft.fromDocument(document, diagnostics: diagnostics);
+  ValidatedImportDraft.fromEncodeDocument(document, diagnostics: diagnostics);
 
   return {
     'schemaVersion': 1,

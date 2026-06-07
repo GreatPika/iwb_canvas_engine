@@ -2,10 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
+
+import '../../support/document_store_with_document.dart';
+import '../../support/runtime_root_with_document.dart';
 
 void main() {
   test(
@@ -36,10 +38,8 @@ void main() {
 }
 
 void _projectionCacheBuildsOnlyThroughExplicitRead() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(
-      layers: [CanvasLayer(id: CanvasLayerId('layer-a'))],
-    ),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(layers: [CanvasLayer(id: CanvasLayerId('layer-a'))]),
     config: const CanvasRuntimeConfig(),
   );
 
@@ -59,7 +59,7 @@ void _projectionCacheBuildsOnlyThroughExplicitRead() {
 }
 
 void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
-  final store = DocumentStoreKernel(
+  final store = documentStoreWithDocument(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -89,8 +89,8 @@ void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
 }
 
 void _ordinaryPublicEditRouteDoesNotBuildProjection() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(
+  final root = runtimeRootWithDocument(
+    CanvasDocument(
       layers: [
         CanvasLayer(
           id: CanvasLayerId('layer-a'),
@@ -129,8 +129,8 @@ void _ordinaryPublicEditRouteDoesNotBuildProjection() {
 }
 
 void _draftSummaryRouteDoesNotBuildProjection() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(
+  final root = runtimeRootWithDocument(
+    CanvasDocument(
       resources: [
         CanvasImageResource(
           id: CanvasResourceId('resource-a'),
@@ -165,8 +165,8 @@ void _draftSummaryRouteDoesNotBuildProjection() {
 }
 
 void _selectionOnlyRouteDoesNotBuildProjection() {
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(
+  final root = runtimeRootWithDocument(
+    CanvasDocument(
       layers: [
         CanvasLayer(
           id: CanvasLayerId('layer-a'),
@@ -259,8 +259,5 @@ StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement before,
   required CanvasElement after,
 }) {
-  return StoreSparseUpdateElement(
-    before: before,
-    element: after,
-  );
+  return StoreSparseUpdateElement(before: before, element: after);
 }

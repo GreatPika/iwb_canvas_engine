@@ -7,6 +7,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test(
     'remove element emits delete action for existing elements',
@@ -33,7 +35,7 @@ void main() {
 // test; splitting this assertion block would hide the command no-op/commit pair.
 // ignore: halstead-volume
 Future<void> _removeElementEmitsDeleteActionForExistingElements() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -69,7 +71,7 @@ Future<void> _removeElementEmitsDeleteActionForExistingElements() async {
 
 Future<void>
 _clearContentReturnsRemovedIdsResourcesAndEmitsClearAction() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -93,7 +95,7 @@ _clearContentReturnsRemovedIdsResourcesAndEmitsClearAction() async {
 
 Future<void>
 _clearContentResourceOnlyCleanupReturnsResultWithoutAction() async {
-  final runtime = CanvasRuntime(initialDocument: _resourceOnlyDocument());
+  final runtime = runtimeWithDocument(_resourceOnlyDocument());
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -150,7 +152,7 @@ void _expectClearAction(
 }
 
 void _commitTextEditReturnsFalseForUnknownRequests() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   addTearDown(runtime.dispose);
 
   expect(

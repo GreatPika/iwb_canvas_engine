@@ -43,6 +43,14 @@ const _blockingEntries = [
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(
+    id: 'api.no_retired_public_load_routes',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
+    id: 'api.no_unapproved_document_load_inputs',
+    suites: {'blocking', 'api'},
+  ),
+  GuardrailEntry(
     id: 'api.facades_do_not_export_internal',
     suites: {'blocking', 'api'},
   ),

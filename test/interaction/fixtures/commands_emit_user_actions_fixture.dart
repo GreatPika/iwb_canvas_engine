@@ -1,5 +1,11 @@
+// This integration fixture keeps runtime, commit, and interaction intent seams
+// together so action ordering is auditable in one place; splitting imports into
+// helper files would hide the cross-seam behavior under test.
+// ignore_for_file: number-of-imports
+
 import 'dart:async';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -316,8 +322,8 @@ _recordFailedEraserThenAcceptedAction() async {
 RuntimeRoot _eraserRoot([
   void Function(List<CommitDeliveryEffect> effects)? observeEffects,
 ]) {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: CanvasRuntimeConfig(
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: CanvasDrawStyle(
@@ -372,8 +378,8 @@ void _performEmptyEraserStroke(RuntimeRoot root) {
 }
 
 RuntimeRoot _runtimeRoot({required List<String> events}) {
-  final root = RuntimeRoot(
-    initialDocument: _document(),
+  final root = runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
   root.state.addListener(() {

@@ -5,6 +5,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/error/error.dart';
 
+import 'document_load_input_guardrail.dart';
 import 'guardrail_violation.dart';
 import 'public_api_registry.dart';
 import 'public_api_surface.dart';
@@ -29,6 +30,73 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
         path: 'docs/_registry/public_api_v1.yaml',
         message: 'registry names missing from public barrel: ${_list(missing)}',
       ),
+  ];
+}
+
+Future<List<GuardrailViolation>> checkNoRetiredPublicLoadRoutes({
+  Map<String, String>? sourceOverrides,
+  Set<String>? registryNamesOverride,
+  Set<String>? exportedNamesOverride,
+}) async {
+  final violations = <GuardrailViolation>[];
+  for (final check in _retiredPublicRouteChecks) {
+    final source =
+        sourceOverrides?[check.path] ??
+        File('$repositoryRoot/${check.path}').readAsStringSync();
+    if (!check.pattern.hasMatch(source)) {
+      continue;
+    }
+
+    violations.add(
+      GuardrailViolation(
+        guardrailId: 'api.no_retired_public_load_routes',
+        path: check.path,
+        message: check.message,
+      ),
+    );
+  }
+  final registryNames =
+      registryNamesOverride ??
+      _publicRegistryNames(sourceOverrides: sourceOverrides);
+  final exportedNames =
+      exportedNamesOverride ?? (await resolvePublicApiSurface()).exportedNames;
+  final leakedInternalNames = {
+    ...registryNames.where(_isInternalLoadPublicExportName),
+    ...exportedNames.where(_isInternalLoadPublicExportName),
+  };
+  if (leakedInternalNames.isNotEmpty) {
+    violations.add(
+      GuardrailViolation(
+        guardrailId: 'api.no_retired_public_load_routes',
+        path: 'lib/iwb_canvas_engine.dart',
+        message:
+            'public API must not expose internal load/import/store types: '
+            '${_list(leakedInternalNames)}',
+      ),
+    );
+  }
+
+  return violations;
+}
+
+Future<List<GuardrailViolation>> checkNoUnapprovedDocumentLoadInputs({
+  Map<String, String>? sourceOverrides,
+}) async {
+  final hits = collectCanvasDocumentLoadInputHits(
+    sourceOverrides: sourceOverrides,
+  );
+
+  if (hits.isEmpty) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'api.no_unapproved_document_load_inputs',
+      path: 'lib/src',
+      message:
+          'unapproved CanvasDocument load/admission inputs: ${_list(hits)}',
+    ),
   ];
 }
 
@@ -73,6 +141,43 @@ Future<List<GuardrailViolation>> checkApiFacadesDoNotExportInternal({
   return violations;
 }
 
+final class _RetiredPublicRouteCheck {
+  const _RetiredPublicRouteCheck({
+    required this.path,
+    required this.pattern,
+    required this.message,
+  });
+
+  final String path;
+  final RegExp pattern;
+  final String message;
+}
+
+final _retiredPublicRouteChecks = [
+  _RetiredPublicRouteCheck(
+    path: 'lib/src/api/canvas_runtime.dart',
+    pattern: RegExp(r'CanvasRuntime\s*\(\s*\{[^}]*\binitialDocument\b'),
+    message:
+        'CanvasRuntime public facade must not expose initialDocument input',
+  ),
+  _RetiredPublicRouteCheck(
+    path: 'lib/src/contracts/public/canvas_runtime.dart',
+    pattern: RegExp(r'\bloadDocument\s*\(\s*CanvasDocument\b'),
+    message:
+        'CanvasEditPort public contract must not expose loadDocument(CanvasDocument)',
+  ),
+  _RetiredPublicRouteCheck(
+    path: 'lib/src/api/canvas_codec.dart',
+    pattern: RegExp(r'\bdecodeCanvasDocument(?:FromJson)?\b'),
+    message: 'public codec facade must not expose decodeCanvasDocument helpers',
+  ),
+  _RetiredPublicRouteCheck(
+    path: 'docs/_registry/public_api_v1.yaml',
+    pattern: RegExp(r'\bdecodeCanvasDocument(?:FromJson)?\b'),
+    message: 'public API registry must not list public decode helpers',
+  ),
+];
+
 Future<List<GuardrailViolation>> checkPublicTypesComplete({
   String? libraryPath,
 }) {
@@ -107,6 +212,48 @@ Set<String> _exportedInternalNames(Map<String, Element> elements) {
 bool _isPublicExportName(String name) {
   return !name.startsWith('_') && !name.endsWith('=');
 }
+
+Set<String> _publicRegistryNames({Map<String, String>? sourceOverrides}) {
+  final override = sourceOverrides?['docs/_registry/public_api_v1.yaml'];
+  if (override != null) {
+    return readPublicApiRegistryFromYaml(override).publicExports;
+  }
+
+  return readPublicApiRegistry();
+}
+
+bool _isInternalLoadPublicExportName(String name) {
+  return _internalLoadPublicExportDenylist.contains(name) ||
+      name.contains('ResourceDescriptor') ||
+      _internalLoadExportSuffixes.any(name.endsWith) ||
+      _internalLoadExportPrefixes.any(name.startsWith);
+}
+
+const _internalLoadPublicExportDenylist = {
+  'ValidatedImportDraft',
+  'PreparedDocumentLoad',
+  'LoadDocumentPipeline',
+  'DocumentStoreKernel',
+  'CommittedDocument',
+  'ResourceTable',
+  'StoreResourceDescriptorFacts',
+  'LayerRow',
+  'LayerTable',
+  'FamilyTables',
+  'ElementRegistry',
+};
+
+const _internalLoadExportSuffixes = {
+  'Importer',
+  'ImportDraft',
+  'Visitor',
+  'Sink',
+  'Row',
+  'Table',
+  'Kernel',
+};
+
+const _internalLoadExportPrefixes = {'Prepared', 'Committed'};
 
 void _throwOnErrorDiagnostics(ResolvedLibraryResult result) {
   final errors = result.units

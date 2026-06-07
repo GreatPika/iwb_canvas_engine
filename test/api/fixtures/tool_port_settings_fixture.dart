@@ -8,6 +8,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test(
     'configured initial tool settings are visible without revision bump',
@@ -37,8 +39,8 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
     markerOpacity: 0.5,
   );
   final policy = CanvasPointerPolicy(tapSlop: 3, deferSingleTap: false);
-  final runtime = CanvasRuntime(
-    initialDocument: _document(),
+  final runtime = runtimeWithDocument(
+    _document(),
     config: CanvasRuntimeConfig(
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: style,
@@ -57,7 +59,7 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
 // them together is clearer than splitting the same state progression.
 // ignore: halstead-volume
 void _setterNoopsAreSilentAndEffectiveChangesPublishInteractionState() {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   addTearDown(runtime.dispose);
   final notifications = <CanvasRuntimeState>[];
   runtime.state.addListener(() {
@@ -85,8 +87,8 @@ void _setterNoopsAreSilentAndEffectiveChangesPublishInteractionState() {
 // ignore: halstead-volume
 Future<void>
 _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
-  final runtime = CanvasRuntime(
-    initialDocument: _document(),
+  final runtime = runtimeWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(clearSelectionOnDrawModeEnter: true),
   );
   final actions = <CanvasActionCommitted>[];
@@ -135,7 +137,7 @@ void _expectPencilPreview(CanvasPreviewState preview) {
 }
 
 Future<void> _modeFlagFalseAndDoubleTapCompatibilityStayBounded() async {
-  final runtime = CanvasRuntime(initialDocument: _document());
+  final runtime = runtimeWithDocument(_document());
   final requests = <CanvasContextActionRequested>[];
   final subscriptions = _listenToContextRequests(runtime, requests);
   runtime.selection.setSelection([CanvasElementId('rect-a')]);

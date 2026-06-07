@@ -24,6 +24,8 @@ Guardrails:
 - `api.integration_surface_complete`
 - `api.no_legacy_public_types`
 - `api.public_exports_complete`
+- `api.no_retired_public_load_routes`
+- `api.no_unapproved_document_load_inputs`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
@@ -175,6 +177,8 @@ Mandatory guardrails:
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
+| `api.no_retired_public_load_routes` | public runtime, edit, codec, and registry surfaces do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, or public `decodeCanvasDocument*` helpers |
+| `api.no_unapproved_document_load_inputs` | production `CanvasDocument` load/admission signatures are limited to the explicit transitional internals that later schema-import/store/runtime units must retire |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |

@@ -101,7 +101,7 @@ void main() {
       'unknownNonMetadata': {'discard': true},
     };
 
-    final document = decodeCanvasDocument(source);
+    final document = decodeSchemaV1Document(source);
     expect(document.metadata, isA<CanvasMetadata>());
     _expectMetadataProjection(document.metadata, 'whiteboard');
     _expectMetadataProjection(document.resources.single.metadata, 'resource');

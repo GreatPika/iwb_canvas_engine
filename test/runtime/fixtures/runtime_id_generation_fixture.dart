@@ -3,9 +3,11 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import '../../support/runtime_with_document.dart';
+
 void main() {
   test('generated ids skip committed ids and advance per runtime', () {
-    final runtime = CanvasRuntime(initialDocument: _document());
+    final runtime = runtimeWithDocument(_document());
 
     expect(runtime.generateElementId(), CanvasElementId('e1'));
     _expectGeneratedIds(runtime);
@@ -16,7 +18,7 @@ void main() {
 
   test('store admission rejects duplicate committed ids', () {
     expect(
-      () => CanvasRuntime(initialDocument: _documentWithDuplicateElementIds()),
+      () => runtimeWithDocument(_documentWithDuplicateElementIds()),
       throwsA(isA<CanvasDataException>()),
     );
     _expectDuplicateAdmissionRejected(
@@ -57,7 +59,7 @@ void _expectDuplicateAdmissionRejected(
   CanvasDataErrorCode code,
 ) {
   expect(
-    () => CanvasRuntime(initialDocument: document),
+    () => runtimeWithDocument(document),
     throwsA(
       isA<CanvasDataException>().having((error) => error.code, 'code', code),
     ),

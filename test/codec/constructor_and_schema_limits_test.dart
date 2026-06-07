@@ -16,6 +16,7 @@ void main() {
 }
 
 const _constructorAndSchemaLimitsTestSource = '''
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -187,20 +188,20 @@ void main() {
 
   test('schema boundary validates known root fields and JSON shape', () {
     expect(
-      decodeCanvasDocument({'schemaVersion': 1, 'unknown': true}),
+      _loadDocumentFromObject({'schemaVersion': 1, 'unknown': true}),
       isA<CanvasDocument>(),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'metadata': {
-          'bad': double.nan,
+          'bad': 'x' * 65537,
         },
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'resources': [
           {
@@ -218,28 +219,28 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'camera': null,
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'resources': null,
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'metadata': null,
       }),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'backgroundLayer': {'elements': [
           {
@@ -253,7 +254,7 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'backgroundLayer': {'elements': [
           {
@@ -268,15 +269,15 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocumentFromJson('[]'),
+      () => _loadDocumentFromJson('[]'),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocumentFromJson('{'),
+      () => _loadDocumentFromJson('{'),
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'backgroundLayer': {'elements': [
           {
@@ -290,7 +291,7 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'backgroundLayer': {'elements': [
           {
@@ -305,7 +306,7 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      () => decodeCanvasDocument({
+      () => _loadDocumentFromObject({
         'schemaVersion': 1,
         'backgroundLayer': {'elements': [
           {
@@ -320,7 +321,7 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
     expect(
-      decodeCanvasDocument({'schemaVersion': 1}),
+      _loadDocumentFromObject({'schemaVersion': 1}),
       isA<CanvasDocument>(),
     );
   });
@@ -384,5 +385,20 @@ void main() {
       throwsA(isA<CanvasDataException>()),
     );
   });
+}
+
+CanvasDocument _loadDocumentFromObject(Map<String, Object?> json) {
+  return _loadDocumentFromJson(jsonEncode(json));
+}
+
+CanvasDocument _loadDocumentFromJson(String json) {
+  final runtime = CanvasRuntime();
+  try {
+    runtime.edits.loadDocumentFromJson(json);
+
+    return runtime.readDocument();
+  } finally {
+    runtime.dispose();
+  }
 }
 ''';

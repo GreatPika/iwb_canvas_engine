@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_config.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import "../../support/runtime_root_with_document.dart";
 
 void main() {
   test('RuntimeRoot owns materialized diagnostic verbose limits', () {
@@ -45,8 +46,8 @@ void main() {
 }
 
 RuntimeRoot _runtimeRootWithDiagnostics(CanvasDiagnosticPolicy policy) {
-  return RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  return runtimeRootWithDocument(
+    CanvasDocument(),
     config: CanvasRuntimeConfig(diagnosticPolicy: policy),
   );
 }

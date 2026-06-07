@@ -22,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
-  test('encode and decode leave runtime document and state unchanged', () {
+  test('encode leaves runtime document and state unchanged', () {
     final document = CanvasDocument(
       resources: [
         CanvasImageResource(
@@ -43,17 +43,16 @@ void main() {
         ),
       ],
     );
-    final runtime = CanvasRuntime(initialDocument: document);
+    final runtime = CanvasRuntime();
+    runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
     final beforeDocument = runtime.readDocument();
     final beforeState = runtime.state.value;
 
     final encoded = encodeCanvasDocument(document);
     final encodedJson = encodeCanvasDocumentToJson(document);
-    final decoded = decodeCanvasDocument(encoded);
-    final decodedFromJson = decodeCanvasDocumentFromJson(encodedJson);
 
-    expect(decoded, isA<CanvasDocument>());
-    expect(decodedFromJson, isA<CanvasDocument>());
+    expect(encoded, isA<Map<String, Object?>>());
+    expect(encodedJson, isA<String>());
     expect(runtime.readDocument(), same(beforeDocument));
     expect(runtime.state.value, beforeState);
     expect(
@@ -65,15 +64,7 @@ void main() {
         selectedCount: 0,
       ),
     );
-    expect(runtime.state.value.revisions, const CanvasRuntimeRevisions(
-      document: 0,
-      selection: 0,
-      preview: 0,
-      viewCamera: 0,
-      resourceVisual: 0,
-      interaction: 0,
-      epoch: 0,
-    ));
+    expect(runtime.state.value.revisions, beforeState.revisions);
   });
 }
 ''';

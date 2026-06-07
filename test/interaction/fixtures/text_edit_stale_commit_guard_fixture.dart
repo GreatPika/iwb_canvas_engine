@@ -1,5 +1,11 @@
+// This fixture intentionally owns text-edit guard, interaction engine, and
+// runtime setup seams together so stale-request behavior stays locally
+// auditable instead of being split only to satisfy import-count metrics.
+// ignore_for_file: number-of-imports
+
 import 'dart:async';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -153,7 +159,9 @@ Future<_IssuedScenario> _missingTextScenario() async {
 Future<_IssuedScenario> _epochStaleScenario() async {
   final scenario = _Scenario();
   final requestId = await scenario.issueTextRequest();
-  scenario.root.edits.loadDocument(_document());
+  scenario.root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_document()),
+  );
 
   return scenario.issued(requestId);
 }
@@ -367,7 +375,9 @@ Future<void> _verifyLoadClearsLiveRequestFacts() async {
       isNotNull,
     );
 
-    scenario.root.edits.loadDocument(_document());
+    scenario.root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_document()),
+    );
 
     expect(scenario.root.interactionEngine.requestFactsFor(requestId), isNull);
     expect(
@@ -397,16 +407,16 @@ String? _textValueOrNull(RuntimeRoot root) {
 final class _Scenario {
   _Scenario()
     : this._(
-        RuntimeRoot(
-          initialDocument: _document(),
+        runtimeRootWithDocument(
+          _document(),
           config: const CanvasRuntimeConfig(),
         ),
       );
 
   _Scenario.failedTextPrepare(void Function() onPrepare)
     : this._(
-        RuntimeRoot.test(
-          initialDocument: _document(),
+        runtimeRootWithDocument(
+          _document(),
           config: const CanvasRuntimeConfig(),
           textEditPrepareOverride: (input) {
             onPrepare();

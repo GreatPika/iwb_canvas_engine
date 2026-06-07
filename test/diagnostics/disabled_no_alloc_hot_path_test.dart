@@ -93,8 +93,8 @@ void main() {
 
     final encoded = encodeCanvasDocument(document);
     final encodedJson = encodeCanvasDocumentToJson(document);
-    expect(decodeCanvasDocument(encoded), isA<CanvasDocument>());
-    expect(decodeCanvasDocumentFromJson(encodedJson), isA<CanvasDocument>());
+    expect(decodeSchemaV1Document(encoded), isA<CanvasDocument>());
+    expect(decodeSchemaV1DocumentFromJson(encodedJson), isA<CanvasDocument>());
 
     expect(DiagnosticRecord.allocations.count, before);
   });

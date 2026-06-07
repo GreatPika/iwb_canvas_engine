@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -43,14 +44,16 @@ Future<void> _expectNextPendingTimestampZeroAfter(
 
 void _loadSuccessCleanup(RuntimeRoot root) {
   _startPencilPreview(root);
-  root.edits.loadDocument(CanvasDocument());
+  root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(CanvasDocument()));
 }
 
 void _loadFailure(RuntimeRoot root) {
   _startPencilPreview(root);
   final before = root.state.value;
   expect(
-    () => root.edits.loadDocument(_invalidReplacementDocument()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_invalidReplacementDocument()),
+    ),
     throwsA(isA<CanvasDataException>()),
   );
   expect(root.state.value, before);
@@ -138,8 +141,8 @@ final class _CleanupTimestampScenario {
     subscription = root.actions.listen(actions.add);
   }
 
-  final root = RuntimeRoot(
-    initialDocument: CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   final actions = <CanvasActionCommitted>[];

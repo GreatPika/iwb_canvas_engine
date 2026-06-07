@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -246,8 +247,8 @@ Future<void> _verifyProgrammaticAddElementActionSilence() async {
 }
 
 _DrawScenario _scenario({CanvasDocument? initialDocument}) {
-  final root = RuntimeRoot(
-    initialDocument: initialDocument ?? CanvasDocument(),
+  final root = runtimeRootWithDocument(
+    initialDocument ?? CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
   final actions = <CanvasActionCommitted>[];

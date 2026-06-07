@@ -1,14 +1,15 @@
 import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
+import '../store/committed_document.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
 
 typedef DocumentInstall =
-    void Function(CanvasDocument document, StoreRevisionDelta delta);
+    void Function(CommittedDocument document, StoreRevisionDelta delta);
 typedef DocumentReplace =
-    void Function(CanvasDocument document, StoreRevisionDelta delta);
+    void Function(CommittedDocument document, StoreRevisionDelta delta);
 typedef SparseDocumentInstall = void Function(PreparedSparseStoreCommit commit);
 typedef SelectionEffectPrepare =
     PreparedSelectionEffect Function(
@@ -115,10 +116,11 @@ void _installAcceptedDocument(
 }) {
   switch (document) {
     case AcceptedMaterializedDocument(:final document, :final revisionDelta):
+      final storeDocument = CommittedDocument(document);
       if (plan.documentReplaced) {
-        documentInstallers.replaceDocument(document, revisionDelta);
+        documentInstallers.replaceDocument(storeDocument, revisionDelta);
       } else {
-        documentInstallers.installDocument(document, revisionDelta);
+        documentInstallers.installDocument(storeDocument, revisionDelta);
       }
     case AcceptedSparseStoreDocument():
       documentInstallers.installSparseCommit(document.commit);

@@ -135,7 +135,7 @@ final class CanvasRuntimeSummary {
 /// Public API v1 declaration for [CanvasEditPort].
 abstract interface class CanvasEditPort {
   T edit<T>(T Function(CanvasEdit edit) fn);
-  void loadDocument(CanvasDocument document);
+  void loadDocumentFromJson(String json);
 }
 
 /// Public API v1 declaration for [CanvasEdit].

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -78,8 +79,8 @@ void _testSelectedMoveStartFacts() {
 void _testSelectedMoveStartGroupUnionFacts() {
   test('selected move start facts expose selected group union facts', () {
     final root =
-        RuntimeRoot(
-            initialDocument: _groupSelectionDocument(includeOccluder: false),
+        runtimeRootWithDocument(
+            _groupSelectionDocument(includeOccluder: false),
             config: const CanvasRuntimeConfig(),
           )
           ..selection.setSelection([
@@ -117,8 +118,8 @@ void _testSelectedMoveStartOccludedGroupUnionFacts() {
     'selected group union facts report higher order exact-hit occlusion',
     () {
       final root =
-          RuntimeRoot(
-              initialDocument: _groupSelectionDocument(includeOccluder: true),
+          runtimeRootWithDocument(
+              _groupSelectionDocument(includeOccluder: true),
               config: const CanvasRuntimeConfig(),
             )
             ..selection.setSelection([
@@ -153,8 +154,8 @@ void _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts() {
     'selected group union facts use content hits for non-selectable occlusion',
     () {
       final root =
-          RuntimeRoot(
-              initialDocument: _groupSelectionDocument(
+          runtimeRootWithDocument(
+              _groupSelectionDocument(
                 includeOccluder: true,
                 occluderSelectable: false,
               ),
@@ -184,8 +185,8 @@ void _testSingleLineMoveStartDoesNotExposeGroupUnionFacts() {
   test(
     'single selected line move start does not expose group-union admission',
     () {
-      final root = RuntimeRoot(
-        initialDocument: _singleSelectedLineDocument(),
+      final root = runtimeRootWithDocument(
+        _singleSelectedLineDocument(),
         config: const CanvasRuntimeConfig(),
       )..selection.setSelection([CanvasElementId('line-a')]);
       addTearDown(root.dispose);
@@ -322,7 +323,7 @@ void _testMarqueeQueryBudgetFacts() {
     () {
       final root = _runtimeRoot();
       addTearDown(root.dispose);
-      root.edits.loadDocument(_document());
+      root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(_document()));
 
       final facts = root.interactionReadPort.marqueeCommitFacts(
         const MarqueeCommitReadRequest(
@@ -421,8 +422,8 @@ void _testRejectedContextTargetReadOutcomes() {
 
 void _testInvalidIndexContextTargetReadOutcome() {
   test('context target reads reject invalid spatial index results', () {
-    final root = RuntimeRoot(
-      initialDocument: CanvasDocument(),
+    final root = runtimeRootWithDocument(
+      CanvasDocument(),
       config: const CanvasRuntimeConfig(),
     );
     addTearDown(root.dispose);
@@ -463,8 +464,8 @@ void _testStaleIndexContextTargetReadOutcome() {
 
 void _testBudgetExceededContextTargetReadOutcome() {
   test('context target reads reject fallback budget overflow results', () {
-    final root = RuntimeRoot(
-      initialDocument: _fallbackBudgetDocument(),
+    final root = runtimeRootWithDocument(
+      _fallbackBudgetDocument(),
       config: const CanvasRuntimeConfig(),
     );
     addTearDown(root.dispose);
@@ -531,8 +532,8 @@ CanvasDocument _fallbackBudgetDocument() {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return RuntimeRoot(
-    initialDocument: _document(),
+  return runtimeRootWithDocument(
+    _document(),
     config: const CanvasRuntimeConfig(),
   );
 }

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -83,7 +84,9 @@ void _verifyLoadSuccessCleanup(CanvasPreviewState preview) {
     snapshots.add(root.state.value);
   });
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
   expect(snapshots, hasLength(1));
   expect(root.interactionEngine.activeSession, isNull);
@@ -111,7 +114,9 @@ void _verifyLoadFailurePreservesInteraction() {
   });
 
   expect(
-    () => root.edits.loadDocument(_invalidReplacementDocument()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_invalidReplacementDocument()),
+    ),
     throwsA(isA<CanvasDataException>()),
   );
 
@@ -136,7 +141,9 @@ void _verifyLoadSuccessCleansEraserInteraction() {
     snapshots.add(root.state.value);
   });
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
   expect(snapshots, hasLength(1));
   expect(root.interactionEngine.activeSession, isNull);
@@ -153,7 +160,9 @@ void _verifyLoadSuccessCleansPendingContextTap() {
   root.contextActionRequests.listen(contextRequests.add);
   _startPendingContextTap(root);
 
-  root.edits.loadDocument(_replacementDocument());
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
 
   expect(root.interactionEngine.pendingContextTap, isNull);
   expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
@@ -176,7 +185,9 @@ void _verifyLoadFailurePreservesPendingContextTap() {
   });
 
   expect(
-    () => root.edits.loadDocument(_invalidReplacementDocument()),
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_invalidReplacementDocument()),
+    ),
     throwsA(isA<CanvasDataException>()),
   );
 
@@ -196,7 +207,9 @@ Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
       isNotNull,
     );
 
-    root.edits.loadDocument(_replacementDocument());
+    root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_replacementDocument()),
+    );
 
     expect(root.interactionEngine.requestFactsFor(request.requestId), isNull);
     expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
@@ -383,16 +396,16 @@ void _expectDisposeCleanupRevisions(
 }
 
 RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
-  return RuntimeRoot(
-    initialDocument: _initialDocument(),
+  return runtimeRootWithDocument(
+    _initialDocument(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: observer,
   );
 }
 
 RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
-  return RuntimeRoot(
-    initialDocument: _unselectedMoveDocument(),
+  return runtimeRootWithDocument(
+    _unselectedMoveDocument(),
     config: CanvasRuntimeConfig(
       pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
     ),

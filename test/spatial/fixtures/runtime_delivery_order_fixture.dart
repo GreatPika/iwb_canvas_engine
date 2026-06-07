@@ -1,4 +1,5 @@
 import 'dart:ui';
+import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -155,8 +156,10 @@ _DeliveryOutcome _runLoadDeliveryScenario() {
   final recorder = _DeliveryRecorder();
   final root = _runtimeRoot(recorder.observe);
   recorder.bind(root);
-  root.edits.loadDocument(
-    _document([_rect('loaded', translation: const Offset(1000, 0))]),
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(
+      _document([_rect('loaded', translation: const Offset(1000, 0))]),
+    ),
   );
 
   return recorder.outcome();
@@ -242,8 +245,8 @@ final class _DeliveryOutcome {
 RuntimeRoot _runtimeRoot([
   void Function(List<CommitDeliveryEffect>)? observer,
 ]) {
-  return RuntimeRoot(
-    initialDocument: _document([_rect('initial')]),
+  return runtimeRootWithDocument(
+    _document([_rect('initial')]),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: observer,
   );
