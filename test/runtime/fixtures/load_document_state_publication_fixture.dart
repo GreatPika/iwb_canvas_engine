@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 import "../../support/runtime_root_with_document.dart";
 
@@ -20,8 +21,44 @@ void main() {
     expect(_expectSuccessfulLoadPublishesPreviewCleanup, returnsNormally);
   });
 
-  test('failed load publishes no state and leaves runtime facts unchanged', () {
-    expect(_expectFailedLoadHasNoSideEffects, returnsNormally);
+  test('malformed JSON load leaves runtime facts unchanged', () {
+    expect(
+      () => _expectFailedLoadHasNoSideEffects(
+        '{',
+        CanvasDataErrorCode.invalidJson,
+      ),
+      returnsNormally,
+    );
+  });
+
+  test('schema version failure leaves runtime facts unchanged', () {
+    expect(
+      () => _expectFailedLoadHasNoSideEffects(
+        jsonEncode({'schemaVersion': 2}),
+        CanvasDataErrorCode.unsupportedSchemaVersion,
+      ),
+      returnsNormally,
+    );
+  });
+
+  test('import event failure leaves runtime facts unchanged', () {
+    expect(
+      () => _expectFailedLoadHasNoSideEffects(
+        _jsonWithImportFieldFailure(),
+        CanvasDataErrorCode.missingField,
+      ),
+      returnsNormally,
+    );
+  });
+
+  test('store preparation failure leaves runtime facts unchanged', () {
+    expect(
+      () => _expectFailedLoadHasNoSideEffects(
+        _jsonWithDuplicateElements(),
+        CanvasDataErrorCode.duplicateElementId,
+      ),
+      returnsNormally,
+    );
   });
 }
 
@@ -88,37 +125,47 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
   _expectLoadEffects(effectBatches.single);
 }
 
-void _expectFailedLoadHasNoSideEffects() {
+void _expectFailedLoadHasNoSideEffects(
+  String json,
+  CanvasDataErrorCode expectedCode,
+) {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   root.selection.setSelection([CanvasElementId('old-element')]);
   root.cameraPort().setOffset(const Offset(3, 4));
+  root.replaceInteractionPreview(
+    const CanvasSelectedMovePreview(delta: Offset(1, 2)),
+  );
   final before = _RuntimeFactsSnapshot.capture(root);
   final snapshots = <CanvasRuntimeState>[];
+  final actionEvents = <CanvasActionCommitted>[];
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
+  root.actions.listen(actionEvents.add);
   effectBatches.clear();
 
-  _expectDuplicateElementLoadRejected(root);
+  _expectLoadRejected(root, json, expectedCode);
 
   expect(snapshots, isEmpty);
+  expect(actionEvents, isEmpty);
   expect(effectBatches, isEmpty);
   before.expectStillCurrent(root);
-  expect(root.cameraPort().offset, const Offset(3, 4));
   expect(root.generateElementId(), CanvasElementId('e0'));
 }
 
-void _expectDuplicateElementLoadRejected(RuntimeRoot root) {
+void _expectLoadRejected(
+  RuntimeRoot root,
+  String json,
+  CanvasDataErrorCode expectedCode,
+) {
   expect(
-    () => root.edits.loadDocumentFromJson(
-      encodeCanvasDocumentToJson(_documentWithDuplicateElements()),
-    ),
+    () => root.edits.loadDocumentFromJson(json),
     throwsA(
       isA<CanvasDataException>().having(
         (error) => error.code,
         'code',
-        CanvasDataErrorCode.duplicateElementId,
+        expectedCode,
       ),
     ),
   );
@@ -193,6 +240,8 @@ final class _RuntimeFactsSnapshot {
     required this.state,
     required this.document,
     required this.selection,
+    required this.cameraOffset,
+    required this.preview,
   });
 
   factory _RuntimeFactsSnapshot.capture(RuntimeRoot root) {
@@ -200,17 +249,23 @@ final class _RuntimeFactsSnapshot {
       state: root.state.value,
       document: root.readDocument(),
       selection: root.selectedElementIds,
+      cameraOffset: root.cameraPort().offset,
+      preview: root.preview,
     );
   }
 
   final CanvasRuntimeState state;
   final CanvasDocument document;
   final Set<CanvasElementId> selection;
+  final Offset cameraOffset;
+  final CanvasPreviewState preview;
 
   void expectStillCurrent(RuntimeRoot root) {
     expect(root.state.value, state);
     expect(root.readDocument(), same(document));
     expect(root.selectedElementIds, selection);
+    expect(root.cameraPort().offset, cameraOffset);
+    expect(root.preview, same(preview));
   }
 }
 
@@ -269,24 +324,46 @@ CanvasDocument _replacementDocument() {
   );
 }
 
-CanvasDocument _documentWithDuplicateElements() {
-  return CanvasDocument(
-    backgroundElements: [
-      CanvasRectElement(
-        id: CanvasElementId('duplicate'),
-        size: const Size(1, 1),
-      ),
-    ],
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer'),
-        elements: [
-          CanvasRectElement(
-            id: CanvasElementId('duplicate'),
-            size: const Size(1, 1),
-          ),
+String _jsonWithDuplicateElements() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'duplicate',
+          'kind': 'rect',
+          'size': {'w': 1, 'h': 1},
+          'strokeWidth': 0,
+        },
+      ],
+    },
+    'layers': [
+      {
+        'id': 'layer',
+        'elements': [
+          {
+            'id': 'duplicate',
+            'kind': 'rect',
+            'size': {'w': 1, 'h': 1},
+            'strokeWidth': 0,
+          },
         ],
-      ),
+      },
     ],
-  );
+  });
+}
+
+String _jsonWithImportFieldFailure() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'invalid-rect',
+          'kind': 'rect',
+          'size': {'w': 1, 'h': 1},
+        },
+      ],
+    },
+  });
 }

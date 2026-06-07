@@ -3,8 +3,10 @@ import "../../support/runtime_root_with_document.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -21,6 +23,10 @@ void main() {
       _expectPreparedCleanupFailureHasNoSideEffects(),
       completes,
     );
+  });
+
+  test('action stream listener delivery rejects reentrant loads', () {
+    expect(_expectActionStreamDeliveryGuards, returnsNormally);
   });
 }
 
@@ -79,6 +85,133 @@ Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
   before.expectStillCurrent(root);
   expect(effectBatches, isEmpty);
   expect(actionEvents, isEmpty);
+}
+
+void _expectActionStreamDeliveryGuards() {
+  _ActionStreamDeliveryGuardScenario().run();
+}
+
+final class _ActionStreamDeliveryGuardScenario {
+  _ActionStreamDeliveryGuardScenario() {
+    root = _runtimeRoot(
+      _RecordingLoadBoundary(),
+      observeEffects: effectBatches.add,
+    );
+    root.selection.setSelection([CanvasElementId('old')]);
+    root.cameraPort().setOffset(const Offset(4, 5));
+    root.state.addListener(() {
+      stateSnapshots.add(root.state.value);
+    });
+    root.actions.listen(_recordAction);
+  }
+
+  late final RuntimeRoot root;
+  final List<CanvasRuntimeState> stateSnapshots = [];
+  final List<List<CommitDeliveryEffect>> effectBatches = [];
+  int actionDeliveries = 0;
+
+  void run() {
+    _deliverActionCommit();
+
+    expect(actionDeliveries, 1);
+    expect(stateSnapshots, hasLength(1));
+    expect(effectBatches, hasLength(1));
+    _capture().expectStillCurrent(
+      root,
+      actionDeliveries: 1,
+      statePublicationCount: 1,
+      observerCount: 1,
+    );
+  }
+
+  void _recordAction(CanvasActionCommitted action) {
+    actionDeliveries += 1;
+    expect(action.type, CanvasActionType.deleteElements);
+    final duringDelivery = _capture();
+
+    _expectDeliveryGuards(root);
+    duringDelivery.expectStillCurrent(
+      root,
+      actionDeliveries: actionDeliveries,
+      statePublicationCount: stateSnapshots.length,
+      observerCount: effectBatches.length,
+    );
+  }
+
+  void _deliverActionCommit() {
+    root.deliverCommitPlanForTesting(
+      CommitPlan.replaceSelection(
+        elementIds: const [],
+        actionIntents: [
+          DeleteSelectionActionIntent(
+            removedElementIds: [CanvasElementId('old')],
+          ),
+        ],
+      ),
+      document: root.readDocument(),
+    );
+  }
+
+  _ActionStreamDeliverySnapshot _capture() {
+    return _ActionStreamDeliverySnapshot.capture(
+      root,
+      actionDeliveries: actionDeliveries,
+      statePublicationCount: stateSnapshots.length,
+      observerCount: effectBatches.length,
+    );
+  }
+}
+
+final class _ActionStreamDeliverySnapshot {
+  const _ActionStreamDeliverySnapshot({
+    required this.document,
+    required this.selection,
+    required this.cameraOffset,
+    required this.state,
+    required this.actionDeliveries,
+    required this.statePublicationCount,
+    required this.observerCount,
+  });
+
+  factory _ActionStreamDeliverySnapshot.capture(
+    RuntimeRoot root, {
+    required int actionDeliveries,
+    required int statePublicationCount,
+    required int observerCount,
+  }) {
+    return _ActionStreamDeliverySnapshot(
+      document: root.readDocument(),
+      selection: root.selectedElementIds,
+      cameraOffset: root.cameraPort().offset,
+      state: root.state.value,
+      actionDeliveries: actionDeliveries,
+      statePublicationCount: statePublicationCount,
+      observerCount: observerCount,
+    );
+  }
+
+  final CanvasDocument document;
+  final Set<CanvasElementId> selection;
+  final Offset cameraOffset;
+  final CanvasRuntimeState state;
+  final int actionDeliveries;
+  final int statePublicationCount;
+  final int observerCount;
+
+  void expectStillCurrent(
+    RuntimeRoot root, {
+    required int actionDeliveries,
+    required int statePublicationCount,
+    required int observerCount,
+  }) {
+    expect(root.readDocument(), same(document));
+    expect(root.selectedElementIds, selection);
+    expect(root.cameraPort().offset, cameraOffset);
+    expect(root.state.value, state);
+    expect(actionDeliveries, this.actionDeliveries);
+    expect(statePublicationCount, this.statePublicationCount);
+    expect(observerCount, this.observerCount);
+  }
 }
 
 final class _SuccessfulLoadOrderingScenario {

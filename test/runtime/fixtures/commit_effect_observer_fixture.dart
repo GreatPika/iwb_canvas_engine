@@ -37,6 +37,7 @@ final class _ObserverDeliveryScenario {
       config: const CanvasRuntimeConfig(),
       commitEffectObserver: _observeEffects,
     );
+    baselineViewCameraRevision = root.state.value.revisions.viewCamera;
     root.state.addListener(_recordState);
   }
 
@@ -46,6 +47,7 @@ final class _ObserverDeliveryScenario {
   final List<CanvasRuntimeState> snapshots = <CanvasRuntimeState>[];
   final List<List<CommitDeliveryEffect>> effectBatches =
       <List<CommitDeliveryEffect>>[];
+  late final int baselineViewCameraRevision;
   bool nestedEditCallbackRan = false;
   int guardedPublicationWindows = 0;
 
@@ -149,7 +151,7 @@ final class _ObserverDeliveryScenario {
 
   void _expectPostObserverState() {
     expect(root.state.value.summary.elementCount, 2);
-    expect(root.state.value.revisions.viewCamera, 0);
+    expect(root.state.value.revisions.viewCamera, baselineViewCameraRevision);
     expect(root.isDisposed, isFalse);
     expect(root.generateElementId(), CanvasElementId('e0'));
     expect(root.generateLayerId(), CanvasLayerId('l0'));

@@ -34,45 +34,18 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../support/runtime_with_document.dart';
-
 void main() {
   test('state.value is readable immediately after construction', () {
-    final document = CanvasDocument(
-      resources: [
-        CanvasImageResource(
-          id: CanvasResourceId('resource-1'),
-          source: CanvasResourceSource.appKey('resource-1'),
-        ),
-      ],
-      backgroundElements: [
-        CanvasRectElement(
-          id: CanvasElementId('background-1'),
-          size: const Size(1, 1),
-        ),
-      ],
-      layers: [
-        CanvasLayer(
-          id: CanvasLayerId('layer-1'),
-          elements: [
-            CanvasRectElement(
-              id: CanvasElementId('element-1'),
-              size: const Size(2, 2),
-            ),
-          ],
-        ),
-      ],
-    );
-    final runtime = runtimeWithDocument(document);
+    final runtime = CanvasRuntime();
 
     expect(runtime.state.value, isA<CanvasRuntimeState>());
     expect(runtime.state.value.revisions, _zeroRevisions());
     expect(
       runtime.state.value.summary,
       const CanvasRuntimeSummary(
-        elementCount: 2,
-        layerCount: 1,
-        resourceCount: 1,
+        elementCount: 0,
+        layerCount: 0,
+        resourceCount: 0,
         selectedCount: 0,
       ),
     );
@@ -117,7 +90,8 @@ void main() {
   });
 
   test('document edits publish exactly one coherent state snapshot', () {
-    final runtime = runtimeWithDocument(_document());
+    final runtime = _runtimeWithDocument(_document());
+    final beforeDocumentRevision = runtime.state.value.revisions.document;
     final snapshots = <CanvasRuntimeState>[];
     runtime.state.addListener(() {
       snapshots.add(runtime.state.value);
@@ -134,7 +108,7 @@ void main() {
     });
 
     expect(snapshots, hasLength(1));
-    expect(snapshots.single.revisions.document, 1);
+    expect(snapshots.single.revisions.document, beforeDocumentRevision + 1);
     expect(snapshots.single.summary.elementCount, 3);
 
     runtime.edits.edit((edit) {});
@@ -142,7 +116,8 @@ void main() {
   });
 
   test('persisted camera edits do not mutate runtime view camera', () {
-    final runtime = runtimeWithDocument(_document());
+    final runtime = _runtimeWithDocument(_document());
+    final beforeDocumentRevision = runtime.state.value.revisions.document;
     final beforeViewCameraRevision = runtime.state.value.revisions.viewCamera;
 
     runtime.edits.edit((edit) {
@@ -151,7 +126,7 @@ void main() {
 
     expect(runtime.readDocument().camera.offset, const Offset(10, 20));
     expect(runtime.camera.offset, Offset.zero);
-    expect(runtime.state.value.revisions.document, 1);
+    expect(runtime.state.value.revisions.document, beforeDocumentRevision + 1);
     expect(runtime.state.value.revisions.viewCamera, beforeViewCameraRevision);
   });
 }
@@ -194,5 +169,12 @@ CanvasDocument _document() {
       ),
     ],
   );
+}
+
+CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
+
+  return runtime;
 }
 ''';
