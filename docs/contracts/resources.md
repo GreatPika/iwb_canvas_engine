@@ -95,6 +95,11 @@ is backed by the committed document owner for frame paint. The resource module
 must not import, read, or mutate `DocumentStoreKernel` or `RuntimeRoot`; it owns
 session policy, resolver-safe placeholder results, and dirty invalidation
 boundaries through narrow contract inputs only.
+Schema v1 runtime load imports resource declarations as store-owned descriptor
+rows during `DocumentStoreKernel` preparation. Load must not construct public
+`CanvasImageResource` instances or call app resolvers. Public
+`CanvasImageResource` appears only when an explicit read/resource/resolver-facing
+projection asks for a public resource view.
 Ordinary frame planning receives immutable row facts and resource ids needed to
 build records, but it does not receive descriptor snapshots or resolver/session
 APIs. In the target frame split, `PaintAssetBindingService` is the only frame

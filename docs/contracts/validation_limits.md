@@ -75,8 +75,8 @@ Validation is applied at:
 - edit/update construction;
 - dynamic or generated `CanvasFieldUpdate` materialization;
 - edit preflight;
-- schema decode;
-- loadDocument materialization;
+- schema v1 JSON validation and import;
+- store-owned schema load preparation;
 - resource upsert;
 - runtime config construction and materialization;
 - interaction config mutation;
@@ -88,7 +88,8 @@ Element transform admission uses the same validation boundary list. Every
 `CanvasElement.transform` and changed `CanvasElementUpdate.transform` value
 must be finite, invertible, and within the transform singular-value limits
 before public DTO exposure, generated or dynamic update materialization, edit
-preflight, schema decode materialization, or `loadDocument` materialization.
+preflight, schema v1 JSON validation/import, or store-owned schema load
+preparation.
 Non-invertible element transforms are rejected with `fieldMustBeInvertible`
 before any draft mutation, runtime mutation, repaint, event, or public state
 publication.
@@ -99,10 +100,15 @@ no control characters. It is
 validated at public construction and at the engine boundary that generates
 request ids for emitted interaction requests.
 
+The raw JSON limit applies to `CanvasEditPort.loadDocumentFromJson(String json)`
+before parse. Under the current `32 * 1024 * 1024` character limit, 100k raw
+JSON load acceptance is outside v1 release readiness unless a later design
+changes the limit with memory proof.
+
 `CanvasMetadata.fromMap` applies the metadata depth, key, string, and total
 encoded-byte limits at public construction and deep-freezes nested list/map
-values before exposure. Metadata accepted through schema decode uses the same
-limits before materializing `CanvasMetadata`. Public constructors that accept
+values before exposure. Metadata accepted through schema v1 JSON validation uses
+the same limits before import or public projection. Public constructors that accept
 caller-provided values with documented runtime validation or sanitization are
 non-const factories because validation and defensive ownership transfer must
 run before the value is exposed. Public `const` remains reserved for marker,

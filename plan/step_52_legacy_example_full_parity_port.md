@@ -10,7 +10,7 @@ Port the legacy Flutter example into a runnable rebuilt root example that preser
 - Research: `.research/2026-06-03-example-full-parity-before-p14.md`
 - Phase: none
 - PLAN: `PLAN.md`
-- Other: `docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md`, `docs/contracts/public_api_v1.md`, `docs/contracts/resources.md`, `docs/verification/guardrails.md`, `docs/verification/release_gates.md`, `docs/verification/tests.md`, `analysis_options.yaml`, `pubspec.yaml`, `lib/iwb_canvas_engine.dart`, `lib/src/api/canvas_runtime.dart`, `lib/src/surface/canvas_surface_widget.dart`, `lib/src/api/canvas_codec.dart`, `tool/guardrails/src/core_boundary_checks.dart`, `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`, `test/smoke/public_incremental_smoke_test.dart`, `legacy/iwb_canvas_engine/pubspec.yaml`, `legacy/iwb_canvas_engine/lib/src/contract/scene_defaults.dart`, `legacy/iwb_canvas_engine/example/lib/**`, `legacy/iwb_canvas_engine/example/pubspec.yaml`, `legacy/iwb_canvas_engine/image/cat.png`
+- Other: `plan/step_58_canonical_schema_v1_json_load_api.md`, `docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md`, `docs/contracts/public_api_v1.md`, `docs/contracts/resources.md`, `docs/verification/guardrails.md`, `docs/verification/release_gates.md`, `docs/verification/tests.md`, `analysis_options.yaml`, `pubspec.yaml`, `lib/iwb_canvas_engine.dart`, `lib/src/api/canvas_runtime.dart`, `lib/src/surface/canvas_surface_widget.dart`, `lib/src/api/canvas_codec.dart`, `tool/guardrails/src/core_boundary_checks.dart`, `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`, `test/smoke/public_incremental_smoke_test.dart`, `legacy/iwb_canvas_engine/pubspec.yaml`, `legacy/iwb_canvas_engine/lib/src/contract/scene_defaults.dart`, `legacy/iwb_canvas_engine/example/lib/**`, `legacy/iwb_canvas_engine/example/pubspec.yaml`, `legacy/iwb_canvas_engine/image/cat.png`
 
 ## Classification
 
@@ -28,7 +28,7 @@ Obligations: SEAM_MIGRATION
 | `D4` Replace `SceneView` with public `CanvasSurface`; keep pending-line marker as an app overlay derived from public preview state. | `Boundaries.In Scope`, Unit 3 | Unit 3 widget tests prove screen composition, `CanvasSurface` construction, pointer interaction, dock controls, and pending-line overlay projection from public preview. |
 | `D5` Keep resource bytes, physical cat image transfer, image disposal, and resolver implementation app-owned. | `Boundaries.State/data ownership`, `Boundaries.Source of Truth`, Unit 1, Unit 4 | Unit 1 transfers `legacy/iwb_canvas_engine/image/cat.png` to `example/image/cat.png` and declares Flutter asset key `image/cat.png`; Unit 4 tests asset load, resolver return, sample image insertion/rendering, and app-owned disposal/no engine IO. |
 | `D6` Preserve inline text editing through app overlay hiding and public `commitTextEdit`, not by mutating target visibility. | `Boundaries.Temporal Surface Closure`, Unit 1, Unit 5 | Unit 1 keeps overlay math dependency-free by default with Flutter `Matrix4` primitives; Unit 5 tests context request delivery, overlay focus/controller lifetime, no visibility patch before commit, commit result handling, dismiss/no-op cleanup, and text style control edits. |
-| `D7` Preserve JSON import/export workflow using schema v1 document JSON; old legacy scene JSON payload compatibility is not required. | `Boundaries.Compatibility`, `Boundaries.All-Or-Nothing Failure Boundary`, Unit 6 | Unit 6 tests export dialog JSON/copy, last-export import prefill, valid schema v1 load, invalid input snackbar, and no document mutation on decode failure. |
+| `D7` Preserve JSON import/export workflow using schema v1 document JSON; old legacy scene JSON payload compatibility is not required. | `Boundaries.Compatibility`, `Boundaries.All-Or-Nothing Failure Boundary`, Unit 6 | Completed Unit 6 records historical export/import proof for the pre-canonical public decode-then-load route; Step 58 owns the live migration to `runtime.edits.loadDocumentFromJson(json)`. |
 | `D8` Verification must include example-specific parity tests and structural import/retired-symbol checks because existing core guardrails do not scan example code. | `Boundaries.Order Constraints`, Unit 7 | Unit 7 adds or updates the exact test/guardrail surfaces and runs repository-required analyze, DCM, focused tests, docs checks when docs change, and release checks only when release/guardrail/benchmark surfaces are changed or claimed complete. |
 | User requirement on 2026-06-03: do not forget the cat photo transfer. | `Boundaries.In Scope`, Unit 1, Unit 4 | Unit 1 completion fails unless `example/image/cat.png` exists and is declared as asset key `image/cat.png`; Unit 4 completion fails unless the app resolver can load and render that asset. |
 | Research inventory `Add Sample` workflow. | `Boundaries.In Scope`, Unit 3, Unit 4, Unit 7 | Unit 3 exposes the UI command; Unit 4 adds public rect, text `New Note`, and cat image elements; Unit 7 verifies the full sample workflow, not only image insertion. |
@@ -48,7 +48,7 @@ Obligations: SEAM_MIGRATION
 - `.design/2026-06-03-legacy-example-full-parity-port.md:384` / import rule: only engine import is the public barrel -> Unit 7 must mechanically enforce import direction.
 - `.design/2026-06-03-legacy-example-full-parity-port.md:386` / selected form: default document must preserve equivalent layers, palette, background, grid, and camera defaults -> Unit 1 must name and test those next-owned defaults directly.
 - `.design/2026-06-03-legacy-example-full-parity-port.md:393` / text edit decision: overlay hides/covers visually and commits through `CanvasCommandPort.commitTextEdit` -> Unit 5 must reject legacy visibility mutation.
-- `.design/2026-06-03-legacy-example-full-parity-port.md:398` / JSON decision: export/import uses `encodeCanvasDocumentToJson` and `decodeCanvasDocumentFromJson` plus public load/replace -> Unit 6 owns schema v1 workflow.
+- `.design/2026-06-03-legacy-example-full-parity-port.md:398` / JSON decision: export/import uses schema v1 document JSON -> Unit 6 owns schema v1 workflow, with import route superseded by the current canonical public JSON load command instead of a public decode-then-load route.
 - `.design/2026-06-03-legacy-example-full-parity-port.md:413` / decision trace: D1 maps root example ownership to app/package setup and import proof -> Unit 1 and Unit 7 carry that decision.
 - `.design/2026-06-03-legacy-example-full-parity-port.md:417` / decision trace: D5 maps cat image/resource ownership to asset/resolver service and resource widget test -> Unit 1 and Unit 4 must include physical asset transfer and resolver proof.
 - `.design/2026-06-03-legacy-example-full-parity-port.md:420` / decision trace: D8 maps verification gaps to tests and structural proof -> Unit 7 owns example-specific checks.
@@ -69,13 +69,13 @@ Obligations: SEAM_MIGRATION
 - `.research/2026-06-03-example-full-parity-before-p14.md:194` / resource ownership: descriptors are committed document state, but bytes/images and resolution are app-owned and surface-session-bound -> Unit 4 keeps image IO/resolution outside engine.
 - `.research/2026-06-03-example-full-parity-before-p14.md:195` / text ownership: text editor UI is application-owned after context request delivery -> Unit 5 owns Flutter focus/controller lifetime.
 - `.research/2026-06-03-example-full-parity-before-p14.md:196` / release-boundary constraint: release proof and packaging are not a feature phase -> implementation must not add engine feature behavior inside this example-port step.
-- `.research/2026-06-03-example-full-parity-before-p14.md:200` / JSON open question resolved by design: old scene JSON compatibility was open, while public API exposes schema v1 -> contract preserves schema v1 workflow only.
+- `.research/2026-06-03-example-full-parity-before-p14.md:200` / JSON open question resolved by design: old scene JSON compatibility was open, while public API exposes schema v1 JSON -> contract preserves schema v1 workflow only.
 - `docs/contracts/public_api_v1.md:103` / public API ban: legacy public symbols are not exported -> example code must use next-owned public names.
 - `docs/contracts/public_api_v1.md:127` / public consumer rule: external adapter proof imports only public barrel -> root example must use the same engine access boundary.
 - `docs/contracts/public_api_v1.md:136` / public consumer fixture: compile without `src/**`, legacy symbols, or internal runtime classes -> structural proof must catch bypasses beyond analyzer success.
 - `docs/contracts/public_api_v1.md:317` / request id policy: no public interaction request id generator -> example must consume engine-delivered requests, not fabricate them.
 - `docs/contracts/public_api_v1.md:505` / surface contract: `CanvasSurface` is the public widget -> Unit 3 replaces `SceneView` with that widget.
-- `docs/contracts/public_api_v1.md:788` / codec contract: public schema helpers encode/decode `CanvasDocument` JSON -> Unit 6 uses rebuilt document JSON.
+- `docs/contracts/public_api_v1.md:788` / codec contract: public schema helpers encode `CanvasDocument` JSON and runtime edits load schema v1 JSON directly -> Unit 6 uses rebuilt document JSON without public decode as a runtime load route.
 - `docs/contracts/public_api_v1.md:1478` / command contract: `CanvasCommandPort.commitTextEdit` is public -> Unit 5 commits text through the command port.
 - `docs/contracts/public_api_v1.md:2360` / app text policy: applications commit request-originated text changes through `CanvasCommandPort.commitTextEdit` -> Unit 5 must not patch visibility/text directly for a request-originated edit.
 - `docs/contracts/resources.md:67` / resource session: each active `CanvasSurface` creates a concrete session -> app supplies resolver, while surface/session owns active cache lifecycle.
@@ -97,7 +97,7 @@ Obligations: SEAM_MIGRATION
 - `lib/src/surface/canvas_surface_widget.dart:14` / surface declaration: `CanvasSurface` is the public widget -> Unit 3 uses it as the render/pointer child.
 - `lib/src/surface/canvas_surface_widget.dart:108` / attach implementation: surface attach owns active resource session setup -> example passes resolver to surface instead of managing frame resource lifecycle.
 - `lib/src/api/canvas_codec.dart:18` / encode helper: schema v1 JSON encode operates on `CanvasDocument` -> export workflow uses rebuilt document JSON.
-- `lib/src/api/canvas_codec.dart:26` / decode helper: schema v1 JSON decode returns `CanvasDocument` -> import workflow decodes before load/replace.
+- `lib/src/api/canvas_codec.dart:26` / historical decode helper: current completed example import decodes schema v1 JSON into `CanvasDocument` before runtime load -> this is recorded as completed Step 52 proof only and is superseded by Step 58 for future import work.
 - `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart:20` / fixture test: import lines and retired symbols are checked mechanically -> Unit 7 structural proof should mirror this for example code.
 - `test/smoke/public_incremental_smoke_test.dart:18` / public smoke: generated consumer source imports Flutter and the public barrel -> example proof can reuse public-consumer compile assumptions.
 - `test/smoke/public_incremental_smoke_test.dart:920` / public surface smoke: public consumer already exercises `CanvasSurface` pointer/resource bridge -> Unit 3 and Unit 4 can focus on app-specific mapping and asset workflow.
@@ -114,7 +114,7 @@ Obligations: SEAM_MIGRATION
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:24` / legacy draw config: clear-selection-on-draw is enabled -> Unit 1 maps this to `CanvasRuntimeConfig.clearSelectionOnDrawModeEnter`.
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:25` / legacy pointer policy: tap slop `16`, double-tap slop `32`, and max delay `450` are configured -> Unit 1 maps these to `CanvasPointerPolicy`.
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:127` / legacy export: old workflow used `encodeSceneToJson` -> Unit 6 maps export to schema v1 helper, not legacy codec.
-- `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:139` / legacy import: old workflow used `decodeSceneFromJson` and replace -> Unit 6 maps import to schema v1 decode plus public load.
+- `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:139` / legacy import: old workflow used `decodeSceneFromJson` and replace -> completed Unit 6 mapped import to the then-current schema v1 decode plus public load route, now superseded by Step 58 for future work.
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:287` / legacy sample: `Add Sample` creates three nodes -> Unit 4 must create public rect, text, and image elements.
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:288` / legacy sample rect: rect is `140x90` with blue fill/stroke -> Unit 4 must preserve visible rect behavior with public element DTOs.
 - `legacy/iwb_canvas_engine/example/lib/ui/canvas_example/view_models/canvas_example_view_model.dart:298` / legacy sample text: text content is `New Note` at font size `20` and black color -> Unit 4 must preserve text note insertion.
@@ -146,7 +146,7 @@ The design file is the contract source input and decision handoff. The research 
 
 Compatibility:
 
-The rebuilt example must be source-compatible as an ordinary package consumer through `package:iwb_canvas_engine/iwb_canvas_engine.dart`. User-visible workflow parity is required, but legacy implementation mechanisms and old JSON payload compatibility are intentionally not preserved. JSON compatibility is schema v1 `CanvasDocument` workflow parity only: export JSON, copy it, import valid schema v1 JSON, replace/load the document, and show a snackbar/error without mutation on invalid input. Existing public API signatures, schema formats, release gates, and production guardrails must not be weakened.
+The rebuilt example must be source-compatible as an ordinary package consumer through `package:iwb_canvas_engine/iwb_canvas_engine.dart`. User-visible workflow parity is required, but legacy implementation mechanisms and old JSON payload compatibility are intentionally not preserved. Completed Step 52 proof covered schema v1 `CanvasDocument` workflow parity only: export JSON, copy it, import valid schema v1 JSON, replace/load the document, and show a snackbar/error without mutation on invalid input. The public decode-then-load import route is superseded for future work by `plan/step_58_canonical_schema_v1_json_load_api.md`; this checked Step 52 unit is historical proof, not live authorization to preserve or reintroduce that route. Existing public API signatures, schema formats, release gates, and production guardrails must not be weakened.
 
 Dependency/import direction:
 
@@ -154,7 +154,7 @@ Allowed: `example/** -> package:iwb_canvas_engine/iwb_canvas_engine.dart`, Flutt
 
 Order Constraints:
 
-Unit 1 establishes runnable app/package, asset declaration, physical cat image transfer, and default document/startup before behavior units depend on them. Unit 2 establishes runtime/view-model ownership before widgets bind controls. Unit 3 builds screen/surface/dock/pending preview on top of the view model. Unit 4 adds sample image service/resolver after asset and surface boundaries exist. Unit 5 adds text options and inline edit after context-request/runtime projection exists. Unit 6 adds JSON dialogs after schema v1 runtime load/export ownership exists. Unit 7 adds or finalizes structural proof, docs/verification updates if needed, and final repository checks after the example surfaces exist. If any unit finds a missing public engine capability, implementation stops before patching around internals.
+Unit 1 establishes runnable app/package, asset declaration, physical cat image transfer, and default document/startup before behavior units depend on them. Unit 2 establishes runtime/view-model ownership before widgets bind controls. Unit 3 builds screen/surface/dock/pending preview on top of the view model. Unit 4 adds sample image service/resolver after asset and surface boundaries exist. Unit 5 adds text options and inline edit after context-request/runtime projection exists. Unit 6 added JSON dialogs against the then-current schema v1 runtime load/export ownership; canonical JSON load API migration is owned by Step 58, not by reopening this checked unit. Unit 7 adds or finalizes structural proof, docs/verification updates if needed, and final repository checks after the example surfaces exist. If any unit finds a missing public engine capability, implementation stops before patching around internals.
 
 Temporal Surface Closure:
 
@@ -162,7 +162,7 @@ The relevant temporal invariant is that app callbacks and public runtime/surface
 
 All-Or-Nothing Failure Boundary:
 
-For JSON import, schema v1 decode/validation is fallible and must complete before the irreversible runtime load/replace point; invalid input projects snackbar/error UI and leaves the prior document unchanged. For text commit, the irreversible point is accepted `CanvasCommandPort.commitTextEdit`; unknown/stale/no-op results are contained to app UI cleanup/error handling without manual document mutation. For the user-facing Add Sample command, cat asset load/decode and app resolver readiness are fallible and must complete before the irreversible document mutation that adds the rect, text, resource descriptor, and image element group; asset/decode failure projects a bounded UI state or snackbar and leaves the document unchanged. For disposal, subscription and app-owned image cleanup must complete without disposing engine-owned state when the runtime was injected.
+For JSON import, the completed Step 52 flow decoded and validated schema v1 JSON before the irreversible runtime load/replace point; invalid input projected snackbar/error UI and left the prior document unchanged. The canonical future JSON-load failure boundary is owned by Step 58. For text commit, the irreversible point is accepted `CanvasCommandPort.commitTextEdit`; unknown/stale/no-op results are contained to app UI cleanup/error handling without manual document mutation. For the user-facing Add Sample command, cat asset load/decode and app resolver readiness are fallible and must complete before the irreversible document mutation that adds the rect, text, resource descriptor, and image element group; asset/decode failure projects a bounded UI state or snackbar and leaves the document unchanged. For disposal, subscription and app-owned image cleanup must complete without disposing engine-owned state when the runtime was injected.
 
 ## Execution Units
 
@@ -285,6 +285,13 @@ Example import/export dialog widgets, clipboard/snackbar integration, view-model
 Boundary:
 
 Preserve the user-facing JSON workflow using rebuilt schema v1 `CanvasDocument` JSON only. This unit does not add legacy scene JSON compatibility or a migration bridge.
+
+Supersession:
+
+This checked unit records completed historical proof for the pre-canonical
+public decode-then-load route. It is not a live requirement to preserve
+`decodeCanvasDocumentFromJson` plus `runtime.edits.loadDocument(document)`.
+Canonical direct JSON import is owned by unchecked Step 58 units.
 
 Change:
 

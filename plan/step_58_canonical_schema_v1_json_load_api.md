@@ -102,7 +102,7 @@ The irreversible point is accepted runtime install of prepared store tables plus
 
 ## Execution Units
 
-### [ ] Unit 1: Roadmap and public source-of-truth migration
+### [x] Unit 1: Roadmap and public source-of-truth migration
 
 Owner:
 

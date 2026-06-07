@@ -40,8 +40,9 @@ Do not assume:
 
 ### 19.1 Entry points
 
-Production `CodecBoundary` owns schema v1 decode/encode only. It must not read
-or write legacy schema versions.
+Production `CodecBoundary` owns schema v1 encode and internal schema v1 import
+validation for runtime JSON load. It must not read or write legacy schema
+versions.
 
 ```dart
 const int canvasSchemaVersionWrite = 1;
@@ -49,8 +50,9 @@ const Set<int> canvasSchemaVersionsRead = {1};
 
 Map<String, Object?> encodeCanvasDocument(CanvasDocument document);
 String encodeCanvasDocumentToJson(CanvasDocument document);
-CanvasDocument decodeCanvasDocument(Map<String, Object?> json);
-CanvasDocument decodeCanvasDocumentFromJson(String json);
+
+// Internal only: runtime JSON load validates schema v1 JSON and emits
+// dependency-neutral import events for store-owned preparation.
 ```
 
 ### 19.2 Decode algorithm
@@ -64,18 +66,35 @@ CanvasDocument decodeCanvasDocumentFromJson(String json);
 6. primitive validation;
 7. resources validation;
 8. elements validation, including non-invertible element transform rejection;
-9. duplicate id checks;
-10. missing resource reference checks;
-11. layer/node count checks;
-12. metadata validation and deep-freeze into `CanvasMetadata`;
-13. materialize `contracts/public` CanvasDocument immutable DTO;
-14. no runtime/store side effects.
+9. metadata validation;
+10. dependency-neutral import event emission;
+11. no runtime/store side effects.
 ```
 
-Decode rejects non-invertible element transforms before DTO materialization.
-This is codec boundary validation, not runtime repair: decode failure does not
-expose a partial `CanvasDocument`, does not call `loadDocument`, and does not
-mutate runtime or store state.
+The public API does not expose `decodeCanvasDocument` or
+`decodeCanvasDocumentFromJson` as runtime load routes. Runtime JSON load shares
+the schema v1 validation policy, but the codec side does not materialize
+`CanvasDocument`, `CanvasImageResource`, store rows, store sinks, or a retained
+document-sized validated fact/list/tree payload. Duplicate id checks, id
+admission, missing resource reference checks, and cross-row reference checks are
+store-owned preparation responsibilities.
+
+The public encode helper still validates DTO input before writing canonical
+schema v1 JSON. That validation may materialize and inspect public DTOs because
+encode is an explicit projection/output path, not the runtime load path:
+
+```text
+1. validate `contracts/public` DTO;
+2. reject invalid metadata or non-invertible element transforms;
+3. enforce layer/node/resource limits;
+4. no runtime/store side effects.
+```
+
+Runtime import validation rejects non-invertible element transforms before any
+store preparation or runtime mutation. This is codec boundary validation, not
+runtime repair: validation failure does not expose a partial `CanvasDocument`,
+does not call a public decode helper, and does not mutate runtime or store
+state.
 
 ### 19.3 Encode algorithm
 

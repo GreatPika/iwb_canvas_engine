@@ -53,7 +53,7 @@ Sections grouped by implementation phase from `docs/_registry/sections.yaml`.
 
 - `section_10_runtime_data_model` - 10. Runtime data model
 - `section_11_edit_kernel` - 11. EditKernel implementation contract
-- `section_12_load_document` - 12. `loadDocument` staged contract
+- `section_12_load_document` - 12. Schema v1 JSON load contract
 - `section_13_operation_matrix` - 13. Operation matrix
 - `section_23_tests` - 23. Tests
 
@@ -86,7 +86,7 @@ Sections grouped by implementation phase from `docs/_registry/sections.yaml`.
 
 - `section_04_public_api_v1` - 4. Public API v1: полный surface
 - `section_11_edit_kernel` - 11. EditKernel implementation contract
-- `section_12_load_document` - 12. `loadDocument` staged contract
+- `section_12_load_document` - 12. Schema v1 JSON load contract
 - `section_13_operation_matrix` - 13. Operation matrix
 - `section_14_interaction_engine` - 14. InteractionEngine
 - `section_15_frame_render_contract` - 15. FrameEngine and render contract
@@ -98,7 +98,7 @@ Sections grouped by implementation phase from `docs/_registry/sections.yaml`.
 
 - `section_04_public_api_v1` - 4. Public API v1: полный surface
 - `section_11_edit_kernel` - 11. EditKernel implementation contract
-- `section_12_load_document` - 12. `loadDocument` staged contract
+- `section_12_load_document` - 12. Schema v1 JSON load contract
 - `section_13_operation_matrix` - 13. Operation matrix
 - `section_14_interaction_engine` - 14. InteractionEngine
 - `section_16_geometry_policy` - 16. Geometry policy v1
@@ -108,7 +108,7 @@ Sections grouped by implementation phase from `docs/_registry/sections.yaml`.
 
 - `section_04_public_api_v1` - 4. Public API v1: полный surface
 - `section_11_edit_kernel` - 11. EditKernel implementation contract
-- `section_12_load_document` - 12. `loadDocument` staged contract
+- `section_12_load_document` - 12. Schema v1 JSON load contract
 - `section_13_operation_matrix` - 13. Operation matrix
 - `section_14_interaction_engine` - 14. InteractionEngine
 - `section_16_geometry_policy` - 16. Geometry policy v1

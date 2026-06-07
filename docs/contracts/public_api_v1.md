@@ -367,7 +367,6 @@ dynamic or generated invalid field updates -> validation error before draft muta
 ```dart
 final class CanvasRuntime {
   CanvasRuntime({
-    CanvasDocument? initialDocument,
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
   });
 
@@ -395,11 +394,13 @@ final class CanvasRuntime {
 ```
 
 `CanvasRuntime` is not a Flutter widget. It may be used in tests without mounting UI.
-When `initialDocument` is provided, construction installs that document as the
-initial committed document and initializes the runtime view camera from the
-document's persisted camera. No public state notification is emitted during
-construction; the initial `state.value` and `camera` getters already reflect the
-installed document and runtime view camera.
+Construction always creates the default empty committed document and initializes
+the runtime view camera from that default document's persisted camera. Public
+runtime construction has no document or JSON load input. Applications that need
+to install saved schema v1 content construct a runtime first and then call
+`runtime.edits.loadDocumentFromJson(json)`. No public state notification is
+emitted during construction; the initial `state.value` and `camera` getters
+already reflect the default committed document and runtime view camera.
 `state.value` is the single public runtime observation snapshot. Applications
 that need repaint, cache, badge, toolbar, or save-state updates subscribe to
 `state` and compare the public revision domains they care about.
@@ -791,14 +792,14 @@ const Set<int> canvasSchemaVersionsRead = {1};
 
 Map<String, Object?> encodeCanvasDocument(CanvasDocument document);
 String encodeCanvasDocumentToJson(CanvasDocument document);
-CanvasDocument decodeCanvasDocument(Map<String, Object?> json);
-CanvasDocument decodeCanvasDocumentFromJson(String json);
 ```
 
-These are public API declarations for the schema v1 codec surface. The
-`CodecBoundary` contract owns schema v1 decode/encode behavior, validation
-order, canonical encoding, supported versions, JSON boundary parsing, and the
-rule that codec calls have no runtime/store side effects.
+These are public API declarations for schema v1 encoding and schema version
+introspection. Public schema v1 JSON load is not a public decode helper; it is
+the runtime command `CanvasEditPort.loadDocumentFromJson(String json)`. The
+`CodecBoundary` contract owns canonical encoding and the internal validation
+policy shared by runtime JSON load, while runtime load must not expose a public
+`CanvasDocument` decode route or materialize a public DTO as its load input.
 
 ### 4.9 Geometry enums and transform
 
@@ -1345,7 +1346,7 @@ selection-normalization, no-op, and rollback effects for changed fields.
 ```dart
 abstract interface class CanvasEditPort {
   T edit<T>(T Function(CanvasEdit edit) fn);
-  void loadDocument(CanvasDocument document);
+  void loadDocumentFromJson(String json);
 }
 
 abstract interface class CanvasEdit {
@@ -1393,9 +1394,10 @@ Edit contract:
 `CanvasEdit.setCameraOffset` changes the persisted document camera. It is a
 document edit: changed offsets increment `state.revisions.document`, invalidate
 the public `CanvasDocument` projection, and are visible through `readDocument`.
-It never directly mutates the runtime view camera. Runtime construction with an
-`initialDocument` and `loadDocument` both initialize the runtime view camera from
-the installed document's persisted camera.
+It never directly mutates the runtime view camera. Runtime construction
+initializes the runtime view camera from the default persisted document camera.
+Successful `loadDocumentFromJson` initializes the runtime view camera from the
+installed schema v1 document's persisted camera.
 
 Persisting the current runtime view camera is an explicit edit boundary:
 

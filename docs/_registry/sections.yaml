@@ -434,7 +434,7 @@
   id: section_12_load_document
   source: docs/_registry/sections.yaml / section 12
   file: docs/contracts/load_document.md
-  title: "12. `loadDocument` staged contract"
+  title: "12. Schema v1 JSON load contract"
   phases:
     - P6
     - P10
@@ -461,7 +461,7 @@
     - test.runtime.load_document_state_publication
   do_not_assume:
     - no interrupt before successful preparation
-    - no prepared replacement in public API
+    - no public CanvasDocument load input
 -
   id: section_13_operation_matrix
   source: docs/_registry/sections.yaml / section 13

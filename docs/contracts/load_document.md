@@ -3,7 +3,7 @@ Registry id: `section_12_load_document`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/contracts/load_document.md`
 Owns:
-- 12. `loadDocument` staged contract
+- 12. Schema v1 JSON load contract
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
@@ -28,19 +28,20 @@ Guardrails:
 - `load.success_interrupts_before_install`
 Do not assume:
 - no interrupt before successful preparation
-- no prepared replacement in public API
+- no public CanvasDocument load input
 <!-- CONTEXT:END -->
 
-## 12. `loadDocument` staged contract
+## 12. Schema v1 JSON load contract
 
-`CanvasEditPort.loadDocument(document)` is the next public external document
-replacement operation. The `CanvasEditPort` declaration lives in
-`contracts/public/**`; the public API facade delegates orchestration to
+`CanvasEditPort.loadDocumentFromJson(json)` is the canonical public external
+document replacement operation. Applications call it on an existing
+`CanvasRuntime` with schema v1 JSON. `CanvasRuntime` construction has no
+document or JSON load input, and public `CanvasDocument` remains only a
+read/output projection. The public API facade delegates orchestration to
 `RuntimeRoot`; it does not read from or install into `DocumentStoreKernel`
-directly. `RuntimeRoot` owns the atomic cross-owner replacement operation once
-validation and materialization have succeeded: document replacement is installed
-into `DocumentStoreKernel`, and selection is cleared through the internal
-selection owner before any public state notification is published.
+directly. `RuntimeRoot` owns the atomic cross-owner replacement operation after
+all fallible JSON validation, dependency-neutral import, store row/table
+preparation, and prepared interaction cleanup have succeeded.
 
 P6 owns only the minimal early interaction boundary needed by staged
 replacement:
@@ -64,31 +65,34 @@ P10-P12 and consume this ordering instead of being prerequisites for P6.
 Success ordering:
 
 ```text
-1. validate `contracts/public` CanvasDocument, including `CanvasMetadata`, frozen collection ownership, and invertible element transforms;
-2. materialize PreparedDocumentLoad;
-3. if validation/materialization succeeds, request prepared interaction cleanup;
-4. produce the LoadInteractionCleanupOutcome before the document install commit
+1. check raw JSON length;
+2. parse JSON and validate schema v1 root, fields, metadata, enums, resources, elements, and invertible element transforms through codec-owned policy;
+3. emit dependency-neutral schema import events without constructing CanvasDocument, CanvasImageResource, store rows, or a retained validated fact graph;
+4. let DocumentStoreKernel-owned preparation consume the import events into store-owned rows/tables, resource descriptor rows, id admission facts, reference checks, revision facts, runtime camera facts, and projection invalidation facts;
+5. if import and store preparation succeed, request prepared interaction cleanup;
+6. produce the LoadInteractionCleanupOutcome before the document install commit
    point; the outcome records whether prepared cleanup changed public preview
    publication state, while full pointer cleanup policy remains owned by
    PointerToolCleanupCoordinator;
-5. atomically install the replacement document and clear selection through the
+7. atomically install the replacement document and clear selection through the
    runtime/applier boundary;
-6. initialize runtime view camera from the persisted document camera;
-7. increment `state.revisions.epoch`, `state.revisions.document`,
+8. initialize runtime view camera from the persisted schema v1 document camera;
+9. increment `state.revisions.epoch`, `state.revisions.document`,
    `state.revisions.selection`, `state.revisions.viewCamera`, and
    `state.revisions.preview` if active preview cleanup changed preview state
    inside the same atomic runtime result;
-8. invalidate projection/spatial/frame/resource caches;
-9. schedule main repaint and overlay repaint;
-10. publish one `CanvasRuntimeState` after install.
+10. invalidate projection/spatial/frame/resource caches without building public projection;
+11. schedule main repaint and overlay repaint;
+12. publish one `CanvasRuntimeState` after install.
 ```
 
-`PreparedDocumentLoad` owns replacement committed tables, generated id admission
-state, and replacement revision facts. The runtime/applier boundary combines
-that prepared document payload with a selection-owner clear effect. Selection
-clearing is not a separate post-install mutation. Pointer normalization and
-pending tap cleanup are also not separate post-install owner calls; they are
-carried by the prepared interaction cleanup outcome before document install.
+The prepared store load owns replacement committed tables, resource descriptor
+rows, generated id admission state, and replacement revision facts. The
+runtime/applier boundary combines that prepared store payload with a
+selection-owner clear effect. Selection clearing is not a separate post-install
+mutation. Pointer normalization and pending tap cleanup are also not separate
+post-install owner calls; they are carried by the prepared interaction cleanup
+outcome before document install.
 The public `CanvasRuntimeState` published after install is the first public
 observation of the replacement document, cleared selection, optional preview
 cleanup, incremented epoch, and runtime view camera initialized from the
@@ -97,7 +101,7 @@ persisted document camera.
 Failure ordering:
 
 ```text
-1. validate/materialize fails, including invalid `CanvasMetadata`, mutable DTO boundary input, or non-invertible element transform input;
+1. raw length check, JSON parse, schema validation, import event emission, store row/table preparation, id admission, reference checks, or prepared cleanup fails;
 2. active gesture is not interrupted;
 3. preview remains unchanged;
 4. pending line remains unchanged;
@@ -111,6 +115,13 @@ Failure ordering:
 12. exception is rethrown as CanvasDataException or StateError.
 ```
 
+Failed load must not materialize a public `CanvasDocument`, build
+`DocumentProjectionCache`, create public `CanvasImageResource`, install partial
+store rows, clear selection, change runtime view camera, increment revisions,
+publish effects/actions, or notify state listeners. Successful load may
+invalidate public projection, but the first `CanvasDocument` projection is built
+only when an explicit read/projection path asks for it.
+
 `CanvasEdit.replaceDraftDocument(document)` is different:
 
 ```text
@@ -118,7 +129,7 @@ Failure ordering:
 - no external gesture interruption;
 - rollback-safe;
 - participates in same atomic edit session;
-- external loadDocument tests do not prove replaceDraftDocument behavior.
+- external JSON load tests do not prove replaceDraftDocument behavior.
 ```
 
 ---

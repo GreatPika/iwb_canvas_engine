@@ -109,8 +109,6 @@ public_exports:
   - CanvasTransform
   - encodeCanvasDocument
   - encodeCanvasDocumentToJson
-  - decodeCanvasDocument
-  - decodeCanvasDocumentFromJson
   - canvasSchemaVersionWrite
   - canvasSchemaVersionsRead
 diagnostics_public_surface:

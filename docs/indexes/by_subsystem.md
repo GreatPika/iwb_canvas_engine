@@ -38,7 +38,7 @@ Sections grouped by subsystem from `docs/_registry/sections.yaml`.
 
 - `section_10_runtime_data_model` - 10. Runtime data model
 - `section_11_edit_kernel` - 11. EditKernel implementation contract
-- `section_12_load_document` - 12. `loadDocument` staged contract
+- `section_12_load_document` - 12. Schema v1 JSON load contract
 - `section_13_operation_matrix` - 13. Operation matrix
 
 ## schema_codec

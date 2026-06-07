@@ -65,9 +65,17 @@ Selection is runtime view state owned by `SelectionKernel`, not committed
 document content. `CommittedDocument` stores no selected ids, selected order, or
 selection revision.
 
-Sparse public edits prepare and install against these committed tables. The
-edit session records sparse mutations and asks `DocumentStoreKernel` to build
-the accepted next `CommittedDocument` snapshot before the irreversible swap.
+Sparse public edits prepare and install against these committed tables. Schema
+v1 JSON load prepares replacement committed tables through the same store-owned
+source of truth, but its input is dependency-neutral schema import events rather
+than public `CanvasDocument`. The codec validates JSON and emits import events;
+`DocumentStoreKernel` consumes those events into prepared rows/tables, resource
+descriptor rows, admitted-id facts, reference facts, revision facts, camera
+facts, and projection invalidation facts before runtime install.
+
+Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
+build the accepted next `CommittedDocument` snapshot before the irreversible
+swap.
 The store validates id admission, layer/resource membership, image references,
 row placement, revision-family alignment, and projection invalidation in that
 prepare step. A successful sparse install swaps committed tables and revision
@@ -126,10 +134,12 @@ RectRows
 Each row table stores only family-specific fields plus common packed fields needed by render/hit/update. Public DTOs are projections.
 
 Runtime view camera is not stored in `CommittedDocument`. It is runtime state
-owned by `RuntimeRoot` through the camera boundary. Runtime construction with an
-initial document and `loadDocument` both initialize the runtime view camera from
-`persistedCameraOffset`; `readDocument` projects the persisted camera, not the
-current runtime view camera.
+owned by `RuntimeRoot` through the camera boundary. Runtime construction creates
+the default empty document and initializes the runtime view camera from that
+document's `persistedCameraOffset`; successful schema v1 JSON load initializes
+the runtime view camera from the loaded document's `persistedCameraOffset`.
+`readDocument` projects the persisted camera, not the current runtime view
+camera.
 
 ### 10.2 Revisions
 
@@ -231,5 +241,12 @@ source of truth and `CanvasDocument` as a read DTO.
 Projection DTOs must deep-copy all public collections and materialize frozen
 `CanvasMetadata` values. Runtime tables may store compact metadata facts, but
 raw metadata maps are not exposed as ordinary public DTO metadata.
+
+Schema v1 JSON load preserves this lazy projection policy. Valid load installs
+prepared store-owned committed tables and invalidates projection facts, but it
+must not build `DocumentProjectionCache` or retain a public `CanvasDocument` as
+the loaded state. Resource JSON is imported as committed descriptor rows; public
+`CanvasImageResource` is materialized only by explicit read/resource projection
+or resolver-facing surfaces.
 
 ---
