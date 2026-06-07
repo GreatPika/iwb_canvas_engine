@@ -1,57 +1,54 @@
-%% Failed loadDocument sequence
+%% Failed schema-v1 JSON load sequence
 sequenceDiagram
   autonumber
 
   actor Caller as Application code
   participant API as CanvasEditPort
   participant Runtime as RuntimeRoot
-  participant Stager as Staged load boundary
-  participant Diagnostics as Load failure projection
+  participant Codec as CodecBoundary
+  participant Import as Schema v1 import events
   participant Store as DocumentStoreKernel
-  participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
+  participant Selection as SelectionKernel
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
   participant Resources as ResourceKernel
   participant Frame as FrameEngine
   participant Signals as Public state/effects
 
-  Caller->>API: loadDocument(document)
-  API->>Runtime: delegate loadDocument(document)
-  Runtime->>Runtime: reject disposed runtime before mutation
+  Caller->>API: loadDocumentFromJson(json)
+  API->>Runtime: delegate schema-v1 JSON load
+  Runtime->>Runtime: reject disposed or guarded runtime before mutation
 
-  alt runtime is disposed
-    Runtime--x API: throw StateError("CanvasRuntime is disposed.")
+  alt runtime is disposed or delivering commit effects
+    Runtime--x API: throw StateError
     API--x Caller: rethrow StateError
-    Note over Runtime,Signals: Rejection is a boundary failure. No store, cache, repaint, action, or listener effect is started.
+    Note over Runtime,Signals: Boundary rejection starts no store, cache, repaint, action, or listener effect.
   else runtime accepts public entry
-    Runtime->>Store: read current committed identity, document revisions, and id admission state
-    Store-->>Runtime: current committed state remains installed
-    Runtime->>Selection: read current selectionRevision
-    Selection-->>Runtime: current selected ids remain installed
+    Runtime->>Codec: parse and validate schema-v1 JSON
+    Codec->>Codec: check raw length, JSON shape, schemaVersion, fields, metadata, enums, and transforms
 
-    Runtime->>Stager: validate public CanvasDocument
-    Stager->>Stager: verify DTO invariants, limits, invertible transforms, duplicate ids, resource references, and CanvasMetadata
-
-    alt public document, transform admission, or frozen metadata validation fails
-      Stager--x Runtime: validation failure
-    else runtime materialization fails
-      Runtime->>Stager: prepare full document replacement from DTO and current snapshot
-      Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
-      Stager--x Runtime: materialization failure
+    alt codec validation or import-event read fails
+      Codec--x Runtime: CanvasDataException
+    else store preparation fails
+      Codec->>Import: emit dependency-neutral import events
+      Import-->>Store: event stream
+      Runtime->>Store: prepare schema-v1 store import
+      Store->>Store: check duplicate ids, id admission, references, layer order, and descriptor rows
+      Store--x Runtime: CanvasDataException or StateError
+    else prepared cleanup fails
+      Store-->>Runtime: PreparedStoreDocumentImport
+      Runtime->>Interaction: prepare successful load cleanup
+      Interaction--x Runtime: StateError
     end
 
-    Runtime->>Diagnostics: project load failure; validation route uses codec bridge
-    Diagnostics->>Diagnostics: sanitize path and bounded details; no runtime source
-    Diagnostics-->>Runtime: CanvasDataException or StateError
     Runtime--x API: rethrow projected exception
-    API--x Caller: rethrow projected exception
+    API--x Caller: rethrow exception
 
-    Note over Runtime,Interaction: Active gesture is not interrupted. Preview, pending line, pointer normalization, and pending tap history remain unchanged.
-    Note over Store: Committed document identity, controllerEpoch, and all document revisions remain unchanged.
-    Note over Selection: Selected ids and selectionRevision remain unchanged.
-    Note over Projection,Frame: Projection, spatial, resource, paint, static, text, path, stroke, and overlay caches remain unchanged.
-    Note over Frame,Signals: No main repaint, overlay repaint, CanvasActionCommitted event, text edit event, or public state publication occurs.
+    Note over Runtime,Interaction: Active gesture, preview, pending input, and text editing state remain unchanged.
+    Note over Store,Selection: Committed rows, document identity, revisions, selected ids, and selectionRevision remain unchanged.
+    Note over Projection,Frame: Projection, spatial, resource, frame caches, and repaint scheduling remain unchanged.
+    Note over Signals: No CanvasRuntimeState publication and no CanvasActionCommitted event occur.
   end
 
-  Note over Runtime,Store: Failure stops before PreparedDocumentLoad install. There is no atomic install, revision bump, cache invalidation action, or success-path interaction cleanup.
+  Note over Runtime,Store: Failure stops before prepared store install. There is no partial row install, selection clear, view camera change, revision bump, cache invalidation, or first projection.

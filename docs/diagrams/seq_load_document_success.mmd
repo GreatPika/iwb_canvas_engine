@@ -1,74 +1,56 @@
-%% Successful loadDocument sequence
+%% Successful schema-v1 JSON load sequence
 sequenceDiagram
   autonumber
 
   actor Caller as Application code
-  participant Codec as CodecBoundary
   participant API as CanvasEditPort
   participant Runtime as RuntimeRoot
-  participant Stager as Staged load boundary
+  participant Codec as CodecBoundary
+  participant Import as Schema v1 import events
   participant Store as DocumentStoreKernel
-  participant Selection as SelectionKernel
   participant Interaction as InteractionEngine
   participant Cleanup as PointerToolCleanupCoordinator
+  participant Selection as SelectionKernel
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
   participant Resources as ResourceKernel
   participant Frame as FrameEngine
   participant Signals as Public state/effects
 
-  opt caller starts from schema v1 JSON
-    Caller->>Codec: decodeCanvasDocument / decodeCanvasDocumentFromJson
-    Codec->>Codec: parse schemaVersion 1 and validate known fields
-    Codec->>Codec: validate resources, element ids, references, limits, and metadata
-    Codec-->>Caller: immutable CanvasDocument DTO with CanvasMetadata
-    Note over Codec,Store: Decode materializes only a public DTO and has no runtime or store side effects.
-  end
+  Caller->>API: loadDocumentFromJson(json)
+  API->>Runtime: delegate schema-v1 JSON load
+  Runtime->>Runtime: reject disposed or guarded runtime before mutation
 
-  Caller->>API: loadDocument(document)
-  API->>Runtime: delegate loadDocument(document)
-  Runtime->>Runtime: reject disposed runtime before mutation
-  Runtime->>Store: read current committed identity, document revisions, and id admission state
-  Store-->>Runtime: current committed snapshot remains installed
-  Runtime->>Selection: read current selectionRevision
-  Selection-->>Runtime: current selected ids remain installed
+  Runtime->>Codec: parse and validate schema-v1 JSON
+  Codec->>Codec: check raw length, JSON shape, schemaVersion 1, known fields, metadata, enums, and transforms
+  Codec->>Import: emit dependency-neutral document, resource, layer, and element events
+  Note over Codec,Import: Codec does not construct CanvasDocument, CanvasImageResource, store rows, or a retained validated graph.
 
-  Runtime->>Stager: validate public CanvasDocument
-  Stager->>Stager: verify DTO invariants, limits, duplicate ids, resource references, and frozen metadata
-  Runtime->>Stager: prepare full document replacement from DTO and current snapshot
-  Stager->>Stager: materialize compact tables, resource descriptors, order, meta, and id generator floor
-  Stager-->>Runtime: PreparedDocumentLoad replacement payload
-  Note over Runtime,Store: No interaction interrupt, preview clear, cache eviction, repaint, public state publication, or store mutation occurs before preparation succeeds.
+  Import-->>Store: event stream
+  Runtime->>Store: prepare schema-v1 store import from current revisions
+  Store->>Store: build resource descriptor rows, family rows, layer order, ids, references, revisions, and camera facts
+  Store-->>Runtime: PreparedStoreDocumentImport
+  Note over Runtime,Store: No interaction interrupt, selection clear, cache eviction, repaint, state publication, or projection build occurs before preparation succeeds.
 
-  Runtime->>Interaction: success-only request for prepared load cleanup
-  Interaction->>Cleanup: typed cleanup request for prepared load success
-  Cleanup-->>Interaction: PointerCleanupOutcome(load sequencing, preview, pointer normalization, pending tap facts)
-  Interaction->>Interaction: stage prepared outcome before install
-  Interaction->>Interaction: bump previewRevision if preview was active
-  Interaction-->>Runtime: prepared cleanup outcome queued until install
-  Note over Interaction,Signals: Preview state may be cleared before install, but no public state is published before the committed replacement is installed.
+  Runtime->>Interaction: prepare successful load cleanup
+  Interaction->>Cleanup: typed prepared-load cleanup request
+  Cleanup-->>Interaction: LoadInteractionCleanupOutcome
+  Interaction-->>Runtime: preview cleanup facts prepared before install
 
-  Runtime->>Store: install PreparedDocumentLoad document payload atomically
-  Runtime->>Selection: clear selection in same runtime result
-  Store->>Store: replace compact committed tables and id admission in one commit boundary
-  Selection->>Selection: clear selected ids and increment selectionRevision if needed
-  Store->>Store: assign new committed identity
-  Store->>Store: increment controllerEpoch and document/structural/bounds/visual/projection/resource revisions inside the install
-  Note over Store: Store state is committed tables and revision state, not a live CanvasDocument DTO.
-  Note over Runtime,Selection: Selection clear is not a public post-install mutation; it is part of the same atomic runtime result.
-  Store-->>Runtime: committed replacement revision facts and installed persisted camera
-  Selection-->>Runtime: committed selection revision facts
-  Runtime->>Runtime: initialize runtime view camera from installed persisted document camera
+  Runtime->>Store: install prepared store rows atomically
+  Store->>Store: replace committed tables and id admission
+  Store-->>Runtime: installed revisions and persisted camera facts
+  Runtime->>Selection: clear selection in same accepted result
+  Selection-->>Runtime: selection revision facts
+  Runtime->>Runtime: initialize runtime view camera from installed persisted camera
+  Runtime->>Runtime: increment epoch and viewCamera revisions
 
-  Store->>Projection: evict public document projection by projectionRevision
-  Runtime->>Spatial: rebuild full spatial index from replacement tables
-  Runtime->>Resources: clear image resolve cache for replaced descriptors
-  Runtime->>Frame: reset replacement-scoped paint, static, text, path, and stroke caches
-  Frame->>Frame: schedule main repaint for replacement document
-  Runtime->>Frame: schedule overlay repaint from prepared PointerCleanupOutcome if preview changed
-  Note over Runtime,Interaction: No interaction owner call runs after install; runtime consumes the already prepared cleanup outcome.
+  Store->>Projection: invalidate public projection without building it
+  Runtime->>Spatial: rebuild replacement spatial index from committed rows
+  Runtime->>Resources: invalidate descriptor-backed resource visuals
+  Runtime->>Frame: reset replacement-scoped caches and schedule repaint
+  Runtime->>Signals: publish one CanvasRuntimeState after install
+  Note over Signals: JSON load emits no CanvasActionCommitted event and does not build the first CanvasDocument projection.
 
-  Runtime->>Signals: publish one CanvasRuntimeState after install, including required viewCamera revision and preview cleanup revision if changed
-  Note over Signals: loadDocument emits no CanvasActionCommitted event.
-  Runtime-->>API: loadDocument complete
-  API-->>Caller: return after post-install effects are scheduled and the state listener is notified
+  Runtime-->>API: complete
+  API-->>Caller: return after accepted state/effect delivery

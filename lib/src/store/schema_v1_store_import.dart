@@ -9,6 +9,9 @@ import 'resource_table.dart';
 import 'revision_state.dart';
 import 'store_revision_delta.dart';
 
+// The builder is the single handoff from schema-v1 import events to committed
+// store tables; splitting it would create another retained import graph.
+// ignore: coupling-between-object-classes
 final class StoreSchemaV1ImportBuilder implements SchemaV1ImportSink {
   SchemaV1DocumentImportEvent? _document;
   final List<SchemaV1ImageResourceImportEvent> _resources = [];
@@ -53,6 +56,9 @@ final class StoreSchemaV1ImportBuilder implements SchemaV1ImportSink {
     _ended = true;
   }
 
+  // Preparation keeps row construction, revision acceptance, and prepared
+  // payload creation in one pass so no second document-sized graph appears.
+  // ignore: halstead-volume, source-lines-of-code
   PreparedStoreDocumentImport prepare({
     required RevisionState baseRevisions,
     required StoreRevisionDelta revisionDelta,

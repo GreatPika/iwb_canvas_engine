@@ -12,13 +12,22 @@ void main() {
 }
 
 void _registerRetiredPublicRouteTests() {
+  _testRetiredRoutesAbsentFromRealSurfaces();
+  _testRetiredPublicDeclarationsRejected();
+  _testRetiredProductionAndExampleCallsRejected();
+  _testInternalLoadTypesQuarantinedFromPublicApi();
+}
+
+void _testRetiredRoutesAbsentFromRealSurfaces() {
   test(
     'retired public load routes are absent from real public surfaces',
     () async {
       expect(await checkNoRetiredPublicLoadRoutes(), isEmpty);
     },
   );
+}
 
+void _testRetiredPublicDeclarationsRejected() {
   test('retired public load route declarations are rejected', () async {
     final violations = await checkNoRetiredPublicLoadRoutes(
       sourceOverrides: _retiredPublicLoadRouteSources(),
@@ -29,7 +38,39 @@ void _registerRetiredPublicRouteTests() {
     });
     expect(violations, hasLength(4));
   });
+}
 
+void _testRetiredProductionAndExampleCallsRejected() {
+  test(
+    'retired production and example load route calls are rejected',
+    () async {
+      final violations = await checkNoRetiredPublicLoadRoutes(
+        sourceOverrides: _retiredRuntimeAndExampleLoadCallSources(),
+      );
+
+      expect(violations.map((violation) => violation.guardrailId).toSet(), {
+        'api.no_retired_public_load_routes',
+      });
+      expect(
+        violations.map((violation) => violation.path),
+        containsAll([
+          'example/lib/src/canvas_json_dialogs.dart',
+          'lib/src/runtime/runtime_root.dart',
+          'lib/src/store/document_store_kernel.dart',
+        ]),
+      );
+      expect(
+        violations.map((violation) => violation.message).join('\n'),
+        allOf(
+          contains('decodeCanvasDocument helpers'),
+          contains('loadDocument(document)'),
+        ),
+      );
+    },
+  );
+}
+
+void _testInternalLoadTypesQuarantinedFromPublicApi() {
   test(
     'internal load and store types are quarantined from public API',
     () async {
@@ -179,6 +220,32 @@ public_exports:
   - decodeCanvasDocument
   - decodeCanvasDocumentFromJson
 diagnostics_public_surface: []
+''',
+  };
+}
+
+Map<String, String> _retiredRuntimeAndExampleLoadCallSources() {
+  return {
+    'example/lib/src/canvas_json_dialogs.dart': '''
+void importJson(CanvasRuntime runtime, String json) {
+  final document = decodeCanvasDocumentFromJson(json);
+  runtime.edits.loadDocument(document);
+}
+''',
+    'lib/src/runtime/runtime_root.dart': '''
+final class RuntimeRoot {
+  void loadReplacement(CanvasDocument document) {
+    edits.loadDocument(document);
+  }
+}
+''',
+    'lib/src/store/document_store_kernel.dart': '''
+final class DocumentStoreKernel {
+  void replaceFromJson(String json) {
+    final document = decodeCanvasDocumentFromJson(json);
+    loadDocument(document);
+  }
+}
 ''',
   };
 }

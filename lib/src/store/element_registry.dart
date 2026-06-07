@@ -12,6 +12,13 @@ import 'layer_table.dart';
 // facts stay one atomic registry snapshot instead of drifting across helpers.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class ElementRegistry {
+  ElementRegistry.empty()
+    : this._(
+        backgroundElementIds: const [],
+        familyTables: const FamilyTables.empty(),
+        layerTable: const LayerTable.empty(),
+      );
+
   // The constructor materializes one committed element registry snapshot:
   // family rows, layer rows, content order, frame order, and admitted ids must
   // stay aligned from the same input pass instead of drifting through

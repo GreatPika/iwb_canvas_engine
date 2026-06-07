@@ -1,3 +1,8 @@
+// The load pipeline names codec diagnostics, store import, committed payloads,
+// and public summary facts at the transaction boundary; hiding these imports
+// behind wrapper types would make ownership less explicit.
+// ignore_for_file: number-of-imports
+
 import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_errors.dart';
@@ -23,11 +28,9 @@ final class PreparedDocumentLoad {
     required this.elementIds,
     required this.revisionDelta,
     required Object ownerToken,
-    CanvasDocument? projectionDocument,
     CommittedDocument? storeDocument,
     PreparedStoreDocumentImport? storeImport,
-  }) : _projectionDocument = projectionDocument,
-       _storeDocument = storeDocument,
+  }) : _storeDocument = storeDocument,
        _storeImport = storeImport,
        _ownerToken = ownerToken;
 
@@ -39,21 +42,15 @@ final class PreparedDocumentLoad {
   final Set<CanvasLayerId> layerIds;
   final Set<CanvasElementId> elementIds;
   final StoreRevisionDelta revisionDelta;
-  final CanvasDocument? _projectionDocument;
   final CommittedDocument? _storeDocument;
   final PreparedStoreDocumentImport? _storeImport;
   final Object _ownerToken;
   bool _isConsumed = false;
 
   CanvasDocument get document {
-    final document = _projectionDocument;
-    if (document == null) {
-      throw StateError(
-        'Prepared JSON load does not materialize a CanvasDocument projection.',
-      );
-    }
-
-    return document;
+    throw StateError(
+      'Prepared document loads do not materialize a CanvasDocument projection.',
+    );
   }
 
   CanvasDocumentSummary get summary {
@@ -65,6 +62,10 @@ final class PreparedDocumentLoad {
   }
 }
 
+// LoadDocumentPipeline is the composition boundary between codec validation,
+// store preparation, diagnostics, and consume-once install; splitting it would
+// create sync glue across the irreversible load boundary.
+// ignore: coupling-between-object-classes
 final class LoadDocumentPipeline {
   LoadDocumentPipeline({
     required DocumentStoreKernel store,
@@ -151,7 +152,6 @@ PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
     layerIds: draft.layerIds,
     elementIds: draft.elementIds,
     revisionDelta: _replacementRevisionDelta,
-    projectionDocument: draft.document,
     storeDocument: CommittedDocument(draft.document),
     ownerToken: _draftReplacementOwnerToken,
   );

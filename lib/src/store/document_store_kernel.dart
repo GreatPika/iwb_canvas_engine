@@ -5,10 +5,10 @@ import 'dart:ui';
 // committed-store boundary instead of simplifying it.
 // ignore_for_file: number-of-imports
 
-import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_geometry.dart';
+import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
@@ -28,7 +28,7 @@ import 'store_revision_delta.dart';
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
-  DocumentStoreKernel() : _document = CommittedDocument(CanvasDocument()) {
+  DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,

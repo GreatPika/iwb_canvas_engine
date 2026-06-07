@@ -5,7 +5,22 @@ import 'element_registry.dart';
 import 'revision_state.dart';
 import 'resource_table.dart';
 
+// This immutable aggregate owns committed document facts and derived variants
+// together so row snapshots cannot become competing sources of truth.
+// ignore: number-of-methods
 final class CommittedDocument {
+  factory CommittedDocument.empty() {
+    return CommittedDocument.fromStoreTables(
+      camera: CanvasCamera.origin,
+      background: const CanvasBackground(),
+      palette: const CanvasPalette.defaults(),
+      elements: ElementRegistry.empty(),
+      metadata: const CanvasMetadata.empty(),
+      resourceTable: const ResourceTable.empty(),
+      revisions: const RevisionState(),
+    );
+  }
+
   factory CommittedDocument(CanvasDocument document) {
     return CommittedDocument.withRevisions(
       document,

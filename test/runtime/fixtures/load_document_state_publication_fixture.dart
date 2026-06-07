@@ -9,6 +9,11 @@ import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_bounda
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
+  _registerSuccessfulLoadPublicationTests();
+  _registerFailedLoadPublicationTests();
+}
+
+void _registerSuccessfulLoadPublicationTests() {
   test('successful load publishes one post-install state and effects', () {
     expect(_expectSuccessfulLoadStatePublication, returnsNormally);
   });
@@ -20,7 +25,9 @@ void main() {
   test('successful load publishes prepared cleanup preview outcome', () {
     expect(_expectSuccessfulLoadPublishesPreviewCleanup, returnsNormally);
   });
+}
 
+void _registerFailedLoadPublicationTests() {
   test('malformed JSON load leaves runtime facts unchanged', () {
     expect(
       () => _expectFailedLoadHasNoSideEffects(

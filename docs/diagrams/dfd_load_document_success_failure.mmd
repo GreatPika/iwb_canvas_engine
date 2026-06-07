@@ -1,94 +1,74 @@
-%% loadDocument success/failure data flow
+%% schema-v1 JSON load success/failure data flow
 flowchart LR
 
   App["Application code"]
 
   subgraph API["Public API boundary"]
-    LoadPort["CanvasEditPort.loadDocument(document)"]
-    PublicDocument["CanvasDocument DTO\nwith CanvasMetadata"]
-    Result["Return or projected exception"]
+    LoadPort["CanvasEditPort.loadDocumentFromJson(json)"]
+    Json["Schema v1 JSON string"]
+    Result["Return or exception"]
   end
 
-  subgraph Staging["Staged load boundary"]
-    Validator["Document validation\npublic DTO invariants\nand frozen metadata"]
-    Materializer["PreparedDocumentLoad materialization\nruntime tables and ids"]
-    Prepared["Prepared replacement\ncommitted document payload"]
-    Failure["Load failure\nCanvasDataException or StateError"]
-  end
-
-  subgraph Interaction["InteractionEngine state"]
-    ActivePreview["Active gesture and preview"]
-    PendingInput["Pointer normalization and pending tap history"]
-    Interrupt["Success-only interaction interrupt\ntyped cleanup request"]
-    CleanupCoordinator["PointerToolCleanupCoordinator\ncoordinator-owned prepared-load cleanup policy"]
-    CleanupOutcome["PointerCleanupOutcome\npreview, pointer normalization,\nand pending tap cleanup facts"]
+  subgraph Codec["CodecBoundary"]
+    Parse["Raw length, JSON parse,\nschemaVersion, known fields"]
+    ImportEvents["Dependency-neutral\nschema-v1 import events"]
+    CodecFailure["CanvasDataException\nfrom parse, validation,\nor import-event read"]
   end
 
   subgraph Store["DocumentStoreKernel"]
-    ExistingCommitted["Existing committed document\nrevisions, projection cache"]
-    AtomicInstall["Atomic document install\nreplacement payload boundary"]
-    ReplacementCommitted["Replacement committed document"]
+    ExistingStore["Existing committed rows,\nrevisions, id admission"]
+    PrepareRows["Store-owned preparation\nfamily rows, layer order,\nresource descriptor rows,\nreferences, ids, revisions,\ncamera facts"]
+    Prepared["PreparedStoreDocumentImport\nconsume-once payload"]
+    StoreFailure["CanvasDataException or StateError\nfrom duplicate ids, admission,\nreferences, or row preparation"]
+    AtomicInstall["Atomic prepared-row install"]
+    ReplacementStore["Replacement committed rows\nand id admission"]
   end
 
-  subgraph Selection["SelectionKernel"]
-    ExistingSelection["Existing selected ids\nand selectionRevision"]
-    SelectionClear["Selection clear effect\nsame runtime result"]
-    ReplacementSelection["Replacement selection state\nselected ids cleared"]
+  subgraph Interaction["Interaction owners"]
+    ExistingInteraction["Active gesture, preview,\npointer normalization,\ntext edit transient state"]
+    Cleanup["Success-only prepared\nload cleanup"]
+    CleanupOutcome["LoadInteractionCleanupOutcome"]
+    CleanupFailure["StateError before install"]
   end
 
-  subgraph Effects["Committed effects"]
-    AtomicRuntimeResult["Atomic runtime result\ndocument replacement + selection clear\n+ runtime view camera initialization"]
-    Revisions["Document-level revisions\ncontroller epoch"]
-    ViewCameraInit["Runtime view camera\ninitialized from installed persisted camera"]
-    ViewCameraRevision["state.revisions.viewCamera"]
-    SpatialRebuild["Spatial index rebuild"]
-    ProjectionEvict["Projection cache eviction"]
-    ResourceEvict["Resource cache eviction"]
-    Repaint["Main and overlay repaint"]
-    Notify["Public CanvasRuntimeState after install\ndocument, selection, viewCamera, epoch,\nconditional preview cleanup\nno user action event"]
-    Diagnostics["Load failure projection\nvalidation uses codec bridge;\nno separate runtime hub route"]
+  subgraph Runtime["Runtime accepted result"]
+    SelectionClear["Selection clear\nsame runtime result"]
+    ViewCamera["Runtime view camera\nfrom persisted JSON camera"]
+    Revisions["Document, selection,\nviewCamera, epoch,\noptional preview revisions"]
+    Invalidations["Projection, spatial,\nframe, resource invalidations\nwithout building CanvasDocument"]
+    Notify["One CanvasRuntimeState\nafter install\nno CanvasActionCommitted"]
   end
 
-  App -->|"external document replacement request"| LoadPort
-  LoadPort -->|"public document input"| PublicDocument
-  PublicDocument -->|"validate before runtime side effects"| Validator
-  Validator -->|"validated DTO data with CanvasMetadata"| Materializer
-  Materializer -->|"prepared runtime document"| Prepared
+  subgraph FailureBoundary["Failure boundary"]
+    FailureSnapshot["Existing committed rows,\nselection, camera, preview,\nrevisions, caches, actions,\neffects, and listeners unchanged"]
+  end
 
-  Validator -.->|"invalid public document"| Failure
-  Materializer -.->|"materialization failure"| Failure
-  Failure -.->|"projected failure;\nvalidation route uses codec bridge"| Diagnostics
-  Diagnostics -.->|"rethrow projected exception"| Result
-  Result -.->|"failure result"| App
+  App --> LoadPort
+  LoadPort --> Json
+  Json --> Parse
+  Parse --> ImportEvents
+  ImportEvents --> PrepareRows
+  ExistingStore --> PrepareRows
+  PrepareRows --> Prepared
+  Prepared --> Cleanup
+  ExistingInteraction --> Cleanup
+  Cleanup --> CleanupOutcome
+  CleanupOutcome --> AtomicInstall
+  Prepared --> AtomicInstall
+  AtomicInstall --> ReplacementStore
+  ReplacementStore --> SelectionClear
+  SelectionClear --> ViewCamera
+  ViewCamera --> Revisions
+  Revisions --> Invalidations
+  Invalidations --> Notify
+  Notify --> Result
+  Result --> App
 
-  Failure -.->|"no interrupt; preview unchanged"| ActivePreview
-  Failure -.->|"pointer normalization and tap history unchanged"| PendingInput
-  Failure -.->|"no committed state, revision, cache, repaint, or event change"| ExistingCommitted
-  Failure -.->|"selection owner unchanged"| ExistingSelection
-
-  Prepared -->|"success-only interrupt request"| Interrupt
-  Interrupt -->|"prepared load success cleanup request"| CleanupCoordinator
-  ActivePreview -->|"interaction-owned state and ownership context"| CleanupCoordinator
-  CleanupCoordinator -->|"effect-only cleanup outcome"| CleanupOutcome
-  PendingInput -->|"prepared cleanup before install"| CleanupCoordinator
-  CleanupOutcome -->|"prepared before install; public state waits for atomic result"| AtomicInstall
-  Prepared -->|"document install payload"| AtomicInstall
-  Prepared -->|"selection clear effect"| SelectionClear
-  AtomicInstall -->|"replace committed state"| ReplacementCommitted
-  SelectionClear -->|"clear selected ids and increment selectionRevision"| ReplacementSelection
-  ReplacementCommitted -->|"document side installed"| AtomicRuntimeResult
-  ReplacementSelection -->|"selection side installed"| AtomicRuntimeResult
-
-  AtomicRuntimeResult -->|"increment document-level revisions, selectionRevision, and epoch"| Revisions
-  AtomicRuntimeResult -->|"read installed persisted camera"| ViewCameraInit
-  ViewCameraInit -->|"publish public view camera domain"| ViewCameraRevision
-  AtomicRuntimeResult -->|"rebuild from replacement document"| SpatialRebuild
-  AtomicRuntimeResult -->|"evict public document projection"| ProjectionEvict
-  AtomicRuntimeResult -->|"evict resolver/resource caches"| ResourceEvict
-  AtomicRuntimeResult -->|"schedule full document repaint"| Repaint
-  CleanupOutcome -->|"consume prepared cleanup facts; no post-install interaction call"| Repaint
-  AtomicRuntimeResult -->|"publish after atomic install"| Notify
-  CleanupOutcome -->|"included in atomic snapshot when preview changed"| Notify
-  ViewCameraRevision -->|"included in atomic snapshot"| Notify
-  Notify -->|"success return"| Result
-  Result -->|"load completed"| App
+  Parse -.-> CodecFailure
+  ImportEvents -.-> CodecFailure
+  PrepareRows -.-> StoreFailure
+  Cleanup -.-> CleanupFailure
+  CodecFailure -.-> FailureSnapshot
+  StoreFailure -.-> FailureSnapshot
+  CleanupFailure -.-> FailureSnapshot
+  FailureSnapshot -.-> Result

@@ -14,8 +14,18 @@ import '../contracts/public/canvas_metadata.dart';
 // element kinds; splitting by kind would reintroduce cross-table drift.
 // Sparse row mutation belongs with family admission so updates cannot drift
 // from duplicate-id and resource-reference validation.
-// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
+  const FamilyTables.empty()
+    : this._fromTables(
+        imageRows: const {},
+        pathRows: const {},
+        textRows: const {},
+        strokeRows: const {},
+        lineRows: const {},
+        rectRows: const {},
+      );
+
   FamilyTables(
     Iterable<CanvasElement> elements, {
     required Set<String> resourceIds,

@@ -177,8 +177,8 @@ Mandatory guardrails:
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.no_retired_public_load_routes` | public runtime, edit, codec, and registry surfaces do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, or public `decodeCanvasDocument*` helpers |
-| `api.no_unapproved_document_load_inputs` | production `CanvasDocument` load/admission signatures are limited to the explicit transitional internals that later schema-import/store/runtime units must retire |
+| `api.no_retired_public_load_routes` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose or document `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
+| `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization compatibility paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |
@@ -201,7 +201,7 @@ Mandatory guardrails:
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
 | `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |
-| `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths |
+| `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths and never by the runtime JSON load route before first explicit read |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |
@@ -212,8 +212,8 @@ Mandatory guardrails:
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
 | `events.action_after_state_order` | accepted public state is published before user action events emitted by interaction and command commits |
 | `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, pending line start previews, and selected move resolver requests |
-| `load.prepares_before_interrupt` | failed load does not interrupt gesture |
-| `load.success_interrupts_before_install` | successful load prepares interaction cleanup before atomic install and performs no post-install interaction owner call to finish load cleanup |
+| `load.prepares_before_interrupt` | failed schema-v1 JSON load does not interrupt gesture, clear selection, publish state, emit actions, build public projection, or install partial store rows |
+| `load.success_interrupts_before_install` | successful schema-v1 JSON load parses JSON, emits codec-owned import events, prepares store-owned rows, prepares interaction cleanup before atomic install, performs no post-install interaction owner call to finish load cleanup, and publishes exactly one accepted runtime state without building first projection |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
 | `preview.selected_move_main_only` | selected move preview is routed only through the main repaint domain |
 | `preview.marquee_overlay_only` | marquee preview is routed only through the overlay repaint domain |

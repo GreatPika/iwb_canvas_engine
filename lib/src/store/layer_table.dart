@@ -15,6 +15,8 @@ final class LayerRow {
 }
 
 final class LayerTable {
+  const LayerTable.empty() : rows = const [];
+
   LayerTable(Iterable<LayerRow> rows)
     : rows = List.unmodifiable(_admitRows(rows));
 

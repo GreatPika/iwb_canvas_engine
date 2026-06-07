@@ -88,78 +88,71 @@ Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
 }
 
 void _expectActionStreamDeliveryGuards() {
-  _ActionStreamDeliveryGuardScenario().run();
+  final records = _ActionStreamDeliveryRecords();
+  final root = _runtimeRoot(
+    _RecordingLoadBoundary(),
+    observeEffects: records.effectBatches.add,
+  );
+  root.selection.setSelection([CanvasElementId('old')]);
+  root.cameraPort().setOffset(const Offset(4, 5));
+  root.state.addListener(() => records.stateSnapshots.add(root.state.value));
+  root.actions.listen(
+    (action) => _recordGuardedActionDelivery(root, records, action),
+  );
+
+  _deliverActionCommitForGuardTest(root);
+  _expectActionStreamGuardOutcome(root, records);
 }
 
-final class _ActionStreamDeliveryGuardScenario {
-  _ActionStreamDeliveryGuardScenario() {
-    root = _runtimeRoot(
-      _RecordingLoadBoundary(),
-      observeEffects: effectBatches.add,
-    );
-    root.selection.setSelection([CanvasElementId('old')]);
-    root.cameraPort().setOffset(const Offset(4, 5));
-    root.state.addListener(() {
-      stateSnapshots.add(root.state.value);
-    });
-    root.actions.listen(_recordAction);
-  }
+void _recordGuardedActionDelivery(
+  RuntimeRoot root,
+  _ActionStreamDeliveryRecords records,
+  CanvasActionCommitted action,
+) {
+  records.actionDeliveries += 1;
+  expect(action.type, CanvasActionType.deleteElements);
+  final duringDelivery = _captureActionStreamDelivery(root, records);
 
-  late final RuntimeRoot root;
+  _expectDeliveryGuards(root);
+  duringDelivery.expectStillCurrent(
+    root,
+    actionDeliveries: records.actionDeliveries,
+    statePublicationCount: records.stateSnapshots.length,
+    observerCount: records.effectBatches.length,
+  );
+}
+
+void _expectActionStreamGuardOutcome(
+  RuntimeRoot root,
+  _ActionStreamDeliveryRecords records,
+) {
+  expect(records.actionDeliveries, 1);
+  expect(records.stateSnapshots, hasLength(1));
+  expect(records.effectBatches, hasLength(1));
+  _captureActionStreamDelivery(root, records).expectStillCurrent(
+    root,
+    actionDeliveries: 1,
+    statePublicationCount: 1,
+    observerCount: 1,
+  );
+}
+
+_ActionStreamDeliverySnapshot _captureActionStreamDelivery(
+  RuntimeRoot root,
+  _ActionStreamDeliveryRecords records,
+) {
+  return _ActionStreamDeliverySnapshot.capture(
+    root,
+    actionDeliveries: records.actionDeliveries,
+    statePublicationCount: records.stateSnapshots.length,
+    observerCount: records.effectBatches.length,
+  );
+}
+
+final class _ActionStreamDeliveryRecords {
   final List<CanvasRuntimeState> stateSnapshots = [];
   final List<List<CommitDeliveryEffect>> effectBatches = [];
   int actionDeliveries = 0;
-
-  void run() {
-    _deliverActionCommit();
-
-    expect(actionDeliveries, 1);
-    expect(stateSnapshots, hasLength(1));
-    expect(effectBatches, hasLength(1));
-    _capture().expectStillCurrent(
-      root,
-      actionDeliveries: 1,
-      statePublicationCount: 1,
-      observerCount: 1,
-    );
-  }
-
-  void _recordAction(CanvasActionCommitted action) {
-    actionDeliveries += 1;
-    expect(action.type, CanvasActionType.deleteElements);
-    final duringDelivery = _capture();
-
-    _expectDeliveryGuards(root);
-    duringDelivery.expectStillCurrent(
-      root,
-      actionDeliveries: actionDeliveries,
-      statePublicationCount: stateSnapshots.length,
-      observerCount: effectBatches.length,
-    );
-  }
-
-  void _deliverActionCommit() {
-    root.deliverCommitPlanForTesting(
-      CommitPlan.replaceSelection(
-        elementIds: const [],
-        actionIntents: [
-          DeleteSelectionActionIntent(
-            removedElementIds: [CanvasElementId('old')],
-          ),
-        ],
-      ),
-      document: root.readDocument(),
-    );
-  }
-
-  _ActionStreamDeliverySnapshot _capture() {
-    return _ActionStreamDeliverySnapshot.capture(
-      root,
-      actionDeliveries: actionDeliveries,
-      statePublicationCount: stateSnapshots.length,
-      observerCount: effectBatches.length,
-    );
-  }
 }
 
 final class _ActionStreamDeliverySnapshot {
@@ -212,6 +205,20 @@ final class _ActionStreamDeliverySnapshot {
     expect(statePublicationCount, this.statePublicationCount);
     expect(observerCount, this.observerCount);
   }
+}
+
+void _deliverActionCommitForGuardTest(RuntimeRoot root) {
+  root.deliverCommitPlanForTesting(
+    CommitPlan.replaceSelection(
+      elementIds: const [],
+      actionIntents: [
+        DeleteSelectionActionIntent(
+          removedElementIds: [CanvasElementId('old')],
+        ),
+      ],
+    ),
+    document: root.readDocument(),
+  );
 }
 
 final class _SuccessfulLoadOrderingScenario {

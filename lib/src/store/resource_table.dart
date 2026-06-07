@@ -4,7 +4,12 @@ import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/internal/schema_v1_import_events.dart';
 
+// ResourceTable owns descriptor admission, mutation, and public projection for
+// one table; splitting these methods would duplicate descriptor invariants.
+// ignore: number-of-methods
 final class ResourceTable {
+  const ResourceTable.empty() : descriptors = const {};
+
   factory ResourceTable(
     Iterable<CanvasResource> resources, {
     required int resourceRevision,

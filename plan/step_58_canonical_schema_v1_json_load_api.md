@@ -212,7 +212,7 @@ Depends On:
 
 Unit 4.
 
-### [ ] Unit 6: Durable diagrams and negative-proof hardening
+### [x] Unit 6: Durable diagrams and negative-proof hardening
 
 Owner:
 

@@ -45,6 +45,17 @@ void _expectSuccessfulPreparationAndConsume() {
 
   final prepared = _prepareFromDocument(pipeline, _replacementDocument());
 
+  _expectPreparedReplacementFacts(prepared);
+  expect(() => prepared.document, throwsStateError);
+  _expectInitialStore(store);
+
+  pipeline.consume(prepared);
+
+  _expectConsumedReplacementStore(store);
+  expect(() => pipeline.consume(prepared), throwsStateError);
+}
+
+void _expectPreparedReplacementFacts(PreparedDocumentLoad prepared) {
   expect(prepared.summary.elementCount, 2);
   expect(prepared.summary.layerCount, 1);
   expect(prepared.summary.resourceCount, 1);
@@ -56,13 +67,10 @@ void _expectSuccessfulPreparationAndConsume() {
   expect(() => prepared.elementIds.clear(), throwsUnsupportedError);
   expect(() => prepared.layerIds.clear(), throwsUnsupportedError);
   expect(() => prepared.resourceIds.clear(), throwsUnsupportedError);
-  expect(() => prepared.document, throwsStateError);
-  _expectInitialStore(store);
+}
 
-  pipeline.consume(prepared);
-
+void _expectConsumedReplacementStore(DocumentStoreKernel store) {
   _expectReplacementStore(store);
-  expect(() => pipeline.consume(prepared), throwsStateError);
   expect(store.documentRevision, 2);
 }
 
@@ -179,16 +187,10 @@ void _expectPreparedDtoOwnershipFrozen() {
   expect(prepared.summary.resourceCount, 1);
   expect(prepared.summary.elementCount, 1);
   expect(prepared.summary.layerCount, 1);
-  _expectPreparedDocumentCollectionsFrozen(prepared);
-}
-
-void _expectPreparedDocumentCollectionsFrozen(PreparedDocumentLoad prepared) {
-  expect(() => prepared.document.resources.clear(), throwsUnsupportedError);
-  expect(
-    () => prepared.document.backgroundElements.clear(),
-    throwsUnsupportedError,
-  );
-  expect(() => prepared.document.layers.clear(), throwsUnsupportedError);
+  expect(prepared.resourceIds.map((id) => id.value), {'load-resource'});
+  expect(prepared.elementIds.map((id) => id.value), {'load-bg'});
+  expect(prepared.layerIds.map((id) => id.value), {'load-layer'});
+  expect(() => prepared.document, throwsStateError);
 }
 
 PreparedDocumentLoad _prepareFromDocument(

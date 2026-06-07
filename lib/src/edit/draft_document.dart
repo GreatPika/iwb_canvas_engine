@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../codec/validated_import_draft.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
@@ -273,21 +274,23 @@ final class DraftDocument {
   }
 
   void replaceDocument(CanvasDocument document) {
-    final preparedLoad = prepareDraftReplacement(document);
-    camera = preparedLoad.document.camera;
-    background = preparedLoad.document.background;
-    palette = _copyPalette(preparedLoad.document.palette);
-    metadata = preparedLoad.document.metadata;
+    final draft = ValidatedImportDraft.fromDraftReplacement(document);
+    final preparedLoad = prepareDraftReplacement(draft.document);
+    final replacement = draft.document;
+    camera = replacement.camera;
+    background = replacement.background;
+    palette = _copyPalette(replacement.palette);
+    metadata = replacement.metadata;
     resources
       ..clear()
-      ..addAll(preparedLoad.document.resources.map(ResourceTable.copy));
+      ..addAll(replacement.resources.map(ResourceTable.copy));
     backgroundElements
       ..clear()
-      ..addAll(preparedLoad.document.backgroundElements);
+      ..addAll(replacement.backgroundElements);
     _layers
       ..clear()
       ..addAll([
-        for (final layer in preparedLoad.document.layers)
+        for (final layer in replacement.layers)
           _DraftLayer(
             id: layer.id,
             elements: List.of(layer.elements),
