@@ -1506,7 +1506,7 @@ final class RuntimeRoot
     _prepareLoadInteractionCleanup();
     _loadPipeline.consume(preparedLoad);
     final didClearSelection = _selection.clearForDocumentReplacement();
-    _viewCamera = preparedLoad.document.camera;
+    _viewCamera = preparedLoad.camera;
     _viewCameraRevision += 1;
     _epochRevision += 1;
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));

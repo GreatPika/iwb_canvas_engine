@@ -19,6 +19,7 @@ import 'element_registry.dart';
 import 'family_tables.dart';
 import 'resource_table.dart';
 import 'revision_state.dart';
+import 'schema_v1_store_import.dart';
 import 'sparse_store_commit.dart';
 import 'store_revision_delta.dart';
 
@@ -62,15 +63,13 @@ final class DocumentStoreKernel {
   CanvasCamera get camera => _document.camera;
   CanvasPalette get palette => _document.palette;
   int get projectionBuildCount => _projectionCache.buildCount;
-  int get resourceCount => _document.resourceTable.rows.length;
+  int get resourceCount => _document.resourceTable.count;
   List<CanvasResource> get resources {
-    return List.unmodifiable(
-      _document.resourceTable.rows.map(ResourceTable.copy),
-    );
+    return _document.resourceTable.projectResources();
   }
 
   CanvasResource? resourceById(CanvasResourceId id) {
-    for (final resource in _document.resourceTable.rows) {
+    for (final resource in _document.resourceTable.projectResources()) {
       if (resource.id == id) {
         return ResourceTable.copy(resource);
       }
@@ -114,7 +113,7 @@ final class DocumentStoreKernel {
   }
 
   Iterable<CanvasResourceId> get resourceIds {
-    return _document.resourceTable.rows.map((resource) => resource.id);
+    return _document.resourceTable.descriptors.keys;
   }
 
   Set<CanvasElementId> get selectableElementIds {
@@ -306,6 +305,36 @@ final class DocumentStoreKernel {
     );
   }
 
+  PreparedStoreDocumentImport prepareSchemaV1Import(
+    StoreSchemaV1ImportBuilder builder,
+    StoreRevisionDelta delta,
+  ) {
+    return builder.prepare(
+      baseRevisions: _document.revisions,
+      revisionDelta: delta,
+    );
+  }
+
+  void installPreparedSchemaV1Import(PreparedStoreDocumentImport prepared) {
+    prepared.consume(_document.revisions);
+    if (!prepared.hasChanges) {
+      return;
+    }
+    _document = prepared.document;
+    _elementIds = _IdAdmission(
+      prefix: 'e',
+      admittedIds: _document.admittedElementIds,
+    );
+    _layerIds = _IdAdmission(
+      prefix: 'l',
+      admittedIds: _document.admittedLayerIds,
+    );
+    _resourceIds = _IdAdmission(
+      prefix: 'r',
+      admittedIds: _document.admittedResourceIds,
+    );
+  }
+
   // Sparse preparation validates, applies, and records admitted-id deltas in
   // one pass so commit acceptance cannot drift from generator admission.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
@@ -415,12 +444,10 @@ final class DocumentStoreKernel {
       StoreSparseRemoveUnusedResource(:final id) => _removeUnusedResource(
         document,
         id,
-        acceptedRevisions: acceptedRevisions,
       ),
       StoreSparseClearContent(:final removeUnusedResources) => _clearContent(
         document,
         removeUnusedResources: removeUnusedResources,
-        acceptedRevisions: acceptedRevisions,
       ),
       StoreSparseSetBackground(:final background) => _setBackground(
         document,
@@ -566,21 +593,15 @@ final class DocumentStoreKernel {
 
   _SparseMutationResult _removeUnusedResource(
     CommittedDocument document,
-    CanvasResourceId id, {
-    required RevisionState acceptedRevisions,
-  }) {
+    CanvasResourceId id,
+  ) {
     if (!document.resourceTable.contains(id) ||
         document.elements.referencesResource(id)) {
       return _SparseMutationResult.unchanged(document);
     }
 
     return _SparseMutationResult.changed(
-      document.copyWith(
-        resourceTable: document.resourceTable.remove(
-          id,
-          revision: acceptedRevisions.resourceRevision,
-        ),
-      ),
+      document.copyWith(resourceTable: document.resourceTable.remove(id)),
       requiredRevisionDelta: const StoreRevisionDelta.resource(),
     );
   }
@@ -588,19 +609,16 @@ final class DocumentStoreKernel {
   _SparseMutationResult _clearContent(
     CommittedDocument document, {
     required bool removeUnusedResources,
-    required RevisionState acceptedRevisions,
   }) {
     final didClearElements = document.elements.elementCount != 0;
     final didClearResources =
-        removeUnusedResources && document.resourceTable.rows.isNotEmpty;
+        removeUnusedResources && document.resourceTable.count != 0;
     if (!didClearElements && !didClearResources) {
       return _SparseMutationResult.unchanged(document);
     }
     final clearedElements = document.elements.clearContent();
     final clearedResources = removeUnusedResources
-        ? document.resourceTable.clear(
-            revision: acceptedRevisions.resourceRevision,
-          )
+        ? document.resourceTable.clear()
         : document.resourceTable;
 
     var requiredRevisionDelta = const StoreRevisionDelta();

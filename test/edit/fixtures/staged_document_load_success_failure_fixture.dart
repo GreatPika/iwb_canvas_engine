@@ -34,7 +34,7 @@ void main() {
     },
   );
 
-  test('mutable source lists do not change prepared DTO ownership', () {
+  test('draft replacement freezes mutable source list ownership', () {
     expect(_expectPreparedDtoOwnershipFrozen, returnsNormally);
   });
 }
@@ -48,10 +48,15 @@ void _expectSuccessfulPreparationAndConsume() {
   expect(prepared.summary.elementCount, 2);
   expect(prepared.summary.layerCount, 1);
   expect(prepared.summary.resourceCount, 1);
+  expect(prepared.background.color, const Color(0xFF112233));
+  expect(prepared.background.grid, CanvasGrid.disabled);
   expect(prepared.elementIds.map((id) => id.value), {'load-bg', 'load-img'});
   expect(prepared.layerIds.map((id) => id.value), {'load-layer'});
   expect(prepared.resourceIds.map((id) => id.value), {'load-resource'});
   expect(() => prepared.elementIds.clear(), throwsUnsupportedError);
+  expect(() => prepared.layerIds.clear(), throwsUnsupportedError);
+  expect(() => prepared.resourceIds.clear(), throwsUnsupportedError);
+  expect(() => prepared.document, throwsStateError);
   _expectInitialStore(store);
 
   pipeline.consume(prepared);
@@ -167,11 +172,8 @@ void _expectPublicDtoInvalidInputRejectedEarly() {
 
 void _expectPreparedDtoOwnershipFrozen() {
   final parts = _MutableDocumentParts.create();
-  final pipeline = LoadDocumentPipeline(
-    store: documentStoreWithDocument(_initialDocument()),
-  );
 
-  final prepared = _prepareFromDocument(pipeline, parts.document);
+  final prepared = prepareDraftReplacement(parts.document);
   parts.clearSources();
 
   expect(prepared.summary.resourceCount, 1);

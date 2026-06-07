@@ -47,6 +47,26 @@ final class CommittedDocument {
     required this.revisions,
   });
 
+  factory CommittedDocument.fromStoreTables({
+    required CanvasCamera camera,
+    required CanvasBackground background,
+    required CanvasPalette palette,
+    required ElementRegistry elements,
+    required CanvasMetadata metadata,
+    required ResourceTable resourceTable,
+    required RevisionState revisions,
+  }) {
+    return CommittedDocument._(
+      camera: camera,
+      background: background,
+      palette: palette,
+      elements: elements,
+      metadata: metadata,
+      resourceTable: resourceTable,
+      revisions: revisions,
+    );
+  }
+
   final CanvasCamera camera;
   final CanvasBackground background;
   final CanvasPalette palette;
@@ -59,7 +79,7 @@ final class CommittedDocument {
     return CanvasDocumentSummary(
       elementCount: elements.elementCount,
       layerCount: elements.layerTable.rows.length,
-      resourceCount: resourceTable.rows.length,
+      resourceCount: resourceTable.count,
     );
   }
 

@@ -3,6 +3,7 @@ import 'dart:ui';
 // Family-specific row tables stay together so admission and projection cannot
 // drift across element kinds; splitting them would obscure the shared id owner.
 
+import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_geometry.dart';
@@ -19,6 +20,11 @@ final class FamilyTables {
     Iterable<CanvasElement> elements, {
     required Set<String> resourceIds,
   }) : this._(_admitElements(elements, resourceIds));
+
+  FamilyTables.fromSchemaV1Import(
+    Iterable<SchemaV1ElementImportEvent> elements, {
+    required Set<String> resourceIds,
+  }) : this._(_admitSchemaV1Elements(elements, resourceIds));
 
   FamilyTables._(_AdmittedRows admitted)
     : this._fromTables(
@@ -489,6 +495,42 @@ final class _AdmittedRows {
     }
   }
 
+  void addSchemaV1Import(
+    SchemaV1ElementImportEvent event,
+    Set<String> resourceIds,
+  ) {
+    final id = event.common.id.value;
+    if (!ids.add(id)) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.duplicateElementId,
+        message: 'duplicate element id.',
+        path: 'elements.id',
+      );
+    }
+
+    switch (event) {
+      case SchemaV1ImageElementImportEvent():
+        if (!resourceIds.contains(event.resourceId.value)) {
+          throw CanvasDataException(
+            code: CanvasDataErrorCode.missingResourceReference,
+            message: 'image element references a missing resource.',
+            path: 'image.resourceId',
+          );
+        }
+        imageRows[id] = ImageRow.fromSchemaV1Import(event);
+      case SchemaV1PathElementImportEvent():
+        pathRows[id] = PathRow.fromSchemaV1Import(event);
+      case SchemaV1TextElementImportEvent():
+        textRows[id] = TextRow.fromSchemaV1Import(event);
+      case SchemaV1StrokeElementImportEvent():
+        strokeRows[id] = StrokeRow.fromSchemaV1Import(event);
+      case SchemaV1LineElementImportEvent():
+        lineRows[id] = LineRow.fromSchemaV1Import(event);
+      case SchemaV1RectElementImportEvent():
+        rectRows[id] = RectRow.fromSchemaV1Import(event);
+    }
+  }
+
   void remove(String id) {
     if (!ids.remove(id)) {
       return;
@@ -514,6 +556,18 @@ _AdmittedRows _admitElements(
   return admitted;
 }
 
+_AdmittedRows _admitSchemaV1Elements(
+  Iterable<SchemaV1ElementImportEvent> elements,
+  Set<String> resourceIds,
+) {
+  final admitted = _AdmittedRows();
+  for (final element in elements) {
+    admitted.addSchemaV1Import(element, resourceIds);
+  }
+
+  return admitted;
+}
+
 final class ElementCommonRow {
   ElementCommonRow(CanvasElement element)
     : id = element.id,
@@ -527,6 +581,19 @@ final class ElementCommonRow {
       isDeletable = element.isDeletable,
       isTransformable = element.isTransformable,
       metadata = element.metadata;
+
+  ElementCommonRow.fromSchemaV1Import(SchemaV1ElementCommonImport common)
+    : id = common.id,
+      revision = common.revision,
+      transform = common.transform,
+      opacity = common.opacity,
+      hitPadding = common.hitPadding,
+      isVisible = common.isVisible,
+      isSelectable = common.isSelectable,
+      isLocked = common.isLocked,
+      isDeletable = common.isDeletable,
+      isTransformable = common.isTransformable,
+      metadata = common.metadata;
 
   final CanvasElementId id;
   final int revision;
@@ -547,6 +614,12 @@ final class ImageRow {
       resourceId = element.resourceId,
       size = element.size,
       naturalSize = element.naturalSize;
+
+  ImageRow.fromSchemaV1Import(SchemaV1ImageElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      resourceId = event.resourceId,
+      size = event.size,
+      naturalSize = event.naturalSize;
 
   final ElementCommonRow common;
   final CanvasResourceId resourceId;
@@ -581,6 +654,14 @@ final class PathRow {
       strokeColor = element.strokeColor,
       strokeWidth = element.strokeWidth,
       fillRule = element.fillRule;
+
+  PathRow.fromSchemaV1Import(SchemaV1PathElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      svgPathData = event.svgPathData,
+      fillColor = event.fillColor,
+      strokeColor = event.strokeColor,
+      strokeWidth = event.strokeWidth,
+      fillRule = event.fillRule;
 
   final ElementCommonRow common;
   final String svgPathData;
@@ -625,6 +706,20 @@ final class TextRow {
       fontFamily = element.fontFamily,
       maxWidth = element.maxWidth,
       lineHeight = element.lineHeight;
+
+  TextRow.fromSchemaV1Import(SchemaV1TextElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      text = event.text,
+      fontSize = event.fontSize,
+      color = event.color,
+      align = event.align,
+      textDirection = event.textDirection,
+      isBold = event.isBold,
+      isItalic = event.isItalic,
+      isUnderline = event.isUnderline,
+      fontFamily = event.fontFamily,
+      maxWidth = event.maxWidth,
+      lineHeight = event.lineHeight;
 
   final ElementCommonRow common;
   final String text;
@@ -674,6 +769,12 @@ final class StrokeRow {
       thickness = element.thickness,
       color = element.color;
 
+  StrokeRow.fromSchemaV1Import(SchemaV1StrokeElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      points = List.unmodifiable(event.points),
+      thickness = event.thickness,
+      color = event.color;
+
   final ElementCommonRow common;
   final List<Offset> points;
   final double thickness;
@@ -706,6 +807,13 @@ final class LineRow {
       end = element.end,
       thickness = element.thickness,
       color = element.color;
+
+  LineRow.fromSchemaV1Import(SchemaV1LineElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      start = event.start,
+      end = event.end,
+      thickness = event.thickness,
+      color = event.color;
 
   final ElementCommonRow common;
   final Offset start;
@@ -741,6 +849,13 @@ final class RectRow {
       fillColor = element.fillColor,
       strokeColor = element.strokeColor,
       strokeWidth = element.strokeWidth;
+
+  RectRow.fromSchemaV1Import(SchemaV1RectElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      size = event.size,
+      fillColor = event.fillColor,
+      strokeColor = event.strokeColor,
+      strokeWidth = event.strokeWidth;
 
   final ElementCommonRow common;
   final Size size;

@@ -2,77 +2,88 @@ import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
+import '../contracts/internal/schema_v1_import_events.dart';
 
 final class ResourceTable {
   factory ResourceTable(
     Iterable<CanvasResource> resources, {
     required int resourceRevision,
   }) {
-    final admittedIds = <String>{};
-    final admittedResources = <CanvasResource>[];
     final descriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
 
     for (final resource in resources) {
-      if (!admittedIds.add(resource.id.value)) {
-        throw CanvasDataException(
-          code: CanvasDataErrorCode.duplicateResourceId,
-          message: 'duplicate resource id.',
-          path: 'resources.id',
-        );
-      }
-      final admitted = copy(resource);
-      admittedResources.add(admitted);
       final descriptor = descriptorFor(
-        admitted,
+        resource,
         resourceRevision: resourceRevision,
       );
       if (descriptor != null) {
-        descriptors[descriptor.id] = descriptor;
+        _admitDescriptor(descriptors, descriptor);
       }
     }
 
-    return ResourceTable._(
-      rows: List.unmodifiable(admittedResources),
-      admittedIds: Set.unmodifiable(admittedIds),
-      descriptors: Map.unmodifiable(descriptors),
-    );
+    return ResourceTable._(descriptors: Map.unmodifiable(descriptors));
   }
 
-  const ResourceTable._({
-    required this.rows,
-    required this.admittedIds,
-    required this.descriptors,
-  });
+  factory ResourceTable.fromSchemaV1Import(
+    Iterable<SchemaV1ImageResourceImportEvent> resources, {
+    required int resourceRevision,
+  }) {
+    final descriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
+    for (final resource in resources) {
+      _admitDescriptor(
+        descriptors,
+        StoreResourceDescriptorFacts(
+          id: resource.id,
+          appKey: resource.appKey,
+          mimeType: resource.mimeType,
+          contentHash: resource.contentHash,
+          byteLength: resource.byteLength,
+          resourceRevision: resourceRevision,
+          metadata: resource.metadata,
+        ),
+      );
+    }
 
-  final List<CanvasResource> rows;
-  final Set<String> admittedIds;
+    return ResourceTable._(descriptors: Map.unmodifiable(descriptors));
+  }
+
+  const ResourceTable._({required this.descriptors});
+
   final Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors;
+
+  int get count => descriptors.length;
+  Set<String> get admittedIds {
+    return {for (final id in descriptors.keys) id.value};
+  }
+
+  List<CanvasResource> projectResources() {
+    return List.unmodifiable(descriptors.values.map(_resourceForDescriptor));
+  }
 
   bool contains(CanvasResourceId id) => admittedIds.contains(id.value);
 
   ResourceTable upsert(CanvasResource resource, {required int revision}) {
-    final nextRows = rows.map(copy).toList();
-    final index = nextRows.indexWhere((row) => row.id == resource.id);
-    if (index == -1) {
-      nextRows.add(copy(resource));
-    } else {
-      nextRows[index] = copy(resource);
+    final descriptor = descriptorFor(resource, resourceRevision: revision);
+    if (descriptor == null) {
+      return this;
     }
+    final nextDescriptors =
+        Map<CanvasResourceId, StoreResourceDescriptorFacts>.of(descriptors);
+    nextDescriptors[descriptor.id] = descriptor;
 
-    return ResourceTable(nextRows, resourceRevision: revision);
+    return ResourceTable._(descriptors: Map.unmodifiable(nextDescriptors));
   }
 
-  ResourceTable remove(CanvasResourceId id, {required int revision}) {
-    final nextRows = [
-      for (final row in rows)
-        if (row.id != id) copy(row),
-    ];
+  ResourceTable remove(CanvasResourceId id) {
+    final nextDescriptors =
+        Map<CanvasResourceId, StoreResourceDescriptorFacts>.of(descriptors)
+          ..remove(id);
 
-    return ResourceTable(nextRows, resourceRevision: revision);
+    return ResourceTable._(descriptors: Map.unmodifiable(nextDescriptors));
   }
 
-  ResourceTable clear({required int revision}) {
-    return ResourceTable(const [], resourceRevision: revision);
+  ResourceTable clear() {
+    return const ResourceTable._(descriptors: {});
   }
 
   static CanvasResource copy(CanvasResource resource) {
@@ -107,6 +118,31 @@ final class ResourceTable {
       metadata: resource.metadata,
     );
   }
+}
+
+void _admitDescriptor(
+  Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors,
+  StoreResourceDescriptorFacts descriptor,
+) {
+  if (descriptors.containsKey(descriptor.id)) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.duplicateResourceId,
+      message: 'duplicate resource id.',
+      path: 'resources.id',
+    );
+  }
+  descriptors[descriptor.id] = descriptor;
+}
+
+CanvasImageResource _resourceForDescriptor(StoreResourceDescriptorFacts facts) {
+  return CanvasImageResource(
+    id: facts.id,
+    source: CanvasResourceSource.appKey(facts.appKey),
+    mimeType: facts.mimeType,
+    contentHash: facts.contentHash,
+    byteLength: facts.byteLength,
+    metadata: facts.metadata,
+  );
 }
 
 final class StoreResourceDescriptorFacts {

@@ -1,6 +1,5 @@
 import '../contracts/public/canvas_document.dart';
 import 'committed_document.dart';
-import 'resource_table.dart';
 
 final class DocumentProjectionCache {
   CanvasDocument? _cachedDocument;
@@ -31,7 +30,7 @@ CanvasDocument _buildProjection(CommittedDocument document) {
     camera: document.camera,
     background: document.background,
     palette: _copyPalette(document.palette),
-    resources: document.resourceTable.rows.map(ResourceTable.copy),
+    resources: document.resourceTable.projectResources(),
     backgroundElements: document.elements.backgroundElementIds.map(
       (id) => document.elements.familyTables.elementById(id.value),
     ),

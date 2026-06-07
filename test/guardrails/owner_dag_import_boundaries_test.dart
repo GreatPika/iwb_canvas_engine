@@ -848,6 +848,10 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'contracts/public',
   ),
   _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'store',
+    targetOwner: 'contracts/internal',
+  ),
+  _ExpectedAllowedOwnerEdge(
     sourceOwner: 'selection',
     targetOwner: 'contracts/public',
   ),
@@ -858,6 +862,10 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'codec',
     targetOwner: 'contracts/public',
+  ),
+  _ExpectedAllowedOwnerEdge(
+    sourceOwner: 'codec',
+    targetOwner: 'contracts/internal',
   ),
   _ExpectedAllowedOwnerEdge(sourceOwner: 'codec', targetOwner: 'diagnostics'),
   _ExpectedAllowedOwnerEdge(

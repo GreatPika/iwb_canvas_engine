@@ -6,39 +6,8 @@ import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_transform_admission.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import 'schema_v1_diagnostics.dart';
-import 'schema_v1_decoder.dart';
 
 final class ValidatedImportDraft {
-  factory ValidatedImportDraft.fromSchemaV1Json(
-    String json, {
-    DiagnosticsHub? diagnostics,
-  }) {
-    final document = decodeSchemaV1DocumentFromJson(
-      json,
-      diagnostics: diagnostics,
-    );
-    final resourceIds = _validatedResourceIds(
-      document.resources,
-      diagnostics: diagnostics,
-    );
-    final layerIds = _validatedLayerIds(
-      document.layers,
-      diagnostics: diagnostics,
-    );
-    final elementIds = _validatedElementIds(
-      _allElements(document.backgroundElements, document.layers),
-      resourceIds: resourceIds,
-      diagnostics: diagnostics,
-    );
-
-    return ValidatedImportDraft._(
-      document: document,
-      resourceIds: resourceIds,
-      layerIds: layerIds,
-      elementIds: elementIds,
-    );
-  }
-
   factory ValidatedImportDraft.fromDraftReplacement(
     CanvasDocument document, {
     DiagnosticsHub? diagnostics,

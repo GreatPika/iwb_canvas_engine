@@ -168,7 +168,7 @@ Depends On:
 
 Unit 2.
 
-### [ ] Unit 4: Store-owned prepared row install seam
+### [x] Unit 4: Store-owned prepared row install seam
 
 Owner:
 
