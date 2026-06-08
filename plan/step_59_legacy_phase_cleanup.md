@@ -238,7 +238,7 @@ Depends On:
 
 None.
 
-### [ ] Unit 2: Public API retired-export registry migration
+### [x] Unit 2: Public API retired-export registry migration
 
 Owner:
 

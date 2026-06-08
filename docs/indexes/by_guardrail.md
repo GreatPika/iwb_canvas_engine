@@ -27,13 +27,13 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## api.no_legacy_public_types
-
-- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
 ## api.no_public_api_import_cycles
 
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## api.no_retired_public_exports
+
+- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.no_retired_public_load_routes
 

@@ -133,6 +133,7 @@ CanvasDocument decodeCanvasDocumentFromJson(String json) => throw '';
 public_exports:
   - decodeCanvasDocument
   - decodeCanvasDocumentFromJson
+retired_public_exports: []
 diagnostics_public_surface: []
 ''',
   };

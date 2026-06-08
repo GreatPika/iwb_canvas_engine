@@ -14,14 +14,14 @@ Related donors:
 Related diagrams:
 - `c4_container`
 Required tests:
-- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.no_retired_public_exports`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.selection_boundary_imports`
 - `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
 - `core.no_legacy_imports`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
 - `frame.committed_facts_via_frame_facts_port`

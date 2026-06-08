@@ -81,7 +81,7 @@ indirection, runtime behavior, or runner coverage.
 | Guardrail id | Primary pattern | Secondary pattern | Confidence | Design note |
 |---|---|---|---|---|
 | `api.integration_surface_complete` | `behavioral_seam_test` | `parsed_ast_directive`, `runner_inventory` | `derived from legacy pattern` | Compile the external app fixture and AST-check that it imports only the public barrel. |
-| `api.no_legacy_public_types` | `negative_legacy_shape` | `resolved_public_surface` | `strong legacy precedent` | Reject legacy exported symbols through the effective public namespace, not just root-barrel text. |
+| `api.no_retired_public_exports` | `negative_legacy_shape` | `resolved_public_surface` | `strong legacy precedent` | Reject current registry-owned retired public symbols through the effective public namespace, not just root-barrel text. |
 | `api.public_exports_complete` | `registry_parity` | `resolved_public_surface` | `strong legacy precedent` | Compare `public_api_v1.yaml` names with the resolved root public exports. |
 | `api.facades_do_not_export_internal` | `resolved_public_surface` | `behavioral_seam_test` | `new-engine extrapolation` | Resolve every `lib/src/api/**` facade export and reject any exported declaration marked `@internal`, with a negative fixture proving broad facade exports are caught. |
 | `api.public_types_complete` | `resolved_public_surface` | `registry_parity` | `strong legacy precedent` | Resolve exported signatures and verify every referenced public type exists in the accepted inventory. |

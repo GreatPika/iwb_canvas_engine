@@ -65,10 +65,10 @@ API or package boundaries directly.
 ## Tests and guardrails that prove this phase
 
 - `test.api_contract.app_next_engine_adapter_compile_fixture` -> `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`; compiles `test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart` and enforces public-barrel-only imports
-- `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test.api_contract.no_retired_public_exports` -> `test/api_contract/no_retired_public_exports_test.dart`
 - `test.codec.constructor_and_schema_limits` -> `test/codec/constructor_and_schema_limits_test.dart`
 - `api.integration_surface_complete`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `api.public_types_complete`
 - `api.public_api_compiles_as_written`
 - `api.no_undefined_public_type_references`

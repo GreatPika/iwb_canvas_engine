@@ -15,7 +15,7 @@ Related diagrams:
 - `c4_context`
 - `c4_container`
 Required tests:
-- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.no_retired_public_exports`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 Guardrails:
 - `core.no_legacy_imports`

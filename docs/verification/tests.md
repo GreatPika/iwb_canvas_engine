@@ -106,7 +106,7 @@ Required tests:
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
-- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.no_retired_public_exports`
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
@@ -254,7 +254,7 @@ Required tests:
 - `test/api/canvas_field_update_test.dart`
 - `test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `test/api_contract/no_undefined_public_type_references_test.dart`
-- `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test/api_contract/no_retired_public_exports_test.dart`
 - `test/api_contract/dto_immutability_test.dart`
 - `test/api_contract/public_equality_policy_test.dart`
 - `test/api_contract/public_signature_shape_test.dart`

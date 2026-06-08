@@ -101,7 +101,7 @@ errors, validation rules, and equality semantics.
 - `test.api_contract.preview_state_sealed_union` -> `test/api_contract/preview_state_sealed_union_test.dart`
 - `test.api_contract.canvas_field_update_static_semantics` -> `test/api_contract/canvas_field_update_static_semantics_test.dart`
 - `test.api_contract.no_undefined_public_type_references` -> `test/api_contract/no_undefined_public_type_references_test.dart`; also checks public signature shape with analyzer AST
-- `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test.api_contract.no_retired_public_exports` -> `test/api_contract/no_retired_public_exports_test.dart`
 - `test.api_contract.dto_immutability` -> `test/api_contract/dto_immutability_test.dart`
 - `test.api_contract.public_equality_policy` -> `test/api_contract/public_equality_policy_test.dart`
 - `test.api.canvas_field_update` -> `test/api/canvas_field_update_test.dart`
@@ -116,7 +116,7 @@ errors, validation rules, and equality semantics.
 - `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`

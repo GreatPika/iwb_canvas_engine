@@ -87,7 +87,7 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `api.public_exports_complete`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
@@ -193,7 +193,7 @@ obligations before continuing dependent phase work.
    `CanvasRuntime.state` surface and exported runtime state snapshot types.
 6. public dartdoc, class modifier, public signature shape, and sealed preview
    state readability guardrails are green.
-6. api.no_legacy_public_types is green.
+6. api.no_retired_public_exports is green.
 7. core.no_legacy_imports is green.
 8. core.import_boundaries and core.no_unapproved_part_files are green.
 9. core.single_runtime_root is green.

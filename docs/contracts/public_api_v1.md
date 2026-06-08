@@ -40,7 +40,7 @@ Required tests:
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
-- `test.api_contract.no_legacy_public_symbols`
+- `test.api_contract.no_retired_public_exports`
 - `test.api_contract.example_public_boundary`
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
@@ -108,9 +108,10 @@ initially contains `CanvasDiagnosticPolicy`, `CanvasDiagnosticsDisabled`,
 and `CanvasDataErrorCode`. The classification does not add public API names or
 change this document's semantic ownership of those declarations.
 
-The legacy public symbols listed in `tool/goldens/public_api_symbols.txt` from
-the legacy package are not exported by this package. Natural concepts may exist
-under next-owned names, but legacy public shapes are banned.
+The registry also owns the `retired_public_exports` deny-list. Names in that
+list are retired public symbols from the legacy package and are not exported by
+this package. Natural concepts may exist under next-owned names, but retired
+public shapes are banned.
 
 The root package does not expose named extension declarations in Public API v1.
 Adding one later is a public API decision that requires an explicit registry and

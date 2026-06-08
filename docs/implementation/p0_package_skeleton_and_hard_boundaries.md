@@ -9,7 +9,7 @@ runtime, API, donor, codec, or Flutter implementation can land.
 
 - populate the existing repository-root package skeleton
 - create public barrel exporting only `src/api/**`
-- add `api.no_legacy_public_types` guardrail
+- add `api.no_retired_public_exports` guardrail
 - add `api.public_exports_complete` guardrail
 - add `api.public_types_complete` guardrail
 - add `core.no_legacy_imports` guardrail
@@ -62,7 +62,7 @@ runtime, API, donor, codec, or Flutter implementation can land.
 
 ## Tests and guardrails that prove this phase
 
-- `test.api_contract.no_legacy_public_symbols` -> `test/api_contract/no_legacy_public_symbols_test.dart`
+- `test.api_contract.no_retired_public_exports` -> `test/api_contract/no_retired_public_exports_test.dart`
 - `test.api_contract.public_exports_complete` -> `test/api_contract/public_exports_complete_test.dart`
 - `test.api_contract.public_types_complete` -> `test/api_contract/public_types_complete_test.dart`
 - `test.guardrails.import_boundaries` -> `test/guardrails/import_boundaries_test.dart`; also enforces no imports from another package's `src/**` and no unapproved production `part` / `part of` directives
@@ -71,7 +71,7 @@ runtime, API, donor, codec, or Flutter implementation can land.
 - `dart run tool/guardrails/run.dart --suite=api`
 - `dart run tool/guardrails/run.dart --suite=core`
 - `dart run tool/guardrails/run.dart --guardrail=core.import_boundaries`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `api.public_exports_complete`
 - `api.public_types_complete`
 - `core.no_legacy_imports`

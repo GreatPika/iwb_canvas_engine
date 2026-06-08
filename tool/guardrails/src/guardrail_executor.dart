@@ -22,6 +22,12 @@ typedef GuardrailProofRunner =
     Future<int> Function(String guardrailId, String path);
 typedef GuardrailViolationRunner = Future<List<GuardrailViolation>> Function();
 
+final class GuardrailRunOptions {
+  const GuardrailRunOptions({this.publicApiLibraryPath});
+
+  final String? publicApiLibraryPath;
+}
+
 final class GuardrailRoute {
   const GuardrailRoute._({required this.kind, required this.target});
 
@@ -47,18 +53,26 @@ final class GuardrailRunResult {
   final int exitCode;
 }
 
-Future<GuardrailRunResult> runGuardrails(Iterable<String> ids) {
-  return runGuardrailsWithProofRunner(ids, runDartTest: _runDartTest);
+Future<GuardrailRunResult> runGuardrails(
+  Iterable<String> ids, {
+  GuardrailRunOptions options = const GuardrailRunOptions(),
+}) {
+  return runGuardrailsWithProofRunner(
+    ids,
+    runDartTest: _runDartTest,
+    options: options,
+  );
 }
 
 Future<GuardrailRunResult> runGuardrailsWithProofRunner(
   Iterable<String> ids, {
   required GuardrailProofRunner runDartTest,
+  GuardrailRunOptions options = const GuardrailRunOptions(),
   Map<String, GuardrailViolationRunner>? violationChecks,
 }) async {
   final ran = <String>[];
   final proofExitCodes = <String, Future<int>>{};
-  final structuralChecks = violationChecks ?? _violationChecks;
+  final structuralChecks = violationChecks ?? _violationChecksFor(options);
 
   for (final id in ids) {
     ran.add(id);
@@ -82,7 +96,7 @@ GuardrailRoute? guardrailRouteFor(String id) {
     return GuardrailRoute.dartTest(proofPaths.join(', '));
   }
 
-  if (_violationChecks.containsKey(id)) {
+  if (_violationChecksFor(const GuardrailRunOptions()).containsKey(id)) {
     return GuardrailRoute.structural(_structuralDescriptions[id] ?? id);
   }
 
@@ -410,8 +424,20 @@ const _testProofPaths = {
   ],
 };
 
-final Map<String, GuardrailViolationRunner> _violationChecks = {
-  'api.no_legacy_public_types': checkNoLegacyPublicTypes,
+Map<String, GuardrailViolationRunner> _violationChecksFor(
+  GuardrailRunOptions options,
+) {
+  return {
+    'api.no_retired_public_exports': () {
+      return checkNoRetiredPublicExports(
+        libraryPath: options.publicApiLibraryPath,
+      );
+    },
+    ..._baseViolationChecks,
+  };
+}
+
+final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
   'api.public_exports_complete': checkPublicExportsComplete,
   'api.no_retired_public_load_routes': checkNoRetiredPublicLoadRoutes,
   'api.no_unapproved_document_load_inputs': checkNoUnapprovedDocumentLoadInputs,
@@ -467,7 +493,7 @@ final Map<String, GuardrailViolationRunner> _violationChecks = {
 };
 
 const _structuralDescriptions = {
-  'api.no_legacy_public_types': 'resolved public legacy symbol check',
+  'api.no_retired_public_exports': 'resolved retired public export check',
   'api.public_exports_complete': 'public registry parity check',
   'api.no_retired_public_load_routes':
       'public load/decode route retirement check',

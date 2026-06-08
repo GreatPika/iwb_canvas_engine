@@ -55,7 +55,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`
 
-## test.api_contract.no_legacy_public_symbols
+## test.api_contract.no_retired_public_exports
 
 - Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
 

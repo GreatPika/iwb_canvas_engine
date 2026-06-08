@@ -16,7 +16,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.geometry.hit_policy
   blocks:
     - P2
@@ -180,7 +180,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
@@ -206,7 +206,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
@@ -255,7 +255,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.constructor_and_schema_limits
   blocks:
     - P1
@@ -282,7 +282,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.constructor_and_schema_limits
   blocks:
     - P2
@@ -309,7 +309,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.constructor_and_schema_limits
   blocks:
     - P2
@@ -334,7 +334,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
   blocks:
     - P2
   related_sections:
@@ -380,7 +380,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.interaction.pointer_session
   blocks:
     - P2
@@ -847,7 +847,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
   blocks:
     - P2
   related_sections:
@@ -869,7 +869,7 @@
   required_tests:
     - test.api_contract.public_api_v1_compiles_as_written
     - api.public_exports_complete
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
@@ -1514,7 +1514,7 @@
     - legacy public API shape
     - controller facade files
   required_tests:
-    - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.no_retired_public_exports
     - core.no_legacy_imports
     - core.no_scene_controller_shape_dependency
     - test.guardrails.blocking_suite

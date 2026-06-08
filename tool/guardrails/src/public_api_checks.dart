@@ -431,22 +431,22 @@ Future<List<GuardrailViolation>> _checkUndefinedPublicTypeReferences({
   ];
 }
 
-Future<List<GuardrailViolation>> checkNoLegacyPublicTypes({
+Future<List<GuardrailViolation>> checkNoRetiredPublicExports({
   String? libraryPath,
 }) async {
   final surface = await resolvePublicApiSurface(libraryPath: libraryPath);
-  final legacySymbols = await _readLegacyPublicSymbols();
-  final exportedLegacy = surface.exportedNames.intersection(legacySymbols);
+  final retiredExports = readPublicApiRegistryData().retiredPublicExports;
+  final exportedRetired = surface.exportedNames.intersection(retiredExports);
 
-  if (exportedLegacy.isEmpty) {
+  if (exportedRetired.isEmpty) {
     return const [];
   }
 
   return [
     GuardrailViolation(
-      guardrailId: 'api.no_legacy_public_types',
+      guardrailId: 'api.no_retired_public_exports',
       path: _displayPath(libraryPath),
-      message: 'exports retired legacy symbols: ${_list(exportedLegacy)}',
+      message: 'exports retired public symbols: ${_list(exportedRetired)}',
     ),
   ];
 }
@@ -467,17 +467,4 @@ String _list(Iterable<String> names) {
   final sorted = names.toList()..sort();
 
   return sorted.join(', ');
-}
-
-Future<Set<String>> _readLegacyPublicSymbols() async {
-  final golden = File(
-    '$repositoryRoot/legacy/iwb_canvas_engine/tool/goldens/'
-    'public_api_symbols.txt',
-  );
-  final lines = await golden.readAsLines();
-
-  return lines
-      .map((line) => line.trim())
-      .where((line) => line.isNotEmpty)
-      .toSet();
 }

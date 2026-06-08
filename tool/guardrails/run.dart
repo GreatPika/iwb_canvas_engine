@@ -5,9 +5,19 @@ import 'src/guardrail_registry.dart';
 
 Future<void> main(List<String> arguments) async {
   final dryRun = arguments.contains('--dry-run');
+  final publicApiLibraryPath = _normalizePathOption(
+    _optionValue(arguments, '--public-api-library='),
+  );
   final selectionArguments = arguments
       .where((arg) => arg != '--dry-run')
+      .where((arg) => !arg.startsWith('--public-api-library='))
       .toList();
+  if (publicApiLibraryPath == '') {
+    stderr.writeln('Empty --public-api-library value');
+    exitCode = 64;
+    return;
+  }
+
   final selection = _selectGuardrails(selectionArguments);
   if (selection == null) {
     exitCode = 64;
@@ -19,11 +29,32 @@ Future<void> main(List<String> arguments) async {
     return;
   }
 
-  final result = await runGuardrails(selection);
+  final result = await runGuardrails(
+    selection,
+    options: GuardrailRunOptions(publicApiLibraryPath: publicApiLibraryPath),
+  );
   for (final id in result.ranGuardrailIds) {
     stdout.writeln('ran $id');
   }
   exitCode = result.exitCode;
+}
+
+String? _optionValue(List<String> arguments, String prefix) {
+  for (final argument in arguments) {
+    if (argument.startsWith(prefix)) {
+      return argument.replaceFirst(prefix, '');
+    }
+  }
+
+  return null;
+}
+
+String? _normalizePathOption(String? path) {
+  if (path == null || path.isEmpty) {
+    return path;
+  }
+
+  return File(path).absolute.path;
 }
 
 int _printDryRun(List<String> selection) {
@@ -89,5 +120,8 @@ List<String> _sorted(Set<String> ids) {
 }
 
 void _printUsage() {
-  stderr.writeln('Use one of: --suite=<name>, --guardrail=<id>');
+  stderr.writeln(
+    'Use one of: --suite=<name>, --guardrail=<id> '
+    '[--public-api-library=<path>]',
+  );
 }

@@ -22,7 +22,7 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
-- `api.no_legacy_public_types`
+- `api.no_retired_public_exports`
 - `api.public_exports_complete`
 - `api.no_retired_public_load_routes`
 - `api.no_unapproved_document_load_inputs`
@@ -175,7 +175,7 @@ Mandatory guardrails:
 | Guardrail id | Rule |
 |---|---|
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
-| `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
+| `api.no_retired_public_exports` | names listed in the current retired public export registry are not exported by the root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
 | `api.no_retired_public_load_routes` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
 | `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization compatibility paths, and named test hooks |

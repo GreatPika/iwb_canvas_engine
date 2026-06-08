@@ -200,6 +200,20 @@ void main() {
       'test/api_contract/public_readable_union_variants_test.dart': 1,
     });
   });
+  test(
+    'api.no_retired_public_exports runner route rejects retired exports',
+    () async {
+      final result = await _runGuardrails([
+        '--guardrail=api.no_retired_public_exports',
+        '--public-api-library=test/api_contract/fixtures/'
+            'retired_public_export_fixture.dart',
+      ], dryRun: false);
+
+      expect(result.exitCode, 1);
+      expect(result.stdout, contains('ran api.no_retired_public_exports'));
+      expect(result.stderr, contains('Transform2D'));
+    },
+  );
   for (final scanCase in _runnerStructuralScanCases) {
     test('${scanCase.id} runs proof tests before structural scan', () async {
       await expectLater(_expectProofBeforeStructuralScan(scanCase), completes);
@@ -248,11 +262,14 @@ Future<Set<String>> _selectedGuardrailIds([
   return _ranGuardrailIds(result);
 }
 
-Future<ProcessResult> _runGuardrails(List<String> arguments) {
+Future<ProcessResult> _runGuardrails(
+  List<String> arguments, {
+  bool dryRun = true,
+}) {
   return Process.run('dart', [
     'run',
     'tool/guardrails/run.dart',
-    '--dry-run',
+    if (dryRun) '--dry-run',
     ...arguments,
   ], workingDirectory: Directory.current.path);
 }

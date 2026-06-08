@@ -37,7 +37,10 @@ const _blockingEntries = [
     id: 'api.integration_surface_complete',
     suites: {'blocking', 'api'},
   ),
-  GuardrailEntry(id: 'api.no_legacy_public_types', suites: {'blocking', 'api'}),
+  GuardrailEntry(
+    id: 'api.no_retired_public_exports',
+    suites: {'blocking', 'api'},
+  ),
   GuardrailEntry(
     id: 'api.public_exports_complete',
     suites: {'blocking', 'api'},
