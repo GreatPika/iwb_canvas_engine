@@ -9,21 +9,10 @@ Must read before editing:
 - `section_07_resource_lifecycle` -> `docs/contracts/resources.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
-Feeds phases:
-- `P9`
-- `P10`
-- `P13`
-Related donors:
-- `frame_render_state`
-- `render_geometry_builder`
-- `snapshot_paint_admission_bounds`
-- `snapshot_paint_candidates`
-- `scene_view_runtime_fast_path`
-- `paint_candidate_stage`
-- `scene_painter_frame`
-- `scene_render_caches`
-- `static_layer_cache`
-- `text_stroke_path_metrics_caches`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_main_paint_frame`
 - `dfd_overlay_frame`

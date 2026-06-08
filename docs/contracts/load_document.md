@@ -7,15 +7,10 @@ Owns:
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
-Feeds phases:
-- `P6`
-- `P10`
-- `P11`
-- `P12`
-Related donors:
-- `staged_load_runtime_materialization`
-- `validated_import_draft`
-- `interaction_mutation_boundary`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_load_document_success_failure`
 - `seq_load_document_success`

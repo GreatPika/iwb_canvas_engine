@@ -7,15 +7,10 @@ Owns:
 Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
-Feeds phases:
-- `P9`
-- `P13`
-- `P14`
-Related donors:
-- `direct_scan_resistant_cache`
-- `scene_render_caches`
-- `static_layer_cache`
-- `text_stroke_path_metrics_caches`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_cache_invalidation`
 Required tests:

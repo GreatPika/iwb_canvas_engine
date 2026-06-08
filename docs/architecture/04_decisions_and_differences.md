@@ -6,10 +6,9 @@ Owns:
 - 9. Accepted differences from legacy engine
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
-Feeds phases:
-- `P1`
-- `P2`
-Related donors:
+Current owners:
+- `architecture`
+Benchmarks:
 - `none`
 Related diagrams:
 - `none`

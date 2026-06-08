@@ -6,15 +6,10 @@ Owns:
 - 6. Validation limits
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
-Feeds phases:
-- `P1`
-- `P2`
-- `P3`
-- `P4`
-Related donors:
-- `foundation_contract_limits`
-- `foundation_validators`
-- `foundation_error_contract`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:

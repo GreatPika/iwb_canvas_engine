@@ -6,10 +6,9 @@ Owns:
 - 2. Несущая модель новой библиотеки
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
-Feeds phases:
-- `P0`
-- `P4`
-Related donors:
+Current owners:
+- `architecture`
+Benchmarks:
 - `none`
 Related diagrams:
 - `c4_container`

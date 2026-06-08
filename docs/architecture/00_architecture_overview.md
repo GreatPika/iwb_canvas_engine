@@ -6,10 +6,9 @@ Owns:
 - 0. Статус и обязательное архитектурное решение
 Must read before editing:
 - `none`
-Feeds phases:
-- `P0`
-- `P1`
-Related donors:
+Current owners:
+- `architecture`
+Benchmarks:
 - `none`
 Related diagrams:
 - `c4_context`

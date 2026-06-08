@@ -108,9 +108,9 @@ List<_SectionEntry> _loadSections(List<String> errors) {
         id: id,
         file: file,
         title: title,
-        phases: _stringListField(item, 'phases', id, errors),
+        owners: _stringListField(item, 'owners', id, errors),
         mustRead: _stringListField(item, 'must_read', id, errors),
-        donors: _stringListField(item, 'donors', id, errors),
+        benchmarks: _stringListField(item, 'benchmarks', id, errors),
         diagrams: _stringListField(item, 'diagrams', id, errors),
         guardrails: _stringListField(item, 'guardrails', id, errors),
         tests: _stringListField(item, 'tests', id, errors),
@@ -135,10 +135,10 @@ String _renderSectionContext(
   _writeLiteralList(buffer, [section.title]);
   buffer.writeln('Must read before editing:');
   _writeReferenceList(buffer, section.mustRead, sectionsById, errors);
-  buffer.writeln('Feeds phases:');
-  _writeCodeList(buffer, section.phases);
-  buffer.writeln('Related donors:');
-  _writeCodeList(buffer, section.donors);
+  buffer.writeln('Current owners:');
+  _writeCodeList(buffer, section.owners);
+  buffer.writeln('Benchmarks:');
+  _writeCodeList(buffer, section.benchmarks);
   buffer.writeln('Related diagrams:');
   _writeCodeList(buffer, section.diagrams);
   buffer.writeln('Required tests:');
@@ -297,9 +297,9 @@ class _SectionEntry {
     required this.id,
     required this.file,
     required this.title,
-    required this.phases,
+    required this.owners,
     required this.mustRead,
-    required this.donors,
+    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -309,9 +309,9 @@ class _SectionEntry {
   final String id;
   final String file;
   final String title;
-  final List<String> phases;
+  final List<String> owners;
   final List<String> mustRead;
-  final List<String> donors;
+  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;

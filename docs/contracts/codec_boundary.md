@@ -7,18 +7,10 @@ Owns:
 Must read before editing:
 - `section_05_schema_v1_contract` -> `docs/contracts/schema_v1.md`
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
-Feeds phases:
-- `P3`
-Related donors:
-- `codec_guards`
-- `codec_json_require`
-- `codec_json_parse`
-- `codec_metadata_decode`
-- `codec_layer_decode`
-- `codec_node_common_decode`
-- `codec_family_decode`
-- `codec_scene_codec_flow`
-- `codec_validation_path_surface`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_schema_v1_import_encode`
 - `seq_schema_v1_import_encode_order`

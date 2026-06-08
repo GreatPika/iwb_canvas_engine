@@ -8,10 +8,39 @@ Must read before editing:
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
-Feeds phases:
-- `P14`
-Related donors:
-- `direct_scan_resistant_cache`
+Current owners:
+- `benchmark`
+Benchmarks:
+- `edit.add_element`
+- `edit.update_visual`
+- `edit.update_transform`
+- `edit.move_selection`
+- `edit.set_camera_offset`
+- `edit.add_line`
+- `input.selected_move_preview`
+- `frame.selected_move_preview_cached_ordinary_plan`
+- `input.marquee_preview`
+- `input.draw_preview`
+- `input.line_preview`
+- `input.eraser_preview`
+- `input.eraser_budget_exceeded`
+- `frame.main_capture`
+- `frame.overlay_capture`
+- `frame.paint_candidates`
+- `resources.resolve_sync`
+- `resources.resolve_sync_cold_budget`
+- `resources.mark_dirty`
+- `resources.mark_all_dirty`
+- `projection.read_document`
+- `codec.decode_v1`
+- `load_document.success`
+- `load_document.breakdown`
+- `load_document.failure`
+- `spatial.query_point`
+- `spatial.query_point_dense_stress`
+- `spatial.touched_update`
+- `runtime.dispose_during_gesture`
+- `diagnostics.disabled_pointer`
 Related diagrams:
 - `none`
 Required tests:

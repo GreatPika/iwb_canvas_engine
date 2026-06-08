@@ -1,1410 +1,1155 @@
--
-  id: section_00_status_and_scope
+- id: section_00_status_and_scope
   source: docs/_registry/sections.yaml / section 0
   file: docs/architecture/00_architecture_overview.md
   title: 0. Статус и обязательное архитектурное решение
-  phases:
-    - P0
-    - P1
+  owners:
+  - architecture
   subsystems:
-    - none
+  - none
   must_read:
-    - "none"
-  donors:
-    - "none"
+  - none
+  benchmarks:
+  - none
   diagrams:
-    - c4_context
-    - c4_container
+  - c4_context
+  - c4_container
   guardrails:
-    - core.no_legacy_imports
-    - core.no_scene_controller_shape_dependency
-    - core.no_node_spec_patch_shape_dependency
+  - core.no_legacy_imports
+  - core.no_scene_controller_shape_dependency
+  - core.no_node_spec_patch_shape_dependency
   tests:
-    - test.api_contract.no_retired_public_exports
-    - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.no_retired_public_exports
+  - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
-    - no legacy facade
-    - no SceneController
-    - no legacy public API shape
-    - no legacy runtime fallback
--
-  id: section_02_architecture_model
+  - no legacy facade
+  - no SceneController
+  - no legacy public API shape
+  - no legacy runtime fallback
+- id: section_02_architecture_model
   source: docs/_registry/sections.yaml / section 2
   file: docs/architecture/01_runtime_ownership.md
   title: 2. Несущая модель новой библиотеки
-  phases:
-    - P0
-    - P4
+  owners:
+  - architecture
   subsystems:
-    - selection_runtime
+  - selection_runtime
   must_read:
-    - section_00_status_and_scope
-  donors:
-    - "none"
+  - section_00_status_and_scope
+  benchmarks:
+  - none
   diagrams:
-    - c4_container
-    - c4_component_runtime
-    - generated/actual_vs_expected_diff
-    - generated/full_architecture
-    - generated/release_verification
-    - state_runtime_lifecycle
+  - c4_container
+  - c4_component_runtime
+  - generated/actual_vs_expected_diff
+  - generated/full_architecture
+  - generated/release_verification
+  - state_runtime_lifecycle
   guardrails:
-    - core.single_runtime_root
-    - selection.owner_separate_from_document
+  - core.single_runtime_root
+  - selection.owner_separate_from_document
   tests:
-    - test.guardrails.blocking_suite
-    - test.selection.runtime_owner_separation
+  - test.guardrails.blocking_suite
+  - test.selection.runtime_owner_separation
   do_not_assume:
-    - no legacy facade
-    - no SceneController
--
-  id: section_03_package_layout
+  - no legacy facade
+  - no SceneController
+- id: section_03_package_layout
   source: docs/_registry/sections.yaml / section 3
   file: docs/architecture/02_package_boundaries.md
   title: 3. Package layout
-  phases:
-    - P0
+  owners:
+  - architecture
   subsystems:
-    - none
+  - none
   must_read:
-    - section_00_status_and_scope
-    - section_02_architecture_model
-  donors:
-    - "none"
+  - section_00_status_and_scope
+  - section_02_architecture_model
+  benchmarks:
+  - none
   diagrams:
-    - c4_container
+  - c4_container
   guardrails:
-    - core.no_legacy_imports
-    - api.no_retired_public_exports
-    - core.import_boundaries
-    - core.no_unapproved_part_files
-    - frame.committed_facts_via_frame_facts_port
-    - interaction.no_concrete_selection_imports
-    - surface.editable_text_surface_only
+  - core.no_legacy_imports
+  - api.no_retired_public_exports
+  - core.import_boundaries
+  - core.no_unapproved_part_files
+  - frame.committed_facts_via_frame_facts_port
+  - interaction.no_concrete_selection_imports
+  - surface.editable_text_surface_only
   tests:
-    - test.api_contract.no_retired_public_exports
-    - test.guardrails.import_boundaries
-    - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.guardrails.selection_boundary_imports
-    - test.guardrails.text_surface_guardrail_checks
+  - test.api_contract.no_retired_public_exports
+  - test.guardrails.import_boundaries
+  - test.guardrails.frame_committed_facts_via_frame_facts_port
+  - test.guardrails.selection_boundary_imports
+  - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-    - no legacy package import
-    - no app adapters in package
--
-  id: section_04_public_api_v1
+  - no legacy package import
+  - no app adapters in package
+- id: section_04_public_api_v1
   source: docs/_registry/sections.yaml / section 4
   file: docs/contracts/public_api_v1.md
-  title: "4. Public API v1: полный surface"
-  phases:
-    - P1
-    - P2
-    - P10
-    - P11
-    - P12
-    - P13
+  title: '4. Public API v1: полный surface'
+  owners:
+  - contract
   subsystems:
-    - public_api
+  - public_api
   must_read:
-    - section_00_status_and_scope
-    - section_03_package_layout
-  donors:
-    - foundation_transform2d
-    - foundation_contract_limits
-    - foundation_error_contract
-    - foundation_validators
-    - foundation_tri_state_patch_semantics
-    - foundation_immutable_collections
-    - foundation_pointer_input_contract
-    - foundation_action_event_immutability
-    - dto_snapshot_behavior
-    - dto_node_spec_behavior
+  - section_00_status_and_scope
+  - section_03_package_layout
+  benchmarks:
+  - none
   diagrams:
-    - c4_context
-    - dfd_public_edit
-    - seq_single_active_surface
+  - c4_context
+  - dfd_public_edit
+  - seq_single_active_surface
   guardrails:
-    - api.integration_surface_complete
-    - api.public_exports_complete
-    - api.no_retired_public_load_routes
-    - api.no_unapproved_document_load_inputs
-    - api.facades_do_not_export_internal
-    - api.public_types_complete
-    - api.public_api_compiles_as_written
-    - api.resource_source_app_key_publicly_readable
-    - api.preview_state_sealed_union_publicly_readable
-    - api.exported_dartdoc_complete
-    - api.public_class_modifiers_explicit
-    - api.no_public_api_import_cycles
-    - api.public_signature_shape
-    - api.no_undefined_public_type_references
-    - api.dto_immutability
-    - api.equality_policy_explicit
-    - api.id_validation_no_extension_type_escape
-    - interaction.text_edit_stale_commit_guard
-    - text.no_overlay_textpainter_measurement
-    - surface.editable_text_surface_only
-    - surface.interactive_false_pending_line_preserved
+  - api.integration_surface_complete
+  - api.public_exports_complete
+  - api.no_retired_public_load_routes
+  - api.no_unapproved_document_load_inputs
+  - api.facades_do_not_export_internal
+  - api.public_types_complete
+  - api.public_api_compiles_as_written
+  - api.resource_source_app_key_publicly_readable
+  - api.preview_state_sealed_union_publicly_readable
+  - api.exported_dartdoc_complete
+  - api.public_class_modifiers_explicit
+  - api.no_public_api_import_cycles
+  - api.public_signature_shape
+  - api.no_undefined_public_type_references
+  - api.dto_immutability
+  - api.equality_policy_explicit
+  - api.id_validation_no_extension_type_escape
+  - interaction.text_edit_stale_commit_guard
+  - text.no_overlay_textpainter_measurement
+  - surface.editable_text_surface_only
+  - surface.interactive_false_pending_line_preserved
   tests:
-    - test.api_contract.public_readable_union_variants
-    - test.api_contract.preview_state_sealed_union
-    - test.api_contract.public_api_v1_compiles_as_written
-    - test.api_contract.public_api_no_unapproved_placeholders
-    - test.guardrails.public_api_declaration_checks
-    - test.guardrails.public_api_import_cycles
-    - test.api.canvas_transform
-    - test.api.canvas_field_update
-    - test.api_contract.canvas_field_update_static_semantics
-    - test.api_contract.no_undefined_public_type_references
-    - test.api_contract.no_retired_public_exports
-    - test.api_contract.example_public_boundary
-    - test.api_contract.dto_immutability
-    - test.api_contract.public_equality_policy
-    - test.api.typed_action_payloads
-    - test.api_contract.app_next_engine_adapter_compile_fixture
-    - test.interaction.context_action_request
-    - test.interaction.text_edit_stale_commit_guard
-    - test.runtime.text_editing_port
-    - test.surface.text_editing_overlay
-    - test.guardrails.text_surface_guardrail_checks
-    - test.runtime.dispose_lifecycle
-    - test.runtime.runtime_state_publication
-    - test.runtime.interaction_settings_state
-    - test.surface.interactive_false_state_isolation
-    - test.surface.interactive_false_pending_line_preserved
-    - test.surface.single_active_surface
-    - test.surface.surface_resource_session_lifecycle
+  - test.api_contract.public_readable_union_variants
+  - test.api_contract.preview_state_sealed_union
+  - test.api_contract.public_api_v1_compiles_as_written
+  - test.api_contract.public_api_no_unapproved_placeholders
+  - test.guardrails.public_api_declaration_checks
+  - test.guardrails.public_api_import_cycles
+  - test.api.canvas_transform
+  - test.api.canvas_field_update
+  - test.api_contract.canvas_field_update_static_semantics
+  - test.api_contract.no_undefined_public_type_references
+  - test.api_contract.no_retired_public_exports
+  - test.api_contract.example_public_boundary
+  - test.api_contract.dto_immutability
+  - test.api_contract.public_equality_policy
+  - test.api.typed_action_payloads
+  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.interaction.context_action_request
+  - test.interaction.text_edit_stale_commit_guard
+  - test.runtime.text_editing_port
+  - test.surface.text_editing_overlay
+  - test.guardrails.text_surface_guardrail_checks
+  - test.runtime.dispose_lifecycle
+  - test.runtime.runtime_state_publication
+  - test.runtime.interaction_settings_state
+  - test.surface.interactive_false_state_isolation
+  - test.surface.interactive_false_pending_line_preserved
+  - test.surface.single_active_surface
+  - test.surface.surface_resource_session_lifecycle
   do_not_assume:
-    - no legacy public API shape
-    - no PatchField export
-    - no SceneController export
-    - no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
--
-  id: section_05_schema_v1_contract
+  - no legacy public API shape
+  - no PatchField export
+  - no SceneController export
+  - no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
+- id: section_05_schema_v1_contract
   source: docs/_registry/sections.yaml / section 5
   file: docs/contracts/schema_v1.md
   title: 5. Schema v1 full field contract
-  phases:
-    - P3
-    - P7
+  owners:
+  - contract
   subsystems:
-    - schema_codec
+  - schema_codec
   must_read:
-    - section_04_public_api_v1
-    - section_06_validation_limits
-  donors:
-    - codec_guards
-    - codec_json_require
-    - codec_json_parse
-    - codec_metadata_decode
-    - codec_layer_decode
-    - codec_node_common_decode
-    - codec_family_decode
-    - codec_scene_codec_flow
-    - codec_validation_path_surface
-    - dto_boundary_schema
+  - section_04_public_api_v1
+  - section_06_validation_limits
+  benchmarks:
+  - none
   diagrams:
-    - dfd_schema_v1_import_encode
-    - seq_schema_v1_import_encode_order
+  - dfd_schema_v1_import_encode
+  - seq_schema_v1_import_encode_order
   guardrails:
-    - codec.schema_v1_exact
-    - codec.known_fields_validated
+  - codec.schema_v1_exact
+  - codec.known_fields_validated
   tests:
-    - test.codec.schema_v1.known_fields_validation
-    - test.codec.schema_v1.canonical_encode_roundtrip
-    - test.codec.schema_v1.metadata_projection
-    - test.codec.schema_v1.resources_appkey_only
-    - test.codec.schema_v1.reject_unknown_element_kind
-    - test.codec.schema_v1.reject_unknown_resource_source_kind
+  - test.codec.schema_v1.known_fields_validation
+  - test.codec.schema_v1.canonical_encode_roundtrip
+  - test.codec.schema_v1.metadata_projection
+  - test.codec.schema_v1.resources_appkey_only
+  - test.codec.schema_v1.reject_unknown_element_kind
+  - test.codec.schema_v1.reject_unknown_resource_source_kind
   do_not_assume:
-    - no schema v7 public entrypoints as next API
-    - no legacy SceneBuilder API shape
-    - no raw metadata map exposure after CanvasMetadata materialization
--
-  id: section_06_validation_limits
+  - no schema v7 public entrypoints as next API
+  - no legacy SceneBuilder API shape
+  - no raw metadata map exposure after CanvasMetadata materialization
+- id: section_06_validation_limits
   source: docs/_registry/sections.yaml / section 6
   file: docs/contracts/validation_limits.md
   title: 6. Validation limits
-  phases:
-    - P1
-    - P2
-    - P3
-    - P4
+  owners:
+  - contract
   subsystems:
-    - public_api
+  - public_api
   must_read:
-    - section_04_public_api_v1
-  donors:
-    - foundation_contract_limits
-    - foundation_validators
-    - foundation_error_contract
+  - section_04_public_api_v1
+  benchmarks:
+  - none
   diagrams:
-    - dfd_diagnostics_error_projection
+  - dfd_diagnostics_error_projection
   guardrails:
-    - codec.known_fields_validated
-    - api.id_validation_no_extension_type_escape
+  - codec.known_fields_validated
+  - api.id_validation_no_extension_type_escape
   tests:
-    - test.codec.constructor_and_schema_limits
+  - test.codec.constructor_and_schema_limits
   do_not_assume:
-    - no unvalidated public ids
-    - no legacy diagnostics surface leakage
--
-  id: section_07_resource_lifecycle
+  - no unvalidated public ids
+  - no legacy diagnostics surface leakage
+- id: section_07_resource_lifecycle
   source: docs/_registry/sections.yaml / section 7
   file: docs/contracts/resources.md
   title: 7. Resource lifecycle contract
-  phases:
-    - P7
-    - P9
-    - P13
+  owners:
+  - contract
   subsystems:
-    - resources
+  - resources
   must_read:
-    - section_04_public_api_v1
-    - section_10_runtime_data_model
-  donors:
-    - "none"
+  - section_04_public_api_v1
+  - section_10_runtime_data_model
+  benchmarks:
+  - none
   diagrams:
-    - dfd_resource_resolution
-    - seq_resource_resolution
-    - state_resource_resolution
+  - dfd_resource_resolution
+  - seq_resource_resolution
+  - state_resource_resolution
   guardrails:
-    - api.resource_source_app_key_publicly_readable
-    - resources.mutation_inside_edit_only
-    - resources.dirty_no_document_revision
-    - resources.app_key_only
-    - resources.resolver_boundary_owned_by_surface_session
-    - resources.resolver_frame_budget
-    - resources.no_same_frame_missing_retry
-    - resources.resolver_reentrancy_rejected
+  - api.resource_source_app_key_publicly_readable
+  - resources.mutation_inside_edit_only
+  - resources.dirty_no_document_revision
+  - resources.app_key_only
+  - resources.resolver_boundary_owned_by_surface_session
+  - resources.resolver_frame_budget
+  - resources.no_same_frame_missing_retry
+  - resources.resolver_reentrancy_rejected
   tests:
-    - test.api_contract.public_readable_union_variants
-    - test.codec.schema_v1.resources_appkey_only
-    - test.codec.schema_v1.reject_unknown_resource_source_kind
-    - test.resources.sync_image_resolver
-    - test.resources.app_owned_image_not_disposed
-    - test.resources.resource_dirty
-    - test.resources.mark_all_resources_dirty
-    - test.resources.missing_result_suppressed_per_frame
-    - test.resources.surface_session_cache_lifecycle
-    - test.resources.resolver_swap_starts_fresh_cache
-    - test.resources.resolver_frame_budget
-    - test.resources.resolver_reentrancy_rejected
+  - test.api_contract.public_readable_union_variants
+  - test.codec.schema_v1.resources_appkey_only
+  - test.codec.schema_v1.reject_unknown_resource_source_kind
+  - test.resources.sync_image_resolver
+  - test.resources.app_owned_image_not_disposed
+  - test.resources.resource_dirty
+  - test.resources.mark_all_resources_dirty
+  - test.resources.missing_result_suppressed_per_frame
+  - test.resources.surface_session_cache_lifecycle
+  - test.resources.resolver_swap_starts_fresh_cache
+  - test.resources.resolver_frame_budget
+  - test.resources.resolver_reentrancy_rejected
   do_not_assume:
-    - no engine IO
-    - no asset-bundle loading
-    - no file loading
-    - no remote/network loading
--
-  id: section_08_legacy_capability_inventory
+  - no engine IO
+  - no asset-bundle loading
+  - no file loading
+  - no remote/network loading
+- id: section_08_legacy_capability_inventory
   source: docs/_registry/sections.yaml / section 8A
   file: docs/verification/legacy_capability_inventory.md
   title: 8A. Legacy capability inventory
-  phases:
-    - P1
+  owners:
+  - verification
   subsystems:
-    - legacy_evidence
+  - legacy_evidence
   must_read:
-    - docs/donors/00_reuse_rules.md
-  donors:
-    - "none"
+  - none
+  benchmarks:
+  - none
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - "none"
+  - none
   tests:
-    - "none"
+  - none
   do_not_assume:
-    - no next API mapping table as release proof
--
-  id: section_09_accepted_differences
+  - no next API mapping table as release proof
+- id: section_09_accepted_differences
   source: docs/_registry/sections.yaml / section 9
   file: docs/architecture/04_decisions_and_differences.md
   title: 9. Accepted differences from legacy engine
-  phases:
-    - P1
-    - P2
+  owners:
+  - architecture
   subsystems:
-    - none
+  - none
   must_read:
-    - section_00_status_and_scope
-  donors:
-    - "none"
+  - section_00_status_and_scope
+  benchmarks:
+  - none
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - api.no_retired_public_exports
-    - core.no_scene_controller_shape_dependency
-    - core.no_node_spec_patch_shape_dependency
+  - api.no_retired_public_exports
+  - core.no_scene_controller_shape_dependency
+  - core.no_node_spec_patch_shape_dependency
   tests:
-    - test.api_contract.no_retired_public_exports
-    - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.no_retired_public_exports
+  - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
-    - accepted differences are explicit only
-    - no silent legacy compatibility layer
--
-  id: section_10_runtime_data_model
+  - accepted differences are explicit only
+  - no silent legacy compatibility layer
+- id: section_10_runtime_data_model
   source: docs/_registry/sections.yaml / section 10
   file: docs/architecture/03_data_model.md
   title: 10. Runtime data model
-  phases:
-    - P4
-    - P5
-    - P6
-    - P7
-    - P8
-    - P9
+  owners:
+  - architecture
   subsystems:
-    - runtime_store_edit
-    - selection_runtime
+  - runtime_store_edit
+  - selection_runtime
   must_read:
-    - section_02_architecture_model
-    - section_04_public_api_v1
-  donors:
-    - dto_document_helpers
-    - store_scene_controller_read_paths
-    - dto_node_boundary_mapping
+  - section_02_architecture_model
+  - section_04_public_api_v1
+  benchmarks:
+  - none
   diagrams:
-    - c4_component_runtime
-    - dfd_cache_invalidation
+  - c4_component_runtime
+  - dfd_cache_invalidation
   guardrails:
-    - core.single_runtime_root
-    - store.no_public_document_live_state
-    - selection.owner_separate_from_document
-    - projection.only_explicit_read_paths
+  - core.single_runtime_root
+  - store.no_public_document_live_state
+  - selection.owner_separate_from_document
+  - projection.only_explicit_read_paths
   tests:
-    - test.runtime.dispose_lifecycle
-    - test.runtime.runtime_state_publication
-    - test.runtime.load_document_state_publication
-    - test.runtime.interaction_settings_state
-    - test.store.read_document_projection
-    - test.selection.runtime_owner_separation
-    - test.store.no_projection_hot_path
-    - test.store.public_document_is_projection_only
-    - test.guardrails.store_projection_checks
-    - test.guardrails.selection_boundary_checks
+  - test.runtime.dispose_lifecycle
+  - test.runtime.runtime_state_publication
+  - test.runtime.load_document_state_publication
+  - test.runtime.interaction_settings_state
+  - test.store.read_document_projection
+  - test.selection.runtime_owner_separation
+  - test.store.no_projection_hot_path
+  - test.store.public_document_is_projection_only
+  - test.guardrails.store_projection_checks
+  - test.guardrails.selection_boundary_checks
   do_not_assume:
-    - no legacy mutable runtime graph
-    - no SceneController shape dependency
--
-  id: section_11_edit_kernel
+  - no legacy mutable runtime graph
+  - no SceneController shape dependency
+- id: section_11_edit_kernel
   source: docs/_registry/sections.yaml / section 11
   file: docs/contracts/edit_kernel.md
   title: 11. EditKernel implementation contract
-  phases:
-    - P5
-    - P6
-    - P10
-    - P11
-    - P12
+  owners:
+  - contract
   subsystems:
-    - runtime_store_edit
+  - runtime_store_edit
   must_read:
-    - section_04_public_api_v1
-    - section_10_runtime_data_model
-  donors:
-    - interaction_mutation_boundary
-    - staged_load_runtime_materialization
-    - validated_import_draft
-    - dto_document_helpers
+  - section_04_public_api_v1
+  - section_10_runtime_data_model
+  benchmarks:
+  - none
   diagrams:
-    - c4_code_edit_kernel
-    - dfd_public_edit
-    - seq_edit_success
-    - seq_edit_rollback
-    - state_edit_session
+  - c4_code_edit_kernel
+  - dfd_public_edit
+  - seq_edit_success
+  - seq_edit_rollback
+  - state_edit_session
   guardrails:
-    - edit.sync_non_nested
-    - edit.rollback_no_effects
-    - edit.stale_handle_rejected
-    - events.low_level_edit_no_user_actions
-    - edit.no_global_invalidation_except_replacement
-    - edit.typed_effects_no_frame_dependency
+  - edit.sync_non_nested
+  - edit.rollback_no_effects
+  - edit.stale_handle_rejected
+  - events.low_level_edit_no_user_actions
+  - edit.no_global_invalidation_except_replacement
+  - edit.typed_effects_no_frame_dependency
   tests:
-    - test.edit.low_level_mutations_do_not_emit_actions
-    - test.runtime.runtime_state_publication
-    - test.edit.sync_non_nested_async_stale
-    - test.edit.rollback
-    - test.edit.field_update_admission_effects
-    - test.edit.exact_touched_invalidation
-    - test.edit.typed_effects_no_frame_dependency
+  - test.edit.low_level_mutations_do_not_emit_actions
+  - test.runtime.runtime_state_publication
+  - test.edit.sync_non_nested_async_stale
+  - test.edit.rollback
+  - test.edit.field_update_admission_effects
+  - test.edit.exact_touched_invalidation
+  - test.edit.typed_effects_no_frame_dependency
   do_not_assume:
-    - no legacy SceneWriteTxn
-    - no legacy controller shell
-    - no async nested edit
--
-  id: section_12_load_document
+  - no legacy SceneWriteTxn
+  - no legacy controller shell
+  - no async nested edit
+- id: section_12_load_document
   source: docs/_registry/sections.yaml / section 12
   file: docs/contracts/load_document.md
-  title: "12. Schema v1 JSON load contract"
-  phases:
-    - P6
-    - P10
-    - P11
-    - P12
+  title: 12. Schema v1 JSON load contract
+  owners:
+  - contract
   subsystems:
-    - runtime_store_edit
+  - runtime_store_edit
   must_read:
-    - section_10_runtime_data_model
-    - section_11_edit_kernel
-  donors:
-    - staged_load_runtime_materialization
-    - validated_import_draft
-    - interaction_mutation_boundary
+  - section_10_runtime_data_model
+  - section_11_edit_kernel
+  benchmarks:
+  - none
   diagrams:
-    - dfd_load_document_success_failure
-    - seq_load_document_success
-    - seq_load_document_failure
+  - dfd_load_document_success_failure
+  - seq_load_document_success
+  - seq_load_document_failure
   guardrails:
-    - load.prepares_before_interrupt
-    - load.success_interrupts_before_install
+  - load.prepares_before_interrupt
+  - load.success_interrupts_before_install
   tests:
-    - test.edit.staged_document_load_success_failure
-    - test.runtime.load_document_state_publication
+  - test.edit.staged_document_load_success_failure
+  - test.runtime.load_document_state_publication
   do_not_assume:
-    - no interrupt before successful preparation
-    - no public CanvasDocument load input
--
-  id: section_13_operation_matrix
+  - no interrupt before successful preparation
+  - no public CanvasDocument load input
+- id: section_13_operation_matrix
   source: docs/_registry/sections.yaml / section 13
   file: docs/contracts/operation_matrix.md
   title: 13. Operation matrix
-  phases:
-    - P5
-    - P6
-    - P7
-    - P10
-    - P11
-    - P12
+  owners:
+  - contract
   subsystems:
-    - runtime_store_edit
+  - runtime_store_edit
   must_read:
-    - section_11_edit_kernel
-  donors:
-    - interaction_mutation_boundary
+  - section_11_edit_kernel
+  benchmarks:
+  - none
   diagrams:
-    - seq_edit_success
-    - seq_edit_rollback
+  - seq_edit_success
+  - seq_edit_rollback
   guardrails:
-    - edit.sync_non_nested
-    - edit.rollback_no_effects
-    - edit.stale_handle_rejected
-    - edit.operation_matrix_complete
-    - events.commands_emit_user_actions
-    - events.runtime_created_timestamps_monotonic
-    - interaction.text_edit_stale_commit_guard
+  - edit.sync_non_nested
+  - edit.rollback_no_effects
+  - edit.stale_handle_rejected
+  - edit.operation_matrix_complete
+  - events.commands_emit_user_actions
+  - events.runtime_created_timestamps_monotonic
+  - interaction.text_edit_stale_commit_guard
   tests:
-    - test.edit.sync_non_nested_async_stale
-    - test.edit.edit_matrix_effects
-    - test.api.runtime_timestamp_order
-    - test.interaction.runtime_created_timestamps_monotonic
-    - test.interaction.context_action_request
-    - test.interaction.text_edit_stale_commit_guard
+  - test.edit.sync_non_nested_async_stale
+  - test.edit.edit_matrix_effects
+  - test.api.runtime_timestamp_order
+  - test.interaction.runtime_created_timestamps_monotonic
+  - test.interaction.context_action_request
+  - test.interaction.text_edit_stale_commit_guard
   do_not_assume:
-    - no implicit mutation path outside EditKernel
--
-  id: section_14_interaction_engine
+  - no implicit mutation path outside EditKernel
+- id: section_14_interaction_engine
   source: docs/_registry/sections.yaml / section 14
   file: docs/contracts/interaction_engine.md
   title: 14. InteractionEngine
-  phases:
-    - P10
-    - P11
-    - P12
-    - P13
+  owners:
+  - contract
   subsystems:
-    - selection_runtime
-    - interaction
+  - selection_runtime
+  - interaction
   must_read:
-    - section_11_edit_kernel
-    - section_15_frame_render_contract
-    - section_16_geometry_policy
-  donors:
-    - interaction_pointer_host
-    - interaction_pointer_session
-    - interaction_pointer_normalizer
-    - interaction_event_dispatcher
-    - interaction_double_tap_router
-    - interaction_gesture_runtime
-    - interaction_move_session
-    - interaction_draw_coordinator
-    - interaction_mutation_boundary
+  - section_11_edit_kernel
+  - section_15_frame_render_contract
+  - section_16_geometry_policy
+  benchmarks:
+  - none
   diagrams:
-    - dfd_pointer_preview_commit
-    - seq_selected_move_preview_commit
-    - seq_selected_move_cancel
-    - seq_marquee_select
-    - seq_pencil_marker_commit
-    - seq_line_two_tap_commit
-    - seq_eraser_commit
-    - seq_context_action_request
-    - seq_dispose_during_gesture
-    - state_pointer_session
-    - state_select_marquee
-    - state_selected_move
-    - state_pencil_marker_draw
-    - state_two_tap_line
-    - state_eraser
-    - state_pending_context_action_request
+  - dfd_pointer_preview_commit
+  - seq_selected_move_preview_commit
+  - seq_selected_move_cancel
+  - seq_marquee_select
+  - seq_pencil_marker_commit
+  - seq_line_two_tap_commit
+  - seq_eraser_commit
+  - seq_context_action_request
+  - seq_dispose_during_gesture
+  - state_pointer_session
+  - state_select_marquee
+  - state_selected_move
+  - state_pencil_marker_draw
+  - state_two_tap_line
+  - state_eraser
+  - state_pending_context_action_request
   guardrails:
-    - preview.selected_move_main_repaint
-    - preview.selected_move_main_only
-    - preview.marquee_overlay_only
-    - api.preview_state_sealed_union_publicly_readable
-    - events.commands_emit_user_actions
-    - events.action_after_state_order
-    - events.runtime_created_timestamps_monotonic
-    - load.prepares_before_interrupt
-    - load.success_interrupts_before_install
-    - interaction.no_concrete_store_imports
-    - interaction.no_concrete_selection_imports
-    - interaction.read_port_immutable_facts
-    - interaction.no_command_facts_import
-    - interaction.cleanup_coordinator_dependency_bans
-    - interaction.no_resolver_on_cancel_paths
-    - interaction.no_stale_terminal_commit
-    - interaction.pointer_cleanup_coordinator_only
-    - interaction.text_edit_stale_commit_guard
-    - tools.p10_compatibility
-    - surface.pointer_samples_normalized_before_runtime
-    - surface.interactive_false_pending_line_preserved
+  - preview.selected_move_main_repaint
+  - preview.selected_move_main_only
+  - preview.marquee_overlay_only
+  - api.preview_state_sealed_union_publicly_readable
+  - events.commands_emit_user_actions
+  - events.action_after_state_order
+  - events.runtime_created_timestamps_monotonic
+  - load.prepares_before_interrupt
+  - load.success_interrupts_before_install
+  - interaction.no_concrete_store_imports
+  - interaction.no_concrete_selection_imports
+  - interaction.read_port_immutable_facts
+  - interaction.no_command_facts_import
+  - interaction.cleanup_coordinator_dependency_bans
+  - interaction.no_resolver_on_cancel_paths
+  - interaction.no_stale_terminal_commit
+  - interaction.pointer_cleanup_coordinator_only
+  - interaction.text_edit_stale_commit_guard
+  - tools.p10_compatibility
+  - surface.pointer_samples_normalized_before_runtime
+  - surface.interactive_false_pending_line_preserved
   tests:
-    - test.api.selection_port
-    - test.api.selection_transform_commands
-    - test.api.command_port_actions
-    - test.api.tool_port_settings
-    - test.api.typed_action_payloads
-    - test.api.runtime_timestamp_order
-    - test.interaction.runtime_created_timestamps_monotonic
-    - test.runtime.command_facts_port
-    - test.runtime.load_interaction_cleanup
-    - test.interaction.commands_emit_user_actions
-    - test.interaction.interaction_declarations
-    - test.interaction.pointer_session
-    - test.interaction.pointer_sample_normalizer
-    - test.interaction.interaction_read_port
-    - test.surface.interactive_false_pointer_routing
-    - test.surface.interactive_false_active_session_cancel
-    - test.surface.interactive_false_pending_line_preserved
-    - test.surface.interactive_false_state_isolation
-    - test.surface.pointer_adapter_finite_normalization
-    - test.runtime.interaction_settings_state
-    - test.api_contract.preview_state_sealed_union
-    - test.interaction.preview_public_state
-    - test.interaction.move_machine
-    - test.interaction.select_machine
-    - test.interaction.move_resolver_reentrancy
-    - test.interaction.move_resolver_not_called_on_cancel_cleanup
-    - test.interaction.pointer_tool_cleanup_coordinator
-    - test.interaction.context_action_request
-    - test.interaction.text_edit_stale_commit_guard
-    - test.diagnostics.interaction_diagnostics
-    - test.frame.selected_move_main_repaint
-    - test.frame.marquee_overlay_repaint
-    - test.guardrails.action_after_state
-    - test.guardrails.interaction_guardrail_enforcement
-    - test.guardrails.selection_boundary_imports
-    - test.surface.widget_paint
+  - test.api.selection_port
+  - test.api.selection_transform_commands
+  - test.api.command_port_actions
+  - test.api.tool_port_settings
+  - test.api.typed_action_payloads
+  - test.api.runtime_timestamp_order
+  - test.interaction.runtime_created_timestamps_monotonic
+  - test.runtime.command_facts_port
+  - test.runtime.load_interaction_cleanup
+  - test.interaction.commands_emit_user_actions
+  - test.interaction.interaction_declarations
+  - test.interaction.pointer_session
+  - test.interaction.pointer_sample_normalizer
+  - test.interaction.interaction_read_port
+  - test.surface.interactive_false_pointer_routing
+  - test.surface.interactive_false_active_session_cancel
+  - test.surface.interactive_false_pending_line_preserved
+  - test.surface.interactive_false_state_isolation
+  - test.surface.pointer_adapter_finite_normalization
+  - test.runtime.interaction_settings_state
+  - test.api_contract.preview_state_sealed_union
+  - test.interaction.preview_public_state
+  - test.interaction.move_machine
+  - test.interaction.select_machine
+  - test.interaction.move_resolver_reentrancy
+  - test.interaction.move_resolver_not_called_on_cancel_cleanup
+  - test.interaction.pointer_tool_cleanup_coordinator
+  - test.interaction.context_action_request
+  - test.interaction.text_edit_stale_commit_guard
+  - test.diagnostics.interaction_diagnostics
+  - test.frame.selected_move_main_repaint
+  - test.frame.marquee_overlay_repaint
+  - test.guardrails.action_after_state
+  - test.guardrails.interaction_guardrail_enforcement
+  - test.guardrails.selection_boundary_imports
+  - test.surface.widget_paint
   do_not_assume:
-    - no legacy callback graph as structure
-    - no reentrant mutation from resolver
--
-  id: section_15_frame_render_contract
+  - no legacy callback graph as structure
+  - no reentrant mutation from resolver
+- id: section_15_frame_render_contract
   source: docs/_registry/sections.yaml / section 15
   file: docs/contracts/frame_rendering.md
   title: 15. FrameEngine and render contract
-  phases:
-    - P9
-    - P10
-    - P13
+  owners:
+  - contract
   subsystems:
-    - selection_runtime
-    - frame_render_spatial_geometry
+  - selection_runtime
+  - frame_render_spatial_geometry
   must_read:
-    - section_10_runtime_data_model
-    - section_07_resource_lifecycle
-    - section_17_spatial_kernel
-    - section_18_cache_policy
-  donors:
-    - frame_render_state
-    - render_geometry_builder
-    - snapshot_paint_admission_bounds
-    - snapshot_paint_candidates
-    - scene_view_runtime_fast_path
-    - paint_candidate_stage
-    - scene_painter_frame
-    - scene_render_caches
-    - static_layer_cache
-    - text_stroke_path_metrics_caches
+  - section_10_runtime_data_model
+  - section_07_resource_lifecycle
+  - section_17_spatial_kernel
+  - section_18_cache_policy
+  benchmarks:
+  - none
   diagrams:
-    - dfd_main_paint_frame
-    - dfd_overlay_frame
-    - seq_main_paint
-    - seq_overlay_paint
+  - dfd_main_paint_frame
+  - dfd_overlay_frame
+  - seq_main_paint
+  - seq_overlay_paint
   guardrails:
-    - preview.selected_move_main_repaint
-    - api.preview_state_sealed_union_publicly_readable
-    - frame.committed_facts_via_frame_facts_port
-    - frame.no_global_scene_sort
-    - frame.paint_plan_excludes_preview_delta
-    - frame.paint_plan_excludes_selection_state
-    - text.single_measured_layout_source
-    - text.no_overlay_textpainter_measurement
-    - cache.background_grid_not_element_visual
+  - preview.selected_move_main_repaint
+  - api.preview_state_sealed_union_publicly_readable
+  - frame.committed_facts_via_frame_facts_port
+  - frame.no_global_scene_sort
+  - frame.paint_plan_excludes_preview_delta
+  - frame.paint_plan_excludes_selection_state
+  - text.single_measured_layout_source
+  - text.no_overlay_textpainter_measurement
+  - cache.background_grid_not_element_visual
   tests:
-    - test.store.no_projection_hot_path
-    - test.frame.main_overlay_capture
-    - test.frame.frame_record_painter_boundary
-    - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.frame.frame_spatial_paint_admission
-    - test.frame.frame_drawable_policy
-    - test.frame.marquee_captured_style
-    - test.surface.no_live_runtime_read_in_painters
-    - test.surface.overlay_drawable_policy
-    - test.surface.marquee_captured_style
-    - test.frame.selection_decoration_plan
-    - test.surface.selection_chrome_topmost_paint
-    - test.surface.selection_chrome_hit_target_boundary
-    - test.frame.paint_plan_write_all_or_nothing
-    - test.frame.paint_plan_excludes_preview_delta
-    - test.frame.paint_plan_excludes_selection_state
-    - test.frame.measured_text_layout
-    - test.guardrails.text_surface_guardrail_checks
-    - test.frame.camera_pan_preserves_ordinary_paint_plan
-    - test.frame.selected_supplement_staging_no_global_sort
-    - test.api_contract.preview_state_sealed_union
-    - test.surface.widget_paint
+  - test.store.no_projection_hot_path
+  - test.frame.main_overlay_capture
+  - test.frame.frame_record_painter_boundary
+  - test.guardrails.frame_committed_facts_via_frame_facts_port
+  - test.frame.frame_spatial_paint_admission
+  - test.frame.frame_drawable_policy
+  - test.frame.marquee_captured_style
+  - test.surface.no_live_runtime_read_in_painters
+  - test.surface.overlay_drawable_policy
+  - test.surface.marquee_captured_style
+  - test.frame.selection_decoration_plan
+  - test.surface.selection_chrome_topmost_paint
+  - test.surface.selection_chrome_hit_target_boundary
+  - test.frame.paint_plan_write_all_or_nothing
+  - test.frame.paint_plan_excludes_preview_delta
+  - test.frame.paint_plan_excludes_selection_state
+  - test.frame.measured_text_layout
+  - test.guardrails.text_surface_guardrail_checks
+  - test.frame.camera_pan_preserves_ordinary_paint_plan
+  - test.frame.selected_supplement_staging_no_global_sort
+  - test.api_contract.preview_state_sealed_union
+  - test.surface.widget_paint
   do_not_assume:
-    - no live runtime reads in painters
-    - no CanvasDocument projection in paint
--
-  id: section_16_geometry_policy
+  - no live runtime reads in painters
+  - no CanvasDocument projection in paint
+- id: section_16_geometry_policy
   source: docs/_registry/sections.yaml / section 16
   file: docs/contracts/geometry.md
   title: 16. Geometry policy v1
-  phases:
-    - P8
-    - P9
-    - P10
-    - P11
-    - P12
+  owners:
+  - contract
   subsystems:
-    - frame_render_spatial_geometry
+  - frame_render_spatial_geometry
   must_read:
-    - section_04_public_api_v1
-    - section_10_runtime_data_model
-  donors:
-    - foundation_core_geometry
-    - geometry_node_geometry
-    - geometry_hit_test
-    - geometry_interactive_geometry
-    - geometry_eraser_exact_hit
-    - foundation_transform2d
-    - direct_numeric_policy
-    - direct_local_bounds_policy
-    - direct_paint_admission
+  - section_04_public_api_v1
+  - section_10_runtime_data_model
+  benchmarks:
+  - none
   diagrams:
-    - dfd_pointer_preview_commit
-    - seq_hit_test_candidate_resolution
-    - seq_eraser_exact_budget
+  - dfd_pointer_preview_commit
+  - seq_hit_test_candidate_resolution
+  - seq_eraser_exact_budget
   guardrails:
-    - geometry.no_legacy_scene_order
-    - geometry.eraser_exact_budget_no_partial
-    - text.single_measured_layout_source
+  - geometry.no_legacy_scene_order
+  - geometry.eraser_exact_budget_no_partial
+  - text.single_measured_layout_source
   tests:
-    - test.geometry.hit_policy
-    - test.interaction.context_action_request
-    - test.geometry.no_legacy_scene_order
-    - test.geometry.eraser_exact_budget_inputs
-    - test.geometry.eraser_exact_budget_no_partial_commit
-    - test.frame.measured_text_layout
-    - test.guardrails.text_surface_guardrail_checks
+  - test.geometry.hit_policy
+  - test.interaction.context_action_request
+  - test.geometry.no_legacy_scene_order
+  - test.geometry.eraser_exact_budget_inputs
+  - test.geometry.eraser_exact_budget_no_partial_commit
+  - test.frame.measured_text_layout
+  - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-    - do not port legacy SceneNode traversal
-    - do not copy legacy scene order logic
--
-  id: section_17_spatial_kernel
+  - do not port legacy SceneNode traversal
+  - do not copy legacy scene order logic
+- id: section_17_spatial_kernel
   source: docs/_registry/sections.yaml / section 17
   file: docs/contracts/spatial_kernel.md
   title: 17. SpatialKernel
-  phases:
-    - P8
-    - P9
-    - P10
-    - P12
+  owners:
+  - contract
   subsystems:
-    - frame_render_spatial_geometry
+  - frame_render_spatial_geometry
   must_read:
-    - section_10_runtime_data_model
-    - section_16_geometry_policy
-  donors:
-    - spatial_scene_spatial_index
-    - spatial_index_cache
-    - store_scene_controller_read_paths
+  - section_10_runtime_data_model
+  - section_16_geometry_policy
+  benchmarks:
+  - none
   diagrams:
-    - dfd_cache_invalidation
-    - dfd_spatial_query_budget
-    - seq_spatial_touched_update
-    - seq_hit_test_candidate_resolution
-    - seq_eraser_exact_budget
+  - dfd_cache_invalidation
+  - dfd_spatial_query_budget
+  - seq_spatial_touched_update
+  - seq_hit_test_candidate_resolution
+  - seq_eraser_exact_budget
   guardrails:
-    - spatial.no_full_clone_ordinary_edit
-    - spatial.stale_candidate_rejected
-    - spatial.fallback_budget_enforced
+  - spatial.no_full_clone_ordinary_edit
+  - spatial.stale_candidate_rejected
+  - spatial.fallback_budget_enforced
   tests:
-    - test.spatial.committed_spatial_read_boundary
-    - test.spatial.tile_outlier_membership
-    - test.spatial.touched_update
-    - test.spatial.no_full_clone_for_touched_update
-    - test.spatial.stale_generation_rejected
-    - test.spatial.fallback_budget_enforced
-    - test.spatial.invalid_index_fallback
-    - test.spatial.runtime_delivery_order
+  - test.spatial.committed_spatial_read_boundary
+  - test.spatial.tile_outlier_membership
+  - test.spatial.touched_update
+  - test.spatial.no_full_clone_for_touched_update
+  - test.spatial.stale_generation_rejected
+  - test.spatial.fallback_budget_enforced
+  - test.spatial.invalid_index_fallback
+  - test.spatial.runtime_delivery_order
   do_not_assume:
-    - do not port legacy Scene or locator maps
-    - do not rely on stale structuralRevision
--
-  id: section_18_cache_policy
+  - do not port legacy Scene or locator maps
+  - do not rely on stale structuralRevision
+- id: section_18_cache_policy
   source: docs/_registry/sections.yaml / section 18
   file: docs/contracts/cache_policy.md
   title: 18. Cache policy ledger
-  phases:
-    - P9
-    - P13
-    - P14
+  owners:
+  - contract
   subsystems:
-    - frame_render_spatial_geometry
+  - frame_render_spatial_geometry
   must_read:
-    - section_10_runtime_data_model
-    - section_17_spatial_kernel
-  donors:
-    - direct_scan_resistant_cache
-    - scene_render_caches
-    - static_layer_cache
-    - text_stroke_path_metrics_caches
+  - section_10_runtime_data_model
+  - section_17_spatial_kernel
+  benchmarks:
+  - none
   diagrams:
-    - dfd_cache_invalidation
+  - dfd_cache_invalidation
   guardrails:
-    - cache.keys_use_next_revisions_only
-    - cache.hot_caches_have_capacity_eviction
-    - cache.background_grid_not_element_visual
-    - frame.paint_plan_excludes_preview_delta
-    - frame.paint_plan_excludes_selection_state
+  - cache.keys_use_next_revisions_only
+  - cache.hot_caches_have_capacity_eviction
+  - cache.background_grid_not_element_visual
+  - frame.paint_plan_excludes_preview_delta
+  - frame.paint_plan_excludes_selection_state
   tests:
-    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
-    - test.frame.cache_capacity_eviction_policy
-    - test.frame.paint_plan_write_all_or_nothing
-    - test.frame.paint_plan_excludes_preview_delta
-    - test.frame.paint_plan_excludes_selection_state
-    - test.frame.camera_pan_preserves_ordinary_paint_plan
+  - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+  - test.frame.cache_capacity_eviction_policy
+  - test.frame.paint_plan_write_all_or_nothing
+  - test.frame.paint_plan_excludes_preview_delta
+  - test.frame.paint_plan_excludes_selection_state
+  - test.frame.camera_pan_preserves_ordinary_paint_plan
   do_not_assume:
-    - no unbounded cache owner sprawl
-    - no cache keys tied to legacy snapshots
--
-  id: section_19_codec_boundary
+  - no unbounded cache owner sprawl
+  - no cache keys tied to legacy snapshots
+- id: section_19_codec_boundary
   source: docs/_registry/sections.yaml / section 19
   file: docs/contracts/codec_boundary.md
   title: 19. CodecBoundary
-  phases:
-    - P3
+  owners:
+  - contract
   subsystems:
-    - schema_codec
+  - schema_codec
   must_read:
-    - section_05_schema_v1_contract
-    - section_06_validation_limits
-  donors:
-    - codec_guards
-    - codec_json_require
-    - codec_json_parse
-    - codec_metadata_decode
-    - codec_layer_decode
-    - codec_node_common_decode
-    - codec_family_decode
-    - codec_scene_codec_flow
-    - codec_validation_path_surface
+  - section_05_schema_v1_contract
+  - section_06_validation_limits
+  benchmarks:
+  - none
   diagrams:
-    - dfd_schema_v1_import_encode
-    - seq_schema_v1_import_encode_order
+  - dfd_schema_v1_import_encode
+  - seq_schema_v1_import_encode_order
   guardrails:
-    - codec.schema_v1_exact
-    - codec.known_fields_validated
-    - codec.no_runtime_side_effects
+  - codec.schema_v1_exact
+  - codec.known_fields_validated
+  - codec.no_runtime_side_effects
   tests:
-    - test.codec.decode_encode_no_runtime_side_effects
-    - test.codec.schema_v1.canonical_encode_roundtrip
-    - test.codec.schema_v1.metadata_projection
-    - test.guardrails.codec_no_runtime_imports
+  - test.codec.decode_encode_no_runtime_side_effects
+  - test.codec.schema_v1.canonical_encode_roundtrip
+  - test.codec.schema_v1.metadata_projection
+  - test.guardrails.codec_no_runtime_imports
   do_not_assume:
-    - no legacy SceneCodec surface as next API
-    - no schema v7 read/write in production core
--
-  id: section_20_diagnostics_hub
+  - no legacy SceneCodec surface as next API
+  - no schema v7 read/write in production core
+- id: section_20_diagnostics_hub
   source: docs/_registry/sections.yaml / section 20
   file: docs/contracts/diagnostics.md
   title: 20. DiagnosticsHub
-  phases:
-    - P3
-    - P14
+  owners:
+  - contract
   subsystems:
-    - none
+  - none
   must_read:
-    - section_06_validation_limits
-    - section_19_codec_boundary
-  donors:
-    - foundation_error_contract
-    - dto_scene_value_validation
+  - section_06_validation_limits
+  - section_19_codec_boundary
+  benchmarks:
+  - none
   diagrams:
-    - dfd_diagnostics_error_projection
+  - dfd_diagnostics_error_projection
   guardrails:
-    - diagnostics.disabled_no_alloc_hot_path
-    - diagnostics.sanitized_public_projection
+  - diagnostics.disabled_no_alloc_hot_path
+  - diagnostics.sanitized_public_projection
   tests:
-    - test.diagnostics.sanitizer_and_public_projection
-    - test.diagnostics.disabled_no_alloc_hot_path
-    - test.diagnostics.diagnostics_public_surface
+  - test.diagnostics.sanitizer_and_public_projection
+  - test.diagnostics.disabled_no_alloc_hot_path
+  - test.diagnostics.diagnostics_public_surface
   do_not_assume:
-    - full pointer/paint no-allocation proof exists before runtime owners exist
--
-  id: section_22_guardrails_machine_checks
+  - full pointer/paint no-allocation proof exists before runtime owners exist
+- id: section_22_guardrails_machine_checks
   source: docs/_registry/sections.yaml / section 22
   file: docs/verification/guardrails.md
   title: 22. Guardrails and machine checks
-  phases:
-    - P0
-    - P14
+  owners:
+  - guardrail
   subsystems:
-    - quality_gates
+  - quality_gates
   must_read:
-    - section_00_status_and_scope
-    - section_03_package_layout
-  donors:
-    - tooling_schema_family_parity
+  - section_00_status_and_scope
+  - section_03_package_layout
+  benchmarks:
+  - none
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - api.integration_surface_complete
-    - api.no_retired_public_exports
-    - api.public_exports_complete
-    - api.no_retired_public_load_routes
-    - api.no_unapproved_document_load_inputs
-    - api.facades_do_not_export_internal
-    - api.public_types_complete
-    - api.public_api_compiles_as_written
-    - api.resource_source_app_key_publicly_readable
-    - api.preview_state_sealed_union_publicly_readable
-    - api.exported_dartdoc_complete
-    - api.public_class_modifiers_explicit
-    - api.no_public_api_import_cycles
-    - api.public_signature_shape
-    - api.no_undefined_public_type_references
-    - api.dto_immutability
-    - api.equality_policy_explicit
-    - api.id_validation_no_extension_type_escape
-    - core.no_legacy_imports
-    - core.import_boundaries
-    - core.no_unapproved_part_files
-    - core.no_scene_controller_shape_dependency
-    - core.no_node_spec_patch_shape_dependency
-    - core.single_runtime_root
-    - store.no_public_document_live_state
-    - selection.owner_separate_from_document
-    - projection.only_explicit_read_paths
-    - edit.sync_non_nested
-    - edit.rollback_no_effects
-    - edit.stale_handle_rejected
-    - edit.operation_matrix_complete
-    - edit.no_global_invalidation_except_replacement
-    - edit.typed_effects_no_frame_dependency
-    - events.low_level_edit_no_user_actions
-    - events.commands_emit_user_actions
-    - events.action_after_state_order
-    - events.runtime_created_timestamps_monotonic
-    - load.prepares_before_interrupt
-    - load.success_interrupts_before_install
-    - preview.selected_move_main_repaint
-    - preview.selected_move_main_only
-    - preview.marquee_overlay_only
-    - interaction.no_concrete_store_imports
-    - interaction.no_concrete_selection_imports
-    - interaction.read_port_immutable_facts
-    - interaction.no_command_facts_import
-    - interaction.cleanup_coordinator_dependency_bans
-    - interaction.no_resolver_on_cancel_paths
-    - interaction.no_stale_terminal_commit
-    - interaction.pointer_cleanup_coordinator_only
-    - interaction.text_edit_stale_commit_guard
-    - geometry.no_legacy_scene_order
-    - geometry.eraser_exact_budget_no_partial
-    - spatial.no_full_clone_ordinary_edit
-    - spatial.stale_candidate_rejected
-    - spatial.fallback_budget_enforced
-    - frame.committed_facts_via_frame_facts_port
-    - frame.no_global_scene_sort
-    - frame.paint_plan_excludes_preview_delta
-    - frame.paint_plan_excludes_selection_state
-    - text.single_measured_layout_source
-    - text.no_overlay_textpainter_measurement
-    - surface.editable_text_surface_only
-    - cache.keys_use_next_revisions_only
-    - cache.background_grid_not_element_visual
-    - cache.hot_caches_have_capacity_eviction
-    - resources.mutation_inside_edit_only
-    - resources.dirty_no_document_revision
-    - resources.app_key_only
-    - resources.resolver_boundary_owned_by_surface_session
-    - resources.resolver_frame_budget
-    - resources.no_same_frame_missing_retry
-    - resources.resolver_reentrancy_rejected
-    - codec.schema_v1_exact
-    - codec.known_fields_validated
-    - codec.no_runtime_side_effects
-    - diagnostics.disabled_no_alloc_hot_path
-    - diagnostics.sanitized_public_projection
-    - release.benchmark_readiness
-    - tools.p10_compatibility
-    - surface.pointer_samples_normalized_before_runtime
-    - surface.interactive_false_pending_line_preserved
+  - api.integration_surface_complete
+  - api.no_retired_public_exports
+  - api.public_exports_complete
+  - api.no_retired_public_load_routes
+  - api.no_unapproved_document_load_inputs
+  - api.facades_do_not_export_internal
+  - api.public_types_complete
+  - api.public_api_compiles_as_written
+  - api.resource_source_app_key_publicly_readable
+  - api.preview_state_sealed_union_publicly_readable
+  - api.exported_dartdoc_complete
+  - api.public_class_modifiers_explicit
+  - api.no_public_api_import_cycles
+  - api.public_signature_shape
+  - api.no_undefined_public_type_references
+  - api.dto_immutability
+  - api.equality_policy_explicit
+  - api.id_validation_no_extension_type_escape
+  - core.no_legacy_imports
+  - core.import_boundaries
+  - core.no_unapproved_part_files
+  - core.no_scene_controller_shape_dependency
+  - core.no_node_spec_patch_shape_dependency
+  - core.single_runtime_root
+  - store.no_public_document_live_state
+  - selection.owner_separate_from_document
+  - projection.only_explicit_read_paths
+  - edit.sync_non_nested
+  - edit.rollback_no_effects
+  - edit.stale_handle_rejected
+  - edit.operation_matrix_complete
+  - edit.no_global_invalidation_except_replacement
+  - edit.typed_effects_no_frame_dependency
+  - events.low_level_edit_no_user_actions
+  - events.commands_emit_user_actions
+  - events.action_after_state_order
+  - events.runtime_created_timestamps_monotonic
+  - load.prepares_before_interrupt
+  - load.success_interrupts_before_install
+  - preview.selected_move_main_repaint
+  - preview.selected_move_main_only
+  - preview.marquee_overlay_only
+  - interaction.no_concrete_store_imports
+  - interaction.no_concrete_selection_imports
+  - interaction.read_port_immutable_facts
+  - interaction.no_command_facts_import
+  - interaction.cleanup_coordinator_dependency_bans
+  - interaction.no_resolver_on_cancel_paths
+  - interaction.no_stale_terminal_commit
+  - interaction.pointer_cleanup_coordinator_only
+  - interaction.text_edit_stale_commit_guard
+  - geometry.no_legacy_scene_order
+  - geometry.eraser_exact_budget_no_partial
+  - spatial.no_full_clone_ordinary_edit
+  - spatial.stale_candidate_rejected
+  - spatial.fallback_budget_enforced
+  - frame.committed_facts_via_frame_facts_port
+  - frame.no_global_scene_sort
+  - frame.paint_plan_excludes_preview_delta
+  - frame.paint_plan_excludes_selection_state
+  - text.single_measured_layout_source
+  - text.no_overlay_textpainter_measurement
+  - surface.editable_text_surface_only
+  - cache.keys_use_next_revisions_only
+  - cache.background_grid_not_element_visual
+  - cache.hot_caches_have_capacity_eviction
+  - resources.mutation_inside_edit_only
+  - resources.dirty_no_document_revision
+  - resources.app_key_only
+  - resources.resolver_boundary_owned_by_surface_session
+  - resources.resolver_frame_budget
+  - resources.no_same_frame_missing_retry
+  - resources.resolver_reentrancy_rejected
+  - codec.schema_v1_exact
+  - codec.known_fields_validated
+  - codec.no_runtime_side_effects
+  - diagnostics.disabled_no_alloc_hot_path
+  - diagnostics.sanitized_public_projection
+  - release.benchmark_readiness
+  - tools.p10_compatibility
+  - surface.pointer_samples_normalized_before_runtime
+  - surface.interactive_false_pending_line_preserved
   tests:
-    - test.api_contract.app_next_engine_adapter_compile_fixture
-    - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.guardrails.text_surface_guardrail_checks
-    - test.guardrails.release_readiness
-    - test.guardrails.blocking_suite
+  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.guardrails.frame_committed_facts_via_frame_facts_port
+  - test.guardrails.text_surface_guardrail_checks
+  - test.guardrails.release_readiness
+  - test.guardrails.blocking_suite
   do_not_assume:
-    - no non-blocking critical guardrail
--
-  id: section_23_tests
+  - no non-blocking critical guardrail
+- id: section_23_tests
   source: docs/_registry/sections.yaml / section 23
   file: docs/verification/tests.md
   title: 23. Tests
-  phases:
-    - P0
-    - P1
-    - P2
-    - P3
-    - P4
-    - P5
-    - P6
-    - P7
-    - P8
-    - P9
-    - P10
-    - P11
-    - P12
-    - P13
-    - P14
+  owners:
+  - test
   subsystems:
-    - quality_gates
+  - quality_gates
   must_read:
-    - section_04_public_api_v1
-    - section_22_guardrails_machine_checks
-  donors:
-    - direct_numeric_policy
-    - direct_local_bounds_policy
-    - direct_paint_admission
-    - direct_scan_resistant_cache
-    - direct_pointer_tap_tracking
-    - direct_flutter_pointer_routing
-    - direct_gesture_ownership
-    - direct_structure_validation
-    - foundation_transform2d
-    - foundation_core_geometry
-    - foundation_contract_limits
-    - foundation_error_contract
-    - foundation_validators
-    - foundation_tri_state_patch_semantics
-    - foundation_immutable_collections
-    - foundation_pointer_input_contract
-    - foundation_action_event_immutability
-    - geometry_node_geometry
-    - geometry_hit_test
-    - render_geometry_builder
-    - geometry_interactive_geometry
-    - geometry_eraser_exact_hit
-    - spatial_scene_spatial_index
-    - spatial_index_cache
-    - store_scene_controller_read_paths
-    - snapshot_paint_admission_bounds
-    - snapshot_paint_candidates
-    - frame_render_state
-    - scene_view_runtime_fast_path
-    - paint_candidate_stage
-    - scene_painter_frame
-    - scene_render_caches
-    - static_layer_cache
-    - text_stroke_path_metrics_caches
-    - dto_snapshot_behavior
-    - dto_node_spec_behavior
-    - dto_boundary_schema
-    - dto_scene_value_validation
-    - dto_node_boundary_mapping
-    - dto_document_helpers
-    - codec_guards
-    - codec_json_require
-    - codec_json_parse
-    - codec_metadata_decode
-    - codec_layer_decode
-    - codec_node_common_decode
-    - codec_family_decode
-    - codec_scene_codec_flow
-    - codec_validation_path_surface
-    - tooling_schema_family_parity
-    - interaction_pointer_host
-    - interaction_pointer_session
-    - interaction_pointer_normalizer
-    - interaction_event_dispatcher
-    - interaction_double_tap_router
-    - interaction_gesture_runtime
-    - interaction_move_session
-    - interaction_draw_coordinator
-    - interaction_mutation_boundary
-    - staged_load_runtime_materialization
-    - validated_import_draft
-    - interaction_public_controller_behavior
-    - avoid_scene_controller_facades
-    - avoid_interactive_runtime_whole
-    - avoid_scene_builder_public_architecture
-    - avoid_scene_codec_whole
-    - avoid_scene_store_controller_whole
+  - section_04_public_api_v1
+  - section_22_guardrails_machine_checks
+  benchmarks:
+  - none
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - "none"
+  - none
   tests:
-    - test.api_contract.public_readable_union_variants
-    - test.api_contract.preview_state_sealed_union
-    - test.api_contract.public_api_v1_compiles_as_written
-    - test.api_contract.public_exports_complete
-    - test.api_contract.api_facades_do_not_export_internal
-    - test.api_contract.public_api_no_unapproved_placeholders
-    - test.guardrails.public_api_declaration_checks
-    - test.guardrails.public_api_import_cycles
-    - test.api.canvas_transform
-    - test.api.canvas_field_update
-    - test.api_contract.canvas_field_update_static_semantics
-    - test.api_contract.no_undefined_public_type_references
-    - test.api_contract.no_retired_public_exports
-    - test.api_contract.dto_immutability
-    - test.api_contract.public_equality_policy
-    - test.api_contract.app_next_engine_adapter_compile_fixture
-    - test.guardrails.import_boundaries
-    - test.guardrails.store_projection_checks
-    - test.guardrails.selection_boundary_checks
-    - test.codec.schema_v1.known_fields_validation
-    - test.codec.schema_v1.canonical_encode_roundtrip
-    - test.codec.schema_v1.metadata_projection
-    - test.codec.schema_v1.resources_appkey_only
-    - test.codec.schema_v1.reject_unknown_element_kind
-    - test.codec.schema_v1.reject_unknown_resource_source_kind
-    - test.codec.decode_encode_no_runtime_side_effects
-    - test.guardrails.codec_no_runtime_imports
-    - test.diagnostics.sanitizer_and_public_projection
-    - test.diagnostics.disabled_no_alloc_hot_path
-    - test.diagnostics.diagnostics_public_surface
-    - test.resources.sync_image_resolver
-    - test.resources.app_owned_image_not_disposed
-    - test.resources.resource_dirty
-    - test.resources.mark_all_resources_dirty
-    - test.resources.missing_result_suppressed_per_frame
-    - test.resources.surface_session_cache_lifecycle
-    - test.resources.resolver_swap_starts_fresh_cache
-    - test.resources.resolver_frame_budget
-    - test.resources.resolver_reentrancy_rejected
-    - test.api.selection_port
-    - test.api.selection_transform_commands
-    - test.api.command_port_actions
-    - test.api.tool_port_settings
-    - test.api.typed_action_payloads
-    - test.api.runtime_timestamp_order
-    - test.interaction.runtime_created_timestamps_monotonic
-    - test.runtime.command_facts_port
-    - test.runtime.load_interaction_cleanup
-    - test.edit.low_level_mutations_do_not_emit_actions
-    - test.interaction.commands_emit_user_actions
-    - test.interaction.interaction_declarations
-    - test.interaction.pointer_session
-    - test.interaction.pointer_sample_normalizer
-    - test.interaction.interaction_read_port
-    - test.interaction.context_action_request
-    - test.runtime.text_editing_port
-    - test.surface.text_editing_overlay
-    - test.surface.interactive_false_pointer_routing
-    - test.surface.interactive_false_active_session_cancel
-    - test.surface.interactive_false_pending_line_preserved
-    - test.surface.interactive_false_state_isolation
-    - test.surface.single_active_surface
-    - test.surface.surface_resource_session_lifecycle
-    - test.surface.pointer_adapter_finite_normalization
-    - test.codec.constructor_and_schema_limits
-    - test.runtime.dispose_lifecycle
-    - test.runtime.runtime_state_publication
-    - test.smoke.public_incremental_smoke
-    - test.runtime.load_document_state_publication
-    - test.runtime.interaction_settings_state
-    - test.store.read_document_projection
-    - test.store.no_projection_hot_path
-    - test.store.public_document_is_projection_only
-    - test.edit.sync_non_nested_async_stale
-    - test.edit.rollback
-    - test.edit.field_update_admission_effects
-    - test.edit.edit_matrix_effects
-    - test.edit.exact_touched_invalidation
-    - test.edit.typed_effects_no_frame_dependency
-    - test.edit.staged_document_load_success_failure
-    - test.spatial.committed_spatial_read_boundary
-    - test.geometry.geometry_spatial_donor_mapping
-    - test.geometry.hit_policy
-    - test.geometry.no_legacy_scene_order
-    - test.geometry.eraser_exact_budget_inputs
-    - test.geometry.eraser_exact_budget_no_partial_commit
-    - test.spatial.tile_outlier_membership
-    - test.spatial.touched_update
-    - test.spatial.no_full_clone_for_touched_update
-    - test.spatial.stale_generation_rejected
-    - test.spatial.fallback_budget_enforced
-    - test.spatial.invalid_index_fallback
-    - test.spatial.runtime_delivery_order
-    - test.frame.main_overlay_capture
-    - test.frame.frame_record_painter_boundary
-    - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.frame.frame_spatial_paint_admission
-    - test.frame.frame_drawable_policy
-    - test.frame.marquee_captured_style
-    - test.surface.no_live_runtime_read_in_painters
-    - test.surface.overlay_drawable_policy
-    - test.surface.marquee_captured_style
-    - test.frame.selection_decoration_plan
-    - test.surface.selection_chrome_topmost_paint
-    - test.surface.selection_chrome_hit_target_boundary
-    - test.frame.paint_plan_write_all_or_nothing
-    - test.frame.measured_text_layout
-    - test.guardrails.text_surface_guardrail_checks
-    - test.guardrails.geometry_no_legacy_scene_order
-    - test.guardrails.geometry_eraser_exact_budget_inputs
-    - test.guardrails.spatial_no_full_clone_ordinary_edit
-    - test.guardrails.spatial_stale_candidate_rejected
-    - test.guardrails.spatial_fallback_budget_enforced
-    - test.frame.paint_plan_excludes_preview_delta
-    - test.frame.camera_pan_preserves_ordinary_paint_plan
-    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
-    - test.frame.cache_capacity_eviction_policy
-    - test.frame.selected_supplement_staging_no_global_sort
-    - test.interaction.preview_public_state
-    - test.interaction.eraser_context_action_routing
-    - test.interaction.move_machine
-    - test.interaction.select_machine
-    - test.interaction.move_resolver_reentrancy
-    - test.interaction.move_resolver_not_called_on_cancel_cleanup
-    - test.interaction.pointer_tool_cleanup_coordinator
-    - test.interaction.text_edit_stale_commit_guard
-    - test.diagnostics.interaction_diagnostics
-    - test.frame.selected_move_main_repaint
-    - test.frame.marquee_overlay_repaint
-    - test.guardrails.action_after_state
-    - test.guardrails.interaction_guardrail_enforcement
-    - test.surface.widget_paint
-    - test.guardrails.release_readiness
-    - test.benchmarks.benchmark_manifest
-    - test.benchmarks.benchmark_diff
-    - test.benchmarks.benchmark_runner
-    - test.benchmarks.required_cases
-    - test.guardrails.blocking_suite
+  - test.api_contract.public_readable_union_variants
+  - test.api_contract.preview_state_sealed_union
+  - test.api_contract.public_api_v1_compiles_as_written
+  - test.api_contract.public_exports_complete
+  - test.api_contract.api_facades_do_not_export_internal
+  - test.api_contract.public_api_no_unapproved_placeholders
+  - test.guardrails.public_api_declaration_checks
+  - test.guardrails.public_api_import_cycles
+  - test.api.canvas_transform
+  - test.api.canvas_field_update
+  - test.api_contract.canvas_field_update_static_semantics
+  - test.api_contract.no_undefined_public_type_references
+  - test.api_contract.no_retired_public_exports
+  - test.api_contract.dto_immutability
+  - test.api_contract.public_equality_policy
+  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.guardrails.import_boundaries
+  - test.guardrails.store_projection_checks
+  - test.guardrails.selection_boundary_checks
+  - test.codec.schema_v1.known_fields_validation
+  - test.codec.schema_v1.canonical_encode_roundtrip
+  - test.codec.schema_v1.metadata_projection
+  - test.codec.schema_v1.resources_appkey_only
+  - test.codec.schema_v1.reject_unknown_element_kind
+  - test.codec.schema_v1.reject_unknown_resource_source_kind
+  - test.codec.decode_encode_no_runtime_side_effects
+  - test.guardrails.codec_no_runtime_imports
+  - test.diagnostics.sanitizer_and_public_projection
+  - test.diagnostics.disabled_no_alloc_hot_path
+  - test.diagnostics.diagnostics_public_surface
+  - test.resources.sync_image_resolver
+  - test.resources.app_owned_image_not_disposed
+  - test.resources.resource_dirty
+  - test.resources.mark_all_resources_dirty
+  - test.resources.missing_result_suppressed_per_frame
+  - test.resources.surface_session_cache_lifecycle
+  - test.resources.resolver_swap_starts_fresh_cache
+  - test.resources.resolver_frame_budget
+  - test.resources.resolver_reentrancy_rejected
+  - test.api.selection_port
+  - test.api.selection_transform_commands
+  - test.api.command_port_actions
+  - test.api.tool_port_settings
+  - test.api.typed_action_payloads
+  - test.api.runtime_timestamp_order
+  - test.interaction.runtime_created_timestamps_monotonic
+  - test.runtime.command_facts_port
+  - test.runtime.load_interaction_cleanup
+  - test.edit.low_level_mutations_do_not_emit_actions
+  - test.interaction.commands_emit_user_actions
+  - test.interaction.interaction_declarations
+  - test.interaction.pointer_session
+  - test.interaction.pointer_sample_normalizer
+  - test.interaction.interaction_read_port
+  - test.interaction.context_action_request
+  - test.runtime.text_editing_port
+  - test.surface.text_editing_overlay
+  - test.surface.interactive_false_pointer_routing
+  - test.surface.interactive_false_active_session_cancel
+  - test.surface.interactive_false_pending_line_preserved
+  - test.surface.interactive_false_state_isolation
+  - test.surface.single_active_surface
+  - test.surface.surface_resource_session_lifecycle
+  - test.surface.pointer_adapter_finite_normalization
+  - test.codec.constructor_and_schema_limits
+  - test.runtime.dispose_lifecycle
+  - test.runtime.runtime_state_publication
+  - test.smoke.public_incremental_smoke
+  - test.runtime.load_document_state_publication
+  - test.runtime.interaction_settings_state
+  - test.store.read_document_projection
+  - test.store.no_projection_hot_path
+  - test.store.public_document_is_projection_only
+  - test.edit.sync_non_nested_async_stale
+  - test.edit.rollback
+  - test.edit.field_update_admission_effects
+  - test.edit.edit_matrix_effects
+  - test.edit.exact_touched_invalidation
+  - test.edit.typed_effects_no_frame_dependency
+  - test.edit.staged_document_load_success_failure
+  - test.spatial.committed_spatial_read_boundary
+  - test.geometry.geometry_spatial_donor_mapping
+  - test.geometry.hit_policy
+  - test.geometry.no_legacy_scene_order
+  - test.geometry.eraser_exact_budget_inputs
+  - test.geometry.eraser_exact_budget_no_partial_commit
+  - test.spatial.tile_outlier_membership
+  - test.spatial.touched_update
+  - test.spatial.no_full_clone_for_touched_update
+  - test.spatial.stale_generation_rejected
+  - test.spatial.fallback_budget_enforced
+  - test.spatial.invalid_index_fallback
+  - test.spatial.runtime_delivery_order
+  - test.frame.main_overlay_capture
+  - test.frame.frame_record_painter_boundary
+  - test.guardrails.frame_committed_facts_via_frame_facts_port
+  - test.frame.frame_spatial_paint_admission
+  - test.frame.frame_drawable_policy
+  - test.frame.marquee_captured_style
+  - test.surface.no_live_runtime_read_in_painters
+  - test.surface.overlay_drawable_policy
+  - test.surface.marquee_captured_style
+  - test.frame.selection_decoration_plan
+  - test.surface.selection_chrome_topmost_paint
+  - test.surface.selection_chrome_hit_target_boundary
+  - test.frame.paint_plan_write_all_or_nothing
+  - test.frame.measured_text_layout
+  - test.guardrails.text_surface_guardrail_checks
+  - test.guardrails.geometry_no_legacy_scene_order
+  - test.guardrails.geometry_eraser_exact_budget_inputs
+  - test.guardrails.spatial_no_full_clone_ordinary_edit
+  - test.guardrails.spatial_stale_candidate_rejected
+  - test.guardrails.spatial_fallback_budget_enforced
+  - test.frame.paint_plan_excludes_preview_delta
+  - test.frame.camera_pan_preserves_ordinary_paint_plan
+  - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+  - test.frame.cache_capacity_eviction_policy
+  - test.frame.selected_supplement_staging_no_global_sort
+  - test.interaction.preview_public_state
+  - test.interaction.eraser_context_action_routing
+  - test.interaction.move_machine
+  - test.interaction.select_machine
+  - test.interaction.move_resolver_reentrancy
+  - test.interaction.move_resolver_not_called_on_cancel_cleanup
+  - test.interaction.pointer_tool_cleanup_coordinator
+  - test.interaction.text_edit_stale_commit_guard
+  - test.diagnostics.interaction_diagnostics
+  - test.frame.selected_move_main_repaint
+  - test.frame.marquee_overlay_repaint
+  - test.guardrails.action_after_state
+  - test.guardrails.interaction_guardrail_enforcement
+  - test.surface.widget_paint
+  - test.guardrails.release_readiness
+  - test.benchmarks.benchmark_manifest
+  - test.benchmarks.benchmark_diff
+  - test.benchmarks.benchmark_runner
+  - test.benchmarks.required_cases
+  - test.guardrails.blocking_suite
   do_not_assume:
-    - no donor reuse without ported or equivalent tests
--
-  id: section_24_benchmarks
+  - no donor reuse without ported or equivalent tests
+- id: section_24_benchmarks
   source: docs/_registry/sections.yaml / section 24
   file: docs/verification/benchmarks.md
   title: 24. Benchmarks
-  phases:
-    - P14
+  owners:
+  - benchmark
   subsystems:
-    - quality_gates
+  - quality_gates
   must_read:
-    - section_15_frame_render_contract
-    - section_17_spatial_kernel
-    - section_18_cache_policy
-  donors:
-    - direct_scan_resistant_cache
+  - section_15_frame_render_contract
+  - section_17_spatial_kernel
+  - section_18_cache_policy
+  benchmarks:
+  - edit.add_element
+  - edit.update_visual
+  - edit.update_transform
+  - edit.move_selection
+  - edit.set_camera_offset
+  - edit.add_line
+  - input.selected_move_preview
+  - frame.selected_move_preview_cached_ordinary_plan
+  - input.marquee_preview
+  - input.draw_preview
+  - input.line_preview
+  - input.eraser_preview
+  - input.eraser_budget_exceeded
+  - frame.main_capture
+  - frame.overlay_capture
+  - frame.paint_candidates
+  - resources.resolve_sync
+  - resources.resolve_sync_cold_budget
+  - resources.mark_dirty
+  - resources.mark_all_dirty
+  - projection.read_document
+  - codec.decode_v1
+  - load_document.success
+  - load_document.breakdown
+  - load_document.failure
+  - spatial.query_point
+  - spatial.query_point_dense_stress
+  - spatial.touched_update
+  - runtime.dispose_during_gesture
+  - diagnostics.disabled_pointer
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - release.benchmark_readiness
+  - release.benchmark_readiness
   tests:
-    - test.benchmarks.benchmark_manifest
-    - test.benchmarks.benchmark_diff
-    - test.benchmarks.benchmark_runner
-    - test.guardrails.release_readiness
-    - test.benchmarks.required_cases
+  - test.benchmarks.benchmark_manifest
+  - test.benchmarks.benchmark_diff
+  - test.benchmarks.benchmark_runner
+  - test.guardrails.release_readiness
+  - test.benchmarks.required_cases
   do_not_assume:
-    - no unapproved legacy feature path regression
-
--
-  id: section_27_final_release_gates
+  - no unapproved legacy feature path regression
+- id: section_27_final_release_gates
   source: docs/_registry/sections.yaml / section 27
   file: docs/verification/release_gates.md
   title: 27. Final release gates
-  phases:
-    - P14
+  owners:
+  - release
   subsystems:
-    - quality_gates
+  - quality_gates
   must_read:
-    - section_22_guardrails_machine_checks
-    - section_23_tests
-    - section_24_benchmarks
-  donors:
-    - direct_numeric_policy
-    - direct_local_bounds_policy
-    - direct_paint_admission
-    - direct_scan_resistant_cache
-    - direct_pointer_tap_tracking
-    - direct_flutter_pointer_routing
-    - direct_gesture_ownership
-    - direct_structure_validation
-    - foundation_transform2d
-    - foundation_core_geometry
-    - foundation_contract_limits
-    - foundation_error_contract
-    - foundation_validators
-    - foundation_tri_state_patch_semantics
-    - foundation_immutable_collections
-    - foundation_pointer_input_contract
-    - foundation_action_event_immutability
-    - geometry_node_geometry
-    - geometry_hit_test
-    - render_geometry_builder
-    - geometry_interactive_geometry
-    - geometry_eraser_exact_hit
-    - spatial_scene_spatial_index
-    - spatial_index_cache
-    - store_scene_controller_read_paths
-    - snapshot_paint_admission_bounds
-    - snapshot_paint_candidates
-    - frame_render_state
-    - scene_view_runtime_fast_path
-    - paint_candidate_stage
-    - scene_painter_frame
-    - scene_render_caches
-    - static_layer_cache
-    - text_stroke_path_metrics_caches
-    - dto_snapshot_behavior
-    - dto_node_spec_behavior
-    - dto_boundary_schema
-    - dto_scene_value_validation
-    - dto_node_boundary_mapping
-    - dto_document_helpers
-    - codec_guards
-    - codec_json_require
-    - codec_json_parse
-    - codec_metadata_decode
-    - codec_layer_decode
-    - codec_node_common_decode
-    - codec_family_decode
-    - codec_scene_codec_flow
-    - codec_validation_path_surface
-    - tooling_schema_family_parity
-    - interaction_pointer_host
-    - interaction_pointer_session
-    - interaction_pointer_normalizer
-    - interaction_event_dispatcher
-    - interaction_double_tap_router
-    - interaction_gesture_runtime
-    - interaction_move_session
-    - interaction_draw_coordinator
-    - interaction_mutation_boundary
-    - staged_load_runtime_materialization
-    - validated_import_draft
-    - interaction_public_controller_behavior
-    - avoid_scene_controller_facades
-    - avoid_interactive_runtime_whole
-    - avoid_scene_builder_public_architecture
-    - avoid_scene_codec_whole
-    - avoid_scene_store_controller_whole
+  - section_22_guardrails_machine_checks
+  - section_23_tests
+  - section_24_benchmarks
+  benchmarks:
+  - none
   diagrams:
-    - "none"
+  - none
   guardrails:
-    - api.integration_surface_complete
-    - api.no_retired_public_exports
-    - api.public_exports_complete
-    - api.facades_do_not_export_internal
-    - api.public_types_complete
-    - api.public_api_compiles_as_written
-    - api.resource_source_app_key_publicly_readable
-    - api.preview_state_sealed_union_publicly_readable
-    - api.exported_dartdoc_complete
-    - api.public_class_modifiers_explicit
-    - api.no_public_api_import_cycles
-    - api.public_signature_shape
-    - api.no_undefined_public_type_references
-    - api.no_retired_public_load_routes
-    - api.no_unapproved_document_load_inputs
-    - api.dto_immutability
-    - api.equality_policy_explicit
-    - api.id_validation_no_extension_type_escape
-    - core.no_legacy_imports
-    - core.import_boundaries
-    - core.no_unapproved_part_files
-    - core.no_scene_controller_shape_dependency
-    - core.no_node_spec_patch_shape_dependency
-    - core.single_runtime_root
-    - store.no_public_document_live_state
-    - selection.owner_separate_from_document
-    - projection.only_explicit_read_paths
-    - edit.sync_non_nested
-    - edit.rollback_no_effects
-    - edit.stale_handle_rejected
-    - edit.operation_matrix_complete
-    - edit.no_global_invalidation_except_replacement
-    - edit.typed_effects_no_frame_dependency
-    - events.low_level_edit_no_user_actions
-    - events.commands_emit_user_actions
-    - events.action_after_state_order
-    - events.runtime_created_timestamps_monotonic
-    - load.prepares_before_interrupt
-    - load.success_interrupts_before_install
-    - preview.selected_move_main_repaint
-    - preview.selected_move_main_only
-    - preview.marquee_overlay_only
-    - interaction.no_concrete_store_imports
-    - interaction.no_concrete_selection_imports
-    - interaction.read_port_immutable_facts
-    - interaction.no_command_facts_import
-    - interaction.cleanup_coordinator_dependency_bans
-    - interaction.no_resolver_on_cancel_paths
-    - interaction.no_stale_terminal_commit
-    - interaction.pointer_cleanup_coordinator_only
-    - interaction.text_edit_stale_commit_guard
-    - geometry.no_legacy_scene_order
-    - geometry.eraser_exact_budget_no_partial
-    - spatial.no_full_clone_ordinary_edit
-    - spatial.stale_candidate_rejected
-    - spatial.fallback_budget_enforced
-    - frame.committed_facts_via_frame_facts_port
-    - frame.no_global_scene_sort
-    - frame.paint_plan_excludes_preview_delta
-    - frame.paint_plan_excludes_selection_state
-    - cache.keys_use_next_revisions_only
-    - cache.background_grid_not_element_visual
-    - cache.hot_caches_have_capacity_eviction
-    - resources.mutation_inside_edit_only
-    - resources.dirty_no_document_revision
-    - resources.app_key_only
-    - resources.resolver_boundary_owned_by_surface_session
-    - resources.resolver_frame_budget
-    - resources.no_same_frame_missing_retry
-    - resources.resolver_reentrancy_rejected
-    - codec.schema_v1_exact
-    - codec.known_fields_validated
-    - codec.no_runtime_side_effects
-    - diagnostics.disabled_no_alloc_hot_path
-    - diagnostics.sanitized_public_projection
-    - release.benchmark_readiness
-    - tools.p10_compatibility
-    - surface.pointer_samples_normalized_before_runtime
-    - surface.interactive_false_pending_line_preserved
+  - api.integration_surface_complete
+  - api.no_retired_public_exports
+  - api.public_exports_complete
+  - api.facades_do_not_export_internal
+  - api.public_types_complete
+  - api.public_api_compiles_as_written
+  - api.resource_source_app_key_publicly_readable
+  - api.preview_state_sealed_union_publicly_readable
+  - api.exported_dartdoc_complete
+  - api.public_class_modifiers_explicit
+  - api.no_public_api_import_cycles
+  - api.public_signature_shape
+  - api.no_undefined_public_type_references
+  - api.no_retired_public_load_routes
+  - api.no_unapproved_document_load_inputs
+  - api.dto_immutability
+  - api.equality_policy_explicit
+  - api.id_validation_no_extension_type_escape
+  - core.no_legacy_imports
+  - core.import_boundaries
+  - core.no_unapproved_part_files
+  - core.no_scene_controller_shape_dependency
+  - core.no_node_spec_patch_shape_dependency
+  - core.single_runtime_root
+  - store.no_public_document_live_state
+  - selection.owner_separate_from_document
+  - projection.only_explicit_read_paths
+  - edit.sync_non_nested
+  - edit.rollback_no_effects
+  - edit.stale_handle_rejected
+  - edit.operation_matrix_complete
+  - edit.no_global_invalidation_except_replacement
+  - edit.typed_effects_no_frame_dependency
+  - events.low_level_edit_no_user_actions
+  - events.commands_emit_user_actions
+  - events.action_after_state_order
+  - events.runtime_created_timestamps_monotonic
+  - load.prepares_before_interrupt
+  - load.success_interrupts_before_install
+  - preview.selected_move_main_repaint
+  - preview.selected_move_main_only
+  - preview.marquee_overlay_only
+  - interaction.no_concrete_store_imports
+  - interaction.no_concrete_selection_imports
+  - interaction.read_port_immutable_facts
+  - interaction.no_command_facts_import
+  - interaction.cleanup_coordinator_dependency_bans
+  - interaction.no_resolver_on_cancel_paths
+  - interaction.no_stale_terminal_commit
+  - interaction.pointer_cleanup_coordinator_only
+  - interaction.text_edit_stale_commit_guard
+  - geometry.no_legacy_scene_order
+  - geometry.eraser_exact_budget_no_partial
+  - spatial.no_full_clone_ordinary_edit
+  - spatial.stale_candidate_rejected
+  - spatial.fallback_budget_enforced
+  - frame.committed_facts_via_frame_facts_port
+  - frame.no_global_scene_sort
+  - frame.paint_plan_excludes_preview_delta
+  - frame.paint_plan_excludes_selection_state
+  - cache.keys_use_next_revisions_only
+  - cache.background_grid_not_element_visual
+  - cache.hot_caches_have_capacity_eviction
+  - resources.mutation_inside_edit_only
+  - resources.dirty_no_document_revision
+  - resources.app_key_only
+  - resources.resolver_boundary_owned_by_surface_session
+  - resources.resolver_frame_budget
+  - resources.no_same_frame_missing_retry
+  - resources.resolver_reentrancy_rejected
+  - codec.schema_v1_exact
+  - codec.known_fields_validated
+  - codec.no_runtime_side_effects
+  - diagnostics.disabled_no_alloc_hot_path
+  - diagnostics.sanitized_public_projection
+  - release.benchmark_readiness
+  - tools.p10_compatibility
+  - surface.pointer_samples_normalized_before_runtime
+  - surface.interactive_false_pending_line_preserved
   tests:
-    - test.api_contract.app_next_engine_adapter_compile_fixture
-    - test.guardrails.frame_committed_facts_via_frame_facts_port
-    - test.guardrails.release_readiness
-    - test.guardrails.blocking_suite
+  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.guardrails.frame_committed_facts_via_frame_facts_port
+  - test.guardrails.release_readiness
+  - test.guardrails.blocking_suite
   do_not_assume:
-    - no release with legacy imports, legacy facade, or unlinked donor reuse
+  - no release with legacy imports, legacy facade, or unlinked donor reuse

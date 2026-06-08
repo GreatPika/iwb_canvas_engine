@@ -7,12 +7,10 @@ Owns:
 Must read before editing:
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 - `section_19_codec_boundary` -> `docs/contracts/codec_boundary.md`
-Feeds phases:
-- `P3`
-- `P14`
-Related donors:
-- `foundation_error_contract`
-- `dto_scene_value_validation`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:

@@ -1,7 +1,7 @@
 // Structural documentation checker only.
 //
 // This tool verifies documentation entrypoints, registries, navigation links,
-// diagram catalog membership, and phase/read-first references. Do not add
+// diagram catalog membership, and current lookup references. Do not add
 // checks that match free-form Markdown wording, Mermaid edge text, or runtime
 // architecture invariants. Those constraints belong in structured registries,
 // generated documentation, analyzer/lint rules, Dart tests, or benchmarks.
@@ -12,10 +12,8 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 import '../../tool/bench/src/benchmark_manifest.dart';
-import '../../tool/guardrails/src/guardrail_registry.dart';
 
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
-const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
 const _benchmarksRegistryPath = 'docs/_registry/benchmarks.yaml';
 const _diagramCatalogPath = 'docs/diagrams/catalog.md';
@@ -23,7 +21,7 @@ const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
 const _diagramCatalogMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _generatedIndexMarker =
-    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
+    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml -->';
 const _benchmarkPolicySourceNote =
     'The structured source of truth for section 24 benchmark cases, scales,\n'
     'measurement boundaries, fixture shapes, metrics, numeric budget classes,\n'
@@ -32,84 +30,32 @@ const _benchmarkPolicySourceNote =
     'that manifest.';
 const _benchmarkFingerprintPrefix = '<!-- BENCHMARK-MANIFEST-FINGERPRINT: ';
 
-const _phaseDocs = {
-  'P0': 'docs/implementation/p0_package_skeleton_and_hard_boundaries.md',
-  'P1': 'docs/implementation/p1_v1_scope_gate_before_public_api_freeze.md',
-  'P2': 'docs/implementation/p2_public_api_v1_freeze.md',
-  'P3': 'docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md',
-  'P4': 'docs/implementation/p4_runtime_spine.md',
-  'P5': 'docs/implementation/p5_edit_core.md',
-  'P6': 'docs/implementation/p6_load_document.md',
-  'P7': 'docs/implementation/p7_resources_and_images.md',
-  'P8': 'docs/implementation/p8_geometry_and_spatial.md',
-  'P9': 'docs/implementation/p9_frame_rendering_and_caches.md',
-  'P10': 'docs/implementation/p10_selection_and_move.md',
-  'P11': 'docs/implementation/p11_draw_tools.md',
-  'P12': 'docs/implementation/p12_eraser_and_context_action_request.md',
-  'P13': 'docs/implementation/p13_flutter_surface.md',
-  'P14': 'docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md',
-};
-
-const _globalReadFirstSections = {
-  'section_22_guardrails_machine_checks',
-  'section_23_tests',
-  'section_27_final_release_gates',
-};
-
-const _donorRelatedSectionCatalogExclusions = {
-  'section_23_tests',
-  'section_27_final_release_gates',
-};
-
-const _allowedDonorDecisions = {
-  'copy',
-  'copy_adapt',
-  'adapt',
-  'adapt_rewrite',
-  'rewrite_reference',
-  'avoid',
-};
-
-const _requiredDonorListFields = {
-  'source_paths',
-  'target_phases',
-  'use_for',
-  'do_not_copy',
-  'required_tests',
-  'blocks',
-  'related_sections',
-};
-
-const _retiredDonorProofPrefixes = {
-  'PLAN.md',
-  'plan/',
-  'docs/donors/',
-  'docs/implementation/',
-};
-
-const _retiredDonorProofPaths = {
-  'docs/_registry/donors.yaml',
-  'docs/architecture/04_decisions_and_differences.md',
-  'docs/verification/legacy_capability_inventory.md',
-};
-
 const _markdownRoots = [
   'docs/architecture',
   'docs/contracts',
-  'docs/implementation',
   'docs/verification',
-  'docs/donors',
   'docs/diagrams',
   'docs/indexes',
 ];
 
+const _retiredDocsRoots = {'docs/implementation', 'docs/donors'};
+
 const _generatedIndexPaths = [
-  'docs/indexes/by_phase.md',
+  'docs/indexes/by_owner.md',
   'docs/indexes/by_subsystem.md',
   'docs/indexes/by_guardrail.md',
   'docs/indexes/by_test_area.md',
-  'docs/indexes/donor_to_phase.md',
+  'docs/indexes/by_benchmark.md',
+  'docs/indexes/by_diagram.md',
+  'docs/indexes/by_release.md',
 ];
+
+const _retiredDocsRoutes = {
+  'docs/indexes/by_phase.md',
+  'docs/indexes/donor_to_phase.md',
+  'PLAN.md',
+  'plan/',
+};
 
 const _rootReadmeGroups = [
   'Start by task',
@@ -127,41 +73,38 @@ const _architectureReadmeGroups = [
 
 const _rootReadmeTaskRoutes = [
   '- Understand architecture: `docs/architecture/README.md`',
-  '- Implement a phase: `docs/indexes/by_phase.md`',
+  '- Plan a change: use a per-task Change Contract with current docs and registries as inputs',
   '- Verify behavior: `docs/verification/`',
+  '- Find current owners: `docs/indexes/by_owner.md`',
   '- Check subsystem contracts: `docs/indexes/by_subsystem.md`',
   '- Find guardrail coverage: `docs/indexes/by_guardrail.md`',
   '- Find test coverage: `docs/indexes/by_test_area.md`',
-  '- Review donor decisions: `docs/indexes/donor_to_phase.md`',
+  '- Find benchmark coverage: `docs/indexes/by_benchmark.md`',
+  '- Find diagram coverage: `docs/indexes/by_diagram.md`',
   '- Update diagrams: `docs/diagrams/catalog.md`',
-  '- Prepare release work: `docs/verification/release_gates.md`',
+  '- Prepare release work: `docs/indexes/by_release.md` and `docs/verification/release_gates.md`',
   '- Use generated lookup: `docs/indexes/`',
-  '- Find Change Contracts: `PLAN.md` and `plan/`',
 ];
 
 final _errors = <String>[];
 
 void main() {
   _checkRequiredEntrypoints();
+  _checkRetiredDocsRootsAreInactive();
   _checkPortalReadmes();
   _checkReadmeInventory();
   _checkGeneratedDocsParity();
   _checkGeneratedIndexes();
 
   final sections = _loadSections();
-  final donors = _loadDonors();
   final sectionIds = sections.map((section) => section.id).toSet();
-  final donorIds = donors.map((donor) => donor.id).toSet();
   final diagrams = _loadDiagramCatalog();
 
-  _checkSectionReferences(sections, sectionIds, donorIds);
-  _checkDonorReferences(sections, donors, sectionIds);
+  _checkSectionReferences(sections, sectionIds);
   _checkDiagramCatalogRegistrySymmetry(sections, sectionIds, diagrams);
   _checkBenchmarkDocsProjection();
-  _checkImplementationDiagramPhaseReferences(diagrams);
   _checkMarkdownPaths(sectionIds);
   _checkMustReadGraph(sections, sectionIds);
-  _checkPhaseReadFirstReferences(sections, sectionIds);
 
   if (_errors.isNotEmpty) {
     stderr.writeln('Docs check failed:');
@@ -173,6 +116,24 @@ void main() {
   }
 
   stdout.writeln('Docs check passed.');
+}
+
+void _checkRetiredDocsRootsAreInactive() {
+  for (final root in _markdownRoots) {
+    if (isRetiredDocsRoot(root)) {
+      _fail('$root must not be an active docs root');
+    }
+  }
+}
+
+bool isRetiredDocsRoot(String path) {
+  return _retiredDocsRoots.any((root) {
+    return path == root || path.startsWith('$root/');
+  });
+}
+
+bool isRetiredDocsRoute(String value) {
+  return _retiredDocsRoutes.contains(value) || isRetiredDocsRoot(value);
 }
 
 void _checkBenchmarkDocsProjection() {
@@ -427,10 +388,10 @@ class _SectionEntry {
     required this.id,
     required this.file,
     required this.title,
-    required this.phases,
+    required this.owners,
     required this.subsystems,
     required this.mustRead,
-    required this.donors,
+    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -440,32 +401,14 @@ class _SectionEntry {
   final String id;
   final String file;
   final String title;
-  final List<String> phases;
+  final List<String> owners;
   final List<String> subsystems;
   final List<String> mustRead;
-  final List<String> donors;
+  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;
   final List<String> doNotAssume;
-}
-
-class _DonorEntry {
-  const _DonorEntry({
-    required this.id,
-    required this.decision,
-    required this.targetPhases,
-    required this.blocks,
-    required this.relatedSections,
-    required this.requiredTests,
-  });
-
-  final String id;
-  final String decision;
-  final List<String> targetPhases;
-  final List<String> blocks;
-  final List<String> relatedSections;
-  final List<String> requiredTests;
 }
 
 class _DiagramEntry {
@@ -475,7 +418,7 @@ class _DiagramEntry {
     required this.file,
     required this.classification,
     required this.relatedSections,
-    required this.relatedPhases,
+    required this.relatedOwners,
     required this.graphViewSource,
   });
 
@@ -484,7 +427,7 @@ class _DiagramEntry {
   final String file;
   final String classification;
   final Set<String> relatedSections;
-  final Set<String> relatedPhases;
+  final Set<String> relatedOwners;
   final String graphViewSource;
 
   bool get isGenerated => classification == 'generated';
@@ -495,7 +438,6 @@ void _checkRequiredEntrypoints() {
     'docs/README.md',
     'docs/architecture/README.md',
     _sectionsRegistryPath,
-    _donorsRegistryPath,
     _diagramsRegistryPath,
     _benchmarksRegistryPath,
     _diagramCatalogPath,
@@ -503,13 +445,10 @@ void _checkRequiredEntrypoints() {
   const requiredDirs = [
     'docs/architecture',
     'docs/contracts',
-    'docs/implementation',
     'docs/verification',
-    'docs/donors',
     'docs/diagrams',
     'docs/indexes',
     'docs/_registry',
-    'plan',
   ];
 
   for (final path in requiredFiles) {
@@ -536,15 +475,17 @@ List<_SectionEntry> _loadSections() {
       id: id,
       file: file,
       title: title,
-      phases: _stringListField(entry, 'phases', id),
+      owners: _stringListField(entry, 'owners', id),
       subsystems: _stringListField(entry, 'subsystems', id),
       mustRead: _stringListField(entry, 'must_read', id),
-      donors: _stringListField(entry, 'donors', id),
+      benchmarks: _stringListField(entry, 'benchmarks', id),
       diagrams: _stringListField(entry, 'diagrams', id),
       guardrails: _stringListField(entry, 'guardrails', id),
       tests: _stringListField(entry, 'tests', id),
       doNotAssume: _stringListField(entry, 'do_not_assume', id),
     );
+
+    _rejectRetiredSectionFields(entry, id);
 
     if (!seenIds.add(id)) {
       _fail('duplicate section id: $id');
@@ -563,47 +504,12 @@ List<_SectionEntry> _loadSections() {
   return sections;
 }
 
-// Donor rows are validated while they are materialized so malformed ownership
-// metadata cannot drift from the object that later checks consume.
-// ignore: halstead-volume
-List<_DonorEntry> _loadDonors() {
-  final donors = <_DonorEntry>[];
-  final seenIds = <String>{};
-
-  for (final entry in _loadYamlMapList(_donorsRegistryPath)) {
-    final id = _stringField(entry, 'id', 'donor registry entry');
-    final decision = _stringField(entry, 'decision', id);
-    _stringField(entry, 'target_owner', id);
-    _stringField(entry, 'notes', id);
-
-    for (final field in _requiredDonorListFields) {
-      final values = _stringListField(entry, field, id);
-      if (values.isEmpty) {
-        _fail('donor $id has empty $field');
-      }
+void _rejectRetiredSectionFields(YamlMap entry, String id) {
+  for (final field in const ['phases', 'donors']) {
+    if (entry.containsKey(field)) {
+      _fail('$id must not use retired section field $field');
     }
-
-    final donor = _DonorEntry(
-      id: id,
-      decision: decision,
-      targetPhases: _stringListField(entry, 'target_phases', id),
-      blocks: _stringListField(entry, 'blocks', id),
-      relatedSections: _stringListField(entry, 'related_sections', id),
-      requiredTests: _stringListField(entry, 'required_tests', id),
-    );
-
-    if (!seenIds.add(id)) {
-      _fail('duplicate donor id: $id');
-      continue;
-    }
-    if (!_allowedDonorDecisions.contains(decision)) {
-      _fail('donor $id has unsupported decision $decision');
-    }
-
-    donors.add(donor);
   }
-
-  return donors;
 }
 
 // Section registry integrity is one row-level invariant; keeping the traversal
@@ -612,24 +518,24 @@ List<_DonorEntry> _loadDonors() {
 void _checkSectionReferences(
   List<_SectionEntry> sections,
   Set<String> sectionIds,
-  Set<String> donorIds,
 ) {
   for (final section in sections) {
     _checkNoneSentinel(section.id, 'must_read', section.mustRead);
+    _checkNoneSentinel(section.id, 'owners', section.owners);
     _checkNoneSentinel(section.id, 'subsystems', section.subsystems);
-    _checkNoneSentinel(section.id, 'donors', section.donors);
+    _checkNoneSentinel(section.id, 'benchmarks', section.benchmarks);
     _checkNoneSentinel(section.id, 'diagrams', section.diagrams);
     _checkNoneSentinel(section.id, 'guardrails', section.guardrails);
     _checkNoneSentinel(section.id, 'tests', section.tests);
     _checkNoneSentinel(section.id, 'do_not_assume', section.doNotAssume);
 
-    if (section.phases.isEmpty) {
-      _fail('${section.id} has no phases');
+    if (section.owners.isEmpty) {
+      _fail('${section.id} has no owners');
     }
     _checkExplicitCoverage(section);
-    for (final phase in section.phases) {
-      if (!_phaseDocs.containsKey(phase)) {
-        _fail('${section.id} references unknown phase $phase');
+    for (final owner in section.owners) {
+      if (RegExp(r'^P([0-9]|1[0-4])$').hasMatch(owner)) {
+        _fail('${section.id} uses retired phase value $owner as owner');
       }
     }
 
@@ -648,13 +554,20 @@ void _checkSectionReferences(
       }
     }
 
-    for (final donorId in section.donors) {
-      if (donorId == 'none') {
-        continue;
-      }
-      if (!donorIds.contains(donorId)) {
-        _fail('${section.id} references unknown donor id $donorId');
-      }
+    _checkBenchmarkReferences(section);
+  }
+}
+
+void _checkBenchmarkReferences(_SectionEntry section) {
+  final benchmarkIds = _loadBenchmarkManifest().cases.map((entry) {
+    return entry.id;
+  }).toSet();
+  for (final benchmarkId in section.benchmarks) {
+    if (benchmarkId == 'none') {
+      continue;
+    }
+    if (!benchmarkIds.contains(benchmarkId)) {
+      _fail('${section.id} references unknown benchmark $benchmarkId');
     }
   }
 }
@@ -796,6 +709,21 @@ void _checkReadmeShape({
       _fail('$path links to retired path $retiredPath');
     }
   }
+  _checkRetiredRoutes(path, text);
+}
+
+void _checkRetiredRoutes(String sourcePath, String text) {
+  for (final retiredRoute in _retiredDocsRoutes) {
+    if (text.contains(retiredRoute)) {
+      _fail('$sourcePath links to retired route $retiredRoute');
+    }
+  }
+  for (final match in RegExp(r'`([^`]+)`').allMatches(text)) {
+    final route = _matchGroup(match, 1, '$sourcePath route');
+    if (isRetiredDocsRoute(route)) {
+      _fail('$sourcePath links to retired route $route');
+    }
+  }
 }
 
 void _checkReadmeNestedHeadings(String path, String text) {
@@ -844,9 +772,10 @@ void _checkIntroParagraph(String path, String intro) {
 
 void _checkExplicitCoverage(_SectionEntry section) {
   final coverage = {
+    'owners': section.owners,
     'must_read': section.mustRead,
     'subsystems': section.subsystems,
-    'donors': section.donors,
+    'benchmarks': section.benchmarks,
     'diagrams': section.diagrams,
     'tests': section.tests,
     'guardrails': section.guardrails,
@@ -871,146 +800,7 @@ bool _sameStringList(List<String> actual, List<String> expected) {
   return true;
 }
 
-// Donor/reference symmetry is one bidirectional registry invariant; splitting
-// the two directions would hide why a donor and section disagree.
-// ignore: cyclomatic-complexity, halstead-volume, maintainability-index, source-lines-of-code
-void _checkDonorReferences(
-  List<_SectionEntry> sections,
-  List<_DonorEntry> donors,
-  Set<String> sectionIds,
-) {
-  final donorsById = {for (final donor in donors) donor.id: donor};
-  final registryDonorSections = <String, Set<String>>{};
-  final sectionsById = {for (final section in sections) section.id: section};
-
-  for (final donor in donors) {
-    _checkNoneSentinel(donor.id, 'related_sections', donor.relatedSections);
-    for (final sectionId in donor.relatedSections) {
-      if (!sectionIds.contains(sectionId)) {
-        _fail('donor ${donor.id} references unknown section id $sectionId');
-      }
-    }
-    for (final proof in donor.requiredTests) {
-      if (_isRetiredDonorProof(proof)) {
-        _fail(
-          'donor ${donor.id} required_tests must cite current tests or '
-          'guardrails, not retired proof source $proof',
-        );
-      }
-      if (!_isRelatedSectionProof(proof, donor, sectionsById)) {
-        _fail(
-          'donor ${donor.id} required_tests entry $proof must be an '
-          'existing test or guardrail id from its related_sections',
-        );
-      }
-      if (!_hasExecutableProofOwner(proof)) {
-        _fail(
-          'donor ${donor.id} required_tests entry $proof must resolve to an '
-          'existing test file or registered guardrail',
-        );
-      }
-    }
-
-    if (donor.decision == 'avoid') {
-      if (donor.targetPhases.length != 1 ||
-          donor.targetPhases.single != 'avoid') {
-        _fail('avoid donor ${donor.id} must use target_phases: avoid');
-      }
-    } else {
-      for (final phase in donor.targetPhases) {
-        if (!_phaseDocs.containsKey(phase)) {
-          _fail('donor ${donor.id} has unknown target phase $phase');
-        }
-      }
-      for (final block in donor.blocks) {
-        if (!_phaseDocs.containsKey(block)) {
-          _fail('donor ${donor.id} has non-phase block $block');
-        }
-      }
-    }
-  }
-
-  for (final section in sections) {
-    for (final donorId in section.donors) {
-      if (donorId == 'none' || !donorsById.containsKey(donorId)) {
-        continue;
-      }
-      if (!_donorRelatedSectionCatalogExclusions.contains(section.id)) {
-        registryDonorSections
-            .putIfAbsent(donorId, () => <String>{})
-            .add(section.id);
-      }
-    }
-  }
-
-  for (final entry in registryDonorSections.entries) {
-    final donor = donorsById[entry.key];
-    if (donor == null) {
-      continue;
-    }
-    final relatedSections = donor.relatedSections.toSet();
-    for (final sectionId in entry.value) {
-      if (!relatedSections.contains(sectionId)) {
-        _fail(
-          'donor ${donor.id} is used by $sectionId in $_sectionsRegistryPath, '
-          'but $_donorsRegistryPath does not list $sectionId as related',
-        );
-      }
-    }
-  }
-}
-
-bool _isRetiredDonorProof(String value) {
-  return _retiredDonorProofPaths.contains(value) ||
-      _retiredDonorProofPrefixes.any(value.startsWith);
-}
-
-bool _isRelatedSectionProof(
-  String value,
-  _DonorEntry donor,
-  Map<String, _SectionEntry> sectionsById,
-) {
-  return _relatedSectionProofIds(donor, sectionsById).contains(value);
-}
-
-Set<String> _relatedSectionProofIds(
-  _DonorEntry donor,
-  Map<String, _SectionEntry> sectionsById,
-) {
-  return {
-    for (final sectionId in donor.relatedSections)
-      if (sectionsById[sectionId] case final section?) ...[
-        ...section.tests.where((test) => test != 'none'),
-        ...section.guardrails.where((guardrail) => guardrail != 'none'),
-      ],
-  };
-}
-
-bool _hasExecutableProofOwner(String value) {
-  return _testProofFileExists(value) || guardrailInventory().containsKey(value);
-}
-
-bool _testProofFileExists(String value) {
-  if (!value.startsWith('test.')) {
-    return false;
-  }
-  return _testProofPathCandidates(value).any((path) => File(path).existsSync());
-}
-
-List<String> _testProofPathCandidates(String value) {
-  final override = _testProofPathOverrides[value];
-  final parts = value.replaceFirst('test.', '').split('.');
-  final conventionalPath =
-      'test/${parts.take(parts.length - 1).join('/')}/${parts.last}_test.dart';
-  return [?override, conventionalPath];
-}
-
-const _testProofPathOverrides = {
-  'test.guardrails.release_readiness':
-      'test/guardrails/release_readiness_guardrail_test.dart',
-};
-
-// Diagram catalog loading validates identity, file, phase, and generated-source
+// Diagram catalog loading validates identity, file, owner, and generated-source
 // metadata in one pass so catalog rows cannot be partially accepted.
 // ignore: cyclomatic-complexity, halstead-volume, maintainability-index, source-lines-of-code
 Map<String, _DiagramEntry> _loadDiagramCatalog() {
@@ -1030,7 +820,7 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     final kind = _stringField(entry, 'kind', diagramId);
     final file = _stringField(entry, 'file', diagramId);
     final classification = _stringField(entry, 'classification', diagramId);
-    final phases = _stringListField(entry, 'related_phases', diagramId).toSet();
+    final owners = _stringListField(entry, 'related_owners', diagramId).toSet();
     final sections = _stringListField(
       entry,
       'related_sections',
@@ -1056,15 +846,18 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
     if (sections.isEmpty) {
       _fail('$_diagramsRegistryPath entry $diagramId has no related sections');
     }
-    if (phases.isEmpty) {
-      _fail('$_diagramsRegistryPath entry $diagramId has no related phases');
+    if (owners.isEmpty) {
+      _fail('$_diagramsRegistryPath entry $diagramId has no related owners');
     }
-    for (final phase in phases) {
-      if (!_phaseDocs.containsKey(phase)) {
+    for (final owner in owners) {
+      if (RegExp(r'^P([0-9]|1[0-4])$').hasMatch(owner)) {
         _fail(
-          '$_diagramsRegistryPath entry $diagramId has unknown phase $phase',
+          '$_diagramsRegistryPath entry $diagramId uses retired phase value $owner',
         );
       }
+    }
+    if (entry.containsKey('related_phases')) {
+      _fail('$_diagramsRegistryPath entry $diagramId uses related_phases');
     }
     if (classification != 'semantic' && classification != 'generated') {
       _fail('$diagramId classification must be semantic or generated');
@@ -1084,7 +877,7 @@ Map<String, _DiagramEntry> _loadDiagramCatalog() {
       file: file,
       classification: classification,
       relatedSections: sections,
-      relatedPhases: phases,
+      relatedOwners: owners,
       graphViewSource: graphViewSource,
     );
   }
@@ -1159,62 +952,6 @@ void _checkDiagramCatalogRegistrySymmetry(
   }
 }
 
-// Phase implementation docs and the diagram catalog form one ownership map, so
-// phase-reference validation stays together instead of metric-shaped fragments.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
-void _checkImplementationDiagramPhaseReferences(
-  Map<String, _DiagramEntry> catalog,
-) {
-  final phaseReferences = <String, Set<String>>{};
-
-  for (final entry in _phaseDocs.entries) {
-    final phase = entry.key;
-    final path = entry.value;
-    final references = phaseReferences.putIfAbsent(phase, () => <String>{});
-    final section = _markdownSection(path, 'Diagrams to read or update');
-    if (section == null) {
-      continue;
-    }
-
-    for (final match in RegExp(
-      r'^- `([^`]+)` -> `(docs/diagrams/[^`]+\.mmd)`$',
-      multiLine: true,
-    ).allMatches(section)) {
-      final diagramId = _matchGroup(match, 1, '$path diagram id');
-      final diagramPath = _matchGroup(match, 2, '$path diagram path');
-      references.add(diagramId);
-
-      final diagram = catalog[diagramId];
-      if (diagram == null) {
-        _fail('$path references uncataloged diagram $diagramId');
-        continue;
-      }
-      if (diagram.file != diagramPath) {
-        _fail(
-          '$path references $diagramId at $diagramPath, '
-          'but $_diagramCatalogPath lists ${diagram.file}',
-        );
-      }
-      if (!diagram.relatedPhases.contains(phase)) {
-        _fail(
-          '$path references diagram $diagramId, but $_diagramCatalogPath '
-          'does not list $phase under $diagramId',
-        );
-      }
-    }
-  }
-
-  final p14References = phaseReferences['P14'] ?? const <String>{};
-  for (final diagram in catalog.values) {
-    if (!diagram.relatedPhases.contains('P14')) {
-      continue;
-    }
-    if (!p14References.contains(diagram.id)) {
-      _fail('${_phaseDocs['P14']} must list P14 catalog diagram ${diagram.id}');
-    }
-  }
-}
-
 void _checkMarkdownPaths(Set<String> sectionIds) {
   for (final rootPath in _markdownRoots) {
     final root = Directory(rootPath);
@@ -1253,6 +990,7 @@ void _checkRetiredSourceClaims(String sourcePath, String text) {
   if (text.contains('docs/indexes/context_coverage.md')) {
     _fail('$sourcePath links to retired context coverage index');
   }
+  _checkRetiredRoutes(sourcePath, text);
 }
 
 // The must-read graph cycle check keeps graph construction and DFS together so
@@ -1300,81 +1038,6 @@ void _checkMustReadGraph(List<_SectionEntry> sections, Set<String> sectionIds) {
   for (final id in graph.keys) {
     visit(id);
   }
-}
-
-// Phase read-first validation compares registry ownership and phase docs as one
-// contract; splitting it would make missing phase mappings less obvious.
-// ignore: cyclomatic-complexity, halstead-volume
-void _checkPhaseReadFirstReferences(
-  List<_SectionEntry> sections,
-  Set<String> sectionIds,
-) {
-  final registryPhases = <String, Set<String>>{};
-  for (final section in sections) {
-    for (final phase in section.phases) {
-      registryPhases.putIfAbsent(phase, () => <String>{}).add(section.id);
-    }
-  }
-
-  for (final phase in registryPhases.keys) {
-    final phaseDoc = _phaseDocs[phase];
-    if (phaseDoc == null) {
-      _fail('phase $phase has no implementation phase document mapping');
-    } else {
-      _requireFile(phaseDoc, source: _sectionsRegistryPath);
-    }
-  }
-
-  for (final entry in _phaseDocs.entries) {
-    final phase = entry.key;
-    final phaseDoc = entry.value;
-    final readFirst = _readFirstSectionIds(phaseDoc);
-    final registrySections = registryPhases[phase] ?? const <String>{};
-    for (final sectionId in readFirst) {
-      if (!sectionIds.contains(sectionId)) {
-        _fail('$phaseDoc Read first references unknown section $sectionId');
-        continue;
-      }
-      if (!registrySections.contains(sectionId) &&
-          !_globalReadFirstSections.contains(sectionId)) {
-        _fail(
-          '$phaseDoc Read first lists $sectionId, but $sectionId does not feed phase $phase',
-        );
-      }
-    }
-  }
-}
-
-Set<String> _readFirstSectionIds(String path) {
-  final section = _markdownSection(path, 'Read first');
-  if (section == null) {
-    return const {};
-  }
-  return RegExp(r'`(section_[^`]+)`')
-      .allMatches(section)
-      .map((match) => _matchGroup(match, 1, '$path Read first reference'))
-      .toSet();
-}
-
-String? _markdownSection(String path, String heading) {
-  _requireFile(path);
-  if (!File(path).existsSync()) {
-    return null;
-  }
-  final text = _read(path);
-  final headingMatch = RegExp(
-    '^## ${RegExp.escape(heading)}\\s*\$',
-    multiLine: true,
-  ).firstMatch(text);
-  if (headingMatch == null) {
-    _fail('$path has no "$heading" section');
-    return null;
-  }
-  final rest = _codeUnitSlice(text, headingMatch.end);
-  final nextHeading = RegExp(r'^##\s+', multiLine: true).firstMatch(rest);
-  return nextHeading == null
-      ? rest
-      : _codeUnitSlice(rest, 0, nextHeading.start);
 }
 
 String _codeUnitSlice(String text, int start, [int? end]) {

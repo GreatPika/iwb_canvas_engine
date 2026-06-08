@@ -1,4 +1,4 @@
-<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->
+<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml -->
 # By test area
 
 Test coverage generated from `docs/_registry/sections.yaml`.

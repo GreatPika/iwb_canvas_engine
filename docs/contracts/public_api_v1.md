@@ -7,24 +7,10 @@ Owns:
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
-Feeds phases:
-- `P1`
-- `P2`
-- `P10`
-- `P11`
-- `P12`
-- `P13`
-Related donors:
-- `foundation_transform2d`
-- `foundation_contract_limits`
-- `foundation_error_contract`
-- `foundation_validators`
-- `foundation_tri_state_patch_semantics`
-- `foundation_immutable_collections`
-- `foundation_pointer_input_contract`
-- `foundation_action_event_immutability`
-- `dto_snapshot_behavior`
-- `dto_node_spec_behavior`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `c4_context`
 - `dfd_public_edit`

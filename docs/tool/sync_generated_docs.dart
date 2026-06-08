@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
-const _donorsRegistryPath = 'docs/_registry/donors.yaml';
 const _diagramRegistryPath = 'docs/_registry/diagrams.yaml';
 const _diagramCatalogPath = 'docs/diagrams/catalog.md';
 const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
@@ -11,31 +10,15 @@ const _contextCoveragePath = 'docs/indexes/context_coverage.md';
 const _diagramGeneratedMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _indexGeneratedMarker =
-    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml and docs/_registry/donors.yaml -->';
+    '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml -->';
 const _generatedIndexPaths = [
-  'docs/indexes/by_phase.md',
+  'docs/indexes/by_owner.md',
   'docs/indexes/by_subsystem.md',
   'docs/indexes/by_guardrail.md',
   'docs/indexes/by_test_area.md',
-  'docs/indexes/donor_to_phase.md',
-];
-
-const _phaseOrder = [
-  'P0',
-  'P1',
-  'P2',
-  'P3',
-  'P4',
-  'P5',
-  'P6',
-  'P7',
-  'P8',
-  'P9',
-  'P10',
-  'P11',
-  'P12',
-  'P13',
-  'P14',
+  'docs/indexes/by_benchmark.md',
+  'docs/indexes/by_diagram.md',
+  'docs/indexes/by_release.md',
 ];
 
 void main(List<String> arguments) {
@@ -94,7 +77,7 @@ class _DiagramEntry {
     required this.kind,
     required this.file,
     required this.classification,
-    required this.relatedPhases,
+    required this.relatedOwners,
     required this.relatedSections,
     required this.graphViewSource,
   });
@@ -103,7 +86,7 @@ class _DiagramEntry {
   final String kind;
   final String file;
   final String classification;
-  final List<String> relatedPhases;
+  final List<String> relatedOwners;
   final List<String> relatedSections;
   final String graphViewSource;
 
@@ -114,10 +97,10 @@ class _SectionEntry {
   const _SectionEntry({
     required this.id,
     required this.title,
-    required this.phases,
+    required this.owners,
     required this.subsystems,
     required this.mustRead,
-    required this.donors,
+    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -125,27 +108,13 @@ class _SectionEntry {
 
   final String id;
   final String title;
-  final List<String> phases;
+  final List<String> owners;
   final List<String> subsystems;
   final List<String> mustRead;
-  final List<String> donors;
+  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;
-}
-
-class _DonorEntry {
-  const _DonorEntry({
-    required this.id,
-    required this.decision,
-    required this.targetPhases,
-    required this.targetOwner,
-  });
-
-  final String id;
-  final String decision;
-  final List<String> targetPhases;
-  final String targetOwner;
 }
 
 _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
@@ -160,7 +129,6 @@ _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
 
   final diagrams = _loadDiagrams(errors);
   final sections = _loadSections(errors);
-  final donors = _loadDonors(errors);
   if (errors.isEmpty) {
     _syncDiagramCatalog(
       diagrams,
@@ -170,7 +138,6 @@ _GeneratedDocsSyncResult _syncGeneratedDocs({required bool checkOnly}) {
     );
     _syncGeneratedIndexes(
       sections,
-      donors,
       checkOnly: checkOnly,
       errors: errors,
       changedFiles: changedFiles,
@@ -205,7 +172,7 @@ _CommandResult _runCommand(String description, List<String> arguments) {
   return _CommandResult(description: description, exitCode: result.exitCode);
 }
 
-// Diagram registry loading validates each row's identity, path, phase, section,
+// Diagram registry loading validates each row's identity, path, owner, section,
 // and graph-source metadata before generation can consume it.
 // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 List<_DiagramEntry> _loadDiagrams(List<String> errors) {
@@ -240,8 +207,8 @@ List<_DiagramEntry> _loadDiagrams(List<String> errors) {
     if (!File(entry.file).existsSync()) {
       errors.add('${entry.id} references missing file ${entry.file}');
     }
-    if (entry.relatedPhases.isEmpty) {
-      errors.add('${entry.id} must have at least one related phase');
+    if (entry.relatedOwners.isEmpty) {
+      errors.add('${entry.id} must have at least one related owner');
     }
     if (entry.relatedSections.isEmpty) {
       errors.add('${entry.id} must have at least one related section');
@@ -290,30 +257,6 @@ List<_SectionEntry> _loadSections(List<String> errors) {
   return entries;
 }
 
-List<_DonorEntry> _loadDonors(List<String> errors) {
-  final entries = <_DonorEntry>[];
-  final seenIds = <String>{};
-  final yaml = _loadYamlList(_donorsRegistryPath, errors);
-
-  for (final item in yaml) {
-    if (item is! YamlMap) {
-      errors.add('$_donorsRegistryPath must contain only YAML map entries');
-      continue;
-    }
-    final entry = _donorEntry(item, errors);
-    if (entry.id.isEmpty) {
-      continue;
-    }
-    if (!seenIds.add(entry.id)) {
-      errors.add('duplicate donor id ${entry.id}');
-      continue;
-    }
-    entries.add(entry);
-  }
-
-  return entries;
-}
-
 _DiagramEntry _diagramEntry(YamlMap map, List<String> errors) {
   final id = _stringField(map, 'id', 'diagram entry', errors);
   return _DiagramEntry(
@@ -321,7 +264,7 @@ _DiagramEntry _diagramEntry(YamlMap map, List<String> errors) {
     kind: _stringField(map, 'kind', id, errors),
     file: _stringField(map, 'file', id, errors),
     classification: _stringField(map, 'classification', id, errors),
-    relatedPhases: _stringListField(map, 'related_phases', id, errors),
+    relatedOwners: _stringListField(map, 'related_owners', id, errors),
     relatedSections: _stringListField(map, 'related_sections', id, errors),
     graphViewSource: _stringField(map, 'graph_view_source', id, errors),
   );
@@ -332,30 +275,21 @@ _SectionEntry _sectionEntry(YamlMap map, List<String> errors) {
   return _SectionEntry(
     id: id,
     title: _stringField(map, 'title', id, errors),
-    phases: _stringListField(map, 'phases', id, errors),
+    owners: _stringListField(map, 'owners', id, errors),
     subsystems: _stringListField(map, 'subsystems', id, errors),
     mustRead: _stringListField(map, 'must_read', id, errors),
-    donors: _stringListField(map, 'donors', id, errors),
+    benchmarks: _stringListField(map, 'benchmarks', id, errors),
     diagrams: _stringListField(map, 'diagrams', id, errors),
     guardrails: _stringListField(map, 'guardrails', id, errors),
     tests: _stringListField(map, 'tests', id, errors),
   );
 }
 
-_DonorEntry _donorEntry(YamlMap map, List<String> errors) {
-  final id = _stringField(map, 'id', 'donor entry', errors);
-  return _DonorEntry(
-    id: id,
-    decision: _stringField(map, 'decision', id, errors),
-    targetPhases: _stringListField(map, 'target_phases', id, errors),
-    targetOwner: _stringField(map, 'target_owner', id, errors),
-  );
-}
-
 void _checkExplicitCoverage(_SectionEntry section, List<String> errors) {
   final coverageFields = {
+    'owners': section.owners,
     'must_read': section.mustRead,
-    'donors': section.donors,
+    'benchmarks': section.benchmarks,
     'diagrams': section.diagrams,
     'guardrails': section.guardrails,
     'tests': section.tests,
@@ -396,12 +330,10 @@ void _syncDiagramCatalog(
   );
 }
 
-// Generated index sync needs both registries plus check/apply accumulators in
-// one call so every generated index is derived from the same snapshot.
-// ignore: number-of-parameters
+// Generated index sync keeps check/apply accumulators with the section snapshot
+// so every generated index is derived from the same registry state.
 void _syncGeneratedIndexes(
-  List<_SectionEntry> sections,
-  List<_DonorEntry> donors, {
+  List<_SectionEntry> sections, {
   required bool checkOnly,
   required List<String> errors,
   required List<String> changedFiles,
@@ -415,14 +347,20 @@ void _syncGeneratedIndexes(
     }
   }
 
-  _checkIndexInventory(errors);
+  _checkIndexInventory(
+    checkOnly: checkOnly,
+    errors: errors,
+    changedFiles: changedFiles,
+  );
 
   final outputs = {
-    'docs/indexes/by_phase.md': _renderByPhaseIndex(sections),
+    'docs/indexes/by_owner.md': _renderByOwnerIndex(sections),
     'docs/indexes/by_subsystem.md': _renderBySubsystemIndex(sections),
     'docs/indexes/by_guardrail.md': _renderByGuardrailIndex(sections),
     'docs/indexes/by_test_area.md': _renderByTestAreaIndex(sections),
-    'docs/indexes/donor_to_phase.md': _renderDonorToPhaseIndex(donors),
+    'docs/indexes/by_benchmark.md': _renderByBenchmarkIndex(sections),
+    'docs/indexes/by_diagram.md': _renderByDiagramIndex(sections),
+    'docs/indexes/by_release.md': _renderByReleaseIndex(sections),
   };
 
   for (final entry in outputs.entries) {
@@ -436,7 +374,11 @@ void _syncGeneratedIndexes(
   }
 }
 
-void _checkIndexInventory(List<String> errors) {
+void _checkIndexInventory({
+  required bool checkOnly,
+  required List<String> errors,
+  required List<String> changedFiles,
+}) {
   final allowed = _generatedIndexPaths.toSet();
   final directory = Directory('docs/indexes');
   if (!directory.existsSync()) {
@@ -448,7 +390,12 @@ void _checkIndexInventory(List<String> errors) {
       continue;
     }
     if (!allowed.contains(file.path)) {
-      errors.add('${file.path} is not a locked generated index');
+      if (checkOnly) {
+        errors.add('${file.path} is not a locked generated index');
+      } else {
+        file.deleteSync();
+        changedFiles.add(file.path);
+      }
     }
   }
 }
@@ -520,7 +467,7 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
       ..writeln('  - File: `${diagram.file}`')
       ..writeln('  - Kind: `${diagram.kind}`')
       ..writeln('  - Classification: `${diagram.classification}`')
-      ..writeln('  - Related phases: ${_codeList(diagram.relatedPhases)}')
+      ..writeln('  - Related owners: ${_codeList(diagram.relatedOwners)}')
       ..writeln('  - Related sections: ${_codeList(diagram.relatedSections)}')
       ..writeln('  - Graph view source: `${diagram.graphViewSource}`');
   }
@@ -533,7 +480,7 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
       ..writeln('- Kind: `${diagram.kind}`')
       ..writeln('- Classification: `${diagram.classification}`')
       ..writeln('- File: `${diagram.file}`')
-      ..writeln('- Related phases: ${_codeList(diagram.relatedPhases)}')
+      ..writeln('- Related owners: ${_codeList(diagram.relatedOwners)}')
       ..writeln('- Related sections: ${_codeList(diagram.relatedSections)}')
       ..writeln('- Graph view source: `${diagram.graphViewSource}`');
   }
@@ -541,20 +488,21 @@ String _renderDiagramCatalog(List<_DiagramEntry> diagrams) {
   return buffer.toString();
 }
 
-String _renderByPhaseIndex(List<_SectionEntry> sections) {
-  final buffer = _indexBuffer(
-    'By phase',
-    'Sections grouped by implementation phase from `$_sectionsRegistryPath`.',
-  );
-  for (final phase in _phaseOrder) {
-    final entries = sections
-        .where((section) => section.phases.contains(phase))
-        .toList();
-    if (entries.isEmpty) {
-      continue;
+String _renderByOwnerIndex(List<_SectionEntry> sections) {
+  final owners = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final owner in section.owners) {
+      owners.putIfAbsent(owner, () => []).add(section);
     }
-    _writeHeading(buffer, phase);
-    _writeSectionBullets(buffer, entries);
+  }
+
+  final buffer = _indexBuffer(
+    'By owner',
+    'Sections grouped by current owner from `$_sectionsRegistryPath`.',
+  );
+  for (final owner in owners.keys.toList()..sort()) {
+    _writeHeading(buffer, owner);
+    _writeSectionBullets(buffer, owners[owner] ?? const []);
   }
   return buffer.toString();
 }
@@ -631,19 +579,67 @@ String _renderByTestAreaIndex(List<_SectionEntry> sections) {
   return buffer.toString();
 }
 
-String _renderDonorToPhaseIndex(List<_DonorEntry> donors) {
+String _renderByBenchmarkIndex(List<_SectionEntry> sections) {
+  final benchmarks = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final benchmark in section.benchmarks) {
+      if (benchmark == 'none') {
+        continue;
+      }
+      benchmarks.putIfAbsent(benchmark, () => []).add(section);
+    }
+  }
+
   final buffer = _indexBuffer(
-    'Donor to phase',
-    'Donor targets generated from `$_donorsRegistryPath`.',
+    'By benchmark',
+    'Benchmark ownership generated from `$_sectionsRegistryPath`.',
   );
-  for (final donor in donors) {
-    _writeHeading(buffer, donor.id);
+  for (final benchmark in benchmarks.keys.toList()..sort()) {
+    final entries = benchmarks[benchmark] ?? const <_SectionEntry>[];
+    _writeHeading(buffer, benchmark);
     buffer
-      ..writeln('- Decision: `${donor.decision}`')
-      ..writeln('- Target phases: ${_codeList(donor.targetPhases)}')
-      ..writeln('- Target owner: ${donor.targetOwner}')
+      ..writeln('- Sections: ${_sectionCodeList(entries)}')
       ..writeln();
   }
+  return buffer.toString();
+}
+
+String _renderByDiagramIndex(List<_SectionEntry> sections) {
+  final diagrams = <String, List<_SectionEntry>>{};
+  for (final section in sections) {
+    for (final diagram in section.diagrams) {
+      if (diagram == 'none') {
+        continue;
+      }
+      diagrams.putIfAbsent(diagram, () => []).add(section);
+    }
+  }
+
+  final buffer = _indexBuffer(
+    'By diagram',
+    'Diagram ownership generated from `$_sectionsRegistryPath`.',
+  );
+  for (final diagram in diagrams.keys.toList()..sort()) {
+    final entries = diagrams[diagram] ?? const <_SectionEntry>[];
+    _writeHeading(buffer, diagram);
+    buffer
+      ..writeln('- Sections: ${_sectionCodeList(entries)}')
+      ..writeln();
+  }
+  return buffer.toString();
+}
+
+String _renderByReleaseIndex(List<_SectionEntry> sections) {
+  final releaseSections = sections
+      .where((section) => section.owners.contains('release'))
+      .toList();
+
+  final buffer = _indexBuffer(
+    'By release',
+    'Release readiness lookup generated from `$_sectionsRegistryPath`.',
+  );
+  _writeHeading(buffer, 'release');
+  _writeSectionBullets(buffer, releaseSections);
   return buffer.toString();
 }
 

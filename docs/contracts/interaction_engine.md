@@ -8,21 +8,10 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 - `section_15_frame_render_contract` -> `docs/contracts/frame_rendering.md`
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
-Feeds phases:
-- `P10`
-- `P11`
-- `P12`
-- `P13`
-Related donors:
-- `interaction_pointer_host`
-- `interaction_pointer_session`
-- `interaction_pointer_normalizer`
-- `interaction_event_dispatcher`
-- `interaction_double_tap_router`
-- `interaction_gesture_runtime`
-- `interaction_move_session`
-- `interaction_draw_coordinator`
-- `interaction_mutation_boundary`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `dfd_pointer_preview_commit`
 - `seq_selected_move_preview_commit`

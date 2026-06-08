@@ -5,10 +5,10 @@ Document path: `docs/verification/legacy_capability_inventory.md`
 Owns:
 - 8A. Legacy capability inventory
 Must read before editing:
-- `docs/donors/00_reuse_rules.md`
-Feeds phases:
-- `P1`
-Related donors:
+- `none`
+Current owners:
+- `verification`
+Benchmarks:
 - `none`
 Related diagrams:
 - `none`

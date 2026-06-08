@@ -7,17 +7,10 @@ Owns:
 Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
-Feeds phases:
-- `P5`
-- `P6`
-- `P10`
-- `P11`
-- `P12`
-Related donors:
-- `interaction_mutation_boundary`
-- `staged_load_runtime_materialization`
-- `validated_import_draft`
-- `dto_document_helpers`
+Current owners:
+- `contract`
+Benchmarks:
+- `none`
 Related diagrams:
 - `c4_code_edit_kernel`
 - `dfd_public_edit`

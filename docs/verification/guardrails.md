@@ -7,11 +7,10 @@ Owns:
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
-Feeds phases:
-- `P0`
-- `P14`
-Related donors:
-- `tooling_schema_family_parity`
+Current owners:
+- `guardrail`
+Benchmarks:
+- `none`
 Related diagrams:
 - `none`
 Required tests:
