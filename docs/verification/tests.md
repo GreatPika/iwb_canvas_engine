@@ -641,9 +641,10 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### `test/smoke/public_incremental_smoke_test.dart`
 - proves an external Flutter consumer can import only the root public barrel,
-  decode schema v1 documents, construct CanvasRuntime, observe initial state
-  and readDocument output, and perform public selection, resource, edit, and
-  load operations;
+  construct CanvasRuntime, load schema v1 JSON through
+  `runtime.edits.loadDocumentFromJson(json)`, observe initial state and
+  readDocument output, and perform public selection, resource, edit, and load
+  operations;
 - appends P8 public compatibility coverage for background geometry,
   overlapping transformed content, one public geometry-changing edit, and a
   replacement geometry-rich load while asserting only public runtime/document
@@ -712,7 +713,7 @@ behavioral tests, and the required guardrail list remains owned by
   proof is required, and fail on fixtures containing the forbidden pattern.
 
 #### `test/runtime/load_document_state_publication_test.dart`
-- proves successful loadDocument publishes exactly one post-install
+- proves successful loadDocumentFromJson publishes exactly one post-install
   CanvasRuntimeState that includes document, selection, viewCamera, epoch,
   and conditional preview cleanup revisions;
 - proves loadDocumentFromJson failure publishes no public state snapshot.

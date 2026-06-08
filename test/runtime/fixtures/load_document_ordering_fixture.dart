@@ -121,7 +121,7 @@ void _expectPreparedCleanupReentrancyGuard() {
 
 // This scenario intentionally keeps request creation, session start, listener
 // cleanup, and reentrant guard assertions together to prove one temporal window.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 Future<void> _expectTextEditCleanupReentrancyGuard() async {
   final root = runtimeRootWithDocument(
     _textDocument(),
@@ -136,16 +136,31 @@ Future<void> _expectTextEditCleanupReentrancyGuard() async {
     final session = root.textEditing.startFromContextAction(request);
     expect(session, isNotNull);
     var guardAttempts = 0;
+    final observedElementIds = <String>[];
+    final observedDocumentRevisions = <int>[];
+    final guardMessages = <String?>[];
+    final sessionCallbackMessages = <String?>[];
     root.textEditing.activeSession.addListener(() {
       if (root.textEditing.activeSession.value != null) {
         return;
       }
       guardAttempts += 1;
-      _expectDocumentLoadGuarded(() => root.edits.edit(_ignoreEditMutation));
-      _expectDocumentLoadGuarded(
-        () => root.edits.loadDocumentFromJson(
-          encodeCanvasDocumentToJson(CanvasDocument()),
+      observedElementIds.add(
+        root.readDocument().backgroundElements.single.id.value,
+      );
+      observedDocumentRevisions.add(root.state.value.revisions.document);
+      guardMessages.add(
+        _documentLoadGuardMessage(() => root.edits.edit(_ignoreEditMutation)),
+      );
+      guardMessages.add(
+        _documentLoadGuardMessage(
+          () => root.edits.loadDocumentFromJson(
+            encodeCanvasDocumentToJson(CanvasDocument()),
+          ),
         ),
+      );
+      sessionCallbackMessages.addAll(
+        _textSessionCallbackMessages(session as CanvasTextEditSession),
       );
     });
 
@@ -154,6 +169,18 @@ Future<void> _expectTextEditCleanupReentrancyGuard() async {
     );
 
     expect(guardAttempts, 1);
+    expect(observedElementIds, ['new']);
+    expect(observedDocumentRevisions, [1]);
+    expect(guardMessages, hasLength(2));
+    expect(
+      guardMessages,
+      everyElement(contains('post-commit effect delivery')),
+    );
+    expect(sessionCallbackMessages, hasLength(8));
+    expect(
+      sessionCallbackMessages,
+      everyElement(contains('post-commit effect delivery')),
+    );
     expect(root.readDocument().backgroundElements.single.id.value, 'new');
   } finally {
     await subscription.cancel();
@@ -431,17 +458,45 @@ void _expectGuarded(void Function() action) {
   );
 }
 
+List<String?> _textSessionCallbackMessages(CanvasTextEditSession session) {
+  return [
+    _documentLoadGuardMessage(() {
+      final _ = session.liveText;
+    }),
+    _documentLoadGuardMessage(() {
+      final _ = session.geometry;
+    }),
+    _documentLoadGuardMessage(() {
+      final _ = session.style;
+    }),
+    _documentLoadGuardMessage(() {
+      final _ = session.isActive;
+    }),
+    _documentLoadGuardMessage(() {
+      final _ = session.isStale;
+    }),
+    _documentLoadGuardMessage(() => session.updateText('during-load')),
+    _documentLoadGuardMessage(() => session.commit(timestampMs: 2)),
+    _documentLoadGuardMessage(session.dismiss),
+  ];
+}
+
 void _expectDocumentLoadGuarded(void Function() action) {
-  expect(
-    action,
-    throwsA(
-      isA<StateError>().having(
-        (error) => error.message,
-        'message',
-        contains('document load'),
-      ),
-    ),
-  );
+  final message = _documentLoadGuardMessage(action);
+  expect(message, contains('document load'));
+}
+
+String? _documentLoadGuardMessage(void Function() action) {
+  try {
+    action();
+  } on Object catch (error, stackTrace) {
+    if (error is StateError) {
+      return error.message;
+    }
+    Error.throwWithStackTrace(error, stackTrace);
+  }
+
+  return null;
 }
 
 void _prepareExistingRuntimeFacts(RuntimeRoot root) {

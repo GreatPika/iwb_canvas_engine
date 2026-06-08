@@ -291,7 +291,7 @@ Supersession:
 This checked unit records completed historical proof for the pre-canonical
 public decode-then-load route. It is not a live requirement to preserve
 `decodeCanvasDocumentFromJson` plus `runtime.edits.loadDocument(document)`.
-Canonical direct JSON import is owned by unchecked Step 58 units.
+Canonical direct JSON import is owned by completed Step 58 units.
 
 Historical Change:
 

@@ -75,27 +75,48 @@ void _testInternalLoadTypesQuarantinedFromPublicApi() {
     'internal load and store types are quarantined from public API',
     () async {
       final violations = await checkNoRetiredPublicLoadRoutes(
-        registryNamesOverride: {
-          'CanvasRuntime',
-          'PreparedDocumentLoad',
-          'DocumentStoreKernel',
-        },
+        registryNamesOverride: _internalLoadPublicExportFixtureOrigins.keys
+            .toSet(),
         exportedNamesOverride: {
           'CanvasRuntime',
-          'PreparedDocumentLoad',
-          'DocumentStoreKernel',
+          ..._internalLoadPublicExportFixtureOrigins.keys,
         },
+        publicExportOriginsOverride: _internalLoadPublicExportFixtureOrigins,
       );
 
       expect(
         violations.single.guardrailId,
         'api.no_retired_public_load_routes',
       );
-      expect(violations.single.message, contains('DocumentStoreKernel'));
-      expect(violations.single.message, contains('PreparedDocumentLoad'));
+      for (final name in _internalLoadPublicExportFixtureOrigins.keys) {
+        if (name == 'CanvasActionPayload') {
+          continue;
+        }
+        expect(violations.single.message, contains(name));
+      }
+      expect(violations.single.message, isNot(contains('CanvasActionPayload')));
     },
   );
 }
+
+const _internalLoadPublicExportFixtureOrigins = {
+  'PreparedDocumentLoad':
+      'package:iwb_canvas_engine/src/edit/staged_document_load.dart',
+  'DocumentStoreKernel':
+      'package:iwb_canvas_engine/src/store/document_store_kernel.dart',
+  'StoreSchemaV1ImportBuilder':
+      'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart',
+  'SchemaV1DocumentImportEvent':
+      'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart',
+  'SchemaV1ElementCommonImport':
+      'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart',
+  'SchemaV1ImportPayload':
+      'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart',
+  'StoreSchemaV1LoadPayload':
+      'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart',
+  'CanvasActionPayload':
+      'package:iwb_canvas_engine/src/contracts/public/canvas_actions.dart',
+};
 
 void _registerDocumentLoadCodecInputTests() {
   test('codec import draft document admission is rejected', () async {
@@ -157,6 +178,7 @@ void _registerRenamedDocumentLoadRouteRejectionTests() {
   _registerRenamedInternalLoadInputRejectionTest();
   _registerWrongOwnerAllowedNameRejectionTest();
   _registerRenamedPublicLoadInputRejectionTest();
+  _registerAliasedDocumentLoadInputRejectionTest();
 }
 
 void _registerRenamedInternalLoadInputRejectionTest() {
@@ -212,6 +234,28 @@ void _registerRenamedPublicLoadInputRejectionTest() {
       violations.single.message,
       contains('CanvasEditPort.importDocument'),
     );
+  });
+}
+
+void _registerAliasedDocumentLoadInputRejectionTest() {
+  test('aliased document load input bypasses are rejected', () async {
+    final violations = await checkNoUnapprovedDocumentLoadInputs(
+      sourceOverrides: _aliasedDocumentLoadInputSources(),
+    );
+
+    expect(
+      violations.single.guardrailId,
+      'api.no_unapproved_document_load_inputs',
+    );
+    expect(violations.single.message, contains('RuntimeRoot.prepare'));
+    expect(violations.single.message, contains('RuntimeRoot.prepareDeferred'));
+    expect(
+      violations.single.message,
+      contains('RuntimeRoot.prepareFunctionTyped'),
+    );
+    expect(violations.single.message, contains('LoadDocumentPipeline.prepare'));
+    expect(violations.single.message, contains('DocumentStoreKernel.prepare'));
+    expect(violations.single.message, contains('StoreSchemaV1ImportBuilder'));
   });
 }
 
@@ -400,6 +444,45 @@ final class DocumentStoreKernel {
 }
 ''',
     'lib/src/store/schema_v1_store_import.dart': '',
+  };
+}
+
+Map<String, String> _aliasedDocumentLoadInputSources() {
+  return {
+    'lib/src/edit/edit_kernel.dart': '''
+typedef SharedLoadInput = CanvasDocument;
+typedef DeferredLoadInput = CanvasDocument Function();
+''',
+    'lib/src/runtime/runtime_root.dart': '''
+typedef RuntimeLoadInput = CanvasDocument;
+
+final class RuntimeRoot {
+  void prepare(RuntimeLoadInput document) {}
+  void prepareDeferred(DeferredLoadInput readDocument) {}
+  void prepareFunctionTyped(CanvasDocument readDocument()) {}
+}
+''',
+    'lib/src/edit/staged_document_load.dart': '''
+typedef DraftLoadInput = CanvasDocument;
+typedef PipelineLoadInput = DraftLoadInput;
+
+final class LoadDocumentPipeline {
+  PreparedDocumentLoad prepare(PipelineLoadInput document) => throw '';
+}
+''',
+    'lib/src/store/document_store_kernel.dart': '''
+final class DocumentStoreKernel {
+  void prepare(SharedLoadInput document) {}
+}
+''',
+    'lib/src/store/schema_v1_store_import.dart': '''
+final class StoreSchemaV1ImportBuilder {
+  void prepare(InternalLoadInput document) {}
+}
+''',
+    'lib/src/contracts/internal/load_contract.dart': '''
+typedef InternalLoadInput = CanvasDocument;
+''',
   };
 }
 

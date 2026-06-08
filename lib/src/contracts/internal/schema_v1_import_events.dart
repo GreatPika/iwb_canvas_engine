@@ -18,7 +18,9 @@ abstract interface class SchemaV1ImportSink {
 
 /// Sink whose partial import state cannot escape if schema decoding fails.
 abstract interface class IsolatedSchemaV1ImportSink
-    implements SchemaV1ImportSink {}
+    implements SchemaV1ImportSink {
+  void abortDocument();
+}
 
 final class SchemaV1DocumentImportEvent {
   const SchemaV1DocumentImportEvent({

@@ -10,11 +10,36 @@ Set<String> collectCanvasDocumentLoadInputHits({
   Map<String, String>? sourceOverrides,
 }) {
   final hits = <String>{};
-  for (final path in _documentLoadInputOwnerPaths(sourceOverrides)) {
+  final ownerPaths = _documentLoadInputOwnerPaths(sourceOverrides);
+  final aliasPaths = _documentLoadInputAliasPaths(sourceOverrides);
+  final parsedUnits = <String, CompilationUnit>{};
+  for (final path in {...ownerPaths, ...aliasPaths}) {
     final source =
         sourceOverrides?[path] ??
         File('$repositoryRoot/$path').readAsStringSync();
-    hits.addAll(_canvasDocumentLoadInputHits(path: path, source: source));
+    if (source.trim().isEmpty) {
+      continue;
+    }
+    parsedUnits[path] = parseString(
+      content: source,
+      path: '$repositoryRoot/$path',
+      throwIfDiagnostics: false,
+    ).unit;
+  }
+
+  final aliases = _canvasDocumentTypeAliases(parsedUnits.values);
+  for (final path in ownerPaths) {
+    final unit = parsedUnits[path];
+    if (unit == null) {
+      continue;
+    }
+    hits.addAll(
+      _canvasDocumentLoadInputHits(
+        path: path,
+        unit: unit,
+        canvasDocumentAliases: aliases,
+      ),
+    );
   }
 
   return hits;
@@ -39,8 +64,33 @@ List<String> _documentLoadInputOwnerPaths(
   return paths;
 }
 
+List<String> _documentLoadInputAliasPaths(
+  Map<String, String>? sourceOverrides,
+) {
+  if (sourceOverrides != null) {
+    final paths =
+        sourceOverrides.keys.where(_isDocumentLoadInputAliasPath).toList()
+          ..sort();
+
+    return paths;
+  }
+
+  final paths = <String>{
+    for (final directory in _documentLoadInputAliasDirectories)
+      for (final file in dartSourceFilesUnder(directory)) file.path,
+  }.toList()..sort();
+
+  return paths;
+}
+
 bool _isDocumentLoadInputGuardrailPath(String path) {
   return _documentLoadInputOwnerDirectories.any(
+    (directory) => path.startsWith('$directory/'),
+  );
+}
+
+bool _isDocumentLoadInputAliasPath(String path) {
+  return _documentLoadInputAliasDirectories.any(
     (directory) => path.startsWith('$directory/'),
   );
 }
@@ -54,29 +104,27 @@ const _documentLoadInputOwnerDirectories = {
   'lib/src/store',
 };
 
+const _documentLoadInputAliasDirectories = {
+  ..._documentLoadInputOwnerDirectories,
+  'lib/src/contracts/internal',
+};
+
 Set<String> _canvasDocumentLoadInputHits({
   required String path,
-  required String source,
+  required CompilationUnit unit,
+  required Set<String> canvasDocumentAliases,
 }) {
-  if (source.trim().isEmpty) {
-    return const {};
-  }
-
-  final unit = parseString(
-    content: source,
-    path: '$repositoryRoot/$path',
-    throwIfDiagnostics: false,
-  ).unit;
-  final visitor = _CanvasDocumentParameterVisitor(path);
+  final visitor = _CanvasDocumentParameterVisitor(path, canvasDocumentAliases);
   unit.accept(visitor);
 
   return visitor.hits;
 }
 
 final class _CanvasDocumentParameterVisitor extends RecursiveAstVisitor<void> {
-  _CanvasDocumentParameterVisitor(this.path);
+  _CanvasDocumentParameterVisitor(this.path, this._canvasDocumentAliases);
 
   final String path;
+  final Set<String> _canvasDocumentAliases;
   final Set<String> hits = {};
   final List<String> _classStack = [];
 
@@ -142,7 +190,12 @@ final class _CanvasDocumentParameterVisitor extends RecursiveAstVisitor<void> {
       return;
     }
     if (parameters == null ||
-        !parameters.parameters.any(_parameterMentionsCanvasDocumentDeep)) {
+        !parameters.parameters.any((parameter) {
+          return _parameterMentionsCanvasDocumentDeep(
+            parameter,
+            _canvasDocumentAliases,
+          );
+        })) {
       return;
     }
 
@@ -161,14 +214,26 @@ String _qualifiedName(String? owner, String? member) {
   return '$owner.$member';
 }
 
-bool _parameterMentionsCanvasDocumentDeep(FormalParameter parameter) {
+bool _parameterMentionsCanvasDocumentDeep(
+  FormalParameter parameter,
+  Set<String> canvasDocumentAliases,
+) {
   final normal = parameter is DefaultFormalParameter
       ? parameter.parameter
       : parameter;
   if (normal is FunctionTypedFormalParameter) {
-    return normal.parameters.parameters.any(
-      _parameterMentionsCanvasDocumentDeep,
-    );
+    final returnType = normal.returnType?.toSource() ?? '';
+
+    return _typeMentionsCanvasDocumentOrAlias(
+          returnType,
+          canvasDocumentAliases,
+        ) ||
+        normal.parameters.parameters.any((parameter) {
+          return _parameterMentionsCanvasDocumentDeep(
+            parameter,
+            canvasDocumentAliases,
+          );
+        });
   }
   final typeSource = switch (normal) {
     SimpleFormalParameter(:final type?) => type.toSource(),
@@ -177,7 +242,45 @@ bool _parameterMentionsCanvasDocumentDeep(FormalParameter parameter) {
     _ => '',
   };
 
-  return RegExp(r'\bCanvasDocument\b').hasMatch(typeSource);
+  return _typeMentionsCanvasDocumentOrAlias(typeSource, canvasDocumentAliases);
+}
+
+Set<String> _canvasDocumentTypeAliases(Iterable<CompilationUnit> units) {
+  final aliasSources = <String, String>{};
+  for (final unit in units) {
+    for (final declaration in unit.declarations) {
+      if (declaration is GenericTypeAlias) {
+        aliasSources[declaration.name.lexeme] = declaration.type.toSource();
+      }
+    }
+  }
+
+  final aliases = <String>{};
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final MapEntry(key: name, value: source) in aliasSources.entries) {
+      if (aliases.contains(name)) {
+        continue;
+      }
+      if (_typeMentionsCanvasDocumentOrAlias(source, aliases)) {
+        aliases.add(name);
+        changed = true;
+      }
+    }
+  }
+
+  return aliases;
+}
+
+bool _typeMentionsCanvasDocumentOrAlias(
+  String typeSource,
+  Set<String> aliases,
+) {
+  return RegExp(r'\bCanvasDocument\b').hasMatch(typeSource) ||
+      aliases.any((alias) {
+        return RegExp('\\b${RegExp.escape(alias)}\\b').hasMatch(typeSource);
+      });
 }
 
 bool _isAllowedCanvasDocumentInput(String path, String declarationName) {
@@ -196,6 +299,7 @@ const _allowedCanvasDocumentInputDeclarations = {
   'lib/src/contracts/public/canvas_runtime.dart::CanvasEdit.replaceDraftDocument',
   'lib/src/edit/draft_document.dart::DraftDocument',
   'lib/src/edit/draft_document.dart::DraftDocument.replaceDocument',
+  'lib/src/edit/edit_kernel.dart::EditKernel',
   'lib/src/edit/edit_session.dart::EditSession.replaceDraftDocument',
   'lib/src/edit/edit_session.dart::_EditSessionBacking.replaceDraftDocument',
   'lib/src/edit/edit_session.dart::_MaterializedEditBacking.replaceDraftDocument',

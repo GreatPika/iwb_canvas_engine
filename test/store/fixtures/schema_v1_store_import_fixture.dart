@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 import 'package:iwb_canvas_engine/src/store/resource_table.dart';
+import 'package:iwb_canvas_engine/src/store/revision_state.dart';
 import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
@@ -20,6 +21,7 @@ void main() {
   _testStorePreparationRejectsInvalidRows();
   _testPreparedImportsAreConsumeOnceAndStaleGuarded();
   _testImportBuildersAreConsumeOnce();
+  _testStoreImportBuilderIsOneShot();
 }
 
 void _testValidImportPreparesAndInstallsRows() {
@@ -190,6 +192,47 @@ void _expectLayerImportBuilderConsumeOnce() {
     throwsA(isA<StateError>()),
   );
   expect(() => layerBuilder.consume(), throwsA(isA<StateError>()));
+}
+
+void _testStoreImportBuilderIsOneShot() {
+  test(
+    'store schema import builder rejects stream reuse and append after end',
+    () {
+      final restartBuilder = StoreSchemaV1ImportBuilder();
+      importSchemaV1Document(_validDocument(), restartBuilder);
+      expect(
+        () => importSchemaV1Document(_validDocument(), restartBuilder),
+        throwsA(isA<StateError>()),
+      );
+
+      final appendBuilder = StoreSchemaV1ImportBuilder();
+      importSchemaV1Document(_validDocument(), appendBuilder);
+      expect(
+        () => appendBuilder.imageResource(_resourceEvent('late-resource')),
+        throwsA(isA<StateError>()),
+      );
+
+      final failedBuilder = StoreSchemaV1ImportBuilder();
+      expect(
+        () => importSchemaV1Document(
+          _documentWithMissingResourceReference(),
+          failedBuilder,
+        ),
+        throwsA(isA<CanvasDataException>()),
+      );
+      expect(
+        () => failedBuilder.imageResource(_resourceEvent('late-resource')),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => failedBuilder.prepare(
+          baseRevisions: const RevisionState(),
+          revisionDelta: _replacementDelta,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    },
+  );
 }
 
 PreparedStoreDocumentImport _prepare(

@@ -11,7 +11,7 @@ import 'store_revision_delta.dart';
 
 // The builder is the single handoff from schema-v1 import events to committed
 // store tables; splitting it would create another retained import graph.
-// ignore: coupling-between-object-classes
+// ignore: coupling-between-object-classes, number-of-methods
 final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   SchemaV1DocumentImportEvent? _document;
   final StoreResourceDescriptorImportBuilder _resources =
@@ -22,41 +22,63 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
       LayerTableSchemaV1ImportBuilder();
   final ElementRegistrySchemaV1OrderImportBuilder _elementOrder =
       ElementRegistrySchemaV1OrderImportBuilder();
+  bool _started = false;
   bool _ended = false;
+  bool _aborted = false;
 
   @override
   void beginDocument(SchemaV1DocumentImportEvent event) {
-    _ensureNotConsumed();
+    _ensureNotConsumedOrAborted();
+    if (_started) {
+      throw StateError('schema v1 import stream has already started.');
+    }
+    _started = true;
     _document = event;
   }
 
   @override
   void imageResource(SchemaV1ImageResourceImportEvent event) {
-    _resources.addSchemaV1Import(event);
+    _acceptEvent(() {
+      _resources.addSchemaV1Import(event);
+    });
   }
 
   @override
   void backgroundElement(SchemaV1ElementImportEvent event) {
-    _families.add(event, _resources.admittedIds);
-    _elementOrder.addBackground(event.common.id);
+    _acceptEvent(() {
+      _families.add(event, _resources.admittedIds);
+      _elementOrder.addBackground(event.common.id);
+    });
   }
 
   @override
   void layer(SchemaV1LayerImportEvent event) {
-    _layers.addLayer(event);
+    _acceptEvent(() {
+      _layers.addLayer(event);
+    });
   }
 
   @override
   void layerElement(CanvasLayerId layerId, SchemaV1ElementImportEvent event) {
-    _families.add(event, _resources.admittedIds);
-    _layers.addElement(layerId, event.common.id);
-    _elementOrder.addContent(layerId, event.common.id);
+    _acceptEvent(() {
+      _families.add(event, _resources.admittedIds);
+      _layers.addElement(layerId, event.common.id);
+      _elementOrder.addContent(layerId, event.common.id);
+    });
   }
 
   @override
   void endDocument() {
-    _ensureNotConsumed();
+    _ensureAcceptingEvents();
     _ended = true;
+  }
+
+  @override
+  void abortDocument() {
+    _document = null;
+    _started = false;
+    _ended = false;
+    _aborted = true;
   }
 
   // Preparation keeps row construction, revision acceptance, and prepared
@@ -66,6 +88,9 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
     required RevisionState baseRevisions,
     required StoreRevisionDelta revisionDelta,
   }) {
+    if (_aborted) {
+      throw StateError('schema v1 import stream was aborted.');
+    }
     if (!_ended) {
       throw StateError('schema v1 import stream did not finish.');
     }
@@ -104,8 +129,31 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
     );
   }
 
-  void _ensureNotConsumed() {
+  void _ensureNotConsumedOrAborted() {
+    if (_aborted) {
+      throw StateError('schema v1 import stream was aborted.');
+    }
     _elementOrder.ensureNotConsumed();
+  }
+
+  void _ensureAcceptingEvents() {
+    _ensureNotConsumedOrAborted();
+    if (!_started) {
+      throw StateError('schema v1 import stream did not start.');
+    }
+    if (_ended) {
+      throw StateError('schema v1 import stream has already ended.');
+    }
+  }
+
+  void _acceptEvent(void Function() accept) {
+    _ensureAcceptingEvents();
+    try {
+      accept();
+    } on Object {
+      abortDocument();
+      rethrow;
+    }
   }
 }
 

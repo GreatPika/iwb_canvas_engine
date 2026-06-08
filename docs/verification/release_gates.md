@@ -99,6 +99,8 @@ Guardrails:
 - `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
+- `api.no_retired_public_load_routes`
+- `api.no_unapproved_document_load_inputs`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`

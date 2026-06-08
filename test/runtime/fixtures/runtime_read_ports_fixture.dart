@@ -23,6 +23,19 @@ void main() {
 
     root.dispose();
   });
+
+  test('test root starts view camera from committed document camera', () {
+    final root = runtimeRootWithDocument(
+      _documentWithCamera(CanvasCamera(offset: const Offset(11, 13))),
+      config: const CanvasRuntimeConfig(),
+    );
+
+    expect(root.readDocument().camera.offset, const Offset(11, 13));
+    expect(root.cameraPort().offset, const Offset(11, 13));
+    expect(root.state.value.revisions.viewCamera, 0);
+
+    root.dispose();
+  });
 }
 
 void _verifyDocumentFacts(RuntimeRoot root) {
@@ -240,6 +253,10 @@ CanvasDocument _document() {
       ),
     ],
   );
+}
+
+CanvasDocument _documentWithCamera(CanvasCamera camera) {
+  return CanvasDocument(camera: camera);
 }
 
 List<CanvasResource> _resources() {

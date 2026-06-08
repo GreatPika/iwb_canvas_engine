@@ -34,8 +34,17 @@ void importSchemaV1DocumentFromJsonIntoIsolatedSink(
   IsolatedSchemaV1ImportSink sink, {
   DiagnosticsHub? diagnostics,
 }) {
-  final root = _decodeRoot(json, diagnostics: diagnostics);
-  importSchemaV1DocumentIntoIsolatedSink(root, sink, diagnostics: diagnostics);
+  try {
+    final root = _decodeRoot(json, diagnostics: diagnostics);
+    importSchemaV1DocumentIntoIsolatedSink(
+      root,
+      sink,
+      diagnostics: diagnostics,
+    );
+  } catch (_) {
+    sink.abortDocument();
+    rethrow;
+  }
 }
 
 void importSchemaV1Document(
@@ -53,8 +62,13 @@ void importSchemaV1DocumentIntoIsolatedSink(
   IsolatedSchemaV1ImportSink sink, {
   DiagnosticsHub? diagnostics,
 }) {
-  validateSchemaV1Root(json, diagnostics: diagnostics);
-  _emitSchemaV1ImportEvents(json, sink, diagnostics: diagnostics);
+  try {
+    validateSchemaV1Root(json, diagnostics: diagnostics);
+    _emitSchemaV1ImportEvents(json, sink, diagnostics: diagnostics);
+  } catch (_) {
+    sink.abortDocument();
+    rethrow;
+  }
 }
 
 // The validation pass mirrors event emission order so invalid input cannot

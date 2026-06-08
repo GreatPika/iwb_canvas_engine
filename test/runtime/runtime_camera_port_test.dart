@@ -24,7 +24,10 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   test('camera starts from document and updates only view camera revision', () {
     final persistedCamera = CanvasCamera(offset: const Offset(4, 8));
-    final runtime = runtimeWithDocument(CanvasDocument(camera: persistedCamera));
+    final runtime = CanvasRuntime();
+    runtime.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(CanvasDocument(camera: persistedCamera)),
+    );
     final notifications = <CanvasRuntimeState>[];
     runtime.state.addListener(() {
       notifications.add(runtime.state.value);
@@ -33,26 +36,26 @@ void main() {
     expect(runtime.camera.camera, persistedCamera);
     expect(runtime.camera.offset, const Offset(4, 8));
     expect(runtime.readDocument().camera, persistedCamera);
-    expect(runtime.state.value.revisions.document, 0);
-    expect(runtime.state.value.revisions.viewCamera, 0);
+    expect(runtime.state.value.revisions.document, 1);
+    expect(runtime.state.value.revisions.viewCamera, 1);
 
     runtime.camera.setOffset(const Offset(10, 12));
 
     expect(runtime.camera.camera, CanvasCamera(offset: const Offset(10, 12)));
     expect(runtime.camera.offset, const Offset(10, 12));
     expect(runtime.readDocument().camera, persistedCamera);
-    expect(runtime.state.value.revisions.document, 0);
-    expect(runtime.state.value.revisions.viewCamera, 1);
+    expect(runtime.state.value.revisions.document, 1);
+    expect(runtime.state.value.revisions.viewCamera, 2);
 
     runtime.camera.panBy(const Offset(-2, 3));
 
     expect(runtime.camera.camera, CanvasCamera(offset: const Offset(8, 15)));
     expect(runtime.camera.offset, const Offset(8, 15));
     expect(runtime.readDocument().camera, persistedCamera);
-    expect(runtime.state.value.revisions.document, 0);
-    expect(runtime.state.value.revisions.viewCamera, 2);
-    expect(notifications.map((state) => state.revisions.viewCamera), [1, 2]);
-    expect(notifications.every((state) => state.revisions.document == 0), true);
+    expect(runtime.state.value.revisions.document, 1);
+    expect(runtime.state.value.revisions.viewCamera, 3);
+    expect(notifications.map((state) => state.revisions.viewCamera), [2, 3]);
+    expect(notifications.every((state) => state.revisions.document == 1), true);
   });
 
   test('camera rejects invalid offsets with CanvasDataException', () {

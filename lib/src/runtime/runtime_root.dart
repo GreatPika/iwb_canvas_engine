@@ -107,22 +107,26 @@ final class RuntimeRoot
        );
 
   @visibleForTesting
-  RuntimeRoot.test({
+  factory RuntimeRoot.test({
     required CanvasRuntimeConfig config,
     DocumentStoreKernel? store,
     LoadInteractionBoundary? loadInteractionBoundary,
     TextEditPrepareOverride? textEditPrepareOverride,
     CommitEffectObserver? commitEffectObserver,
-  }) : this._(
-         store: store ?? DocumentStoreKernel(),
-         config: RuntimeConfig.from(config),
-         diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
-         diagnosticPolicy: config.diagnosticPolicy,
-         loadInteractionBoundary: loadInteractionBoundary,
-         textEditPrepareOverride: textEditPrepareOverride,
-         initialViewCamera: CanvasCamera(),
-         commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
-       );
+  }) {
+    final resolvedStore = store ?? DocumentStoreKernel();
+
+    return RuntimeRoot._(
+      store: resolvedStore,
+      config: RuntimeConfig.from(config),
+      diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
+      diagnosticPolicy: config.diagnosticPolicy,
+      loadInteractionBoundary: loadInteractionBoundary,
+      textEditPrepareOverride: textEditPrepareOverride,
+      initialViewCamera: resolvedStore.camera,
+      commitEffectObserver: commitEffectObserver ?? _ignoreCommitEffects,
+    );
+  }
 
   RuntimeRoot._({
     required DocumentStoreKernel store,
@@ -1523,8 +1527,9 @@ final class RuntimeRoot
 
     _isInstallingDocumentLoad = true;
     late final bool didClearSelection;
+    late final bool didClearTextEditing;
     try {
-      _prepareLoadInteractionCleanup();
+      didClearTextEditing = _prepareLoadInteractionCleanup();
       _loadPipeline.consume(preparedLoad);
       didClearSelection = _selection.clearForDocumentReplacement();
       _viewCamera = preparedLoad.camera;
@@ -1533,18 +1538,26 @@ final class RuntimeRoot
     } finally {
       _isInstallingDocumentLoad = false;
     }
-    _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
+    _deliverLoadResult(
+      _loadEffects(didClearSelection: didClearSelection),
+      didClearTextEditing: didClearTextEditing,
+    );
   }
 
-  void _prepareLoadInteractionCleanup() {
+  bool _prepareLoadInteractionCleanup() {
     final testBoundary = _loadInteractionBoundary;
     if (testBoundary != null) {
       testBoundary.prepareLoadCleanup();
     }
-    _textEditingPort.clearTransientState(publishState: false);
+    final didClearTextEditing = _textEditingPort.clearTransientState(
+      publishState: false,
+      notifyActiveSession: false,
+    );
     _interactionEngine.prepareLoadCleanup();
     _interactionEngine.clearInteractionRequests();
     _contextRequestGeneration += 1;
+
+    return didClearTextEditing;
   }
 
   // Commit delivery pipeline.
@@ -1642,11 +1655,17 @@ final class RuntimeRoot
     }
   }
 
-  void _deliverLoadResult(List<CommitDeliveryEffect> effects) {
+  void _deliverLoadResult(
+    List<CommitDeliveryEffect> effects, {
+    required bool didClearTextEditing,
+  }) {
     _isDeliveringCommitEffects = true;
     try {
       _deliverSpatialEffects(effects);
       _publishRuntimeState();
+      if (didClearTextEditing) {
+        _textEditingPort.notifyActiveSessionChanged();
+      }
       if (effects.isNotEmpty) {
         _commitEffectObserver(effects);
       }
@@ -2647,11 +2666,33 @@ final class _RuntimeRevisionFacts {
   final int interaction;
 }
 
-final class _TextEditActiveSessionNotifier
-    extends ValueNotifier<CanvasTextEditSession?> {
-  _TextEditActiveSessionNotifier() : super(null);
+final class _TextEditActiveSessionNotifier extends ChangeNotifier
+    implements ValueListenable<CanvasTextEditSession?> {
+  CanvasTextEditSession? _value;
+
+  @override
+  CanvasTextEditSession? get value => _value;
+
+  set value(CanvasTextEditSession? next) {
+    if (_value == next) {
+      return;
+    }
+    _value = next;
+    notifyListeners();
+  }
+
+  CanvasTextEditSession? replaceSilently(CanvasTextEditSession? next) {
+    final previous = _value;
+    _value = next;
+
+    return previous;
+  }
 
   void notifyLiveTextChanged() {
+    notifyListeners();
+  }
+
+  void notifyValueChanged() {
     notifyListeners();
   }
 }
@@ -2788,13 +2829,20 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     return true;
   }
 
-  bool clearTransientState({bool publishState = true}) {
+  bool clearTransientState({
+    bool publishState = true,
+    bool notifyActiveSession = true,
+  }) {
     final state = _active;
     if (state != null) {
       state.active = false;
       _active = null;
       _suppressionToken = null;
-      _activeSession.value = null;
+      if (notifyActiveSession) {
+        _activeSession.value = null;
+      } else {
+        _activeSession.replaceSilently(null);
+      }
     }
     _ownedStates.clear();
     if (state == null) {
@@ -2805,6 +2853,10 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     }
 
     return true;
+  }
+
+  void notifyActiveSessionChanged() {
+    _activeSession.notifyValueChanged();
   }
 
   void _ensurePublicOperationAllowed() {

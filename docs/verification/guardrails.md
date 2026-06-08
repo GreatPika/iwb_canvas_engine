@@ -177,7 +177,7 @@ Mandatory guardrails:
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
 | `api.no_legacy_public_types` | legacy public golden symbols not exported by root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.no_retired_public_load_routes` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose or document `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
+| `api.no_retired_public_load_routes` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
 | `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization compatibility paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
@@ -250,7 +250,7 @@ Mandatory guardrails:
 | `resources.resolver_reentrancy_rejected` | public runtime mutation from inside CanvasResourceResolver throws StateError without runtime effects |
 | `codec.schema_v1_exact` | only schema v1 read/write |
 | `codec.known_fields_validated` | known schema v1 fields are validated and canonical encoder writes only v1 fields |
-| `codec.no_runtime_side_effects` | schema v1 decode/encode validates and materializes DTOs without mutating runtime or store state |
+| `codec.no_runtime_side_effects` | schema v1 import/encode validates codec-owned input without mutating runtime or store state; runtime load import emits dependency-neutral events instead of materializing public DTOs |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
 | `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, read-only diff, P14 graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, app adapter names, legacy benchmark proof, benchmark-only production hooks, or non-manual approved-baseline writes |

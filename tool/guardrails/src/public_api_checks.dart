@@ -37,17 +37,28 @@ Future<List<GuardrailViolation>> checkNoRetiredPublicLoadRoutes({
   Map<String, String>? sourceOverrides,
   Set<String>? registryNamesOverride,
   Set<String>? exportedNamesOverride,
+  Map<String, String>? publicExportOriginsOverride,
 }) async {
   final registryNames =
       registryNamesOverride ??
       _publicRegistryNames(sourceOverrides: sourceOverrides);
+  final surface = publicExportOriginsOverride == null
+      ? await resolvePublicApiSurface()
+      : null;
   final exportedNames =
-      exportedNamesOverride ?? (await resolvePublicApiSurface()).exportedNames;
+      exportedNamesOverride ?? surface?.exportedNames ?? const <String>{};
+  final exportedElements =
+      surface?.exportedElements ?? const <String, Element>{};
 
   return [
     ..._retiredPublicRouteDeclarationViolations(sourceOverrides),
     ..._retiredLoadRouteUsageViolations(sourceOverrides),
-    ..._internalLoadExportViolations(registryNames, exportedNames),
+    ..._internalLoadExportViolations(
+      registryNames,
+      exportedNames,
+      exportedElements: exportedElements,
+      publicExportOriginsOverride: publicExportOriginsOverride,
+    ),
   ];
 }
 
@@ -91,12 +102,18 @@ List<GuardrailViolation> _retiredLoadRouteUsageViolations(
 
 List<GuardrailViolation> _internalLoadExportViolations(
   Set<String> registryNames,
-  Set<String> exportedNames,
-) {
-  final leakedInternalNames = {
-    ...registryNames.where(_isInternalLoadPublicExportName),
-    ...exportedNames.where(_isInternalLoadPublicExportName),
-  };
+  Set<String> exportedNames, {
+  required Map<String, Element> exportedElements,
+  required Map<String, String>? publicExportOriginsOverride,
+}) {
+  final publicNames = {...registryNames, ...exportedNames};
+  final leakedInternalNames = publicNames.where((name) {
+    final origin =
+        publicExportOriginsOverride?[name] ??
+        _exportedElementOrigin(name, exportedElements);
+
+    return origin != null && _isInternalLoadPublicExportOrigin(origin);
+  }).toSet();
   if (leakedInternalNames.isEmpty) {
     return const [];
   }
@@ -110,6 +127,10 @@ List<GuardrailViolation> _internalLoadExportViolations(
           '${_list(leakedInternalNames)}',
     ),
   ];
+}
+
+String? _exportedElementOrigin(String name, Map<String, Element> elements) {
+  return elements[name]?.library?.uri.toString();
 }
 
 Future<List<GuardrailViolation>> checkNoUnapprovedDocumentLoadInputs({
@@ -346,38 +367,23 @@ Set<String> _publicRegistryNames({Map<String, String>? sourceOverrides}) {
   return readPublicApiRegistry();
 }
 
-bool _isInternalLoadPublicExportName(String name) {
-  return _internalLoadPublicExportDenylist.contains(name) ||
-      name.contains('ResourceDescriptor') ||
-      _internalLoadExportSuffixes.any(name.endsWith) ||
-      _internalLoadExportPrefixes.any(name.startsWith);
+bool _isInternalLoadPublicExportOrigin(String origin) {
+  return _internalLoadPublicExportOrigins.contains(origin);
 }
 
-const _internalLoadPublicExportDenylist = {
-  'ValidatedImportDraft',
-  'PreparedDocumentLoad',
-  'LoadDocumentPipeline',
-  'DocumentStoreKernel',
-  'CommittedDocument',
-  'ResourceTable',
-  'StoreResourceDescriptorFacts',
-  'LayerRow',
-  'LayerTable',
-  'FamilyTables',
-  'ElementRegistry',
+const _internalLoadPublicExportOrigins = {
+  'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart',
+  'package:iwb_canvas_engine/src/codec/validated_import_draft.dart',
+  'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart',
+  'package:iwb_canvas_engine/src/edit/staged_document_load.dart',
+  'package:iwb_canvas_engine/src/store/committed_document.dart',
+  'package:iwb_canvas_engine/src/store/document_store_kernel.dart',
+  'package:iwb_canvas_engine/src/store/element_registry.dart',
+  'package:iwb_canvas_engine/src/store/family_tables.dart',
+  'package:iwb_canvas_engine/src/store/layer_table.dart',
+  'package:iwb_canvas_engine/src/store/resource_table.dart',
+  'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart',
 };
-
-const _internalLoadExportSuffixes = {
-  'Importer',
-  'ImportDraft',
-  'Visitor',
-  'Sink',
-  'Row',
-  'Table',
-  'Kernel',
-};
-
-const _internalLoadExportPrefixes = {'Prepared', 'Committed'};
 
 void _throwOnErrorDiagnostics(ResolvedLibraryResult result) {
   final errors = result.units

@@ -229,6 +229,59 @@ void _registerPartialEventTests() {
     );
     expect(sink.events, isEmpty);
   });
+
+  test('isolated sinks clear partial import events after invalid documents', () {
+    final sink = _CollectingImportSink();
+
+    _expectImportFailure(
+      () => importSchemaV1DocumentIntoIsolatedSink(
+        {
+          ..._validDocument(),
+          'layers': [
+            {
+              'id': 'layer-a',
+              'elements': [
+                {
+                  'id': 'bad-text',
+                  'kind': 'text',
+                  'text': 'missing font size',
+                  'color': '#FF000000',
+                },
+              ],
+            },
+          ],
+        },
+        sink,
+      ),
+      CanvasDataErrorCode.missingField,
+      'text.fontSize',
+    );
+    expect(sink.events, isEmpty);
+    expect(sink.resources, isEmpty);
+    expect(sink.layers, isEmpty);
+    expect(sink.layerElements, isEmpty);
+  });
+
+  test('isolated sinks abort on decode and root validation failures', () {
+    final invalidJsonSink = _CollectingImportSink();
+    _expectImportFailure(
+      () => importSchemaV1DocumentFromJsonIntoIsolatedSink('{', invalidJsonSink),
+      CanvasDataErrorCode.invalidJson,
+      r'$',
+    );
+    expect(invalidJsonSink.wasAborted, isTrue);
+
+    final invalidSchemaSink = _CollectingImportSink();
+    _expectImportFailure(
+      () => importSchemaV1DocumentIntoIsolatedSink(
+        {..._validDocument(), 'schemaVersion': 2},
+        invalidSchemaSink,
+      ),
+      CanvasDataErrorCode.unsupportedSchemaVersion,
+      r'$.schemaVersion',
+    );
+    expect(invalidSchemaSink.wasAborted, isTrue);
+  });
 }
 
 void _registerTextValidationTests() {
@@ -388,13 +441,14 @@ Map<String, Object?> _validDocument() {
   };
 }
 
-final class _CollectingImportSink implements SchemaV1ImportSink {
+final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   final events = <String>[];
   final resources = <SchemaV1ImageResourceImportEvent>[];
   final backgroundElements = <SchemaV1ElementImportEvent>[];
   final layers = <SchemaV1LayerImportEvent>[];
   final layerElements =
       <(CanvasLayerId, SchemaV1ElementImportEvent)>[];
+  bool wasAborted = false;
 
   @override
   void beginDocument(SchemaV1DocumentImportEvent event) {
@@ -430,6 +484,16 @@ final class _CollectingImportSink implements SchemaV1ImportSink {
   @override
   void endDocument() {
     events.add('end');
+  }
+
+  @override
+  void abortDocument() {
+    wasAborted = true;
+    events.clear();
+    resources.clear();
+    backgroundElements.clear();
+    layers.clear();
+    layerElements.clear();
   }
 }
 ''';

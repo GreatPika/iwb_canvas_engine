@@ -37,11 +37,11 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 ## api.no_retired_public_load_routes
 
-- Sections: `section_22_guardrails_machine_checks`
+- Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.no_unapproved_document_load_inputs
 
-- Sections: `section_22_guardrails_machine_checks`
+- Sections: `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.no_undefined_public_type_references
 
