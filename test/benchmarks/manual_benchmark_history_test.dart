@@ -424,6 +424,7 @@ void _expectSingleProbeCase(Map<String, Object?> history) {
   final benchmarkCase = cases.single as Map<String, Object?>;
   expect(benchmarkCase['id'], 'edit.update_visual');
   expect(benchmarkCase['scale'], '100k');
+  expect(benchmarkCase['baselinePolicy'], 'reference_comparison');
   expect(benchmarkCase, isNot(contains('actionUsSamples')));
   expect(benchmarkCase, isNot(contains('setupUsSamples')));
   final sampleSummary = benchmarkCase['sampleSummary'] as Map<String, Object?>;

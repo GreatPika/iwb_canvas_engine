@@ -71,7 +71,7 @@
     {
       "id": "edit.add_element",
       "scale": "100k",
-      "baselinePolicy": null,
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -125,7 +125,7 @@
     {
       "id": "edit.update_transform",
       "scale": "100k",
-      "baselinePolicy": null,
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -180,7 +180,7 @@
     {
       "id": "edit.update_visual",
       "scale": "100k",
-      "baselinePolicy": null,
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",

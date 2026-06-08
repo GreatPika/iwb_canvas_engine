@@ -337,7 +337,7 @@ Map<String, Object?> _probeCaseJson({
   return {
     'id': identity.caseId,
     'scale': identity.scale,
-    'baselinePolicy': null,
+    'baselinePolicy': identity.baselinePolicy,
     'fixtureShape': json['fixtureShape'],
     'measurementBoundary': json['measurementBoundary'],
     'sampleSummary': {
@@ -532,7 +532,9 @@ Map<String, Object?> _map(Object? value) {
   return const {};
 }
 
-({String caseId, String scale}) _probeIdentityFromPath(String path) {
+({String caseId, String scale, String baselinePolicy}) _probeIdentityFromPath(
+  String path,
+) {
   final name = path.split(Platform.pathSeparator).last;
   if (!name.endsWith('.log')) {
     throw FormatException('Probe log filename does not identify case: $path');
@@ -540,16 +542,21 @@ Map<String, Object?> _map(Object? value) {
 
   for (final entry in _manifestCaseScaleSuffixes()) {
     if (name.endsWith(entry.suffix)) {
-      return (caseId: entry.caseId, scale: entry.scale);
+      return (
+        caseId: entry.caseId,
+        scale: entry.scale,
+        baselinePolicy: entry.baselinePolicy,
+      );
     }
   }
 
   throw FormatException('Probe log filename does not identify case: $path');
 }
 
-List<({String caseId, String scale, String suffix})>
+List<({String caseId, String scale, String baselinePolicy, String suffix})>
 _manifestCaseScaleSuffixes() {
-  final suffixes = <({String caseId, String scale, String suffix})>[];
+  final suffixes =
+      <({String caseId, String scale, String baselinePolicy, String suffix})>[];
   for (final benchmarkCase in BenchmarkManifest.load().cases) {
     final caseFilePart = benchmarkCase.id.replaceAll('.', '_');
     for (final scale in benchmarkCase.scales) {
@@ -557,11 +564,13 @@ _manifestCaseScaleSuffixes() {
         ..add((
           caseId: benchmarkCase.id,
           scale: scale.id,
+          baselinePolicy: benchmarkCase.baselinePolicy,
           suffix: '_${caseFilePart}_${scale.id}.log',
         ))
         ..add((
           caseId: benchmarkCase.id,
           scale: scale.id,
+          baselinePolicy: benchmarkCase.baselinePolicy,
           suffix: '_${caseFilePart}_rerun_${scale.id}.log',
         ));
     }
