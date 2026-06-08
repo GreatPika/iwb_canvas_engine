@@ -1,6 +1,6 @@
 ---
 name: research-codebase
-description: Use when the user asks to research, map, explain, or document how an area of the current codebase works as a saved research note. Use one focused codebase_researcher task for narrow questions or up to four parallel factual investigations for naturally independent areas. Produces objective findings only, with exact file and line references, search coverage, and saves the result under .research/.
+description: Use when the user asks to research, map, explain, or document how an area of the current codebase works as a saved research note. Use one focused codebase_researcher task for narrow questions or up to six parallel factual investigations for naturally independent areas. Produces objective findings only, with exact file and line references, search coverage, and saves the result under .research/.
 ---
 
 # Research Codebase
@@ -44,7 +44,7 @@ After receiving the research question:
 3. Use 1 task for narrow questions, directly named files, or a single linear
    call path.
 4. Use multiple tasks only when the question naturally splits into
-   independent areas, with a maximum of 4 total tasks.
+   independent areas, with a maximum of 6 total tasks.
 5. Create a task list with the active plan tool when available.
 
 ### 2. Spawn Research Tasks
@@ -55,13 +55,13 @@ Routing rules:
 
 - When spawning a researcher, use a clean context. Do not fork the current chat
   context into research subagents.
-- Use 1 to 4 tasks total.
+- Use 1 to 6 tasks total.
 - Use 1 task for narrow research, directly named files, or a single linear call
   path.
 - Use multiple parallel tasks only for independent investigation areas, with a
-  maximum of 4 total tasks.
+  maximum of 6 total tasks.
 - Never create artificial investigation areas just to reach a minimum count.
-- Never spawn more than 4 parallel tasks because of context overflow risk.
+- Never spawn more than 6 parallel tasks because of context overflow risk.
 - Use sequential tasks when one area depends on another area's findings.
 - Use background tasks for broad searches that do not block other work.
 
@@ -169,7 +169,7 @@ merely uninspected.
    no vague descriptions.
 2. Read files completely before making claims about them.
 3. Use the `codebase_researcher` subagent for independent or broad factual investigation. For a narrow single-file or single-path question, the parent may perform the one task directly after reading the relevant files.
-4. Use at most 4 tasks and at most 4 parallel tasks.
+4. Use at most 6 tasks and at most 6 parallel tasks.
 5. Spawn research subagents with clean context, not by forking the current chat.
 6. Maintain objectivity; only facts, no opinions.
 7. Preserve exact repository paths.
