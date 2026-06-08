@@ -55,8 +55,6 @@ const _retiredDocsRoutes = {
   'docs/implementation/',
   'docs/donors',
   'docs/donors/',
-  'PLAN.md',
-  'plan/',
 };
 
 const _rootReadmeGroups = [
@@ -95,8 +93,6 @@ const _activeRoutePolicyPaths = [
 ];
 
 const _retiredActiveRouteTokens = [
-  'PLAN.md',
-  'plan/',
   'docs/indexes/by_phase.md',
   'docs/indexes/donor_to_phase.md',
   'docs/donors',

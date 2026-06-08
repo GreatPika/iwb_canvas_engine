@@ -14,10 +14,6 @@ Sections grouped by subsystem from `docs/_registry/sections.yaml`.
 
 - `section_14_interaction_engine` - 14. InteractionEngine
 
-## legacy_evidence
-
-- `section_08_legacy_capability_inventory` - 8A. Legacy capability inventory
-
 ## public_api
 
 - `section_04_public_api_v1` - 4. Public API v1: полный surface

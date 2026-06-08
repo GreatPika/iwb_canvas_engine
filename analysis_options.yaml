@@ -1,6 +1,5 @@
 analyzer:
   exclude:
-    - legacy/**
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "**/*.mocks.dart"

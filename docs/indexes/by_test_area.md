@@ -41,7 +41,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api_contract.app_next_engine_adapter_compile_fixture
 
-- Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
+- Sections: `section_00_status_and_scope`, `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 
 ## test.api_contract.canvas_field_update_static_semantics
 
@@ -57,7 +57,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api_contract.no_retired_public_exports
 
-- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_09_accepted_differences`, `section_23_tests`
+- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api_contract.no_undefined_public_type_references
 

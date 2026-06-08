@@ -292,8 +292,6 @@ void _checkNoRetiredWorkflowCommands(
       );
     }
     for (final token in const [
-      'PLAN.md',
-      'plan/',
       'docs/indexes/by_phase.md',
       'docs/indexes/donor_to_phase.md',
       'docs/donors',
@@ -305,7 +303,7 @@ void _checkNoRetiredWorkflowCommands(
             guardrailId: releaseBenchmarkReadinessGuardrailId,
             path: releaseWorkflowPath,
             message:
-                'release benchmark workflow must not invoke retired planning routes',
+                'release benchmark workflow must not invoke retired docs routes',
           ),
         );
       }

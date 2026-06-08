@@ -37,7 +37,6 @@ nodes:
     status: required
     coverageScope: publicSurfaces
     sourceDocs:
-      - path: docs/implementation/p0_package_skeleton_and_hard_boundaries.md
       - path: docs/contracts/public_api_v1.md
     evidence:
       - Public consumers enter through the package export and API declarations.
@@ -53,8 +52,8 @@ nodes:
     status: required
     coverageScope: publicSurfaces
     sourceDocs:
-      - path: docs/implementation/p2_public_api_v1_freeze.md
-      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/contracts/public_api_v1.md
+      - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - CanvasRuntime is the public facade for runtime state and ports.
     actual:
@@ -67,7 +66,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p2_public_api_v1_freeze.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - The public camera port declaration is contract-owned, not proof of runtime camera ownership.
@@ -120,7 +118,6 @@ nodes:
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/contracts/diagnostics.md
-      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
     evidence:
       - DiagnosticsHub owns runtime diagnostic recording and sanitized projection.
     actual:
@@ -139,7 +136,6 @@ nodes:
     sourceDocs:
       - path: docs/contracts/schema_v1.md
       - path: docs/contracts/codec_boundary.md
-      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
     evidence:
       - Schema v1 decode and encode own JSON boundary validation.
     actual:
@@ -155,7 +151,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - RuntimeRoot composes store, selection, config, facts, public state, and the runtime-local interaction read adapter.
@@ -174,7 +169,6 @@ nodes:
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
-      - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - View camera ownership must live in runtime state, not as a facade placeholder.
     actual:
@@ -187,7 +181,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
       - path: docs/contracts/cache_policy.md
     evidence:
       - DocumentStoreKernel owns committed document facts and projection cache input.
@@ -201,8 +194,7 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
-      - path: docs/implementation/p10_selection_and_move.md
+      - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - Selection state is owned behind runtime read ports.
     actual:
@@ -215,7 +207,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p5_edit_core.md
       - path: docs/contracts/edit_kernel.md
     evidence:
       - Edit mutation semantics become required in P5.
@@ -229,7 +220,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p6_load_document.md
       - path: docs/contracts/load_document.md
     evidence:
       - Loading validated documents is implemented as a staged runtime pipeline.
@@ -243,7 +233,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
     evidence:
       - ResourceKernel owns the implemented non-surface resource API, committed catalog reads through ResourceCatalogPort, resourceVisualRevision, dirty-resource no-op and acceptance decisions, and dirty outcomes; resolver/cache/session behavior is owned by SurfaceResourceSession and runtime handoff seams, not by ResourceKernel.
@@ -257,7 +246,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p7_resources_and_images.md
       - path: docs/contracts/resources.md
     evidence:
       - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, ImageResolveCache, per-frame resolver budget, same-frame null-result suppression, and bounded placeholder policy for missing descriptors and absent resolvers.
@@ -271,7 +259,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p8_geometry_and_spatial.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
       - SpatialKernel owns derived spatial state, tile/outlier membership, typed budget results, and stale candidate rejection without becoming committed scene truth.
@@ -287,7 +274,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
     evidence:
       - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, repaint signals, and bounded frame cache orchestration.
@@ -308,7 +294,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - InteractionEngine is the current boundary for pointer sessions, tool preview intents, selection/move behavior, and terminal commit coordination.
@@ -327,7 +312,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p11_draw_tools.md
       - path: docs/contracts/operation_matrix.md
     evidence:
       - DrawStrokeMachine and LineMachine own pencil, marker, and line lifecycle decisions while InteractionEngine owns active pointer, pending line, preview, and cleanup state.
@@ -342,7 +326,6 @@ nodes:
     status: required
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - EraserMachine, ContextActionRouter, and InteractionRequestRegistry own P12 eraser capture, context request routing, and request guard facts under the interaction boundary.
@@ -358,7 +341,6 @@ nodes:
     status: required
     coverageScope: publicSurfaces
     sourceDocs:
-      - path: docs/implementation/p13_flutter_surface.md
       - path: docs/architecture/02_package_boundaries.md
     evidence:
       - Flutter widget integration is current public surface scope.
@@ -372,13 +354,11 @@ nodes:
     status: measurement
     coverageScope: architectureOwners
     sourceDocs:
-      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
       - path: docs/verification/benchmarks.md
     isolationAllowances:
       - views:
           - release_verification
         sourceDocs:
-          - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
           - path: docs/verification/benchmarks.md
         reason: Release measurement and alignment are release-verification scope, not runtime production ownership with architecture dependencies.
     evidence:
@@ -432,7 +412,7 @@ edges:
     kind: composes
     status: required
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - CanvasRuntime delegates implemented runtime behavior to RuntimeRoot.
     actual:
@@ -446,7 +426,7 @@ edges:
     kind: composes
     status: required
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - RuntimeRoot composes DocumentStoreKernel as the committed document owner.
     actual:
@@ -458,7 +438,7 @@ edges:
     kind: composes
     status: required
     sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
+      - path: docs/architecture/01_runtime_ownership.md
     evidence:
       - RuntimeRoot composes SelectionKernel behind the public selection port.
     actual:
@@ -470,7 +450,6 @@ edges:
     kind: composes
     status: required
     sourceDocs:
-      - path: docs/implementation/p8_geometry_and_spatial.md
       - path: docs/contracts/spatial_kernel.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
@@ -487,7 +466,6 @@ edges:
     status: required
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
-      - path: docs/implementation/p9_frame_rendering_and_caches.md
     evidence:
       - RuntimeRoot implements FrameFactsPort so FrameEngine and frame collaborators consume committed frame facts through the internal facts boundary instead of store internals.
     actual:
@@ -500,7 +478,6 @@ edges:
     status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
-      - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - The camera public port is visible on the facade.
     actual:
@@ -515,7 +492,6 @@ edges:
     status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
-      - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - The public camera port must route to runtime-owned view camera state.
     actual:
@@ -529,7 +505,6 @@ edges:
     kind: facade_port
     status: required
     sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/public_api_v1.md
     evidence:
       - CanvasRuntime.tools is non-throwing in P10 for mode, draw style, pointer policy, pointer dispatch compatibility, and cleanup; P11 owns later draw production behavior behind the port.
@@ -544,7 +519,6 @@ edges:
     kind: facade_port
     status: required
     sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/public_api_v1.md
     evidence:
       - CanvasRuntime.commands is non-throwing in P10 for remove, clear, and unknown text edit behavior routed through RuntimeRoot command adapters and EditKernel commits.
@@ -559,8 +533,6 @@ edges:
     kind: facade_stream
     status: required
     sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/public_api_v1.md
     evidence:
       - CanvasRuntime.contextActionRequests is a non-throwing broadcast stream that is empty in P10, emits P12 context-action requests from RuntimeRoot, and closes with RuntimeRoot disposal.
@@ -589,7 +561,6 @@ edges:
     status: required
     sourceDocs:
       - path: docs/contracts/diagnostics.md
-      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
     evidence:
       - Codec failure paths must route through an explicit graph-checkable diagnostics bridge, not only import DiagnosticsHub.
     actual:
@@ -608,7 +579,6 @@ edges:
     sourceDocs:
       - path: docs/contracts/diagnostics.md
       - path: docs/contracts/interaction_engine.md
-      - path: docs/implementation/p10_selection_and_move.md
     evidence:
       - Interaction-observed hit-test fallback, query budget, stale candidate, stale terminal, invalid cleanup, selected-move denial, and resolver reentrancy reliability events route through an internal sink that runtime maps to DiagnosticsHub without public API exposure.
     actual:
@@ -653,7 +623,6 @@ edges:
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - RuntimeRoot composes and coordinates ResourceKernel for the public resource port, resource visual state publication, dirty-resource orchestration, and session invalidation events.
     actual:
@@ -666,7 +635,6 @@ edges:
     status: required
     sourceDocs:
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - RuntimeRoot holds the nullable active ResourceSessionInvalidationSink and forwards accepted ResourceDirtyOutcome target/all invalidation to the active SurfaceResourceSession before dirty publication, without ResourceKernel owning app image references or session cache entries.
     actual:
@@ -678,7 +646,6 @@ edges:
     kind: action_stream_boundary
     status: required
     sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/operation_matrix.md
       - path: docs/contracts/public_api_v1.md
     evidence:
@@ -720,7 +687,6 @@ edges:
     kind: tool_commit
     status: required
     sourceDocs:
-      - path: docs/implementation/p11_draw_tools.md
       - path: docs/contracts/operation_matrix.md
     evidence:
       - RuntimeRoot delivers accepted pencil, marker, and line terminal commit intents through EditKernel.prepareInteractionCommit and CanvasEdit.addElement.
@@ -736,7 +702,6 @@ edges:
     kind: tool_lifecycle_delegation
     status: required
     sourceDocs:
-      - path: docs/implementation/p11_draw_tools.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - InteractionEngine delegates stroke and line lifecycle decisions to DrawStrokeMachine and LineMachine, then owns preview publication, pending line state, and cleanup routing.
@@ -758,7 +723,6 @@ edges:
     kind: tool_commit
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/operation_matrix.md
     evidence:
       - RuntimeRoot delivers accepted eraser and request-originated text changes through EditKernel.prepareInteractionCommit before public state/action delivery.
@@ -774,7 +738,6 @@ edges:
     kind: interaction_target_geometry_boundary
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/geometry.md
       - path: docs/contracts/spatial_kernel.md
     evidence:
@@ -791,7 +754,6 @@ edges:
     kind: lifecycle_request_delegation
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - InteractionEngine delegates P12 eraser lifecycle and context request decisions to EraserMachine, ContextActionRouter, and InteractionRequestRegistry while owning preview/session state and cleanup routing.
@@ -812,7 +774,6 @@ edges:
     kind: context_request_stream
     status: required
     sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
       - path: docs/contracts/interaction_engine.md
     evidence:
       - RuntimeRoot emits accepted P12 context-action requests through the public CanvasRuntime.contextActionRequests stream controller.
@@ -827,7 +788,6 @@ edges:
     kind: ui_boundary
     status: required
     sourceDocs:
-      - path: docs/implementation/p13_flutter_surface.md
       - path: docs/architecture/02_package_boundaries.md
     evidence:
       - Flutter surface integration reaches runtime behavior through CanvasRuntime and the narrow runtime-surface bridge, not RuntimeRoot.
@@ -843,7 +803,6 @@ placeholders:
     status: forbidden
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
-      - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - Closed P4 camera ownership cannot remain a public facade placeholder.
   - id: api.canvas_runtime.preview.current_placeholder
@@ -852,7 +811,6 @@ placeholders:
     path: lib/src/api/canvas_runtime.dart
     status: forbidden
     sourceDocs:
-      - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
     evidence:
       - CanvasRuntime.preview is implemented in P9 as a readable immutable CanvasPreviewState routed through RuntimeRoot.preview and must not return to a throwing public placeholder.
@@ -1294,7 +1252,6 @@ forbiddenEdges:
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - P7 resource implementation must route runtime-facing collaboration through contract-owned seams instead of importing runtime.
   - id: resource.kernel.forbidden_frame_dependency
@@ -1304,7 +1261,6 @@ forbiddenEdges:
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - P7 resource implementation must not depend on frame rendering.
   - id: resource.surface_session.forbidden_runtime_dependency
@@ -1314,7 +1270,6 @@ forbiddenEdges:
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - Surface resource sessions are surface/resource-owned and must not import runtime.
   - id: resource.surface_session.forbidden_frame_dependency
@@ -1324,7 +1279,6 @@ forbiddenEdges:
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
-      - path: docs/implementation/p7_resources_and_images.md
     evidence:
       - Frame code consumes the surface session boundary; the session must not depend back on frame.
   - id: selection.kernel.forbidden_runtime_dependency
@@ -1387,7 +1341,6 @@ views:
     kind: expected_release_verification
     output: docs/diagrams/generated/release_verification.mmd
     sourceDocs:
-      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
       - path: docs/verification/benchmarks.md
 sourceCoverage:
   - sectionId: section_00_status_and_scope
@@ -1462,12 +1415,6 @@ sourceCoverage:
       - runtime.root.owns_resource_kernel
       - runtime.root.invalidates_active_resource_session
       - frame.renderer.uses_surface_resource_session
-  - sectionId: section_08_legacy_capability_inventory
-    disposition: non_graph_semantics
-    reason: Legacy donor classification is migration evidence, not a target architecture topology obligation.
-  - sectionId: section_09_accepted_differences
-    disposition: non_graph_semantics
-    reason: Accepted differences record deliberate semantic deltas rather than graph-checkable owners or edges.
   - sectionId: section_10_runtime_data_model
     disposition: graph_obligation
     graphIds:

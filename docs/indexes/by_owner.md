@@ -8,7 +8,6 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 - `section_00_status_and_scope` - 0. Статус и обязательное архитектурное решение
 - `section_02_architecture_model` - 2. Несущая модель новой библиотеки
 - `section_03_package_layout` - 3. Package layout
-- `section_09_accepted_differences` - 9. Accepted differences from legacy engine
 - `section_10_runtime_data_model` - 10. Runtime data model
 
 ## benchmark
@@ -43,8 +42,4 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 ## test
 
 - `section_23_tests` - 23. Tests
-
-## verification
-
-- `section_08_legacy_capability_inventory` - 8A. Legacy capability inventory
 

@@ -10,87 +10,10 @@ import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
   group('current invariant transfer', () {
-    test('donor registry proof cites current owner tests', () {
-      expect(_retiredDonorProofTests(), isEmpty);
-      expect(_invalidDonorProofTests(), isEmpty);
-    });
-
-    test('donor registry related sections resolve to current owners', () {
-      expect(_retiredDonorOwnerSections(), isEmpty);
-    });
-
     test('design transfer rows resolve to current proof owners', () {
       expect(_designTransferRowsWithoutCurrentProof(), isEmpty);
     });
-
-    test('active donor docs no longer publish retired proof links', () {
-      expect(_retiredProofTextInActiveDonorDocs(), isEmpty);
-    });
   });
-}
-
-Map<String, List<String>> _retiredDonorProofTests() {
-  final donors = _loadYamlList('docs/_registry/donors.yaml');
-  final retiredProofs = <String, List<String>>{};
-
-  for (final donor in donors.cast<YamlMap>()) {
-    final donorId = donor['id'] as String;
-    final requiredTests = _stringList(donor, 'required_tests');
-    final retired = requiredTests.where(_isRetiredProofSource).toList();
-    if (retired.isNotEmpty) {
-      retiredProofs[donorId] = retired;
-    }
-  }
-
-  return retiredProofs;
-}
-
-Map<String, List<String>> _invalidDonorProofTests() {
-  final sections = _loadSectionsById();
-  final donors = _loadYamlList('docs/_registry/donors.yaml');
-  final invalidProofs = <String, List<String>>{};
-
-  for (final donor in donors.cast<YamlMap>()) {
-    final donorId = donor['id'] as String;
-    final relatedProofIds = _relatedSectionProofIds(donor, sections);
-    final invalid = _stringList(donor, 'required_tests')
-        .where(
-          (proof) =>
-              !relatedProofIds.contains(proof) ||
-              !_hasExecutableProofOwner(proof),
-        )
-        .toList();
-    if (invalid.isNotEmpty) {
-      invalidProofs[donorId] = invalid;
-    }
-  }
-
-  return invalidProofs;
-}
-
-Map<String, List<String>> _retiredDonorOwnerSections() {
-  final sections = {
-    for (final section in _loadYamlList(
-      'docs/_registry/sections.yaml',
-    ).cast<YamlMap>())
-      section['id'] as String: section['file'] as String,
-  };
-  final donors = _loadYamlList('docs/_registry/donors.yaml');
-  final retiredOwners = <String, List<String>>{};
-
-  for (final donor in donors.cast<YamlMap>()) {
-    final donorId = donor['id'] as String;
-    final relatedOwnerFiles = [
-      for (final sectionId in _stringList(donor, 'related_sections'))
-        sections[sectionId] ?? '<missing:$sectionId>',
-    ];
-    final retired = relatedOwnerFiles.where(_isRetiredProofSource).toList();
-    if (retired.isNotEmpty) {
-      retiredOwners[donorId] = retired;
-    }
-  }
-
-  return retiredOwners;
 }
 
 Map<String, String> _designTransferRowsWithoutCurrentProof() {
@@ -254,35 +177,27 @@ List<String> _backtickValues(String text) {
   ];
 }
 
-List<String> _retiredProofTextInActiveDonorDocs() {
-  final retiredMentions = <String>[];
-  final donorDocs = Directory(
-    'docs/donors',
-  ).listSync().whereType<File>().where((file) => file.path.endsWith('.md'));
-
-  for (final file in donorDocs) {
-    final text = file.readAsStringSync();
-    for (final retired in _retiredProofTextNeedles) {
-      if (text.contains(retired)) {
-        retiredMentions.add('${file.path}: $retired');
-      }
-    }
-  }
-
-  return retiredMentions;
-}
-
-Map<String, _SectionOwner> _loadSectionsById() {
+Map<String, _SectionOwner> _loadSectionsByFile() {
   return {
     for (final section in _loadYamlList(
       'docs/_registry/sections.yaml',
     ).cast<YamlMap>())
-      section['id'] as String: _SectionOwner(
+      section['file'] as String: _SectionOwner(
         file: section['file'] as String,
-        tests: _stringList(section, 'tests').toSet(),
-        guardrails: _stringList(section, 'guardrails').toSet(),
+        tests: _stringList(section, 'tests').where(_notNone).toSet(),
+        guardrails: _stringList(section, 'guardrails').where(_notNone).toSet(),
       ),
   };
+}
+
+List<Object?> _loadYamlList(String path) {
+  final parsed = loadYaml(File(path).readAsStringSync());
+  return (parsed as YamlList).nodes.map((node) => node.value).toList();
+}
+
+List<String> _stringList(YamlMap map, String field) {
+  final value = map[field] as YamlList;
+  return value.nodes.map((node) => node.value as String).toList();
 }
 
 bool _hasExecutableProofOwner(String value) {
@@ -304,67 +219,15 @@ List<String> _testProofPathCandidates(String value) {
   return [?override, conventionalPath];
 }
 
-Map<String, _SectionOwner> _loadSectionsByFile() {
-  return {
-    for (final section in _loadYamlList(
-      'docs/_registry/sections.yaml',
-    ).cast<YamlMap>())
-      section['file'] as String: _SectionOwner(
-        file: section['file'] as String,
-        tests: _stringList(section, 'tests').where(_notNone).toSet(),
-        guardrails: _stringList(section, 'guardrails').where(_notNone).toSet(),
-      ),
-  };
-}
-
-Set<String> _relatedSectionProofIds(
-  YamlMap donor,
-  Map<String, _SectionOwner> sections,
-) {
-  return {
-    for (final sectionId in _stringList(donor, 'related_sections'))
-      if (sections[sectionId] case final section?) ...[
-        ...section.tests,
-        ...section.guardrails,
-      ],
-  };
-}
-
-List<Object?> _loadYamlList(String path) {
-  final parsed = loadYaml(File(path).readAsStringSync());
-  return (parsed as YamlList).nodes.map((node) => node.value).toList();
-}
-
-List<String> _stringList(YamlMap map, String field) {
-  final value = map[field] as YamlList;
-  return value.nodes.map((node) => node.value as String).toList();
-}
-
 bool _isRetiredProofSource(String value) {
-  return value == 'PLAN.md' ||
-      value == 'docs/_registry/donors.yaml' ||
+  return value == 'docs/_registry/donors.yaml' ||
       value == 'docs/architecture/04_decisions_and_differences.md' ||
       value == 'docs/verification/legacy_capability_inventory.md' ||
-      value.startsWith('plan/') ||
       value.startsWith('docs/donors/') ||
       value.startsWith('docs/implementation/');
 }
 
 bool _notNone(String value) => value != 'none';
-
-const _retiredProofTextNeedles = [
-  'PLAN.md',
-  'plan/',
-  'docs/implementation/',
-  'docs/verification/legacy_capability_inventory.md',
-  'docs/architecture/04_decisions_and_differences.md',
-  'test/render/',
-  'test/core/',
-  'test/view/',
-  'test/contract/',
-  'test/interactive/',
-  'single-pointer policy tests',
-];
 
 final class _SectionOwner {
   const _SectionOwner({

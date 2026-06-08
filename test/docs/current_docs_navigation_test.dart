@@ -26,7 +26,7 @@ void _registerGeneratedIndexesTest() {
 }
 
 void _registerEntrypointRouteTest() {
-  test('docs entrypoints reject retired phase donor and plan routes', () {
+  test('docs entrypoints reject retired phase and donor routes', () {
     final entrypointText = [
       File('docs/README.md').readAsStringSync(),
       File('docs/architecture/README.md').readAsStringSync(),
@@ -62,6 +62,4 @@ const _retiredRoutes = {
   'docs/indexes/donor_to_phase.md',
   'docs/implementation/',
   'docs/donors/',
-  'PLAN.md',
-  'plan/',
 };

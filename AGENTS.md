@@ -9,10 +9,12 @@ and registries.
 
 - Plan future implementation work with a per-task Change Contract in the work
   item, Codex thread, or PR context.
+- `PLAN.md` is the retained current roadmap index. Keep it limited to current
+  retained work, and keep `plan/` limited to linked current step contracts.
 - Use current code, docs, registries, guardrails, tests, `.design/`, and
   `.research/` as source inputs when they are relevant to the task.
-- Do not create an in-repository roadmap, contract index, completed contract
-  archive, phase route, or donor route as a replacement planning surface.
+- Do not create a completed contract archive, phase route, or donor route as a
+  replacement planning surface.
 - Follow the task contract as written during implementation. If it conflicts
   with current code, docs, guardrails, tests, registries, or repository-local
   boundary enforcement, stop implementation, report the exact contradiction

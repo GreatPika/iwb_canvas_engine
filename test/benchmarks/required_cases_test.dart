@@ -5,8 +5,9 @@ import 'package:test/test.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_runner.dart';
 
-// Required-case proof keeps inventory, metrics, invariants, and retired-route
-// checks in one suite because together they define benchmark executability.
+// Required-case proof keeps inventory, metrics, invariants, and benchmark owner
+// dependency checks in one suite because together they define benchmark
+// executability.
 // ignore: halstead-volume, maximum-nesting-level, maintainability-index, source-lines-of-code
 void main() {
   group('required benchmark cases', () {
@@ -85,23 +86,44 @@ void main() {
       expect(encoded['caseCount'], report.cases.length);
     });
 
-    test('current benchmark proof does not depend on retired tooling', () {
-      const retiredOwner = 'legacy';
-      final retiredPathToken = '$retiredOwner/';
-      final retiredImportToken = '$retiredOwner.';
-      final benchFiles = [
-        for (final root in ['tool/bench', 'test/benchmarks'])
-          ...Directory(root)
-              .listSync(recursive: true)
-              .whereType<File>()
-              .where((file) => file.path.endsWith('.dart')),
-      ];
-
-      for (final file in benchFiles) {
-        final text = file.readAsStringSync();
-        expect(text, isNot(contains(retiredPathToken)), reason: file.path);
-        expect(text, isNot(contains(retiredImportToken)), reason: file.path);
-      }
+    test('benchmark owner code does not reference retired package paths', () {
+      expect(_retiredBenchmarkPathReferences(), isEmpty);
     });
   });
+}
+
+List<String> _retiredBenchmarkPathReferences() {
+  final references = <String>[];
+  final retiredPathTokens = _retiredBenchmarkPathTokens();
+
+  for (final file in _benchmarkDartFiles()) {
+    final text = file.readAsStringSync();
+    for (final token in retiredPathTokens) {
+      if (text.contains(token)) {
+        references.add('${file.path}: $token');
+      }
+    }
+  }
+
+  return references;
+}
+
+List<String> _retiredBenchmarkPathTokens() {
+  final legacyPath = ['legacy', '/'].join();
+  return [
+    legacyPath,
+    ['../', legacyPath].join(),
+    ['../../', legacyPath].join(),
+    ['package:', legacyPath].join(),
+    ['legacy', '/', 'iwb_canvas_engine'].join(),
+  ];
+}
+
+Iterable<File> _benchmarkDartFiles() sync* {
+  for (final root in const ['tool/bench', 'test/benchmarks']) {
+    yield* Directory(root)
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.dart'));
+  }
 }

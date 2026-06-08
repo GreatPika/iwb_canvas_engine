@@ -282,28 +282,25 @@ continue-on-error: true
     );
   });
 
-  test(
-    'release benchmark readiness guardrail rejects retired planning routes',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-              '      - run: dart run tool/guardrails/run.dart',
-              '''
-      - run: dart run tool/release_from_plan.dart --source=plan/
+  test('release benchmark readiness guardrail rejects retired docs routes', () {
+    expect(
+      _violationMessages(
+        _checkWith(
+          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
+            '      - run: dart run tool/guardrails/run.dart',
+            '''
+      - run: dart run tool/docs_release_check.dart docs/indexes/by_phase.md
       - run: dart run tool/guardrails/run.dart''',
-            ),
           ),
         ),
+      ),
+      contains(
         contains(
-          contains(
-            'release benchmark workflow must not invoke retired planning routes',
-          ),
+          'release benchmark workflow must not invoke retired docs routes',
         ),
-      );
-    },
-  );
+      ),
+    );
+  });
 
   test(
     'release benchmark readiness guardrail rejects direct baseline path writes',

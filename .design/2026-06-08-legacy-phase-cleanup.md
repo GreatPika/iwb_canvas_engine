@@ -5,7 +5,7 @@ date: 2026-06-08
 designer: Codex
 commit: 81453c0d
 branch: new-architecture
-design_question: "Design the target repository state after completing the architecture rebuild so the active package no longer depends on the legacy package, legacy-parity scaffolding, donor migration records, phase-based roadmap documents, or rebuild-mode navigation."
+design_question: "Design the target repository state after completing the architecture rebuild so the active package no longer depends on the legacy package, legacy-parity scaffolding, donor migration records, old completed phase-based roadmap documents, or rebuild-mode navigation."
 ---
 
 ## Disposition
@@ -28,10 +28,11 @@ Non-goals:
 
 - preserving the nested `legacy/iwb_canvas_engine` package as an in-repository
   archive;
-- keeping `PLAN.md`, `plan/`, `docs/implementation/`, donor registries, or phase
-  indexes as historical records;
-- replacing `PLAN.md`/`plan/` with a new in-repository roadmap, contract index,
-  or completed-contract archive;
+- keeping old completed `PLAN.md` entries, old completed `plan/step_*.md` files,
+  `docs/implementation/`, donor registries, or phase indexes as historical
+  records;
+- replacing the retained current `PLAN.md`/`plan/` roadmap surface with a second
+  roadmap, contract index, or completed-contract archive;
 - deleting `.design/` or `.research/`; both remain current source-input layers
   for design, contract, and review workflows;
 - weakening public API compatibility or release checks while removing legacy
@@ -68,7 +69,7 @@ unit, proof surface, or review consequence it supports.
 - `.research/2026-06-08-legacy-phase-footprint.md:31` - public API retired-symbol data flow is resolved exports intersected with the legacy golden file -> supports moving the retired-symbol deny set into the current public API registry.
 - `.research/2026-06-08-legacy-phase-footprint.md:35` - example boundary tests scan `example/**` for retired symbols including `SceneController`, `SceneView`, `NodeSpec`, `NodePatch`, `Transform2D`, `encodeSceneToJson`, and `decodeSceneFromJson` -> supports keeping example public-boundary protection but renaming it around current package public-boundary rules.
 - `.research/2026-06-08-legacy-phase-footprint.md:37` - donor mapping tests are constant inventory assertions and benchmark legacy-equivalence checks use manifest/report metadata, not direct legacy runtime execution -> supports deleting donor mapping tests after their still-current facts are represented in contract or behavior tests.
-- `.research/2026-06-08-legacy-phase-footprint.md:41` - `PLAN.md` is an active plan index, contains 58 checked entries, and completed steps may reference retired paths, APIs, or checks -> supports deleting the roadmap/history model after source-of-truth docs and checks own current invariants.
+- `.research/2026-06-08-legacy-phase-footprint.md:41` - `PLAN.md` is an active plan index, contains 58 checked entries, and completed steps may reference retired paths, APIs, or checks -> supports preserving the current roadmap surface while deleting stale completed roadmap entries/contracts after source-of-truth docs and checks own current invariants.
 - `.research/2026-06-08-legacy-phase-footprint.md:47` - `docs/_registry/sections.yaml` maps `section_08_legacy_capability_inventory` and `docs/_registry/donors.yaml` contains donor source paths, decisions, target phases, target owners, tests, blocks, and related sections -> supports replacing donor/legacy registry ownership with current section, contract, guardrail, test, and benchmark owners.
 - `.research/2026-06-08-legacy-phase-footprint.md:53` - architecture graph encodes P0-P14, while P10 and P13 are `future` and P14 is `measurement` -> supports replacing selected-phase closure with current-architecture/release closure and resolving status drift before phase deletion.
 - `.research/2026-06-08-legacy-phase-footprint.md:59` - docs generation hard-codes selected graph phase P14 and docs checks hard-code phase docs and phase read-first references -> supports rewriting docs tooling before deleting phase files and indexes.
@@ -82,25 +83,26 @@ unit, proof surface, or review consequence it supports.
   current evidence-source layer.
 - `AGENTS.md:3` - repository root is the canonical target package -> supports making root package docs/checks the only active owners.
 - `AGENTS.md:4` - current task is to build the new engine described in `docs/`, not maintain or extend the legacy package -> supports deleting nested legacy package after replacing current checks.
-- `AGENTS.md:9` - `PLAN.md` is currently the active roadmap and source of truth for planned work -> supports updating repository instructions as part of removing `PLAN.md`.
-- `AGENTS.md:18` - completed plan steps currently require checkbox updates in both `PLAN.md` and linked step documents -> supports deleting this workflow only after a new Change Contract route exists outside `PLAN.md`.
+- `AGENTS.md:9` - `PLAN.md` is currently the active roadmap and source of truth for planned work -> supports updating repository instructions while retaining a current-only roadmap surface.
+- `AGENTS.md:18` - completed plan steps currently require checkbox updates in both `PLAN.md` and linked step documents -> supports cleaning completed-step navigation while keeping the current step workflow.
 - `.agents/skills/change-contract/SKILL.md:8` - the repository-local
   Change Contract skill creates a short contract for the implementer rather than
   requiring a repository file path -> supports routing future implementation
   planning through a per-task execution artifact, not a committed roadmap index.
 - `.agents/skills/change-contract/SKILL.md:21` - the contract must define source
   inputs, classification, decisions, scope, owner, order, and completion checks
-  -> supports preserving planning rigor after deleting `PLAN.md`/`plan/`.
+  -> supports preserving planning rigor while keeping `PLAN.md`/`plan/` limited
+  to current work.
 - `.agents/skills/change-contract/SKILL.md:112` - the skill has an explicit
   `against design DESIGN_FILE` source-input route -> supports using `.design/`
   artifacts plus current docs/registries as future contract inputs without a
-  plan index.
+  completed-contract archive.
 - `AGENTS.md:58` - architecture graph checks currently use `dart run tool/architecture_graph/check.dart --phase Px` -> supports replacing repository verification instructions with non-phase closure commands.
-- `PLAN.md:5` - `PLAN.md` declares itself the active plan index -> supports treating its deletion as a source-of-truth migration, not a file cleanup.
+- `PLAN.md:5` - `PLAN.md` declares itself the active plan index -> supports treating stale entry removal as a source-of-truth migration, not a raw file cleanup.
 - `PLAN.md:12` - step order defines intended implementation order and detailed
   scope/closure/verification live only in linked step documents -> supports
   disposing the complete checked step set through an explicit current-owner
-  transfer map before deleting `plan/`.
+  transfer map before deleting old completed `plan/step_*.md` files.
 - `PLAN.md:15` - completed step contracts are historical records that may reference retired paths, APIs, or checks -> supports preferring git history over active in-repo archives.
 - `PLAN.md:23` through `PLAN.md:80` - all 58 plan steps are checked complete ->
   supports treating every plan document as a historical execution record after
@@ -112,7 +114,7 @@ unit, proof surface, or review consequence it supports.
 - `docs/README.md:3` - docs portal routes work to current source-of-truth documentation while generated navigation handles reverse lookup and drift checks -> supports keeping a docs portal but changing its navigation model.
 - `docs/README.md:10` - docs entrypoint currently routes "Implement a phase" to `docs/indexes/by_phase.md` -> supports deleting or rewriting phase navigation.
 - `docs/README.md:15` - docs entrypoint routes donor decisions to `docs/indexes/donor_to_phase.md` -> supports deleting donor navigation.
-- `docs/README.md:19` - docs entrypoint routes Change Contracts to `PLAN.md` and `plan/` -> supports replacing the Change Contract discovery route before deleting `PLAN.md`.
+- `docs/README.md:19` - docs entrypoint routes Change Contracts to `PLAN.md` and `plan/` -> supports keeping the planning route current-only while removing phase/donor and completed-contract archive navigation.
 - `docs/README.md:23` - normative architecture lives under `docs/architecture/` -> supports making architecture docs the target owner for current architecture invariants.
 - `docs/README.md:24` - normative contracts live under `docs/contracts/` -> supports moving still-current behavior invariants from legacy/donor docs into contracts.
 - `docs/README.md:25` - verification policy lives under `docs/verification/` -> supports moving proof, guardrail, release, and benchmark invariants into verification docs.
@@ -242,27 +244,27 @@ unit, proof surface, or review consequence it supports.
 
 ### Candidate A. Minimal Legacy Directory Removal
 
-- Form: Delete `legacy/iwb_canvas_engine/` and update the public API guardrail to store retired symbols somewhere else, while leaving `PLAN.md`, `plan/`, phase docs, donor docs, phase generated indexes, and P14 graph closure in place.
+- Form: Delete `legacy/iwb_canvas_engine/` and update the public API guardrail to store retired symbols somewhere else, while leaving old completed `PLAN.md` entries, old completed `plan/step_*.md` files, phase docs, donor docs, phase generated indexes, and P14 graph closure in place.
 - Why it could work: It removes the largest confusing nested package and resolves the only direct executable file dependency on legacy symbols.
 - Gate failures or risks: It fails the product outcome because phase roadmap, donor migration records, rebuild-mode navigation, and legacy-negative guardrail wording remain active. `docs/README.md:10`, `docs/README.md:15`, and `docs/README.md:19` would still route users through phase, donor, and plan concepts.
 
 ### Candidate B. Medium Cleanup With Phase Roadmap Retained
 
-- Form: Delete nested legacy package and donor docs/registries, but keep `PLAN.md`, `plan/`, `docs/implementation/`, P0-P14 graph fields, and selected-phase generated diagrams as release history.
+- Form: Delete nested legacy package and donor docs/registries, but keep old completed `PLAN.md` entries, old completed `plan/step_*.md` files, `docs/implementation/`, P0-P14 graph fields, and selected-phase generated diagrams as release history.
 - Why it could work: It lowers risk by keeping old execution contracts visible during the transition.
 - Gate failures or risks: It violates the user's "no unnecessary active tree artifacts" constraint and preserves a second source of truth for completed work. `PLAN.md:15` already says completed step contracts are historical records that may reference retired paths, APIs, or checks; keeping them as active navigation would preserve stale truth.
 
 ### Candidate C. Full Cleanup With Current Owners Only
 
-- Form: Move still-current invariants into existing current owners (`docs/contracts/`, `docs/architecture/`, `docs/verification/`, `docs/_registry/public_api_v1.yaml`, `docs/_registry/benchmarks.yaml`, guardrail/test/tool code, and CI), rewrite tooling from phase/donor/legacy concepts to current architecture/release concepts, then delete legacy package, roadmap, donor, phase, and parity artifacts.
+- Form: Move still-current invariants into existing current owners (`docs/contracts/`, `docs/architecture/`, `docs/verification/`, `docs/_registry/public_api_v1.yaml`, `docs/_registry/benchmarks.yaml`, guardrail/test/tool code, and CI), rewrite tooling from phase/donor/legacy concepts to current architecture/release concepts, then delete legacy package, old completed roadmap entries/contracts, donor, phase, and parity artifacts.
 - Why it could work: It matches the requested target, preserves invariants through executable owners, and makes git history the archive for migration records.
-- Gate failures or risks: It has the highest migration surface. The Change Contract must enforce a strict order: replacement owner and proof first, deletion second, final residue scan last.
+- Gate failures or risks: It has the highest migration surface. The Change Contract must enforce a strict order: replacement owner and proof first, cleanup second, focused owner checks last.
 
 ## Known Future Pressures
 
 | Pressure | Evidence | How the selected form responds | Accepted cost or risk |
 |---|---|---|---|
-| Users should not see migration/rebuild navigation after cleanup. | `docs/README.md:10`, `docs/README.md:15`, `docs/README.md:19` | Delete phase/donor/plan routes and replace generated navigation with current subsystem, guardrail, test, benchmark, diagram, and release routes. | Larger docs-tool rewrite. |
+| Users should not see migration/rebuild navigation after cleanup. | `docs/README.md:10`, `docs/README.md:15`, `docs/README.md:19` | Delete phase/donor routes and stale completed plan navigation; keep `PLAN.md`/`plan/` limited to current roadmap work. Replace generated navigation with current subsystem, guardrail, test, benchmark, diagram, and release routes. | Larger docs-tool rewrite. |
 | Current public API compatibility must remain stable. | `docs/contracts/public_api_v1.md:95`, `docs/_registry/public_api_v1.yaml:3`, `docs/contracts/public_api_v1.md:110` | Keep `public_exports` as allowed set and add a current `retired_public_exports` deny set in the same registry before deleting the legacy golden. | One-time schema/test migration for public API registry reader. |
 | Architecture graph currently disagrees with completed plan state. | `PLAN.md:69`, `PLAN.md:73`, `docs/architecture/architecture_graph.yaml:61`, `docs/architecture/architecture_graph.yaml:79` | Reconcile current graph node statuses before removing phase model; the post-cleanup graph has only current required/release obligations. | Contract must not hide unresolved future/measurement status by deleting phase fields first. |
 | Benchmark history is current machine-consumed data even though it contains legacy vocabulary. | `docs/verification/benchmarks.md:91`, `docs/verification/benchmarks.md:121`, `tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_2.json:65` | Preserve benchmark history/reference reports, but migrate schema vocabulary or add a temporary compatibility reader with a retirement gate. | Mechanical data migration risk; requires focused benchmark tests. |
@@ -289,19 +291,19 @@ The target repository state keeps only current, mechanically consumed owners:
 | Benchmark committed history/reference data | `tool/bench/manual/reference_reports/`, `tool/bench/manual/run_history/`, `tool/bench/manual/reference_decisions.json` | manual benchmark history/reference tooling |
 | Release gates | `docs/verification/release_gates.md`, `.github/workflows/*.yml` | root/release CI, release readiness guardrail |
 | Generated navigation and diagrams | current-only `docs/indexes/`, `docs/diagrams/catalog.md`, generated non-phase graph views | `docs/tool/sync_generated_docs.dart --check`, `docs/tool/check_docs.dart`, graph view check |
-| Future Change Contract route | `AGENTS.md`, `docs/README.md`, and the repository-local `change-contract` / `change-contract-check` skills describe the per-task workflow; no `PLAN.md`, `plan/`, roadmap, or completed-contract archive remains in the repository tree | docs checker rejects old plan/phase routes; final residue scan rejects `PLAN.md`/`plan/`; implementation/review consumes the explicit per-task contract from the work item, thread, or PR context |
-| Design and research evidence | `.design/` and `.research/` | architecture-design, research-codebase, change-contract, contract-check, and review workflows consume these as source inputs; final residue scan treats legacy/phase/donor wording inside them as historical evidence, not active artifact residue |
+| Future Change Contract route | `AGENTS.md`, `docs/README.md`, retained current `PLAN.md`, and retained current `plan/` describe current roadmap work and per-task workflow; no completed-contract archive, phase route, or donor route remains in the repository tree | docs checker rejects phase/donor routes; implementation/review consumes the explicit per-task contract from the work item, thread, PR context, or retained current roadmap surface |
+| Design and research evidence | `.design/` and `.research/` | architecture-design, research-codebase, change-contract, contract-check, and review workflows consume these as source inputs; legacy/phase/donor wording inside them is historical evidence, not active package navigation |
 
 Target artifact disposition:
 
 | Artifact | Disposition | Evidence | Replacement owner or deletion gate |
 |---|---|---|---|
 | `legacy/iwb_canvas_engine/` | Delete | `.research/2026-06-08-legacy-phase-footprint.md:13`; `legacy/iwb_canvas_engine/pubspec.yaml:1` | Current checks must no longer read legacy golden/assets; current example owns any needed asset. |
-| `analysis_options.yaml` `legacy/**` exclusion | Delete/rewrite | `analysis_options.yaml:3`; `.research/2026-06-08-legacy-phase-footprint.md:29` | Directory deletion plus final no-legacy-path residue scan. |
-| `PLAN.md` | Delete | `PLAN.md:5`; `PLAN.md:15`; `.agents/skills/change-contract/SKILL.md:8` | `AGENTS.md` and `docs/README.md` route future implementation planning to a per-task Change Contract artifact in the work item/thread/PR context, with `.design/` and current docs/registries as source inputs. No in-repo roadmap or contract archive replaces it. |
+| `analysis_options.yaml` `legacy/**` exclusion | Delete/rewrite | `analysis_options.yaml:3`; `.research/2026-06-08-legacy-phase-footprint.md:29` | Directory deletion plus current import/boundary checks. |
+| `PLAN.md` | Keep current-only | `PLAN.md:5`; `PLAN.md:15`; `.agents/skills/change-contract/SKILL.md:8` | Keep only current roadmap entries; remove old completed entries that no longer own current work. No completed-contract archive replaces them. |
 | `.design/` | Keep | `.agents/skills/architecture-design/SKILL.md:1`; `.agents/skills/change-contract/SKILL.md:112` | Current design decision-source layer for future Change Contracts and reviews. Not a roadmap, archive, or package behavior owner. |
 | `.research/` | Keep | `.agents/skills/research-codebase/SKILL.md:1`; `.research/2026-06-08-legacy-phase-footprint.md:13` | Current evidence-source layer for future design/contract/review work. Historical terms inside research are allowed as cited evidence. |
-| `plan/` | Delete | `.research/2026-06-08-legacy-phase-footprint.md:41`; `PLAN.md:15` | Still-current invariants from completed contracts must be in current docs/tests/guardrails first. |
+| `plan/` | Keep current-only | `.research/2026-06-08-legacy-phase-footprint.md:41`; `PLAN.md:15` | Keep only linked current step contracts; delete old completed `plan/step_*.md` files after still-current invariants are in current docs/tests/guardrails. |
 | `docs/implementation/` | Delete | `docs/README.md:26`; `docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md:5` | Current release/architecture/contract docs own remaining invariants. |
 | `docs/donors/` | Delete | `docs/donors/00_reuse_rules.md:13`; `docs/donors/00_reuse_rules.md:34` | Behavior tests and current contracts own reused behavior; no donor proof-only docs remain. |
 | `docs/_registry/donors.yaml` | Delete | `docs/_registry/donors.yaml:1`; `.research/2026-06-08-legacy-phase-footprint.md:47` | Remove donor fields/indexes after all current target-owner facts are moved or proven redundant. |
@@ -322,7 +324,7 @@ Target artifact disposition:
 | `docs/tool/check_docs.dart` | Rewrite | `docs/tool/check_docs.dart:34`; `docs/tool/check_docs.dart:63`; `docs/tool/check_docs.dart:82`; `docs/tool/check_docs.dart:114` | Validate current docs roots, registries, graph views, benchmark projection, and no phase/donor routes. |
 | `api.no_legacy_public_types` | Rewrite/rename | `tool/guardrails/src/public_api_checks.dart:434`; `tool/guardrails/src/public_api_checks.dart:472` | `api.no_retired_public_exports` reading `retired_public_exports` from current public API registry. |
 | `test/api_contract/no_legacy_public_symbols_test.dart` | Rename/rewrite | `test/api_contract/no_legacy_public_symbols_test.dart:7` | Retired public exports test with current fixture naming. |
-| `core.no_legacy_imports` | Rewrite/possibly rename | `tool/guardrails/src/core_boundary_checks.dart:385`; `tool/guardrails/src/core_boundary_checks.dart:620` | Current package-boundary/import guardrail plus final no `legacy/` path residue scan. |
+| `core.no_legacy_imports` | Rewrite/possibly rename | `tool/guardrails/src/core_boundary_checks.dart:385`; `tool/guardrails/src/core_boundary_checks.dart:620` | Current package-boundary/import guardrail plus focused dependency checks for current owners. |
 | `geometry.no_legacy_scene_order` | Rename/rewrite | `tool/guardrails/src/geometry_spatial_guardrail_checks.dart:31`; `docs/verification/guardrails.md:229` | Positive committed handle-order/token guardrail. |
 | `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart` | Rename | `tool/guardrails/src/frame_cache_guardrail_checks.dart:14`; `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart:6` | Positive cache key current-revision test. |
 | Donor mapping tests | Delete/rewrite as behavior tests | `.research/2026-06-08-legacy-phase-footprint.md:37`; `test/frame/frame_donor_mapping_test.dart:4`; `test/geometry/geometry_spatial_donor_mapping_test.dart:4` | Current behavior/contract tests own copied/adapted behavior. |
@@ -375,14 +377,14 @@ Accepted-differences transfer:
 | Schema v7 is not the production decode target. | `docs/architecture/04_decisions_and_differences.md:37` | `docs/contracts/schema_v1.md`, `docs/contracts/codec_boundary.md`, schema/codec tests | Schema v1 codec/load tests prove current payload support without a legacy difference table. |
 | Palette, grid color, image resource identity, typed action payloads, and synchronous move resolver policy are current v1 behavior decisions. | `docs/architecture/04_decisions_and_differences.md:38`; `docs/architecture/04_decisions_and_differences.md:43` | `docs/contracts/public_api_v1.md`, `docs/contracts/resources.md`, `docs/contracts/interaction_engine.md`, frame/resource/interaction tests | Current contract and behavior tests own these semantics. |
 
-Post-`PLAN.md` Change Contract route:
+Retained current Change Contract route:
 
 | Concern | Selected target |
 |---|---|
-| Owner | `AGENTS.md` states the repository is a normal maintained package and describes when to create a Change Contract; `docs/README.md` routes implementation planning to that workflow and to current docs/registries. |
-| Place | No persistent repository roadmap, plan directory, contract index, or completed-contract archive. A future Change Contract is a per-task execution artifact in the work item, Codex thread, or PR context. If an implementation requires a design source input, the durable repository input is the relevant `.design/YYYY-MM-DD-topic.md` plus current docs/contracts/verification owners. |
+| Owner | `AGENTS.md` states the repository is a normal maintained package and describes when to create a Change Contract; `PLAN.md`/`plan/` remain limited to current roadmap work; `docs/README.md` routes implementation planning to that workflow and to current docs/registries. |
+| Place | No completed-contract archive, phase route, or donor route. A future Change Contract is a per-task execution artifact in the work item, Codex thread, PR context, or retained current roadmap surface. If an implementation requires a design source input, the durable repository input is the relevant `.design/YYYY-MM-DD-topic.md` plus current docs/contracts/verification owners. |
 | Consumer | The implementer, contract checker, code reviewer, and PR/review process consume the explicit per-task contract. Repository CI consumes the resulting current docs, tests, guardrails, graph checks, benchmark checks, and workflows, not historical contract files. |
-| Check | `docs/tool/check_docs.dart` must reject README/architecture routes to `PLAN.md`, `plan/`, phase indexes, and donor indexes. The final residue scan rejects `PLAN.md`, `plan/`, and completed-contract archive paths. |
+| Check | `docs/tool/check_docs.dart` must reject README/architecture routes to phase indexes and donor indexes. The retained plan surface must contain only current roadmap entries and linked current step contracts; no completed-contract archive path is introduced. |
 
 Replacement model for retired public symbols:
 
@@ -459,16 +461,18 @@ Ordered migration slices:
    migrate or compatibility-read committed benchmark data, and update benchmark
    tests plus release readiness guardrail.
 7. CI and repository instruction migration: update root/release workflows,
-   `AGENTS.md`, docs checks, release gates, and the post-`PLAN.md`
-   Change Contract route to no-phase/no-legacy commands and no roadmap archive.
-8. Deletion slice: remove `legacy/`, `PLAN.md`, `plan/`, `docs/donors/`,
-   `docs/implementation/`, legacy inventory, donor registry, phase indexes, and
-   phase generated diagrams only after replacement checks are green. Remove
+   `AGENTS.md`, docs checks, release gates, and the retained current Change
+   Contract route to no-phase/no-legacy commands and no completed-contract
+   archive.
+8. Cleanup slice: remove `legacy/`, old completed `PLAN.md` entries, old
+   completed `plan/step_*.md` files, `docs/donors/`, `docs/implementation/`,
+   legacy inventory, donor registry, phase indexes, and phase generated diagrams
+   only after replacement checks are green. Remove
    `docs/architecture/04_decisions_and_differences.md` in the same deletion
    family after its current decisions are transferred.
-9. Final residue gate: run no-residue semantic searches for old paths and
-   vocabulary, then run docs checks, graph checks, guardrails, focused tests,
-   analyze/DCM, benchmark tests, and CI-equivalent workflow command checks.
+9. Final verification: run focused current-owner checks, docs checks, graph
+   checks, focused tests, analyze/DCM, benchmark owner-dependency checks, and
+   CI workflow command checks.
 
 ## Decision Trace
 
@@ -478,31 +482,31 @@ them forward.
 
 | Decision ID | Decision | Evidence | Contract handoff target |
 |---|---|---|---|
-| D1 | Select full cleanup: no active legacy package, roadmap, donor, phase, or rebuild-mode navigation remains unless mechanically consumed as current truth. | `.research/2026-06-08-legacy-phase-footprint.md:15`; `docs/README.md:10`; `docs/README.md:15`; `docs/README.md:19`; `PLAN.md:15` | `Boundaries.In Scope`, `Boundaries.Out of Scope`, deletion units, final residue proof |
+| D1 | Select full cleanup: no active legacy package, old completed roadmap entries/contracts, donor, phase, or rebuild-mode navigation remains unless mechanically consumed as current truth. | `.research/2026-06-08-legacy-phase-footprint.md:15`; `docs/README.md:10`; `docs/README.md:15`; `docs/README.md:19`; `PLAN.md:15` | `Boundaries.In Scope`, `Boundaries.Out of Scope`, cleanup units, focused route proof |
 | D2 | Public API compatibility stays current-owned by public API contract and registry; retired symbols move from legacy golden to `docs/_registry/public_api_v1.yaml`. | `docs/contracts/public_api_v1.md:95`; `docs/_registry/public_api_v1.yaml:3`; `tool/guardrails/src/public_api_checks.dart:472`; `legacy/iwb_canvas_engine/tool/goldens/public_api_symbols.txt:1` | public API migration unit; proof surfaces `api.public_exports_complete`, `api.no_retired_public_exports`, public API compile/signature tests |
 | D3 | Phase closure is replaced by no-phase current architecture/release closure while preserving graph required-node, required-edge, forbidden-edge, placeholder, and unknown-seam checks. | `tool/architecture_graph/check.dart:7`; `tool/architecture_graph/src/phase_closure.dart:116`; `tool/architecture_graph/src/architecture_graph.dart:473`; `docs/architecture/architecture_graph.yaml:427`; `docs/architecture/architecture_graph.yaml:483` | architecture graph migration unit; proof surfaces graph checker tests and generated-view checks |
 | D4 | Donor and legacy inventory records are deleted only after still-current facts are moved into contracts, behavior tests, guardrails, benchmark policy, or release gates. | `docs/verification/legacy_capability_inventory.md:116`; `docs/donors/00_reuse_rules.md:34`; `.research/2026-06-08-legacy-phase-footprint.md:37` | invariant-capture unit; artifact disposition checklist; final deletion gate |
 | D5 | Benchmark history/reference data remains only because it is current machine-consumed data; legacy benchmark vocabulary is migrated to reference/baseline terminology. | `docs/verification/benchmarks.md:91`; `docs/verification/benchmarks.md:121`; `tool/bench/src/benchmark_manifest.dart:226`; `tool/bench/src/benchmark_diff.dart:1019`; `tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_2.json:65` | benchmark schema migration unit; proof surfaces benchmark manifest/diff/runner/manual-reference/history tests |
 | D6 | Guardrails/tests should be positive current-architecture invariants, not legacy-negative wording, except where a current retired-export deny set is the explicit claim. | `tool/guardrails/src/geometry_spatial_guardrail_checks.dart:31`; `tool/guardrails/src/frame_cache_guardrail_checks.dart:14`; `docs/verification/guardrails.md:178`; `docs/verification/guardrails.md:229` | guardrail/test rename/rewrite unit; proof surfaces guardrail registry, runner-backed tests, negative fixtures |
-| D7 | Deletion order is replacement owner first, deletion second, residue scan last. | `.research/2026-06-08-legacy-phase-footprint.md:17`; `docs/tool/check_docs.dart:34`; `docs/tool/check_docs.dart:82`; `.github/workflows/release_benchmarks.yml:30` | execution order constraints; final verification plan |
+| D7 | Cleanup order is replacement owner first, cleanup second, focused owner checks last. | `.research/2026-06-08-legacy-phase-footprint.md:17`; `docs/tool/check_docs.dart:34`; `docs/tool/check_docs.dart:82`; `.github/workflows/release_benchmarks.yml:30` | execution order constraints; final verification plan |
 | D8 | Cleanup must not rewrite or prune git history; removed migration artifacts remain available from previous commits. | User requirement on 2026-06-08: "главное из гита не удаляй"; `PLAN.md:15` | rollback boundary; deletion unit constraints; final handoff |
-| D9 | Future Change Contracts do not get a new repository roadmap or archive after `PLAN.md` deletion; they are per-task execution artifacts consumed from the work item/thread/PR context, with `.design/` and current docs/registries as durable source inputs when needed. | `.agents/skills/change-contract/SKILL.md:8`; `.agents/skills/change-contract/SKILL.md:21`; `.agents/skills/change-contract/SKILL.md:112`; `docs/README.md:19` | repository instruction/docs migration unit; docs checker expectations; final residue proof |
+| D9 | Future Change Contracts use the retained `PLAN.md`/`plan/` current roadmap surface only for current work; no completed-contract archive or replacement phase/donor route is introduced. | `.agents/skills/change-contract/SKILL.md:8`; `.agents/skills/change-contract/SKILL.md:21`; `.agents/skills/change-contract/SKILL.md:112`; `docs/README.md:19` | repository instruction/docs migration unit; docs checker expectations; focused route proof |
 | D10 | `docs/architecture/04_decisions_and_differences.md` is deleted after its current decisions move to named current owners; no renamed "legacy differences" document remains. | `docs/architecture/README.md:12`; `docs/architecture/04_decisions_and_differences.md:28`; `docs/architecture/04_decisions_and_differences.md:32`; `docs/architecture/04_decisions_and_differences.md:38` | accepted-differences transfer unit; architecture README/read-path update; public API/schema/resources/interaction proof |
-| D11 | `.design/` and `.research/` remain in the active repository as current source-input/evidence layers, while cleanup deletes migration roadmap, phase, donor, legacy package, and parity scaffolding artifacts. | `.agents/skills/architecture-design/SKILL.md:1`; `.agents/skills/research-codebase/SKILL.md:1`; `.agents/skills/change-contract/SKILL.md:112` | source-of-truth policy unit; residue-scan exception list; contract/review source-input route |
+| D11 | `.design/` and `.research/` remain in the active repository as current source-input/evidence layers, while cleanup deletes old completed roadmap entries/contracts, phase, donor, legacy package, and parity scaffolding artifacts. | `.agents/skills/architecture-design/SKILL.md:1`; `.agents/skills/research-codebase/SKILL.md:1`; `.agents/skills/change-contract/SKILL.md:112` | source-of-truth policy unit; contract/review source-input route |
 
 ## Outcome-Proof Fit
 
 | Claim | Direct outcome | Proxy risk | Required proof surface or strategy |
 |---|---|---|---|
-| Full cleanup leaves no active migration artifacts. | Paths and generated navigation for `legacy/`, `PLAN.md`, `plan/`, donor docs, implementation phase docs, phase indexes, and phase generated views are absent or replaced by current owners. | Passing tests while stale docs remain discoverable. | Final no-residue path scan plus docs checker expectations that reject phase/donor/plan routes. |
+| Full cleanup leaves no active migration artifacts. | Paths and generated navigation for `legacy/`, old completed `PLAN.md` entries, old completed `plan/step_*.md` files, donor docs, implementation phase docs, phase indexes, and phase generated views are absent or replaced by current owners. | Passing tests while stale docs remain discoverable. | Focused current-owner checks plus docs checker expectations that reject phase/donor routes. |
 | Public API compatibility is preserved. | Public barrel exports exactly `public_exports` and exports none of `retired_public_exports`. | Deleted legacy golden makes the old guardrail pass vacuously. | Registry-reader tests, public surface resolver guardrail, fixture with denied retired symbols, and public API compile/signature tests. |
 | Architecture closure remains strong after phase removal. | Current graph checker fails missing required owners/edges, forbidden dependencies, stale placeholders, and unknown seams without `--phase`. | Generated views compile while closure no longer enforces selected obligations. | Graph unit tests porting each phase-closure rule to current closure plus release workflow command check. |
 | Still-current legacy/donor facts are preserved. | Each retained fact has a current contract/test/guardrail/benchmark/release owner, or the fact is explicitly proven redundant by an existing current proof. | A mapping spreadsheet or prose table says facts were considered but no executable proof owns them. | Invariant-capture checklist in the Change Contract with owner/proof fields, and deletion blocked until every retained fact has a current owner. |
 | Benchmark cleanup preserves usable historical baselines. | Benchmark tools can read current manifest/reports/history/reference data using new vocabulary, and committed benchmark reference decisions still point to valid data. | Only docs mention new names while old JSON fixtures keep passing through untested compatibility. | Manifest/report/diff/manual-history/reference tests over committed sample data after migration or explicit compatibility reader with retirement test. |
 | Guardrail vocabulary becomes current-positive without weakening checks. | Renamed guardrails still reject representative bad inputs and pass current repository. | Renaming ids in docs only. | Runner-backed guardrail tests with positive current repository check and negative fixtures for retired exports, forbidden package boundaries, committed order, and cache key fields. |
-| Future Change Contracts remain available without repository clutter. | README/AGENTS route future implementation planning to per-task contracts while no roadmap/archive path exists in the active tree. | Deleting `PLAN.md` leaves agents with no planning route, or a new archive recreates the same clutter. | Docs checker expectation for the post-`PLAN.md` route plus final residue scan rejecting `PLAN.md`, `plan/`, and replacement archive directories. |
+| Future Change Contracts remain available without repository clutter. | README/AGENTS and retained `PLAN.md`/`plan/` route future implementation planning to current work while no completed-contract archive path exists in the active tree. | A stale completed-contract archive recreates the same clutter, or plan navigation points to retired phase/donor routes. | Docs checker expectation for the retained current route plus focused checks rejecting replacement archive directories and phase/donor routes. |
 | Current accepted-difference decisions are preserved without legacy framing. | Public API, schema, resource, action payload, and move resolver decisions move to named current owners. | Deleting the differences document drops current decisions, or renaming it keeps legacy framing active. | Accepted-differences transfer checklist plus current public API/schema/resource/interaction contract tests and architecture README read-path update. |
-| Deletion is all-or-nothing at the artifact level. | No old artifact is deleted before new owner and proof pass; final state has no old references. | Partial deletion hides stale dependency until CI or docs generation fails later. | Ordered slices, per-slice focused tests, final residue scan, docs checks, graph checks, guardrails, analyze/DCM, and benchmark tests. |
+| Deletion is all-or-nothing at the artifact level. | No old artifact is deleted before new owner and proof pass; final state routes active work through current owners. | Partial deletion hides stale dependency until CI or docs generation fails later. | Ordered slices, per-slice focused tests, focused current-owner checks, docs checks, graph checks, analyze/DCM, and targeted benchmark/guardrail tests. |
 
 ## Hard Gate Check
 
@@ -515,34 +519,34 @@ them forward.
 | Negative Proof And Fixture Quarantine | pass | Negative fixtures stay in tests/guardrail fixtures and current deny-list registries; legacy package files, donor rows, and phase docs do not become production/public source-of-truth fixtures. |
 | Dependency direction | pass | The selected form removes nested same-name package and preserves root public barrel/private `src/**` boundary checks. Evidence: `legacy/iwb_canvas_engine/pubspec.yaml:1`, `docs/contracts/public_api_v1.md:134`, `tool/guardrails/src/core_boundary_checks.dart:385`. |
 | State/data | pass | No runtime state changes. Committed benchmark history/reference data remains under benchmark tooling ownership; migration treats schema fields as data owned by benchmark readers. |
-| Sequenced Migration And Retirement | pass | Ordered slices name successor owners, replacement paths, retirement gates, and final residue scan. |
+| Sequenced Migration And Retirement | pass | Ordered slices name successor owners, replacement paths, retirement gates, and focused current-owner checks. |
 | Temporal Surface Closure | not applicable | Cleanup changes repository source-of-truth and tooling, not runtime callback/public-state publication ordering. |
 | All-Or-Nothing Failure Boundary | pass | Irreversible deletion happens only after replacement owners and checks pass; failure projection is a blocked cleanup slice with old artifacts still present. |
 | Outcome-Proof Fit | pass | Each claim maps to direct outcomes and proof surfaces in `Outcome-Proof Fit`. |
-| Verification | pass | Future proof uses docs checks, graph checks, guardrail runner, focused unit tests, benchmark tests, CI command checks, analyzer/DCM, and residue scans. |
+| Verification | pass | Future proof uses docs checks, graph checks, focused guardrail tests, focused unit tests, benchmark owner/schema tests, CI command checks, analyzer/DCM, and current-owner checks. |
 | Future pressure | pass | Future pressures include public API compatibility, benchmark history migration, graph status drift, and user no-clutter constraint. |
 
 ## Lock-Required Facts
 
-- Owner: current root `iwb_canvas_engine` package source-of-truth owners, not nested legacy package or rebuild roadmap artifacts.
+- Owner: current root `iwb_canvas_engine` package source-of-truth owners, not nested legacy package, donor/phase routes, or old completed roadmap artifacts.
 - Owning layer/module/document family: `docs/contracts/`, `docs/architecture/`, `docs/verification/`, `docs/_registry/public_api_v1.yaml`, `docs/_registry/benchmarks.yaml`, `tool/guardrails/`, `tool/architecture_graph/`, `tool/bench/`, tests, and `.github/workflows/`.
 - Seam: retire legacy package, donor registry, phase roadmap, selected-phase closure, and legacy-equivalence benchmark vocabulary; replace each with a current owner.
 - Dependency/import direction: active package code cannot import legacy or app adapters; public consumers import only `package:iwb_canvas_engine/iwb_canvas_engine.dart`; tooling may inspect current repo files but must not read deleted legacy paths.
 - State/data ownership: no runtime state changes; benchmark reference/history JSON remains benchmark-owned current committed data when machine-consumed.
 - Entry boundaries: future Change Contract source inputs, public API registry reader, architecture graph loader, docs generator/checker, guardrail runner, benchmark manifest/report/diff/manual-history readers, CI workflows.
-- Exit boundaries: generated docs/diagrams, guardrail violations, benchmark diff reports, CI command pass/fail, final residue scan.
+- Exit boundaries: generated docs/diagrams, guardrail violations, benchmark diff reports, CI command pass/fail, and focused owner checks.
 - File placement basis: current truth goes under existing current owner directories; historical migration artifacts are deleted rather than archived.
 - `.design/` and `.research/` placement basis: keep as current
   source-input/evidence layers for design, contract, and review workflows;
   they do not own runtime behavior, release gates, public API, guardrail policy,
   benchmark policy, or active navigation.
-- Execution order constraints: replacement owner and proof before deletion; graph status reconciliation before phase field deletion; benchmark schema reader/data migration before legacy vocabulary removal; final residue scan after deletion.
+- Execution order constraints: replacement owner and proof before deletion; graph status reconciliation before phase field deletion; benchmark schema reader/data migration before legacy vocabulary removal; focused owner checks after cleanup.
 - Rollback boundary: use normal file deletions in a commit only; do not rewrite,
   prune, filter, or otherwise remove historical commits or blobs from git.
 - `Temporal Surface Closure` invariant, synchronous callback surfaces, guard/boundary owner, public observation order, and expected rejection/no-mutation signal: not applicable to runtime behavior; tooling order is enforced by migration slices and CI gates.
-- `All-Or-Nothing Failure Boundary` irreversible point, fallible-before-irreversible work, later infallible/failure-contained/accepted work, failure projection, and proof surface: irreversible point is deleting legacy/phase/donor artifacts; fallible work is all replacement owner creation, schema migration, generated docs, graph/guardrail/benchmark/test updates; later work is residue scan and verification; failure projects as a blocked slice with old artifact retained.
+- `All-Or-Nothing Failure Boundary` irreversible point, fallible-before-irreversible work, later infallible/failure-contained/accepted work, failure projection, and proof surface: irreversible point is deleting legacy/phase/donor artifacts and old completed roadmap entries/contracts; fallible work is all replacement owner creation, schema migration, generated docs, graph/guardrail/benchmark/test updates; later work is focused owner checks and verification; failure projects as a blocked slice with old artifact retained.
 - Rejected alternatives: minimal and medium cleanup rejected because they keep active migration artifacts.
-- Verification strategy: executable checks first, docs/graph/guardrail/benchmark/schema tests, no-residue scans, and CI command checks.
+- Verification strategy: executable checks first, docs/graph/guardrail/benchmark/schema tests, focused owner checks, and CI command checks.
 
 ## Diagram Need Assessment
 
@@ -582,8 +586,8 @@ sequenceDiagram
   Contract->>Current: Move still-current invariants
   Current->>Checks: Add or rewrite proof
   Checks-->>Contract: Green replacement proof
-  Contract->>Old: Delete legacy/phase/donor artifacts
-  Contract->>Checks: Run residue and regression checks
+  Contract->>Old: Delete legacy/phase/donor artifacts and old completed plan entries
+  Contract->>Checks: Run focused owner and regression checks
   Checks-->>Contract: No old owner remains active
 ```
 
@@ -591,20 +595,21 @@ sequenceDiagram
 
 Future Change Contract must update these current owners:
 
-- `AGENTS.md`: remove architecture rebuild mode, active `PLAN.md` workflow, and
-  phase-specific architecture check commands; replace with current package and
-  no-phase verification instructions.
-- `docs/README.md` and `docs/architecture/README.md`: remove phase/donor/plan
+- `AGENTS.md`: remove architecture rebuild mode and phase-specific architecture
+  check commands; keep `PLAN.md`/`plan/` limited to current roadmap work.
+- `PLAN.md` and `plan/`: remove old completed entries/files that no longer own
+  current work; keep the current step contract surface.
+- `docs/README.md` and `docs/architecture/README.md`: remove phase/donor
   navigation and route users to current architecture, contracts, verification,
-  guardrails, benchmarks, release gates, diagrams, and generated current indexes.
-- `AGENTS.md` and `docs/README.md`: define the post-`PLAN.md` Change Contract
-  route as per-task work item/thread/PR context plus `.design/` and current
-  docs/registries as source inputs when needed; do not create a replacement
-  roadmap, contract index, or completed-contract archive.
-- `AGENTS.md`, docs checker expectations, and residue-scan policy: keep
-  `.design/` and `.research/` as current source-input/evidence layers while
-  rejecting them as active package behavior, release, benchmark, guardrail,
-  phase, donor, or roadmap owners.
+  guardrails, benchmarks, release gates, diagrams, generated current indexes, and
+  retained current planning workflow.
+- `AGENTS.md` and `docs/README.md`: define the current Change Contract route as
+  per-task work item/thread/PR context or retained current roadmap surface plus
+  `.design/` and current docs/registries as source inputs when needed; do not
+  create a completed-contract archive.
+- `AGENTS.md` and docs checker expectations: keep `.design/` and `.research/`
+  as current source-input/evidence layers while rejecting them as active package
+  behavior, release, benchmark, guardrail, phase, donor, or roadmap owners.
 - `docs/architecture/README.md`: remove
   `docs/architecture/04_decisions_and_differences.md` from the read path after
   the accepted-differences transfer lands.
@@ -634,8 +639,8 @@ Future Change Contract must update these current owners:
 Artifacts to delete only after replacement owners exist:
 
 - `legacy/iwb_canvas_engine/`
-- `PLAN.md`
-- `plan/`
+- old completed `PLAN.md` entries
+- old completed `plan/step_*.md` files
 - `docs/donors/`
 - `docs/implementation/`
 - `docs/verification/legacy_capability_inventory.md`
@@ -654,44 +659,43 @@ Future proof surfaces:
 - public API resolver guardrail proving current exports exclude retired names;
 - no-phase architecture graph checker tests for required nodes, required edges,
   forbidden edges, placeholders, sensitive throws, and unknown seams;
-- docs generator/checker tests rejecting phase/donor/plan routes after cleanup;
-- docs checker tests rejecting any replacement roadmap/contract archive route and
-  proving README routes future implementation planning to the per-task
-  Change Contract workflow;
+- docs generator/checker tests rejecting phase/donor routes after cleanup;
+- docs checker tests rejecting any completed-contract archive route and proving
+  README routes future implementation planning to the current Change Contract
+  workflow;
 - guardrail runner inventory/route tests for renamed current guardrails;
 - negative fixtures for retired public exports, boundary imports, committed
   handle order, and cache key ownership;
-- benchmark manifest/report/diff/manual-history/reference tests over migrated or
-  compatibility-read committed JSON;
+- benchmark manifest/report/diff/manual-history/reference tests over migrated
+  committed JSON and focused benchmark owner-dependency checks;
 - CI workflow structural tests or release readiness guardrail updates for
   no-phase graph commands;
-- final residue scan for `legacy/iwb_canvas_engine`, `docs/donors`,
-  `docs/implementation`, `PLAN.md`, `plan/`, `by_phase`, `donor_to_phase`,
-  `--phase P`, `P14` release commands, `equivalent_legacy`, `legacy_avg_us`, and
-  `bootstrap_legacy_equivalence`, with documented exceptions only for git history
-  or explicitly current symbol names such as `CanvasPointerLifecyclePhase`.
-  `.design/` and `.research/` are also documented residue-scan exceptions for
-  historical evidence/source-input text; they must not be active navigation,
-  tooling inputs, CI commands, guardrail policy, public API policy, benchmark
-  policy, or release gates unless explicitly cited as source inputs by a current
-  design/contract/review workflow.
+- focused current-owner checks proving active docs, release workflow commands,
+  guardrail policy, public API policy, benchmark policy, and release gates no
+  longer depend on deleted legacy/donor/implementation/phase artifacts or old
+  completed roadmap entries. `.design/` and `.research/` remain historical
+  evidence/source-input text; they must not be active navigation, tooling inputs,
+  CI commands, guardrail policy, public API policy, benchmark policy, or release
+  gates unless explicitly cited as source inputs by a current design/contract/
+  review workflow.
 
 ## Verification Strategy
 
 The Change Contract should verify every migration slice with focused tests before
-deletion and with full repository checks after deletion:
+deletion and with focused owner checks after cleanup:
 
 - docs-only edits: `dart run docs/tool/sync_generated_docs.dart --check` and
   `dart run docs/tool/check_docs.dart`;
 - architecture graph edits: no-phase `dart run tool/architecture_graph/check.dart`
   and `dart run tool/architecture_graph/generate_views.dart --check`;
 - guardrail/tool/test code edits: `dart analyze`, `dcm analyze .`, scoped
-  `dcm calculate-metrics`, focused tests, and `dart run tool/guardrails/run.dart`;
-- benchmark edits: benchmark manifest/diff/runner/manual-history/reference tests
-  plus docs projection checks;
+  `dcm calculate-metrics`, and focused tests;
+- benchmark edits: benchmark manifest/diff/manual-history/reference tests, focused
+  owner-dependency checks, plus docs projection checks;
 - CI/workflow edits: release readiness guardrail tests and workflow command
   structural assertions;
-- final cleanup: full residue scan and all relevant root checks.
+- final cleanup: focused current-owner checks and relevant docs/graph/analyzer/DCM
+  checks for changed owners.
 
 ## Change Contract Handoff
 
@@ -708,11 +712,11 @@ deletion and with full repository checks after deletion:
     fields;
   - public API allowed exports must not change unless a separate breaking-change
     decision is approved;
-  - benchmark committed history/reference data must be migrated or compatibility
-    read before old vocabulary is rejected;
-  - future Change Contracts are per-task execution artifacts in the
-    work item/thread/PR context; no in-repo roadmap, contract index, or completed
-    contract archive replaces `PLAN.md`/`plan/`;
+  - benchmark committed history/reference data must be migrated before old
+    vocabulary is rejected;
+  - future Change Contracts are per-task execution artifacts in the work item,
+    thread, PR context, or retained current roadmap surface; no completed
+    contract archive is introduced;
   - `docs/architecture/04_decisions_and_differences.md` is deleted after its
     current decisions move to named owners;
   - `.design/` and `.research/` remain as current source-input/evidence layers,
@@ -724,10 +728,11 @@ deletion and with full repository checks after deletion:
   - public API registry/retired-export tests and guardrail;
   - no-phase graph checker/generator tests;
   - docs generator/checker tests;
-  - guardrail runner and negative fixture tests;
-  - benchmark schema/history/reference tests;
+  - focused guardrail and negative fixture tests;
+  - benchmark schema/history/reference tests and benchmark owner-dependency
+    checks;
   - CI workflow/release readiness tests;
-  - final residue scan and root verification checks.
+  - focused current-owner checks and relevant changed-owner verification.
 
 ## Open Decisions
 

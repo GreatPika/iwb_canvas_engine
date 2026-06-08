@@ -33,7 +33,7 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 ## api.no_retired_public_exports
 
-- Sections: `section_03_package_layout`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.no_retired_public_load_routes
 
@@ -105,11 +105,11 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 ## core.no_retired_controller_shape_dependency
 
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## core.no_retired_node_patch_shape_dependency
 
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+- Sections: `section_00_status_and_scope`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## core.no_retired_package_imports
 
