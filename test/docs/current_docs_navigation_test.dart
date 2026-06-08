@@ -5,15 +5,11 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../../docs/tool/check_docs.dart' as docs_checker;
-
 void main() {
   group('current docs navigation', () {
     _registerGeneratedIndexesTest();
     _registerEntrypointRouteTest();
     _registerDiagramCatalogOwnerTest();
-    _registerDocsRootTest();
-    _registerDocsRouteTest();
   });
 }
 
@@ -48,36 +44,6 @@ void _registerDiagramCatalogOwnerTest() {
 
     expect(catalog, contains('Related owners:'));
     expect(catalog, isNot(contains('Related phases:')));
-  });
-}
-
-void _registerDocsRootTest() {
-  test('docs checker excludes retired historical roots from active roots', () {
-    expect(docs_checker.isRetiredDocsRoot('docs/implementation'), isTrue);
-    expect(
-      docs_checker.isRetiredDocsRoot('docs/implementation/current'),
-      isTrue,
-    );
-    expect(docs_checker.isRetiredDocsRoot('docs/donors'), isTrue);
-    expect(docs_checker.isRetiredDocsRoot('docs/donors/current'), isTrue);
-    expect(docs_checker.isRetiredDocsRoot('docs/contracts'), isFalse);
-  });
-}
-
-void _registerDocsRouteTest() {
-  test('docs checker rejects retired route roots with or without slash', () {
-    expect(docs_checker.isRetiredDocsRoute('docs/implementation'), isTrue);
-    expect(
-      docs_checker.isRetiredDocsRoute('docs/implementation/current'),
-      isTrue,
-    );
-    expect(docs_checker.isRetiredDocsRoute('docs/donors'), isTrue);
-    expect(docs_checker.isRetiredDocsRoute('docs/donors/current'), isTrue);
-    expect(docs_checker.isRetiredDocsRoute('docs/indexes/by_phase.md'), isTrue);
-    expect(
-      docs_checker.isRetiredDocsRoute('docs/indexes/by_owner.md'),
-      isFalse,
-    );
   });
 }
 

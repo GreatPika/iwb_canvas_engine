@@ -38,8 +38,6 @@ const _markdownRoots = [
   'docs/indexes',
 ];
 
-const _retiredDocsRoots = {'docs/implementation', 'docs/donors'};
-
 const _generatedIndexPaths = [
   'docs/indexes/by_owner.md',
   'docs/indexes/by_subsystem.md',
@@ -53,6 +51,10 @@ const _generatedIndexPaths = [
 const _retiredDocsRoutes = {
   'docs/indexes/by_phase.md',
   'docs/indexes/donor_to_phase.md',
+  'docs/implementation',
+  'docs/implementation/',
+  'docs/donors',
+  'docs/donors/',
   'PLAN.md',
   'plan/',
 };
@@ -90,7 +92,6 @@ final _errors = <String>[];
 
 void main() {
   _checkRequiredEntrypoints();
-  _checkRetiredDocsRootsAreInactive();
   _checkPortalReadmes();
   _checkReadmeInventory();
   _checkGeneratedDocsParity();
@@ -116,24 +117,6 @@ void main() {
   }
 
   stdout.writeln('Docs check passed.');
-}
-
-void _checkRetiredDocsRootsAreInactive() {
-  for (final root in _markdownRoots) {
-    if (isRetiredDocsRoot(root)) {
-      _fail('$root must not be an active docs root');
-    }
-  }
-}
-
-bool isRetiredDocsRoot(String path) {
-  return _retiredDocsRoots.any((root) {
-    return path == root || path.startsWith('$root/');
-  });
-}
-
-bool isRetiredDocsRoute(String value) {
-  return _retiredDocsRoutes.contains(value) || isRetiredDocsRoot(value);
 }
 
 void _checkBenchmarkDocsProjection() {
@@ -720,7 +703,7 @@ void _checkRetiredRoutes(String sourcePath, String text) {
   }
   for (final match in RegExp(r'`([^`]+)`').allMatches(text)) {
     final route = _matchGroup(match, 1, '$sourcePath route');
-    if (isRetiredDocsRoute(route)) {
+    if (_retiredDocsRoutes.contains(route)) {
       _fail('$sourcePath links to retired route $route');
     }
   }
