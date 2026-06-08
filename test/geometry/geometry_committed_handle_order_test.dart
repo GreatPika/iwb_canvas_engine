@@ -11,7 +11,7 @@ void main() {
 }
 
 void _testGeometryImportsCommittedFacts() {
-  test('geometry imports committed facts and not legacy scene owners', () {
+  test('geometry imports committed facts without retired scene owners', () {
     final units = _geometryUnits();
 
     expect(

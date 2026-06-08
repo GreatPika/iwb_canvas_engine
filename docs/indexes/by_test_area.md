@@ -187,7 +187,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_18_cache_policy`, `section_23_tests`
 
-## test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+## test.frame.cache_keys_use_current_revisions
 
 - Sections: `section_18_cache_policy`, `section_23_tests`
 
@@ -247,6 +247,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
+## test.geometry.committed_handle_order
+
+- Sections: `section_16_geometry_policy`, `section_23_tests`
+
 ## test.geometry.eraser_exact_budget_inputs
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
@@ -255,15 +259,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 
-## test.geometry.geometry_spatial_donor_mapping
-
-- Sections: `section_23_tests`
-
 ## test.geometry.hit_policy
-
-- Sections: `section_16_geometry_policy`, `section_23_tests`
-
-## test.geometry.no_legacy_scene_order
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
 
@@ -283,11 +279,11 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_03_package_layout`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_23_tests`, `section_27_final_release_gates`
 
-## test.guardrails.geometry_eraser_exact_budget_inputs
+## test.guardrails.geometry_committed_handle_order
 
 - Sections: `section_23_tests`
 
-## test.guardrails.geometry_no_legacy_scene_order
+## test.guardrails.geometry_eraser_exact_budget_inputs
 
 - Sections: `section_23_tests`
 

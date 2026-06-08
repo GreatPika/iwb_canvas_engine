@@ -31,7 +31,7 @@ void _registerStartupTests() {
 }
 
 void _registerDefaultDocumentTests() {
-  test('default document preserves the legacy startup canvas defaults', () {
+  test('default document preserves the current startup canvas defaults', () {
     final document = createCanvasExampleDocument();
 
     expect(document.layers, hasLength(2));

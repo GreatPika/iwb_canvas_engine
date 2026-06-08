@@ -296,7 +296,7 @@ preview value types needed to calculate `CanvasNoPreview` outcomes. It must not
 depend on concrete store internals, concrete selection internals, selected-move
 resolver callbacks, `EditKernel`, action dispatchers, context-action streams,
 frame engine, repaint buses, Flutter widgets/adapters, resource
-resolver/session APIs, public runtime-state publication, or legacy package
+resolver/session APIs, public runtime-state publication, or retired package
 paths.
 
 ### 14.3 Preview repaint target

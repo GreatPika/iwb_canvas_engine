@@ -482,9 +482,9 @@ const _runnerStructuralScanCases = [
     violationPath: 'lib/src/runtime/runtime_root.dart',
   ),
   _StructuralScanCase(
-    id: 'geometry.no_legacy_scene_order',
+    id: 'geometry.committed_handle_order',
     proofPaths: [
-      'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',
+      'test/guardrails/geometry_committed_handle_order_guardrail_test.dart',
     ],
     violationPath: 'lib/src/geometry/bad_runner_scene_order.dart',
   ),

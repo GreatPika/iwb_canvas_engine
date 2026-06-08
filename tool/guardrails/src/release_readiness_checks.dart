@@ -127,18 +127,19 @@ void _checkBenchmarkSources(
   Iterable<GuardrailSourceSnapshot> benchmarkSources,
   List<GuardrailViolation> violations,
 ) {
-  final legacyImport = RegExp(
+  final retiredPackageImport = RegExp(
     r'''^\s*(import|export)\s+['"][^'"]*legacy''',
     multiLine: true,
   );
   for (final source in benchmarkSources) {
-    if (legacyImport.hasMatch(source.content) ||
+    if (retiredPackageImport.hasMatch(source.content) ||
         source.content.contains('legacy/')) {
       violations.add(
         GuardrailViolation(
           guardrailId: releaseBenchmarkReadinessGuardrailId,
           path: source.path,
-          message: 'benchmark release proof must not invoke legacy paths',
+          message:
+              'benchmark release proof must not invoke retired package paths',
         ),
       );
     }
@@ -203,7 +204,7 @@ void _checkReleaseWorkflow(
     _runCommands(steps),
     violations,
   );
-  _checkNoLegacyWorkflowCommands(
+  _checkNoRetiredWorkflowCommands(
     releaseWorkflowPath,
     _runCommands(steps),
     violations,
@@ -263,7 +264,7 @@ void _checkRequiredReleaseCommands(
   }
 }
 
-void _checkNoLegacyWorkflowCommands(
+void _checkNoRetiredWorkflowCommands(
   String releaseWorkflowPath,
   Set<String> runCommands,
   List<GuardrailViolation> violations,
@@ -274,7 +275,8 @@ void _checkNoLegacyWorkflowCommands(
         GuardrailViolation(
           guardrailId: releaseBenchmarkReadinessGuardrailId,
           path: releaseWorkflowPath,
-          message: 'release benchmark workflow must not invoke legacy paths',
+          message:
+              'release benchmark workflow must not invoke retired package paths',
         ),
       );
     }

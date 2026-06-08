@@ -14,7 +14,7 @@ Benchmarks:
 Related diagrams:
 - `dfd_cache_invalidation`
 Required tests:
-- `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
+- `test.frame.cache_keys_use_current_revisions`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.paint_plan_excludes_preview_delta`
@@ -28,7 +28,7 @@ Guardrails:
 - `frame.paint_plan_excludes_selection_state`
 Do not assume:
 - no unbounded cache owner sprawl
-- no cache keys tied to legacy snapshots
+- no cache keys tied to non-owned snapshot facts
 <!-- CONTEXT:END -->
 
 ## 18. Cache policy ledger

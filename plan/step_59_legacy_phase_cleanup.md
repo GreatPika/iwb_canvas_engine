@@ -366,7 +366,7 @@ Depends On:
 
 Unit 1 and Unit 3.
 
-### [ ] Unit 5: Current-positive guardrail and test vocabulary
+### [x] Unit 5: Current-positive guardrail and test vocabulary
 
 Owner:
 

@@ -346,7 +346,7 @@ void _registerInlineTextEditContextProjectionTest() {
 
 void _registerInlineTextEditStructuralGuardTest() {
   test(
-    'example inline editing uses the public overlay without legacy hiding',
+    'example inline editing uses the public overlay without private hiding',
     () {
       final sourceRoot = _exampleSourceRoot();
       final exampleSources = Directory(sourceRoot)
@@ -445,7 +445,7 @@ void _registerJsonExportImportTest() {
 }
 
 void _registerJsonImportFailureTest() {
-  test('invalid and legacy-shaped JSON leave the document unchanged', () {
+  test('invalid and retired-shape JSON leave the document unchanged', () {
     final viewModel = CanvasExampleViewModel();
     addTearDown(viewModel.dispose);
     _addText(viewModel.runtime, 'json-failure-text');

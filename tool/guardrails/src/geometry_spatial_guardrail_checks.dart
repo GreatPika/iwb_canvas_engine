@@ -7,24 +7,25 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
-const geometryNoLegacySceneOrderGuardrailId = 'geometry.no_legacy_scene_order';
+const geometryCommittedHandleOrderGuardrailId =
+    'geometry.committed_handle_order';
 const geometryEraserExactBudgetGuardrailId =
     'geometry.eraser_exact_budget_no_partial';
 const spatialNoFullCloneGuardrailId = 'spatial.no_full_clone_ordinary_edit';
 const spatialStaleCandidateGuardrailId = 'spatial.stale_candidate_rejected';
 const spatialFallbackBudgetGuardrailId = 'spatial.fallback_budget_enforced';
 
-Future<List<GuardrailViolation>> checkNoLegacySceneOrder() async {
+Future<List<GuardrailViolation>> checkCommittedHandleOrder() async {
   return [
     for (final file in dartFilesUnder('lib/src/geometry'))
-      ...checkNoLegacySceneOrderSource(
+      ...checkCommittedHandleOrderSource(
         path: relativePath(file),
         content: file.readAsStringSync(),
       ),
   ];
 }
 
-List<GuardrailViolation> checkNoLegacySceneOrderSource({
+List<GuardrailViolation> checkCommittedHandleOrderSource({
   required String path,
   required String content,
 }) {
@@ -41,7 +42,7 @@ List<GuardrailViolation> checkNoLegacySceneOrderSource({
     for (final token in forbiddenTokens)
       if (content.contains(token))
         GuardrailViolation(
-          guardrailId: geometryNoLegacySceneOrderGuardrailId,
+          guardrailId: geometryCommittedHandleOrderGuardrailId,
           path: path,
           message:
               'geometry/spatial code must use committed handle order tokens. '

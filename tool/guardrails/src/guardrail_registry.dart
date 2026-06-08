@@ -118,18 +118,21 @@ const _blockingEntries = [
     suites: {'blocking', 'release'},
     requiresRunnerStructuralProof: true,
   ),
-  GuardrailEntry(id: 'core.no_legacy_imports', suites: {'blocking', 'core'}),
+  GuardrailEntry(
+    id: 'core.no_retired_package_imports',
+    suites: {'blocking', 'core'},
+  ),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
   GuardrailEntry(
     id: 'core.no_unapproved_part_files',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(
-    id: 'core.no_scene_controller_shape_dependency',
+    id: 'core.no_retired_controller_shape_dependency',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(
-    id: 'core.no_node_spec_patch_shape_dependency',
+    id: 'core.no_retired_node_patch_shape_dependency',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(id: 'core.single_runtime_root', suites: {'blocking', 'core'}),
@@ -334,7 +337,7 @@ const _blockingEntries = [
     suites: {'blocking', 'cache'},
   ),
   GuardrailEntry(
-    id: 'geometry.no_legacy_scene_order',
+    id: 'geometry.committed_handle_order',
     suites: {'blocking', 'geometry'},
     requiresRunnerStructuralProof: true,
   ),

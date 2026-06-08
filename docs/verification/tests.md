@@ -95,9 +95,8 @@ Required tests:
 - `test.edit.typed_effects_no_frame_dependency`
 - `test.edit.staged_document_load_success_failure`
 - `test.spatial.committed_spatial_read_boundary`
-- `test.geometry.geometry_spatial_donor_mapping`
 - `test.geometry.hit_policy`
-- `test.geometry.no_legacy_scene_order`
+- `test.geometry.committed_handle_order`
 - `test.geometry.eraser_exact_budget_inputs`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.spatial.tile_outlier_membership`
@@ -122,14 +121,14 @@ Required tests:
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.measured_text_layout`
 - `test.guardrails.text_surface_guardrail_checks`
-- `test.guardrails.geometry_no_legacy_scene_order`
+- `test.guardrails.geometry_committed_handle_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
 - `test.guardrails.spatial_no_full_clone_ordinary_edit`
 - `test.guardrails.spatial_stale_candidate_rejected`
 - `test.guardrails.spatial_fallback_budget_enforced`
 - `test.frame.paint_plan_excludes_preview_delta`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
-- `test.frame.cache_keys_do_not_use_legacy_snapshot_shape`
+- `test.frame.cache_keys_use_current_revisions`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.interaction.preview_public_state`
@@ -155,7 +154,7 @@ Required tests:
 Guardrails:
 - `none`
 Do not assume:
-- no donor reuse without ported or equivalent tests
+- copied or adapted behavior needs current owner tests
 <!-- CONTEXT:END -->
 
 ## 23. Tests
@@ -269,9 +268,8 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
 - `test/edit/staged_document_load_success_failure_test.dart`
 - `test/spatial/committed_spatial_read_boundary_test.dart`
-- `test/geometry/geometry_spatial_donor_mapping_test.dart`
 - `test/geometry/hit_policy_test.dart`
-- `test/geometry/no_legacy_scene_order_test.dart`
+- `test/geometry/geometry_committed_handle_order_test.dart`
 - `test/geometry/eraser_exact_budget_inputs_test.dart`
 - `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
 - `test/spatial/tile_outlier_membership_test.dart`
@@ -283,7 +281,6 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/spatial/runtime_delivery_order_test.dart`
 - `test/api/canvas_runtime_preview_test.dart`
 - `test/frame/main_overlay_capture_test.dart`
-- `test/frame/frame_donor_mapping_test.dart`
 - `test/frame/frame_record_painter_boundary_test.dart`
 - `test/frame/frame_spatial_paint_admission_test.dart`
 - `test/frame/frame_drawable_policy_test.dart`
@@ -298,7 +295,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/repaint_bus_output_test.dart`
 - `test/frame/static_background_plan_test.dart`
 - `test/frame/measured_text_layout_test.dart`
-- `test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart`
+- `test/frame/cache_keys_use_current_revisions_test.dart`
 - `test/frame/cache_capacity_eviction_policy_test.dart`
 - `test/frame/paint_plan_excludes_preview_delta_test.dart`
 - `test/frame/paint_plan_excludes_selection_state_test.dart`
@@ -319,7 +316,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/guardrails/action_after_state_guardrail_test.dart`
 - `test/guardrails/interaction_guardrail_enforcement_test.dart`
 - `test/guardrails/selection_boundary_imports_test.dart`
-- `test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart`
+- `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`
 - `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`
 - `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`
 - `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`
@@ -439,7 +436,7 @@ behavioral tests, and the required guardrail list remains owned by
 - compiles test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart;
 - proves external application adapter code can use the public integration
   surface through package:iwb_canvas_engine/iwb_canvas_engine.dart only;
-- rejects fixture imports of src/\*\*, legacy package symbols, or internal
+- rejects fixture imports of src/\*\*, retired package symbols, or internal
   runtime classes;
 - covers runtime lifecycle, state/document observation, edit/load,
   selection/camera/tools, high-level commands, actions/context-action
@@ -451,7 +448,7 @@ behavioral tests, and the required guardrail list remains owned by
   generated `.dart_tool` and build output;
 - proves example engine imports use only
   `package:iwb_canvas_engine/iwb_canvas_engine.dart`;
-- rejects example imports of engine internals, legacy paths, retired legacy
+- rejects example imports of engine internals, retired package paths, retired legacy
   scene/controller/spec/patch/codec symbols, and app-adapter responsibility
   names;
 - when the current unstaged, staged, or untracked diff includes non-generated
@@ -541,7 +538,7 @@ behavioral tests, and the required guardrail list remains owned by
 - proves `release.benchmark_readiness` is runner-backed in the blocking and
   release suites without running the full benchmark matrix;
 - rejects missing release diff routing, public benchmark exports, app adapter
-  names in production source, legacy benchmark proof imports, and approved
+  names in production source, retired benchmark route imports, and approved
   baseline writes outside the manual update workflow.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
@@ -600,12 +597,6 @@ behavioral tests, and the required guardrail list remains owned by
   validation by supplying stale handles, and geometry/spatial code does not
   read concrete store tables.
 
-#### `test/geometry/geometry_spatial_donor_mapping_test.dart`
-- proves every required P8 geometry/spatial donor is mapped to copied,
-  adapted, rejected, or deferred ownership evidence;
-- proves forbidden legacy scene/controller/codec/cache-shell structures remain
-  excluded from the P8 implementation.
-
 #### `test/geometry/eraser_exact_budget_inputs_test.dart`
 - proves P8 eraser corridor, exact-hit input limits, and preview/terminal
   candidate and exact-check budget input shapes;
@@ -624,7 +615,7 @@ behavioral tests, and the required guardrail list remains owned by
   runtime state publication and before observer callbacks can run.
 
 #### P8 guardrail proof tests
-- `test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart`,
+- `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`,
   `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`,
   `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`,
   `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`, and

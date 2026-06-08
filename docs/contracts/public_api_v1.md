@@ -128,7 +128,7 @@ from an external package by importing only
 package:iwb_canvas_engine/iwb_canvas_engine.dart.
 ```
 
-That fixture must compile without `src/**`, legacy package symbols, or internal
+That fixture must compile without `src/**`, retired package symbols, or internal
 runtime classes. It is compile-time coverage for the external operation
 families an app-level adapter needs: runtime lifecycle, state/document
 observation, edit/load, selection/camera/tools, high-level commands,

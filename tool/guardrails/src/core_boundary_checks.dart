@@ -366,7 +366,7 @@ List<GuardrailViolation> _checkDirectives(String path, CompilationUnit unit) {
 
 List<GuardrailViolation> _checkImport(String path, String uri) {
   final violations = [
-    ..._checkLegacyImport(path, uri),
+    ..._checkRetiredPackageImport(path, uri),
     ..._checkExternalPrivateImport(path, uri),
     ..._checkCodecFlutterImport(path, uri),
     ..._checkResourceFlutterImport(path, uri),
@@ -382,16 +382,16 @@ List<GuardrailViolation> _checkImport(String path, String uri) {
   return violations;
 }
 
-List<GuardrailViolation> _checkLegacyImport(String path, String uri) {
-  if (!_isLegacyUri(uri)) {
+List<GuardrailViolation> _checkRetiredPackageImport(String path, String uri) {
+  if (!_isRetiredPackageUri(uri)) {
     return const [];
   }
 
   return [
     GuardrailViolation(
-      guardrailId: 'core.no_legacy_imports',
+      guardrailId: 'core.no_retired_package_imports',
       path: path,
-      message: 'imports legacy code through $uri',
+      message: 'imports retired package code through $uri',
     ),
   ];
 }
@@ -617,7 +617,7 @@ Iterable<String> _topLevelDeclarationNames(CompilationUnit unit) sync* {
   }
 }
 
-bool _isLegacyUri(String uri) {
+bool _isRetiredPackageUri(String uri) {
   return uri.startsWith('../legacy/') ||
       uri.startsWith('../../legacy/') ||
       uri.startsWith('package:legacy/') ||
@@ -764,14 +764,14 @@ List<GuardrailViolation> _resolverBoundaryViolation(String path) {
 GuardrailViolation _retiredShapeViolation(String path, String name) {
   if (_sceneControllerShapeNames.contains(name)) {
     return GuardrailViolation(
-      guardrailId: 'core.no_scene_controller_shape_dependency',
+      guardrailId: 'core.no_retired_controller_shape_dependency',
       path: path,
       message: 'references retired SceneController shape $name',
     );
   }
 
   return GuardrailViolation(
-    guardrailId: 'core.no_node_spec_patch_shape_dependency',
+    guardrailId: 'core.no_retired_node_patch_shape_dependency',
     path: path,
     message: 'references retired node patch shape $name',
   );
@@ -785,7 +785,7 @@ bool _isRetiredShapeDependency(String name, Element? element) {
   }
 
   return element == null ||
-      _isLegacyElement(element) ||
+      _isRetiredPackageElement(element) ||
       _isProductionElement(element);
 }
 
@@ -794,7 +794,7 @@ bool _isRetiredShapeName(String name) {
       _nodeSpecPatchShapeNames.contains(name);
 }
 
-bool _isLegacyElement(Element element) {
+bool _isRetiredPackageElement(Element element) {
   final uri = element.library?.uri.toString();
 
   return uri != null && uri.contains('legacy/iwb_canvas_engine');

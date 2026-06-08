@@ -394,7 +394,7 @@ const _testProofPaths = {
     'test/guardrails/text_surface_guardrail_checks_test.dart',
   ],
   'cache.keys_use_next_revisions_only': [
-    'test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart',
+    'test/frame/cache_keys_use_current_revisions_test.dart',
   ],
   'cache.background_grid_not_element_visual': [
     'test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart',
@@ -403,8 +403,8 @@ const _testProofPaths = {
   'cache.hot_caches_have_capacity_eviction': [
     'test/frame/cache_capacity_eviction_policy_test.dart',
   ],
-  geometryNoLegacySceneOrderGuardrailId: [
-    'test/guardrails/geometry_no_legacy_scene_order_guardrail_test.dart',
+  geometryCommittedHandleOrderGuardrailId: [
+    'test/guardrails/geometry_committed_handle_order_guardrail_test.dart',
   ],
   geometryEraserExactBudgetGuardrailId: [
     'test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart',
@@ -484,7 +484,7 @@ final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
   cacheKeysUseNextRevisionsGuardrailId: checkCacheKeysUseNextRevisionsOnly,
   cacheBackgroundGridGuardrailId: checkCacheBackgroundGridNotElementVisual,
   cacheHotCachesCapacityGuardrailId: checkCacheHotCachesHaveCapacityEviction,
-  geometryNoLegacySceneOrderGuardrailId: checkNoLegacySceneOrder,
+  geometryCommittedHandleOrderGuardrailId: checkCommittedHandleOrder,
   geometryEraserExactBudgetGuardrailId: checkGeometryEraserExactBudgetInputs,
   spatialNoFullCloneGuardrailId: checkSpatialNoFullCloneOrdinaryEdit,
   spatialStaleCandidateGuardrailId: checkSpatialStaleCandidateRejected,
@@ -551,12 +551,12 @@ const _structuralDescriptions = {
   surfaceEditableTextSurfaceOnlyGuardrailId:
       'EditableText production owner boundary check',
   cacheKeysUseNextRevisionsGuardrailId:
-      'frame cache key legacy snapshot-shape check',
+      'frame cache key owned-revision structural check',
   cacheBackgroundGridGuardrailId:
       'ordinary paint-plan background/grid/camera exclusion check',
   cacheHotCachesCapacityGuardrailId:
       'hot frame cache capacity and eviction probe check',
-  geometryNoLegacySceneOrderGuardrailId:
+  geometryCommittedHandleOrderGuardrailId:
       'geometry/spatial committed order-token structural check',
   geometryEraserExactBudgetGuardrailId:
       'P8 eraser primitive and exact-check budget-input check',
@@ -571,9 +571,9 @@ const _structuralDescriptions = {
 };
 
 const _coreBoundaryIds = {
-  'core.no_legacy_imports',
+  'core.no_retired_package_imports',
   'core.import_boundaries',
   'core.no_unapproved_part_files',
-  'core.no_scene_controller_shape_dependency',
-  'core.no_node_spec_patch_shape_dependency',
+  'core.no_retired_controller_shape_dependency',
+  'core.no_retired_node_patch_shape_dependency',
 };

@@ -64,19 +64,16 @@ void _registerEngineImportBoundaryTest() {
 }
 
 void _registerRetiredSeamBoundaryTest() {
-  test(
-    'example sources do not reference internal, legacy, or retired seams',
-    () {
-      final violations = <String>[];
-      for (final file in _exampleDartFiles()) {
-        final source = File(file.absolutePath).readAsStringSync();
-        _recordForbiddenPathMentions(file.path, source, violations);
-        _recordRetiredSymbolMentions(file.path, source, violations);
-      }
+  test('example sources do not reference private or retired seams', () {
+    final violations = <String>[];
+    for (final file in _exampleDartFiles()) {
+      final source = File(file.absolutePath).readAsStringSync();
+      _recordForbiddenPathMentions(file.path, source, violations);
+      _recordRetiredSymbolMentions(file.path, source, violations);
+    }
 
-      expect(violations, isEmpty);
-    },
-  );
+    expect(violations, isEmpty);
+  });
 }
 
 void _registerProductionAdapterBoundaryTest() {

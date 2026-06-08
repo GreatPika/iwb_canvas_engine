@@ -14,17 +14,17 @@
   - c4_context
   - c4_container
   guardrails:
-  - core.no_legacy_imports
-  - core.no_scene_controller_shape_dependency
-  - core.no_node_spec_patch_shape_dependency
+  - core.no_retired_package_imports
+  - core.no_retired_controller_shape_dependency
+  - core.no_retired_node_patch_shape_dependency
   tests:
   - test.api_contract.no_retired_public_exports
   - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
-  - no legacy facade
+  - no retired facade
   - no SceneController
-  - no legacy public API shape
-  - no legacy runtime fallback
+  - no retired public API shape
+  - no retired runtime fallback
 - id: section_02_architecture_model
   source: docs/_registry/sections.yaml / section 2
   file: docs/architecture/01_runtime_ownership.md
@@ -69,7 +69,7 @@
   diagrams:
   - c4_container
   guardrails:
-  - core.no_legacy_imports
+  - core.no_retired_package_imports
   - api.no_retired_public_exports
   - core.import_boundaries
   - core.no_unapproved_part_files
@@ -83,7 +83,7 @@
   - test.guardrails.selection_boundary_imports
   - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-  - no legacy package import
+  - no retired package import
   - no app adapters in package
 - id: section_04_public_api_v1
   source: docs/_registry/sections.yaml / section 4
@@ -290,8 +290,8 @@
   - none
   guardrails:
   - api.no_retired_public_exports
-  - core.no_scene_controller_shape_dependency
-  - core.no_node_spec_patch_shape_dependency
+  - core.no_retired_controller_shape_dependency
+  - core.no_retired_node_patch_shape_dependency
   tests:
   - test.api_contract.no_retired_public_exports
   - test.api_contract.app_next_engine_adapter_compile_fixture
@@ -599,20 +599,20 @@
   - seq_hit_test_candidate_resolution
   - seq_eraser_exact_budget
   guardrails:
-  - geometry.no_legacy_scene_order
+  - geometry.committed_handle_order
   - geometry.eraser_exact_budget_no_partial
   - text.single_measured_layout_source
   tests:
   - test.geometry.hit_policy
   - test.interaction.context_action_request
-  - test.geometry.no_legacy_scene_order
+  - test.geometry.committed_handle_order
   - test.geometry.eraser_exact_budget_inputs
   - test.geometry.eraser_exact_budget_no_partial_commit
   - test.frame.measured_text_layout
   - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-  - do not port legacy SceneNode traversal
-  - do not copy legacy scene order logic
+  - geometry reads committed frame facts, not runtime scene owners
+  - hit ordering is owned by committed handle order tokens
 - id: section_17_spatial_kernel
   source: docs/_registry/sections.yaml / section 17
   file: docs/contracts/spatial_kernel.md
@@ -670,7 +670,7 @@
   - frame.paint_plan_excludes_preview_delta
   - frame.paint_plan_excludes_selection_state
   tests:
-  - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+  - test.frame.cache_keys_use_current_revisions
   - test.frame.cache_capacity_eviction_policy
   - test.frame.paint_plan_write_all_or_nothing
   - test.frame.paint_plan_excludes_preview_delta
@@ -678,7 +678,7 @@
   - test.frame.camera_pan_preserves_ordinary_paint_plan
   do_not_assume:
   - no unbounded cache owner sprawl
-  - no cache keys tied to legacy snapshots
+  - no cache keys tied to non-owned snapshot facts
 - id: section_19_codec_boundary
   source: docs/_registry/sections.yaml / section 19
   file: docs/contracts/codec_boundary.md
@@ -765,11 +765,11 @@
   - api.dto_immutability
   - api.equality_policy_explicit
   - api.id_validation_no_extension_type_escape
-  - core.no_legacy_imports
+  - core.no_retired_package_imports
   - core.import_boundaries
   - core.no_unapproved_part_files
-  - core.no_scene_controller_shape_dependency
-  - core.no_node_spec_patch_shape_dependency
+  - core.no_retired_controller_shape_dependency
+  - core.no_retired_node_patch_shape_dependency
   - core.single_runtime_root
   - store.no_public_document_live_state
   - selection.owner_separate_from_document
@@ -798,7 +798,7 @@
   - interaction.no_stale_terminal_commit
   - interaction.pointer_cleanup_coordinator_only
   - interaction.text_edit_stale_commit_guard
-  - geometry.no_legacy_scene_order
+  - geometry.committed_handle_order
   - geometry.eraser_exact_budget_no_partial
   - spatial.no_full_clone_ordinary_edit
   - spatial.stale_candidate_rejected
@@ -936,9 +936,8 @@
   - test.edit.typed_effects_no_frame_dependency
   - test.edit.staged_document_load_success_failure
   - test.spatial.committed_spatial_read_boundary
-  - test.geometry.geometry_spatial_donor_mapping
   - test.geometry.hit_policy
-  - test.geometry.no_legacy_scene_order
+  - test.geometry.committed_handle_order
   - test.geometry.eraser_exact_budget_inputs
   - test.geometry.eraser_exact_budget_no_partial_commit
   - test.spatial.tile_outlier_membership
@@ -963,14 +962,14 @@
   - test.frame.paint_plan_write_all_or_nothing
   - test.frame.measured_text_layout
   - test.guardrails.text_surface_guardrail_checks
-  - test.guardrails.geometry_no_legacy_scene_order
+  - test.guardrails.geometry_committed_handle_order
   - test.guardrails.geometry_eraser_exact_budget_inputs
   - test.guardrails.spatial_no_full_clone_ordinary_edit
   - test.guardrails.spatial_stale_candidate_rejected
   - test.guardrails.spatial_fallback_budget_enforced
   - test.frame.paint_plan_excludes_preview_delta
   - test.frame.camera_pan_preserves_ordinary_paint_plan
-  - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+  - test.frame.cache_keys_use_current_revisions
   - test.frame.cache_capacity_eviction_policy
   - test.frame.selected_supplement_staging_no_global_sort
   - test.interaction.preview_public_state
@@ -994,7 +993,7 @@
   - test.benchmarks.required_cases
   - test.guardrails.blocking_suite
   do_not_assume:
-  - no donor reuse without ported or equivalent tests
+  - copied or adapted behavior needs current owner tests
 - id: section_24_benchmarks
   source: docs/_registry/sections.yaml / section 24
   file: docs/verification/benchmarks.md
@@ -1085,11 +1084,11 @@
   - api.dto_immutability
   - api.equality_policy_explicit
   - api.id_validation_no_extension_type_escape
-  - core.no_legacy_imports
+  - core.no_retired_package_imports
   - core.import_boundaries
   - core.no_unapproved_part_files
-  - core.no_scene_controller_shape_dependency
-  - core.no_node_spec_patch_shape_dependency
+  - core.no_retired_controller_shape_dependency
+  - core.no_retired_node_patch_shape_dependency
   - core.single_runtime_root
   - store.no_public_document_live_state
   - selection.owner_separate_from_document
@@ -1118,7 +1117,7 @@
   - interaction.no_stale_terminal_commit
   - interaction.pointer_cleanup_coordinator_only
   - interaction.text_edit_stale_commit_guard
-  - geometry.no_legacy_scene_order
+  - geometry.committed_handle_order
   - geometry.eraser_exact_budget_no_partial
   - spatial.no_full_clone_ordinary_edit
   - spatial.stale_candidate_rejected
@@ -1152,4 +1151,4 @@
   - test.guardrails.release_readiness
   - test.guardrails.blocking_suite
   do_not_assume:
-  - no release with legacy imports, legacy facade, or unlinked donor reuse
+  - no release with retired imports, private facades, or unproved copied behavior

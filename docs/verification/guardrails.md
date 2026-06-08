@@ -38,11 +38,11 @@ Guardrails:
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
-- `core.no_legacy_imports`
+- `core.no_retired_package_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
-- `core.no_scene_controller_shape_dependency`
-- `core.no_node_spec_patch_shape_dependency`
+- `core.no_retired_controller_shape_dependency`
+- `core.no_retired_node_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
 - `selection.owner_separate_from_document`
@@ -71,7 +71,7 @@ Guardrails:
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
-- `geometry.no_legacy_scene_order`
+- `geometry.committed_handle_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
@@ -191,12 +191,12 @@ Mandatory guardrails:
 | `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; public constructors with caller-provided validated or sanitized values are non-const factories while marker/empty/default/private storage forms keep only approved const forms |
 | `api.equality_policy_explicit` | public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
-| `core.no_legacy_imports` | no import of legacy package/runtime |
+| `core.no_retired_package_imports` | no import of retired package routes |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
 | `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/store/frame/surface`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
 | `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
-| `core.no_scene_controller_shape_dependency` | no `SceneController` concept in core |
-| `core.no_node_spec_patch_shape_dependency` | no legacy NodeSpec/NodePatch/PatchField in core |
+| `core.no_retired_controller_shape_dependency` | no `SceneController` concept in core |
+| `core.no_retired_node_patch_shape_dependency` | no retired NodeSpec/NodePatch/PatchField in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
 | `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |
@@ -225,7 +225,7 @@ Mandatory guardrails:
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create selected-move, draw, line, or eraser commit intents |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
 | `interaction.text_edit_stale_commit_guard` | request-originated text commits accept only current text content-target context requests, treat unknown/already-consumed ids as no-ops, consume known live rejected epoch-stale, generation-stale, revision-stale, missing, empty-canvas, non-text, or family-mismatched targets without public effects, consume same-text accepted requests without document/action effects, and consume changed-text accepted requests only after successful prepare and before public delivery while allowing unrelated documentRevision changes |
-| `geometry.no_legacy_scene_order` | geometry and hit-test policy does not reuse legacy SceneNode traversal or legacy scene order logic |
+| `geometry.committed_handle_order` | geometry and hit-test policy use committed handle order tokens without retired scene-owner traversal |
 | `geometry.eraser_exact_budget_no_partial` | eraser primitive and exact-check budget inputs cannot produce partial-erasure paths, and P12 terminal overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
@@ -237,7 +237,7 @@ Mandatory guardrails:
 | `text.single_measured_layout_source` | `FrameTextLayoutMeasurer` remains the single TextPainter-backed text layout source, while geometry consumes measured text layout facts instead of formula bounds based on text length, font size, maxWidth, or lineHeight |
 | `text.no_overlay_textpainter_measurement` | surface and example text editing overlays must not construct a duplicate TextPainter measurement path; editor size and placement come from session geometry |
 | `surface.editable_text_surface_only` | production `EditableText` use is confined to surface-owned widgets, with example code allowed as an application consumer and tests allowed as proof code |
-| `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not legacy snapshot shapes |
+| `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not non-owned snapshot facts |
 | `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
@@ -252,7 +252,7 @@ Mandatory guardrails:
 | `codec.no_runtime_side_effects` | schema v1 import/encode validates codec-owned input without mutating runtime or store state; runtime load import emits dependency-neutral events instead of materializing public DTOs |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
-| `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, read-only diff, P14 graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, app adapter names, legacy benchmark proof, benchmark-only production hooks, or non-manual approved-baseline writes |
+| `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, read-only diff, P14 graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, app adapter names, retired benchmark route, benchmark-only production hooks, or non-manual approved-baseline writes |
 | `tools.p10_compatibility` | public tool and command ports continue to expose P10 interaction payload families without source-level internal imports |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |

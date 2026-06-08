@@ -20,7 +20,7 @@ Required tests:
 - `test.guardrails.selection_boundary_imports`
 - `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
-- `core.no_legacy_imports`
+- `core.no_retired_package_imports`
 - `api.no_retired_public_exports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
@@ -28,7 +28,7 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `surface.editable_text_surface_only`
 Do not assume:
-- no legacy package import
+- no retired package import
 - no app adapters in package
 <!-- CONTEXT:END -->
 
@@ -298,11 +298,11 @@ lib/src/resources/**         -> may not import runtime, store, frame, surface, i
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/tools/**             -> may not import runtime, frame, or surface internals
-lib/src/surface/**           -> may not import legacy iwb_canvas_engine package
+lib/src/surface/**           -> may not import retired iwb_canvas_engine package
 lib/src/surface/**           -> may use CanvasRuntime public facade type for public widget constructor signatures, but runtime internals still go through named surface bridges
 lib/src/surface/**           -> may use EditableText only for public surface widgets; non-surface production owners must not import or construct EditableText
 example/lib/**               -> may consume the public package barrel and example-local files only; inline text editing must use CanvasTextEditingOverlay or CanvasTextEditingPort without src/** imports, visibility hiding, or duplicate TextPainter measurement
-all lib/**                   -> may not import legacy package or legacy runtime paths
+all lib/**                   -> may not import retired package or retired runtime paths
 ```
 
 Committed document facts and runtime selection facts used by interaction are

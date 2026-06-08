@@ -47,9 +47,9 @@ const _fixtures = [
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
-    path: 'lib/src/runtime/bad_legacy_import.dart',
+    path: 'lib/src/runtime/bad_retired_package_import.dart',
     content: "import '../../legacy/iwb_canvas_engine.dart';",
-    guardrailIds: ['core.no_legacy_imports'],
+    guardrailIds: ['core.no_retired_package_imports'],
   ),
   _Fixture(
     path: 'lib/src/runtime/bad_package_src_import.dart',
@@ -137,7 +137,7 @@ const _fixtures = [
   _Fixture(
     path: 'lib/src/runtime/bad_scene_controller.dart',
     content: 'final SceneController? controller = null;',
-    guardrailIds: ['core.no_scene_controller_shape_dependency'],
+    guardrailIds: ['core.no_retired_controller_shape_dependency'],
   ),
   _Fixture(
     path: 'lib/src/runtime/bad_node_patch.dart',
@@ -145,19 +145,19 @@ const _fixtures = [
         'final NodeSpec? spec = null; final NodePatch? patch = null; '
         'final PatchField? field = null;',
     guardrailIds: [
-      'core.no_node_spec_patch_shape_dependency',
-      'core.no_node_spec_patch_shape_dependency',
-      'core.no_node_spec_patch_shape_dependency',
+      'core.no_retired_node_patch_shape_dependency',
+      'core.no_retired_node_patch_shape_dependency',
+      'core.no_retired_node_patch_shape_dependency',
     ],
   ),
   _Fixture(
     path: 'lib/src/runtime/bad_node_spec_declaration.dart',
     content: 'class NodeSpec {}',
-    guardrailIds: ['core.no_node_spec_patch_shape_dependency'],
+    guardrailIds: ['core.no_retired_node_patch_shape_dependency'],
   ),
   _Fixture(
     path: 'lib/src/runtime/bad_patch_field_typedef.dart',
     content: 'typedef PatchField = Object;',
-    guardrailIds: ['core.no_node_spec_patch_shape_dependency'],
+    guardrailIds: ['core.no_retired_node_patch_shape_dependency'],
   ),
 ];

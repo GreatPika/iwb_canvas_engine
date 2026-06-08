@@ -103,17 +103,17 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## core.no_legacy_imports
+## core.no_retired_controller_shape_dependency
+
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## core.no_retired_node_patch_shape_dependency
+
+- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## core.no_retired_package_imports
 
 - Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
-## core.no_node_spec_patch_shape_dependency
-
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
-## core.no_scene_controller_shape_dependency
-
-- Sections: `section_00_status_and_scope`, `section_09_accepted_differences`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## core.no_unapproved_part_files
 
@@ -187,11 +187,11 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## geometry.eraser_exact_budget_no_partial
+## geometry.committed_handle_order
 
 - Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## geometry.no_legacy_scene_order
+## geometry.eraser_exact_budget_no_partial
 
 - Sections: `section_16_geometry_policy`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 

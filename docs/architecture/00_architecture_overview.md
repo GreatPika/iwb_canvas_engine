@@ -17,14 +17,14 @@ Required tests:
 - `test.api_contract.no_retired_public_exports`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 Guardrails:
-- `core.no_legacy_imports`
-- `core.no_scene_controller_shape_dependency`
-- `core.no_node_spec_patch_shape_dependency`
+- `core.no_retired_package_imports`
+- `core.no_retired_controller_shape_dependency`
+- `core.no_retired_node_patch_shape_dependency`
 Do not assume:
-- no legacy facade
+- no retired facade
 - no SceneController
-- no legacy public API shape
-- no legacy runtime fallback
+- no retired public API shape
+- no retired runtime fallback
 <!-- CONTEXT:END -->
 
 # `iwb_canvas_engine`: scope and architecture decision

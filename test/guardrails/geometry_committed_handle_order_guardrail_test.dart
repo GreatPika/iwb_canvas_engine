@@ -6,26 +6,26 @@ import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
   test(
-    'geometry legacy scene order guardrail is registered and enforced',
+    'geometry committed handle order guardrail is registered and enforced',
     () async {
       expect(
         guardrailInventory(),
-        contains(geometryNoLegacySceneOrderGuardrailId),
+        contains(geometryCommittedHandleOrderGuardrailId),
       );
       expect(
-        guardrailRouteFor(geometryNoLegacySceneOrderGuardrailId),
+        guardrailRouteFor(geometryCommittedHandleOrderGuardrailId),
         isNotNull,
       );
-      expect(await checkNoLegacySceneOrder(), isEmpty);
+      expect(await checkCommittedHandleOrder(), isEmpty);
 
-      final violations = checkNoLegacySceneOrderSource(
+      final violations = checkCommittedHandleOrderSource(
         path: 'lib/src/geometry/bad.dart',
         content: 'final order = SceneNode().sceneOrder;',
       );
       expect(violations, hasLength(2));
       expect(
         violations.map((violation) => violation.guardrailId),
-        everyElement(geometryNoLegacySceneOrderGuardrailId),
+        everyElement(geometryCommittedHandleOrderGuardrailId),
       );
     },
   );

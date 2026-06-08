@@ -16,9 +16,7 @@ void _registerRunnerProof() {
       await guardrailIsRunnerBacked(
         id: 'cache.keys_use_next_revisions_only',
         suites: {'blocking', 'cache'},
-        proofPaths: [
-          'test/frame/cache_keys_do_not_use_legacy_snapshot_shape_test.dart',
-        ],
+        proofPaths: ['test/frame/cache_keys_use_current_revisions_test.dart'],
       ),
       isTrue,
     );

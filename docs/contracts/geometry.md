@@ -18,18 +18,18 @@ Related diagrams:
 Required tests:
 - `test.geometry.hit_policy`
 - `test.interaction.context_action_request`
-- `test.geometry.no_legacy_scene_order`
+- `test.geometry.committed_handle_order`
 - `test.geometry.eraser_exact_budget_inputs`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.frame.measured_text_layout`
 - `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
-- `geometry.no_legacy_scene_order`
+- `geometry.committed_handle_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `text.single_measured_layout_source`
 Do not assume:
-- do not port legacy SceneNode traversal
-- do not copy legacy scene order logic
+- geometry reads committed frame facts, not runtime scene owners
+- hit ordering is owned by committed handle order tokens
 <!-- CONTEXT:END -->
 
 ## 16. Geometry policy v1

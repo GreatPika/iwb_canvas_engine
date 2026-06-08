@@ -38,11 +38,11 @@ Guardrails:
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
-- `core.no_legacy_imports`
+- `core.no_retired_package_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
-- `core.no_scene_controller_shape_dependency`
-- `core.no_node_spec_patch_shape_dependency`
+- `core.no_retired_controller_shape_dependency`
+- `core.no_retired_node_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
 - `selection.owner_separate_from_document`
@@ -71,7 +71,7 @@ Guardrails:
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
-- `geometry.no_legacy_scene_order`
+- `geometry.committed_handle_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
 - `spatial.stale_candidate_rejected`
@@ -100,7 +100,7 @@ Guardrails:
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
-- no release with legacy imports, legacy facade, or unlinked donor reuse
+- no release with retired imports, private facades, or unproved copied behavior
 <!-- CONTEXT:END -->
 
 ## 27. Final release gates
@@ -128,7 +128,7 @@ current graph obligations before continuing dependent architecture work.
 6. public dartdoc, class modifier, public signature shape, and sealed preview
    state readability guardrails are green.
 6. api.no_retired_public_exports is green.
-7. core.no_legacy_imports is green.
+7. core.no_retired_package_imports is green.
 8. core.import_boundaries and core.no_unapproved_part_files are green.
 9. core.single_runtime_root is green.
 10. store/projection/selection ownership tests are green.
@@ -144,7 +144,7 @@ current graph obligations before continuing dependent architecture work.
 18. loadDocument staged success/failure tests are green.
 19. public runtime state publication, load publication, interaction settings state,
     preview public state, and dispose lifecycle tests are green.
-20. geometry/spatial parity, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
+20. geometry/spatial committed-order, eraser exact-budget, stale-candidate, and fallback-budget tests are green.
 21. frame capture, cache-key, cache-policy, frame-meta, paint-plan,
     runtime-view-camera vs persisted-document-camera separation,
     selection-state cache independence, and selected supplement staging tests are green.

@@ -155,7 +155,7 @@ continue-on-error: true
   );
 
   test(
-    'release benchmark readiness guardrail rejects legacy benchmark proof',
+    'release benchmark readiness guardrail rejects retired benchmark routes',
     () {
       expect(
         _violationMessages(
@@ -169,7 +169,9 @@ continue-on-error: true
           ),
         ),
         contains(
-          contains('benchmark release proof must not invoke legacy paths'),
+          contains(
+            'benchmark release proof must not invoke retired package paths',
+          ),
         ),
       );
     },
@@ -242,7 +244,7 @@ continue-on-error: true
   });
 
   test(
-    'release benchmark readiness guardrail rejects legacy workflow steps',
+    'release benchmark readiness guardrail rejects retired workflow commands',
     () {
       expect(
         _violationMessages(
@@ -256,7 +258,9 @@ continue-on-error: true
           ),
         ),
         contains(
-          contains('release benchmark workflow must not invoke legacy paths'),
+          contains(
+            'release benchmark workflow must not invoke retired package paths',
+          ),
         ),
       );
     },
