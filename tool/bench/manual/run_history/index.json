@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-08T08:53:19.090975Z",
+  "updatedAtUtc": "2026-06-08T10:40:13.572151Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -81,11 +81,11 @@
       "caseCount": 78
     },
     {
-      "path": "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_3.json",
-      "label": "schema_import_load_release_run_3",
-      "recordedAtUtc": "2026-06-08T08:50:53.940161Z",
-      "subjectGitHead": "b0052279751d8733197c1e075de7745b013e27f1",
-      "repositoryDirty": true,
+      "path": "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_1.json",
+      "label": "schema_import_load_release_run_1",
+      "recordedAtUtc": "2026-06-08T10:40:13.335792Z",
+      "subjectGitHead": "d39e68367145c15c1820f55507f5d859bf84d5d0",
+      "repositoryDirty": false,
       "device": {
         "name": "Xiaomi 22081283G",
         "id": "22081283G",
@@ -94,11 +94,11 @@
       "caseCount": 77
     },
     {
-      "path": "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_1.json",
-      "label": "schema_import_load_release_run_1",
-      "recordedAtUtc": "2026-06-08T08:53:19.082128Z",
-      "subjectGitHead": "b0052279751d8733197c1e075de7745b013e27f1",
-      "repositoryDirty": true,
+      "path": "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_3.json",
+      "label": "schema_import_load_release_run_3",
+      "recordedAtUtc": "2026-06-08T10:40:13.572151Z",
+      "subjectGitHead": "d39e68367145c15c1820f55507f5d859bf84d5d0",
+      "repositoryDirty": false,
       "device": {
         "name": "Xiaomi 22081283G",
         "id": "22081283G",
@@ -109,9 +109,9 @@
     {
       "path": "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_2.json",
       "label": "schema_import_load_release_run_2",
-      "recordedAtUtc": "2026-06-08T08:53:19.090975Z",
-      "subjectGitHead": "b0052279751d8733197c1e075de7745b013e27f1",
-      "repositoryDirty": true,
+      "recordedAtUtc": "2026-06-08T10:40:13.576195Z",
+      "subjectGitHead": "d39e68367145c15c1820f55507f5d859bf84d5d0",
+      "repositoryDirty": false,
       "device": {
         "name": "Xiaomi 22081283G",
         "id": "22081283G",

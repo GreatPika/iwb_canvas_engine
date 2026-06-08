@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "kind": "manual_benchmark_history",
-  "recordedAtUtc": "2026-06-08T08:53:19.082990Z",
+  "recordedAtUtc": "2026-06-08T10:40:13.572151Z",
   "label": "schema_import_load_release_run_3",
-  "subjectGitHead": "b0052279751d8733197c1e075de7745b013e27f1",
-  "repositoryDirty": true,
+  "subjectGitHead": "d39e68367145c15c1820f55507f5d859bf84d5d0",
+  "repositoryDirty": false,
   "device": {
     "name": "Xiaomi 22081283G",
     "id": "22081283G",
@@ -49,8 +49,8 @@
       "kind": "report",
       "source": {
         "path": "build/bench/current/xiaomi_22081283g_schema_import_load_release_run_3.json",
-        "sizeBytes": 4405386,
-        "sha256": "75b035b29862a13a48da935f3492035e8c61901eea97e162a3a7afa26b796f2d"
+        "sizeBytes": 4311814,
+        "sha256": "bede5ea88e9c1d23826894dafb2197b7a25819e247f08acfa76a71fe824e0be9"
       },
       "manifestVersion": "p14_benchmark_measurement_boundary_v2",
       "manifestFingerprint": "497add8c",
@@ -81,36 +81,36 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 216,
-          "min_us": 243,
-          "avg_us": 387,
-          "p50_us": 323,
-          "p95_us": 658,
-          "max_us": 2345
+          "count": 213,
+          "min_us": 284,
+          "avg_us": 408,
+          "p50_us": 365,
+          "p95_us": 566,
+          "max_us": 1677
         },
         "setupUs": {
           "available": true,
-          "count": 216,
-          "min_us": 7647,
-          "avg_us": 8792,
-          "p50_us": 8178,
-          "p95_us": 11519,
-          "max_us": 28883
+          "count": 213,
+          "min_us": 8008,
+          "avg_us": 8913,
+          "p50_us": 8517,
+          "p95_us": 9664,
+          "max_us": 28203
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 387,
-        "p95_us": 658,
-        "max_us": 2345,
-        "setup_us": 8792
+        "avg_us": 408,
+        "p95_us": 566,
+        "max_us": 1677,
+        "setup_us": 8913
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 5675,
-        "setup_allocation_bytes": 16384,
-        "setup_rss_delta_bytes": 16384,
-        "setup_us": 8792
+        "spatial_rebuild_setup_us": 4584,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 8913
       },
       "exactInvariants": {}
     },
@@ -137,35 +137,35 @@
         "actionUs": {
           "available": true,
           "count": 18,
-          "min_us": 2102,
-          "avg_us": 2808,
-          "p50_us": 2356,
-          "p95_us": 4443,
-          "max_us": 5518
+          "min_us": 2091,
+          "avg_us": 3168,
+          "p50_us": 2385,
+          "p95_us": 5134,
+          "max_us": 8936
         },
         "setupUs": {
           "available": true,
           "count": 18,
-          "min_us": 102817,
-          "avg_us": 111039,
-          "p50_us": 110345,
-          "p95_us": 123677,
-          "max_us": 126655
+          "min_us": 106393,
+          "avg_us": 113575,
+          "p50_us": 112388,
+          "p95_us": 127945,
+          "max_us": 132085
         }
       },
       "metrics": {
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 2808,
-        "p95_us": 4443,
-        "max_us": 5518,
-        "setup_us": 111039
+        "allocation_bytes": 573440,
+        "rss_delta_bytes": 573440,
+        "avg_us": 3168,
+        "p95_us": 5134,
+        "max_us": 8936,
+        "setup_us": 113575
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 65313,
+        "spatial_rebuild_setup_us": 65403,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 111039
+        "setup_us": 113575
       },
       "exactInvariants": {}
     },
@@ -192,35 +192,35 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 11567,
-          "avg_us": 12154,
-          "p50_us": 12256,
-          "p95_us": 12474,
-          "max_us": 12474
+          "min_us": 12576,
+          "avg_us": 14923,
+          "p50_us": 13936,
+          "p95_us": 19173,
+          "max_us": 19173
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 560504,
-          "avg_us": 581428,
-          "p50_us": 586529,
-          "p95_us": 608885,
-          "max_us": 608885
+          "min_us": 576614,
+          "avg_us": 605926,
+          "p50_us": 618451,
+          "p95_us": 630256,
+          "max_us": 630256
         }
       },
       "metrics": {
-        "allocation_bytes": 11288576,
-        "rss_delta_bytes": 11288576,
-        "avg_us": 12154,
-        "p95_us": 12474,
-        "max_us": 12474,
-        "setup_us": 581428
+        "allocation_bytes": 10338304,
+        "rss_delta_bytes": 10338304,
+        "avg_us": 14923,
+        "p95_us": 19173,
+        "max_us": 19173,
+        "setup_us": 605926
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 320491,
+        "spatial_rebuild_setup_us": 344807,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 581428
+        "setup_us": 605926
       },
       "exactInvariants": {}
     },
@@ -247,35 +247,35 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 26245,
-          "avg_us": 32494,
-          "p50_us": 28674,
-          "p95_us": 40496,
-          "max_us": 40496
+          "min_us": 27570,
+          "avg_us": 29913,
+          "p50_us": 28159,
+          "p95_us": 34888,
+          "max_us": 34888
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 1171591,
-          "avg_us": 1221449,
-          "p50_us": 1222312,
-          "p95_us": 1268426,
-          "max_us": 1268426
+          "min_us": 1226692,
+          "avg_us": 1265676,
+          "p50_us": 1278500,
+          "p95_us": 1317249,
+          "max_us": 1317249
         }
       },
       "metrics": {
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 32494,
-        "p95_us": 40496,
-        "max_us": 40496,
-        "setup_us": 1221449
+        "allocation_bytes": 21970944,
+        "rss_delta_bytes": 21970944,
+        "avg_us": 29913,
+        "p95_us": 34888,
+        "max_us": 34888,
+        "setup_us": 1265676
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 688315,
+        "spatial_rebuild_setup_us": 671875,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 1221449
+        "setup_us": 1265676
       },
       "exactInvariants": {}
     },
@@ -301,37 +301,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 224,
-          "min_us": 215,
-          "avg_us": 316,
-          "p50_us": 299,
-          "p95_us": 439,
-          "max_us": 1011
+          "count": 211,
+          "min_us": 243,
+          "avg_us": 366,
+          "p50_us": 348,
+          "p95_us": 483,
+          "max_us": 1750
         },
         "setupUs": {
           "available": true,
-          "count": 224,
-          "min_us": 7636,
-          "avg_us": 8541,
-          "p50_us": 8265,
-          "p95_us": 9032,
-          "max_us": 25886
+          "count": 211,
+          "min_us": 7906,
+          "avg_us": 9009,
+          "p50_us": 8608,
+          "p95_us": 9991,
+          "max_us": 27654
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 316,
-        "p95_us": 439,
-        "max_us": 1011,
-        "setup_us": 8541
+        "avg_us": 366,
+        "p95_us": 483,
+        "max_us": 1750,
+        "setup_us": 9009
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4365,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 8541
+        "spatial_rebuild_setup_us": 5705,
+        "setup_allocation_bytes": 1376256,
+        "setup_rss_delta_bytes": 1376256,
+        "setup_us": 9009
       },
       "exactInvariants": {}
     },
@@ -357,37 +357,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 1711,
-          "avg_us": 1969,
-          "p50_us": 1792,
-          "p95_us": 2982,
-          "max_us": 3204
+          "count": 17,
+          "min_us": 1783,
+          "avg_us": 2082,
+          "p50_us": 1901,
+          "p95_us": 2589,
+          "max_us": 3819
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 103244,
-          "avg_us": 110768,
-          "p50_us": 107822,
-          "p95_us": 124205,
-          "max_us": 131499
+          "count": 17,
+          "min_us": 107117,
+          "avg_us": 117471,
+          "p50_us": 116048,
+          "p95_us": 129228,
+          "max_us": 131612
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 1969,
-        "p95_us": 2982,
-        "max_us": 3204,
-        "setup_us": 110768
+        "avg_us": 2082,
+        "p95_us": 2589,
+        "max_us": 3819,
+        "setup_us": 117471
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 64231,
+        "spatial_rebuild_setup_us": 67538,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 110768
+        "setup_us": 117471
       },
       "exactInvariants": {}
     },
@@ -414,36 +414,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 8760,
-          "avg_us": 9217,
-          "p50_us": 8991,
-          "p95_us": 9762,
-          "max_us": 9762
+          "min_us": 9847,
+          "avg_us": 10875,
+          "p50_us": 10281,
+          "p95_us": 13316,
+          "max_us": 13316
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 605102,
-          "avg_us": 635101,
-          "p50_us": 635955,
-          "p95_us": 658596,
-          "max_us": 658596
+          "min_us": 623820,
+          "avg_us": 641740,
+          "p50_us": 636685,
+          "p95_us": 660981,
+          "max_us": 660981
         }
       },
       "metrics": {
         "touched_count": 1,
-        "allocation_bytes": 5439488,
-        "rss_delta_bytes": 5439488,
-        "avg_us": 9217,
-        "p95_us": 9762,
-        "max_us": 9762,
-        "setup_us": 635101
+        "allocation_bytes": 5406720,
+        "rss_delta_bytes": 5406720,
+        "avg_us": 10875,
+        "p95_us": 13316,
+        "max_us": 13316,
+        "setup_us": 641740
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 362946,
+        "spatial_rebuild_setup_us": 340395,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 635101
+        "setup_us": 641740
       },
       "exactInvariants": {}
     },
@@ -470,36 +470,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 16526,
-          "avg_us": 20382,
-          "p50_us": 18776,
-          "p95_us": 24792,
-          "max_us": 24792
+          "min_us": 20537,
+          "avg_us": 22429,
+          "p50_us": 20699,
+          "p95_us": 29243,
+          "max_us": 29243
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 1165228,
-          "avg_us": 1222923,
-          "p50_us": 1216575,
-          "p95_us": 1310890,
-          "max_us": 1310890
+          "min_us": 1238036,
+          "avg_us": 1261565,
+          "p50_us": 1261702,
+          "p95_us": 1293656,
+          "max_us": 1293656
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 11780096,
         "rss_delta_bytes": 11780096,
-        "avg_us": 20382,
-        "p95_us": 24792,
-        "max_us": 24792,
-        "setup_us": 1222923
+        "avg_us": 22429,
+        "p95_us": 29243,
+        "max_us": 29243,
+        "setup_us": 1261565
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 662960,
+        "spatial_rebuild_setup_us": 675361,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 1222923
+        "setup_us": 1261565
       },
       "exactInvariants": {}
     },
@@ -525,37 +525,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 229,
-          "min_us": 238,
-          "avg_us": 336,
-          "p50_us": 297,
-          "p95_us": 478,
-          "max_us": 1593
+          "count": 214,
+          "min_us": 279,
+          "avg_us": 428,
+          "p50_us": 392,
+          "p95_us": 563,
+          "max_us": 2167
         },
         "setupUs": {
           "available": true,
-          "count": 229,
-          "min_us": 7562,
-          "avg_us": 8320,
-          "p50_us": 7980,
-          "p95_us": 9004,
-          "max_us": 26369
+          "count": 214,
+          "min_us": 7841,
+          "avg_us": 8816,
+          "p50_us": 8404,
+          "p95_us": 9824,
+          "max_us": 26583
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 336,
-        "p95_us": 478,
-        "max_us": 1593,
-        "setup_us": 8320
+        "avg_us": 428,
+        "p95_us": 563,
+        "max_us": 2167,
+        "setup_us": 8816
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4444,
+        "spatial_rebuild_setup_us": 4405,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 8320
+        "setup_us": 8816
       },
       "exactInvariants": {}
     },
@@ -581,37 +581,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 1711,
-          "avg_us": 2226,
-          "p50_us": 2024,
-          "p95_us": 3043,
-          "max_us": 4460
+          "count": 17,
+          "min_us": 1823,
+          "avg_us": 2290,
+          "p50_us": 2060,
+          "p95_us": 3407,
+          "max_us": 3961
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 103066,
-          "avg_us": 112080,
-          "p50_us": 110395,
-          "p95_us": 131884,
-          "max_us": 134915
+          "count": 17,
+          "min_us": 108438,
+          "avg_us": 116015,
+          "p50_us": 113143,
+          "p95_us": 126786,
+          "max_us": 140712
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 2226,
-        "p95_us": 3043,
-        "max_us": 4460,
-        "setup_us": 112080
+        "avg_us": 2290,
+        "p95_us": 3407,
+        "max_us": 3961,
+        "setup_us": 116015
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 89771,
+        "spatial_rebuild_setup_us": 66306,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 112080
+        "setup_us": 116015
       },
       "exactInvariants": {}
     },
@@ -638,36 +638,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 8199,
-          "avg_us": 9954,
-          "p50_us": 8912,
-          "p95_us": 13684,
-          "max_us": 13684
+          "min_us": 8769,
+          "avg_us": 10104,
+          "p50_us": 9441,
+          "p95_us": 13029,
+          "max_us": 13029
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 556039,
-          "avg_us": 584846,
-          "p50_us": 573754,
-          "p95_us": 656864,
-          "max_us": 656864
+          "min_us": 584348,
+          "avg_us": 647379,
+          "p50_us": 612754,
+          "p95_us": 783787,
+          "max_us": 783787
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
-        "allocation_bytes": 5423104,
-        "rss_delta_bytes": 5423104,
-        "avg_us": 9954,
-        "p95_us": 13684,
-        "max_us": 13684,
-        "setup_us": 584846
+        "allocation_bytes": 5406720,
+        "rss_delta_bytes": 5406720,
+        "avg_us": 10104,
+        "p95_us": 13029,
+        "max_us": 13029,
+        "setup_us": 647379
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 320464,
+        "spatial_rebuild_setup_us": 333310,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 584846
+        "setup_us": 647379
       },
       "exactInvariants": {}
     },
@@ -694,36 +694,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 18501,
-          "avg_us": 22671,
-          "p50_us": 24102,
-          "p95_us": 25599,
-          "max_us": 25599
+          "min_us": 19446,
+          "avg_us": 22457,
+          "p50_us": 21875,
+          "p95_us": 26430,
+          "max_us": 26430
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 1157444,
-          "avg_us": 1198914,
-          "p50_us": 1206300,
-          "p95_us": 1215264,
-          "max_us": 1215264
+          "min_us": 1222212,
+          "avg_us": 1272298,
+          "p50_us": 1261992,
+          "p95_us": 1365317,
+          "max_us": 1365317
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
-        "allocation_bytes": 11763712,
-        "rss_delta_bytes": 11763712,
-        "avg_us": 22671,
-        "p95_us": 25599,
-        "max_us": 25599,
-        "setup_us": 1198914
+        "allocation_bytes": 11780096,
+        "rss_delta_bytes": 11780096,
+        "avg_us": 22457,
+        "p95_us": 26430,
+        "max_us": 26430,
+        "setup_us": 1272298
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 656894,
+        "spatial_rebuild_setup_us": 709724,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 1198914
+        "setup_us": 1272298
       },
       "exactInvariants": {}
     },
@@ -749,37 +749,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 209,
-          "min_us": 578,
-          "avg_us": 851,
-          "p50_us": 753,
-          "p95_us": 1643,
-          "max_us": 2633
+          "count": 200,
+          "min_us": 593,
+          "avg_us": 921,
+          "p50_us": 791,
+          "p95_us": 1841,
+          "max_us": 3134
         },
         "setupUs": {
           "available": true,
-          "count": 209,
-          "min_us": 7644,
-          "avg_us": 8672,
-          "p50_us": 8246,
-          "p95_us": 9843,
-          "max_us": 27122
+          "count": 200,
+          "min_us": 7879,
+          "avg_us": 9001,
+          "p50_us": 8477,
+          "p95_us": 10116,
+          "max_us": 29852
         }
       },
       "metrics": {
         "selected_count": 16,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 851,
-        "p95_us": 1643,
-        "max_us": 2633,
-        "setup_us": 8672
+        "avg_us": 921,
+        "p95_us": 1841,
+        "max_us": 3134,
+        "setup_us": 9001
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4182,
+        "spatial_rebuild_setup_us": 4205,
         "setup_allocation_bytes": 16384,
         "setup_rss_delta_bytes": 16384,
-        "setup_us": 8672
+        "setup_us": 9001
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -813,37 +813,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 3072,
-          "avg_us": 4020,
-          "p50_us": 3604,
-          "p95_us": 6313,
-          "max_us": 7039
+          "count": 17,
+          "min_us": 3148,
+          "avg_us": 4338,
+          "p50_us": 3757,
+          "p95_us": 7215,
+          "max_us": 7633
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 103333,
-          "avg_us": 112605,
-          "p50_us": 112096,
-          "p95_us": 119692,
-          "max_us": 127098
+          "count": 17,
+          "min_us": 102994,
+          "avg_us": 113816,
+          "p50_us": 110764,
+          "p95_us": 122952,
+          "max_us": 133545
         }
       },
       "metrics": {
         "selected_count": 16,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 4020,
-        "p95_us": 6313,
-        "max_us": 7039,
-        "setup_us": 112605
+        "avg_us": 4338,
+        "p95_us": 7215,
+        "max_us": 7633,
+        "setup_us": 113816
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 64614,
-        "setup_allocation_bytes": 3178496,
-        "setup_rss_delta_bytes": 3178496,
-        "setup_us": 112605
+        "spatial_rebuild_setup_us": 68466,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 113816
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -878,36 +878,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 15225,
-          "avg_us": 18475,
-          "p50_us": 16708,
-          "p95_us": 27393,
-          "max_us": 27393
+          "min_us": 15847,
+          "avg_us": 22723,
+          "p50_us": 25469,
+          "p95_us": 27069,
+          "max_us": 27069
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 566755,
-          "avg_us": 593782,
-          "p50_us": 606777,
-          "p95_us": 614948,
-          "max_us": 614948
+          "min_us": 575021,
+          "avg_us": 603473,
+          "p50_us": 601836,
+          "p95_us": 635808,
+          "max_us": 635808
         }
       },
       "metrics": {
         "selected_count": 16,
         "allocation_bytes": 11337728,
         "rss_delta_bytes": 11337728,
-        "avg_us": 18475,
-        "p95_us": 27393,
-        "max_us": 27393,
-        "setup_us": 593782
+        "avg_us": 22723,
+        "p95_us": 27069,
+        "max_us": 27069,
+        "setup_us": 603473
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 337408,
+        "spatial_rebuild_setup_us": 323034,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 593782
+        "setup_us": 603473
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -941,37 +941,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 239,
-          "min_us": 35,
-          "avg_us": 56,
-          "p50_us": 53,
-          "p95_us": 84,
-          "max_us": 184
+          "count": 221,
+          "min_us": 40,
+          "avg_us": 81,
+          "p50_us": 71,
+          "p95_us": 132,
+          "max_us": 175
         },
         "setupUs": {
           "available": true,
-          "count": 239,
-          "min_us": 7540,
-          "avg_us": 8234,
-          "p50_us": 7912,
-          "p95_us": 8710,
-          "max_us": 26921
+          "count": 221,
+          "min_us": 7785,
+          "avg_us": 8883,
+          "p50_us": 8333,
+          "p95_us": 9544,
+          "max_us": 28883
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 56,
-        "p95_us": 84,
-        "max_us": 184,
-        "setup_us": 8234
+        "avg_us": 81,
+        "p95_us": 132,
+        "max_us": 175,
+        "setup_us": 8883
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4109,
-        "setup_allocation_bytes": 32768,
-        "setup_rss_delta_bytes": 32768,
-        "setup_us": 8234
+        "spatial_rebuild_setup_us": 4597,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 8883
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1006,36 +1006,36 @@
         "actionUs": {
           "available": true,
           "count": 18,
-          "min_us": 110,
-          "avg_us": 140,
-          "p50_us": 137,
-          "p95_us": 171,
-          "max_us": 172
+          "min_us": 117,
+          "avg_us": 138,
+          "p50_us": 134,
+          "p95_us": 159,
+          "max_us": 202
         },
         "setupUs": {
           "available": true,
           "count": 18,
-          "min_us": 103413,
-          "avg_us": 112141,
-          "p50_us": 110745,
-          "p95_us": 124186,
-          "max_us": 124596
+          "min_us": 105768,
+          "avg_us": 111972,
+          "p50_us": 110389,
+          "p95_us": 120015,
+          "max_us": 131780
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 140,
-        "p95_us": 171,
-        "max_us": 172,
-        "setup_us": 112141
+        "avg_us": 138,
+        "p95_us": 159,
+        "max_us": 202,
+        "setup_us": 111972
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 70594,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 112141
+        "spatial_rebuild_setup_us": 64825,
+        "setup_allocation_bytes": 1294336,
+        "setup_rss_delta_bytes": 1294336,
+        "setup_us": 111972
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1070,20 +1070,20 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 133,
+          "min_us": 141,
           "avg_us": 155,
-          "p50_us": 151,
-          "p95_us": 180,
-          "max_us": 180
+          "p50_us": 154,
+          "p95_us": 182,
+          "max_us": 182
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 561561,
-          "avg_us": 585315,
-          "p50_us": 588826,
-          "p95_us": 602112,
-          "max_us": 602112
+          "min_us": 560969,
+          "avg_us": 613757,
+          "p50_us": 615306,
+          "p95_us": 672998,
+          "max_us": 672998
         }
       },
       "metrics": {
@@ -1091,15 +1091,15 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 155,
-        "p95_us": 180,
-        "max_us": 180,
-        "setup_us": 585315
+        "p95_us": 182,
+        "max_us": 182,
+        "setup_us": 613757
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 334590,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 585315
+        "spatial_rebuild_setup_us": 338705,
+        "setup_allocation_bytes": 1130496,
+        "setup_rss_delta_bytes": 1130496,
+        "setup_us": 613757
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1134,36 +1134,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 134,
-          "avg_us": 150,
-          "p50_us": 145,
-          "p95_us": 189,
-          "max_us": 189
+          "min_us": 141,
+          "avg_us": 153,
+          "p50_us": 147,
+          "p95_us": 166,
+          "max_us": 166
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 1183772,
-          "avg_us": 1224327,
-          "p50_us": 1225448,
-          "p95_us": 1265607,
-          "max_us": 1265607
+          "min_us": 1224595,
+          "avg_us": 1270595,
+          "p50_us": 1260464,
+          "p95_us": 1321501,
+          "max_us": 1321501
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 150,
-        "p95_us": 189,
-        "max_us": 189,
-        "setup_us": 1224327
+        "avg_us": 153,
+        "p95_us": 166,
+        "max_us": 166,
+        "setup_us": 1270595
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 684592,
-        "setup_allocation_bytes": 3932160,
-        "setup_rss_delta_bytes": 3932160,
-        "setup_us": 1224327
+        "spatial_rebuild_setup_us": 733669,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1270595
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1197,36 +1197,36 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 228,
-          "min_us": 170,
-          "avg_us": 284,
-          "p50_us": 252,
-          "p95_us": 446,
-          "max_us": 1204
+          "count": 217,
+          "min_us": 201,
+          "avg_us": 320,
+          "p50_us": 284,
+          "p95_us": 432,
+          "max_us": 1455
         },
         "setupUs": {
           "available": true,
-          "count": 228,
-          "min_us": 7600,
-          "avg_us": 8425,
-          "p50_us": 8083,
-          "p95_us": 9350,
-          "max_us": 27456
+          "count": 217,
+          "min_us": 7948,
+          "avg_us": 8814,
+          "p50_us": 8403,
+          "p95_us": 9705,
+          "max_us": 27861
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 284,
-        "p95_us": 446,
-        "max_us": 1204,
-        "setup_us": 8425
+        "avg_us": 320,
+        "p95_us": 432,
+        "max_us": 1455,
+        "setup_us": 8814
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4313,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 8425
+        "spatial_rebuild_setup_us": 4287,
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 8814
       },
       "exactInvariants": {}
     },
@@ -1252,36 +1252,36 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 741,
-          "avg_us": 1019,
-          "p50_us": 894,
-          "p95_us": 1519,
-          "max_us": 1757
+          "count": 16,
+          "min_us": 792,
+          "avg_us": 1017,
+          "p50_us": 941,
+          "p95_us": 1549,
+          "max_us": 1557
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 103399,
-          "avg_us": 113865,
-          "p50_us": 108436,
-          "p95_us": 135050,
-          "max_us": 152624
+          "count": 16,
+          "min_us": 106377,
+          "avg_us": 124151,
+          "p50_us": 117538,
+          "p95_us": 153234,
+          "max_us": 192453
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 1019,
-        "p95_us": 1519,
-        "max_us": 1757,
-        "setup_us": 113865
+        "avg_us": 1017,
+        "p95_us": 1549,
+        "max_us": 1557,
+        "setup_us": 124151
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 62716,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 113865
+        "spatial_rebuild_setup_us": 89247,
+        "setup_allocation_bytes": 14139392,
+        "setup_rss_delta_bytes": 14139392,
+        "setup_us": 124151
       },
       "exactInvariants": {}
     },
@@ -1308,35 +1308,35 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 3689,
-          "avg_us": 3904,
-          "p50_us": 3820,
-          "p95_us": 4391,
-          "max_us": 4391
+          "min_us": 3731,
+          "avg_us": 4130,
+          "p50_us": 3889,
+          "p95_us": 5304,
+          "max_us": 5304
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 568903,
-          "avg_us": 585567,
-          "p50_us": 589212,
-          "p95_us": 596139,
-          "max_us": 596139
+          "min_us": 569449,
+          "avg_us": 630770,
+          "p50_us": 626969,
+          "p95_us": 704242,
+          "max_us": 704242
         }
       },
       "metrics": {
         "allocation_bytes": 4898816,
         "rss_delta_bytes": 4898816,
-        "avg_us": 3904,
-        "p95_us": 4391,
-        "max_us": 4391,
-        "setup_us": 585567
+        "avg_us": 4130,
+        "p95_us": 5304,
+        "max_us": 5304,
+        "setup_us": 630770
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 337176,
+        "spatial_rebuild_setup_us": 348094,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 585567
+        "setup_us": 630770
       },
       "exactInvariants": {}
     },
@@ -1362,37 +1362,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 147,
-          "min_us": 3136,
-          "avg_us": 3947,
-          "p50_us": 3449,
-          "p95_us": 5646,
-          "max_us": 16571
+          "count": 144,
+          "min_us": 3238,
+          "avg_us": 4105,
+          "p50_us": 3521,
+          "p95_us": 5669,
+          "max_us": 17782
         },
         "setupUs": {
           "available": true,
-          "count": 147,
-          "min_us": 8108,
-          "avg_us": 9457,
-          "p50_us": 9044,
-          "p95_us": 13278,
-          "max_us": 26794
+          "count": 144,
+          "min_us": 8226,
+          "avg_us": 9557,
+          "p50_us": 9140,
+          "p95_us": 12081,
+          "max_us": 29169
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 3947,
-        "p95_us": 5646,
-        "max_us": 16571,
-        "setup_us": 9457
+        "avg_us": 4105,
+        "p95_us": 5669,
+        "max_us": 17782,
+        "setup_us": 9557
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 8146,
+        "spatial_rebuild_setup_us": 4515,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 9457
+        "setup_us": 9557
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1428,35 +1428,35 @@
           "available": true,
           "count": 17,
           "min_us": 3780,
-          "avg_us": 4978,
-          "p50_us": 4149,
-          "p95_us": 8101,
-          "max_us": 8465
+          "avg_us": 5024,
+          "p50_us": 4648,
+          "p95_us": 7340,
+          "max_us": 7479
         },
         "setupUs": {
           "available": true,
           "count": 17,
-          "min_us": 104281,
-          "avg_us": 113985,
-          "p50_us": 110237,
-          "p95_us": 126338,
-          "max_us": 141031
+          "min_us": 106776,
+          "avg_us": 118237,
+          "p50_us": 114642,
+          "p95_us": 130196,
+          "max_us": 153863
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
-        "allocation_bytes": 557056,
-        "rss_delta_bytes": 557056,
-        "avg_us": 4978,
-        "p95_us": 8101,
-        "max_us": 8465,
-        "setup_us": 113985
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 5024,
+        "p95_us": 7340,
+        "max_us": 7479,
+        "setup_us": 118237
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 65968,
+        "spatial_rebuild_setup_us": 69144,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 113985
+        "setup_us": 118237
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1491,36 +1491,36 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 20206,
-          "avg_us": 25002,
-          "p50_us": 23537,
-          "p95_us": 30167,
-          "max_us": 30167
+          "min_us": 22798,
+          "avg_us": 28146,
+          "p50_us": 26567,
+          "p95_us": 34963,
+          "max_us": 34963
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 551012,
-          "avg_us": 576585,
-          "p50_us": 585503,
-          "p95_us": 600869,
-          "max_us": 600869
+          "min_us": 581175,
+          "avg_us": 604093,
+          "p50_us": 599770,
+          "p95_us": 635954,
+          "max_us": 635954
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
-        "allocation_bytes": 12877824,
-        "rss_delta_bytes": 12877824,
-        "avg_us": 25002,
-        "p95_us": 30167,
-        "max_us": 30167,
-        "setup_us": 576585
+        "allocation_bytes": 12779520,
+        "rss_delta_bytes": 12779520,
+        "avg_us": 28146,
+        "p95_us": 34963,
+        "max_us": 34963,
+        "setup_us": 604093
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 329710,
+        "spatial_rebuild_setup_us": 331489,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 576585
+        "setup_us": 604093
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1554,21 +1554,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 514,
-          "min_us": 3530,
-          "avg_us": 3884,
-          "p50_us": 3819,
-          "p95_us": 4353,
-          "max_us": 8234
+          "count": 487,
+          "min_us": 3582,
+          "avg_us": 4096,
+          "p50_us": 4012,
+          "p95_us": 4658,
+          "max_us": 7840
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 28096,
-          "avg_us": 28096,
-          "p50_us": 28096,
-          "p95_us": 28096,
-          "max_us": 28096
+          "min_us": 37439,
+          "avg_us": 37439,
+          "p50_us": 37439,
+          "p95_us": 37439,
+          "max_us": 37439
         }
       },
       "metrics": {
@@ -1577,15 +1577,15 @@
         "cached_preview_delta_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 3884,
-        "p95_us": 4353,
-        "max_us": 8234,
-        "setup_us": 28096
+        "avg_us": 4096,
+        "p95_us": 4658,
+        "max_us": 7840,
+        "setup_us": 37439
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 4947968,
-        "setup_rss_delta_bytes": 4947968,
-        "setup_us": 28096
+        "setup_allocation_bytes": 5259264,
+        "setup_rss_delta_bytes": 5259264,
+        "setup_us": 37439
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1619,21 +1619,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 3939,
-          "min_us": 341,
-          "avg_us": 499,
-          "p50_us": 390,
-          "p95_us": 1081,
-          "max_us": 5634
+          "count": 3868,
+          "min_us": 339,
+          "avg_us": 508,
+          "p50_us": 399,
+          "p95_us": 1080,
+          "max_us": 6138
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 117572,
-          "avg_us": 117572,
-          "p50_us": 117572,
-          "p95_us": 117572,
-          "max_us": 117572
+          "min_us": 123128,
+          "avg_us": 123128,
+          "p50_us": 123128,
+          "p95_us": 123128,
+          "max_us": 123128
         }
       },
       "metrics": {
@@ -1642,15 +1642,15 @@
         "cached_preview_delta_count": 0,
         "allocation_bytes": 278528,
         "rss_delta_bytes": 278528,
-        "avg_us": 499,
-        "p95_us": 1081,
-        "max_us": 5634,
-        "setup_us": 117572
+        "avg_us": 508,
+        "p95_us": 1080,
+        "max_us": 6138,
+        "setup_us": 123128
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 12091392,
-        "setup_rss_delta_bytes": 12091392,
-        "setup_us": 117572
+        "setup_allocation_bytes": 10960896,
+        "setup_rss_delta_bytes": 10960896,
+        "setup_us": 123128
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1684,38 +1684,38 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1328,
+          "count": 1164,
           "min_us": 962,
-          "avg_us": 1489,
-          "p50_us": 1133,
-          "p95_us": 2771,
-          "max_us": 26763
+          "avg_us": 1694,
+          "p50_us": 1226,
+          "p95_us": 3413,
+          "max_us": 28819
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 605680,
-          "avg_us": 605680,
-          "p50_us": 605680,
-          "p95_us": 605680,
-          "max_us": 605680
+          "min_us": 662986,
+          "avg_us": 662986,
+          "p50_us": 662986,
+          "p95_us": 662986,
+          "max_us": 662986
         }
       },
       "metrics": {
         "ordinary_plan_hit_rate": 0.0,
         "supplement_count": 0,
         "cached_preview_delta_count": 0,
-        "allocation_bytes": 1605632,
-        "rss_delta_bytes": 1605632,
-        "avg_us": 1489,
-        "p95_us": 2771,
-        "max_us": 26763,
-        "setup_us": 605680
+        "allocation_bytes": 1622016,
+        "rss_delta_bytes": 1622016,
+        "avg_us": 1694,
+        "p95_us": 3413,
+        "max_us": 28819,
+        "setup_us": 662986
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 12255232,
-        "setup_rss_delta_bytes": 12255232,
-        "setup_us": 605680
+        "setup_allocation_bytes": 14745600,
+        "setup_rss_delta_bytes": 14745600,
+        "setup_us": 662986
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1749,37 +1749,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 240,
-          "min_us": 61,
-          "avg_us": 94,
-          "p50_us": 87,
-          "p95_us": 151,
-          "max_us": 419
+          "count": 214,
+          "min_us": 74,
+          "avg_us": 134,
+          "p50_us": 123,
+          "p95_us": 209,
+          "max_us": 548
         },
         "setupUs": {
           "available": true,
-          "count": 240,
-          "min_us": 7523,
-          "avg_us": 8179,
-          "p50_us": 7889,
-          "p95_us": 8621,
-          "max_us": 24912
+          "count": 214,
+          "min_us": 7885,
+          "avg_us": 9117,
+          "p50_us": 8432,
+          "p95_us": 9526,
+          "max_us": 40994
         }
       },
       "metrics": {
         "overlay_repaint_count": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 94,
-        "p95_us": 151,
-        "max_us": 419,
-        "setup_us": 8179
+        "avg_us": 134,
+        "p95_us": 209,
+        "max_us": 548,
+        "setup_us": 9117
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4532,
+        "spatial_rebuild_setup_us": 4375,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 8179
+        "setup_us": 9117
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -1813,357 +1813,357 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 19,
-          "min_us": 163,
-          "avg_us": 222,
+          "count": 18,
+          "min_us": 209,
+          "avg_us": 231,
+          "p50_us": 228,
+          "p95_us": 272,
+          "max_us": 284
+        },
+        "setupUs": {
+          "available": true,
+          "count": 18,
+          "min_us": 106573,
+          "avg_us": 113842,
+          "p50_us": 112262,
+          "p95_us": 123970,
+          "max_us": 134474
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 231,
+        "p95_us": 272,
+        "max_us": 284,
+        "setup_us": 113842
+      },
+      "setupMetrics": {
+        "spatial_rebuild_setup_us": 70543,
+        "setup_allocation_bytes": 8634368,
+        "setup_rss_delta_bytes": 8634368,
+        "setup_us": 113842
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.marquee_preview",
+      "scale": "50k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 236,
+          "avg_us": 245,
+          "p50_us": 245,
+          "p95_us": 256,
+          "max_us": 256
+        },
+        "setupUs": {
+          "available": true,
+          "count": 5,
+          "min_us": 602575,
+          "avg_us": 639387,
+          "p50_us": 619839,
+          "p95_us": 704290,
+          "max_us": 704290
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 245,
+        "p95_us": 256,
+        "max_us": 256,
+        "setup_us": 639387
+      },
+      "setupMetrics": {
+        "spatial_rebuild_setup_us": 341991,
+        "setup_allocation_bytes": 884736,
+        "setup_rss_delta_bytes": 884736,
+        "setup_us": 639387
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.draw_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 226,
+          "min_us": 71,
+          "avg_us": 120,
+          "p50_us": 111,
+          "p95_us": 186,
+          "max_us": 513
+        },
+        "setupUs": {
+          "available": true,
+          "count": 226,
+          "min_us": 7698,
+          "avg_us": 8658,
+          "p50_us": 8285,
+          "p95_us": 8976,
+          "max_us": 26160
+        }
+      },
+      "metrics": {
+        "point_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 120,
+        "p95_us": 186,
+        "max_us": 513,
+        "setup_us": 8658
+      },
+      "setupMetrics": {
+        "spatial_rebuild_setup_us": 4352,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 8658
+      },
+      "exactInvariants": {
+        "point_count_matches_input": {
+          "metric": "point_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.draw_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 18,
+          "min_us": 179,
+          "avg_us": 224,
+          "p50_us": 219,
+          "p95_us": 252,
+          "max_us": 257
+        },
+        "setupUs": {
+          "available": true,
+          "count": 18,
+          "min_us": 107403,
+          "avg_us": 115185,
+          "p50_us": 113574,
+          "p95_us": 126241,
+          "max_us": 134833
+        }
+      },
+      "metrics": {
+        "point_count": 2,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 224,
+        "p95_us": 252,
+        "max_us": 257,
+        "setup_us": 115185
+      },
+      "setupMetrics": {
+        "spatial_rebuild_setup_us": 72428,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 115185
+      },
+      "exactInvariants": {
+        "point_count_matches_input": {
+          "metric": "point_count",
+          "actual": 2,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.line_preview",
+      "scale": "1k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 224,
+          "min_us": 73,
+          "avg_us": 124,
+          "p50_us": 119,
+          "p95_us": 184,
+          "max_us": 303
+        },
+        "setupUs": {
+          "available": true,
+          "count": 224,
+          "min_us": 7775,
+          "avg_us": 8707,
+          "p50_us": 8374,
+          "p95_us": 9003,
+          "max_us": 25855
+        }
+      },
+      "metrics": {
+        "overlay_repaint_count": 1,
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 124,
+        "p95_us": 184,
+        "max_us": 303,
+        "setup_us": 8707
+      },
+      "setupMetrics": {
+        "spatial_rebuild_setup_us": 4158,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 8707
+      },
+      "exactInvariants": {
+        "overlay_repaint_count_bounded": {
+          "metric": "overlay_repaint_count",
+          "actual": 1,
+          "expected": null,
+          "max": null,
+          "passed": true
+        }
+      }
+    },
+    {
+      "id": "input.line_preview",
+      "scale": "10k",
+      "classification": "new_only",
+      "fixtureShape": "normal_spread",
+      "measurementBoundary": {
+        "timedScope": "action_only",
+        "setupScope": "per_sample_prepared_fixture",
+        "teardownScope": "excluded",
+        "primaryTiming": "action",
+        "primaryMemory": "action",
+        "setupMetrics": [
+          "setup_us"
+        ],
+        "setupMemoryMetrics": [
+          "setup_allocation_bytes",
+          "setup_rss_delta_bytes"
+        ]
+      },
+      "sampleSummary": {
+        "actionUs": {
+          "available": true,
+          "count": 17,
+          "min_us": 175,
+          "avg_us": 220,
           "p50_us": 215,
-          "p95_us": 260,
-          "max_us": 344
+          "p95_us": 245,
+          "max_us": 273
         },
         "setupUs": {
           "available": true,
-          "count": 19,
-          "min_us": 100998,
-          "avg_us": 109591,
-          "p50_us": 107792,
-          "p95_us": 115072,
-          "max_us": 132877
-        }
-      },
-      "metrics": {
-        "overlay_repaint_count": 2,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 222,
-        "p95_us": 260,
-        "max_us": 344,
-        "setup_us": 109591
-      },
-      "setupMetrics": {
-        "spatial_rebuild_setup_us": 66486,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 109591
-      },
-      "exactInvariants": {
-        "overlay_repaint_count_bounded": {
-          "metric": "overlay_repaint_count",
-          "actual": 2,
-          "expected": null,
-          "max": null,
-          "passed": true
-        }
-      }
-    },
-    {
-      "id": "input.marquee_preview",
-      "scale": "50k",
-      "classification": "new_only",
-      "fixtureShape": "normal_spread",
-      "measurementBoundary": {
-        "timedScope": "action_only",
-        "setupScope": "per_sample_prepared_fixture",
-        "teardownScope": "excluded",
-        "primaryTiming": "action",
-        "primaryMemory": "action",
-        "setupMetrics": [
-          "setup_us"
-        ],
-        "setupMemoryMetrics": [
-          "setup_allocation_bytes",
-          "setup_rss_delta_bytes"
-        ]
-      },
-      "sampleSummary": {
-        "actionUs": {
-          "available": true,
-          "count": 5,
-          "min_us": 218,
-          "avg_us": 247,
-          "p50_us": 238,
-          "p95_us": 306,
-          "max_us": 306
-        },
-        "setupUs": {
-          "available": true,
-          "count": 5,
-          "min_us": 559116,
-          "avg_us": 595058,
-          "p50_us": 593399,
-          "p95_us": 625938,
-          "max_us": 625938
-        }
-      },
-      "metrics": {
-        "overlay_repaint_count": 2,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 247,
-        "p95_us": 306,
-        "max_us": 306,
-        "setup_us": 595058
-      },
-      "setupMetrics": {
-        "spatial_rebuild_setup_us": 333744,
-        "setup_allocation_bytes": 589824,
-        "setup_rss_delta_bytes": 589824,
-        "setup_us": 595058
-      },
-      "exactInvariants": {
-        "overlay_repaint_count_bounded": {
-          "metric": "overlay_repaint_count",
-          "actual": 2,
-          "expected": null,
-          "max": null,
-          "passed": true
-        }
-      }
-    },
-    {
-      "id": "input.draw_preview",
-      "scale": "1k",
-      "classification": "new_only",
-      "fixtureShape": "normal_spread",
-      "measurementBoundary": {
-        "timedScope": "action_only",
-        "setupScope": "per_sample_prepared_fixture",
-        "teardownScope": "excluded",
-        "primaryTiming": "action",
-        "primaryMemory": "action",
-        "setupMetrics": [
-          "setup_us"
-        ],
-        "setupMemoryMetrics": [
-          "setup_allocation_bytes",
-          "setup_rss_delta_bytes"
-        ]
-      },
-      "sampleSummary": {
-        "actionUs": {
-          "available": true,
-          "count": 238,
-          "min_us": 62,
-          "avg_us": 94,
-          "p50_us": 90,
-          "p95_us": 142,
-          "max_us": 216
-        },
-        "setupUs": {
-          "available": true,
-          "count": 238,
-          "min_us": 7543,
-          "avg_us": 8247,
-          "p50_us": 7974,
-          "p95_us": 8760,
-          "max_us": 25353
-        }
-      },
-      "metrics": {
-        "point_count": 2,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 94,
-        "p95_us": 142,
-        "max_us": 216,
-        "setup_us": 8247
-      },
-      "setupMetrics": {
-        "spatial_rebuild_setup_us": 4282,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 8247
-      },
-      "exactInvariants": {
-        "point_count_matches_input": {
-          "metric": "point_count",
-          "actual": 2,
-          "expected": null,
-          "max": null,
-          "passed": true
-        }
-      }
-    },
-    {
-      "id": "input.draw_preview",
-      "scale": "10k",
-      "classification": "new_only",
-      "fixtureShape": "normal_spread",
-      "measurementBoundary": {
-        "timedScope": "action_only",
-        "setupScope": "per_sample_prepared_fixture",
-        "teardownScope": "excluded",
-        "primaryTiming": "action",
-        "primaryMemory": "action",
-        "setupMetrics": [
-          "setup_us"
-        ],
-        "setupMemoryMetrics": [
-          "setup_allocation_bytes",
-          "setup_rss_delta_bytes"
-        ]
-      },
-      "sampleSummary": {
-        "actionUs": {
-          "available": true,
-          "count": 19,
-          "min_us": 190,
-          "avg_us": 222,
-          "p50_us": 218,
-          "p95_us": 249,
-          "max_us": 283
-        },
-        "setupUs": {
-          "available": true,
-          "count": 19,
-          "min_us": 102864,
-          "avg_us": 109587,
-          "p50_us": 109499,
-          "p95_us": 116195,
-          "max_us": 120798
-        }
-      },
-      "metrics": {
-        "point_count": 2,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 222,
-        "p95_us": 249,
-        "max_us": 283,
-        "setup_us": 109587
-      },
-      "setupMetrics": {
-        "spatial_rebuild_setup_us": 63606,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 109587
-      },
-      "exactInvariants": {
-        "point_count_matches_input": {
-          "metric": "point_count",
-          "actual": 2,
-          "expected": null,
-          "max": null,
-          "passed": true
-        }
-      }
-    },
-    {
-      "id": "input.line_preview",
-      "scale": "1k",
-      "classification": "new_only",
-      "fixtureShape": "normal_spread",
-      "measurementBoundary": {
-        "timedScope": "action_only",
-        "setupScope": "per_sample_prepared_fixture",
-        "teardownScope": "excluded",
-        "primaryTiming": "action",
-        "primaryMemory": "action",
-        "setupMetrics": [
-          "setup_us"
-        ],
-        "setupMemoryMetrics": [
-          "setup_allocation_bytes",
-          "setup_rss_delta_bytes"
-        ]
-      },
-      "sampleSummary": {
-        "actionUs": {
-          "available": true,
-          "count": 235,
-          "min_us": 58,
-          "avg_us": 94,
-          "p50_us": 85,
-          "p95_us": 156,
-          "max_us": 225
-        },
-        "setupUs": {
-          "available": true,
-          "count": 235,
-          "min_us": 7650,
-          "avg_us": 8361,
-          "p50_us": 8024,
-          "p95_us": 9124,
-          "max_us": 26689
+          "count": 17,
+          "min_us": 108860,
+          "avg_us": 118457,
+          "p50_us": 117075,
+          "p95_us": 129326,
+          "max_us": 138436
         }
       },
       "metrics": {
         "overlay_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 94,
-        "p95_us": 156,
-        "max_us": 225,
-        "setup_us": 8361
+        "avg_us": 220,
+        "p95_us": 245,
+        "max_us": 273,
+        "setup_us": 118457
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4454,
-        "setup_allocation_bytes": 32768,
-        "setup_rss_delta_bytes": 32768,
-        "setup_us": 8361
-      },
-      "exactInvariants": {
-        "overlay_repaint_count_bounded": {
-          "metric": "overlay_repaint_count",
-          "actual": 1,
-          "expected": null,
-          "max": null,
-          "passed": true
-        }
-      }
-    },
-    {
-      "id": "input.line_preview",
-      "scale": "10k",
-      "classification": "new_only",
-      "fixtureShape": "normal_spread",
-      "measurementBoundary": {
-        "timedScope": "action_only",
-        "setupScope": "per_sample_prepared_fixture",
-        "teardownScope": "excluded",
-        "primaryTiming": "action",
-        "primaryMemory": "action",
-        "setupMetrics": [
-          "setup_us"
-        ],
-        "setupMemoryMetrics": [
-          "setup_allocation_bytes",
-          "setup_rss_delta_bytes"
-        ]
-      },
-      "sampleSummary": {
-        "actionUs": {
-          "available": true,
-          "count": 18,
-          "min_us": 178,
-          "avg_us": 211,
-          "p50_us": 211,
-          "p95_us": 239,
-          "max_us": 279
-        },
-        "setupUs": {
-          "available": true,
-          "count": 18,
-          "min_us": 102249,
-          "avg_us": 111191,
-          "p50_us": 110952,
-          "p95_us": 123309,
-          "max_us": 123640
-        }
-      },
-      "metrics": {
-        "overlay_repaint_count": 1,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 211,
-        "p95_us": 239,
-        "max_us": 279,
-        "setup_us": 111191
-      },
-      "setupMetrics": {
-        "spatial_rebuild_setup_us": 65906,
+        "spatial_rebuild_setup_us": 72627,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 111191
+        "setup_us": 118457
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -2198,20 +2198,20 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 213,
+          "min_us": 197,
           "avg_us": 219,
-          "p50_us": 218,
-          "p95_us": 227,
-          "max_us": 227
+          "p50_us": 224,
+          "p95_us": 234,
+          "max_us": 234
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 548295,
-          "avg_us": 582631,
-          "p50_us": 586647,
-          "p95_us": 612558,
-          "max_us": 612558
+          "min_us": 583799,
+          "avg_us": 637631,
+          "p50_us": 612531,
+          "p95_us": 760735,
+          "max_us": 760735
         }
       },
       "metrics": {
@@ -2219,15 +2219,15 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 219,
-        "p95_us": 227,
-        "max_us": 227,
-        "setup_us": 582631
+        "p95_us": 234,
+        "max_us": 234,
+        "setup_us": 637631
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 335161,
-        "setup_allocation_bytes": 360448,
-        "setup_rss_delta_bytes": 360448,
-        "setup_us": 582631
+        "spatial_rebuild_setup_us": 345561,
+        "setup_allocation_bytes": 557056,
+        "setup_rss_delta_bytes": 557056,
+        "setup_us": 637631
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -2261,21 +2261,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 142,
-          "min_us": 4102,
-          "avg_us": 5091,
-          "p50_us": 5118,
-          "p95_us": 6259,
-          "max_us": 12762
+          "count": 135,
+          "min_us": 4276,
+          "avg_us": 5330,
+          "p50_us": 5397,
+          "p95_us": 6238,
+          "max_us": 14374
         },
         "setupUs": {
           "available": true,
-          "count": 142,
-          "min_us": 7735,
-          "avg_us": 8964,
-          "p50_us": 8510,
-          "p95_us": 12507,
-          "max_us": 26192
+          "count": 135,
+          "min_us": 8072,
+          "avg_us": 9380,
+          "p50_us": 8823,
+          "p95_us": 12989,
+          "max_us": 27782
         }
       },
       "metrics": {
@@ -2283,18 +2283,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 5091,
-        "p95_us": 6259,
-        "max_us": 12762,
-        "setup_us": 8964
+        "allocation_bytes": 2113536,
+        "rss_delta_bytes": 2113536,
+        "avg_us": 5330,
+        "p95_us": 6238,
+        "max_us": 14374,
+        "setup_us": 9380
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 4189,
+        "spatial_rebuild_setup_us": 4683,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 8964
+        "setup_us": 9380
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2328,21 +2328,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 3706,
-          "avg_us": 4678,
-          "p50_us": 4131,
-          "p95_us": 8519,
-          "max_us": 9059
+          "count": 17,
+          "min_us": 3754,
+          "avg_us": 4757,
+          "p50_us": 4346,
+          "p95_us": 7175,
+          "max_us": 8727
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 99165,
-          "avg_us": 111157,
-          "p50_us": 108831,
-          "p95_us": 122694,
-          "max_us": 140777
+          "count": 17,
+          "min_us": 104762,
+          "avg_us": 116893,
+          "p50_us": 114126,
+          "p95_us": 127057,
+          "max_us": 153612
         }
       },
       "metrics": {
@@ -2350,18 +2350,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 557056,
-        "rss_delta_bytes": 557056,
-        "avg_us": 4678,
-        "p95_us": 8519,
-        "max_us": 9059,
-        "setup_us": 111157
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 4757,
+        "p95_us": 7175,
+        "max_us": 8727,
+        "setup_us": 116893
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 62198,
-        "setup_allocation_bytes": 15663104,
-        "setup_rss_delta_bytes": 15663104,
-        "setup_us": 111157
+        "spatial_rebuild_setup_us": 66434,
+        "setup_allocation_bytes": 1785856,
+        "setup_rss_delta_bytes": 1785856,
+        "setup_us": 116893
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2396,20 +2396,20 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 23539,
-          "avg_us": 28457,
-          "p50_us": 28267,
-          "p95_us": 35981,
-          "max_us": 35981
+          "min_us": 25280,
+          "avg_us": 30237,
+          "p50_us": 29289,
+          "p95_us": 37361,
+          "max_us": 37361
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 580143,
-          "avg_us": 592103,
-          "p50_us": 592558,
-          "p95_us": 603392,
-          "max_us": 603392
+          "min_us": 585834,
+          "avg_us": 609497,
+          "p50_us": 612361,
+          "p95_us": 630262,
+          "max_us": 630262
         }
       },
       "metrics": {
@@ -2417,18 +2417,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 5308416,
-        "rss_delta_bytes": 5308416,
-        "avg_us": 28457,
-        "p95_us": 35981,
-        "max_us": 35981,
-        "setup_us": 592103
+        "allocation_bytes": 5652480,
+        "rss_delta_bytes": 5652480,
+        "avg_us": 30237,
+        "p95_us": 37361,
+        "max_us": 37361,
+        "setup_us": 609497
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 329109,
+        "spatial_rebuild_setup_us": 339245,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 592103
+        "setup_us": 609497
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2463,20 +2463,20 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 24260,
-          "avg_us": 26956,
-          "p50_us": 27757,
-          "p95_us": 29933,
-          "max_us": 29933
+          "min_us": 22245,
+          "avg_us": 26573,
+          "p50_us": 26300,
+          "p95_us": 33643,
+          "max_us": 33643
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 579344,
-          "avg_us": 589692,
-          "p50_us": 584298,
-          "p95_us": 605439,
-          "max_us": 605439
+          "min_us": 590271,
+          "avg_us": 619443,
+          "p50_us": 604923,
+          "p95_us": 691943,
+          "max_us": 691943
         }
       },
       "metrics": {
@@ -2484,18 +2484,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 16695296,
-        "rss_delta_bytes": 16695296,
-        "avg_us": 26956,
-        "p95_us": 29933,
-        "max_us": 29933,
-        "setup_us": 589692
+        "allocation_bytes": 13549568,
+        "rss_delta_bytes": 13549568,
+        "avg_us": 26573,
+        "p95_us": 33643,
+        "max_us": 33643,
+        "setup_us": 619443
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 335562,
+        "spatial_rebuild_setup_us": 333648,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 589692
+        "setup_us": 619443
       },
       "exactInvariants": {
         "partial_erase_count_zero": {
@@ -2529,39 +2529,39 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1580,
-          "min_us": 1155,
-          "avg_us": 1260,
-          "p50_us": 1203,
-          "p95_us": 1451,
-          "max_us": 9841
+          "count": 1491,
+          "min_us": 1177,
+          "avg_us": 1331,
+          "p50_us": 1275,
+          "p95_us": 1530,
+          "max_us": 10849
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 27790,
-          "avg_us": 27790,
-          "p50_us": 27790,
-          "p95_us": 27790,
-          "max_us": 27790
+          "min_us": 29100,
+          "avg_us": 29100,
+          "p50_us": 29100,
+          "p95_us": 29100,
+          "max_us": 29100
         }
       },
       "metrics": {
         "captured_handle_count": 1000,
         "captured_element_count": 1000,
         "resource_descriptor_count": 0,
-        "allocation_bytes": 32768,
-        "rss_delta_bytes": 32768,
-        "avg_us": 1260,
-        "p95_us": 1451,
-        "max_us": 9841,
-        "setup_us": 27790
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 1331,
+        "p95_us": 1530,
+        "max_us": 10849,
+        "setup_us": 29100
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 17843,
-        "setup_allocation_bytes": 3817472,
-        "setup_rss_delta_bytes": 3817472,
-        "setup_us": 27790
+        "spatial_rebuild_setup_us": 19194,
+        "setup_allocation_bytes": 5439488,
+        "setup_rss_delta_bytes": 5439488,
+        "setup_us": 29100
       },
       "exactInvariants": {}
     },
@@ -2587,39 +2587,39 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 4250,
-          "min_us": 317,
-          "avg_us": 461,
-          "p50_us": 358,
-          "p95_us": 1002,
-          "max_us": 5191
+          "count": 3588,
+          "min_us": 339,
+          "avg_us": 549,
+          "p50_us": 422,
+          "p95_us": 1184,
+          "max_us": 7601
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 109507,
-          "avg_us": 109507,
-          "p50_us": 109507,
-          "p95_us": 109507,
-          "max_us": 109507
+          "min_us": 130736,
+          "avg_us": 130736,
+          "p50_us": 130736,
+          "p95_us": 130736,
+          "max_us": 130736
         }
       },
       "metrics": {
         "captured_handle_count": 0,
         "captured_element_count": 0,
         "resource_descriptor_count": 0,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 461,
-        "p95_us": 1002,
-        "max_us": 5191,
-        "setup_us": 109507
+        "allocation_bytes": 278528,
+        "rss_delta_bytes": 278528,
+        "avg_us": 549,
+        "p95_us": 1184,
+        "max_us": 7601,
+        "setup_us": 130736
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 64050,
-        "setup_allocation_bytes": 16400384,
-        "setup_rss_delta_bytes": 16400384,
-        "setup_us": 109507
+        "spatial_rebuild_setup_us": 70902,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 130736
       },
       "exactInvariants": {}
     },
@@ -2645,21 +2645,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1334,
-          "min_us": 874,
-          "avg_us": 1482,
-          "p50_us": 1103,
-          "p95_us": 2820,
-          "max_us": 13356
+          "count": 1169,
+          "min_us": 960,
+          "avg_us": 1691,
+          "p50_us": 1271,
+          "p95_us": 3514,
+          "max_us": 14722
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 585350,
-          "avg_us": 585350,
-          "p50_us": 585350,
-          "p95_us": 585350,
-          "max_us": 585350
+          "min_us": 639702,
+          "avg_us": 639702,
+          "p50_us": 639702,
+          "p95_us": 639702,
+          "max_us": 639702
         }
       },
       "metrics": {
@@ -2668,16 +2668,16 @@
         "resource_descriptor_count": 0,
         "allocation_bytes": 1605632,
         "rss_delta_bytes": 1605632,
-        "avg_us": 1482,
-        "p95_us": 2820,
-        "max_us": 13356,
-        "setup_us": 585350
+        "avg_us": 1691,
+        "p95_us": 3514,
+        "max_us": 14722,
+        "setup_us": 639702
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 329336,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 585350
+        "spatial_rebuild_setup_us": 383472,
+        "setup_allocation_bytes": 8208384,
+        "setup_rss_delta_bytes": 8208384,
+        "setup_us": 639702
       },
       "exactInvariants": {}
     },
@@ -2703,39 +2703,39 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 722,
-          "min_us": 1818,
-          "avg_us": 2746,
-          "p50_us": 2165,
-          "p95_us": 4748,
-          "max_us": 7044
+          "count": 700,
+          "min_us": 1726,
+          "avg_us": 2835,
+          "p50_us": 2173,
+          "p95_us": 4977,
+          "max_us": 27704
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 1228703,
-          "avg_us": 1228703,
-          "p50_us": 1228703,
-          "p95_us": 1228703,
-          "max_us": 1228703
+          "min_us": 1208055,
+          "avg_us": 1208055,
+          "p50_us": 1208055,
+          "p95_us": 1208055,
+          "max_us": 1208055
         }
       },
       "metrics": {
         "captured_handle_count": 0,
         "captured_element_count": 0,
         "resource_descriptor_count": 0,
-        "allocation_bytes": 3178496,
-        "rss_delta_bytes": 3178496,
-        "avg_us": 2746,
-        "p95_us": 4748,
-        "max_us": 7044,
-        "setup_us": 1228703
+        "allocation_bytes": 3211264,
+        "rss_delta_bytes": 3211264,
+        "avg_us": 2835,
+        "p95_us": 4977,
+        "max_us": 27704,
+        "setup_us": 1208055
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 704746,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 1228703
+        "spatial_rebuild_setup_us": 672914,
+        "setup_allocation_bytes": 20742144,
+        "setup_rss_delta_bytes": 20742144,
+        "setup_us": 1208055
       },
       "exactInvariants": {}
     },
@@ -2761,21 +2761,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 151912,
+          "count": 144986,
           "min_us": 9,
-          "avg_us": 10,
+          "avg_us": 11,
           "p50_us": 9,
-          "p95_us": 16,
-          "max_us": 749
+          "p95_us": 17,
+          "max_us": 1042
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 674,
-          "avg_us": 674,
-          "p50_us": 674,
-          "p95_us": 674,
-          "max_us": 674
+          "min_us": 736,
+          "avg_us": 736,
+          "p50_us": 736,
+          "p95_us": 736,
+          "max_us": 736
         }
       },
       "metrics": {
@@ -2783,16 +2783,16 @@
         "overlay_preview_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 10,
-        "p95_us": 16,
-        "max_us": 749,
-        "setup_us": 674
+        "avg_us": 11,
+        "p95_us": 17,
+        "max_us": 1042,
+        "setup_us": 736
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 116,
+        "spatial_rebuild_setup_us": 134,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 674
+        "setup_us": 736
       },
       "exactInvariants": {}
     },
@@ -2818,39 +2818,39 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 562,
-          "min_us": 3211,
-          "avg_us": 3548,
-          "p50_us": 3480,
-          "p95_us": 3998,
-          "max_us": 14226
+          "count": 534,
+          "min_us": 3317,
+          "avg_us": 3725,
+          "p50_us": 3623,
+          "p95_us": 4102,
+          "max_us": 16059
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 24788,
-          "avg_us": 24788,
-          "p50_us": 24788,
-          "p95_us": 24788,
-          "max_us": 24788
+          "min_us": 28351,
+          "avg_us": 28351,
+          "p50_us": 28351,
+          "p95_us": 28351,
+          "max_us": 28351
         }
       },
       "metrics": {
         "candidate_count": 1000,
         "offscreen_layer_count": 0,
         "save_layer_count": 0,
-        "allocation_bytes": 557056,
-        "rss_delta_bytes": 557056,
-        "avg_us": 3548,
-        "p95_us": 3998,
-        "max_us": 14226,
-        "setup_us": 24788
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 3725,
+        "p95_us": 4102,
+        "max_us": 16059,
+        "setup_us": 28351
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 13870,
-        "setup_allocation_bytes": 10420224,
-        "setup_rss_delta_bytes": 10420224,
-        "setup_us": 24788
+        "spatial_rebuild_setup_us": 16009,
+        "setup_allocation_bytes": 11075584,
+        "setup_rss_delta_bytes": 11075584,
+        "setup_us": 28351
       },
       "exactInvariants": {
         "save_layer_count_zero": {
@@ -2891,21 +2891,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 4154,
+          "count": 4053,
           "min_us": 322,
-          "avg_us": 472,
-          "p50_us": 364,
-          "p95_us": 1007,
-          "max_us": 4705
+          "avg_us": 484,
+          "p50_us": 379,
+          "p95_us": 1048,
+          "max_us": 6723
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 121968,
-          "avg_us": 121968,
-          "p50_us": 121968,
-          "p95_us": 121968,
-          "max_us": 121968
+          "min_us": 130464,
+          "avg_us": 130464,
+          "p50_us": 130464,
+          "p95_us": 130464,
+          "max_us": 130464
         }
       },
       "metrics": {
@@ -2914,16 +2914,16 @@
         "save_layer_count": 0,
         "allocation_bytes": 278528,
         "rss_delta_bytes": 278528,
-        "avg_us": 472,
-        "p95_us": 1007,
-        "max_us": 4705,
-        "setup_us": 121968
+        "avg_us": 484,
+        "p95_us": 1048,
+        "max_us": 6723,
+        "setup_us": 130464
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 65188,
-        "setup_allocation_bytes": 6209536,
-        "setup_rss_delta_bytes": 6209536,
-        "setup_us": 121968
+        "spatial_rebuild_setup_us": 71224,
+        "setup_allocation_bytes": 7634944,
+        "setup_rss_delta_bytes": 7634944,
+        "setup_us": 130464
       },
       "exactInvariants": {
         "save_layer_count_zero": {
@@ -2964,21 +2964,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1334,
-          "min_us": 872,
-          "avg_us": 1482,
-          "p50_us": 1123,
-          "p95_us": 2819,
-          "max_us": 14383
+          "count": 1228,
+          "min_us": 949,
+          "avg_us": 1608,
+          "p50_us": 1205,
+          "p95_us": 3243,
+          "max_us": 15602
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 626612,
-          "avg_us": 626612,
-          "p50_us": 626612,
-          "p95_us": 626612,
-          "max_us": 626612
+          "min_us": 627522,
+          "avg_us": 627522,
+          "p50_us": 627522,
+          "p95_us": 627522,
+          "max_us": 627522
         }
       },
       "metrics": {
@@ -2987,16 +2987,16 @@
         "save_layer_count": 0,
         "allocation_bytes": 1605632,
         "rss_delta_bytes": 1605632,
-        "avg_us": 1482,
-        "p95_us": 2819,
-        "max_us": 14383,
-        "setup_us": 626612
+        "avg_us": 1608,
+        "p95_us": 3243,
+        "max_us": 15602,
+        "setup_us": 627522
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 329205,
-        "setup_allocation_bytes": 5111808,
-        "setup_rss_delta_bytes": 5111808,
-        "setup_us": 626612
+        "spatial_rebuild_setup_us": 328752,
+        "setup_allocation_bytes": 5521408,
+        "setup_rss_delta_bytes": 5521408,
+        "setup_us": 627522
       },
       "exactInvariants": {
         "save_layer_count_zero": {
@@ -3037,39 +3037,39 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 715,
-          "min_us": 1790,
-          "avg_us": 2776,
-          "p50_us": 2222,
-          "p95_us": 4803,
-          "max_us": 23997
+          "count": 598,
+          "min_us": 1848,
+          "avg_us": 3320,
+          "p50_us": 2587,
+          "p95_us": 5912,
+          "max_us": 32328
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 1327923,
-          "avg_us": 1327923,
-          "p50_us": 1327923,
-          "p95_us": 1327923,
-          "max_us": 1327923
+          "min_us": 1487670,
+          "avg_us": 1487670,
+          "p50_us": 1487670,
+          "p95_us": 1487670,
+          "max_us": 1487670
         }
       },
       "metrics": {
         "candidate_count": 0,
         "offscreen_layer_count": 0,
         "save_layer_count": 0,
-        "allocation_bytes": 3178496,
-        "rss_delta_bytes": 3178496,
-        "avg_us": 2776,
-        "p95_us": 4803,
-        "max_us": 23997,
-        "setup_us": 1327923
+        "allocation_bytes": 3227648,
+        "rss_delta_bytes": 3227648,
+        "avg_us": 3320,
+        "p95_us": 5912,
+        "max_us": 32328,
+        "setup_us": 1487670
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 687765,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 1327923
+        "spatial_rebuild_setup_us": 754070,
+        "setup_allocation_bytes": 229376,
+        "setup_rss_delta_bytes": 229376,
+        "setup_us": 1487670
       },
       "exactInvariants": {
         "save_layer_count_zero": {
@@ -3110,21 +3110,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 514,
-          "min_us": 33,
-          "avg_us": 59,
-          "p50_us": 47,
-          "p95_us": 119,
-          "max_us": 366
+          "count": 483,
+          "min_us": 38,
+          "avg_us": 68,
+          "p50_us": 56,
+          "p95_us": 128,
+          "max_us": 588
         },
         "setupUs": {
           "available": true,
-          "count": 514,
-          "min_us": 3420,
-          "avg_us": 3767,
-          "p50_us": 3698,
-          "p95_us": 4123,
-          "max_us": 8910
+          "count": 483,
+          "min_us": 3535,
+          "avg_us": 3990,
+          "p50_us": 3905,
+          "p95_us": 4443,
+          "max_us": 9031
         }
       },
       "metrics": {
@@ -3134,15 +3134,15 @@
         "cold_sync_resolver_calls": 32,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 59,
-        "p95_us": 119,
-        "max_us": 366,
-        "setup_us": 3767
+        "avg_us": 68,
+        "p95_us": 128,
+        "max_us": 588,
+        "setup_us": 3990
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 540672,
-        "setup_rss_delta_bytes": 540672,
-        "setup_us": 3767
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 3990
       },
       "exactInvariants": {
         "resolver_calls_bounded": {
@@ -3176,21 +3176,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 513,
-          "min_us": 83,
-          "avg_us": 117,
-          "p50_us": 95,
-          "p95_us": 241,
-          "max_us": 702
+          "count": 469,
+          "min_us": 84,
+          "avg_us": 130,
+          "p50_us": 105,
+          "p95_us": 312,
+          "max_us": 814
         },
         "setupUs": {
           "available": true,
-          "count": 513,
-          "min_us": 3365,
-          "avg_us": 3715,
-          "p50_us": 3642,
-          "p95_us": 4093,
-          "max_us": 8307
+          "count": 469,
+          "min_us": 3503,
+          "avg_us": 4047,
+          "p50_us": 3930,
+          "p95_us": 4670,
+          "max_us": 8625
         }
       },
       "metrics": {
@@ -3200,15 +3200,15 @@
         "cold_sync_resolver_calls": 128,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 117,
-        "p95_us": 241,
-        "max_us": 702,
-        "setup_us": 3715
+        "avg_us": 130,
+        "p95_us": 312,
+        "max_us": 814,
+        "setup_us": 4047
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 524288,
-        "setup_rss_delta_bytes": 524288,
-        "setup_us": 3715
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 4047
       },
       "exactInvariants": {
         "session_budget_resolver_calls_lte_128": {
@@ -3242,21 +3242,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 488,
-          "min_us": 28,
-          "avg_us": 41,
-          "p50_us": 38,
-          "p95_us": 59,
-          "max_us": 133
+          "count": 481,
+          "min_us": 30,
+          "avg_us": 46,
+          "p50_us": 44,
+          "p95_us": 64,
+          "max_us": 155
         },
         "setupUs": {
           "available": true,
-          "count": 488,
-          "min_us": 3480,
-          "avg_us": 3978,
-          "p50_us": 3860,
-          "p95_us": 4334,
-          "max_us": 19211
+          "count": 481,
+          "min_us": 3554,
+          "avg_us": 4028,
+          "p50_us": 3961,
+          "p95_us": 4534,
+          "max_us": 8875
         }
       },
       "metrics": {
@@ -3264,15 +3264,15 @@
         "target_session_cache_invalidation_cost": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 41,
-        "p95_us": 59,
-        "max_us": 133,
-        "setup_us": 3978
+        "avg_us": 46,
+        "p95_us": 64,
+        "max_us": 155,
+        "setup_us": 4028
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 3978
+        "setup_us": 4028
       },
       "exactInvariants": {
         "target_session_cache_invalidation_bounded": {
@@ -3306,21 +3306,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 498,
-          "min_us": 28,
-          "avg_us": 38,
-          "p50_us": 35,
-          "p95_us": 54,
-          "max_us": 154
+          "count": 475,
+          "min_us": 27,
+          "avg_us": 41,
+          "p50_us": 37,
+          "p95_us": 65,
+          "max_us": 411
         },
         "setupUs": {
           "available": true,
-          "count": 498,
-          "min_us": 3521,
-          "avg_us": 3903,
-          "p50_us": 3834,
-          "p95_us": 4258,
-          "max_us": 8530
+          "count": 475,
+          "min_us": 3588,
+          "avg_us": 4089,
+          "p50_us": 3989,
+          "p95_us": 4758,
+          "max_us": 9080
         }
       },
       "metrics": {
@@ -3328,15 +3328,15 @@
         "all_entry_session_cache_invalidation_cost": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 38,
-        "p95_us": 54,
-        "max_us": 154,
-        "setup_us": 3903
+        "avg_us": 41,
+        "p95_us": 65,
+        "max_us": 411,
+        "setup_us": 4089
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 3903
+        "setup_us": 4089
       },
       "exactInvariants": {
         "all_entry_session_cache_invalidation_bounded": {
@@ -3370,38 +3370,38 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 194,
-          "min_us": 816,
-          "avg_us": 1073,
-          "p50_us": 898,
-          "p95_us": 2027,
-          "max_us": 3232
+          "count": 192,
+          "min_us": 787,
+          "avg_us": 1129,
+          "p50_us": 891,
+          "p95_us": 2083,
+          "max_us": 5964
         },
         "setupUs": {
           "available": true,
-          "count": 194,
-          "min_us": 7960,
-          "avg_us": 9161,
-          "p50_us": 8780,
-          "p95_us": 12089,
-          "max_us": 27188
+          "count": 192,
+          "min_us": 7941,
+          "avg_us": 9193,
+          "p50_us": 8764,
+          "p95_us": 10875,
+          "max_us": 31529
         }
       },
       "metrics": {
-        "first_read_us": 867,
+        "first_read_us": 2498,
         "cache_hit_us": 1,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 1073,
-        "p95_us": 2027,
-        "max_us": 3232,
-        "setup_us": 9161
+        "allocation_bytes": 1572864,
+        "rss_delta_bytes": 1572864,
+        "avg_us": 1129,
+        "p95_us": 2083,
+        "max_us": 5964,
+        "setup_us": 9193
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 5273,
+        "spatial_rebuild_setup_us": 7294,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 9161
+        "setup_us": 9193
       },
       "exactInvariants": {}
     },
@@ -3428,37 +3428,37 @@
         "actionUs": {
           "available": true,
           "count": 17,
-          "min_us": 8553,
-          "avg_us": 10703,
-          "p50_us": 9959,
-          "p95_us": 15656,
-          "max_us": 16523
+          "min_us": 8894,
+          "avg_us": 10885,
+          "p50_us": 9977,
+          "p95_us": 16301,
+          "max_us": 17684
         },
         "setupUs": {
           "available": true,
           "count": 17,
-          "min_us": 104217,
-          "avg_us": 112165,
-          "p50_us": 112237,
-          "p95_us": 118189,
-          "max_us": 118684
+          "min_us": 103557,
+          "avg_us": 111822,
+          "p50_us": 109412,
+          "p95_us": 118601,
+          "max_us": 132150
         }
       },
       "metrics": {
-        "first_read_us": 9845,
-        "cache_hit_us": 2,
-        "allocation_bytes": 704512,
-        "rss_delta_bytes": 704512,
-        "avg_us": 10703,
-        "p95_us": 15656,
-        "max_us": 16523,
-        "setup_us": 112165
+        "first_read_us": 12455,
+        "cache_hit_us": 1,
+        "allocation_bytes": 1671168,
+        "rss_delta_bytes": 1671168,
+        "avg_us": 10885,
+        "p95_us": 16301,
+        "max_us": 17684,
+        "setup_us": 111822
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 64525,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 112165
+        "spatial_rebuild_setup_us": 62763,
+        "setup_allocation_bytes": 311296,
+        "setup_rss_delta_bytes": 311296,
+        "setup_us": 111822
       },
       "exactInvariants": {}
     },
@@ -3485,37 +3485,37 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 47454,
-          "avg_us": 58170,
-          "p50_us": 59487,
-          "p95_us": 63323,
-          "max_us": 63323
+          "min_us": 45703,
+          "avg_us": 52826,
+          "p50_us": 48994,
+          "p95_us": 69818,
+          "max_us": 69818
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 558089,
-          "avg_us": 592956,
-          "p50_us": 575807,
-          "p95_us": 633022,
-          "max_us": 633022
+          "min_us": 597605,
+          "avg_us": 642598,
+          "p50_us": 651002,
+          "p95_us": 676533,
+          "max_us": 676533
         }
       },
       "metrics": {
-        "first_read_us": 63144,
-        "cache_hit_us": 6,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 58170,
-        "p95_us": 63323,
-        "max_us": 63323,
-        "setup_us": 592956
+        "first_read_us": 45573,
+        "cache_hit_us": 2,
+        "allocation_bytes": 5685248,
+        "rss_delta_bytes": 5685248,
+        "avg_us": 52826,
+        "p95_us": 69818,
+        "max_us": 69818,
+        "setup_us": 642598
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 355364,
+        "spatial_rebuild_setup_us": 352630,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 592956
+        "setup_us": 642598
       },
       "exactInvariants": {}
     },
@@ -3542,37 +3542,37 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 95591,
-          "avg_us": 101905,
-          "p50_us": 98432,
-          "p95_us": 121098,
-          "max_us": 121098
+          "min_us": 94210,
+          "avg_us": 114376,
+          "p50_us": 121044,
+          "p95_us": 133458,
+          "max_us": 133458
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 1229625,
-          "avg_us": 1291505,
-          "p50_us": 1267906,
-          "p95_us": 1435308,
-          "max_us": 1435308
+          "min_us": 1307458,
+          "avg_us": 1344318,
+          "p50_us": 1318468,
+          "p95_us": 1432250,
+          "max_us": 1432250
         }
       },
       "metrics": {
-        "first_read_us": 95465,
+        "first_read_us": 94067,
         "cache_hit_us": 2,
-        "allocation_bytes": 2457600,
-        "rss_delta_bytes": 2457600,
-        "avg_us": 101905,
-        "p95_us": 121098,
-        "max_us": 121098,
-        "setup_us": 1291505
+        "allocation_bytes": 13352960,
+        "rss_delta_bytes": 13352960,
+        "avg_us": 114376,
+        "p95_us": 133458,
+        "max_us": 133458,
+        "setup_us": 1344318
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 679051,
-        "setup_allocation_bytes": 19464192,
-        "setup_rss_delta_bytes": 19464192,
-        "setup_us": 1291505
+        "spatial_rebuild_setup_us": 730720,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1344318
       },
       "exactInvariants": {}
     },
@@ -3598,21 +3598,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 68674,
+          "count": 67237,
           "min_us": 21,
-          "avg_us": 26,
+          "avg_us": 27,
           "p50_us": 22,
-          "p95_us": 38,
-          "max_us": 542
+          "p95_us": 40,
+          "max_us": 1355
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 194,
-          "avg_us": 194,
-          "p50_us": 194,
-          "p95_us": 194,
-          "max_us": 194
+          "min_us": 212,
+          "avg_us": 212,
+          "p50_us": 212,
+          "p95_us": 212,
+          "max_us": 212
         }
       },
       "metrics": {
@@ -3620,15 +3620,15 @@
         "allocation_bytes": 809,
         "error_payload": "valid",
         "rss_delta_bytes": 0,
-        "avg_us": 26,
-        "p95_us": 38,
-        "max_us": 542,
-        "setup_us": 194
+        "avg_us": 27,
+        "p95_us": 40,
+        "max_us": 1355,
+        "setup_us": 212
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 32768,
-        "setup_rss_delta_bytes": 32768,
-        "setup_us": 194
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 212
       },
       "exactInvariants": {
         "error_payload_matches_fixture": {
@@ -3662,38 +3662,38 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 142,
-          "min_us": 5977,
-          "avg_us": 7064,
-          "p50_us": 6696,
-          "p95_us": 10294,
-          "max_us": 19653
+          "count": 138,
+          "min_us": 5914,
+          "avg_us": 7332,
+          "p50_us": 6852,
+          "p95_us": 10102,
+          "max_us": 25928
         },
         "setupUs": {
           "available": true,
-          "count": 142,
-          "min_us": 6292,
-          "avg_us": 7033,
-          "p50_us": 6821,
-          "p95_us": 7916,
-          "max_us": 21080
+          "count": 138,
+          "min_us": 6338,
+          "avg_us": 7124,
+          "p50_us": 6866,
+          "p95_us": 8430,
+          "max_us": 17919
         }
       },
       "metrics": {
         "loaded_element_count": 1000,
         "rebuild_cost": 128,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 7064,
-        "p95_us": 10294,
-        "max_us": 19653,
-        "schema_import_load_us": 10214,
-        "setup_us": 7033
+        "allocation_bytes": 3162112,
+        "rss_delta_bytes": 3162112,
+        "avg_us": 7332,
+        "p95_us": 10102,
+        "max_us": 25928,
+        "schema_import_load_us": 10004,
+        "setup_us": 7124
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 7033
+        "setup_us": 7124
       },
       "exactInvariants": {}
     },
@@ -3720,37 +3720,37 @@
         "actionUs": {
           "available": true,
           "count": 13,
-          "min_us": 74792,
-          "avg_us": 83950,
-          "p50_us": 84831,
-          "p95_us": 88919,
-          "max_us": 89798
+          "min_us": 80239,
+          "avg_us": 83443,
+          "p50_us": 82609,
+          "p95_us": 87037,
+          "max_us": 94130
         },
         "setupUs": {
           "available": true,
           "count": 13,
-          "min_us": 75403,
-          "avg_us": 78590,
-          "p50_us": 78132,
-          "p95_us": 81700,
-          "max_us": 84125
+          "min_us": 75010,
+          "avg_us": 80907,
+          "p50_us": 82153,
+          "p95_us": 85203,
+          "max_us": 92308
         }
       },
       "metrics": {
         "loaded_element_count": 10000,
         "rebuild_cost": 128,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 83950,
-        "p95_us": 88919,
-        "max_us": 89798,
-        "schema_import_load_us": 88778,
-        "setup_us": 78590
+        "allocation_bytes": 21807104,
+        "rss_delta_bytes": 21807104,
+        "avg_us": 83443,
+        "p95_us": 87037,
+        "max_us": 94130,
+        "schema_import_load_us": 86927,
+        "setup_us": 80907
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 78590
+        "setup_us": 80907
       },
       "exactInvariants": {}
     },
@@ -3777,20 +3777,20 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 419169,
-          "avg_us": 432748,
-          "p50_us": 436521,
-          "p95_us": 446120,
-          "max_us": 446120
+          "min_us": 434427,
+          "avg_us": 442162,
+          "p50_us": 437622,
+          "p95_us": 458808,
+          "max_us": 458808
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 355827,
-          "avg_us": 363762,
-          "p50_us": 363207,
-          "p95_us": 376025,
-          "max_us": 376025
+          "min_us": 357577,
+          "avg_us": 365269,
+          "p50_us": 366128,
+          "p95_us": 375017,
+          "max_us": 375017
         }
       },
       "metrics": {
@@ -3798,16 +3798,16 @@
         "rebuild_cost": 128,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 432748,
-        "p95_us": 446120,
-        "max_us": 446120,
-        "schema_import_load_us": 446006,
-        "setup_us": 363762
+        "avg_us": 442162,
+        "p95_us": 458808,
+        "max_us": 458808,
+        "schema_import_load_us": 458678,
+        "setup_us": 365269
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 121159680,
-        "setup_rss_delta_bytes": 121159680,
-        "setup_us": 363762
+        "setup_allocation_bytes": 120881152,
+        "setup_rss_delta_bytes": 120881152,
+        "setup_us": 365269
       },
       "exactInvariants": {}
     },
@@ -3833,42 +3833,42 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 129,
-          "min_us": 13611,
-          "avg_us": 15565,
-          "p50_us": 14971,
-          "p95_us": 19206,
-          "max_us": 28810
+          "count": 130,
+          "min_us": 13586,
+          "avg_us": 15357,
+          "p50_us": 14635,
+          "p95_us": 19606,
+          "max_us": 30377
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 10910,
-          "avg_us": 10910,
-          "p50_us": 10910,
-          "p95_us": 10910,
-          "max_us": 10910
+          "min_us": 10920,
+          "avg_us": 10920,
+          "p50_us": 10920,
+          "p95_us": 10920,
+          "max_us": 10920
         }
       },
       "metrics": {
-        "decode_us": 8096,
-        "runtime_construct_us": 92,
-        "first_projection_us": 1157,
+        "decode_us": 5285,
+        "runtime_construct_us": 79,
+        "first_projection_us": 905,
         "loaded_element_count": 1000,
         "projected_element_count": 1000,
         "encoded_byte_count": 340405,
-        "allocation_bytes": 688128,
-        "rss_delta_bytes": 688128,
-        "avg_us": 15565,
-        "p95_us": 19206,
-        "max_us": 28810,
-        "schema_import_load_us": 8025,
-        "setup_us": 10910
+        "allocation_bytes": 2801664,
+        "rss_delta_bytes": 2801664,
+        "avg_us": 15357,
+        "p95_us": 19606,
+        "max_us": 30377,
+        "schema_import_load_us": 7990,
+        "setup_us": 10920
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 4046848,
-        "setup_rss_delta_bytes": 4046848,
-        "setup_us": 10910
+        "setup_allocation_bytes": 3489792,
+        "setup_rss_delta_bytes": 3489792,
+        "setup_us": 10920
       },
       "exactInvariants": {}
     },
@@ -3895,41 +3895,41 @@
         "actionUs": {
           "available": true,
           "count": 11,
-          "min_us": 174511,
-          "avg_us": 183763,
-          "p50_us": 185986,
-          "p95_us": 190765,
-          "max_us": 190765
+          "min_us": 178853,
+          "avg_us": 188261,
+          "p50_us": 182229,
+          "p95_us": 220020,
+          "max_us": 220020
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 92198,
-          "avg_us": 92198,
-          "p50_us": 92198,
-          "p95_us": 92198,
-          "max_us": 92198
+          "min_us": 91782,
+          "avg_us": 91782,
+          "p50_us": 91782,
+          "p95_us": 91782,
+          "max_us": 91782
         }
       },
       "metrics": {
-        "decode_us": 76111,
-        "runtime_construct_us": 122,
-        "first_projection_us": 11532,
+        "decode_us": 106231,
+        "runtime_construct_us": 152,
+        "first_projection_us": 11187,
         "loaded_element_count": 10000,
         "projected_element_count": 10000,
         "encoded_byte_count": 3369551,
-        "allocation_bytes": 15187968,
-        "rss_delta_bytes": 15187968,
-        "avg_us": 183763,
-        "p95_us": 190765,
-        "max_us": 190765,
-        "schema_import_load_us": 89065,
-        "setup_us": 92198
+        "allocation_bytes": 0,
+        "rss_delta_bytes": 0,
+        "avg_us": 188261,
+        "p95_us": 220020,
+        "max_us": 220020,
+        "schema_import_load_us": 93712,
+        "setup_us": 91782
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 92198
+        "setup_us": 91782
       },
       "exactInvariants": {}
     },
@@ -3956,41 +3956,41 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 880003,
-          "avg_us": 911276,
-          "p50_us": 906608,
-          "p95_us": 964955,
-          "max_us": 964955
+          "min_us": 860521,
+          "avg_us": 903713,
+          "p50_us": 894284,
+          "p95_us": 966509,
+          "max_us": 966509
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 500560,
-          "avg_us": 500560,
-          "p50_us": 500560,
-          "p95_us": 500560,
-          "max_us": 500560
+          "min_us": 460338,
+          "avg_us": 460338,
+          "p50_us": 460338,
+          "p95_us": 460338,
+          "max_us": 460338
         }
       },
       "metrics": {
-        "decode_us": 359156,
-        "runtime_construct_us": 187,
-        "first_projection_us": 49914,
+        "decode_us": 366923,
+        "runtime_construct_us": 181,
+        "first_projection_us": 49030,
         "loaded_element_count": 50000,
         "projected_element_count": 50000,
         "encoded_byte_count": 16872388,
-        "allocation_bytes": 3031040,
-        "rss_delta_bytes": 3031040,
-        "avg_us": 911276,
-        "p95_us": 964955,
-        "max_us": 964955,
-        "schema_import_load_us": 485962,
-        "setup_us": 500560
+        "allocation_bytes": 17743872,
+        "rss_delta_bytes": 17743872,
+        "avg_us": 903713,
+        "p95_us": 966509,
+        "max_us": 966509,
+        "schema_import_load_us": 445003,
+        "setup_us": 460338
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 500560
+        "setup_us": 460338
       },
       "exactInvariants": {}
     },
@@ -4016,21 +4016,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 416,
-          "min_us": 390,
-          "avg_us": 528,
-          "p50_us": 506,
-          "p95_us": 711,
-          "max_us": 1610
+          "count": 404,
+          "min_us": 398,
+          "avg_us": 556,
+          "p50_us": 521,
+          "p95_us": 832,
+          "max_us": 1473
         },
         "setupUs": {
           "available": true,
-          "count": 416,
-          "min_us": 3705,
-          "avg_us": 4248,
-          "p50_us": 4146,
-          "p95_us": 4826,
-          "max_us": 12938
+          "count": 404,
+          "min_us": 3811,
+          "avg_us": 4366,
+          "p50_us": 4241,
+          "p95_us": 5134,
+          "max_us": 12579
         }
       },
       "metrics": {
@@ -4039,15 +4039,15 @@
         "error_payload": "duplicateElementId",
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 528,
-        "p95_us": 711,
-        "max_us": 1610,
-        "setup_us": 4248
+        "avg_us": 556,
+        "p95_us": 832,
+        "max_us": 1473,
+        "setup_us": 4366
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 16384,
-        "setup_rss_delta_bytes": 16384,
-        "setup_us": 4248
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 4366
       },
       "exactInvariants": {
         "committed_mutation_count_zero": {
@@ -4082,20 +4082,20 @@
         "actionUs": {
           "available": true,
           "count": 34,
-          "min_us": 3535,
-          "avg_us": 4780,
-          "p50_us": 4538,
-          "p95_us": 6329,
-          "max_us": 7168
+          "min_us": 3519,
+          "avg_us": 4730,
+          "p50_us": 4135,
+          "p95_us": 6880,
+          "max_us": 7555
         },
         "setupUs": {
           "available": true,
           "count": 34,
-          "min_us": 47841,
-          "avg_us": 54645,
-          "p50_us": 53709,
-          "p95_us": 64595,
-          "max_us": 77215
+          "min_us": 46582,
+          "avg_us": 54375,
+          "p50_us": 52485,
+          "p95_us": 62374,
+          "max_us": 86624
         }
       },
       "metrics": {
@@ -4104,15 +4104,15 @@
         "error_payload": "duplicateElementId",
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 4780,
-        "p95_us": 6329,
-        "max_us": 7168,
-        "setup_us": 54645
+        "avg_us": 4730,
+        "p95_us": 6880,
+        "max_us": 7555,
+        "setup_us": 54375
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 3178496,
-        "setup_rss_delta_bytes": 3178496,
-        "setup_us": 54645
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 54375
       },
       "exactInvariants": {
         "committed_mutation_count_zero": {
@@ -4147,20 +4147,20 @@
         "actionUs": {
           "available": true,
           "count": 7,
-          "min_us": 24595,
-          "avg_us": 29017,
-          "p50_us": 27545,
-          "p95_us": 33440,
-          "max_us": 33440
+          "min_us": 21511,
+          "avg_us": 26994,
+          "p50_us": 24982,
+          "p95_us": 35124,
+          "max_us": 35124
         },
         "setupUs": {
           "available": true,
           "count": 7,
-          "min_us": 278166,
-          "avg_us": 289788,
-          "p50_us": 284102,
-          "p95_us": 316109,
-          "max_us": 316109
+          "min_us": 263573,
+          "avg_us": 297517,
+          "p50_us": 300172,
+          "p95_us": 316746,
+          "max_us": 316746
         }
       },
       "metrics": {
@@ -4169,15 +4169,15 @@
         "error_payload": "duplicateElementId",
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 29017,
-        "p95_us": 33440,
-        "max_us": 33440,
-        "setup_us": 289788
+        "avg_us": 26994,
+        "p95_us": 35124,
+        "max_us": 35124,
+        "setup_us": 297517
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 15368192,
-        "setup_rss_delta_bytes": 15368192,
-        "setup_us": 289788
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 297517
       },
       "exactInvariants": {
         "committed_mutation_count_zero": {
@@ -4212,20 +4212,20 @@
         "actionUs": {
           "available": true,
           "count": 12374,
-          "min_us": 140,
-          "avg_us": 158,
-          "p50_us": 151,
-          "p95_us": 185,
-          "max_us": 1251
+          "min_us": 139,
+          "avg_us": 157,
+          "p50_us": 150,
+          "p95_us": 186,
+          "max_us": 2021
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 27385,
-          "avg_us": 27385,
-          "p50_us": 27385,
-          "p95_us": 27385,
-          "max_us": 27385
+          "min_us": 27012,
+          "avg_us": 27012,
+          "p50_us": 27012,
+          "p95_us": 27012,
+          "max_us": 27012
         }
       },
       "metrics": {
@@ -4233,16 +4233,16 @@
         "fallback_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 158,
-        "p95_us": 185,
-        "max_us": 1251,
-        "setup_us": 27385
+        "avg_us": 157,
+        "p95_us": 186,
+        "max_us": 2021,
+        "setup_us": 27012
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 18140,
-        "setup_allocation_bytes": 5701632,
-        "setup_rss_delta_bytes": 5701632,
-        "setup_us": 27385
+        "spatial_rebuild_setup_us": 18157,
+        "setup_allocation_bytes": 4505600,
+        "setup_rss_delta_bytes": 4505600,
+        "setup_us": 27012
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4276,21 +4276,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 3607,
-          "min_us": 336,
-          "avg_us": 546,
-          "p50_us": 419,
-          "p95_us": 1217,
-          "max_us": 4535
+          "count": 3864,
+          "min_us": 331,
+          "avg_us": 507,
+          "p50_us": 393,
+          "p95_us": 1106,
+          "max_us": 6848
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 125117,
-          "avg_us": 125117,
-          "p50_us": 125117,
-          "p95_us": 125117,
-          "max_us": 125117
+          "min_us": 118647,
+          "avg_us": 118647,
+          "p50_us": 118647,
+          "p95_us": 118647,
+          "max_us": 118647
         }
       },
       "metrics": {
@@ -4298,16 +4298,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 278528,
         "rss_delta_bytes": 278528,
-        "avg_us": 546,
-        "p95_us": 1217,
-        "max_us": 4535,
-        "setup_us": 125117
+        "avg_us": 507,
+        "p95_us": 1106,
+        "max_us": 6848,
+        "setup_us": 118647
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 68353,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 125117
+        "spatial_rebuild_setup_us": 71417,
+        "setup_allocation_bytes": 10977280,
+        "setup_rss_delta_bytes": 10977280,
+        "setup_us": 118647
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4341,21 +4341,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1242,
-          "min_us": 970,
-          "avg_us": 1593,
-          "p50_us": 1183,
-          "p95_us": 3133,
-          "max_us": 13884
+          "count": 1221,
+          "min_us": 978,
+          "avg_us": 1620,
+          "p50_us": 1227,
+          "p95_us": 3139,
+          "max_us": 4978
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 598368,
-          "avg_us": 598368,
-          "p50_us": 598368,
-          "p95_us": 598368,
-          "max_us": 598368
+          "min_us": 610920,
+          "avg_us": 610920,
+          "p50_us": 610920,
+          "p95_us": 610920,
+          "max_us": 610920
         }
       },
       "metrics": {
@@ -4363,16 +4363,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 1605632,
         "rss_delta_bytes": 1605632,
-        "avg_us": 1593,
-        "p95_us": 3133,
-        "max_us": 13884,
-        "setup_us": 598368
+        "avg_us": 1620,
+        "p95_us": 3139,
+        "max_us": 4978,
+        "setup_us": 610920
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 339237,
-        "setup_allocation_bytes": 6438912,
-        "setup_rss_delta_bytes": 6438912,
-        "setup_us": 598368
+        "spatial_rebuild_setup_us": 348302,
+        "setup_allocation_bytes": 7143424,
+        "setup_rss_delta_bytes": 7143424,
+        "setup_us": 610920
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4406,21 +4406,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 699,
-          "min_us": 1852,
-          "avg_us": 2843,
-          "p50_us": 2211,
-          "p95_us": 4907,
-          "max_us": 24340
+          "count": 660,
+          "min_us": 1942,
+          "avg_us": 3008,
+          "p50_us": 2460,
+          "p95_us": 5129,
+          "max_us": 23346
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 1256390,
-          "avg_us": 1256390,
-          "p50_us": 1256390,
-          "p95_us": 1256390,
-          "max_us": 1256390
+          "min_us": 1286375,
+          "avg_us": 1286375,
+          "p50_us": 1286375,
+          "p95_us": 1286375,
+          "max_us": 1286375
         }
       },
       "metrics": {
@@ -4428,16 +4428,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 3178496,
         "rss_delta_bytes": 3178496,
-        "avg_us": 2843,
-        "p95_us": 4907,
-        "max_us": 24340,
-        "setup_us": 1256390
+        "avg_us": 3008,
+        "p95_us": 5129,
+        "max_us": 23346,
+        "setup_us": 1286375
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 728872,
-        "setup_allocation_bytes": 7487488,
-        "setup_rss_delta_bytes": 7487488,
-        "setup_us": 1256390
+        "spatial_rebuild_setup_us": 760766,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 1286375
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4471,21 +4471,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 1276,
-          "min_us": 945,
-          "avg_us": 1551,
-          "p50_us": 1173,
-          "p95_us": 2897,
-          "max_us": 23301
+          "count": 1173,
+          "min_us": 1040,
+          "avg_us": 1687,
+          "p50_us": 1304,
+          "p95_us": 3163,
+          "max_us": 14104
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 587754,
-          "avg_us": 587754,
-          "p50_us": 587754,
-          "p95_us": 587754,
-          "max_us": 587754
+          "min_us": 619653,
+          "avg_us": 619653,
+          "p50_us": 619653,
+          "p95_us": 619653,
+          "max_us": 619653
         }
       },
       "metrics": {
@@ -4493,16 +4493,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 1605632,
         "rss_delta_bytes": 1605632,
-        "avg_us": 1551,
-        "p95_us": 2897,
-        "max_us": 23301,
-        "setup_us": 587754
+        "avg_us": 1687,
+        "p95_us": 3163,
+        "max_us": 14104,
+        "setup_us": 619653
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 329076,
-        "setup_allocation_bytes": 1163264,
-        "setup_rss_delta_bytes": 1163264,
-        "setup_us": 587754
+        "spatial_rebuild_setup_us": 338454,
+        "setup_allocation_bytes": 491520,
+        "setup_rss_delta_bytes": 491520,
+        "setup_us": 619653
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4536,21 +4536,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 217,
-          "min_us": 278,
-          "avg_us": 402,
-          "p50_us": 371,
-          "p95_us": 522,
-          "max_us": 1753
+          "count": 216,
+          "min_us": 269,
+          "avg_us": 413,
+          "p50_us": 385,
+          "p95_us": 535,
+          "max_us": 1872
         },
         "setupUs": {
           "available": true,
-          "count": 217,
-          "min_us": 7920,
-          "avg_us": 8724,
-          "p50_us": 8384,
-          "p95_us": 9203,
-          "max_us": 26681
+          "count": 216,
+          "min_us": 7891,
+          "avg_us": 8752,
+          "p50_us": 8336,
+          "p95_us": 9306,
+          "max_us": 26570
         }
       },
       "metrics": {
@@ -4559,16 +4559,16 @@
         "rebuilt_pages": 64,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 402,
-        "p95_us": 522,
-        "max_us": 1753,
-        "setup_us": 8724
+        "avg_us": 413,
+        "p95_us": 535,
+        "max_us": 1872,
+        "setup_us": 8752
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 5070,
+        "spatial_rebuild_setup_us": 4351,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 8724
+        "setup_us": 8752
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -4602,21 +4602,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 18,
-          "min_us": 1767,
-          "avg_us": 2160,
-          "p50_us": 2053,
-          "p95_us": 2729,
-          "max_us": 3264
+          "count": 17,
+          "min_us": 1914,
+          "avg_us": 2152,
+          "p50_us": 2098,
+          "p95_us": 2395,
+          "max_us": 3319
         },
         "setupUs": {
           "available": true,
-          "count": 18,
-          "min_us": 106431,
-          "avg_us": 113872,
-          "p50_us": 112222,
-          "p95_us": 123558,
-          "max_us": 126995
+          "count": 17,
+          "min_us": 107756,
+          "avg_us": 116895,
+          "p50_us": 118193,
+          "p95_us": 121772,
+          "max_us": 132071
         }
       },
       "metrics": {
@@ -4625,16 +4625,16 @@
         "rebuilt_pages": 64,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 2160,
-        "p95_us": 2729,
-        "max_us": 3264,
-        "setup_us": 113872
+        "avg_us": 2152,
+        "p95_us": 2395,
+        "max_us": 3319,
+        "setup_us": 116895
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 66709,
+        "spatial_rebuild_setup_us": 72046,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 113872
+        "setup_us": 116895
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -4669,38 +4669,38 @@
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 8689,
-          "avg_us": 10114,
-          "p50_us": 9081,
-          "p95_us": 14047,
-          "max_us": 14047
+          "min_us": 9124,
+          "avg_us": 10809,
+          "p50_us": 10491,
+          "p95_us": 13182,
+          "max_us": 13182
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 575918,
-          "avg_us": 598184,
-          "p50_us": 595678,
-          "p95_us": 634755,
-          "max_us": 634755
+          "min_us": 583557,
+          "avg_us": 634430,
+          "p50_us": 623804,
+          "p95_us": 720522,
+          "max_us": 720522
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "rebuilt_ids": 128,
         "rebuilt_pages": 64,
-        "allocation_bytes": 5406720,
-        "rss_delta_bytes": 5406720,
-        "avg_us": 10114,
-        "p95_us": 14047,
-        "max_us": 14047,
-        "setup_us": 598184
+        "allocation_bytes": 5488640,
+        "rss_delta_bytes": 5488640,
+        "avg_us": 10809,
+        "p95_us": 13182,
+        "max_us": 13182,
+        "setup_us": 634430
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 330092,
+        "spatial_rebuild_setup_us": 361817,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 598184
+        "setup_us": 634430
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -4734,21 +4734,21 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 21140,
+          "count": 20726,
           "min_us": 12,
           "avg_us": 18,
           "p50_us": 14,
           "p95_us": 36,
-          "max_us": 471
+          "max_us": 1324
         },
         "setupUs": {
           "available": true,
-          "count": 21140,
+          "count": 20726,
           "min_us": 42,
-          "avg_us": 66,
+          "avg_us": 67,
           "p50_us": 47,
-          "p95_us": 169,
-          "max_us": 1469
+          "p95_us": 172,
+          "max_us": 2378
         }
       },
       "metrics": {
@@ -4758,13 +4758,13 @@
         "rss_delta_bytes": 0,
         "avg_us": 18,
         "p95_us": 36,
-        "max_us": 471,
-        "setup_us": 66
+        "max_us": 1324,
+        "setup_us": 67
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 66
+        "setup_us": 67
       },
       "exactInvariants": {
         "resolver_calls_zero": {
@@ -4805,37 +4805,37 @@
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 24574,
+          "count": 25315,
           "min_us": 7,
-          "avg_us": 11,
+          "avg_us": 10,
           "p50_us": 8,
-          "p95_us": 20,
-          "max_us": 210
+          "p95_us": 19,
+          "max_us": 374
         },
         "setupUs": {
           "available": true,
-          "count": 24574,
+          "count": 25315,
           "min_us": 33,
-          "avg_us": 53,
+          "avg_us": 51,
           "p50_us": 37,
-          "p95_us": 120,
-          "max_us": 7734
+          "p95_us": 117,
+          "max_us": 1459
         }
       },
       "metrics": {
         "allocation_records": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 11,
-        "p95_us": 20,
-        "max_us": 210,
-        "setup_us": 53
+        "avg_us": 10,
+        "p95_us": 19,
+        "max_us": 374,
+        "setup_us": 51
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 5,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 53
+        "setup_us": 51
       },
       "exactInvariants": {
         "allocation_records_zero": {
