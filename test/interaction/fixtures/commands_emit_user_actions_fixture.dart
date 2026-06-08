@@ -5,7 +5,7 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -322,7 +322,7 @@ _recordFailedEraserThenAcceptedAction() async {
 RuntimeRoot _eraserRoot([
   void Function(List<CommitDeliveryEffect> effects)? observeEffects,
 ]) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
       initialMode: CanvasInteractionMode.draw,
@@ -378,7 +378,7 @@ void _performEmptyEraserStroke(RuntimeRoot root) {
 }
 
 RuntimeRoot _runtimeRoot({required List<String> events}) {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
   );

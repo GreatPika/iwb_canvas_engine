@@ -669,7 +669,7 @@ void _expectRuntimeConstructionExcludesLoad() {
     source,
     '_timedRuntimeConstruction',
     forbidden: [
-      'runtimeRootWithDocument',
+      'runtimeRootWithCommittedDocumentSeed',
       'loadDocumentFromJson',
       'encodeCanvasDocumentToJson',
     ],

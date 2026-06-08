@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 // The asset-binding fixture imports the frame model, resource session, resolver
 // adapter, and public descriptor payloads together to prove the exact seam.
@@ -31,7 +31,7 @@ void main() {
 
 void _testReentrantResolverRejectedThroughAssetBinding() {
   test('asset binding rejects public runtime mutations from resolver', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
       config: const CanvasRuntimeConfig(),
     );

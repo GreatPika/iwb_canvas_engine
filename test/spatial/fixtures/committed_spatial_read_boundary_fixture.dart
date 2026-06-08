@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -14,7 +14,7 @@ void main() {
 
 void _testCommittedScopeFacts() {
   test('committed frame facts expose spatial scope facts', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: const CanvasRuntimeConfig(),
     );
@@ -37,7 +37,7 @@ void _testCommittedScopeFacts() {
 
 void _testHandleValidation() {
   test('scope facts do not weaken handle validation', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: const CanvasRuntimeConfig(),
     );

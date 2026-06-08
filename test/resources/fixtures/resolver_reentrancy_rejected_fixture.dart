@@ -1,5 +1,5 @@
 import 'dart:ui' show Offset, Rect, Size;
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 // This resource fixture now covers both the session boundary and the asset binding caller, so the imports intentionally span frame and resource seams.
 // ignore_for_file: number-of-imports
@@ -168,7 +168,7 @@ Future<void> _expectRejectedMutation(
 }
 
 RuntimeRoot _runtime() {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       resources: [
         CanvasImageResource(

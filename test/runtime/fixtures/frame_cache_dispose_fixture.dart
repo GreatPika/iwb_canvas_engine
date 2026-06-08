@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -8,7 +8,7 @@ void main() {
   test(
     'RuntimeRoot dispose releases frame-owned static background picture',
     () {
-      final root = runtimeRootWithDocument(
+      final root = runtimeRootWithCommittedDocumentSeed(
         CanvasDocument(),
         config: const CanvasRuntimeConfig(),
       );

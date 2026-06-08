@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -32,7 +32,7 @@ void _expectObserverFailureIsContained() {
 // ignore: coupling-between-object-classes
 final class _ObserverDeliveryScenario {
   _ObserverDeliveryScenario() {
-    root = runtimeRootWithDocument(
+    root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: const CanvasRuntimeConfig(),
       commitEffectObserver: _observeEffects,
@@ -164,7 +164,7 @@ final class _ObserverDeliveryScenario {
 // ignore: coupling-between-object-classes
 final class _ObserverFailureScenario {
   _ObserverFailureScenario() {
-    root = runtimeRootWithDocument(
+    root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: const CanvasRuntimeConfig(),
       commitEffectObserver: _throwFromObserver,

@@ -1,10 +1,10 @@
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_element.dart';
-import '../store/element_update_compiler.dart' as store_update;
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
+import 'element_update_compiler.dart' as element_update;
 
-typedef ElementUpdateCompileResult = store_update.ElementUpdateCompileResult;
+typedef ElementUpdateCompileResult = element_update.ElementUpdateCompileResult;
 
 final class CommitCompiler {
   const CommitCompiler();
@@ -32,7 +32,7 @@ final class CommitCompiler {
     required CanvasElement before,
     required CanvasElement after,
   }) {
-    return const store_update.ElementUpdateCompiler().compileElementUpdate(
+    return const element_update.ElementUpdateCompiler().compileElementUpdate(
       before: before,
       after: after,
     );

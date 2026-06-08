@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -152,7 +152,7 @@ Future<void> _verifyAcceptedDirectRequestIsAsync() async {
 }
 
 Future<void> _verifyDisposePreservesQueuedRequestBeforeDone() async {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _document(selectableContent: false, hitPadding: 0),
     config: const CanvasRuntimeConfig(),
   );
@@ -420,7 +420,7 @@ final class _RuntimeContextRequestScenario {
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
     CanvasDocument? initialDocument,
   }) {
-    root = runtimeRootWithDocument(
+    root = runtimeRootWithCommittedDocumentSeed(
       initialDocument ??
           _document(
             selectableContent: selectableContent,

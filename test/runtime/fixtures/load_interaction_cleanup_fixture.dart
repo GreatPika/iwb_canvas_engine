@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -420,7 +420,7 @@ void _expectDisposeCleanupRevisions(
 }
 
 RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: observer,
@@ -428,7 +428,7 @@ RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
 }
 
 RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _unselectedMoveDocument(),
     config: CanvasRuntimeConfig(
       pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),

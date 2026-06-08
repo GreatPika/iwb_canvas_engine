@@ -6,7 +6,7 @@ import 'dart:ui' show Color, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart';
+import 'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';

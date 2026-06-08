@@ -9,7 +9,7 @@ import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../codec/schema_v1_diagnostics.dart';
-import '../codec/schema_v1_import_events.dart';
+import '../codec/schema_v1_import_emitter.dart';
 import '../codec/validated_import_draft.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import '../store/committed_document.dart';

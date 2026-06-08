@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -663,7 +663,7 @@ void _testNonSelectableOccludedGroupInteriorDoesNotStartSelectedMove() {
 
 void _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove() {
   test('single selected line bounds miss does not start selected move', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _singleLineDocument(),
       config: const CanvasRuntimeConfig(),
     )..selection.setSelection([CanvasElementId('line-a')]);
@@ -1201,7 +1201,7 @@ _NoCommitScenario _occludedNoCommitScenario({
   bool occluderLocked = false,
 }) {
   var resolverCalls = 0;
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _occludedGroupDocument(
       occluderSelectable: occluderSelectable,
       occluderLocked: occluderLocked,
@@ -1437,7 +1437,7 @@ RuntimeRoot _runtimeRoot({
   CanvasMoveCommitResolver? resolver,
   CanvasRuntimeConfig? config,
 }) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
   );

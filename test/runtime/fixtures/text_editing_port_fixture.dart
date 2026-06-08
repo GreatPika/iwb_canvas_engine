@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -759,7 +759,7 @@ void _expectRequestFactsLive(
 
 final class _Scenario {
   _Scenario({CanvasDocument? document})
-    : root = runtimeRootWithDocument(
+    : root = runtimeRootWithCommittedDocumentSeed(
         document ?? _document(),
         config: const CanvasRuntimeConfig(),
       ) {
@@ -768,7 +768,7 @@ final class _Scenario {
   }
 
   _Scenario.failedTextPrepare()
-    : root = runtimeRootWithDocument(
+    : root = runtimeRootWithCommittedDocumentSeed(
         _document(),
         config: const CanvasRuntimeConfig(),
         textEditPrepareOverride: (_) {

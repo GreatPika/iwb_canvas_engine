@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 import "../../support/document_store_with_document.dart";
 
 // This fixture intentionally names commit, selection, and runtime boundaries in
@@ -377,7 +377,7 @@ final class _SparseSelectionCommitProof {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
   );

@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -9,7 +9,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test('document and frame ports return committed facts only', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: const CanvasRuntimeConfig(),
     );
@@ -25,7 +25,7 @@ void main() {
   });
 
   test('test root starts view camera from committed document camera', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _documentWithCamera(CanvasCamera(offset: const Offset(11, 13))),
       config: const CanvasRuntimeConfig(),
     );

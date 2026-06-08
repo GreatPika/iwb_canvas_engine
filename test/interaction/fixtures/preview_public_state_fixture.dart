@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -48,7 +48,7 @@ void main() {
 }
 
 void _verifyPreviewOnlyPublication() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
@@ -87,7 +87,7 @@ void _expectSelectedMovePreview(CanvasPreviewState preview) {
 }
 
 void _verifySilentNoOpPreviewChanges() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
@@ -216,7 +216,7 @@ _DrawPreviewScenario _drawPreviewScenario() {
 }
 
 RuntimeRoot _drawRuntimeRoot() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
@@ -229,7 +229,7 @@ RuntimeRoot _drawRuntimeRoot() {
 }
 
 _DrawPreviewScenario _linePreviewScenario() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );
@@ -256,7 +256,7 @@ _DrawPreviewScenario _linePreviewScenario() {
 }
 
 _DrawPreviewScenario _eraserPreviewScenario() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(),
   );

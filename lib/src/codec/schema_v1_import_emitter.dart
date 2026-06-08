@@ -1,4 +1,4 @@
-// Schema v1 import events are the codec-owned load handoff. They intentionally
+// Schema v1 import emitter is the codec-owned load handoff. It intentionally
 // avoid public document/resource/element DTOs and store-owned row types.
 // ignore_for_file: number-of-imports
 

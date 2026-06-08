@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -300,7 +300,7 @@ _MarqueeScenario _scenario() {
 }
 
 _MarqueeScenario _overlappingScenario() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -331,7 +331,7 @@ _MarqueeScenario _overlappingScenario() {
 }
 
 _MarqueeScenario _lineScenario() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -374,7 +374,7 @@ void _dragMarquee(
 }
 
 RuntimeRoot _runtimeRoot({CanvasRuntimeConfig? config}) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: config ?? const CanvasRuntimeConfig(),
   );

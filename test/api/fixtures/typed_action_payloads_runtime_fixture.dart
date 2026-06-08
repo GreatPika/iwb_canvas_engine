@@ -3,7 +3,7 @@
 // ignore_for_file: missing-test-assertion
 
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -40,7 +40,7 @@ void main() {
 }
 
 Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
@@ -86,7 +86,7 @@ void _expectDrawActionPayloads(List<CanvasActionCommitted> actions) {
 }
 
 Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
   );
@@ -117,7 +117,7 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
 // the terminal marquee action shape from one runtime interaction.
 // ignore: halstead-volume
 Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
   );

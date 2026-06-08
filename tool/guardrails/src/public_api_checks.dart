@@ -372,7 +372,7 @@ bool _isInternalLoadPublicExportOrigin(String origin) {
 }
 
 const _internalLoadPublicExportOrigins = {
-  'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart',
+  'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart',
   'package:iwb_canvas_engine/src/codec/validated_import_draft.dart',
   'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart',
   'package:iwb_canvas_engine/src/edit/staged_document_load.dart',

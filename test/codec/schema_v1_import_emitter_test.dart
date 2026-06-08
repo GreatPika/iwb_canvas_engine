@@ -8,20 +8,20 @@ import '../support/flutter_consumer_test_harness.dart';
 // structural seam assertion stay in the same executable API-contract test.
 // ignore: halstead-volume
 void main() {
-  test('schema v1 import events validate codec-owned load inputs', () async {
+  test('schema v1 import emitter validates codec-owned load inputs', () async {
     await expectLater(
       runFlutterConsumerTest(
-        packageName: 'iwb_canvas_engine_schema_v1_import_events',
-        testFileName: 'schema_v1_import_events_test.dart',
-        testSource: _schemaV1ImportEventsSource,
+        packageName: 'iwb_canvas_engine_schema_v1_import_emitter',
+        testFileName: 'schema_v1_import_emitter_test.dart',
+        testSource: _schemaV1ImportEmitterSource,
       ),
       completes,
     );
   });
 
-  test('schema v1 import event seam stays codec-owned and non-retained', () {
+  test('schema v1 import emitter stays codec-owned and non-retained', () {
     final source = File(
-      'lib/src/codec/schema_v1_import_events.dart',
+      'lib/src/codec/schema_v1_import_emitter.dart',
     ).readAsStringSync();
 
     expect(source, isNot(contains('CanvasDocument')));
@@ -46,12 +46,12 @@ void main() {
   });
 }
 
-const _schemaV1ImportEventsSource = r'''
+const _schemaV1ImportEmitterSource = r'''
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/codec/schema_v1_import_events.dart';
+import 'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 

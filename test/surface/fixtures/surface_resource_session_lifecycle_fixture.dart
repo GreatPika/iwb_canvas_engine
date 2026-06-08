@@ -4,7 +4,7 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:io';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -296,7 +296,7 @@ Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
 }
 
 bool _runtimeTokenGuardedSessionInstall() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -333,7 +333,7 @@ bool _dirtyInvalidatesInstalledSessionBeforePublish() {
 }
 
 void _expectTargetDirtyInvalidatesBeforePublish() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -354,7 +354,7 @@ void _expectTargetDirtyInvalidatesBeforePublish() {
 }
 
 void _expectMarkAllInvalidatesBeforePublish() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -375,7 +375,7 @@ void _expectMarkAllInvalidatesBeforePublish() {
 }
 
 void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );

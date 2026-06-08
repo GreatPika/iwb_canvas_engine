@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -79,7 +79,7 @@ void _testSelectedMoveStartFacts() {
 void _testSelectedMoveStartGroupUnionFacts() {
   test('selected move start facts expose selected group union facts', () {
     final root =
-        runtimeRootWithDocument(
+        runtimeRootWithCommittedDocumentSeed(
             _groupSelectionDocument(includeOccluder: false),
             config: const CanvasRuntimeConfig(),
           )
@@ -118,7 +118,7 @@ void _testSelectedMoveStartOccludedGroupUnionFacts() {
     'selected group union facts report higher order exact-hit occlusion',
     () {
       final root =
-          runtimeRootWithDocument(
+          runtimeRootWithCommittedDocumentSeed(
               _groupSelectionDocument(includeOccluder: true),
               config: const CanvasRuntimeConfig(),
             )
@@ -154,7 +154,7 @@ void _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts() {
     'selected group union facts use content hits for non-selectable occlusion',
     () {
       final root =
-          runtimeRootWithDocument(
+          runtimeRootWithCommittedDocumentSeed(
               _groupSelectionDocument(
                 includeOccluder: true,
                 occluderSelectable: false,
@@ -185,7 +185,7 @@ void _testSingleLineMoveStartDoesNotExposeGroupUnionFacts() {
   test(
     'single selected line move start does not expose group-union admission',
     () {
-      final root = runtimeRootWithDocument(
+      final root = runtimeRootWithCommittedDocumentSeed(
         _singleSelectedLineDocument(),
         config: const CanvasRuntimeConfig(),
       )..selection.setSelection([CanvasElementId('line-a')]);
@@ -422,7 +422,7 @@ void _testRejectedContextTargetReadOutcomes() {
 
 void _testInvalidIndexContextTargetReadOutcome() {
   test('context target reads reject invalid spatial index results', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
       config: const CanvasRuntimeConfig(),
     );
@@ -464,7 +464,7 @@ void _testStaleIndexContextTargetReadOutcome() {
 
 void _testBudgetExceededContextTargetReadOutcome() {
   test('context target reads reject fallback budget overflow results', () {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       _fallbackBudgetDocument(),
       config: const CanvasRuntimeConfig(),
     );
@@ -532,7 +532,7 @@ CanvasDocument _fallbackBudgetDocument() {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
   );

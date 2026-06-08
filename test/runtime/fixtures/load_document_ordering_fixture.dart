@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -123,7 +123,7 @@ void _expectPreparedCleanupReentrancyGuard() {
 // cleanup, and reentrant guard assertions together to prove one temporal window.
 // ignore: halstead-volume, source-lines-of-code
 Future<void> _expectTextEditCleanupReentrancyGuard() async {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _textDocument(),
     config: const CanvasRuntimeConfig(),
   );
@@ -390,7 +390,7 @@ RuntimeRoot _runtimeRoot(
   _RecordingLoadBoundary boundary, {
   void Function(List<CommitDeliveryEffect> effects)? observeEffects,
 }) {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
     config: const CanvasRuntimeConfig(),
     loadInteractionBoundary: boundary,

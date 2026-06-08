@@ -3,7 +3,6 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
-import 'element_update_compiler.dart';
 import 'revision_state.dart';
 import 'store_revision_delta.dart';
 
@@ -63,29 +62,15 @@ final class StoreSparseAddElement extends StoreSparseMutation {
 }
 
 final class StoreSparseUpdateElement extends StoreSparseMutation {
-  factory StoreSparseUpdateElement({
-    required CanvasElement before,
-    required CanvasElement element,
-  }) {
-    return StoreSparseUpdateElement._(
-      before: before,
-      element: element,
-      compiledUpdate: const ElementUpdateCompiler().compileElementUpdate(
-        before: before,
-        after: element,
-      ),
-    );
-  }
-
-  const StoreSparseUpdateElement._({
+  const StoreSparseUpdateElement({
     required this.before,
     required this.element,
-    required this.compiledUpdate,
+    required this.elementRevisionDelta,
   });
 
   final CanvasElement before;
   final CanvasElement element;
-  final ElementUpdateCompileResult compiledUpdate;
+  final StoreRevisionDelta elementRevisionDelta;
 }
 
 final class StoreSparseRemoveElement extends StoreSparseMutation {

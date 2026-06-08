@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -277,7 +277,7 @@ void _expectReplacementCommitsInsideEdit() {
 }
 
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,

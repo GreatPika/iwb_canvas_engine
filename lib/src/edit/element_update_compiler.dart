@@ -1,28 +1,10 @@
+import 'dart:ui';
+
 import '../contracts/public/canvas_element.dart';
-import 'store_revision_delta.dart';
-
-final class ElementUpdateCompiler {
-  const ElementUpdateCompiler();
-
-  ElementUpdateCompileResult compileElementUpdate({
-    required CanvasElement before,
-    required CanvasElement after,
-  }) {
-    final delta = _elementRevisionDelta(before: before, after: after);
-
-    return ElementUpdateCompileResult._(
-      revisionDelta: delta,
-      touchesGeometry: delta.bounds,
-      touchesSpatial: delta.bounds || before.isSelectable != after.isSelectable,
-      touchesVisual: delta.elementVisual,
-      transformsElement: before.transform != after.transform,
-      prunesSelection: _requiresSelectionPrune(before, after),
-    );
-  }
-}
+import '../store/store_revision_delta.dart';
 
 final class ElementUpdateCompileResult {
-  const ElementUpdateCompileResult._({
+  const ElementUpdateCompileResult({
     required this.revisionDelta,
     required this.touchesGeometry,
     required this.touchesSpatial,
@@ -37,6 +19,26 @@ final class ElementUpdateCompileResult {
   final bool touchesVisual;
   final bool transformsElement;
   final bool prunesSelection;
+}
+
+final class ElementUpdateCompiler {
+  const ElementUpdateCompiler();
+
+  ElementUpdateCompileResult compileElementUpdate({
+    required CanvasElement before,
+    required CanvasElement after,
+  }) {
+    final delta = _elementRevisionDelta(before: before, after: after);
+
+    return ElementUpdateCompileResult(
+      revisionDelta: delta,
+      touchesGeometry: delta.bounds,
+      touchesSpatial: delta.bounds || before.isSelectable != after.isSelectable,
+      touchesVisual: delta.elementVisual,
+      transformsElement: before.transform != after.transform,
+      prunesSelection: _requiresSelectionPrune(before, after),
+    );
+  }
 }
 
 bool _requiresSelectionPrune(CanvasElement before, CanvasElement after) {
@@ -222,33 +224,32 @@ StoreRevisionDelta _rectDelta(
 }
 
 bool _strokePaintedBoundsChanged(
-  Object? beforeColor,
-  double beforeWidth,
-  Object? afterColor,
-  double afterWidth,
+  Color? beforeColor,
+  double beforeStrokeWidth,
+  Color? afterColor,
+  double afterStrokeWidth,
 ) {
-  return _hasPaintedStroke(beforeColor, beforeWidth) !=
-      _hasPaintedStroke(afterColor, afterWidth);
+  return _isPaintedStroke(beforeColor, beforeStrokeWidth) !=
+          _isPaintedStroke(afterColor, afterStrokeWidth) ||
+      beforeStrokeWidth != afterStrokeWidth;
 }
 
-bool _hasPaintedStroke(Object? color, double width) {
-  return color != null && width > 0;
+bool _isPaintedStroke(Color? color, double strokeWidth) {
+  return color != null && strokeWidth > 0;
 }
 
-bool _anyChanged(Iterable<bool> changes) {
-  return changes.any((changed) => changed);
+bool _anyChanged(List<bool> changes) {
+  return changes.contains(true);
 }
 
 bool _sameList<T>(List<T> left, List<T> right) {
   if (left.length != right.length) {
     return false;
   }
-
   for (var index = 0; index < left.length; index += 1) {
     if (left[index] != right[index]) {
       return false;
     }
   }
-
   return true;
 }

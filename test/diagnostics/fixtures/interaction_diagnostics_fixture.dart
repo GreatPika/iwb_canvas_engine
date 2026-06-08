@@ -5,7 +5,7 @@
 
 import 'dart:ui';
 import 'dart:io';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -142,7 +142,7 @@ void _testResolverReentrantMutationDiagnostic() {
   test('resolver reentrant mutation rejection records no public action', () {
     late RuntimeRoot root;
     final actions = <CanvasActionCommitted>[];
-    root = runtimeRootWithDocument(
+    root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: CanvasRuntimeConfig(
         diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),

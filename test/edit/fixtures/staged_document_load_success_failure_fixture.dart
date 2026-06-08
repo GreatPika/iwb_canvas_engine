@@ -55,6 +55,9 @@ void _expectSuccessfulPreparationAndConsume() {
   expect(() => pipeline.consume(prepared), throwsStateError);
 }
 
+// This assertion keeps one prepared replacement snapshot together so the
+// store-import handoff and immutable id views are checked in the same proof.
+// ignore: halstead-volume
 void _expectPreparedReplacementFacts(PreparedDocumentLoad prepared) {
   expect(prepared.summary.elementCount, 2);
   expect(prepared.summary.layerCount, 1);

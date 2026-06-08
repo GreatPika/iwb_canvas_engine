@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -183,7 +183,7 @@ RuntimeRoot _runtimeRoot(
   LoadInteractionBoundary? loadInteractionBoundary,
 }) {
   if (loadInteractionBoundary != null) {
-    return runtimeRootWithDocument(
+    return runtimeRootWithCommittedDocumentSeed(
       _initialDocument(),
       config: const CanvasRuntimeConfig(),
       loadInteractionBoundary: loadInteractionBoundary,
@@ -191,7 +191,7 @@ RuntimeRoot _runtimeRoot(
     );
   }
 
-  return runtimeRootWithDocument(
+  return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: effectBatches.add,

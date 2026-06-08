@@ -5,7 +5,7 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -407,7 +407,7 @@ String? _textValueOrNull(RuntimeRoot root) {
 final class _Scenario {
   _Scenario()
     : this._(
-        runtimeRootWithDocument(
+        runtimeRootWithCommittedDocumentSeed(
           _document(),
           config: const CanvasRuntimeConfig(),
         ),
@@ -415,7 +415,7 @@ final class _Scenario {
 
   _Scenario.failedTextPrepare(void Function() onPrepare)
     : this._(
-        runtimeRootWithDocument(
+        runtimeRootWithCommittedDocumentSeed(
           _document(),
           config: const CanvasRuntimeConfig(),
           textEditPrepareOverride: (input) {

@@ -1,5 +1,5 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_document.dart";
+import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -455,7 +455,7 @@ final _updateTaxonomyCases = [
 ];
 
 void _expectAddElementInstallsAfterCommit() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -478,7 +478,7 @@ void _expectAddElementInstallsAfterCommit() {
 }
 
 void _expectEnsureLayerNoOpRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -494,7 +494,7 @@ void _expectEnsureLayerNoOpRow() {
 }
 
 void _expectEnsureLayerRevisionFamilies() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -511,7 +511,7 @@ void _expectEnsureLayerRevisionFamilies() {
 }
 
 void _expectAdmissionErrorsUsePublicCodes() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -540,7 +540,7 @@ void _expectAdmissionErrorsUsePublicCodes() {
 }
 
 void _expectImageResourceUpdatePreflightsDescriptor() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -566,7 +566,7 @@ void _expectImageResourceUpdatePreflightsDescriptor() {
 }
 
 void _expectRemoveUnusedResourceNoOps() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -587,7 +587,7 @@ void _expectRemoveUnusedResourceNoOps() {
 }
 
 void _expectUnusedResourceRemovalInstalls() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -637,7 +637,7 @@ void _expectEditOperationRowsCompileEffects() {
 
 Future<void> _expectEditOperationRowsRollback() async {
   for (final operationCase in _editOperationMatrixCases) {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       operationCase.document(),
       config: const CanvasRuntimeConfig(),
     );
@@ -665,7 +665,7 @@ Future<void> _expectEditOperationRowsRollback() async {
 
 Future<void> _expectEditOperationRowsEmitNoActions() async {
   for (final operationCase in _editOperationMatrixCases) {
-    final root = runtimeRootWithDocument(
+    final root = runtimeRootWithCommittedDocumentSeed(
       operationCase.document(),
       config: const CanvasRuntimeConfig(),
     );
@@ -808,7 +808,7 @@ void _expectPlanEffects(
 }
 
 void _expectBackgroundElementRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -823,7 +823,7 @@ void _expectBackgroundElementRow() {
 }
 
 void _expectUpdateElementRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -842,7 +842,7 @@ void _expectUpdateElementRow() {
 }
 
 void _expectRemoveElementRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -857,7 +857,7 @@ void _expectRemoveElementRow() {
 }
 
 void _expectClearContentRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -881,7 +881,7 @@ void _expectClearContentRow() {
 }
 
 void _expectPersistedCameraRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -895,7 +895,7 @@ void _expectPersistedCameraRow() {
 }
 
 void _expectBackgroundRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -909,7 +909,7 @@ void _expectBackgroundRow() {
 }
 
 void _expectGridRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -924,7 +924,7 @@ void _expectGridRow() {
 }
 
 void _expectPaletteRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -946,7 +946,7 @@ void _expectPaletteRow() {
 }
 
 void _expectUpsertResourceRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -969,7 +969,7 @@ void _expectUpsertResourceRow() {
 }
 
 void _expectNoOpEditRow() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -993,7 +993,7 @@ void _expectReplaceDraftDocumentRow() {
 }
 
 void _expectReplacementClearsRemovedSelection() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );
@@ -1020,7 +1020,7 @@ void _expectReplacementClearsRemovedSelection() {
 }
 
 void _expectReplacementClearsIneligibleSelection() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
   );

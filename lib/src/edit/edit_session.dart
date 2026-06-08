@@ -541,8 +541,15 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return false;
     }
     _validateSparseElementResourceReferences(after);
-    final mutation = StoreSparseUpdateElement(before: before, element: after);
-    final compiledUpdate = mutation.compiledUpdate;
+    final compiledUpdate = const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
+    );
+    final mutation = StoreSparseUpdateElement(
+      before: before,
+      element: after,
+      elementRevisionDelta: compiledUpdate.revisionDelta,
+    );
     _elementOverrides[after.id] = after;
     _journal.add((draft) => draft.updateElement(update));
     _mutations.add(mutation);

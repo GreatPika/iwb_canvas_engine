@@ -7,7 +7,7 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../support/document_store_with_document.dart';
-import '../../support/runtime_root_with_document.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test(
@@ -38,7 +38,7 @@ void main() {
 }
 
 void _projectionCacheBuildsOnlyThroughExplicitRead() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(layers: [CanvasLayer(id: CanvasLayerId('layer-a'))]),
     config: const CanvasRuntimeConfig(),
   );
@@ -89,7 +89,7 @@ void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
 }
 
 void _ordinaryPublicEditRouteDoesNotBuildProjection() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -129,7 +129,7 @@ void _ordinaryPublicEditRouteDoesNotBuildProjection() {
 }
 
 void _draftSummaryRouteDoesNotBuildProjection() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       resources: [
         CanvasImageResource(
@@ -165,7 +165,7 @@ void _draftSummaryRouteDoesNotBuildProjection() {
 }
 
 void _selectionOnlyRouteDoesNotBuildProjection() {
-  final root = runtimeRootWithDocument(
+  final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(
       layers: [
         CanvasLayer(
@@ -222,6 +222,7 @@ void _installSparseTransform(DocumentStoreKernel store) {
               revision: 1,
               transform: CanvasTransform.translation(const Offset(1, 1)),
             ),
+            elementRevisionDelta: const StoreRevisionDelta.elementBounds(),
           ),
         ],
       ),
@@ -233,7 +234,7 @@ void _installSparseTransformNoOp(DocumentStoreKernel store) {
   store.installSparseCommit(
     store.prepareSparseCommit(
       StoreSparseCommit(
-        revisionDelta: const StoreRevisionDelta.elementBounds(),
+        revisionDelta: const StoreRevisionDelta(),
         mutations: [
           _sparseUpdate(
             before: CanvasRectElement(
@@ -248,6 +249,7 @@ void _installSparseTransformNoOp(DocumentStoreKernel store) {
               revision: 1,
               transform: CanvasTransform.translation(const Offset(1, 1)),
             ),
+            elementRevisionDelta: const StoreRevisionDelta(),
           ),
         ],
       ),
@@ -258,6 +260,11 @@ void _installSparseTransformNoOp(DocumentStoreKernel store) {
 StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement before,
   required CanvasElement after,
+  required StoreRevisionDelta elementRevisionDelta,
 }) {
-  return StoreSparseUpdateElement(before: before, element: after);
+  return StoreSparseUpdateElement(
+    before: before,
+    element: after,
+    elementRevisionDelta: elementRevisionDelta,
+  );
 }

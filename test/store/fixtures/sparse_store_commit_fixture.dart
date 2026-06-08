@@ -46,8 +46,8 @@ void _registerSparseInstallTests() {
     () => expect(_admitsSparseIdsWithoutDocumentScan, returnsNormally),
   );
   test(
-    'validates sparse updates through the shared element taxonomy',
-    () => expect(_validatesSparseUpdatesThroughSharedTaxonomy, returnsNormally),
+    'validates sparse update revision coverage',
+    () => expect(_validatesSparseUpdateRevisionCoverage, returnsNormally),
   );
   test(
     'replacement fallback still installs full committed facts',
@@ -88,7 +88,7 @@ void _registerSparseValidationTests() {
     () => expect(_rejectsRevisionOnlySparseUpdateBeforeSwap, returnsNormally),
   );
   test(
-    'rejects sparse update taxonomy from non-committed rows',
+    'rejects sparse update deltas from non-committed rows',
     () => expect(_rejectsSparseUpdateSourceMismatchBeforeSwap, returnsNormally),
   );
   test(
@@ -131,6 +131,9 @@ void _addsElementsAndLayersWithoutProjection() {
   expect(store.projectionBuildCount, 0);
 }
 
+// This store admission scenario keeps the input row, explicit revision family,
+// and installed facts together; splitting it would hide the checked handoff.
+// ignore: halstead-volume
 void _updatesFactsInPlace() {
   final store = documentStoreWithDocument(_baseDocument());
 
@@ -152,6 +155,7 @@ void _updatesFactsInPlace() {
               transform: CanvasTransform.translation(const Offset(1, 1)),
               fillColor: const Color(0xFF00FF00),
             ),
+            elementRevisionDelta: const StoreRevisionDelta.elementBounds(),
           ),
         ],
       ),
@@ -209,7 +213,11 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
-        _sparseUpdate(before: _contentRect(), after: _contentRect()),
+        _sparseUpdate(
+          before: _contentRect(),
+          after: _contentRect(),
+          elementRevisionDelta: const StoreRevisionDelta(),
+        ),
         _sparseUpdate(
           before: CanvasRectElement(
             id: CanvasElementId('missing'),
@@ -221,6 +229,7 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
             revision: 1,
             fillColor: const Color(0xFF123456),
           ),
+          elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
         ),
       ],
     ),
@@ -333,6 +342,7 @@ void _expectElementBoundsDeltaRejected() {
             revision: 1,
             fillColor: const Color(0xFFFF0000),
           ),
+          elementRevisionDelta: const StoreRevisionDelta.elementBounds(),
         ),
       ],
     ),
@@ -360,6 +370,7 @@ void _rejectsRevisionOnlySparseUpdateBeforeSwap() {
               revision: 1,
               fillColor: const Color(0xFFFF0000),
             ),
+            elementRevisionDelta: const StoreRevisionDelta(),
           ),
         ],
       ),
@@ -396,18 +407,19 @@ StoreSparseCommit _sparseUpdateWithMismatchedBefore() {
   return StoreSparseCommit(
     revisionDelta: const StoreRevisionDelta.elementVisual(),
     mutations: [
-      StoreSparseUpdateElement(
+      _sparseUpdate(
         before: CanvasRectElement(
           id: CanvasElementId('e-content'),
           size: const Size(44, 55),
           fillColor: const Color(0xFFFF0000),
         ),
-        element: CanvasRectElement(
+        after: CanvasRectElement(
           id: CanvasElementId('e-content'),
           size: const Size(44, 55),
           revision: 1,
           fillColor: const Color(0xFF00FF00),
         ),
+        elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
       ),
     ],
   );
@@ -452,6 +464,7 @@ void _rejectsStaleElementRevisionBeforeSwap() {
           _sparseUpdate(
             before: _contentRect(),
             after: _contentRect(fillColor: const Color(0xFF00FF00)),
+            elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
           ),
         ],
       ),
@@ -607,7 +620,7 @@ void _admitsSparseIdsWithoutDocumentScan() {
   expect(store.projectionBuildCount, 0);
 }
 
-void _validatesSparseUpdatesThroughSharedTaxonomy() {
+void _validatesSparseUpdateRevisionCoverage() {
   _validatesUnderlineVisualUpdate();
   _validatesPathPaintedStrokeBoundsUpdate();
   _validatesRectPaintedStrokeBoundsUpdate();
@@ -635,6 +648,7 @@ void _validatesUnderlineVisualUpdate() {
               revision: 1,
               isUnderline: true,
             ),
+            elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
           ),
         ],
       ),
@@ -695,7 +709,13 @@ void _expectPaintedStrokeBoundsUpdate({
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
-        mutations: [StoreSparseUpdateElement(before: before, element: update)],
+        mutations: [
+          _sparseUpdate(
+            before: before,
+            after: update,
+            elementRevisionDelta: const StoreRevisionDelta.elementBounds(),
+          ),
+        ],
       ),
     ),
     throwsA(isA<ArgumentError>()),
@@ -704,7 +724,13 @@ void _expectPaintedStrokeBoundsUpdate({
     store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementBounds(),
-        mutations: [StoreSparseUpdateElement(before: before, element: update)],
+        mutations: [
+          _sparseUpdate(
+            before: before,
+            after: update,
+            elementRevisionDelta: const StoreRevisionDelta.elementBounds(),
+          ),
+        ],
       ),
     ),
   );
@@ -782,17 +808,18 @@ void Function() _prepareMissingResourceUpdate(DocumentStoreKernel store) {
     StoreSparseCommit(
       revisionDelta: const StoreRevisionDelta.elementVisual(),
       mutations: [
-        StoreSparseUpdateElement(
+        _sparseUpdate(
           before: CanvasImageElement(
             id: CanvasElementId('e-image'),
             resourceId: CanvasResourceId('resource-a'),
             size: const Size(6, 7),
           ),
-          element: CanvasImageElement(
+          after: CanvasImageElement(
             id: CanvasElementId('e-image'),
             resourceId: CanvasResourceId('missing'),
             size: const Size(6, 7),
           ),
+          elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
         ),
       ],
     ),
@@ -809,8 +836,13 @@ StoreElementFacts _requireFacts(DocumentStoreKernel store, CanvasElementId id) {
 StoreSparseUpdateElement _sparseUpdate({
   required CanvasElement before,
   required CanvasElement after,
+  required StoreRevisionDelta elementRevisionDelta,
 }) {
-  return StoreSparseUpdateElement(before: before, element: after);
+  return StoreSparseUpdateElement(
+    before: before,
+    element: after,
+    elementRevisionDelta: elementRevisionDelta,
+  );
 }
 
 StoreSparseUpdateElement _sparseRectFillColorUpdate({
@@ -826,6 +858,7 @@ StoreSparseUpdateElement _sparseRectFillColorUpdate({
       fillColor: fillColor,
       revision: 1,
     ),
+    elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
   );
 }
 

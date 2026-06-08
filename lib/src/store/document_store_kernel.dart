@@ -555,7 +555,7 @@ final class DocumentStoreKernel {
         resourceIds: document.resourceTable.admittedIds,
       );
       requiredRevisionDelta = requiredRevisionDelta.merge(
-        update.compiledUpdate.revisionDelta,
+        update.elementRevisionDelta,
       );
       changedById[element.id] = element;
     }
@@ -825,7 +825,7 @@ bool _isSparseElementUpdateNoOp({
   required CanvasElement before,
   required StoreSparseUpdateElement update,
 }) {
-  return !update.compiledUpdate.revisionDelta.hasChanges &&
+  return !update.elementRevisionDelta.hasChanges &&
       update.element.revision == before.revision;
 }
 
@@ -837,7 +837,7 @@ void _validateSparseElementUpdateSource({
     throw ArgumentError.value(
       update.before,
       'before',
-      'sparse element update taxonomy must be compiled from the committed row.',
+      'sparse element update delta must be derived from the committed row.',
     );
   }
 }
@@ -856,11 +856,11 @@ void _validateSparseElementUpdate({
     );
   }
   _validateSparseUpdateResourceReferences(after, resourceIds);
-  if (!update.compiledUpdate.revisionDelta.hasChanges) {
+  if (!update.elementRevisionDelta.hasChanges) {
     throw ArgumentError.value(
-      update.compiledUpdate.revisionDelta,
-      'compiledUpdate.revisionDelta',
-      'changed sparse element updates must carry a compiler-produced revision delta.',
+      update.elementRevisionDelta,
+      'elementRevisionDelta',
+      'changed sparse element updates must carry an element revision delta.',
     );
   }
   _validateSparseElementRevision(before: before, after: after);
