@@ -75,18 +75,22 @@ void main() {
           baselineJson: invalidated,
           currentJson: _releaseReport(manifest),
           baselinePath:
-              '$manualBenchmarkReferenceRoot/'
-              'pixel6_android16_flutter_3_44_0.json',
+              '$manualBenchmarkReferenceRoot/invalidated_old_schema.json',
           currentPath: 'current.json',
         ).failures.join('\n'),
         contains('benchmark baseline is invalidated old schema'),
       );
     });
 
-    test('committed manual references are initialized as schema v3', () {
+    test('committed manual references are current-schema diff inputs', () {
+      final manifest = BenchmarkManifest.load();
+      final manifestFingerprint = benchmarkManifestFingerprint(manifest);
       const expectedDeviceIds = {
         'pixel6_android16_flutter_3_44_0.json': '23081FDF6000L2',
         'xiaomi_22081283g_android14_flutter_3_44_0.json': '22081283G',
+      };
+      const activeDiffReferences = {
+        'xiaomi_22081283g_android14_flutter_3_44_0.json',
       };
       final files = Directory(manualBenchmarkReferenceRoot)
           .listSync()
@@ -106,10 +110,144 @@ void main() {
         final runtime = baseline['runtime'] as Map<String, Object?>;
 
         expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
+        expect(baseline['manifestVersion'], benchmarkManifestVersion);
+        expect(baseline['manifestFingerprint'], manifestFingerprint);
         expect(baseline['profile'], isA<Map<String, Object?>>());
-        expect(baseline['cases'], isA<List<Object?>>());
+        expect(
+          baseline['cases'],
+          isA<List<Object?>>().having(
+            (cases) => cases.length,
+            'length',
+            greaterThan(0),
+          ),
+        );
         expect(runtime['deviceId'], entry.value);
+        final result = diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: activeDiffReferences.contains(entry.key)
+              ? _currentReportFromManualBaseline(manifest, baseline)
+              : _releaseReport(manifest),
+          baselinePath: '$manualBenchmarkReferenceRoot/${entry.key}',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
+        );
+
+        if (activeDiffReferences.contains(entry.key)) {
+          expect(result.failures, isEmpty);
+        } else {
+          expect(result.failures, isNotEmpty);
+          expect(result.failures.join('\n'), isNot(contains('retired field')));
+          expect(result.failures.join('\n'), isNot(contains('retired metric')));
+        }
       }
+    });
+
+    test('committed manual history uses current vocabulary', () {
+      final manifest = BenchmarkManifest.load();
+      final manifestFingerprint = benchmarkManifestFingerprint(manifest);
+      final index =
+          jsonDecode(
+                File(
+                  'tool/bench/manual/run_history/index.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
+      final decisions =
+          jsonDecode(
+                File(
+                  'tool/bench/manual/reference_decisions.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
+      final indexedPaths = {
+        for (final record
+            in (index['records'] as List<Object?>).cast<Map<String, Object?>>())
+          record['path'] as String,
+      };
+      final decisionPaths = {
+        for (final record
+            in (decisions['records'] as List<Object?>)
+                .cast<Map<String, Object?>>())
+          ...(record['acceptedFromRuns'] as List<Object?>).cast<String>(),
+      };
+
+      expect(indexedPaths, containsAll(decisionPaths));
+      for (final runPath in indexedPaths) {
+        final history =
+            jsonDecode(File(runPath).readAsStringSync())
+                as Map<String, Object?>;
+        final cases = history['cases'] as List<Object?>;
+
+        expect(history['schemaVersion'], benchmarkToolSchemaVersion);
+        for (final source
+            in (history['sources'] as List<Object?>)
+                .cast<Map<String, Object?>>()
+                .where((source) => source['kind'] == 'report')) {
+          expect(source['manifestVersion'], benchmarkManifestVersion);
+          expect(source['manifestFingerprint'], manifestFingerprint);
+        }
+        expect(cases, isNotEmpty, reason: runPath);
+        for (final entry in cases.cast<Map<String, Object?>>()) {
+          expect(entry, contains('baselinePolicy'), reason: runPath);
+          expect(entry, isNot(contains('classification')), reason: runPath);
+          final metrics = entry['metrics'] as Map<String, Object?>;
+          expect(metrics, isNot(contains('legacy_avg_us')), reason: runPath);
+        }
+      }
+    });
+
+    test('rejects retired report vocabulary even with current fields', () {
+      final manifest = BenchmarkManifest.load();
+      final currentWithRetiredCaseField = _releaseReport(manifest);
+      final caseWithRetiredField =
+          (currentWithRetiredCaseField['cases'] as List<Object?>).first
+              as Map<String, Object?>;
+      caseWithRetiredField['classification'] = 'equivalent_legacy';
+
+      expect(
+        () => diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: _releaseReport(manifest),
+          currentJson: currentWithRetiredCaseField,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            contains('retired field classification'),
+          ),
+        ),
+      );
+
+      final currentWithRetiredMetric = _releaseReport(manifest);
+      final caseWithRetiredMetric =
+          (currentWithRetiredMetric['cases'] as List<Object?>).first
+              as Map<String, Object?>;
+      final metrics = caseWithRetiredMetric['metrics'] as Map<String, Object?>;
+      metrics['legacy_avg_us'] = 100;
+
+      expect(
+        () => diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: _releaseReport(manifest),
+          currentJson: currentWithRetiredMetric,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (error) => error.message,
+            'message',
+            contains('retired metric legacy_avg_us'),
+          ),
+        ),
+      );
     });
 
     test('rejects release contour and schema metadata mismatches', () {
@@ -443,53 +581,56 @@ void main() {
       );
     });
 
-    test('rejects exact invariant and bootstrap legacy ceiling violations', () {
-      final manifest = BenchmarkManifest.load();
-      final invariantReport = _releaseReport(manifest);
-      final metrics = _metrics(
-        invariantReport,
-        'diagnostics.disabled_pointer',
-        'hot_pointer',
-      );
-      metrics['allocation_bytes'] = 1;
-      final invariant = _invariant(
-        invariantReport,
-        'diagnostics.disabled_pointer',
-        'hot_pointer',
-        'allocation_bytes_zero',
-      );
-      invariant['actual'] = 1;
-      invariant['passed'] = false;
+    test(
+      'rejects exact invariant and reference baseline ceiling violations',
+      () {
+        final manifest = BenchmarkManifest.load();
+        final invariantReport = _releaseReport(manifest);
+        final metrics = _metrics(
+          invariantReport,
+          'diagnostics.disabled_pointer',
+          'hot_pointer',
+        );
+        metrics['allocation_bytes'] = 1;
+        final invariant = _invariant(
+          invariantReport,
+          'diagnostics.disabled_pointer',
+          'hot_pointer',
+          'allocation_bytes_zero',
+        );
+        invariant['actual'] = 1;
+        invariant['passed'] = false;
 
-      expect(
-        validateFirstBaselineCandidate(
-          manifest: manifest,
-          profile: 'release',
-          candidateJson: invariantReport,
-          candidatePath: 'candidate.json',
-        ).failures.join('\n'),
-        contains('invariant allocation_bytes_zero'),
-      );
+        expect(
+          validateFirstBaselineCandidate(
+            manifest: manifest,
+            profile: 'release',
+            candidateJson: invariantReport,
+            candidatePath: 'candidate.json',
+          ).failures.join('\n'),
+          contains('invariant allocation_bytes_zero'),
+        );
 
-      final bootstrapReport = _releaseReport(manifest);
-      final bootstrapMetrics = _metrics(
-        bootstrapReport,
-        'edit.add_element',
-        '1k',
-      );
-      bootstrapMetrics['avg_us'] = 200;
-      bootstrapMetrics['legacy_avg_us'] = 100;
+        final bootstrapReport = _releaseReport(manifest);
+        final bootstrapMetrics = _metrics(
+          bootstrapReport,
+          'edit.add_element',
+          '1k',
+        );
+        bootstrapMetrics['avg_us'] = 200;
+        bootstrapMetrics['reference_avg_us'] = 100;
 
-      expect(
-        validateFirstBaselineCandidate(
-          manifest: manifest,
-          profile: 'release',
-          candidateJson: bootstrapReport,
-          candidatePath: 'candidate.json',
-        ).failures.join('\n'),
-        contains('legacy_avg_us'),
-      );
-    });
+        expect(
+          validateFirstBaselineCandidate(
+            manifest: manifest,
+            profile: 'release',
+            candidateJson: bootstrapReport,
+            candidatePath: 'candidate.json',
+          ).failures.join('\n'),
+          contains('reference_avg_us'),
+        );
+      },
+    );
 
     test('rejects approved-baseline time, allocation, and RSS regressions', () {
       final manifest = BenchmarkManifest.load();
@@ -928,7 +1069,7 @@ void main() {
         final approvedCase =
             (approvedJson['cases'] as List<Object?>).first
                 as Map<String, Object?>;
-        expect(approvedCase, isNot(contains('classification')));
+        expect(approvedCase, isNot(contains('baselinePolicy')));
         expect(approvedCase, isNot(contains('budgetClasses')));
         expect(approvedCase, isNot(contains('memoryScope')));
         expect(approvedCase, contains('measurementBoundary'));
@@ -1040,6 +1181,58 @@ Map<String, Object?> _releaseReport(BenchmarkManifest manifest) {
   };
 }
 
+Map<String, Object?> _currentReportFromManualBaseline(
+  BenchmarkManifest manifest,
+  Map<String, Object?> baseline,
+) {
+  final cases = [
+    for (final compactCase
+        in (baseline['cases'] as List<Object?>).cast<Map<String, Object?>>())
+      _currentCaseFromManualBaseline(manifest, compactCase),
+  ];
+  return {...baseline, 'caseCount': cases.length, 'cases': cases};
+}
+
+// Keeping the compact-reference expansion in one helper makes the reconstructed
+// diff input auditable against the report schema without hiding fields behind
+// test-only indirection.
+// ignore: halstead-volume
+Map<String, Object?> _currentCaseFromManualBaseline(
+  BenchmarkManifest manifest,
+  Map<String, Object?> compactCase,
+) {
+  final id = compactCase['id'] as String;
+  final scale = compactCase['scale'] as String;
+  final benchmarkCase = manifest.cases.firstWhere((candidate) {
+    return candidate.id == id &&
+        candidate.scales.any((candidateScale) => candidateScale.id == scale);
+  }, orElse: () => throw StateError('missing manifest case for $id/$scale'));
+  final metrics = Map<String, Object?>.from(
+    compactCase['metrics'] as Map<String, Object?>,
+  );
+  final setupMetrics = Map<String, Object?>.from(
+    compactCase['setupMetrics'] as Map<String, Object?>? ?? const {},
+  );
+  for (final metric in benchmarkCase.measurementBoundary.setupMetrics) {
+    metrics.putIfAbsent(metric, () => setupMetrics[metric] ?? 1);
+  }
+  return {
+    ...compactCase,
+    'baselinePolicy': benchmarkCase.baselinePolicy,
+    'scaleLabel': benchmarkCase.scales.singleWhere((item) {
+      return item.id == scale;
+    }).label,
+    'budgetClasses': benchmarkCase.budgetClasses,
+    'memoryScope': benchmarkCase.memoryScope,
+    'actionUsSamples': [metrics['avg_us'] ?? 1],
+    'setupUsSamples': benchmarkCase.measurementBoundary.setupScope == 'none'
+        ? <int>[]
+        : [setupMetrics['setup_us'] ?? metrics['setup_us'] ?? 1],
+    'metrics': metrics,
+    'setupMetrics': setupMetrics,
+  };
+}
+
 Map<String, Object?> _oldSchemaReport(BenchmarkManifest manifest) {
   final report = _releaseReport(manifest);
   report['schemaVersion'] = 1;
@@ -1082,7 +1275,7 @@ Map<String, Object?> _caseIdentityJson(
 ) {
   return {
     'id': benchmarkCase.id,
-    'classification': benchmarkCase.classification,
+    'baselinePolicy': benchmarkCase.baselinePolicy,
     'scale': scale.id,
     'scaleLabel': scale.label,
     'budgetClasses': benchmarkCase.budgetClasses,
@@ -1126,7 +1319,7 @@ Map<String, Object?> _metricsForCase(
   _addTimingMetrics(metrics, benchmarkCase);
   _addInvariantMetrics(metrics, benchmarkCase, scale);
   _addMemoryMetrics(metrics, benchmarkCase);
-  _addLegacyMetrics(metrics, benchmarkCase);
+  _addReferenceMetrics(metrics, benchmarkCase);
   _addSetupTimingMetric(metrics, benchmarkCase);
   return metrics;
 }
@@ -1182,13 +1375,13 @@ void _addMemoryMetrics(
   );
 }
 
-void _addLegacyMetrics(
+void _addReferenceMetrics(
   Map<String, Object?> metrics,
   BenchmarkCase benchmarkCase,
 ) {
-  if (benchmarkCase.classification == 'equivalent_legacy' &&
+  if (benchmarkCase.baselinePolicy == 'reference_comparison' &&
       metrics.containsKey('avg_us')) {
-    metrics['legacy_avg_us'] = 100;
+    metrics['reference_avg_us'] = 100;
   }
 }
 

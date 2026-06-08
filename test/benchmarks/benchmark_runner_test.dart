@@ -225,7 +225,7 @@ void main() {
         expect(decoded['profile'], containsPair('id', 'release'));
         expect(caseScales, ['edit.add_element/1k', 'edit.add_element/10k']);
         expect(firstMetrics, containsPair('rss_delta_bytes', isA<int>()));
-        expect(firstMetrics.containsKey('legacy_avg_us'), isFalse);
+        expect(firstMetrics.containsKey('reference_avg_us'), isFalse);
         expect(
           decoded['runtime'],
           containsPair(
@@ -470,7 +470,7 @@ BenchmarkManifest _withFirstCase(
     memoryScopes: manifest.memoryScopes,
     cases: [benchmarkCase, ...manifest.cases.skip(1)],
     postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
-    bootstrapLegacyEquivalence: manifest.bootstrapLegacyEquivalence,
+    firstBaselineReferenceLimits: manifest.firstBaselineReferenceLimits,
   );
 }
 
@@ -488,7 +488,7 @@ BenchmarkManifest _multiReleaseScaleManifest() {
       _copyCase(benchmarkCase, scales: benchmarkCase.scales.take(2).toList()),
     ],
     postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
-    bootstrapLegacyEquivalence: manifest.bootstrapLegacyEquivalence,
+    firstBaselineReferenceLimits: manifest.firstBaselineReferenceLimits,
   );
 }
 
@@ -506,7 +506,7 @@ BenchmarkManifest _singleCaseManifest() {
       _copyCase(benchmarkCase, scales: [benchmarkCase.scales.first]),
     ],
     postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
-    bootstrapLegacyEquivalence: manifest.bootstrapLegacyEquivalence,
+    firstBaselineReferenceLimits: manifest.firstBaselineReferenceLimits,
   );
 }
 
@@ -518,7 +518,7 @@ BenchmarkCase _copyCase(
 }) {
   return BenchmarkCase(
     id: benchmarkCase.id,
-    classification: benchmarkCase.classification,
+    baselinePolicy: benchmarkCase.baselinePolicy,
     budgetClasses: benchmarkCase.budgetClasses,
     memoryScope: benchmarkCase.memoryScope,
     measurementBoundary: benchmarkCase.measurementBoundary,
@@ -536,7 +536,7 @@ BenchmarkCase _copyCaseWithFixtureShape(
 ) {
   return BenchmarkCase(
     id: benchmarkCase.id,
-    classification: benchmarkCase.classification,
+    baselinePolicy: benchmarkCase.baselinePolicy,
     budgetClasses: benchmarkCase.budgetClasses,
     memoryScope: benchmarkCase.memoryScope,
     measurementBoundary: benchmarkCase.measurementBoundary,

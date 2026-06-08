@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 4,
   "kind": "manual_benchmark_history",
   "recordedAtUtc": "2026-06-06T19:42:00.000Z",
   "label": "sparse-update-source-validation",
@@ -25,8 +25,8 @@
     "releaseContour": null
   },
   "referenceReport": {
-    "kind": "manual",
-    "path": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json"
+    "kind": null,
+    "path": null
   },
   "sources": [
     {
@@ -71,7 +71,7 @@
     {
       "id": "edit.add_element",
       "scale": "100k",
-      "classification": null,
+      "baselinePolicy": null,
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -125,7 +125,7 @@
     {
       "id": "edit.update_transform",
       "scale": "100k",
-      "classification": null,
+      "baselinePolicy": null,
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -180,7 +180,7 @@
     {
       "id": "edit.update_visual",
       "scale": "100k",
-      "classification": null,
+      "baselinePolicy": null,
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",

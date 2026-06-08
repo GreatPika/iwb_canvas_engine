@@ -168,7 +168,7 @@ Map<String, Object?> _boundaryJson(BenchmarkMeasurementBoundary boundary) {
 BenchmarkCase _withoutSetup(BenchmarkCase benchmarkCase) {
   return BenchmarkCase(
     id: benchmarkCase.id,
-    classification: benchmarkCase.classification,
+    baselinePolicy: benchmarkCase.baselinePolicy,
     budgetClasses: benchmarkCase.budgetClasses,
     memoryScope: benchmarkCase.memoryScope,
     measurementBoundary: BenchmarkMeasurementBoundary(

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 4,
   "kind": "manual_benchmark_history",
   "recordedAtUtc": "2026-06-06T19:45:00.000Z",
   "label": "existing-full-release-report",
@@ -52,8 +52,8 @@
         "sizeBytes": 4769958,
         "sha256": "20a13e7ac8063a6ed4402b9104cd4c47865806328675defc106cae82b273c2b6"
       },
-      "manifestVersion": "p14_benchmark_measurement_boundary_v2",
-      "manifestFingerprint": "e244be03",
+      "manifestVersion": "benchmark_measurement_boundary_v3",
+      "manifestFingerprint": "2e4b020c",
       "caseCount": 78
     }
   ],
@@ -62,7 +62,6 @@
     {
       "id": "edit.add_element",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -111,12 +110,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 6684
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_element",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -165,12 +164,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 90452
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_element",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -219,12 +218,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 472354
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_element",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -273,12 +272,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 1011906
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_visual",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -328,12 +327,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 6696
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_visual",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -383,12 +382,12 @@
         "setup_rss_delta_bytes": 15024128,
         "setup_us": 89004
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_visual",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -438,12 +437,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 494058
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_visual",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -493,12 +492,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 1121599
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_transform",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -548,12 +547,12 @@
         "setup_rss_delta_bytes": 524288,
         "setup_us": 7397
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_transform",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -603,12 +602,12 @@
         "setup_rss_delta_bytes": 3915776,
         "setup_us": 99043
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_transform",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -658,12 +657,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 573324
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.update_transform",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -713,12 +712,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 1091031
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.move_selection",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -776,12 +775,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.move_selection",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -839,12 +838,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.move_selection",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -902,12 +901,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.set_camera_offset",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -965,12 +964,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.set_camera_offset",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1028,12 +1027,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.set_camera_offset",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1091,12 +1090,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.set_camera_offset",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1154,12 +1153,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_line",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1208,12 +1207,12 @@
         "setup_rss_delta_bytes": 229376,
         "setup_us": 6813
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_line",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1262,12 +1261,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 94734
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "edit.add_line",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1316,12 +1315,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 516757
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "input.selected_move_preview",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1379,12 +1378,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.selected_move_preview",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1442,12 +1441,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.selected_move_preview",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1505,12 +1504,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1570,12 +1569,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1635,12 +1634,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1700,12 +1699,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.marquee_preview",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1763,12 +1762,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.marquee_preview",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1826,12 +1825,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.marquee_preview",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1889,12 +1888,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.draw_preview",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1952,12 +1951,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.draw_preview",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2015,12 +2014,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.line_preview",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2078,12 +2077,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.line_preview",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2141,12 +2140,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.line_preview",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2204,12 +2203,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.eraser_preview",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2270,12 +2269,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.eraser_preview",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2336,12 +2335,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.eraser_preview",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2402,12 +2401,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "input.eraser_budget_exceeded",
       "scale": "dense_50k",
-      "classification": "new_only",
       "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2468,12 +2467,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.main_capture",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2525,12 +2524,12 @@
         "setup_rss_delta_bytes": 3817472,
         "setup_us": 22737
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "frame.main_capture",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2582,12 +2581,12 @@
         "setup_rss_delta_bytes": 1212416,
         "setup_us": 92640
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "frame.main_capture",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2639,12 +2638,12 @@
         "setup_rss_delta_bytes": 1572864,
         "setup_us": 468035
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "frame.main_capture",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2696,12 +2695,12 @@
         "setup_rss_delta_bytes": 2670592,
         "setup_us": 933835
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "frame.overlay_capture",
       "scale": "active_previews",
-      "classification": "new_only",
       "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2752,12 +2751,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 393
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.paint_candidates",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2824,12 +2823,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.paint_candidates",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2896,12 +2895,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.paint_candidates",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2968,12 +2967,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "frame.paint_candidates",
       "scale": "100k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3040,12 +3039,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "resources.resolve_sync",
       "scale": "1k_resources",
-      "classification": "new_only",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3106,12 +3105,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "resources.resolve_sync_cold_budget",
       "scale": "1k_uncached_image_records",
-      "classification": "new_only",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3172,12 +3171,12 @@
           "max": 128,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "resources.mark_dirty",
       "scale": "1k_resources",
-      "classification": "new_only",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3236,12 +3235,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "resources.mark_all_dirty",
       "scale": "1k_resources",
-      "classification": "new_only",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3300,12 +3299,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "projection.read_document",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3356,12 +3355,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 6673
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "projection.read_document",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3412,12 +3411,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 92409
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "projection.read_document",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3468,12 +3467,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 488691
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "projection.read_document",
       "scale": "100k",
-      "classification": "new_only",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3524,12 +3523,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 1031615
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "codec.decode_v1",
       "scale": "all_fixtures",
-      "classification": "equivalent_legacy",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3588,12 +3587,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.success",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3644,12 +3643,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 1436
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.success",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3700,12 +3699,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 20487
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.success",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3756,12 +3755,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 83529
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.success",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3812,12 +3811,12 @@
         "setup_rss_delta_bytes": 27262976,
         "setup_us": 146027
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.breakdown",
       "scale": "1k",
-      "classification": "new_only",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3873,12 +3872,12 @@
         "setup_rss_delta_bytes": 4063232,
         "setup_us": 14066
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "load_document.breakdown",
       "scale": "10k",
-      "classification": "new_only",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3934,12 +3933,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 96784
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "load_document.breakdown",
       "scale": "50k",
-      "classification": "new_only",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3995,12 +3994,12 @@
         "setup_rss_delta_bytes": 0,
         "setup_us": 417308
       },
-      "exactInvariants": {}
+      "exactInvariants": {},
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "load_document.failure",
       "scale": "invalid_1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4060,12 +4059,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.failure",
       "scale": "invalid_10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4125,12 +4124,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "load_document.failure",
       "scale": "invalid_50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4190,12 +4189,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.query_point",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4254,12 +4253,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.query_point",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4318,12 +4317,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.query_point",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4382,12 +4381,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.query_point",
       "scale": "100k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4446,12 +4445,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.query_point_dense_stress",
       "scale": "dense_50k",
-      "classification": "new_only",
       "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4510,12 +4509,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "spatial.touched_update",
       "scale": "1k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4575,12 +4574,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.touched_update",
       "scale": "10k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4640,12 +4639,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "spatial.touched_update",
       "scale": "50k",
-      "classification": "equivalent_legacy",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4705,12 +4704,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "reference_comparison"
     },
     {
       "id": "runtime.dispose_during_gesture",
       "scale": "active_selected_overlay_previews",
-      "classification": "new_only",
       "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4776,12 +4775,12 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     },
     {
       "id": "diagnostics.disabled_pointer",
       "scale": "hot_pointer",
-      "classification": "new_only",
       "fixtureShape": "hot_pointer",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4846,7 +4845,8 @@
           "max": null,
           "passed": true
         }
-      }
+      },
+      "baselinePolicy": "absolute_budget"
     }
   ]
 }

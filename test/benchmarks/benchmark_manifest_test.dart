@@ -9,7 +9,7 @@ import '../../tool/bench/src/benchmark_manifest.dart';
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   group('benchmark manifest schema', () {
-    test('loads the P14 source of truth with the required inventory', () {
+    test('loads the benchmark source of truth with the required inventory', () {
       final manifest = BenchmarkManifest.load();
 
       expect(manifest.manifestVersion, benchmarkManifestVersion);
@@ -84,8 +84,8 @@ void main() {
         _expectedPostBaselineRegressionCaps,
       );
       expect(
-        manifest.bootstrapLegacyEquivalence,
-        _expectedBootstrapLegacyEquivalence,
+        manifest.firstBaselineReferenceLimits,
+        _expectedFirstBaselineReferenceLimits,
       );
     });
 
@@ -158,15 +158,42 @@ void main() {
       );
     });
 
-    test('rejects invalid equivalent-legacy classification', () {
+    test('rejects invalid baseline policy', () {
       final error = _parseFailure(
         _manifestText().replaceFirst(
-          'classification: equivalent_legacy',
-          'classification: legacyish',
+          'baseline_policy: reference_comparison',
+          'baseline_policy: unsupported_policy',
         ),
       );
 
-      expect(error.message, contains('unsupported classification legacyish'));
+      expect(
+        error.message,
+        contains('unsupported baselinePolicy unsupported_policy'),
+      );
+    });
+
+    test('rejects retired benchmark vocabulary fields', () {
+      final rootError = _parseFailure(
+        _manifestText().replaceFirst(
+          'first_baseline_reference_limits:',
+          'bootstrap_legacy_equivalence:\n'
+              '  avg_us_multiplier: 1.35\n'
+              'first_baseline_reference_limits:',
+        ),
+      );
+      final caseError = _parseFailure(
+        _manifestText().replaceFirst(
+          '    baseline_policy: reference_comparison',
+          '    baseline_policy: reference_comparison\n'
+              '    classification: equivalent_legacy',
+        ),
+      );
+
+      expect(
+        rootError.message,
+        contains('retired field bootstrap_legacy_equivalence'),
+      );
+      expect(caseError.message, contains('retired field classification'));
     });
 
     test('rejects stale manifest and tool schema versions', () {
@@ -178,7 +205,7 @@ void main() {
       );
       final schemaError = _parseFailure(
         _manifestText().replaceFirst(
-          'tool_schema_version: 3',
+          'tool_schema_version: 4',
           'tool_schema_version: 2',
         ),
       );
@@ -431,7 +458,7 @@ List<String> _casePolicyFingerprints(BenchmarkManifest manifest) {
     for (final benchmarkCase in manifest.cases)
       [
         benchmarkCase.id,
-        benchmarkCase.classification,
+        benchmarkCase.baselinePolicy,
         benchmarkCase.budgetClasses.join(','),
         benchmarkCase.memoryScope,
         benchmarkCase.requiredMetrics.join(','),
@@ -647,7 +674,7 @@ const _expectedPostBaselineRegressionCaps = {
   'rss_floor_bytes': 1048576,
 };
 
-const _expectedBootstrapLegacyEquivalence = {'avg_us_multiplier': 1.35};
+const _expectedFirstBaselineReferenceLimits = {'avg_us_multiplier': 1.35};
 
 const _expectedProfilePolicyFingerprint =
     'dry_run:0:1:1:0:0:false:all_required_scales|'
@@ -691,34 +718,34 @@ const _expectedCaseBoundaryFingerprints = [
 ];
 
 const _expectedCasePolicyFingerprints = [
-  'edit.add_element|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'edit.update_visual|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,touched_count||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'edit.update_transform|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|spatial_touched_pages,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'edit.move_selection|equivalent_legacy|hot_input,incremental_edit,exact_invariant|incremental_owner_update|selected_count,avg_us,p95_us,max_us|selected_count_matches_input:selected_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'edit.set_camera_offset|equivalent_legacy|hot_input,incremental_edit,exact_invariant|incremental_owner_update|avg_us,p95_us,max_us,ordinary_paint_plan_invalidations|ordinary_paint_plan_invalidations_zero:ordinary_paint_plan_invalidations:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'edit.add_line|equivalent_legacy|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'input.selected_move_preview|new_only|hot_input,exact_invariant|hot_or_query|scene_repaint_count,avg_us,max_us|scene_repaint_count_bounded:scene_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'frame.selected_move_preview_cached_ordinary_plan|new_only|frame_capture,query_read,exact_invariant|frame_or_resource|ordinary_plan_hit_rate,supplement_count,cached_preview_delta_count|cached_preview_delta_absent:cached_preview_delta_count:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'input.marquee_preview|new_only|hot_input,exact_invariant|hot_or_query|overlay_repaint_count,avg_us,max_us|overlay_repaint_count_bounded:overlay_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'input.draw_preview|new_only|hot_input,exact_invariant|hot_or_query|point_count,avg_us,max_us|point_count_matches_input:point_count::|1k:dry_run,smoke,release;10k:dry_run,release',
-  'input.line_preview|new_only|hot_input,exact_invariant|hot_or_query|overlay_repaint_count,avg_us,max_us|overlay_repaint_count_bounded:overlay_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'input.eraser_preview|new_only|hot_input,exact_invariant|hot_or_query|candidate_count,exact_check_count|eraser_exact_checks_match_candidates:exact_check_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'input.eraser_budget_exceeded|new_only|frame_capture,exact_invariant|frame_or_resource|budget_exceeded_count,partial_erase_count|partial_erase_count_zero:partial_erase_count:0:|dense_50k:dry_run,smoke,release',
-  'frame.main_capture|equivalent_legacy|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'frame.overlay_capture|new_only|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||active_previews:dry_run,smoke,release',
-  'frame.paint_candidates|new_only|frame_capture,allocation_budget,exact_invariant|frame_or_resource|candidate_count,offscreen_layer_count,save_layer_count|save_layer_count_zero:save_layer_count:0:,offscreen_layer_count_zero:offscreen_layer_count:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'resources.resolve_sync|new_only|resource_budgeted,exact_invariant|frame_or_resource|surface_resource_session_resolver_calls,session_cache_hits,repaint_count|resolver_calls_bounded:surface_resource_session_resolver_calls::|1k_resources:dry_run,smoke,release',
-  'resources.resolve_sync_cold_budget|new_only|resource_budgeted,exact_invariant|frame_or_resource|session_budget_resolver_calls,budget_placeholders,throttled_repaint_count|session_budget_resolver_calls_lte_128:session_budget_resolver_calls::128|1k_uncached_image_records:dry_run,smoke,release',
-  'resources.mark_dirty|new_only|resource_budgeted,exact_invariant|frame_or_resource|repaint_count,target_session_cache_invalidation_cost|target_session_cache_invalidation_bounded:target_session_cache_invalidation_cost::|1k_resources:dry_run,smoke,release',
-  'resources.mark_all_dirty|new_only|resource_budgeted,exact_invariant|frame_or_resource|repaint_count,all_entry_session_cache_invalidation_cost|all_entry_session_cache_invalidation_bounded:all_entry_session_cache_invalidation_cost::|1k_resources:dry_run,smoke,release',
-  'projection.read_document|new_only|query_read|bulk_document_1k_10k_50k_100k|first_read_us,cache_hit_us||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'codec.decode_v1|equivalent_legacy|bulk_io,allocation_budget,exact_invariant|codec_fixture_bulk|avg_us,p95_us,max_us,error_payload|error_payload_matches_fixture:error_payload::|all_fixtures:dry_run,smoke,release',
-  'load_document.success|equivalent_legacy|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,schema_import_load_us,rebuild_cost,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'load_document.breakdown|new_only|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,decode_us,runtime_construct_us,schema_import_load_us,first_projection_us,loaded_element_count,projected_element_count,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'load_document.failure|equivalent_legacy|bulk_io,allocation_budget,exact_invariant|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,committed_mutation_count|committed_mutation_count_zero:committed_mutation_count:0:|invalid_1k:dry_run,smoke,release;invalid_10k:dry_run,release;invalid_50k:dry_run,release',
-  'spatial.query_point|equivalent_legacy|query_read,exact_invariant|hot_or_query|tile_count,fallback_count|fallback_count_bounded:fallback_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
-  'spatial.query_point_dense_stress|new_only|query_read,exact_invariant|hot_or_query|fallback_count|fallback_count_bounded:fallback_count::|dense_50k:dry_run,smoke,release',
-  'spatial.touched_update|equivalent_legacy|query_read,incremental_edit,exact_invariant|incremental_owner_update|rebuilt_ids,rebuilt_pages|rebuilt_pages_match_touched_set:rebuilt_pages::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
-  'runtime.dispose_during_gesture|new_only|hot_input,exact_invariant|hot_or_query|avg_us,p95_us,max_us,resolver_calls,action_events|resolver_calls_zero:resolver_calls:0:,action_events_zero:action_events:0:|active_selected_overlay_previews:dry_run,smoke,release',
-  'diagnostics.disabled_pointer|new_only|hot_input,exact_invariant,allocation_budget|zero_allocation|allocation_records,allocation_bytes|allocation_records_zero:allocation_records:0:,allocation_bytes_zero:allocation_bytes:0:|hot_pointer:dry_run,smoke,release',
+  'edit.add_element|reference_comparison|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'edit.update_visual|reference_comparison|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,touched_count||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'edit.update_transform|reference_comparison|incremental_edit,allocation_budget|incremental_owner_update|spatial_touched_pages,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'edit.move_selection|reference_comparison|hot_input,incremental_edit,exact_invariant|incremental_owner_update|selected_count,avg_us,p95_us,max_us|selected_count_matches_input:selected_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'edit.set_camera_offset|reference_comparison|hot_input,incremental_edit,exact_invariant|incremental_owner_update|avg_us,p95_us,max_us,ordinary_paint_plan_invalidations|ordinary_paint_plan_invalidations_zero:ordinary_paint_plan_invalidations:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'edit.add_line|reference_comparison|incremental_edit,allocation_budget|incremental_owner_update|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'input.selected_move_preview|absolute_budget|hot_input,exact_invariant|hot_or_query|scene_repaint_count,avg_us,max_us|scene_repaint_count_bounded:scene_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'frame.selected_move_preview_cached_ordinary_plan|absolute_budget|frame_capture,query_read,exact_invariant|frame_or_resource|ordinary_plan_hit_rate,supplement_count,cached_preview_delta_count|cached_preview_delta_absent:cached_preview_delta_count:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'input.marquee_preview|absolute_budget|hot_input,exact_invariant|hot_or_query|overlay_repaint_count,avg_us,max_us|overlay_repaint_count_bounded:overlay_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'input.draw_preview|absolute_budget|hot_input,exact_invariant|hot_or_query|point_count,avg_us,max_us|point_count_matches_input:point_count::|1k:dry_run,smoke,release;10k:dry_run,release',
+  'input.line_preview|absolute_budget|hot_input,exact_invariant|hot_or_query|overlay_repaint_count,avg_us,max_us|overlay_repaint_count_bounded:overlay_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'input.eraser_preview|absolute_budget|hot_input,exact_invariant|hot_or_query|candidate_count,exact_check_count|eraser_exact_checks_match_candidates:exact_check_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'input.eraser_budget_exceeded|absolute_budget|frame_capture,exact_invariant|frame_or_resource|budget_exceeded_count,partial_erase_count|partial_erase_count_zero:partial_erase_count:0:|dense_50k:dry_run,smoke,release',
+  'frame.main_capture|reference_comparison|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'frame.overlay_capture|absolute_budget|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||active_previews:dry_run,smoke,release',
+  'frame.paint_candidates|absolute_budget|frame_capture,allocation_budget,exact_invariant|frame_or_resource|candidate_count,offscreen_layer_count,save_layer_count|save_layer_count_zero:save_layer_count:0:,offscreen_layer_count_zero:offscreen_layer_count:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'resources.resolve_sync|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|surface_resource_session_resolver_calls,session_cache_hits,repaint_count|resolver_calls_bounded:surface_resource_session_resolver_calls::|1k_resources:dry_run,smoke,release',
+  'resources.resolve_sync_cold_budget|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|session_budget_resolver_calls,budget_placeholders,throttled_repaint_count|session_budget_resolver_calls_lte_128:session_budget_resolver_calls::128|1k_uncached_image_records:dry_run,smoke,release',
+  'resources.mark_dirty|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|repaint_count,target_session_cache_invalidation_cost|target_session_cache_invalidation_bounded:target_session_cache_invalidation_cost::|1k_resources:dry_run,smoke,release',
+  'resources.mark_all_dirty|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|repaint_count,all_entry_session_cache_invalidation_cost|all_entry_session_cache_invalidation_bounded:all_entry_session_cache_invalidation_cost::|1k_resources:dry_run,smoke,release',
+  'projection.read_document|absolute_budget|query_read|bulk_document_1k_10k_50k_100k|first_read_us,cache_hit_us||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'codec.decode_v1|reference_comparison|bulk_io,allocation_budget,exact_invariant|codec_fixture_bulk|avg_us,p95_us,max_us,error_payload|error_payload_matches_fixture:error_payload::|all_fixtures:dry_run,smoke,release',
+  'load_document.success|reference_comparison|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,schema_import_load_us,rebuild_cost,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'load_document.breakdown|absolute_budget|bulk_io,allocation_budget|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,decode_us,runtime_construct_us,schema_import_load_us,first_projection_us,loaded_element_count,projected_element_count,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'load_document.failure|reference_comparison|bulk_io,allocation_budget,exact_invariant|bulk_document_1k_10k_50k_100k|avg_us,p95_us,max_us,committed_mutation_count|committed_mutation_count_zero:committed_mutation_count:0:|invalid_1k:dry_run,smoke,release;invalid_10k:dry_run,release;invalid_50k:dry_run,release',
+  'spatial.query_point|reference_comparison|query_read,exact_invariant|hot_or_query|tile_count,fallback_count|fallback_count_bounded:fallback_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'spatial.query_point_dense_stress|absolute_budget|query_read,exact_invariant|hot_or_query|fallback_count|fallback_count_bounded:fallback_count::|dense_50k:dry_run,smoke,release',
+  'spatial.touched_update|reference_comparison|query_read,incremental_edit,exact_invariant|incremental_owner_update|rebuilt_ids,rebuilt_pages|rebuilt_pages_match_touched_set:rebuilt_pages::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'runtime.dispose_during_gesture|absolute_budget|hot_input,exact_invariant|hot_or_query|avg_us,p95_us,max_us,resolver_calls,action_events|resolver_calls_zero:resolver_calls:0:,action_events_zero:action_events:0:|active_selected_overlay_previews:dry_run,smoke,release',
+  'diagnostics.disabled_pointer|absolute_budget|hot_input,exact_invariant,allocation_budget|zero_allocation|allocation_records,allocation_bytes|allocation_records_zero:allocation_records:0:,allocation_bytes_zero:allocation_bytes:0:|hot_pointer:dry_run,smoke,release',
 ];

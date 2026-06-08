@@ -410,7 +410,7 @@ Depends On:
 
 Unit 2 and Unit 4.
 
-### [ ] Unit 6: Benchmark schema and history migration
+### [x] Unit 6: Benchmark schema and history migration
 
 Owner:
 

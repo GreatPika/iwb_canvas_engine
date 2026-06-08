@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'benchmark_manifest.dart';
+
 const manualBenchmarkReferenceDecisionPath =
     'tool/bench/manual/reference_decisions.json';
 const _referenceValueOptions = {
@@ -325,12 +327,13 @@ _HistoryRun _historyRun(String path) {
   if (json['kind'] != 'manual_benchmark_history') {
     throw FormatException('Not a manual benchmark history record: $path');
   }
+  _validateHistorySchema(path, json);
   final cases = _historyCases(json);
   final sources = _historySources(json);
   final firstSource = sources.first;
   return _HistoryRun(
     path: path,
-    schemaVersion: 3,
+    schemaVersion: json['schemaVersion'] as int,
     manifestVersion: _string(firstSource['manifestVersion'], 'manifestVersion'),
     manifestFingerprint: _string(
       firstSource['manifestFingerprint'],
@@ -348,13 +351,37 @@ _HistoryRun _historyRun(String path) {
   );
 }
 
+void _validateHistorySchema(String path, Map<String, Object?> json) {
+  if (json['schemaVersion'] != benchmarkToolSchemaVersion) {
+    throw FormatException(
+      'Manual benchmark history schemaVersion must be '
+      '$benchmarkToolSchemaVersion: $path',
+    );
+  }
+}
+
 Map<String, Map<String, Object?>> _historyCases(Map<String, Object?> json) {
   final cases = <String, Map<String, Object?>>{};
   for (final entry in _list(json['cases'], 'cases')) {
     final benchmarkCase = _map(entry, 'case');
+    _rejectRetiredHistoryCaseFields(benchmarkCase);
     cases['${benchmarkCase['id']}/${benchmarkCase['scale']}'] = benchmarkCase;
   }
   return cases;
+}
+
+void _rejectRetiredHistoryCaseFields(Map<String, Object?> benchmarkCase) {
+  if (benchmarkCase.containsKey('classification')) {
+    throw const FormatException(
+      'Manual benchmark history case uses retired field classification',
+    );
+  }
+  final metrics = _map(benchmarkCase['metrics'], 'case metrics');
+  if (metrics.containsKey('legacy_avg_us')) {
+    throw const FormatException(
+      'Manual benchmark history case uses retired metric legacy_avg_us',
+    );
+  }
 }
 
 List<Map<String, Object?>> _historySources(Map<String, Object?> json) {

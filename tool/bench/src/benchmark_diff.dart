@@ -119,7 +119,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       report: baseline,
       profile: profile,
       sourceRole: 'baseline',
-      requireLegacyBootstrapMetrics: false,
+      requireReferenceBaselineMetrics: false,
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: false,
       requireSamples: false,
@@ -133,7 +133,7 @@ BenchmarkDiffResult diffBenchmarkReports({
       report: current,
       profile: profile,
       sourceRole: 'current',
-      requireLegacyBootstrapMetrics: false,
+      requireReferenceBaselineMetrics: false,
       requireFirstBaselineMemoryCaps: false,
       requireCasePolicyFields: true,
       requireSamples: true,
@@ -190,7 +190,7 @@ BenchmarkDiffResult validateFirstBaselineCandidate({
     report: candidate,
     profile: profile,
     sourceRole: 'candidate',
-    requireLegacyBootstrapMetrics: true,
+    requireReferenceBaselineMetrics: true,
     requireFirstBaselineMemoryCaps: true,
     requireCasePolicyFields: true,
     requireSamples: true,
@@ -538,7 +538,7 @@ final class ParsedReleaseContour {
 final class ParsedCaseReport {
   const ParsedCaseReport({
     required this.id,
-    required this.classification,
+    required this.baselinePolicy,
     required this.scale,
     required this.budgetClasses,
     required this.memoryScope,
@@ -552,7 +552,7 @@ final class ParsedCaseReport {
   });
 
   final String id;
-  final String? classification;
+  final String? baselinePolicy;
   final String scale;
   final List<String>? budgetClasses;
   final String? memoryScope;
@@ -568,11 +568,16 @@ final class ParsedCaseReport {
 
   factory ParsedCaseReport.parse(Map<String, Object?> json, String source) {
     final caseSource = '$source case';
+    _rejectRetiredCaseFields(json, caseSource);
     final metadata = _parseCaseMetadata(json, caseSource);
     final samples = _parseCaseSamples(json, caseSource);
+    final metrics = Map<String, Object?>.from(
+      _map(json, 'metrics', caseSource),
+    );
+    _rejectRetiredMetricFields(metrics, caseSource);
     return ParsedCaseReport(
       id: metadata.id,
-      classification: metadata.classification,
+      baselinePolicy: metadata.baselinePolicy,
       scale: metadata.scale,
       budgetClasses: metadata.budgetClasses,
       memoryScope: metadata.memoryScope,
@@ -580,7 +585,7 @@ final class ParsedCaseReport {
       fixtureShape: metadata.fixtureShape,
       actionUsSamples: samples.actionUsSamples,
       setupUsSamples: samples.setupUsSamples,
-      metrics: Map<String, Object?>.from(_map(json, 'metrics', caseSource)),
+      metrics: metrics,
       setupMetrics: _optionalMap(json, 'setupMetrics', caseSource),
       exactInvariants: _parseExactInvariants(json, source, caseSource),
     );
@@ -606,9 +611,25 @@ final class ParsedCaseReport {
   }
 }
 
+void _rejectRetiredCaseFields(Map<String, Object?> json, String source) {
+  for (final field in const ['classification']) {
+    if (json.containsKey(field)) {
+      throw FormatException('$source uses retired field $field');
+    }
+  }
+}
+
+void _rejectRetiredMetricFields(Map<String, Object?> metrics, String source) {
+  for (final field in const ['legacy_avg_us']) {
+    if (metrics.containsKey(field)) {
+      throw FormatException('$source uses retired metric $field');
+    }
+  }
+}
+
 ({
   String id,
-  String? classification,
+  String? baselinePolicy,
   String scale,
   List<String>? budgetClasses,
   String? memoryScope,
@@ -618,7 +639,7 @@ final class ParsedCaseReport {
 _parseCaseMetadata(Map<String, Object?> json, String caseSource) {
   return (
     id: _string(json, 'id', caseSource),
-    classification: _optionalString(json, 'classification', caseSource),
+    baselinePolicy: _optionalString(json, 'baselinePolicy', caseSource),
     scale: _string(json, 'scale', caseSource),
     budgetClasses: _optionalStringList(json, 'budgetClasses', caseSource),
     memoryScope: _optionalString(json, 'memoryScope', caseSource),
@@ -753,7 +774,7 @@ List<String> _validateReportForPolicy({
   required ParsedBenchmarkReport report,
   required String profile,
   required String sourceRole,
-  required bool requireLegacyBootstrapMetrics,
+  required bool requireReferenceBaselineMetrics,
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
   required bool requireSamples,
@@ -827,7 +848,7 @@ List<String> _validateReportForPolicy({
           scale: scale,
           actual: actual,
           sourceRole: sourceRole,
-          requireLegacyBootstrapMetrics: requireLegacyBootstrapMetrics,
+          requireReferenceBaselineMetrics: requireReferenceBaselineMetrics,
           requireFirstBaselineMemoryCaps: requireFirstBaselineMemoryCaps,
           requireCasePolicyFields: requireCasePolicyFields,
           requireSamples: requireSamples,
@@ -848,7 +869,7 @@ List<String> _validateCaseForPolicy({
   required BenchmarkScale scale,
   required ParsedCaseReport actual,
   required String sourceRole,
-  required bool requireLegacyBootstrapMetrics,
+  required bool requireReferenceBaselineMetrics,
   required bool requireFirstBaselineMemoryCaps,
   required bool requireCasePolicyFields,
   required bool requireSamples,
@@ -879,8 +900,8 @@ List<String> _validateCaseForPolicy({
     enforceAbsoluteCaps: enforceAbsoluteCaps,
     requireFirstBaselineMemoryCaps: requireFirstBaselineMemoryCaps,
   ));
-  if (requireLegacyBootstrapMetrics) {
-    _validateLegacyBootstrapMetrics((
+  if (requireReferenceBaselineMetrics) {
+    _validateReferenceBaselineMetrics((
       failures: failures,
       manifest: manifest,
       benchmarkCase: benchmarkCase,
@@ -899,9 +920,9 @@ void _validateCasePolicyFields(
 ) {
   _expectEqual(
     failures,
-    '$caseName classification',
-    actual.classification,
-    benchmarkCase.classification,
+    '$caseName baselinePolicy',
+    actual.baselinePolicy,
+    benchmarkCase.baselinePolicy,
   );
   _expectEqual(
     failures,
@@ -1000,7 +1021,7 @@ List<String> _validateSchemaImportLoadAcceptanceGate({
   return const [];
 }
 
-void _validateLegacyBootstrapMetrics(
+void _validateReferenceBaselineMetrics(
   ({
     List<String> failures,
     BenchmarkManifest manifest,
@@ -1011,24 +1032,24 @@ void _validateLegacyBootstrapMetrics(
   input,
 ) {
   final actual = input.actual;
-  if (input.benchmarkCase.classification != 'equivalent_legacy' ||
+  if (input.benchmarkCase.baselinePolicy != 'reference_comparison' ||
       !actual.metrics.containsKey('avg_us')) {
     return;
   }
   final avg = _metricNumber(actual, 'avg_us');
-  final legacy = _metricNumber(actual, 'legacy_avg_us');
-  if (legacy == null) {
-    input.failures.add('${input.caseName} missing metric legacy_avg_us');
+  final reference = _metricNumber(actual, 'reference_avg_us');
+  if (reference == null) {
+    input.failures.add('${input.caseName} missing metric reference_avg_us');
     return;
   }
   if (avg == null) {
     return;
   }
   final multiplier =
-      input.manifest.bootstrapLegacyEquivalence['avg_us_multiplier']!;
-  if (avg > legacy * multiplier) {
+      input.manifest.firstBaselineReferenceLimits['avg_us_multiplier']!;
+  if (avg > reference * multiplier) {
     input.failures.add(
-      '${input.caseName} avg_us $avg exceeds legacy_avg_us $legacy * $multiplier',
+      '${input.caseName} avg_us $avg exceeds reference_avg_us $reference * $multiplier',
     );
   }
 }

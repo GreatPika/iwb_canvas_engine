@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 4,
   "kind": "manual_benchmark_history",
   "recordedAtUtc": "2026-06-08T10:40:13.572151Z",
   "label": "schema_import_load_release_run_3",
@@ -52,8 +52,8 @@
         "sizeBytes": 4311814,
         "sha256": "bede5ea88e9c1d23826894dafb2197b7a25819e247f08acfa76a71fe824e0be9"
       },
-      "manifestVersion": "p14_benchmark_measurement_boundary_v2",
-      "manifestFingerprint": "497add8c",
+      "manifestVersion": "benchmark_measurement_boundary_v3",
+      "manifestFingerprint": "2e4b020c",
       "caseCount": 77
     }
   ],
@@ -62,7 +62,7 @@
     {
       "id": "edit.add_element",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -117,7 +117,7 @@
     {
       "id": "edit.add_element",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -172,7 +172,7 @@
     {
       "id": "edit.add_element",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -227,7 +227,7 @@
     {
       "id": "edit.add_element",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -282,7 +282,7 @@
     {
       "id": "edit.update_visual",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -338,7 +338,7 @@
     {
       "id": "edit.update_visual",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -394,7 +394,7 @@
     {
       "id": "edit.update_visual",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -450,7 +450,7 @@
     {
       "id": "edit.update_visual",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -506,7 +506,7 @@
     {
       "id": "edit.update_transform",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -562,7 +562,7 @@
     {
       "id": "edit.update_transform",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -618,7 +618,7 @@
     {
       "id": "edit.update_transform",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -674,7 +674,7 @@
     {
       "id": "edit.update_transform",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -730,7 +730,7 @@
     {
       "id": "edit.move_selection",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -794,7 +794,7 @@
     {
       "id": "edit.move_selection",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -858,7 +858,7 @@
     {
       "id": "edit.move_selection",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -922,7 +922,7 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -986,7 +986,7 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1050,7 +1050,7 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1114,7 +1114,7 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1178,7 +1178,7 @@
     {
       "id": "edit.add_line",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1233,7 +1233,7 @@
     {
       "id": "edit.add_line",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1288,7 +1288,7 @@
     {
       "id": "edit.add_line",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1343,7 +1343,7 @@
     {
       "id": "input.selected_move_preview",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1407,7 +1407,7 @@
     {
       "id": "input.selected_move_preview",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1471,7 +1471,7 @@
     {
       "id": "input.selected_move_preview",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1535,7 +1535,7 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1600,7 +1600,7 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1665,7 +1665,7 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1730,7 +1730,7 @@
     {
       "id": "input.marquee_preview",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1794,7 +1794,7 @@
     {
       "id": "input.marquee_preview",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1858,7 +1858,7 @@
     {
       "id": "input.marquee_preview",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1922,7 +1922,7 @@
     {
       "id": "input.draw_preview",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -1986,7 +1986,7 @@
     {
       "id": "input.draw_preview",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2050,7 +2050,7 @@
     {
       "id": "input.line_preview",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2114,7 +2114,7 @@
     {
       "id": "input.line_preview",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2178,7 +2178,7 @@
     {
       "id": "input.line_preview",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2242,7 +2242,7 @@
     {
       "id": "input.eraser_preview",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2309,7 +2309,7 @@
     {
       "id": "input.eraser_preview",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2376,7 +2376,7 @@
     {
       "id": "input.eraser_preview",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2443,7 +2443,7 @@
     {
       "id": "input.eraser_budget_exceeded",
       "scale": "dense_50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2510,7 +2510,7 @@
     {
       "id": "frame.main_capture",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2568,7 +2568,7 @@
     {
       "id": "frame.main_capture",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2626,7 +2626,7 @@
     {
       "id": "frame.main_capture",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2684,7 +2684,7 @@
     {
       "id": "frame.main_capture",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2742,7 +2742,7 @@
     {
       "id": "frame.overlay_capture",
       "scale": "active_previews",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2799,7 +2799,7 @@
     {
       "id": "frame.paint_candidates",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2872,7 +2872,7 @@
     {
       "id": "frame.paint_candidates",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -2945,7 +2945,7 @@
     {
       "id": "frame.paint_candidates",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3018,7 +3018,7 @@
     {
       "id": "frame.paint_candidates",
       "scale": "100k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3091,7 +3091,7 @@
     {
       "id": "resources.resolve_sync",
       "scale": "1k_resources",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3157,7 +3157,7 @@
     {
       "id": "resources.resolve_sync_cold_budget",
       "scale": "1k_uncached_image_records",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3223,7 +3223,7 @@
     {
       "id": "resources.mark_dirty",
       "scale": "1k_resources",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3287,7 +3287,7 @@
     {
       "id": "resources.mark_all_dirty",
       "scale": "1k_resources",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3351,7 +3351,7 @@
     {
       "id": "projection.read_document",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3408,7 +3408,7 @@
     {
       "id": "projection.read_document",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3465,7 +3465,7 @@
     {
       "id": "projection.read_document",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3522,7 +3522,7 @@
     {
       "id": "projection.read_document",
       "scale": "100k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
@@ -3579,7 +3579,7 @@
     {
       "id": "codec.decode_v1",
       "scale": "all_fixtures",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3643,7 +3643,7 @@
     {
       "id": "load_document.success",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3700,7 +3700,7 @@
     {
       "id": "load_document.success",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3757,7 +3757,7 @@
     {
       "id": "load_document.success",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -3814,7 +3814,7 @@
     {
       "id": "load_document.breakdown",
       "scale": "1k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3875,7 +3875,7 @@
     {
       "id": "load_document.breakdown",
       "scale": "10k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3936,7 +3936,7 @@
     {
       "id": "load_document.breakdown",
       "scale": "50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -3997,7 +3997,7 @@
     {
       "id": "load_document.failure",
       "scale": "invalid_1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4062,7 +4062,7 @@
     {
       "id": "load_document.failure",
       "scale": "invalid_10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4127,7 +4127,7 @@
     {
       "id": "load_document.failure",
       "scale": "invalid_50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
@@ -4192,7 +4192,7 @@
     {
       "id": "spatial.query_point",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4257,7 +4257,7 @@
     {
       "id": "spatial.query_point",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4322,7 +4322,7 @@
     {
       "id": "spatial.query_point",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4387,7 +4387,7 @@
     {
       "id": "spatial.query_point",
       "scale": "100k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4452,7 +4452,7 @@
     {
       "id": "spatial.query_point_dense_stress",
       "scale": "dense_50k",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4517,7 +4517,7 @@
     {
       "id": "spatial.touched_update",
       "scale": "1k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4583,7 +4583,7 @@
     {
       "id": "spatial.touched_update",
       "scale": "10k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4649,7 +4649,7 @@
     {
       "id": "spatial.touched_update",
       "scale": "50k",
-      "classification": "equivalent_legacy",
+      "baselinePolicy": "reference_comparison",
       "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4715,7 +4715,7 @@
     {
       "id": "runtime.dispose_during_gesture",
       "scale": "active_selected_overlay_previews",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
@@ -4786,7 +4786,7 @@
     {
       "id": "diagnostics.disabled_pointer",
       "scale": "hot_pointer",
-      "classification": "new_only",
+      "baselinePolicy": "absolute_budget",
       "fixtureShape": "hot_pointer",
       "measurementBoundary": {
         "timedScope": "action_only",

@@ -1048,7 +1048,7 @@
   - test.guardrails.release_readiness
   - test.benchmarks.required_cases
   do_not_assume:
-  - no unapproved legacy feature path regression
+  - no unapproved retired feature route regression
 - id: section_27_final_release_gates
   source: docs/_registry/sections.yaml / section 27
   file: docs/verification/release_gates.md

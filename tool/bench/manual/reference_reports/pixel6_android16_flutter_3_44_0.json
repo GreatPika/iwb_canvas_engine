@@ -1,8 +1,8 @@
 {
   "kind": "manual_benchmark_reference",
-  "schemaVersion": 3,
-  "manifestVersion": "p14_benchmark_measurement_boundary_v2",
-  "manifestFingerprint": "e244be03",
+  "schemaVersion": 4,
+  "manifestVersion": "benchmark_measurement_boundary_v3",
+  "manifestFingerprint": "2e4b020c",
   "profile": {
     "id": "release",
     "warmups": 1,

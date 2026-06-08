@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
 import '../../tool/bench/src/benchmark_runner.dart';
 
-// Required-case proof keeps inventory, metrics, invariants, and legacy-ban
+// Required-case proof keeps inventory, metrics, invariants, and retired-route
 // checks in one suite because together they define benchmark executability.
 // ignore: halstead-volume, maximum-nesting-level, maintainability-index, source-lines-of-code
 void main() {
@@ -85,10 +85,10 @@ void main() {
       expect(encoded['caseCount'], report.cases.length);
     });
 
-    test('current benchmark proof does not depend on legacy tooling', () {
-      const legacyOwner = 'legacy';
-      final legacyPathToken = '$legacyOwner/';
-      final legacyImportToken = '$legacyOwner.';
+    test('current benchmark proof does not depend on retired tooling', () {
+      const retiredOwner = 'legacy';
+      final retiredPathToken = '$retiredOwner/';
+      final retiredImportToken = '$retiredOwner.';
       final benchFiles = [
         for (final root in ['tool/bench', 'test/benchmarks'])
           ...Directory(root)
@@ -99,8 +99,8 @@ void main() {
 
       for (final file in benchFiles) {
         final text = file.readAsStringSync();
-        expect(text, isNot(contains(legacyPathToken)), reason: file.path);
-        expect(text, isNot(contains(legacyImportToken)), reason: file.path);
+        expect(text, isNot(contains(retiredPathToken)), reason: file.path);
+        expect(text, isNot(contains(retiredImportToken)), reason: file.path);
       }
     });
   });

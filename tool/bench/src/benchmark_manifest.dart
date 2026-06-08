@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 const benchmarkManifestPath = 'docs/_registry/benchmarks.yaml';
-const benchmarkManifestVersion = 'p14_benchmark_measurement_boundary_v2';
-const benchmarkToolSchemaVersion = 3;
+const benchmarkManifestVersion = 'benchmark_measurement_boundary_v3';
+const benchmarkToolSchemaVersion = 4;
 
 final class BenchmarkManifest {
   const BenchmarkManifest({
@@ -16,7 +16,7 @@ final class BenchmarkManifest {
     required this.memoryScopes,
     required this.cases,
     required this.postBaselineRegressionCaps,
-    required this.bootstrapLegacyEquivalence,
+    required this.firstBaselineReferenceLimits,
   });
 
   final String manifestVersion;
@@ -27,7 +27,7 @@ final class BenchmarkManifest {
   final List<BenchmarkMemoryScope> memoryScopes;
   final List<BenchmarkCase> cases;
   final Map<String, num> postBaselineRegressionCaps;
-  final Map<String, num> bootstrapLegacyEquivalence;
+  final Map<String, num> firstBaselineReferenceLimits;
 
   Map<String, BenchmarkProfile> get profilesById => {
     for (final profile in profiles) profile.id: profile,
@@ -108,7 +108,7 @@ final class BenchmarkMemoryScope {
 final class BenchmarkCase {
   const BenchmarkCase({
     required this.id,
-    required this.classification,
+    required this.baselinePolicy,
     required this.budgetClasses,
     required this.memoryScope,
     required this.measurementBoundary,
@@ -120,7 +120,7 @@ final class BenchmarkCase {
   });
 
   final String id;
-  final String classification;
+  final String baselinePolicy;
   final List<String> budgetClasses;
   final String memoryScope;
   final BenchmarkMeasurementBoundary measurementBoundary;
@@ -223,7 +223,7 @@ final class _ExpectedBenchmarkBoundary {
 final class _BenchmarkManifestParser {
   _BenchmarkManifestParser(this.root, this.source);
 
-  static const _classifications = {'equivalent_legacy', 'new_only'};
+  static const _baselinePolicies = {'reference_comparison', 'absolute_budget'};
   static const _timedScopes = {'action_only', 'lifecycle', 'projection_split'};
   static const _setupScopes = {
     'none',
@@ -377,6 +377,7 @@ final class _BenchmarkManifestParser {
   final String source;
 
   BenchmarkManifest parse() {
+    _rejectRetiredRootFields();
     final manifestVersion = _manifestVersion();
     final toolSchemaVersion = _toolSchemaVersion();
     final profiles = _profiles();
@@ -404,12 +405,20 @@ final class _BenchmarkManifestParser {
         'post_baseline_regression_caps',
         source,
       ),
-      bootstrapLegacyEquivalence: _numberMap(
+      firstBaselineReferenceLimits: _numberMap(
         root,
-        'bootstrap_legacy_equivalence',
+        'first_baseline_reference_limits',
         source,
       ),
     );
+  }
+
+  void _rejectRetiredRootFields() {
+    for (final field in const ['bootstrap_legacy_equivalence']) {
+      if (root.containsKey(field)) {
+        _fail('benchmark manifest uses retired field $field');
+      }
+    }
   }
 
   String _manifestVersion() {
@@ -513,7 +522,7 @@ final class _BenchmarkManifestParser {
     return scopes;
   }
 
-  // Case parsing validates identity, classification, budgets, metrics,
+  // Case parsing validates identity, baselinePolicy, budgets, metrics,
   // invariants, and scales together because they form one manifest row schema.
   // Keeping this row admission together prevents partial manifest acceptance
   // where boundary policy is parsed separately from the case it governs.
@@ -528,12 +537,13 @@ final class _BenchmarkManifestParser {
 
     for (final entry in _mapList(root, 'cases', source)) {
       final id = _string(entry, 'id', 'benchmark case');
+      _rejectRetiredCaseFields(entry, id);
       if (!seen.add(id)) {
         _fail('duplicate benchmark case id $id');
       }
-      final classification = _string(entry, 'classification', id);
-      if (!_classifications.contains(classification)) {
-        _fail('$id has unsupported classification $classification');
+      final baselinePolicy = _string(entry, 'baseline_policy', id);
+      if (!_baselinePolicies.contains(baselinePolicy)) {
+        _fail('$id has unsupported baselinePolicy $baselinePolicy');
       }
       final budgetClasses = _stringList(entry, 'budget_classes', id);
       if (budgetClasses.isEmpty) {
@@ -571,7 +581,7 @@ final class _BenchmarkManifestParser {
       cases.add(
         BenchmarkCase(
           id: id,
-          classification: classification,
+          baselinePolicy: baselinePolicy,
           budgetClasses: budgetClasses,
           memoryScope: memoryScope,
           measurementBoundary: measurementBoundary,
@@ -595,6 +605,14 @@ final class _BenchmarkManifestParser {
     }
 
     return cases;
+  }
+
+  void _rejectRetiredCaseFields(YamlMap entry, String id) {
+    for (final field in const ['classification']) {
+      if (entry.containsKey(field)) {
+        _fail('$id uses retired field $field');
+      }
+    }
   }
 
   // Measurement boundary parsing keeps every required boundary field in one

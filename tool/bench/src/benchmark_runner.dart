@@ -240,7 +240,7 @@ _BenchmarkCaseRun _runCase(
   return _BenchmarkCaseRun(
     report: BenchmarkCaseReport(
       id: benchmarkCase.id,
-      classification: benchmarkCase.classification,
+      baselinePolicy: benchmarkCase.baselinePolicy,
       scale: scale.id,
       scaleLabel: scale.label,
       budgetClasses: benchmarkCase.budgetClasses,

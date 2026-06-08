@@ -52,7 +52,7 @@ Required tests:
 Guardrails:
 - `release.benchmark_readiness`
 Do not assume:
-- no unapproved legacy feature path regression
+- no unapproved retired feature route regression
 <!-- CONTEXT:END -->
 
 ## 24. Benchmarks
@@ -65,7 +65,7 @@ exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: 076f941c -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 2e4b020c -->
 
 Required benchmark cases:
 
@@ -127,8 +127,6 @@ Release benchmark interpretation:
 - Manual reference decisions are recorded in
   `tool/bench/manual/reference_decisions.json`. A reference report is valid only
   when that decision log says which history run or run window produced it.
-- The Pixel 6 Android 16 Flutter 3.44.0 manual reference report is
-  `tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json`.
 - The Xiaomi 22081283G Android 14 Flutter 3.44.0 manual reference report is
   `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json`.
 - Refresh a device report with
@@ -191,7 +189,7 @@ Benchmark CI routing:
   `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
 - Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.38.0` stable,
   writes the current release report, runs the read-only release diff, and then
-  blocks on P14 graph, generated-view, and guardrail checks.
+  blocks on current graph closure, generated-view, and guardrail checks.
 - Release baseline update is a separate `workflow_dispatch` route that writes a
   candidate under `build/bench/candidates/`, runs `update_baseline`, and uploads
   the accepted release-baseline artifact without auto-committing it.

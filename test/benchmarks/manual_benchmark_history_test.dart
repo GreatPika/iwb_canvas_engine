@@ -66,6 +66,70 @@ void _registerSourceBoundaryTests(Directory Function() sandbox) {
       throwsA(isA<FormatException>()),
     );
   });
+
+  _registerReportSchemaBoundaryTest(sandbox);
+  _registerReportPolicyBoundaryTests(sandbox);
+}
+
+void _registerReportSchemaBoundaryTest(Directory Function() sandbox) {
+  test('rejects stale report schema sources', () {
+    expect(
+      () => _archiveOldVocabularyReport(
+        sandbox(),
+        mutate: (report, _) {
+          report['schemaVersion'] = 3;
+        },
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('schemaVersion must be 4'),
+        ),
+      ),
+    );
+  });
+}
+
+void _registerReportPolicyBoundaryTests(Directory Function() sandbox) {
+  test('rejects retired report case policy fields', () {
+    expect(
+      () => _archiveOldVocabularyReport(
+        sandbox(),
+        mutate: (_, benchmarkCase) {
+          benchmarkCase
+            ..remove('baselinePolicy')
+            ..['classification'] = 'equivalent_legacy';
+        },
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('retired field classification'),
+        ),
+      ),
+    );
+  });
+
+  test('rejects retired report metric fields', () {
+    expect(
+      () => _archiveOldVocabularyReport(
+        sandbox(),
+        mutate: (_, benchmarkCase) {
+          final metrics = benchmarkCase['metrics'] as Map<String, Object?>;
+          metrics['legacy_avg_us'] = 19814;
+        },
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('retired metric legacy_avg_us'),
+        ),
+      ),
+    );
+  });
 }
 
 void _registerProbeFailureTests(Directory Function() sandbox) {
@@ -73,6 +137,27 @@ void _registerProbeFailureTests(Directory Function() sandbox) {
     expect(
       () => _archiveUnidentifiedProbe(sandbox()),
       throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('rejects retired probe log metric fields', () {
+    final probePath = '${sandbox().path}/run_input_draw_preview_1k.log';
+    final probe = _probeJson();
+    final metrics = probe['metrics'] as Map<String, Object?>;
+    metrics['legacy_avg_us'] = 19947;
+    File(
+      probePath,
+    ).writeAsStringSync('BENCHMARK_PROBE_JSON:${jsonEncode(probe)}\n');
+
+    expect(
+      () => _archiveProbePath(sandbox(), probePath, 'retired-probe-metric'),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('retired metric legacy_avg_us'),
+        ),
+      ),
     );
   });
 }
@@ -114,6 +199,34 @@ void _archiveMalformedSamples(Directory sandbox) {
   writeManualBenchmarkHistory(
     options: ManualBenchmarkHistoryOptions(
       label: 'bad-samples',
+      reportPaths: [reportPath],
+      output: outputPath,
+      historyRoot: '${sandbox.path}/history',
+    ),
+    git: const ManualBenchmarkGitState(head: '9369b6f2', dirty: false),
+    recordedAtUtc: DateTime.utc(2026, 6, 6, 17, 42),
+  );
+}
+
+void _archiveOldVocabularyReport(
+  Directory sandbox, {
+  required void Function(
+    Map<String, Object?> report,
+    Map<String, Object?> benchmarkCase,
+  )
+  mutate,
+}) {
+  final outputPath = '${sandbox.path}/history/old-vocabulary.json';
+  final reportPath = '${sandbox.path}/old_vocabulary_release.json';
+  final report = _reportJson();
+  final benchmarkCase =
+      (report['cases'] as List<Object?>).single as Map<String, Object?>;
+  mutate(report, benchmarkCase);
+  File(reportPath).writeAsStringSync(jsonEncode(report));
+
+  writeManualBenchmarkHistory(
+    options: ManualBenchmarkHistoryOptions(
+      label: 'old-vocabulary',
       reportPaths: [reportPath],
       output: outputPath,
       historyRoot: '${sandbox.path}/history',
@@ -220,7 +333,7 @@ ManualBenchmarkHistoryOptions _fullReportOptions(
     deviceName: 'Pixel 6',
     deviceOs: 'Android 16',
     referencePath:
-        'tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json',
+        'tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json',
     output: outputPath,
     historyRoot: '${sandbox.path}/history',
   );
@@ -328,8 +441,8 @@ void _expectSingleSourceFingerprint(Map<String, Object?> history) {
 
 Map<String, Object?> _reportJson() {
   return {
-    'schemaVersion': 3,
-    'manifestVersion': 'p14_benchmark_measurement_boundary_v2',
+    'schemaVersion': 4,
+    'manifestVersion': 'benchmark_measurement_boundary_v3',
     'manifestFingerprint': 'e244be03',
     'profile': {
       'id': 'release',
@@ -346,7 +459,7 @@ Map<String, Object?> _reportJson() {
       {
         'id': 'edit.update_transform',
         'scale': '100k',
-        'classification': 'equivalent_legacy',
+        'baselinePolicy': 'reference_comparison',
         'fixtureShape': 'normal_spread',
         'measurementBoundary': {
           'timedScope': 'action_only',

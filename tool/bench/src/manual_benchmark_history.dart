@@ -160,7 +160,7 @@ Map<String, Object?> _historyJson({
   final profile = _profileJson(sources);
 
   return {
-    'schemaVersion': 1,
+    'schemaVersion': benchmarkToolSchemaVersion,
     'kind': 'manual_benchmark_history',
     'recordedAtUtc': recordedAtUtc.toIso8601String(),
     'label': options.label,
@@ -210,9 +210,10 @@ List<_HistorySource> _loadSources(ManualBenchmarkHistoryOptions options) {
 
 _HistorySource _loadReportSource(String path) {
   final json = _readJsonFile(path);
+  _validateReportSchema(path, json);
   final cases = (json['cases'] as List<Object?>? ?? const [])
       .whereType<Map<String, Object?>>()
-      .map(_caseJson)
+      .map((entry) => _caseJson(path: path, json: entry))
       .toList();
 
   return _HistorySource(
@@ -254,11 +255,30 @@ _HistorySource _loadProbeLogSource(String path) {
   );
 }
 
-Map<String, Object?> _caseJson(Map<String, Object?> json) {
+void _validateReportSchema(String path, Map<String, Object?> json) {
+  if (json['schemaVersion'] != benchmarkToolSchemaVersion) {
+    throw FormatException(
+      'Benchmark report schemaVersion must be $benchmarkToolSchemaVersion: $path',
+    );
+  }
+}
+
+Map<String, Object?> _caseJson({
+  required String path,
+  required Map<String, Object?> json,
+}) {
+  _rejectRetiredReportCaseFields(path: path, json: json);
+  final metrics = _map(json['metrics']);
+  _rejectRetiredMetricFields(path: path, metrics: metrics);
+  final baselinePolicy = json['baselinePolicy'];
+  if (baselinePolicy is! String || baselinePolicy.isEmpty) {
+    throw FormatException('Report case missing baselinePolicy: $path');
+  }
+
   return {
     'id': json['id'],
     'scale': json['scale'],
-    'classification': json['classification'],
+    'baselinePolicy': baselinePolicy,
     'fixtureShape': json['fixtureShape'],
     'measurementBoundary': json['measurementBoundary'],
     'sampleSummary': {
@@ -279,10 +299,32 @@ Map<String, Object?> _caseJson(Map<String, Object?> json) {
         ),
       ),
     },
-    'metrics': json['metrics'],
+    'metrics': metrics,
     'setupMetrics': json['setupMetrics'],
     'exactInvariants': json['exactInvariants'] ?? const <String, Object?>{},
   };
+}
+
+void _rejectRetiredReportCaseFields({
+  required String path,
+  required Map<String, Object?> json,
+}) {
+  for (final field in const ['classification']) {
+    if (json.containsKey(field)) {
+      throw FormatException('Report case uses retired field $field: $path');
+    }
+  }
+}
+
+void _rejectRetiredMetricFields({
+  required String path,
+  required Map<String, Object?> metrics,
+}) {
+  for (final field in const ['legacy_avg_us']) {
+    if (metrics.containsKey(field)) {
+      throw FormatException('Report case uses retired metric $field: $path');
+    }
+  }
 }
 
 Map<String, Object?> _probeCaseJson({
@@ -290,10 +332,12 @@ Map<String, Object?> _probeCaseJson({
   required Map<String, Object?> json,
 }) {
   final identity = _probeIdentityFromPath(path);
+  final metrics = _map(json['metrics']);
+  _rejectRetiredMetricFields(path: path, metrics: metrics);
   return {
     'id': identity.caseId,
     'scale': identity.scale,
-    'classification': null,
+    'baselinePolicy': null,
     'fixtureShape': json['fixtureShape'],
     'measurementBoundary': json['measurementBoundary'],
     'sampleSummary': {
@@ -314,7 +358,7 @@ Map<String, Object?> _probeCaseJson({
         ),
       ),
     },
-    'metrics': json['metrics'],
+    'metrics': metrics,
     'setupMetrics': json['setupMetrics'],
     'exactInvariants': json['exactInvariants'] ?? const <String, Object?>{},
   };

@@ -6,12 +6,12 @@
 // architecture invariants. Those constraints belong in structured registries,
 // generated documentation, analyzer/lint rules, Dart tests, or benchmarks.
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
 import '../../tool/bench/src/benchmark_manifest.dart';
+import '../../tool/bench/src/benchmark_report.dart';
 
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
@@ -177,93 +177,7 @@ void _checkBenchmarkPolicySourceNote(BenchmarkManifest manifest) {
 }
 
 String _benchmarkManifestFingerprint(BenchmarkManifest manifest) {
-  final encoded = jsonEncode(_benchmarkManifestProjection(manifest));
-  var hash = 0x811c9dc5;
-  for (final codeUnit in encoded.codeUnits) {
-    hash ^= codeUnit;
-    hash = (hash * 0x01000193) & 0xffffffff;
-  }
-  return hash.toRadixString(16).padLeft(8, '0');
-}
-
-// Benchmark docs fingerprinting must serialize the complete manifest policy in
-// one stable shape; splitting this projection would obscure the checked source
-// of truth and make drift failures harder to diagnose.
-// ignore: halstead-volume, maintainability-index, source-lines-of-code
-Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
-  return {
-    'manifest_version': manifest.manifestVersion,
-    'tool_schema_version': manifest.toolSchemaVersion,
-    'release_contour': {
-      'runner_label': manifest.releaseContour.runnerLabel,
-      'os_name': manifest.releaseContour.osName,
-      'os_version': manifest.releaseContour.osVersion,
-      'flutter_channel': manifest.releaseContour.flutterChannel,
-      'flutter_version': manifest.releaseContour.flutterVersion,
-    },
-    'profiles': [
-      for (final profile in manifest.profiles)
-        {
-          'id': profile.id,
-          'warmups': profile.warmups,
-          'repetitions': profile.repetitions,
-          'iterations': profile.iterations,
-          'minimum_measured_ms': profile.minimumMeasuredMs,
-          'minimum_samples': profile.minimumSamples,
-          'timing_claims': profile.timingClaims,
-          'scale_selection': profile.scaleSelection,
-        },
-    ],
-    'post_baseline_regression_caps': manifest.postBaselineRegressionCaps,
-    'bootstrap_legacy_equivalence': manifest.bootstrapLegacyEquivalence,
-    'budget_classes': [
-      for (final budget in manifest.budgetClasses)
-        {'id': budget.id, 'absolute_caps': budget.absoluteCaps},
-    ],
-    'memory_scopes': [
-      for (final scope in manifest.memoryScopes)
-        {'id': scope.id, 'caps': scope.caps},
-    ],
-    'cases': [
-      for (final benchmarkCase in manifest.cases)
-        {
-          'id': benchmarkCase.id,
-          'classification': benchmarkCase.classification,
-          'budget_classes': benchmarkCase.budgetClasses,
-          'memory_scope': benchmarkCase.memoryScope,
-          'measurement_boundary': {
-            'timed_scope': benchmarkCase.measurementBoundary.timedScope,
-            'setup_scope': benchmarkCase.measurementBoundary.setupScope,
-            'teardown_scope': benchmarkCase.measurementBoundary.teardownScope,
-            'primary_timing': benchmarkCase.measurementBoundary.primaryTiming,
-            'primary_memory': benchmarkCase.measurementBoundary.primaryMemory,
-            'setup_metrics': benchmarkCase.measurementBoundary.setupMetrics,
-            'setup_memory_metrics':
-                benchmarkCase.measurementBoundary.setupMemoryMetrics,
-          },
-          'fixture_shape': benchmarkCase.fixtureShape,
-          'docs_metrics_label': benchmarkCase.docsMetricsLabel,
-          'required_metrics': benchmarkCase.requiredMetrics,
-          'exact_invariants': [
-            for (final invariant in benchmarkCase.exactInvariants)
-              {
-                'name': invariant.name,
-                'metric': invariant.metric,
-                'expected': invariant.expected,
-                'max': invariant.max,
-              },
-          ],
-          'scales': [
-            for (final scale in benchmarkCase.scales)
-              {
-                'id': scale.id,
-                'label': scale.label,
-                'profiles': scale.profiles,
-              },
-          ],
-        },
-    ],
-  };
+  return benchmarkManifestFingerprint(manifest);
 }
 
 BenchmarkManifest _loadBenchmarkManifest() {
@@ -286,7 +200,7 @@ BenchmarkManifest _loadBenchmarkManifest() {
       memoryScopes: [],
       cases: [],
       postBaselineRegressionCaps: {},
-      bootstrapLegacyEquivalence: {},
+      firstBaselineReferenceLimits: {},
     );
   }
 }

@@ -1,5 +1,5 @@
-manifest_version: "p14_benchmark_measurement_boundary_v2"
-tool_schema_version: 3
+manifest_version: "benchmark_measurement_boundary_v3"
+tool_schema_version: 4
 release_contour:
   runner_label: "ubuntu-24.04"
   os_name: "Ubuntu"
@@ -34,7 +34,7 @@ post_baseline_regression_caps:
   allocation_or_rss_percent: 10
   allocation_floor_bytes: 65536
   rss_floor_bytes: 1048576
-bootstrap_legacy_equivalence:
+first_baseline_reference_limits:
   avg_us_multiplier: 1.35
 budget_classes:
   - id: hot_input
@@ -113,7 +113,7 @@ memory_scopes:
     rss_encoded_input_multiplier: 2
 cases:
   - id: edit.add_element
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -134,7 +134,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: edit.update_visual
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -155,7 +155,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: edit.update_transform
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -176,7 +176,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: edit.move_selection
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [hot_input, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -197,7 +197,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: edit.set_camera_offset
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [hot_input, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -219,7 +219,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: edit.add_line
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [incremental_edit, allocation_budget]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -239,7 +239,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: input.selected_move_preview
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -260,7 +260,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: frame.selected_move_preview_cached_ordinary_plan
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [frame_capture, query_read, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -281,7 +281,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: input.marquee_preview
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -302,7 +302,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: input.draw_preview
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -322,7 +322,7 @@ cases:
       - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
   - id: input.line_preview
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -343,7 +343,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: input.eraser_preview
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -364,7 +364,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: input.eraser_budget_exceeded
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [frame_capture, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -383,7 +383,7 @@ cases:
     scales:
       - {id: "dense_50k", label: "dense 50k", profiles: [dry_run, smoke, release]}
   - id: frame.main_capture
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [frame_capture, allocation_budget]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -404,7 +404,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: frame.overlay_capture
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [frame_capture, allocation_budget]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -422,7 +422,7 @@ cases:
     scales:
       - {id: "active_previews", label: "active previews", profiles: [dry_run, smoke, release]}
   - id: frame.paint_candidates
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [frame_capture, allocation_budget, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -445,7 +445,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: resources.resolve_sync
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -464,7 +464,7 @@ cases:
     scales:
       - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
   - id: resources.resolve_sync_cold_budget
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -483,7 +483,7 @@ cases:
     scales:
       - {id: "1k_uncached_image_records", label: "1k uncached image records", profiles: [dry_run, smoke, release]}
   - id: resources.mark_dirty
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -502,7 +502,7 @@ cases:
     scales:
       - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
   - id: resources.mark_all_dirty
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [resource_budgeted, exact_invariant]
     memory_scope: frame_or_resource
     measurement_boundary:
@@ -521,7 +521,7 @@ cases:
     scales:
       - {id: "1k_resources", label: "1k resources", profiles: [dry_run, smoke, release]}
   - id: projection.read_document
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [query_read]
     memory_scope: bulk_document_1k_10k_50k_100k
     measurement_boundary:
@@ -542,7 +542,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: codec.decode_v1
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [bulk_io, allocation_budget, exact_invariant]
     memory_scope: codec_fixture_bulk
     measurement_boundary:
@@ -561,7 +561,7 @@ cases:
     scales:
       - {id: "all_fixtures", label: "all fixtures", profiles: [dry_run, smoke, release]}
   - id: load_document.success
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [bulk_io, allocation_budget]
     memory_scope: bulk_document_1k_10k_50k_100k
     measurement_boundary:
@@ -581,7 +581,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: load_document.breakdown
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [bulk_io, allocation_budget]
     memory_scope: bulk_document_1k_10k_50k_100k
     measurement_boundary:
@@ -601,7 +601,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: load_document.failure
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [bulk_io, allocation_budget, exact_invariant]
     memory_scope: bulk_document_1k_10k_50k_100k
     measurement_boundary:
@@ -622,7 +622,7 @@ cases:
       - {id: "invalid_10k", label: "invalid 10k inputs", profiles: [dry_run, release]}
       - {id: "invalid_50k", label: "invalid 50k inputs", profiles: [dry_run, release]}
   - id: spatial.query_point
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [query_read, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -644,7 +644,7 @@ cases:
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
   - id: spatial.query_point_dense_stress
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [query_read, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -663,7 +663,7 @@ cases:
     scales:
       - {id: "dense_50k", label: "dense 50k", profiles: [dry_run, smoke, release]}
   - id: spatial.touched_update
-    classification: equivalent_legacy
+    baseline_policy: reference_comparison
     budget_classes: [query_read, incremental_edit, exact_invariant]
     memory_scope: incremental_owner_update
     measurement_boundary:
@@ -684,7 +684,7 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: runtime.dispose_during_gesture
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant]
     memory_scope: hot_or_query
     measurement_boundary:
@@ -704,7 +704,7 @@ cases:
     scales:
       - {id: "active_selected_overlay_previews", label: "active selected/overlay previews", profiles: [dry_run, smoke, release]}
   - id: diagnostics.disabled_pointer
-    classification: new_only
+    baseline_policy: absolute_budget
     budget_classes: [hot_input, exact_invariant, allocation_budget]
     memory_scope: zero_allocation
     measurement_boundary:

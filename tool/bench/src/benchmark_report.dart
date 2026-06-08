@@ -143,7 +143,7 @@ final class BenchmarkReleaseContourReport {
 final class BenchmarkCaseReport {
   const BenchmarkCaseReport({
     required this.id,
-    required this.classification,
+    required this.baselinePolicy,
     required this.scale,
     required this.scaleLabel,
     required this.budgetClasses,
@@ -162,7 +162,7 @@ final class BenchmarkCaseReport {
   });
 
   final String id;
-  final String classification;
+  final String baselinePolicy;
   final String scale;
   final String scaleLabel;
   final List<String> budgetClasses;
@@ -182,7 +182,7 @@ final class BenchmarkCaseReport {
   Map<String, Object?> toJson() {
     return {
       'id': id,
-      'classification': classification,
+      'baselinePolicy': baselinePolicy,
       'scale': scale,
       'scaleLabel': scaleLabel,
       'budgetClasses': budgetClasses,
@@ -296,14 +296,14 @@ Map<String, Object?> _benchmarkManifestProjection(BenchmarkManifest manifest) {
     'post_baseline_regression_caps': _sortedJsonMap(
       manifest.postBaselineRegressionCaps,
     ),
-    'bootstrap_legacy_equivalence': _sortedJsonMap(
-      manifest.bootstrapLegacyEquivalence,
+    'first_baseline_reference_limits': _sortedJsonMap(
+      manifest.firstBaselineReferenceLimits,
     ),
     'cases': [
       for (final benchmarkCase in manifest.cases)
         {
           'id': benchmarkCase.id,
-          'classification': benchmarkCase.classification,
+          'baseline_policy': benchmarkCase.baselinePolicy,
           'budget_classes': benchmarkCase.budgetClasses,
           'memory_scope': benchmarkCase.memoryScope,
           'measurement_boundary': {

@@ -119,7 +119,7 @@ failure for the current graph. Repair the implementation or update the accepted
 current graph obligations before continuing dependent architecture work.
 
 ```text
-1. P1 public API, external-adapter, legacy-ban, and validation checks are green.
+1. Public API, external-adapter, retired-route, and validation checks are green.
 2. api.public_exports_complete is green.
 3. api.facades_do_not_export_internal is green.
 4. api.public_types_complete is green.
@@ -164,13 +164,13 @@ current graph obligations before continuing dependent architecture work.
     are green, including runtime state snapshot value equality.
 31. no CanvasDocument projection in paint/pointer/hit tests are green.
 32. all required diagrams exist and match owners.
-33. phase guardrail alignment is green, and generated graph views match
+33. current graph guardrail alignment is green, and generated graph views match
     `docs/architecture/architecture_graph.yaml`.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
 36. benchmark gates pass through the pinned release workflow: release profile
-    run, read-only release diff, P14 graph check, generated-view check, and
+    run, read-only release diff, current graph check, generated-view check, and
     guardrail runner.
 37. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
