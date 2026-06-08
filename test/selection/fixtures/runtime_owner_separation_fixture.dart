@@ -10,38 +10,57 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   test(
     'selection changes publish selection facts without document effects',
-    () {
-      final root = runtimeRootWithCommittedDocumentSeed(
-        _document(),
-        config: const CanvasRuntimeConfig(),
-      );
-      final selection = root.selection;
-
-      final firstProjection = root.readDocument();
-      expect(root.projectionBuildCount, 1);
-
-      _verifySelectionNormalization(root, selection, firstProjection);
-      _verifyToggleAndNoOpBehavior(root, selection);
-      _verifyClearAndSelectAll(root, selection);
-      _verifyEditPrunesSelectionAtomically(root, selection);
-
-      root.dispose();
-    },
+    () => expect(
+      _selectionChangesPublishSelectionFactsWithoutDocumentEffects,
+      returnsNormally,
+    ),
   );
 
   test('public facade exposes the selection port', () {
-    final runtime = runtimeWithDocument(_document());
+    expect(_publicFacadeExposesSelectionPort, returnsNormally);
+  });
+}
+
+void _selectionChangesPublishSelectionFactsWithoutDocumentEffects() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  try {
+    final selection = root.selection;
+
+    final firstProjection = root.readDocument();
+    expect(root.projectionBuildCount, 1);
+
+    _verifySelectionNormalization(root, selection, firstProjection);
+    _verifyToggleAndNoOpBehavior(root, selection);
+    _verifyClearAndSelectAll(root, selection);
+    _verifyEditPrunesSelectionAtomically(root, selection);
+  } finally {
+    root.dispose();
+  }
+}
+
+void _publicFacadeExposesSelectionPort() {
+  final runtime = runtimeWithDocument(_document());
+  try {
+    final beforeSelectionRevision = runtime.state.value.revisions.selection;
+    final beforeDocumentRevision = runtime.state.value.revisions.document;
 
     runtime.selection.setSelection([CanvasElementId('element-a')]);
 
     expect(runtime.selection.selectedElementIds, {
       CanvasElementId('element-a'),
     });
-    expect(runtime.state.value.revisions.selection, 1);
+    expect(
+      runtime.state.value.revisions.selection,
+      beforeSelectionRevision + 1,
+    );
+    expect(runtime.state.value.revisions.document, beforeDocumentRevision);
     expect(runtime.state.value.summary.selectedCount, 1);
-
+  } finally {
     runtime.dispose();
-  });
+  }
 }
 
 void _verifySelectionNormalization(

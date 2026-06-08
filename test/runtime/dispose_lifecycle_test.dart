@@ -21,11 +21,9 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../support/runtime_with_document.dart';
-
 void main() {
   test('dispose is idempotent and leaves final state readable', () {
-    final runtime = runtimeWithDocument(_document());
+    final runtime = _runtimeWithDocument(_document());
     var notifications = 0;
     runtime.state.addListener(() {
       notifications += 1;
@@ -37,9 +35,19 @@ void main() {
     runtime.dispose();
 
     expect(runtime.state.value, beforeDispose);
-    expect(runtime.state.value.revisions.document, 0);
+    expect(
+      runtime.state.value.revisions.document,
+      beforeDispose.revisions.document,
+    );
     expect(notifications, 0);
   });
+}
+
+CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
+  final runtime = CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
+
+  return runtime;
 }
 
 CanvasDocument _document() {

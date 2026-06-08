@@ -34,7 +34,9 @@ Future<void> _directSelectionChangesPublishSelectionOnly() async {
 }
 
 void _expectFilteredSetSelection(CanvasRuntime runtime) {
-  expect(runtime.state.value.revisions.selection, 0);
+  final beforeSelectionRevision = runtime.state.value.revisions.selection;
+  final beforeDocumentRevision = runtime.state.value.revisions.document;
+
   runtime.selection.setSelection([
     CanvasElementId('content-b'),
     CanvasElementId('missing'),
@@ -43,32 +45,48 @@ void _expectFilteredSetSelection(CanvasRuntime runtime) {
   ]);
 
   expect(runtime.selection.selectedElementIds, {CanvasElementId('content-b')});
-  expect(runtime.state.value.revisions.selection, 1);
-  expect(runtime.state.value.revisions.document, 0);
+  expect(runtime.state.value.revisions.selection, beforeSelectionRevision + 1);
+  expect(runtime.state.value.revisions.document, beforeDocumentRevision);
   runtime.selection.setSelection([CanvasElementId('content-b')]);
-  expect(runtime.state.value.revisions.selection, 1);
+  expect(runtime.state.value.revisions.selection, beforeSelectionRevision + 1);
 }
 
 void _expectToggleAndClear(CanvasRuntime runtime) {
+  final beforeToggleSelectionRevision = runtime.state.value.revisions.selection;
+
   runtime.selection.toggleSelection(CanvasElementId('content-a'));
   expect(runtime.selection.selectedElementIds, {
     CanvasElementId('content-a'),
     CanvasElementId('content-b'),
   });
-  expect(runtime.state.value.revisions.selection, 2);
+  expect(
+    runtime.state.value.revisions.selection,
+    beforeToggleSelectionRevision + 1,
+  );
+
+  final beforeClearSelectionRevision = runtime.state.value.revisions.selection;
 
   runtime.selection.clearSelection();
   expect(runtime.selection.selectedElementIds, isEmpty);
-  expect(runtime.state.value.revisions.selection, 3);
+  expect(
+    runtime.state.value.revisions.selection,
+    beforeClearSelectionRevision + 1,
+  );
 }
 
 void _expectSelectAll(CanvasRuntime runtime) {
+  final beforeSelectAllRevision = runtime.state.value.revisions.selection;
+  final beforeDocumentRevision = runtime.state.value.revisions.document;
+
   runtime.selection.selectAll();
   expect(runtime.selection.selectedElementIds, {
     CanvasElementId('content-a'),
     CanvasElementId('content-b'),
   });
-  expect(runtime.state.value.revisions.selection, 4);
+  expect(runtime.state.value.revisions.selection, beforeSelectAllRevision + 1);
+
+  final beforeSelectAllIncludingHiddenRevision =
+      runtime.state.value.revisions.selection;
 
   runtime.selection.selectAll(onlySelectable: false);
   expect(runtime.selection.selectedElementIds, {
@@ -77,8 +95,11 @@ void _expectSelectAll(CanvasRuntime runtime) {
     CanvasElementId('hidden-a'),
     CanvasElementId('not-selectable-a'),
   });
-  expect(runtime.state.value.revisions.selection, 5);
-  expect(runtime.state.value.revisions.document, 0);
+  expect(
+    runtime.state.value.revisions.selection,
+    beforeSelectAllIncludingHiddenRevision + 1,
+  );
+  expect(runtime.state.value.revisions.document, beforeDocumentRevision);
 }
 
 CanvasDocument _document() {

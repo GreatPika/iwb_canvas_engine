@@ -97,13 +97,30 @@ _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
     await subscription.cancel();
     runtime.dispose();
   });
+  final beforeSelectionSetRevision = runtime.state.value.revisions.selection;
   runtime.selection.setSelection([CanvasElementId('rect-a')]);
+  expect(
+    runtime.state.value.revisions.selection,
+    beforeSelectionSetRevision + 1,
+  );
+
+  final beforeModeChange = runtime.state.value;
 
   runtime.tools.setMode(CanvasInteractionMode.draw);
   expect(runtime.tools.mode, CanvasInteractionMode.draw);
   expect(runtime.selection.selectedElementIds, isEmpty);
-  expect(runtime.state.value.revisions.selection, 2);
-  expect(runtime.state.value.revisions.interaction, 1);
+  expect(
+    runtime.state.value.revisions.selection,
+    beforeModeChange.revisions.selection + 1,
+  );
+  expect(
+    runtime.state.value.revisions.interaction,
+    beforeModeChange.revisions.interaction + 1,
+  );
+  expect(
+    runtime.state.value.revisions.document,
+    beforeModeChange.revisions.document,
+  );
 
   final before = runtime.state.value;
   _sendDrawModePreviewPointer(runtime);
