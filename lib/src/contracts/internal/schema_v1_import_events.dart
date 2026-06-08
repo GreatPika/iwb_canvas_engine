@@ -16,6 +16,10 @@ abstract interface class SchemaV1ImportSink {
   void endDocument();
 }
 
+/// Sink whose partial import state cannot escape if schema decoding fails.
+abstract interface class IsolatedSchemaV1ImportSink
+    implements SchemaV1ImportSink {}
+
 final class SchemaV1DocumentImportEvent {
   const SchemaV1DocumentImportEvent({
     required this.camera,

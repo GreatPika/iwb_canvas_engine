@@ -123,7 +123,7 @@ non-owned pending line state remains preserved on `interactive=false`.
 - coordinator outcomes preserve non-owned pending line state on
   `interactive=false`, clear line-owned pending state, and classify overlay or
   no-preview cleanup without action or context-request emission
-- loadDocument failure preserves pending draw/line state where the contract requires it
+- loadDocumentFromJson failure preserves pending draw/line state where the contract requires it
 - loadDocument prepared cleanup before install clears active draw/line gesture state.
 
 ## Risks and trade-offs

@@ -1,0 +1,86 @@
+%% Schema v1 runtime import and encode ordering sequence
+sequenceDiagram
+  autonumber
+
+  actor App as Application
+  participant API as Public runtime or codec API
+  participant Runtime as RuntimeRoot
+  participant Codec as CodecBoundary
+  participant Schema as Schema v1 validators
+  participant Import as SchemaV1ImportSink
+  participant Store as DocumentStoreKernel
+  participant Diagnostics as DiagnosticsHub
+
+  App->>API: runtime.edits.loadDocumentFromJson(json)
+  API->>Runtime: installLoadedDocument(json)
+  Runtime->>Codec: importSchemaV1DocumentFromJson(json, sink)
+  Codec->>Codec: raw JSON length check
+  Codec->>Codec: JSON parse
+
+  alt raw length or parse fails
+    Codec->>Diagnostics: create codec diagnostic with code, path, and sanitized details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x Runtime: throw CanvasDataException
+    Runtime--x API: throw CanvasDataException without cleanup or install
+    API--x App: throw CanvasDataException
+    Note over Codec,Store: Raw boundary failure emits no import events and mutates no runtime or store state.
+  else raw input accepted
+    Codec->>Codec: root object check
+    Codec->>Schema: schemaVersion gate(read exactly {1})
+    Schema->>Schema: known v1 field validation and unknown non-metadata policy
+    Schema->>Schema: primitive validation(colors, finite numbers, ids)
+    Schema->>Schema: resource validation(appKey source only)
+    Schema->>Schema: element validation(known kinds, enums, and transform admission)
+    Schema->>Schema: layer and node count checks
+    Schema->>Schema: metadata validation(JSON-only bounded extension area)
+
+    alt codec validation accepts
+      Schema-->>Codec: validated streamable import facts
+      Codec->>Import: begin document and emit resource/layer/element events
+      Import->>Store: prepareSchemaV1Import
+      Store->>Store: duplicate id and cross-row reference checks
+      alt store preparation accepts
+        Store-->>Runtime: PreparedStoreDocumentImport consume-once rows
+        Runtime->>Runtime: prepared interaction cleanup before install
+        Runtime->>Store: install prepared rows atomically
+        Runtime-->>API: publish one post-install state
+        API-->>App: load accepted
+      else store preparation rejects
+        Store->>Diagnostics: create schema/store diagnostic with sanitized details
+        Diagnostics-->>Runtime: CanvasDataException safe public projection
+        Runtime--x API: throw CanvasDataException without cleanup or install
+        API--x App: throw CanvasDataException
+      end
+    else schema validation rejects
+      Schema->>Diagnostics: create codec diagnostic with code, path, and sanitized details
+      Diagnostics-->>Codec: CanvasDataException safe public projection
+      Codec--x Runtime: throw CanvasDataException
+      Runtime--x API: throw CanvasDataException without cleanup or install
+      API--x App: throw CanvasDataException
+    end
+  end
+
+  App->>API: encodeCanvasDocument / encodeCanvasDocumentToJson(document)
+  API->>Codec: encode request
+  Codec->>Schema: validate contracts/public DTO before writing JSON
+
+  alt DTO validation accepts
+    Schema-->>Codec: public DTO accepted
+    Codec->>Codec: canonicalize default fields
+    Codec->>Codec: preserve layer/resource/element order
+    Codec->>Codec: write uppercase color hex
+    Codec->>Codec: write schemaVersion = 1 and all common element fields
+    Codec->>Codec: omit nullable optional family fields only where schema allows
+    Codec->>Codec: write appKey resource descriptors only
+    Codec->>Codec: project CanvasMetadata as JSON-compatible values
+    Codec->>Codec: omit unknown non-metadata fields from canonical encode
+    Codec-->>API: canonical schema v1 JSON-compatible Map or JSON string
+    API-->>App: encoded Map or JSON string
+  else DTO validation rejects
+    Schema->>Diagnostics: create codec diagnostic with sanitized path/details
+    Diagnostics-->>Codec: CanvasDataException safe public projection
+    Codec--x API: throw CanvasDataException
+    API--x App: throw CanvasDataException
+  end
+
+  Note over Runtime,Store: Runtime load uses import events and store rows, public decode helpers are not exposed as load routes.

@@ -10,7 +10,7 @@ Set<String> collectCanvasDocumentLoadInputHits({
   Map<String, String>? sourceOverrides,
 }) {
   final hits = <String>{};
-  for (final path in _documentLoadInputOwnerPaths) {
+  for (final path in _documentLoadInputOwnerPaths(sourceOverrides)) {
     final source =
         sourceOverrides?[path] ??
         File('$repositoryRoot/$path').readAsStringSync();
@@ -20,14 +20,39 @@ Set<String> collectCanvasDocumentLoadInputHits({
   return hits;
 }
 
-const _documentLoadInputOwnerPaths = [
-  'lib/src/codec/validated_import_draft.dart',
-  'lib/src/edit/edit_kernel.dart',
-  'lib/src/runtime/runtime_root.dart',
-  'lib/src/edit/staged_document_load.dart',
-  'lib/src/store/document_store_kernel.dart',
-  'lib/src/store/schema_v1_store_import.dart',
-];
+List<String> _documentLoadInputOwnerPaths(
+  Map<String, String>? sourceOverrides,
+) {
+  if (sourceOverrides != null) {
+    final paths =
+        sourceOverrides.keys.where(_isDocumentLoadInputGuardrailPath).toList()
+          ..sort();
+
+    return paths;
+  }
+
+  final paths = <String>{
+    for (final directory in _documentLoadInputOwnerDirectories)
+      for (final file in dartSourceFilesUnder(directory)) file.path,
+  }.toList()..sort();
+
+  return paths;
+}
+
+bool _isDocumentLoadInputGuardrailPath(String path) {
+  return _documentLoadInputOwnerDirectories.any(
+    (directory) => path.startsWith('$directory/'),
+  );
+}
+
+const _documentLoadInputOwnerDirectories = {
+  'lib/src/api',
+  'lib/src/contracts/public',
+  'lib/src/codec',
+  'lib/src/edit',
+  'lib/src/runtime',
+  'lib/src/store',
+};
 
 Set<String> _canvasDocumentLoadInputHits({
   required String path,
@@ -113,7 +138,7 @@ final class _CanvasDocumentParameterVisitor extends RecursiveAstVisitor<void> {
     required String declarationName,
     required FormalParameterList? parameters,
   }) {
-    if (_isAllowedCanvasDocumentInput(declarationName)) {
+    if (_isAllowedCanvasDocumentInput(path, declarationName)) {
       return;
     }
     if (parameters == null ||
@@ -155,13 +180,28 @@ bool _parameterMentionsCanvasDocumentDeep(FormalParameter parameter) {
   return RegExp(r'\bCanvasDocument\b').hasMatch(typeSource);
 }
 
-bool _isAllowedCanvasDocumentInput(String declarationName) {
-  return _allowedCanvasDocumentInputDeclarations.contains(declarationName);
+bool _isAllowedCanvasDocumentInput(String path, String declarationName) {
+  return _allowedCanvasDocumentInputDeclarations.contains(
+    '$path::$declarationName',
+  );
 }
 
 const _allowedCanvasDocumentInputDeclarations = {
-  'prepareDraftReplacement',
-  'ValidatedImportDraft.fromDraftReplacement',
-  'ValidatedImportDraft.fromEncodeDocument',
-  'RuntimeRoot.deliverCommitPlanForTesting',
+  'lib/src/api/canvas_codec.dart::encodeCanvasDocument',
+  'lib/src/api/canvas_codec.dart::encodeCanvasDocumentToJson',
+  'lib/src/codec/schema_v1_decoder.dart::_validateDocumentReferences',
+  'lib/src/codec/schema_v1_encoder.dart::encodeSchemaV1Document',
+  'lib/src/codec/validated_import_draft.dart::ValidatedImportDraft.fromDraftReplacement',
+  'lib/src/codec/validated_import_draft.dart::ValidatedImportDraft.fromEncodeDocument',
+  'lib/src/contracts/public/canvas_runtime.dart::CanvasEdit.replaceDraftDocument',
+  'lib/src/edit/draft_document.dart::DraftDocument',
+  'lib/src/edit/draft_document.dart::DraftDocument.replaceDocument',
+  'lib/src/edit/edit_session.dart::EditSession.replaceDraftDocument',
+  'lib/src/edit/edit_session.dart::_EditSessionBacking.replaceDraftDocument',
+  'lib/src/edit/edit_session.dart::_MaterializedEditBacking.replaceDraftDocument',
+  'lib/src/edit/edit_session.dart::_SparseEditBacking.replaceDraftDocument',
+  'lib/src/edit/staged_document_load.dart::prepareDraftReplacement',
+  'lib/src/runtime/runtime_root.dart::RuntimeRoot.deliverCommitPlanForTesting',
+  'lib/src/store/committed_document.dart::CommittedDocument',
+  'lib/src/store/committed_document.dart::CommittedDocument.withRevisions',
 };

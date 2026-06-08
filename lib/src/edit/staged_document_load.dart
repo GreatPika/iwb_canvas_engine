@@ -124,7 +124,11 @@ final class LoadDocumentPipeline {
 
   PreparedDocumentLoad prepareFromJson(String json) {
     final sink = StoreSchemaV1ImportBuilder();
-    importSchemaV1DocumentFromJson(json, sink, diagnostics: _diagnostics);
+    importSchemaV1DocumentFromJsonIntoIsolatedSink(
+      json,
+      sink,
+      diagnostics: _diagnostics,
+    );
     late final PreparedStoreDocumentImport preparedStoreImport;
     try {
       preparedStoreImport = _store.prepareSchemaV1Import(

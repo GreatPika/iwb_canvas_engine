@@ -96,7 +96,7 @@ void _expectSuccessfulLoadClearsEmptySelection() {
     encodeCanvasDocumentToJson(_replacementDocument()),
   );
 
-  expect(root.state.value.revisions.selection, 2);
+  expect(root.state.value.revisions.selection, 1);
   _expectLoadEffects(effectBatches.single);
 }
 
@@ -220,10 +220,10 @@ void _expectReplacementState(
       selectedCount: 0,
     ),
   );
-  expect(state.revisions.document, 2);
-  expect(state.revisions.selection, 3);
-  expect(state.revisions.viewCamera, 2);
-  expect(state.revisions.epoch, 2);
+  expect(state.revisions.document, 1);
+  expect(state.revisions.selection, 2);
+  expect(state.revisions.viewCamera, 1);
+  expect(state.revisions.epoch, 1);
   expect(state.revisions.preview, expectedPreviewRevision);
 }
 

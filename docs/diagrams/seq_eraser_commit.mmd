@@ -94,7 +94,7 @@ sequenceDiagram
     Frame->>Frame: defer overlay repaint to loadDocument replacement repaint scheduling
     Note over EK,Signals: No eraser EditKernel commit, eraser spatial remove, eraser projection eviction, eraser main repaint, or erase action is published.
     Note over Signals: No public eraser repaint signal is published before the successful load install boundary.
-    Note over Store,Frame: The loadDocument success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
+    Note over Store,Frame: The loadDocumentFromJson success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
   else same-token pointer up
     User->>Surface: pointer up
     Surface->>Tools: handlePointer(CanvasPointerSample up)

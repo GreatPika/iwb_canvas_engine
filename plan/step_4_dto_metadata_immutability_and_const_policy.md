@@ -83,8 +83,8 @@ redesign backlog.
   already lists DTO immutability and constructor/schema limit proof areas.
 - `docs/_registry/donors.yaml` and `docs/donors/**` - map immutable collection
   and metadata decode donor knowledge to future phases.
-- `docs/diagrams/dfd_schema_v1_decode_encode.mmd` and
-  `docs/diagrams/seq_schema_v1_decode_encode_order.mmd` - show schema metadata
+- `docs/diagrams/dfd_schema_v1_import_encode.mmd` and
+  `docs/diagrams/seq_schema_v1_import_encode_order.mmd` - show schema metadata
   validation, DTO materialization, public DTO validation, and metadata encode
   order.
 - `docs/diagrams/seq_load_document_success.mmd`,
@@ -391,8 +391,8 @@ redesign backlog.
 
 ### Analysis Area
 
-- `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `docs/diagrams/dfd_schema_v1_import_encode.mmd`
+- `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 - `docs/diagrams/seq_load_document_success.mmd`
 - `docs/diagrams/seq_load_document_failure.mmd`
 - `docs/diagrams/dfd_load_document_success_failure.mmd`
@@ -549,8 +549,8 @@ descriptor metadata, diagnostics details, or future proof requirements.
 - `rg -n "CanvasMetadata" docs/donors/01_summary_by_decision.md docs/donors/04_dto_model_validation_structure.md docs/donors/05_codec.md`
 - `rg -n "CanvasMetadata" docs/verification/guardrails.md docs/verification/tests.md docs/verification/release_gates.md`
 - `rg -n "CanvasMetadata" docs/indexes/by_guardrail.md docs/indexes/by_test_area.md docs/indexes/donor_to_phase.md`
-- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_schema_v1_import_encode.mmd`
+- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_load_document_success.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_load_document_failure.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_load_document_success_failure.mmd`
@@ -642,8 +642,8 @@ this step file.
 - `rg -n "CanvasMetadata" docs/donors/01_summary_by_decision.md docs/donors/04_dto_model_validation_structure.md docs/donors/05_codec.md`
 - `rg -n "CanvasMetadata" docs/verification/guardrails.md docs/verification/tests.md docs/verification/release_gates.md`
 - `rg -n "CanvasMetadata" docs/indexes/by_guardrail.md docs/indexes/by_test_area.md docs/indexes/donor_to_phase.md`
-- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_schema_v1_import_encode.mmd`
+- `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_load_document_success.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/seq_load_document_failure.mmd`
 - `rg -n "CanvasMetadata|frozen metadata" docs/diagrams/dfd_load_document_success_failure.mmd`

@@ -574,8 +574,8 @@ BUG_FIX, PUBLIC_API_CHANGE
 - Export registry verify-only evidence: `docs/_registry/public_api_v1.yaml` —
   already lists the codec public names and must remain aligned with the copied
   declarations.
-- Diagram verify-only evidence: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-  and `docs/diagrams/seq_schema_v1_decode_encode_order.mmd` — remain behavior
+- Diagram verify-only evidence: `docs/diagrams/dfd_schema_v1_import_encode.mmd`
+  and `docs/diagrams/seq_schema_v1_import_encode_order.mmd` — remain behavior
   flow diagrams unless declaration wording changes require label alignment.
 
 #### Change

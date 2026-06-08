@@ -145,7 +145,7 @@ camera.
 
 ```text
 documentRevision        -> any committed document state change
-controllerEpoch         -> loadDocument success or full document replacement
+controllerEpoch         -> loadDocumentFromJson success or full document replacement
 structuralRevision      -> element/layer/resource membership/order/family changes
 resourceRevision        -> resource descriptor changes
 resourceVisualRevision  -> ResourceKernel/RuntimeRoot markResourceDirty visual invalidation

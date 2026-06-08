@@ -112,6 +112,24 @@ void _registerDocumentLoadCodecInputTests() {
 }
 
 void _registerDocumentLoadRouteInputTests() {
+  test(
+    'production document load input guardrail accepts real surfaces',
+    () async {
+      final violations = await checkNoUnapprovedDocumentLoadInputs();
+
+      expect(violations, isEmpty);
+    },
+  );
+
+  _registerDocumentLoadRouteRejectionTests();
+}
+
+void _registerDocumentLoadRouteRejectionTests() {
+  _registerDirectDocumentLoadRouteRejectionTests();
+  _registerRenamedDocumentLoadRouteRejectionTests();
+}
+
+void _registerDirectDocumentLoadRouteRejectionTests() {
   test('unapproved production document load inputs are rejected', () async {
     final violations = await checkNoUnapprovedDocumentLoadInputs(
       sourceOverrides: _editKernelDocumentLoadInputSources(),
@@ -133,7 +151,15 @@ void _registerDocumentLoadRouteInputTests() {
       'api.no_unapproved_document_load_inputs',
     );
   });
+}
 
+void _registerRenamedDocumentLoadRouteRejectionTests() {
+  _registerRenamedInternalLoadInputRejectionTest();
+  _registerWrongOwnerAllowedNameRejectionTest();
+  _registerRenamedPublicLoadInputRejectionTest();
+}
+
+void _registerRenamedInternalLoadInputRejectionTest() {
   test(
     'renamed load and admission document input bypasses are rejected',
     () async {
@@ -152,6 +178,41 @@ void _registerDocumentLoadRouteInputTests() {
       );
     },
   );
+}
+
+void _registerWrongOwnerAllowedNameRejectionTest() {
+  test('allowed document input names in wrong owners are rejected', () async {
+    final violations = await checkNoUnapprovedDocumentLoadInputs(
+      sourceOverrides: _wrongOwnerAllowedNameDocumentInputSources(),
+    );
+
+    expect(
+      violations.single.guardrailId,
+      'api.no_unapproved_document_load_inputs',
+    );
+    expect(
+      violations.single.message,
+      contains('RuntimeRoot._validateDocumentReferences'),
+    );
+    expect(violations.single.message, contains('encodeCanvasDocument'));
+  });
+}
+
+void _registerRenamedPublicLoadInputRejectionTest() {
+  test('renamed public document load input bypasses are rejected', () async {
+    final violations = await checkNoUnapprovedDocumentLoadInputs(
+      sourceOverrides: _publicRuntimeDocumentLoadInputSources(),
+    );
+
+    expect(
+      violations.single.guardrailId,
+      'api.no_unapproved_document_load_inputs',
+    );
+    expect(
+      violations.single.message,
+      contains('CanvasEditPort.importDocument'),
+    );
+  });
 }
 
 void _registerDocumentLoadStoreInputTests() {
@@ -232,6 +293,19 @@ public_exports:
   - decodeCanvasDocument
   - decodeCanvasDocumentFromJson
 diagnostics_public_surface: []
+''',
+  };
+}
+
+Map<String, String> _publicRuntimeDocumentLoadInputSources() {
+  return {
+    'lib/src/contracts/public/canvas_runtime.dart': r'''
+import 'canvas_document.dart';
+
+abstract interface class CanvasEditPort {
+  void loadDocumentFromJson(String json);
+  void importDocument(CanvasDocument document);
+}
 ''',
   };
 }
@@ -392,6 +466,22 @@ final class DocumentStoreKernel {
   void replaceDocument(CanvasDocument document, StoreRevisionDelta delta) {}
 }
 ''',
+    'lib/src/store/schema_v1_store_import.dart': '',
+  };
+}
+
+Map<String, String> _wrongOwnerAllowedNameDocumentInputSources() {
+  return {
+    'lib/src/runtime/runtime_root.dart': '''
+final class RuntimeRoot {
+  void _validateDocumentReferences(CanvasDocument document) {}
+}
+''',
+    'lib/src/store/document_store_kernel.dart': '''
+Map<String, Object?> encodeCanvasDocument(CanvasDocument document) => {};
+''',
+    'lib/src/edit/edit_kernel.dart': '',
+    'lib/src/edit/staged_document_load.dart': '',
     'lib/src/store/schema_v1_store_import.dart': '',
   };
 }

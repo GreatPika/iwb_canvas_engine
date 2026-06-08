@@ -3,6 +3,10 @@ import 'dart:io';
 import 'src/benchmark_runner.dart';
 
 Future<void> main(List<String> args) async {
+  if (isBenchmarkRunHelpRequest(args)) {
+    stdout.writeln(benchmarkRunUsage);
+    return;
+  }
   try {
     final result = await runBenchmarkCliDetailed(args);
     stdout.writeln('Benchmark report written to ${result.reportPath}');

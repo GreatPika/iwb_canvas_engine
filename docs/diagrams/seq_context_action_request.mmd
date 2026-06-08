@@ -35,7 +35,7 @@ sequenceDiagram
       Spatial-->>IE: candidates or typed non-candidate result
       alt invalid-index, stale-index, or budget-exceeded
         IE-->>Tools: reject before timestamp, request id, or stream emission
-        Note over IE,Signals: Rejected target reads emit no public request. Stale-index and budget-exceeded record bounded interaction diagnostics; invalid-index records none.
+        Note over IE,Signals: Rejected target reads emit no public request. Stale-index and budget-exceeded record bounded interaction diagnostics, invalid-index records none.
       else candidate result
         IE->>Geometry: exact context-action hit for visible content elements
         Geometry-->>IE: top visible content element or no content target
@@ -74,7 +74,7 @@ sequenceDiagram
   Spatial-->>IE: candidates or typed non-candidate result
   alt first tap target read is invalid-index, stale-index, or budget-exceeded
     IE-->>Tools: finish tap without pending context tap or request
-    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index and budget-exceeded record bounded interaction diagnostics; invalid-index records none.
+    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index and budget-exceeded record bounded interaction diagnostics, invalid-index records none.
   else candidate result
     IE->>Geometry: exact context-action hit for visible content elements
     Geometry-->>IE: top visible content element or no content target

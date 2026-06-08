@@ -33,7 +33,7 @@ stateDiagram-v2
   ActiveSession --> ResolveRequested: main paint image record carries resourceId
   ActiveSession --> ActiveSession: rejected second surface attach / existing session remains alive
   ActiveSession --> ResolverReplaced: active surface receives different resourceResolver
-  ActiveSession --> DescriptorMutation: CanvasEdit or loadDocument success mutates descriptors
+  ActiveSession --> DescriptorMutation: CanvasEdit or loadDocumentFromJson success mutates descriptors
   ActiveSession --> DirtySignal: markResourceDirty(id) or markAllResourcesDirty()
   ActiveSession --> NoSurface: detach/runtime swap / drop session
   ActiveSession --> Disposed: dispose() / drop session

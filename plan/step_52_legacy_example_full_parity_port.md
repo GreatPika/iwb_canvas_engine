@@ -293,9 +293,14 @@ public decode-then-load route. It is not a live requirement to preserve
 `decodeCanvasDocumentFromJson` plus `runtime.edits.loadDocument(document)`.
 Canonical direct JSON import is owned by unchecked Step 58 units.
 
-Change:
+Historical Change:
 
-Implement export dialog generation from the current public document through `encodeCanvasDocumentToJson`, copy action, import dialog prefilled from last export, valid import through `decodeCanvasDocumentFromJson` followed by public `runtime.edits.loadDocument`, and invalid input error/snackbar without document mutation.
+This checked unit implemented export dialog generation from the current public
+document through `encodeCanvasDocumentToJson`, copy action, import dialog
+prefilled from last export, valid schema v1 import through the then-current
+public decode-then-load route, and invalid input error/snackbar without document
+mutation. Current and future example import behavior is owned by Step 58's
+canonical `runtime.edits.loadDocumentFromJson(json)` route.
 
 Completion Check:
 

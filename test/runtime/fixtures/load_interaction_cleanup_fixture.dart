@@ -45,6 +45,10 @@ void _registerLoadSuccessCleanupTests() {
   test('successful load clears live context request facts', () {
     return expectLater(_verifyLoadSuccessClearsLiveRequestFacts(), completes);
   });
+
+  test('successful load suppresses queued context requests', () {
+    return expectLater(_verifyLoadSuccessSuppressesQueuedRequest(), completes);
+  });
 }
 
 void _registerLoadFailureCleanupTests() {
@@ -214,6 +218,26 @@ Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
     expect(root.interactionEngine.requestFactsFor(request.requestId), isNull);
     expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
   } finally {
+    root.dispose();
+  }
+}
+
+Future<void> _verifyLoadSuccessSuppressesQueuedRequest() async {
+  final contextRequests = <CanvasContextActionRequested>[];
+  final root = _runtimeRoot(_ignoreCommitEffects);
+  final subscription = root.contextActionRequests.listen(contextRequests.add);
+  try {
+    root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+
+    root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_replacementDocument()),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(contextRequests, isEmpty);
+    expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
+  } finally {
+    await subscription.cancel();
     root.dispose();
   }
 }

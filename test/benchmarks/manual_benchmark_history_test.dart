@@ -19,7 +19,6 @@ void main() {
   });
 
   _registerArchiveTests(() => sandbox);
-  _registerBridgeComparisonTests(() => sandbox);
   _registerBoundaryTests(() => sandbox);
 }
 
@@ -37,24 +36,6 @@ void _registerArchiveTests(Directory Function() sandbox) {
   test('updates the manual history index without duplicate paths', () {
     final index = _updatesManualHistoryIndex(sandbox());
     expect(index['records'], hasLength(1));
-  });
-}
-
-void _registerBridgeComparisonTests(Directory Function() sandbox) {
-  test('records schema import bridge comparison against manual reference', () {
-    final history = _archivesSchemaImportBridgeComparison(sandbox());
-    final comparisons = history['bridgeComparisons'] as List<Object?>;
-    final comparison = comparisons.single as Map<String, Object?>;
-
-    expect(comparison['id'], 'step58_xiaomi_50k_public_json_load');
-    expect(comparison['legacy'], containsPair('decode_plus_load_us', 818915));
-    expect(
-      comparison['current'],
-      containsPair('schema_import_load_us', 464392),
-    );
-    expect(comparison['threshold'], containsPair('max_exclusive_us', 574000));
-    expect(comparison['threshold'], containsPair('passed', isTrue));
-    expect(comparison['improvement'], containsPair('relative_percent', 43.3));
   });
 }
 
@@ -226,28 +207,6 @@ Map<String, Object?> _archivesFullBenchmarkReport(Directory sandbox) {
   return history;
 }
 
-Map<String, Object?> _archivesSchemaImportBridgeComparison(Directory sandbox) {
-  final currentPath = '${sandbox.path}/xiaomi_current.json';
-  final referencePath = '${sandbox.path}/xiaomi_reference.json';
-  final outputPath = '${sandbox.path}/history/xiaomi_bridge.json';
-  File(currentPath).writeAsStringSync(jsonEncode(_schemaImportReportJson()));
-  File(referencePath).writeAsStringSync(jsonEncode(_legacyReferenceJson()));
-
-  writeManualBenchmarkHistory(
-    options: ManualBenchmarkHistoryOptions(
-      label: 'schema-import-bridge',
-      reportPaths: [currentPath],
-      referencePath: referencePath,
-      output: outputPath,
-      historyRoot: '${sandbox.path}/history',
-    ),
-    git: const ManualBenchmarkGitState(head: 'e70cbee7', dirty: true),
-    recordedAtUtc: DateTime.utc(2026, 6, 7, 21, 30),
-  );
-
-  return _readJson(outputPath);
-}
-
 ManualBenchmarkHistoryOptions _fullReportOptions(
   Directory sandbox,
   String outputPath,
@@ -402,47 +361,6 @@ Map<String, Object?> _reportJson() {
         'setupMetrics': {'setup_us': 987718},
         'actionUsSamples': [21492, 20300, 17264],
         'setupUsSamples': [990000, 980000, 970000],
-      },
-    ],
-  };
-}
-
-Map<String, Object?> _schemaImportReportJson() {
-  final report = _reportJson();
-  report['runtime'] = _runtimeJson(deviceId: '22081283G');
-  report['manifestFingerprint'] = '497add8c';
-  report['cases'] = [
-    {
-      'id': 'load_document.success',
-      'scale': '50k',
-      'classification': 'equivalent_legacy',
-      'fixtureShape': 'normal_spread',
-      'measurementBoundary': {
-        'timedScope': 'action_only',
-        'setupScope': 'per_sample_prepared_fixture',
-      },
-      'metrics': {
-        'avg_us': 435638,
-        'p95_us': 464507,
-        'max_us': 464507,
-        'schema_import_load_us': 464392,
-      },
-      'setupMetrics': {'setup_us': 357300},
-      'actionUsSamples': [441767, 464507, 423477, 422900, 425539],
-      'setupUsSamples': [353454, 362781, 356093, 357000, 357172],
-    },
-  ];
-
-  return report;
-}
-
-Map<String, Object?> _legacyReferenceJson() {
-  return {
-    'cases': [
-      {
-        'id': 'load_document.breakdown',
-        'scale': '50k',
-        'metrics': {'decode_us': 347810, 'load_document_us': 471105},
       },
     ],
   };

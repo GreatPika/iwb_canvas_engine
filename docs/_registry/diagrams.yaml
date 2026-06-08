@@ -158,9 +158,9 @@
     - section_07_resource_lifecycle
   graph_view_source: none
 -
-  id: dfd_schema_v1_decode_encode
+  id: dfd_schema_v1_import_encode
   kind: data_flow
-  file: docs/diagrams/dfd_schema_v1_decode_encode.mmd
+  file: docs/diagrams/dfd_schema_v1_import_encode.mmd
   classification: semantic
   related_phases:
     - P3
@@ -170,9 +170,9 @@
     - section_19_codec_boundary
   graph_view_source: none
 -
-  id: seq_schema_v1_decode_encode_order
+  id: seq_schema_v1_import_encode_order
   kind: sequence
-  file: docs/diagrams/seq_schema_v1_decode_encode_order.mmd
+  file: docs/diagrams/seq_schema_v1_import_encode_order.mmd
   classification: semantic
   related_phases:
     - P3

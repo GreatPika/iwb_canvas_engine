@@ -13,6 +13,18 @@ import '../../tool/bench/src/benchmark_runner.dart';
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   group('benchmark runner profiles', () {
+    test('exposes CLI help without accepting mixed help arguments', () {
+      expect(isBenchmarkRunHelpRequest(['--help']), isTrue);
+      expect(isBenchmarkRunHelpRequest(['-h']), isTrue);
+      expect(
+        isBenchmarkRunHelpRequest(['--profile=dry_run', '--help']),
+        isFalse,
+      );
+      expect(benchmarkRunUsage, contains('Usage:'));
+      expect(benchmarkRunUsage, contains('--profile=<profile>'));
+      expect(benchmarkRunUsage, contains('--history-label=<label>'));
+    });
+
     test('dry_run covers every manifest scale without timing claims', () {
       final manifest = BenchmarkManifest.load();
       final report = runBenchmarks(manifest: manifest, profileId: 'dry_run');

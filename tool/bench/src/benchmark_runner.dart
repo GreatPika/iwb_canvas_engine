@@ -9,6 +9,33 @@ import 'manual_benchmark_history.dart';
 const releaseReportPath =
     'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
 
+const benchmarkRunUsage = '''
+Usage: dart run tool/bench/run.dart --profile=<profile> [options]
+
+Required:
+  --profile=<profile>              Benchmark profile from the manifest.
+
+Options:
+  --output=<path>                  Report path under build/bench/**.
+  --device=<id>                    Device id passed to real-device probes.
+  --history-label=<label>          Archive a compact manual history entry.
+  --history-device-name=<name>     Device name for the history entry.
+  --history-device-id=<id>         Device id for the history entry.
+  --history-device-os=<name>       Device OS for the history entry.
+  --history-reference=<path>       Manual reference report to compare against.
+  --history-baseline=<path>        Alias for --history-reference.
+  --history-output=<path>          Explicit history output file.
+  --history-root=<path>            History root directory.
+  --history-subject-git-head=<sha> Subject commit recorded in history.
+  --history-allow-dirty            Allow dirty working tree history capture.
+  --history-overwrite              Replace an existing history output file.
+  -h, --help                       Print this help and exit.
+''';
+
+bool isBenchmarkRunHelpRequest(List<String> args) {
+  return args.length == 1 && (args.single == '--help' || args.single == '-h');
+}
+
 typedef BenchmarkCaseAdapter =
     BenchmarkAdapterResult Function(
       BenchmarkCase benchmarkCase,

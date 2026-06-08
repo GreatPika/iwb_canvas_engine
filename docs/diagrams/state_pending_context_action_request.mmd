@@ -159,7 +159,7 @@ stateDiagram-v2
 
   IssuedRequestLive --> ConsumedRequest: "commitTextEdit accepted no-op or changed text content request / consume request"
   IssuedRequestLive --> ConsumedRequest: "commitTextEdit rejects known live stale, empty-canvas, non-text, missing, or family-mismatched request / privately consume request"
-  IssuedRequestLive --> ConsumedRequest: "loadDocument success / clear live request facts"
+  IssuedRequestLive --> ConsumedRequest: "loadDocumentFromJson success / clear live request facts"
   IssuedRequestLive --> Disposed: "runtime.dispose() / clear live request facts before later commitTextEdit throws StateError"
 
   state "Consumed or stale request id" as ConsumedRequest

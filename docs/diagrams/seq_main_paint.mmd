@@ -44,7 +44,7 @@ sequenceDiagram
   Note over Capture: CapturedMainFrame freezes the runtime facts used by this main paint frame.
 
   Frame->>Ordinary: plan ordinary committed records
-  Ordinary->>Ordinary: admit captured spatialPaintResult only when it is SpatialCandidatesResult; reject typed failures visibly
+  Ordinary->>Ordinary: admit captured spatialPaintResult only when it is SpatialCandidatesResult and reject typed failures visibly
   alt ordinary admission rejected
     Ordinary-->>Frame: empty ordinary plan with rejected-admission reason and no cache write
   else ordinary admission accepted
@@ -147,5 +147,5 @@ sequenceDiagram
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
   Note over Frame,Store: Forbidden in main paint: direct FrameEngine store reads, Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
-  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter never calls the application resolver directly.
+  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter never calls the application resolver directly.
   Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.

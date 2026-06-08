@@ -25,6 +25,14 @@ void main() {
     );
   });
 
+  test('prepared cleanup rejects reentrant public mutations', () {
+    expect(_expectPreparedCleanupReentrancyGuard, returnsNormally);
+  });
+
+  test('text edit cleanup listener rejects reentrant public mutations', () {
+    return expectLater(_expectTextEditCleanupReentrancyGuard(), completes);
+  });
+
   test('action stream listener delivery rejects reentrant loads', () {
     expect(_expectActionStreamDeliveryGuards, returnsNormally);
   });
@@ -85,6 +93,72 @@ Future<void> _expectPreparedCleanupFailureHasNoSideEffects() async {
   before.expectStillCurrent(root);
   expect(effectBatches, isEmpty);
   expect(actionEvents, isEmpty);
+}
+
+void _expectPreparedCleanupReentrancyGuard() {
+  final boundary = _RecordingLoadBoundary();
+  final root = _runtimeRoot(boundary);
+  final guardEvents = <String>[];
+  boundary.onPrepareCleanup = () {
+    guardEvents.add('cleanup');
+    _expectDocumentLoadGuarded(() => root.edits.edit(_ignoreEditMutation));
+    _expectDocumentLoadGuarded(
+      () => root.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(CanvasDocument()),
+      ),
+    );
+    _expectDocumentLoadGuarded(root.dispose);
+  };
+
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
+
+  expect(guardEvents, ['cleanup']);
+  expect(root.readDocument().backgroundElements.single.id.value, 'new');
+  expect(root.state.value.revisions.document, 1);
+}
+
+// This scenario intentionally keeps request creation, session start, listener
+// cleanup, and reentrant guard assertions together to prove one temporal window.
+// ignore: halstead-volume
+Future<void> _expectTextEditCleanupReentrancyGuard() async {
+  final root = runtimeRootWithDocument(
+    _textDocument(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final requests = <CanvasContextActionRequested>[];
+  final subscription = root.contextActionRequests.listen(requests.add);
+  try {
+    root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+    await _drainActionStream();
+    final request = requests.single;
+    final session = root.textEditing.startFromContextAction(request);
+    expect(session, isNotNull);
+    var guardAttempts = 0;
+    root.textEditing.activeSession.addListener(() {
+      if (root.textEditing.activeSession.value != null) {
+        return;
+      }
+      guardAttempts += 1;
+      _expectDocumentLoadGuarded(() => root.edits.edit(_ignoreEditMutation));
+      _expectDocumentLoadGuarded(
+        () => root.edits.loadDocumentFromJson(
+          encodeCanvasDocumentToJson(CanvasDocument()),
+        ),
+      );
+    });
+
+    root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_replacementDocument()),
+    );
+
+    expect(guardAttempts, 1);
+    expect(root.readDocument().backgroundElements.single.id.value, 'new');
+  } finally {
+    await subscription.cancel();
+    root.dispose();
+  }
 }
 
 void _expectActionStreamDeliveryGuards() {
@@ -250,7 +324,7 @@ final class _SuccessfulLoadOrderingScenario {
 void _recordSuccessfulPrepareCleanup(List<String> events, RuntimeRoot root) {
   events.add('prepared-cleanup');
   expect(root.readDocument().layers.single.elements.single.id.value, 'old');
-  expect(root.state.value.revisions.document, 1);
+  expect(root.state.value.revisions.document, 0);
 }
 
 void _recordSuccessfulState(List<String> events, RuntimeRoot root) {
@@ -303,8 +377,8 @@ RuntimeRoot _runtimeRoot(
 void _expectPublishedLoadState(RuntimeRoot root) {
   expect(root.readDocument().backgroundElements.single.id.value, 'new');
   expect(root.state.value.summary.elementCount, 1);
-  expect(root.state.value.revisions.document, 2);
-  expect(root.state.value.revisions.epoch, 2);
+  expect(root.state.value.revisions.document, 1);
+  expect(root.state.value.revisions.epoch, 1);
   _expectInteractionAlreadyCleaned(root);
 }
 
@@ -352,6 +426,19 @@ void _expectGuarded(void Function() action) {
         (error) => error.message,
         'message',
         contains('post-commit effect delivery'),
+      ),
+    ),
+  );
+}
+
+void _expectDocumentLoadGuarded(void Function() action) {
+  expect(
+    action,
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('document load'),
       ),
     ),
   );
@@ -465,6 +552,25 @@ CanvasDocument _replacementDocument() {
   return CanvasDocument(
     backgroundElements: [
       CanvasRectElement(id: CanvasElementId('new'), size: const Size(1, 1)),
+    ],
+  );
+}
+
+CanvasDocument _textDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('text-layer'),
+        elements: [
+          CanvasTextElement(
+            id: CanvasElementId('text-a'),
+            text: 'hello',
+            fontSize: 16,
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+          ),
+        ],
+      ),
     ],
   );
 }

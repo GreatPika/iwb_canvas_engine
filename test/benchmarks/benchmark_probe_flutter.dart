@@ -13,6 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_codec.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/document_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_element.dart';
@@ -709,7 +710,11 @@ void _expectLoadDocumentSourceShape() {
     source,
     '_loadDocumentFailurePlan',
     'measure:',
-    forbidden: ['encodeCanvasDocumentToJson'],
+    forbidden: ["'committed_mutation_count': 0", 'encodeCanvasDocumentToJson'],
+  );
+  expect(
+    _declarationBody(source, '_loadDocumentFailurePlan'),
+    contains('loadFixture.before.mutationCount'),
   );
 }
 
@@ -1805,10 +1810,12 @@ _BenchmarkCasePlan _loadDocumentFailurePlan(String setupScope, String scaleId) {
   return _BenchmarkCasePlan(
     setupScope: setupScope,
     prepare: () {
+      final runtime = _runtime(scaleId);
       return _PreparedProbeFixture(
         value: _LoadDocumentFailureFixture(
-          runtime: _runtime(scaleId),
+          runtime: runtime,
           encodedJson: _duplicateElementJson(),
+          before: _LoadFailureRuntimeSnapshot.capture(runtime),
         ),
       );
     },
@@ -1819,7 +1826,9 @@ _BenchmarkCasePlan _loadDocumentFailurePlan(String setupScope, String scaleId) {
       } on CanvasDataException catch (error) {
         return {
           'failure_mutation_count': 0,
-          'committed_mutation_count': 0,
+          'committed_mutation_count': loadFixture.before.mutationCount(
+            loadFixture.runtime,
+          ),
           'error_payload': error.code.name,
         };
       }
@@ -2472,10 +2481,66 @@ final class _LoadDocumentFailureFixture {
   const _LoadDocumentFailureFixture({
     required this.runtime,
     required this.encodedJson,
+    required this.before,
   });
 
   final RuntimeRoot runtime;
   final String encodedJson;
+  final _LoadFailureRuntimeSnapshot before;
+}
+
+final class _LoadFailureRuntimeSnapshot {
+  const _LoadFailureRuntimeSnapshot({
+    required this.documentFacts,
+    required this.state,
+    required this.selectedIds,
+    required this.viewCameraOffset,
+    required this.preview,
+    required this.projectionBuildCount,
+  });
+
+  factory _LoadFailureRuntimeSnapshot.capture(RuntimeRoot runtime) {
+    return _LoadFailureRuntimeSnapshot(
+      documentFacts: runtime.documentFacts,
+      state: runtime.state.value,
+      selectedIds: runtime.selectionFacts.selectedElementIds,
+      viewCameraOffset: runtime.viewCameraOffset,
+      preview: runtime.preview,
+      projectionBuildCount: runtime.projectionBuildCount,
+    );
+  }
+
+  final DocumentFacts documentFacts;
+  final CanvasRuntimeState state;
+  final Set<CanvasElementId> selectedIds;
+  final Offset viewCameraOffset;
+  final CanvasPreviewState preview;
+  final int projectionBuildCount;
+
+  int mutationCount(RuntimeRoot runtime) {
+    return [
+      _documentFactsChanged(runtime.documentFacts, documentFacts),
+      runtime.state.value != state,
+      !_sameIdSet(runtime.selectionFacts.selectedElementIds, selectedIds),
+      runtime.viewCameraOffset != viewCameraOffset,
+      runtime.preview != preview,
+      runtime.projectionBuildCount != projectionBuildCount,
+    ].where((changed) => changed).length;
+  }
+}
+
+bool _documentFactsChanged(DocumentFacts current, DocumentFacts before) {
+  return current.elementCount != before.elementCount ||
+      current.layerCount != before.layerCount ||
+      current.resourceCount != before.resourceCount ||
+      current.documentRevision != before.documentRevision ||
+      current.structuralRevision != before.structuralRevision ||
+      !_sameIdSet(current.contentElementIds, before.contentElementIds) ||
+      !_sameIdSet(current.selectableElementIds, before.selectableElementIds);
+}
+
+bool _sameIdSet<T>(Set<T> left, Set<T> right) {
+  return left.length == right.length && left.containsAll(right);
 }
 
 final class _RuntimeSelectionFactsPort implements SelectionFactsPort {

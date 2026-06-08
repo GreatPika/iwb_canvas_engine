@@ -604,8 +604,8 @@ Must-edit durable diagrams:
 Classification-only durable diagrams from the current direct-hit search:
 
 - `docs/diagrams/c4_container.mmd`
-- `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `docs/diagrams/dfd_schema_v1_import_encode.mmd`
+- `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 
 Current durable diagrams without direct DiagnosticsHub/diagnostic/probe/counter
 hits are outside the diagram edit perimeter for this step unless a prior unit

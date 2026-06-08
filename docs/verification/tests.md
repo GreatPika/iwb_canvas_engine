@@ -715,7 +715,7 @@ behavioral tests, and the required guardrail list remains owned by
 - proves successful loadDocument publishes exactly one post-install
   CanvasRuntimeState that includes document, selection, viewCamera, epoch,
   and conditional preview cleanup revisions;
-- proves loadDocument failure publishes no public state snapshot.
+- proves loadDocumentFromJson failure publishes no public state snapshot.
 
 #### `test/runtime/interaction_settings_state_test.dart`
 - proves mode, draw tool, draw style, draw color, and pointer policy changes

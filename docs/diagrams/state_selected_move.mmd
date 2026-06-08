@@ -46,7 +46,7 @@ stateDiagram-v2
     PreviewReady --> PreResolverCleanup: "mode change"
     PreviewReady --> PreResolverCleanup: "interactive=false"
     PreviewReady --> PreResolverCleanup: "loadDocument prepared cleanup before install"
-    PreviewReady --> PreviewReady: "loadDocument failure / preserve if generic session preserves"
+    PreviewReady --> PreviewReady: "loadDocumentFromJson failure / preserve if generic session preserves"
     PreviewReady --> DisposeCleanup: "runtime.dispose()"
     PreviewReady --> TerminalGate: "same-token pointer up"
 

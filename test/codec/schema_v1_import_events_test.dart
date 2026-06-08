@@ -4,6 +4,9 @@ import 'package:test/test.dart';
 
 import '../support/flutter_consumer_test_harness.dart';
 
+// The harness owns an embedded consumer fixture so the public compile proof and
+// structural seam assertion stay in the same executable API-contract test.
+// ignore: halstead-volume
 void main() {
   test('schema v1 import events validate codec-owned load inputs', () async {
     await expectLater(
@@ -31,6 +34,12 @@ void main() {
     expect(source, isNot(contains('decodeCanvasDocument')));
     expect(source, isNot(contains('decodeSchemaV1Document')));
     expect(source, contains(RegExp(r'void importSchemaV1DocumentFromJson\(')));
+    expect(
+      source,
+      contains(
+        RegExp(r'void importSchemaV1DocumentFromJsonIntoIsolatedSink\('),
+      ),
+    );
     expect(source, contains(RegExp(r'void importSchemaV1Document\(')));
     expect(source, isNot(contains('List<SchemaV1')));
     expect(source, isNot(contains('Map<CanvasElementId')));
@@ -47,6 +56,14 @@ import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 
 void main() {
+  _registerValidImportEventTests();
+  _registerCodecFailureTests();
+  _registerPartialEventTests();
+  _registerTextValidationTests();
+  _registerCodecOwnershipTests();
+}
+
+void _registerValidImportEventTests() {
   test('valid schema v1 JSON emits dependency-neutral import events', () {
     final sink = _CollectingImportSink();
 
@@ -64,7 +81,9 @@ void main() {
     expect(sink.layerElements.single.$2, isA<SchemaV1ImageElementImportEvent>());
     expect(sink.backgroundElements.single, isA<SchemaV1RectElementImportEvent>());
   });
+}
 
+void _registerCodecFailureTests() {
   test('codec rejects malformed, oversized, schema, enum, metadata, and transform failures', () {
     _expectImportFailure(
       () => importSchemaV1DocumentFromJson('{', _CollectingImportSink()),
@@ -179,7 +198,61 @@ void main() {
       'element.transform',
     );
   });
+}
 
+void _registerPartialEventTests() {
+  test('invalid documents emit no partial import events', () {
+    final sink = _CollectingImportSink();
+
+    _expectImportFailure(
+      () => importSchemaV1Document(
+        {
+          ..._validDocument(),
+          'layers': [
+            {
+              'id': 'layer-a',
+              'elements': [
+                {
+                  'id': 'bad-text',
+                  'kind': 'text',
+                  'text': 'missing font size',
+                  'color': '#FF000000',
+                },
+              ],
+            },
+          ],
+        },
+        sink,
+      ),
+      CanvasDataErrorCode.missingField,
+      'text.fontSize',
+    );
+    expect(sink.events, isEmpty);
+  });
+}
+
+void _registerTextValidationTests() {
+  test('text schema import preserves required field and null enum validation', () {
+    _expectImportFailure(
+      () => importSchemaV1Document(
+        _documentWithText({'fontSize': null}),
+        _CollectingImportSink(),
+      ),
+      CanvasDataErrorCode.missingField,
+      'text.fontSize',
+    );
+    _expectImportFailure(
+      () => importSchemaV1Document(
+        _documentWithText({'textDirection': null}),
+        _CollectingImportSink(),
+      ),
+      CanvasDataErrorCode.invalidFieldType,
+      'text.textDirection',
+    );
+  });
+}
+
+void _registerCodecOwnershipTests() {
   test('duplicate ids and missing resource references are not codec-owned policy', () {
     final sink = _CollectingImportSink();
 
@@ -229,6 +302,29 @@ void _expectImportFailure(
           .having((error) => error.path, 'path', path),
     ),
   );
+}
+
+Map<String, Object?> _documentWithText(Map<String, Object?> overrides) {
+  return {
+    ..._validDocument(),
+    'layers': [
+      {
+        'id': 'layer-a',
+        'metadata': {'owner': 'layer'},
+        'elements': [
+          {
+            'id': 'text-a',
+            'kind': 'text',
+            'text': 'hello',
+            'fontSize': 16,
+            'color': '#FF000000',
+            'textDirection': 'ltr',
+            ...overrides,
+          },
+        ],
+      },
+    ],
+  };
 }
 
 Map<String, Object?> _validDocument() {

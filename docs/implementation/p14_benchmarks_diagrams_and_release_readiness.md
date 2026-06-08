@@ -60,7 +60,7 @@ architecture.
 - `dfd_pointer_preview_commit` -> `docs/diagrams/dfd_pointer_preview_commit.mmd`
 - `dfd_public_edit` -> `docs/diagrams/dfd_public_edit.mmd`
 - `dfd_resource_resolution` -> `docs/diagrams/dfd_resource_resolution.mmd`
-- `dfd_schema_v1_decode_encode` -> `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
+- `dfd_schema_v1_import_encode` -> `docs/diagrams/dfd_schema_v1_import_encode.mmd`
 - `dfd_spatial_query_budget` -> `docs/diagrams/dfd_spatial_query_budget.mmd`
 - `seq_dispose_during_gesture` -> `docs/diagrams/seq_dispose_during_gesture.mmd`
 - `seq_edit_rollback` -> `docs/diagrams/seq_edit_rollback.mmd`
@@ -76,7 +76,7 @@ architecture.
 - `seq_overlay_paint` -> `docs/diagrams/seq_overlay_paint.mmd`
 - `seq_pencil_marker_commit` -> `docs/diagrams/seq_pencil_marker_commit.mmd`
 - `seq_resource_resolution` -> `docs/diagrams/seq_resource_resolution.mmd`
-- `seq_schema_v1_decode_encode_order` -> `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `seq_schema_v1_import_encode_order` -> `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 - `seq_selected_move_cancel` -> `docs/diagrams/seq_selected_move_cancel.mmd`
 - `seq_selected_move_preview_commit` -> `docs/diagrams/seq_selected_move_preview_commit.mmd`
 - `seq_single_active_surface` -> `docs/diagrams/seq_single_active_surface.mmd`

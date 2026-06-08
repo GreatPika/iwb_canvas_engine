@@ -381,7 +381,7 @@ file whitespace remain valid after the source-of-truth edits.
 ```sh
 dart run docs/tool/generate_context_capsules.dart --check
 dart run docs/tool/check_docs.dart
-git diff --check -- PLAN.md plan/step_12_non_invertible_transform_admission.md redesign.md docs/contracts/public_api_v1.md docs/contracts/validation_limits.md docs/contracts/schema_v1.md docs/contracts/codec_boundary.md docs/contracts/load_document.md docs/contracts/geometry.md docs/contracts/diagnostics.md docs/diagrams/seq_schema_v1_decode_encode_order.mmd docs/diagrams/seq_load_document_failure.mmd docs/diagrams/seq_hit_test_candidate_resolution.mmd docs/verification/tests.md docs/indexes/by_test_area.md
+git diff --check -- PLAN.md plan/step_12_non_invertible_transform_admission.md redesign.md docs/contracts/public_api_v1.md docs/contracts/validation_limits.md docs/contracts/schema_v1.md docs/contracts/codec_boundary.md docs/contracts/load_document.md docs/contracts/geometry.md docs/contracts/diagnostics.md docs/diagrams/seq_schema_v1_import_encode_order.mmd docs/diagrams/seq_load_document_failure.mmd docs/diagrams/seq_hit_test_candidate_resolution.mmd docs/verification/tests.md docs/indexes/by_test_area.md
 ```
 
 Expected signal: all commands pass.
@@ -403,7 +403,7 @@ This proves the sequence diagrams listed in Slice 1 carry the same transform
 admission ordering as the contracts.
 
 ```sh
-rg -n "transform|non-invertible|element validation|validation failure|PreparedDocumentLoad|interrupt" docs/diagrams/seq_schema_v1_decode_encode_order.mmd docs/diagrams/seq_load_document_failure.mmd
+rg -n "transform|non-invertible|element validation|validation failure|PreparedDocumentLoad|interrupt" docs/diagrams/seq_schema_v1_import_encode_order.mmd docs/diagrams/seq_load_document_failure.mmd
 ```
 
 Expected signal: the schema decode sequence names transform admission as part
@@ -472,7 +472,7 @@ BUG_FIX, PUBLIC_API_CHANGE
 - Load contract edit: `docs/contracts/load_document.md` — make staged
   validation include non-invertible element transform rejection before
   `PreparedDocumentLoad` success or interaction interruption.
-- Decode sequence alignment: `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- Decode sequence alignment: `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
   — align schema element validation wording so the sequence names transform
   admission as part of element validation.
 - Failed load sequence alignment: `docs/diagrams/seq_load_document_failure.mmd`

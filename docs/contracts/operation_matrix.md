@@ -46,7 +46,7 @@ P5 closes edit-owned rows and the generic executable effect shape.
 P5 reserves the documentReplaced invalidation/effect shape and the only generic
 global-invalidation exception, but does not make CanvasEdit.replaceDraftDocument
 executable.
-P6 closes the loadDocument success/failure rows after the staged load contract.
+P6 closes the loadDocumentFromJson success/failure rows after the staged load contract.
 P6 also owns CanvasEdit.replaceDraftDocument success/failure behavior and any
 load-driven draft replacement execution.
 P7 and P10-P12 close their resource and interaction rows when those owners land.
@@ -79,8 +79,8 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |
 | setMode/setDrawStyle/setDrawTool/setDrawColor/setPointerPolicy | interaction settings | state.revisions.interaction, state.revisions.selection if draw-mode entry clears selection, state.revisions.preview if active preview cleared | none | no | main/overlay only for changed affected state | none |
 | CanvasToolPort.handlePointer dispatcher | validates/routes pointer sample to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
-| loadDocument success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
-| loadDocument failure | none | none | none | none | none | none |
+| loadDocumentFromJson success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
+| loadDocumentFromJson failure | none | none | none | none | none | none |
 | CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
 | pencil/marker preview | preview only | state.revisions.preview | none | no | overlay | none |
 | pencil/marker commit | add stroke | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawPencil/drawMarker; `runtime_created_timestamps_monotonic` |
@@ -291,7 +291,7 @@ Rollback behavior: original committed document, selection owner, epoch,
 resources, spatial index, projection, repaint, and notifications remain
 unchanged.
 
-#### loadDocument success
+#### loadDocumentFromJson success
 
 Touched state: whole document; selection owner clear; prepared interaction
 cleanup outcome for preview cleanup when an active preview exists, pointer
@@ -320,7 +320,7 @@ Repaint target: main plus overlay.
 User-action notification: none.
 
 No-op behavior: no successful no-op path; validation/materialization failure is
-covered by the `loadDocument failure` row.
+covered by the `loadDocumentFromJson failure` row.
 
 Rollback behavior: validation/materialization failure leaves active gesture,
 preview, pending line, pointer normalization, committed document, selection,

@@ -64,8 +64,8 @@ external data shapes.
 ## Diagrams to read or update
 
 - `dfd_diagnostics_error_projection` -> `docs/diagrams/dfd_diagnostics_error_projection.mmd`
-- `dfd_schema_v1_decode_encode` -> `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
-- `seq_schema_v1_decode_encode_order` -> `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- `dfd_schema_v1_import_encode` -> `docs/diagrams/dfd_schema_v1_import_encode.mmd`
+- `seq_schema_v1_import_encode_order` -> `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 
 ## Contracts satisfied by this phase
 

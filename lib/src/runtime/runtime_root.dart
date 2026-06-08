@@ -109,11 +109,12 @@ final class RuntimeRoot
   @visibleForTesting
   RuntimeRoot.test({
     required CanvasRuntimeConfig config,
+    DocumentStoreKernel? store,
     LoadInteractionBoundary? loadInteractionBoundary,
     TextEditPrepareOverride? textEditPrepareOverride,
     CommitEffectObserver? commitEffectObserver,
   }) : this._(
-         store: DocumentStoreKernel(),
+         store: store ?? DocumentStoreKernel(),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
          diagnosticPolicy: config.diagnosticPolicy,
@@ -189,10 +190,15 @@ final class RuntimeRoot
   int _viewCameraRevision = 0;
   int _epochRevision = 0;
   int _textEditInteractionRevision = 0;
+  int _contextRequestGeneration = 0;
+  final List<({int generation, CanvasContextActionRequested request})>
+  _pendingContextRequests = [];
+  bool _isContextRequestDeliveryScheduled = false;
 
   // Mutation and lifecycle guards.
   bool _isDisposed = false;
   bool _isDeliveringCommitEffects = false;
+  bool _isInstallingDocumentLoad = false;
   bool _isRunningResolverCallback = false;
   Object? _activeSurfaceToken;
   SurfaceResourceSessionLifecycle? _activeSurfaceResourceSession;
@@ -1347,6 +1353,7 @@ final class RuntimeRoot
       return;
     }
     _ensureNotDeliveringCommitEffects();
+    _ensureNoDocumentLoadInProgress();
     if (_isRunningResolverCallback) {
       _recordResolverReentrantMutationRejected('dispose');
       throw StateError(
@@ -1356,7 +1363,9 @@ final class RuntimeRoot
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
     _applyPointerCleanupSelection(cleanupOutcome);
+    _deliverPendingContextRequests();
     _interactionEngine.clearInteractionRequests();
+    _contextRequestGeneration += 1;
     _isDisposed = true;
     _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
@@ -1389,6 +1398,7 @@ final class RuntimeRoot
   void ensureRuntimeMutationAllowed() {
     _ensureNotDisposed();
     _ensureNoActiveEditSession();
+    _ensureNoDocumentLoadInProgress();
     if (_isRunningResolverCallback) {
       _recordResolverReentrantMutationRejected('runtimeMutation');
       throw StateError(
@@ -1417,6 +1427,14 @@ final class RuntimeRoot
     if (_isDeliveringCommitEffects) {
       throw StateError(
         'CanvasRuntime public mutations cannot run during post-commit effect delivery.',
+      );
+    }
+  }
+
+  void _ensureNoDocumentLoadInProgress() {
+    if (_isInstallingDocumentLoad) {
+      throw StateError(
+        'CanvasRuntime public mutations cannot run during document load.',
       );
     }
   }
@@ -1503,12 +1521,18 @@ final class RuntimeRoot
   void _loadDocumentFromJson(String json) {
     final preparedLoad = _loadPipeline.prepareFromJson(json);
 
-    _prepareLoadInteractionCleanup();
-    _loadPipeline.consume(preparedLoad);
-    final didClearSelection = _selection.clearForDocumentReplacement();
-    _viewCamera = preparedLoad.camera;
-    _viewCameraRevision += 1;
-    _epochRevision += 1;
+    _isInstallingDocumentLoad = true;
+    late final bool didClearSelection;
+    try {
+      _prepareLoadInteractionCleanup();
+      _loadPipeline.consume(preparedLoad);
+      didClearSelection = _selection.clearForDocumentReplacement();
+      _viewCamera = preparedLoad.camera;
+      _viewCameraRevision += 1;
+      _epochRevision += 1;
+    } finally {
+      _isInstallingDocumentLoad = false;
+    }
     _deliverLoadResult(_loadEffects(didClearSelection: didClearSelection));
   }
 
@@ -1520,6 +1544,7 @@ final class RuntimeRoot
     _textEditingPort.clearTransientState(publishState: false);
     _interactionEngine.prepareLoadCleanup();
     _interactionEngine.clearInteractionRequests();
+    _contextRequestGeneration += 1;
   }
 
   // Commit delivery pipeline.
@@ -1699,7 +1724,44 @@ final class RuntimeRoot
   }
 
   void _emitContextRequest(ContextActionRequestIntent intent) {
-    _contextActionRequests.add(intent.request);
+    _pendingContextRequests.add((
+      generation: _contextRequestGeneration,
+      request: intent.request,
+    ));
+    if (_isContextRequestDeliveryScheduled) {
+      return;
+    }
+    _isContextRequestDeliveryScheduled = true;
+    scheduleMicrotask(() {
+      _isContextRequestDeliveryScheduled = false;
+      for (final request in _takeDeliverablePendingContextRequests()) {
+        _contextActionRequests.add(request);
+      }
+    });
+  }
+
+  void _deliverPendingContextRequests() {
+    for (final request in _takeDeliverablePendingContextRequests()) {
+      _contextActionRequests.add(request);
+    }
+  }
+
+  List<CanvasContextActionRequested> _takeDeliverablePendingContextRequests() {
+    if (_pendingContextRequests.isEmpty || _contextActionRequests.isClosed) {
+      _pendingContextRequests.clear();
+
+      return const [];
+    }
+    final pending = List.of(_pendingContextRequests);
+    _pendingContextRequests.clear();
+    final deliverable = <CanvasContextActionRequested>[];
+    for (final entry in pending) {
+      if (entry.generation == _contextRequestGeneration) {
+        deliverable.add(entry.request);
+      }
+    }
+
+    return deliverable;
   }
 
   // Selected move commit flow.

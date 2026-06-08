@@ -541,7 +541,7 @@ while IFS= read -r term; do
 done <<'"'"'TERMS'"'"'
 removeUnusedResource
 replaceDraftDocument
-loadDocument success
+loadDocumentFromJson success
 toggleSelection
 clearSelection
 selectAll

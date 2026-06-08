@@ -1,3 +1,7 @@
+// Store import fixtures name row/table owners directly so one test proves the
+// import handoff without hiding ownership behind helper-only imports.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui' show Color, Size;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -60,19 +64,37 @@ void _expectPreparedImportFacts(PreparedStoreDocumentImport prepared) {
   });
 }
 
+// Installed import facts stay in one assertion block so the fixture proves the
+// committed document, resource, metadata, and projection boundaries together.
+// ignore: halstead-volume
 void _expectInstalledImportFacts(DocumentStoreKernel store) {
   expect(store.documentSummary.elementCount, 2);
   expect(store.documentSummary.layerCount, 1);
   expect(store.documentSummary.resourceCount, 1);
   expect(store.camera.offset, const Offset(2, 3));
+  expect(store.background.color, const Color(0xFF112233));
+  expect(store.background.grid.enabled, isTrue);
+  expect(store.background.grid.cellSize, 17);
+  expect(store.background.grid.color, const Color(0xFF445566));
+  expect(store.palette.penColors, [const Color(0xFF102030)]);
+  expect(store.palette.backgroundColors, [const Color(0xFF405060)]);
+  expect(store.palette.gridSizes, [17]);
   expect(store.resourceRevision, 1);
   expect(
     store.resourceDescriptor(CanvasResourceId('resource-a'))?.appKey,
     'asset/resource-a',
   );
   expect(
+    store.resourceDescriptor(CanvasResourceId('resource-a'))?.metadata['owner'],
+    'resource',
+  );
+  expect(
     store.elementFactsById(CanvasElementId('image-a'))?.resourceId,
     CanvasResourceId('resource-a'),
+  );
+  expect(
+    store.elementById(CanvasElementId('bg-rect'))?.metadata['owner'],
+    'rect',
   );
   expect(store.resources.single, isA<CanvasImageResource>());
 }
@@ -82,6 +104,10 @@ void _expectExplicitReadBuildsFirstProjection(
   int beforeProjectionBuilds,
 ) {
   final projected = store.readDocument();
+  expect(projected.metadata['owner'], 'document');
+  expect(projected.layers.single.metadata['owner'], 'layer');
+  expect(projected.background.color, const Color(0xFF112233));
+  expect(projected.palette.penColors, [const Color(0xFF102030)]);
   expect(projected.resources.single, isA<CanvasImageResource>());
   expect(store.projectionBuildCount, beforeProjectionBuilds + 1);
 }
@@ -121,40 +147,49 @@ void _testPreparedImportsAreConsumeOnceAndStaleGuarded() {
 
 void _testImportBuildersAreConsumeOnce() {
   test('store import row builders are consume-once', () {
-    final resourceBuilder = StoreResourceDescriptorImportBuilder()
-      ..addSchemaV1Import(_resourceEvent('resource-a'));
-    resourceBuilder.consume(resourceRevision: 1);
-    expect(
-      () => resourceBuilder.addSchemaV1Import(_resourceEvent('resource-b')),
-      throwsA(isA<StateError>()),
-    );
-    expect(
-      () => resourceBuilder.consume(resourceRevision: 1),
-      throwsA(isA<StateError>()),
-    );
-
-    final familyBuilder = FamilyTablesSchemaV1ImportBuilder()
-      ..add(_rectEvent('rect-a'), const {});
-    familyBuilder.consume();
-    expect(
-      () => familyBuilder.add(_rectEvent('rect-b'), const {}),
-      throwsA(isA<StateError>()),
-    );
-    expect(() => familyBuilder.consume(), throwsA(isA<StateError>()));
-
-    final layerBuilder = LayerTableSchemaV1ImportBuilder()
-      ..addLayer(_layerEvent('layer-a'));
-    layerBuilder.addElement(
-      CanvasLayerId('layer-a'),
-      CanvasElementId('rect-a'),
-    );
-    layerBuilder.consume();
-    expect(
-      () => layerBuilder.addLayer(_layerEvent('layer-b')),
-      throwsA(isA<StateError>()),
-    );
-    expect(() => layerBuilder.consume(), throwsA(isA<StateError>()));
+    expect(() {
+      _expectResourceImportBuilderConsumeOnce();
+      _expectFamilyImportBuilderConsumeOnce();
+      _expectLayerImportBuilderConsumeOnce();
+    }, returnsNormally);
   });
+}
+
+void _expectResourceImportBuilderConsumeOnce() {
+  final resourceBuilder = StoreResourceDescriptorImportBuilder()
+    ..addSchemaV1Import(_resourceEvent('resource-a'));
+  resourceBuilder.consume(resourceRevision: 1);
+  expect(
+    () => resourceBuilder.addSchemaV1Import(_resourceEvent('resource-b')),
+    throwsA(isA<StateError>()),
+  );
+  expect(
+    () => resourceBuilder.consume(resourceRevision: 1),
+    throwsA(isA<StateError>()),
+  );
+}
+
+void _expectFamilyImportBuilderConsumeOnce() {
+  final familyBuilder = FamilyTablesSchemaV1ImportBuilder()
+    ..add(_rectEvent('rect-a'), const {});
+  familyBuilder.consume();
+  expect(
+    () => familyBuilder.add(_rectEvent('rect-b'), const {}),
+    throwsA(isA<StateError>()),
+  );
+  expect(() => familyBuilder.consume(), throwsA(isA<StateError>()));
+}
+
+void _expectLayerImportBuilderConsumeOnce() {
+  final layerBuilder = LayerTableSchemaV1ImportBuilder()
+    ..addLayer(_layerEvent('layer-a'));
+  layerBuilder.addElement(CanvasLayerId('layer-a'), CanvasElementId('rect-a'));
+  layerBuilder.consume();
+  expect(
+    () => layerBuilder.addLayer(_layerEvent('layer-b')),
+    throwsA(isA<StateError>()),
+  );
+  expect(() => layerBuilder.consume(), throwsA(isA<StateError>()));
 }
 
 PreparedStoreDocumentImport _prepare(
@@ -285,13 +320,13 @@ Map<String, Object?> _validDocument({String resourceId = 'resource-a'}) {
       'offset': {'x': 2, 'y': 3},
     },
     'background': {
-      'color': '#FFFFFFFF',
-      'grid': {'enabled': false, 'cellSize': 10, 'color': '#1F000000'},
+      'color': '#FF112233',
+      'grid': {'enabled': true, 'cellSize': 17, 'color': '#FF445566'},
     },
     'palette': {
-      'penColors': ['#FF000000'],
-      'backgroundColors': ['#FFFFFFFF'],
-      'gridSizes': [8],
+      'penColors': ['#FF102030'],
+      'backgroundColors': ['#FF405060'],
+      'gridSizes': [17],
     },
     'resources': [_resource(resourceId)],
     'metadata': {'owner': 'document'},

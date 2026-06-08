@@ -12,7 +12,7 @@ import 'store_revision_delta.dart';
 // The builder is the single handoff from schema-v1 import events to committed
 // store tables; splitting it would create another retained import graph.
 // ignore: coupling-between-object-classes
-final class StoreSchemaV1ImportBuilder implements SchemaV1ImportSink {
+final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   SchemaV1DocumentImportEvent? _document;
   final StoreResourceDescriptorImportBuilder _resources =
       StoreResourceDescriptorImportBuilder();

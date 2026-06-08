@@ -22,8 +22,8 @@ Related donors:
 - `codec_validation_path_surface`
 - `dto_boundary_schema`
 Related diagrams:
-- `dfd_schema_v1_decode_encode`
-- `seq_schema_v1_decode_encode_order`
+- `dfd_schema_v1_import_encode`
+- `seq_schema_v1_import_encode_order`
 Required tests:
 - `test.codec.schema_v1.known_fields_validation`
 - `test.codec.schema_v1.canonical_encode_roundtrip`

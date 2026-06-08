@@ -29,12 +29,103 @@ void importSchemaV1DocumentFromJson(
   importSchemaV1Document(root, sink, diagnostics: diagnostics);
 }
 
+void importSchemaV1DocumentFromJsonIntoIsolatedSink(
+  String json,
+  IsolatedSchemaV1ImportSink sink, {
+  DiagnosticsHub? diagnostics,
+}) {
+  final root = _decodeRoot(json, diagnostics: diagnostics);
+  importSchemaV1DocumentIntoIsolatedSink(root, sink, diagnostics: diagnostics);
+}
+
 void importSchemaV1Document(
   Map<String, Object?> json,
   SchemaV1ImportSink sink, {
   DiagnosticsHub? diagnostics,
 }) {
   validateSchemaV1Root(json, diagnostics: diagnostics);
+  _validateSchemaV1ImportEvents(json, diagnostics: diagnostics);
+  _emitSchemaV1ImportEvents(json, sink, diagnostics: diagnostics);
+}
+
+void importSchemaV1DocumentIntoIsolatedSink(
+  Map<String, Object?> json,
+  IsolatedSchemaV1ImportSink sink, {
+  DiagnosticsHub? diagnostics,
+}) {
+  validateSchemaV1Root(json, diagnostics: diagnostics);
+  _emitSchemaV1ImportEvents(json, sink, diagnostics: diagnostics);
+}
+
+// The validation pass mirrors event emission order so invalid input cannot
+// partially notify sinks without building a retained document-sized event graph.
+// ignore: halstead-volume, source-lines-of-code
+void _validateSchemaV1ImportEvents(
+  Map<String, Object?> json, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  _readDocumentEvent(json, diagnostics: diagnostics);
+
+  final resources = _readList(
+    json,
+    key: 'resources',
+    path: 'resources',
+    diagnostics: diagnostics,
+  );
+  if (resources.length > canvasMaxResources) {
+    _fail(
+      diagnostics,
+      CanvasDataErrorCode.maxItems,
+      'document resources exceed the maximum count.',
+      'resources',
+    );
+  }
+  for (final resource in resources) {
+    _readResource(resource, diagnostics: diagnostics);
+  }
+
+  var elementCount = 0;
+  for (final element in _readBackgroundElements(
+    json,
+    diagnostics: diagnostics,
+  )) {
+    elementCount += 1;
+    _validateElementCount(elementCount, diagnostics);
+    _readElement(element, diagnostics: diagnostics);
+  }
+
+  final layers = _readList(
+    json,
+    key: 'layers',
+    path: 'layers',
+    diagnostics: diagnostics,
+  );
+  if (layers.length > canvasMaxContentLayers) {
+    _fail(
+      diagnostics,
+      CanvasDataErrorCode.maxItems,
+      'document layers exceed the maximum count.',
+      'layers',
+    );
+  }
+  for (final value in layers) {
+    final layer = _readLayer(value, diagnostics: diagnostics);
+    for (final element in layer.elements) {
+      elementCount += 1;
+      _validateElementCount(elementCount, diagnostics);
+      _readElement(element, diagnostics: diagnostics);
+    }
+  }
+}
+
+// Event emission stays in schema order to keep the sink protocol auditable and
+// avoid splitting count limits away from the exact events they guard.
+// ignore: halstead-volume, source-lines-of-code
+void _emitSchemaV1ImportEvents(
+  Map<String, Object?> json,
+  SchemaV1ImportSink sink, {
+  required DiagnosticsHub? diagnostics,
+}) {
   _deliverDocumentEvent(
     sink,
     _readDocumentEvent(json, diagnostics: diagnostics),
@@ -397,6 +488,9 @@ CanvasPalette _readPalette(
   );
 }
 
+// Resource import keeps source, descriptor, and metadata validation together so
+// diagnostics point at one schema resource boundary instead of split helpers.
+// ignore: halstead-volume, source-lines-of-code
 SchemaV1ImageResourceImportEvent _readResource(
   Object? value, {
   required DiagnosticsHub? diagnostics,
@@ -583,6 +677,9 @@ SchemaV1ElementImportEvent _readElement(
   };
 }
 
+// Common element fields are validated as one schema record so every element
+// family shares the same admission order and diagnostics paths.
+// ignore: halstead-volume, source-lines-of-code
 SchemaV1ElementCommonImport _readElementCommon(
   Map<String, Object?> map, {
   required CanvasElementKind kind,
@@ -695,6 +792,9 @@ SchemaV1ImageElementImportEvent _readImageElement(
   });
 }
 
+// Path schema validation keeps data length, paint, and fill rule checks together
+// because splitting would hide the single path-family admission boundary.
+// ignore: source-lines-of-code
 SchemaV1PathElementImportEvent _readPathElement(
   Map<String, Object?> map,
   SchemaV1ElementCommonImport common, {
@@ -745,6 +845,9 @@ SchemaV1PathElementImportEvent _readPathElement(
   );
 }
 
+// Text schema validation stays cohesive so required font, color, alignment, and
+// style defaults are admitted as one text-family record.
+// ignore: halstead-volume, source-lines-of-code
 SchemaV1TextElementImportEvent _readTextElement(
   Map<String, Object?> map,
   SchemaV1ElementCommonImport common, {
@@ -775,7 +878,7 @@ SchemaV1TextElementImportEvent _readTextElement(
     common: common,
     text: text,
     fontSize: _validatedPositiveDouble(
-      map.containsKey('fontSize') ? map['fontSize'] : 24.0,
+      map['fontSize'],
       path: 'text.fontSize',
       max: canvasMaxThickness,
       diagnostics: diagnostics,
@@ -786,10 +889,7 @@ SchemaV1TextElementImportEvent _readTextElement(
       diagnostics: diagnostics,
     ),
     align: _readTextAlign(map, diagnostics: diagnostics),
-    textDirection: _readTextDirection(
-      map['textDirection'],
-      diagnostics: diagnostics,
-    ),
+    textDirection: _readTextDirection(map, diagnostics: diagnostics),
     isBold: _readBoolDefault(
       map,
       key: 'isBold',
@@ -1333,11 +1433,15 @@ TextAlign _readTextAlign(
 }
 
 TextDirection _readTextDirection(
-  Object? value, {
+  Map<String, Object?> map, {
   required DiagnosticsHub? diagnostics,
 }) {
-  return switch (value) {
-    null || 'ltr' => TextDirection.ltr,
+  if (!map.containsKey('textDirection')) {
+    return TextDirection.ltr;
+  }
+
+  return switch (map['textDirection']) {
+    'ltr' => TextDirection.ltr,
     'rtl' => TextDirection.rtl,
     _ => _fail(
       diagnostics,
@@ -1370,6 +1474,9 @@ CanvasElementKind _readElementKind(
   };
 }
 
+// Optional string validation keeps the schema path, limit, empty policy, and
+// diagnostics sink explicit at each call site.
+// ignore: number-of-parameters
 String? _validatedOptionalString(
   Object? value, {
   required String path,
@@ -1438,6 +1545,9 @@ int? _validatedOptionalByteLength(
   return byteLength;
 }
 
+// Range validation keeps min/max at the call site so schema constraints remain
+// visible where each field is decoded.
+// ignore: number-of-parameters
 double _validatedDoubleRange(
   Object? value, {
   required String path,
@@ -1513,6 +1623,9 @@ T _materialize<T>(DiagnosticsHub? diagnostics, T Function() materialize) {
   }
 }
 
+// Failure construction keeps diagnostics, public error code, path, and details
+// at the throw site so schema failures stay auditable.
+// ignore: number-of-parameters
 Never _fail(
   DiagnosticsHub? diagnostics,
   CanvasDataErrorCode code,

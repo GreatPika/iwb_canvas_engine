@@ -2,6 +2,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
 // The helper mirrors RuntimeRoot.test setup seams so call sites can name only
 // the collaborator they exercise instead of introducing fixture-specific
@@ -17,6 +19,9 @@ RuntimeRoot runtimeRootWithDocument(
   var isLoadingInitialDocument = true;
   final root = RuntimeRoot.test(
     config: config,
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(document),
+    ),
     loadInteractionBoundary: loadInteractionBoundary,
     textEditPrepareOverride: textEditPrepareOverride,
     commitEffectObserver: commitEffectObserver == null
@@ -27,7 +32,6 @@ RuntimeRoot runtimeRootWithDocument(
             }
           },
   );
-  root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
   isLoadingInitialDocument = false;
 
   return root;

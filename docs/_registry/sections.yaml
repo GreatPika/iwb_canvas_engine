@@ -202,8 +202,8 @@
     - codec_validation_path_surface
     - dto_boundary_schema
   diagrams:
-    - dfd_schema_v1_decode_encode
-    - seq_schema_v1_decode_encode_order
+    - dfd_schema_v1_import_encode
+    - seq_schema_v1_import_encode_order
   guardrails:
     - codec.schema_v1_exact
     - codec.known_fields_validated
@@ -821,8 +821,8 @@
     - codec_scene_codec_flow
     - codec_validation_path_surface
   diagrams:
-    - dfd_schema_v1_decode_encode
-    - seq_schema_v1_decode_encode_order
+    - dfd_schema_v1_import_encode
+    - seq_schema_v1_import_encode_order
   guardrails:
     - codec.schema_v1_exact
     - codec.known_fields_validated

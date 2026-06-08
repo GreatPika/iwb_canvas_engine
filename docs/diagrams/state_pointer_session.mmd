@@ -46,7 +46,7 @@ stateDiagram-v2
     Routing --> CleanupOnly: mode/tool change cancels session
     Routing --> CleanupOnly: interactive=false routes cancel for active routed pointer only
     Routing --> CleanupOnly: loadDocument prepared cleanup before install interrupts session
-    Routing --> Routing: loadDocument failure / preserve active session
+    Routing --> Routing: loadDocumentFromJson failure / preserve active session
     Routing --> DisposeCleanup: runtime.dispose() interrupts session
 
     state "Terminal sample gate" as TerminalGate

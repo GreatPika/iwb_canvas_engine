@@ -38,7 +38,7 @@ sequenceDiagram
   else stale id, generation, structuralRevision, or membership validation fails
     Spatial->>Spatial: discard prepared delta without applying partial removals/additions
     Spatial->>Spatial: mark spatial index invalid
-    Spatial->>SpatialCounters: increment invalid-index counter; not a DiagnosticsHub write
+    Spatial->>SpatialCounters: increment invalid-index counter, not a DiagnosticsHub write
     Spatial-->>Runtime: typed invalid-index result
     Runtime->>Runtime: request rebuild or retry outside hot pointer/paint path
     Note over Spatial,Runtime: Until rebuild, invalid index behavior is bounded fallback or typed budget-exceeded only, and silent full-scene scan is forbidden.

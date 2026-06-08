@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:characters/characters.dart';
 
-import 'benchmark_diff.dart' show schemaImportLoadSuccess50kMaxUs;
 import 'benchmark_manifest.dart';
 import 'benchmark_sample_summary.dart';
 
@@ -174,161 +173,10 @@ Map<String, Object?> _historyJson({
       'kind': options.referencePath == null ? null : 'manual',
       'path': options.referencePath,
     },
-    'bridgeComparisons': _bridgeComparisons(options: options, sources: sources),
     'sources': [for (final source in sources) source.toJson()],
     'caseCount': _caseCount(sources),
     'cases': _casesJson(sources),
   };
-}
-
-List<Map<String, Object?>> _bridgeComparisons({
-  required ManualBenchmarkHistoryOptions options,
-  required List<_HistorySource> sources,
-}) {
-  final referencePath = options.referencePath;
-  if (referencePath == null || !File(referencePath).existsSync()) {
-    return const [];
-  }
-  final legacy = _legacyLoadBridge(referencePath);
-  if (legacy == null) {
-    return const [];
-  }
-  for (final source in sources) {
-    final current = _currentSchemaImportLoadBridge(source);
-    if (current != null) {
-      return [_bridgeComparisonJson(legacy, current)];
-    }
-  }
-
-  return const [];
-}
-
-_LegacyLoadBridge? _legacyLoadBridge(String referencePath) {
-  final referenceBreakdown = _findReportCase(
-    _readJsonFile(referencePath),
-    id: 'load_document.breakdown',
-    scale: '50k',
-  );
-  if (referenceBreakdown == null) {
-    return null;
-  }
-  final metrics = _map(referenceBreakdown['metrics']);
-  final decodeUs = metrics['decode_us'];
-  final loadUs = metrics['load_document_us'];
-  if (decodeUs is! int || loadUs is! int) {
-    return null;
-  }
-
-  return _LegacyLoadBridge(
-    source: referencePath,
-    decodeUs: decodeUs,
-    loadDocumentUs: loadUs,
-  );
-}
-
-_CurrentSchemaImportLoadBridge? _currentSchemaImportLoadBridge(
-  _HistorySource source,
-) {
-  final currentSuccess = _findSourceCase(
-    source,
-    id: 'load_document.success',
-    scale: '50k',
-  );
-  if (currentSuccess == null) {
-    return null;
-  }
-  final loadUs = _map(currentSuccess['metrics'])['schema_import_load_us'];
-  if (loadUs is! int) {
-    return null;
-  }
-
-  return _CurrentSchemaImportLoadBridge(source: source.path, loadUs: loadUs);
-}
-
-Map<String, Object?> _bridgeComparisonJson(
-  _LegacyLoadBridge legacy,
-  _CurrentSchemaImportLoadBridge current,
-) {
-  final legacyTotalUs = legacy.decodeUs + legacy.loadDocumentUs;
-
-  return {
-    'id': 'step58_xiaomi_50k_public_json_load',
-    'legacy': {
-      'source': legacy.source,
-      'decode_us': legacy.decodeUs,
-      'load_document_us': legacy.loadDocumentUs,
-      'decode_plus_load_us': legacyTotalUs,
-    },
-    'current': {
-      'source': current.source,
-      'schema_import_load_us': current.loadUs,
-    },
-    'threshold': {
-      'metric': 'schema_import_load_us',
-      'max_exclusive_us': schemaImportLoadSuccess50kMaxUs,
-      'passed': current.loadUs < schemaImportLoadSuccess50kMaxUs,
-    },
-    'improvement': {
-      'absolute_us': legacyTotalUs - current.loadUs,
-      'relative_percent':
-          ((legacyTotalUs - current.loadUs) / legacyTotalUs * 1000).round() /
-          10,
-    },
-  };
-}
-
-Map<String, Object?>? _findReportCase(
-  Map<String, Object?> report, {
-  required String id,
-  required String scale,
-}) {
-  final cases = report['cases'];
-  if (cases is! List<Object?>) {
-    return null;
-  }
-  for (final benchmarkCase in cases.whereType<Map<String, Object?>>()) {
-    if (benchmarkCase['id'] == id && benchmarkCase['scale'] == scale) {
-      return benchmarkCase;
-    }
-  }
-
-  return null;
-}
-
-Map<String, Object?>? _findSourceCase(
-  _HistorySource source, {
-  required String id,
-  required String scale,
-}) {
-  for (final benchmarkCase in source.cases) {
-    if (benchmarkCase['id'] == id && benchmarkCase['scale'] == scale) {
-      return benchmarkCase;
-    }
-  }
-
-  return null;
-}
-
-final class _LegacyLoadBridge {
-  const _LegacyLoadBridge({
-    required this.source,
-    required this.decodeUs,
-    required this.loadDocumentUs,
-  });
-
-  final String source;
-  final int decodeUs;
-  final int loadDocumentUs;
-}
-
-final class _CurrentSchemaImportLoadBridge {
-  const _CurrentSchemaImportLoadBridge({
-    required this.source,
-    required this.loadUs,
-  });
-
-  final String source;
-  final int loadUs;
 }
 
 Map<String, Object?> _deviceJson(

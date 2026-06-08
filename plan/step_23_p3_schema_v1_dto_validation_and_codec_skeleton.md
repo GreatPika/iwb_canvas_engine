@@ -67,8 +67,8 @@ the change, not target-state requirements.
   hot-path allocation constraints, and public sanitized exception projection.
 - `docs/verification/guardrail_design_patterns.md` already maps the P3 guardrail
   IDs to allowed guardrail patterns.
-- `docs/diagrams/dfd_schema_v1_decode_encode.mmd` and
-  `docs/diagrams/seq_schema_v1_decode_encode_order.mmd` show codec failures
+- `docs/diagrams/dfd_schema_v1_import_encode.mmd` and
+  `docs/diagrams/seq_schema_v1_import_encode_order.mmd` show codec failures
   flowing from `CodecBoundary` to `DiagnosticsHub` before public
   `CanvasDataException` projection.
 - `docs/diagrams/dfd_diagnostics_error_projection.mmd` is listed by the P3

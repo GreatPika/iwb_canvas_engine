@@ -153,20 +153,20 @@ Current generated outputs:
 - Related sections: `section_07_resource_lifecycle`
 - Graph view source: `none`
 
-## dfd_schema_v1_decode_encode
+## dfd_schema_v1_import_encode
 
 - Kind: `data_flow`
 - Classification: `semantic`
-- File: `docs/diagrams/dfd_schema_v1_decode_encode.mmd`
+- File: `docs/diagrams/dfd_schema_v1_import_encode.mmd`
 - Related phases: `P3`, `P14`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
 - Graph view source: `none`
 
-## seq_schema_v1_decode_encode_order
+## seq_schema_v1_import_encode_order
 
 - Kind: `sequence`
 - Classification: `semantic`
-- File: `docs/diagrams/seq_schema_v1_decode_encode_order.mmd`
+- File: `docs/diagrams/seq_schema_v1_import_encode_order.mmd`
 - Related phases: `P3`, `P14`
 - Related sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`
 - Graph view source: `none`

@@ -20,8 +20,8 @@ Related donors:
 - `codec_scene_codec_flow`
 - `codec_validation_path_surface`
 Related diagrams:
-- `dfd_schema_v1_decode_encode`
-- `seq_schema_v1_decode_encode_order`
+- `dfd_schema_v1_import_encode`
+- `seq_schema_v1_import_encode_order`
 Required tests:
 - `test.codec.decode_encode_no_runtime_side_effects`
 - `test.codec.schema_v1.canonical_encode_roundtrip`

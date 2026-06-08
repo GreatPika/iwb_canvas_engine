@@ -323,7 +323,9 @@ There is no public `CanvasRuntime.generateInteractionRequestId()`. The engine
 generates interaction request ids for emitted interaction requests; application
 code stores the id from the request and passes it back to guarded command seams.
 
-Generated ids are unique within the current runtime. `loadDocument` resets id generators so that new generated ids do not collide with loaded ids.
+Generated ids are unique within the current runtime.
+`loadDocumentFromJson` resets id generators so that new generated ids do not
+collide with loaded ids.
 
 ### 4.3 Field update patch semantics
 
@@ -1470,7 +1472,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
 - CanvasDocument, schema v1 data, resource state, selection state, document
   revisions, and preview revisions do not persist or reconstruct the timestamp
   cursor;
-- no-op, stale rejection, rollback, cancel, loadDocument, and dispose stream
+- no-op, stale rejection, rollback, cancel, `loadDocumentFromJson`, and dispose stream
   close paths do not create timestamped action or context request outputs.
 - P10 selected-move resolver requests and accepted user actions resolve
   timestamps only after the path is accepted far enough to create that output;
@@ -2115,8 +2117,8 @@ Rules:
 - every pointer preview update creates a small new snapshot or reuses previous unchanged snapshot;
 - no CanvasDocument materialization in preview getters;
 - pending line start is epoch-bound;
-- loadDocument prepared cleanup before install clears preview;
-- loadDocument failure preserves preview;
+- `loadDocumentFromJson` prepared cleanup before install clears preview;
+- `loadDocumentFromJson` failure preserves preview;
 - selected move preview is main-scene preview, not overlay-only preview.
 - migration is by type testing or pattern matching on concrete preview variants.
 ```
@@ -2301,7 +2303,7 @@ Event emission matrix:
 | eraser commit | yes if removed | `erase` | `CanvasEraseActionPayload` |
 | guarded text edit changed commit | yes | `editText` | `CanvasTextEditActionPayload` |
 | guarded text edit stale/no-op commit | no | — | — |
-| loadDocument | no | — | — |
+| loadDocumentFromJson | no | — | — |
 | set camera/background/grid/palette | no | — | — |
 | markResourceDirty | no | — | — |
 
@@ -2414,7 +2416,7 @@ Context-action and text editing model:
 - context menus, app-specific editor decoration, focus policy choices,
   accessibility presentation, and text selection controls remain application
   responsibilities;
-- loadDocument success changes controllerEpoch, which makes existing
+- `loadDocumentFromJson` success changes controllerEpoch, which makes existing
   interaction request ids stale; after runtime disposal, commitTextEdit follows
   the existing mutating public operation rule and throws
   StateError('CanvasRuntime is disposed.').
@@ -2590,7 +2592,7 @@ Resolver rules:
 - not called during preview;
 - not called if movement is zero;
 - not called if selected movable set is empty;
-- not called when gesture is cancelled by loadDocument/modeChange/dispose;
+- not called when gesture is cancelled by `loadDocumentFromJson`/modeChange/dispose;
 - reentrant public mutation from inside resolver throws StateError;
 - returned delta must be finite;
 - CanvasMoveCancel discards move commit and emits no action;

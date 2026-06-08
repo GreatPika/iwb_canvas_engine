@@ -101,7 +101,7 @@ sequenceDiagram
   Frame->>Painter: paint immutable records with resolved image assets or placeholders
   Painter-->>Surface: draw main scene
 
-  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession; painter owns no typed CanvasResourceResolver reference.
+  Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.
   Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.

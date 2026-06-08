@@ -41,7 +41,7 @@ stateDiagram-v2
     CorridorPreview --> CleanupOnly: mode change
     CorridorPreview --> CleanupOnly: interactive=false
     CorridorPreview --> CleanupOnly: loadDocument prepared cleanup before install
-    CorridorPreview --> CorridorPreview: loadDocument failure / preserve if pointer session preserves
+    CorridorPreview --> CorridorPreview: loadDocumentFromJson failure / preserve if pointer session preserves
     CorridorPreview --> CleanupOnly: runtime.dispose()
 
     state "Read-only candidate refresh" as CandidateRefresh

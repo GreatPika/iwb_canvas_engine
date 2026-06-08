@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 // DocumentStoreKernel directly names the DTO, fact, projection, and revision
 // owners it coordinates; hiding one import behind a wrapper would obscure the
 // committed-store boundary instead of simplifying it.
@@ -29,6 +31,15 @@ import 'store_revision_delta.dart';
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
+    _resetIdAdmission();
+  }
+
+  @visibleForTesting
+  DocumentStoreKernel.withCommittedDocumentForTesting(this._document) {
+    _resetIdAdmission();
+  }
+
+  void _resetIdAdmission() {
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
