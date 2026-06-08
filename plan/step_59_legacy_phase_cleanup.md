@@ -279,7 +279,7 @@ Depends On:
 
 Unit 1.
 
-### [ ] Unit 3: No-phase architecture closure migration
+### [x] Unit 3: No-phase architecture closure migration
 
 Owner:
 

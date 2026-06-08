@@ -7,7 +7,6 @@ const architectureGraphPath = 'docs/architecture/architecture_graph.yaml';
 final class ExpectedArchitectureGraph {
   const ExpectedArchitectureGraph({
     required this.schemaVersion,
-    required this.phases,
     required this.coverage,
     required this.nodes,
     required this.edges,
@@ -18,7 +17,6 @@ final class ExpectedArchitectureGraph {
   });
 
   final int schemaVersion;
-  final List<ArchitecturePhase> phases;
   final ArchitectureCoverage coverage;
   final List<ArchitectureNode> nodes;
   final List<ArchitectureEdge> edges;
@@ -26,26 +24,6 @@ final class ExpectedArchitectureGraph {
   final List<ArchitectureForbiddenEdge> forbiddenEdges;
   final List<ArchitectureView> views;
   final List<ArchitectureSourceCoverage> sourceCoverage;
-
-  Set<String> get phaseIds => phases.map((phase) => phase.id).toSet();
-
-  ArchitecturePhase phaseById(String id) {
-    return phases.firstWhere((phase) => phase.id == id);
-  }
-}
-
-final class ArchitecturePhase {
-  const ArchitecturePhase({
-    required this.id,
-    required this.title,
-    required this.status,
-    required this.sourceDocs,
-  });
-
-  final String id;
-  final String title;
-  final String status;
-  final List<SourceDoc> sourceDocs;
 }
 
 final class ArchitectureCoverage {
@@ -96,8 +74,6 @@ final class ArchitectureNode {
     required this.label,
     required this.kind,
     required this.owner,
-    required this.phaseIntroduced,
-    required this.phaseRequiredBy,
     required this.status,
     required this.coverageScope,
     required this.sourceDocs,
@@ -110,8 +86,6 @@ final class ArchitectureNode {
   final String label;
   final String kind;
   final String owner;
-  final String phaseIntroduced;
-  final String phaseRequiredBy;
   final String status;
   final String coverageScope;
   final List<SourceDoc> sourceDocs;
@@ -126,7 +100,6 @@ final class ArchitectureEdge {
     required this.from,
     required this.to,
     required this.kind,
-    required this.phaseRequiredBy,
     required this.status,
     required this.sourceDocs,
     required this.evidence,
@@ -137,7 +110,6 @@ final class ArchitectureEdge {
   final String from;
   final String to;
   final String kind;
-  final String phaseRequiredBy;
   final String status;
   final List<SourceDoc> sourceDocs;
   final List<String> evidence;
@@ -150,7 +122,6 @@ final class ArchitecturePlaceholder {
     required this.node,
     required this.member,
     required this.path,
-    required this.phaseRequiredBy,
     required this.status,
     required this.sourceDocs,
     required this.evidence,
@@ -160,7 +131,6 @@ final class ArchitecturePlaceholder {
   final String node;
   final String member;
   final String path;
-  final String phaseRequiredBy;
   final String status;
   final List<SourceDoc> sourceDocs;
   final List<String> evidence;
@@ -172,7 +142,6 @@ final class ArchitectureForbiddenEdge {
     required this.from,
     required this.to,
     required this.kind,
-    required this.phaseRequiredBy,
     required this.status,
     required this.sourceDocs,
     required this.evidence,
@@ -182,7 +151,6 @@ final class ArchitectureForbiddenEdge {
   final String from;
   final String to;
   final String kind;
-  final String phaseRequiredBy;
   final String status;
   final List<SourceDoc> sourceDocs;
   final List<String> evidence;
@@ -296,11 +264,6 @@ ExpectedArchitectureGraph loadExpectedArchitectureGraph({
 
   return ExpectedArchitectureGraph(
     schemaVersion: _requiredInt(root, 'schemaVersion', path),
-    phases: _requiredMaps(
-      root,
-      'phases',
-      path,
-    ).map((entry) => _phase(entry, '$path/phases')).toList(),
     coverage: _coverage(_requiredMap(root, 'coverage', path), '$path/coverage'),
     nodes: _requiredMaps(
       root,
@@ -359,7 +322,7 @@ final class ArchitectureGraphValidator {
       graph: graph,
       repositoryRoot: repositoryRoot,
     );
-    _PhaseAndCoverageValidator(context).validate();
+    _SchemaAndCoverageValidator(context).validate();
     _GraphEntryValidator(context).validate();
     _SourceCoverageValidator(context).validate();
 
@@ -381,12 +344,6 @@ final class _ArchitectureGraphValidationContext {
   void unique(String id) {
     if (!ids.add(id)) {
       add('graph.id.duplicate', architectureGraphPath, 'duplicate id: $id');
-    }
-  }
-
-  void phaseRef(String id, String owner) {
-    if (!graph.phaseIds.contains(id)) {
-      add('phase.reference', owner, 'unknown phase: $id');
     }
   }
 
@@ -447,8 +404,8 @@ final class _ArchitectureGraphValidationContext {
   }
 }
 
-final class _PhaseAndCoverageValidator {
-  const _PhaseAndCoverageValidator(this.context);
+final class _SchemaAndCoverageValidator {
+  const _SchemaAndCoverageValidator(this.context);
 
   final _ArchitectureGraphValidationContext context;
 
@@ -456,7 +413,6 @@ final class _PhaseAndCoverageValidator {
 
   void validate() {
     _schemaVersion();
-    _phases();
     _coverage();
   }
 
@@ -467,26 +423,6 @@ final class _PhaseAndCoverageValidator {
         architectureGraphPath,
         'schemaVersion must be 1',
       );
-    }
-  }
-
-  void _phases() {
-    final expectedIds = [for (var index = 0; index <= 14; index++) 'P$index'];
-    final actualIds = graph.phases.map((phase) => phase.id).toList();
-    if (!_sameOrderedValues(actualIds, expectedIds)) {
-      context.add(
-        'phase.inventory',
-        architectureGraphPath,
-        'phases must be P0-P14',
-      );
-    }
-    for (final phase in graph.phases) {
-      context.allowed(phase.status, const {
-        'closed',
-        'future',
-        'measurement',
-      }, phase.id);
-      context.sourceDocs(phase.sourceDocs, phase.id);
     }
   }
 
@@ -542,8 +478,6 @@ final class _GraphEntryValidator {
     final coverageScopes = {'publicSurfaces', 'architectureOwners'};
     for (final node in graph.nodes) {
       context.unique(node.id);
-      context.phaseRef(node.phaseIntroduced, node.id);
-      context.phaseRef(node.phaseRequiredBy, node.id);
       context.allowed(node.status, const {
         'required',
         'future',
@@ -580,7 +514,6 @@ final class _GraphEntryValidator {
     final nodeIds = graph.nodes.map((node) => node.id).toSet();
     for (final edge in graph.edges) {
       context.unique(edge.id);
-      context.phaseRef(edge.phaseRequiredBy, edge.id);
       context.nodeRef(edge.from, nodeIds, edge.id);
       context.nodeRef(edge.to, nodeIds, edge.id);
       context.allowed(edge.status, const {'required', 'future'}, edge.id);
@@ -595,11 +528,7 @@ final class _GraphEntryValidator {
     for (final placeholder in graph.placeholders) {
       context.unique(placeholder.id);
       context.nodeRef(placeholder.node, nodeIds, placeholder.id);
-      context.phaseRef(placeholder.phaseRequiredBy, placeholder.id);
-      context.allowed(placeholder.status, const {
-        'forbidden_after_phase',
-        'deferred_until_phase',
-      }, placeholder.id);
+      context.allowed(placeholder.status, const {'forbidden'}, placeholder.id);
       context.requiredText(placeholder.member, '${placeholder.id}.member');
       context.requiredText(placeholder.path, '${placeholder.id}.path');
       context.sourceDocs(placeholder.sourceDocs, placeholder.id);
@@ -614,7 +543,6 @@ final class _GraphEntryValidator {
     final nodeIds = graph.nodes.map((node) => node.id).toSet();
     for (final edge in graph.forbiddenEdges) {
       context.unique(edge.id);
-      context.phaseRef(edge.phaseRequiredBy, edge.id);
       context.nodeRef(edge.from, nodeIds, edge.id);
       context.nodeRef(edge.to, nodeIds, edge.id);
       context.allowed(edge.status, const {'forbidden'}, edge.id);
@@ -628,8 +556,6 @@ final class _GraphEntryValidator {
       context.unique(view.id);
       context.allowed(view.kind, const {
         'expected_full',
-        'expected_current_phase',
-        'expected_future',
         'expected_release_verification',
         'actual_vs_expected_diff',
       }, view.id);
@@ -650,7 +576,7 @@ final class _SourceCoverageValidator {
 
   void _sourceCoverage() {
     final state = _SourceCoverageState(
-      registrySections: _selectedRegistrySections(context.repositoryRoot),
+      registrySections: _sourceCoverageRegistrySections(context.repositoryRoot),
       graphIds: _allGraphIds(context.graph),
     );
     for (final coverage in context.graph.sourceCoverage) {
@@ -769,7 +695,7 @@ Set<String> _allGraphIds(ExpectedArchitectureGraph graph) {
   };
 }
 
-List<_RegistrySection> _selectedRegistrySections(String repositoryRoot) {
+List<_RegistrySection> _sourceCoverageRegistrySections(String repositoryRoot) {
   final file = File('$repositoryRoot/docs/_registry/sections.yaml');
   final yaml = loadYaml(file.readAsStringSync());
   final entries = _normalizeYaml(yaml);
@@ -782,8 +708,7 @@ List<_RegistrySection> _selectedRegistrySections(String repositoryRoot) {
       .where((section) {
         return section.file.startsWith('docs/architecture/') ||
             section.file.startsWith('docs/contracts/') ||
-            section.file.startsWith('docs/verification/') ||
-            section.phases.any(_isKnownPhase);
+            section.file.startsWith('docs/verification/');
       })
       .toList();
 }
@@ -800,37 +725,10 @@ final class _SourceCoverageState {
 }
 
 final class _RegistrySection {
-  const _RegistrySection({
-    required this.id,
-    required this.file,
-    required this.phases,
-  });
+  const _RegistrySection({required this.id, required this.file});
 
   final String id;
   final String file;
-  final List<String> phases;
-}
-
-bool _sameOrderedValues(List<String> actual, List<String> expected) {
-  if (actual.length != expected.length) {
-    return false;
-  }
-  for (var index = 0; index < actual.length; index++) {
-    if (actual[index] != expected[index]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-ArchitecturePhase _phase(Map<String, Object?> yaml, String path) {
-  return ArchitecturePhase(
-    id: _requiredString(yaml, 'id', path),
-    title: _requiredString(yaml, 'title', path),
-    status: _requiredString(yaml, 'status', path),
-    sourceDocs: _sourceDocs(yaml, path),
-  );
 }
 
 ArchitectureCoverage _coverage(Map<String, Object?> yaml, String path) {
@@ -862,8 +760,6 @@ ArchitectureNode _node(Map<String, Object?> yaml, String path) {
     label: _requiredString(yaml, 'label', path),
     kind: _requiredString(yaml, 'kind', path),
     owner: _requiredString(yaml, 'owner', path),
-    phaseIntroduced: _requiredString(yaml, 'phaseIntroduced', path),
-    phaseRequiredBy: _requiredString(yaml, 'phaseRequiredBy', path),
     status: _requiredString(yaml, 'status', path),
     coverageScope: _requiredString(yaml, 'coverageScope', path),
     sourceDocs: _sourceDocs(yaml, path),
@@ -879,7 +775,6 @@ ArchitectureEdge _edge(Map<String, Object?> yaml, String path) {
     from: _requiredString(yaml, 'from', path),
     to: _requiredString(yaml, 'to', path),
     kind: _requiredString(yaml, 'kind', path),
-    phaseRequiredBy: _requiredString(yaml, 'phaseRequiredBy', path),
     status: _requiredString(yaml, 'status', path),
     sourceDocs: _sourceDocs(yaml, path),
     evidence: _requiredStrings(yaml, 'evidence', path),
@@ -893,7 +788,6 @@ ArchitecturePlaceholder _placeholder(Map<String, Object?> yaml, String path) {
     node: _requiredString(yaml, 'node', path),
     member: _requiredString(yaml, 'member', path),
     path: _requiredString(yaml, 'path', path),
-    phaseRequiredBy: _requiredString(yaml, 'phaseRequiredBy', path),
     status: _requiredString(yaml, 'status', path),
     sourceDocs: _sourceDocs(yaml, path),
     evidence: _requiredStrings(yaml, 'evidence', path),
@@ -909,7 +803,6 @@ ArchitectureForbiddenEdge _forbiddenEdge(
     from: _requiredString(yaml, 'from', path),
     to: _requiredString(yaml, 'to', path),
     kind: _requiredString(yaml, 'kind', path),
-    phaseRequiredBy: _requiredString(yaml, 'phaseRequiredBy', path),
     status: _requiredString(yaml, 'status', path),
     sourceDocs: _sourceDocs(yaml, path),
     evidence: _requiredStrings(yaml, 'evidence', path),
@@ -957,7 +850,6 @@ _RegistrySection _registrySection(Map<String, Object?> yaml) {
   return _RegistrySection(
     id: _requiredString(yaml, 'id', 'docs/_registry/sections.yaml'),
     file: _requiredString(yaml, 'file', 'docs/_registry/sections.yaml'),
-    phases: _requiredStrings(yaml, 'phases', 'docs/_registry/sections.yaml'),
   );
 }
 
@@ -1132,10 +1024,4 @@ bool? _optionalBool(Map<String, Object?> yaml, String key) {
     return value as bool?;
   }
   throw FormatException('Expected boolean at $key.');
-}
-
-bool _isKnownPhase(String value) {
-  final match = RegExp(r'^P([0-9]|1[0-4])$').firstMatch(value);
-
-  return match != null;
 }

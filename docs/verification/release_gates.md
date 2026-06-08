@@ -173,16 +173,16 @@ Do not assume:
 
 Release is blocked unless all statements are true:
 
-For phase-closure work, graph-checkable architecture obligations are checked by
-the standalone selected-phase command:
+For current-closure work, graph-checkable architecture obligations are checked by
+the standalone current command:
 
 ```bash
-dart run tool/architecture_graph/check.dart --phase Px
+dart run tool/architecture_graph/check.dart
 ```
 
-A non-zero selected-phase graph-closure result is a blocking release-gate
-failure for that phase. Repair the implementation or resolve the accepted phase
-obligations before continuing dependent phase work.
+A non-zero current graph-closure result is a blocking release-gate
+failure for the current graph. Repair the implementation or update the accepted
+current graph obligations before continuing dependent architecture work.
 
 ```text
 1. P1 public API, external-adapter, legacy-ban, and validation checks are green.

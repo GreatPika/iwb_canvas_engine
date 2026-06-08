@@ -7,14 +7,14 @@ import '../../tool/architecture_graph/src/architecture_graph.dart';
 void main() {
   group('expected graph shape', () {
     _registerGraphValidationTest();
-    _registerPhaseInventoryTest();
+    _registerNoPhaseMetadataTest();
     _registerClosureIdsTest();
     _registerCoverageCategoryTest();
     _registerSourceDocumentTest();
   });
   group('schema diagnostics', () {
     _registerEnumDiagnosticTest();
-    _registerPhaseReferenceDiagnosticTest();
+    _registerViewKindDiagnosticTest();
     _registerDuplicateGraphIdTest();
     _registerMissingSourceDocTest();
     _registerMissingCitationTest();
@@ -29,6 +29,7 @@ void main() {
     _registerEmptyCoverageGraphIdsTest();
     _registerMissingGraphEntryCoverageTest();
     _registerCoverageDispositionTextTest();
+    _registerRegistryPhaseMetadataIgnoredTest();
   });
 }
 
@@ -41,17 +42,21 @@ void _registerGraphValidationTest() {
   });
 }
 
-void _registerPhaseInventoryTest() {
-  test('expected architecture graph models all phases uniformly', () {
+void _registerNoPhaseMetadataTest() {
+  test('expected architecture graph has no phase inventory metadata', () {
     final graph = loadExpectedArchitectureGraph();
+    final source = File(architectureGraphPath).readAsStringSync();
 
-    expect(graph.phaseIds, {
-      for (var index = 0; index <= 14; index++) 'P$index',
-    });
-    expect(graph.phaseById('P14').status, 'measurement');
+    expect(source, isNot(contains('\nphases:')));
+    expect(source, isNot(contains('phaseIntroduced')));
+    expect(source, isNot(contains('phaseRequiredBy')));
     expect(
-      graph.nodes.map((node) => node.phaseRequiredBy).toSet(),
-      contains('P14'),
+      graph.views.map((view) => view.output),
+      isNot(contains('docs/diagrams/generated/current_phase.mmd')),
+    );
+    expect(
+      graph.views.map((view) => view.output),
+      isNot(contains('docs/diagrams/generated/future_target.mmd')),
     );
   });
 }
@@ -66,7 +71,7 @@ void _registerClosureIdsTest() {
     );
     expect(
       graph.placeholders.map((placeholder) => placeholder.id),
-      contains('runtime.canvas_runtime.camera.closed_phase_placeholder'),
+      contains('runtime.canvas_runtime.camera.current_placeholder'),
     );
   });
 }
@@ -90,7 +95,6 @@ void _registerSourceDocumentTest() {
   test('source document paths exist but line evidence is not mandatory', () {
     final graph = loadExpectedArchitectureGraph();
     final sourceDocs = [
-      for (final phase in graph.phases) ...phase.sourceDocs,
       for (final node in graph.nodes) ...node.sourceDocs,
       for (final edge in graph.edges) ...edge.sourceDocs,
       for (final placeholder in graph.placeholders) ...placeholder.sourceDocs,
@@ -108,30 +112,30 @@ void _registerSourceDocumentTest() {
 
 void _registerEnumDiagnosticTest() {
   test('schema validation rejects unsupported enum values', () {
-    final graph = _graphWith(
-      phases: [
-        ArchitecturePhase(
-          id: 'P0',
-          title: 'Invalid',
-          status: 'invalid',
-          sourceDocs: _validGraph().phases.first.sourceDocs,
-        ),
-        ..._validGraph().phases.skip(1),
-      ],
-    );
-
-    expect(_diagnosticIds(graph), contains('enum.value'));
-  });
-}
-
-void _registerPhaseReferenceDiagnosticTest() {
-  test('schema validation rejects unknown phase references', () {
     final graph = _validGraph();
-    final invalidNode = _nodeWith(graph.nodes.first, phaseRequiredBy: 'P99');
+    final invalidNode = _invalidStatusNode(graph.nodes.first);
 
     expect(
       _diagnosticIds(_graphWith(nodes: [invalidNode, ...graph.nodes.skip(1)])),
-      contains('phase.reference'),
+      contains('enum.value'),
+    );
+  });
+}
+
+void _registerViewKindDiagnosticTest() {
+  test('schema validation rejects old selected-phase view kinds', () {
+    final graph = _validGraph();
+    final invalidView = ArchitectureView(
+      id: 'invalid.current_phase',
+      title: 'Invalid selected phase view',
+      kind: 'expected_current_phase',
+      output: 'docs/diagrams/generated/current_phase.mmd',
+      sourceDocs: graph.views.first.sourceDocs,
+    );
+
+    expect(
+      _diagnosticIds(_graphWith(views: [invalidView, ...graph.views])),
+      contains('enum.value'),
     );
   });
 }
@@ -354,6 +358,27 @@ void _registerCoverageDispositionTextTest() {
   );
 }
 
+void _registerRegistryPhaseMetadataIgnoredTest() {
+  test('source coverage selection ignores registry phase metadata', () {
+    final repository = Directory.systemTemp.createTempSync(
+      'architecture_graph_registry_',
+    );
+    try {
+      _writeSourceCoverageRegistryFixture(repository);
+
+      expect(
+        _diagnosticIds(
+          _minimalSourceCoverageGraph,
+          repositoryRoot: repository.path,
+        ),
+        isNot(contains('source_coverage.missing_section')),
+      );
+    } finally {
+      repository.deleteSync(recursive: true);
+    }
+  });
+}
+
 ArchitectureSourceCoverage _reasonlessSourceCoverage(
   ExpectedArchitectureGraph graph,
 ) {
@@ -399,39 +424,39 @@ ArchitectureSourceCoverage _sourceCoverageWith(
 
 ExpectedArchitectureGraph _validGraph() => loadExpectedArchitectureGraph();
 
-Set<String> _diagnosticIds(ExpectedArchitectureGraph graph) {
+Set<String> _diagnosticIds(
+  ExpectedArchitectureGraph graph, {
+  String repositoryRoot = '.',
+}) {
   return validateExpectedArchitectureGraph(
     graph,
+    repositoryRoot: repositoryRoot,
   ).map((diagnostic) => diagnostic.id).toSet();
 }
 
 ExpectedArchitectureGraph _graphWith({
-  List<ArchitecturePhase>? phases,
   ArchitectureCoverage? coverage,
   List<ArchitectureNode>? nodes,
+  List<ArchitectureView>? views,
   List<ArchitectureSourceCoverage>? sourceCoverage,
 }) {
   final graph = _validGraph();
 
   return ExpectedArchitectureGraph(
     schemaVersion: graph.schemaVersion,
-    phases: phases ?? graph.phases,
     coverage: coverage ?? graph.coverage,
     nodes: nodes ?? graph.nodes,
     edges: graph.edges,
     placeholders: graph.placeholders,
     forbiddenEdges: graph.forbiddenEdges,
-    views: graph.views,
+    views: views ?? graph.views,
     sourceCoverage: sourceCoverage ?? graph.sourceCoverage,
   );
 }
 
-// This fixture helper keeps schema-case variation local to the test data.
-// ignore: number-of-parameters
 ArchitectureNode _nodeWith(
   ArchitectureNode node, {
   String? id,
-  String? phaseRequiredBy,
   List<SourceDoc>? sourceDocs,
   List<String>? evidence,
 }) {
@@ -440,8 +465,6 @@ ArchitectureNode _nodeWith(
     label: node.label,
     kind: node.kind,
     owner: node.owner,
-    phaseIntroduced: node.phaseIntroduced,
-    phaseRequiredBy: phaseRequiredBy ?? node.phaseRequiredBy,
     status: node.status,
     coverageScope: node.coverageScope,
     sourceDocs: sourceDocs ?? node.sourceDocs,
@@ -450,3 +473,80 @@ ArchitectureNode _nodeWith(
     isolationAllowances: node.isolationAllowances,
   );
 }
+
+ArchitectureNode _invalidStatusNode(ArchitectureNode node) {
+  return ArchitectureNode(
+    id: node.id,
+    label: node.label,
+    kind: node.kind,
+    owner: node.owner,
+    status: 'invalid',
+    coverageScope: node.coverageScope,
+    sourceDocs: node.sourceDocs,
+    evidence: node.evidence,
+    actual: node.actual,
+    isolationAllowances: node.isolationAllowances,
+  );
+}
+
+void _writeSourceCoverageRegistryFixture(Directory repository) {
+  File('${repository.path}/docs/_registry/sections.yaml')
+    ..createSync(recursive: true)
+    ..writeAsStringSync('''
+-
+  id: section_current_architecture
+  file: docs/architecture/current.md
+-
+  id: section_phase_only
+  file: docs/implementation/phase_only.md
+  phases:
+    - P14
+''');
+  File('${repository.path}/docs/architecture/current.md')
+    ..createSync(recursive: true)
+    ..writeAsStringSync('current architecture source\n');
+}
+
+const _minimalSourceCoverageGraph = ExpectedArchitectureGraph(
+  schemaVersion: 1,
+  coverage: ArchitectureCoverage(
+    publicSurfaces: ['lib/iwb_canvas_engine.dart'],
+    architectureOwners: ['lib/src/**'],
+    sensitiveThrows: [
+      SensitiveThrowCoverage(
+        owner: 'test.owner',
+        under: 'lib/src/**',
+        exception: 'StateError',
+      ),
+    ],
+    placeholders: [PlaceholderCoverage(under: 'lib/src/**')],
+    ignored: ['test/**'],
+  ),
+  nodes: [
+    ArchitectureNode(
+      id: 'test.current',
+      label: 'Current test owner',
+      kind: 'test_owner',
+      owner: 'test',
+      status: 'required',
+      coverageScope: 'architectureOwners',
+      sourceDocs: [SourceDoc(path: 'docs/architecture/current.md')],
+      evidence: ['Minimal current graph owner.'],
+      actual: ActualExpectation.empty(),
+      isolationAllowances: [],
+    ),
+  ],
+  edges: [],
+  placeholders: [],
+  forbiddenEdges: [],
+  views: [],
+  sourceCoverage: [
+    ArchitectureSourceCoverage(
+      sectionId: 'section_current_architecture',
+      disposition: 'graph_obligation',
+      graphIds: ['test.current'],
+      reason: null,
+      successorSource: null,
+    ),
+  ],
+);

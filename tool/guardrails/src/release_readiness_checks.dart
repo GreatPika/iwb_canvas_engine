@@ -247,8 +247,8 @@ void _checkRequiredReleaseCommands(
   for (final required in const [
     'dart run tool/bench/run.dart --profile=release',
     _releaseDiffCommand,
-    'dart run tool/architecture_graph/check.dart --phase P14',
-    'dart run tool/architecture_graph/generate_views.dart --phase P14 --check',
+    'dart run tool/architecture_graph/check.dart',
+    'dart run tool/architecture_graph/generate_views.dart --check',
     'dart run tool/guardrails/run.dart',
   ]) {
     if (!runCommands.contains(required)) {

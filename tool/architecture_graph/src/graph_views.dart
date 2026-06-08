@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'actual_graph.dart';
 import 'architecture_graph.dart';
-import 'phase_closure.dart';
+import 'current_closure.dart';
 
 const _edgeKindLabels = {
   'exports': 'exports',
@@ -32,17 +32,12 @@ const _edgeKindLabels = {
 Map<String, String> renderGraphViews({
   required ExpectedArchitectureGraph expected,
   required ActualArchitectureGraph actual,
-  required String selectedPhase,
 }) {
-  final report = checkPhaseClosure(
-    expected: expected,
-    actual: actual,
-    selectedPhase: selectedPhase,
-  );
+  final report = checkArchitectureClosure(expected: expected, actual: actual);
 
   return {
     for (final view in expected.views)
-      view.output: _renderView(view, expected, report, selectedPhase),
+      view.output: _renderView(view, expected, report),
   };
 }
 
@@ -60,6 +55,14 @@ List<String> writeGraphViews({
       file.writeAsStringSync(entry.value);
     }
   }
+  for (final path in _orphanGeneratedViewPaths(
+    views: views,
+    repositoryRoot: repositoryRoot,
+  )) {
+    final file = File('$repositoryRoot/$path');
+    file.deleteSync();
+    changed.add(path);
+  }
 
   return changed;
 }
@@ -75,50 +78,51 @@ List<String> checkGraphViews({
       stale.add(entry.key);
     }
   }
+  stale.addAll(
+    _orphanGeneratedViewPaths(views: views, repositoryRoot: repositoryRoot),
+  );
+
+  return stale;
+}
+
+List<String> _orphanGeneratedViewPaths({
+  required Map<String, String> views,
+  required String repositoryRoot,
+}) {
   final generatedDirectory = Directory(
     '$repositoryRoot/docs/diagrams/generated',
   );
-  if (generatedDirectory.existsSync()) {
-    for (final file
-        in generatedDirectory.listSync(recursive: true).whereType<File>()) {
-      final path = _relativePath(file.path, repositoryRoot);
-      if (path.endsWith('.mmd') && !views.containsKey(path)) {
-        stale.add(path);
-      }
+  if (!generatedDirectory.existsSync()) {
+    return const [];
+  }
+
+  final paths = <String>[];
+  for (final file
+      in generatedDirectory.listSync(recursive: true).whereType<File>()) {
+    final path = _relativePath(file.path, repositoryRoot);
+    if (path.endsWith('.mmd') && !views.containsKey(path)) {
+      paths.add(path);
     }
   }
 
-  return stale;
+  return paths..sort();
 }
 
 String _renderView(
   ArchitectureView view,
   ExpectedArchitectureGraph expected,
-  PhaseClosureReport report,
-  String selectedPhase,
+  ArchitectureClosureReport report,
 ) {
   return switch (view.kind) {
-    'expected_full' => _renderFullExpectedView(view, expected, selectedPhase),
-    'expected_current_phase' => _renderCurrentPhaseView(
-      view,
-      expected,
-      selectedPhase,
-    ),
-    'expected_future' => _renderFutureExpectedView(
-      view,
-      expected,
-      selectedPhase,
-    ),
+    'expected_full' => _renderFullExpectedView(view, expected),
     'expected_release_verification' => _renderReleaseVerificationView(
       view,
       expected,
-      selectedPhase,
     ),
     'actual_vs_expected_diff' => _renderDiffView(
       title: view.title,
       expected: expected,
       report: report,
-      selectedPhase: selectedPhase,
     ),
     _ => throw UnsupportedError('Unsupported graph view kind: ${view.kind}'),
   };
@@ -127,7 +131,6 @@ String _renderView(
 String _renderFullExpectedView(
   ArchitectureView view,
   ExpectedArchitectureGraph expected,
-  String selectedPhase,
 ) {
   return _renderExpectedGraphView(
     _ExpectedViewRequest(
@@ -135,50 +138,6 @@ String _renderFullExpectedView(
       title: view.title,
       nodes: _includedNodes(expected.nodes, view),
       edges: expected.edges,
-      selectedPhase: selectedPhase,
-      enforceConnectivity: true,
-    ),
-  );
-}
-
-String _renderCurrentPhaseView(
-  ArchitectureView view,
-  ExpectedArchitectureGraph expected,
-  String selectedPhase,
-) {
-  return _renderExpectedGraphView(
-    _ExpectedViewRequest(
-      viewId: view.id,
-      title: view.title,
-      nodes: _includedNodes(
-        expected.nodes,
-        view,
-      ).where(_isRequiredBy(selectedPhase)).toList(),
-      edges: _edgesBeforeOrAt(expected.edges, selectedPhase),
-      selectedPhase: selectedPhase,
-      enforceConnectivity: false,
-    ),
-  );
-}
-
-String _renderFutureExpectedView(
-  ArchitectureView view,
-  ExpectedArchitectureGraph expected,
-  String selectedPhase,
-) {
-  final futureEdges = _futureEdges(expected.edges, selectedPhase);
-
-  return _renderExpectedGraphView(
-    _ExpectedViewRequest(
-      viewId: view.id,
-      title: view.title,
-      nodes: _futureNodesWithEdgeEndpoints(
-        _includedNodes(expected.nodes, view),
-        futureEdges,
-        selectedPhase,
-      ),
-      edges: futureEdges,
-      selectedPhase: selectedPhase,
       enforceConnectivity: true,
     ),
   );
@@ -187,7 +146,6 @@ String _renderFutureExpectedView(
 String _renderReleaseVerificationView(
   ArchitectureView view,
   ExpectedArchitectureGraph expected,
-  String selectedPhase,
 ) {
   return _renderExpectedGraphView(
     _ExpectedViewRequest(
@@ -200,7 +158,6 @@ String _renderReleaseVerificationView(
       edges: expected.edges
           .where((edge) => edge.status == 'measurement')
           .toList(),
-      selectedPhase: selectedPhase,
       enforceConnectivity: true,
     ),
   );
@@ -214,11 +171,7 @@ String _renderExpectedGraphView(_ExpectedViewRequest request) {
       edges: request.edges,
     );
   }
-  final buffer = _header(
-    request.title,
-    request.selectedPhase,
-    note: _expectedViewNote(request.viewId),
-  );
+  final buffer = _header(request.title);
   _writeExpectedNodes(buffer, request.nodes);
   _writeExpectedEdges(buffer, request.nodes, request.edges);
 
@@ -231,7 +184,6 @@ final class _ExpectedViewRequest {
     required this.title,
     required this.nodes,
     required this.edges,
-    required this.selectedPhase,
     required this.enforceConnectivity,
   });
 
@@ -239,15 +191,12 @@ final class _ExpectedViewRequest {
   final String title;
   final List<ArchitectureNode> nodes;
   final List<ArchitectureEdge> edges;
-  final String selectedPhase;
   final bool enforceConnectivity;
 }
 
 void _writeExpectedNodes(StringBuffer buffer, List<ArchitectureNode> nodes) {
   for (final node in _sortedNodes(nodes)) {
-    buffer.writeln(
-      '  ${_mermaidId(node.id)}["${_label(node.label, node.phaseRequiredBy)}"]',
-    );
+    buffer.writeln('  ${_mermaidId(node.id)}["${_label(node.label)}"]');
   }
 }
 
@@ -277,52 +226,6 @@ List<ArchitectureNode> _includedNodes(
       .toList(growable: false);
 }
 
-bool Function(ArchitectureNode) _isRequiredBy(String selectedPhase) {
-  return (node) =>
-      _phaseIndex(node.phaseRequiredBy) <= _phaseIndex(selectedPhase);
-}
-
-List<ArchitectureNode> _futureNodesWithEdgeEndpoints(
-  List<ArchitectureNode> nodes,
-  List<ArchitectureEdge> futureEdges,
-  String selectedPhase,
-) {
-  final endpointIds = {
-    for (final edge in futureEdges) edge.from,
-    for (final edge in futureEdges) edge.to,
-  };
-
-  return nodes.where((node) {
-    return _phaseIndex(node.phaseRequiredBy) > _phaseIndex(selectedPhase) ||
-        endpointIds.contains(node.id);
-  }).toList();
-}
-
-List<ArchitectureNode> _activeNodes(
-  List<ArchitectureNode> nodes,
-  String selectedPhase,
-) {
-  return nodes.where(_isRequiredBy(selectedPhase)).toList();
-}
-
-List<ArchitectureEdge> _edgesBeforeOrAt(
-  List<ArchitectureEdge> edges,
-  String selectedPhase,
-) {
-  return edges.where((edge) {
-    return _phaseIndex(edge.phaseRequiredBy) <= _phaseIndex(selectedPhase);
-  }).toList();
-}
-
-List<ArchitectureEdge> _futureEdges(
-  List<ArchitectureEdge> edges,
-  String selectedPhase,
-) {
-  return edges.where((edge) {
-    return _phaseIndex(edge.phaseRequiredBy) > _phaseIndex(selectedPhase);
-  }).toList();
-}
-
 List<ArchitectureNode> _sortedNodes(List<ArchitectureNode> nodes) {
   return nodes.toList()..sort((left, right) => left.id.compareTo(right.id));
 }
@@ -331,8 +234,8 @@ List<ArchitectureEdge> _sortedEdges(List<ArchitectureEdge> edges) {
   return edges.toList()..sort((left, right) => left.id.compareTo(right.id));
 }
 
-List<PhaseClosureViolation> _sortedViolations(
-  List<PhaseClosureViolation> violations,
+List<ArchitectureClosureViolation> _sortedViolations(
+  List<ArchitectureClosureViolation> violations,
 ) {
   return violations.toList()
     ..sort((left, right) => left.graphId.compareTo(right.graphId));
@@ -376,21 +279,19 @@ bool _allowsIsolation(ArchitectureNode node, String viewId) {
 String _renderDiffView({
   required String title,
   required ExpectedArchitectureGraph expected,
-  required PhaseClosureReport report,
-  required String selectedPhase,
+  required ArchitectureClosureReport report,
 }) {
   final violationIds = report.violations
       .map((violation) => violation.graphId)
       .toSet();
-  final buffer = _header(title, selectedPhase);
-  _writeDiffNodes(buffer, expected.nodes, violationIds, selectedPhase);
+  final buffer = _header(title);
+  _writeDiffNodes(buffer, expected.nodes, violationIds);
   final linkStyles = <String>[];
   _writeDiffEdges(
     _DiffEdgeWriteRequest(
       buffer: buffer,
       edges: expected.edges,
       violationIds: violationIds,
-      selectedPhase: selectedPhase,
       linkStyles: linkStyles,
     ),
   );
@@ -404,21 +305,18 @@ void _writeDiffNodes(
   StringBuffer buffer,
   List<ArchitectureNode> nodes,
   Set<String> violationIds,
-  String selectedPhase,
 ) {
-  for (final node in _sortedNodes(_activeNodes(nodes, selectedPhase))) {
+  for (final node in _sortedNodes(nodes)) {
     final className = violationIds.contains(node.id) ? 'violation' : 'ok';
     buffer.writeln(
-      '  ${_mermaidId(node.id)}["${_label(node.label, node.phaseRequiredBy)}"]:::$className',
+      '  ${_mermaidId(node.id)}["${_label(node.label)}"]:::$className',
     );
   }
 }
 
 void _writeDiffEdges(_DiffEdgeWriteRequest request) {
   var linkIndex = 0;
-  for (final edge in _sortedEdges(
-    _edgesBeforeOrAt(request.edges, request.selectedPhase),
-  )) {
+  for (final edge in _sortedEdges(request.edges)) {
     request.buffer.writeln(
       '  ${_mermaidId(edge.from)} -->|${_edgeLabel(edge)}| ${_mermaidId(edge.to)}',
     );
@@ -436,20 +334,18 @@ final class _DiffEdgeWriteRequest {
     required this.buffer,
     required this.edges,
     required this.violationIds,
-    required this.selectedPhase,
     required this.linkStyles,
   });
 
   final StringBuffer buffer;
   final List<ArchitectureEdge> edges;
   final Set<String> violationIds;
-  final String selectedPhase;
   final List<String> linkStyles;
 }
 
 void _writeViolationNodes(
   StringBuffer buffer,
-  List<PhaseClosureViolation> violations,
+  List<ArchitectureClosureViolation> violations,
   ExpectedArchitectureGraph expected,
 ) {
   for (final violation in _sortedViolations(violations)) {
@@ -472,40 +368,19 @@ void _writeDiffClassDefs(StringBuffer buffer, List<String> linkStyles) {
   }
 }
 
-String? _expectedViewNote(String viewId) {
-  return switch (viewId) {
-    'full_architecture' =>
-      'Includes current architecture plus all planned future and measurement-scope graph nodes. Use current_phase.mmd for implemented selected-phase state.',
-    'future_target' =>
-      'Shows future planned edges after the selected phase plus their endpoint nodes for context.',
-    _ => null,
-  };
-}
-
-StringBuffer _header(String title, String selectedPhase, {String? note}) {
+StringBuffer _header(String title) {
   final buffer = StringBuffer()
     ..writeln('%% GENERATED FILE. Do not edit by hand.')
     ..writeln('%% Source: docs/architecture/architecture_graph.yaml')
-    ..writeln('%% View: $title')
-    ..writeln('%% Selected phase: $selectedPhase');
-  if (note != null) {
-    buffer.writeln('%% Note: $note');
-  }
+    ..writeln('%% View: $title');
 
   return buffer..writeln('flowchart LR');
 }
 
-String _label(String label, String phaseRequiredBy) {
-  return '${_escape(label)}<br/>required by $phaseRequiredBy';
-}
+String _label(String label) => _escape(label);
 
 String _edgeLabel(ArchitectureEdge edge) {
-  final label = _edgeKindLabel(edge.kind);
-  if (edge.status == 'future') {
-    return 'planned $label by ${edge.phaseRequiredBy}';
-  }
-
-  return '$label by ${edge.phaseRequiredBy}';
+  return _edgeKindLabel(edge.kind);
 }
 
 String _edgeKindLabel(String kind) {
@@ -517,17 +392,15 @@ String _violationLabel(String status) {
     'missing_required_node' => 'Missing required box',
     'missing_required_edge' => 'Missing required link',
     'forbidden_edge' => 'Forbidden link exists',
-    'closed_phase_placeholder' => 'Old placeholder remains',
-    'expired_placeholder_deferral' => 'Placeholder is overdue',
+    'current_placeholder' => 'Placeholder remains',
     'untracked_placeholder' => 'Untracked placeholder',
     'unknown_architecture_seam' => 'Unknown architecture box',
-    'unknown_phase' => 'Unknown phase',
     _ => status.replaceAll('_', ' '),
   };
 }
 
 List<String> _violationTargets(
-  PhaseClosureViolation violation,
+  ArchitectureClosureViolation violation,
   ExpectedArchitectureGraph expected,
 ) {
   for (final edge in expected.edges) {
@@ -553,10 +426,6 @@ String _escape(String value) {
 
 String _mermaidId(String id) {
   return id.replaceAll(RegExp('[^A-Za-z0-9_]'), '_');
-}
-
-int _phaseIndex(String phase) {
-  return int.tryParse(phase.replaceFirst('P', '')) ?? -1;
 }
 
 String _relativePath(String path, String repositoryRoot) {

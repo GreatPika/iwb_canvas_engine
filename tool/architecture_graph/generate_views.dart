@@ -5,18 +5,17 @@ import 'src/architecture_graph.dart';
 import 'src/graph_views.dart';
 
 void main(List<String> arguments) {
-  final phase = _phaseArgument(arguments);
-  if (phase == null) {
+  if (!_validArguments(arguments)) {
     _failUsage();
     return;
   }
 
   final expected = loadExpectedArchitectureGraph();
-  if (!_validateExpected(expected) || !_validatePhase(expected, phase)) {
+  if (!_validateExpected(expected)) {
     return;
   }
 
-  final views = _buildViews(expected, phase);
+  final views = _buildViews(expected);
 
   if (arguments.contains('--check')) {
     _checkViews(views);
@@ -26,23 +25,14 @@ void main(List<String> arguments) {
   _writeViews(views);
 }
 
-String? _phaseArgument(List<String> arguments) {
-  for (var index = 0; index < arguments.length; index++) {
-    final argument = arguments[index];
-    if (argument == '--phase' && index + 1 < arguments.length) {
-      return arguments[index + 1];
-    }
-    if (argument.startsWith('--phase=')) {
-      return argument.replaceFirst('--phase=', '');
-    }
-  }
-
-  return null;
+bool _validArguments(List<String> arguments) {
+  return arguments.isEmpty ||
+      (arguments.length == 1 && arguments.single == '--check');
 }
 
 void _failUsage() {
   stderr.writeln(
-    'Usage: dart run tool/architecture_graph/generate_views.dart --phase Px [--check]',
+    'Usage: dart run tool/architecture_graph/generate_views.dart [--check]',
   );
   exitCode = 64;
 }
@@ -61,24 +51,10 @@ bool _validateExpected(ExpectedArchitectureGraph expected) {
   return false;
 }
 
-bool _validatePhase(ExpectedArchitectureGraph expected, String phase) {
-  if (expected.phaseIds.contains(phase)) {
-    return true;
-  }
-  stderr.writeln('Unknown architecture graph phase: $phase');
-  exitCode = 64;
-
-  return false;
-}
-
-Map<String, String> _buildViews(
-  ExpectedArchitectureGraph expected,
-  String phase,
-) {
+Map<String, String> _buildViews(ExpectedArchitectureGraph expected) {
   return renderGraphViews(
     expected: expected,
     actual: extractActualArchitectureGraph(expectedGraph: expected),
-    selectedPhase: phase,
   );
 }
 

@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 
 import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
-import '../../tool/architecture_graph/src/phase_closure.dart';
+import '../../tool/architecture_graph/src/current_closure.dart';
 
 void main() {
   group('required obligations', () {
@@ -29,7 +29,7 @@ void main() {
   group('architecture inventory', () {
     _registerForbiddenEdgeTest();
     _registerUnknownSeamTest();
-    _registerP10SourceRepairInventoryTest();
+    _registerCurrentSourceRepairInventoryTest();
     _registerProductionClosureTest();
   });
 }
@@ -87,11 +87,10 @@ final class PaintAssetBindingService {
 }
 
 void _registerMissingRequiredObligationTest() {
-  test('fails missing required nodes and edges for the selected phase', () {
-    final report = checkPhaseClosure(
+  test('fails missing required nodes and edges for the current closure', () {
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(report), contains('fixture.required_node'));
@@ -100,11 +99,10 @@ void _registerMissingRequiredObligationTest() {
 }
 
 void _registerFutureObligationTest() {
-  test('requires future obligations when selected phase reaches them', () {
-    final report = checkPhaseClosure(
+  test('requires all listed obligations in current closure', () {
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(),
-      selectedPhase: 'P5',
     );
 
     expect(_ids(report), contains('fixture.future_edge'));
@@ -113,8 +111,8 @@ void _registerFutureObligationTest() {
 }
 
 void _registerClosedPlaceholderTest() {
-  test('fails closed-phase and untracked public placeholders', () {
-    final report = checkPhaseClosure(
+  test('fails tracked and untracked public placeholders', () {
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         placeholders: const [
@@ -132,12 +130,11 @@ void _registerClosedPlaceholderTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(
       _ids(report),
-      contains('runtime.canvas_runtime.camera.closed_phase_placeholder'),
+      contains('runtime.canvas_runtime.camera.current_placeholder'),
     );
     expect(
       _ids(report),
@@ -147,8 +144,8 @@ void _registerClosedPlaceholderTest() {
 }
 
 void _registerFuturePlaceholderTest() {
-  test('allows future placeholders and deferred edges before their phase', () {
-    final report = checkPhaseClosure(
+  test('fails deferred public placeholders in current closure', () {
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -174,17 +171,16 @@ void _registerFuturePlaceholderTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
-    expect(_ids(report), isNot(contains('fixture.future_edge')));
-    expect(_ids(report), isNot(contains('fixture.future_placeholder')));
+    expect(_ids(report), contains('fixture.future_edge'));
+    expect(_ids(report), contains('fixture.current_placeholder'));
   });
 }
 
 void _registerForbiddenEdgeTest() {
-  test('fails forbidden edges when selected phase is closed', () {
-    final report = checkPhaseClosure(
+  test('fails forbidden edges when current closure is closed', () {
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         imports: const [
@@ -195,7 +191,6 @@ void _registerForbiddenEdgeTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(report), contains('fixture.forbidden_runtime_import'));
@@ -204,7 +199,7 @@ void _registerForbiddenEdgeTest() {
 
 void _registerUnknownSeamTest() {
   test('fails unknown architecture seams inside declared coverage', () {
-    final report = checkPhaseClosure(
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -216,7 +211,6 @@ void _registerUnknownSeamTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(report), contains('architecture.unknown.ExtraRuntimeSeam'));
@@ -224,47 +218,48 @@ void _registerUnknownSeamTest() {
 }
 
 void _registerProductionClosureTest() {
-  test('production graph closes selected P6 obligations', () {
+  test('production graph closes current obligations', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
-    final report = checkPhaseClosure(
-      expected: expected,
-      actual: actual,
-      selectedPhase: 'P6',
-    );
+    final report = checkArchitectureClosure(expected: expected, actual: actual);
 
     expect(_ids(report), isEmpty);
   });
 }
 
-void _registerP10SourceRepairInventoryTest() {
-  test(
-    'P10 source repair splits facade placeholders and diagnostics scope',
-    () {
-      final expected = loadExpectedArchitectureGraph();
-      expect(expected.phaseIds, contains('P12'));
-      _expectP10FacadePlaceholdersRetired(expected.placeholders);
-      _expectP10FacadeRoutesDocumentLaterOwners(expected.edges);
-      _expectP10DiagnosticsScope(expected.edges);
-    },
-  );
+void _registerCurrentSourceRepairInventoryTest() {
+  test('current graph keeps repaired facade and diagnostics scope', () {
+    final expected = loadExpectedArchitectureGraph();
+
+    expect(
+      expected.edges.map((edge) => edge.id),
+      contains('interaction.engine.reliability_events.report_to_diagnostics'),
+    );
+
+    _expectFacadePlaceholdersRetired(expected.placeholders);
+    _expectFacadeRoutesDocumentCurrentOwners(expected.edges);
+    _expectDiagnosticsScope(expected.edges);
+    _expectDeferredDiagnosticsRoutesAreNotGraphBacked();
+  });
 }
 
-void _expectP10FacadePlaceholdersRetired(
+void _expectFacadePlaceholdersRetired(
   Iterable<ArchitecturePlaceholder> placeholders,
 ) {
   final byId = {for (final placeholder in placeholders) placeholder.id};
 
-  expect(byId, isNot(contains('api.canvas_runtime.tools.future_placeholder')));
+  expect(byId, isNot(contains('api.canvas_runtime.tools.current_placeholder')));
   expect(
     byId,
     isNot(
-      contains('api.canvas_runtime.context_action_requests.future_placeholder'),
+      contains(
+        'api.canvas_runtime.context_action_requests.current_placeholder',
+      ),
     ),
   );
 }
 
-void _expectP10FacadeRoutesDocumentLaterOwners(
+void _expectFacadeRoutesDocumentCurrentOwners(
   Iterable<ArchitectureEdge> edges,
 ) {
   final byId = {for (final edge in edges) edge.id: edge};
@@ -282,13 +277,18 @@ void _expectP10FacadeRoutesDocumentLaterOwners(
   );
 }
 
-void _expectP10DiagnosticsScope(Iterable<ArchitectureEdge> edges) {
+void _expectDiagnosticsScope(Iterable<ArchitectureEdge> edges) {
   final byId = {for (final edge in edges) edge.id: edge};
 
   expect(
-    byId['geometry.spatial_index.corrupted_rows.report_to_diagnostics']
-        ?.phaseRequiredBy,
-    isNot('P10'),
+    byId,
+    isNot(
+      contains('geometry.spatial_index.corrupted_rows.report_to_diagnostics'),
+    ),
+  );
+  expect(
+    byId,
+    isNot(contains('runtime.root.observer_failures.report_to_diagnostics')),
   );
   expect(
     byId['interaction.engine.reliability_events.report_to_diagnostics']?.status,
@@ -302,9 +302,27 @@ void _expectP10DiagnosticsScope(Iterable<ArchitectureEdge> edges) {
   );
 }
 
+void _expectDeferredDiagnosticsRoutesAreNotGraphBacked() {
+  final currentContracts = [
+    File('docs/contracts/diagnostics.md').readAsStringSync(),
+    File('docs/contracts/edit_kernel.md').readAsStringSync(),
+  ].join('\n');
+
+  expect(
+    currentContracts,
+    isNot(
+      contains('geometry.spatial_index.corrupted_rows.report_to_diagnostics'),
+    ),
+  );
+  expect(
+    currentContracts,
+    isNot(contains('runtime.root.observer_failures.report_to_diagnostics')),
+  );
+}
+
 void _registerCompositionEvidenceTest() {
   test('passes required non-placeholder edge when evidence exists', () {
-    final report = checkPhaseClosure(
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -325,7 +343,6 @@ void _registerCompositionEvidenceTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(report), isNot(contains('fixture.required_edge')));
@@ -336,7 +353,7 @@ void _registerWrongOwnerCompositionTest() {
   test(
     'does not close an edge with evidence from another class in the owner path',
     () {
-      final report = checkPhaseClosure(
+      final report = checkArchitectureClosure(
         expected: _fixtureGraph(),
         actual: _actualGraph(
           declarations: const [
@@ -363,7 +380,6 @@ void _registerWrongOwnerCompositionTest() {
             ),
           ],
         ),
-        selectedPhase: 'P4',
       );
 
       expect(_ids(report), contains('fixture.required_edge'));
@@ -375,7 +391,7 @@ void _registerWrongOwnerDeclarationTest() {
   test(
     'does not close a required node with declarations from another owner',
     () {
-      final report = checkPhaseClosure(
+      final report = checkArchitectureClosure(
         expected: _fixtureGraph(),
         actual: _actualGraph(
           declarations: const [
@@ -387,7 +403,6 @@ void _registerWrongOwnerDeclarationTest() {
             ),
           ],
         ),
-        selectedPhase: 'P4',
       );
 
       expect(_ids(report), contains('fixture.required_node'));
@@ -397,7 +412,7 @@ void _registerWrongOwnerDeclarationTest() {
 
 void _registerInterfaceEvidenceTest() {
   test('compares implemented interface expectations', () {
-    final missingReport = checkPhaseClosure(
+    final missingReport = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -409,9 +424,8 @@ void _registerInterfaceEvidenceTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
-    final passingReport = checkPhaseClosure(
+    final passingReport = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -431,7 +445,6 @@ void _registerInterfaceEvidenceTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(missingReport), contains('fixture.required_node'));
@@ -441,7 +454,7 @@ void _registerInterfaceEvidenceTest() {
 
 void _registerUnrelatedOwnerCompositionTest() {
   test('does not close an edge with evidence from an unrelated owner path', () {
-    final report = checkPhaseClosure(
+    final report = checkArchitectureClosure(
       expected: _fixtureGraph(),
       actual: _actualGraph(
         declarations: const [
@@ -462,7 +475,6 @@ void _registerUnrelatedOwnerCompositionTest() {
           ),
         ],
       ),
-      selectedPhase: 'P4',
     );
 
     expect(_ids(report), contains('fixture.required_edge'));
@@ -480,30 +492,28 @@ void _registerDiagnosticRouteTest() {
   });
 }
 
-PhaseClosureReport _missingDiagnosticRouteReport(
+ArchitectureClosureReport _missingDiagnosticRouteReport(
   ExpectedArchitectureGraph expected,
 ) {
-  return checkPhaseClosure(
+  return checkArchitectureClosure(
     expected: expected,
     actual: _actualGraph(
       exceptionThrows: const [_diagnosticExceptionThrow],
       delegations: const [_diagnosticRouteDelegation],
     ),
-    selectedPhase: 'P4',
   );
 }
 
-PhaseClosureReport _routedDiagnosticRouteReport(
+ArchitectureClosureReport _routedDiagnosticRouteReport(
   ExpectedArchitectureGraph expected,
 ) {
-  return checkPhaseClosure(
+  return checkArchitectureClosure(
     expected: expected,
     actual: _actualGraph(
       exceptionThrows: const [_diagnosticExceptionThrow],
       delegations: const [_diagnosticRouteDelegation],
       memberCalls: const [_diagnosticRouteCall],
     ),
-    selectedPhase: 'P4',
   );
 }
 
@@ -530,14 +540,13 @@ const _diagnosticRouteCall = MemberCallFact(
   target: 'recordFixtureRoute',
 );
 
-Set<String> _ids(PhaseClosureReport report) {
+Set<String> _ids(ArchitectureClosureReport report) {
   return report.violations.map((violation) => violation.graphId).toSet();
 }
 
 ExpectedArchitectureGraph _fixtureGraph() {
   return ExpectedArchitectureGraph(
     schemaVersion: 1,
-    phases: _fixturePhases(),
     coverage: _fixtureCoverage(),
     nodes: _fixtureNodes(),
     edges: _fixtureEdges(),
@@ -546,18 +555,6 @@ ExpectedArchitectureGraph _fixtureGraph() {
     views: const [],
     sourceCoverage: const [],
   );
-}
-
-List<ArchitecturePhase> _fixturePhases() {
-  return [
-    for (var index = 0; index <= 14; index++)
-      ArchitecturePhase(
-        id: 'P$index',
-        title: 'P$index',
-        status: index <= 4 ? 'closed' : 'future',
-        sourceDocs: const [SourceDoc(path: 'docs/architecture/README.md')],
-      ),
-  ];
 }
 
 ArchitectureCoverage _fixtureCoverage() {
@@ -591,8 +588,6 @@ ArchitectureNode _fixtureRuntimeNode() {
     label: 'Fixture runtime',
     kind: 'runtime_owner',
     owner: 'runtime',
-    phaseIntroduced: 'P4',
-    phaseRequiredBy: 'P4',
     status: 'required',
     coverageScope: 'architectureOwners',
     sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
@@ -610,8 +605,6 @@ ArchitectureNode _fixtureApiNode() {
     label: 'Fixture facade',
     kind: 'facade',
     owner: 'api',
-    phaseIntroduced: 'P4',
-    phaseRequiredBy: 'P4',
     status: 'required',
     coverageScope: 'publicSurfaces',
     sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
@@ -626,8 +619,6 @@ ArchitectureNode _fixtureCodecNode() {
     label: 'Fixture codec',
     kind: 'codec_owner',
     owner: 'codec',
-    phaseIntroduced: 'P3',
-    phaseRequiredBy: 'P3',
     status: 'required',
     coverageScope: 'architectureOwners',
     sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
@@ -639,12 +630,10 @@ ArchitectureNode _fixtureCodecNode() {
 ArchitectureNode _fixtureFutureNode() {
   return const ArchitectureNode(
     id: 'fixture.future_node',
-    label: 'Future owner',
-    kind: 'future_owner',
+    label: 'Current owner',
+    kind: 'current_owner',
     owner: 'runtime',
-    phaseIntroduced: 'P5',
-    phaseRequiredBy: 'P5',
-    status: 'future',
+    status: 'required',
     coverageScope: 'architectureOwners',
     sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
     evidence: ['fixture'],
@@ -659,7 +648,6 @@ List<ArchitectureEdge> _fixtureEdges() {
       from: 'fixture.api',
       to: 'fixture.required_node',
       kind: 'composes',
-      phaseRequiredBy: 'P4',
       status: 'required',
       sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
       evidence: ['fixture'],
@@ -669,9 +657,8 @@ List<ArchitectureEdge> _fixtureEdges() {
       id: 'fixture.future_edge',
       from: 'fixture.api',
       to: 'fixture.required_node',
-      kind: 'future',
-      phaseRequiredBy: 'P5',
-      status: 'future',
+      kind: 'composes',
+      status: 'required',
       sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
       evidence: ['fixture'],
       actual: ActualExpectation(compositionFields: ['FutureRuntime']),
@@ -682,22 +669,20 @@ List<ArchitectureEdge> _fixtureEdges() {
 List<ArchitecturePlaceholder> _fixturePlaceholders() {
   return const [
     ArchitecturePlaceholder(
-      id: 'runtime.canvas_runtime.camera.closed_phase_placeholder',
+      id: 'runtime.canvas_runtime.camera.current_placeholder',
       node: 'fixture.api',
       member: 'FixtureFacade.camera',
       path: 'lib/src/api/facade.dart',
-      phaseRequiredBy: 'P4',
-      status: 'forbidden_after_phase',
+      status: 'forbidden',
       sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
       evidence: ['fixture'],
     ),
     ArchitecturePlaceholder(
-      id: 'fixture.future_placeholder',
+      id: 'fixture.current_placeholder',
       node: 'fixture.api',
       member: 'FixtureFacade.future',
       path: 'lib/src/api/facade.dart',
-      phaseRequiredBy: 'P5',
-      status: 'deferred_until_phase',
+      status: 'forbidden',
       sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
       evidence: ['fixture'],
     ),
@@ -711,7 +696,6 @@ List<ArchitectureForbiddenEdge> _fixtureForbiddenEdges() {
       from: 'fixture.codec',
       to: 'fixture.required_node',
       kind: 'forbidden_import',
-      phaseRequiredBy: 'P4',
       status: 'forbidden',
       sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
       evidence: ['fixture'],
@@ -724,7 +708,6 @@ ExpectedArchitectureGraph _fixtureGraphWithDiagnosticRoute() {
 
   return ExpectedArchitectureGraph(
     schemaVersion: graph.schemaVersion,
-    phases: graph.phases,
     coverage: graph.coverage,
     nodes: graph.nodes,
     edges: [
@@ -734,7 +717,6 @@ ExpectedArchitectureGraph _fixtureGraphWithDiagnosticRoute() {
         from: 'fixture.codec',
         to: 'fixture.required_node',
         kind: 'diagnostic_route',
-        phaseRequiredBy: 'P4',
         status: 'required',
         sourceDocs: [SourceDoc(path: 'docs/architecture/README.md')],
         evidence: ['fixture'],

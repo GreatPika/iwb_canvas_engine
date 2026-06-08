@@ -126,17 +126,17 @@ is a thin dispatcher over existing proof commands, such as Dart tests and
 tool-owned structural checks. It must not become a second test framework or a
 second source of truth for required guardrails.
 
-The phase-aware architecture graph checker is a standalone strict closure
+The current architecture graph checker is a standalone strict closure
 command:
 
 ```bash
-dart run tool/architecture_graph/check.dart --phase Px
+dart run tool/architecture_graph/check.dart
 ```
 
-For selected-phase closure work, this command is the blocking source of truth
-for graph-checkable obligations. A non-zero result means the selected phase has
+For current closure work, this command is the blocking source of truth
+for graph-checkable obligations. A non-zero result means the current closure has
 an open architecture violation that must be repaired, rephased by an accepted
-contract, or explicitly resolved before dependent phase work continues.
+contract, or explicitly resolved before dependent architecture work continues.
 
 The graph extractor is not a general Dart call-graph analyzer. It extracts only
 named graph facts declared in `docs/architecture/architecture_graph.yaml`, such

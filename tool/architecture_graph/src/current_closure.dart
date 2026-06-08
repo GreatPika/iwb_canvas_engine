@@ -36,10 +36,9 @@ const _architectureSeamSuffixes = [
   'Coordinator',
 ];
 
-final class PhaseClosureViolation {
-  const PhaseClosureViolation({
+final class ArchitectureClosureViolation {
+  const ArchitectureClosureViolation({
     required this.graphId,
-    required this.selectedPhase,
     required this.expectedFact,
     required this.actualEvidence,
     required this.path,
@@ -48,7 +47,6 @@ final class PhaseClosureViolation {
   });
 
   final String graphId;
-  final String selectedPhase;
   final String expectedFact;
   final String actualEvidence;
   final String path;
@@ -56,36 +54,27 @@ final class PhaseClosureViolation {
   final String message;
 }
 
-final class PhaseClosureReport {
-  const PhaseClosureReport({
-    required this.selectedPhase,
-    required this.violations,
-  });
+final class ArchitectureClosureReport {
+  const ArchitectureClosureReport({required this.violations});
 
-  final String selectedPhase;
-  final List<PhaseClosureViolation> violations;
+  final List<ArchitectureClosureViolation> violations;
 
   bool get isClosed => violations.isEmpty;
 }
 
-PhaseClosureReport checkPhaseClosure({
+ArchitectureClosureReport checkArchitectureClosure({
   required ExpectedArchitectureGraph expected,
   required ActualArchitectureGraph actual,
-  required String selectedPhase,
 }) {
-  return _PhaseClosureRun(
-    expected: expected,
-    actual: actual,
-    selectedPhase: selectedPhase,
-  ).check();
+  return _ArchitectureClosureRun(expected: expected, actual: actual).check();
 }
 
-String formatPhaseClosureReport(PhaseClosureReport report) {
+String formatArchitectureClosureReport(ArchitectureClosureReport report) {
   if (report.isClosed) {
-    return 'Architecture graph closure passed for ${report.selectedPhase}.';
+    return 'Architecture graph closure passed.';
   }
   final buffer = StringBuffer()
-    ..writeln('Architecture graph closure failed for ${report.selectedPhase}.')
+    ..writeln('Architecture graph closure failed.')
     ..writeln('Violations: ${report.violations.length}');
   for (final violation in report.violations) {
     buffer
@@ -100,50 +89,37 @@ String formatPhaseClosureReport(PhaseClosureReport report) {
   return buffer.toString();
 }
 
-final class _PhaseClosureRun {
-  _PhaseClosureRun({
+final class _ArchitectureClosureRun {
+  _ArchitectureClosureRun({
     required ExpectedArchitectureGraph expected,
     required ActualArchitectureGraph actual,
-    required String selectedPhase,
-  }) : context = _PhaseClosureContext(
+  }) : context = _ArchitectureClosureContext(
          expected: expected,
          actual: actual,
-         selectedPhase: selectedPhase,
        );
 
-  final _PhaseClosureContext context;
+  final _ArchitectureClosureContext context;
 
-  PhaseClosureReport check() {
-    _SelectedPhaseRule(context).check();
+  ArchitectureClosureReport check() {
     _RequiredObligationRule(context).check();
     _ForbiddenEdgeRule(context).check();
     _PlaceholderRule(context).check();
     _UnknownArchitectureDeclarationRule(context).check();
 
-    return PhaseClosureReport(
-      selectedPhase: context.selectedPhase,
-      violations: context.violations,
-    );
+    return ArchitectureClosureReport(violations: context.violations);
   }
 }
 
-final class _PhaseClosureContext {
-  _PhaseClosureContext({
-    required this.expected,
-    required this.actual,
-    required this.selectedPhase,
-  }) : matcher = _ExpectationEvidenceMatcher(
-         expected: expected,
-         actual: actual,
-       );
+final class _ArchitectureClosureContext {
+  _ArchitectureClosureContext({required this.expected, required this.actual})
+    : matcher = _ExpectationEvidenceMatcher(expected: expected, actual: actual);
 
   final ExpectedArchitectureGraph expected;
   final ActualArchitectureGraph actual;
-  final String selectedPhase;
   final _ExpectationEvidenceMatcher matcher;
-  final List<PhaseClosureViolation> violations = [];
+  final List<ArchitectureClosureViolation> violations = [];
 
-  void add(PhaseClosureViolation violation) => violations.add(violation);
+  void add(ArchitectureClosureViolation violation) => violations.add(violation);
 
   ArchitectureNode? node(String id) {
     for (final node in expected.nodes) {
@@ -154,43 +130,12 @@ final class _PhaseClosureContext {
 
     return null;
   }
-
-  bool isActive(String phase) =>
-      _phaseIndex(selectedPhase) >= _phaseIndex(phase);
-
-  bool isRequiredBySelectedPhase(String phase, String status) {
-    return isActive(phase) &&
-        (status == 'required' || status == 'future' || status == 'measurement');
-  }
-}
-
-final class _SelectedPhaseRule {
-  const _SelectedPhaseRule(this.context);
-
-  final _PhaseClosureContext context;
-
-  void check() {
-    if (context.expected.phaseIds.contains(context.selectedPhase)) {
-      return;
-    }
-    context.add(
-      PhaseClosureViolation(
-        graphId: 'phase.selected.unknown',
-        selectedPhase: context.selectedPhase,
-        expectedFact: 'selected phase exists',
-        actualEvidence: context.selectedPhase,
-        path: architectureGraphPath,
-        status: 'unknown_phase',
-        message: 'Selected phase is not declared in architecture_graph.yaml.',
-      ),
-    );
-  }
 }
 
 final class _RequiredObligationRule {
   const _RequiredObligationRule(this.context);
 
-  final _PhaseClosureContext context;
+  final _ArchitectureClosureContext context;
 
   void check() {
     _nodes();
@@ -199,26 +144,18 @@ final class _RequiredObligationRule {
 
   void _nodes() {
     for (final node in context.expected.nodes) {
-      if (!context.isRequiredBySelectedPhase(
-        node.phaseRequiredBy,
-        node.status,
-      )) {
-        continue;
-      }
       final missing = context.matcher.missingForNode(node);
       if (missing.isEmpty) {
         continue;
       }
       context.add(
-        PhaseClosureViolation(
+        ArchitectureClosureViolation(
           graphId: node.id,
-          selectedPhase: context.selectedPhase,
           expectedFact: 'required node ${node.label}',
           actualEvidence: 'missing ${missing.join(', ')}',
           path: node.sourceDocs.first.path,
           status: 'missing_required_node',
-          message:
-              'Required selected-phase architecture node is not implemented.',
+          message: 'Required architecture node is not implemented.',
         ),
       );
     }
@@ -226,26 +163,18 @@ final class _RequiredObligationRule {
 
   void _edges() {
     for (final edge in context.expected.edges) {
-      if (!context.isRequiredBySelectedPhase(
-        edge.phaseRequiredBy,
-        edge.status,
-      )) {
-        continue;
-      }
       final missing = context.matcher.missingForEdge(edge);
       if (missing.isEmpty) {
         continue;
       }
       context.add(
-        PhaseClosureViolation(
+        ArchitectureClosureViolation(
           graphId: edge.id,
-          selectedPhase: context.selectedPhase,
           expectedFact: '${edge.from} ${edge.kind} ${edge.to}',
           actualEvidence: 'missing ${missing.join(', ')}',
           path: edge.sourceDocs.first.path,
           status: 'missing_required_edge',
-          message:
-              'Required selected-phase architecture edge is not implemented.',
+          message: 'Required architecture edge is not implemented.',
         ),
       );
     }
@@ -255,13 +184,10 @@ final class _RequiredObligationRule {
 final class _ForbiddenEdgeRule {
   const _ForbiddenEdgeRule(this.context);
 
-  final _PhaseClosureContext context;
+  final _ArchitectureClosureContext context;
 
   void check() {
     for (final edge in context.expected.forbiddenEdges) {
-      if (!context.isActive(edge.phaseRequiredBy)) {
-        continue;
-      }
       final fromNode = context.node(edge.from);
       final toNode = context.node(edge.to);
       if (fromNode == null || toNode == null) {
@@ -281,14 +207,13 @@ final class _ForbiddenEdgeRule {
           _uriMatchesNode(fact.uri, toNode);
     })) {
       context.add(
-        PhaseClosureViolation(
+        ArchitectureClosureViolation(
           graphId: edge.id,
-          selectedPhase: context.selectedPhase,
           expectedFact: '${edge.from} must not import ${edge.to}',
           actualEvidence: '${fact.path}:${fact.line} imports ${fact.uri}',
           path: fact.path,
           status: 'forbidden_edge',
-          message: 'Forbidden selected-phase dependency is present.',
+          message: 'Forbidden architecture dependency is present.',
         ),
       );
     }
@@ -298,7 +223,7 @@ final class _ForbiddenEdgeRule {
 final class _PlaceholderRule {
   const _PlaceholderRule(this.context);
 
-  final _PhaseClosureContext context;
+  final _ArchitectureClosureContext context;
 
   void check() {
     final expectedByMember = {
@@ -317,9 +242,8 @@ final class _PlaceholderRule {
 
   void _untracked(PlaceholderFact fact) {
     context.add(
-      PhaseClosureViolation(
+      ArchitectureClosureViolation(
         graphId: 'placeholder.untracked.${fact.member}',
-        selectedPhase: context.selectedPhase,
         expectedFact: 'public placeholder has graph-owned deferral',
         actualEvidence: '${fact.path}:${fact.line} throws ${fact.throwType}',
         path: fact.path,
@@ -330,45 +254,21 @@ final class _PlaceholderRule {
   }
 
   void _tracked(ArchitecturePlaceholder placeholder, PlaceholderFact fact) {
-    if (placeholder.status == 'forbidden_after_phase' &&
-        context.isActive(placeholder.phaseRequiredBy)) {
-      _closedPhase(placeholder, fact);
-    }
-    if (placeholder.status == 'deferred_until_phase' &&
-        context.isActive(placeholder.phaseRequiredBy)) {
-      _expiredDeferral(placeholder, fact);
-    }
+    _currentPlaceholder(placeholder, fact);
   }
 
-  void _closedPhase(ArchitecturePlaceholder placeholder, PlaceholderFact fact) {
-    context.add(
-      PhaseClosureViolation(
-        graphId: placeholder.id,
-        selectedPhase: context.selectedPhase,
-        expectedFact:
-            '${placeholder.member} implemented by ${placeholder.phaseRequiredBy}',
-        actualEvidence: '${fact.path}:${fact.line} throws ${fact.throwType}',
-        path: fact.path,
-        status: 'closed_phase_placeholder',
-        message: 'Closed-phase public placeholder remains in production code.',
-      ),
-    );
-  }
-
-  void _expiredDeferral(
+  void _currentPlaceholder(
     ArchitecturePlaceholder placeholder,
     PlaceholderFact fact,
   ) {
     context.add(
-      PhaseClosureViolation(
+      ArchitectureClosureViolation(
         graphId: placeholder.id,
-        selectedPhase: context.selectedPhase,
-        expectedFact:
-            '${placeholder.member} deferred only before ${placeholder.phaseRequiredBy}',
+        expectedFact: '${placeholder.member} implemented in current closure',
         actualEvidence: '${fact.path}:${fact.line} throws ${fact.throwType}',
         path: fact.path,
-        status: 'expired_placeholder_deferral',
-        message: 'Placeholder deferral has expired for the selected phase.',
+        status: 'current_placeholder',
+        message: 'Public placeholder remains in production code.',
       ),
     );
   }
@@ -377,7 +277,7 @@ final class _PlaceholderRule {
 final class _UnknownArchitectureDeclarationRule {
   const _UnknownArchitectureDeclarationRule(this.context);
 
-  final _PhaseClosureContext context;
+  final _ArchitectureClosureContext context;
 
   void check() {
     final expectedDeclarations = {
@@ -388,9 +288,8 @@ final class _UnknownArchitectureDeclarationRule {
         continue;
       }
       context.add(
-        PhaseClosureViolation(
+        ArchitectureClosureViolation(
           graphId: 'architecture.unknown.${fact.name}',
-          selectedPhase: context.selectedPhase,
           expectedFact:
               'architecture declaration is represented in expected graph',
           actualEvidence: '${fact.path}:${fact.line} declares ${fact.name}',
@@ -688,14 +587,6 @@ List<String> _ownerPrefixes(ArchitectureNode node) {
 
 bool _isArchitectureSeamDeclaration(String name) {
   return _architectureSeamSuffixes.any(name.endsWith);
-}
-
-int _phaseIndex(String phase) {
-  if (!phase.startsWith('P')) {
-    return -1;
-  }
-
-  return int.tryParse(phase.replaceFirst('P', '')) ?? -1;
 }
 
 bool _matchesGlob(String path, String pattern) {

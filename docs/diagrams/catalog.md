@@ -9,8 +9,8 @@ subdirectory. Their source of truth is
 `docs/architecture/architecture_graph.yaml`; regenerate or check them with:
 
 ```bash
-dart run tool/architecture_graph/generate_views.dart --phase P14
-dart run tool/architecture_graph/generate_views.dart --phase P14 --check
+dart run tool/architecture_graph/generate_views.dart
+dart run tool/architecture_graph/generate_views.dart --check
 ```
 
 Handwritten sequence, state, C4, lifecycle, and data-flow diagrams remain
@@ -20,20 +20,6 @@ Current generated outputs:
 
 - `generated/full_architecture`
   - File: `docs/diagrams/generated/full_architecture.mmd`
-  - Kind: `architecture_graph_view`
-  - Classification: `generated`
-  - Related phases: `P4`
-  - Related sections: `section_02_architecture_model`
-  - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `generated/current_phase`
-  - File: `docs/diagrams/generated/current_phase.mmd`
-  - Kind: `architecture_graph_view`
-  - Classification: `generated`
-  - Related phases: `P4`
-  - Related sections: `section_02_architecture_model`
-  - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `generated/future_target`
-  - File: `docs/diagrams/generated/future_target.mmd`
   - Kind: `architecture_graph_view`
   - Classification: `generated`
   - Related phases: `P4`

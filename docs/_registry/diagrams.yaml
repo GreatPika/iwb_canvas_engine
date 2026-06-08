@@ -585,26 +585,6 @@
     - section_02_architecture_model
   graph_view_source: docs/architecture/architecture_graph.yaml
 -
-  id: generated/current_phase
-  kind: architecture_graph_view
-  file: docs/diagrams/generated/current_phase.mmd
-  classification: generated
-  related_phases:
-    - P4
-  related_sections:
-    - section_02_architecture_model
-  graph_view_source: docs/architecture/architecture_graph.yaml
--
-  id: generated/future_target
-  kind: architecture_graph_view
-  file: docs/diagrams/generated/future_target.mmd
-  classification: generated
-  related_phases:
-    - P4
-  related_sections:
-    - section_02_architecture_model
-  graph_view_source: docs/architecture/architecture_graph.yaml
--
   id: generated/actual_vs_expected_diff
   kind: architecture_graph_view
   file: docs/diagrams/generated/actual_vs_expected_diff.mmd

@@ -6,8 +6,6 @@ import '../../tool/architecture_graph/src/actual_graph.dart';
 import '../../tool/architecture_graph/src/architecture_graph.dart';
 import '../../tool/architecture_graph/src/graph_views.dart';
 
-const _selectedArchitectureGraphPhase = 'P14';
-
 void main() {
   group('rendered views', () {
     _registerRenderedViewsTest();
@@ -25,100 +23,69 @@ void _registerRenderedViewsTest() {
   test('renders deterministic expected-only and diff graph views', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
-    final first = renderGraphViews(
-      expected: expected,
-      actual: actual,
-      selectedPhase: _selectedArchitectureGraphPhase,
-    );
-    final second = renderGraphViews(
-      expected: expected,
-      actual: actual,
-      selectedPhase: _selectedArchitectureGraphPhase,
-    );
+    final first = renderGraphViews(expected: expected, actual: actual);
+    final second = renderGraphViews(expected: expected, actual: actual);
 
     expect(first, second);
     expect(
       first.keys.toSet(),
       expected.views.map((view) => view.output).toSet(),
     );
-    _expectCurrentPhaseView(first);
-    _expectFutureView(first);
+    _expectCurrentViews(first);
+    _expectRetiredViewsAbsent(first);
     _expectReleaseView(first);
     _expectDiffView(first);
+    _expectNoSelectedPhaseMetadata(first);
   });
 }
 
-void _expectCurrentPhaseView(Map<String, String> views) {
+void _expectCurrentViews(Map<String, String> views) {
   expect(
     views['docs/diagrams/generated/full_architecture.mmd'],
     contains('api_canvas_runtime'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     contains('load_document_pipeline'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     contains('edit_kernel'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
-    contains('public API forwards to by P4'),
+    views['docs/diagrams/generated/full_architecture.mmd'],
+    contains('public API forwards to'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     contains('resource_kernel'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     contains('eraser_context_request'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     contains('flutter_surface'),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     isNot(contains(r'\n')),
   );
   expect(
-    views['docs/diagrams/generated/current_phase.mmd'],
+    views['docs/diagrams/generated/full_architecture.mmd'],
     isNot(contains('facade_port P4')),
   );
 }
 
-void _expectFutureView(Map<String, String> views) {
+void _expectRetiredViewsAbsent(Map<String, String> views) {
   expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('planned reports errors to by P14')),
+    views.keys,
+    isNot(contains('docs/diagrams/generated/current_phase.mmd')),
   );
   expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('flutter_surface')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('planned drives public runtime ports by P13')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('store_document_kernel')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('resource_kernel')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('eraser_context_request')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('draw_tools')),
-  );
-  expect(
-    views['docs/diagrams/generated/future_target.mmd'],
-    isNot(contains('release_measurement')),
+    views.keys,
+    isNot(contains('docs/diagrams/generated/future_target.mmd')),
   );
 }
 
@@ -148,11 +115,7 @@ void _registerCheckedInViewsTest() {
   test('checked-in generated graph views are current', () {
     final expected = loadExpectedArchitectureGraph();
     final actual = extractActualArchitectureGraph(expectedGraph: expected);
-    final views = renderGraphViews(
-      expected: expected,
-      actual: actual,
-      selectedPhase: _selectedArchitectureGraphPhase,
-    );
+    final views = renderGraphViews(expected: expected, actual: actual);
 
     for (final entry in views.entries) {
       expect(
@@ -170,11 +133,7 @@ void _registerOrphanViewTest() {
     try {
       final expected = loadExpectedArchitectureGraph();
       final actual = extractActualArchitectureGraph(expectedGraph: expected);
-      final views = renderGraphViews(
-        expected: expected,
-        actual: actual,
-        selectedPhase: _selectedArchitectureGraphPhase,
-      );
+      final views = renderGraphViews(expected: expected, actual: actual);
       writeGraphViews(views: views, repositoryRoot: directory.path);
       File('${directory.path}/docs/diagrams/generated/old/orphan.mmd')
         ..createSync(recursive: true)
@@ -200,11 +159,7 @@ void _registerIsolatedNodeTest() {
     );
 
     expect(
-      () => renderGraphViews(
-        expected: graph,
-        actual: actual,
-        selectedPhase: 'P4',
-      ),
+      () => renderGraphViews(expected: graph, actual: actual),
       throwsA(
         isA<StateError>().having(
           (error) => error.message,
@@ -214,33 +169,15 @@ void _registerIsolatedNodeTest() {
       ),
     );
 
-    final futureGraph = _graphWith(
+    final allowedGraph = _graphWith(
       expected,
       nodes: [...expected.nodes, _fullAllowedNode(expected)],
     );
-
-    _expectFutureIsolationFailure(futureGraph, actual);
+    expect(
+      () => renderGraphViews(expected: allowedGraph, actual: actual),
+      returnsNormally,
+    );
   });
-}
-
-void _expectFutureIsolationFailure(
-  ExpectedArchitectureGraph futureGraph,
-  ActualArchitectureGraph actual,
-) {
-  expect(
-    () => renderGraphViews(
-      expected: futureGraph,
-      actual: actual,
-      selectedPhase: 'P4',
-    ),
-    throwsA(
-      isA<StateError>().having(
-        (error) => error.message,
-        'message',
-        allOf(contains('future_target'), contains('test.future_isolated_node')),
-      ),
-    ),
-  );
 }
 
 ArchitectureNode _isolatedNode(ExpectedArchitectureGraph expected) {
@@ -249,9 +186,7 @@ ArchitectureNode _isolatedNode(ExpectedArchitectureGraph expected) {
     label: 'Isolated test node',
     kind: 'test_owner',
     owner: 'test',
-    phaseIntroduced: 'P5',
-    phaseRequiredBy: 'P5',
-    status: 'future',
+    status: 'required',
     coverageScope: 'architectureOwners',
     sourceDocs: expected.nodes.first.sourceDocs,
     evidence: const ['Constructed negative fixture.'],
@@ -261,13 +196,11 @@ ArchitectureNode _isolatedNode(ExpectedArchitectureGraph expected) {
 
 ArchitectureNode _fullAllowedNode(ExpectedArchitectureGraph expected) {
   return ArchitectureNode(
-    id: 'test.future_isolated_node',
-    label: 'Future isolated test node',
+    id: 'test.current_isolated_node',
+    label: 'Current isolated test node',
     kind: 'test_owner',
     owner: 'test',
-    phaseIntroduced: 'P5',
-    phaseRequiredBy: 'P5',
-    status: 'future',
+    status: 'required',
     coverageScope: 'architectureOwners',
     sourceDocs: expected.nodes.first.sourceDocs,
     evidence: const ['Constructed negative fixture.'],
@@ -288,7 +221,6 @@ ExpectedArchitectureGraph _graphWith(
 }) {
   return ExpectedArchitectureGraph(
     schemaVersion: graph.schemaVersion,
-    phases: graph.phases,
     coverage: graph.coverage,
     nodes: nodes ?? graph.nodes,
     edges: graph.edges,
@@ -297,4 +229,12 @@ ExpectedArchitectureGraph _graphWith(
     views: graph.views,
     sourceCoverage: graph.sourceCoverage,
   );
+}
+
+void _expectNoSelectedPhaseMetadata(Map<String, String> views) {
+  for (final entry in views.entries) {
+    expect(entry.value, isNot(contains('Selected phase')), reason: entry.key);
+    expect(entry.value, isNot(contains('required by P')), reason: entry.key);
+    expect(entry.value, isNot(contains(' by P')), reason: entry.key);
+  }
 }

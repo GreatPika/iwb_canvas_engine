@@ -130,8 +130,8 @@ post-commit notification failures: they do not roll back accepted document,
 selection, revision, projection, resource, or public-state changes; they do not
 rethrow from public edit calls; and they do not replace the edit callback
 result. Any future DiagnosticsHub record for these failures is runtime-owned
-through the planned `runtime.root.observer_failures.report_to_diagnostics`
-route in `section_20_diagnostics_hub`, not an edit-owned writer. Observer
+through `section_20_diagnostics_hub`; it is not an edit-owned writer and is not
+a current graph obligation until a later contract adds the route. Observer
 delivery is not a reentrant mutation window. Public runtime
 mutations attempted while the observer is running are rejected with `StateError`
 before draft creation, committed-state mutation, public-state publication, or

@@ -267,7 +267,7 @@ Required tests:
 - `test/guardrails/public_api_import_cycles_test.dart`
 - `test/guardrails/import_boundaries_test.dart`
 - `test/guardrails/owner_dag_import_boundaries_test.dart`
-- `test/architecture_graph/phase_closure_checker_test.dart`
+- `test/architecture_graph/current_closure_checker_test.dart`
 - `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
 - `test/guardrails/release_readiness_guardrail_test.dart`
@@ -279,7 +279,7 @@ Required tests:
 The owner-DAG proof is split intentionally: `owner_dag_import_boundaries_test`
 checks wrapper export, named facade bridge, implementation-to-api,
 contracts-to-api, and contracts-to-implementation fixtures, while
-`phase_closure_checker_test` proves the same forbidden-edge classes in
+`current_closure_checker_test` proves the same forbidden-edge classes in
 `architecture_graph.yaml`.
 - `test/codec/schema_v1/known_fields_validation_test.dart`
 - `test/codec/schema_v1/canonical_encode_roundtrip_test.dart`

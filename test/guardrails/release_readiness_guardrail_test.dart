@@ -351,8 +351,8 @@ jobs:
           flutter-version: 3.38.0
       - run: dart run tool/bench/run.dart --profile=release
       - run: $_releaseDiffCommand
-      - run: dart run tool/architecture_graph/check.dart --phase P14
-      - run: dart run tool/architecture_graph/generate_views.dart --phase P14 --check
+      - run: dart run tool/architecture_graph/check.dart
+      - run: dart run tool/architecture_graph/generate_views.dart --check
       - run: dart run tool/guardrails/run.dart
 ''';
 

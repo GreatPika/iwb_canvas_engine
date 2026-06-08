@@ -191,14 +191,11 @@ void _expectReleaseBenchmarkCommands(List<YamlMap> steps) {
   );
   expect(
     runCommands,
-    contains('dart run tool/architecture_graph/check.dart --phase P14'),
+    contains('dart run tool/architecture_graph/check.dart'),
   );
   expect(
     runCommands,
-    contains(
-      'dart run tool/architecture_graph/generate_views.dart '
-      '--phase P14 --check',
-    ),
+    contains('dart run tool/architecture_graph/generate_views.dart --check'),
   );
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
 }

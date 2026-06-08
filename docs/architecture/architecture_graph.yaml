@@ -1,93 +1,4 @@
 schemaVersion: 1
-phases:
-  - id: P0
-    title: Package skeleton and hard boundaries
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p0_package_skeleton_and_hard_boundaries.md
-  - id: P1
-    title: V1 scope gate before public API freeze
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p1_v1_scope_gate_before_public_api_freeze.md
-  - id: P2
-    title: Public API v1 freeze
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p2_public_api_v1_freeze.md
-  - id: P3
-    title: Schema v1 DTO validation and codec skeleton
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p3_schema_v1_dto_validation_and_codec_skeleton.md
-      - path: docs/contracts/codec_boundary.md
-  - id: P4
-    title: Runtime spine, store, and projection cache
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p4_runtime_spine.md
-      - path: docs/architecture/01_runtime_ownership.md
-  - id: P5
-    title: Edit core
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p5_edit_core.md
-      - path: docs/contracts/edit_kernel.md
-  - id: P6
-    title: Load document
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p6_load_document.md
-      - path: docs/contracts/load_document.md
-  - id: P7
-    title: Resources and images
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p7_resources_and_images.md
-      - path: docs/contracts/resources.md
-  - id: P8
-    title: Geometry and spatial
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p8_geometry_and_spatial.md
-      - path: docs/contracts/spatial_kernel.md
-  - id: P9
-    title: Frame rendering and caches
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p9_frame_rendering_and_caches.md
-      - path: docs/contracts/frame_rendering.md
-      - path: docs/contracts/cache_policy.md
-  - id: P10
-    title: Selection and move
-    status: future
-    sourceDocs:
-      - path: docs/implementation/p10_selection_and_move.md
-      - path: docs/contracts/interaction_engine.md
-  - id: P11
-    title: Draw tools
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p11_draw_tools.md
-      - path: docs/contracts/operation_matrix.md
-  - id: P12
-    title: Eraser and context requests
-    status: closed
-    sourceDocs:
-      - path: docs/implementation/p12_eraser_and_context_action_request.md
-      - path: docs/contracts/interaction_engine.md
-  - id: P13
-    title: Flutter surface
-    status: future
-    sourceDocs:
-      - path: docs/implementation/p13_flutter_surface.md
-      - path: docs/architecture/02_package_boundaries.md
-  - id: P14
-    title: Benchmarks, diagrams, and release readiness
-    status: measurement
-    sourceDocs:
-      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
-      - path: docs/verification/benchmarks.md
 coverage:
   publicSurfaces:
     - lib/iwb_canvas_engine.dart
@@ -123,8 +34,6 @@ nodes:
     label: Public package surface
     kind: public_surface
     owner: api
-    phaseIntroduced: P0
-    phaseRequiredBy: P0
     status: required
     coverageScope: publicSurfaces
     sourceDocs:
@@ -141,8 +50,6 @@ nodes:
     label: Canvas runtime facade
     kind: facade
     owner: api
-    phaseIntroduced: P2
-    phaseRequiredBy: P4
     status: required
     coverageScope: publicSurfaces
     sourceDocs:
@@ -157,8 +64,6 @@ nodes:
     label: Public camera port
     kind: public_port
     owner: contracts_public
-    phaseIntroduced: P2
-    phaseRequiredBy: P4
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -173,8 +78,6 @@ nodes:
     label: Public contract declarations
     kind: contract_owner
     owner: contracts_public
-    phaseIntroduced: P6
-    phaseRequiredBy: P6
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -193,8 +96,6 @@ nodes:
     label: Internal owner ports and fact contracts
     kind: contract_owner
     owner: contracts_internal
-    phaseIntroduced: P6
-    phaseRequiredBy: P6
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -215,8 +116,6 @@ nodes:
     label: Diagnostics hub
     kind: diagnostics_owner
     owner: diagnostics
-    phaseIntroduced: P3
-    phaseRequiredBy: P3
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -235,8 +134,6 @@ nodes:
     label: Schema v1 codec
     kind: codec_owner
     owner: codec
-    phaseIntroduced: P3
-    phaseRequiredBy: P3
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -255,8 +152,6 @@ nodes:
     label: Runtime composition root
     kind: runtime_owner
     owner: runtime
-    phaseIntroduced: P4
-    phaseRequiredBy: P4
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -275,8 +170,6 @@ nodes:
     label: Runtime-owned view camera
     kind: runtime_state_owner
     owner: runtime
-    phaseIntroduced: P4
-    phaseRequiredBy: P4
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -291,8 +184,6 @@ nodes:
     label: Document store kernel
     kind: store_owner
     owner: store
-    phaseIntroduced: P4
-    phaseRequiredBy: P4
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -307,8 +198,6 @@ nodes:
     label: Selection kernel
     kind: selection_owner
     owner: selection
-    phaseIntroduced: P4
-    phaseRequiredBy: P4
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -323,8 +212,6 @@ nodes:
     label: Edit kernel
     kind: edit_owner
     owner: edit
-    phaseIntroduced: P5
-    phaseRequiredBy: P5
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -339,8 +226,6 @@ nodes:
     label: Load document pipeline
     kind: load_owner
     owner: load_document
-    phaseIntroduced: P6
-    phaseRequiredBy: P6
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -355,8 +240,6 @@ nodes:
     label: Resource kernel
     kind: resource_owner
     owner: resource
-    phaseIntroduced: P7
-    phaseRequiredBy: P7
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -371,8 +254,6 @@ nodes:
     label: Surface resource session
     kind: resource_owner
     owner: resource
-    phaseIntroduced: P7
-    phaseRequiredBy: P7
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -387,8 +268,6 @@ nodes:
     label: Geometry and spatial index
     kind: spatial_owner
     owner: spatial
-    phaseIntroduced: P8
-    phaseRequiredBy: P8
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -405,8 +284,6 @@ nodes:
     label: Frame renderer and cache owner
     kind: frame_owner
     owner: frame
-    phaseIntroduced: P9
-    phaseRequiredBy: P9
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -428,15 +305,13 @@ nodes:
     label: Interaction engine boundary
     kind: interaction_owner
     owner: interaction
-    phaseIntroduced: P10
-    phaseRequiredBy: P10
-    status: future
+    status: required
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - InteractionEngine is the future boundary for pointer sessions, tool preview intents, selection/move behavior, and terminal commit coordination.
+      - InteractionEngine is the current boundary for pointer sessions, tool preview intents, selection/move behavior, and terminal commit coordination.
     actual:
       declarations:
         - InteractionEngine
@@ -449,8 +324,6 @@ nodes:
     label: Draw tool owner
     kind: interaction_owner
     owner: interaction
-    phaseIntroduced: P11
-    phaseRequiredBy: P11
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -466,8 +339,6 @@ nodes:
     label: Eraser and context request owner
     kind: interaction_owner
     owner: interaction
-    phaseIntroduced: P12
-    phaseRequiredBy: P12
     status: required
     coverageScope: architectureOwners
     sourceDocs:
@@ -484,15 +355,13 @@ nodes:
     label: Flutter surface integration
     kind: surface_owner
     owner: surface
-    phaseIntroduced: P13
-    phaseRequiredBy: P13
-    status: future
+    status: required
     coverageScope: publicSurfaces
     sourceDocs:
       - path: docs/implementation/p13_flutter_surface.md
       - path: docs/architecture/02_package_boundaries.md
     evidence:
-      - Flutter widget integration remains future-phase public surface scope.
+      - Flutter widget integration is current public surface scope.
     actual:
       declarations:
         - CanvasSurface
@@ -500,8 +369,6 @@ nodes:
     label: Measurement and release alignment
     kind: measurement_scope
     owner: release
-    phaseIntroduced: P14
-    phaseRequiredBy: P14
     status: measurement
     coverageScope: architectureOwners
     sourceDocs:
@@ -513,9 +380,9 @@ nodes:
         sourceDocs:
           - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
           - path: docs/verification/benchmarks.md
-        reason: P14 is release measurement and alignment scope, not a runtime production owner with architecture dependencies.
+        reason: Release measurement and alignment are release-verification scope, not runtime production ownership with architecture dependencies.
     evidence:
-      - P14 is release measurement scope, not a normal production owner.
+      - Release measurement is release-verification scope, not a normal production owner.
     actual:
       declarations:
         - ReleaseReadiness
@@ -524,7 +391,6 @@ edges:
     from: api.public_surface
     to: api.canvas_runtime
     kind: exports
-    phaseRequiredBy: P2
     status: required
     sourceDocs:
       - path: docs/contracts/public_api_v1.md
@@ -537,7 +403,6 @@ edges:
     from: api.public_surface
     to: contracts.public
     kind: wrapper_export
-    phaseRequiredBy: P6
     status: required
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -551,7 +416,6 @@ edges:
     from: contracts.internal_ports
     to: contracts.public
     kind: contract_dependency
-    phaseRequiredBy: P6
     status: required
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -566,7 +430,6 @@ edges:
     from: api.canvas_runtime
     to: runtime.root
     kind: composes
-    phaseRequiredBy: P4
     status: required
     sourceDocs:
       - path: docs/implementation/p4_runtime_spine.md
@@ -581,7 +444,6 @@ edges:
     from: runtime.root
     to: store.document_kernel
     kind: composes
-    phaseRequiredBy: P4
     status: required
     sourceDocs:
       - path: docs/implementation/p4_runtime_spine.md
@@ -594,7 +456,6 @@ edges:
     from: runtime.root
     to: selection.kernel
     kind: composes
-    phaseRequiredBy: P4
     status: required
     sourceDocs:
       - path: docs/implementation/p4_runtime_spine.md
@@ -607,7 +468,6 @@ edges:
     from: runtime.root
     to: geometry.spatial_index
     kind: composes
-    phaseRequiredBy: P8
     status: required
     sourceDocs:
       - path: docs/implementation/p8_geometry_and_spatial.md
@@ -624,7 +484,6 @@ edges:
     from: runtime.root
     to: frame.renderer
     kind: frame_facts_provider
-    phaseRequiredBy: P9
     status: required
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
@@ -638,7 +497,6 @@ edges:
     from: api.canvas_runtime
     to: api.camera_port
     kind: facade_port
-    phaseRequiredBy: P4
     status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
@@ -654,7 +512,6 @@ edges:
     from: api.canvas_runtime
     to: runtime.view_camera
     kind: facade_port
-    phaseRequiredBy: P4
     status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
@@ -670,7 +527,6 @@ edges:
     from: api.canvas_runtime
     to: runtime.root
     kind: facade_port
-    phaseRequiredBy: P10
     status: required
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
@@ -686,7 +542,6 @@ edges:
     from: api.canvas_runtime
     to: runtime.root
     kind: facade_port
-    phaseRequiredBy: P10
     status: required
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
@@ -702,7 +557,6 @@ edges:
     from: api.canvas_runtime
     to: runtime.root
     kind: facade_stream
-    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
@@ -719,7 +573,6 @@ edges:
     from: codec.schema_v1
     to: contracts.public
     kind: data_boundary
-    phaseRequiredBy: P3
     status: required
     sourceDocs:
       - path: docs/contracts/schema_v1.md
@@ -733,7 +586,6 @@ edges:
     from: codec.schema_v1
     to: diagnostics.hub
     kind: diagnostic_route
-    phaseRequiredBy: P3
     status: required
     sourceDocs:
       - path: docs/contracts/diagnostics.md
@@ -752,7 +604,6 @@ edges:
     from: interaction.engine
     to: diagnostics.hub
     kind: diagnostic_route
-    phaseRequiredBy: P10
     status: required
     sourceDocs:
       - path: docs/contracts/diagnostics.md
@@ -768,35 +619,10 @@ edges:
         - InteractionEngine._selectedMoveStartDecision
       delegationTargets:
         - InteractionDiagnosticsSink
-  - id: geometry.spatial_index.corrupted_rows.report_to_diagnostics
-    from: geometry.spatial_index
-    to: diagnostics.hub
-    kind: diagnostic_route
-    phaseRequiredBy: P14
-    status: future
-    sourceDocs:
-      - path: docs/contracts/diagnostics.md
-      - path: docs/contracts/geometry.md
-      - path: docs/implementation/p8_geometry_and_spatial.md
-    evidence:
-      - Corrupted committed geometry or spatial rows return miss without mutation in P8 and remain outside P10 closure; policy-gated internal diagnostics are deferred until a later diagnostics integration phase adds an explicit bridge.
-  - id: runtime.root.observer_failures.report_to_diagnostics
-    from: runtime.root
-    to: diagnostics.hub
-    kind: diagnostic_route
-    phaseRequiredBy: P14
-    status: future
-    sourceDocs:
-      - path: docs/contracts/diagnostics.md
-      - path: docs/contracts/edit_kernel.md
-      - path: docs/implementation/p14_benchmarks_diagrams_and_release_readiness.md
-    evidence:
-      - Commit, load, and resource-dirty observer delivery failures are planned post-acceptance diagnostics owned by RuntimeRoot and must not roll back accepted results.
   - id: edit.kernel.mutates_store
     from: edit.kernel
     to: store.document_kernel
     kind: mutation_boundary
-    phaseRequiredBy: P5
     status: required
     sourceDocs:
       - path: docs/contracts/edit_kernel.md
@@ -811,7 +637,6 @@ edges:
     from: load_document.pipeline
     to: store.document_kernel
     kind: mutation_boundary
-    phaseRequiredBy: P6
     status: required
     sourceDocs:
       - path: docs/contracts/load_document.md
@@ -824,7 +649,6 @@ edges:
     from: runtime.root
     to: resource.kernel
     kind: composition
-    phaseRequiredBy: P7
     status: required
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
@@ -839,7 +663,6 @@ edges:
     from: runtime.root
     to: resource.surface_session
     kind: resource_invalidation
-    phaseRequiredBy: P7
     status: required
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -853,7 +676,6 @@ edges:
     from: runtime.root
     to: api.canvas_runtime
     kind: action_stream_boundary
-    phaseRequiredBy: P10
     status: required
     sourceDocs:
       - path: docs/implementation/p10_selection_and_move.md
@@ -868,7 +690,6 @@ edges:
     from: runtime.root
     to: interaction.engine
     kind: read_port_adapter
-    phaseRequiredBy: P10
     status: required
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
@@ -882,7 +703,6 @@ edges:
     from: frame.renderer
     to: resource.surface_session
     kind: resource_boundary
-    phaseRequiredBy: P9
     status: required
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -898,7 +718,6 @@ edges:
     from: runtime.root
     to: edit.kernel
     kind: tool_commit
-    phaseRequiredBy: P11
     status: required
     sourceDocs:
       - path: docs/implementation/p11_draw_tools.md
@@ -915,7 +734,6 @@ edges:
     from: interaction.engine
     to: draw.tools
     kind: tool_lifecycle_delegation
-    phaseRequiredBy: P11
     status: required
     sourceDocs:
       - path: docs/implementation/p11_draw_tools.md
@@ -938,7 +756,6 @@ edges:
     from: runtime.root
     to: edit.kernel
     kind: tool_commit
-    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_context_action_request.md
@@ -955,7 +772,6 @@ edges:
     from: runtime.root
     to: geometry.spatial_index
     kind: interaction_target_geometry_boundary
-    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_context_action_request.md
@@ -973,7 +789,6 @@ edges:
     from: interaction.engine
     to: eraser_context.request
     kind: lifecycle_request_delegation
-    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_context_action_request.md
@@ -995,7 +810,6 @@ edges:
     from: runtime.root
     to: api.canvas_runtime
     kind: context_request_stream
-    phaseRequiredBy: P12
     status: required
     sourceDocs:
       - path: docs/implementation/p12_eraser_and_context_action_request.md
@@ -1011,8 +825,7 @@ edges:
     from: flutter.surface
     to: api.canvas_runtime
     kind: ui_boundary
-    phaseRequiredBy: P13
-    status: future
+    status: required
     sourceDocs:
       - path: docs/implementation/p13_flutter_surface.md
       - path: docs/architecture/02_package_boundaries.md
@@ -1023,23 +836,21 @@ edges:
         - lib/src/api/canvas_runtime.dart
         - lib/src/api/canvas_runtime_surface_bridge.dart
 placeholders:
-  - id: runtime.canvas_runtime.camera.closed_phase_placeholder
+  - id: runtime.canvas_runtime.camera.current_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.camera
     path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P4
-    status: forbidden_after_phase
+    status: forbidden
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
       - path: docs/implementation/p4_runtime_spine.md
     evidence:
       - Closed P4 camera ownership cannot remain a public facade placeholder.
-  - id: api.canvas_runtime.preview.future_placeholder
+  - id: api.canvas_runtime.preview.current_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.preview
     path: lib/src/api/canvas_runtime.dart
-    phaseRequiredBy: P9
-    status: forbidden_after_phase
+    status: forbidden
     sourceDocs:
       - path: docs/implementation/p9_frame_rendering_and_caches.md
       - path: docs/contracts/frame_rendering.md
@@ -1050,7 +861,6 @@ forbiddenEdges:
     from: codec.schema_v1
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P3
     status: forbidden
     sourceDocs:
       - path: docs/contracts/codec_boundary.md
@@ -1061,7 +871,6 @@ forbiddenEdges:
     from: runtime.root
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1072,7 +881,6 @@ forbiddenEdges:
     from: edit.kernel
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1083,7 +891,6 @@ forbiddenEdges:
     from: store.document_kernel
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1094,7 +901,6 @@ forbiddenEdges:
     from: selection.kernel
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1105,7 +911,6 @@ forbiddenEdges:
     from: codec.schema_v1
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1116,7 +921,6 @@ forbiddenEdges:
     from: diagnostics.hub
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1127,7 +931,6 @@ forbiddenEdges:
     from: load_document.pipeline
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1138,7 +941,6 @@ forbiddenEdges:
     from: resource.kernel
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1149,7 +951,6 @@ forbiddenEdges:
     from: resource.surface_session
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1160,7 +961,6 @@ forbiddenEdges:
     from: geometry.spatial_index
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1171,7 +971,6 @@ forbiddenEdges:
     from: frame.renderer
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1182,7 +981,6 @@ forbiddenEdges:
     from: interaction.engine
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1193,7 +991,6 @@ forbiddenEdges:
     from: draw.tools
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1204,7 +1001,6 @@ forbiddenEdges:
     from: eraser_context.request
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1215,7 +1011,6 @@ forbiddenEdges:
     from: contracts.public
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1226,7 +1021,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: api.public_surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1237,7 +1031,6 @@ forbiddenEdges:
     from: contracts.public
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1248,7 +1041,6 @@ forbiddenEdges:
     from: contracts.public
     to: edit.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1259,7 +1051,6 @@ forbiddenEdges:
     from: contracts.public
     to: store.document_kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1270,7 +1061,6 @@ forbiddenEdges:
     from: contracts.public
     to: selection.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1281,7 +1071,6 @@ forbiddenEdges:
     from: contracts.public
     to: codec.schema_v1
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1292,7 +1081,6 @@ forbiddenEdges:
     from: contracts.public
     to: diagnostics.hub
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1303,7 +1091,6 @@ forbiddenEdges:
     from: contracts.public
     to: resource.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1314,7 +1101,6 @@ forbiddenEdges:
     from: contracts.public
     to: resource.surface_session
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1325,7 +1111,6 @@ forbiddenEdges:
     from: contracts.public
     to: frame.renderer
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1336,7 +1121,6 @@ forbiddenEdges:
     from: contracts.public
     to: interaction.engine
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1347,7 +1131,6 @@ forbiddenEdges:
     from: contracts.public
     to: draw.tools
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1358,7 +1141,6 @@ forbiddenEdges:
     from: contracts.public
     to: geometry.spatial_index
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1369,7 +1151,6 @@ forbiddenEdges:
     from: contracts.public
     to: flutter.surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1380,7 +1161,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1391,7 +1171,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: edit.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1402,7 +1181,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: store.document_kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1413,7 +1191,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: selection.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1424,7 +1201,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: codec.schema_v1
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1435,7 +1211,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: diagnostics.hub
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1446,7 +1221,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: resource.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1457,7 +1231,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: resource.surface_session
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1468,7 +1241,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: frame.renderer
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1479,7 +1251,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: interaction.engine
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1490,7 +1261,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: draw.tools
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1501,7 +1271,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: geometry.spatial_index
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1512,7 +1281,6 @@ forbiddenEdges:
     from: contracts.internal_ports
     to: flutter.surface
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1523,7 +1291,6 @@ forbiddenEdges:
     from: resource.kernel
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -1534,7 +1301,6 @@ forbiddenEdges:
     from: resource.kernel
     to: frame.renderer
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -1545,7 +1311,6 @@ forbiddenEdges:
     from: resource.surface_session
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -1556,7 +1321,6 @@ forbiddenEdges:
     from: resource.surface_session
     to: frame.renderer
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/resources.md
@@ -1567,7 +1331,6 @@ forbiddenEdges:
     from: selection.kernel
     to: runtime.root
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
@@ -1578,7 +1341,6 @@ forbiddenEdges:
     from: codec.schema_v1
     to: store.document_kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/codec_boundary.md
@@ -1589,7 +1351,6 @@ forbiddenEdges:
     from: codec.schema_v1
     to: edit.kernel
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/codec_boundary.md
@@ -1600,7 +1361,6 @@ forbiddenEdges:
     from: codec.schema_v1
     to: frame.renderer
     kind: forbidden_import
-    phaseRequiredBy: P6
     status: forbidden
     sourceDocs:
       - path: docs/contracts/codec_boundary.md
@@ -1616,24 +1376,8 @@ views:
       - measurement_scope
     sourceDocs:
       - path: docs/architecture/00_architecture_overview.md
-  - id: current_phase
-    title: Selected phase architecture graph
-    kind: expected_current_phase
-    output: docs/diagrams/generated/current_phase.mmd
-    excludedNodeKinds:
-      - measurement_scope
-    sourceDocs:
-      - path: docs/architecture/00_architecture_overview.md
-  - id: future_target
-    title: Future target architecture graph
-    kind: expected_future
-    output: docs/diagrams/generated/future_target.mmd
-    excludedNodeKinds:
-      - measurement_scope
-    sourceDocs:
-      - path: docs/architecture/00_architecture_overview.md
   - id: actual_vs_expected_diff
-    title: Actual vs expected selected phase diff
+    title: Actual vs expected current diff
     kind: actual_vs_expected_diff
     output: docs/diagrams/generated/actual_vs_expected_diff.mmd
     sourceDocs:
@@ -1653,7 +1397,6 @@ sourceCoverage:
       - api.public_surface.exports_runtime
       - codec.schema_v1.forbidden_runtime_dependency
       - full_architecture
-      - current_phase
   - sectionId: section_02_architecture_model
     disposition: graph_obligation
     graphIds:
@@ -1673,7 +1416,7 @@ sourceCoverage:
       - runtime.root.composes_spatial_kernel
       - runtime.root.exposes_frame_facts
       - api.canvas_runtime.camera.routes_to_runtime_view_camera
-      - runtime.canvas_runtime.camera.closed_phase_placeholder
+      - runtime.canvas_runtime.camera.current_placeholder
   - sectionId: section_03_package_layout
     disposition: graph_obligation
     graphIds:
@@ -1696,10 +1439,10 @@ sourceCoverage:
       - api.camera_port
       - flutter.surface
       - api.canvas_runtime.exposes_camera
-      - runtime.canvas_runtime.camera.closed_phase_placeholder
+      - runtime.canvas_runtime.camera.current_placeholder
       - api.canvas_runtime.tools.routes_to_runtime_tools
       - api.canvas_runtime.commands.routes_to_runtime_commands
-      - api.canvas_runtime.preview.future_placeholder
+      - api.canvas_runtime.preview.current_placeholder
       - api.canvas_runtime.context_action_requests.routes_context_action_requests
   - sectionId: section_05_schema_v1_contract
     disposition: graph_obligation
@@ -1772,7 +1515,7 @@ sourceCoverage:
       - frame.renderer
       - runtime.root.exposes_frame_facts
       - frame.renderer.uses_surface_resource_session
-      - api.canvas_runtime.preview.future_placeholder
+      - api.canvas_runtime.preview.current_placeholder
   - sectionId: section_16_geometry_policy
     disposition: graph_obligation
     graphIds:
@@ -1804,8 +1547,6 @@ sourceCoverage:
       - diagnostics.hub
       - codec.schema_v1.failures.report_to_diagnostics
       - interaction.engine.reliability_events.report_to_diagnostics
-      - geometry.spatial_index.corrupted_rows.report_to_diagnostics
-      - runtime.root.observer_failures.report_to_diagnostics
   - sectionId: section_22_guardrails_machine_checks
     disposition: graph_obligation
     graphIds:
@@ -1875,6 +1616,5 @@ sourceCoverage:
     graphIds:
       - release.measurement
       - full_architecture
-      - future_target
       - actual_vs_expected_diff
       - release_verification

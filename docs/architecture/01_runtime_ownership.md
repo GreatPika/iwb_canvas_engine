@@ -15,9 +15,7 @@ Related diagrams:
 - `c4_container`
 - `c4_component_runtime`
 - `generated/actual_vs_expected_diff`
-- `generated/current_phase`
 - `generated/full_architecture`
-- `generated/future_target`
 - `generated/release_verification`
 - `state_runtime_lifecycle`
 Required tests:
