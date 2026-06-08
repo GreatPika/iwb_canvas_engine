@@ -158,6 +158,7 @@
     - test.api_contract.canvas_field_update_static_semantics
     - test.api_contract.no_undefined_public_type_references
     - test.api_contract.no_legacy_public_symbols
+    - test.api_contract.example_public_boundary
     - test.api_contract.dto_immutability
     - test.api_contract.public_equality_policy
     - test.api.typed_action_payloads

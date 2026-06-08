@@ -190,7 +190,7 @@ same working-tree/commit operation, not by rewriting git history.
 
 ## Execution Units
 
-### [ ] Unit 1: Current invariant transfer
+### [x] Unit 1: Current invariant transfer
 
 Owner:
 

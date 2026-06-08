@@ -14,14 +14,14 @@ inside the root package as needed.
 
 | Area | Donor | Reuse | Proof to port |
 |---|---|---:|---|
-| Numeric policy | `lib/src/core/numeric_clamp.dart`, `lib/src/core/numeric_tolerance.dart`, `lib/src/contract/transform_tolerance.dart` | `copy` | geometry and hit-test tests |
-| Local bounds | `lib/src/core/local_bounds_policy.dart` | `copy` | `test/render/render_geometry_cache_test.dart`, `test/render/render_hit_bounds_parity_test.dart` |
-| Paint admission | `lib/src/core/paint_candidate_admission.dart` | `copy` | `test/render/scene_painter_bounds_contract_test.dart`, `plan/step_37_paint_admission_edge_touch_parity.md` |
-| Generic cache policy | `lib/src/render/cache/scan_resistant_cache.dart` | `copy` | `test/render/scan_resistant_cache_test.dart`, `test/render/render_cache_policy_contract_test.dart` |
-| Pointer tap tracking | `lib/src/core/pointer_input_tracker.dart` | `copy` | `test/core/pointer_input_test.dart` |
-| Flutter pointer routing | `lib/src/view/scene_view_pointer_router.dart` | `copy` | `test/view/scene_view_pointer_router_test.dart` |
-| Gesture ownership | `lib/src/interactive/internal/interactive_gesture_machine.dart` | `copy` | `test/interactive/core/interactive_move_session_test.dart`, single-pointer policy tests |
-| Structure validation | `lib/src/contract/scene_structure_validation.dart` | `copy/adapt` | `test/contract/scene_structure_validation_test.dart` |
+| Numeric policy | `lib/src/core/numeric_clamp.dart`, `lib/src/core/numeric_tolerance.dart`, `lib/src/contract/transform_tolerance.dart` | `copy` | `test.api_contract.public_api_v1_compiles_as_written`, `test.geometry.hit_policy` |
+| Local bounds | `lib/src/core/local_bounds_policy.dart` | `copy` | `test.geometry.hit_policy`, `test.frame.frame_spatial_paint_admission` |
+| Paint admission | `lib/src/core/paint_candidate_admission.dart` | `copy` | `test.frame.frame_spatial_paint_admission`, `test.geometry.no_legacy_scene_order` |
+| Generic cache policy | `lib/src/render/cache/scan_resistant_cache.dart` | `copy` | `test.frame.cache_capacity_eviction_policy`, `test.benchmarks.benchmark_manifest` |
+| Pointer tap tracking | `lib/src/core/pointer_input_tracker.dart` | `copy` | `test.interaction.pointer_session`, `test.interaction.pointer_sample_normalizer` |
+| Flutter pointer routing | `lib/src/view/scene_view_pointer_router.dart` | `copy` | `test.interaction.pointer_session`, `test.interaction.context_action_request` |
+| Gesture ownership | `lib/src/interactive/internal/interactive_gesture_machine.dart` | `copy` | `test.interaction.pointer_session`, `test.interaction.move_machine` |
+| Structure validation | `lib/src/contract/scene_structure_validation.dart` | `copy/adapt` | `test.api_contract.public_api_v1_compiles_as_written`, `test.codec.schema_v1.known_fields_validation` |
 
 ### Foundation donors to adapt early
 

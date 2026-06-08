@@ -12,6 +12,7 @@ import 'dart:io';
 import 'package:yaml/yaml.dart';
 
 import '../../tool/bench/src/benchmark_manifest.dart';
+import '../../tool/guardrails/src/guardrail_registry.dart';
 
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _donorsRegistryPath = 'docs/_registry/donors.yaml';
@@ -77,6 +78,19 @@ const _requiredDonorListFields = {
   'required_tests',
   'blocks',
   'related_sections',
+};
+
+const _retiredDonorProofPrefixes = {
+  'PLAN.md',
+  'plan/',
+  'docs/donors/',
+  'docs/implementation/',
+};
+
+const _retiredDonorProofPaths = {
+  'docs/_registry/donors.yaml',
+  'docs/architecture/04_decisions_and_differences.md',
+  'docs/verification/legacy_capability_inventory.md',
 };
 
 const _markdownRoots = [
@@ -443,6 +457,7 @@ class _DonorEntry {
     required this.targetPhases,
     required this.blocks,
     required this.relatedSections,
+    required this.requiredTests,
   });
 
   final String id;
@@ -450,6 +465,7 @@ class _DonorEntry {
   final List<String> targetPhases;
   final List<String> blocks;
   final List<String> relatedSections;
+  final List<String> requiredTests;
 }
 
 class _DiagramEntry {
@@ -573,6 +589,7 @@ List<_DonorEntry> _loadDonors() {
       targetPhases: _stringListField(entry, 'target_phases', id),
       blocks: _stringListField(entry, 'blocks', id),
       relatedSections: _stringListField(entry, 'related_sections', id),
+      requiredTests: _stringListField(entry, 'required_tests', id),
     );
 
     if (!seenIds.add(id)) {
@@ -856,7 +873,7 @@ bool _sameStringList(List<String> actual, List<String> expected) {
 
 // Donor/reference symmetry is one bidirectional registry invariant; splitting
 // the two directions would hide why a donor and section disagree.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+// ignore: cyclomatic-complexity, halstead-volume, maintainability-index, source-lines-of-code
 void _checkDonorReferences(
   List<_SectionEntry> sections,
   List<_DonorEntry> donors,
@@ -864,12 +881,33 @@ void _checkDonorReferences(
 ) {
   final donorsById = {for (final donor in donors) donor.id: donor};
   final registryDonorSections = <String, Set<String>>{};
+  final sectionsById = {for (final section in sections) section.id: section};
 
   for (final donor in donors) {
     _checkNoneSentinel(donor.id, 'related_sections', donor.relatedSections);
     for (final sectionId in donor.relatedSections) {
       if (!sectionIds.contains(sectionId)) {
         _fail('donor ${donor.id} references unknown section id $sectionId');
+      }
+    }
+    for (final proof in donor.requiredTests) {
+      if (_isRetiredDonorProof(proof)) {
+        _fail(
+          'donor ${donor.id} required_tests must cite current tests or '
+          'guardrails, not retired proof source $proof',
+        );
+      }
+      if (!_isRelatedSectionProof(proof, donor, sectionsById)) {
+        _fail(
+          'donor ${donor.id} required_tests entry $proof must be an '
+          'existing test or guardrail id from its related_sections',
+        );
+      }
+      if (!_hasExecutableProofOwner(proof)) {
+        _fail(
+          'donor ${donor.id} required_tests entry $proof must resolve to an '
+          'existing test file or registered guardrail',
+        );
       }
     }
 
@@ -921,6 +959,56 @@ void _checkDonorReferences(
     }
   }
 }
+
+bool _isRetiredDonorProof(String value) {
+  return _retiredDonorProofPaths.contains(value) ||
+      _retiredDonorProofPrefixes.any(value.startsWith);
+}
+
+bool _isRelatedSectionProof(
+  String value,
+  _DonorEntry donor,
+  Map<String, _SectionEntry> sectionsById,
+) {
+  return _relatedSectionProofIds(donor, sectionsById).contains(value);
+}
+
+Set<String> _relatedSectionProofIds(
+  _DonorEntry donor,
+  Map<String, _SectionEntry> sectionsById,
+) {
+  return {
+    for (final sectionId in donor.relatedSections)
+      if (sectionsById[sectionId] case final section?) ...[
+        ...section.tests.where((test) => test != 'none'),
+        ...section.guardrails.where((guardrail) => guardrail != 'none'),
+      ],
+  };
+}
+
+bool _hasExecutableProofOwner(String value) {
+  return _testProofFileExists(value) || guardrailInventory().containsKey(value);
+}
+
+bool _testProofFileExists(String value) {
+  if (!value.startsWith('test.')) {
+    return false;
+  }
+  return _testProofPathCandidates(value).any((path) => File(path).existsSync());
+}
+
+List<String> _testProofPathCandidates(String value) {
+  final override = _testProofPathOverrides[value];
+  final parts = value.replaceFirst('test.', '').split('.');
+  final conventionalPath =
+      'test/${parts.take(parts.length - 1).join('/')}/${parts.last}_test.dart';
+  return [?override, conventionalPath];
+}
+
+const _testProofPathOverrides = {
+  'test.guardrails.release_readiness':
+      'test/guardrails/release_readiness_guardrail_test.dart',
+};
 
 // Diagram catalog loading validates identity, file, phase, and generated-source
 // metadata in one pass so catalog rows cannot be partially accepted.

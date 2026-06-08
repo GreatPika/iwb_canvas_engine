@@ -14,7 +14,10 @@
   do_not_copy:
     - legacy public export paths
   required_tests:
-    - "geometry and hit-test tests"
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.geometry.hit_policy
   blocks:
     - P2
     - P8
@@ -36,8 +39,10 @@
   do_not_copy:
     - legacy snapshot coupling
   required_tests:
-    - test/render/render_geometry_cache_test.dart
-    - test/render/render_hit_bounds_parity_test.dart
+    - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_inputs
+    - test.frame.frame_spatial_paint_admission
   blocks:
     - P8
     - P9
@@ -59,8 +64,8 @@
   do_not_copy:
     - legacy scene traversal shell
   required_tests:
-    - test/render/scene_painter_bounds_contract_test.dart
-    - plan/step_37_paint_admission_edge_touch_parity.md
+    - test.frame.frame_spatial_paint_admission
+    - test.geometry.no_legacy_scene_order
   blocks:
     - P8
     - P9
@@ -82,8 +87,10 @@
   do_not_copy:
     - legacy render owner lifecycle
   required_tests:
-    - test/render/scan_resistant_cache_test.dart
-    - test/render/render_cache_policy_contract_test.dart
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
+    - test.frame.cache_capacity_eviction_policy
+    - test.benchmarks.benchmark_manifest
+    - test.benchmarks.benchmark_diff
   blocks:
     - P9
     - P14
@@ -104,7 +111,10 @@
   do_not_copy:
     - legacy controller ownership
   required_tests:
-    - test/core/pointer_input_test.dart
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
   related_sections:
@@ -123,7 +133,10 @@
   do_not_copy:
     - legacy SceneView facade
   required_tests:
-    - test/view/scene_view_pointer_router_test.dart
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P13
   related_sections:
@@ -142,8 +155,10 @@
   do_not_copy:
     - legacy callback graph
   required_tests:
-    - test/interactive/core/interactive_move_session_test.dart
-    - "single-pointer policy tests"
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
   related_sections:
@@ -163,7 +178,10 @@
   do_not_copy:
     - legacy public type names
   required_tests:
-    - test/contract/scene_structure_validation_test.dart
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
     - P3
@@ -186,7 +204,10 @@
   do_not_copy:
     - legacy contract namespace
   required_tests:
-    - geometry and schema transform tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
     - P3
@@ -209,7 +230,9 @@
   do_not_copy:
     - legacy node APIs
   required_tests:
-    - geometry policy tests
+    - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_inputs
   blocks:
     - P8
   related_sections:
@@ -230,7 +253,10 @@
   do_not_copy:
     - legacy public constants as API unless approved by v1 surface
   required_tests:
-    - validation limits tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.constructor_and_schema_limits
   blocks:
     - P1
     - P2
@@ -254,8 +280,10 @@
   do_not_copy:
     - legacy exception names if not in v1 API
   required_tests:
-    - error payload tests
-    - diagnostics tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.constructor_and_schema_limits
   blocks:
     - P2
     - P3
@@ -279,8 +307,10 @@
   do_not_copy:
     - legacy validated wrapper public shape
   required_tests:
-    - constructor validation tests
-    - schema validation tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.constructor_and_schema_limits
   blocks:
     - P2
     - P3
@@ -302,7 +332,9 @@
   do_not_copy:
     - PatchField name or NodePatch public API
   required_tests:
-    - element update tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
   blocks:
     - P2
   related_sections:
@@ -322,7 +354,7 @@
   do_not_copy:
     - legacy DTO shells
   required_tests:
-    - test/api_contract/dto_immutability_test.dart
+    - test.api_contract.dto_immutability
   blocks:
     - P2
   related_sections:
@@ -346,8 +378,10 @@
   do_not_copy:
     - legacy pointer public boundary where v1 differs
   required_tests:
-    - pointer API tests
-    - interaction pointer lifecycle tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.interaction.pointer_session
   blocks:
     - P2
     - P10
@@ -373,7 +407,7 @@
   do_not_copy:
     - legacy event public names unless in v1 API
   required_tests:
-    - test/api/typed_action_payloads_test.dart
+    - test.api.typed_action_payloads
   blocks:
     - P2
     - P10
@@ -396,9 +430,9 @@
   do_not_copy:
     - SceneNode or NodeSnapshot APIs
   required_tests:
-    - test/core/node_geometry_test.dart
-    - test/core/hit_test_test.dart
-    - test/core/hit_test_candidate_bounds_test.dart
+    - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_inputs
   blocks:
     - P8
   related_sections:
@@ -417,7 +451,9 @@
   do_not_copy:
     - "hitTestTopNode traversal or legacy scene-order logic"
   required_tests:
-    - test/core/hit_test_test.dart
+    - test.geometry.hit_policy
+    - test.geometry.no_legacy_scene_order
+    - test.geometry.eraser_exact_budget_inputs
   blocks:
     - P8
   related_sections:
@@ -437,8 +473,10 @@
   do_not_copy:
     - "legacy snapshot, text layout or cache keys"
   required_tests:
-    - test/render/render_geometry_cache_test.dart
-    - test/render/render_hit_bounds_parity_test.dart
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
+    - test.geometry.hit_policy
   blocks:
     - P8
     - P9
@@ -462,8 +500,10 @@
   do_not_copy:
     - "gesture soft-limit shell coupled to legacy input sampling"
   required_tests:
-    - test/interactive/core/interactive_draw_path_buffer_test.dart
-    - eraser guardrail tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P8
     - P10
@@ -488,8 +528,10 @@
   do_not_copy:
     - "legacy snapshots, delete eligibility shell, debug counters as structure"
   required_tests:
-    - test/interactive/core/interactive_draw_eraser_engine_test.dart
-    - eraser lifecycle tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P8
     - P12
@@ -510,7 +552,9 @@
   do_not_copy:
     - "legacy Scene, SceneNode, locator maps, background sentinel"
   required_tests:
-    - spatial index tests
+    - test.spatial.committed_spatial_read_boundary
+    - test.spatial.fallback_budget_enforced
+    - test.spatial.no_full_clone_for_touched_update
   blocks:
     - P8
   related_sections:
@@ -530,7 +574,10 @@
   do_not_copy:
     - legacy ChangeSet or controller revisions
   required_tests:
-    - touched spatial update tests
+    - test.spatial.committed_spatial_read_boundary
+    - test.spatial.fallback_budget_enforced
+    - test.spatial.no_full_clone_for_touched_update
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
   blocks:
     - P8
     - P9
@@ -552,8 +599,10 @@
   do_not_copy:
     - controller facade shell
   required_tests:
-    - committed read tests
-    - spatial stale candidate tests
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+    - test.runtime.runtime_state_publication
+    - test.spatial.committed_spatial_read_boundary
   blocks:
     - P4
     - P8
@@ -574,7 +623,9 @@
   do_not_copy:
     - legacy validity keys without next shape rebuild
   required_tests:
-    - paint bounds cache tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
   related_sections:
@@ -593,7 +644,9 @@
   do_not_copy:
     - "legacy non-committed fallback path as primary architecture"
   required_tests:
-    - paint candidate tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
   related_sections:
@@ -612,8 +665,9 @@
   do_not_copy:
     - legacy contract path or name
   required_tests:
-    - main capture tests
-    - overlay capture tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
   related_sections:
@@ -632,7 +686,9 @@
   do_not_copy:
     - controller shell
   required_tests:
-    - frame snapshot consistency tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
   related_sections:
@@ -651,7 +707,9 @@
   do_not_copy:
     - legacy stage owner or ordering tokens without next model
   required_tests:
-    - selected supplement staging tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
   related_sections:
@@ -671,8 +729,9 @@
   do_not_copy:
     - Flutter/node snapshot coupling
   required_tests:
-    - painter frame tests
-    - widget paint tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
   blocks:
     - P9
     - P13
@@ -693,7 +752,10 @@
   do_not_copy:
     - legacy controller lifecycle
   required_tests:
-    - render cache lifecycle tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
   blocks:
     - P9
     - P13
@@ -715,7 +777,10 @@
   do_not_copy:
     - cache if next design drops static layer cache
   required_tests:
-    - static layer cache disposal tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
   blocks:
     - P9
     - P13
@@ -738,7 +803,10 @@
   do_not_copy:
     - legacy snapshot and revision keys
   required_tests:
-    - render cache key tests
+    - test.frame.frame_spatial_paint_admission
+    - test.frame.frame_record_painter_boundary
+    - test.frame.main_overlay_capture
+    - test.frame.cache_keys_do_not_use_legacy_snapshot_shape
   blocks:
     - P9
   related_sections:
@@ -758,7 +826,7 @@
   do_not_copy:
     - legacy family names or broad file structure
   required_tests:
-    - test/api_contract/dto_immutability_test.dart
+    - test.api_contract.dto_immutability
   blocks:
     - P2
   related_sections:
@@ -777,7 +845,9 @@
   do_not_copy:
     - legacy family names and legacy API shape
   required_tests:
-    - public constructor validation tests
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
   blocks:
     - P2
   related_sections:
@@ -797,7 +867,10 @@
   do_not_copy:
     - "internal fast-path or backing coupling"
   required_tests:
-    - "schema family parity tests if next keeps field-record schema families"
+    - test.api_contract.public_api_v1_compiles_as_written
+    - api.public_exports_complete
+    - test.api_contract.no_legacy_public_symbols
+    - test.codec.schema_v1.known_fields_validation
   blocks:
     - P2
     - P3
@@ -819,7 +892,10 @@
   do_not_copy:
     - bridges to legacy mutable runtime
   required_tests:
-    - validation diagnostics tests
+    - test.codec.constructor_and_schema_limits
+    - api.id_validation_no_extension_type_escape
+    - codec.known_fields_validated
+    - test.diagnostics.diagnostics_public_surface
   blocks:
     - P2
     - P3
@@ -841,7 +917,10 @@
   do_not_copy:
     - legacy node names and runtime shapes
   required_tests:
-    - DTO to runtime mapping tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.store.read_document_projection
   blocks:
     - P3
     - P4
@@ -863,8 +942,10 @@
   do_not_copy:
     - ownership that conflicts with store/selection/edit split
   required_tests:
-    - store kernel tests
-    - edit kernel tests
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+    - test.runtime.runtime_state_publication
+    - test.edit.sync_non_nested_async_stale
   blocks:
     - P4
     - P5
@@ -885,7 +966,10 @@
   do_not_copy:
     - "part-of scene_codec structure"
   required_tests:
-    - schema raw input guard tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -905,7 +989,10 @@
   do_not_copy:
     - SceneBuilder name
   required_tests:
-    - schema known field validation tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -925,7 +1012,10 @@
   do_not_copy:
     - legacy enum and transform names
   required_tests:
-    - primitive encoding tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -945,7 +1035,10 @@
   do_not_copy:
     - legacy schema shape into production v1
   required_tests:
-    - metadata codec tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -965,7 +1058,10 @@
   do_not_copy:
     - legacy layer model if v1 differs
   required_tests:
-    - layer JSON tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -985,7 +1081,10 @@
   do_not_copy:
     - legacy instanceRevision semantics as next schema unless specified
   required_tests:
-    - element common JSON tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -1010,7 +1109,10 @@
   do_not_copy:
     - legacy JSON aliases into v1 except where specified
   required_tests:
-    - element family JSON tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -1031,7 +1133,10 @@
     - SceneSnapshot and SceneBuilder coupling
     - legacy public SceneCodec surface
   required_tests:
-    - schema roundtrip tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -1051,7 +1156,10 @@
   do_not_copy:
     - aliases not approved for v1
   required_tests:
-    - diagnostic path tests
+    - test.codec.schema_v1.known_fields_validation
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - test.codec.schema_v1.metadata_projection
+    - test.codec.decode_encode_no_runtime_side_effects
   blocks:
     - P3
   related_sections:
@@ -1071,7 +1179,8 @@
   do_not_copy:
     - legacy paths and package names
   required_tests:
-    - tooling guardrail smoke tests
+    - test.guardrails.blocking_suite
+    - test.guardrails.release_readiness
   blocks:
     - P14
   related_sections:
@@ -1090,7 +1199,10 @@
   do_not_copy:
     - legacy Flutter host facade
   required_tests:
-    - surface pointer host tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P13
   related_sections:
@@ -1112,7 +1224,10 @@
   do_not_copy:
     - current Listenable wiring if owner differs
   required_tests:
-    - pointer session lifecycle tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
     - P13
@@ -1136,7 +1251,10 @@
   do_not_copy:
     - "wrong session-token keying"
   required_tests:
-    - pointer normalization tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
     - P11
@@ -1159,7 +1277,10 @@
   do_not_copy:
     - legacy sync/async notification contract before next decision
   required_tests:
-    - event dispatch tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
     - P11
@@ -1180,7 +1301,10 @@
   do_not_copy:
     - "legacy text-only hit-test read model"
   required_tests:
-    - context-action request tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P12
   related_sections:
@@ -1202,8 +1326,10 @@
   do_not_copy:
     - legacy callback graph
   required_tests:
-    - interaction state tests
-    - terminal cleanup tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
     - P11
@@ -1225,8 +1351,10 @@
   do_not_copy:
     - "legacy selection ownership, direct hit-test/store reads, and mutation callback wiring"
   required_tests:
-    - move preview tests
-    - marquee selection tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
   related_sections:
@@ -1249,9 +1377,10 @@
   do_not_copy:
     - eraser internals before new geometry/spatial model
   required_tests:
-    - draw lifecycle tests
-    - "line two-tap tests"
-    - eraser lifecycle tests
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P11
     - P12
@@ -1274,8 +1403,10 @@
   do_not_copy:
     - legacy bridge names and access types
   required_tests:
-    - mutation boundary tests
-    - interaction commit tests
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.rollback
+    - test.edit.exact_touched_invalidation
+    - test.edit.staged_document_load_success_failure
   blocks:
     - P5
     - P10
@@ -1303,7 +1434,10 @@
   do_not_copy:
     - prepared replacement through public API
   required_tests:
-    - loadDocument staged tests
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.rollback
+    - test.edit.exact_touched_invalidation
+    - test.edit.staged_document_load_success_failure
   blocks:
     - P6
     - P10
@@ -1328,8 +1462,10 @@
   do_not_copy:
     - legacy import draft naming as public API
   required_tests:
-    - validated import draft tests
-    - loadDocument tests
+    - test.edit.sync_non_nested_async_stale
+    - test.edit.rollback
+    - test.edit.exact_touched_invalidation
+    - test.edit.staged_document_load_success_failure
   blocks:
     - P3
     - P6
@@ -1361,6 +1497,7 @@
     - P2
   related_sections:
     - section_04_public_api_v1
+    - section_14_interaction_engine
   notes: Reference only.
 -
   id: avoid_scene_controller_facades
@@ -1377,7 +1514,10 @@
     - legacy public API shape
     - controller facade files
   required_tests:
-    - "none"
+    - test.api_contract.no_legacy_public_symbols
+    - core.no_legacy_imports
+    - core.no_scene_controller_shape_dependency
+    - test.guardrails.blocking_suite
   blocks:
     - core.no_scene_controller_shape_dependency
   related_sections:
@@ -1397,7 +1537,10 @@
   do_not_copy:
     - whole legacy callback graph
   required_tests:
-    - "none"
+    - test.interaction.pointer_session
+    - test.interaction.pointer_sample_normalizer
+    - test.interaction.context_action_request
+    - test.interaction.move_machine
   blocks:
     - P10
     - P11
@@ -1419,7 +1562,9 @@
   do_not_copy:
     - legacy builder API
   required_tests:
-    - "none"
+    - test.codec.decode_encode_no_runtime_side_effects
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - codec.schema_v1_exact
   blocks:
     - P3
   related_sections:
@@ -1439,7 +1584,9 @@
     - SceneSnapshot coupling
     - legacy public codec surface
   required_tests:
-    - "none"
+    - test.codec.decode_encode_no_runtime_side_effects
+    - test.codec.schema_v1.canonical_encode_roundtrip
+    - codec.schema_v1_exact
   blocks:
     - P3
   related_sections:
@@ -1458,7 +1605,10 @@
   do_not_copy:
     - mixed controller facade
   required_tests:
-    - "none"
+    - test.store.read_document_projection
+    - test.store.no_projection_hot_path
+    - test.runtime.runtime_state_publication
+    - test.spatial.committed_spatial_read_boundary
   blocks:
     - P4
     - P8
