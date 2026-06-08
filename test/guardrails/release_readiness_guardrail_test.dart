@@ -7,7 +7,7 @@ import '../../tool/guardrails/src/release_readiness_checks.dart';
 import 'fixtures/runner_backed_guardrail_test_support.dart';
 
 // Keep the positive runner route and negative release-readiness fixtures
-// together so the P14 guardrail contract cannot drift across separate tests.
+// together so the release guardrail contract cannot drift across separate tests.
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   test('release benchmark readiness guardrail is runner-backed', () async {
@@ -94,7 +94,7 @@ continue-on-error: true
         ),
       ),
       contains(
-        contains('public surface must not expose P14 benchmark tooling'),
+        contains('public surface must not expose release benchmark tooling'),
       ),
     );
   });
@@ -266,6 +266,45 @@ continue-on-error: true
     },
   );
 
+  test('release benchmark readiness guardrail rejects phase graph commands', () {
+    expect(
+      _violationMessages(
+        _checkWith(
+          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
+            '      - run: dart run tool/architecture_graph/check.dart',
+            '      - run: dart run tool/architecture_graph/check.dart --phase P14',
+          ),
+        ),
+      ),
+      contains(
+        contains('release benchmark workflow must use current graph commands'),
+      ),
+    );
+  });
+
+  test(
+    'release benchmark readiness guardrail rejects retired planning routes',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            releaseWorkflow: _validReleaseWorkflow.replaceFirst(
+              '      - run: dart run tool/guardrails/run.dart',
+              '''
+      - run: dart run tool/release_from_plan.dart --source=plan/
+      - run: dart run tool/guardrails/run.dart''',
+            ),
+          ),
+        ),
+        contains(
+          contains(
+            'release benchmark workflow must not invoke retired planning routes',
+          ),
+        ),
+      );
+    },
+  );
+
   test(
     'release benchmark readiness guardrail rejects direct baseline path writes',
     () {
@@ -353,6 +392,8 @@ jobs:
         with:
           channel: stable
           flutter-version: 3.38.0
+      - run: dart run docs/tool/sync_generated_docs.dart --check
+      - run: dart run docs/tool/check_docs.dart
       - run: dart run tool/bench/run.dart --profile=release
       - run: $_releaseDiffCommand
       - run: dart run tool/architecture_graph/check.dart

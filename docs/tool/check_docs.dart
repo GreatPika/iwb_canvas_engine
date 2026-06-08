@@ -75,7 +75,7 @@ const _architectureReadmeGroups = [
 
 const _rootReadmeTaskRoutes = [
   '- Understand architecture: `docs/architecture/README.md`',
-  '- Plan a change: use a per-task Change Contract with current docs and registries as inputs',
+  '- Plan a change: use a per-task Change Contract in the work item, Codex thread, or PR context',
   '- Verify behavior: `docs/verification/`',
   '- Find current owners: `docs/indexes/by_owner.md`',
   '- Check subsystem contracts: `docs/indexes/by_subsystem.md`',
@@ -88,10 +88,30 @@ const _rootReadmeTaskRoutes = [
   '- Use generated lookup: `docs/indexes/`',
 ];
 
+const _activeRoutePolicyPaths = [
+  'AGENTS.md',
+  'docs/README.md',
+  'docs/verification/release_gates.md',
+];
+
+const _retiredActiveRouteTokens = [
+  'PLAN.md',
+  'plan/',
+  'docs/indexes/by_phase.md',
+  'docs/indexes/donor_to_phase.md',
+  'docs/donors',
+  'docs/donors/',
+  'docs/implementation',
+  'docs/implementation/',
+  '--phase P14',
+  '--phase=P14',
+];
+
 final _errors = <String>[];
 
 void main() {
   _checkRequiredEntrypoints();
+  _checkActiveRoutePolicyDocs();
   _checkPortalReadmes();
   _checkReadmeInventory();
   _checkGeneratedDocsParity();
@@ -353,6 +373,21 @@ void _checkRequiredEntrypoints() {
   }
   for (final path in requiredDirs) {
     _requireDirectory(path);
+  }
+}
+
+void _checkActiveRoutePolicyDocs() {
+  for (final path in _activeRoutePolicyPaths) {
+    if (!File(path).existsSync()) {
+      _fail('$path is required for active route policy checks');
+      continue;
+    }
+    final text = _read(path);
+    for (final token in _retiredActiveRouteTokens) {
+      if (text.contains(token)) {
+        _fail('$path routes active work through retired token $token');
+      }
+    }
   }
 }
 

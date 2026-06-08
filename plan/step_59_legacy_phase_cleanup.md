@@ -459,7 +459,7 @@ Depends On:
 
 Unit 4 and Unit 5.
 
-### [ ] Unit 7: Repository instructions, release gates, CI, and post-PLAN route
+### [x] Unit 7: Repository instructions, release gates, CI, and post-PLAN route
 
 Owner:
 

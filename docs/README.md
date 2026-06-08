@@ -7,7 +7,7 @@ drift checks.
 ## Start by task
 
 - Understand architecture: `docs/architecture/README.md`
-- Plan a change: use a per-task Change Contract with current docs and registries as inputs
+- Plan a change: use a per-task Change Contract in the work item, Codex thread, or PR context
 - Verify behavior: `docs/verification/`
 - Find current owners: `docs/indexes/by_owner.md`
 - Check subsystem contracts: `docs/indexes/by_subsystem.md`
@@ -26,6 +26,12 @@ drift checks.
 - Verification policy: `docs/verification/`
 - Structured relationships: `docs/_registry/`
 - Generated navigation: `docs/indexes/` and `docs/diagrams/catalog.md`
+- Evidence inputs: `.design/` and `.research/`, when a task needs prior design
+  decisions or codebase research
+
+`.design/` and `.research/` are evidence and source-input layers only. They do
+not own active package behavior, release policy, guardrails, benchmarks,
+roadmaps, donor routes, phase routes, or runtime contracts.
 
 ## Checks
 

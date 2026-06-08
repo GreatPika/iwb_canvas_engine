@@ -1,23 +1,26 @@
-# Architecture rebuild mode
+# Maintained package mode
 
-The repository root is the canonical target package for the `iwb_canvas_engine`
-architecture rebuild. The current task is to build the new engine described in
-`docs/`, not to maintain or extend the legacy package. `docs/README.md` is the documentation entry point.
+The repository root is the canonical maintained package for
+`iwb_canvas_engine`. `docs/README.md` is the documentation entry point for
+architecture, contracts, verification policy, release gates, generated indexes,
+and registries.
 
-## Plan workflow
+## Change planning
 
-- `PLAN.md` is the active roadmap and the source of truth for planned work.
-- When adding a new step to `PLAN.md`, use `$change-contract` directly as the
-  canonical step-contract template. Do not infer the required structure from
-  existing plan steps.
-- Follow the step contract as written during implementation. If a step contract
-  conflicts with the current code, guardrails, tests, or repository-local
-  boundary enforcement, stop implementation, report the exact contradiction with
-  file-level evidence, and resolve the contract or enforcement before
-  continuing. Do not silently reinterpret the plan.
-- After completing a plan step, update the corresponding checkbox entries in
-  `PLAN.md` and any linked step document so finished items are marked done in
-  the same change.
+- Plan future implementation work with a per-task Change Contract in the work
+  item, Codex thread, or PR context.
+- Use current code, docs, registries, guardrails, tests, `.design/`, and
+  `.research/` as source inputs when they are relevant to the task.
+- Do not create an in-repository roadmap, contract index, completed contract
+  archive, phase route, or donor route as a replacement planning surface.
+- Follow the task contract as written during implementation. If it conflicts
+  with current code, docs, guardrails, tests, registries, or repository-local
+  boundary enforcement, stop implementation, report the exact contradiction
+  with file-level evidence, and resolve the contract or enforcement before
+  continuing. Do not silently reinterpret the task.
+- Treat `.design/` and `.research/` as evidence and source-input layers only.
+  They do not own active package behavior, release policy, guardrails,
+  benchmarks, roadmaps, donor routes, phase routes, or runtime contracts.
 
 
 ## DCM metrics exceptions
@@ -55,14 +58,13 @@ Also run the focused tests that cover the changed behavior or changed tool.
 For architecture changes, run the architecture graph checks from the repository
 root:
 
-- `dart run tool/architecture_graph/check.dart --phase Px`
-- `dart run tool/architecture_graph/generate_views.dart --phase Px --check`
+- `dart run tool/architecture_graph/check.dart`
+- `dart run tool/architecture_graph/generate_views.dart --check`
 
 Run the architecture checks when changing architecture-owned production seams,
 `docs/architecture/architecture_graph.yaml`, generated architecture diagrams,
-architecture documentation, phase closure state, or a plan step whose completion
-depends on architecture graph closure. Use the phase named by the active step
-contract for `Px`, including generated graph view checks.
+architecture documentation, or release gates that depend on current graph
+closure.
 
 For documentation-only changes, do not run the Dart/DCM code checks above.
 Instead, run the documentation checks from the repository root:

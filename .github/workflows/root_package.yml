@@ -28,6 +28,12 @@ jobs:
       - name: Check docs
         run: dart run docs/tool/check_docs.dart
 
+      - name: Check current architecture graph
+        run: dart run tool/architecture_graph/check.dart
+
+      - name: Check generated graph views
+        run: dart run tool/architecture_graph/generate_views.dart --check
+
       - name: Test benchmark manifest
         run: dart test test/benchmarks/benchmark_manifest_test.dart
 

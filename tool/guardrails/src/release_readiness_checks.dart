@@ -84,7 +84,7 @@ void _checkPublicSurfaceSources(
           GuardrailViolation(
             guardrailId: releaseBenchmarkReadinessGuardrailId,
             path: source.path,
-            message: 'public surface must not expose P14 benchmark tooling',
+            message: 'public surface must not expose release benchmark tooling',
           ),
         );
       }
@@ -246,6 +246,8 @@ void _checkRequiredReleaseCommands(
   List<GuardrailViolation> violations,
 ) {
   for (final required in const [
+    'dart run docs/tool/sync_generated_docs.dart --check',
+    'dart run docs/tool/check_docs.dart',
     'dart run tool/bench/run.dart --profile=release',
     _releaseDiffCommand,
     'dart run tool/architecture_graph/check.dart',
@@ -279,6 +281,34 @@ void _checkNoRetiredWorkflowCommands(
               'release benchmark workflow must not invoke retired package paths',
         ),
       );
+    }
+    if (command.contains('--phase') || command.contains('P14')) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: releaseBenchmarkReadinessGuardrailId,
+          path: releaseWorkflowPath,
+          message: 'release benchmark workflow must use current graph commands',
+        ),
+      );
+    }
+    for (final token in const [
+      'PLAN.md',
+      'plan/',
+      'docs/indexes/by_phase.md',
+      'docs/indexes/donor_to_phase.md',
+      'docs/donors',
+      'docs/implementation',
+    ]) {
+      if (command.contains(token)) {
+        violations.add(
+          GuardrailViolation(
+            guardrailId: releaseBenchmarkReadinessGuardrailId,
+            path: releaseWorkflowPath,
+            message:
+                'release benchmark workflow must not invoke retired planning routes',
+          ),
+        );
+      }
     }
   }
 }

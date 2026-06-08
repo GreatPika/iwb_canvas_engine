@@ -108,15 +108,17 @@ Do not assume:
 Release is blocked unless all statements are true:
 
 For current-closure work, graph-checkable architecture obligations are checked by
-the standalone current command:
+the standalone current commands:
 
 ```bash
 dart run tool/architecture_graph/check.dart
+dart run tool/architecture_graph/generate_views.dart --check
 ```
 
-A non-zero current graph-closure result is a blocking release-gate
-failure for the current graph. Repair the implementation or update the accepted
-current graph obligations before continuing dependent architecture work.
+A non-zero current graph-closure or generated-view result is a blocking
+release-gate failure for the current graph. Repair the implementation or update
+the accepted current graph obligations before continuing dependent architecture
+work.
 
 ```text
 1. Public API, external-adapter, retired-route, and validation checks are green.
@@ -169,9 +171,9 @@ current graph obligations before continuing dependent architecture work.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-36. benchmark gates pass through the pinned release workflow: release profile
-    run, read-only release diff, current graph check, generated-view check, and
-    guardrail runner.
+36. benchmark gates pass through the pinned release workflow: docs checks,
+    release profile run, read-only release diff, current graph check,
+    generated-view check, and guardrail runner.
 37. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
 ```
 
