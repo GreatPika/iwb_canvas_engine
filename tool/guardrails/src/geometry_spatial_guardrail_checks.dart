@@ -647,49 +647,58 @@ List<GuardrailViolation> checkSpatialFallbackBudgetEnforcedSources({
 }
 
 bool _tileIndexEnforcesSpatialBudgets(String content) {
-  final parsed = _ParsedFunctions(content);
   final query = _executableBody(content, 'query');
   final candidateBudget = _executableBody(
     content,
     'spatialCandidateResultWithinBudget',
   );
+  if (query == null || candidateBudget == null) {
+    return false;
+  }
 
-  return query != null &&
-      candidateBudget != null &&
-      _bodyContainsComparison(
-        query,
+  return _queryEnforcesTileBudget(query) &&
+      _queryAvoidsUnboundedCandidateMaterialization(query) &&
+      _queryUsesBudgetCheckedCandidateInsertion(query) &&
+      _candidateBudgetReturnsTypedResult(candidateBudget);
+}
+
+bool _queryEnforcesTileBudget(FunctionBody body) {
+  return _bodyContainsComparison(
+        body,
         'queryTileCount',
         'kCanvasMaxQueryCells',
       ) &&
-      _bodyContainsInvocation(query, 'recordQueryTileBudgetExceeded') &&
-      _bodyContainsInstanceCreation(query, 'SpatialBudgetExceededResult') &&
+      _bodyContainsInvocation(body, 'recordQueryTileBudgetExceeded') &&
+      _bodyContainsInstanceCreation(body, 'SpatialBudgetExceededResult') &&
       _bodyContainsToken(
-        query,
+        body,
         'SpatialBudgetExceededReason.queryTileBudgetExceeded',
-      ) &&
-      !_bodyContainsIdentifier(query, 'fallbackCandidates') &&
-      !_bodyContainsInvocation(query, 'addAll') &&
-      parsed.memberOrReachableHelperContains(
-        'query',
-        'recordFallbackCandidateBudgetExceeded',
-      ) &&
-      parsed.memberOrReachableHelperContains(
-        'query',
-        'kCanvasMaxFallbackCandidates',
-      ) &&
-      _bodyContainsComparison(
-        candidateBudget,
+      );
+}
+
+bool _queryAvoidsUnboundedCandidateMaterialization(FunctionBody body) {
+  return !_bodyContainsIdentifier(body, 'fallbackCandidates') &&
+      !_bodyContainsInvocation(body, 'addAll');
+}
+
+bool _candidateBudgetReturnsTypedResult(FunctionBody body) {
+  return _bodyContainsComparison(
+        body,
         'candidates.length',
         'kCanvasMaxFallbackCandidates',
       ) &&
-      _bodyContainsInvocation(
-        candidateBudget,
-        'recordFallbackCandidateBudgetExceeded',
-      ) &&
-      _bodyContainsInstanceCreation(
-        candidateBudget,
-        'SpatialBudgetExceededResult',
-      );
+      _bodyContainsInvocation(body, 'recordFallbackCandidateBudgetExceeded') &&
+      _bodyContainsInstanceCreation(body, 'SpatialBudgetExceededResult');
+}
+
+bool _queryUsesBudgetCheckedCandidateInsertion(FunctionBody body) {
+  final visitor = _TileIndexCandidateBudgetFlowVisitor();
+  body.accept(visitor);
+
+  return visitor.hasBudgetResultCheck &&
+      visitor.hasBudgetCheckedCandidateInsertion &&
+      visitor.allBudgetResultsChecked &&
+      !visitor.hasDirectCandidateMutation;
 }
 
 bool _invalidIndexFallbackEnforcesCandidateBudget(String content) {
@@ -703,6 +712,125 @@ bool _invalidIndexFallbackEnforcesCandidateBudget(String content) {
       ) &&
       _bodyContainsInvocation(body, 'recordFallbackCandidateBudgetExceeded') &&
       _bodyContainsInstanceCreation(body, 'SpatialBudgetExceededResult');
+}
+
+final class _TileIndexCandidateBudgetFlowVisitor
+    extends RecursiveAstVisitor<void> {
+  bool hasBudgetResultCheck = false;
+  bool hasBudgetCheckedCandidateInsertion = false;
+  bool hasDirectCandidateMutation = false;
+  bool hasUnscopedBudgetHelperCall = false;
+  final Set<String> _budgetResultVariables = {};
+  final Set<String> _checkedBudgetResultVariables = {};
+
+  bool get allBudgetResultsChecked {
+    return _budgetResultVariables.isNotEmpty &&
+        _checkedBudgetResultVariables.containsAll(_budgetResultVariables) &&
+        !hasUnscopedBudgetHelperCall;
+  }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    if (node.leftHandSide is IndexExpression &&
+        node.leftHandSide.toSource().startsWith('candidates[')) {
+      hasDirectCandidateMutation = true;
+    }
+    super.visitAssignmentExpression(node);
+  }
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    final initializer = node.initializer;
+    if (initializer is MethodInvocation &&
+        _isCandidateBudgetHelperCall(initializer)) {
+      _budgetResultVariables.add(node.name.lexeme);
+      hasBudgetCheckedCandidateInsertion = true;
+    }
+    super.visitVariableDeclaration(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (_isDirectCandidateMutation(node)) {
+      hasDirectCandidateMutation = true;
+    }
+    if (_isCandidateBudgetHelperCall(node) && !_isVariableInitializer(node)) {
+      hasUnscopedBudgetHelperCall = true;
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitIfStatement(IfStatement node) {
+    final checkedVariable = _nullableResultCheckVariable(node.expression);
+    if (checkedVariable != null && _nodeContainsReturn(node.thenStatement)) {
+      _checkedBudgetResultVariables.add(checkedVariable);
+      hasBudgetResultCheck = true;
+    }
+    super.visitIfStatement(node);
+  }
+}
+
+bool _isCandidateBudgetHelperCall(MethodInvocation node) {
+  return node.methodName.name == '_addUniqueCandidatesWithinBudget' &&
+      node.argumentList.toSource().contains('candidates');
+}
+
+bool _isDirectCandidateMutation(MethodInvocation node) {
+  final target = node.target;
+  if (target is! SimpleIdentifier || target.name != 'candidates') {
+    return false;
+  }
+
+  return const {
+    'addAll',
+    'addEntries',
+    'clear',
+    'putIfAbsent',
+    'remove',
+    'removeWhere',
+    'update',
+    'updateAll',
+  }.contains(node.methodName.name);
+}
+
+bool _isVariableInitializer(MethodInvocation node) {
+  final parent = node.parent;
+
+  return parent is VariableDeclaration && identical(parent.initializer, node);
+}
+
+String? _nullableResultCheckVariable(Expression expression) {
+  if (expression is! BinaryExpression || expression.operator.lexeme != '!=') {
+    return null;
+  }
+  final left = expression.leftOperand;
+  final right = expression.rightOperand;
+  if (right is NullLiteral && left is SimpleIdentifier) {
+    return left.name;
+  }
+  if (left is NullLiteral && right is SimpleIdentifier) {
+    return right.name;
+  }
+
+  return null;
+}
+
+bool _nodeContainsReturn(AstNode node) {
+  final visitor = _ReturnFinder();
+  node.accept(visitor);
+
+  return visitor.found;
+}
+
+final class _ReturnFinder extends RecursiveAstVisitor<void> {
+  bool found = false;
+
+  @override
+  void visitReturnStatement(ReturnStatement node) {
+    found = true;
+    super.visitReturnStatement(node);
+  }
 }
 
 Future<List<GuardrailViolation>> checkGeometryEraserExactBudgetInputs() async {

@@ -90,11 +90,13 @@ void main() {
 
     _expectCodecFailureRecord(
       summaryHub.records.single,
-      message: 'unknown resource kind: video.',
+      message: 'unknown resource kind.',
+      kind: 'video',
     );
     _expectCodecFailureRecord(
       verboseHub.records.single,
-      message: startsWith('unknown resource kind: v'),
+      message: 'unknown resource kind.',
+      kind: 'video',
     );
   });
 
@@ -404,11 +406,14 @@ void _expectSameFailure(
 void _expectCodecFailureRecord(
   DiagnosticRecord record, {
   required Object message,
+  required Object kind,
 }) {
   expect(record.source, DiagnosticSource.codec);
   expect(record.severity, DiagnosticSeverity.error);
   expect(record.code, DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType));
   expect(record.path, 'resource.kind');
   expect(record.details['message'], message);
+  final details = record.details['details'] as Map<String, Object?>;
+  expect(details['kind'], kind);
 }
 ''';

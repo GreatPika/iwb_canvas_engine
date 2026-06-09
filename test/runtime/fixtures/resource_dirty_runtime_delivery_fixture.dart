@@ -48,6 +48,10 @@ void _registerSessionInvalidationTests() {
     );
   });
 
+  test('dirty invalidation failure drops sink after publication', () {
+    return expectLater(_expectDirtyInvalidationFailureIsContained(), completes);
+  });
+
   test(
     'edit resource effects invalidate active session before publication',
     () {
@@ -57,6 +61,10 @@ void _registerSessionInvalidationTests() {
       );
     },
   );
+
+  test('edit resource invalidation failure drops sink after publication', () {
+    expect(_expectEditResourceInvalidationFailureIsContained, returnsNormally);
+  });
 
   test('cleared active session is not mutated by later dirty calls', () {
     return expectLater(_expectClearedActiveSessionIsIgnored(), completes);
@@ -169,6 +177,35 @@ Future<void> _expectActiveSessionInvalidatesBeforePublish() {
   return Future<void>.value();
 }
 
+Future<void> _expectDirtyInvalidationFailureIsContained() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final snapshots = <CanvasRuntimeState>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: effectBatches.add,
+  );
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+  root.attachResourceSessionInvalidationSink(
+    _ThrowingResourceSessionInvalidationSink(),
+  );
+
+  root.resources.markResourceDirty(CanvasResourceId('resource-a'));
+
+  expect(snapshots, hasLength(1));
+  expect(root.state.value.revisions.resourceVisual, 1);
+  expect(effectBatches, hasLength(1));
+  expect(
+    () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
+    returnsNormally,
+  );
+  root.dispose();
+
+  return Future<void>.value();
+}
+
 Future<void> _expectEditResourceEffectsInvalidateBeforePublish() {
   _expectEditUpsertResourceInvalidatesBeforePublish();
   _expectEditRemoveResourceInvalidatesBeforePublish();
@@ -229,6 +266,58 @@ void _expectEditRemoveResourceInvalidatesBeforePublish() {
   expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
   expect(sink.allInvalidationCount, 0);
   root.dispose();
+}
+
+void _expectEditResourceInvalidationFailureIsContained() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final snapshots = <CanvasRuntimeState>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: effectBatches.add,
+  );
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+  root.attachResourceSessionInvalidationSink(
+    _ThrowingResourceSessionInvalidationSink(),
+  );
+
+  final changed = _upsertResourceA(root);
+
+  expect(changed, isTrue);
+  expect(snapshots, hasLength(1));
+  expect(effectBatches, hasLength(1));
+  _expectUpdatedResourceASource(root);
+  _expectDirtyAfterFailedSinkIsDropped(root);
+  root.dispose();
+}
+
+bool _upsertResourceA(RuntimeRoot root) {
+  return root.edits.edit((edit) {
+    return edit.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('resource-a'),
+        source: CanvasResourceSource.appKey('resource-a-updated'),
+      ),
+    );
+  });
+}
+
+void _expectUpdatedResourceASource(RuntimeRoot root) {
+  final updatedSource = root.resources.resources.single.source;
+  expect(updatedSource, isA<CanvasAppKeyResourceSource>());
+  expect(
+    (updatedSource as CanvasAppKeyResourceSource).key,
+    'resource-a-updated',
+  );
+}
+
+void _expectDirtyAfterFailedSinkIsDropped(RuntimeRoot root) {
+  expect(
+    () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
+    returnsNormally,
+  );
 }
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
@@ -389,6 +478,19 @@ final class _RecordingResourceSessionInvalidationSink
 
   void expectTargetInvalidated(CanvasResourceId id) {
     expect(targetInvalidations, contains(id));
+  }
+}
+
+final class _ThrowingResourceSessionInvalidationSink
+    implements ResourceSessionInvalidationSink {
+  @override
+  void invalidateResourceImage(CanvasResourceId id) {
+    throw StateError('resource invalidation failed');
+  }
+
+  @override
+  void invalidateAllResourceImages() {
+    throw StateError('resource invalidation failed');
   }
 }
 

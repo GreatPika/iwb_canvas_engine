@@ -1644,12 +1644,7 @@ final class RuntimeRoot
         _publishRuntimeState();
         _emitActions(applyResult.actionIntents);
       }
-      if (applyResult.effects.isNotEmpty) {
-        _commitEffectObserver(applyResult.effects);
-      }
-    } on Object {
-      // Observer failures are contained post-commit notifications. A future
-      // diagnostics seam can report them without changing commit acceptance.
+      _deliverCommitEffectObserver(applyResult.effects);
     } finally {
       _isDeliveringCommitEffects = false;
     }
@@ -1667,12 +1662,7 @@ final class RuntimeRoot
       if (didClearTextEditing) {
         _textEditingPort.notifyActiveSessionChanged();
       }
-      if (effects.isNotEmpty) {
-        _commitEffectObserver(effects);
-      }
-    } on Object {
-      // Observer failures are contained post-load notifications. A future
-      // diagnostics seam can report them without changing load acceptance.
+      _deliverCommitEffectObserver(effects);
     } finally {
       _isDeliveringCommitEffects = false;
     }
@@ -1684,22 +1674,28 @@ final class RuntimeRoot
     if (!outcome.hasDirtyResources) {
       return;
     }
-    _invalidateActiveResourceSession(outcome);
+    _invalidateActiveResourceSessionForDirtyOutcome(outcome);
     _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
   }
 
-  void _invalidateActiveResourceSession(ResourceDirtyOutcome outcome) {
+  void _invalidateActiveResourceSessionForDirtyOutcome(
+    ResourceDirtyOutcome outcome,
+  ) {
     final sink = _activeResourceSessionInvalidationSink;
     if (sink == null) {
       return;
     }
-    if (outcome.allResourcesDirty) {
-      sink.invalidateAllResourceImages();
+    try {
+      if (outcome.allResourcesDirty) {
+        sink.invalidateAllResourceImages();
 
-      return;
-    }
-    for (final id in outcome.dirtyResourceIds) {
-      sink.invalidateResourceImage(id);
+        return;
+      }
+      for (final id in outcome.dirtyResourceIds) {
+        sink.invalidateResourceImage(id);
+      }
+    } on Object {
+      _dropFailedResourceInvalidationTarget(sink);
     }
   }
 
@@ -1719,14 +1715,21 @@ final class RuntimeRoot
     _isDeliveringCommitEffects = true;
     try {
       _publishRuntimeState();
-      if (effects.isNotEmpty) {
-        _commitEffectObserver(effects);
-      }
-    } on Object {
-      // Observer failures are contained post-dirty notifications. A future
-      // diagnostics seam can report them without changing dirty acceptance.
+      _deliverCommitEffectObserver(effects);
     } finally {
       _isDeliveringCommitEffects = false;
+    }
+  }
+
+  void _deliverCommitEffectObserver(List<CommitDeliveryEffect> effects) {
+    if (effects.isEmpty) {
+      return;
+    }
+    try {
+      _commitEffectObserver(effects);
+    } on Object {
+      // Observer failures are contained post-delivery notifications. A future
+      // diagnostics seam can report them without changing accepted outcomes.
     }
   }
 
@@ -1742,30 +1745,68 @@ final class RuntimeRoot
     if (sink == null && _activeSurfaceResourceSession == null) {
       return;
     }
-    for (final effect in effects.whereType<ResourceDeliveryEffect>()) {
-      final touchedSet = effect.touchedSet;
-      if (touchedSet.documentReplaced) {
-        _resetActiveResourceSessionForDocumentReplacement();
-        continue;
+    try {
+      for (final effect in effects.whereType<ResourceDeliveryEffect>()) {
+        final touchedSet = effect.touchedSet;
+        if (touchedSet.documentReplaced) {
+          _resetActiveResourceSessionForDocumentReplacement();
+          continue;
+        }
+        if (touchedSet.allResourceVisualsChanged) {
+          sink?.invalidateAllResourceImages();
+          continue;
+        }
+        for (final id in touchedSet.resourceIds) {
+          sink?.invalidateResourceImage(id);
+        }
       }
-      if (touchedSet.allResourceVisualsChanged) {
-        sink?.invalidateAllResourceImages();
-        continue;
-      }
-      for (final id in touchedSet.resourceIds) {
-        sink?.invalidateResourceImage(id);
-      }
+    } on Object {
+      _dropFailedResourceInvalidationTarget(sink);
     }
   }
 
   void _resetActiveResourceSessionForDocumentReplacement() {
     final session = _activeSurfaceResourceSession;
     if (session != null) {
-      session.resetForDocumentReplacement();
+      try {
+        session.resetForDocumentReplacement();
+      } on Object {
+        _dropActiveSurfaceResourceSessionBestEffort();
+      }
 
       return;
     }
     _activeResourceSessionInvalidationSink?.invalidateAllResourceImages();
+  }
+
+  void _dropFailedResourceInvalidationTarget(
+    ResourceSessionInvalidationSink? failedSink,
+  ) {
+    final session = _activeSurfaceResourceSession;
+    if (session != null &&
+        (failedSink == null || identical(failedSink, session))) {
+      _dropActiveSurfaceResourceSessionBestEffort();
+
+      return;
+    }
+    if (failedSink != null &&
+        identical(_activeResourceSessionInvalidationSink, failedSink)) {
+      _activeResourceSessionInvalidationSink = null;
+    }
+  }
+
+  void _dropActiveSurfaceResourceSessionBestEffort() {
+    final session = _activeSurfaceResourceSession;
+    _activeSurfaceResourceSession = null;
+    if (identical(_activeResourceSessionInvalidationSink, session)) {
+      _activeResourceSessionInvalidationSink = null;
+    }
+    try {
+      session?.drop();
+    } on Object {
+      // A failed cache-session drop must not block publication of the accepted
+      // document state. Clearing ownership above prevents stale reuse.
+    }
   }
 
   void _emitActions(List<CommitActionIntent> intents) {

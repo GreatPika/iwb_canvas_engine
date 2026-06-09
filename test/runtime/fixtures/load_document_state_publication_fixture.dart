@@ -37,6 +37,17 @@ void _registerSuccessfulLoadPublicationTests() {
       );
     },
   );
+
+  test('successful load drops failed resource session after publish', () {
+    expect(_expectSuccessfulLoadDropsFailedResourceSession, returnsNormally);
+  });
+
+  test('successful load attributes reset failure to surface session', () {
+    expect(
+      _expectSuccessfulLoadDropsFailedSessionWithDifferentSink,
+      returnsNormally,
+    );
+  });
 }
 
 void _registerFailedLoadFactPreservationTests() {
@@ -175,6 +186,54 @@ void _expectSuccessfulLoadInvalidatesActiveResourceSession() {
   root.dispose();
 }
 
+void _expectSuccessfulLoadDropsFailedResourceSession() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final token = Object();
+  final session = _ThrowingResetLifecycleSession();
+  final snapshots = <CanvasRuntimeState>[];
+  root.attachSurface(token);
+  root.installSurfaceResourceSession(token, session);
+  root.state.addListener(() {
+    snapshots.add(root.state.value);
+  });
+
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
+
+  expect(snapshots, hasLength(1));
+  _expectReplacementDocumentInstalled(root);
+  _expectReplacementState(snapshots.single, expectedSelectionRevision: 1);
+  expect(effectBatches, hasLength(1));
+  expect(session.dropCount, 1);
+  expect(root.activeSurfaceResourceSessionForTesting, isNull);
+  root.dispose();
+}
+
+void _expectSuccessfulLoadDropsFailedSessionWithDifferentSink() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final token = Object();
+  final session = _ThrowingResetLifecycleSession();
+  final sink = _RecordingLifecycleSession();
+  root.attachSurface(token);
+  root.installSurfaceResourceSession(token, session);
+  root.attachResourceSessionInvalidationSink(sink);
+
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
+
+  _expectReplacementDocumentInstalled(root);
+  expect(effectBatches, hasLength(1));
+  expect(session.dropCount, 1);
+  expect(sink.dropCount, 0);
+  expect(sink.allInvalidationCount, 0);
+  expect(root.activeSurfaceResourceSessionForTesting, isNull);
+  root.dispose();
+}
+
 void _expectFailedLoadHasNoSideEffects(
   String json,
   CanvasDataErrorCode expectedCode,
@@ -270,6 +329,7 @@ void _expectReplacementDocumentInstalled(RuntimeRoot root) {
 
 void _expectReplacementState(
   CanvasRuntimeState state, {
+  int expectedSelectionRevision = 2,
   int expectedPreviewRevision = 0,
 }) {
   expect(
@@ -282,7 +342,7 @@ void _expectReplacementState(
     ),
   );
   expect(state.revisions.document, 1);
-  expect(state.revisions.selection, 2);
+  expect(state.revisions.selection, expectedSelectionRevision);
   expect(state.revisions.viewCamera, 1);
   expect(state.revisions.epoch, 1);
   expect(state.revisions.preview, expectedPreviewRevision);
@@ -366,6 +426,33 @@ final class _RecordingLifecycleSession
   @override
   void resetForDocumentReplacement() {
     replacementResetCount += 1;
+  }
+
+  @override
+  void drop() {
+    dropCount += 1;
+  }
+}
+
+final class _ThrowingResetLifecycleSession
+    implements SurfaceResourceSessionLifecycle {
+  int targetInvalidationCount = 0;
+  int allInvalidationCount = 0;
+  int dropCount = 0;
+
+  @override
+  void invalidateResourceImage(CanvasResourceId id) {
+    targetInvalidationCount += 1;
+  }
+
+  @override
+  void invalidateAllResourceImages() {
+    allInvalidationCount += 1;
+  }
+
+  @override
+  void resetForDocumentReplacement() {
+    throw StateError('resource reset failed');
   }
 
   @override

@@ -61,7 +61,9 @@ implemented non-surface resource API, catalog read delegation,
 `RuntimeRoot` holds the nullable active `SurfaceResourceSessionLifecycle` port,
 which extends `ResourceSessionInvalidationSink` with `drop()`. Runtime uses the
 invalidation side before dirty public-state/effect publication and the drop side
-when the active surface detaches, swaps runtimes, or the runtime is disposed.
+when the active surface detaches, swaps runtimes, the runtime is disposed, or a
+post-acceptance resource-session invalidation/reset target fails and must not be
+reused.
 Each active `CanvasSurface` creates one concrete `SurfaceResourceSession`
 instance under `lib/src/resources/**` for synchronous resolver lifecycle and
 resolved-image cache state; surface wires that instance to the runtime lifecycle
@@ -137,6 +139,13 @@ The public dirty-resource revision is a repaint observation signal only. Cache
 identity is the table key above; dirty-resource calls invalidate target entries
 or all entries in the active session explicitly. If no surface is attached,
 there is no session cache to invalidate and the next attach starts empty.
+Resource-session invalidation and document-replacement reset are
+post-acceptance delivery work: failures from the active invalidation sink or
+surface session must not roll back, rethrow from, or block publication of an
+accepted edit, accepted load, or accepted dirty-resource result. Runtime clears
+the failed sink; when the failed target is the active surface session, runtime
+drops and detaches that session before continuing publication so stale resolved
+images cannot be reused.
 
 ### 7.2 Atomic operations
 
@@ -197,9 +206,11 @@ public `state.revisions.resourceVisual` domain. The public resource port
 delegates the revision increment to ResourceKernel/RuntimeRoot orchestration.
 `ResourceKernel` emits only `ResourceDirtyOutcome`; `RuntimeRoot` owns the
 active-session invalidation slot and forwards target/all invalidation to the
-attached resource session, if any. The repaint intent is runtime-owned and does
-not require an attached `CanvasSurface`; an attached surface observes it if
-present.
+attached resource session, if any. If that invalidation target fails,
+`RuntimeRoot` contains the failure by clearing the failed sink or dropping the
+failed surface session, then still publishes the accepted dirty state and repaint
+effect. The repaint intent is runtime-owned and does not require an attached
+`CanvasSurface`; an attached surface observes it if present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
 clears the active session cache when a `ResourceSessionInvalidationSink` is

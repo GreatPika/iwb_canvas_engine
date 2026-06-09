@@ -636,7 +636,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/resources.md
     evidence:
-      - RuntimeRoot holds the nullable active ResourceSessionInvalidationSink and forwards accepted ResourceDirtyOutcome target/all invalidation to the active SurfaceResourceSession before dirty publication, without ResourceKernel owning app image references or session cache entries.
+      - RuntimeRoot holds the nullable active ResourceSessionInvalidationSink and forwards accepted ResourceDirtyOutcome target/all invalidation to the active SurfaceResourceSession before dirty publication, containing failed invalidation/reset targets by clearing the failed sink or dropping the failed session so accepted edit/load/dirty publication still completes, without ResourceKernel owning app image references or session cache entries.
     actual:
       compositionFields:
         - ResourceSessionInvalidationSink

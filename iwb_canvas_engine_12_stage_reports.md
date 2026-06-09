@@ -537,7 +537,8 @@ ID: RUNTIME-002
 - Test C: сохранить существующее поведение accepted resolver path: resolver request timestamp и последующий move action timestamp остаются монотонными и различимыми.
 
 
-, pointer tools и preview/commit flow
+```text
+Этап 5. Interaction engine, pointer tools и preview/commit flow
 
 Проверенная область:
 lib/src/interaction/**
