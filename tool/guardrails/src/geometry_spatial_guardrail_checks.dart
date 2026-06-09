@@ -647,6 +647,7 @@ List<GuardrailViolation> checkSpatialFallbackBudgetEnforcedSources({
 }
 
 bool _tileIndexEnforcesSpatialBudgets(String content) {
+  final parsed = _ParsedFunctions(content);
   final query = _executableBody(content, 'query');
   final candidateBudget = _executableBody(
     content,
@@ -667,6 +668,15 @@ bool _tileIndexEnforcesSpatialBudgets(String content) {
         'SpatialBudgetExceededReason.queryTileBudgetExceeded',
       ) &&
       !_bodyContainsIdentifier(query, 'fallbackCandidates') &&
+      !_bodyContainsInvocation(query, 'addAll') &&
+      parsed.memberOrReachableHelperContains(
+        'query',
+        'recordFallbackCandidateBudgetExceeded',
+      ) &&
+      parsed.memberOrReachableHelperContains(
+        'query',
+        'kCanvasMaxFallbackCandidates',
+      ) &&
       _bodyContainsComparison(
         candidateBudget,
         'candidates.length',

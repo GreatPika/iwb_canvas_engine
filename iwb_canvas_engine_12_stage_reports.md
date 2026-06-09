@@ -756,42 +756,6 @@ CanvasTransform(a: 1e-4, b: 0, c: 0, d: 1e-4, tx: 2000, ty: 0)
 2. Проверить, что HitTestPolicy().exactHit(point: Offset(2000, 0), facts: rect) не бросает exception и возвращает true.
 3. Повторить для exactContextHit и для path/text, где inverse используется тем же путём.
 
-ID: GEOMETRY-002
-Этап: Этап 6. Geometry, transforms, hit-testing и spatial index
-Название проблемы: Spatial candidate budget применяется после полной материализации candidates
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-TileIndex.query сначала собирает все tile/outlier candidates в Map, а только потом вызывает spatialCandidateResultWithinBudget(...). Поэтому budget 4096 предотвращает возврат partial candidates, но не предотвращает полный scan/allocation большого candidate set в hot path. На плотном документе это может дать резкую деградацию pointer hit-testing, marquee, eraser или frame paint query.
-
-Доказательство в коде:
-lib/src/geometry/spatial_query_policy.dart:7 — kCanvasMaxFallbackCandidates = 4096.
-lib/src/geometry/tile_index.dart:62-68 — TileIndex.query создаёт Map candidates и добавляет туда все tile pages и все outlierCandidates до budget gate.
-lib/src/geometry/tile_index.dart:70-75 — budget проверяется только после полной сборки candidates.values.
-lib/src/geometry/tile_index.dart:95-104 — spatialCandidateResultWithinBudget(...) останавливается при candidates.length > 4096, но к этому моменту source уже является полностью построенным candidates.values.
-lib/src/contracts/public/canvas_contract_limits.dart:3 — public validation допускает до 200000 элементов в документе.
-
-Пользовательский или инженерный сценарий проявления:
-Документ содержит 50000-200000 маленьких элементов в одной области или много oversized outlier elements. Пользователь двигает pointer, делает marquee или viewport paint query по этой области. Query вернёт SpatialBudgetExceededResult, но перед этим TileIndex уже скопирует/обойдёт весь большой набор candidates.
-
-Почему это не теоретический edge case:
-200000 элементов — заявленный validation limit, а dense canvas и большие paint/hit запросы являются нормальными сценариями canvas engine. Проблема находится именно в performance budget hot path: результат диагностируется как budget-exceeded, но дорогая работа уже выполнена.
-
-Рекомендуемое исправление:
-Перенести candidate budget gate внутрь процесса union/dedup:
-- при обходе tile pages и outliers добавлять unique id в candidates;
-- как только unique candidate count становится > kCanvasMaxFallbackCandidates, сразу возвращать SpatialBudgetExceededResult;
-- не материализовать оставшиеся candidates;
-- observed можно фиксировать как budget + 1 либо как bounded observed count, если контракт не требует полного подсчёта.
-Также обновить тесты, которые сейчас допускают полный обход over-budget source.
-
-Минимальная проверка после исправления:
-Добавить тест для TileIndex:
-1. Заполнить одну tile page количеством candidates > kCanvasMaxFallbackCandidates.
-2. Выполнить маленький SpatialQueryWindow по этой tile.
-3. Проверить SpatialBudgetExceededResult без SpatialCandidatesResult.
-4. Через counting iterable/outlier source проверить, что обход останавливается не позже budget + 1, а не посещает весь источник.
-
 ID: GEOMETRY-003
 Этап: Этап 6. Geometry, transforms, hit-testing и spatial index
 Название проблемы: Invalid-index fallback обходит query tile budget

@@ -10,7 +10,7 @@ research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.
 
 ## Summary
 
-12 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. Fixed entries were removed from this remaining-problems document.
+11 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. Fixed entries were removed from this remaining-problems document.
 
 Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path.
 
@@ -18,7 +18,7 @@ The original research was static. This document now tracks only the remaining P1
 
 ## Remaining Problem Groups
 
-The 12 remaining P1 entries collapse into 10 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
+The 11 remaining P1 entries collapse into 9 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
 
 | Group | Remaining report IDs | Owning code path | Grouping basis |
 | --- | --- | --- | --- |
@@ -29,9 +29,8 @@ The 12 remaining P1 entries collapse into 10 unique problem groups when overlapp
 | 5 | `INTERACTION-001` | Selection terminal admission | Marquee/point selection can commit from unreliable query facts because terminal admission does not gate on query status/skipped candidates. |
 | 6 | `INTERACTION-002` | Context target admission | Context action target admission can use partial candidate results with skipped/unresolved handles. |
 | 7 | `GEOMETRY-001` | Geometry inverse transform computation | Hit testing calls public-validating inverse construction, so a valid transform can throw on derived inverse coordinates. |
-| 8 | `GEOMETRY-002` | Spatial candidate budget enforcement | Tile query materializes candidates before applying candidate budget. |
-| 9 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
-| 10 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
+| 8 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
+| 9 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
 
 ## Detailed Findings
 
@@ -84,11 +83,6 @@ The 12 remaining P1 entries collapse into 10 unique problem groups when overlapp
 - **Dependencies**: public geometry contracts, transform admission, hit test policy.
 - **Data flow**: Valid public transform -> hit test inverse -> public transform validation on derived inverse -> exception possible when derived translation exceeds public coordinate limit.
 
-- **Location**: primary `lib/src/geometry/tile_index.dart:62`; additional `lib/src/geometry/tile_index.dart:70`.
-- **Description**: `GEOMETRY-002` is confirmed. Spatial candidate budget is 4096 (`lib/src/geometry/spatial_query_policy.dart:7`). `TileIndex.query` creates a candidates map (`lib/src/geometry/tile_index.dart:62`), adds tile page candidates and all outlier candidates (`lib/src/geometry/tile_index.dart:63`, `lib/src/geometry/tile_index.dart:66`), and only then calls `spatialCandidateResultWithinBudget(candidates.values, ...)` (`lib/src/geometry/tile_index.dart:70`, `lib/src/geometry/tile_index.dart:71`). The budget helper checks length while iterating the already-built source (`lib/src/geometry/tile_index.dart:95`, `lib/src/geometry/tile_index.dart:101`, `lib/src/geometry/tile_index.dart:104`). A fixture expects over-budget outlier iteration to visit the whole source (`test/spatial/fixtures/fallback_budget_enforced_fixture.dart:42`, `test/spatial/fixtures/fallback_budget_enforced_fixture.dart:56`).
-- **Dependencies**: tile index, spatial query policy, budget result helper.
-- **Data flow**: Query window -> materialize all candidate handles into map -> budget helper returns budget-exceeded result after materialization.
-
 - **Location**: primary `lib/src/frame/frame_capture_service.dart:40`; additional `lib/src/frame/captured_frame.dart:90`.
 - **Description**: `FRAME-001` is confirmed. Frame contract describes `CapturedOverlayFrame` as preview/camera/style facts (`docs/contracts/frame_rendering.md:85`, `docs/contracts/frame_rendering.md:88`, `docs/contracts/frame_rendering.md:94`) and says overlay primitives are admitted from `CapturedOverlayFrame` (`docs/contracts/frame_rendering.md:175`, `docs/contracts/frame_rendering.md:178`). Current `captureOverlayFrame` calls `_captureSnapshot(inputs)` (`lib/src/frame/frame_capture_service.dart:40`, `lib/src/frame/frame_capture_service.dart:41`). `_captureSnapshot` reads revisions, selection facts, spatial paint query, resolved elements/descriptors, background, and spatial candidates (`lib/src/frame/frame_capture_service.dart:52`, `lib/src/frame/frame_capture_service.dart:55`, `lib/src/frame/frame_capture_service.dart:56`, `lib/src/frame/frame_capture_service.dart:69`, `lib/src/frame/frame_capture_service.dart:76`, `lib/src/frame/frame_capture_service.dart:80`). `CapturedOverlayFrame` stores a full `CapturedFrameSnapshot` (`lib/src/frame/captured_frame.dart:90`, `lib/src/frame/captured_frame.dart:92`, `lib/src/frame/captured_frame.dart:96`), and that snapshot includes main-frame fields (`lib/src/frame/captured_frame.dart:56`, `lib/src/frame/captured_frame.dart:57`, `lib/src/frame/captured_frame.dart:58`, `lib/src/frame/captured_frame.dart:61`, `lib/src/frame/captured_frame.dart:62`). Existing fixture expects overlay snapshot spatial candidates and doubled reads (`test/frame/fixtures/main_overlay_capture_fixture.dart:76`, `test/frame/fixtures/main_overlay_capture_fixture.dart:115`, `test/frame/fixtures/main_overlay_capture_fixture.dart:132`).
 - **Dependencies**: frame capture service, captured frame models, runtime frame facts, overlay planner.
@@ -115,7 +109,6 @@ The 12 remaining P1 entries collapse into 10 unique problem groups when overlapp
 - `iwb_canvas_engine_12_stage_reports.md:646` - `INTERACTION-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:696` - `INTERACTION-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:806` - `GEOMETRY-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:845` - `GEOMETRY-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:918` - `FRAME-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:1115` - `RESOURCE-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:1481` - `SURFACE-002` P1 entry.
@@ -129,7 +122,6 @@ The 12 remaining P1 entries collapse into 10 unique problem groups when overlapp
 - `lib/src/interaction/select_machine.dart:35` - selection terminal checks revisions/ids, not query status.
 - `lib/src/runtime/runtime_interaction_read_adapter.dart:414` - context target admission uses candidates presence.
 - `lib/src/contracts/public/canvas_geometry.dart:155` - inverse transform uses public constructor.
-- `lib/src/geometry/tile_index.dart:70` - candidate budget helper runs after map construction.
 - `lib/src/frame/frame_capture_service.dart:40` - overlay capture uses `_captureSnapshot`.
 - `lib/src/surface/pointer_adapter.dart:38` - surface drops non-finite pointer event before sample route.
 - `tool/bench/src/benchmark_diff.dart:168` - unapproved baseline status creates failure.

@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/geometry/tile_index.dart';
 void main() {
   _testTileBudgetResult();
   _testFallbackCandidateBudget();
+  _testTileCandidateBudget();
   _testOrdinaryTileQueryDoesNotUseFallback();
 }
 
@@ -53,7 +54,45 @@ void _testFallbackCandidateBudget() {
     );
     expect(counters.queryTileBudgetExceededCount, 0);
     expect(counters.fallbackCandidateBudgetExceededCount, 1);
-    expect(fallback.visited, fallback.count);
+    expect(budget.observed, kCanvasMaxFallbackCandidates + 1);
+    expect(fallback.visited, kCanvasMaxFallbackCandidates + 1);
+  });
+}
+
+void _testTileCandidateBudget() {
+  test('tile candidate budget stops during page union', () {
+    final counters = SpatialBudgetCounters();
+    final tiles = TileIndex();
+    for (var index = 0; index < kCanvasMaxFallbackCandidates + 10; index += 1) {
+      tiles.put(
+        SpatialMembership.fromBounds(
+          handle: _handle('tile-$index', index),
+          boundsWorld: const Rect.fromLTRB(0, 0, 100, 100),
+          indexKind: SpatialIndexKind.hit,
+        ),
+      );
+    }
+
+    final result = tiles.query(
+      _ordinaryWindow(),
+      TileQueryContext(
+        counters: counters,
+        candidateMapper: (handle) {
+          throw StateError('over-budget query should not map candidates');
+        },
+      ),
+    );
+
+    expect(result, isA<SpatialBudgetExceededResult>());
+    final budget = result as SpatialBudgetExceededResult;
+    expect(
+      budget.reason,
+      SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
+    );
+    expect(budget.budget, kCanvasMaxFallbackCandidates);
+    expect(budget.observed, kCanvasMaxFallbackCandidates + 1);
+    expect(counters.queryTileBudgetExceededCount, 0);
+    expect(counters.fallbackCandidateBudgetExceededCount, 1);
   });
 }
 

@@ -61,10 +61,26 @@ final class TileIndex {
     }
     final candidates = <CanvasElementId, FrameElementHandle>{};
     for (final tile in spatialTilesFor(window.boundsWorld)) {
-      candidates.addAll(_pages[tile] ?? const {});
+      final page = _pages[tile];
+      if (page == null) {
+        continue;
+      }
+      final budgetResult = _addUniqueCandidatesWithinBudget(
+        candidates,
+        page.values,
+        context.counters,
+      );
+      if (budgetResult != null) {
+        return budgetResult;
+      }
     }
-    for (final handle in context.outlierCandidates) {
-      candidates[handle.id] = handle;
+    final outlierBudgetResult = _addUniqueCandidatesWithinBudget(
+      candidates,
+      context.outlierCandidates,
+      context.counters,
+    );
+    if (outlierBudgetResult != null) {
+      return outlierBudgetResult;
     }
 
     return spatialCandidateResultWithinBudget(
@@ -74,6 +90,28 @@ final class TileIndex {
       budgetReason: SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
     );
   }
+}
+
+SpatialQueryResult? _addUniqueCandidatesWithinBudget(
+  Map<CanvasElementId, FrameElementHandle> candidates,
+  Iterable<FrameElementHandle> source,
+  SpatialBudgetCounters counters,
+) {
+  for (final handle in source) {
+    final isNewCandidate = !candidates.containsKey(handle.id);
+    candidates[handle.id] = handle;
+    if (isNewCandidate && candidates.length > kCanvasMaxFallbackCandidates) {
+      counters.recordFallbackCandidateBudgetExceeded();
+
+      return SpatialBudgetExceededResult(
+        reason: SpatialBudgetExceededReason.fallbackCandidateBudgetExceeded,
+        budget: kCanvasMaxFallbackCandidates,
+        observed: candidates.length,
+      );
+    }
+  }
+
+  return null;
 }
 
 FrameElementHandle _identityHandle(FrameElementHandle handle) => handle;

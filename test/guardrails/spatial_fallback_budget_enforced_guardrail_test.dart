@@ -47,6 +47,56 @@ if (context.indexedEntryCount > kCanvasMaxFallbackCandidates) {
         ),
         hasLength(1),
       );
+
+      final fullMaterializationBeforeBudget =
+          checkSpatialFallbackBudgetEnforcedSources(
+            tileIndexPath: 'lib/src/geometry/tile_index.dart',
+            tileIndexContent: '''
+SpatialQueryResult query(window, context) {
+  final queryTileCount = spatialTileCountFor(window.boundsWorld);
+  if (queryTileCount > kCanvasMaxQueryCells) {
+    context.counters.recordQueryTileBudgetExceeded();
+    return SpatialBudgetExceededResult(
+      reason: SpatialBudgetExceededReason.queryTileBudgetExceeded,
+    );
+  }
+  final candidates = {};
+  candidates.addAll(page);
+  return spatialCandidateResultWithinBudget(
+    candidates.values,
+    context.counters,
+  );
+}
+
+SpatialQueryResult spatialCandidateResultWithinBudget(source, counters) {
+  final candidates = [];
+  for (final handle in source) {
+    candidates.add(handle);
+    if (candidates.length > kCanvasMaxFallbackCandidates) {
+      counters.recordFallbackCandidateBudgetExceeded();
+      return SpatialBudgetExceededResult();
+    }
+  }
+  return SpatialCandidatesResult(orderedCandidates: candidates);
+}
+''',
+            queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
+            queryStateContent: '''
+SpatialQueryResult runQuery(context) {
+  if (context.indexedEntryCount > kCanvasMaxFallbackCandidates) {
+    counters.recordFallbackCandidateBudgetExceeded();
+    return SpatialBudgetExceededResult();
+  }
+  return SpatialInvalidIndexResult();
+}
+''',
+          );
+      expect(
+        fullMaterializationBeforeBudget.where(
+          (violation) => violation.path.contains('tile_index'),
+        ),
+        hasLength(1),
+      );
     },
   );
 }
