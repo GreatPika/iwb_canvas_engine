@@ -1468,8 +1468,8 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
 - current selected-move resolver requests and accepted user actions resolve
   timestamps only after the path is accepted far enough to create that output;
   stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
-  rollback, load cleanup, dispose cleanup, unsupported double tap, and unknown
-  or already-consumed text request ids remain timestamp-silent.
+  rollback, load cleanup, dispose cleanup, invalid direct double tap, and
+  unknown or already-consumed text request ids remain timestamp-silent.
 ```
 
 ```dart
@@ -1767,10 +1767,12 @@ Public tool-port behavior:
   stream that closes on dispose.
 ```
 
-`CanvasToolPort.handleDoubleTap` throws an `UnsupportedError` whose message
-names context actions and
-performs no request, document, selection, preview, interaction, action,
-timestamp, repaint, or DiagnosticsHub effect.
+`CanvasToolPort.handleDoubleTap` accepts a finite host-recognized double-tap
+view position, does not require pending first-tap history, and emits at most one
+asynchronous context-action request after candidate spatial admission. Invalid
+positions are rejected before target resolution and request emission. Delivery
+has no document, selection, preview, repaint, spatial, projection, resource, or
+action effect.
 
 Validation:
 
@@ -2354,9 +2356,9 @@ Context-action and text editing model:
 ```text
 - when there is no context-action request producer, `contextActionRequests` is an
   empty broadcast stream that closes on dispose;
-- unsupported direct `CanvasToolPort.handleDoubleTap` throws
-  `UnsupportedError` naming context actions and has no request, state, action,
-  or timestamp effect;
+- direct `CanvasToolPort.handleDoubleTap` is a supported host-recognized
+  double-tap input that can emit one asynchronous context-action request after
+  candidate spatial admission;
 - engine behavior detects an accepted double-tap context target after
   candidate spatial admission;
 - rejected invalid-index, stale-index, and budget-exceeded target reads emit no

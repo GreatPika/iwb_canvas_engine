@@ -40,6 +40,23 @@ void _registerBasicEditRows() {
   test('removeUnusedResource removes only unused descriptors', () {
     expect(_expectUnusedResourceRemovalInstalls, returnsNormally);
   });
+
+  test('replaceDraftDocument resource descriptors use accepted revision', () {
+    expect(
+      _expectReplaceDraftDocumentResourceDescriptorsUseAcceptedRevision,
+      returnsNormally,
+    );
+  });
+
+  test(
+    'materialized non-resource edit preserves resource descriptor revision',
+    () {
+      expect(
+        _expectMaterializedNonResourceEditPreservesResourceDescriptorRevision,
+        returnsNormally,
+      );
+    },
+  );
 }
 
 void _registerOperationMatrixRows() {
@@ -600,6 +617,58 @@ void _expectUnusedResourceRemovalInstalls() {
   expect(root.readDocument().resources, isEmpty);
   expect(root.documentFacts.documentRevision, 1);
   expect(root.frameRevisions.resourceRevision, 1);
+}
+
+void _expectReplaceDraftDocumentResourceDescriptorsUseAcceptedRevision() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(_replacementDocumentWithResource());
+  });
+
+  final descriptor = root.resourceDescriptor(
+    CanvasResourceId('replacement-resource'),
+  );
+  expect(root.frameRevisions.resourceRevision, 1);
+  expect(descriptor?.appKey, 'replacement-resource');
+  expect(descriptor?.resourceRevision, root.frameRevisions.resourceRevision);
+}
+
+// This regression keeps the mixed resource revision setup, materialized edit,
+// and descriptor assertions together so the per-resource invariant is visible.
+// ignore: halstead-volume
+void _expectMaterializedNonResourceEditPreservesResourceDescriptorRevision() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithTwoReferencedResources(),
+    config: const CanvasRuntimeConfig(),
+  );
+  root.edits.edit((edit) {
+    edit.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('resource-2'),
+        source: CanvasResourceSource.appKey('resource-2-updated'),
+      ),
+    );
+  });
+  expect(root.frameRevisions.resourceRevision, 1);
+
+  root.edits.edit((edit) {
+    edit.readDraftDocument();
+    edit.setBackgroundColor(const Color(0xFF112233));
+  });
+
+  final unchanged = root.resourceDescriptor(CanvasResourceId('resource-1'));
+  final changed = root.resourceDescriptor(CanvasResourceId('resource-2'));
+  expect(root.documentFacts.documentRevision, 2);
+  expect(root.frameRevisions.backgroundRevision, 1);
+  expect(root.frameRevisions.resourceRevision, 1);
+  expect(unchanged?.appKey, 'resource-1');
+  expect(unchanged?.resourceRevision, 0);
+  expect(changed?.appKey, 'resource-2-updated');
+  expect(changed?.resourceRevision, root.frameRevisions.resourceRevision);
 }
 
 void _expectEditOperationRowsInstallEffects() {
@@ -1279,12 +1348,67 @@ CanvasDocument _documentWithReferencedResource() {
   );
 }
 
+CanvasDocument _documentWithTwoReferencedResources() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-1'),
+        source: CanvasResourceSource.appKey('resource-1'),
+      ),
+      CanvasImageResource(
+        id: CanvasResourceId('resource-2'),
+        source: CanvasResourceSource.appKey('resource-2'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-1'),
+            resourceId: CanvasResourceId('resource-1'),
+            size: const Size(1, 1),
+          ),
+          CanvasImageElement(
+            id: CanvasElementId('image-2'),
+            resourceId: CanvasResourceId('resource-2'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 CanvasDocument _replacementDocument() {
   return CanvasDocument(
     backgroundElements: [
       CanvasRectElement(
         id: CanvasElementId('replacement'),
         size: const Size(1, 1),
+      ),
+    ],
+  );
+}
+
+CanvasDocument _replacementDocumentWithResource() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('replacement-resource'),
+        source: CanvasResourceSource.appKey('replacement-resource'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('replacement-layer'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('replacement-image'),
+            resourceId: CanvasResourceId('replacement-resource'),
+            size: const Size(1, 1),
+          ),
+        ],
       ),
     ],
   );

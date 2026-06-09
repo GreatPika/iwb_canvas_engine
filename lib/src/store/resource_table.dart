@@ -80,6 +80,37 @@ final class ResourceTable {
 
   bool contains(CanvasResourceId id) => descriptors.containsKey(id);
 
+  ResourceTable withAcceptedResourceRevisions(
+    ResourceTable previous, {
+    required int acceptedRevision,
+  }) {
+    if (descriptors.isEmpty ||
+        descriptors.values.every(
+          (descriptor) =>
+              descriptor.resourceRevision ==
+              _acceptedResourceRevisionFor(
+                descriptor,
+                previous: previous,
+                acceptedRevision: acceptedRevision,
+              ),
+        )) {
+      return this;
+    }
+    final nextDescriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
+    for (final descriptor in descriptors.values) {
+      final revision = _acceptedResourceRevisionFor(
+        descriptor,
+        previous: previous,
+        acceptedRevision: acceptedRevision,
+      );
+      nextDescriptors[descriptor.id] = descriptor.withResourceRevision(
+        revision,
+      );
+    }
+
+    return ResourceTable._(descriptors: Map.unmodifiable(nextDescriptors));
+  }
+
   ResourceTable upsert(CanvasResource resource, {required int revision}) {
     final descriptor = descriptorFor(resource, resourceRevision: revision);
     if (descriptor == null) {
@@ -136,6 +167,20 @@ final class ResourceTable {
       metadata: resource.metadata,
     );
   }
+}
+
+int _acceptedResourceRevisionFor(
+  StoreResourceDescriptorFacts descriptor, {
+  required ResourceTable previous,
+  required int acceptedRevision,
+}) {
+  final previousDescriptor = previous.descriptors[descriptor.id];
+  if (previousDescriptor != null &&
+      descriptor.hasSameResourceFacts(previousDescriptor)) {
+    return previousDescriptor.resourceRevision;
+  }
+
+  return acceptedRevision;
 }
 
 final class StoreResourceDescriptorImportBuilder {
@@ -279,4 +324,29 @@ final class StoreResourceDescriptorFacts {
   final int? byteLength;
   final int resourceRevision;
   final CanvasMetadata metadata;
+
+  StoreResourceDescriptorFacts withResourceRevision(int revision) {
+    if (resourceRevision == revision) {
+      return this;
+    }
+
+    return StoreResourceDescriptorFacts(
+      id: id,
+      appKey: appKey,
+      mimeType: mimeType,
+      contentHash: contentHash,
+      byteLength: byteLength,
+      resourceRevision: revision,
+      metadata: metadata,
+    );
+  }
+
+  bool hasSameResourceFacts(StoreResourceDescriptorFacts other) {
+    return id == other.id &&
+        appKey == other.appKey &&
+        mimeType == other.mimeType &&
+        contentHash == other.contentHash &&
+        byteLength == other.byteLength &&
+        metadata == other.metadata;
+  }
 }

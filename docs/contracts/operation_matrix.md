@@ -82,7 +82,7 @@ Resource and interaction owners own their resource and interaction rows.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
-| context-action double-tap request | unsupported direct double tap has no touched state; direct `handleDoubleTap` clears pending context tap history before candidate-admitted current-target resolution; InteractionRequestRegistry stores live context request target kind and guard facts | none for unsupported direct double tap; none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
+| context-action double-tap request | direct `handleDoubleTap` clears pending context tap history before candidate-admitted current-target resolution; InteractionRequestRegistry stores live context request target kind and guard facts | none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
 | commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel plus consume/remove live request facts after successful prepare | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
@@ -162,7 +162,7 @@ Notes:
 - Action rows emit only after the accepted state for the same operation has
   been installed and published. No-op, stale, invalid, cancel, resolver cancel,
   rollback, load cleanup, dispose cleanup, unknown text request ids, and
-  unsupported double tap do not resolve action/request timestamps and emit no
+  invalid direct double tap do not resolve action/request timestamps and emit no
   action or context request.
 ```
 

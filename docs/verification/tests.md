@@ -647,9 +647,8 @@ behavioral tests, and the required guardrail list remains owned by
   initial settings are visible, effective changes advance interaction
   revision, no-ops stay silent, active sessions clean up on setting changes,
   pencil draw-mode pointer input publishes preview-only public state,
-  unsupported direct double tap has no state, action, timestamp, request,
-  repaint, or diagnostics effect, and context-action requests are a
-  non-throwing empty stream.
+  direct double tap emits a bounded asynchronous context-action request, and
+  context-action requests use a non-throwing broadcast stream.
 - `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
   timestamps are resolved through one runtime-local monotonic cursor.
 - `test/runtime/command_facts_port_test.dart` proves immutable command fact

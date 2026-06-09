@@ -257,9 +257,7 @@ final class DocumentStoreKernel {
     if (!delta.hasChanges) {
       return;
     }
-    _document = document.copyWith(
-      revisions: delta.advance(_document.revisions),
-    );
+    _document = _acceptFullDocument(document, delta);
     _elementIds.admitAll(_document.admittedElementIds);
     _layerIds.admitAll(_document.admittedLayerIds);
     _resourceIds.admitAll(_document.admittedResourceIds);
@@ -269,9 +267,7 @@ final class DocumentStoreKernel {
     if (!delta.hasChanges) {
       return;
     }
-    _document = document.copyWith(
-      revisions: delta.advance(_document.revisions),
-    );
+    _document = _acceptFullDocument(document, delta);
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
@@ -293,9 +289,7 @@ final class DocumentStoreKernel {
     if (!delta.hasChanges) {
       return;
     }
-    _document = document.copyWith(
-      revisions: delta.advance(_document.revisions),
-    );
+    _document = _acceptFullDocument(document, delta);
     _elementIds = _IdAdmission(
       prefix: 'e',
       admittedIds: _document.admittedElementIds,
@@ -408,6 +402,21 @@ final class DocumentStoreKernel {
       admittedElementIds: didMutateFacts ? admittedIds.elementIds : const [],
       admittedLayerIds: didMutateFacts ? admittedIds.layerIds : const [],
       admittedResourceIds: didMutateFacts ? admittedIds.resourceIds : const [],
+    );
+  }
+
+  CommittedDocument _acceptFullDocument(
+    CommittedDocument document,
+    StoreRevisionDelta delta,
+  ) {
+    final acceptedRevisions = delta.advance(_document.revisions);
+
+    return document.copyWith(
+      revisions: acceptedRevisions,
+      resourceTable: document.resourceTable.withAcceptedResourceRevisions(
+        _document.resourceTable,
+        acceptedRevision: acceptedRevisions.resourceRevision,
+      ),
     );
   }
 

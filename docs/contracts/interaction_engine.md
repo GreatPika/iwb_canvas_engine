@@ -321,11 +321,9 @@ This is mandatory. Selected move preview uses main-scene repaint through selecte
 
 ### 14.4 Double-tap context action
 
-Double-tap context actions are interaction-owned. When direct double-tap
-delivery is unsupported, `CanvasToolPort.handleDoubleTap` throws an
-`UnsupportedError` naming context actions and performs no request, document,
-selection, preview,
-interaction, action, timestamp, repaint, or DiagnosticsHub effect.
+Double-tap context actions are interaction-owned. Direct double-tap delivery
+through `CanvasToolPort.handleDoubleTap` is supported when the host surface has
+already recognized the double-tap gesture and supplies the view position.
 `CanvasRuntime.contextActionRequests` is a non-throwing broadcast stream that
 closes on dispose.
 
