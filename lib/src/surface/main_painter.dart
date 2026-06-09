@@ -19,6 +19,7 @@ final class MainFramePainter extends CustomPainter {
       Paint()..color = const Color(0x00000000),
     );
     canvas.save();
+    canvas.clipRect(Offset.zero & size);
     canvas.translate(-viewport.left, -viewport.top);
     canvas.drawPicture(output.staticBackgroundPlan.picture.picture);
     paintMainFrameRecordsAndSelectionDecorations(canvas, output);

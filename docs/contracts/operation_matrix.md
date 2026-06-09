@@ -119,13 +119,20 @@ Notes:
   selection, preview, spatial, projection, repaint, or event effect. Terminal
   effects are defined only by the selected tool row: marquee, selected move,
   pencil/marker, line, eraser, context-action tap, or cleanup/no-op.
+- `CanvasElementUpdate.isSelectable` changes spatial hit/selectable membership,
+  so it is a spatial touched update even when selection normalization and repaint
+  effects are otherwise no-ops.
 - Context-action double-tap request emits `CanvasContextActionRequested` with
   `CanvasInteractionRequestId`, `CanvasContextActionTrigger.doubleTap`,
   controller epoch, document revision, timestamp, view/world positions, and
   either a content-element target or empty-canvas target. Direct
-  `CanvasToolPort.handleDoubleTap` is a host-recognized input that does not
-  require pending first-tap history; pointer-sample recognition remains a
-  separate two-tap path. Content targets carry an immutable public
+  `CanvasToolPort.handleDoubleTap` is a host-recognized input that is admitted
+  independently from engine-owned pointer-sample context taps: it does not
+  require pending first-tap history, move mode, or absence of an active pointer
+  preview/session. Emitting the direct request does not clear active pointer
+  preview/session state. Pointer-sample context taps remain a separate two-tap
+  path guarded by move-mode and pointer-session policy. Content targets carry
+  an immutable public
   `CanvasElement` snapshot and boundsWorld; empty-canvas targets carry no
   element snapshot. Delivery is asynchronous through the context request stream.
   Rejected invalid-index, stale-index, and budget-exceeded target reads emit no

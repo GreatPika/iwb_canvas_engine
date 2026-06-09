@@ -21,6 +21,7 @@ void main() {
 
     _expectRootPackageChecks(steps);
     _expectRootPackageBenchmarkChecks(workflowContent, steps);
+    _expectExampleBoundaryDiffEnvironment(steps);
     _expectNoWorkflowBypass(rootPackageJob, steps);
     _expectGuardrailRunnerCannotBeBypassed(rootPackageJob, guardrailStep);
     _expectFullGuardrailRunnerSelection(workflowContent, guardrailStep);
@@ -89,6 +90,26 @@ void _expectRootPackageChecks(List<YamlMap> steps) {
   );
   expect(runCommands, contains('dart analyze'));
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
+}
+
+void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
+  final checkoutStep = _stepNamed(steps, 'Checkout');
+  final checkoutWith = checkoutStep['with'] as YamlMap;
+  expect(checkoutWith['fetch-depth'], 0);
+
+  final flutterTestStep = _stepNamed(
+    steps,
+    'Test all non-benchmark Flutter tests',
+  );
+  final env = flutterTestStep['env'] as YamlMap;
+  expect(
+    env['EXAMPLE_BOUNDARY_DIFF_BASE'],
+    r"${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}",
+  );
+  expect(
+    env['EXAMPLE_BOUNDARY_DIFF_HEAD'],
+    r"${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}",
+  );
 }
 
 void _expectRootPackageBenchmarkChecks(
@@ -189,10 +210,7 @@ void _expectReleaseBenchmarkCommands(List<YamlMap> steps) {
       'release_ubuntu_24_04_flutter_3_38_0.json',
     ),
   );
-  expect(
-    runCommands,
-    contains('dart run tool/architecture_graph/check.dart'),
-  );
+  expect(runCommands, contains('dart run tool/architecture_graph/check.dart'));
   expect(
     runCommands,
     contains('dart run tool/architecture_graph/generate_views.dart --check'),

@@ -225,7 +225,7 @@ Field taxonomy:
 | `CanvasElementUpdate.opacity` | elementVisual, projection | none | evict | none | main | none |
 | `CanvasElementUpdate.hitPadding` | bounds, projection | touched update | evict | none | none | none |
 | `CanvasElementUpdate.isVisible` | bounds, elementVisual, projection | touched update | evict | none | main | prune selected id when it becomes invisible |
-| `CanvasElementUpdate.isSelectable` | projection | none | evict | none | main when selection normalization prunes; otherwise none | prune selected id when it becomes non-selectable |
+| `CanvasElementUpdate.isSelectable` | projection | touched update | evict | none | main when selection normalization prunes; otherwise none | prune selected id when it becomes non-selectable |
 | `CanvasElementUpdate.isLocked` | projection | none | evict | none | none | none |
 | `CanvasElementUpdate.isDeletable` | projection | none | evict | none | none | none |
 | `CanvasElementUpdate.isTransformable` | projection | none | evict | none | none | none |

@@ -1629,9 +1629,16 @@ double? _validatedOptionalPositiveDouble(
 }
 
 T _materialize<T>(DiagnosticsHub? diagnostics, T Function() materialize) {
+  final hub = diagnostics;
+  final recordsBefore = hub?.recordCount;
   try {
     return materialize();
   } on CanvasDataException catch (exception, stackTrace) {
+    if (hub != null &&
+        recordsBefore != null &&
+        hub.recordCount > recordsBefore) {
+      Error.throwWithStackTrace(exception, stackTrace);
+    }
     Error.throwWithStackTrace(
       recordSchemaV1FailureDiagnostic(diagnostics, exception),
       stackTrace,

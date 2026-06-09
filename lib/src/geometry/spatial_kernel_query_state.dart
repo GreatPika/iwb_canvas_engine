@@ -1,4 +1,5 @@
 import '../contracts/internal/frame_facts_port.dart';
+import 'geometry_policy.dart';
 import 'spatial_budget_counters.dart';
 import 'spatial_query_policy.dart';
 import 'spatial_query_result.dart';
@@ -35,6 +36,10 @@ final class SpatialKernelQueryState {
 
   SpatialQueryResult runQuery(SpatialKernelQueryContext context) {
     if (isInvalid) {
+      final queryTileBudgetResult = _queryTileBudgetResult(context, counters);
+      if (queryTileBudgetResult != null) {
+        return queryTileBudgetResult;
+      }
       counters.recordInvalidIndexProbe();
       if (context.indexedEntryCount > kCanvasMaxFallbackCandidates) {
         counters.recordFallbackCandidateBudgetExceeded();
@@ -71,6 +76,23 @@ final class SpatialKernelQueryState {
       );
     }
   }
+}
+
+SpatialQueryResult? _queryTileBudgetResult(
+  SpatialKernelQueryContext context,
+  SpatialBudgetCounters counters,
+) {
+  final queryTileCount = spatialTileCountFor(context.window.boundsWorld);
+  if (queryTileCount <= kCanvasMaxQueryCells) {
+    return null;
+  }
+  counters.recordQueryTileBudgetExceeded();
+
+  return SpatialBudgetExceededResult(
+    reason: SpatialBudgetExceededReason.queryTileBudgetExceeded,
+    budget: kCanvasMaxQueryCells,
+    observed: queryTileCount,
+  );
 }
 
 SpatialQueryResult _invalidFallbackResult(

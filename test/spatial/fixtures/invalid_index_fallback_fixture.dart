@@ -1,6 +1,10 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_budget_counters.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
@@ -11,6 +15,7 @@ void main() {
   _testFailedUpdatePreservesEntries();
   _testMissingTouchedHandleRejected();
   _testInvalidIndexBudgetExceeded();
+  _testInvalidIndexQueryTileBudgetExceeded();
 }
 
 void _testFailedUpdatePreservesEntries() {
@@ -90,4 +95,57 @@ void _testInvalidIndexBudgetExceeded() {
     expect(result, isA<SpatialBudgetExceededResult>());
     expect(kernel.budgetCounters.fallbackCandidateBudgetExceededCount, 1);
   });
+}
+
+void _testInvalidIndexQueryTileBudgetExceeded() {
+  // Assertions live in the focused helper so the over-budget window setup stays
+  // readable at the regression site.
+  // ignore: missing-test-assertion
+  test(
+    'invalid index over query tile budget returns no fallback candidates',
+    () {
+      final kernel = SpatialKernel();
+      kernel.rebuild(
+        SpatialFrameFactsPortFixture([spatialRect('e0', order: 0)]),
+      );
+      final corrupt = SpatialFrameFactsPortFixture([
+        spatialRect('e0', order: 0, generation: 1),
+      ]);
+      kernel.applyTouched(
+        corrupt,
+        TouchedSet(updatedElementIds: [CanvasElementId('e0')]),
+      );
+
+      _expectInvalidIndexQueryTileBudgetExceeded(
+        kernel.queryHit(_overBudgetWindow(kernel)),
+        kernel.budgetCounters,
+      );
+    },
+  );
+}
+
+SpatialQueryWindow _overBudgetWindow(SpatialKernel kernel) {
+  return SpatialQueryWindow(
+    boundsWorld: Rect.fromLTWH(
+      0,
+      0,
+      (kCanvasMaxQueryCells + 1) * kCanvasSpatialCellSize.toDouble(),
+      kCanvasSpatialCellSize.toDouble(),
+    ),
+    structuralRevision: kernel.snapshot.structuralRevision,
+  );
+}
+
+void _expectInvalidIndexQueryTileBudgetExceeded(
+  SpatialQueryResult result,
+  SpatialBudgetCounters counters,
+) {
+  expect(result, isA<SpatialBudgetExceededResult>());
+  final budget = result as SpatialBudgetExceededResult;
+  expect(budget.reason, SpatialBudgetExceededReason.queryTileBudgetExceeded);
+  expect(budget.budget, kCanvasMaxQueryCells);
+  expect(budget.observed, greaterThan(kCanvasMaxQueryCells));
+  expect(counters.queryTileBudgetExceededCount, 1);
+  expect(counters.fallbackCandidateBudgetExceededCount, 0);
+  expect(counters.invalidIndexProbeCount, 0);
 }

@@ -407,12 +407,6 @@ const ownerDagAllowedEdges = [
     sourcePath: 'lib/src/api/canvas_codec.dart',
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
   ),
-  OwnerEdge(
-    source: apiOwner,
-    target: codecOwner,
-    sourcePath: 'lib/src/api/canvas_codec.dart',
-    targetPath: 'lib/src/codec/schema_v1_decoder.dart',
-  ),
   OwnerEdge(source: runtimeOwner, target: contractsPublicOwner),
   OwnerEdge(source: runtimeOwner, target: contractsInternalOwner),
   OwnerEdge(
@@ -475,12 +469,6 @@ const ownerDagAllowedEdges = [
     target: spatialOwner,
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-  ),
-  OwnerEdge(
-    source: runtimeOwner,
-    target: spatialOwner,
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
   ),
   OwnerEdge(
     source: runtimeOwner,
@@ -636,12 +624,6 @@ const ownerDagAllowedEdges = [
   OwnerEdge(
     source: frameOwner,
     target: spatialOwner,
-    sourcePath: 'lib/src/frame/ordinary_paint_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  OwnerEdge(
-    source: frameOwner,
-    target: spatialOwner,
     sourcePath: 'lib/src/frame/render_element_record.dart',
     targetPath: 'lib/src/geometry/geometry_policy.dart',
   ),
@@ -656,12 +638,6 @@ const ownerDagAllowedEdges = [
     target: spatialOwner,
     sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
     targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  OwnerEdge(
-    source: frameOwner,
-    target: resourcesOwner,
-    sourcePath: 'lib/src/frame/frame_paint_output.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
   OwnerEdge(
     source: frameOwner,

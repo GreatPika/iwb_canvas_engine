@@ -79,7 +79,7 @@
   - test.api_contract.public_exports_complete
   - test.guardrails.import_boundaries
   - test.guardrails.frame_committed_facts_via_frame_facts_port
-  - test.guardrails.selection_boundary_imports
+  - test.guardrails.selection_boundary_checks
   - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
   - no external package import bypass
@@ -147,7 +147,7 @@
   - test.guardrails.text_surface_guardrail_checks
   - test.runtime.dispose_lifecycle
   - test.runtime.runtime_state_publication
-  - test.runtime.interaction_settings_state
+  - test.api.tool_port_settings
   - test.surface.interactive_false_state_isolation
   - test.surface.interactive_false_pending_line_preserved
   - test.surface.single_active_surface
@@ -279,7 +279,7 @@
   - test.runtime.dispose_lifecycle
   - test.runtime.runtime_state_publication
   - test.runtime.load_document_state_publication
-  - test.runtime.interaction_settings_state
+  - test.api.tool_port_settings
   - test.store.read_document_projection
   - test.selection.runtime_owner_separation
   - test.store.no_projection_hot_path
@@ -459,7 +459,6 @@
   - test.surface.interactive_false_pending_line_preserved
   - test.surface.interactive_false_state_isolation
   - test.surface.pointer_adapter_finite_normalization
-  - test.runtime.interaction_settings_state
   - test.api_contract.preview_state_sealed_union
   - test.interaction.preview_public_state
   - test.interaction.move_machine
@@ -474,7 +473,7 @@
   - test.frame.marquee_overlay_repaint
   - test.guardrails.action_after_state
   - test.guardrails.interaction_guardrail_enforcement
-  - test.guardrails.selection_boundary_imports
+  - test.guardrails.selection_boundary_checks
   - test.surface.widget_paint
   do_not_assume:
   - no callback graph as structure
@@ -877,7 +876,6 @@
   - test.runtime.runtime_state_publication
   - test.smoke.public_incremental_smoke
   - test.runtime.load_document_state_publication
-  - test.runtime.interaction_settings_state
   - test.store.read_document_projection
   - test.store.no_projection_hot_path
   - test.store.public_document_is_projection_only

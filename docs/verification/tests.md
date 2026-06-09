@@ -82,7 +82,6 @@ Required tests:
 - `test.runtime.runtime_state_publication`
 - `test.smoke.public_incremental_smoke`
 - `test.runtime.load_document_state_publication`
-- `test.runtime.interaction_settings_state`
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
@@ -245,7 +244,6 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/runtime/runtime_state_publication_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
 - `test/runtime/load_document_state_publication_test.dart`
-- `test/runtime/interaction_settings_state_test.dart`
 - `test/surface/interactive_false_pointer_routing_test.dart`
 - `test/surface/interactive_false_active_session_cancel_test.dart`
 - `test/surface/interactive_false_pending_line_preserved_test.dart`
@@ -313,7 +311,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/selection/runtime_owner_separation_test.dart`
 - `test/guardrails/action_after_state_guardrail_test.dart`
 - `test/guardrails/interaction_guardrail_enforcement_test.dart`
-- `test/guardrails/selection_boundary_imports_test.dart`
+- `test/guardrails/selection_boundary_checks_test.dart`
 - `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`
 - `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`
 - `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`
@@ -625,14 +623,6 @@ behavioral tests, and the required guardrail list remains owned by
   CanvasRuntimeState that includes document, selection, viewCamera, epoch,
   and conditional preview cleanup revisions;
 - proves loadDocumentFromJson failure publishes no public state snapshot.
-
-#### `test/runtime/interaction_settings_state_test.dart`
-- proves mode, draw tool, draw style, draw color, and pointer policy changes
-  publish state.revisions.interaction without changing document,
-  resourceVisual, or viewCamera revisions;
-- proves selection and preview revisions are unchanged for no-cleanup
-  settings changes, and advance only when the operation also owns draw-mode
-  selection clear or active preview cleanup.
 
 #### Public command and tool tests
 - `test/api/selection_port_test.dart` proves direct public selection changes
@@ -950,7 +940,7 @@ Current implemented proof:
   output after runtime camera pan while preserving ordinary paint plan identity
   and capturing the runtime preview source.
 
-#### `test/guardrails/selection_boundary_imports_test.dart`
+#### `test/guardrails/selection_boundary_checks_test.dart`
 - proves InteractionEngine does not import concrete SelectionKernel or
   DocumentStoreKernel internals;
 - proves interaction selection/document reads are routed through

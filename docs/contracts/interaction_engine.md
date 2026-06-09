@@ -49,7 +49,6 @@ Required tests:
 - `test.surface.interactive_false_pending_line_preserved`
 - `test.surface.interactive_false_state_isolation`
 - `test.surface.pointer_adapter_finite_normalization`
-- `test.runtime.interaction_settings_state`
 - `test.api_contract.preview_state_sealed_union`
 - `test.interaction.preview_public_state`
 - `test.interaction.move_machine`
@@ -64,7 +63,7 @@ Required tests:
 - `test.frame.marquee_overlay_repaint`
 - `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
-- `test.guardrails.selection_boundary_imports`
+- `test.guardrails.selection_boundary_checks`
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`
@@ -341,13 +340,15 @@ projection, resource, or action effect.
 `CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
 not the second sample in engine-owned pointer-sample recognition. It accepts a
 finite view position from the host surface and does not require pending
-first-tap history. On a valid direct double-tap, the interaction engine clears
-any pending context tap history through `PointerToolCleanupCoordinator`,
-resolves the current context-action target at the supplied position, admits only
-candidate spatial results, then resolves the request timestamp through the
-runtime timestamp cursor, issues a `CanvasInteractionRequestId`, records live
-guard facts in `InteractionRequestRegistry`, and emits exactly one asynchronous
-context-action request for the current content target or empty canvas. A
+first-tap history, move mode, or absence of an active pointer preview/session.
+On a valid direct double-tap, the interaction engine clears any pending context
+tap history through `PointerToolCleanupCoordinator`, resolves the current
+context-action target at the supplied position, admits only candidate spatial
+results, then resolves the request timestamp through the runtime timestamp
+cursor, issues a `CanvasInteractionRequestId`, records live guard facts in
+`InteractionRequestRegistry`, and emits exactly one asynchronous context-action
+request for the current content target or empty canvas. Emitting the direct
+request must not clear active pointer preview/session state by itself. A
 non-finite position is rejected before target resolution and request emission.
 
 Engine-owned pointer-sample recognition remains separate: the first tap may
@@ -356,9 +357,10 @@ current target class and target facts before request emission. When the first
 tap is also a move-mode selection tap, the selection commit may update
 selection state and emit the normal select-marquee action, but post-commit
 cleanup must preserve the pending context tap history so the next fast tap is
-recognized as the second tap. Direct `handleDoubleTap` bypasses that pending
-candidate requirement while still clearing stale pending context tap history
-before it resolves the current target.
+recognized as the second tap. Pointer-sample context taps remain guarded by
+move-mode and pointer-session policy. Direct `handleDoubleTap` bypasses that
+pending candidate requirement while still clearing stale pending context tap
+history before it resolves the current target.
 
 Content-element targets carry an immutable public `CanvasElement` snapshot and
 `boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is

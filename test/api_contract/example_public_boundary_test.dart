@@ -105,11 +105,15 @@ void _registerNoProductionLibDiffTest() {
             '--name-only',
             '${diffRange.base}..${diffRange.head}',
           ]);
-    if (diffRange == null && !changedPaths.any(_isExampleBoundaryPath)) {
+    if (!changedPaths.any(_isExampleBoundaryPath)) {
       markTestSkipped(
-        'Set EXAMPLE_BOUNDARY_DIFF_BASE and EXAMPLE_BOUNDARY_DIFF_HEAD '
-        'when reviewing a committed example boundary step diff; the current '
-        'working tree has no example/** changes to classify.',
+        diffRange == null
+            ? 'Set EXAMPLE_BOUNDARY_DIFF_BASE and EXAMPLE_BOUNDARY_DIFF_HEAD '
+                  'when reviewing a committed example boundary step diff; '
+                  'the current working tree has no example/** changes to '
+                  'classify.'
+            : 'The committed example boundary diff range has no example/** '
+                  'changes to classify.',
       );
 
       return;

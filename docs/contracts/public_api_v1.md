@@ -39,7 +39,7 @@ Required tests:
 - `test.guardrails.text_surface_guardrail_checks`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
-- `test.runtime.interaction_settings_state`
+- `test.api.tool_port_settings`
 - `test.surface.interactive_false_state_isolation`
 - `test.surface.interactive_false_pending_line_preserved`
 - `test.surface.single_active_surface`

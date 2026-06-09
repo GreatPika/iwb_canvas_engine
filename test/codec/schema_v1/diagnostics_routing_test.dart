@@ -38,6 +38,8 @@ import 'package:flutter_test/flutter_test.dart';
 	import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 	import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 	import 'package:iwb_canvas_engine/src/codec/schema_v1_encoder.dart';
+	import 'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart';
+	import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
 	import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 	import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 
@@ -320,6 +322,68 @@ void main() {
     expect(hub.records.single.path, 'resources.id');
   });
 
+  test('schema v1 import emitter records each data failure exactly once', () {
+    final readFailureHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+    final materializeFailureHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+
+    expect(
+      () => importSchemaV1Document(
+        _importDocumentWithTransform({'a': 'bad'}),
+        _NoopImportSink(),
+        diagnostics: readFailureHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.invalidFieldType,
+            )
+            .having((error) => error.path, 'path', 'transform.a'),
+      ),
+    );
+    expect(readFailureHub.recordCount, 1);
+    expect(
+      readFailureHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType),
+    );
+    expect(readFailureHub.records.single.path, 'transform.a');
+
+    expect(
+      () => importSchemaV1Document(
+        _importDocumentWithTransform({
+          'a': 0,
+          'b': 0,
+          'c': 0,
+          'd': 0,
+          'tx': 0,
+          'ty': 0,
+        }),
+        _NoopImportSink(),
+        diagnostics: materializeFailureHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMustBeInvertible,
+            )
+            .having((error) => error.path, 'path', 'element.transform'),
+      ),
+    );
+    expect(materializeFailureHub.recordCount, 1);
+    expect(
+      materializeFailureHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.fieldMustBeInvertible),
+    );
+    expect(materializeFailureHub.records.single.path, 'element.transform');
+  });
+
   test('internal decode without enabled diagnostics records nothing', () {
     final disabledHub = DiagnosticsHub(
       policy: const CanvasDiagnosticPolicy.disabled(),
@@ -365,6 +429,52 @@ Map<String, Object?> _resourceAppKeyDocument(String key) {
       },
     ],
   };
+}
+
+Map<String, Object?> _importDocumentWithTransform(
+  Map<String, Object?> transformPatch,
+) {
+  return {
+    'schemaVersion': 1,
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'rect-a',
+          'kind': 'rect',
+          'size': {'w': 1, 'h': 1},
+          'transform': {
+            'a': 1,
+            'b': 0,
+            'c': 0,
+            'd': 1,
+            'tx': 0,
+            'ty': 0,
+            ...transformPatch,
+          },
+        },
+      ],
+    },
+  };
+}
+
+final class _NoopImportSink implements SchemaV1ImportSink {
+  @override
+  void beginDocument(SchemaV1DocumentImportEvent event) {}
+
+  @override
+  void imageResource(SchemaV1ImageResourceImportEvent event) {}
+
+  @override
+  void backgroundElement(SchemaV1ElementImportEvent event) {}
+
+  @override
+  void layer(SchemaV1LayerImportEvent event) {}
+
+  @override
+  void layerElement(CanvasLayerId layerId, SchemaV1ElementImportEvent event) {}
+
+  @override
+  void endDocument() {}
 }
 
 String _decodedResourceAppKey(CanvasDocument document) {

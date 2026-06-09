@@ -54,6 +54,10 @@ these checks from the repository root:
   production, test, and tool scopes such as `lib/src/<owner>`,
   `test/<area>`, and `tool/<area>`.
 
+DCM is intentionally local-only verification. Root CI does not run
+`dcm analyze` or `dcm calculate-metrics`, and absence of DCM from CI is not a
+release-gate bug.
+
 Also run the focused tests that cover the changed behavior or changed tool.
 
 For architecture changes, run the architecture graph checks from the repository

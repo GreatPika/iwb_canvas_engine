@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -47,6 +49,9 @@ jobs:
         run: dart test test/benchmarks/benchmark_runner_test.dart
 
       - name: Test all non-benchmark Flutter tests
+        env:
+          EXAMPLE_BOUNDARY_DIFF_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          EXAMPLE_BOUNDARY_DIFF_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
         run: flutter test --concurrency=1 $(find test -path test/benchmarks -prune -o -name '*_test.dart' -print)
 
       - name: Analyze Dart

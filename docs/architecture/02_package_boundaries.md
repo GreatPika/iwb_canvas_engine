@@ -17,7 +17,7 @@ Required tests:
 - `test.api_contract.public_exports_complete`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
-- `test.guardrails.selection_boundary_imports`
+- `test.guardrails.selection_boundary_checks`
 - `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
 - `core.no_unapproved_external_package_imports`
@@ -277,7 +277,14 @@ when a proof needs the same command path as CI.
 Forbidden imports:
 
 ```text
-lib/src/api/**               -> may not import/export contracts/internal; only named facade bridges may import runtime/codec implementation
+lib/src/api/**               -> may not import/export contracts/internal except
+                                 lib/src/api/canvas_runtime_surface_bridge.dart,
+                                 which is the narrow package-boundary bridge
+                                 allowed to import exactly
+                                 ../contracts/internal/resolver_mutation_guard.dart
+                                 and
+                                 ../contracts/internal/surface_resource_session_lifecycle.dart;
+                                 only named facade bridges may import runtime/codec implementation
 lib/src/contracts/public/**  -> may not import/export src/api or implementation owners
 lib/src/contracts/internal/** -> may not import/export src/api or implementation owners
 lib/src/runtime/**           -> may not import src/api or the root public barrel as a type library

@@ -12,15 +12,19 @@ stateDiagram-v2
   Idle --> Disposed: "runtime.dispose()"
   Idle --> FirstTapGate: "finite tap or click admitted"
   Idle --> DirectDoubleTapGate: "host-recognized handleDoubleTap with finite position"
-  Idle --> Idle: "invalid, stale, drag, active pointer conflict, or wrong mode / ignore"
+  Idle --> Idle: "invalid, stale, drag, or pointer-sample wrong mode / ignore"
 
   state "Direct double-tap gate" as DirectDoubleTapGate
   note right of DirectDoubleTapGate
     Direct handleDoubleTap is a host-recognized
-    input event. It does not require pending
-    first-tap history, but clears stale pending
-    context tap history through PointerToolCleanupCoordinator
-    before resolving the current target.
+    input event. It is separate from the
+    engine-owned pointer-sample context-tap path:
+    it does not require move mode, pending first-tap
+    history, or absence of an active pointer
+    preview/session. It clears stale pending context
+    tap history before resolving the current target,
+    but does not clear active pointer preview/session
+    state just because the direct request is emitted.
   end note
 
   DirectDoubleTapGate --> DirectTopTarget: "query current content hit candidates"
@@ -81,8 +85,8 @@ stateDiagram-v2
 
   PendingContentTarget --> SecondTapGate: "second tap"
   PendingEmptyCanvas --> SecondTapGate: "second tap"
-  PendingContentTarget --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap"
-  PendingEmptyCanvas --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap"
+  PendingContentTarget --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap only"
+  PendingEmptyCanvas --> DirectDoubleTapGate: "host-recognized finite handleDoubleTap / clear pending context tap only"
   PendingContentTarget --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
   PendingEmptyCanvas --> CleanupOnly: "delay exceeded, slop exceeded, invalid sample, mode mismatch, controllerEpoch mismatch, mode change, or interactive=false"
   PendingContentTarget --> CleanupOnly: "loadDocument prepared cleanup before install"

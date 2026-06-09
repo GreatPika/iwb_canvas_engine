@@ -15,6 +15,7 @@ final class OverlayFramePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final viewport = output.capturedFrame.snapshot.inputs.effectiveWorldBounds;
     canvas.save();
+    canvas.clipRect(Offset.zero & size);
     canvas.translate(-viewport.left, -viewport.top);
     for (final primitive in output.overlayPreviewPlan.primitives) {
       _paintPrimitive(canvas, primitive);

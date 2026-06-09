@@ -292,13 +292,6 @@ const _bridgeFixtures = [
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'codec',
-    sourcePath: 'lib/src/api/canvas_codec.dart',
-    targetPath: 'lib/src/codec/schema_v1_decoder.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
     sourceOwner: 'runtime',
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_root.dart',
@@ -345,13 +338,6 @@ const _bridgeFixtures = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -518,13 +504,6 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'frame',
     targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/ordinary_paint_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
     sourcePath: 'lib/src/frame/render_element_record.dart',
     targetPath: 'lib/src/geometry/geometry_policy.dart',
     directiveKind: 'import',
@@ -541,13 +520,6 @@ const _bridgeFixtures = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
     targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/frame_paint_output.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
     directiveKind: 'import',
   ),
   _OwnerDagFixture(
@@ -654,12 +626,6 @@ const _expectedAllowedOwnerEdges = [
     targetPath: 'lib/src/codec/schema_v1_encoder.dart',
   ),
   _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'codec',
-    sourcePath: 'lib/src/api/canvas_codec.dart',
-    targetPath: 'lib/src/codec/schema_v1_decoder.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
     targetOwner: 'contracts/public',
   ),
@@ -709,12 +675,6 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
     targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'runtime',
@@ -927,12 +887,6 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'frame',
     targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/ordinary_paint_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
     sourcePath: 'lib/src/frame/render_element_record.dart',
     targetPath: 'lib/src/geometry/geometry_policy.dart',
   ),
@@ -947,12 +901,6 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'spatial',
     sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
     targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/frame_paint_output.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'frame',

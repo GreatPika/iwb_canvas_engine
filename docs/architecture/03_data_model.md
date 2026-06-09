@@ -18,7 +18,7 @@ Required tests:
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.load_document_state_publication`
-- `test.runtime.interaction_settings_state`
+- `test.api.tool_port_settings`
 - `test.store.read_document_projection`
 - `test.selection.runtime_owner_separation`
 - `test.store.no_projection_hot_path`

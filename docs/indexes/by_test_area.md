@@ -29,7 +29,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api.tool_port_settings
 
-- Sections: `section_14_interaction_engine`, `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
 
 ## test.api.typed_action_payloads
 
@@ -305,11 +305,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.guardrails.selection_boundary_checks
 
-- Sections: `section_10_runtime_data_model`, `section_23_tests`
-
-## test.guardrails.selection_boundary_imports
-
-- Sections: `section_03_package_layout`, `section_14_interaction_engine`
+- Sections: `section_03_package_layout`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
 
 ## test.guardrails.spatial_fallback_budget_enforced
 
@@ -434,10 +430,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.runtime.dispose_lifecycle
 
 - Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_23_tests`
-
-## test.runtime.interaction_settings_state
-
-- Sections: `section_04_public_api_v1`, `section_10_runtime_data_model`, `section_14_interaction_engine`, `section_23_tests`
 
 ## test.runtime.load_document_state_publication
 
