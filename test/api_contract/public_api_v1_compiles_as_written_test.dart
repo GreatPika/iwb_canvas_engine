@@ -35,13 +35,25 @@ Future<ProcessResult> _analyzeConsumerSource(String source) async {
     ], workingDirectory: packageDir.path);
     expect(pubGet.exitCode, 0, reason: _processOutput(pubGet));
 
-    return await Process.run(Platform.resolvedExecutable, [
+    return await Process.run(_dartExecutablePath(), [
       'analyze',
       'lib/public_api_consumer.dart',
     ], workingDirectory: packageDir.path);
   } finally {
     await packageDir.delete(recursive: true);
   }
+}
+
+String _dartExecutablePath() {
+  final sdkPath = analysisDartSdkPath;
+  if (sdkPath == null) {
+    return 'dart';
+  }
+
+  final executableName = Platform.isWindows ? 'dart.exe' : 'dart';
+
+  return '$sdkPath${Platform.pathSeparator}bin'
+      '${Platform.pathSeparator}$executableName';
 }
 
 String _pubspecSource() {

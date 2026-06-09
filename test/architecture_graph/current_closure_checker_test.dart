@@ -268,12 +268,15 @@ void _expectFacadeRoutesDocumentCurrentOwners(
     byId['api.canvas_runtime.tools.routes_to_runtime_tools']?.evidence.join(
       ' ',
     ),
-    contains('P11 owns later draw production behavior behind the port'),
+    contains('draw owns later draw production behavior behind the port'),
   );
   expect(
     byId['eraser_context.request.produces_context_action_requests']?.evidence
         .join(' '),
-    contains('RuntimeRoot emits accepted P12 context-action requests'),
+    contains(
+      'RuntimeRoot emits accepted eraser/context-action context-action '
+      'requests',
+    ),
   );
 }
 

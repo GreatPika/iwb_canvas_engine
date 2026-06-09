@@ -6,6 +6,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
+import 'src/analysis_dart_sdk_path.dart';
 import 'src/public_export_namespace_support.dart';
 import 'src/tool_command_result.dart';
 
@@ -83,6 +84,7 @@ Future<Map<String, Object?>> _buildReport({
 
   final collection = AnalysisContextCollection(
     includedPaths: <String>[rootAbsPath],
+    sdkPath: resolveAnalysisDartSdkPath(),
   );
   final context = collection.contextFor(entrypointAbsPath);
   final session = context.currentSession;
