@@ -937,14 +937,6 @@ const _expectedAllowedOwnerEdges = [
     targetOwner: 'contracts/internal',
   ),
   _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'tools',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'tools',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
     sourceOwner: 'surface',
     targetOwner: 'contracts/public',
   ),
@@ -1060,7 +1052,6 @@ const _ownerFixtureSources = {
   'frame': 'lib/src/frame/bad.dart',
   'interaction': 'lib/src/interaction/bad.dart',
   'spatial': 'lib/src/geometry/bad.dart',
-  'tools': 'lib/src/tools/bad.dart',
   'surface': 'lib/src/surface/bad.dart',
 };
 
@@ -1078,7 +1069,6 @@ const _ownerFixtureTargets = {
   'frame': 'lib/src/frame/frame_renderer.dart',
   'interaction': 'lib/src/interaction/interaction_engine.dart',
   'spatial': 'lib/src/geometry/spatial_kernel.dart',
-  'tools': 'lib/src/tools/draw_tool_kernel.dart',
   'surface': 'lib/src/surface/flutter_surface.dart',
 };
 
@@ -1093,7 +1083,6 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'api', target: 'frame'),
   _RequiredForbiddenEdge(source: 'api', target: 'interaction'),
   _RequiredForbiddenEdge(source: 'api', target: 'spatial'),
-  _RequiredForbiddenEdge(source: 'api', target: 'tools'),
   _RequiredForbiddenEdge(source: 'api', target: 'surface'),
   _RequiredForbiddenEdge(source: 'runtime', target: 'api'),
   _RequiredForbiddenEdge(source: 'runtime', target: 'spatial'),
@@ -1126,7 +1115,6 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'frame'),
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'interaction'),
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'spatial'),
-  _RequiredForbiddenEdge(source: 'contracts/public', target: 'tools'),
   _RequiredForbiddenEdge(source: 'contracts/public', target: 'surface'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'runtime'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'api'),
@@ -1139,7 +1127,6 @@ const _requiredForbiddenEdges = [
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'frame'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'interaction'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'spatial'),
-  _RequiredForbiddenEdge(source: 'contracts/internal', target: 'tools'),
   _RequiredForbiddenEdge(source: 'contracts/internal', target: 'surface'),
   _RequiredForbiddenEdge(
     source: 'api',

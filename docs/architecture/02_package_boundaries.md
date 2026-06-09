@@ -135,9 +135,6 @@ The new package is rooted at the repository top level:
         tile_index.dart
         outlier_index.dart
         spatial_membership.dart
-      tools/
-        draw_tool_kernel.dart
-        tool_preview_coordinator.dart
       resources/
         resource_kernel.dart
         resource_cache.dart
@@ -303,7 +300,6 @@ lib/src/geometry/**          -> may consume measured text layout facts but must 
 lib/src/resources/**         -> may not import runtime, store, frame, surface, interaction, Flutter, or cache/session owners outside resource-owned seams
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
-lib/src/tools/**             -> may not import runtime, frame, or surface internals
 lib/src/surface/**           -> may not import package-internal iwb_canvas_engine route
 lib/src/surface/**           -> may use CanvasRuntime public facade type for public widget constructor signatures, but runtime internals still go through named surface bridges
 lib/src/surface/**           -> may use EditableText only for public surface widgets; non-surface production owners must not import or construct EditableText

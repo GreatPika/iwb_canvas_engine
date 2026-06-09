@@ -17,7 +17,6 @@ coverage:
     - lib/src/geometry/**
     - lib/src/frame/**
     - lib/src/interaction/**
-    - lib/src/tools/**
     - lib/src/surface/**
     - tool/bench/src/release_readiness.dart
   sensitiveThrows:

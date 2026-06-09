@@ -21,6 +21,7 @@ void main() {
     _registerMissingAnchorLineTest();
     _registerOutOfBoundsAnchorTest();
     _registerMalformedCoverageTest();
+    _registerRepositoryRelativeCoveragePathTest();
   });
   group('source coverage diagnostics', () {
     _registerSourceCoverageCompletenessTest();
@@ -85,6 +86,10 @@ void _registerCoverageCategoryTest() {
       contains('lib/iwb_canvas_engine.dart'),
     );
     expect(graph.coverage.architectureOwners, contains('lib/src/runtime/**'));
+    expect(
+      graph.coverage.architectureOwners,
+      isNot(contains('lib/src/tools/**')),
+    );
     expect(graph.coverage.sensitiveThrows.single.owner, 'codec.schema_v1');
     expect(graph.coverage.placeholders.single.under, 'lib/src/api/**');
     expect(graph.coverage.ignored, contains('**/fixtures/**'));
@@ -246,6 +251,55 @@ void _registerMalformedCoverageTest() {
       _diagnosticIds(_graphWith(coverage: invalidCoverage)),
       contains('required.text'),
     );
+  });
+
+  test('schema validation rejects empty production coverage globs', () {
+    final graph = _graphWith(
+      coverage: ArchitectureCoverage(
+        publicSurfaces: const ['lib/iwb_canvas_engine.dart'],
+        architectureOwners: const ['lib/src/missing_owner/**'],
+        sensitiveThrows: _validGraph().coverage.sensitiveThrows,
+        placeholders: _validGraph().coverage.placeholders,
+        ignored: _validGraph().coverage.ignored,
+      ),
+    );
+
+    expect(_diagnosticIds(graph), contains('coverage.empty_glob'));
+  });
+}
+
+void _registerRepositoryRelativeCoveragePathTest() {
+  test(
+    'schema validation classifies production paths relative to repo root',
+    () {
+      _withTemporaryRepositoryUnderTestPath((repositoryRoot) {
+        expect(
+          _diagnosticIds(
+            _minimalCoverageGraph(
+              publicSurfaces: const ['lib/iwb_canvas_engine.dart'],
+              architectureOwners: const ['lib/src/covered/**'],
+            ),
+            repositoryRoot: repositoryRoot.path,
+          ),
+          isNot(contains('coverage.empty_glob')),
+        );
+      });
+    },
+  );
+
+  test('schema validation rejects repo-relative test coverage paths', () {
+    _withTemporaryRepositoryUnderTestPath((repositoryRoot) {
+      expect(
+        _diagnosticIds(
+          _minimalCoverageGraph(
+            publicSurfaces: const ['test/foo.dart'],
+            architectureOwners: const ['test/**'],
+          ),
+          repositoryRoot: repositoryRoot.path,
+        ),
+        contains('coverage.empty_glob'),
+      );
+    });
   });
 }
 
@@ -505,6 +559,51 @@ void _writeSourceCoverageRegistryFixture(Directory repository) {
   File('${repository.path}/docs/architecture/current.md')
     ..createSync(recursive: true)
     ..writeAsStringSync('current architecture source\n');
+}
+
+void _withTemporaryRepositoryUnderTestPath(void Function(Directory) callback) {
+  final temporary = Directory.systemTemp.createTempSync(
+    'architecture_graph_schema_',
+  );
+  try {
+    final repositoryRoot = Directory('${temporary.path}/outer/test/repo')
+      ..createSync(recursive: true);
+    _writeSourceCoverageRegistryFixture(repositoryRoot);
+    File('${repositoryRoot.path}/lib/iwb_canvas_engine.dart')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// public surface\n');
+    File('${repositoryRoot.path}/lib/src/covered/owner.dart')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// owner\n');
+    File('${repositoryRoot.path}/test/foo.dart')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// test-only\n');
+    callback(repositoryRoot);
+  } finally {
+    temporary.deleteSync(recursive: true);
+  }
+}
+
+ExpectedArchitectureGraph _minimalCoverageGraph({
+  required List<String> publicSurfaces,
+  required List<String> architectureOwners,
+}) {
+  return ExpectedArchitectureGraph(
+    schemaVersion: _minimalSourceCoverageGraph.schemaVersion,
+    coverage: ArchitectureCoverage(
+      publicSurfaces: publicSurfaces,
+      architectureOwners: architectureOwners,
+      sensitiveThrows: _minimalSourceCoverageGraph.coverage.sensitiveThrows,
+      placeholders: _minimalSourceCoverageGraph.coverage.placeholders,
+      ignored: _minimalSourceCoverageGraph.coverage.ignored,
+    ),
+    nodes: _minimalSourceCoverageGraph.nodes,
+    edges: _minimalSourceCoverageGraph.edges,
+    placeholders: _minimalSourceCoverageGraph.placeholders,
+    forbiddenEdges: _minimalSourceCoverageGraph.forbiddenEdges,
+    views: _minimalSourceCoverageGraph.views,
+    sourceCoverage: _minimalSourceCoverageGraph.sourceCoverage,
+  );
 }
 
 const _minimalSourceCoverageGraph = ExpectedArchitectureGraph(

@@ -316,7 +316,6 @@ const interactionOwner = Owner(
   prefixes: ['lib/src/interaction/'],
 );
 const spatialOwner = Owner(name: 'spatial', prefixes: ['lib/src/geometry/']);
-const toolsOwner = Owner(name: 'tools', prefixes: ['lib/src/tools/']);
 const surfaceOwner = Owner(name: 'surface', prefixes: ['lib/src/surface/']);
 
 const ownerDagOwners = [
@@ -333,7 +332,6 @@ const ownerDagOwners = [
   frameOwner,
   interactionOwner,
   spatialOwner,
-  toolsOwner,
   surfaceOwner,
 ];
 
@@ -661,8 +659,6 @@ const ownerDagAllowedEdges = [
   OwnerEdge(source: interactionOwner, target: contractsInternalOwner),
   OwnerEdge(source: spatialOwner, target: contractsPublicOwner),
   OwnerEdge(source: spatialOwner, target: contractsInternalOwner),
-  OwnerEdge(source: toolsOwner, target: contractsPublicOwner),
-  OwnerEdge(source: toolsOwner, target: contractsInternalOwner),
   OwnerEdge(source: surfaceOwner, target: contractsPublicOwner),
   OwnerEdge(source: surfaceOwner, target: contractsInternalOwner),
   OwnerEdge(

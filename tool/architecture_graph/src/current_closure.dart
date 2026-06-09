@@ -16,7 +16,6 @@ const _ownerPathPrefixes = {
   'spatial': ['lib/src/geometry/'],
   'frame': ['lib/src/frame/'],
   'interaction': ['lib/src/interaction/'],
-  'tools': ['lib/src/tools/'],
   'surface': ['lib/src/surface/'],
   'release': ['tool/', 'docs/verification/'],
 };
