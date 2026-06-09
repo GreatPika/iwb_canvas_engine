@@ -19,3 +19,5 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
   document in the same change.
 
 ## Step Files
+
+- [ ] [Step 1. Current docs without history](plan/step_1_current_docs_without_history.md)
