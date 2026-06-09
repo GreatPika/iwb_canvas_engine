@@ -7,22 +7,21 @@ and registries.
 
 ## Change planning
 
-- Plan future implementation work with a per-task Change Contract in the work
-  item, Codex thread, or PR context.
-- `PLAN.md` is the retained current roadmap index. Keep it limited to current
-  retained work, and keep `plan/` limited to linked current step contracts.
+- `PLAN.md` is the active roadmap and the source of truth for planned work.
+- `plan/` stores the linked step contracts for `PLAN.md` entries.
+- When adding a new step to `PLAN.md`, use `$change-contract` directly as the
+  canonical step-contract template. Do not infer the required structure from
+  existing plan steps.
 - Use current code, docs, registries, guardrails, tests, `.design/`, and
   `.research/` as source inputs when they are relevant to the task.
-- Do not create a completed contract archive, phase route, or donor route as a
-  replacement planning surface.
-- Follow the task contract as written during implementation. If it conflicts
+- Follow the step contract as written during implementation. If it conflicts
   with current code, docs, guardrails, tests, registries, or repository-local
   boundary enforcement, stop implementation, report the exact contradiction
   with file-level evidence, and resolve the contract or enforcement before
-  continuing. Do not silently reinterpret the task.
-- Treat `.design/` and `.research/` as evidence and source-input layers only.
-  They do not own active package behavior, release policy, guardrails,
-  benchmarks, roadmaps, donor routes, phase routes, or runtime contracts.
+  continuing. Do not silently reinterpret the plan.
+- After completing a plan step, update the corresponding checkbox entries in
+  `PLAN.md` and any linked step document so finished items are marked done in
+  the same change.
 
 
 ## DCM metrics exceptions
