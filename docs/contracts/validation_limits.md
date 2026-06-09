@@ -34,7 +34,7 @@ These limits are mandatory for v1 and define the current package validation boun
 | max resources | `4096` |
 | max element id length | `256` |
 | max layer id length | `256` |
-| max resource id/appKey length | `1024` |
+| max resource id/appKey raw length | `1024` |
 | max action id length | `256` |
 | max interaction request id length | `256` |
 | max text length | `100000` |
@@ -94,6 +94,12 @@ non-empty canonical string, no leading/trailing whitespace, length <= 256, and
 no control characters. It is
 validated at public construction and at the engine boundary that generates
 request ids for emitted interaction requests.
+
+`CanvasResourceSource.appKey` follows the public resource source validator
+contract: non-empty raw string, no leading/trailing whitespace, raw length <=
+1024, and no control characters. The appKey is an application-owned identity,
+so public DTO construction and schema v1 decode/import preserve the accepted
+value exactly and do not trim or canonicalize it.
 
 The raw JSON limit applies to `CanvasEditPort.loadDocumentFromJson(String json)`
 before parse. Under current 32 * 1024 * 1024 character limit, 100k raw JSON load

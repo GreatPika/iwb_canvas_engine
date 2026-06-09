@@ -167,7 +167,13 @@ void main() {
   });
 
   test('internal decode reports appKey value failures at JSON key path', () {
-    final emptyHub = DiagnosticsHub(
+    final blankHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+    final newlineHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+    final lengthHub = DiagnosticsHub(
       policy: const CanvasDiagnosticPolicy.summary(),
     );
     final controlHub = DiagnosticsHub(
@@ -176,29 +182,79 @@ void main() {
 
     expect(
       () => decodeSchemaV1Document(
-        _invalidResourceAppKeyDocument('   '),
-        diagnostics: emptyHub,
+        _resourceAppKeyDocument(' asset-a '),
+        diagnostics: blankHub,
       ),
       throwsA(
         isA<CanvasDataException>()
             .having(
               (error) => error.code,
               'code',
-              CanvasDataErrorCode.fieldMustNotBeEmpty,
+              CanvasDataErrorCode.invalidFieldType,
             )
             .having((error) => error.path, 'path', 'resource.source.key'),
       ),
     );
-    expect(emptyHub.recordCount, 1);
+    expect(blankHub.recordCount, 1);
     expect(
-      emptyHub.records.single.code,
-      DiagnosticCode.data(CanvasDataErrorCode.fieldMustNotBeEmpty),
+      blankHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType),
     );
-    expect(emptyHub.records.single.path, 'resource.source.key');
+    expect(blankHub.records.single.path, 'resource.source.key');
 
     expect(
       () => decodeSchemaV1Document(
-        _invalidResourceAppKeyDocument('asset-\u0001'),
+        _resourceAppKeyDocument('asset-a\n'),
+        diagnostics: newlineHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.invalidFieldType,
+            )
+            .having((error) => error.path, 'path', 'resource.source.key'),
+      ),
+    );
+    expect(newlineHub.recordCount, 1);
+    expect(
+      newlineHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType),
+    );
+    expect(newlineHub.records.single.path, 'resource.source.key');
+
+    final oversizedKey = ' ${List.filled(1023, 'a').join()} ';
+    expect(
+      () => decodeSchemaV1Document(
+        _resourceAppKeyDocument(oversizedKey),
+        diagnostics: lengthHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMaxLength,
+            )
+            .having((error) => error.path, 'path', 'resource.source.key')
+            .having(
+              (error) => error.details,
+              'details',
+              containsPair('actualLength', 1025),
+            ),
+      ),
+    );
+    expect(lengthHub.recordCount, 1);
+    expect(
+      lengthHub.records.single.code,
+      DiagnosticCode.data(CanvasDataErrorCode.fieldMaxLength),
+    );
+    expect(lengthHub.records.single.path, 'resource.source.key');
+
+    expect(
+      () => decodeSchemaV1Document(
+        _resourceAppKeyDocument('asset-\u0001'),
         diagnostics: controlHub,
       ),
       throwsA(
@@ -217,6 +273,13 @@ void main() {
       DiagnosticCode.data(CanvasDataErrorCode.invalidFieldType),
     );
     expect(controlHub.records.single.path, 'resource.source.key');
+  });
+
+  test('internal decode and encode preserve valid appKey exactly', () {
+    final decoded = decodeSchemaV1Document(_resourceAppKeyDocument('asset a'));
+
+    expect(_decodedResourceAppKey(decoded), 'asset a');
+    expect(_encodedResourceAppKey(encodeSchemaV1Document(decoded)), 'asset a');
   });
 
   test('internal encode records schema validation failures when enabled', () {
@@ -289,7 +352,7 @@ Map<String, Object?> _invalidResourceKindDocument() {
   };
 }
 
-Map<String, Object?> _invalidResourceAppKeyDocument(String key) {
+Map<String, Object?> _resourceAppKeyDocument(String key) {
   return {
     'schemaVersion': 1,
     'resources': [
@@ -300,6 +363,23 @@ Map<String, Object?> _invalidResourceAppKeyDocument(String key) {
       },
     ],
   };
+}
+
+String _decodedResourceAppKey(CanvasDocument document) {
+  final source = document.resources.single.source;
+  if (source is CanvasAppKeyResourceSource) {
+    return source.key;
+  }
+
+  fail('expected CanvasAppKeyResourceSource');
+}
+
+String _encodedResourceAppKey(Map<String, Object?> document) {
+  final resources = document['resources'] as List<Object?>;
+  final resource = resources.single as Map<String, Object?>;
+  final source = resource['source'] as Map<String, Object?>;
+
+  return source['key'] as String;
 }
 
 CanvasDataException _captureFailure(void Function() run) {

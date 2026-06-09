@@ -111,7 +111,8 @@ Rules:
 
 ```text
 source.kind=appKey    -> requires key;
-appKey                -> non-empty string, length <= 1024, no control characters;
+appKey                -> non-empty string, no leading/trailing whitespace,
+                         raw length <= 1024, no control characters;
 contentHash           -> null or non-empty string <= 256;
 byteLength            -> null or int >= 0 and <= 32MB;
 mimeType              -> null or non-empty string <= 128;

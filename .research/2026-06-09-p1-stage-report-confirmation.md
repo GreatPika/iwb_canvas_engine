@@ -10,7 +10,7 @@ research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.
 
 ## Summary
 
-After fixing the first three quick entries, 18 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
+After fixing the first quick entries and `CODEC-002`, 17 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
 
 Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `RESOURCE-003` and `SURFACE-001` both trace to the same budget follow-up flag being produced by `SurfaceResourceSession` without a production surface/runtime consumer. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path. `RUNTIME-003` and `RESOURCE-001` overlap on load/edit resource-session lifecycle delivery.
 
@@ -34,11 +34,6 @@ The original research was static. This document now tracks only the remaining P1
 - **Description**: `CODEC-001` is confirmed. Schema and validation docs define a 1MB total encoded metadata budget for the document and say schema import/load applies the limits (`docs/contracts/schema_v1.md:253`, `docs/contracts/validation_limits.md:62`, `docs/contracts/validation_limits.md:73`, `docs/contracts/validation_limits.md:74`). `CanvasDocument` applies aggregate metadata validation (`lib/src/contracts/public/canvas_document.dart:51`, `lib/src/contracts/public/canvas_document.dart:269`, `lib/src/contracts/public/canvas_document.dart:293`, `lib/src/contracts/public/canvas_document.dart:294`). Runtime load prepares from JSON through schema import events and store preparation (`lib/src/edit/staged_document_load.dart:125`, `lib/src/edit/staged_document_load.dart:127`, `lib/src/edit/staged_document_load.dart:134`) while `PreparedDocumentLoad.document` explicitly does not materialize a `CanvasDocument` projection (`lib/src/edit/staged_document_load.dart:57`, `lib/src/edit/staged_document_load.dart:58`, `lib/src/edit/staged_document_load.dart:59`). Import reads each metadata map via `CanvasMetadata.fromMap(...)` (`lib/src/codec/schema_v1_import_emitter.dart:1387`, `lib/src/codec/schema_v1_import_emitter.dart:1402`) and store import creates a committed document without the DTO aggregate constructor (`lib/src/store/schema_v1_store_import.dart:87`, `lib/src/store/schema_v1_store_import.dart:110`, `lib/src/store/schema_v1_store_import.dart:120`).
 - **Dependencies**: schema v1 import emitter, staged load pipeline, store import builder, public DTO projection cache.
 - **Data flow**: JSON -> import emitter per-map metadata validation -> store import -> committed document -> later projection can call `CanvasDocument`.
-
-- **Location**: primary `lib/src/contracts/public/canvas_value_validators.dart:45`; additional `lib/src/contracts/public/canvas_value_validators.dart:50`, `lib/src/contracts/public/canvas_value_validators.dart:74`, `docs/contracts/schema_v1.md:114`.
-- **Description**: `CODEC-002` is confirmed. Schema v1 says app keys are non-empty, length <= 1024, and contain no control characters (`docs/contracts/schema_v1.md:113`, `docs/contracts/schema_v1.md:114`). `validateCanvasAppKeyValue(...)` trims first (`lib/src/contracts/public/canvas_value_validators.dart:45`, `lib/src/contracts/public/canvas_value_validators.dart:50`), validates the trimmed value (`lib/src/contracts/public/canvas_value_validators.dart:51`, `lib/src/contracts/public/canvas_value_validators.dart:58`, `lib/src/contracts/public/canvas_value_validators.dart:66`), and returns the trimmed value (`lib/src/contracts/public/canvas_value_validators.dart:74`). Both schema import paths call the validator (`lib/src/codec/schema_v1_import_emitter.dart:561`, `lib/src/codec/schema_v1_decoder.dart:393`), and the public resource source stores the returned key (`lib/src/contracts/public/canvas_resource.dart:78`, `lib/src/contracts/public/canvas_resource.dart:83`).
-- **Dependencies**: shared app key validator, schema v1 decoder, schema import emitter, public resource source.
-- **Data flow**: JSON/public app key -> trim -> validate trimmed value -> store/export canonicalized key.
 
 ### 2. Store, Resource Revisions, And Resource Sessions
 
@@ -127,7 +122,6 @@ The original research was static. This document now tracks only the remaining P1
 - `iwb_canvas_engine_12_stage_reports.md:20` - `API-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:84` - `API-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:156` - `CODEC-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:194` - `CODEC-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:276` - `EDIT-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:579` - `RUNTIME-003` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:646` - `INTERACTION-001` P1 entry.
@@ -146,7 +140,6 @@ The original research was static. This document now tracks only the remaining P1
 - `lib/src/contracts/public/canvas_pointer.dart:100` - pointer sample validates position for every phase.
 - `lib/src/contracts/public/canvas_document.dart:51` - public DTO aggregate metadata validation entry.
 - `lib/src/edit/staged_document_load.dart:57` - prepared loads do not materialize DTO projection.
-- `lib/src/contracts/public/canvas_value_validators.dart:50` - app key trim before validation.
 - `lib/src/edit/commit_applier.dart:119` - materialized commit constructs `CommittedDocument(document)`.
 - `lib/src/store/committed_document.dart:37` - resource table descriptors use constructor revision state.
 - `lib/src/runtime/runtime_root.dart:1686` - dirty path invalidates active resource session.
@@ -172,14 +165,13 @@ The original research was static. This document now tracks only the remaining P1
 - Inspected: relevant fixtures/tests under `test/api`, `test/api_contract`, `test/codec`, `test/runtime`, `test/interaction`, `test/resources`, `test/surface`, `test/spatial`, `test/frame`, `test/diagnostics`, `test/guardrails`, `test/architecture_graph`, and `test/benchmarks`.
 - Searched: `rg -n "^ID: .*|^Приоритет: P1|^Название проблемы:" iwb_canvas_engine_12_stage_reports.md`.
 - Searched: `rg -n "handleDoubleTap|UnsupportedError|contextActionRequests|CanvasContextActionRequested|CanvasPointerSample|non-finite|invalid terminal|localPosition" lib test docs`.
-- Searched: `rg -n "metadata.*budget|aggregate|canvasMetadataEncodedByteLength|canvasMetadataMaxEncodedBytes|CanvasMetadata.fromMap|invalidMetadata|validateCanvasAppKeyValue|resource.source.key|trim" lib test docs`.
+- Searched: `rg -n "metadata.*budget|aggregate|canvasMetadataEncodedByteLength|canvasMetadataMaxEncodedBytes|CanvasMetadata.fromMap|invalidMetadata" lib test docs`.
 - Searched: `rg -n "resourceRevision|SurfaceResourceSession|ResourceDeliveryEffect|hasPendingBudgetFollowUpRepaint|beginFrameResourcePass|resolveImage\\(|invalidateResourceImage|CommittedDocument\\(" lib test docs`.
 - Searched: `rg -n "CanvasContextActionRequested|loadDocumentFromJson|skippedCandidateCount|RejectedContextTargetRead|MarqueeCommitFacts|_withPointerCleanupEffects|_deliverPendingContextRequests" lib test docs`.
 - Searched: `rg -n "invert\\(|CanvasTransform\\(|validateOffset\\(|_hitBox|_hitPath|_eraserHitsPath|spatialCandidateResultWithinBudget|CapturedOverlayFrame|captureOverlayFrame|_captureSnapshot" lib test docs`.
 - Searched: `rg -n "CanvasDataException|sanitize|unknown resource kind|unknown element kind|metadata\.\$\{entry\.key\}" lib test docs`.
 - Searched: `rg -n "unapproved|approved baseline is not initialized|release_ubuntu_24_04_flutter_3_38_0|release_benchmarks" .github tool docs test`.
 - Not found: aggregate metadata byte summing in runtime load/store import path outside `CanvasDocument`.
-- Not found: tests rejecting trimmed-but-noncanonical appKey values.
 - Not found: tests requiring invalid terminal up/cancel cleanup through `CanvasSurfacePointerAdapter`.
 - Not found: production consumer of `hasPendingBudgetFollowUpRepaint` outside `SurfaceResourceSession`.
 - Not found: edit/load runtime path applying `ResourceDeliveryEffect` to the active resource-session invalidation sink.

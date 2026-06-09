@@ -297,6 +297,7 @@ Validation:
 CanvasElementId  -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
 CanvasLayerId    -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
 CanvasResourceId -> non-empty canonical string, no leading/trailing whitespace, length <= 1024, no control characters.
+CanvasResourceSource.appKey key -> non-empty raw string, no leading/trailing whitespace, length <= 1024, no control characters.
 CanvasActionId   -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
 CanvasInteractionRequestId -> non-empty canonical string, no leading/trailing whitespace, length <= 256, no control characters.
 ```
@@ -1895,6 +1896,10 @@ v1 resource rules:
 
 ```text
 - CanvasResourceSource.appKey is mandatory for v1 resource sources;
+- CanvasResourceSource.appKey stores the application-owned identity exactly as
+  supplied; no trimming or canonicalization is applied;
+- CanvasResourceSource.appKey key must be non-empty, have no leading/trailing
+  whitespace, have raw length <= 1024, and contain no control characters;
 - no engine IO;
 - no asset-bundle loading;
 - no file loading;

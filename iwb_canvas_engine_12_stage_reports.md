@@ -191,45 +191,6 @@ Metadata — документированная extension area schema v1. Имп
 6. Проверить, что runtime.readDocument() после failed load возвращает предыдущий документ без исключения.
 
 
-ID: CODEC-002
-Этап: Этап 2. Контракт JSON schema v1, codec и загрузка документа
-Название проблемы: appKey валидируется после trim(), что допускает silent mutation и обход части schema validation
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Контракт schema v1 требует для resource.source.key: non-empty, length <= 1024, no control characters. Реальный validator сначала делает value.trim(), затем проверяет пустоту, длину и control characters уже на trimmed-значении, и возвращает trimmed key. Это означает, что JSON appKey с ведущими/замыкающими пробелами, табами или переводами строк может быть принят и молча изменён. Также строка, превышающая лимит только за счёт leading/trailing whitespace, может пройти после trim().
-
-Доказательство в коде:
-docs/contracts/schema_v1.md:113-117 задаёт правила appKey: non-empty, length <= 1024, no control characters.
-lib/src/contracts/public/canvas_value_validators.dart:45-74: validateCanvasAppKeyValue(...) делает final trimmed = value.trim(), затем валидирует trimmed и возвращает trimmed.
-lib/src/codec/schema_v1_import_emitter.dart:549-565 применяет validateCanvasAppKeyValue(...) к JSON field resource.source.key.
-lib/src/codec/schema_v1_decoder.dart:386-399 делает то же для legacy internal decode path.
-lib/src/contracts/public/canvas_resource.dart:76-83 public CanvasAppKeyResourceSource тоже сохраняет результат validateCanvasAppKeyValue(...), то есть уже нормализованный key.
-lib/src/codec/schema_v1_encoder.dart:76-79 пишет source.key обратно в schema JSON, фиксируя изменённое значение.
-
-Пользовательский или инженерный сценарий проявления:
-В импортируемом JSON ресурс имеет source.key: "asset-a\n" или " asset-a ". Codec принимает документ и сохраняет key как "asset-a". Приложение-резолвер получает другой app-owned key, чем был в исходном документе. При экспорте документ уже содержит изменённое значение, то есть round-trip не сохраняет известное schema field.
-
-Почему это не теоретический edge case:
-Asset/resource keys часто копируются из UI, файлов, CSV, backend payloads или ручного JSON, где leading/trailing whitespace и newline — обычная ошибка данных. Граница импорта должна либо отклонить такой документ диагностируемо, либо явно документировать canonical trim policy. Сейчас контракт говорит “no control characters”, но leading/trailing control whitespace может исчезнуть до проверки.
-
-Рекомендуемое исправление:
-Изменить validateCanvasAppKeyValue(...), чтобы проверки выполнялись на исходном value. Для текущего контракта безопаснее:
-- не делать trim();
-- reject empty string;
-- reject value.length > canvasMaxResourceAppKeyLength;
-- reject any control characters in original value;
-- при необходимости отдельно reject leading/trailing whitespace, если это должно стать частью контракта.
-Если trim действительно является желаемой canonicalization policy, её нужно явно описать в schema_v1.md/public_api_v1.md и покрыть тестами round-trip.
-
-Минимальная проверка после исправления:
-Добавить schema/load тесты:
-1. source.key = " asset-a " должен либо выбрасывать CanvasDataException, либо, если trim будет документирован, явно проверяться как canonical behavior.
-2. source.key = "asset-a\n" должен выбрасывать CanvasDataException с path resource.source.key.
-3. source.key длиной 1024 плюс leading/trailing spaces не должен проходить за счёт trim().
-4. Проверить, что encode/decode round-trip не меняет валидный appKey.
-
-
 ID: CODEC-003
 Этап: Этап 2. Контракт JSON schema v1, codec и загрузка документа
 Название проблемы: Default palette в codec/load не совпадает с canonical schema v1 shape

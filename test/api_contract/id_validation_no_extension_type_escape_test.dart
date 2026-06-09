@@ -74,11 +74,35 @@ void main() {
     );
 
     expect(
-      CanvasResourceSource.appKey(' asset-main '),
-      isA<CanvasAppKeyResourceSource>().having(
-        (source) => source.key,
-        'key',
-        'asset-main',
+      () => CanvasResourceSource.appKey(''),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.fieldMustNotBeEmpty,
+            )
+            .having(
+              (error) => error.path,
+              'path',
+              'resource.source.appKey',
+            ),
+      ),
+    );
+    expect(
+      () => CanvasResourceSource.appKey(' asset-main '),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.invalidFieldType,
+            )
+            .having(
+              (error) => error.path,
+              'path',
+              'resource.source.appKey',
+            ),
       ),
     );
   });

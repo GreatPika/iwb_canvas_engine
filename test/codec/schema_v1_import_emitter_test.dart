@@ -127,6 +127,23 @@ void _registerCodecFailureTests() {
       () => importSchemaV1Document(
         {
           ..._validDocument(),
+          'resources': [
+            {
+              'kind': 'image',
+              'id': 'resource-a',
+              'source': {'kind': 'appKey', 'key': ' asset/resource-a '},
+            },
+          ],
+        },
+        _CollectingImportSink(),
+      ),
+      CanvasDataErrorCode.invalidFieldType,
+      'resource.source.key',
+    );
+    _expectImportFailure(
+      () => importSchemaV1Document(
+        {
+          ..._validDocument(),
           'backgroundLayer': {
             'elements': [
               {'id': 'video-a', 'kind': 'video'},
