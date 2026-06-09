@@ -26,7 +26,7 @@ Required tests:
 - `test.api.canvas_field_update`
 - `test.api_contract.canvas_field_update_static_semantics`
 - `test.api_contract.no_undefined_public_type_references`
-- `test.api_contract.no_retired_public_exports`
+- `test.api_contract.public_exports_complete`
 - `test.api_contract.example_public_boundary`
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
@@ -47,7 +47,7 @@ Required tests:
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`
-- `api.no_retired_public_load_routes`
+- `api.current_document_load_surface_only`
 - `api.no_unapproved_document_load_inputs`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
@@ -94,10 +94,10 @@ initially contains `CanvasDiagnosticPolicy`, `CanvasDiagnosticsDisabled`,
 and `CanvasDataErrorCode`. The classification does not add public API names or
 change this document's semantic ownership of those declarations.
 
-The registry also owns the `retired_public_exports` deny-list. Names in that
-list are retired public symbols from the legacy package and are not exported by
-this package. Natural concepts may exist under next-owned names, but retired
-public shapes are banned.
+The registry's `public_exports` list is the current public barrel allow-list.
+`api.public_exports_complete` rejects root-package exports that are absent from
+that list and registry names that are missing from the root package public
+barrel.
 
 The root package does not expose named extension declarations in Public API v1.
 Adding one later is a public API decision that requires an explicit registry and

@@ -14,12 +14,12 @@ Related diagrams:
 - `c4_context`
 - `c4_container`
 Required tests:
-- `test.api_contract.no_retired_public_exports`
+- `test.api_contract.public_exports_complete`
 - `test.api_contract.app_next_engine_adapter_compile_fixture`
 Guardrails:
-- `core.no_retired_package_imports`
-- `core.no_retired_controller_shape_dependency`
-- `core.no_retired_node_patch_shape_dependency`
+- `core.no_unapproved_external_package_imports`
+- `core.no_unapproved_controller_shape_dependency`
+- `core.no_unapproved_patch_shape_dependency`
 Do not assume:
 - no retired facade
 - no SceneController

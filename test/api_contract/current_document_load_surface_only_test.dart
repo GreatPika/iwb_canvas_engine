@@ -3,73 +3,67 @@ import 'package:test/test.dart';
 import '../../tool/guardrails/src/public_api_checks.dart';
 
 void main() {
-  _registerRetiredPublicRouteTests();
+  _registerCurrentDocumentLoadSurfaceTests();
 }
 
-void _registerRetiredPublicRouteTests() {
-  _testRetiredRoutesAbsentFromRealSurfaces();
-  _testRetiredPublicDeclarationsRejected();
-  _testRetiredProductionAndExampleCallsRejected();
+void _registerCurrentDocumentLoadSurfaceTests() {
+  _testDocumentLoadSurfaceUsesCurrentRoutes();
+  _testUnsupportedPublicDeclarationsRejected();
+  _testUnsupportedProductionAndExampleCallsRejected();
   _testInternalLoadTypesQuarantinedFromPublicApi();
 }
 
-void _testRetiredRoutesAbsentFromRealSurfaces() {
-  test(
-    'retired public load routes are absent from real public surfaces',
-    () async {
-      expect(await checkNoRetiredPublicLoadRoutes(), isEmpty);
-    },
-  );
+void _testDocumentLoadSurfaceUsesCurrentRoutes() {
+  test('document load surface uses current public routes', () async {
+    expect(await checkCurrentDocumentLoadSurfaceOnly(), isEmpty);
+  });
 }
 
-void _testRetiredPublicDeclarationsRejected() {
-  test('retired public load route declarations are rejected', () async {
-    final violations = await checkNoRetiredPublicLoadRoutes(
-      sourceOverrides: _retiredPublicLoadRouteSources(),
+void _testUnsupportedPublicDeclarationsRejected() {
+  test('unsupported public load declarations are rejected', () async {
+    final violations = await checkCurrentDocumentLoadSurfaceOnly(
+      sourceOverrides: _unsupportedPublicLoadRouteSources(),
     );
 
     expect(violations.map((violation) => violation.guardrailId).toSet(), {
-      'api.no_retired_public_load_routes',
+      'api.current_document_load_surface_only',
     });
     expect(violations, hasLength(4));
   });
 }
 
-void _testRetiredProductionAndExampleCallsRejected() {
-  test(
-    'retired production and example load route calls are rejected',
-    () async {
-      final violations = await checkNoRetiredPublicLoadRoutes(
-        sourceOverrides: _retiredRuntimeAndExampleLoadCallSources(),
-      );
+void _testUnsupportedProductionAndExampleCallsRejected() {
+  test('unsupported production and example load calls are rejected', () async {
+    final violations = await checkCurrentDocumentLoadSurfaceOnly(
+      sourceOverrides: _unsupportedRuntimeAndExampleLoadCallSources(),
+    );
 
-      expect(violations.map((violation) => violation.guardrailId).toSet(), {
-        'api.no_retired_public_load_routes',
-      });
-      expect(
-        violations.map((violation) => violation.path),
-        containsAll([
-          'example/lib/src/canvas_json_dialogs.dart',
-          'lib/src/runtime/runtime_root.dart',
-          'lib/src/store/document_store_kernel.dart',
-        ]),
-      );
-      expect(
-        violations.map((violation) => violation.message).join('\n'),
-        allOf(
-          contains('decodeCanvasDocument helpers'),
-          contains('loadDocument(document)'),
-        ),
-      );
-    },
-  );
+    expect(violations.map((violation) => violation.guardrailId).toSet(), {
+      'api.current_document_load_surface_only',
+    });
+    expect(
+      violations.map((violation) => violation.path),
+      containsAll([
+        'example/lib/src/canvas_json_dialogs.dart',
+        'lib/src/runtime/runtime_root.dart',
+        'lib/src/store/document_store_kernel.dart',
+      ]),
+    );
+    expect(
+      violations.map((violation) => violation.message).join('\n'),
+      allOf(
+        contains('decodeCanvasDocument helpers'),
+        contains('loadDocument(document)'),
+      ),
+    );
+  });
 }
 
 void _testInternalLoadTypesQuarantinedFromPublicApi() {
   test(
     'internal load and store types are quarantined from public API',
     () async {
-      final violations = await checkNoRetiredPublicLoadRoutes(
+      final violations = await checkCurrentDocumentLoadSurfaceOnly(
         registryNamesOverride: _internalLoadPublicExportFixtureOrigins.keys
             .toSet(),
         exportedNamesOverride: {
@@ -81,7 +75,7 @@ void _testInternalLoadTypesQuarantinedFromPublicApi() {
 
       expect(
         violations.single.guardrailId,
-        'api.no_retired_public_load_routes',
+        'api.current_document_load_surface_only',
       );
       for (final name in _internalLoadPublicExportFixtureOrigins.keys) {
         if (name == 'CanvasActionPayload') {
@@ -113,7 +107,7 @@ const _internalLoadPublicExportFixtureOrigins = {
       'package:iwb_canvas_engine/src/contracts/public/canvas_actions.dart',
 };
 
-Map<String, String> _retiredPublicLoadRouteSources() {
+Map<String, String> _unsupportedPublicLoadRouteSources() {
   return {
     'lib/src/api/canvas_runtime.dart': '''
 final class CanvasRuntime {
@@ -133,13 +127,12 @@ CanvasDocument decodeCanvasDocumentFromJson(String json) => throw '';
 public_exports:
   - decodeCanvasDocument
   - decodeCanvasDocumentFromJson
-retired_public_exports: []
 diagnostics_public_surface: []
 ''',
   };
 }
 
-Map<String, String> _retiredRuntimeAndExampleLoadCallSources() {
+Map<String, String> _unsupportedRuntimeAndExampleLoadCallSources() {
   return {
     'example/lib/src/canvas_json_dialogs.dart': '''
 void importJson(CanvasRuntime runtime, String json) {

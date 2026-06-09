@@ -21,7 +21,6 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
-- `api.no_retired_public_exports`
 - `api.public_exports_complete`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
@@ -33,16 +32,16 @@ Guardrails:
 - `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
-- `api.no_retired_public_load_routes`
+- `api.current_document_load_surface_only`
 - `api.no_unapproved_document_load_inputs`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
-- `core.no_retired_package_imports`
+- `core.no_unapproved_external_package_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
-- `core.no_retired_controller_shape_dependency`
-- `core.no_retired_node_patch_shape_dependency`
+- `core.no_unapproved_controller_shape_dependency`
+- `core.no_unapproved_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
 - `selection.owner_separate_from_document`
@@ -129,8 +128,7 @@ work.
    `CanvasRuntime.state` surface and exported runtime state snapshot types.
 6. public dartdoc, class modifier, public signature shape, and sealed preview
    state readability guardrails are green.
-6. api.no_retired_public_exports is green.
-7. core.no_retired_package_imports is green.
+7. core.no_unapproved_external_package_imports is green.
 8. core.import_boundaries and core.no_unapproved_part_files are green.
 9. core.single_runtime_root is green.
 10. store/projection/selection ownership tests are green.

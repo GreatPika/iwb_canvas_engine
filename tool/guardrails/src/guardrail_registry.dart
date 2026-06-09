@@ -38,15 +38,11 @@ const _blockingEntries = [
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(
-    id: 'api.no_retired_public_exports',
-    suites: {'blocking', 'api'},
-  ),
-  GuardrailEntry(
     id: 'api.public_exports_complete',
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(
-    id: 'api.no_retired_public_load_routes',
+    id: 'api.current_document_load_surface_only',
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(
@@ -119,7 +115,7 @@ const _blockingEntries = [
     requiresRunnerStructuralProof: true,
   ),
   GuardrailEntry(
-    id: 'core.no_retired_package_imports',
+    id: 'core.no_unapproved_external_package_imports',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(id: 'core.import_boundaries', suites: {'blocking', 'core'}),
@@ -128,11 +124,11 @@ const _blockingEntries = [
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(
-    id: 'core.no_retired_controller_shape_dependency',
+    id: 'core.no_unapproved_controller_shape_dependency',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(
-    id: 'core.no_retired_node_patch_shape_dependency',
+    id: 'core.no_unapproved_patch_shape_dependency',
     suites: {'blocking', 'core'},
   ),
   GuardrailEntry(id: 'core.single_runtime_root', suites: {'blocking', 'core'}),

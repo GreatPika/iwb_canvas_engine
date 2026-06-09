@@ -428,8 +428,8 @@ Map<String, GuardrailViolationRunner> _violationChecksFor(
   GuardrailRunOptions options,
 ) {
   return {
-    'api.no_retired_public_exports': () {
-      return checkNoRetiredPublicExports(
+    'api.public_exports_complete': () {
+      return checkPublicExportsComplete(
         libraryPath: options.publicApiLibraryPath,
       );
     },
@@ -438,8 +438,7 @@ Map<String, GuardrailViolationRunner> _violationChecksFor(
 }
 
 final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
-  'api.public_exports_complete': checkPublicExportsComplete,
-  'api.no_retired_public_load_routes': checkNoRetiredPublicLoadRoutes,
+  'api.current_document_load_surface_only': checkCurrentDocumentLoadSurfaceOnly,
   'api.no_unapproved_document_load_inputs': checkNoUnapprovedDocumentLoadInputs,
   'api.facades_do_not_export_internal': checkApiFacadesDoNotExportInternal,
   'api.public_types_complete': checkPublicTypesComplete,
@@ -493,10 +492,9 @@ final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
 };
 
 const _structuralDescriptions = {
-  'api.no_retired_public_exports': 'resolved retired public export check',
   'api.public_exports_complete': 'public registry parity check',
-  'api.no_retired_public_load_routes':
-      'public load/decode route retirement check',
+  'api.current_document_load_surface_only':
+      'current public document load surface check',
   'api.no_unapproved_document_load_inputs':
       'production CanvasDocument load-input allowlist check',
   'api.facades_do_not_export_internal':
@@ -571,9 +569,9 @@ const _structuralDescriptions = {
 };
 
 const _coreBoundaryIds = {
-  'core.no_retired_package_imports',
+  'core.no_unapproved_external_package_imports',
   'core.import_boundaries',
   'core.no_unapproved_part_files',
-  'core.no_retired_controller_shape_dependency',
-  'core.no_retired_node_patch_shape_dependency',
+  'core.no_unapproved_controller_shape_dependency',
+  'core.no_unapproved_patch_shape_dependency',
 };

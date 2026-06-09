@@ -17,7 +17,6 @@ PublicApiRegistry readPublicApiRegistryData() {
 PublicApiRegistry readPublicApiRegistryFromYaml(String yamlSource) {
   final parsed = _readYamlMap(yamlSource);
   final publicExports = _readStringSet(parsed, 'public_exports');
-  final retiredPublicExports = _readStringSet(parsed, 'retired_public_exports');
   final diagnosticsPublicSurface = _readStringSet(
     parsed,
     'diagnostics_public_surface',
@@ -31,17 +30,8 @@ PublicApiRegistry readPublicApiRegistryFromYaml(String yamlSource) {
     );
   }
 
-  final activeRetiredOverlap = publicExports.intersection(retiredPublicExports);
-  if (activeRetiredOverlap.isNotEmpty) {
-    throw StateError(
-      'retired_public_exports entries must not be present in public_exports: '
-      '${_list(activeRetiredOverlap)}',
-    );
-  }
-
   return PublicApiRegistry(
     publicExports: publicExports,
-    retiredPublicExports: retiredPublicExports,
     diagnosticsPublicSurface: diagnosticsPublicSurface,
   );
 }
@@ -99,11 +89,9 @@ String _list(Iterable<String> names) {
 final class PublicApiRegistry {
   const PublicApiRegistry({
     required this.publicExports,
-    required this.retiredPublicExports,
     required this.diagnosticsPublicSurface,
   });
 
   final Set<String> publicExports;
-  final Set<String> retiredPublicExports;
   final Set<String> diagnosticsPublicSurface;
 }

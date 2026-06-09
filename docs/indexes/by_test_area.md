@@ -55,10 +55,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`
 
-## test.api_contract.no_retired_public_exports
-
-- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_23_tests`
-
 ## test.api_contract.no_undefined_public_type_references
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
@@ -81,7 +77,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api_contract.public_exports_complete
 
-- Sections: `section_23_tests`
+- Sections: `section_00_status_and_scope`, `section_03_package_layout`, `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api_contract.public_readable_union_variants
 

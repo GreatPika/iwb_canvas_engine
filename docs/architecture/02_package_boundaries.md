@@ -14,14 +14,13 @@ Benchmarks:
 Related diagrams:
 - `c4_container`
 Required tests:
-- `test.api_contract.no_retired_public_exports`
+- `test.api_contract.public_exports_complete`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.selection_boundary_imports`
 - `test.guardrails.text_surface_guardrail_checks`
 Guardrails:
-- `core.no_retired_package_imports`
-- `api.no_retired_public_exports`
+- `core.no_unapproved_external_package_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
 - `frame.committed_facts_via_frame_facts_port`

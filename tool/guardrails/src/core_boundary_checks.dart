@@ -389,9 +389,9 @@ List<GuardrailViolation> _checkRetiredPackageImport(String path, String uri) {
 
   return [
     GuardrailViolation(
-      guardrailId: 'core.no_retired_package_imports',
+      guardrailId: 'core.no_unapproved_external_package_imports',
       path: path,
-      message: 'imports retired package code through $uri',
+      message: 'imports unapproved external package code through $uri',
     ),
   ];
 }
@@ -764,16 +764,16 @@ List<GuardrailViolation> _resolverBoundaryViolation(String path) {
 GuardrailViolation _retiredShapeViolation(String path, String name) {
   if (_sceneControllerShapeNames.contains(name)) {
     return GuardrailViolation(
-      guardrailId: 'core.no_retired_controller_shape_dependency',
+      guardrailId: 'core.no_unapproved_controller_shape_dependency',
       path: path,
-      message: 'references retired SceneController shape $name',
+      message: 'references unapproved controller shape $name',
     );
   }
 
   return GuardrailViolation(
-    guardrailId: 'core.no_retired_node_patch_shape_dependency',
+    guardrailId: 'core.no_unapproved_patch_shape_dependency',
     path: path,
-    message: 'references retired node patch shape $name',
+    message: 'references unapproved patch shape $name',
   );
 }
 

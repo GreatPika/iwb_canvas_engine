@@ -11,9 +11,11 @@ import 'public_api_registry.dart';
 import 'public_api_surface.dart';
 import 'repository_paths.dart';
 
-Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
+Future<List<GuardrailViolation>> checkPublicExportsComplete({
+  String? libraryPath,
+}) async {
   final registryNames = readPublicApiRegistry();
-  final surface = await resolvePublicApiSurface();
+  final surface = await resolvePublicApiSurface(libraryPath: libraryPath);
   final extra = surface.exportedNames.difference(registryNames);
   final missing = registryNames.difference(surface.exportedNames);
 
@@ -21,7 +23,7 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
     if (extra.isNotEmpty)
       GuardrailViolation(
         guardrailId: 'api.public_exports_complete',
-        path: 'lib/iwb_canvas_engine.dart',
+        path: _displayPath(libraryPath),
         message: 'exports names absent from registry: ${_list(extra)}',
       ),
     if (missing.isNotEmpty)
@@ -33,7 +35,7 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete() async {
   ];
 }
 
-Future<List<GuardrailViolation>> checkNoRetiredPublicLoadRoutes({
+Future<List<GuardrailViolation>> checkCurrentDocumentLoadSurfaceOnly({
   Map<String, String>? sourceOverrides,
   Set<String>? registryNamesOverride,
   Set<String>? exportedNamesOverride,
@@ -69,7 +71,7 @@ List<GuardrailViolation> _retiredPublicRouteDeclarationViolations(
     for (final check in _retiredPublicRouteChecks)
       if (_retiredPublicRouteCheckMatches(check, sourceOverrides))
         GuardrailViolation(
-          guardrailId: 'api.no_retired_public_load_routes',
+          guardrailId: 'api.current_document_load_surface_only',
           path: check.path,
           message: check.message,
         ),
@@ -93,7 +95,7 @@ List<GuardrailViolation> _retiredLoadRouteUsageViolations(
   return [
     for (final hit in _retiredLoadRouteUsageHits(sourceOverrides))
       GuardrailViolation(
-        guardrailId: 'api.no_retired_public_load_routes',
+        guardrailId: 'api.current_document_load_surface_only',
         path: hit.path,
         message: hit.message,
       ),
@@ -120,7 +122,7 @@ List<GuardrailViolation> _internalLoadExportViolations(
 
   return [
     GuardrailViolation(
-      guardrailId: 'api.no_retired_public_load_routes',
+      guardrailId: 'api.current_document_load_surface_only',
       path: 'lib/iwb_canvas_engine.dart',
       message:
           'public API must not expose internal load/import/store types: '
@@ -427,26 +429,6 @@ Future<List<GuardrailViolation>> _checkUndefinedPublicTypeReferences({
       guardrailId: guardrailId,
       path: _displayPath(libraryPath),
       message: 'undefined public type references: ${_list(undefined)}',
-    ),
-  ];
-}
-
-Future<List<GuardrailViolation>> checkNoRetiredPublicExports({
-  String? libraryPath,
-}) async {
-  final surface = await resolvePublicApiSurface(libraryPath: libraryPath);
-  final retiredExports = readPublicApiRegistryData().retiredPublicExports;
-  final exportedRetired = surface.exportedNames.intersection(retiredExports);
-
-  if (exportedRetired.isEmpty) {
-    return const [];
-  }
-
-  return [
-    GuardrailViolation(
-      guardrailId: 'api.no_retired_public_exports',
-      path: _displayPath(libraryPath),
-      message: 'exports retired public symbols: ${_list(exportedRetired)}',
     ),
   ];
 }

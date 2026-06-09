@@ -21,9 +21,8 @@ Required tests:
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
-- `api.no_retired_public_exports`
 - `api.public_exports_complete`
-- `api.no_retired_public_load_routes`
+- `api.current_document_load_surface_only`
 - `api.no_unapproved_document_load_inputs`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
@@ -38,11 +37,11 @@ Guardrails:
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
 - `api.id_validation_no_extension_type_escape`
-- `core.no_retired_package_imports`
+- `core.no_unapproved_external_package_imports`
 - `core.import_boundaries`
 - `core.no_unapproved_part_files`
-- `core.no_retired_controller_shape_dependency`
-- `core.no_retired_node_patch_shape_dependency`
+- `core.no_unapproved_controller_shape_dependency`
+- `core.no_unapproved_patch_shape_dependency`
 - `core.single_runtime_root`
 - `store.no_public_document_live_state`
 - `selection.owner_separate_from_document`
@@ -174,9 +173,8 @@ Mandatory guardrails:
 | Guardrail id | Rule |
 |---|---|
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
-| `api.no_retired_public_exports` | names listed in the current retired public export registry are not exported by the root package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.no_retired_public_load_routes` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
+| `api.current_document_load_surface_only` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
 | `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization compatibility paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
@@ -191,12 +189,12 @@ Mandatory guardrails:
 | `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; public constructors with caller-provided validated or sanitized values are non-const factories while marker/empty/default/private storage forms keep only approved const forms |
 | `api.equality_policy_explicit` | public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
-| `core.no_retired_package_imports` | no import of retired package routes |
+| `core.no_unapproved_external_package_imports` | no import of retired package routes |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
 | `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/store/frame/surface`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
 | `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
-| `core.no_retired_controller_shape_dependency` | no `SceneController` concept in core |
-| `core.no_retired_node_patch_shape_dependency` | no retired NodeSpec/NodePatch/PatchField in core |
+| `core.no_unapproved_controller_shape_dependency` | no `SceneController` concept in core |
+| `core.no_unapproved_patch_shape_dependency` | no retired NodeSpec/NodePatch/PatchField in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
 | `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |

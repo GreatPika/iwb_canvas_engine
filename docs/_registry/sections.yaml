@@ -14,11 +14,11 @@
   - c4_context
   - c4_container
   guardrails:
-  - core.no_retired_package_imports
-  - core.no_retired_controller_shape_dependency
-  - core.no_retired_node_patch_shape_dependency
+  - core.no_unapproved_external_package_imports
+  - core.no_unapproved_controller_shape_dependency
+  - core.no_unapproved_patch_shape_dependency
   tests:
-  - test.api_contract.no_retired_public_exports
+  - test.api_contract.public_exports_complete
   - test.api_contract.app_next_engine_adapter_compile_fixture
   do_not_assume:
   - no retired facade
@@ -69,15 +69,14 @@
   diagrams:
   - c4_container
   guardrails:
-  - core.no_retired_package_imports
-  - api.no_retired_public_exports
+  - core.no_unapproved_external_package_imports
   - core.import_boundaries
   - core.no_unapproved_part_files
   - frame.committed_facts_via_frame_facts_port
   - interaction.no_concrete_selection_imports
   - surface.editable_text_surface_only
   tests:
-  - test.api_contract.no_retired_public_exports
+  - test.api_contract.public_exports_complete
   - test.guardrails.import_boundaries
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.guardrails.selection_boundary_imports
@@ -105,7 +104,7 @@
   guardrails:
   - api.integration_surface_complete
   - api.public_exports_complete
-  - api.no_retired_public_load_routes
+  - api.current_document_load_surface_only
   - api.no_unapproved_document_load_inputs
   - api.facades_do_not_export_internal
   - api.public_types_complete
@@ -135,7 +134,7 @@
   - test.api.canvas_field_update
   - test.api_contract.canvas_field_update_static_semantics
   - test.api_contract.no_undefined_public_type_references
-  - test.api_contract.no_retired_public_exports
+  - test.api_contract.public_exports_complete
   - test.api_contract.example_public_boundary
   - test.api_contract.dto_immutability
   - test.api_contract.public_equality_policy
@@ -704,9 +703,8 @@
   - none
   guardrails:
   - api.integration_surface_complete
-  - api.no_retired_public_exports
   - api.public_exports_complete
-  - api.no_retired_public_load_routes
+  - api.current_document_load_surface_only
   - api.no_unapproved_document_load_inputs
   - api.facades_do_not_export_internal
   - api.public_types_complete
@@ -721,11 +719,11 @@
   - api.dto_immutability
   - api.equality_policy_explicit
   - api.id_validation_no_extension_type_escape
-  - core.no_retired_package_imports
+  - core.no_unapproved_external_package_imports
   - core.import_boundaries
   - core.no_unapproved_part_files
-  - core.no_retired_controller_shape_dependency
-  - core.no_retired_node_patch_shape_dependency
+  - core.no_unapproved_controller_shape_dependency
+  - core.no_unapproved_patch_shape_dependency
   - core.single_runtime_root
   - store.no_public_document_live_state
   - selection.owner_separate_from_document
@@ -823,7 +821,6 @@
   - test.api.canvas_field_update
   - test.api_contract.canvas_field_update_static_semantics
   - test.api_contract.no_undefined_public_type_references
-  - test.api_contract.no_retired_public_exports
   - test.api_contract.dto_immutability
   - test.api_contract.public_equality_policy
   - test.api_contract.app_next_engine_adapter_compile_fixture
@@ -1023,7 +1020,6 @@
   - none
   guardrails:
   - api.integration_surface_complete
-  - api.no_retired_public_exports
   - api.public_exports_complete
   - api.facades_do_not_export_internal
   - api.public_types_complete
@@ -1035,16 +1031,16 @@
   - api.no_public_api_import_cycles
   - api.public_signature_shape
   - api.no_undefined_public_type_references
-  - api.no_retired_public_load_routes
+  - api.current_document_load_surface_only
   - api.no_unapproved_document_load_inputs
   - api.dto_immutability
   - api.equality_policy_explicit
   - api.id_validation_no_extension_type_escape
-  - core.no_retired_package_imports
+  - core.no_unapproved_external_package_imports
   - core.import_boundaries
   - core.no_unapproved_part_files
-  - core.no_retired_controller_shape_dependency
-  - core.no_retired_node_patch_shape_dependency
+  - core.no_unapproved_controller_shape_dependency
+  - core.no_unapproved_patch_shape_dependency
   - core.single_runtime_root
   - store.no_public_document_live_state
   - selection.owner_separate_from_document
