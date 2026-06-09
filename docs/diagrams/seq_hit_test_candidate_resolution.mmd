@@ -19,7 +19,7 @@ sequenceDiagram
 
   alt spatial query budget exceeded
     Spatial-->>Interaction: typed budget-exceeded result with no partial candidates
-    Interaction->>Diagnostics: planned P10 interaction reliability diagnostic for user-facing budget event
+    Interaction->>Diagnostics: interaction reliability diagnostic for user-facing budget event
     Interaction-->>Surface: no hit result, no partial candidates consumed
   else bounded candidate handles returned
     Spatial-->>Interaction: candidate handles(id, generation, orderToken, structuralRevision)
@@ -30,14 +30,14 @@ sequenceDiagram
       alt candidate is stale
         Store-->>ReadPort: stale candidate rejected
         ReadPort-->>Interaction: stale candidate rejected
-        Interaction->>Diagnostics: planned P10 interaction reliability diagnostic for stale candidate rejection
+        Interaction->>Diagnostics: interaction reliability diagnostic for stale candidate rejection
       else candidate is current
         Store-->>ReadPort: immutable hit row and common flags
         ReadPort-->>Interaction: immutable hit row and common flags
         Interaction->>Hit: check hit eligibility(point finite, visible, selectable, transform finite)
         Hit->>Geometry: exact family hit with transform, local bounds, hit padding, and slop
         alt committed row has non-invertible transform
-          Note over Geometry,Diagnostics: P8 returns miss without DiagnosticsHub write, corrupted-row diagnostic route is deferred.
+          Note over Geometry,Diagnostics: Geometry/spatial returns miss without DiagnosticsHub write; corrupted-row diagnostic route is deferred.
           Geometry-->>Hit: miss
           Hit-->>Interaction: continue candidate scan
         else transform invertible
@@ -57,4 +57,4 @@ sequenceDiagram
   Note over Interaction,ReadPort: Hit-test resolves committed rows through read-only candidate handles only.
   Note over Hit,Geometry: Background elements are not pointer-selectable in v1.
   Note over Caller,Hit: Marquee selection uses the same bounded spatial candidate rules, but selection accumulation is covered by seq_marquee_select.
-  Note over Spatial,Hit: Legacy SceneNode traversal and legacy scene order logic are not normative input.
+  Note over Spatial,Hit: Hit-test ordering is derived only from committed frame facts and order tokens.

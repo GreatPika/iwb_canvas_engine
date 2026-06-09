@@ -28,7 +28,7 @@ Required tests:
 - `test.api_contract.no_undefined_public_type_references`
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
-- `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.api_contract.public_integration_compile_fixture`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.store_projection_checks`
 - `test.guardrails.selection_boundary_checks`
@@ -153,7 +153,7 @@ Required tests:
 Guardrails:
 - `none`
 Do not assume:
-- copied or adapted behavior needs current owner tests
+- shared behavior needs current owner tests
 <!-- CONTEXT:END -->
 
 ## 23. Tests
@@ -176,8 +176,8 @@ Required tests:
 - `test/api_contract/public_equality_policy_test.dart`
 - `test/api_contract/public_signature_shape_test.dart`
 - `test/api_contract/id_validation_no_extension_type_escape_test.dart`
-- `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
-- `test/api_contract/public_facade_wrapper_compatibility_test.dart`
+- `test/api_contract/public_integration_compile_fixture_test.dart`
+- `test/api_contract/public_facade_wrapper_test.dart`
 - `test/contracts/contract_declaration_shape_test.dart`
 - `test/contracts/internal_seam_shape_test.dart`
 - `test/guardrails/public_api_declaration_checks_test.dart`
@@ -341,7 +341,7 @@ resolve through one runtime-local monotonic cursor, while loadDocument and
 dispose stream-close paths create no timestamped action output.
 `test.interaction.runtime_created_timestamps_monotonic` remains the
 contract-level proof area for non-action runtime-created timestamp outputs
-owned by later interaction phases.
+owned by later interaction work.
 
 `test.codec.constructor_and_schema_limits` covers element transform admission
 at public DTO construction and schema decode: non-invertible element
@@ -375,11 +375,11 @@ rejection of non-invertible element transforms before `PreparedDocumentLoad`
 success, interaction interruption, repaint, action events, or public state
 publication.
 
-P8 `test.geometry.hit_policy` coverage for corrupted committed hit rows proves
+geometry/spatial `test.geometry.hit_policy` coverage for corrupted committed hit rows proves
 the implemented behavior: a non-invertible element transform returns miss,
 continues candidate scan, has no coarse fallback acceptance, mutates no state,
 and allocates no DiagnosticsHub record. The policy-gated corrupted-row
-DiagnosticsHub route is deferred after P8.
+DiagnosticsHub route is deferred after geometry/spatial.
 
 Future diagnostics sanitizer coverage must cover corrupted-row diagnostic
 sanitization when that deferred route is implemented.
@@ -430,11 +430,11 @@ behavioral tests, and the required guardrail list remains owned by
 
 ### Test Responsibilities
 
-#### `test/api_contract/app_next_engine_adapter_compile_fixture_test.dart`
-- compiles test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart;
+#### `test/api_contract/public_integration_compile_fixture_test.dart`
+- compiles test/api_contract/fixtures/public_integration_compile_fixture.dart;
 - proves external application adapter code can use the public integration
   surface through package:iwb_canvas_engine/iwb_canvas_engine.dart only;
-- rejects fixture imports of src/\*\*, retired package symbols, or internal
+- rejects fixture imports of src/\*\*, package-internal or unregistered public symbols, or internal
   runtime classes;
 - covers runtime lifecycle, state/document observation, edit/load,
   selection/camera/tools, high-level commands, actions/context-action
@@ -446,8 +446,7 @@ behavioral tests, and the required guardrail list remains owned by
   generated `.dart_tool` and build output;
 - proves example engine imports use only
   `package:iwb_canvas_engine/iwb_canvas_engine.dart`;
-- rejects example imports of engine internals, retired package paths, retired legacy
-  scene/controller/spec/patch/codec symbols, and app-adapter responsibility
+- rejects example imports of engine internals, package-internal paths, package-internal symbols, and app-adapter responsibility
   names;
 - when the current unstaged, staged, or untracked diff includes non-generated
   `example/**` changes, fails that current diff if it also modifies production
@@ -455,11 +454,11 @@ behavioral tests, and the required guardrail list remains owned by
 - when `EXAMPLE_BOUNDARY_DIFF_BASE` and `EXAMPLE_BOUNDARY_DIFF_HEAD` are set,
   fails if that committed range modifies production `lib/**` files;
 - proves production engine source under `lib/**` does not contain
-  `AppCanvasPort`, `LegacyEngineAdapter`, or `NextEngineAdapter`.
+  `application canvas port` or `application adapter`.
 
 #### `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - compiles the exported API declarations in an empty consumer package;
-- instantiates and calls P2-owned public constructors, getters, methods,
+- instantiates and calls public constructors, getters, methods,
   defaults, and return shapes through the public barrel.
 
 #### `test/api_contract/public_exports_complete_test.dart`
@@ -525,18 +524,18 @@ behavioral tests, and the required guardrail list remains owned by
   them only through an explicit generated-code approval list.
 
 #### `test/guardrails/blocking_suite_test.dart`
-- proves the executable P0 hard-boundary guardrail ids are represented in
+- proves the executable hard-boundary guardrail ids are represented in
   runner inventory;
 - proves the full guardrail runner, `--suite=api`, `--suite=core`, and
-  explicit `--guardrail=<id>` selection modes execute the intended P0 ids;
+  explicit `--guardrail=<id>` selection modes execute the intended hard-boundary ids;
 - proves unknown or empty suite selection fails instead of silently running
   an unintended guardrail set.
 
 #### `test/guardrails/release_readiness_guardrail_test.dart`
 - proves `release.benchmark_readiness` is runner-backed in the blocking and
   release suites without running the full benchmark matrix;
-- rejects missing release diff routing, public benchmark exports, app adapter
-  names in production source, retired benchmark route imports, and approved
+- rejects missing release diff routing, public benchmark exports, public integration
+  names in production source, benchmark route outside release policy imports, and approved
   baseline writes outside the manual update workflow.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
@@ -560,23 +559,23 @@ behavioral tests, and the required guardrail list remains owned by
   `runtime.edits.loadDocumentFromJson(json)`, observe initial state and
   readDocument output, and perform public selection, resource, edit, and load
   operations;
-- appends P8 public compatibility coverage for background geometry,
+- appends geometry/spatial public API coverage for background geometry,
   overlapping transformed content, one public geometry-changing edit, and a
   replacement geometry-rich load while asserting only public runtime/document
   outcomes;
-- appends P9 public compatibility coverage for reading `runtime.preview` and
+- appends frame/cache public API coverage for reading `runtime.preview` and
   pumping a resource-free `CanvasSurface` through the public API until the
   `ValueKey<String>('iwb_canvas_surface.paint_host')` `CustomPaint` host is
   present;
-- appends public interaction compatibility coverage for non-throwing tool,
+- appends public interaction coverage for non-throwing tool,
   empty context-request stream, marquee replacement selection, selected-move
   preview and resolved commit, typed action delivery, remove-element command,
   unknown text-edit no-op, and clear-content command behavior;
-- appends P11 draw coverage for pencil and marker stroke previews, first-drag
+- appends draw coverage for pencil and marker stroke previews, first-drag
   and two-tap line previews/commits, public `CanvasSurface(interactive: false)`
   pending-line preservation, committed stroke/line document elements, and typed
   draw action delivery after accepted state publication;
-- appends P13 `public consumer uses CanvasSurface pointer and resource bridge`
+- appends surface `public consumer uses CanvasSurface pointer and resource bridge`
   coverage for resource-free zero resolver calls, app-key image resource
   resolution through `CanvasSurface`, resolver replacement, bounded null
   resolver behavior, Flutter pointer gestures on the public paint host,
@@ -596,9 +595,9 @@ behavioral tests, and the required guardrail list remains owned by
   read concrete store tables.
 
 #### `test/geometry/eraser_exact_budget_inputs_test.dart`
-- proves P8 eraser corridor, exact-hit input limits, and preview/terminal
+- proves geometry/spatial eraser corridor, exact-hit input limits, and preview/terminal
   candidate and exact-check budget input shapes;
-- intentionally leaves terminal cleanup/no-op commit behavior to P12.
+- intentionally leaves terminal cleanup/no-op commit behavior to eraser/context-action.
 
 #### `test/spatial/tile_outlier_membership_test.dart`
 - proves tile membership, outlier routing, max-cells behavior, and query
@@ -612,13 +611,13 @@ behavioral tests, and the required guardrail list remains owned by
 - proves `RuntimeRoot` applies spatial update/rebuild delivery before public
   runtime state publication and before observer callbacks can run.
 
-#### P8 guardrail proof tests
+#### geometry/spatial guardrail proof tests
 - `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`,
   `test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart`,
   `test/guardrails/spatial_no_full_clone_ordinary_edit_guardrail_test.dart`,
   `test/guardrails/spatial_stale_candidate_rejected_guardrail_test.dart`, and
   `test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart`
-  prove the P8 guardrail ids are registered, runner-backed where structural
+  prove the geometry/spatial guardrail ids are registered, runner-backed where structural
   proof is required, and fail on fixtures containing the forbidden pattern.
 
 #### `test/runtime/load_document_state_publication_test.dart`
@@ -635,7 +634,7 @@ behavioral tests, and the required guardrail list remains owned by
   settings changes, and advance only when the operation also owns draw-mode
   selection clear or active preview cleanup.
 
-#### P10 public command and tool tests
+#### Public command and tool tests
 - `test/api/selection_port_test.dart` proves direct public selection changes
   update the selection revision domain without emitting user actions.
 - `test/api/selection_transform_commands_test.dart` proves public selection
@@ -644,12 +643,12 @@ behavioral tests, and the required guardrail list remains owned by
   and typed action emission.
 - `test/api/command_port_actions_test.dart` proves command-port remove, clear,
   and unknown text-edit behavior plus their action payloads.
-- `test/api/tool_port_settings_test.dart` proves historical P10 tool-port
-  compatibility:
+- `test/api/tool_port_settings_test.dart` proves public tool-port behavior:
   initial settings are visible, effective changes advance interaction
   revision, no-ops stay silent, active sessions clean up on setting changes,
-  pencil draw-mode pointer input publishes preview-only public state, P10 double
-  tap remains unsupported until P12, and P10 context-action requests are a
+  pencil draw-mode pointer input publishes preview-only public state,
+  unsupported direct double tap has no state, action, timestamp, request,
+  repaint, or diagnostics effect, and context-action requests are a
   non-throwing empty stream.
 - `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
   timestamps are resolved through one runtime-local monotonic cursor.
@@ -659,7 +658,7 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/runtime/load_interaction_cleanup_test.dart` proves load and dispose
   use interaction-owned cleanup without post-install interaction calls.
 
-#### P11 draw tool tests
+#### Draw tool tests
 - `test/interaction/draw_stroke_machine_test.dart` proves pencil and marker
   stroke decisions, duplicate-point handling, and max-point replacement.
 - `test/interaction/draw_stroke_interaction_routing_test.dart` proves
@@ -683,7 +682,7 @@ behavioral tests, and the required guardrail list remains owned by
   and no-op terminals do not reserve the next draw output timestamp.
 - `test/surface/interactive_false_pending_line_preserved_test.dart`
   proves public `CanvasSurface(interactive: false)` preserves non-owned
-  pending line state, clears active endpoint state, and cleans the old runtime
+  pending line state, clears active endpoint state, and cleans the current runtime
   on runtime-swap plus `interactive` disable.
 - `test/api/typed_action_payloads_test.dart` proves public draw action payload
   fields and runtime finalization for `drawPencil`, `drawMarker`, and
@@ -696,14 +695,14 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/guardrails/interaction_guardrail_enforcement_test.dart` proves
   `interaction.no_stale_terminal_commit`,
   `interaction.pointer_cleanup_coordinator_only`, and interaction import
-  guardrails are runner-backed or structurally checked for P11 draw/line and
-  P12 eraser owner surfaces.
+  guardrails are runner-backed or structurally checked for draw/line and
+  eraser/context-action eraser owner surfaces.
 - `test/architecture_graph/generated_graph_views_test.dart` proves generated
-  architecture graph Mermaid views are reproducible for the selected P12 phase
+  architecture graph Mermaid views are reproducible for the selected eraser/context-action view
   and stay synchronized with `docs/architecture/architecture_graph.yaml`.
 
-#### P12 eraser and context-action request tests
-- `test/interaction/interaction_read_port_test.dart` proves P12 immutable read
+#### eraser/context-action eraser and context-action request tests
+- `test/interaction/interaction_read_port_test.dart` proves eraser/context-action immutable read
   facts for eraser, context targets, and text guard inputs without exposing
   store tables or mutation owners to interaction machines.
 - `test/interaction/eraser_context_action_routing_test.dart` proves eraser machine routing,
@@ -720,7 +719,7 @@ behavioral tests, and the required guardrail list remains owned by
   terminal eraser budget overflow cleans up without partial document mutation,
   action delivery, or DiagnosticsHub allocation.
 - `test/runtime/load_interaction_cleanup_test.dart` proves successful document
-  load prepares P12 eraser/context cleanup before install while failed load
+  load prepares eraser/context-action eraser/context cleanup before install while failed load
   preserves active interaction state where required.
 - `test/interaction/text_edit_stale_commit_guard_test.dart` proves guarded
   request-originated text commits, including unknown/already-consumed no-ops,
@@ -737,7 +736,7 @@ behavioral tests, and the required guardrail list remains owned by
   `interaction.text_edit_stale_commit_guard` is runner-backed, selected by the
   blocking suite, and rejects hardcoded or bypassed text guard facts.
 
-#### P13 Flutter surface tests
+#### surface Flutter surface tests
 - `test/surface/single_active_surface_test.dart` proves exactly one active
   `CanvasSurface` per `CanvasRuntime`, rejected attach all-or-nothing behavior,
   and independent active surfaces for independent runtimes.
@@ -762,7 +761,7 @@ behavioral tests, and the required guardrail list remains owned by
   `test/surface/surface_camera_frame_output_test.dart` prove the public surface
   paint host remains stable while frame-owned main and overlay outputs render
   through surface-owned painter adapters.
-- `test/smoke/public_incremental_smoke_test.dart` appends the P13 root-barrel
+- `test/smoke/public_incremental_smoke_test.dart` appends the surface root-barrel
   public consumer scenario named
   `public consumer uses CanvasSurface pointer and resource bridge`, covering
   resource-free paint, resource-backed resolver calls, resolver replacement,
@@ -854,9 +853,9 @@ behavioral tests, and the required guardrail list remains owned by
   revisions and without emitting action events;
 - proves cleanup against already-empty preview state is public-state silent.
 
-#### P10 interaction seam tests
+#### Interaction boundary tests
 - `test/interaction/interaction_declarations_test.dart` proves the required
-  P10 interaction declarations live in their owning files instead of umbrella
+  interaction declarations live in their owning files instead of umbrella
   or placeholder modules.
 - `test/interaction/pointer_session_test.dart` proves active-pointer token,
   controller-epoch, stale terminal cleanup, stale non-terminal ignore, and
@@ -886,7 +885,7 @@ behavioral tests, and the required guardrail list remains owned by
   request, no resolver runs on cleanup-only paths, stale terminal cleanup
   creates no commit intent, and cleanup emits no user action.
 
-#### P10 frame and interaction guardrail proof tests
+#### Frame and interaction guardrail proof tests
 - `test/frame/selected_move_main_repaint_test.dart` and
   `test/frame/marquee_overlay_repaint_test.dart` prove selected-move preview is
   main-only and marquee preview is overlay-only through the frame repaint
@@ -894,7 +893,7 @@ behavioral tests, and the required guardrail list remains owned by
 - `test/guardrails/action_after_state_guardrail_test.dart` proves
   state-before-action ordering is runner-backed and rejects inverted action
   fixture order.
-- `test/guardrails/interaction_guardrail_enforcement_test.dart` proves P10
+- `test/guardrails/interaction_guardrail_enforcement_test.dart` proves
   guardrail ids are registered, blocking, runner-backed or structurally
   checked as appropriate, and reject contract-owned negative fixtures for
   interaction imports, command-fact imports, cleanup coordinator dependencies,
@@ -970,7 +969,7 @@ Current implemented proof:
   selection facts, resolver state, mutation APIs, or public document
   projection access.
 
-#### P9 frame/cache guardrail proof tests
+#### Frame/cache guardrail proof tests
 - `test/guardrails/frame_no_global_scene_sort_guardrail_test.dart`,
   `test/guardrails/frame_paint_plan_excludes_preview_delta_guardrail_test.dart`,
   `test/guardrails/frame_paint_plan_excludes_selection_state_guardrail_test.dart`,
@@ -978,7 +977,7 @@ Current implemented proof:
   `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`,
   `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`,
   and `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
-  prove the P9 frame, cache, and preview guardrail ids are registered,
+  prove the frame, cache, and preview guardrail ids are registered,
   runner-backed or structurally checked where required, and reject fixtures
   containing only the forbidden contract shapes. The frame scene-sort proof
   covers direct sort calls, cascades, multi-line statements, and named
@@ -988,7 +987,7 @@ Current implemented proof:
   `OrdinaryPaintRecordCacheEntry`, `PaintPlan`, `RenderElementRecord`, and
   registered row payloads.
 
-Legacy capability inventory rows require inventory-only tests. Next API
+Capability inventory rows require inventory-only tests. Current API
 behavior is proved by focused API, subsystem, and integration tests, not by
 mapping rows.
 Runtime coverage must include api, edit, interaction, frame, spatial, geometry, codec/schema_v1, resources, surface, and diagnostics tests.

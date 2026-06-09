@@ -19,12 +19,12 @@ Guardrails:
 - `api.id_validation_no_extension_type_escape`
 Do not assume:
 - no unvalidated public ids
-- no legacy diagnostics surface leakage
+- no diagnostics surface leakage
 <!-- CONTEXT:END -->
 
 ## 6. Validation limits
 
-These limits are mandatory for v1. They intentionally preserve legacy safety limits where a legacy equivalent exists.
+These limits are mandatory for v1 and define the current package validation boundary.
 
 | Limit | Value |
 |---|---:|

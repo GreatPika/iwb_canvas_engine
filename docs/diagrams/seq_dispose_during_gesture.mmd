@@ -36,7 +36,7 @@ sequenceDiagram
     Note over Runtime,Signals: Dispose is idempotent. No repaint, stream event, state tick, resource invalidation, resolver call, or document read is produced.
   else first dispose call
     Runtime->>Runtime: enter disposing guard and reject reentrant mutation
-    Runtime->>Tools: stop accepting new public pointer routing
+    Runtime->>Tools: stop accepting current public pointer routing
     Tools->>IE: interrupt active pointer because runtime is disposing
     IE->>IE: classify active session as dispose cancellation
     Note over IE,MoveResolver: Move commit resolver is not called when dispose cancels a gesture.

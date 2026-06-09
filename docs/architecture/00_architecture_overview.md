@@ -3,7 +3,7 @@ Registry id: `section_00_status_and_scope`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/architecture/00_architecture_overview.md`
 Owns:
-- 0. Статус и обязательное архитектурное решение
+- 0. Current package status and architecture decision
 Must read before editing:
 - `none`
 Current owners:
@@ -15,53 +15,44 @@ Related diagrams:
 - `c4_container`
 Required tests:
 - `test.api_contract.public_exports_complete`
-- `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.api_contract.public_integration_compile_fixture`
 Guardrails:
 - `core.no_unapproved_external_package_imports`
 - `core.no_unapproved_controller_shape_dependency`
 - `core.no_unapproved_patch_shape_dependency`
 Do not assume:
-- no retired facade
-- no SceneController
-- no retired public API shape
-- no retired runtime fallback
+- no public facade bypass
+- no controller shape
+- no unregistered public API shape
+- no runtime fallback path
 <!-- CONTEXT:END -->
 
 # `iwb_canvas_engine`: scope and architecture decision
 
-## 0. Статус и обязательное архитектурное решение
+## 0. Current package status and architecture decision
 
-Документ фиксирует обязательную границу v1 для новой библиотеки.
-Он заменяет прежнюю модель, где новый runtime должен был сохранять старую форму публичного API.
+This document fixes the package boundary for Public API v1. The maintained
+package is a single Flutter-based canvas runtime with its own public API,
+runtime owners, verification gates, and release policy.
 
-Фиксированное решение:
+Fixed decision:
 
 ```text
 iwb_canvas_engine
-  -> отдельный новый package;
-  -> новый публичный API v1;
-  -> один новый runtime;
-  -> новый core/store/edit/frame/interaction/resource/codec;
-  -> functional-compatible со старым движком;
-  -> не API-compatible со старым движком;
-  -> без legacy facade внутри нового движка;
-  -> без старого runtime внутри поставляемого артефакта.
+  -> maintained package root;
+  -> Public API v1;
+  -> one runtime root;
+  -> owned core/store/edit/frame/interaction/resource/codec boundaries;
+  -> no fallback runtime in the shipped artifact.
 ```
 
-Старый движок используется только как **functional oracle**:
+The package is complete only when current behavior is proved through package
+tests, guardrails, generated documentation checks, architecture graph checks,
+and release gates.
 
-```text
-legacy iwb_canvas_engine package
-  -> показывает, какие сценарии, edge cases, события, проверки и performance probes нельзя потерять;
-  -> не задаёт форму нового публичного API;
-  -> не импортируется новым package;
-  -> не используется как fallback;
-  -> не оборачивается новым runtime.
-```
+### 0.1 Scope lock for v1
 
-### 0.1 Scope lock для v1
-
-v1 scope additions over legacy functional behavior:
+v1 includes these package-owned capabilities:
 
 ```text
 - CanvasResourceId;
@@ -74,34 +65,27 @@ v1 scope additions over legacy functional behavior:
 - CanvasSurface(interactive=false).
 ```
 
-Запрещено в новом package:
+The package boundary excludes:
 
 ```text
-Legacy public API:
-  - реализовывать legacy facade старого API;
-  - экспортировать SceneController;
-  - экспортировать SceneSnapshot;
-  - экспортировать NodeSpec;
-  - экспортировать NodePatch;
-  - экспортировать PatchField;
-  - экспортировать SceneWriteTxn;
-  - экспортировать старые schema v7 public entrypoints как API нового package.
+Public API:
+  - parallel public facades;
+  - unregistered public symbols;
+  - public schema entrypoints outside the v1 contract.
 
-App integration:
-  - размещать AppCanvasPort внутри нового package;
-  - размещать LegacyEngineAdapter внутри нового package;
-  - размещать NextEngineAdapter внутри нового package.
+Application integration:
+  - application-owned integration code ports inside the package;
+  - application-specific adapter implementations inside the package.
 
 Runtime and proof:
-  - использовать старый runtime в production path;
-  - доказывать полноту нового API прохождением старого public API ledger.
+  - fallback runtime paths;
+  - proof that bypasses current package tests, registries, or guardrails.
 ```
 
-Приложение может иметь собственный слой миграции или adapter contract, но он находится **вне** `iwb_canvas_engine`.
-Такой слой не является deliverable движка. Движок обязан предоставить чистый новый API и собственные contract tests; приложение само решает, как адаптировать его к своему integration port.
-При этом полнота public API для внешнего app adapter доказывается не наличием
-типов в контракте, а external compile fixture, который импортирует только
-`package:iwb_canvas_engine/iwb_canvas_engine.dart` и не использует `src/**`,
-legacy symbols или internal runtime classes.
+Applications may own adapters around `iwb_canvas_engine`, but those adapters
+are outside this package. Public API completeness for app-facing integration is
+proved by an external compile fixture that imports only
+`package:iwb_canvas_engine/iwb_canvas_engine.dart` and does not use `src/**` or
+internal runtime classes.
 
 ---

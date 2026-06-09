@@ -15,7 +15,7 @@ Benchmarks:
 Related diagrams:
 - `none`
 Required tests:
-- `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.api_contract.public_integration_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.release_readiness`
 - `test.guardrails.blocking_suite`
@@ -95,11 +95,11 @@ Guardrails:
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
 - `release.benchmark_readiness`
-- `tools.p10_compatibility`
+- `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
-- no release with retired imports, private facades, or unproved copied behavior
+- no release with blocked imports, private facades, or unproved behavior
 <!-- CONTEXT:END -->
 
 ## 27. Final release gates
@@ -120,7 +120,7 @@ the accepted current graph obligations before continuing dependent architecture
 work.
 
 ```text
-1. Public API, external-adapter, retired-route, and validation checks are green.
+1. Public API, public integration, document load surface, and validation checks are green.
 2. api.public_exports_complete is green.
 3. api.facades_do_not_export_internal is green.
 4. api.public_types_complete is green.
@@ -172,7 +172,7 @@ work.
 36. benchmark gates pass through the pinned release workflow: docs checks,
     release profile run, read-only release diff, current graph check,
     generated-view check, and guardrail runner.
-37. AppCanvasPort, LegacyEngineAdapter and NextEngineAdapter are not present in the engine package.
+37. application canvas port and application adapter names are not present in the engine package.
 ```
 
 ---

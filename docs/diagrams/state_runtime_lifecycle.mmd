@@ -6,7 +6,7 @@ stateDiagram-v2
   note right of Creating
     Initialize committed document, runtime owners,
     public ports, streams, state listenable, and caches.
-    No legacy SceneController, NodeSpec, or PatchField entities.
+    Only current runtime, document, and update entities participate.
   end note
 
   Creating --> Active: initial committed immutable document is installed

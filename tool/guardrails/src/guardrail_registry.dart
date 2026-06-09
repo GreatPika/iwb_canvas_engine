@@ -288,7 +288,10 @@ const _blockingEntries = [
     suites: {'blocking', 'surface'},
     requiresRunnerStructuralProof: true,
   ),
-  GuardrailEntry(id: 'tools.p10_compatibility', suites: {'blocking', 'tools'}),
+  GuardrailEntry(
+    id: 'tools.public_port_behavior',
+    suites: {'blocking', 'tools'},
+  ),
   GuardrailEntry(
     id: 'frame.committed_facts_via_frame_facts_port',
     suites: {'blocking', 'frame'},

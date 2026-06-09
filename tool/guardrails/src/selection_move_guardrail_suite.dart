@@ -5,7 +5,7 @@ const eventsActionAfterStateOrderGuardrailId =
 const selectedMoveMainOnlyPreviewGuardrailId =
     'preview.selected_move_main_only';
 const marqueeOverlayOnlyPreviewGuardrailId = 'preview.marquee_overlay_only';
-const toolPortCompatibilityGuardrailId = 'tools.p10_compatibility';
+const toolPublicPortBehaviorGuardrailId = 'tools.public_port_behavior';
 
 const selectionMoveGuardrailIds = {
   'load.prepares_before_interrupt',
@@ -23,5 +23,5 @@ const selectionMoveGuardrailIds = {
   'preview.selected_move_main_repaint',
   selectedMoveMainOnlyPreviewGuardrailId,
   marqueeOverlayOnlyPreviewGuardrailId,
-  toolPortCompatibilityGuardrailId,
+  toolPublicPortBehaviorGuardrailId,
 };

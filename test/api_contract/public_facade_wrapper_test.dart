@@ -7,7 +7,7 @@ void main() {
     await expectLater(
       runFlutterConsumerTest(
         packageName: 'iwb_canvas_engine_facade_wrapper_consumer',
-        testFileName: 'facade_wrapper_compatibility_test.dart',
+        testFileName: 'facade_wrapper_test.dart',
         testSource: _consumerSource,
       ),
       completes,

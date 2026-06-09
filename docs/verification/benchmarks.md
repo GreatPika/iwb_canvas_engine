@@ -52,7 +52,7 @@ Required tests:
 Guardrails:
 - `release.benchmark_readiness`
 Do not assume:
-- no unapproved retired feature route regression
+- no feature route regression
 <!-- CONTEXT:END -->
 
 ## 24. Benchmarks
@@ -168,7 +168,7 @@ Manual benchmark history ledger:
   `--history-label=<reason>` to `tool/bench/run.dart`. Optional history fields
   are `--history-device-name`, `--history-device-id`, `--history-device-os`,
   `--history-reference`, `--history-root`, and `--history-output`.
-  `--history-baseline` remains accepted only as a compatibility alias for older
+  `--history-baseline` remains accepted only as an alias for existing
   local commands.
 - History records and manual reference reports must not store raw
   `actionUsSamples` or `setupUsSamples` arrays. Store `sampleSummary` instead:

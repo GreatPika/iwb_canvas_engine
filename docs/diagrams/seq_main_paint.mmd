@@ -148,4 +148,4 @@ sequenceDiagram
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.
   Note over Frame,Store: Forbidden in main paint: direct FrameEngine store reads, Store mutation, CanvasDocument projection, DocumentProjectionCache read, public API reads, and InteractionEngine mutation.
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter never calls the application resolver directly.
-  Note over Surface,Painter: No legacy scene, controller, snapshot, or public DTO entities participate in this sequence.
+  Note over Surface,Painter: Main paint uses frame inputs, paint plans, and surface resource session state only.

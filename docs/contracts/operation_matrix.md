@@ -34,17 +34,14 @@ Do not assume:
 
 ## 13. Operation matrix
 
-Phase ownership:
+Owner coverage:
 
 ```text
-P5 closes edit-owned rows and the generic executable effect shape.
-P5 reserves the documentReplaced invalidation/effect shape and the only generic
-global-invalidation exception, but does not make CanvasEdit.replaceDraftDocument
-executable.
-P6 closes the loadDocumentFromJson success/failure rows after the staged load contract.
-P6 also owns CanvasEdit.replaceDraftDocument success/failure behavior and any
-load-driven draft replacement execution.
-P7 and P10-P12 close their resource and interaction rows when those owners land.
+Edit owns edit rows and the generic executable effect shape.
+Staged load owns loadDocumentFromJson success/failure rows.
+Staged load also owns CanvasEdit.replaceDraftDocument success/failure behavior
+and load-driven draft replacement execution.
+Resource and interaction owners own their resource and interaction rows.
 ```
 
 | Operation | State touched | Revisions | Spatial | Projection | Repaint | Events |
@@ -85,7 +82,7 @@ P7 and P10-P12 close their resource and interaction rows when those owners land.
 | line commit | add line | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | add id | evict | main + overlay cleanup | drawLine; `runtime_created_timestamps_monotonic` |
 | eraser preview | preview corridor | state.revisions.preview | none | no | overlay | none |
 | eraser commit | removed elements plus selection-owner prune when erased ids intersect selection | state.revisions.document, state.revisions.selection if pruned, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | remove ids | evict | main + overlay cleanup | erase if removed; `runtime_created_timestamps_monotonic` |
-| context-action double-tap request | P10 unsupported direct double tap has no touched state; P12 contextActionRequests stream only; P12 direct `handleDoubleTap` clears pending context tap history before candidate-admitted current-target resolution; InteractionRequestRegistry stores live context request target kind and guard facts | none in P10; none for P12 request delivery | none | no | none | none in P10; P12 asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
+| context-action double-tap request | unsupported direct double tap has no touched state; direct `handleDoubleTap` clears pending context tap history before candidate-admitted current-target resolution; InteractionRequestRegistry stores live context request target kind and guard facts | none for unsupported direct double tap; none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` |
 | commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel plus consume/remove live request facts after successful prepare | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
@@ -116,7 +113,7 @@ Notes:
 - Runtime view camera rows do not mutate persisted document camera and do not
   invalidate public document projection. Persisted camera edits remain document
   edits through `CanvasEdit.setCameraOffset`.
-- No-op operations publish no new public state snapshot.
+- No-op operations publish no current public state snapshot.
 - `CanvasToolPort.handlePointer` is the public pointer dispatcher boundary. It
   validates and routes the pointer sample, but has no standalone document,
   selection, preview, spatial, projection, repaint, or event effect. Terminal
@@ -162,9 +159,9 @@ Notes:
   through the public runtime timestamp contract before publishing the
   timestamped action, request, preview, or resolver request output. Preview and
   resolver request rows remain non-user-action outputs.
-- P10 action rows emit only after the accepted state for the same operation has
+- Action rows emit only after the accepted state for the same operation has
   been installed and published. No-op, stale, invalid, cancel, resolver cancel,
-  rollback, load cleanup, dispose cleanup, unknown text request ids, and P10
+  rollback, load cleanup, dispose cleanup, unknown text request ids, and
   unsupported double tap do not resolve action/request timestamps and emit no
   action or context request.
 ```
@@ -252,10 +249,8 @@ cache, repaint, and notifications remain unchanged.
 
 #### replaceDraftDocument
 
-Phase ownership: P6 closes this executable edit-session replacement row. P5
-kept only the `documentReplaced` invalidation/effect shape reserved for the
-generic global-invalidation exception; P6 makes
-`CanvasEdit.replaceDraftDocument` replace the whole draft document through the
+Owner coverage: staged load owns this executable edit-session replacement row.
+`CanvasEdit.replaceDraftDocument` replaces the whole draft document through the
 edit commit path.
 
 Touched state: whole draft document; selection owner when replacement makes the

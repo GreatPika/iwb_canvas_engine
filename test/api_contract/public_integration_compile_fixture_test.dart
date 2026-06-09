@@ -5,16 +5,19 @@ import 'package:test/test.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 const _fixturePath =
-    'test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart';
+    'test/api_contract/fixtures/public_integration_compile_fixture.dart';
 
 void main() {
-  test('app adapter fixture imports only the root public barrel', () {
+  test('public integration fixture imports only the root public barrel', () {
     expect(_expectFixtureImportsOnlyRootBarrel, returnsNormally);
   });
 
-  test('app adapter fixture compiles from an external package', () async {
-    await expectLater(_expectFixtureCompilesFromExternalPackage(), completes);
-  });
+  test(
+    'public integration fixture compiles from an external package',
+    () async {
+      await expectLater(_expectFixtureCompilesFromExternalPackage(), completes);
+    },
+  );
 }
 
 void _expectFixtureImportsOnlyRootBarrel() {
@@ -37,7 +40,7 @@ void _expectFixtureImportsOnlyRootBarrel() {
 
 Future<void> _expectFixtureCompilesFromExternalPackage() async {
   final packageDir = await Directory.systemTemp.createTemp(
-    'iwb_canvas_engine_app_adapter_consumer_',
+    'iwb_canvas_engine_public_integration_consumer_',
   );
 
   try {
@@ -46,7 +49,7 @@ Future<void> _expectFixtureCompilesFromExternalPackage() async {
       '${packageDir.path}/pubspec.yaml',
     ).writeAsString(_pubspecSource());
     await File(
-      '${packageDir.path}/lib/app_adapter_fixture.dart',
+      '${packageDir.path}/lib/public_integration_fixture.dart',
     ).writeAsString(File(_fixturePath).readAsStringSync());
 
     final pubGet = await Process.run('flutter', [
@@ -57,7 +60,7 @@ Future<void> _expectFixtureCompilesFromExternalPackage() async {
 
     final analyze = await Process.run('dart', [
       'analyze',
-      'lib/app_adapter_fixture.dart',
+      'lib/public_integration_fixture.dart',
     ], workingDirectory: packageDir.path);
     expect(analyze.exitCode, 0, reason: _processOutput(analyze));
   } finally {
@@ -67,7 +70,7 @@ Future<void> _expectFixtureCompilesFromExternalPackage() async {
 
 String _pubspecSource() {
   return '''
-name: iwb_canvas_engine_app_adapter_consumer
+name: iwb_canvas_engine_public_integration_consumer
 publish_to: none
 
 environment:

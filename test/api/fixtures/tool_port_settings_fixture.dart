@@ -27,8 +27,8 @@ void main() {
   );
 
   test(
-    'mode flag false and double tap compatibility stay bounded',
-    _modeFlagFalseAndDoubleTapCompatibilityStayBounded,
+    'mode flag false and direct double tap stay bounded',
+    _modeFlagFalseAndDirectDoubleTapStayBounded,
   );
 }
 
@@ -153,7 +153,7 @@ void _expectPencilPreview(CanvasPreviewState preview) {
   expect(pencil.opacity, 1);
 }
 
-Future<void> _modeFlagFalseAndDoubleTapCompatibilityStayBounded() async {
+Future<void> _modeFlagFalseAndDirectDoubleTapStayBounded() async {
   final runtime = runtimeWithDocument(_document());
   final requests = <CanvasContextActionRequested>[];
   final subscriptions = _listenToContextRequests(runtime, requests);

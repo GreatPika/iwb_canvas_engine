@@ -33,8 +33,8 @@ Guardrails:
 - `edit.no_global_invalidation_except_replacement`
 - `edit.typed_effects_no_frame_dependency`
 Do not assume:
-- no legacy SceneWriteTxn
-- no legacy controller shell
+- no edit-session owner bypass
+- no controller-shell owner bypass
 - no async nested edit
 <!-- CONTEXT:END -->
 
@@ -90,15 +90,15 @@ session. The session records a callback-local sparse journal, reads committed
 facts from `DocumentStoreKernel`, and compiles exact touched-set/revision
 deltas without building a public `CanvasDocument` projection. `draftSummary`
 uses the committed summary plus sparse deltas. `readDraftDocument` and
-`replaceDraftDocument` are explicit compatibility fallbacks: they materialize a
+`replaceDraftDocument` are explicit materialization fallbacks: they materialize a
 rollback-safe `DraftDocument`, replay prior sparse mutations, and then commit
 through the materialized payload path.
 
 `DocumentStoreKernel` prepares accepted sparse commits before the irreversible
-store swap. Duplicate ids, resource references, update-kind compatibility,
+store swap. Duplicate ids, resource references, update-kind validation,
 revision-family alignment, and projection invalidation are validated against
-the accepted next committed tables. Selection effects are also prepared before
-the swap from accepted next-document facts. After the swap, `SelectionKernel`
+the accepted committed tables. Selection effects are also prepared before
+the swap from accepted committed document facts. After the swap, `SelectionKernel`
 installs only the prepared selected ids; it does not re-read public document
 membership from the current store.
 

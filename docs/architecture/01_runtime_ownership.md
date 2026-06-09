@@ -3,7 +3,7 @@ Registry id: `section_02_architecture_model`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/architecture/01_runtime_ownership.md`
 Owns:
-- 2. Несущая модель новой библиотеки
+- 2. Runtime ownership model
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 Current owners:
@@ -24,47 +24,48 @@ Guardrails:
 - `core.single_runtime_root`
 - `selection.owner_separate_from_document`
 Do not assume:
-- no legacy facade
-- no SceneController
+- no public facade bypass
+- no controller shape
 <!-- CONTEXT:END -->
 
-## 2. Несущая модель новой библиотеки
+## 2. Runtime ownership model
 
-Новая библиотека предоставляет графический runtime для холста. Она не хранит предметную модель приложения.
+The package provides the canvas runtime. It does not store application domain
+state.
 
 ```text
 Application domain state
-  -> живёт в приложении;
-  -> может ссылаться на canvas element ids;
-  -> не хранится внутри engine core.
+  -> lives in the application;
+  -> may reference canvas element ids;
+  -> is not stored inside engine core.
 
 Canvas engine state
-  -> документ холста;
-  -> элементы;
-  -> ресурсы;
-  -> выделение;
-  -> камера;
-  -> режимы и preview;
+  -> canvas document;
+  -> elements;
+  -> resources;
+  -> selection;
+  -> camera;
+  -> modes and preview;
   -> render/cache/spatial/runtime state.
 ```
 
-Внутри движка роли разделены так:
+Runtime responsibilities are split as follows:
 
-| Зона | Хранит | Не должна делать |
+| Zone | Owns | Must not do |
 |---|---|---|
-| Public API | стабильные DTO, операции, события, ошибки | раскрывать таблицы, handles, caches, runtime internals |
-| DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | читать gesture state, selection state или Flutter widget |
+| Public API | stable DTOs, operations, events, errors | expose tables, handles, caches, or runtime internals |
+| DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | read gesture state, selection state, or Flutter widget state |
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
-| SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | хранить committed document content, selected-order cache или быть public API type |
-| EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | выполнять paint или pointer routing |
-| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | читать или менять DocumentStoreKernel напрямую; хранить Flutter text editor session state |
+| SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
+| EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
+| InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
 | CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
-| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | владеть app domain assets, resolved image references или committed descriptors |
-| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | владеть committed descriptors, public runtime state или Flutter widget lifecycle |
-| SpatialKernel | coarse candidate lookup, outlier policy | быть source of truth для сцены |
-| CodecBoundary | schema v1 encode/decode, validation, diagnostics | зависеть от Flutter widget или gestures |
-| DiagnosticsHub | internal diagnostic records, public error projection | добавлять public stream без API-решения |
+| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | own app domain assets, resolved image references, or committed descriptors |
+| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | own committed descriptors, public runtime state, or Flutter widget lifecycle |
+| SpatialKernel | coarse candidate lookup, outlier policy | be the document source of truth |
+| CodecBoundary | schema v1 encode/decode, validation, diagnostics | depend on Flutter widgets or gestures |
+| DiagnosticsHub | internal diagnostic records, public error projection | add a public stream without an API decision |
 
 Public runtime observation is owned by `RuntimeRoot`. It publishes the single
 `CanvasRuntime.state` listenable as immutable `CanvasRuntimeState` snapshots
@@ -75,8 +76,8 @@ widget state to publish core runtime state.
 
 Frame, cache, lifecycle, and public edit diagrams use this public runtime state
 model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view
-camera is distinct from persisted document camera, and retired separate public
-listener getters are not diagram seams.
+camera is distinct from persisted document camera, and no separate public
+listener getter is a diagram seam.
 
 The target `PointerToolCleanupCoordinator` is an internal
 `InteractionEngine` collaborator and cleanup policy seam. `InteractionEngine`

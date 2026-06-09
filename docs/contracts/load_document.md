@@ -38,7 +38,7 @@ directly. `RuntimeRoot` owns the atomic cross-owner replacement operation after
 all fallible JSON validation, dependency-neutral import, store row/table
 preparation, and prepared interaction cleanup have succeeded.
 
-P6 owns only the minimal early interaction boundary needed by staged
+The staged-load owner uses only the minimal early interaction boundary needed by staged
 replacement:
 
 ```text
@@ -54,8 +54,8 @@ to finish load cleanup;
 failure before PreparedDocumentLoad success must not call the boundary.
 ```
 
-The full `InteractionEngine` pointer-session state machines remain owned by
-P10-P12 and consume this ordering instead of being prerequisites for P6.
+The full `InteractionEngine` pointer-session state machines consume this
+ordering instead of being prerequisites for staged load.
 
 Success ordering:
 

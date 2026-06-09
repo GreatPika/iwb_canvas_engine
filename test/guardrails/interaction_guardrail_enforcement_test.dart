@@ -816,7 +816,7 @@ const _runnerBackedProofs = [
     proofPaths: ['test/frame/marquee_overlay_repaint_test.dart'],
   ),
   _RunnerBackedProof(
-    id: toolPortCompatibilityGuardrailId,
+    id: toolPublicPortBehaviorGuardrailId,
     suites: {'blocking', 'tools'},
     proofPaths: [
       'test/api/tool_port_settings_test.dart',

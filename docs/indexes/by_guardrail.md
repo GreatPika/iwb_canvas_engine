@@ -323,7 +323,7 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_22_guardrails_machine_checks`
 
-## tools.p10_compatibility
+## tools.public_port_behavior
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 

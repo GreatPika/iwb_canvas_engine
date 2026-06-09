@@ -50,7 +50,7 @@ flowchart LR
     NoMaterializedLoadDto["Runtime load does not materialize\nCanvasDocument or resource DTOs"]
     RuntimeProjection["DocumentProjectionCache\nbuilt only by readDocument,\nencodeCanvasDocument, tests/tools,\nor explicit edit.readDraftDocument"]
     UnknownPreserve["Unknown non-metadata fields\nnot preserved by encode"]
-    LegacySchemaBlocked["No production legacy schema read/write"]
+    NonV1SchemaBlocked["No production schema read/write outside v1"]
   end
 
   App -->|"runtime load request"| LoadEntry
@@ -98,4 +98,4 @@ flowchart LR
   JsonOutput -->|"encoded result"| App
 
   DtoValidation -.->|"invalid DTO"| DiagnosticRecord
-  CanonicalEncoder -.->|"forbidden runtime mutation"| LegacySchemaBlocked
+  CanonicalEncoder -.->|"forbidden runtime mutation"| NonV1SchemaBlocked

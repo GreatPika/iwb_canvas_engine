@@ -31,7 +31,7 @@ drift checks.
 
 `.design/` and `.research/` are evidence and source-input layers only. They do
 not own active package behavior, release policy, guardrails, benchmarks,
-roadmaps, donor routes, phase routes, or runtime contracts.
+roadmaps, external routes, removed planning routes, or runtime contracts.
 
 ## Checks
 

@@ -726,7 +726,7 @@ List<GuardrailViolation> checkGeometryEraserExactBudgetInputSources({
         guardrailId: geometryEraserExactBudgetGuardrailId,
         path: geometryPath,
         message:
-            'P8 eraser guardrail covers primitive and exact-check budget inputs.',
+            'Eraser guardrail covers primitive and exact-check budget inputs.',
       ),
     );
   }
@@ -735,7 +735,7 @@ List<GuardrailViolation> checkGeometryEraserExactBudgetInputSources({
       GuardrailViolation(
         guardrailId: geometryEraserExactBudgetGuardrailId,
         path: hitPath,
-        message: 'P8 eraser exact-hit helper must remain family-owned.',
+        message: 'Eraser exact-hit helper must remain family-owned.',
       ),
     );
   }
@@ -745,7 +745,7 @@ List<GuardrailViolation> checkGeometryEraserExactBudgetInputSources({
       GuardrailViolation(
         guardrailId: geometryEraserExactBudgetGuardrailId,
         path: geometryPath,
-        message: 'P8 eraser budget checks must not implement partial erases.',
+        message: 'Eraser budget checks must not implement partial erases.',
       ),
     );
   }

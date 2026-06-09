@@ -85,11 +85,11 @@ Guardrails:
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
 - `interaction.text_edit_stale_commit_guard`
-- `tools.p10_compatibility`
+- `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
-- no legacy callback graph as structure
+- no callback graph as structure
 - no reentrant mutation from resolver
 <!-- CONTEXT:END -->
 
@@ -141,7 +141,7 @@ Rules:
 - public interaction setting changes publish `state.revisions.interaction`;
 - preview changes publish sealed `CanvasPreviewState` variants and
   `state.revisions.preview`;
-- interaction cleanup that is already a no-op publishes no new public state
+- interaction cleanup that is already a no-op publishes no current public state
   snapshot.
 ```
 
@@ -239,7 +239,7 @@ cleanup request carries both cleanup reason and ownership context so the
 coordinator can distinguish active pointer-owned state from non-owned pending
 line state. Tool machines must not call the coordinator directly.
 
-P11 draw cancellation maps to `PointerCleanupReason.cancel` for every
+draw cancellation maps to `PointerCleanupReason.cancel` for every
 user-cancelled pencil, marker, and line path. Pencil and marker cancellation
 clears the active stroke preview/session without creating a commit, action, or
 timestamp reservation. Line first-tap cancellation clears only the active
@@ -296,7 +296,7 @@ preview value types needed to calculate `CanvasNoPreview` outcomes. It must not
 depend on concrete store internals, concrete selection internals, selected-move
 resolver callbacks, `EditKernel`, action dispatchers, context-action streams,
 frame engine, repaint buses, Flutter widgets/adapters, resource
-resolver/session APIs, public runtime-state publication, or retired package
+resolver/session APIs, public runtime-state publication, or package-internal
 paths.
 
 ### 14.3 Preview repaint target
@@ -317,20 +317,19 @@ do not include selected ids, pointer tokens, active pointer ids, or session ids.
 | CanvasEraserPreview | overlay only |
 | CanvasSelectedMovePreview | main scene only |
 
-This is mandatory. The legacy selected move preview uses main-scene repaint
-through selected supplement staging; next behavior must preserve that functional
-result.
+This is mandatory. Selected move preview uses main-scene repaint through selected supplement staging; current behavior must preserve that result.
 
 ### 14.4 Double-tap context action
 
-Double-tap context actions are P12-owned. In P10,
-`CanvasToolPort.handleDoubleTap` throws an `UnsupportedError` naming P12
-context actions and performs no request, document, selection, preview,
+Double-tap context actions are interaction-owned. When direct double-tap
+delivery is unsupported, `CanvasToolPort.handleDoubleTap` throws an
+`UnsupportedError` naming context actions and performs no request, document,
+selection, preview,
 interaction, action, timestamp, repaint, or DiagnosticsHub effect.
-`CanvasRuntime.contextActionRequests` is still non-throwing in P10, but it is
-an empty broadcast stream that closes on dispose.
+`CanvasRuntime.contextActionRequests` is a non-throwing broadcast stream that
+closes on dispose.
 
-P12 double-tap on an accepted context-action target emits exactly one
+Double-tap on an accepted context-action target emits exactly one
 asynchronous `CanvasContextActionRequested` through
 `CanvasRuntime.contextActionRequests`. The trigger is
 `CanvasContextActionTrigger.doubleTap`, and the accepted target is either a
@@ -341,7 +340,7 @@ bounded interaction diagnostics; rejected invalid-index reads record none.
 Request delivery has no document, selection, preview, repaint, spatial,
 projection, resource, or action effect.
 
-In P12, `CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
+`CanvasToolPort.handleDoubleTap` is a direct host-recognized double-tap event,
 not the second sample in engine-owned pointer-sample recognition. It accepts a
 finite view position from the host surface and does not require pending
 first-tap history. On a valid direct double-tap, the interaction engine clears
@@ -375,7 +374,7 @@ Context request emission records a live issued request in
 request target kind and controllerEpoch. For content-element targets, the
 registry also stores target element id, element generation, elementRevision, and
 element family. Request facts are consumed and removed once; already-consumed
-ids are absent rather than stored as durable retired state.
+ids are absent rather than stored as durable registry state.
 
 `documentRevision` is an observation and diagnostics fact only, not a
 DiagnosticsHub write and not a stale commit guard. Unrelated document edits
@@ -393,10 +392,10 @@ selection controls.
 
 Request-originated text changes commit through
 `CanvasCommandPort.commitTextEdit(requestId, newText, timestampMs: ...)`.
-Until P12 creates `InteractionRequestRegistry`, every P10 commitTextEdit
+When there is no live `InteractionRequestRegistry` entry, a commitTextEdit
 request id is unknown and returns false without document, selection, preview,
-interaction, action, timestamp, repaint, or private-retirement effects. After
-P12, the command accepts only current live context request ids whose target is a
+interaction, action, timestamp, repaint, or private request-consumption effects.
+The command accepts only current live context request ids whose target is a
 text content element. It consumes accepted no-op requests, consumes changed
 requests only after successful edit preparation and before public delivery,
 consumes known live rejected request ids, treats unknown and already-consumed

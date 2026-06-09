@@ -177,7 +177,7 @@ int _reportViolations(String id, Iterable<GuardrailViolation> violations) {
 
 const _testProofPaths = {
   'api.integration_surface_complete': [
-    'test/api_contract/app_next_engine_adapter_compile_fixture_test.dart',
+    'test/api_contract/public_integration_compile_fixture_test.dart',
   ],
   'api.public_api_compiles_as_written': [
     'test/api_contract/public_api_v1_compiles_as_written_test.dart',
@@ -362,7 +362,7 @@ const _testProofPaths = {
   marqueeOverlayOnlyPreviewGuardrailId: [
     'test/frame/marquee_overlay_repaint_test.dart',
   ],
-  toolPortCompatibilityGuardrailId: [
+  toolPublicPortBehaviorGuardrailId: [
     'test/api/tool_port_settings_test.dart',
     'test/api/command_port_actions_test.dart',
     'test/api/typed_action_payloads_test.dart',
@@ -557,7 +557,7 @@ const _structuralDescriptions = {
   geometryCommittedHandleOrderGuardrailId:
       'geometry/spatial committed order-token structural check',
   geometryEraserExactBudgetGuardrailId:
-      'P8 eraser primitive and exact-check budget-input check',
+      'eraser primitive and exact-check budget-input check',
   spatialNoFullCloneGuardrailId:
       'ordinary spatial update full-frame enumeration check',
   spatialStaleCandidateGuardrailId:
@@ -565,7 +565,7 @@ const _structuralDescriptions = {
   spatialFallbackBudgetGuardrailId:
       'spatial fallback budget no-partial result check',
   releaseBenchmarkReadinessGuardrailId:
-      'benchmark release-readiness workflow and compatibility check',
+      'benchmark release-readiness workflow and policy check',
 };
 
 const _coreBoundaryIds = {

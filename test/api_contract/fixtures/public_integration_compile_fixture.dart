@@ -1,12 +1,12 @@
-// This fixture intentionally keeps the external app adapter proof in one
+// This fixture intentionally keeps the external public integration proof in one
 // root-barrel consumer so it exercises the app-facing API as an adapter would,
 // instead of passing through metric-shaped fragments.
 // ignore_for_file: type=metrics
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-final class AppNextEngineAdapterCompileFixture {
-  AppNextEngineAdapterCompileFixture({CanvasRuntime? runtime})
+final class PublicIntegrationCompileFixture {
+  PublicIntegrationCompileFixture({CanvasRuntime? runtime})
     : runtime = runtime ?? CanvasRuntime(config: _runtimeConfig());
 
   final CanvasRuntime runtime;
@@ -14,7 +14,7 @@ final class AppNextEngineAdapterCompileFixture {
   CanvasSurface createSurface() {
     return CanvasSurface(
       runtime: runtime,
-      resourceResolver: const AppNextEngineAdapterResourceResolver(),
+      resourceResolver: const PublicIntegrationResourceResolver(),
       selectionStyle: CanvasSelectionStyle.defaultStyle,
       gridStyle: CanvasGridStyle.defaultStyle,
       interactive: false,
@@ -166,9 +166,9 @@ final class AppNextEngineAdapterCompileFixture {
   }
 }
 
-final class AppNextEngineAdapterResourceResolver
+final class PublicIntegrationResourceResolver
     implements CanvasResourceResolver {
-  const AppNextEngineAdapterResourceResolver();
+  const PublicIntegrationResourceResolver();
 
   @override
   Never resolveImage(CanvasImageResource resource) {

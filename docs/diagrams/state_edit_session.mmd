@@ -28,8 +28,7 @@ stateDiagram-v2
       Read committed store facts, create a sparse
       callback-local journal, create an empty touched set,
       and bind the live CanvasEdit handle to this session.
-      No legacy SceneController, SceneWriteTxn, NodeSpec,
-      or PatchField entity participates.
+      Only current edit-session, document, and update entities participate.
     end note
 
     Opening --> CallbackExecuting: invoke fn(handle)
@@ -139,5 +138,5 @@ stateDiagram-v2
     stale handle operations throw StateError;
     nested edit is rejected;
     Future-returning edit is rejected;
-    no legacy entities are part of the lifecycle.
+    no package-internal entities are part of the lifecycle.
   end note

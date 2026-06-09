@@ -5,8 +5,8 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 
 ## architecture
 
-- `section_00_status_and_scope` - 0. Статус и обязательное архитектурное решение
-- `section_02_architecture_model` - 2. Несущая модель новой библиотеки
+- `section_00_status_and_scope` - 0. Current package status and architecture decision
+- `section_02_architecture_model` - 2. Runtime ownership model
 - `section_03_package_layout` - 3. Package layout
 - `section_10_runtime_data_model` - 10. Runtime data model
 
@@ -16,7 +16,7 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 
 ## contract
 
-- `section_04_public_api_v1` - 4. Public API v1: полный surface
+- `section_04_public_api_v1` - 4. Public API v1: complete surface
 - `section_05_schema_v1_contract` - 5. Schema v1 full field contract
 - `section_06_validation_limits` - 6. Validation limits
 - `section_07_resource_lifecycle` - 7. Resource lifecycle contract

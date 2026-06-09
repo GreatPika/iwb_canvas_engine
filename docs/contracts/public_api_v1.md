@@ -3,7 +3,7 @@ Registry id: `section_04_public_api_v1`
 Registry source: `docs/_registry/sections.yaml`
 Document path: `docs/contracts/public_api_v1.md`
 Owns:
-- 4. Public API v1: полный surface
+- 4. Public API v1: complete surface
 Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
@@ -31,7 +31,7 @@ Required tests:
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
-- `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.api_contract.public_integration_compile_fixture`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.text_editing_port`
@@ -67,15 +67,15 @@ Guardrails:
 - `surface.editable_text_surface_only`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
-- no legacy public API shape
-- no PatchField export
-- no SceneController export
+- no unregistered public API shape
+- no unregistered field-update export
+- no implementation-owner export
 - no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
 <!-- CONTEXT:END -->
 
-## 4. Public API v1: полный surface
+## 4. Public API v1: complete surface
 
-Dart declarations below are normative. Implementation must compile against these names and semantics.
+Dart declarations below are authoritative. Implementation must compile against these names and semantics.
 
 ### 4.1 Public exports
 
@@ -102,7 +102,7 @@ barrel.
 The root package does not expose named extension declarations in Public API v1.
 Adding one later is a public API decision that requires an explicit registry and
 signature traversal update; this clarification does not remove any approved v1
-API, require a migration, or change the package version.
+API, require a public API change, or change the package version.
 
 Factory target classes may be private only for construction-only sealed values.
 Sealed values that application code must read at public boundaries expose their
@@ -122,15 +122,15 @@ The root package is Flutter-based. Public API may use:
 External adapter static proof:
 
 ```text
-test.api_contract.app_next_engine_adapter_compile_fixture proves that an
-application-owned adapter can statically reference the public app-facing surface
+test.api_contract.public_integration_compile_fixture proves that an
+application-owned integration code can statically reference the public public integration surface
 from an external package by importing only
 package:iwb_canvas_engine/iwb_canvas_engine.dart.
 ```
 
-That fixture must compile without `src/**`, retired package symbols, or internal
+That fixture must compile without `src/**`, package-internal or unregistered public symbols, or internal
 runtime classes. It is compile-time coverage for the external operation
-families an app-level adapter needs: runtime lifecycle, state/document
+families an application integration needs: runtime lifecycle, state/document
 observation, edit/load, selection/camera/tools, high-level commands,
 actions/context-action requests, resources, and `CanvasSurface` construction
 with public resolver/style inputs. Behavioral integration remains covered by the
@@ -319,8 +319,8 @@ collide with loaded ids.
 
 ### 4.3 Field update patch semantics
 
-The next API does not use legacy `PatchField`. It uses a next-owned field
-update intent type with explicit absent, non-null set, and nullable clear
+The current API represents partial updates with a package-owned field update
+intent type that has explicit absent, non-null set, and nullable clear
 semantics.
 
 ```dart
@@ -771,7 +771,7 @@ Validated scalar value objects such as `CanvasCamera` and `CanvasGrid` expose
 non-const public factories. Their approved defaults use private const storage
 only for already-validated values that cannot expose invalid public state.
 `CanvasDocument.camera` stores the persisted document default camera offset,
-matching legacy engine behavior for schema/readDocument round trips. The same
+using the schema and readDocument round-trip semantics required by this contract. The same
 `CanvasCamera` value type is also used by `CanvasCameraPort.camera` to report
 the runtime view camera; runtime view camera offset is owned by
 `CanvasCameraPort` and published through `CanvasRuntime.state`.
@@ -795,9 +795,9 @@ policy shared by runtime JSON load, while runtime load must not expose a public
 
 ### 4.9 Geometry enums and transform
 
-The current package exposes `Transform2D` as a six-component affine transform
+The current package exposes `CanvasTransform` as a six-component affine transform
 with JSON shape `{a,b,c,d,tx,ty}` and Flutter canvas matrix conversion. The
-public `CanvasTransform` keeps that complete behavior under the next API name.
+public `CanvasTransform` keeps that complete behavior under the current API name.
 
 ```dart
 enum CanvasElementKind {
@@ -1116,7 +1116,7 @@ final class CanvasRectElement extends CanvasElement {
 
 ### 4.11 Element updates
 
-Partial updates use `CanvasFieldUpdate`, not legacy `NodePatch`.
+Partial updates use `CanvasFieldUpdate` values within `CanvasElementUpdate`.
 
 ```dart
 sealed class CanvasElementUpdate {
@@ -1451,7 +1451,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   cross-runtime ordering guarantee is made;
 - stale host timestamps and host clock rollback are backwards hints and resolve
   to next;
-- the primary compatibility proof covers CanvasActionCommitted.timestampMs and
+- the primary proof covers CanvasActionCommitted.timestampMs and
   CanvasContextActionRequested.timestampMs;
 - the same runtime-local resolver also applies to
   CanvasPendingLineStartPreview.timestampMs and
@@ -1464,7 +1464,7 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
   cursor;
 - no-op, stale rejection, rollback, cancel, `loadDocumentFromJson`, and dispose stream
   close paths do not create timestamped action or context request outputs.
-- P10 selected-move resolver requests and accepted user actions resolve
+- current selected-move resolver requests and accepted user actions resolve
   timestamps only after the path is accepted far enough to create that output;
   stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
   rollback, load cleanup, dispose cleanup, unsupported double tap, and unknown
@@ -1491,8 +1491,8 @@ Rules:
 ```text
 - command mutations must go through EditKernel and inherit rollback/stale/dispose checks;
 - removeElement emits deleteElements only when it removes an element;
-- P10 has no `InteractionRequestRegistry`; until P12 introduces it,
-  commitTextEdit returns false for every request id and performs no document,
+- when a request id is unknown because no live `InteractionRequestRegistry`
+  entry exists, commitTextEdit returns false and performs no document,
   selection, preview, interaction, action, timestamp, or request-consumption
   effect;
 - commitTextEdit returns false when the request id is unknown or already
@@ -1742,10 +1742,10 @@ Pointer policy semantics:
 - doubleTapSlop is used only to match two tap terminals into a double tap.
 ```
 
-P10 tool-port compatibility:
+Public tool-port behavior:
 
 ```text
-- CanvasRuntime.tools is non-throwing in P10 for mode, draw style, pointer
+- CanvasRuntime.tools is non-throwing for mode, draw style, pointer
   policy, and handlePointer dispatch;
 - the runtime's configured initial mode, draw style, and pointer policy are
   visible immediately after construction without a construction-time
@@ -1759,18 +1759,17 @@ P10 tool-port compatibility:
   `CanvasRuntimeConfig.clearSelectionOnDrawModeEnter` is true;
 - entering draw mode with `clearSelectionOnDrawModeEnter` false does not clear
   selection;
-- draw-mode pointer input is a P10 compatibility no-op except for cleanup-capable
+- draw-mode pointer input is a behavior no-op except for cleanup-capable
   terminal handling; pencil, marker, line, eraser, text, and context-action
-  production behavior remains later-phase scope;
-- P10 `CanvasRuntime.contextActionRequests` is a non-throwing empty broadcast
+  production behavior remains tool-owned scope;
+- `CanvasRuntime.contextActionRequests` is a non-throwing empty broadcast
   stream that closes on dispose.
 ```
 
-`CanvasToolPort.handleDoubleTap` remains P12-owned in P10. In P10 the method
-throws an `UnsupportedError` whose message names P12 context actions and
+`CanvasToolPort.handleDoubleTap` throws an `UnsupportedError` whose message
+names context actions and
 performs no request, document, selection, preview, interaction, action,
-timestamp, repaint, or DiagnosticsHub effect. P12 will introduce the direct
-host-recognized double-tap input boundary and context-action request delivery.
+timestamp, repaint, or DiagnosticsHub effect.
 
 Validation:
 
@@ -1915,7 +1914,7 @@ v1 resource rules:
 
 ### 4.18 Preview state
 
-The next API exposes read-only preview state because applications need to
+The current API exposes read-only preview state because applications need to
 render pending line, stroke, marquee, eraser, and selected-move previews without
 being able to construct impossible cross-kind states.
 
@@ -2099,7 +2098,7 @@ Rules:
 ```text
 - preview state is immutable;
 - CanvasPreviewState variants represent the only valid preview payload shapes;
-- CanvasPreviewKind remains a stable read-only compatibility discriminator;
+- CanvasPreviewKind remains a stable read-only discriminator;
 - CanvasStrokePreview owns shared pencil and marker preview facts;
 - pencil, marker, and eraser iterable inputs are copied into unmodifiable lists;
 - selected ids, pointer tokens, active pointer ids, and session ids are not
@@ -2110,7 +2109,7 @@ Rules:
 - `loadDocumentFromJson` prepared cleanup before install clears preview;
 - `loadDocumentFromJson` failure preserves preview;
 - selected move preview is main-scene preview, not overlay-only preview.
-- migration is by type testing or pattern matching on concrete preview variants.
+- consumers use type testing or pattern matching on concrete preview variants.
 ```
 
 ### 4.19 Action and text events
@@ -2348,11 +2347,12 @@ final class CanvasEmptyCanvasContextActionTarget
 Context-action and text editing model:
 
 ```text
-- P10 has no context-action request producer; `contextActionRequests` is an
+- when there is no context-action request producer, `contextActionRequests` is an
   empty broadcast stream that closes on dispose;
-- P10 direct `CanvasToolPort.handleDoubleTap` throws `UnsupportedError` naming
-  P12 context actions and has no request, state, action, or timestamp effect;
-- P12 engine behavior detects an accepted double-tap context target after
+- unsupported direct `CanvasToolPort.handleDoubleTap` throws
+  `UnsupportedError` naming context actions and has no request, state, action,
+  or timestamp effect;
+- engine behavior detects an accepted double-tap context target after
   candidate spatial admission;
 - rejected invalid-index, stale-index, and budget-exceeded target reads emit no
   context request; stale and budget rejected reads record bounded interaction
@@ -2383,7 +2383,7 @@ Context-action and text editing model:
   CanvasCommandPort.commitTextEdit(requestId, newText) or the active session
   commit() helper;
 - request facts are live and consumed/removed once rather than kept as durable
-  retired registry state; unknown and already-consumed ids are no-effect false
+  registry state; unknown and already-consumed ids are no-effect false
   results;
 - direct CanvasEdit.updateElement(CanvasTextElementUpdate) remains available
   for programmatic non-request synchronization;

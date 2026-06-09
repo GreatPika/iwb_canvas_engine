@@ -28,7 +28,7 @@ Guardrails:
 - `geometry.eraser_exact_budget_no_partial`
 - `text.single_measured_layout_source`
 Do not assume:
-- geometry reads committed frame facts, not runtime scene owners
+- geometry reads committed frame facts, not runtime owner internals
 - hit ordering is owned by committed handle order tokens
 <!-- CONTEXT:END -->
 
@@ -145,7 +145,7 @@ Paint admission:
 - background elements are included in paint scope;
 - content elements are included in paint scope;
 - candidate admitted if queryRect overlaps paintBoundsWorld;
-- edge-touch parity tests must cover legacy behavior.
+- edge-touch tests must cover the current hit-admission behavior.
 ```
 
 Marquee selection:
@@ -180,8 +180,9 @@ terminal budget exceeded -> cleanup/no-op, no partial erase;
 budget exceeded increments eraser-owned metric/probe counters only; this is not a DiagnosticsHub write;
 budget exceeded does not mutate document, selection, spatial index, projection,
 cache, repaint main scene, or emit erase action.
-P8 owns the geometry primitives and exact-check budget foundations; the full
-terminal no-partial-commit proof is owned by P12.
+Geometry/spatial owns the geometry primitives and exact-check budget
+foundations; terminal no-partial-commit behavior is owned by the eraser
+interaction path.
 ```
 
 ---

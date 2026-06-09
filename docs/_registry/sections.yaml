@@ -1,7 +1,7 @@
 - id: section_00_status_and_scope
   source: docs/_registry/sections.yaml / section 0
   file: docs/architecture/00_architecture_overview.md
-  title: 0. Статус и обязательное архитектурное решение
+  title: 0. Current package status and architecture decision
   owners:
   - architecture
   subsystems:
@@ -19,16 +19,16 @@
   - core.no_unapproved_patch_shape_dependency
   tests:
   - test.api_contract.public_exports_complete
-  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.public_integration_compile_fixture
   do_not_assume:
-  - no retired facade
-  - no SceneController
-  - no retired public API shape
-  - no retired runtime fallback
+  - no public facade bypass
+  - no controller shape
+  - no unregistered public API shape
+  - no runtime fallback path
 - id: section_02_architecture_model
   source: docs/_registry/sections.yaml / section 2
   file: docs/architecture/01_runtime_ownership.md
-  title: 2. Несущая модель новой библиотеки
+  title: 2. Runtime ownership model
   owners:
   - architecture
   subsystems:
@@ -51,8 +51,8 @@
   - test.guardrails.blocking_suite
   - test.selection.runtime_owner_separation
   do_not_assume:
-  - no legacy facade
-  - no SceneController
+  - no public facade bypass
+  - no controller shape
 - id: section_03_package_layout
   source: docs/_registry/sections.yaml / section 3
   file: docs/architecture/02_package_boundaries.md
@@ -82,12 +82,12 @@
   - test.guardrails.selection_boundary_imports
   - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-  - no retired package import
-  - no app adapters in package
+  - no external package import bypass
+  - no public integrations in package
 - id: section_04_public_api_v1
   source: docs/_registry/sections.yaml / section 4
   file: docs/contracts/public_api_v1.md
-  title: '4. Public API v1: полный surface'
+  title: '4. Public API v1: complete surface'
   owners:
   - contract
   subsystems:
@@ -139,7 +139,7 @@
   - test.api_contract.dto_immutability
   - test.api_contract.public_equality_policy
   - test.api.typed_action_payloads
-  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.public_integration_compile_fixture
   - test.interaction.context_action_request
   - test.interaction.text_edit_stale_commit_guard
   - test.runtime.text_editing_port
@@ -153,9 +153,9 @@
   - test.surface.single_active_surface
   - test.surface.surface_resource_session_lifecycle
   do_not_assume:
-  - no legacy public API shape
-  - no PatchField export
-  - no SceneController export
+  - no unregistered public API shape
+  - no unregistered field-update export
+  - no implementation-owner export
   - no raw Map metadata as ordinary public DTO metadata; use CanvasMetadata
 - id: section_05_schema_v1_contract
   source: docs/_registry/sections.yaml / section 5
@@ -184,8 +184,8 @@
   - test.codec.schema_v1.reject_unknown_element_kind
   - test.codec.schema_v1.reject_unknown_resource_source_kind
   do_not_assume:
-  - no schema v7 public entrypoints as next API
-  - no legacy SceneBuilder API shape
+  - no schema entrypoints outside v1 public API
+  - no builder API shape outside schema v1
   - no raw metadata map exposure after CanvasMetadata materialization
 - id: section_06_validation_limits
   source: docs/_registry/sections.yaml / section 6
@@ -208,7 +208,7 @@
   - test.codec.constructor_and_schema_limits
   do_not_assume:
   - no unvalidated public ids
-  - no legacy diagnostics surface leakage
+  - no diagnostics surface leakage
 - id: section_07_resource_lifecycle
   source: docs/_registry/sections.yaml / section 7
   file: docs/contracts/resources.md
@@ -287,8 +287,8 @@
   - test.guardrails.store_projection_checks
   - test.guardrails.selection_boundary_checks
   do_not_assume:
-  - no legacy mutable runtime graph
-  - no SceneController shape dependency
+  - no mutable runtime graph bypass
+  - no implementation-owner dependency bypass
 - id: section_11_edit_kernel
   source: docs/_registry/sections.yaml / section 11
   file: docs/contracts/edit_kernel.md
@@ -324,8 +324,8 @@
   - test.edit.exact_touched_invalidation
   - test.edit.typed_effects_no_frame_dependency
   do_not_assume:
-  - no legacy SceneWriteTxn
-  - no legacy controller shell
+  - no edit-session owner bypass
+  - no controller-shell owner bypass
   - no async nested edit
 - id: section_12_load_document
   source: docs/_registry/sections.yaml / section 12
@@ -436,7 +436,7 @@
   - interaction.no_stale_terminal_commit
   - interaction.pointer_cleanup_coordinator_only
   - interaction.text_edit_stale_commit_guard
-  - tools.p10_compatibility
+  - tools.public_port_behavior
   - surface.pointer_samples_normalized_before_runtime
   - surface.interactive_false_pending_line_preserved
   tests:
@@ -477,7 +477,7 @@
   - test.guardrails.selection_boundary_imports
   - test.surface.widget_paint
   do_not_assume:
-  - no legacy callback graph as structure
+  - no callback graph as structure
   - no reentrant mutation from resolver
 - id: section_15_frame_render_contract
   source: docs/_registry/sections.yaml / section 15
@@ -566,7 +566,7 @@
   - test.frame.measured_text_layout
   - test.guardrails.text_surface_guardrail_checks
   do_not_assume:
-  - geometry reads committed frame facts, not runtime scene owners
+  - geometry reads committed frame facts, not runtime owner internals
   - hit ordering is owned by committed handle order tokens
 - id: section_17_spatial_kernel
   source: docs/_registry/sections.yaml / section 17
@@ -601,7 +601,7 @@
   - test.spatial.invalid_index_fallback
   - test.spatial.runtime_delivery_order
   do_not_assume:
-  - do not port legacy Scene or locator maps
+  - use current document facts and locator maps only
   - do not rely on stale structuralRevision
 - id: section_18_cache_policy
   source: docs/_registry/sections.yaml / section 18
@@ -660,8 +660,8 @@
   - test.codec.schema_v1.metadata_projection
   - test.guardrails.codec_no_runtime_imports
   do_not_assume:
-  - no legacy SceneCodec surface as next API
-  - no schema v7 read/write in production core
+  - no codec surface outside v1 public API
+  - no schema version outside v1 read/write in production core
 - id: section_20_diagnostics_hub
   source: docs/_registry/sections.yaml / section 20
   file: docs/contracts/diagnostics.md
@@ -780,11 +780,11 @@
   - diagnostics.disabled_no_alloc_hot_path
   - diagnostics.sanitized_public_projection
   - release.benchmark_readiness
-  - tools.p10_compatibility
+  - tools.public_port_behavior
   - surface.pointer_samples_normalized_before_runtime
   - surface.interactive_false_pending_line_preserved
   tests:
-  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.public_integration_compile_fixture
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.guardrails.text_surface_guardrail_checks
   - test.guardrails.release_readiness
@@ -823,7 +823,7 @@
   - test.api_contract.no_undefined_public_type_references
   - test.api_contract.dto_immutability
   - test.api_contract.public_equality_policy
-  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.public_integration_compile_fixture
   - test.guardrails.import_boundaries
   - test.guardrails.store_projection_checks
   - test.guardrails.selection_boundary_checks
@@ -946,7 +946,7 @@
   - test.benchmarks.required_cases
   - test.guardrails.blocking_suite
   do_not_assume:
-  - copied or adapted behavior needs current owner tests
+  - shared behavior needs current owner tests
 - id: section_24_benchmarks
   source: docs/_registry/sections.yaml / section 24
   file: docs/verification/benchmarks.md
@@ -1001,7 +1001,7 @@
   - test.guardrails.release_readiness
   - test.benchmarks.required_cases
   do_not_assume:
-  - no unapproved retired feature route regression
+  - no feature route regression
 - id: section_27_final_release_gates
   source: docs/_registry/sections.yaml / section 27
   file: docs/verification/release_gates.md
@@ -1094,13 +1094,13 @@
   - diagnostics.disabled_no_alloc_hot_path
   - diagnostics.sanitized_public_projection
   - release.benchmark_readiness
-  - tools.p10_compatibility
+  - tools.public_port_behavior
   - surface.pointer_samples_normalized_before_runtime
   - surface.interactive_false_pending_line_preserved
   tests:
-  - test.api_contract.app_next_engine_adapter_compile_fixture
+  - test.api_contract.public_integration_compile_fixture
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.guardrails.release_readiness
   - test.guardrails.blocking_suite
   do_not_assume:
-  - no release with retired imports, private facades, or unproved copied behavior
+  - no release with blocked imports, private facades, or unproved behavior

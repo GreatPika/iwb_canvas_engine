@@ -25,8 +25,8 @@ Guardrails:
 - `codec.schema_v1_exact`
 - `codec.known_fields_validated`
 Do not assume:
-- no schema v7 public entrypoints as next API
-- no legacy SceneBuilder API shape
+- no schema entrypoints outside v1 public API
+- no builder API shape outside schema v1
 - no raw metadata map exposure after CanvasMetadata materialization
 <!-- CONTEXT:END -->
 

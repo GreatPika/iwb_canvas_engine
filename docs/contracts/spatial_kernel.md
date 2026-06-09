@@ -31,7 +31,7 @@ Guardrails:
 - `spatial.stale_candidate_rejected`
 - `spatial.fallback_budget_enforced`
 Do not assume:
-- do not port legacy Scene or locator maps
+- use current document facts and locator maps only
 - do not rely on stale structuralRevision
 <!-- CONTEXT:END -->
 
@@ -89,7 +89,7 @@ Fallback budget behavior:
 
 ```text
 - pure SpatialKernel fallback increments a non-hub budget counter whenever the query tile or candidate budget is hit;
-- this counter is not a DiagnosticsHub write; only interaction-observed user-facing reliability events route through the planned P10 `interaction` row in `section_20_diagnostics_hub`;
+- this counter is not a DiagnosticsHub write; only interaction-observed user-facing reliability events route through the `interaction` row in `section_20_diagnostics_hub`;
 - budget-exceeded fallback does not return partial hit/paint candidates as valid results;
 - RuntimeRoot schedules rebuild or retry outside the hot pointer/paint path;
 - no fallback path may scan the full scene silently.

@@ -14,7 +14,7 @@ Benchmarks:
 Related diagrams:
 - `none`
 Required tests:
-- `test.api_contract.app_next_engine_adapter_compile_fixture`
+- `test.api_contract.public_integration_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.text_surface_guardrail_checks`
 - `test.guardrails.release_readiness`
@@ -98,7 +98,7 @@ Guardrails:
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
 - `release.benchmark_readiness`
-- `tools.p10_compatibility`
+- `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
 Do not assume:
@@ -133,7 +133,7 @@ dart run tool/architecture_graph/check.dart
 
 For current closure work, this command is the blocking source of truth
 for graph-checkable obligations. A non-zero result means the current closure has
-an open architecture violation that must be repaired, rephased by an accepted
+an open architecture violation that must be repaired, rescheduled by an accepted
 contract, or explicitly resolved before dependent architecture work continues.
 
 The graph extractor is not a general Dart call-graph analyzer. It extracts only
@@ -160,25 +160,25 @@ Runner metadata lives under `tool/guardrails/**` and owns the executable
 guardrail ids, suite membership, and dispatch routing for checks that can run
 through this entrypoint. Future mandatory guardrails remain owned by
 `docs/_registry/sections.yaml` and this section until their implementation
-phase adds executable proof.
+contract adds executable proof.
 
 Design guidance for implementing or rewriting individual guardrails lives in
 `docs/verification/guardrail_design_patterns.md`. Each mandatory guardrail must
 choose a pattern from that document before executable proof is added, so new
-checks reuse the legacy-proven scanner, resolver, sequence, parity, behavior,
+checks reuse the repository-proven scanner, resolver, sequence, parity, behavior,
 and budget patterns instead of inventing bespoke enforcement.
 
 Mandatory guardrails:
 
 | Guardrail id | Rule |
 |---|---|
-| `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `NextEngineAdapter` responsibilities, while the adapter itself is not in package |
+| `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `application adapter` responsibilities, while the adapter itself is not in package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.current_document_load_surface_only` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `decodeCanvasDocument*` helpers, or public internal importer/row/prepared payload types |
-| `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization compatibility paths, and named test hooks |
+| `api.current_document_load_surface_only` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `public decode helper*` helpers, or public internal importer/row/prepared payload types |
+| `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
-| `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding retired document/preview listener getters |
+| `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding extra document/preview listener getters |
 | `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |
 | `api.preview_state_sealed_union_publicly_readable` | external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
@@ -189,12 +189,12 @@ Mandatory guardrails:
 | `api.dto_immutability` | DTO collections are defensively copied and unmodifiable; `CanvasMetadata` is deep-frozen; public constructors with caller-provided validated or sanitized values are non-const factories while marker/empty/default/private storage forms keep only approved const forms |
 | `api.equality_policy_explicit` | public value equality is explicit for concrete public classes, including runtime state snapshot types, and covered by API contract tests |
 | `api.id_validation_no_extension_type_escape` | ids cannot be publicly constructed without validation |
-| `core.no_unapproved_external_package_imports` | no import of retired package routes |
+| `core.no_unapproved_external_package_imports` | no import of package-internal package routes |
 | `core.import_boundaries` | package-owned source paths obey source boundary rules and the forbidden import matrix from `section_03_package_layout` |
 | `core.owner_dag_import_boundaries` | production import/export directives obey the selected owner-DAG: implementation-to-API, contracts-to-API, contracts-to-implementation, `resources -> runtime/store/frame/surface`, `selection -> runtime`, and `codec -> runtime/store/edit/frame` edges are rejected; API wrapper exports to `contracts/public/**` and named facade bridges are the only API exceptions |
 | `core.no_unapproved_part_files` | production code has no `part` or `part of` files unless generated-code use is explicitly approved |
-| `core.no_unapproved_controller_shape_dependency` | no `SceneController` concept in core |
-| `core.no_unapproved_patch_shape_dependency` | no retired NodeSpec/NodePatch/PatchField in core |
+| `core.no_unapproved_controller_shape_dependency` | blocks controller-shaped ownership bypasses in core |
+| `core.no_unapproved_patch_shape_dependency` | blocks update-owner shape bypasses in core |
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
 | `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |
@@ -223,8 +223,8 @@ Mandatory guardrails:
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create selected-move, draw, line, or eraser commit intents |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
 | `interaction.text_edit_stale_commit_guard` | request-originated text commits accept only current text content-target context requests, treat unknown/already-consumed ids as no-ops, consume known live rejected epoch-stale, generation-stale, revision-stale, missing, empty-canvas, non-text, or family-mismatched targets without public effects, consume same-text accepted requests without document/action effects, and consume changed-text accepted requests only after successful prepare and before public delivery while allowing unrelated documentRevision changes |
-| `geometry.committed_handle_order` | geometry and hit-test policy use committed handle order tokens without retired scene-owner traversal |
-| `geometry.eraser_exact_budget_no_partial` | eraser primitive and exact-check budget inputs cannot produce partial-erasure paths, and P12 terminal overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation |
+| `geometry.committed_handle_order` | geometry and hit-test policy use committed handle order tokens without bypassing committed frame facts |
+| `geometry.eraser_exact_budget_no_partial` | eraser primitive and exact-check budget inputs cannot produce partial-erasure paths, and terminal overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
 | `spatial.fallback_budget_enforced` | query-tile and fallback-candidate budgets increment non-hub counters and return typed budget-exceeded results without partial candidates |
@@ -235,7 +235,7 @@ Mandatory guardrails:
 | `text.single_measured_layout_source` | `FrameTextLayoutMeasurer` remains the single TextPainter-backed text layout source, while geometry consumes measured text layout facts instead of formula bounds based on text length, font size, maxWidth, or lineHeight |
 | `text.no_overlay_textpainter_measurement` | surface and example text editing overlays must not construct a duplicate TextPainter measurement path; editor size and placement come from session geometry |
 | `surface.editable_text_surface_only` | production `EditableText` use is confined to surface-owned widgets, with example code allowed as an application consumer and tests allowed as proof code |
-| `cache.keys_use_next_revisions_only` | cache keys use next-owned revision facts and stable inputs, not non-owned snapshot facts |
+| `cache.keys_use_next_revisions_only` | cache keys use current package-owned revision facts and stable inputs, not non-owned snapshot facts |
 | `cache.background_grid_not_element_visual` | backgroundRevision/gridRevision changes and runtime view camera changes must not invalidate ordinary element paint plans |
 | `cache.hot_caches_have_capacity_eviction` | hot caches declare capacity, eviction policy, invalidation owner, and metric/probe |
 | `resources.mutation_inside_edit_only` | resource descriptor mutation only via CanvasEdit |
@@ -250,17 +250,17 @@ Mandatory guardrails:
 | `codec.no_runtime_side_effects` | schema v1 import/encode validates codec-owned input without mutating runtime or store state; runtime load import emits dependency-neutral events instead of materializing public DTOs |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
-| `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, docs checks, read-only diff, current graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, app adapter names, retired benchmark route, benchmark-only production hooks, or non-manual approved-baseline writes |
-| `tools.p10_compatibility` | public tool and command ports continue to expose P10 interaction payload families without source-level internal imports |
+| `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, docs checks, read-only diff, current graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, public integration names, benchmark route outside release policy, benchmark-only production hooks, or non-manual approved-baseline writes |
+| `tools.public_port_behavior` | public tool and command ports expose interaction payload families without source-level internal imports |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 
 `api.integration_surface_complete` is executable only when the guardrail runner
 or its delegated proof compiles
-`test/api_contract/fixtures/app_next_engine_adapter_compile_fixture.dart` and
+`test/api_contract/fixtures/public_integration_compile_fixture.dart` and
 checks that the fixture imports only
 `package:iwb_canvas_engine/iwb_canvas_engine.dart`. The fixture must not import
-`src/**`, legacy symbols, or internal runtime classes, and it must exercise the
+`src/**`, package-internal symbols, or internal runtime classes, and it must exercise the
 required external adapter operation families from the public API contract.
 
 ---

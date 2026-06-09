@@ -64,7 +64,7 @@ invalidation side before dirty public-state/effect publication and the drop side
 when the active surface detaches, swaps runtimes, or the runtime is disposed.
 Each active `CanvasSurface` creates one concrete `SurfaceResourceSession`
 instance under `lib/src/resources/**` for synchronous resolver lifecycle and
-resolved-image cache state; P13 wires that instance to the runtime lifecycle
+resolved-image cache state; surface wires that instance to the runtime lifecycle
 port after successful surface attach.
 
 ```text
@@ -125,8 +125,8 @@ receives a different `resourceResolver`, the session increments
 
 `ImageResolveCache` is `SurfaceResourceSession` policy owned by the resources
 module, not a frame/spatial cache prerequisite and not runtime-wide resource
-state. Frame rendering consumes the session boundary; P7 owns the session
-primitive and cache policy, while P13 wires the instance lifecycle to
+state. Frame rendering consumes the session boundary; resource owns the session
+primitive and cache policy, while surface wires the instance lifecycle to
 `CanvasSurface`.
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
@@ -166,7 +166,8 @@ If any operation throws, both resource and element changes roll back.
 
 ### 7.4 External visual resource repaint
 
-Legacy `notifySceneChanged()` is replaced by:
+Applications notify the runtime about external resource visual changes through
+the current resource repaint API:
 
 ```dart
 runtime.resources.markResourceDirty(resourceId);

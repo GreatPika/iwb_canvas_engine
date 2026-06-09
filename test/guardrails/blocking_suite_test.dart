@@ -154,7 +154,7 @@ void main() {
         'preview.selected_move_main_repaint',
         'preview.selected_move_main_only',
         'preview.marquee_overlay_only',
-        'tools.p10_compatibility',
+        'tools.public_port_behavior',
       }),
     );
   });

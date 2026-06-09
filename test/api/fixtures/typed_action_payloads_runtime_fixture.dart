@@ -29,8 +29,8 @@ void main() {
   );
 
   test(
-    'public selection and command ports emit P10 payload families',
-    _publicSelectionAndCommandPortsEmitP10PayloadFamilies,
+    'public selection and command ports emit payload families',
+    _publicSelectionAndCommandPortsEmitPayloadFamilies,
   );
 
   test(
@@ -147,7 +147,7 @@ Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
   );
 }
 
-Future<void> _publicSelectionAndCommandPortsEmitP10PayloadFamilies() async {
+Future<void> _publicSelectionAndCommandPortsEmitPayloadFamilies() async {
   await _expectPublicMoveAction();
   await _expectPublicRotateAction();
   await _expectPublicFlipAction();

@@ -16,7 +16,7 @@ Sections grouped by subsystem from `docs/_registry/sections.yaml`.
 
 ## public_api
 
-- `section_04_public_api_v1` - 4. Public API v1: полный surface
+- `section_04_public_api_v1` - 4. Public API v1: complete surface
 - `section_06_validation_limits` - 6. Validation limits
 
 ## quality_gates
@@ -44,7 +44,7 @@ Sections grouped by subsystem from `docs/_registry/sections.yaml`.
 
 ## selection_runtime
 
-- `section_02_architecture_model` - 2. Несущая модель новой библиотеки
+- `section_02_architecture_model` - 2. Runtime ownership model
 - `section_10_runtime_data_model` - 10. Runtime data model
 - `section_14_interaction_engine` - 14. InteractionEngine
 - `section_15_frame_render_contract` - 15. FrameEngine and render contract

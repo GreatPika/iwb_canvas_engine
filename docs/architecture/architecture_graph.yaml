@@ -209,7 +209,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/edit_kernel.md
     evidence:
-      - Edit mutation semantics become required in P5.
+      - Edit mutation semantics become required in edit.
     actual:
       declarations:
         - EditKernel
@@ -328,7 +328,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - EraserMachine, ContextActionRouter, and InteractionRequestRegistry own P12 eraser capture, context request routing, and request guard facts under the interaction boundary.
+      - EraserMachine, ContextActionRouter, and InteractionRequestRegistry own eraser/context-action eraser capture, context request routing, and request guard facts under the interaction boundary.
     actual:
       declarations:
         - EraserMachine
@@ -388,7 +388,7 @@ edges:
       - path: docs/architecture/02_package_boundaries.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - API declaration files are compatibility wrappers that re-export public contract declarations.
+      - API declaration files are public facade wrappers that re-export public contract declarations.
     actual:
       exports:
         - lib/src/contracts/public/canvas_document.dart
@@ -507,7 +507,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - CanvasRuntime.tools is non-throwing in P10 for mode, draw style, pointer policy, pointer dispatch compatibility, and cleanup; P11 owns later draw production behavior behind the port.
+      - CanvasRuntime.tools is non-throwing in current for mode, draw style, pointer policy, pointer dispatch behavior, and cleanup; draw owns later draw production behavior behind the port.
     actual:
       delegationTargets:
         - RuntimeRoot
@@ -521,7 +521,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - CanvasRuntime.commands is non-throwing in P10 for remove, clear, and unknown text edit behavior routed through RuntimeRoot command adapters and EditKernel commits.
+      - CanvasRuntime.commands is non-throwing in current for remove, clear, and unknown text edit behavior routed through RuntimeRoot command adapters and EditKernel commits.
     actual:
       delegationTargets:
         - RuntimeRoot
@@ -535,7 +535,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - CanvasRuntime.contextActionRequests is a non-throwing broadcast stream that is empty in P10, emits P12 context-action requests from RuntimeRoot, and closes with RuntimeRoot disposal.
+      - CanvasRuntime.contextActionRequests is a non-throwing broadcast stream that is empty in current, emits eraser/context-action context-action requests from RuntimeRoot, and closes with RuntimeRoot disposal.
     actual:
       delegationTargets:
         - RuntimeRoot
@@ -756,7 +756,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - InteractionEngine delegates P12 eraser lifecycle and context request decisions to EraserMachine, ContextActionRouter, and InteractionRequestRegistry while owning preview/session state and cleanup routing.
+      - InteractionEngine delegates eraser/context-action eraser lifecycle and context request decisions to EraserMachine, ContextActionRouter, and InteractionRequestRegistry while owning preview/session state and cleanup routing.
     actual:
       delegationMembers:
         - InteractionEngine.handleDoubleTap
@@ -776,7 +776,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - RuntimeRoot emits accepted P12 context-action requests through the public CanvasRuntime.contextActionRequests stream controller.
+      - RuntimeRoot emits accepted eraser/context-action context-action requests through the public CanvasRuntime.contextActionRequests stream controller.
     actual:
       delegationMembers:
         - RuntimeRoot._emitContextRequest
@@ -804,7 +804,7 @@ placeholders:
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - Closed P4 camera ownership cannot remain a public facade placeholder.
+      - Closed camera camera ownership cannot remain a public facade placeholder.
   - id: api.canvas_runtime.preview.current_placeholder
     node: api.canvas_runtime
     member: CanvasRuntime.preview
@@ -813,7 +813,7 @@ placeholders:
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - CanvasRuntime.preview is implemented in P9 as a readable immutable CanvasPreviewState routed through RuntimeRoot.preview and must not return to a throwing public placeholder.
+      - CanvasRuntime.preview is implemented in frame/cache as a readable immutable CanvasPreviewState routed through RuntimeRoot.preview and must not return to a throwing public placeholder.
 forbiddenEdges:
   - id: codec.schema_v1.forbidden_runtime_dependency
     from: codec.schema_v1
@@ -1253,7 +1253,7 @@ forbiddenEdges:
     sourceDocs:
       - path: docs/contracts/resources.md
     evidence:
-      - P7 resource implementation must route runtime-facing collaboration through contract-owned seams instead of importing runtime.
+      - resource resource implementation must route runtime-facing collaboration through contract-owned seams instead of importing runtime.
   - id: resource.kernel.forbidden_frame_dependency
     from: resource.kernel
     to: frame.renderer
@@ -1262,7 +1262,7 @@ forbiddenEdges:
     sourceDocs:
       - path: docs/contracts/resources.md
     evidence:
-      - P7 resource implementation must not depend on frame rendering.
+      - resource resource implementation must not depend on frame rendering.
   - id: resource.surface_session.forbidden_runtime_dependency
     from: resource.surface_session
     to: runtime.root

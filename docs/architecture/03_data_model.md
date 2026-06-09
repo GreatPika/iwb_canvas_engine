@@ -31,8 +31,8 @@ Guardrails:
 - `selection.owner_separate_from_document`
 - `projection.only_explicit_read_paths`
 Do not assume:
-- no legacy mutable runtime graph
-- no SceneController shape dependency
+- no mutable runtime graph bypass
+- no implementation-owner dependency bypass
 <!-- CONTEXT:END -->
 
 ## 10. Runtime data model
@@ -67,7 +67,7 @@ descriptor rows, admitted-id facts, reference facts, revision facts, camera
 facts, and projection invalidation facts before runtime install.
 
 Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
-build the accepted next `CommittedDocument` snapshot before the irreversible
+build the accepted `CommittedDocument` snapshot before the irreversible
 swap.
 The store validates id admission, layer/resource membership, image references,
 row placement, revision-family alignment, and projection invalidation in that
@@ -105,7 +105,7 @@ ElementHandle:
   boundsRevision
 ```
 
-P8 committed spatial reads expose a narrower immutable
+geometry/spatial committed spatial reads expose a narrower immutable
 `FrameElementHandle` across `FrameFactsPort`: id, structuralRevision,
 generation, and committed orderToken. `locationKind` and nullable `layerId`
 are facts-only values resolved from the current committed row by

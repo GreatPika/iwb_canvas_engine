@@ -27,8 +27,8 @@ Guardrails:
 - `interaction.no_concrete_selection_imports`
 - `surface.editable_text_surface_only`
 Do not assume:
-- no retired package import
-- no app adapters in package
+- no external package import bypass
+- no public integrations in package
 <!-- CONTEXT:END -->
 
 ## 3. Package layout
@@ -247,8 +247,8 @@ or read descriptor snapshots.
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only
 `package:iwb_canvas_engine/iwb_canvas_engine.dart`, must not import `src/**`,
-and must not use legacy public symbols or internal runtime classes. The
-app-adapter fixture is the proof surface for `api.integration_surface_complete`,
+and must not use package-internal or unregistered public symbols or internal runtime classes. The
+public integration fixture is the proof surface for `api.integration_surface_complete`,
 not an adapter implementation shipped by this package.
 
 Production-owned tests mirror the top-level ownership folders under
@@ -297,11 +297,11 @@ lib/src/resources/**         -> may not import runtime, store, frame, surface, i
 lib/src/codec/**             -> may not import runtime, store, edit, frame, Flutter widgets, or interaction state
 lib/src/diagnostics/**       -> may not expose runtime objects, images, closures, or full scene dumps as public diagnostic data
 lib/src/tools/**             -> may not import runtime, frame, or surface internals
-lib/src/surface/**           -> may not import retired iwb_canvas_engine package
+lib/src/surface/**           -> may not import package-internal iwb_canvas_engine route
 lib/src/surface/**           -> may use CanvasRuntime public facade type for public widget constructor signatures, but runtime internals still go through named surface bridges
 lib/src/surface/**           -> may use EditableText only for public surface widgets; non-surface production owners must not import or construct EditableText
 example/lib/**               -> may consume the public package barrel and example-local files only; inline text editing must use CanvasTextEditingOverlay or CanvasTextEditingPort without src/** imports, visibility hiding, or duplicate TextPainter measurement
-all lib/**                   -> may not import retired package or retired runtime paths
+all lib/**                   -> may not import package-internal or runtime-private paths
 ```
 
 Committed document facts and runtime selection facts used by interaction are
@@ -323,7 +323,7 @@ menu state, editor overlay lifetime, or mutations.
 engine-issued `CanvasInteractionRequestId` guard facts, context request target
 kind, controller epoch, live request status, and content-target guard facts for
 app-owned interaction requests. Guarded command operations consume and remove
-live facts instead of retaining durable retired facts. The registry must not
+live facts instead of retaining durable extra registry facts. The registry must not
 expose store tables, selection internals, Flutter editor overlay state,
 IME/focus/selection state, context menu state, or mutation methods; guarded
 mutations still enter through public command ports and commit through

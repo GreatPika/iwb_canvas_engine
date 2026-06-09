@@ -24,8 +24,8 @@ Guardrails:
 - `codec.known_fields_validated`
 - `codec.no_runtime_side_effects`
 Do not assume:
-- no legacy SceneCodec surface as next API
-- no schema v7 read/write in production core
+- no codec surface outside v1 public API
+- no schema version outside v1 read/write in production core
 <!-- CONTEXT:END -->
 
 ## 19. CodecBoundary
@@ -33,8 +33,7 @@ Do not assume:
 ### 19.1 Entry points
 
 Production `CodecBoundary` owns schema v1 encode and internal schema v1 import
-validation for runtime JSON load. It must not read or write legacy schema
-versions.
+validation for runtime JSON load. It must not read or write schema versions outside v1.
 
 ```dart
 const int canvasSchemaVersionWrite = 1;
@@ -63,8 +62,8 @@ String encodeCanvasDocumentToJson(CanvasDocument document);
 11. no runtime/store side effects.
 ```
 
-The public API does not expose `decodeCanvasDocument` or
-`decodeCanvasDocumentFromJson` as runtime load routes. Runtime JSON load shares
+The public API does not expose `public decode helper` or
+`public JSON decode helper` as runtime load routes. Runtime JSON load shares
 the schema v1 validation policy, but the codec side does not materialize
 `CanvasDocument`, `CanvasImageResource`, store rows, store sinks, or a retained
 document-sized validated fact/list/tree payload. Duplicate id checks, id
