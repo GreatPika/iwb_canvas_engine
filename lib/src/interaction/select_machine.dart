@@ -41,6 +41,9 @@ final class SelectMachine {
         facts.controllerEpoch != session.controllerEpoch.value) {
       return const MarqueeTerminalDecision.cleanupOnly();
     }
+    if (!_hasReliableSelectionQuery(facts.query)) {
+      return const MarqueeTerminalDecision.cleanupOnly();
+    }
     if (_idsEqual(facts.nextSelectedIds, selectionCapture.previousIds)) {
       return const MarqueeTerminalDecision.cleanupOnly();
     }
@@ -116,4 +119,9 @@ bool _idsEqual(List<CanvasElementId> left, List<CanvasElementId> right) {
   }
 
   return true;
+}
+
+bool _hasReliableSelectionQuery(InteractionReadQueryFacts query) {
+  return query.status == InteractionReadQueryStatus.candidates &&
+      query.skippedCandidateCount == 0;
 }

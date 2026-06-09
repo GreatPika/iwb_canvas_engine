@@ -92,8 +92,7 @@ final class HitTestPolicy {
   }
 
   bool exactHit({required Offset point, required FrameElementFacts facts}) {
-    if (!geometryPolicy.isHitEligible(facts, point) ||
-        _needsInverseHit(facts.kind) && !facts.transform.isInvertible) {
+    if (!geometryPolicy.isHitEligible(facts, point)) {
       return false;
     }
     final bounds = geometryPolicy.boundsFor(facts).hitBoundsWorld;
@@ -122,8 +121,7 @@ final class HitTestPolicy {
     if (!isFiniteOffset(point) ||
         !facts.isVisible ||
         facts.locationKind != FrameElementLocationKind.content ||
-        !isFiniteTransform(facts.transform) ||
-        _needsInverseHit(facts.kind) && !facts.transform.isInvertible) {
+        !isFiniteTransform(facts.transform)) {
       return false;
     }
     final bounds = geometryPolicy.boundsFor(facts).hitBoundsWorld;
@@ -180,22 +178,12 @@ final class HitTestPolicy {
   }
 }
 
-bool _needsInverseHit(CanvasElementKind kind) {
-  return switch (kind) {
-    CanvasElementKind.image ||
-    CanvasElementKind.rect ||
-    CanvasElementKind.text ||
-    CanvasElementKind.path => true,
-    CanvasElementKind.line || CanvasElementKind.stroke => false,
-  };
-}
-
 bool _hitBox(
   Offset point,
   FrameElementFacts facts,
   GeometryPolicy geometryPolicy,
 ) {
-  final inverse = facts.transform.invert();
+  final inverse = _invertTransform(facts.transform);
   if (inverse == null) {
     return false;
   }
@@ -214,6 +202,61 @@ bool _hitBox(
   return _rectContainsPointInclusive(inflated, localPoint);
 }
 
+final class _InverseTransform {
+  const _InverseTransform({
+    required this.a,
+    required this.b,
+    required this.c,
+    required this.d,
+    required this.tx,
+    required this.ty,
+  });
+
+  final double a;
+  final double b;
+  final double c;
+  final double d;
+  final double tx;
+  final double ty;
+
+  Offset applyToPoint(Offset point) {
+    return Offset(
+      a * point.dx + c * point.dy + tx,
+      b * point.dx + d * point.dy + ty,
+    );
+  }
+}
+
+_InverseTransform? _invertTransform(CanvasTransform transform) {
+  final determinant = transform.a * transform.d - transform.b * transform.c;
+  if (!determinant.isFinite || determinant == 0) {
+    return null;
+  }
+  final inverseA = transform.d / determinant;
+  final inverseB = -transform.b / determinant;
+  final inverseC = -transform.c / determinant;
+  final inverseD = transform.a / determinant;
+  final inverseTx = -(inverseA * transform.tx + inverseC * transform.ty);
+  final inverseTy = -(inverseB * transform.tx + inverseD * transform.ty);
+  if (!inverseA.isFinite ||
+      !inverseB.isFinite ||
+      !inverseC.isFinite ||
+      !inverseD.isFinite ||
+      !inverseTx.isFinite ||
+      !inverseTy.isFinite) {
+    return null;
+  }
+
+  return _InverseTransform(
+    a: inverseA,
+    b: inverseB,
+    c: inverseC,
+    d: inverseD,
+    tx: inverseTx,
+    ty: inverseTy,
+  );
+}
+
 bool _isEraserEligible(
   EraserCorridor corridor,
   FrameElementFacts facts,
@@ -224,8 +267,7 @@ bool _isEraserEligible(
       !facts.isVisible ||
       !facts.isDeletable ||
       facts.locationKind == FrameElementLocationKind.background ||
-      !isFiniteTransform(facts.transform) ||
-      _needsInverseHit(facts.kind) && !facts.transform.isInvertible) {
+      !isFiniteTransform(facts.transform)) {
     return false;
   }
 
@@ -464,7 +506,7 @@ bool _eraserHitsPath(EraserCorridor corridor, FrameElementFacts facts) {
     facts.svgPathData ?? '',
     fillRule: facts.fillRule ?? CanvasPathFillRule.nonZero,
   );
-  final inverse = facts.transform.invert();
+  final inverse = _invertTransform(facts.transform);
   if (parsed == null || inverse == null) {
     return false;
   }
@@ -515,25 +557,26 @@ bool _hitPath(Offset point, FrameElementFacts facts) {
     facts.svgPathData ?? '',
     fillRule: facts.fillRule ?? CanvasPathFillRule.nonZero,
   );
-  final inverse = facts.transform.invert();
+  final inverse = _invertTransform(facts.transform);
   if (parsed == null || inverse == null) {
     return false;
   }
   final localPoint = inverse.applyToPoint(point);
-  return _hitPathFill(parsed.path, localPoint, facts) ||
+  return _hitPathFill(parsed.path, localPoint, inverse, facts) ||
       _hitPathStrokePaint(parsed.path, localPoint, inverse, facts);
 }
 
-bool _hitPathFill(Path path, Offset localPoint, FrameElementFacts facts) {
+bool _hitPathFill(
+  Path path,
+  Offset localPoint,
+  _InverseTransform inverse,
+  FrameElementFacts facts,
+) {
   if (facts.fillColor == null) {
     return false;
   }
   if (path.contains(localPoint)) {
     return true;
-  }
-  final inverse = facts.transform.invert();
-  if (inverse == null) {
-    return false;
   }
   final paddingRadius = _sceneScalarToLocalMax(
     inverse,
@@ -546,7 +589,7 @@ bool _hitPathFill(Path path, Offset localPoint, FrameElementFacts facts) {
 bool _hitPathStrokePaint(
   Path path,
   Offset localPoint,
-  CanvasTransform inverse,
+  _InverseTransform inverse,
   FrameElementFacts facts,
 ) {
   final strokeWidth = facts.strokeWidth ?? 0;
@@ -958,7 +1001,7 @@ bool _onSegment(Offset start, Offset point, Offset end) {
 
 Rect _inflateLocalBoundsForScenePadding(
   Rect bounds,
-  CanvasTransform inverse,
+  _InverseTransform inverse,
   double paddingScene,
 ) {
   final paddingX =
@@ -983,8 +1026,30 @@ double _worldPaintStrokeRadius(FrameElementFacts facts) {
   return maxScale(facts.transform) * (facts.thickness ?? 0) / 2;
 }
 
-double _sceneScalarToLocalMax(CanvasTransform inverse, double scenePadding) {
-  return scenePadding * maxScale(inverse);
+double _sceneScalarToLocalMax(_InverseTransform inverse, double scenePadding) {
+  return scenePadding *
+      _maxScaleForCoefficients(
+        a: inverse.a,
+        b: inverse.b,
+        c: inverse.c,
+        d: inverse.d,
+      );
+}
+
+double _maxScaleForCoefficients({
+  required double a,
+  required double b,
+  required double c,
+  required double d,
+}) {
+  final trace = a * a + b * b + c * c + d * d;
+  final determinant = a * d - b * c;
+  final discriminant = math.max(
+    0,
+    trace * trace - 4 * determinant * determinant,
+  );
+
+  return math.sqrt(math.max(0, (trace + math.sqrt(discriminant)) / 2));
 }
 
 double _scenePadding(double hitPadding) {

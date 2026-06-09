@@ -24,6 +24,35 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 
 void main() {
+  test('canonical encode preserves documented default palette', () {
+    final document = CanvasDocument();
+    final encoded = encodeCanvasDocument(document);
+
+    expect(encoded['palette'], {
+      'penColors': [
+        '#FF000000',
+        '#FFE53935',
+        '#FF1E88E5',
+        '#FF43A047',
+        '#FFFB8C00',
+        '#FF8E24AA',
+      ],
+      'backgroundColors': [
+        '#FFFFFFFF',
+        '#FFFFF9C4',
+        '#FFBBDEFB',
+        '#FFC8E6C9',
+      ],
+      'gridSizes': [10.0, 20.0, 40.0, 80.0],
+    });
+
+    final decoded = decodeSchemaV1Document(encoded);
+    expect(decoded.palette.penColors, document.palette.penColors);
+    expect(decoded.palette.backgroundColors, document.palette.backgroundColors);
+    expect(decoded.palette.gridSizes, document.palette.gridSizes);
+    expect(encodeCanvasDocument(decoded)['palette'], encoded['palette']);
+  });
+
   test('canonical encode writes schema v1 fields and preserves order', () {
     final document = CanvasDocument(
       camera: CanvasCamera(offset: const Offset(12, -7)),

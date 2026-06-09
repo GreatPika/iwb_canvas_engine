@@ -186,6 +186,96 @@ void main() {
     );
   });
 
+  test('runtime JSON load rejects aggregate metadata before install', () {
+    final runtime = CanvasRuntime();
+    try {
+      runtime.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(
+          CanvasDocument(
+            camera: CanvasCamera(offset: const Offset(3, 4)),
+            layers: [
+              CanvasLayer(
+                id: CanvasLayerId('layer-a'),
+                elements: [
+                  CanvasRectElement(
+                    id: CanvasElementId('element-a'),
+                    size: const Size(1, 1),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      runtime.selection.setSelection([CanvasElementId('element-a')]);
+      runtime.camera.setOffset(const Offset(9, 10));
+
+      final beforeState = runtime.state.value;
+      final beforeDocument = runtime.readDocument();
+
+      expect(
+        () => runtime.edits.loadDocumentFromJson(
+          jsonEncode(_aggregateMetadataLimitJson()),
+        ),
+        throwsA(
+          isA<CanvasDataException>().having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.invalidMetadata,
+          ),
+        ),
+      );
+
+      expect(runtime.state.value, beforeState);
+      expect(runtime.camera.offset, const Offset(9, 10));
+      expect(runtime.selection.selectedElementIds, {CanvasElementId('element-a')});
+      expect(runtime.readDocument(), same(beforeDocument));
+      expect(runtime.readDocument().layers.single.elements.single.id.value, 'element-a');
+    } finally {
+      runtime.dispose();
+    }
+  });
+
+  test('documented default palette is used by encode and minimal load', () {
+    final expectedPenColors = [
+      const Color(0xFF000000),
+      const Color(0xFFE53935),
+      const Color(0xFF1E88E5),
+      const Color(0xFF43A047),
+      const Color(0xFFFB8C00),
+      const Color(0xFF8E24AA),
+    ];
+    final expectedBackgroundColors = [
+      const Color(0xFFFFFFFF),
+      const Color(0xFFFFF9C4),
+      const Color(0xFFBBDEFB),
+      const Color(0xFFC8E6C9),
+    ];
+    const expectedGridSizes = [10.0, 20.0, 40.0, 80.0];
+
+    final encoded = encodeCanvasDocument(CanvasDocument());
+    expect(
+      (encoded['palette'] as Map<String, Object?>)['penColors'],
+      ['#FF000000', '#FFE53935', '#FF1E88E5', '#FF43A047', '#FFFB8C00', '#FF8E24AA'],
+    );
+    expect(
+      (encoded['palette'] as Map<String, Object?>)['backgroundColors'],
+      ['#FFFFFFFF', '#FFFFF9C4', '#FFBBDEFB', '#FFC8E6C9'],
+    );
+    expect(
+      (encoded['palette'] as Map<String, Object?>)['gridSizes'],
+      expectedGridSizes,
+    );
+
+    final loaded = _loadDocumentFromObject({'schemaVersion': 1});
+    expect(loaded.palette.penColors, expectedPenColors);
+    expect(loaded.palette.backgroundColors, expectedBackgroundColors);
+    expect(loaded.palette.gridSizes, expectedGridSizes);
+
+    final reencoded = encodeCanvasDocument(loaded);
+    expect(reencoded['palette'], encoded['palette']);
+  });
+
   test('schema boundary validates known root fields and JSON shape', () {
     expect(
       _loadDocumentFromObject({'schemaVersion': 1, 'unknown': true}),
@@ -400,5 +490,30 @@ CanvasDocument _loadDocumentFromJson(String json) {
   } finally {
     runtime.dispose();
   }
+}
+
+Map<String, Object?> _aggregateMetadataLimitJson() {
+  final largeValue = 'x' * 60000;
+
+  return {
+    'schemaVersion': 1,
+    'layers': [
+      {
+        'id': 'layer-a',
+        'elements': [
+          for (var index = 0; index < 18; index += 1)
+            {
+              'id': 'element-\$index',
+              'kind': 'rect',
+              'size': {'w': 1, 'h': 1},
+              'fillColor': null,
+              'strokeColor': null,
+              'strokeWidth': 0,
+              'metadata': {'chunk': largeValue},
+            },
+        ],
+      },
+    ],
+  };
 }
 ''';

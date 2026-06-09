@@ -13,6 +13,7 @@ void main() {
   _testBounds();
   _testCorruptedBounds();
   _testFamilyHits();
+  _testNearSingularInternalHitInverse();
   _testTopmostResolution();
   _testPaintAdmission();
   _testMarqueeExactInclusion();
@@ -134,6 +135,58 @@ void _expectPathFamilyHits() {
   expect(
     const GeometryPolicy().boundsFor(_invalidPath()).localBounds,
     Rect.zero,
+  );
+}
+
+void _testNearSingularInternalHitInverse() {
+  test(
+    'near-singular transforms hit-test without public inverse admission',
+    () {
+      const policy = HitTestPolicy();
+      final rect = _rect(
+        'near-singular-rect',
+        _RectSpec(transform: _nearSingularTranslatedTransform),
+      );
+
+      expect(() {
+        _expectNearSingularRectHits(policy, rect);
+        _expectNearSingularPathHits(policy, _nearSingularPath());
+      }, returnsNormally);
+    },
+  );
+}
+
+void _expectNearSingularRectHits(HitTestPolicy policy, FrameElementFacts rect) {
+  expect(
+    () => policy.exactHit(point: const Offset(2000, 0), facts: rect),
+    returnsNormally,
+  );
+  expect(policy.exactHit(point: const Offset(2000, 0), facts: rect), isTrue);
+  expect(
+    policy.exactContextHit(point: const Offset(2000, 0), facts: rect),
+    isTrue,
+  );
+  expect(policy.exactHit(point: const Offset(2005, 0), facts: rect), isFalse);
+}
+
+void _expectNearSingularPathHits(HitTestPolicy policy, FrameElementFacts path) {
+  expect(policy.exactHit(point: const Offset(2000, 0), facts: path), isTrue);
+  expect(
+    policy.exactContextHit(point: const Offset(2007, 0), facts: path),
+    isFalse,
+  );
+}
+
+FrameElementFacts _nearSingularPath() {
+  return _facts(
+    _FactSpec(
+      id: 'near-singular-path',
+      kind: CanvasElementKind.path,
+      svgPathData: 'M 0 0 L 10 0 L 10 10 L 0 10 Z',
+      fillColor: const Color(0xff000000),
+      fillRule: CanvasPathFillRule.nonZero,
+      transform: _nearSingularTranslatedTransform,
+    ),
   );
 }
 
@@ -774,6 +827,15 @@ final class _RectSpec {
   final FrameElementLocationKind locationKind;
   final CanvasTransform transform;
 }
+
+final _nearSingularTranslatedTransform = CanvasTransform(
+  a: 1e-4,
+  b: 0,
+  c: 0,
+  d: 1e-4,
+  tx: 2000,
+  ty: 0,
+);
 
 final class _LineSpec {
   const _LineSpec({

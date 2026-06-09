@@ -411,7 +411,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       resolve: _frame.resolveElement,
     );
     final queryFacts = interactionQueryFacts(query, candidates);
-    if (!interactionQueryHasCandidates(query)) {
+    if (!_hasReliableCandidateFacts(queryFacts)) {
       return RejectedContextTargetRead(query: queryFacts);
     }
 

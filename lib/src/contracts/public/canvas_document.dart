@@ -237,9 +237,21 @@ final class CanvasPalette {
   }
 
   const CanvasPalette.defaults()
-    : _penColors = const [],
-      _backgroundColors = const [],
-      _gridSizes = const [];
+    : _penColors = const [
+        Color(0xFF000000),
+        Color(0xFFE53935),
+        Color(0xFF1E88E5),
+        Color(0xFF43A047),
+        Color(0xFFFB8C00),
+        Color(0xFF8E24AA),
+      ],
+      _backgroundColors = const [
+        Color(0xFFFFFFFF),
+        Color(0xFFFFF9C4),
+        Color(0xFFBBDEFB),
+        Color(0xFFC8E6C9),
+      ],
+      _gridSizes = const [10.0, 20.0, 40.0, 80.0];
 
   final List<Color> _penColors;
   final List<Color> _backgroundColors;

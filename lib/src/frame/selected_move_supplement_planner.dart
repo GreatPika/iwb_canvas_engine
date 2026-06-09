@@ -217,6 +217,7 @@ final class SelectedMoveSupplementPlanner {
       transform: shiftedTransform,
       opacity: record.opacity,
       primitiveAlpha: record.primitiveAlpha,
+      paintBoundsLocal: record.paintBoundsLocal,
       paintBoundsWorld: record.paintBoundsWorld.shift(delta),
       hitBoundsWorld: record.hitBoundsWorld.shift(delta),
       resourceId: record.resourceId,

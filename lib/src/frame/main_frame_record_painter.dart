@@ -104,7 +104,7 @@ void _paintPathRecord(
     if (path == null) {
       _paintFallbackBounds(
         canvas,
-        record.paintBoundsWorld,
+        record.paintBoundsLocal,
         record.primitiveAlpha,
       );
 
@@ -141,7 +141,7 @@ void _paintTextRecord(
     if (entry == null) {
       _paintFallbackBounds(
         canvas,
-        record.paintBoundsWorld,
+        record.paintBoundsLocal,
         record.primitiveAlpha,
       );
 
@@ -171,7 +171,7 @@ void _paintStrokeRecord(
     if (!painted) {
       _paintFallbackBounds(
         canvas,
-        record.paintBoundsWorld,
+        record.paintBoundsLocal,
         record.primitiveAlpha,
       );
 

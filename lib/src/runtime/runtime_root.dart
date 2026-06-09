@@ -26,7 +26,6 @@ import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/internal/text_edit_paint_suppression.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_actions.dart';
-import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_element_update.dart';
@@ -99,7 +98,6 @@ final class RuntimeRoot
          store: DocumentStoreKernel(),
          config: RuntimeConfig.from(config),
          diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
-         diagnosticPolicy: config.diagnosticPolicy,
          loadInteractionBoundary: null,
          textEditPrepareOverride: null,
          initialViewCamera: CanvasCamera(),
@@ -120,7 +118,6 @@ final class RuntimeRoot
       store: resolvedStore,
       config: RuntimeConfig.from(config),
       diagnostics: diagnosticsHubForPolicy(config.diagnosticPolicy),
-      diagnosticPolicy: config.diagnosticPolicy,
       loadInteractionBoundary: loadInteractionBoundary,
       textEditPrepareOverride: textEditPrepareOverride,
       initialViewCamera: resolvedStore.camera,
@@ -132,7 +129,6 @@ final class RuntimeRoot
     required DocumentStoreKernel store,
     required this.config,
     required DiagnosticsHub? diagnostics,
-    required CanvasDiagnosticPolicy diagnosticPolicy,
     required LoadInteractionBoundary? loadInteractionBoundary,
     required TextEditPrepareOverride? textEditPrepareOverride,
     required CanvasCamera initialViewCamera,
@@ -144,7 +140,7 @@ final class RuntimeRoot
        _textEditPrepareOverride = textEditPrepareOverride,
        _loadPipeline = LoadDocumentPipeline(
          store: store,
-         diagnosticPolicy: diagnosticPolicy,
+         diagnostics: diagnostics,
        ),
        _commitEffectObserver = commitEffectObserver,
        _selection = SelectionKernel(

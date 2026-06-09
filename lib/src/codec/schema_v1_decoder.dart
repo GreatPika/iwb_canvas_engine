@@ -215,6 +215,9 @@ CanvasPalette _readPalette(
   required String key,
   required DiagnosticsHub? diagnostics,
 }) {
+  if (!parent.containsKey(key)) {
+    return const CanvasPalette.defaults();
+  }
   final map = _readMap(
     parent,
     key: key,

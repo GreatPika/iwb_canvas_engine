@@ -1,3 +1,9 @@
+// This context action fixture exercises the runtime facade, direct interaction
+// engine admission, frame facts, spatial facts, diagnostics, and pointer stream
+// delivery together. Keeping those seams in one file makes regressions easier
+// to localize than splitting the same context flow into metric-shaped fixtures.
+// ignore_for_file: number-of-imports
+
 import 'dart:async';
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
@@ -5,9 +11,18 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 
 void main() {
   test('direct content double tap emits one content request', () {
@@ -55,9 +70,9 @@ void _registerAsyncContextRequestStreamTests() {
   test('accepted direct request delivery is asynchronous', () {
     return expectLater(_verifyAcceptedDirectRequestIsAsync(), completes);
   });
-  test('dispose preserves accepted request before stream done', () {
+  test('dispose suppresses accepted queued request before stream done', () {
     return expectLater(
-      _verifyDisposePreservesQueuedRequestBeforeDone(),
+      _verifyDisposeSuppressesQueuedRequestBeforeDone(),
       completes,
     );
   });
@@ -75,6 +90,12 @@ void _registerRejectedContextTargetTests() {
   });
   test('budget direct target read emits no public request or effects', () {
     return expectLater(_verifyBudgetTargetRejectsPublicly(), completes);
+  });
+  test('unresolved direct target candidate rejects before timestamp', () {
+    return expectLater(
+      _verifyUnresolvedTargetRejectsBeforeTimestamp(),
+      completes,
+    );
   });
 }
 
@@ -151,7 +172,7 @@ Future<void> _verifyAcceptedDirectRequestIsAsync() async {
   }
 }
 
-Future<void> _verifyDisposePreservesQueuedRequestBeforeDone() async {
+Future<void> _verifyDisposeSuppressesQueuedRequestBeforeDone() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(selectableContent: false, hitPadding: 0),
     config: const CanvasRuntimeConfig(),
@@ -173,9 +194,7 @@ Future<void> _verifyDisposePreservesQueuedRequestBeforeDone() async {
 
   await done.future;
 
-  expect(events, hasLength(2));
-  expect(events.first, startsWith('request:'));
-  expect(events.last, 'done');
+  expect(events, ['done']);
 }
 
 Future<void> _verifyPaddedContextHitRequest() async {
@@ -265,6 +284,88 @@ Future<void> _verifyBudgetTargetRejectsPublicly() async {
   } finally {
     await scenario.dispose();
   }
+}
+
+Future<void> _verifyUnresolvedTargetRejectsBeforeTimestamp() {
+  final fixture = _unresolvedTopCandidateFixture();
+  var timestampReservations = 0;
+
+  final intent = fixture.engine.handleDoubleTap(
+    const Offset(5, 5),
+    InteractionPointerContext(
+      viewCameraOffset: Offset.zero,
+      controllerEpoch: 0,
+      resolveOutputTimestamp: (_) {
+        timestampReservations += 1;
+
+        return 1;
+      },
+    ),
+    timestampHintMs: 1,
+  );
+
+  _expectUnresolvedTargetRejected(
+    fixture.hub,
+    intent: intent,
+    timestampReservations: timestampReservations,
+  );
+
+  return Future<void>.value();
+}
+
+_DirectContextTargetFixture _unresolvedTopCandidateFixture() {
+  final frame = _FakeContextFrameFactsPort([
+    _contextFrameFacts(id: 'lower', orderToken: 1),
+    _contextFrameFacts(id: 'top', orderToken: 2),
+  ]);
+  final spatial = SpatialKernel()..rebuild(frame);
+  frame.unresolvedIds.add(CanvasElementId('top'));
+  final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
+  final engine = InteractionEngine(
+    initialMode: CanvasInteractionMode.move,
+    initialDrawStyle: CanvasDrawStyle(),
+    pointerPolicy: CanvasPointerPolicy(),
+    diagnosticsSink: RuntimeInteractionDiagnosticsAdapter(hub),
+  );
+  engine.attachReadPort(
+    RuntimeInteractionReadAdapter(
+      frame: frame,
+      documentSummary: () => const CanvasDocumentSummary(
+        elementCount: 2,
+        layerCount: 1,
+        resourceCount: 0,
+      ),
+      selection: const _EmptySelectionFactsPort(),
+      spatial: spatial,
+      controllerEpoch: () => 0,
+    ),
+  );
+
+  return _DirectContextTargetFixture(engine: engine, hub: hub);
+}
+
+void _expectUnresolvedTargetRejected(
+  DiagnosticsHub hub, {
+  required Object? intent,
+  required int timestampReservations,
+}) {
+  expect(intent, isNull);
+  expect(timestampReservations, 0);
+  expect(
+    hub.records.map((record) => record.code),
+    contains(
+      const DiagnosticCode.interaction(
+        InteractionDiagnosticCode.staleCandidateRejected,
+      ),
+    ),
+  );
+}
+
+class _DirectContextTargetFixture {
+  const _DirectContextTargetFixture({required this.engine, required this.hub});
+
+  final InteractionEngine engine;
+  final DiagnosticsHub hub;
 }
 
 void _expectRejectedContextTargetIsPrivate(
@@ -530,4 +631,107 @@ CanvasDocument _document({
       ),
     ],
   );
+}
+
+FrameElementFacts _contextFrameFacts({
+  required String id,
+  required int orderToken,
+}) {
+  return FrameElementFacts(
+    id: CanvasElementId(id),
+    kind: CanvasElementKind.rect,
+    revision: 0,
+    generation: 0,
+    orderToken: orderToken,
+    locationKind: FrameElementLocationKind.content,
+    transform: CanvasTransform.identity,
+    opacity: 1,
+    hitPadding: 0,
+    isVisible: true,
+    isSelectable: true,
+    isLocked: false,
+    isDeletable: true,
+    isTransformable: true,
+    metadata: const CanvasMetadata.empty(),
+    size: const Size(10, 10),
+  );
+}
+
+final class _EmptySelectionFactsPort implements SelectionFactsPort {
+  const _EmptySelectionFactsPort();
+
+  @override
+  SelectionFacts get selectionFacts {
+    return SelectionFacts(selectedElementIds: const [], selectionRevision: 0);
+  }
+}
+
+final class _FakeContextFrameFactsPort implements FrameFactsPort {
+  _FakeContextFrameFactsPort(Iterable<FrameElementFacts> facts)
+    : _facts = {for (final fact in facts) fact.id: fact};
+
+  final Map<CanvasElementId, FrameElementFacts> _facts;
+  final Set<CanvasElementId> unresolvedIds = {};
+
+  @override
+  FrameRevisionFacts get frameRevisions {
+    return const FrameRevisionFacts(
+      documentRevision: 0,
+      structuralRevision: 0,
+      boundsRevision: 0,
+      elementVisualRevision: 0,
+      backgroundRevision: 0,
+      gridRevision: 0,
+      resourceRevision: 0,
+    );
+  }
+
+  @override
+  CanvasBackground get background => const CanvasBackground();
+
+  @override
+  int elementCount(int structuralRevision) => _facts.length;
+
+  @override
+  List<FrameElementHandle> elementHandles(int structuralRevision) {
+    return [
+      for (final facts in _facts.values)
+        FrameElementHandle(
+          id: facts.id,
+          structuralRevision: structuralRevision,
+          generation: facts.generation,
+          orderToken: facts.orderToken,
+        ),
+    ];
+  }
+
+  @override
+  FrameElementHandle? elementHandleForId(
+    int structuralRevision,
+    CanvasElementId id,
+  ) {
+    final facts = _facts[id];
+    if (facts == null) {
+      return null;
+    }
+
+    return FrameElementHandle(
+      id: facts.id,
+      structuralRevision: structuralRevision,
+      generation: facts.generation,
+      orderToken: facts.orderToken,
+    );
+  }
+
+  @override
+  FrameElementFacts? resolveElement(FrameElementHandle handle) {
+    if (unresolvedIds.contains(handle.id)) {
+      return null;
+    }
+
+    return _facts[handle.id];
+  }
+
+  @override
+  FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) => null;
 }

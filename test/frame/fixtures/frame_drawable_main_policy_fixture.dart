@@ -179,6 +179,7 @@ RenderElementRecord _record(RenderElementRow row) {
     transform: CanvasTransform.identity,
     opacity: 1,
     primitiveAlpha: 255,
+    paintBoundsLocal: const Rect.fromLTWH(0, 0, 32, 32),
     paintBoundsWorld: const Rect.fromLTWH(0, 0, 32, 32),
     hitBoundsWorld: const Rect.fromLTWH(0, 0, 32, 32),
     resourceId: null,

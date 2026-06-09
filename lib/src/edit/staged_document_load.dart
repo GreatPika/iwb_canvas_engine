@@ -3,7 +3,6 @@
 // behind wrapper types would make ownership less explicit.
 // ignore_for_file: number-of-imports
 
-import '../contracts/public/canvas_diagnostics.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
@@ -107,10 +106,9 @@ int _preparedElementCount(
 final class LoadDocumentPipeline {
   LoadDocumentPipeline({
     required DocumentStoreKernel store,
-    CanvasDiagnosticPolicy diagnosticPolicy =
-        const CanvasDiagnosticPolicy.disabled(),
+    DiagnosticsHub? diagnostics,
   }) : _store = store,
-       _diagnostics = _diagnosticsHubFor(diagnosticPolicy);
+       _diagnostics = diagnostics;
 
   final DocumentStoreKernel _store;
   final DiagnosticsHub? _diagnostics;
@@ -212,11 +210,3 @@ const _replacementRevisionDelta = StoreRevisionDelta(
 );
 
 final Object _draftReplacementOwnerToken = Object();
-
-DiagnosticsHub? _diagnosticsHubFor(CanvasDiagnosticPolicy policy) {
-  if (policy is CanvasDiagnosticsDisabled) {
-    return null;
-  }
-
-  return DiagnosticsHub(policy: policy);
-}

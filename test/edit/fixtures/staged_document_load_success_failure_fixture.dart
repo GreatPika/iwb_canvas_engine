@@ -121,9 +121,14 @@ void _expectFailedPreparationLeavesStoreUnchanged() {
 }
 
 void _expectDiagnosticsRouting() {
+  _expectEnabledDiagnosticsRouting();
+  _expectDisabledDiagnosticsAvoidsRecordAllocation();
+}
+
+void _expectEnabledDiagnosticsRouting() {
   final enabled = LoadDocumentPipeline(
     store: documentStoreWithDocument(_initialDocument()),
-    diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+    diagnostics: DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary()),
   );
 
   expect(enabled.hasDiagnosticsRecordingSurface, isTrue);
@@ -136,7 +141,9 @@ void _expectDiagnosticsRouting() {
     enabled.diagnosticRecords.single.code,
     const DiagnosticCode.data(CanvasDataErrorCode.duplicateResourceId),
   );
+}
 
+void _expectDisabledDiagnosticsAvoidsRecordAllocation() {
   DiagnosticRecord.allocations.reset();
   final disabled = LoadDocumentPipeline(
     store: documentStoreWithDocument(_initialDocument()),

@@ -132,6 +132,7 @@ final class RenderElementRecord {
     required this.transform,
     required this.opacity,
     required this.primitiveAlpha,
+    required this.paintBoundsLocal,
     required this.paintBoundsWorld,
     required this.hitBoundsWorld,
     required this.resourceId,
@@ -145,6 +146,7 @@ final class RenderElementRecord {
   final CanvasTransform transform;
   final double opacity;
   final int primitiveAlpha;
+  final Rect paintBoundsLocal;
   final Rect paintBoundsWorld;
   final Rect hitBoundsWorld;
   final CanvasResourceId? resourceId;
@@ -166,6 +168,7 @@ final class RenderElementRecord {
       transform: facts.transform,
       opacity: facts.opacity,
       primitiveAlpha: _primitiveAlpha(facts.opacity),
+      paintBoundsLocal: bounds.localBounds,
       paintBoundsWorld: bounds.paintBoundsWorld,
       hitBoundsWorld: bounds.hitBoundsWorld,
       resourceId: facts.resourceId,

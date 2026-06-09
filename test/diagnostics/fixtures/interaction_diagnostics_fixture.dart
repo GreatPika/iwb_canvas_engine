@@ -3,6 +3,7 @@
 // stay together instead of being split into metric-shaped fixtures.
 // ignore_for_file: number-of-imports
 
+import 'dart:convert';
 import 'dart:ui';
 import 'dart:io';
 import "../../support/runtime_root_with_committed_document_seed.dart";
@@ -137,9 +138,9 @@ int _diagnosticCount(DiagnosticsHub hub, InteractionDiagnosticCode code) {
 
 // The reentrancy proof keeps resolver mutation, rollback, action silence, and
 // diagnostic emission in one scenario so no assertion can drift from the cause.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _testResolverReentrantMutationDiagnostic() {
-  test('resolver reentrant mutation rejection records no public action', () {
+  test('runtime load and interaction diagnostics share ordered records', () {
     late RuntimeRoot root;
     final actions = <CanvasActionCommitted>[];
     root = runtimeRootWithCommittedDocumentSeed(
@@ -155,6 +156,32 @@ void _testResolverReentrantMutationDiagnostic() {
     );
     addTearDown(root.dispose);
     root.actions.listen(actions.add);
+
+    expect(
+      () => root.edits.loadDocumentFromJson(
+        jsonEncode({
+          'schemaVersion': 1,
+          'resources': [
+            {
+              'id': 'resource-a',
+              'kind': 'image',
+              'source': {'kind': 'appKey', 'key': 'resource-a'},
+            },
+            {
+              'id': 'resource-a',
+              'kind': 'image',
+              'source': {'kind': 'appKey', 'key': 'resource-a'},
+            },
+          ],
+        }),
+      ),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(
+      root.diagnosticRecords.single.code,
+      const DiagnosticCode.data(CanvasDataErrorCode.duplicateResourceId),
+    );
+
     root.selection.setSelection([CanvasElementId('a')]);
 
     root.handlePointer(_sample(CanvasPointerLifecyclePhase.down, Offset.zero));
@@ -171,14 +198,13 @@ void _testResolverReentrantMutationDiagnostic() {
 
     expect(actions, isEmpty);
     expect(_rect(root, 'a').transform, CanvasTransform.identity);
-    expect(
-      root.diagnosticRecords.map((record) => record.code),
-      contains(
-        const DiagnosticCode.interaction(
-          InteractionDiagnosticCode.resolverReentrantMutationRejected,
-        ),
+    expect(root.diagnosticRecords, hasLength(2));
+    expect(root.diagnosticRecords.map((record) => record.code), [
+      const DiagnosticCode.data(CanvasDataErrorCode.duplicateResourceId),
+      const DiagnosticCode.interaction(
+        InteractionDiagnosticCode.resolverReentrantMutationRejected,
       ),
-    );
+    ]);
   });
 }
 

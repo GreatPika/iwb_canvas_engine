@@ -64,6 +64,7 @@ void importSchemaV1DocumentIntoIsolatedSink(
 }) {
   try {
     validateSchemaV1Root(json, diagnostics: diagnostics);
+    _validateSchemaV1ImportEvents(json, diagnostics: diagnostics);
     _emitSchemaV1ImportEvents(json, sink, diagnostics: diagnostics);
   } catch (_) {
     sink.abortDocument();
@@ -78,7 +79,9 @@ void _validateSchemaV1ImportEvents(
   Map<String, Object?> json, {
   required DiagnosticsHub? diagnostics,
 }) {
-  _readDocumentEvent(json, diagnostics: diagnostics);
+  final metadataBudget = _SchemaV1MetadataBudget(diagnostics);
+  final document = _readDocumentEvent(json, diagnostics: diagnostics);
+  metadataBudget.add(document.metadata);
 
   final resources = _readList(
     json,
@@ -95,7 +98,9 @@ void _validateSchemaV1ImportEvents(
     );
   }
   for (final resource in resources) {
-    _readResource(resource, diagnostics: diagnostics);
+    metadataBudget.add(
+      _readResource(resource, diagnostics: diagnostics).metadata,
+    );
   }
 
   var elementCount = 0;
@@ -105,7 +110,9 @@ void _validateSchemaV1ImportEvents(
   )) {
     elementCount += 1;
     _validateElementCount(elementCount, diagnostics);
-    _readElement(element, diagnostics: diagnostics);
+    metadataBudget.add(
+      _readElement(element, diagnostics: diagnostics).common.metadata,
+    );
   }
 
   final layers = _readList(
@@ -124,11 +131,39 @@ void _validateSchemaV1ImportEvents(
   }
   for (final value in layers) {
     final layer = _readLayer(value, diagnostics: diagnostics);
+    metadataBudget.add(layer.event.metadata);
     for (final element in layer.elements) {
       elementCount += 1;
       _validateElementCount(elementCount, diagnostics);
-      _readElement(element, diagnostics: diagnostics);
+      metadataBudget.add(
+        _readElement(element, diagnostics: diagnostics).common.metadata,
+      );
     }
+  }
+}
+
+final class _SchemaV1MetadataBudget {
+  _SchemaV1MetadataBudget(this._diagnostics);
+
+  final DiagnosticsHub? _diagnostics;
+  var _totalEncodedBytes = 0;
+
+  void add(CanvasMetadata metadata) {
+    _totalEncodedBytes += canvasMetadataEncodedByteLength(metadata);
+    if (_totalEncodedBytes <= canvasMetadataMaxEncodedBytes) {
+      return;
+    }
+
+    _fail(
+      _diagnostics,
+      CanvasDataErrorCode.invalidMetadata,
+      'document metadata exceeds the aggregate encoded byte limit.',
+      'metadata',
+      details: {
+        'maxEncodedBytes': canvasMetadataMaxEncodedBytes,
+        'actualEncodedBytes': _totalEncodedBytes,
+      },
+    );
   }
 }
 
@@ -470,6 +505,9 @@ CanvasPalette _readPalette(
   Map<String, Object?> json, {
   required DiagnosticsHub? diagnostics,
 }) {
+  if (!json.containsKey('palette')) {
+    return const CanvasPalette.defaults();
+  }
   final map = _readMap(
     json,
     key: 'palette',

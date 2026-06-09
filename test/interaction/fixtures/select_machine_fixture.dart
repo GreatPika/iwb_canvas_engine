@@ -1,9 +1,18 @@
+// Selection tests intentionally cover both the runtime pointer flow and the
+// select-machine admission gate so tap and marquee behavior stay in one proof.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
+import 'package:iwb_canvas_engine/src/interaction/select_machine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 const _marqueeDragStart = Offset(-20, -20);
@@ -25,7 +34,8 @@ void main() {
   _testPointClickSelectsLine();
   _testUnchangedSelectionCleansWithoutAction();
   _testChangedSelectionCommitsAndEmitsAction();
-  _testDeletedCandidateIsSkipped();
+  _testTerminalAdmissionRejectsUnreliableQueryFacts();
+  _testUnreliableTerminalCandidatesCleanupOnly();
 }
 
 void _testMarqueeAdmissionAndPreview() {
@@ -247,24 +257,112 @@ void _testChangedSelectionCommitsAndEmitsAction() {
   );
 }
 
-void _testDeletedCandidateIsSkipped() {
-  test('marquee skips elements deleted before terminal commit', () async {
-    final scenario = _scenario();
-    final root = scenario.root;
+void _testTerminalAdmissionRejectsUnreliableQueryFacts() {
+  test('selection terminal admission requires reliable candidate facts', () {
+    const machine = SelectMachine();
+    final session = _selectionSession(previousIds: [CanvasElementId('a')]);
+    final unreliableQueries = [
+      const InteractionReadQueryFacts.budgetExceeded(
+        budgetExceededReason:
+            InteractionReadBudgetExceededReason.fallbackCandidateBudgetExceeded,
+        budget: 1,
+        observed: 2,
+      ),
+      const InteractionReadQueryFacts.staleIndex(
+        expectedStructuralRevision: 2,
+        observedStructuralRevision: 1,
+      ),
+      const InteractionReadQueryFacts.candidates(
+        candidateCount: 1,
+        skippedCandidateCount: 1,
+      ),
+    ];
 
-    root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
-    );
-    root.edits.edit((edit) => edit.removeElement(CanvasElementId('b')));
-    root.handlePointer(
-      _sample(CanvasPointerLifecyclePhase.up, const Offset(25, 12)),
-    );
-    await Future<void>.delayed(Duration.zero);
+    for (final query in unreliableQueries) {
+      final decision = machine.terminal(
+        session: session,
+        facts: MarqueeCommitFacts(
+          previousSelectedIds: [CanvasElementId('a')],
+          nextSelectedIds: const [],
+          controllerEpoch: 0,
+          selectionRevision: 0,
+          rectWorld: Rect.zero,
+          query: query,
+        ),
+      );
 
-    expect(root.selection.selectedElementIds, {CanvasElementId('a')});
-    final action = scenario.actions.single;
-    expect(action.elementIds, [CanvasElementId('a')]);
+      expect(decision.shouldCommit, isFalse);
+      expect(decision.intent, isNull);
+    }
   });
+}
+
+void _testUnreliableTerminalCandidatesCleanupOnly() {
+  test(
+    'marquee stale terminal candidates clean without selection action',
+    () async {
+      final scenario = _scenario(
+        config: const CanvasRuntimeConfig(
+          diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
+        ),
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+
+      _completeUnreliableMarqueeTerminal(root);
+      await Future<void>.delayed(Duration.zero);
+
+      _expectUnreliableTerminalPreservesSelection(scenario);
+      _completeValidPointSelection(root);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+      expect(scenario.actions.single.timestampMs, 17);
+    },
+  );
+}
+
+void _completeUnreliableMarqueeTerminal(RuntimeRoot root) {
+  root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
+  );
+  root.spatialKernel.resetEmpty(1);
+  root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.up, const Offset(25, 12)),
+  );
+}
+
+void _expectUnreliableTerminalPreservesSelection(_MarqueeScenario scenario) {
+  final root = scenario.root;
+  expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+  expect(scenario.actions, isEmpty);
+  expect(
+    root.diagnosticRecords.map((record) => record.code),
+    contains(
+      const DiagnosticCode.interaction(
+        InteractionDiagnosticCode.staleCandidateRejected,
+      ),
+    ),
+  );
+}
+
+void _completeValidPointSelection(RuntimeRoot root) {
+  root.spatialKernel.rebuild(root);
+  root.selection.clearSelection();
+  root.handlePointer(
+    _sample(
+      CanvasPointerLifecyclePhase.down,
+      const Offset(5, 5),
+      timestampMs: 17,
+    ),
+  );
+  root.handlePointer(
+    _sample(
+      CanvasPointerLifecyclePhase.up,
+      const Offset(5, 5),
+      timestampMs: 17,
+    ),
+  );
 }
 
 void _expectMarqueeAction(CanvasActionCommitted action) {
@@ -297,9 +395,12 @@ void _expectMarqueePreviewRect(RuntimeRoot root, Rect rect) {
   expect((root.preview as CanvasMarqueePreview).rect, rect);
 }
 
-_MarqueeScenario _scenario() {
+_MarqueeScenario _scenario({CanvasRuntimeConfig? config}) {
   final effectBatches = <List<CommitDeliveryEffect>>[];
-  final root = _runtimeRoot(commitEffectObserver: effectBatches.add);
+  final root = _runtimeRoot(
+    config: config,
+    commitEffectObserver: effectBatches.add,
+  );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
   addTearDown(() async {
@@ -448,6 +549,23 @@ CanvasDocument _document() {
         ],
       ),
     ],
+  );
+}
+
+PointerSession _selectionSession({
+  required Iterable<CanvasElementId> previousIds,
+}) {
+  return PointerSession.marquee(
+    token: const PointerSessionToken(1),
+    controllerEpoch: const PointerControllerEpoch(0),
+    sessionId: const PointerSessionId(1),
+    pointerId: 1,
+    startWorld: Offset.zero,
+    currentWorld: Offset.zero,
+    previousSelectionIds: previousIds,
+    capturedSelectionRevision: 0,
+    lastPreview: const CanvasNoPreview(),
+    dragStartSlop: 0,
   );
 }
 
