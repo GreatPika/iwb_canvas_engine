@@ -21,6 +21,7 @@ void main() {
 
     _expectRootPackageChecks(steps);
     _expectRootPackageBenchmarkChecks(workflowContent, steps);
+    _expectExamplePackageChecks(workflowContent);
     _expectExampleBoundaryDiffEnvironment(steps);
     _expectNoWorkflowBypass(rootPackageJob, steps);
     _expectGuardrailRunnerCannotBeBypassed(rootPackageJob, guardrailStep);
@@ -117,28 +118,24 @@ void _expectRootPackageBenchmarkChecks(
   List<YamlMap> steps,
 ) {
   final runCommands = _runCommands(steps);
+  final benchmarkTestCommand = runCommands.singleWhere(
+    _isDynamicBenchmarkTestCommand,
+    orElse: () => '',
+  );
 
   expect(
     runCommands,
     contains('dart run docs/tool/sync_generated_docs.dart --check'),
   );
   expect(runCommands, contains('dart run docs/tool/check_docs.dart'));
-  expect(
-    runCommands,
-    contains('dart test test/benchmarks/benchmark_manifest_test.dart'),
-  );
-  expect(
-    runCommands,
-    contains('dart test test/benchmarks/required_cases_test.dart'),
-  );
-  expect(
-    runCommands,
-    contains('dart test test/benchmarks/benchmark_diff_test.dart'),
-  );
-  expect(
-    runCommands,
-    contains('dart test test/benchmarks/benchmark_runner_test.dart'),
-  );
+  expect(benchmarkTestCommand, isNotEmpty);
+  for (final benchmarkTest in _benchmarkTestPaths()) {
+    expect(
+      _benchmarkCommandCoversPath(benchmarkTestCommand, benchmarkTest),
+      isTrue,
+      reason: benchmarkTest,
+    );
+  }
   expect(workflowContent, isNot(contains('tool/bench/update_baseline.dart')));
   expect(
     workflowContent,
@@ -146,6 +143,26 @@ void _expectRootPackageBenchmarkChecks(
   );
   expect(workflowContent, isNot(contains('paths-ignore:')));
   expect(workflowContent, isNot(contains('paths:')));
+}
+
+void _expectExamplePackageChecks(String workflowContent) {
+  final workflow = _workflowYaml(workflowContent);
+  final jobs = workflow['jobs'] as YamlMap;
+  expect(jobs.containsKey('example-package'), isTrue);
+  final exampleJob = jobs['example-package'] as YamlMap;
+  final steps = _workflowSteps(exampleJob);
+  final runCommands = _runCommands(steps);
+
+  expect(runCommands, contains('flutter pub get'));
+  expect(runCommands, contains('flutter test'));
+  expect(runCommands, contains('flutter analyze'));
+  for (final stepName in [
+    'Install example dependencies',
+    'Test example package',
+    'Analyze example package',
+  ]) {
+    expect(_stepNamed(steps, stepName)['working-directory'], 'example');
+  }
 }
 
 void _expectGuardrailRunnerCannotBeBypassed(
@@ -279,10 +296,14 @@ YamlMap _rootPackageJob(String workflowContent) {
 }
 
 YamlMap _workflowJob(String workflowContent, String jobId) {
-  final workflow = loadYaml(workflowContent) as YamlMap;
+  final workflow = _workflowYaml(workflowContent);
   final jobs = workflow['jobs'] as YamlMap;
 
   return jobs[jobId] as YamlMap;
+}
+
+YamlMap _workflowYaml(String workflowContent) {
+  return loadYaml(workflowContent) as YamlMap;
 }
 
 List<YamlMap> _workflowSteps(YamlMap rootPackageJob) {
@@ -307,4 +328,32 @@ Set<String> _usedActions(List<YamlMap> steps) {
       .whereType<String>()
       .map((action) => action.trim())
       .toSet();
+}
+
+List<String> _benchmarkTestPaths() {
+  return Directory('test/benchmarks')
+      .listSync(followLinks: false)
+      .whereType<File>()
+      .map((file) => file.path.replaceAll('\\', '/'))
+      .where((path) => path.endsWith('_test.dart'))
+      .toList()
+    ..sort();
+}
+
+bool _benchmarkCommandCoversPath(String command, String path) {
+  const benchmarkDirectory = 'test/benchmarks/';
+  final benchmarkFileName = path.replaceFirst(benchmarkDirectory, '');
+
+  return _isDynamicBenchmarkTestCommand(command) &&
+      path.startsWith(benchmarkDirectory) &&
+      !benchmarkFileName.contains('/') &&
+      path.endsWith('_test.dart');
+}
+
+bool _isDynamicBenchmarkTestCommand(String command) {
+  return command.startsWith('dart test ') &&
+      command.contains('find test/benchmarks') &&
+      command.contains('-maxdepth 1') &&
+      command.contains("-name '*_test.dart'") &&
+      command.contains('-print');
 }
