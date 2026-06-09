@@ -22,7 +22,7 @@ Required tests:
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`
-- `api.current_document_load_surface_only`
+- `api.no_public_internal_load_types`
 - `api.no_unapproved_document_load_inputs`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`
@@ -174,7 +174,7 @@ Mandatory guardrails:
 |---|---|
 | `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `application adapter` responsibilities, while the adapter itself is not in package |
 | `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.current_document_load_surface_only` | public runtime, edit, codec, registry, and example-facing load surfaces use `CanvasEditPort.loadDocumentFromJson(String)` directly and do not expose `CanvasRuntime(initialDocument:)`, `CanvasEditPort.loadDocument(CanvasDocument)`, public `public decode helper*` helpers, or public internal importer/row/prepared payload types |
+| `api.no_public_internal_load_types` | the public API registry and root barrel do not expose internal load, import, store, row, or prepared-load payload types |
 | `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |

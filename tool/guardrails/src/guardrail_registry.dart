@@ -42,7 +42,7 @@ const _blockingEntries = [
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(
-    id: 'api.current_document_load_surface_only',
+    id: 'api.no_public_internal_load_types',
     suites: {'blocking', 'api'},
   ),
   GuardrailEntry(

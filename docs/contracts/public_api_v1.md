@@ -47,7 +47,7 @@ Required tests:
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`
-- `api.current_document_load_surface_only`
+- `api.no_public_internal_load_types`
 - `api.no_unapproved_document_load_inputs`
 - `api.facades_do_not_export_internal`
 - `api.public_types_complete`

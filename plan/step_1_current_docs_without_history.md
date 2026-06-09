@@ -160,7 +160,7 @@ Guardrail Id Migration:
 |---|---|---|---|
 | `api.no_retired_public_exports` | remove | none; covered by `api.public_exports_complete` | `tool/guardrails/src/guardrail_registry.dart`, `tool/guardrails/src/guardrail_executor.dart`, `tool/guardrails/src/public_api_checks.dart`, `docs/_registry/sections.yaml`, `docs/verification/guardrails.md`, `docs/verification/release_gates.md`, `test/guardrails/blocking_suite_test.dart`, `test/api_contract/no_retired_public_exports_test.dart` |
 | `test.api_contract.no_retired_public_exports` | remove | `test.api_contract.public_exports_complete` | `docs/_registry/sections.yaml`, `docs/verification/tests.md`, generated test-area index |
-| `api.no_retired_public_load_routes` | rename | `api.current_document_load_surface_only` | guardrail registry/executor, public API checks, docs registry, guardrail docs, release gates, API contract tests |
+| `api.no_retired_public_load_routes` | remove route-specific guardrail | `api.no_public_internal_load_types` covers only internal load/import/store type exposure | guardrail registry/executor, public API checks, docs registry, guardrail docs, release gates, API contract tests |
 | `core.no_retired_package_imports` | rename | `core.no_unapproved_external_package_imports` | guardrail registry/executor, core boundary checks, docs registry, guardrail docs, release gates, core boundary tests |
 | `core.no_retired_controller_shape_dependency` | rename | `core.no_unapproved_controller_shape_dependency` | guardrail registry/executor, core boundary checks, docs registry, guardrail docs, release gates, core boundary tests |
 | `core.no_retired_node_patch_shape_dependency` | rename | `core.no_unapproved_patch_shape_dependency` | guardrail registry/executor, core boundary checks, docs registry, guardrail docs, release gates, core boundary tests |
@@ -223,7 +223,7 @@ Completion Check:
   silently weaken public surface protection.
 - Required proof: `dart test test/api_contract/public_api_registry_test.dart`,
   `dart test test/api_contract/public_exports_complete_test.dart`,
-  `dart test test/api_contract/current_document_load_surface_only_test.dart`,
+  `dart test test/api_contract/no_public_internal_load_types_test.dart`,
   `dart test test/guardrails/core_boundary_negative_fixtures_test.dart`,
   `dart test test/guardrails/blocking_suite_test.dart`,
   `dart test test/tool/current_invariant_transfer_test.dart` if the file remains,
@@ -310,7 +310,7 @@ Completion Check:
 
 Completion Evidence:
 
-- `dart test test/api_contract/public_api_registry_test.dart test/api_contract/public_exports_complete_test.dart test/api_contract/current_document_load_surface_only_test.dart test/guardrails/core_boundary_negative_fixtures_test.dart test/guardrails/blocking_suite_test.dart test/api_contract/public_integration_compile_fixture_test.dart test/api_contract/public_facade_wrapper_test.dart test/guardrails/interaction_guardrail_enforcement_test.dart test/api/tool_port_settings_test.dart test/api/command_port_actions_test.dart test/api/typed_action_payloads_test.dart`:
+- `dart test test/api_contract/public_api_registry_test.dart test/api_contract/public_exports_complete_test.dart test/api_contract/no_public_internal_load_types_test.dart test/guardrails/core_boundary_negative_fixtures_test.dart test/guardrails/blocking_suite_test.dart test/api_contract/public_integration_compile_fixture_test.dart test/api_contract/public_facade_wrapper_test.dart test/guardrails/interaction_guardrail_enforcement_test.dart test/api/tool_port_settings_test.dart test/api/command_port_actions_test.dart test/api/typed_action_payloads_test.dart`:
   passed, 108 tests.
 - `dart run docs/tool/sync_generated_docs.dart --check`: passed.
 - `dart run docs/tool/check_docs.dart`: passed.

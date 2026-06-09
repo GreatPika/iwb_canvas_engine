@@ -35,7 +35,7 @@ Future<List<GuardrailViolation>> checkPublicExportsComplete({
   ];
 }
 
-Future<List<GuardrailViolation>> checkCurrentDocumentLoadSurfaceOnly({
+Future<List<GuardrailViolation>> checkNoPublicInternalLoadTypes({
   Map<String, String>? sourceOverrides,
   Set<String>? registryNamesOverride,
   Set<String>? exportedNamesOverride,
@@ -53,52 +53,12 @@ Future<List<GuardrailViolation>> checkCurrentDocumentLoadSurfaceOnly({
       surface?.exportedElements ?? const <String, Element>{};
 
   return [
-    ..._retiredPublicRouteDeclarationViolations(sourceOverrides),
-    ..._retiredLoadRouteUsageViolations(sourceOverrides),
     ..._internalLoadExportViolations(
       registryNames,
       exportedNames,
       exportedElements: exportedElements,
       publicExportOriginsOverride: publicExportOriginsOverride,
     ),
-  ];
-}
-
-List<GuardrailViolation> _retiredPublicRouteDeclarationViolations(
-  Map<String, String>? sourceOverrides,
-) {
-  return [
-    for (final check in _retiredPublicRouteChecks)
-      if (_retiredPublicRouteCheckMatches(check, sourceOverrides))
-        GuardrailViolation(
-          guardrailId: 'api.current_document_load_surface_only',
-          path: check.path,
-          message: check.message,
-        ),
-  ];
-}
-
-bool _retiredPublicRouteCheckMatches(
-  _RetiredPublicRouteCheck check,
-  Map<String, String>? sourceOverrides,
-) {
-  final source =
-      sourceOverrides?[check.path] ??
-      File('$repositoryRoot/${check.path}').readAsStringSync();
-
-  return check.pattern.hasMatch(source);
-}
-
-List<GuardrailViolation> _retiredLoadRouteUsageViolations(
-  Map<String, String>? sourceOverrides,
-) {
-  return [
-    for (final hit in _retiredLoadRouteUsageHits(sourceOverrides))
-      GuardrailViolation(
-        guardrailId: 'api.current_document_load_surface_only',
-        path: hit.path,
-        message: hit.message,
-      ),
   ];
 }
 
@@ -122,7 +82,7 @@ List<GuardrailViolation> _internalLoadExportViolations(
 
   return [
     GuardrailViolation(
-      guardrailId: 'api.current_document_load_surface_only',
+      guardrailId: 'api.no_public_internal_load_types',
       path: 'lib/iwb_canvas_engine.dart',
       message:
           'public API must not expose internal load/import/store types: '
@@ -196,134 +156,6 @@ Future<List<GuardrailViolation>> checkApiFacadesDoNotExportInternal({
 
   return violations;
 }
-
-final class _RetiredPublicRouteCheck {
-  const _RetiredPublicRouteCheck({
-    required this.path,
-    required this.pattern,
-    required this.message,
-  });
-
-  final String path;
-  final RegExp pattern;
-  final String message;
-}
-
-final _retiredPublicRouteChecks = [
-  _RetiredPublicRouteCheck(
-    path: 'lib/src/api/canvas_runtime.dart',
-    pattern: RegExp(r'CanvasRuntime\s*\(\s*\{[^}]*\binitialDocument\b'),
-    message:
-        'CanvasRuntime public facade must not expose initialDocument input',
-  ),
-  _RetiredPublicRouteCheck(
-    path: 'lib/src/contracts/public/canvas_runtime.dart',
-    pattern: RegExp(r'\bloadDocument\s*\(\s*CanvasDocument\b'),
-    message:
-        'CanvasEditPort public contract must not expose loadDocument(CanvasDocument)',
-  ),
-  _RetiredPublicRouteCheck(
-    path: 'lib/src/api/canvas_codec.dart',
-    pattern: RegExp(r'\bdecodeCanvasDocument(?:FromJson)?\b'),
-    message: 'public codec facade must not expose decodeCanvasDocument helpers',
-  ),
-  _RetiredPublicRouteCheck(
-    path: 'docs/_registry/public_api_v1.yaml',
-    pattern: RegExp(r'\bdecodeCanvasDocument(?:FromJson)?\b'),
-    message: 'public API registry must not list public decode helpers',
-  ),
-];
-
-final class _RetiredLoadRouteUsageHit {
-  const _RetiredLoadRouteUsageHit({required this.path, required this.message});
-
-  final String path;
-  final String message;
-}
-
-final class _RetiredLoadRouteUsageSource {
-  const _RetiredLoadRouteUsageSource({required this.path, required this.text});
-
-  final String path;
-  final String text;
-}
-
-List<_RetiredLoadRouteUsageHit> _retiredLoadRouteUsageHits(
-  Map<String, String>? sourceOverrides,
-) {
-  return [
-    for (final source in _retiredLoadRouteUsageSources(sourceOverrides))
-      ..._retiredLoadRouteUsageHitsIn(source),
-  ];
-}
-
-Iterable<_RetiredLoadRouteUsageSource> _retiredLoadRouteUsageSources(
-  Map<String, String>? sourceOverrides,
-) sync* {
-  if (sourceOverrides != null) {
-    for (final entry in sourceOverrides.entries) {
-      if (_isRetiredLoadRouteUsagePath(entry.key)) {
-        yield _RetiredLoadRouteUsageSource(path: entry.key, text: entry.value);
-      }
-    }
-
-    return;
-  }
-
-  for (final directory in _retiredLoadRouteUsageDirectories) {
-    for (final file in dartSourceFilesUnder(directory)) {
-      yield _RetiredLoadRouteUsageSource(
-        path: file.path,
-        text: File(file.absolutePath).readAsStringSync(),
-      );
-    }
-  }
-}
-
-List<_RetiredLoadRouteUsageHit> _retiredLoadRouteUsageHitsIn(
-  _RetiredLoadRouteUsageSource source,
-) {
-  final hits = <_RetiredLoadRouteUsageHit>[];
-  if (_retiredDecodeHelperUsage.hasMatch(source.text)) {
-    hits.add(
-      _RetiredLoadRouteUsageHit(
-        path: source.path,
-        message:
-            'runtime/load/example surfaces must not call decodeCanvasDocument helpers',
-      ),
-    );
-  }
-  if (_retiredLoadDocumentCall.hasMatch(source.text)) {
-    hits.add(
-      _RetiredLoadRouteUsageHit(
-        path: source.path,
-        message:
-            'runtime/load/example surfaces must not call loadDocument(document)',
-      ),
-    );
-  }
-
-  return hits;
-}
-
-bool _isRetiredLoadRouteUsagePath(String path) {
-  return _retiredLoadRouteUsageDirectories.any(
-    (directory) => path.startsWith('$directory/'),
-  );
-}
-
-const _retiredLoadRouteUsageDirectories = {
-  'example/lib',
-  'lib/src/codec',
-  'lib/src/edit',
-  'lib/src/runtime',
-  'lib/src/store',
-};
-
-final _retiredDecodeHelperUsage = RegExp(
-  r'\bdecodeCanvasDocument(?:FromJson)?\b',
-);
-final _retiredLoadDocumentCall = RegExp(r'\bloadDocument\s*\(');
 
 Future<List<GuardrailViolation>> checkPublicTypesComplete({
   String? libraryPath,

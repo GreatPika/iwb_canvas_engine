@@ -438,7 +438,7 @@ Map<String, GuardrailViolationRunner> _violationChecksFor(
 }
 
 final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
-  'api.current_document_load_surface_only': checkCurrentDocumentLoadSurfaceOnly,
+  'api.no_public_internal_load_types': checkNoPublicInternalLoadTypes,
   'api.no_unapproved_document_load_inputs': checkNoUnapprovedDocumentLoadInputs,
   'api.facades_do_not_export_internal': checkApiFacadesDoNotExportInternal,
   'api.public_types_complete': checkPublicTypesComplete,
@@ -493,8 +493,7 @@ final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
 
 const _structuralDescriptions = {
   'api.public_exports_complete': 'public registry parity check',
-  'api.current_document_load_surface_only':
-      'current public document load surface check',
+  'api.no_public_internal_load_types': 'public internal load type export check',
   'api.no_unapproved_document_load_inputs':
       'production CanvasDocument load-input allowlist check',
   'api.facades_do_not_export_internal':

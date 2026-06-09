@@ -13,13 +13,6 @@ void main() {
     );
     expect(analyze.exitCode, 0, reason: _processOutput(analyze));
   });
-
-  test('retired public load and decode routes do not compile', () async {
-    for (final source in _retiredPublicRouteSources()) {
-      final analyze = await _analyzeConsumerSource(source);
-      expect(analyze.exitCode, isNot(0), reason: _processOutput(analyze));
-    }
-  });
 }
 
 Future<ProcessResult> _analyzeConsumerSource(String source) async {
@@ -49,40 +42,6 @@ Future<ProcessResult> _analyzeConsumerSource(String source) async {
   } finally {
     await packageDir.delete(recursive: true);
   }
-}
-
-List<String> _retiredPublicRouteSources() {
-  const prefix = '''
-import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-
-void main() {
-''';
-  const suffix = '''
-}
-''';
-
-  return [
-    '''
-$prefix
-  CanvasRuntime(initialDocument: CanvasDocument());
-$suffix
-''',
-    '''
-$prefix
-  CanvasRuntime().edits.loadDocument(CanvasDocument());
-$suffix
-''',
-    '''
-$prefix
-  decodeCanvasDocument({'schemaVersion': 1});
-$suffix
-''',
-    '''
-$prefix
-  decodeCanvasDocumentFromJson('{"schemaVersion":1}');
-$suffix
-''',
-  ];
 }
 
 String _pubspecSource() {

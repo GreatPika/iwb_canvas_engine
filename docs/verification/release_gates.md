@@ -32,7 +32,7 @@ Guardrails:
 - `api.no_public_api_import_cycles`
 - `api.public_signature_shape`
 - `api.no_undefined_public_type_references`
-- `api.current_document_load_surface_only`
+- `api.no_public_internal_load_types`
 - `api.no_unapproved_document_load_inputs`
 - `api.dto_immutability`
 - `api.equality_policy_explicit`
@@ -120,7 +120,7 @@ the accepted current graph obligations before continuing dependent architecture
 work.
 
 ```text
-1. Public API, public integration, document load surface, and validation checks are green.
+1. Public API, public integration, public internal load type, and validation checks are green.
 2. api.public_exports_complete is green.
 3. api.facades_do_not_export_internal is green.
 4. api.public_types_complete is green.

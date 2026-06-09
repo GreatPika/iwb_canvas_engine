@@ -3,10 +3,6 @@
 
 Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
-## api.current_document_load_surface_only
-
-- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
 ## api.dto_immutability
 
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
@@ -32,6 +28,10 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
 ## api.no_public_api_import_cycles
+
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
+
+## api.no_public_internal_load_types
 
 - Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
