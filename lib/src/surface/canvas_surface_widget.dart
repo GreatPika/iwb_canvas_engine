@@ -33,13 +33,16 @@ final class CanvasSurface extends StatefulWidget {
 
 // The state keeps attach, cleanup, paint, and detach ordering together so the
 // temporal surface lifecycle is auditable at the Flutter boundary.
-// ignore: coupling-between-object-classes, weighted-methods-per-class
+// Budget follow-up scheduling stays here so mounted/runtime/session identity
+// guards remain beside attach, detach, and frame binding.
+// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   final Object _surfaceToken = Object();
   CanvasRuntime? _activeRuntime;
   CanvasRuntimeSurfacePort? _activePort;
   SurfaceResourceSession? _activeSession;
   bool _isSurfaceAttached = false;
+  bool _hasPendingBudgetFollowUpFrame = false;
 
   @override
   void initState() {
@@ -145,12 +148,14 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activeSession = null;
     _activeRuntime = null;
     _activePort = null;
+    _hasPendingBudgetFollowUpFrame = false;
 
     return null;
   }
 
   void _detachSurface() {
     final session = _activeSession;
+    _hasPendingBudgetFollowUpFrame = false;
     if (!_isSurfaceAttached) {
       session?.drop();
       _activeSession = null;
@@ -187,6 +192,11 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       gridStyle: widget.gridStyle,
       bindAssets: const CanvasSurfaceImageBridge().bindAssets(session),
     );
+    _scheduleBudgetFollowUpFrameIfNeeded(
+      runtime: widget.runtime,
+      port: port,
+      session: session,
+    );
     final overlayOutput = port.buildSurfaceOverlayFrame(
       _surfaceToken,
       viewportWorldBounds: viewport,
@@ -222,5 +232,31 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 
   double _devicePixelRatioFor(BuildContext context) {
     return MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+  }
+
+  void _scheduleBudgetFollowUpFrameIfNeeded({
+    required CanvasRuntime runtime,
+    required CanvasRuntimeSurfacePort port,
+    required SurfaceResourceSession session,
+  }) {
+    if (_hasPendingBudgetFollowUpFrame ||
+        !session.hasPendingBudgetFollowUpRepaint) {
+      return;
+    }
+    _hasPendingBudgetFollowUpFrame = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !identical(_activeRuntime, runtime) ||
+          !identical(_activePort, port) ||
+          !identical(_activeSession, session) ||
+          !identical(widget.runtime, runtime)) {
+        _hasPendingBudgetFollowUpFrame = false;
+
+        return;
+      }
+      setState(() {
+        _hasPendingBudgetFollowUpFrame = false;
+      });
+    });
   }
 }

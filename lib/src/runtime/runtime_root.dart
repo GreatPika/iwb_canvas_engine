@@ -1636,6 +1636,7 @@ final class RuntimeRoot
     _isDeliveringCommitEffects = true;
     try {
       _deliverSpatialEffects(applyResult.effects);
+      _deliverResourceEffects(applyResult.effects);
       if (applyResult.shouldPublishState) {
         if (applyResult.replacedDocument) {
           _epochRevision += 1;
@@ -1661,6 +1662,7 @@ final class RuntimeRoot
     _isDeliveringCommitEffects = true;
     try {
       _deliverSpatialEffects(effects);
+      _deliverResourceEffects(effects);
       _publishRuntimeState();
       if (didClearTextEditing) {
         _textEditingPort.notifyActiveSessionChanged();
@@ -1733,6 +1735,37 @@ final class RuntimeRoot
     for (final effect in effects.whereType<SpatialDeliveryEffect>()) {
       _spatial.applyTouched(this, effect.touchedSet);
     }
+  }
+
+  void _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
+    final sink = _activeResourceSessionInvalidationSink;
+    if (sink == null && _activeSurfaceResourceSession == null) {
+      return;
+    }
+    for (final effect in effects.whereType<ResourceDeliveryEffect>()) {
+      final touchedSet = effect.touchedSet;
+      if (touchedSet.documentReplaced) {
+        _resetActiveResourceSessionForDocumentReplacement();
+        continue;
+      }
+      if (touchedSet.allResourceVisualsChanged) {
+        sink?.invalidateAllResourceImages();
+        continue;
+      }
+      for (final id in touchedSet.resourceIds) {
+        sink?.invalidateResourceImage(id);
+      }
+    }
+  }
+
+  void _resetActiveResourceSessionForDocumentReplacement() {
+    final session = _activeSurfaceResourceSession;
+    if (session != null) {
+      session.resetForDocumentReplacement();
+
+      return;
+    }
+    _activeResourceSessionInvalidationSink?.invalidateAllResourceImages();
   }
 
   void _emitActions(List<CommitActionIntent> intents) {

@@ -269,8 +269,9 @@ CanvasResource _readResource(
       diagnostics,
       CanvasDataException(
         code: CanvasDataErrorCode.invalidFieldType,
-        message: 'unknown resource kind: $kind.',
+        message: 'unknown resource kind.',
         path: 'resource.kind',
+        details: {'kind': kind},
       ),
     );
   }
@@ -378,8 +379,9 @@ CanvasResourceSource _readResourceSource(
       diagnostics,
       CanvasDataException(
         code: CanvasDataErrorCode.invalidFieldType,
-        message: 'unknown resource source kind: $kind.',
+        message: 'unknown resource source kind.',
         path: 'resource.source.kind',
+        details: {'kind': kind},
       ),
     );
   }
@@ -484,8 +486,9 @@ CanvasElement _readElement(
       diagnostics,
       CanvasDataException(
         code: CanvasDataErrorCode.invalidFieldType,
-        message: 'unknown element kind: $kind.',
+        message: 'unknown element kind.',
         path: 'element.kind',
+        details: {'kind': kind},
       ),
     ),
   };

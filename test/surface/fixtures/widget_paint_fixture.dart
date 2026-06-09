@@ -26,6 +26,20 @@ void main() {
     expect(_paintHosts(), findsOneWidget);
   });
 
+  testWidgets('CanvasSurface schedules resource budget follow-up frames', (
+    tester,
+  ) async {
+    await _expectResourceBudgetFollowUpFrame(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('stale resource budget follow-up does not rebuild old surface', (
+    tester,
+  ) async {
+    await _expectStaleBudgetFollowUpIgnored(tester);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('CanvasSurface splits selected move and overlay previews', (
     tester,
   ) async {
@@ -100,6 +114,62 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   expect(resolver.calls, 2);
   expect(image.debugDisposed, isFalse);
   image.dispose();
+}
+
+Future<void> _expectResourceBudgetFollowUpFrame(WidgetTester tester) async {
+  final image = await _createImage();
+  final runtime = runtimeWithDocument(_manyImageDocument(140));
+  final resolver = _RecordingResolver((_) => image);
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+
+  expect(resolver.calls, 128);
+  expect(_budgetPlaceholders(tester), 12);
+
+  await tester.pump();
+
+  expect(resolver.calls, 140);
+  expect(_budgetPlaceholders(tester), 0);
+
+  await tester.pump();
+
+  expect(resolver.calls, 140);
+  expect(_budgetPlaceholders(tester), 0);
+  expect(image.debugDisposed, isFalse);
+  image.dispose();
+}
+
+Future<void> _expectStaleBudgetFollowUpIgnored(WidgetTester tester) async {
+  final oldImage = await _createImage();
+  final newImage = await _createImage();
+  final oldRuntime = runtimeWithDocument(_manyImageDocument(140));
+  final newRuntime = runtimeWithDocument(_manyImageDocument(140));
+  final oldResolver = _RecordingResolver((_) => oldImage);
+  final newResolver = _RecordingResolver((_) => newImage);
+  addTearDown(oldRuntime.dispose);
+  addTearDown(newRuntime.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: oldRuntime, resolver: oldResolver),
+  );
+  expect(oldResolver.calls, 128);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: newRuntime, resolver: newResolver),
+  );
+
+  expect(oldResolver.calls, 128);
+  expect(newResolver.calls, 128);
+
+  await tester.pump();
+
+  expect(oldResolver.calls, 128);
+  expect(newResolver.calls, 140);
+  expect(oldImage.debugDisposed, isFalse);
+  expect(newImage.debugDisposed, isFalse);
+  oldImage.dispose();
+  newImage.dispose();
 }
 
 Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
@@ -215,6 +285,12 @@ OverlayFramePainter _overlayPainter(WidgetTester tester) {
   expect(painter, isA<OverlayFramePainter>());
 
   return painter as OverlayFramePainter;
+}
+
+int _budgetPlaceholders(WidgetTester tester) {
+  return _mainPainter(tester).output.assetBindings.images.values
+      .whereType<BudgetExceededResourceImagePlaceholder>()
+      .length;
 }
 
 List<CanvasElementId> _mainRecordIds(WidgetTester tester) {
@@ -337,6 +413,36 @@ CanvasDocument _imageDocument() {
             resourceId: CanvasResourceId('resource-a'),
             size: const Size(10, 10),
           ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _manyImageDocument(int count) {
+  return CanvasDocument(
+    resources: [
+      for (var index = 0; index < count; index += 1)
+        CanvasImageResource(
+          id: CanvasResourceId('resource-$index'),
+          source: CanvasResourceSource.appKey('image-$index'),
+          mimeType: 'image/png',
+          byteLength: 24,
+        ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          for (var index = 0; index < count; index += 1)
+            CanvasImageElement(
+              id: CanvasElementId('image-$index'),
+              resourceId: CanvasResourceId('resource-$index'),
+              size: const Size(1, 1),
+              transform: CanvasTransform.translation(
+                Offset((index % 20).toDouble(), (index ~/ 20).toDouble()),
+              ),
+            ),
         ],
       ),
     ],

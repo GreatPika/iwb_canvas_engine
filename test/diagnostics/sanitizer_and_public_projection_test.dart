@@ -48,6 +48,19 @@ void main() {
     expect(exception.details['longString'], '\${'x' * 256}<truncated>');
     _expectBoundedList(exception);
   });
+
+  test('metadata validation does not expose raw keys in public path', () {
+    final rawKey = 'raw-\${'x' * 512}';
+
+    expect(
+      () => CanvasMetadata.fromMap({rawKey: true}),
+      throwsA(
+        isA<CanvasDataException>()
+            .having((error) => error.path, 'path', isNot(contains(rawKey)))
+            .having((error) => error.path, 'path', 'metadata.<key>'),
+      ),
+    );
+  });
 }
 
 CanvasDataException _detachedException() {

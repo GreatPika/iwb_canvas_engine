@@ -412,6 +412,7 @@ bool _lifecycleSeamShapeIsNarrow() {
     lifecycleSource,
     contains('implements ResourceSessionInvalidationSink'),
   );
+  expect(lifecycleSource, contains('void resetForDocumentReplacement();'));
   expect(lifecycleSource, contains('void drop();'));
   expect(lifecycleSource, isNot(contains('resolveImage')));
   expect(lifecycleSource, isNot(contains('replaceResolver')));
@@ -594,6 +595,7 @@ final class _RecordingLifecycleSession
     implements SurfaceResourceSessionLifecycle {
   final List<CanvasResourceId> targetInvalidations = [];
   int allInvalidationCount = 0;
+  int replacementResetCount = 0;
   int dropCount = 0;
 
   @override
@@ -604,6 +606,11 @@ final class _RecordingLifecycleSession
   @override
   void invalidateAllResourceImages() {
     allInvalidationCount += 1;
+  }
+
+  @override
+  void resetForDocumentReplacement() {
+    replacementResetCount += 1;
   }
 
   @override

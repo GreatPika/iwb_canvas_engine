@@ -7,6 +7,7 @@ import 'surface_resource_session_test_support.dart';
 
 void main() {
   _testTargetAndAllInvalidation();
+  _testDocumentReplacementReset();
   _testLeastRecentlyUsedEviction();
   _testDroppedSessionDoesNotResolveAgain();
 }
@@ -43,6 +44,68 @@ void _testTargetAndAllInvalidation() {
       image.dispose();
     },
   );
+}
+
+void _testDocumentReplacementReset() {
+  test('document replacement reset clears cache, null suppression, and budget', () async {
+    final image = await createResourceTestImage();
+    final resolver = RecordingResourceResolver(
+      (resource) => resource.id.value == 'missing-resource' ? null : image,
+    );
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: CountingResolverMutationGuard(),
+    );
+    _populateCacheAndNullSuppression(session, resolver);
+    _exhaustResolverBudget(session);
+    final callCountBeforeReset = resolver.callCount;
+
+    session.resetForDocumentReplacement();
+
+    _expectReplacementResetClearedSessionState(
+      session,
+      resolver,
+      callCountBeforeReset,
+    );
+    expect(resolver.callCount, greaterThan(callCountBeforeReset));
+
+    image.dispose();
+  });
+}
+
+void _populateCacheAndNullSuppression(
+  SurfaceResourceSession session,
+  RecordingResourceResolver resolver,
+) {
+  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  expect(resolver.callCount, 1);
+
+  session.resolveImage(descriptorRequest(id: 'missing-resource'));
+  session.resolveImage(descriptorRequest(id: 'missing-resource'));
+  expect(resolver.callCount, 2);
+}
+
+void _exhaustResolverBudget(SurfaceResourceSession session) {
+  for (var index = 0; index < 128; index += 1) {
+    session.resolveImage(descriptorRequest(id: 'budget-$index'));
+  }
+  expect(
+    session.resolveImage(descriptorRequest(id: 'budget-over')),
+    isA<BudgetExceededResourceImagePlaceholder>(),
+  );
+  expect(session.hasPendingBudgetFollowUpRepaint, isTrue);
+}
+
+void _expectReplacementResetClearedSessionState(
+  SurfaceResourceSession session,
+  RecordingResourceResolver resolver,
+  int callCountBeforeReset,
+) {
+  expect(session.hasPendingBudgetFollowUpRepaint, isFalse);
+  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  session.resolveImage(descriptorRequest(id: 'missing-resource'));
+  expect(resolver.callCount, callCountBeforeReset + 2);
 }
 
 void _testLeastRecentlyUsedEviction() {

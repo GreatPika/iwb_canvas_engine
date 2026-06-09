@@ -6,11 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/surface_resource_session_lifecycle.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   _registerSuccessfulLoadPublicationTests();
-  _registerFailedLoadPublicationTests();
+  _registerFailedLoadFactPreservationTests();
+  _registerFailedLoadSessionTests();
 }
 
 void _registerSuccessfulLoadPublicationTests() {
@@ -25,9 +27,19 @@ void _registerSuccessfulLoadPublicationTests() {
   test('successful load publishes prepared cleanup preview outcome', () {
     expect(_expectSuccessfulLoadPublishesPreviewCleanup, returnsNormally);
   });
+
+  test(
+    'successful load invalidates active resource session before publish',
+    () {
+      expect(
+        _expectSuccessfulLoadInvalidatesActiveResourceSession,
+        returnsNormally,
+      );
+    },
+  );
 }
 
-void _registerFailedLoadPublicationTests() {
+void _registerFailedLoadFactPreservationTests() {
   test('malformed JSON load leaves runtime facts unchanged', () {
     expect(
       () => _expectFailedLoadHasNoSideEffects(
@@ -64,6 +76,15 @@ void _registerFailedLoadPublicationTests() {
         _jsonWithDuplicateElements(),
         CanvasDataErrorCode.duplicateElementId,
       ),
+      returnsNormally,
+    );
+  });
+}
+
+void _registerFailedLoadSessionTests() {
+  test('failed load does not invalidate active resource session', () {
+    expect(
+      _expectFailedLoadDoesNotInvalidateActiveResourceSession,
       returnsNormally,
     );
   });
@@ -132,6 +153,28 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
   _expectLoadEffects(effectBatches.single);
 }
 
+void _expectSuccessfulLoadInvalidatesActiveResourceSession() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final token = Object();
+  final session = _RecordingLifecycleSession();
+  root.attachSurface(token);
+  root.installSurfaceResourceSession(token, session);
+  root.state.addListener(() {
+    expect(session.replacementResetCount, 1);
+  });
+
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
+
+  expect(session.replacementResetCount, 1);
+  expect(session.allInvalidationCount, 0);
+  expect(session.targetInvalidations, isEmpty);
+  expect(effectBatches, hasLength(1));
+  root.dispose();
+}
+
 void _expectFailedLoadHasNoSideEffects(
   String json,
   CanvasDataErrorCode expectedCode,
@@ -159,6 +202,24 @@ void _expectFailedLoadHasNoSideEffects(
   expect(effectBatches, isEmpty);
   before.expectStillCurrent(root);
   expect(root.generateElementId(), CanvasElementId('e0'));
+}
+
+void _expectFailedLoadDoesNotInvalidateActiveResourceSession() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final token = Object();
+  final session = _RecordingLifecycleSession();
+  root.attachSurface(token);
+  root.installSurfaceResourceSession(token, session);
+
+  _expectLoadRejected(root, '{', CanvasDataErrorCode.invalidJson);
+
+  expect(session.targetInvalidations, isEmpty);
+  expect(session.allInvalidationCount, 0);
+  expect(session.replacementResetCount, 0);
+  expect(root.state.value.revisions.document, 0);
+  expect(effectBatches, isEmpty);
+  root.dispose();
 }
 
 void _expectLoadRejected(
@@ -282,6 +343,34 @@ final class _PreviewChangedLoadBoundary implements LoadInteractionBoundary {
   @override
   LoadInteractionCleanupOutcome prepareLoadCleanup() {
     return const LoadInteractionCleanupOutcome(previewChanged: true);
+  }
+}
+
+final class _RecordingLifecycleSession
+    implements SurfaceResourceSessionLifecycle {
+  final List<CanvasResourceId> targetInvalidations = [];
+  int allInvalidationCount = 0;
+  int replacementResetCount = 0;
+  int dropCount = 0;
+
+  @override
+  void invalidateResourceImage(CanvasResourceId id) {
+    targetInvalidations.add(id);
+  }
+
+  @override
+  void invalidateAllResourceImages() {
+    allInvalidationCount += 1;
+  }
+
+  @override
+  void resetForDocumentReplacement() {
+    replacementResetCount += 1;
+  }
+
+  @override
+  void drop() {
+    dropCount += 1;
   }
 }
 

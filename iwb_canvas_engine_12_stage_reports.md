@@ -537,54 +537,7 @@ ID: RUNTIME-002
 - Test C: сохранить существующее поведение accepted resolver path: resolver request timestamp и последующий move action timestamp остаются монотонными и различимыми.
 
 
-ID: RUNTIME-003
-Этап: Этап 4. Runtime composition, ownership и lifecycle состояния
-Название проблемы: Successful `loadDocumentFromJson` не очищает runtime-owned `SurfaceResourceSession` состояния предыдущего документа
-Приоритет: P1
-Вероятность проявления: R2
-
-Краткое описание:
-RuntimeRoot владеет active surface token, active `SurfaceResourceSessionLifecycle` и invalidation sink. Контракт successful load требует заменить resource descriptors, invalidate resource caches и очистить surface-session resource state, зависящий от предыдущего документа. Фактический load path устанавливает новый документ, публикует runtime state и отдаёт `ResourceDeliveryEffect` observer-у, но не вызывает очистку active surface resource session и не инвалидирует её cache/session state перед публикацией нового состояния.
-
-Это создаёт lifecycle-разрыв: публичный runtime уже сообщает о новом документе, а surface resource session может всё ещё удерживать cache/null-suppression/budget state от предыдущего документа.
-
-Доказательство в коде:
-- RuntimeRoot хранит active surface/session ownership: `_activeSurfaceToken`, `_activeSurfaceResourceSession`, `_activeResourceSessionInvalidationSink`: `lib/src/runtime/runtime_root.dart:202-209`.
-- Operation matrix для successful `loadDocumentFromJson` требует invalidate resource caches и clear surface-session resource state for replacement: `docs/contracts/operation_matrix.md:284-306`.
-- `_loadDocumentFromJson(...)` делает `_loadPipeline.consume(...)`, clear selection, устанавливает `_viewCamera`, bump-ит view/epoch revisions и вызывает `_deliverLoadResult(...)`: `lib/src/runtime/runtime_root.dart:1524-1544`.
-- `_deliverLoadResult(...)` применяет только spatial effects, публикует runtime state, уведомляет text editing и observer; resource session lifecycle/invalidation не обрабатывается: `lib/src/runtime/runtime_root.dart:1658-1677`.
-- `_loadEffects(...)` создаёт `ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true))`, но RuntimeRoot не интерпретирует этот effect для active resource session: `lib/src/runtime/runtime_root.dart:2582-2590`.
-- Код очистки session существует в `_dropActiveSurfaceResourceSession()` и вызывается при detach/install/dispose, но не при load: `lib/src/runtime/runtime_root.dart:349`, `lib/src/runtime/runtime_root.dart:367`, `lib/src/runtime/runtime_root.dart:1374`, `lib/src/runtime/runtime_root.dart:1705-1715`.
-- `SurfaceResourceSession` реально содержит cache и replacement-dependent state: `_cache`, `_currentFrameNullResults`, resolver budget flags; `drop()` очищает их: `lib/src/resources/surface_resource_session.dart:24-31`, `lib/src/resources/surface_resource_session.dart:189-197`.
-
-Пользовательский или инженерный сценарий проявления:
-Приложение показывает `CanvasSurface` с image resource resolver, пользователь открывает другой документ через `runtime.edits.loadDocumentFromJson(...)`. Public runtime state уже содержит новый document summary/resource table, но active surface session остаётся прежним объектом с cache/suppression state предыдущего документа. При reused resource ids, same resolver, same surface instance или long-lived surface это может удерживать старые image references и вести к stale/degraded resource resolution до detach/dispose/explicit dirty.
-
-Почему это не теоретический edge case:
-Открытие нового документа при уже смонтированном canvas surface — базовый пользовательский сценарий. В коде уже есть отдельные lifecycle tests для session drop при runtime swap/dispose/detach и dirty invalidation before publish, но нет аналогичной проверки load replacement session cleanup. Контракт successful load явно называет этот resource/session cleanup обязательным.
-
-Рекомендуемое исправление:
-Добавить explicit resource-session cleanup в successful load path до `_publishRuntimeState()`.
-
-Предпочтительный вариант:
-- расширить `SurfaceResourceSessionLifecycle` методом уровня document replacement, например `clearForDocumentReplacement()` или `resetForDocumentReplacement()`;
-- реализовать его в `SurfaceResourceSession` так, чтобы очищались image cache, current-frame null suppression, resolver budget follow-up state и replacement-dependent state, но сохранялся app-provided resolver и сама attached surface session;
-- вызывать этот метод из `RuntimeRoot._loadDocumentFromJson` / `_deliverLoadResult` перед публикацией нового runtime state.
-
-Если используется только `invalidateAllResourceImages()`, нужно убедиться, что оно очищает не только `_cache`, но и другие replacement-dependent поля (`_currentFrameNullResults`, budget follow-up state), иначе контракт “clear surface-session resource state” останется частично невыполненным. Не стоит просто вызывать `_dropActiveSurfaceResourceSession()` без surface-side reattach protocol: surface state продолжит держать dropped session и может начать возвращать no-resolver placeholders.
-
-Минимальная проверка после исправления:
-Добавить runtime/surface lifecycle test:
-1. создать `RuntimeRoot`, attach surface token, install recording `SurfaceResourceSessionLifecycle`;
-2. загрузить replacement document через `root.edits.loadDocumentFromJson(...)`;
-3. в state listener проверить, что session cleanup/invalidation уже произошёл до public state publication;
-4. проверить, что session не остаётся со старым cache state;
-5. проверить, что resolver остаётся пригодным для нового документа, если выбран reset-without-drop вариант;
-6. добавить негативную проверку: failed load не очищает session state и не публикует runtime state.
-```
-
-```text
-Этап 5. Interaction engine, pointer tools и preview/commit flow
+, pointer tools и preview/commit flow
 
 Проверенная область:
 lib/src/interaction/**
@@ -1026,51 +979,7 @@ Fallback branches являются production paint code, а не test-only asse
 - `test/resources/**`
 - resource-related runtime/surface tests
 
-Найдено проблем: 3.
-
-
-ID: RESOURCE-001
-Этап: Этап 8. Resources, resolver lifecycle и asset consistency
-Название проблемы: Активная SurfaceResourceSession инвалидируется только через dirty API, но не через load/edit ResourceDeliveryEffect
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Контракт resources требует инвалидации image/resource cache при изменении resource table, resolver, dirty outcome и document load. В коде активная `SurfaceResourceSession` реально инвалидируется только в специализированном dirty-пути `deliverResourceDirtyOutcome(...)`. При обычной загрузке документа и edit-операциях, которые создают `ResourceDeliveryEffect`, runtime публикует effects наружу, но не применяет их к активной resource-session. Из-за этого session cache может удерживать старые `ui.Image` и stale resource entries после загрузки нового документа, замены resource table или удаления ресурса.
-
-Доказательство в коде:
-- `docs/contracts/resources.md:132-135`: `ImageResolveCache` должен инвалидироваться при resolver replacement, descriptor change, dirty target/all, detach/dispose/runtime swap.
-- `docs/contracts/resources.md:179-185`: resource dirty outcome должен сначала инвалидировать session, затем публиковать dirty state/effects и repaint.
-- `docs/diagrams/dfd_cache_invalidation.mmd:156-160`: `LoadSuccess` и `ResourceRevision` ведут к `ResourceSessionInvalidation`.
-- `lib/src/runtime/runtime_root.dart:1682-1702`: `_invalidateActiveResourceSession(...)` вызывается только из `deliverResourceDirtyOutcome(...)` и принимает только `ResourceDirtyOutcome`.
-- `lib/src/runtime/runtime_root.dart:1636-1649`: `_deliverEditCommitResult(...)` доставляет spatial/state/text/effects, но не применяет `ResourceDeliveryEffect` к `_activeSurfaceResourceSession`.
-- `lib/src/runtime/runtime_root.dart:1658-1671`: `_deliverLoadResult(...)` аналогично публикует load state/effects без resource-session invalidation.
-- `lib/src/runtime/runtime_root.dart:2582-2590`: `_loadEffects(...)` создаёт `ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true))`.
-- `lib/src/edit/commit_compiler.dart:46-63`: document replacement или resource revision создают `ResourceEffect`.
-- `lib/src/edit/commit_applier.dart:159-167`: `ResourceEffect` преобразуется в `ResourceDeliveryEffect`.
-- `test/runtime/fixtures/resource_dirty_runtime_delivery_fixture.dart`: проверяет order/invalidation только для dirty delivery path.
-- `test/runtime/fixtures/load_document_state_publication_fixture.dart:230-238`: проверяет наличие resource effect при load, но не проверяет invalidation активной surface session.
-
-Пользовательский или инженерный сценарий проявления:
-Пользователь открывает документ с изображениями, surface резолвит ресурсы и заполняет `ImageResolveCache`. Затем пользователь загружает другой документ или выполняет edit, который меняет resource table. Runtime публикует новое состояние и `ResourceDeliveryEffect`, но активная `SurfaceResourceSession` не получает target/all invalidation. Старые image handles остаются в cache до resolver replacement, detach/drop или LRU eviction.
-
-Почему это не теоретический edge case:
-Загрузка другого документа, замена ресурса и удаление неиспользуемого ресурса — обычные сценарии canvas-приложения. Cache имеет capacity 1024, поэтому для типичных документов старые entries могут не вытесняться естественным образом. Это прямо попадает в риск этапа 8: stale images и missing dirty/resource propagation.
-
-Рекомендуемое исправление:
-Добавить в `RuntimeRoot` единый обработчик `ResourceDeliveryEffect` для load/edit delivery:
-- если `touchedSet.documentReplaced == true` или `touchedSet.allResourceVisualsChanged == true`, вызывать `invalidateAllResourceImages()` у активной session/sink;
-- если есть `resourceDescriptorChangedIds` или `resourceVisualChangedIds`, вызывать targeted invalidation;
-- выполнять invalidation до `_publishRuntimeState(...)` и до публикации effects observer, по аналогии с dirty outcome contract;
-- не дублировать dirty path, если он остаётся отдельным специализированным путём.
-
-Минимальная проверка после исправления:
-Добавить runtime/surface-session tests:
-1. Подключить recording `SurfaceResourceInvalidationSink`.
-2. Выполнить successful `loadDocumentFromJson(...)` с resource table.
-3. Проверить, что `invalidateAllResourceImages()` вызван до публикации runtime state/effects.
-4. Выполнить edit `upsertResource(...)` и `removeUnusedResource(...)`.
-5. Проверить targeted invalidation по resource ID.
-6. Проверить, что следующий `resolveImage(...)` после load/edit не использует старый cached entry.
+Найдено проблем: 1.
 
 
 ID: RESOURCE-002
@@ -1097,7 +1006,7 @@ ID: RESOURCE-002
 - `lib/src/frame/paint_asset_binding_service.dart:66-74`: asset binding передаёт в request именно `descriptor.resourceRevision`.
 
 Пользовательский или инженерный сценарий проявления:
-Внешний потребитель через публичный edit API вызывает `replaceDraftDocument(...)` с документом, где есть resource `r1` и appKey `asset-a`. Surface резолвит image A и кладёт её в cache с key `r1 + revision 0`. Затем потребитель снова вызывает `replaceDraftDocument(...)` с тем же `resourceId = r1`, но с другим appKey `asset-b`. Новый descriptor снова получает `resourceRevision == 0`. С учётом RESOURCE-001 активная session не инвалидируется на edit delivery, поэтому cache lookup может вернуть image A для нового ресурса B.
+Внешний потребитель через публичный edit API вызывает `replaceDraftDocument(...)` с документом, где есть resource `r1` и appKey `asset-a`. Surface резолвит image A и кладёт её в cache с key `r1 + revision 0`. Затем потребитель снова вызывает `replaceDraftDocument(...)` с тем же `resourceId = r1`, но с другим appKey `asset-b`. Новый descriptor снова получает `resourceRevision == 0`. Cache identity перестаёт отражать фактическую замену resource table, поэтому stale image A может быть переиспользован там, где lookup опирается на descriptor revision вместо принятой store revision.
 
 Почему это не теоретический edge case:
 `replaceDraftDocument(...)` — публичный путь массовой замены документа. Сохранение стабильных resource IDs при смене appKey/asset — нормальный сценарий синхронизации внешнего asset store. Проблема не требует экстремальных данных: достаточно одного resource ID и двух последовательных materialized replacements.
@@ -1108,7 +1017,7 @@ ID: RESOURCE-002
 - добавить store-owned prepare/install path, который получает accepted `RevisionState`;
 - если materialized replacement меняет resource table, назначать descriptors accepted `resourceRevision`;
 - если materialized edit не меняет resources, сохранять прежние descriptor revisions для unchanged resources;
-- после исправления оставить/добавить targeted/all cache invalidation из RESOURCE-001, потому что revision-correctness и invalidation — разные уровни защиты.
+- targeted/all cache invalidation должна оставаться независимой защитой, потому что revision-correctness и invalidation — разные уровни консистентности.
 
 Минимальная проверка после исправления:
 Добавить tests:
@@ -1119,48 +1028,6 @@ ID: RESOURCE-002
 5. Проверить, что descriptor revision соответствует accepted store resource revision.
 6. С активной `SurfaceResourceSession` проверить, что повторная замена same resource ID не возвращает старый cached image.
 
-
-ID: RESOURCE-003
-Этап: Этап 8. Resources, resolver lifecycle и asset consistency
-Название проблемы: Budget-exceeded follow-up repaint flag создаётся, но не потребляется production surface/runtime
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Контракт resource resolution ограничивает resolver calls per frame и допускает throttled follow-up repaint после budget exhaustion. `SurfaceResourceSession` выставляет `hasPendingBudgetFollowUpRepaint`, когда лимит исчерпан. Но production `CanvasSurfaceWidget` после построения frame не проверяет этот флаг и не планирует следующий repaint/build. В результате документы с количеством cold image resources выше frame budget могут получить placeholders после первого frame и не перерезолвиться до внешнего события: edit, load, dirty, resize, rebuild, tool action.
-
-Доказательство в коде:
-- `docs/contracts/resources.md:249-260`: resolver frame budget — 128 calls; после budget exceeded возвращается placeholder; session owns follow-up throttle; painters/resolvers не должны сами schedule.
-- `docs/diagrams/seq_resource_resolution.mmd:74-75`: budget-exceeded placeholder records at most one pending throttled follow-up repaint.
-- `lib/src/resources/surface_resource_session.dart:33`: есть публичный getter `hasPendingBudgetFollowUpRepaint`.
-- `lib/src/resources/surface_resource_session.dart:35-39`: `beginFrameResourcePass()` очищает pending flag в начале следующего pass.
-- `lib/src/resources/surface_resource_session.dart:120-132`: `_budgetPlaceholder(...)` выставляет `_hasPendingBudgetFollowUpRepaint = true`.
-- `lib/src/surface/canvas_surface_widget.dart:182-203`: surface строит main frame, overlay frame и `CustomPaint`, но не проверяет `session.hasPendingBudgetFollowUpRepaint`.
-- `lib/src/surface/canvas_surface_widget.dart:88-90`: rebuild зависит от `runtime.stateListenable`; budget placeholder сам по себе не публикует runtime state.
-- По поиску production usages `hasPendingBudgetFollowUpRepaint` используется только в `SurfaceResourceSession` и тестах/benchmarks, но не в production surface/runtime consumer.
-- `test/resources/fixtures/resolver_frame_budget_fixture.dart:15-62`: тест вручную вызывает следующий `beginFrameResourcePass()`, проверяя session-level механику, но не доказывает, что Flutter surface schedule-ит follow-up frame.
-
-Пользовательский или инженерный сценарий проявления:
-Документ содержит 200 видимых image elements с уникальными resource IDs, cache холодный. Первый build surface вызывает resolver для первых 128 ресурсов. Для остальных 72 session возвращает budget placeholders и ставит pending follow-up flag. Так как surface не schedule-ит follow-up repaint, оставшиеся изображения остаются placeholders до любого другого runtime/surface события.
-
-Почему это не теоретический edge case:
-Сам контракт вводит frame budget именно для реалистичных больших документов. 128+ видимых изображений достижимы для импортированных досок, шаблонов, стикеров, PDF/page-image workflows или asset-heavy whiteboard документов. Это прямой риск этапа 8: документ с ресурсами отображается неполно.
-
-Рекомендуемое исправление:
-Добавить production consumer для `hasPendingBudgetFollowUpRepaint` на surface/session boundary:
-- после `buildSurfaceMainFrame(...)` проверять `session.hasPendingBudgetFollowUpRepaint`;
-- если flag выставлен, schedule-ить ровно один post-frame repaint/build через surface-owned механизм;
-- использовать `mounted`, identity текущего runtime/session и cancellation guard на dispose/runtime swap;
-- не schedule-ить из painter или resolver;
-- следующий `beginFrameResourcePass()` должен очищать flag и разрешать следующий batch resolver calls.
-
-Минимальная проверка после исправления:
-Добавить widget/resource bridge test:
-1. Создать runtime/surface с >128 видимыми image resources и cold resolver.
-2. Pump первый frame: resolver call count capped at 128, часть resources получает placeholders.
-3. Без edit/load/dirty выполнить следующий pump, вызванный scheduled follow-up.
-4. Проверить, что resolver call count увеличился и количество placeholders уменьшилось.
-5. Проверить, что за один frame schedule-ится не более одного follow-up.
-6. Проверить, что dispose/runtime swap не оставляет stale callback.
 
 
 Проверено без отдельной проблемы:
@@ -1199,78 +1066,7 @@ test/edit/fixtures/staged_document_load_success_failure_fixture.dart
 Ограничение проверки:
 Статический анализ. Dart/Flutter toolchain в среде недоступен, поэтому тесты не запускались.
 
-Найдено проблем: 3
-
-ID: DIAG-001
-Этап: Этап 9. Diagnostics, errors и публичная наблюдаемость отказов
-Название проблемы: CanvasDataException выводит raw input через message/path, обходя sanitized details
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Контракт публичной ошибки требует, чтобы raw failure context оставался внутри DiagnosticsHub или попадал наружу только через sanitized, bounded, deeply immutable details. В коде же часть codec/schema failures вставляет пользовательские значения прямо в CanvasDataException.message, а metadata validation вставляет raw key прямо в CanvasDataException.path. Эти поля публичные и не проходят sanitizer.
-
-Доказательство в коде:
-docs/contracts/public_api_v1.md:2697-2702:
-`CanvasDataException must not expose raw input... Raw failure context remains internal to DiagnosticsHub or is projected only through sanitized, bounded, deeply immutable details`.
-
-lib/src/contracts/public/canvas_errors.dart:29-40:
-factory CanvasDataException sanitizes только `details`; `message` и `path` сохраняются как есть.
-
-lib/src/contracts/public/canvas_errors.dart:50-53:
-`message`, `path`, `details` являются публичными final fields.
-
-lib/src/codec/schema_v1_decoder.dart:267-274:
-unknown resource kind формирует public message как `unknown resource kind: $kind.`.
-
-lib/src/codec/schema_v1_decoder.dart:376-383:
-unknown resource source kind формирует public message как `unknown resource source kind: $kind.`.
-
-lib/src/codec/schema_v1_decoder.dart:483-489:
-unknown element kind формирует public message как `unknown element kind: $kind.`.
-
-lib/src/codec/schema_v1_import_emitter.dart:522-528:
-runtime import emitter повторяет тот же паттерн для `resource.kind`.
-
-lib/src/codec/schema_v1_import_emitter.dart:540-546:
-runtime import emitter повторяет тот же паттерн для `resource.source.kind`.
-
-lib/src/contracts/public/canvas_value_validators.dart:207-215:
-metadata key используется в `path: 'metadata.${entry.key}'` до безопасной проекции ключа.
-
-lib/src/contracts/public/canvas_value_validators.dart:357-367:
-nested metadata key также напрямую попадает в public path через `path: 'metadata.$path.${entry.key}'` и `path: '$path.${entry.key}'`.
-
-lib/src/contracts/public/canvas_contract_limits.dart:1:
-raw JSON может быть до 32 MiB, то есть raw string в message/path может быть очень большим до того, как будет отброшен как unknown enum/key.
-
-Пользовательский или инженерный сценарий проявления:
-Пользователь открывает несовместимый или повреждённый JSON-документ, где `element.kind` содержит длинную строку, фрагмент пользовательского содержимого или управляющие символы. `loadDocumentFromJson` выбрасывает CanvasDataException, а приложение логирует или показывает `exception.message`. В результате наружу уходит raw input, хотя контракт допускает raw context только через sanitized details.
-
-Второй реалистичный сценарий: JSON содержит metadata key длиной больше лимита. Ошибка `invalidMetadata` получает public `path`, в который включён весь ключ, хотя именно этот ключ должен быть bounded/sanitized preview, а не raw path segment.
-
-Почему это не теоретический edge case:
-Unknown enum value — обычный сценарий импорта документа из будущей версии schema или повреждённого файла. Metadata keys приходят из пользовательского документа. Это не требует нарушения предыдущей границы: значения достигают codec/load boundary через публичный `CanvasEditPort.loadDocumentFromJson(String json)`.
-
-Рекомендуемое исправление:
-Сделать public message статическим и не включать raw input:
-- `unknown resource kind.`
-- `unknown resource source kind.`
-- `unknown element kind.`
-- `duplicate id.`
-- `metadata key exceeds the maximum length.`
-
-Raw/actual значения переносить только в `details`, например:
-`details: {'actual': kind}` или `details: {'keyPreview': key}`,
-после чего они пройдут `sanitizeCanvasErrorDetails`.
-
-Для metadata path не строить path из raw key. Использовать стабильный путь вроде `metadata`, `metadata.<key>`, `metadata.children[]` или bounded/escaped path segment, но не полный пользовательский ключ.
-
-Минимальная проверка после исправления:
-Добавить тесты:
-1. JSON с `element.kind = 'x' * 10000`; проверить, что CanvasDataException.message не содержит raw value, а details содержит bounded preview.
-2. JSON с metadata key длиной больше лимита; проверить, что CanvasDataException.path не содержит raw key.
-3. Повторить те же проверки через `loadDocumentFromJson`, не только через internal decoder/import emitter.
-
+Найдено проблем: 2
 
 ID: DIAG-002
 Этап: Этап 9. Diagnostics, errors и публичная наблюдаемость отказов
@@ -1403,41 +1199,7 @@ Runtime load получает schema v1 JSON, где `transform.a` — стро�
 Ограничение проверки:
 Автотесты не запускались: в доступной среде нет dart/flutter. Выводы ниже основаны на статическом чтении кода, контрактов и surface/widget fixtures.
 
-Найдено проблем: 2.
-
-ID: SURFACE-001
-Этап: Этап 10. Flutter surface, widget lifecycle и platform integration
-Название проблемы: CanvasSurface не планирует follow-up repaint после превышения resource resolver frame budget
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-SurfaceResourceSession явно фиксирует, что в текущем resource pass был превышен per-frame budget синхронных image resolver calls, но CanvasSurface никак не использует этот сигнал. В результате документы с количеством uncached image resources больше kMaxSyncResourceResolverCallsPerFrame могут навсегда остаться с BudgetExceededResourceImagePlaceholder для части изображений до любого постороннего runtime-события: camera pan, edit, dirty mark, rebuild parent widget и т.п.
-
-Доказательство в коде:
-- docs/contracts/resources.md:249-260 описывает resolver frame budget: kMaxSyncResourceResolverCallsPerFrame = 128, budget-exceeded placeholder, pending throttled follow-up repaint и запрет планировать такие repaint из painters/app resolvers.
-- lib/src/resources/surface_resource_session.dart:30-38 хранит _hasPendingBudgetFollowUpRepaint, сбрасывая его в beginFrameResourcePass().
-- lib/src/resources/surface_resource_session.dart:120-130 выставляет _hasPendingBudgetFollowUpRepaint = true при budget exceeded.
-- lib/src/frame/paint_asset_binding_service.dart:23-49 вызывает session.beginFrameResourcePass() и затем session.resolveImage(...) для records, то есть именно build main frame может выставить pending follow-up flag.
-- lib/src/surface/canvas_surface_widget.dart:182-203 строит mainOutput, overlayOutput и CustomPaint, но после buildSurfaceMainFrame не проверяет session.hasPendingBudgetFollowUpRepaint и не вызывает ни post-frame setState, ни другой repaint trigger.
-- Поиск по lib/src показывает, что hasPendingBudgetFollowUpRepaint используется только внутри SurfaceResourceSession, а не surface/widget integration.
-
-Пользовательский или инженерный сценарий проявления:
-Пользователь открывает документ с 129+ distinct image elements, которые ещё не находятся в ImageResolveCache. Первый frame вызывает resolver только до лимита, для остальных записывает BudgetExceededResourceImagePlaceholder. Так как runtime state при этом не обязан меняться, CanvasSurface не получает нового repaint-события, и оставшиеся изображения не дорезолвятся, пока пользователь случайно не вызовет другой rebuild: подвигал камеру, изменил документ, переключил tool или parent widget перестроился.
-
-Почему это не теоретический edge case:
-В контракте явно есть kMaxSyncResourceResolverCallsPerFrame = 128 и pending follow-up repaint flag. Большой canvas-документ с сотнями вставленных изображений является обычным пользовательским сценарием для whiteboard/canvas engine, а не экстремальным malformed input. Сам код уже содержит production-сигнал hasPendingBudgetFollowUpRepaint, но surface его не потребляет.
-
-Рекомендуемое исправление:
-Добавить в _CanvasSurfaceState surface-owned throttled repaint scheduling. После buildSurfaceMainFrame(...) проверить session.hasPendingBudgetFollowUpRepaint. Если flag true и repaint ещё не запланирован, вызвать WidgetsBinding.instance.addPostFrameCallback, проверить mounted, active runtime/port/session identity и затем сделать setState(() {}) либо вызвать явно выделенный surface repaint port. Нужен локальный bool вроде _resourceBudgetRepaintScheduled, чтобы не создать repaint loop. После следующего build PaintAssetBindingService.beginFrameResourcePass() сбросит flag; если следующий batch снова превысит budget, surface сможет запланировать ещё один follow-up frame.
-
-Минимальная проверка после исправления:
-Добавить widget test в test/surface/**:
-1. Создать CanvasRuntime с документом, содержащим больше 128 image elements с distinct resourceId.
-2. Подключить CanvasSurface с RecordingResolver, возвращающим ui.Image.
-3. После первого pump проверить, что resolver вызван не больше 128 раз и часть assetBindings содержит BudgetExceededResourceImagePlaceholder.
-4. Выполнить следующий pump без runtime edit/camera/resource dirty.
-5. Проверить, что resolver получил дополнительные вызовы и следующая часть изображений перешла из budget placeholder в resolved/null/missing outcome.
-6. Проверить, что repaint scheduling не продолжает бесконечно тикать после исчерпания pending budget.
+Найдено проблем: 1.
 
 ID: SURFACE-002
 Этап: Этап 10. Flutter surface, widget lifecycle и platform integration

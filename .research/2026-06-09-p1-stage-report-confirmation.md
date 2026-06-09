@@ -10,15 +10,15 @@ research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.
 
 ## Summary
 
-After fixing `ARCH-001`, `RUNTIME-001`, `INTERACTION-003`, and `CODEC-002`, 17 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
+12 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. Fixed entries were removed from this remaining-problems document.
 
-Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `RESOURCE-003` and `SURFACE-001` both trace to the same budget follow-up flag being produced by `SurfaceResourceSession` without a production surface/runtime consumer. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path. `RUNTIME-003` and `RESOURCE-001` overlap on load/edit resource-session lifecycle delivery.
+Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path.
 
-The original research was static. This document now tracks only the remaining P1 entries after the first four quick fixes were implemented.
+The original research was static. This document now tracks only the remaining P1 entries after the implemented quick fixes were removed.
 
 ## Remaining Problem Groups
 
-The 17 remaining P1 entries collapse into 13 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
+The 12 remaining P1 entries collapse into 10 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
 
 | Group | Remaining report IDs | Owning code path | Grouping basis |
 | --- | --- | --- | --- |
@@ -26,15 +26,12 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 | 2 | `API-002`, `SURFACE-002` | Pointer terminal cleanup boundary | Invalid terminal cleanup is documented, but public sample validation and surface event routing both block non-finite terminal events before cleanup routing. |
 | 3 | `CODEC-001` | Runtime schema load validation | Aggregate metadata budget is enforced by public DTO projection but not by runtime schema import before store install. |
 | 4 | `EDIT-001`, `RESOURCE-002` | Materialized document resource descriptors | Materialized commit/replacement builds resource descriptors with default revision state before accepted resource revisions are applied. |
-| 5 | `RUNTIME-003`, `RESOURCE-001` | Load/edit resource-session delivery | Load/edit `ResourceDeliveryEffect` is published but not applied to the active `SurfaceResourceSession`; successful load also leaves replacement-dependent session state uncleared. |
-| 6 | `INTERACTION-001` | Selection terminal admission | Marquee/point selection can commit from unreliable query facts because terminal admission does not gate on query status/skipped candidates. |
-| 7 | `INTERACTION-002` | Context target admission | Context action target admission can use partial candidate results with skipped/unresolved handles. |
-| 8 | `GEOMETRY-001` | Geometry inverse transform computation | Hit testing calls public-validating inverse construction, so a valid transform can throw on derived inverse coordinates. |
-| 9 | `GEOMETRY-002` | Spatial candidate budget enforcement | Tile query materializes candidates before applying candidate budget. |
-| 10 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
-| 11 | `RESOURCE-003`, `SURFACE-001` | Resource resolver budget follow-up repaint | Session sets the budget follow-up flag, but production surface/runtime does not consume it. |
-| 12 | `DIAG-001` | Public error sanitization | Raw schema/metadata values can appear in public `CanvasDataException.message` or `path`, which are not sanitized. |
-| 13 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
+| 5 | `INTERACTION-001` | Selection terminal admission | Marquee/point selection can commit from unreliable query facts because terminal admission does not gate on query status/skipped candidates. |
+| 6 | `INTERACTION-002` | Context target admission | Context action target admission can use partial candidate results with skipped/unresolved handles. |
+| 7 | `GEOMETRY-001` | Geometry inverse transform computation | Hit testing calls public-validating inverse construction, so a valid transform can throw on derived inverse coordinates. |
+| 8 | `GEOMETRY-002` | Spatial candidate budget enforcement | Tile query materializes candidates before applying candidate budget. |
+| 9 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
+| 10 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
 
 ## Detailed Findings
 
@@ -62,27 +59,12 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - **Dependencies**: edit kernel, commit applier, committed document, store kernel, resource table.
 - **Data flow**: Materialized edit -> `CommittedDocument(document)` with default revisions -> store advances aggregate revisions -> embedded resource descriptors keep constructor-time revision.
 
-- **Location**: primary `lib/src/runtime/runtime_root.dart:1681`; additional `lib/src/runtime/runtime_root.dart:1636`, `lib/src/runtime/runtime_root.dart:1658`, `lib/src/runtime/runtime_root.dart:1733`.
-- **Description**: `RESOURCE-001` is confirmed. Dirty delivery invalidates the active resource session before publication (`lib/src/runtime/runtime_root.dart:1681`, `lib/src/runtime/runtime_root.dart:1686`, `lib/src/runtime/runtime_root.dart:1690`, `lib/src/runtime/runtime_root.dart:1702`). Edit delivery and load delivery publish state/effects without applying `ResourceDeliveryEffect` to the active session (`lib/src/runtime/runtime_root.dart:1636`, `lib/src/runtime/runtime_root.dart:1649`, `lib/src/runtime/runtime_root.dart:1658`, `lib/src/runtime/runtime_root.dart:1671`). The shared delivery helper consumes only `SpatialDeliveryEffect` (`lib/src/runtime/runtime_root.dart:1733`, `lib/src/runtime/runtime_root.dart:1736`). Load effects include `ResourceDeliveryEffect(touchedSet: TouchedSet(documentReplaced: true))` (`lib/src/runtime/runtime_root.dart:2582`, `lib/src/runtime/runtime_root.dart:2590`), and edit effects convert `ResourceEffect` into `ResourceDeliveryEffect` (`lib/src/edit/commit_applier.dart:159`, `lib/src/edit/commit_applier.dart:167`).
-- **Dependencies**: RuntimeRoot active surface session, dirty outcome path, commit delivery effects.
-- **Data flow**: Dirty outcome -> active session invalidation; edit/load effect -> observer delivery without active session invalidation.
-
 - **Location**: primary `lib/src/edit/staged_document_load.dart:186`; additional `lib/src/resources/resource_cache.dart:7`, `lib/src/frame/paint_asset_binding_service.dart:73`.
 - **Description**: `RESOURCE-002` is confirmed and overlaps with `EDIT-001`. Public `replaceDraftDocument` promotes to materialized replacement (`lib/src/edit/edit_session.dart:748`, `lib/src/edit/edit_session.dart:750`), and staged draft replacement builds `storeDocument: CommittedDocument(draft.document)` (`lib/src/edit/staged_document_load.dart:186`, `lib/src/edit/staged_document_load.dart:199`). Cache identity uses `resolverGeneration`, `resourceId`, and `resourceRevision` (`lib/src/resources/resource_cache.dart:7`, `lib/src/resources/resource_cache.dart:11`), session cache reads/writes by request revision (`lib/src/resources/surface_resource_session.dart:81`, `lib/src/resources/surface_resource_session.dart:88`, `lib/src/resources/surface_resource_session.dart:154`, `lib/src/resources/surface_resource_session.dart:159`), and frame asset requests use `descriptor.resourceRevision` (`lib/src/frame/paint_asset_binding_service.dart:66`, `lib/src/frame/paint_asset_binding_service.dart:73`).
 - **Dependencies**: staged load/draft replacement, resource cache key, frame asset binding service.
 - **Data flow**: Draft/materialized replacement -> default revision descriptor -> frame request -> cache lookup by descriptor revision.
 
-- **Location**: primary `lib/src/resources/surface_resource_session.dart:33`; additional `lib/src/surface/canvas_surface_widget.dart:172`, `lib/src/surface/canvas_surface_widget.dart:203`.
-- **Description**: `RESOURCE-003` is confirmed. Resource docs define frame budget, budget-exceeded placeholders, and session-owned follow-up throttle (`docs/contracts/resources.md:249`, `docs/contracts/resources.md:252`, `docs/contracts/resources.md:257`, `docs/contracts/resources.md:259`). `SurfaceResourceSession` stores and exposes `hasPendingBudgetFollowUpRepaint` (`lib/src/resources/surface_resource_session.dart:30`, `lib/src/resources/surface_resource_session.dart:33`), clears it at the next frame pass (`lib/src/resources/surface_resource_session.dart:35`, `lib/src/resources/surface_resource_session.dart:39`), and sets it when resolver-call budget is exhausted (`lib/src/resources/surface_resource_session.dart:120`, `lib/src/resources/surface_resource_session.dart:127`, `lib/src/resources/surface_resource_session.dart:132`). Production frame binding and surface build use the session but do not read the getter (`lib/src/frame/paint_asset_binding_service.dart:23`, `lib/src/frame/paint_asset_binding_service.dart:49`, `lib/src/surface/canvas_surface_widget.dart:172`, `lib/src/surface/canvas_surface_widget.dart:203`). The resource fixture verifies the flag manually (`test/resources/fixtures/resolver_frame_budget_fixture.dart:41`, `test/resources/fixtures/resolver_frame_budget_fixture.dart:59`).
-- **Dependencies**: resource session, paint asset binding, surface widget.
-- **Data flow**: Frame pass -> resolver budget exceeded -> session flag set -> no production surface/runtime read found.
-
 ### 3. Runtime Lifecycle And Interaction Flow
-
-- **Location**: primary `lib/src/runtime/runtime_root.dart:1525`; additional `lib/src/runtime/runtime_root.dart:1658`, `lib/src/resources/surface_resource_session.dart:189`.
-- **Description**: `RUNTIME-003` is confirmed and overlaps with `RESOURCE-001`. Operation matrix requires successful `loadDocumentFromJson` to replace descriptors, invalidate resource caches, and clear surface-session resource state (`docs/contracts/operation_matrix.md:284`). RuntimeRoot stores active resource session state (`lib/src/runtime/runtime_root.dart:208`). `_loadDocumentFromJson` prepares and consumes load, clears selection, bumps camera/epoch, and calls `_deliverLoadResult(...)` (`lib/src/runtime/runtime_root.dart:1525`, `lib/src/runtime/runtime_root.dart:1544`). `_deliverLoadResult` handles spatial effects, state publication, text editing, and observer delivery without clearing active resource session (`lib/src/runtime/runtime_root.dart:1658`, `lib/src/runtime/runtime_root.dart:1671`). `_dropActiveSurfaceResourceSession()` exists and calls `session.drop()` (`lib/src/runtime/runtime_root.dart:1705`), and `SurfaceResourceSession.drop()` clears resolver/cache/budget/null-suppression state (`lib/src/resources/surface_resource_session.dart:189`).
-- **Dependencies**: load pipeline, RuntimeRoot surface session ownership, surface resource session lifecycle.
-- **Data flow**: Successful load -> state/effects delivery -> active session cleanup not invoked.
 
 - **Location**: primary `lib/src/runtime/runtime_interaction_read_adapter.dart:171`; additional `lib/src/interaction/select_machine.dart:35`.
 - **Description**: `INTERACTION-001` is confirmed. Marquee read facts return `nextSelectedIds` plus query facts (`lib/src/runtime/runtime_interaction_read_adapter.dart:171`), and point-selection path does the same (`lib/src/runtime/runtime_interaction_read_adapter.dart:205`). Interaction engine records query diagnostics and still passes facts to `SelectMachine.terminal(...)` (`lib/src/interaction/interaction_engine.dart:1134`, `lib/src/interaction/interaction_engine.dart:1487`, `lib/src/interaction/interaction_engine.dart:1494`). `SelectMachine.terminal` checks selection revision, controller epoch, and ids, not `facts.query.status` or skipped candidates (`lib/src/interaction/select_machine.dart:35`, `lib/src/interaction/select_machine.dart:40`). A fixture records `budgetExceeded` with empty `nextSelectedIds` (`test/interaction/fixtures/interaction_read_port_fixture.dart:320`, `test/interaction/fixtures/interaction_read_port_fixture.dart:328`).
@@ -112,20 +94,7 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - **Dependencies**: frame capture service, captured frame models, runtime frame facts, overlay planner.
 - **Data flow**: Overlay frame request -> full snapshot capture -> overlay planner uses overlay preview plus snapshot inputs.
 
-### 5. Diagnostics And Architecture Guardrails
-
-- **Location**: primary `lib/src/contracts/public/canvas_errors.dart:29`; additional `docs/contracts/public_api_v1.md:2697`, `lib/src/codec/schema_v1_decoder.dart:272`, `lib/src/contracts/public/canvas_value_validators.dart:213`.
-- **Description**: `DIAG-001` is confirmed. Public error contract prohibits raw input exposure outside DiagnosticsHub or sanitized bounded details (`docs/contracts/public_api_v1.md:2697`, `docs/contracts/public_api_v1.md:2700`). `CanvasDataException` sanitizes only `details`; `message` and `path` pass through unchanged (`lib/src/contracts/public/canvas_errors.dart:29`, `lib/src/contracts/public/canvas_errors.dart:37`, `lib/src/contracts/public/canvas_errors.dart:38`, `lib/src/contracts/public/canvas_errors.dart:39`). `message`, `path`, and `details` are public fields (`lib/src/contracts/public/canvas_errors.dart:50`, `lib/src/contracts/public/canvas_errors.dart:53`). Schema decoder/import emitter interpolate raw `kind` values into messages (`lib/src/codec/schema_v1_decoder.dart:272`, `lib/src/codec/schema_v1_decoder.dart:381`, `lib/src/codec/schema_v1_decoder.dart:487`, `lib/src/codec/schema_v1_import_emitter.dart:526`, `lib/src/codec/schema_v1_import_emitter.dart:544`). Metadata validation interpolates raw keys into public paths (`lib/src/contracts/public/canvas_value_validators.dart:211`, `lib/src/contracts/public/canvas_value_validators.dart:213`, `lib/src/contracts/public/canvas_value_validators.dart:357`, `lib/src/contracts/public/canvas_value_validators.dart:366`).
-- **Dependencies**: public error model, details sanitizer, codec/schema errors, metadata validators.
-- **Data flow**: Raw schema/metadata value -> public message/path -> no sanitizer for those fields.
-
-
-### 6. Surface Integration And Release Readiness
-
-- **Location**: primary `lib/src/surface/canvas_surface_widget.dart:182`; additional `lib/src/resources/surface_resource_session.dart:127`.
-- **Description**: `SURFACE-001` is confirmed and overlaps with `RESOURCE-003`. `CanvasSurface` builds the main frame with `CanvasSurfaceImageBridge().bindAssets(session)` (`lib/src/surface/canvas_surface_widget.dart:182`, `lib/src/surface/canvas_surface_widget.dart:189`), then builds overlay and returns `CustomPaint` (`lib/src/surface/canvas_surface_widget.dart:190`, `lib/src/surface/canvas_surface_widget.dart:203`) without reading `session.hasPendingBudgetFollowUpRepaint`. The flag is produced by `SurfaceResourceSession` on budget exhaustion (`lib/src/resources/surface_resource_session.dart:120`, `lib/src/resources/surface_resource_session.dart:127`, `lib/src/resources/surface_resource_session.dart:132`) and cleared by the next frame pass (`lib/src/resources/surface_resource_session.dart:35`, `lib/src/resources/surface_resource_session.dart:38`). Surface tests cover dirty-resource repaint by explicit dirty action and pump, not budget follow-up scheduling (`test/surface/fixtures/widget_paint_fixture.dart:97`, `test/surface/fixtures/widget_paint_fixture.dart:100`).
-- **Dependencies**: CanvasSurface widget, resource session, frame asset binding.
-- **Data flow**: Surface frame build -> budget flag can be set during asset binding -> widget build completes with no follow-up scheduling read.
+### 5. Surface Integration And Release Readiness
 
 - **Location**: primary `lib/src/surface/pointer_adapter.dart:25`; additional `lib/src/surface/pointer_adapter.dart:38`.
 - **Description**: `SURFACE-002` is confirmed and overlaps with `API-002`. Flutter `PointerUpEvent` and `PointerCancelEvent` route into `_route(...)` with terminal phases (`lib/src/surface/pointer_adapter.dart:25`, `lib/src/surface/pointer_adapter.dart:30`). `_route` returns on any non-finite `localPosition` before phase-specific handling or sample creation (`lib/src/surface/pointer_adapter.dart:35`, `lib/src/surface/pointer_adapter.dart:37`, `lib/src/surface/pointer_adapter.dart:38`, `lib/src/surface/pointer_adapter.dart:41`). Interaction tests show cleanup-only terminal behavior once a terminal sample exists (`test/interaction/pointer_session_test.dart:119`, `test/interaction/pointer_session_test.dart:147`), but surface adapter blocks invalid terminal events before runtime routing.
@@ -143,17 +112,12 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - `iwb_canvas_engine_12_stage_reports.md:84` - `API-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:156` - `CODEC-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:276` - `EDIT-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:579` - `RUNTIME-003` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:646` - `INTERACTION-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:696` - `INTERACTION-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:806` - `GEOMETRY-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:845` - `GEOMETRY-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:918` - `FRAME-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1071` - `RESOURCE-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:1115` - `RESOURCE-002` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1162` - `RESOURCE-003` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1243` - `DIAG-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1447` - `SURFACE-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:1481` - `SURFACE-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:1710` - `TEST-001` P1 entry.
 - `lib/src/runtime/runtime_root.dart:2450` - direct tool double-tap delegates to runtime root.
@@ -162,16 +126,11 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - `lib/src/edit/staged_document_load.dart:57` - prepared loads do not materialize DTO projection.
 - `lib/src/edit/commit_applier.dart:119` - materialized commit constructs `CommittedDocument(document)`.
 - `lib/src/store/committed_document.dart:37` - resource table descriptors use constructor revision state.
-- `lib/src/runtime/runtime_root.dart:1686` - dirty path invalidates active resource session.
-- `lib/src/runtime/runtime_root.dart:1733` - shared delivery helper consumes spatial effects only.
 - `lib/src/interaction/select_machine.dart:35` - selection terminal checks revisions/ids, not query status.
 - `lib/src/runtime/runtime_interaction_read_adapter.dart:414` - context target admission uses candidates presence.
 - `lib/src/contracts/public/canvas_geometry.dart:155` - inverse transform uses public constructor.
 - `lib/src/geometry/tile_index.dart:70` - candidate budget helper runs after map construction.
 - `lib/src/frame/frame_capture_service.dart:40` - overlay capture uses `_captureSnapshot`.
-- `lib/src/contracts/public/canvas_errors.dart:39` - sanitizer applied only to details.
-- `lib/src/resources/surface_resource_session.dart:127` - budget exhaustion sets follow-up repaint flag.
-- `lib/src/surface/canvas_surface_widget.dart:182` - surface builds main frame with session-backed asset binding.
 - `lib/src/surface/pointer_adapter.dart:38` - surface drops non-finite pointer event before sample route.
 - `tool/bench/src/benchmark_diff.dart:168` - unapproved baseline status creates failure.
 
@@ -186,15 +145,12 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - Searched: `rg -n "^ID: .*|^Приоритет: P1|^Название проблемы:" iwb_canvas_engine_12_stage_reports.md`.
 - Searched: `rg -n "handleDoubleTap|UnsupportedError|contextActionRequests|CanvasContextActionRequested|CanvasPointerSample|non-finite|invalid terminal|localPosition" lib test docs`.
 - Searched: `rg -n "metadata.*budget|aggregate|canvasMetadataEncodedByteLength|canvasMetadataMaxEncodedBytes|CanvasMetadata.fromMap|invalidMetadata" lib test docs`.
-- Searched: `rg -n "resourceRevision|SurfaceResourceSession|ResourceDeliveryEffect|hasPendingBudgetFollowUpRepaint|beginFrameResourcePass|resolveImage\\(|invalidateResourceImage|CommittedDocument\\(" lib test docs`.
+- Searched: `rg -n "resourceRevision|SurfaceResourceSession|beginFrameResourcePass|resolveImage\\(|CommittedDocument\\(" lib test docs`.
 - Searched: `rg -n "CanvasContextActionRequested|loadDocumentFromJson|skippedCandidateCount|RejectedContextTargetRead|MarqueeCommitFacts|_withPointerCleanupEffects|_deliverPendingContextRequests" lib test docs`.
 - Searched: `rg -n "invert\\(|CanvasTransform\\(|validateOffset\\(|_hitBox|_hitPath|_eraserHitsPath|spatialCandidateResultWithinBudget|CapturedOverlayFrame|captureOverlayFrame|_captureSnapshot" lib test docs`.
-- Searched: `rg -n "CanvasDataException|sanitize|unknown resource kind|unknown element kind|metadata\.\$\{entry\.key\}" lib test docs`.
 - Searched: `rg -n "unapproved|approved baseline is not initialized|release_ubuntu_24_04_flutter_3_38_0|release_benchmarks" .github tool docs test`.
 - Not found: aggregate metadata byte summing in runtime load/store import path outside `CanvasDocument`.
 - Not found: tests requiring invalid terminal up/cancel cleanup through `CanvasSurfacePointerAdapter`.
-- Not found: production consumer of `hasPendingBudgetFollowUpRepaint` outside `SurfaceResourceSession`.
-- Not found: edit/load runtime path applying `ResourceDeliveryEffect` to the active resource-session invalidation sink.
 - Not found: geometry-only unchecked inverse helper in searched geometry/frame paths.
 - Not found: current zero-read overlay capture fixture.
 - Not found: measured approved release baseline replacing the unapproved placeholder at the approved release baseline path.
@@ -205,7 +161,6 @@ The 17 remaining P1 entries collapse into 13 unique problem groups when overlapp
 - Boundary validation mismatch: invalid terminal pointer cleanup is documented but blocked by both public sample validation and surface finite-position gate (`docs/contracts/public_api_v1.md:1782`, `lib/src/contracts/public/canvas_pointer.dart:100`, `lib/src/surface/pointer_adapter.dart:38`).
 - Load validation split: aggregate metadata budget is enforced by public DTO construction but not by the runtime schema import path before store install (`lib/src/contracts/public/canvas_document.dart:51`, `lib/src/edit/staged_document_load.dart:127`, `lib/src/store/schema_v1_store_import.dart:110`).
 - Materialized resource revision split: sparse/schema import paths can use accepted revisions while materialized paths build resource descriptors from default revision state (`lib/src/store/document_store_kernel.dart:592`, `lib/src/store/schema_v1_store_import.dart:101`, `lib/src/edit/commit_applier.dart:119`, `lib/src/store/committed_document.dart:27`).
-- Resource session delivery split: dirty delivery has active-session invalidation, while edit/load resource delivery effects are observer-facing without active-session application (`lib/src/runtime/runtime_root.dart:1686`, `lib/src/runtime/runtime_root.dart:1733`).
 - Interaction admission pattern: context/selection reliability gates remain documented for `INTERACTION-001` and `INTERACTION-002`.
 - Overlay/main capture coupling: overlay frame capture currently owns a full main-frame snapshot, including spatial/resource/selection facts (`lib/src/frame/frame_capture_service.dart:40`, `lib/src/frame/captured_frame.dart:56`).
 - Release benchmark gate state: the current approved baseline path is intentionally present but unapproved, and diff code fails closed on that status (`tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:3`, `tool/bench/src/benchmark_diff.dart:168`).

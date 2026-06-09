@@ -185,7 +185,7 @@ void _registerCodecFailureTests() {
         _CollectingImportSink(),
       ),
       CanvasDataErrorCode.invalidMetadata,
-      'metadata.tooLong',
+      'metadata.<value>',
     );
     _expectImportFailure(
       () => importSchemaV1Document(

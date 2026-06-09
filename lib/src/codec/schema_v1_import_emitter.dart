@@ -523,8 +523,9 @@ SchemaV1ImageResourceImportEvent _readResource(
     _fail(
       diagnostics,
       CanvasDataErrorCode.invalidFieldType,
-      'unknown resource kind: $kind.',
+      'unknown resource kind.',
       'resource.kind',
+      details: {'kind': kind},
     );
   }
   final source = _readRequiredMap(
@@ -541,8 +542,9 @@ SchemaV1ImageResourceImportEvent _readResource(
     _fail(
       diagnostics,
       CanvasDataErrorCode.invalidFieldType,
-      'unknown resource source kind: $sourceKind.',
+      'unknown resource source kind.',
       'resource.source.kind',
+      details: {'kind': sourceKind},
     );
   }
 

@@ -22,6 +22,9 @@ import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 
 void main() {
   test('unknown resource source kind fails before DTO exposure', () {
+    final rawKind = 'url-${'x' * 512}';
+    final expectedDetail = '${'url-' + ('x' * 252)}<truncated>';
+
     expect(
       () => decodeSchemaV1Document({
         'schemaVersion': 1,
@@ -29,14 +32,16 @@ void main() {
           {
             'id': 'image-1',
             'kind': 'image',
-            'source': {'kind': 'url', 'url': 'https://example.invalid/a.png'},
+            'source': {'kind': rawKind, 'url': 'https://example.invalid/a.png'},
           },
         ],
       }),
       throwsA(
         isA<CanvasDataException>()
             .having((error) => error.code, 'code', CanvasDataErrorCode.invalidFieldType)
-            .having((error) => error.path, 'path', 'resource.source.kind'),
+            .having((error) => error.message, 'message', isNot(contains(rawKind)))
+            .having((error) => error.path, 'path', 'resource.source.kind')
+            .having((error) => error.details['kind'], 'kind detail', expectedDetail),
       ),
     );
   });

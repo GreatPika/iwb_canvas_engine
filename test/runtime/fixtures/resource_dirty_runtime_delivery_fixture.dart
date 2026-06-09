@@ -10,6 +10,13 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_invali
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
+  _registerDirtyAcceptanceTests();
+  _registerDirtyGuardTests();
+  _registerSessionInvalidationTests();
+  _registerBoundaryTests();
+}
+
+void _registerDirtyAcceptanceTests() {
   test('accepted dirty publishes one resource visual snapshot and effects', () {
     return expectLater(_expectAcceptedSingleTargetDirty(), completes);
   });
@@ -21,7 +28,9 @@ void main() {
   test('mark-all publishes one all-resource visual outcome', () {
     return expectLater(_expectAcceptedMarkAllDirty(), completes);
   });
+}
 
+void _registerDirtyGuardTests() {
   test('runtime mutation guards reject dirty before side effects', () {
     return expectLater(_expectDirtyMutationGuards(), completes);
   });
@@ -29,7 +38,9 @@ void main() {
   test('observer failure does not roll back accepted dirty revision', () {
     return expectLater(_expectDirtyObserverFailureContainment(), completes);
   });
+}
 
+void _registerSessionInvalidationTests() {
   test('active session invalidates before dirty publication', () {
     return expectLater(
       _expectActiveSessionInvalidatesBeforePublish(),
@@ -37,10 +48,22 @@ void main() {
     );
   });
 
+  test(
+    'edit resource effects invalidate active session before publication',
+    () {
+      return expectLater(
+        _expectEditResourceEffectsInvalidateBeforePublish(),
+        completes,
+      );
+    },
+  );
+
   test('cleared active session is not mutated by later dirty calls', () {
     return expectLater(_expectClearedActiveSessionIsIgnored(), completes);
   });
+}
 
+void _registerBoundaryTests() {
   test('resource kernel does not import session invalidation sink', () {
     expect(
       _resourceKernelSource(),
@@ -144,6 +167,68 @@ Future<void> _expectActiveSessionInvalidatesBeforePublish() {
   root.dispose();
 
   return Future<void>.value();
+}
+
+Future<void> _expectEditResourceEffectsInvalidateBeforePublish() {
+  _expectEditUpsertResourceInvalidatesBeforePublish();
+  _expectEditRemoveResourceInvalidatesBeforePublish();
+
+  return Future<void>.value();
+}
+
+void _expectEditUpsertResourceInvalidatesBeforePublish() {
+  final sink = _RecordingResourceSessionInvalidationSink();
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (_) {
+      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    },
+  );
+  root.attachResourceSessionInvalidationSink(sink);
+  root.state.addListener(() {
+    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+  });
+
+  final changed = root.edits.edit((edit) {
+    return edit.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('resource-a'),
+        source: CanvasResourceSource.appKey('resource-a-updated'),
+      ),
+    );
+  });
+
+  expect(changed, isTrue);
+  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
+  expect(sink.allInvalidationCount, 0);
+  root.dispose();
+}
+
+void _expectEditRemoveResourceInvalidatesBeforePublish() {
+  final sink = _RecordingResourceSessionInvalidationSink();
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (_) {
+      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    },
+  );
+  root.attachResourceSessionInvalidationSink(sink);
+  root.state.addListener(() {
+    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+  });
+
+  final changed = root.edits.edit((edit) {
+    return edit.removeUnusedResource(CanvasResourceId('resource-a'));
+  });
+
+  expect(changed, isTrue);
+  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
+  expect(sink.allInvalidationCount, 0);
+  root.dispose();
 }
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
@@ -403,6 +488,28 @@ CanvasDocument _documentWithResource() {
           CanvasImageElement(
             id: CanvasElementId('image-a'),
             resourceId: CanvasResourceId('resource-a'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithUnusedResource() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-a'),
+        source: CanvasResourceSource.appKey('resource-a'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('rect-a'),
             size: const Size(1, 1),
           ),
         ],

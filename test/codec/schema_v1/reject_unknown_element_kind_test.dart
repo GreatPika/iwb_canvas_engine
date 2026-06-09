@@ -22,6 +22,9 @@ import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 
 void main() {
   test('unknown element kind fails before DTO exposure', () {
+    final rawKind = 'video-${'x' * 512}';
+    final expectedDetail = '${'video-' + ('x' * 250)}<truncated>';
+
     expect(
       () => decodeSchemaV1Document({
         'schemaVersion': 1,
@@ -29,7 +32,7 @@ void main() {
           'elements': [
             {
               'id': 'video-1',
-              'kind': 'video',
+              'kind': rawKind,
             },
           ],
         },
@@ -37,7 +40,9 @@ void main() {
       throwsA(
         isA<CanvasDataException>()
             .having((error) => error.code, 'code', CanvasDataErrorCode.invalidFieldType)
-            .having((error) => error.path, 'path', 'element.kind'),
+            .having((error) => error.message, 'message', isNot(contains(rawKind)))
+            .having((error) => error.path, 'path', 'element.kind')
+            .having((error) => error.details['kind'], 'kind detail', expectedDetail),
       ),
     );
   });

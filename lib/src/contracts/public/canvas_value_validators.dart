@@ -214,11 +214,12 @@ Map<String, Object?> freezeCanvasMetadata(Map<String, Object?> values) {
   final frozen = <String, Object?>{};
   _validateMetadataObjectSize(values, path: 'metadata');
   for (final entry in values.entries) {
-    final key = validateCanvasMetadataKey(
-      entry.key,
-      path: 'metadata.${entry.key}',
+    final key = validateCanvasMetadataKey(entry.key, path: 'metadata.<key>');
+    frozen[key] = _freezeMetadataValue(
+      entry.value,
+      path: 'metadata.<value>',
+      depth: 1,
     );
-    frozen[key] = _freezeMetadataValue(entry.value, path: key, depth: 1);
   }
 
   _validateMetadataEncodedLength(frozen);
@@ -288,7 +289,7 @@ Object? _freezeMetadataValue(
     throw CanvasDataException(
       code: CanvasDataErrorCode.invalidMetadata,
       message: 'metadata exceeds the maximum depth.',
-      path: 'metadata.$path',
+      path: path,
       details: {'maxDepth': canvasMetadataMaxDepth},
     );
   }
@@ -316,7 +317,7 @@ String _freezeMetadataString(String value, {required String path}) {
     throw CanvasDataException(
       code: CanvasDataErrorCode.invalidMetadata,
       message: 'metadata string exceeds the maximum length.',
-      path: 'metadata.$path',
+      path: path,
       details: {
         'maxLength': canvasMetadataMaxStringLength,
         'actualLength': value.length,
@@ -332,7 +333,7 @@ num _freezeMetadataNumber(num value, {required String path}) {
     throw CanvasDataException(
       code: CanvasDataErrorCode.invalidMetadata,
       message: 'metadata numbers must be finite.',
-      path: 'metadata.$path',
+      path: path,
     );
   }
 
@@ -346,11 +347,8 @@ List<Object?> _freezeMetadataList(
 }) {
   return List<Object?>.unmodifiable(
     value.indexed.map(
-      (entry) => _freezeMetadataValue(
-        entry.$2,
-        path: '$path.${entry.$1}',
-        depth: depth + 1,
-      ),
+      (entry) =>
+          _freezeMetadataValue(entry.$2, path: '$path.[]', depth: depth + 1),
     ),
   );
 }
@@ -360,16 +358,16 @@ Map<String, Object?> _freezeMetadataMap(
   required String path,
   required int depth,
 }) {
-  _validateMetadataObjectSize(value, path: 'metadata.$path');
+  _validateMetadataObjectSize(value, path: path);
 
   return Map<String, Object?>.unmodifiable({
     for (final entry in value.entries)
       validateCanvasMetadataKey(
         entry.key,
-        path: 'metadata.$path.${entry.key}',
+        path: '$path.<key>',
       ): _freezeMetadataValue(
         entry.value,
-        path: '$path.${entry.key}',
+        path: '$path.<value>',
         depth: depth + 1,
       ),
   });

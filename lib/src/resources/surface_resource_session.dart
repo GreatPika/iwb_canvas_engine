@@ -186,6 +186,17 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   }
 
   @override
+  void resetForDocumentReplacement() {
+    if (_isDropped) {
+      return;
+    }
+    _resolverCallsThisFrame = 0;
+    _hasPendingBudgetFollowUpRepaint = false;
+    _cache.clear();
+    _currentFrameNullResults.clear();
+  }
+
+  @override
   void drop() {
     _isDropped = true;
     _resolver = null;
