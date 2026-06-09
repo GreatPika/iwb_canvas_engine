@@ -10,11 +10,31 @@ research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.
 
 ## Summary
 
-After fixing the first quick entries and `CODEC-002`, 17 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
+After fixing `ARCH-001`, `RUNTIME-001`, `INTERACTION-003`, and `CODEC-002`, 17 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
 
 Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `RESOURCE-003` and `SURFACE-001` both trace to the same budget follow-up flag being produced by `SurfaceResourceSession` without a production surface/runtime consumer. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path. `RUNTIME-003` and `RESOURCE-001` overlap on load/edit resource-session lifecycle delivery.
 
-The original research was static. This document now tracks only the remaining P1 entries after the first three quick fixes were implemented.
+The original research was static. This document now tracks only the remaining P1 entries after the first four quick fixes were implemented.
+
+## Remaining Problem Groups
+
+The 17 remaining P1 entries collapse into 13 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
+
+| Group | Remaining report IDs | Owning code path | Grouping basis |
+| --- | --- | --- | --- |
+| 1 | `API-001` | Public tool double-tap contract/runtime behavior | Direct `CanvasToolPort.handleDoubleTap` is documented as unsupported but implemented/tested as a context request producer. |
+| 2 | `API-002`, `SURFACE-002` | Pointer terminal cleanup boundary | Invalid terminal cleanup is documented, but public sample validation and surface event routing both block non-finite terminal events before cleanup routing. |
+| 3 | `CODEC-001` | Runtime schema load validation | Aggregate metadata budget is enforced by public DTO projection but not by runtime schema import before store install. |
+| 4 | `EDIT-001`, `RESOURCE-002` | Materialized document resource descriptors | Materialized commit/replacement builds resource descriptors with default revision state before accepted resource revisions are applied. |
+| 5 | `RUNTIME-003`, `RESOURCE-001` | Load/edit resource-session delivery | Load/edit `ResourceDeliveryEffect` is published but not applied to the active `SurfaceResourceSession`; successful load also leaves replacement-dependent session state uncleared. |
+| 6 | `INTERACTION-001` | Selection terminal admission | Marquee/point selection can commit from unreliable query facts because terminal admission does not gate on query status/skipped candidates. |
+| 7 | `INTERACTION-002` | Context target admission | Context action target admission can use partial candidate results with skipped/unresolved handles. |
+| 8 | `GEOMETRY-001` | Geometry inverse transform computation | Hit testing calls public-validating inverse construction, so a valid transform can throw on derived inverse coordinates. |
+| 9 | `GEOMETRY-002` | Spatial candidate budget enforcement | Tile query materializes candidates before applying candidate budget. |
+| 10 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
+| 11 | `RESOURCE-003`, `SURFACE-001` | Resource resolver budget follow-up repaint | Session sets the budget follow-up flag, but production surface/runtime does not consume it. |
+| 12 | `DIAG-001` | Public error sanitization | Raw schema/metadata values can appear in public `CanvasDataException.message` or `path`, which are not sanitized. |
+| 13 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
 
 ## Detailed Findings
 
