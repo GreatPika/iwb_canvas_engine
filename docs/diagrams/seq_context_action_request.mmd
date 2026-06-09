@@ -33,11 +33,17 @@ sequenceDiagram
       IE->>IE: convert viewPosition to finite worldPosition
       IE->>Spatial: query point hit candidates at worldPosition
       Spatial-->>IE: candidates or typed non-candidate result
-      alt invalid-index, stale-index, or budget-exceeded
+      alt invalid-index, stale-index, budget-exceeded, or unresolved/skipped candidate
         IE-->>Tools: reject before timestamp, request id, or stream emission
-        Note over IE,Signals: Rejected target reads emit no public request. Stale-index and budget-exceeded record bounded interaction diagnostics, invalid-index records none.
+        Note over IE,Signals: Rejected target reads emit no public request. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics; invalid-index records none.
       else candidate result
-        IE->>Geometry: exact context-action hit for visible content elements
+        IE->>ReadPort: resolve candidate handles to current immutable facts
+        alt any candidate handle unresolved or skipped
+          ReadPort-->>IE: rejected unresolved/skipped candidate read
+          IE-->>Tools: reject before timestamp, request id, or stream emission
+        else all candidate handles resolved
+          IE->>Geometry: exact context-action hit for visible content elements
+        end
         Geometry-->>IE: top visible content element or no content target
       alt current content target found
         IE->>ReadPort: read immutable current content target facts
@@ -72,11 +78,17 @@ sequenceDiagram
   IE->>IE: convert viewPosition to finite worldPosition
   IE->>Spatial: query point hit candidates at worldPosition
   Spatial-->>IE: candidates or typed non-candidate result
-  alt first tap target read is invalid-index, stale-index, or budget-exceeded
+  alt first tap target read is invalid-index, stale-index, budget-exceeded, or unresolved/skipped candidate
     IE-->>Tools: finish tap without pending context tap or request
-    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index and budget-exceeded record bounded interaction diagnostics, invalid-index records none.
+    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics; invalid-index records none.
   else candidate result
-    IE->>Geometry: exact context-action hit for visible content elements
+    IE->>ReadPort: resolve candidate handles to current immutable facts
+    alt any candidate handle unresolved or skipped
+      ReadPort-->>IE: rejected unresolved/skipped candidate read
+      IE-->>Tools: finish tap without pending context tap or request
+    else all candidate handles resolved
+      IE->>Geometry: exact context-action hit for visible content elements
+    end
     Geometry-->>IE: top visible content element or no content target
 
   alt first tap has content target
@@ -105,13 +117,21 @@ sequenceDiagram
   IE->>IE: convert viewPosition to finite worldPosition
   IE->>Spatial: query point hit candidates at second worldPosition
   Spatial-->>IE: candidates or typed non-candidate result
-  alt second tap target read is invalid-index, stale-index, or budget-exceeded
+  alt second tap target read is invalid-index, stale-index, budget-exceeded, or unresolved/skipped candidate
     IE->>Cleanup: typed cleanup request for pending context tap when needed
     Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
     IE-->>Tools: finish double-tap handling without request
     Note over IE,Signals: Rejected second tap clears pending context tap without timestamp, request id, stream event, or public effect.
   else candidate result
-    IE->>Geometry: exact context-action hit for visible content elements
+    IE->>ReadPort: resolve candidate handles to current immutable facts
+    alt any candidate handle unresolved or skipped
+      ReadPort-->>IE: rejected unresolved/skipped candidate read
+      IE->>Cleanup: typed cleanup request for pending context tap when needed
+      Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
+      IE-->>Tools: finish double-tap handling without request
+    else all candidate handles resolved
+      IE->>Geometry: exact context-action hit for visible content elements
+    end
     Geometry-->>IE: top visible content element or no content target
 
   alt target class changed, delay exceeded, slop exceeded, sample invalid, or controllerEpoch changed

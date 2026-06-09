@@ -326,14 +326,18 @@ already recognized the double-tap gesture and supplies the view position.
 `CanvasRuntime.contextActionRequests` is a non-throwing broadcast stream that
 closes on dispose.
 
-Double-tap on an accepted context-action target emits exactly one
-asynchronous `CanvasContextActionRequested` through
-`CanvasRuntime.contextActionRequests`. The trigger is
-`CanvasContextActionTrigger.doubleTap`, and the accepted target is either a
-content element or empty canvas after candidate spatial admission succeeds.
-Rejected invalid-index, stale-index, and budget-exceeded context target reads
-emit no public request. Rejected stale-index and budget-exceeded reads record
-bounded interaction diagnostics; rejected invalid-index reads record none.
+Double-tap on an accepted context-action target queues exactly one asynchronous
+`CanvasContextActionRequested` for `CanvasRuntime.contextActionRequests`. The
+trigger is `CanvasContextActionTrigger.doubleTap`, and the accepted target is
+either a content element or empty canvas after candidate spatial admission
+succeeds and all candidate handles resolve to current immutable facts. The
+queued request is delivered only if runtime load/dispose cleanup does not
+suppress pending context requests before the scheduled delivery microtask.
+Rejected invalid-index, stale-index, budget-exceeded, and
+unresolved/skipped-candidate context target reads emit no public request.
+Rejected stale-index, budget-exceeded, and unresolved/skipped-candidate reads
+record bounded interaction diagnostics; rejected invalid-index reads record
+none.
 Request delivery has no document, selection, preview, repaint, spatial,
 projection, resource, or action effect.
 
@@ -344,12 +348,14 @@ first-tap history, move mode, or absence of an active pointer preview/session.
 On a valid direct double-tap, the interaction engine clears any pending context
 tap history through `PointerToolCleanupCoordinator`, resolves the current
 context-action target at the supplied position, admits only candidate spatial
-results, then resolves the request timestamp through the runtime timestamp
-cursor, issues a `CanvasInteractionRequestId`, records live guard facts in
-`InteractionRequestRegistry`, and emits exactly one asynchronous context-action
-request for the current content target or empty canvas. Emitting the direct
-request must not clear active pointer preview/session state by itself. A
-non-finite position is rejected before target resolution and request emission.
+results whose handles all resolve, then resolves the request timestamp through
+the runtime timestamp cursor, issues a `CanvasInteractionRequestId`, records
+live guard facts in `InteractionRequestRegistry`, and queues exactly one
+asynchronous context-action request for the current content target or empty
+canvas. Load/dispose cleanup may suppress that queued request before stream
+delivery; disposal remains a stream-close-only path. Emitting the direct request
+must not clear active pointer preview/session state by itself. A non-finite
+position is rejected before target resolution and request emission.
 
 Engine-owned pointer-sample recognition remains separate: the first tap may
 store a pending context tap candidate, and the second tap must revalidate the

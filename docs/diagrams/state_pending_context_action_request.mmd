@@ -35,13 +35,14 @@ stateDiagram-v2
     context-action target at the supplied position:
     top visible content element or empty canvas
     after candidate spatial admission. Invalid-index,
-    stale-index, and budget-exceeded reads reject
+    stale-index, budget-exceeded, and unresolved
+    or skipped candidate reads reject
     without timestamp, request id, or stream emission.
   end note
 
   DirectTopTarget --> EmitContentRequest: "current content target"
   DirectTopTarget --> EmitEmptyCanvasRequest: "current empty-canvas target"
-  DirectTopTarget --> CleanupOnly: "invalid-index, stale-index, or budget-exceeded / no request"
+  DirectTopTarget --> CleanupOnly: "unreliable target read / no request"
 
   state "First tap gate" as FirstTapGate
   note right of FirstTapGate

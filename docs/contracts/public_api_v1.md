@@ -1769,10 +1769,12 @@ Public tool-port behavior:
 
 `CanvasToolPort.handleDoubleTap` accepts a finite host-recognized double-tap
 view position, does not require pending first-tap history, and emits at most one
-asynchronous context-action request after candidate spatial admission. Invalid
-positions are rejected before target resolution and request emission. Delivery
-has no document, selection, preview, repaint, spatial, projection, resource, or
-action effect.
+asynchronous context-action request after candidate spatial admission with all
+candidate handles resolved to current immutable facts. Invalid positions and
+unreliable target reads are rejected before target resolution and request
+emission. Pending request delivery is suppressed if load/dispose cleanup runs
+before the scheduled delivery microtask. Delivery has no document, selection,
+preview, repaint, spatial, projection, resource, or action effect.
 
 Validation:
 
@@ -2358,14 +2360,18 @@ Context-action and text editing model:
   empty broadcast stream that closes on dispose;
 - direct `CanvasToolPort.handleDoubleTap` is a supported host-recognized
   double-tap input that can emit one asynchronous context-action request after
-  candidate spatial admission;
+  candidate spatial admission with all candidate handles resolved to current
+  immutable facts;
 - engine behavior detects an accepted double-tap context target after
   candidate spatial admission;
-- rejected invalid-index, stale-index, and budget-exceeded target reads emit no
-  context request; stale and budget rejected reads record bounded interaction
-  diagnostics, while invalid-index rejected reads record none;
-- engine emits exactly one asynchronous CanvasContextActionRequested through
-  contextActionRequests for the accepted target;
+- rejected invalid-index, stale-index, budget-exceeded, and
+  unresolved/skipped-candidate target reads emit no context request; stale,
+  budget, and unresolved/skipped-candidate rejected reads record bounded
+  interaction diagnostics, while invalid-index rejected reads record none;
+- engine queues exactly one asynchronous CanvasContextActionRequested for the
+  accepted target and delivers it through contextActionRequests unless
+  load/dispose cleanup suppresses pending context requests before the scheduled
+  delivery microtask;
 - trigger is CanvasContextActionTrigger.doubleTap;
 - target is either CanvasContentElementContextActionTarget or
   CanvasEmptyCanvasContextActionTarget;
