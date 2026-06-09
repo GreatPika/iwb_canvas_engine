@@ -14,6 +14,7 @@ import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
+import '../../src/directive_uri_references.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
@@ -338,15 +339,12 @@ List<GuardrailViolation> _checkDirectives(String path, CompilationUnit unit) {
   for (final directive in unit.directives) {
     switch (directive) {
       case ImportDirective():
-        final uri = directive.uri.stringValue;
-        if (uri == null) {
-          continue;
+        for (final reference in directiveUriReferences(directive)) {
+          violations.addAll(_checkImport(path, reference.uri));
         }
-        violations.addAll(_checkImport(path, uri));
       case ExportDirective():
-        final uri = directive.uri.stringValue;
-        if (uri != null) {
-          violations.addAll(_checkExport(path, uri));
+        for (final reference in directiveUriReferences(directive)) {
+          violations.addAll(_checkExport(path, reference.uri));
         }
       case PartDirective() || PartOfDirective():
         violations.add(

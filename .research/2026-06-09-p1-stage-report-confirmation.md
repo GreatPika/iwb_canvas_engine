@@ -10,11 +10,11 @@ research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.
 
 ## Summary
 
-All 21 P1 entries in `iwb_canvas_engine_12_stage_reports.md` were checked against the current codebase. The current code confirms every P1 entry as present. No P1 entry was refuted by the inspected code, tests, docs, or guardrail/tooling paths.
+After fixing the first three quick entries, 18 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here as confirmed against the codebase state captured by this research note. The fixed entries were removed from this remaining-problems document.
 
 Several entries describe overlapping symptoms of the same underlying code path. `EDIT-001` and `RESOURCE-002` both trace to materialized document paths building resource descriptors from `CommittedDocument(document)` with `const RevisionState()`. `RESOURCE-003` and `SURFACE-001` both trace to the same budget follow-up flag being produced by `SurfaceResourceSession` without a production surface/runtime consumer. `API-002` and `SURFACE-002` both trace to invalid terminal pointer cleanup being documented but not representable or routable through the current public/surface sample path. `RUNTIME-003` and `RESOURCE-001` overlap on load/edit resource-session lifecycle delivery.
 
-The research was static. The spawned codebase researchers inspected code, docs, and fixtures with exact line references; no tests or analyzers were run as part of this research note.
+The original research was static. This document now tracks only the remaining P1 entries after the first three quick fixes were implemented.
 
 ## Detailed Findings
 
@@ -64,11 +64,6 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 
 ### 3. Runtime Lifecycle And Interaction Flow
 
-- **Location**: primary `lib/src/runtime/runtime_root.dart:1368`; additional `lib/src/runtime/runtime_root.dart:1745`, `lib/src/runtime/runtime_root.dart:1762`.
-- **Description**: `RUNTIME-001` is confirmed. Pending context requests are queued and microtask-delivered (`lib/src/runtime/runtime_root.dart:1745`, `lib/src/runtime/runtime_root.dart:1754`, `lib/src/runtime/runtime_root.dart:1757`). `dispose()` calls `_deliverPendingContextRequests()` before clearing interaction requests, incrementing generation, setting disposed, and closing streams (`lib/src/runtime/runtime_root.dart:1368`, `lib/src/runtime/runtime_root.dart:1370`, `lib/src/runtime/runtime_root.dart:1372`, `lib/src/runtime/runtime_root.dart:1374`). `_deliverPendingContextRequests()` adds deliverable requests to `_contextActionRequests` (`lib/src/runtime/runtime_root.dart:1762`). Existing load-path tests cover queued request suppression on load (`test/runtime/fixtures/load_interaction_cleanup_fixture.dart:225`), while dispose fixture coverage starts at already-live cleanup (`test/runtime/fixtures/load_interaction_cleanup_fixture.dart:245`).
-- **Dependencies**: RuntimeRoot dispose, context request queue, interaction cleanup.
-- **Data flow**: Gesture emits pending context request -> dispose synchronously delivers pending queue -> generation invalidation and stream close happen after delivery.
-
 - **Location**: primary `lib/src/runtime/runtime_root.dart:1525`; additional `lib/src/runtime/runtime_root.dart:1658`, `lib/src/resources/surface_resource_session.dart:189`.
 - **Description**: `RUNTIME-003` is confirmed and overlaps with `RESOURCE-001`. Operation matrix requires successful `loadDocumentFromJson` to replace descriptors, invalidate resource caches, and clear surface-session resource state (`docs/contracts/operation_matrix.md:284`). RuntimeRoot stores active resource session state (`lib/src/runtime/runtime_root.dart:208`). `_loadDocumentFromJson` prepares and consumes load, clears selection, bumps camera/epoch, and calls `_deliverLoadResult(...)` (`lib/src/runtime/runtime_root.dart:1525`, `lib/src/runtime/runtime_root.dart:1544`). `_deliverLoadResult` handles spatial effects, state publication, text editing, and observer delivery without clearing active resource session (`lib/src/runtime/runtime_root.dart:1658`, `lib/src/runtime/runtime_root.dart:1671`). `_dropActiveSurfaceResourceSession()` exists and calls `session.drop()` (`lib/src/runtime/runtime_root.dart:1705`), and `SurfaceResourceSession.drop()` clears resolver/cache/budget/null-suppression state (`lib/src/resources/surface_resource_session.dart:189`).
 - **Dependencies**: load pipeline, RuntimeRoot surface session ownership, surface resource session lifecycle.
@@ -84,10 +79,6 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - **Dependencies**: candidate mapping, context target read adapter, interaction engine diagnostics.
 - **Data flow**: Spatial handles -> unresolved handles skipped -> candidates query still admitted -> context target computed from partial handles.
 
-- **Location**: primary `lib/src/runtime/runtime_root.dart:1899`; additional `lib/src/runtime/runtime_root.dart:2073`, `lib/src/runtime/runtime_root.dart:2132`.
-- **Description**: `INTERACTION-003` is confirmed. Operation matrix requires main + overlay cleanup for marquee, pencil/marker, line, and eraser commits (`docs/contracts/operation_matrix.md:57`, `docs/contracts/operation_matrix.md:78`, `docs/contracts/operation_matrix.md:80`, `docs/contracts/operation_matrix.md:84`). Cleanup coordinator maps active preview cleanup to overlay repaint (`lib/src/interaction/pointer_tool_cleanup_coordinator.dart:47`). Eraser commit captures cleanup and delivers `_withPointerCleanupEffects(applyResult, cleanup)` (`lib/src/runtime/runtime_root.dart:2073`, `lib/src/runtime/runtime_root.dart:2089`). Marquee, draw stroke, and line commit call cleanup with `publish: false` but deliver `applyResult` without merging cleanup effects (`lib/src/runtime/runtime_root.dart:1899`, `lib/src/runtime/runtime_root.dart:1945`, `lib/src/runtime/runtime_root.dart:2007`). `_withPointerCleanupEffects` exists and merges cleanup repaint effects (`lib/src/runtime/runtime_root.dart:2132`, `lib/src/runtime/runtime_root.dart:2156`, `lib/src/runtime/runtime_root.dart:2175`).
-- **Dependencies**: RuntimeRoot commit delivery, cleanup coordinator, commit delivery effects.
-- **Data flow**: Successful pointer commit -> preview cleanup outcome -> eraser merges repaint effect; marquee/draw/line ignore cleanup outcome for delivery effects.
 
 ### 4. Geometry, Spatial, And Frame Capture
 
@@ -113,10 +104,6 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - **Dependencies**: public error model, details sanitizer, codec/schema errors, metadata validators.
 - **Data flow**: Raw schema/metadata value -> public message/path -> no sanitizer for those fields.
 
-- **Location**: primary `tool/guardrails/src/core_boundary_checks.dart:338`; additional `tool/architecture_graph/src/actual_graph.dart:382`.
-- **Description**: `ARCH-001` is confirmed as an enforcement gap. Core boundary checks read only `directive.uri.stringValue` for imports and exports (`tool/guardrails/src/core_boundary_checks.dart:338`, `tool/guardrails/src/core_boundary_checks.dart:341`, `tool/guardrails/src/core_boundary_checks.dart:346`, `tool/guardrails/src/core_boundary_checks.dart:349`) and apply checks to that single URI (`tool/guardrails/src/core_boundary_checks.dart:367`, `tool/guardrails/src/core_boundary_checks.dart:379`). Architecture graph extraction records only `node.uri.stringValue` for export/import facts (`tool/architecture_graph/src/actual_graph.dart:382`, `tool/architecture_graph/src/actual_graph.dart:390`, `tool/architecture_graph/src/actual_graph.dart:397`, `tool/architecture_graph/src/actual_graph.dart:405`). Owner DAG already includes conditional configurations by yielding both main URI and configuration URIs (`tool/guardrails/src/owner_dag_import_checks.dart:137`, `tool/guardrails/src/owner_dag_import_checks.dart:150`, `tool/guardrails/src/owner_dag_import_checks.dart:160`, `tool/guardrails/src/owner_dag_import_checks.dart:163`) and has a conditional hidden-edge test (`test/guardrails/owner_dag_import_boundaries_test.dart:64`, `test/guardrails/owner_dag_import_boundaries_test.dart:82`). No committed production conditional import/export was found in searched `lib/**`.
-- **Dependencies**: core boundary checker, architecture graph extractor, owner DAG checker.
-- **Data flow**: Dart directive -> core/graph reads main URI only; conditional URI branches are not included in those guardrails.
 
 ### 6. Surface Integration And Release Readiness
 
@@ -142,22 +129,19 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - `iwb_canvas_engine_12_stage_reports.md:156` - `CODEC-001` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:194` - `CODEC-002` P1 entry.
 - `iwb_canvas_engine_12_stage_reports.md:276` - `EDIT-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:534` - `RUNTIME-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:627` - `RUNTIME-003` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:694` - `INTERACTION-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:744` - `INTERACTION-002` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:789` - `INTERACTION-003` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:915` - `GEOMETRY-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:954` - `GEOMETRY-002` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1027` - `FRAME-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1180` - `RESOURCE-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1224` - `RESOURCE-002` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1271` - `RESOURCE-003` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1352` - `DIAG-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1556` - `SURFACE-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1590` - `SURFACE-002` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1637` - `ARCH-001` P1 entry.
-- `iwb_canvas_engine_12_stage_reports.md:1883` - `TEST-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:579` - `RUNTIME-003` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:646` - `INTERACTION-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:696` - `INTERACTION-002` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:806` - `GEOMETRY-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:845` - `GEOMETRY-002` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:918` - `FRAME-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1071` - `RESOURCE-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1115` - `RESOURCE-002` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1162` - `RESOURCE-003` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1243` - `DIAG-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1447` - `SURFACE-001` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1481` - `SURFACE-002` P1 entry.
+- `iwb_canvas_engine_12_stage_reports.md:1710` - `TEST-001` P1 entry.
 - `lib/src/runtime/runtime_root.dart:2450` - direct tool double-tap delegates to runtime root.
 - `lib/src/contracts/public/canvas_pointer.dart:100` - pointer sample validates position for every phase.
 - `lib/src/contracts/public/canvas_document.dart:51` - public DTO aggregate metadata validation entry.
@@ -167,17 +151,12 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - `lib/src/store/committed_document.dart:37` - resource table descriptors use constructor revision state.
 - `lib/src/runtime/runtime_root.dart:1686` - dirty path invalidates active resource session.
 - `lib/src/runtime/runtime_root.dart:1733` - shared delivery helper consumes spatial effects only.
-- `lib/src/runtime/runtime_root.dart:1370` - dispose delivers pending context requests.
 - `lib/src/interaction/select_machine.dart:35` - selection terminal checks revisions/ids, not query status.
 - `lib/src/runtime/runtime_interaction_read_adapter.dart:414` - context target admission uses candidates presence.
-- `lib/src/runtime/runtime_root.dart:2089` - eraser commit merges cleanup effects.
-- `lib/src/runtime/runtime_root.dart:1899` - marquee commit cleanup outcome not merged.
 - `lib/src/contracts/public/canvas_geometry.dart:155` - inverse transform uses public constructor.
 - `lib/src/geometry/tile_index.dart:70` - candidate budget helper runs after map construction.
 - `lib/src/frame/frame_capture_service.dart:40` - overlay capture uses `_captureSnapshot`.
 - `lib/src/contracts/public/canvas_errors.dart:39` - sanitizer applied only to details.
-- `tool/guardrails/src/core_boundary_checks.dart:341` - core boundary reads only main import URI.
-- `tool/architecture_graph/src/actual_graph.dart:397` - actual graph reads only main import URI.
 - `lib/src/resources/surface_resource_session.dart:127` - budget exhaustion sets follow-up repaint flag.
 - `lib/src/surface/canvas_surface_widget.dart:182` - surface builds main frame with session-backed asset binding.
 - `lib/src/surface/pointer_adapter.dart:38` - surface drops non-finite pointer event before sample route.
@@ -197,7 +176,7 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - Searched: `rg -n "resourceRevision|SurfaceResourceSession|ResourceDeliveryEffect|hasPendingBudgetFollowUpRepaint|beginFrameResourcePass|resolveImage\\(|invalidateResourceImage|CommittedDocument\\(" lib test docs`.
 - Searched: `rg -n "CanvasContextActionRequested|loadDocumentFromJson|skippedCandidateCount|RejectedContextTargetRead|MarqueeCommitFacts|_withPointerCleanupEffects|_deliverPendingContextRequests" lib test docs`.
 - Searched: `rg -n "invert\\(|CanvasTransform\\(|validateOffset\\(|_hitBox|_hitPath|_eraserHitsPath|spatialCandidateResultWithinBudget|CapturedOverlayFrame|captureOverlayFrame|_captureSnapshot" lib test docs`.
-- Searched: `rg -n "CanvasDataException|sanitize|unknown resource kind|unknown element kind|metadata\\.\\$\\{entry\\.key\\}|ImportDirective|ExportDirective|configurations|node\\.uri|stringValue" lib tool test docs`.
+- Searched: `rg -n "CanvasDataException|sanitize|unknown resource kind|unknown element kind|metadata\.\$\{entry\.key\}" lib test docs`.
 - Searched: `rg -n "unapproved|approved baseline is not initialized|release_ubuntu_24_04_flutter_3_38_0|release_benchmarks" .github tool docs test`.
 - Not found: aggregate metadata byte summing in runtime load/store import path outside `CanvasDocument`.
 - Not found: tests rejecting trimmed-but-noncanonical appKey values.
@@ -206,7 +185,6 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - Not found: edit/load runtime path applying `ResourceDeliveryEffect` to the active resource-session invalidation sink.
 - Not found: geometry-only unchecked inverse helper in searched geometry/frame paths.
 - Not found: current zero-read overlay capture fixture.
-- Not found: committed production conditional import/export directives in searched `lib/**`.
 - Not found: measured approved release baseline replacing the unapproved placeholder at the approved release baseline path.
 
 ## Observed Architecture Facts
@@ -216,9 +194,8 @@ The research was static. The spawned codebase researchers inspected code, docs, 
 - Load validation split: aggregate metadata budget is enforced by public DTO construction but not by the runtime schema import path before store install (`lib/src/contracts/public/canvas_document.dart:51`, `lib/src/edit/staged_document_load.dart:127`, `lib/src/store/schema_v1_store_import.dart:110`).
 - Materialized resource revision split: sparse/schema import paths can use accepted revisions while materialized paths build resource descriptors from default revision state (`lib/src/store/document_store_kernel.dart:592`, `lib/src/store/schema_v1_store_import.dart:101`, `lib/src/edit/commit_applier.dart:119`, `lib/src/store/committed_document.dart:27`).
 - Resource session delivery split: dirty delivery has active-session invalidation, while edit/load resource delivery effects are observer-facing without active-session application (`lib/src/runtime/runtime_root.dart:1686`, `lib/src/runtime/runtime_root.dart:1733`).
-- Interaction admission pattern: diagnostics can be recorded for query reliability while terminal mutation continues through machines that do not check query status/skipped candidate count (`lib/src/interaction/interaction_engine.dart:1494`, `lib/src/interaction/select_machine.dart:35`).
+- Interaction admission pattern: context/selection reliability gates remain documented for `INTERACTION-001` and `INTERACTION-002`.
 - Overlay/main capture coupling: overlay frame capture currently owns a full main-frame snapshot, including spatial/resource/selection facts (`lib/src/frame/frame_capture_service.dart:40`, `lib/src/frame/captured_frame.dart:56`).
-- Guardrail asymmetry: owner DAG scans conditional directive URIs, while core boundary and architecture graph do not (`tool/guardrails/src/owner_dag_import_checks.dart:150`, `tool/guardrails/src/core_boundary_checks.dart:341`, `tool/architecture_graph/src/actual_graph.dart:397`).
 - Release benchmark gate state: the current approved baseline path is intentionally present but unapproved, and diff code fails closed on that status (`tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:3`, `tool/bench/src/benchmark_diff.dart:168`).
 
 ## Open Questions

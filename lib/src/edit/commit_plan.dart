@@ -21,7 +21,11 @@ final class CommitPlan {
       revisionDelta: const StoreRevisionDelta(),
       touchedSet: TouchedSet(selection: true),
       selectionEffect: ReplaceSelectionEffect(elementIds),
-      effects: const [SelectionEffect(), PublicStateEffect()],
+      effects: const [
+        SelectionEffect(),
+        RepaintEffect(mainCanvas: true),
+        PublicStateEffect(),
+      ],
       actionIntents: actionIntents,
     );
   }

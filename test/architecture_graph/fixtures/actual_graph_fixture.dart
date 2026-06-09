@@ -1,6 +1,8 @@
-export 'exported_fixture.dart';
+export 'exported_fixture.dart'
+    if (dart.library.ui) 'conditional_exported_fixture.dart';
 
-import 'exported_fixture.dart';
+import 'exported_fixture.dart'
+    if (dart.library.io) 'conditional_imported_fixture.dart';
 
 abstract interface class FixturePort {}
 

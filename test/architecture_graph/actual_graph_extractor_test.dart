@@ -57,8 +57,20 @@ void _registerDirectiveAndDeclarationTest() {
       contains('test/architecture_graph/fixtures/exported_fixture.dart'),
     );
     expect(
+      graph.exports.map((fact) => fact.uri),
+      contains(
+        'test/architecture_graph/fixtures/conditional_exported_fixture.dart',
+      ),
+    );
+    expect(
       graph.imports.map((fact) => fact.uri),
       contains('test/architecture_graph/fixtures/exported_fixture.dart'),
+    );
+    expect(
+      graph.imports.map((fact) => fact.uri),
+      contains(
+        'test/architecture_graph/fixtures/conditional_imported_fixture.dart',
+      ),
     );
     expect(
       graph.declarations.map((fact) => fact.name),

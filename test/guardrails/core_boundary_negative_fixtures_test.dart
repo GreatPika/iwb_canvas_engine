@@ -120,6 +120,21 @@ const _fixtures = [
     guardrailIds: ['core.import_boundaries'],
   ),
   _Fixture(
+    path: 'lib/src/interaction/bad_conditional_flutter_import.dart',
+    content:
+        "import '../contracts/public/canvas_ids.dart' "
+        "if (dart.library.ui) 'package:flutter/widgets.dart';",
+    guardrailIds: ['core.import_boundaries'],
+  ),
+  _Fixture(
+    path: 'lib/src/api/bad_conditional_internal_export.dart',
+    content:
+        "export '../contracts/public/canvas_ids.dart' "
+        "if (dart.library.ui) "
+        "'../contracts/internal/document_facts_port.dart';",
+    guardrailIds: ['core.import_boundaries'],
+  ),
+  _Fixture(
     path: 'lib/src/interaction/bad_selection_import.dart',
     content: "import '../selection/selection_kernel.dart';",
     guardrailIds: ['core.import_boundaries'],

@@ -3,6 +3,7 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 const _marqueeDragStart = Offset(-20, -20);
@@ -241,6 +242,7 @@ void _testChangedSelectionCommitsAndEmitsAction() {
       });
       expect(root.projectionBuildCount, 0);
       _expectMarqueeAction(scenario.actions.single);
+      _expectMarqueeCommitRepaintsMainAndOverlay(scenario.effectBatches.single);
     },
   );
 }
@@ -283,12 +285,21 @@ void _expectMarqueeAction(CanvasActionCommitted action) {
   expect(payload.marqueeRectWorld, const Rect.fromLTRB(-20, -20, 55, 12));
 }
 
+void _expectMarqueeCommitRepaintsMainAndOverlay(
+  List<CommitDeliveryEffect> effects,
+) {
+  final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isTrue);
+}
+
 void _expectMarqueePreviewRect(RuntimeRoot root, Rect rect) {
   expect((root.preview as CanvasMarqueePreview).rect, rect);
 }
 
 _MarqueeScenario _scenario() {
-  final root = _runtimeRoot();
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(commitEffectObserver: effectBatches.add);
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
   addTearDown(() async {
@@ -296,7 +307,11 @@ _MarqueeScenario _scenario() {
     root.dispose();
   });
 
-  return _MarqueeScenario(root: root, actions: actions);
+  return _MarqueeScenario(
+    root: root,
+    actions: actions,
+    effectBatches: effectBatches,
+  );
 }
 
 _MarqueeScenario _overlappingScenario() {
@@ -327,7 +342,11 @@ _MarqueeScenario _overlappingScenario() {
     root.dispose();
   });
 
-  return _MarqueeScenario(root: root, actions: actions);
+  return _MarqueeScenario(
+    root: root,
+    actions: actions,
+    effectBatches: const [],
+  );
 }
 
 _MarqueeScenario _lineScenario() {
@@ -357,7 +376,11 @@ _MarqueeScenario _lineScenario() {
     root.dispose();
   });
 
-  return _MarqueeScenario(root: root, actions: actions);
+  return _MarqueeScenario(
+    root: root,
+    actions: actions,
+    effectBatches: const [],
+  );
 }
 
 void _dragMarquee(
@@ -373,10 +396,14 @@ void _dragMarquee(
   );
 }
 
-RuntimeRoot _runtimeRoot({CanvasRuntimeConfig? config}) {
+RuntimeRoot _runtimeRoot({
+  CanvasRuntimeConfig? config,
+  void Function(List<CommitDeliveryEffect> effects)? commitEffectObserver,
+}) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: config ?? const CanvasRuntimeConfig(),
+    commitEffectObserver: commitEffectObserver,
   );
 }
 
@@ -425,8 +452,13 @@ CanvasDocument _document() {
 }
 
 final class _MarqueeScenario {
-  const _MarqueeScenario({required this.root, required this.actions});
+  const _MarqueeScenario({
+    required this.root,
+    required this.actions,
+    required this.effectBatches,
+  });
 
   final RuntimeRoot root;
   final List<CanvasActionCommitted> actions;
+  final List<List<CommitDeliveryEffect>> effectBatches;
 }

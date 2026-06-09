@@ -531,54 +531,6 @@ isSelectable — обычное редактируемое свойство эл
 Проверка: статическое ревью runtime composition / ownership / lifecycle по `lib/src/runtime/**`, `lib/src/api/canvas_runtime.dart`, runtime surface/frame bridges, runtime-related docs и runtime tests.
 Ограничение проверки: `dart` и `flutter` SDK в среде отсутствуют, поэтому тесты не запускались.
 
-ID: RUNTIME-001
-Этап: Этап 4. Runtime composition, ownership и lifecycle состояния
-Название проблемы: `dispose()` доставляет отложенный `CanvasContextActionRequested` вместо подавления перед закрытием runtime
-Приоритет: P1
-Вероятность проявления: R2
-
-Краткое описание:
-`RuntimeRoot` создаёт context-action request как отложенное событие: request кладётся в `_pendingContextRequests`, а доставка планируется через `scheduleMicrotask`. При `dispose()` runtime должен очистить pending context target и закрыть stream без эмиссии context-action request. Фактическая реализация делает обратное: перед очисткой interaction requests, инкрементом generation и закрытием stream она вызывает `_deliverPendingContextRequests()`, то есть синхронно добавляет ещё не доставленный request в `contextActionRequests`.
-
-Так как `_contextActionRequests` создан как async broadcast stream, добавленный в `dispose()` request может быть доставлен подписчику уже после начала или завершения dispose-цикла, при уже очищенных request facts и закрывающемся runtime.
-
-Доказательство в коде:
-- Контракт dispose требует закрыть `contextActionRequests`, оставить `state.value` читаемым и после dispose не доставлять дальнейшие уведомления состояния: `docs/contracts/public_api_v1.md:400-419`.
-- Диаграмма dispose прямо фиксирует: “No CanvasActionCommitted and no context-action request is emitted by dispose”: `docs/diagrams/seq_dispose_during_gesture.mmd:89-92`.
-- Диаграмма pending context action фиксирует, что dispose cleanup должен очистить pending context target before runtime streams close: `docs/diagrams/state_pending_context_action_request.mmd:188-192`.
-- Stream context requests async: `StreamController<CanvasContextActionRequested>.broadcast()` без `sync: true`: `lib/src/runtime/runtime_root.dart:188-191`.
-- `_emitContextRequest(...)` кладёт request в `_pendingContextRequests` и планирует microtask-доставку: `lib/src/runtime/runtime_root.dart:1745-1759`.
-- `dispose()` вызывает `_deliverPendingContextRequests()` до `_interactionEngine.clearInteractionRequests()`, `_contextRequestGeneration += 1`, `_isDisposed = true` и закрытия stream: `lib/src/runtime/runtime_root.dart:1355-1383`.
-- `_deliverPendingContextRequests()` реально добавляет deliverable requests в `_contextActionRequests`: `lib/src/runtime/runtime_root.dart:1762-1765`.
-- В тестах есть сценарий, что successful load suppresses queued request: `test/runtime/fixtures/load_interaction_cleanup_fixture.dart:225-238`.
-- Для dispose покрыт только already-delivered live request facts cleanup, а не queued request suppression: `test/runtime/fixtures/load_interaction_cleanup_fixture.dart:245-252`.
-
-Пользовательский или инженерный сценарий проявления:
-Пользователь делает double tap по текстовому элементу, runtime создаёт context-action request и ставит его на доставку через microtask. До выполнения microtask приложение закрывает экран, заменяет runtime или вызывает `runtime.dispose()`. Вместо подавления request подписчик получает `CanvasContextActionRequested` для runtime, который уже находится в dispose path; попытка открыть text editing session по request может не найти guard facts, потому что `clearInteractionRequests()` уже выполнен.
-
-Почему это не теоретический edge case:
-Асинхронная доставка context-action request уже является частью реализации и тестируется через `await Future<void>.delayed(Duration.zero)`. Быстрый dispose/runtime swap после gesture — обычный Flutter lifecycle-сценарий: route pop, widget unmount, document close, runtime replacement. В репозитории уже есть load-сценарий для suppression queued request, значит temporal window признан реалистичным.
-
-Рекомендуемое исправление:
-В `dispose()` не вызывать `_deliverPendingContextRequests()`. Для dispose path нужно делать то же концептуальное подавление, что и для successful load cleanup:
-1. очистить interaction-owned request facts;
-2. инвалидировать queued context requests через `_contextRequestGeneration += 1`;
-3. очистить `_pendingContextRequests`;
-4. закрыть `_contextActionRequests`;
-5. позволить уже запланированному microtask увидеть пустую/closed очередь и ничего не доставить.
-
-Важно: не полагаться только на `isClosed`, потому что event может быть добавлен до close. Request должен быть удалён из pending queue до любой попытки `_contextActionRequests.add(...)`.
-
-Минимальная проверка после исправления:
-Добавить runtime test:
-1. создать runtime с text/context target;
-2. подписаться на `contextActionRequests`;
-3. вызвать `root.handleDoubleTap(...)`;
-4. сразу вызвать `root.dispose()` до `await Duration.zero`;
-5. сделать `await Future<void>.delayed(Duration.zero)`;
-6. проверить, что список context requests пуст, stream closed, request facts очищены, `state.value` читаем, повторный dispose silent.
-
-
 ID: RUNTIME-002
 Этап: Этап 4. Runtime composition, ownership и lifecycle состояния
 Название проблемы: Runtime timestamp cursor расходуется для runtime outputs, которые затем suppress/cancel и не должны создавать timestamp
@@ -783,67 +735,6 @@ Spatial index содержит stale handle верхнего элемента, �
 2. `RuntimeInteractionReadAdapter.directContextTargetFacts(...)` должен вернуть `RejectedContextTargetRead`.
 3. `CanvasToolPort.handleDoubleTap(...)` не должен эмитить `CanvasContextActionRequested`.
 4. Для skipped candidates должен появиться bounded stale-candidate diagnostic, если это предусмотрено diagnostic policy.
-
----
-
-ID: INTERACTION-003
-Этап: Этап 5. Interaction engine, pointer tools и preview/commit flow
-Название проблемы: Successful commit не доставляет overlay cleanup repaint effects для marquee/draw/line, хотя eraser доставляет
-Приоритет: P1
-Вероятность проявления: R2
-
-Краткое описание:
-`PointerToolCleanupCoordinator` корректно рассчитывает repaint target для cleanup активного preview. Но при successful commit runtime использует cleanup outcome только для eraser. Для marquee, pencil/marker stroke и line endpoint cleanup outcome игнорируется, поэтому commit delivery effects могут не содержать overlay cleanup repaint, хотя operation matrix требует `main + overlay cleanup`.
-
-Доказательство в коде:
-docs/contracts/operation_matrix.md:57:
-`marquee commit` требует repaint target `main + overlay cleanup`.
-
-docs/contracts/operation_matrix.md:78:
-`pencil/marker commit` требует `main + overlay cleanup`.
-
-docs/contracts/operation_matrix.md:80-82:
-line drag/line commit требуют `main + overlay cleanup`.
-
-docs/contracts/operation_matrix.md:84:
-`eraser commit` также требует `main + overlay cleanup`.
-
-lib/src/interaction/pointer_tool_cleanup_coordinator.dart:47-60:
-cleanup coordinator мапит `CanvasMarqueePreview`, pencil/marker, pending line, line preview и eraser в `PointerCleanupRepaintTarget.overlay`.
-
-lib/src/runtime/runtime_root.dart:2072-2091:
-eraser commit вызывает `_cleanupEraser(...)` и затем `_withPointerCleanupEffects(applyResult, cleanup)`, то есть overlay cleanup effect реально мержится в delivery result.
-
-lib/src/runtime/runtime_root.dart:1899-1922:
-marquee commit вызывает `_cleanupMarquee(..., publish: false)`, но outcome не сохраняет и не мержит в delivery effects.
-
-lib/src/runtime/runtime_root.dart:1945-1960:
-draw stroke commit вызывает `_cleanupDrawStroke(..., publish: false)`, но outcome игнорируется.
-
-lib/src/runtime/runtime_root.dart:2007-2022:
-draw line commit вызывает `_cleanupLineEndpoint(..., publish: false)`, но outcome игнорируется.
-
-lib/src/runtime/runtime_root.dart:2132-2145:
-механизм `_withPointerCleanupEffects(...)` уже существует, но применяется только к eraser path.
-
-Пользовательский или инженерный сценарий проявления:
-Host использует разделённые repaint effects для main/overlay canvas. Пользователь рисует pencil/marker stroke, завершает line или отпускает marquee. Document/main repaint проходит, preview state очищается, но overlay cleanup repaint effect не доставляется в commit observer. В таком host overlay layer может оставить ghost preview до следующего overlay repaint.
-
-Почему это не теоретический edge case:
-Это обычные пользовательские gestures: draw, line и marquee. Контракт прямо перечисляет `main + overlay cleanup`, а eraser path уже содержит специальный код для merge cleanup effects. Значит несогласованность не является намеренной общей политикой.
-
-Рекомендуемое исправление:
-Сделать successful-commit paths симметричными:
-- `_cleanupMarquee(...)`, `_cleanupDrawStroke(...)`, `_cleanupLineEndpoint(...)` должны возвращать `InteractionCleanupOutcome`;
-- в `_deliverMarqueeCommit(...)`, `_deliverDrawStrokeCommit(...)`, `_deliverDrawLineCommit(...)` нужно передавать `_withPointerCleanupEffects(applyResult, cleanup)` в `_deliverEditCommitResult(...)`;
-- сохранить текущий порядок: prepare commit → cleanup preview/session → deliver public commit effects/actions.
-
-Минимальная проверка после исправления:
-Добавить tests с `commitEffectObserver`:
-1. Pencil/marker stroke commit после active preview должен дать merged `RepaintDeliveryEffect(mainCanvas: true, overlayCanvas: true)`.
-2. Line endpoint commit после line preview должен дать `mainCanvas: true, overlayCanvas: true`.
-3. Marquee commit после marquee preview должен дать overlay cleanup repaint вместе с selection/main repaint semantics.
-4. Проверить, что public preview state после commit — `CanvasNoPreview`.
 
 ---
 
@@ -1634,69 +1525,6 @@ CanvasSurfacePointerAdapter отбрасывает любой PointerEvent с no
 ```text
 Источник стратегии этапа 11: fileciteturn0file0
 
-ID: ARCH-001
-Этап: Этап 11. Архитектурные границы, dependency graph и guardrails
-Название проблемы: Core boundary и architecture graph scanners игнорируют conditional import/export URIs
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Часть архитектурных guardrails анализирует только основной URI import/export directive и не обходит conditional configurations. Поэтому запрещённую зависимость можно спрятать во второй ветке Dart conditional import/export. Это особенно опасно для запретов вроде “interaction не импортирует Flutter”, “resources не импортирует dart:io/network”, “api не импортирует implementation owners”, потому что owner DAG умеет проверять conditional directives, а core boundary и architecture graph extractor — нет.
-
-Доказательство в коде:
-tool/guardrails/src/core_boundary_checks.dart: _checkDirectives(...) для ImportDirective берёт только directive.uri.stringValue и передаёт его в _checkImport(...); для ExportDirective аналогично берёт только directive.uri.stringValue и передаёт его в _checkExport(...). Conditional configurations не обходятся.
-Фрагменты:
-- tool/guardrails/src/core_boundary_checks.dart:338-349
-- tool/guardrails/src/core_boundary_checks.dart:367-379
-- tool/guardrails/src/core_boundary_checks.dart:853-870
-- tool/guardrails/src/core_boundary_checks.dart:1035-1044
-
-tool/architecture_graph/src/actual_graph.dart: _DirectiveGraphVisitor записывает только node.uri.stringValue для export/import facts. Conditional configurations также не попадают в actual graph.
-Фрагменты:
-- tool/architecture_graph/src/actual_graph.dart:382-409
-
-При этом owner DAG уже реализует правильный обход configurations:
-- tool/guardrails/src/owner_dag_import_checks.dart:137-165
-
-И в тестах owner DAG явно признаёт этот риск:
-- test/guardrails/owner_dag_import_boundaries_test.dart:64-83
-
-Пользовательский или инженерный сценарий проявления:
-Разработчик добавляет платформенный shim:
-
-import '../contracts/public/canvas_ids.dart'
-  if (dart.library.ui) 'package:flutter/widgets.dart';
-
-в lib/src/interaction/foo.dart.
-
-Core boundary увидит только основной импорт '../contracts/public/canvas_ids.dart' и не зафиксирует нарушение “interaction code may not import Flutter packages”. Аналогично можно спрятать conditional import на dart:io в resources или conditional export на internal/implementation path в graph-level проверке.
-
-Почему это не теоретический edge case:
-Conditional imports/exports — штатный механизм Dart/Flutter для platform-specific code. Репозиторий уже содержит отдельный тест owner DAG “conditional directives cannot hide rejected owner edges”, то есть сам проект признаёт этот класс обхода архитектурных проверок реалистичным. В текущем production lib/** я не нашёл conditional import/export, но guardrail gap позволяет внести такой обход в следующем изменении.
-
-Рекомендуемое исправление:
-Вынести общий extractor directive URI literals, который возвращает основной URI и все configuration.uri.stringValue. Использовать его как минимум в:
-- tool/guardrails/src/core_boundary_checks.dart
-- tool/architecture_graph/src/actual_graph.dart
-- при необходимости в public API facade checks
-
-Для каждого returned URI применять те же _checkImport/_checkExport/normalizeDirectiveUri rules. Добавить negative fixtures для:
-- interaction conditional import package:flutter/widgets.dart
-- resources conditional import dart:io
-- api conditional import/export contracts/internal
-- architecture_graph forbidden edge через conditional import
-
-Минимальная проверка после исправления:
-Добавить тест в test/guardrails/import_boundaries_test.dart:
-checkCoreBoundaryFile(
-  path: 'lib/src/interaction/bad_conditional_flutter.dart',
-  content: "import '../contracts/public/canvas_ids.dart' if (dart.library.ui) 'package:flutter/widgets.dart';\n",
-)
-должен вернуть core.import_boundaries.
-
-Добавить тест в test/architecture_graph/actual_graph_extractor_test.dart:
-conditional import на forbidden target должен попадать в actual.imports и затем закрываться current_closure forbidden edge check.
-
-
 ID: ARCH-002
 Этап: Этап 11. Архитектурные границы, dependency graph и guardrails
 Название проблемы: API boundary contract запрещает contracts/internal imports, но production bridge и guardrails явно разрешают их
@@ -1874,7 +1702,6 @@ ID: ARCH-004
 
 Оставшиеся неопределённости:
 - В текущей среде не установлен dart/flutter, поэтому я не запускал dart analyze, dart test, tool/architecture_graph/check.dart или tool/guardrails/run.dart. Вывод основан на статическом чтении файлов и собственном скане import/export directives.
-- В production lib/** не найдено текущих conditional import/export directives; ARCH-001 является guardrail-bypass проблемой, а не уже внесённым forbidden production import.
 ```
 
 ```text

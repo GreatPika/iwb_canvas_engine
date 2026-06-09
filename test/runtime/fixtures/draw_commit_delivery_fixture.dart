@@ -3,6 +3,7 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
@@ -26,18 +27,21 @@ Future<void> _verifyDrawCommitDelivery() async {
 
   _drawPencil(scenario.root);
   await _expectDeliveredActionCount(scenario, expectedDocumentRevisions: [1]);
+  _expectLatestCommitRepaintsMainAndOverlay(scenario);
 
   _drawMarker(scenario.root);
   await _expectDeliveredActionCount(
     scenario,
     expectedDocumentRevisions: [1, 2],
   );
+  _expectLatestCommitRepaintsMainAndOverlay(scenario);
 
   _drawLine(scenario.root);
   await _expectDeliveredActionCount(
     scenario,
     expectedDocumentRevisions: [1, 2, 3],
   );
+  _expectLatestCommitRepaintsMainAndOverlay(scenario);
   _expectPencil(scenario.root.readDocument(), scenario.actions[0]);
   _expectMarker(scenario.root.readDocument(), scenario.actions[1]);
   _expectLine(scenario.root.readDocument(), scenario.actions[2]);
@@ -49,10 +53,19 @@ Future<void> _expectDeliveredActionCount(
 }) async {
   await Future<void>.delayed(Duration.zero);
   expect(scenario.actions, hasLength(expectedDocumentRevisions.length));
+  expect(scenario.effectBatches, hasLength(expectedDocumentRevisions.length));
   expect(
     scenario.actionStates.map((state) => state.revisions.document),
     expectedDocumentRevisions,
   );
+}
+
+void _expectLatestCommitRepaintsMainAndOverlay(_DrawScenario scenario) {
+  final repaint = scenario.effectBatches.last
+      .whereType<RepaintDeliveryEffect>()
+      .single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isTrue);
 }
 
 void _drawPencil(RuntimeRoot root, {int? timestampMs = 10}) {
@@ -247,9 +260,11 @@ Future<void> _verifyProgrammaticAddElementActionSilence() async {
 }
 
 _DrawScenario _scenario({CanvasDocument? initialDocument}) {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     initialDocument ?? CanvasDocument(),
     config: const CanvasRuntimeConfig(),
+    commitEffectObserver: effectBatches.add,
   );
   final actions = <CanvasActionCommitted>[];
   final actionStates = <CanvasRuntimeState>[];
@@ -262,13 +277,19 @@ _DrawScenario _scenario({CanvasDocument? initialDocument}) {
     root.dispose();
   });
 
-  return (root: root, actions: actions, actionStates: actionStates);
+  return (
+    root: root,
+    actions: actions,
+    actionStates: actionStates,
+    effectBatches: effectBatches,
+  );
 }
 
 typedef _DrawScenario = ({
   RuntimeRoot root,
   List<CanvasActionCommitted> actions,
   List<CanvasRuntimeState> actionStates,
+  List<List<CommitDeliveryEffect>> effectBatches,
 });
 
 CanvasPointerSample _pointer(

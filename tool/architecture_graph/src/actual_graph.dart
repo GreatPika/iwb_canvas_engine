@@ -5,6 +5,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/source/line_info.dart';
 
+import '../../src/directive_uri_references.dart';
 import 'architecture_graph.dart';
 
 final class ActualArchitectureGraph {
@@ -381,31 +382,29 @@ final class _DirectiveGraphVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitExportDirective(ExportDirective node) {
-    collector.exports.add(
-      ExportFact(
-        path: path,
-        line: _line(node),
-        uri: normalizeDirectiveUri(
-          sourcePath: path,
-          uri: node.uri.stringValue ?? '',
+    for (final reference in directiveUriReferences(node)) {
+      collector.exports.add(
+        ExportFact(
+          path: path,
+          line: _line(reference.sourceNode),
+          uri: normalizeDirectiveUri(sourcePath: path, uri: reference.uri),
         ),
-      ),
-    );
+      );
+    }
     super.visitExportDirective(node);
   }
 
   @override
   void visitImportDirective(ImportDirective node) {
-    collector.imports.add(
-      ImportFact(
-        path: path,
-        line: _line(node),
-        uri: normalizeDirectiveUri(
-          sourcePath: path,
-          uri: node.uri.stringValue ?? '',
+    for (final reference in directiveUriReferences(node)) {
+      collector.imports.add(
+        ImportFact(
+          path: path,
+          line: _line(reference.sourceNode),
+          uri: normalizeDirectiveUri(sourcePath: path, uri: reference.uri),
         ),
-      ),
-    );
+      );
+    }
     super.visitImportDirective(node);
   }
 

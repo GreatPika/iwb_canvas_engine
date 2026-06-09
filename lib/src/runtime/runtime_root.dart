@@ -1367,9 +1367,8 @@ final class RuntimeRoot
     _ensureNoActiveEditSession();
     final cleanupOutcome = _interactionEngine.disposeCleanup();
     _applyPointerCleanupSelection(cleanupOutcome);
-    _deliverPendingContextRequests();
     _interactionEngine.clearInteractionRequests();
-    _contextRequestGeneration += 1;
+    _suppressPendingContextRequests();
     _isDisposed = true;
     _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
@@ -1555,7 +1554,7 @@ final class RuntimeRoot
     );
     _interactionEngine.prepareLoadCleanup();
     _interactionEngine.clearInteractionRequests();
-    _contextRequestGeneration += 1;
+    _suppressPendingContextRequests();
 
     return didClearTextEditing;
   }
@@ -1759,10 +1758,9 @@ final class RuntimeRoot
     });
   }
 
-  void _deliverPendingContextRequests() {
-    for (final request in _takeDeliverablePendingContextRequests()) {
-      _contextActionRequests.add(request);
-    }
+  void _suppressPendingContextRequests() {
+    _contextRequestGeneration += 1;
+    _pendingContextRequests.clear();
   }
 
   List<CanvasContextActionRequested> _takeDeliverablePendingContextRequests() {
@@ -1914,12 +1912,14 @@ final class RuntimeRoot
           ],
         ),
       );
-      _cleanupMarquee(
+      final cleanup = _cleanupMarquee(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
         preservePendingContextTap: intent.preservePendingContextTap,
       );
-      _deliverEditCommitResult(applyResult);
+      _deliverEditCommitResult(
+        _withPointerCleanupEffects(applyResult, cleanup),
+      );
     } on Object {
       _cleanupMarquee(PointerCleanupReason.editFailure);
       _publishRuntimeState();
@@ -1927,7 +1927,7 @@ final class RuntimeRoot
     }
   }
 
-  void _cleanupMarquee(
+  InteractionCleanupOutcome _cleanupMarquee(
     PointerCleanupReason reason, {
     bool publish = true,
     bool preservePendingContextTap = false,
@@ -1939,6 +1939,8 @@ final class RuntimeRoot
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
+
+    return outcome;
   }
 
   // Draw stroke commit flow.
@@ -1953,11 +1955,13 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
-      _cleanupDrawStroke(
+      final cleanup = _cleanupDrawStroke(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _deliverEditCommitResult(applyResult);
+      _deliverEditCommitResult(
+        _withPointerCleanupEffects(applyResult, cleanup),
+      );
     } on Object {
       _cleanupDrawStroke(PointerCleanupReason.editFailure);
       _publishRuntimeState();
@@ -1996,11 +2000,16 @@ final class RuntimeRoot
     );
   }
 
-  void _cleanupDrawStroke(PointerCleanupReason reason, {bool publish = true}) {
+  InteractionCleanupOutcome _cleanupDrawStroke(
+    PointerCleanupReason reason, {
+    bool publish = true,
+  }) {
     final outcome = _interactionEngine.finishDrawStroke(reason);
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
+
+    return outcome;
   }
 
   // Draw line commit flow.
@@ -2015,11 +2024,13 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
-      _cleanupLineEndpoint(
+      final cleanup = _cleanupLineEndpoint(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _deliverEditCommitResult(applyResult);
+      _deliverEditCommitResult(
+        _withPointerCleanupEffects(applyResult, cleanup),
+      );
     } on Object {
       _cleanupLineEndpoint(PointerCleanupReason.editFailure);
       _publishRuntimeState();
@@ -2059,7 +2070,7 @@ final class RuntimeRoot
     );
   }
 
-  void _cleanupLineEndpoint(
+  InteractionCleanupOutcome _cleanupLineEndpoint(
     PointerCleanupReason reason, {
     bool publish = true,
   }) {
@@ -2067,6 +2078,8 @@ final class RuntimeRoot
     if (publish && outcome.publicStateNeeded) {
       _publishRuntimeState();
     }
+
+    return outcome;
   }
 
   // Eraser commit flow.

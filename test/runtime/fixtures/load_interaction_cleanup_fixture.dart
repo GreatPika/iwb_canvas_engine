@@ -73,6 +73,10 @@ void _registerDisposeCleanupTests() {
   test('dispose clears live context request facts', () {
     return expectLater(_verifyDisposeClearsLiveRequestFacts(), completes);
   });
+
+  test('dispose suppresses queued context requests before stream close', () {
+    return expectLater(_verifyDisposeSuppressesQueuedRequest(), completes);
+  });
 }
 
 void _verifyLoadSuccessCleanup(CanvasPreviewState preview) {
@@ -250,6 +254,34 @@ Future<void> _verifyDisposeClearsLiveRequestFacts() async {
   root.dispose();
 
   expect(root.interactionEngine.requestFactsFor(request.requestId), isNull);
+}
+
+Future<void> _verifyDisposeSuppressesQueuedRequest() async {
+  final contextRequests = <CanvasContextActionRequested>[];
+  var streamClosed = false;
+  final root = _runtimeRoot(_ignoreCommitEffects);
+  final subscription = root.contextActionRequests.listen(
+    contextRequests.add,
+    onDone: () {
+      streamClosed = true;
+    },
+  );
+
+  try {
+    root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+    root.dispose();
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(contextRequests, isEmpty);
+    expect(streamClosed, isTrue);
+    expect(root.isDisposed, isTrue);
+  } finally {
+    await subscription.cancel();
+    if (!root.isDisposed) {
+      root.dispose();
+    }
+  }
 }
 
 Future<CanvasContextActionRequested> _issueContextRequest(RuntimeRoot root) {
