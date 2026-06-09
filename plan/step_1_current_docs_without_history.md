@@ -180,7 +180,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Registry and guardrail surface migration
+### [x] Unit 1: Registry and guardrail surface migration
 
 Owner:
 
@@ -234,7 +234,7 @@ Depends On:
 
 - none
 
-### [ ] Unit 2: Active docs current-state rewrite
+### [x] Unit 2: Active docs current-state rewrite
 
 Owner:
 
@@ -274,7 +274,7 @@ Depends On:
 
 - Unit 1
 
-### [ ] Unit 3: Verification
+### [x] Unit 3: Verification
 
 Owner:
 
@@ -307,6 +307,26 @@ Completion Check:
   guardrails are broken.
 - Required proof: command output from all required checks, with unavailable
   commands reported explicitly.
+
+Completion Evidence:
+
+- `dart test test/api_contract/public_api_registry_test.dart test/api_contract/public_exports_complete_test.dart test/api_contract/current_document_load_surface_only_test.dart test/guardrails/core_boundary_negative_fixtures_test.dart test/guardrails/blocking_suite_test.dart test/api_contract/public_integration_compile_fixture_test.dart test/api_contract/public_facade_wrapper_test.dart test/guardrails/interaction_guardrail_enforcement_test.dart test/api/tool_port_settings_test.dart test/api/command_port_actions_test.dart test/api/typed_action_payloads_test.dart`:
+  passed, 108 tests.
+- `dart run docs/tool/sync_generated_docs.dart --check`: passed.
+- `dart run docs/tool/check_docs.dart`: passed.
+- `dart run tool/architecture_graph/check.dart`: passed.
+- `dart run tool/architecture_graph/generate_views.dart --check`: passed.
+- `dart analyze`: passed with no issues.
+- `dcm analyze .`: passed with no issues.
+- `dcm calculate-metrics tool/guardrails/src test/api test/api_contract test/guardrails`:
+  passed with no metric violations.
+- Guardrail migration scan over `docs tool test lib`: no hits.
+- Active-doc forbidden-term scan over docs, architecture, contracts,
+  verification, registries, and diagrams: no hits.
+- Active-doc Cyrillic scan over docs, architecture, contracts, verification,
+  registries, and diagrams: no hits.
+- Expanded active-doc cleanup scan over docs, architecture, contracts,
+  verification, registries, and diagrams: no hits.
 
 Depends On:
 
