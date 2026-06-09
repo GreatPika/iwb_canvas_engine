@@ -19,5 +19,3 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
   document in the same change.
 
 ## Step Files
-
-- [x] [Step 59. Legacy and phase cleanup](plan/step_59_legacy_phase_cleanup.md)
