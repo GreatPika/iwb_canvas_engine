@@ -86,12 +86,20 @@ Overlay frame:
 
 ```text
 CapturedOverlayFrame
+  viewportRect
+  effectiveWorldBounds
   previewRevision
   viewCameraRevision
   viewCameraOffset
   previewState
   selectionStyle
 ```
+
+`CapturedOverlayFrame` is compact overlay output. It freezes only the viewport
+facts, preview facts, view camera facts, and captured selection style needed by
+overlay preview admission and painting. Overlay frame capture must not read
+committed document facts, spatial candidates, selection facts, background facts,
+element rows, or resource descriptor facts.
 
 Frame consumes public preview state by variant. `CanvasSelectedMovePreview` is
 captured for the main-scene selected supplement path only. `CanvasMarqueePreview`,
@@ -105,7 +113,8 @@ Rules:
 
 ```text
 - main paint captures main frame once;
-- overlay paint captures overlay frame once;
+- overlay paint captures one compact overlay frame once from surface/runtime
+  value inputs;
 - committed frame facts enter FrameEngine through FrameFactsPort;
 - FrameFactsPort supplies documentRevision, structuralRevision, boundsRevision,
   elementVisualRevision, backgroundRevision, gridRevision, immutable committed

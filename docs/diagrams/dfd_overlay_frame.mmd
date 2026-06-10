@@ -19,7 +19,7 @@ flowchart LR
   subgraph Frame["FrameEngine facade and frame-private collaborators"]
     OverlayRepaint["Overlay repaint request"]
     Capture["FrameCaptureService\noverlay frame capture\nsingle runtime read boundary"]
-    CapturedFrame["CapturedOverlayFrame\npreviewRevision, viewCameraRevision,\nviewCameraOffset, previewState,\nselectionStyle"]
+    CapturedFrame["CapturedOverlayFrame\nviewportRect + effectiveWorldBounds,\npreviewRevision, viewCameraRevision,\nviewCameraOffset, previewState,\nselectionStyle"]
     PreviewAdmission["OverlayPreviewPlanner\npreview admission from captured sealed variant\nexclude CanvasSelectedMovePreview"]
     CapturedOverlayKinds["Captured overlay preview variants\nmarquee, pencil, marker,\npending line start, line preview, eraser"]
     MainRepaintReference["Main repaint bus\noutside overlay paint path"]
@@ -37,11 +37,12 @@ flowchart LR
   Surface -->|"paint asks for overlay UI"| OverlayRepaint
   OverlayRepaint -->|"capture once for this paint"| Capture
 
+  Surface -->|"viewportRect, effectiveWorldBounds,\nselectionStyle"| Capture
   Capture -->|"read view camera once"| CameraState
-  CameraState -->|"view camera facts"| CapturedFrame
+  CameraState -->|"view camera facts"| Capture
   Capture -->|"read preview state once"| PreviewSnapshot
-  PreviewSnapshot -->|"previewRevision and previewState"| CapturedFrame
-  Surface -->|"selectionStyle"| CapturedFrame
+  PreviewSnapshot -->|"previewRevision and previewState"| Capture
+  Capture -->|"compact captured overlay facts"| CapturedFrame
 
   CapturedFrame -->|"captured CanvasPreviewState only"| PreviewAdmission
   PreviewAdmission -->|"admitted overlay variant payloads"| CapturedOverlayKinds
@@ -61,3 +62,4 @@ flowchart LR
   LiveReadBlocked -.->|"no DocumentStore, InteractionEngine,\nFrameEngine, Public API, or resolver reads"| OverlayPainter
   Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
   ProjectionCache -.->|"not read by overlay paint"| ProjectionBlocked
+  Capture -.->|"must not read committed document,\nselection, spatial, background,\nelement row, or resource descriptor facts"| ProjectionBlocked
