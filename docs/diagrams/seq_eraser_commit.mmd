@@ -25,7 +25,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: pointer down in draw mode with eraser tool
-  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>IE: read finite eraserThickness and start eraser session
@@ -41,7 +41,7 @@ sequenceDiagram
 
   loop pointer move samples for same token
     User->>Surface: pointer move
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: append corridor point and trim if interactive eraser soft limit is exceeded
     Note over IE: Corridor remains preview state only, no selected-move main-scene preview is staged.
@@ -66,7 +66,7 @@ sequenceDiagram
   end
 
   alt stale non-terminal sample or second pointer down during active routing
-    Surface->>Tools: handlePointer(CanvasPointerSample move/down)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move/down)
     Tools->>IE: stale token or unsupported concurrent pointer
     IE-->>Tools: ignore without preview, edit, repaint, or action
   else cancel, mode change, dispose, or invalid terminal cleanup
@@ -97,7 +97,7 @@ sequenceDiagram
     Note over Store,Frame: The loadDocumentFromJson success Store mutation, spatial rebuild, projection eviction, and main plus overlay repaint are external load effects covered by seq_load_document_success.
   else same-token pointer up
     User->>Surface: pointer up
-    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite up)
     Tools->>IE: same-token finite terminal sample
     IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
     IE->>Spatial: query final corridor envelope for content hit candidates

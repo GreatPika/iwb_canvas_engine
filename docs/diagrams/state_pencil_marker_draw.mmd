@@ -49,13 +49,13 @@ stateDiagram-v2
     state "Terminal stroke gate" as TerminalGate
     note right of TerminalGate
       Terminal up can commit only when token, session id,
-      controllerEpoch, terminal sample, and final stroke facts
+      controllerEpoch, finite terminal sample, and final stroke facts
       still match the active stroke draft.
     end note
 
     TerminalGate --> CleanupOnly: "stale token, controllerEpoch mismatch, invalid terminal, or non-finite facts"
     TerminalGate --> NoOpTerminal: "empty stroke"
-    TerminalGate --> FinalStrokeNormalization: "valid terminal sample and non-empty stroke facts"
+    TerminalGate --> FinalStrokeNormalization: "valid finite terminal sample and non-empty stroke facts"
 
     state "No-op terminal" as NoOpTerminal
     note left of NoOpTerminal
@@ -182,7 +182,7 @@ stateDiagram-v2
 
   state "Disposed runtime" as Disposed
   Disposed --> Disposed: "dispose() again / no side effects"
-  Disposed --> Disposed: "pointer sample or mutating operation / StateError"
+  Disposed --> Disposed: "pointer input or mutating operation / StateError"
 
   note left of Drafting
     Negative invariants:

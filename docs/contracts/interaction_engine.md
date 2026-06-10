@@ -117,11 +117,14 @@ Rules:
 - pointerId is a routing token only;
 - concurrent pointer sessions are not supported in v1;
 - raw pointer routing belongs to the surface pointer adapter;
-- InteractionEngine receives normalized CanvasPointerSample;
-- public pointer samples are normalized by
+- InteractionEngine receives `CanvasPointerInput`;
+- finite public pointer samples are normalized by
   `lib/src/interaction/pointer_sample_normalizer.dart`, which converts
   view-space positions to world-space positions by adding the current runtime
   view camera offset;
+- `CanvasPointerTerminalCleanup` branches before sample normalization and
+  routes through the invalid-terminal cleanup classifier without creating
+  `NormalizedPointerSample` geometry;
 - terminal admission requires the active pointer token and current
   `controllerEpoch`; stale token or epoch mismatch may clean up only and cannot
   create a commit intent;
@@ -212,8 +215,8 @@ suppresses move samples; the active preview continues to update when the
 pointer returns inside the start radius or crosses the original start point.
 Terminal point-selection and context-tap checks continue to use `tapSlop`, so a
 gesture can publish a preview after effective drag-start slop and still resolve
-as a tap if the terminal sample remains within `tapSlop`. Double-tap matching
-uses `doubleTapSlop` only.
+as a tap if the finite terminal sample remains within `tapSlop`. Double-tap
+matching uses `doubleTapSlop` only.
 
 `interactive=false` cancels only an active routed pointer session. Pending line
 start or line preview state that is not currently owned by an active routed

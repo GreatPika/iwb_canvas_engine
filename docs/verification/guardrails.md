@@ -252,7 +252,7 @@ Mandatory guardrails:
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
 | `release.benchmark_readiness` | release benchmark readiness is routed through pinned release CI, docs checks, read-only diff, current graph/generated-view checks, and guardrails; public/runtime source cannot expose benchmark tooling, public integration names, benchmark route outside release policy, benchmark-only production hooks, or non-manual approved-baseline writes |
 | `tools.public_port_behavior` | public tool and command ports expose interaction payload families without source-level internal imports |
-| `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass only normalized finite pointer samples into runtime routing |
+| `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass finite pointer samples or terminal cleanup input into runtime routing without owning world normalization |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 
 `api.integration_surface_complete` is executable only when the guardrail runner

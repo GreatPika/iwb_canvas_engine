@@ -25,7 +25,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: pointer down in move mode
-  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>ReadPort: read marquee start selection facts
@@ -60,7 +60,7 @@ sequenceDiagram
 
   loop pointer move samples for same token
     User->>Surface: pointer move
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: normalize rectangle from anchor to current position
     Note over IE,Frame: Marquee drag preview is overlay-only and no selected-move main-scene preview delta is staged.
@@ -75,8 +75,8 @@ sequenceDiagram
   end
 
   User->>Surface: pointer up
-  Surface->>Tools: handlePointer(CanvasPointerSample up)
-  Tools->>IE: same-token terminal sample
+  Surface->>Tools: handlePointer(CanvasPointerInput finite up)
+  Tools->>IE: same-token finite terminal sample
   IE->>IE: normalize terminal marquee rectangle
   IE->>ReadPort: read marquee commit facts for normalized rect
   alt zero-area rect from point click

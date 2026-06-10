@@ -82,7 +82,7 @@ sequenceDiagram
   end
 
   User->>Surface: first tap on canvas
-  Surface->>Tools: handlePointer(CanvasPointerSample down/up)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down/up)
   Tools->>IE: normalized finite tap sample
   IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
   IE->>IE: convert viewPosition to finite worldPosition
@@ -109,7 +109,7 @@ sequenceDiagram
     IE->>IE: store pending content target, generation, elementRevision, family, controllerEpoch, timestamp, viewPosition, and worldPosition
     Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
     opt first tap also selects content in move mode
-      IE->>IE: pair same terminal sample with zero-area marquee selection intent
+      IE->>IE: pair same finite terminal sample with zero-area marquee selection intent
       IE->>Cleanup: selection post-commit cleanup preserving pending context tap
       Cleanup-->>IE: PointerCleanupOutcome(selection session released, pending tap preserved)
       IE-->>Signals: publish normal select-marquee action and selection state
@@ -121,7 +121,7 @@ sequenceDiagram
   end
 
   User->>Surface: second tap on canvas
-  Surface->>Tools: handlePointer(CanvasPointerSample down/up)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down/up)
   Tools->>IE: normalized finite tap sample
   IE->>IE: admit tap if no active pointer conflict, stale token, or drag beyond tapSlop
   IE->>IE: convert viewPosition to finite worldPosition

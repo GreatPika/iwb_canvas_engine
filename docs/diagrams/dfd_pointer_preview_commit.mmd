@@ -4,12 +4,14 @@ flowchart LR
   Surface["CanvasSurface\nFlutter pointer host"]
 
   subgraph SurfacePointerAdapter["Surface pointer adapter boundary"]
-    PointerAdapter["CanvasSurfacePointerAdapter\nfinite down/move normalization\nbefore runtime routing"]
+    PointerAdapter["CanvasSurfacePointerAdapter\nfinite sample routing;\nterminal cleanup input for invalid up/cancel"]
     InvalidDownMoveEvent["Invalid down/move Flutter pointer facts\nrejected before runtime"]
   end
 
   subgraph API["Public API boundary"]
-    Sample["CanvasPointerSample\nfinite down/move;\nterminal cleanup may use invalid sample"]
+    PointerInput["CanvasPointerInput\nfinite samples or no-position\nterminal cleanup input"]
+    Sample["CanvasPointerSample\nfinite coordinates for all phases"]
+    TerminalCleanupInput["CanvasPointerTerminalCleanup\nno coordinates; up/cancel only"]
     MoveResolver["CanvasMoveCommitResolver\nselected move terminal only"]
     PublicSignals["Public state/effects\naction events, CanvasRuntimeState,\nmain/overlay repaint requests"]
   end
@@ -68,14 +70,16 @@ flowchart LR
   end
 
   Surface -->|"raw Flutter pointer event"| PointerAdapter
-  PointerAdapter -->|"valid finite down/move sample"| Sample
-  PointerAdapter -->|"terminal sample for active route\nfinite or cleanup-only invalid"| Sample
+  PointerAdapter -->|"finite down/move/up/cancel sample"| Sample
+  PointerAdapter -->|"non-finite up/cancel cleanup input"| TerminalCleanupInput
   PointerAdapter -.->|"non-finite or invalid down/move facts"| InvalidDownMoveEvent
   InvalidDownMoveEvent -.->|"no runtime route, preview, repaint, edit, or event"| Surface
-  Sample -->|"finite down/move or cleanup-only terminal data"| TokenGate
+  Sample --> PointerInput
+  TerminalCleanupInput --> PointerInput
+  PointerInput -->|"finite sample or cleanup-only terminal input"| TokenGate
   TokenGate -.->|"stale non-terminal token"| StaleSample
   StaleSample -.->|"no preview, repaint, edit, or event"| Surface
-  TokenGate -.->|"stale/invalid terminal sample\ncleanup only, no commit intent"| TerminalCleanup
+  TokenGate -.->|"stale terminal or terminal cleanup input\ncleanup only, no commit intent"| TerminalCleanup
 
   TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
   TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery

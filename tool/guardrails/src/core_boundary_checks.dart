@@ -93,6 +93,8 @@ Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
     'final class CanvasSurfacePointerAdapter',
     'Listener(',
     'CanvasPointerSample(',
+    'CanvasPointerTerminalCleanup(',
+    'routeInput',
     'localPosition',
     'isFinite',
   ]) {
@@ -127,13 +129,12 @@ Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
   const widgetPath = 'lib/src/surface/canvas_surface_widget.dart';
   final widgetContent = File(widgetPath).readAsStringSync();
   if (!widgetContent.contains('CanvasSurfacePointerAdapter(') ||
-      !widgetContent.contains('port.handlePointer(_surfaceToken, sample)')) {
+      !widgetContent.contains('port.handlePointer(_surfaceToken, input)')) {
     violations.add(
       const GuardrailViolation(
         guardrailId: 'surface.pointer_samples_normalized_before_runtime',
         path: widgetPath,
-        message:
-            'CanvasSurface must route pointer samples through active token',
+        message: 'CanvasSurface must route pointer input through active token',
       ),
     );
   }

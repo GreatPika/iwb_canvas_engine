@@ -430,7 +430,7 @@ Depends On:
 - Unit 1
 - Unit 2
 
-### [ ] Unit 4: Public source-of-truth docs and retirement proof
+### [x] Unit 4: Public source-of-truth docs and retirement proof
 
 Owner:
 

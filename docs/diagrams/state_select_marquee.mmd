@@ -107,7 +107,7 @@ stateDiagram-v2
   state "Public state/effects after cleanup" as PublicCommitSignals
   PublicCommitSignals --> Idle: publish CanvasRuntimeState with selection/preview effects, selectMarquee action, main repaint, overlay cleanup repaint
 
-  state "Invalid terminal sample" as InvalidTerminal
+  state "Invalid terminal cleanup" as InvalidTerminal
   note right of InvalidTerminal
     Stale token, controllerEpoch mismatch, invalid session id, non-finite
     terminal facts, and stale candidate generations cannot
@@ -150,7 +150,7 @@ stateDiagram-v2
   OverlayCleanup --> Disposed: dispose cleanup finished
 
   state "Disposed runtime" as Disposed
-  Disposed --> Disposed: later pointer sample or mutating operation / StateError
+  Disposed --> Disposed: later pointer input or mutating operation / StateError
 
   note left of DragPreview
     Negative invariants:

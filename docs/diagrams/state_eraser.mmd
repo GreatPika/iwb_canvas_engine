@@ -143,7 +143,7 @@ stateDiagram-v2
   Previewing --> Disposed: dispose cleanup complete
 
   state "Disposed runtime" as Disposed
-  Disposed --> Disposed: pointer sample or mutating operation / StateError
+  Disposed --> Disposed: pointer input or mutating operation / StateError
 
   note left of Previewing
     Forbidden paths:

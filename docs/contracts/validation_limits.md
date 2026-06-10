@@ -76,7 +76,7 @@ Validation is applied at:
 - runtime config construction and materialization;
 - interaction config mutation;
 - interaction request id generation and guarded request commit;
-- pointer sample routing.
+- pointer input routing.
 ```
 
 Element transform admission uses the same validation boundary list. Every

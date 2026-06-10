@@ -92,7 +92,7 @@ sequenceDiagram
     Note over Actions,Signals: No CanvasActionCommitted and no context-action request is emitted by dispose.
   end
 
-  User->>Surface: later pointer move or terminal sample
+  User->>Surface: later finite pointer move or terminal input
   Surface->>Runtime: route public mutating operation
   Runtime-->>Surface: throw StateError("CanvasRuntime is disposed.")
   Note over Surface,IE: Later samples cannot revive the pointer session or commit a stale preview.

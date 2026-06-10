@@ -28,7 +28,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: pointer down on selected movable element
-  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>ReadPort: read selected move start facts
@@ -48,7 +48,7 @@ sequenceDiagram
 
   loop pointer move samples for same token
     User->>Surface: pointer move
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: update active selected move session delta
     IE->>Preview: replace immutable CanvasSelectedMovePreview(delta)
@@ -101,7 +101,7 @@ sequenceDiagram
 
   alt same-token pointer cancel
     User->>Surface: pointer cancel
-    Surface->>Tools: handlePointer(CanvasPointerSample cancel)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite cancel)
     Tools->>IE: same-token cancel sample
     IE->>IE: classify active selected move as cancelled
     Note over IE,Resolver: Resolver is not called for pointer cancel.
@@ -113,8 +113,8 @@ sequenceDiagram
     Note over IE,Resolver: Resolver is not called for mode-change cancellation.
   else terminal pointer up resolved as CanvasMoveCancel
     User->>Surface: pointer up
-    Surface->>Tools: handlePointer(CanvasPointerSample up)
-    Tools->>IE: same-token terminal sample
+    Surface->>Tools: handlePointer(CanvasPointerInput finite up)
+    Tools->>IE: same-token finite terminal sample
     IE->>IE: read proposedDelta from selected move session
     IE->>ReadPort: read selected move commit facts
     ReadPort->>SelectionFacts: read selected ids and selectionRevision

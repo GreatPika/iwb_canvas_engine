@@ -70,7 +70,7 @@ Resource and interaction owners own their resource and interaction rows.
 | removeUnusedResource removed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used by stale resource visuals only | none |
 | markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |
 | setMode/setDrawStyle/setDrawTool/setDrawColor/setPointerPolicy | interaction settings | state.revisions.interaction, state.revisions.selection if draw-mode entry clears selection, state.revisions.preview if active preview cleared | none | no | main/overlay only for changed affected state | none |
-| CanvasToolPort.handlePointer dispatcher | validates/routes pointer sample to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
+| CanvasToolPort.handlePointer dispatcher | validates/routes pointer input to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
 | loadDocumentFromJson success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
 | loadDocumentFromJson failure | none | none | none | none | none | none |
 | CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
@@ -115,10 +115,13 @@ Notes:
   edits through `CanvasEdit.setCameraOffset`.
 - No-op operations publish no current public state snapshot.
 - `CanvasToolPort.handlePointer` is the public pointer dispatcher boundary. It
-  validates and routes the pointer sample, but has no standalone document,
-  selection, preview, spatial, projection, repaint, or event effect. Terminal
-  effects are defined only by the selected tool row: marquee, selected move,
-  pencil/marker, line, eraser, context-action tap, or cleanup/no-op.
+  validates and routes pointer input, but has no standalone document,
+  selection, preview, spatial, projection, repaint, or event effect. Finite
+  samples may reach selection, move, draw, line, eraser, or context-tap rows;
+  terminal cleanup input reaches cleanup/no-op rows without normalized
+  geometry. Terminal effects are defined only by the selected tool row:
+  marquee, selected move, pencil/marker, line, eraser, context-action tap, or
+  cleanup/no-op.
 - `CanvasElementUpdate.isSelectable` changes spatial hit/selectable membership,
   so it is a spatial touched update even when selection normalization and repaint
   effects are otherwise no-ops.

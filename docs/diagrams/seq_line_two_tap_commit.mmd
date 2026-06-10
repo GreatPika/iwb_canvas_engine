@@ -25,7 +25,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: first pointer down in draw mode with line tool
-  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite down sample
   IE->>IE: reject active pointer conflict and stale token
   IE->>IE: read drawStyle line color and finite lineThickness
@@ -34,7 +34,7 @@ sequenceDiagram
 
   alt first pointer drag exits tap slop
     User->>Surface: pointer move beyond tap slop
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: convert active first-tap capture to line endpoint session
     IE->>Preview: publish CanvasLinePreview(start, end, color, thickness)
@@ -49,7 +49,7 @@ sequenceDiagram
     Signals-->>Surface: repaint overlay line preview
   else terminal up remains within tap slop
     User->>Surface: first pointer up within tap slop
-    Surface->>Tools: handlePointer(CanvasPointerSample up)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite up)
     Tools->>IE: normalized finite up sample
     IE->>ReadPort: read current controllerEpoch for pending line
     ReadPort->>Store: read current controllerEpoch
@@ -69,7 +69,7 @@ sequenceDiagram
 
   loop pointer movement while pending or active endpoint line exists
     User->>Surface: pointer move toward second point
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: verify pending line epoch matches current controllerEpoch
     IE->>Preview: replace with CanvasLinePreview(start, end, color, thickness)
@@ -85,7 +85,7 @@ sequenceDiagram
   end
 
   alt stale non-terminal sample or second pointer down during active routing
-    Surface->>Tools: handlePointer(CanvasPointerSample move/down)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move/down)
     Tools->>IE: stale token or unsupported concurrent pointer
     IE-->>Tools: ignore without preview, edit, repaint, or action
   else cancel, mode change, dispose, active routed pointer cancellation, or epoch mismatch
@@ -107,10 +107,10 @@ sequenceDiagram
     Tools->>IE: no active routed pointer cancel
     IE->>Preview: preserve CanvasPendingLineStartPreview or CanvasLinePreview
     Note over IE,Signals: No pending line cleanup, overlay cleanup repaint, edit, action, or committed mutation is produced.
-  else terminal endpoint sample is invalid
-    User->>Surface: endpoint terminal sample
-    Surface->>Tools: handlePointer(CanvasPointerSample up)
-    Tools->>IE: invalid terminal sample for cleanup only
+  else terminal endpoint input has no usable position
+    User->>Surface: endpoint non-finite terminal input
+    Surface->>Tools: handlePointer(CanvasPointerTerminalCleanup up)
+    Tools->>IE: no-position terminal cleanup input
     IE->>Cleanup: typed cleanup request for line-owned pending state
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
         IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
@@ -123,7 +123,7 @@ sequenceDiagram
     Note over EK,Signals: Invalid terminal cleanup publishes no committed effects.
   else endpoint terminal completes finite line
     User->>Surface: second tap or first-drag terminal up at endpoint
-    Surface->>Tools: handlePointer(CanvasPointerSample down/up)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite down/up)
     Tools->>IE: normalized finite terminal sample
     IE->>IE: verify pending line epoch matches current controllerEpoch
     IE->>Geometry: validate finite line start, end, color, and thickness

@@ -23,7 +23,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: pointer down in draw mode with pencil or marker
-  Surface->>Tools: handlePointer(CanvasPointerSample down)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite down sample
   IE->>IE: admit one active pointer token
   IE->>IE: read drawStyle and start pencil or marker stroke session
@@ -39,7 +39,7 @@ sequenceDiagram
 
   loop pointer move samples for same token
     User->>Surface: pointer move
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
     IE->>IE: append normalized point and trim/resample if interactive stroke soft limit is exceeded
     Note over IE,Frame: Pencil and marker preview is overlay-only, no selected-move main-scene preview delta is staged.
@@ -54,13 +54,13 @@ sequenceDiagram
   end
 
   alt stale non-terminal sample
-    Surface->>Tools: handlePointer(CanvasPointerSample move)
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: stale pointer token
     IE-->>Tools: ignore without preview, edit, repaint, or action
-  else same-token terminal sample is invalid
-    User->>Surface: pointer up or cancel
-    Surface->>Tools: handlePointer(CanvasPointerSample terminal)
-    Tools->>IE: same-token terminal cleanup sample
+  else same-token terminal input has no usable position
+    User->>Surface: non-finite pointer up or cancel
+    Surface->>Tools: handlePointer(CanvasPointerTerminalCleanup terminal)
+    Tools->>IE: no-position terminal cleanup input
     IE->>Cleanup: typed cleanup request for stroke session
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
@@ -73,8 +73,8 @@ sequenceDiagram
     Note over EK,Events: No EditKernel commit, Store mutation, spatial update, projection eviction, main repaint, or action event.
   else same-token pointer up
     User->>Surface: pointer up
-    Surface->>Tools: handlePointer(CanvasPointerSample up)
-    Tools->>IE: same-token terminal sample
+    Surface->>Tools: handlePointer(CanvasPointerInput finite up)
+    Tools->>IE: same-token finite terminal sample
     IE->>IE: append finite terminal point if distinct
     IE->>IE: normalize, cap, and resample final points to max stroke points per element
 

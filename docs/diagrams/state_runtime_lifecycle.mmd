@@ -83,7 +83,7 @@ stateDiagram-v2
 
   Disposed --> Disposed: dispose() again / return without side effects
   Disposed --> Disposed: readDocument() / return last committed immutable document
-  Disposed --> Disposed: mutating public operation or pointer sample / throw StateError
+  Disposed --> Disposed: mutating public operation or pointer input / throw StateError
 
   note left of Disposed
     Negative invariants:

@@ -174,7 +174,7 @@ stateDiagram-v2
     or mutate Store.
   end note
   Disposed --> Disposed: dispose again / no side effects
-  Disposed --> Disposed: later resolve, dirty signal, edit, load, or pointer sample / StateError
+  Disposed --> Disposed: later resolve, dirty signal, edit, load, or pointer input / StateError
 
   note left of ActiveSession
     Negative invariants:

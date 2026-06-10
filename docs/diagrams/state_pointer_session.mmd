@@ -158,13 +158,13 @@ stateDiagram-v2
 
   state "Disposed runtime" as Disposed
   note right of Disposed
-    Later pointer samples and mutating public operations throw
+    Later pointer input and mutating public operations throw
     StateError("CanvasRuntime is disposed.") and cannot revive
     or commit a stale pointer session.
   end note
 
   Disposed --> Disposed: dispose() again / return without side effects
-  Disposed --> Disposed: pointer sample or mutating operation / StateError
+  Disposed --> Disposed: pointer input or mutating operation / StateError
 
   note left of ActivePointer
     Negative invariants:

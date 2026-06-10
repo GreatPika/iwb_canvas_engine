@@ -24,7 +24,7 @@ sequenceDiagram
   participant Signals as Public state/effects
 
   User->>Surface: eraser down/move samples
-  Surface->>Tools: handlePointer(normalized finite samples)
+  Surface->>Tools: handlePointer(CanvasPointerInput finite samples)
   Tools->>IE: normalized finite eraser sample and finite thickness
   IE->>IE: append eraser corridor point in world coordinates
   IE->>Spatial: query erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
@@ -58,8 +58,8 @@ sequenceDiagram
   end
 
   User->>Surface: eraser terminal up
-  Surface->>Tools: handlePointer(terminal sample)
-  Tools->>IE: same-token terminal eraser intent
+  Surface->>Tools: handlePointer(CanvasPointerInput finite up)
+  Tools->>IE: same-token finite terminal eraser intent
   IE->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
   Spatial-->>IE: terminal candidate handles or typed budget-exceeded
 

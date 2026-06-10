@@ -190,6 +190,7 @@ CanvasSelectionStyle
 CanvasGridStyle
 CanvasPointerPolicy
 CanvasPointerSample
+CanvasPointerTerminalCleanup
 CanvasDrawStyle
 CanvasResourceSource and CanvasAppKeyResourceSource
 CanvasElementRead
@@ -547,7 +548,8 @@ Surface contract:
   decision;
 - toggling interactive back to true resumes routing only for subsequent pointer events;
 - CanvasSurface never mutates committed document directly;
-- CanvasSurface routes pointer samples into InteractionEngine;
+- CanvasSurface routes pointer input into InteractionEngine: finite samples for
+  usable coordinates and terminal cleanup input for non-finite up/cancel;
 - CanvasSurface resourceResolver is the app-owned synchronous image resolver for that surface;
 - successful attach creates an empty `SurfaceResourceSession` for that active
   surface before paint can resolve image assets;
@@ -1618,7 +1620,11 @@ final class CanvasPointerPolicy {
   final double? dragStartSlop;
 }
 
-final class CanvasPointerSample {
+sealed class CanvasPointerInput {
+  const CanvasPointerInput();
+}
+
+final class CanvasPointerSample extends CanvasPointerInput {
   factory CanvasPointerSample({
     required int pointerId,
     required Offset position,
@@ -1653,6 +1659,39 @@ final class CanvasPointerSample {
   final int? timestampMs;
   final CanvasPointerLifecyclePhase phase;
   final PointerDeviceKind kind;
+}
+
+final class CanvasPointerTerminalCleanup extends CanvasPointerInput {
+  factory CanvasPointerTerminalCleanup({
+    required int pointerId,
+    required CanvasPointerLifecyclePhase phase,
+    required PointerDeviceKind kind,
+    int? timestampMs,
+  }) {
+    CanvasPointerValidators.requireTerminalCleanup(
+      pointerId: pointerId,
+      phase: phase,
+      timestampMs: timestampMs,
+    );
+    return CanvasPointerTerminalCleanup._(
+      pointerId: pointerId,
+      phase: phase,
+      kind: kind,
+      timestampMs: timestampMs,
+    );
+  }
+
+  const CanvasPointerTerminalCleanup._({
+    required this.pointerId,
+    required this.phase,
+    required this.kind,
+    required this.timestampMs,
+  });
+
+  final int pointerId;
+  final CanvasPointerLifecyclePhase phase;
+  final PointerDeviceKind kind;
+  final int? timestampMs;
 }
 
 final class CanvasDrawStyle {
@@ -1723,7 +1762,7 @@ abstract interface class CanvasToolPort {
   void setDrawColor(Color color);
   void setPointerPolicy(CanvasPointerPolicy policy);
 
-  void handlePointer(CanvasPointerSample sample);
+  void handlePointer(CanvasPointerInput input);
   void handleDoubleTap({required Offset position, int? timestampMs});
 }
 ```
@@ -1760,9 +1799,20 @@ Public tool-port behavior:
   `CanvasRuntimeConfig.clearSelectionOnDrawModeEnter` is true;
 - entering draw mode with `clearSelectionOnDrawModeEnter` false does not clear
   selection;
+- `CanvasPointerInput` is the sealed public dispatch input; concrete finite
+  samples and no-position terminal cleanup input own their own validation and
+  equality policies;
+- `CanvasPointerSample` carries finite view coordinates for any lifecycle
+  phase, including finite `up` and `cancel`;
+- `CanvasPointerTerminalCleanup` carries invalid terminal cleanup intent
+  without coordinates and is valid only for `up` and `cancel`;
 - draw-mode pointer input is a behavior no-op except for cleanup-capable
   terminal handling; pencil, marker, line, eraser, text, and context-action
   production behavior remains tool-owned scope;
+- terminal cleanup input routes through the same runtime pointer admission and
+  invalid-terminal cleanup owner as finite terminal samples; it does not create
+  document commits, user actions, context requests, resolver requests, or
+  timestamped runtime outputs;
 - `CanvasRuntime.contextActionRequests` is a non-throwing empty broadcast
   stream that closes on dispose.
 ```
@@ -1784,13 +1834,16 @@ doubleTapMaxDelayMs -> >= 0;
 dragStartSlop -> null or finite >= 0;
 pencil/marker/line/eraser thickness -> finite > 0;
 markerOpacity -> finite in [0, 1];
-pointer position -> finite for down/move; invalid terminal samples are routed to cleanup logic.
+pointer sample position -> finite for every phase;
+terminal cleanup phase -> up or cancel only;
+pointerId and timestampMs -> >= 0 when present.
 ```
 
 Pointer scope for v1:
 
 ```text
-- pointerId is used only to route samples and reject stale terminal samples;
+- pointerId is used only to route pointer input and reject stale terminal
+  samples or stale terminal cleanup input;
 - one runtime has at most one active pointer session;
 - a second pointer down while a session is active is ignored;
 - no concurrent pointer sessions are stored.

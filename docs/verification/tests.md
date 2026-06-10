@@ -735,9 +735,10 @@ behavioral tests, and the required guardrail list remains owned by
   dispose, runtime swap, and runtime dispose drop session state without
   disposing app-owned images.
 - `test/surface/pointer_adapter_finite_normalization_test.dart` proves the
-  surface `Listener` converts only finite Flutter down/move/up/cancel events to
-  public pointer samples, leaves world normalization in interaction, and keeps
-  stale callbacks and non-finite events runtime-effect silent.
+  surface `Listener` converts finite Flutter down/move/up/cancel events to
+  public pointer samples, maps non-finite up/cancel to terminal cleanup input,
+  leaves world normalization in interaction, and keeps stale callbacks and
+  non-finite down/move events runtime-effect silent.
 - `test/surface/interactive_false_pointer_routing_test.dart`,
   `test/surface/interactive_false_active_session_cancel_test.dart`,
   `test/surface/interactive_false_pending_line_preserved_test.dart`, and
