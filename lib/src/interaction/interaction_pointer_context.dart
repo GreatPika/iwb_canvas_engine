@@ -11,7 +11,7 @@ typedef InteractionOutputTimestampResolver = int Function(int? timestampHintMs);
 final class InteractionPointerAdmission {
   const InteractionPointerAdmission({
     required this.kind,
-    required this.sample,
+    this.sample,
     this.publishRuntimeState = true,
     this.selectionReplacement,
     this.markProvisionalSelectionReplacementApplied = false,
@@ -25,7 +25,7 @@ final class InteractionPointerAdmission {
   });
 
   final InteractionPointerAdmissionKind kind;
-  final NormalizedPointerSample sample;
+  final NormalizedPointerSample? sample;
   final bool publishRuntimeState;
   final InteractionSelectionReplacement? selectionReplacement;
   final bool markProvisionalSelectionReplacementApplied;

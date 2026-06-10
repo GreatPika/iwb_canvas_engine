@@ -1242,10 +1242,10 @@ final class RuntimeRoot
   }
 
   // Pointer input.
-  void handlePointer(CanvasPointerSample sample) {
+  void handlePointer(CanvasPointerInput input) {
     ensureRuntimeMutationAllowed();
-    final admission = _interactionEngine.handlePointerSample(
-      sample,
+    final admission = _interactionEngine.handlePointerInput(
+      input,
       InteractionPointerContext(
         viewCameraOffset: viewCameraOffset,
         controllerEpoch: _epochRevision,
@@ -1265,7 +1265,10 @@ final class RuntimeRoot
     }
     if (_deliverPointerCommitAdmission(
       admission,
-      timestampHintMs: sample.timestampMs,
+      timestampHintMs: switch (input) {
+        CanvasPointerSample(:final timestampMs) => timestampMs,
+        CanvasPointerTerminalCleanup() => null,
+      },
     )) {
       return;
     }
@@ -2524,8 +2527,8 @@ final class _RuntimeToolPort implements CanvasToolPort {
   }
 
   @override
-  void handlePointer(CanvasPointerSample sample) {
-    root.handlePointer(sample);
+  void handlePointer(CanvasPointerInput input) {
+    root.handlePointer(input);
   }
 
   @override

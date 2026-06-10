@@ -289,7 +289,7 @@ Depends On:
 
 - none
 
-### [ ] Unit 2: Atomic public runtime pointer seam migration
+### [x] Unit 2: Atomic public runtime pointer seam migration
 
 Owner:
 

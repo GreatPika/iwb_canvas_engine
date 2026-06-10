@@ -118,6 +118,6 @@ abstract interface class CanvasToolPort {
   void setDrawTool(CanvasDrawTool tool);
   void setDrawColor(Color color);
   void setPointerPolicy(CanvasPointerPolicy policy);
-  void handlePointer(CanvasPointerSample sample);
+  void handlePointer(CanvasPointerInput input);
   void handleDoubleTap({required Offset position, int? timestampMs});
 }

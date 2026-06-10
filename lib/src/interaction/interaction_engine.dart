@@ -340,8 +340,28 @@ final class InteractionEngine {
     return _cleanupWithReason(PointerCleanupReason.modeToolChange);
   }
 
-  // Pointer sample routing.
+  // Pointer input routing.
+  InteractionPointerAdmission handlePointerInput(
+    CanvasPointerInput input,
+    InteractionPointerContext context,
+  ) {
+    return switch (input) {
+      CanvasPointerSample() => _handlePointerSample(input, context),
+      CanvasPointerTerminalCleanup() => _handleTerminalCleanupInput(
+        input,
+        context,
+      ),
+    };
+  }
+
   InteractionPointerAdmission handlePointerSample(
+    CanvasPointerSample sample,
+    InteractionPointerContext context,
+  ) {
+    return handlePointerInput(sample, context);
+  }
+
+  InteractionPointerAdmission _handlePointerSample(
     CanvasPointerSample sample,
     InteractionPointerContext context,
   ) {
@@ -357,6 +377,19 @@ final class InteractionEngine {
       CanvasPointerLifecyclePhase.up || CanvasPointerLifecyclePhase.cancel =>
         _handleTerminal(normalized, context),
     };
+  }
+
+  InteractionPointerAdmission _handleTerminalCleanupInput(
+    CanvasPointerTerminalCleanup input,
+    InteractionPointerContext context,
+  ) {
+    final decision = _terminalCleanupInputDecision(
+      _activeSession,
+      input,
+      context,
+    );
+
+    return _handleInvalidTerminal(null, decision);
   }
 
   InteractionPointerAdmission _admitted(
@@ -1378,8 +1411,21 @@ final class InteractionEngine {
     );
   }
 
+  InvalidTerminalCleanupDecision _terminalCleanupInputDecision(
+    PointerSession? session,
+    CanvasPointerTerminalCleanup input,
+    InteractionPointerContext context,
+  ) {
+    return _normalizer.terminalCleanupInputDecision(
+      activePointerId: session?.pointerId,
+      activeControllerEpoch: session?.controllerEpoch.value,
+      terminalPointerId: input.pointerId,
+      terminalControllerEpoch: context.controllerEpoch,
+    );
+  }
+
   InteractionPointerAdmission _handleInvalidTerminal(
-    NormalizedPointerSample sample,
+    NormalizedPointerSample? sample,
     InvalidTerminalCleanupDecision decision,
   ) {
     _recordInvalidTerminalCleanup(decision);
@@ -1427,6 +1473,8 @@ final class InteractionEngine {
     return switch (decision.kind) {
       InvalidTerminalCleanupKind.noActiveSession =>
         PointerCleanupReason.noOpTerminal,
+      InvalidTerminalCleanupKind.invalidTerminalPosition =>
+        PointerCleanupReason.invalidTerminal,
       InvalidTerminalCleanupKind.stalePointer =>
         PointerCleanupReason.invalidTerminal,
       InvalidTerminalCleanupKind.staleControllerEpoch =>
@@ -1804,6 +1852,8 @@ String _budgetReasonName(InteractionReadQueryFacts query) {
 String _invalidTerminalReasonName(InvalidTerminalCleanupDecision decision) {
   return switch (decision.kind) {
     InvalidTerminalCleanupKind.none => 'none',
+    InvalidTerminalCleanupKind.invalidTerminalPosition =>
+      'invalidTerminalPosition',
     InvalidTerminalCleanupKind.noActiveSession => 'noActiveSession',
     InvalidTerminalCleanupKind.stalePointer => 'stalePointer',
     InvalidTerminalCleanupKind.staleControllerEpoch => 'staleControllerEpoch',

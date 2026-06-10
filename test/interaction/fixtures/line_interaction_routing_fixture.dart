@@ -5,6 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 
 void main() {
   test('first tap stores timestamped pending line preview', () {
@@ -52,8 +53,8 @@ void _verifyFirstTapStoresPendingPreview() {
     _context(1, timestamps),
   );
 
-  expect(down.kind, InteractionPointerAdmissionKind.admitted);
-  expect(terminal.kind, InteractionPointerAdmissionKind.admitted);
+  _expectAdmittedWithSample(down);
+  _expectAdmittedWithSample(terminal);
   expect(timestamps, [17]);
   expect(engine.activeSession, isNull);
   final pending = engine.preview as CanvasPendingLineStartPreview;
@@ -162,8 +163,9 @@ void _verifyEndpointLifecycle() {
   final move = _handleEndpointMove(engine, timestamps);
   final terminal = _handleEndpointUp(engine, timestamps);
 
-  expect(down.kind, InteractionPointerAdmissionKind.admitted);
-  expect(move.kind, InteractionPointerAdmissionKind.admitted);
+  _expectAdmittedWithSample(down);
+  _expectAdmittedWithSample(move);
+  _expectAdmittedWithSample(terminal);
   _expectLinePreview(engine.preview, end: const Offset(6, 7));
   _expectLineCommit(terminal.lineCommit);
   expect(timestamps, isEmpty);
@@ -287,6 +289,7 @@ InteractionPointerAdmission _handleEndpointUp(
 void _verifyEndpointCleanup() {
   _expectEndpointCancelClearsPendingLine();
   _expectEndpointStaleTerminalClearsPendingLine();
+  _expectEndpointStaleCleanupInputClearsPendingLine();
   _expectEndpointInvalidTerminalClearsPendingLine();
   _expectNoActiveTerminalPreservesPendingLine();
 }
@@ -356,6 +359,25 @@ void _expectEndpointStaleTerminalClearsPendingLine() {
   expect(engine.preview, isA<CanvasNoPreview>());
 }
 
+void _expectEndpointStaleCleanupInputClearsPendingLine() {
+  final engine = _engineWithPendingLine();
+  engine.handlePointerSample(
+    _sample(1, const Offset(4, 5), CanvasPointerLifecyclePhase.down),
+    _context(1, []),
+  );
+  final stale = engine.handlePointerInput(
+    _cleanup(2, CanvasPointerLifecyclePhase.up),
+    _context(1, []),
+  );
+
+  expect(stale.kind, InteractionPointerAdmissionKind.cleanupOnly);
+  expect(stale.cleanupDecision?.kind, InvalidTerminalCleanupKind.stalePointer);
+  expect(stale.sample, isNull);
+  expect(stale.lineCommit, isNull);
+  expect(engine.hasPendingLine, isFalse);
+  expect(engine.preview, isA<CanvasNoPreview>());
+}
+
 InteractionEngine _engineWithPendingLine() {
   return _engine()..storePendingLineStart(
     preview: const CanvasPendingLineStartPreview(
@@ -407,6 +429,17 @@ CanvasPointerSample _sample(
   );
 }
 
+CanvasPointerTerminalCleanup _cleanup(
+  int pointerId,
+  CanvasPointerLifecyclePhase phase,
+) {
+  return CanvasPointerTerminalCleanup(
+    pointerId: pointerId,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+  );
+}
+
 void _expectLinePreview(CanvasPreviewState preview, {required Offset end}) {
   final line = preview as CanvasLinePreview;
   expect(line.start, const Offset(1, 1));
@@ -422,4 +455,9 @@ void _expectLineCommit(DrawLineCommitIntent? intent) {
   expect(commit.color, const Color(0xFF445566));
   expect(commit.thickness, 7);
   expect(commit.opacity, 1);
+}
+
+void _expectAdmittedWithSample(InteractionPointerAdmission admission) {
+  expect(admission.kind, InteractionPointerAdmissionKind.admitted);
+  expect(admission.sample, isNotNull);
 }

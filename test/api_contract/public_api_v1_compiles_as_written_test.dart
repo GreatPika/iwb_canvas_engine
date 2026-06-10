@@ -609,6 +609,8 @@ void _exerciseP2ContractSurface() {
   _use(editPort.edit((edit) => edit.draftSummary));
   _use(selectionPort.selectedElementIds);
   _use(toolPort.pointerPolicy);
+  toolPort.handlePointer(finitePointerInput);
+  toolPort.handlePointer(terminalPointerInput);
   _use(commandPort.clearContent());
   _use(cameraPort.offset);
 
@@ -839,9 +841,9 @@ final class _ConsumerSelectionPort implements CanvasSelectionPort {
 }
 
 final class _ConsumerToolPort implements CanvasToolPort {
-  _ConsumerToolPort(this._sample);
+  _ConsumerToolPort(this._input);
 
-  final CanvasPointerSample _sample;
+  final CanvasPointerInput _input;
 
   @override
   CanvasDrawStyle get drawStyle => CanvasDrawStyle.defaultStyle;
@@ -856,8 +858,8 @@ final class _ConsumerToolPort implements CanvasToolPort {
   void handleDoubleTap({required Offset position, int? timestampMs}) {}
 
   @override
-  void handlePointer(CanvasPointerSample sample) {
-    _use(_sample == sample);
+  void handlePointer(CanvasPointerInput input) {
+    _use(_input == input);
   }
 
   @override

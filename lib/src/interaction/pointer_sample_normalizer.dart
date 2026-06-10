@@ -24,6 +24,7 @@ final class NormalizedPointerSample {
 
 enum InvalidTerminalCleanupKind {
   none,
+  invalidTerminalPosition,
   noActiveSession,
   stalePointer,
   staleControllerEpoch,
@@ -86,6 +87,28 @@ final class PointerSampleNormalizer {
     return const InvalidTerminalCleanupDecision(
       kind: InvalidTerminalCleanupKind.none,
       shouldCleanupActiveSession: false,
+    );
+  }
+
+  InvalidTerminalCleanupDecision terminalCleanupInputDecision({
+    required int? activePointerId,
+    required int? activeControllerEpoch,
+    required int terminalPointerId,
+    required int terminalControllerEpoch,
+  }) {
+    final decision = invalidTerminalCleanupDecision(
+      activePointerId: activePointerId,
+      activeControllerEpoch: activeControllerEpoch,
+      terminalPointerId: terminalPointerId,
+      terminalControllerEpoch: terminalControllerEpoch,
+    );
+    if (decision.kind != InvalidTerminalCleanupKind.none) {
+      return decision;
+    }
+
+    return const InvalidTerminalCleanupDecision(
+      kind: InvalidTerminalCleanupKind.invalidTerminalPosition,
+      shouldCleanupActiveSession: true,
     );
   }
 }

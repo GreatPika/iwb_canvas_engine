@@ -22,6 +22,10 @@ void main() {
     expect(_verifyStaleTerminalCleanup, returnsNormally);
   });
 
+  test('routes terminal cleanup input before sample normalization', () {
+    expect(_verifyTerminalCleanupInputRouting, returnsNormally);
+  });
+
   test('closes an admitted terminal sample', () {
     expect(_verifyAdmittedTerminalClose, returnsNormally);
   });
@@ -57,6 +61,7 @@ void _verifyPointerAdmission() {
 
   final session = engine.activeSession;
   expect(result.kind, InteractionPointerAdmissionKind.admitted);
+  expect(result.sample, isNotNull);
   expect(session, isNotNull);
   final active = session as PointerSession;
   _expectPointerIdentity(active);
@@ -126,8 +131,96 @@ void _verifyStaleTerminalCleanup() {
     terminal.cleanupDecision?.kind,
     InvalidTerminalCleanupKind.staleControllerEpoch,
   );
+  expect(terminal.sample, isNotNull);
   expect(engine.activeSession, isNull);
   expect(engine.interactionRevision, 0);
+}
+
+void _verifyTerminalCleanupInputRouting() {
+  _expectSameActiveCleanupInput();
+  _expectNoActiveCleanupInput();
+  _expectStalePointerCleanupInput();
+  _expectStaleEpochCleanupInput();
+}
+
+void _expectSameActiveCleanupInput() {
+  final engine = _engine()
+    ..handlePointerInput(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(controllerEpoch: 1),
+    );
+
+  final terminal = engine.handlePointerInput(
+    _cleanup(1, CanvasPointerLifecyclePhase.up),
+    _context(controllerEpoch: 1),
+  );
+
+  expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
+  expect(
+    terminal.cleanupDecision?.kind,
+    InvalidTerminalCleanupKind.invalidTerminalPosition,
+  );
+  expect(terminal.sample, isNull);
+  expect(engine.activeSession, isNull);
+}
+
+void _expectNoActiveCleanupInput() {
+  final engine = _engine();
+
+  final terminal = engine.handlePointerInput(
+    _cleanup(1, CanvasPointerLifecyclePhase.cancel),
+    _context(controllerEpoch: 1),
+  );
+
+  expect(terminal.kind, InteractionPointerAdmissionKind.ignored);
+  expect(
+    terminal.cleanupDecision?.kind,
+    InvalidTerminalCleanupKind.noActiveSession,
+  );
+  expect(terminal.sample, isNull);
+  expect(engine.activeSession, isNull);
+}
+
+void _expectStalePointerCleanupInput() {
+  final engine = _engine()
+    ..handlePointerInput(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(controllerEpoch: 1),
+    );
+
+  final terminal = engine.handlePointerInput(
+    _cleanup(2, CanvasPointerLifecyclePhase.up),
+    _context(controllerEpoch: 1),
+  );
+
+  expect(terminal.kind, InteractionPointerAdmissionKind.ignored);
+  expect(
+    terminal.cleanupDecision?.kind,
+    InvalidTerminalCleanupKind.stalePointer,
+  );
+  expect(terminal.sample, isNull);
+  expect(engine.activeSession?.pointerId, 1);
+}
+
+void _expectStaleEpochCleanupInput() {
+  final engine = _engine()
+    ..handlePointerInput(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(controllerEpoch: 1),
+    );
+
+  final terminal = engine.handlePointerInput(
+    _cleanup(1, CanvasPointerLifecyclePhase.cancel),
+    _context(controllerEpoch: 2),
+  );
+
+  expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
+  expect(
+    terminal.cleanupDecision?.kind,
+    InvalidTerminalCleanupKind.staleControllerEpoch,
+  );
+  expect(terminal.sample, isNull);
+  expect(engine.activeSession, isNull);
 }
 
 void _verifyAdmittedTerminalClose() {
@@ -143,6 +236,7 @@ void _verifyAdmittedTerminalClose() {
   );
 
   expect(terminal.kind, InteractionPointerAdmissionKind.cleanupOnly);
+  expect(terminal.sample, isNotNull);
   expect(engine.activeSession, isNull);
   expect(engine.interactionRevision, 0);
 }
@@ -389,6 +483,17 @@ CanvasPointerSample _sample(
   return CanvasPointerSample(
     pointerId: pointerId,
     position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+  );
+}
+
+CanvasPointerTerminalCleanup _cleanup(
+  int pointerId,
+  CanvasPointerLifecyclePhase phase,
+) {
+  return CanvasPointerTerminalCleanup(
+    pointerId: pointerId,
     phase: phase,
     kind: PointerDeviceKind.touch,
   );
