@@ -57,11 +57,11 @@ final class CanvasRuntimeSurfacePort {
     _root.handleSurfaceInteractiveDisabled();
   }
 
-  void handlePointer(Object token, CanvasPointerSample sample) {
+  void handlePointer(Object token, CanvasPointerInput input) {
     if (!_root.isActiveSurface(token)) {
       return;
     }
-    _root.handlePointer(sample);
+    _root.handlePointer(input);
   }
 
   // The surface port keeps the viewport/style/binding inputs explicit so the

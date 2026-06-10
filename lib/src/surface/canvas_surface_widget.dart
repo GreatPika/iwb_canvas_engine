@@ -216,8 +216,8 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     }
 
     return CanvasSurfacePointerAdapter(
-      routeSample: (sample) {
-        port.handlePointer(_surfaceToken, sample);
+      routeInput: (input) {
+        port.handlePointer(_surfaceToken, input);
       },
       child: paintHost,
     );

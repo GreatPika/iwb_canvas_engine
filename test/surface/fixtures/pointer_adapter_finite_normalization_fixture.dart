@@ -13,8 +13,8 @@ void main() {
   testWidgets('adapter maps finite Flutter pointer phases to public samples', (
     tester,
   ) async {
-    await _expectAdapterSampleMapping(tester);
-    expect(_samples, hasLength(4));
+    await _expectAdapterInputMapping(tester);
+    expect(_inputs, hasLength(6));
   });
 
   testWidgets('CanvasSurface routes through runtime normalization only', (
@@ -31,19 +31,20 @@ void main() {
     await _expectStaleCallbackNoOpsAfterRuntimeSwap(tester);
     await _expectStaleCallbackNoOpsAfterDispose(tester);
     await _expectNonFiniteSurfaceEventHasNoRuntimeEffects(tester);
+    await _expectNonFiniteTerminalSurfaceEventCleansRuntime(tester);
     expect(tester.takeException(), isNull);
   });
 }
 
-final List<CanvasPointerSample> _samples = [];
+final List<CanvasPointerInput> _inputs = [];
 
-Future<void> _expectAdapterSampleMapping(WidgetTester tester) async {
-  _samples.clear();
+Future<void> _expectAdapterInputMapping(WidgetTester tester) async {
+  _inputs.clear();
   await tester.pumpWidget(
     Directionality(
       textDirection: TextDirection.ltr,
       child: CanvasSurfacePointerAdapter(
-        routeSample: _samples.add,
+        routeInput: _inputs.add,
         child: const SizedBox(width: 40, height: 40),
       ),
     ),
@@ -53,7 +54,7 @@ Future<void> _expectAdapterSampleMapping(WidgetTester tester) async {
   _routeFiniteEvents(listener);
   _expectMappedSamples();
   _routeNonFiniteEvents(listener);
-  expect(_samples, hasLength(4));
+  _expectMappedTerminalCleanups();
 }
 
 void _routeFiniteEvents(Listener listener) {
@@ -92,26 +93,35 @@ void _routeFiniteEvents(Listener listener) {
 }
 
 void _expectMappedSamples() {
-  expect(_samples.map((sample) => sample.phase), [
+  final samples = _inputs.whereType<CanvasPointerSample>().toList();
+  expect(samples.map((sample) => sample.phase), [
     CanvasPointerLifecyclePhase.down,
     CanvasPointerLifecyclePhase.move,
     CanvasPointerLifecyclePhase.up,
     CanvasPointerLifecyclePhase.cancel,
   ]);
-  expect(_samples.map((sample) => sample.pointerId).toSet(), {42});
-  expect(_samples.map((sample) => sample.kind).toSet(), {
+  expect(samples.map((sample) => sample.pointerId).toSet(), {42});
+  expect(samples.map((sample) => sample.kind).toSet(), {
     PointerDeviceKind.stylus,
   });
-  expect(_samples.map((sample) => sample.position), const [
+  expect(samples.map((sample) => sample.position), const [
     Offset(1, 2),
     Offset(3, 4),
     Offset(5, 6),
     Offset(7, 8),
   ]);
-  expect(_samples.map((sample) => sample.timestampMs), [7, 8, null, 9]);
+  expect(samples.map((sample) => sample.timestampMs), [7, 8, null, 9]);
 }
 
 void _routeNonFiniteEvents(Listener listener) {
+  _onPointerDown(listener)(
+    const PointerDownEvent(
+      pointer: 42,
+      position: Offset(double.nan, 9),
+      kind: PointerDeviceKind.stylus,
+      timeStamp: Duration(milliseconds: 10),
+    ),
+  );
   _onPointerMove(listener)(
     const PointerMoveEvent(
       pointer: 42,
@@ -128,6 +138,35 @@ void _routeNonFiniteEvents(Listener listener) {
       timeStamp: Duration(milliseconds: 11),
     ),
   );
+  _onPointerUp(listener)(
+    const PointerUpEvent(
+      pointer: 42,
+      position: Offset(double.nan, 9),
+      kind: PointerDeviceKind.stylus,
+      timeStamp: Duration(milliseconds: 12),
+    ),
+  );
+  _onPointerCancel(listener)(
+    const PointerCancelEvent(
+      pointer: 42,
+      position: Offset(9, double.infinity),
+      kind: PointerDeviceKind.stylus,
+      timeStamp: Duration(microseconds: -1),
+    ),
+  );
+}
+
+void _expectMappedTerminalCleanups() {
+  final cleanups = _inputs.whereType<CanvasPointerTerminalCleanup>().toList();
+  expect(cleanups.map((cleanup) => cleanup.phase), [
+    CanvasPointerLifecyclePhase.up,
+    CanvasPointerLifecyclePhase.cancel,
+  ]);
+  expect(cleanups.map((cleanup) => cleanup.pointerId).toSet(), {42});
+  expect(cleanups.map((cleanup) => cleanup.kind).toSet(), {
+    PointerDeviceKind.stylus,
+  });
+  expect(cleanups.map((cleanup) => cleanup.timestampMs), [12, null]);
 }
 
 Future<void> _expectSurfaceRuntimeWorldNormalization(
@@ -176,16 +215,15 @@ Future<void> _expectStaleCallbackNoOpsAfterRuntimeSwap(
 
   await tester.pumpWidget(_SurfaceHost(runtime: oldRuntime, interactive: true));
   final staleListener = tester.widget<Listener>(find.byType(Listener));
+  _startPencilPreviewThroughTools(oldRuntime, pointerId: 7);
+  expect(oldRuntime.preview, isA<CanvasPencilStrokePreview>());
   await tester.pumpWidget(_SurfaceHost(runtime: newRuntime, interactive: true));
+  final oldStateBeforeStaleCallback = oldRuntime.state.value;
+  final oldPreviewBeforeStaleCallback = oldRuntime.preview;
 
-  _onPointerDown(staleListener)(
-    const PointerDownEvent(
-      pointer: 7,
-      position: Offset(1, 1),
-      kind: PointerDeviceKind.touch,
-    ),
-  );
-  expect(oldRuntime.preview, isA<CanvasNoPreview>());
+  _routeNonFinitePointerUp(staleListener, pointerId: 7);
+  expect(oldRuntime.state.value, same(oldStateBeforeStaleCallback));
+  expect(oldRuntime.preview, same(oldPreviewBeforeStaleCallback));
   expect(newRuntime.preview, isA<CanvasNoPreview>());
 }
 
@@ -224,6 +262,127 @@ Future<void> _expectNonFiniteSurfaceEventHasNoRuntimeEffects(
 
   observer.expectNoEffects(runtime);
   expect(_paintHosts(), findsOneWidget);
+}
+
+Future<void> _expectNonFiniteTerminalSurfaceEventCleansRuntime(
+  WidgetTester tester,
+) async {
+  await _expectNonFiniteTerminalSurfaceCleanup(
+    tester,
+    routeTerminal: (listener) {
+      _onPointerUp(listener)(
+        const PointerUpEvent(
+          pointer: 10,
+          position: Offset(double.nan, 1),
+          kind: PointerDeviceKind.touch,
+          timeStamp: Duration(milliseconds: 25),
+        ),
+      );
+    },
+  );
+  await _expectNonFiniteTerminalSurfaceCleanup(
+    tester,
+    routeTerminal: (listener) {
+      _onPointerCancel(listener)(
+        const PointerCancelEvent(
+          pointer: 10,
+          position: Offset(1, double.infinity),
+          kind: PointerDeviceKind.touch,
+          timeStamp: Duration(milliseconds: 26),
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _expectNonFiniteTerminalSurfaceCleanup(
+  WidgetTester tester, {
+  required void Function(Listener listener) routeTerminal,
+}) async {
+  final runtime = runtimeWithDocument(CanvasDocument());
+  addTearDown(runtime.dispose);
+  runtime.tools.setMode(CanvasInteractionMode.draw);
+  runtime.tools.setDrawStyle(CanvasDrawStyle.defaultStyle);
+  final observer = _RuntimeSideEffectObserver(runtime);
+  addTearDown(observer.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, interactive: true));
+  final listener = tester.widget<Listener>(find.byType(Listener));
+  _routeSurfacePencilDown(listener);
+  await tester.pump();
+  expect(runtime.preview, isA<CanvasPencilStrokePreview>());
+
+  routeTerminal(listener);
+  await tester.pump();
+
+  observer.expectNoOutputsAndSameDocument(runtime);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  _expectNextLineFirstTapTimestampZero(runtime, listener);
+  observer.expectNoOutputsAndSameDocument(runtime);
+}
+
+void _routeSurfacePencilDown(Listener listener) {
+  _onPointerDown(listener)(
+    const PointerDownEvent(
+      pointer: 10,
+      position: Offset(4, 5),
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+}
+
+void _expectNextLineFirstTapTimestampZero(
+  CanvasRuntime runtime,
+  Listener listener,
+) {
+  runtime.tools.setDrawStyle(
+    CanvasDrawStyle(tool: CanvasDrawTool.line, lineThickness: 4),
+  );
+  _routeLineFirstTap(listener);
+
+  final preview = runtime.preview as CanvasPendingLineStartPreview;
+  expect(preview.timestampMs, 0);
+}
+
+void _routeLineFirstTap(Listener listener) {
+  _onPointerDown(listener)(
+    const PointerDownEvent(
+      pointer: 11,
+      position: Offset(2, 3),
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+  _onPointerUp(listener)(
+    const PointerUpEvent(
+      pointer: 11,
+      position: Offset(2, 3),
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+}
+
+void _startPencilPreviewThroughTools(
+  CanvasRuntime runtime, {
+  required int pointerId,
+}) {
+  runtime.tools.handlePointer(
+    CanvasPointerSample(
+      pointerId: pointerId,
+      position: const Offset(1, 1),
+      phase: CanvasPointerLifecyclePhase.down,
+      kind: PointerDeviceKind.touch,
+    ),
+  );
+}
+
+void _routeNonFinitePointerUp(Listener listener, {required int pointerId}) {
+  _onPointerUp(listener)(
+    PointerUpEvent(
+      pointer: pointerId,
+      position: const Offset(double.nan, 1),
+      kind: PointerDeviceKind.touch,
+    ),
+  );
 }
 
 void _routeNonFiniteSurfaceEvents(Listener listener) {
@@ -307,6 +466,7 @@ final class _RuntimeSideEffectObserver {
     : beforeDocument = _runtime.readDocument(),
       beforeState = _runtime.state.value {
     _subscription = _runtime.actions.listen(actions.add);
+    _requestSubscription = _runtime.contextActionRequests.listen(requests.add);
     _runtime.state.addListener(_countStateTick);
   }
 
@@ -314,7 +474,10 @@ final class _RuntimeSideEffectObserver {
   final CanvasDocument beforeDocument;
   final CanvasRuntimeState beforeState;
   final List<CanvasActionCommitted> actions = [];
+  final List<CanvasContextActionRequested> requests = [];
   late final StreamSubscription<CanvasActionCommitted> _subscription;
+  late final StreamSubscription<CanvasContextActionRequested>
+  _requestSubscription;
   int stateTicks = 0;
 
   void expectNoEffects(CanvasRuntime runtime) {
@@ -323,11 +486,19 @@ final class _RuntimeSideEffectObserver {
     expect(runtime.readDocument(), same(beforeDocument));
     expect(stateTicks, 0);
     expect(actions, isEmpty);
+    expect(requests, isEmpty);
+  }
+
+  void expectNoOutputsAndSameDocument(CanvasRuntime runtime) {
+    expect(runtime.readDocument(), same(beforeDocument));
+    expect(actions, isEmpty);
+    expect(requests, isEmpty);
   }
 
   Future<void> dispose() async {
     _runtime.state.removeListener(_countStateTick);
     await _subscription.cancel();
+    await _requestSubscription.cancel();
   }
 
   void _countStateTick() {

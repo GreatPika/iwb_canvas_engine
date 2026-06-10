@@ -378,7 +378,7 @@ Depends On:
 
 - Unit 1
 
-### [ ] Unit 3: Flutter surface terminal admission
+### [x] Unit 3: Flutter surface terminal admission
 
 Owner:
 

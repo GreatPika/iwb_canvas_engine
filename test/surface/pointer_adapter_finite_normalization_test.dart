@@ -6,7 +6,7 @@ import '../support/flutter_in_package_test_harness.dart';
 
 void main() {
   test(
-    'CanvasSurfacePointerAdapter routes finite Flutter samples only',
+    'CanvasSurfacePointerAdapter routes finite samples and terminal cleanup',
     () async {
       await expectLater(
         runFlutterInPackageTest(
@@ -17,7 +17,7 @@ void main() {
     },
   );
 
-  test('pointer adapter remains a Listener-only finite boundary', () {
+  test('pointer adapter remains a Listener-only input boundary', () {
     final source = File(
       'lib/src/surface/pointer_adapter.dart',
     ).readAsStringSync();
