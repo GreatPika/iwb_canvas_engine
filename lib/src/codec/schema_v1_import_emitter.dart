@@ -64,11 +64,10 @@ void importSchemaV1DocumentIntoIsolatedSink(
 }) {
   try {
     validateSchemaV1Root(json, diagnostics: diagnostics);
-    _emitSchemaV1ImportEvents(
+    _emitSchemaV1ImportEventsIntoIsolatedSink(
       json,
       sink,
       diagnostics: diagnostics,
-      metadataBudget: _SchemaV1MetadataBudget(diagnostics),
     );
   } catch (_) {
     sink.abortDocument();
@@ -171,6 +170,19 @@ final class _SchemaV1MetadataBudget {
   }
 }
 
+void _emitSchemaV1ImportEventsIntoIsolatedSink(
+  Map<String, Object?> json,
+  IsolatedSchemaV1ImportSink sink, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  _emitSchemaV1ImportEvents(
+    json,
+    sink,
+    diagnostics: diagnostics,
+    isolatedMetadataBudget: _SchemaV1MetadataBudget(diagnostics),
+  );
+}
+
 // Event emission stays in schema order to keep the sink protocol auditable and
 // avoid splitting count limits away from the exact events they guard.
 // Keeping isolated-sink validation in this pass avoids a second document walk.
@@ -179,10 +191,10 @@ void _emitSchemaV1ImportEvents(
   Map<String, Object?> json,
   SchemaV1ImportSink sink, {
   required DiagnosticsHub? diagnostics,
-  _SchemaV1MetadataBudget? metadataBudget,
+  _SchemaV1MetadataBudget? isolatedMetadataBudget,
 }) {
   final document = _readDocumentEvent(json, diagnostics: diagnostics);
-  metadataBudget?.add(document.metadata);
+  isolatedMetadataBudget?.add(document.metadata);
   _deliverDocumentEvent(sink, document, diagnostics);
 
   final resources = _readList(
@@ -201,7 +213,7 @@ void _emitSchemaV1ImportEvents(
   }
   for (final resource in resources) {
     final event = _readResource(resource, diagnostics: diagnostics);
-    metadataBudget?.add(event.metadata);
+    isolatedMetadataBudget?.add(event.metadata);
     _deliverResourceEvent(sink, event, diagnostics);
   }
 
@@ -213,7 +225,7 @@ void _emitSchemaV1ImportEvents(
     elementCount += 1;
     _validateElementCount(elementCount, diagnostics);
     final event = _readElement(element, diagnostics: diagnostics);
-    metadataBudget?.add(event.common.metadata);
+    isolatedMetadataBudget?.add(event.common.metadata);
     _deliverBackgroundElementEvent(sink, event, diagnostics);
   }
 
@@ -233,13 +245,13 @@ void _emitSchemaV1ImportEvents(
   }
   for (final value in layers) {
     final layer = _readLayer(value, diagnostics: diagnostics);
-    metadataBudget?.add(layer.event.metadata);
+    isolatedMetadataBudget?.add(layer.event.metadata);
     _deliverLayerEvent(sink, layer.event, diagnostics);
     for (final element in layer.elements) {
       elementCount += 1;
       _validateElementCount(elementCount, diagnostics);
       final event = _readElement(element, diagnostics: diagnostics);
-      metadataBudget?.add(event.common.metadata);
+      isolatedMetadataBudget?.add(event.common.metadata);
       _deliverLayerElementEvent(sink, layer.event.id, event, diagnostics);
     }
   }

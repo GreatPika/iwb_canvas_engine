@@ -279,6 +279,36 @@ void _registerPartialEventTests() {
     expect(sink.layerElements, isEmpty);
   });
 
+  test('isolated aggregate metadata overflow aborts accepted stream state', () {
+    final sink = _CollectingImportSink();
+
+    _expectImportFailure(
+      () => importSchemaV1DocumentIntoIsolatedSink(
+        _aggregateMetadataLimitDocument(),
+        sink,
+      ),
+      CanvasDataErrorCode.invalidMetadata,
+      'metadata',
+    );
+
+    expect(sink.wasAborted, isTrue);
+    expect(
+      sink.eventsBeforeAbort,
+      containsAllInOrder([
+        'begin',
+        'resource:resource-a',
+        'background:rect:bg-rect',
+        'layer:layer-a',
+        'layerElement:layer-a:rect:element-0',
+      ]),
+    );
+    expect(sink.events, isEmpty);
+    expect(sink.resources, isEmpty);
+    expect(sink.backgroundElements, isEmpty);
+    expect(sink.layers, isEmpty);
+    expect(sink.layerElements, isEmpty);
+  });
+
   test('isolated sinks abort on decode and root validation failures', () {
     final invalidJsonSink = _CollectingImportSink();
     _expectImportFailure(
@@ -458,6 +488,29 @@ Map<String, Object?> _validDocument() {
   };
 }
 
+Map<String, Object?> _aggregateMetadataLimitDocument() {
+  final largeValue = 'x' * 60000;
+
+  return {
+    ..._validDocument(),
+    'layers': [
+      {
+        'id': 'layer-a',
+        'elements': [
+          for (var index = 0; index < 18; index += 1)
+            {
+              'id': 'element-' + index.toString(),
+              'kind': 'rect',
+              'size': {'w': 1, 'h': 1},
+              'strokeWidth': 0,
+              'metadata': {'chunk': largeValue},
+            },
+        ],
+      },
+    ],
+  };
+}
+
 final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   final events = <String>[];
   final resources = <SchemaV1ImageResourceImportEvent>[];
@@ -465,6 +518,7 @@ final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   final layers = <SchemaV1LayerImportEvent>[];
   final layerElements =
       <(CanvasLayerId, SchemaV1ElementImportEvent)>[];
+  List<String> eventsBeforeAbort = const [];
   bool wasAborted = false;
 
   @override
@@ -506,6 +560,7 @@ final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   @override
   void abortDocument() {
     wasAborted = true;
+    eventsBeforeAbort = List.unmodifiable(events);
     events.clear();
     resources.clear();
     backgroundElements.clear();

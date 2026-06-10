@@ -61,9 +61,15 @@ Success ordering:
 
 ```text
 1. check raw JSON length;
-2. parse JSON and validate schema v1 root, fields, metadata, enums, resources, elements, and invertible element transforms through codec-owned policy;
-3. emit dependency-neutral schema import events without constructing CanvasDocument, CanvasImageResource, store rows, or a retained validated fact graph;
-4. let DocumentStoreKernel-owned preparation consume the import events into store-owned rows/tables, resource descriptor rows, id admission facts, reference checks, revision facts, runtime camera facts, and projection invalidation facts;
+2. parse JSON and validate the schema v1 root through codec-owned policy;
+3. stream codec-owned field, metadata, enum, resource, element, and invertible
+   transform validation with dependency-neutral schema import events into an
+   isolated sink without constructing CanvasDocument, CanvasImageResource, store
+   rows, or a retained validated fact graph;
+4. let DocumentStoreKernel-owned preparation consume the isolated import sink
+   into store-owned rows/tables, resource descriptor rows, id admission facts,
+   reference checks, revision facts, runtime camera facts, and projection
+   invalidation facts;
 5. if import and store preparation succeed, request prepared interaction cleanup;
 6. produce the LoadInteractionCleanupOutcome before the document install commit
    point; the outcome records whether prepared cleanup changed public preview
@@ -81,8 +87,11 @@ Success ordering:
 12. publish one `CanvasRuntimeState` after install.
 ```
 
-The prepared store load owns replacement committed tables, resource descriptor
-rows, generated id admission state, and replacement revision facts. The
+The isolated import sink may hold pending replacement rows while validation and
+event emission are still streaming. If validation or store preparation fails,
+that pending state is aborted and cannot be installed or observed. The prepared
+store load owns replacement committed tables, resource descriptor rows,
+generated id admission state, and replacement revision facts. The
 runtime/applier boundary combines that prepared store payload with a
 selection-owner clear effect. Selection clearing is not a separate post-install
 mutation. Pointer normalization and pending tap cleanup are also not separate

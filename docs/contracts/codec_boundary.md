@@ -59,7 +59,7 @@ String encodeCanvasDocumentToJson(CanvasDocument document);
 8. elements validation, including non-invertible element transform rejection;
 9. metadata validation;
 10. dependency-neutral import event emission;
-11. no runtime/store side effects.
+11. no runtime side effects and no committed store side effects.
 ```
 
 The public API does not expose `public decode helper` or
@@ -69,6 +69,15 @@ the schema v1 validation policy, but the codec side does not materialize
 document-sized validated fact/list/tree payload. Duplicate id checks, id
 admission, missing resource reference checks, and cross-row reference checks are
 store-owned preparation responsibilities.
+
+Public non-isolated import sinks receive events only after the codec-owned
+validation pass succeeds, so invalid schema input cannot partially notify those
+sinks. Runtime JSON load uses an isolated import sink instead: after raw JSON,
+root object, and schemaVersion admission, codec validation and import event
+emission may stream in one pass. If any codec validation, import event delivery,
+or store-owned preparation step fails, the isolated sink must abort its pending
+state before the exception escapes. Pending isolated sink state is not a
+committed store mutation and must not be publicly observable.
 
 The public encode helper still validates DTO input before writing canonical
 schema v1 JSON. That validation may materialize and inspect public DTOs because
@@ -81,11 +90,11 @@ encode is an explicit projection/output path, not the runtime load path:
 4. no runtime/store side effects.
 ```
 
-Runtime import validation rejects non-invertible element transforms before any
-store preparation or runtime mutation. This is codec boundary validation, not
+Runtime import validation rejects non-invertible element transforms before
+document install or runtime mutation. This is codec boundary validation, not
 runtime repair: validation failure does not expose a partial `CanvasDocument`,
-does not call a public decode helper, and does not mutate runtime or store
-state.
+does not call a public decode helper, does not commit store state, and does not
+mutate runtime state.
 
 ### 19.3 Encode algorithm
 
