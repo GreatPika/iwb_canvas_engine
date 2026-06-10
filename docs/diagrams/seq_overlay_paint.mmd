@@ -12,15 +12,15 @@ sequenceDiagram
   participant Builder as Overlay primitive builder
   participant Painter as Overlay painter
 
-  Surface->>Frame: paint overlay request(viewportRect, effectiveWorldBounds, selectionStyle)
+  Surface->>Frame: paint overlay request(viewportRect, selectionStyle)
   Frame->>Capture: capture overlay frame once
   Capture->>Runtime: capture viewCameraOffset once for overlay frame
   Runtime-->>Capture: viewCameraRevision and viewCameraOffset
   Capture->>Preview: capture previewRevision and immutable previewState once
   Preview-->>Capture: previewRevision and immutable previewState
-  Surface-->>Capture: viewportRect, effectiveWorldBounds, and selectionStyle for this paint frame
+  Surface-->>Capture: viewportRect and selectionStyle for this paint frame
   Capture-->>Frame: CapturedOverlayFrame
-  Note over Capture: CapturedOverlayFrame freezes viewportRect, effectiveWorldBounds, previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
+  Note over Capture: CapturedOverlayFrame freezes viewportRect, derived effectiveWorldBounds, previewRevision, viewCameraRevision, viewCameraOffset, immutable previewState, and selectionStyle for this paint frame.
 
   Frame->>Overlay: admit overlay preview variant from captured CanvasPreviewState only
 

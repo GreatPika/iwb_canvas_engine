@@ -69,7 +69,7 @@ void _testImmutableFrameCapture() {
       },
     );
     final inputs = _inputs(
-      preview: const CanvasSelectedMovePreview(delta: Offset(4, 5)),
+      preview: const CanvasMarqueePreview(rect: Rect.fromLTWH(4, 5, 6, 7)),
       previewRevision: 9,
       viewCameraOffset: const Offset(10, 20),
       viewCameraRevision: 12,
@@ -121,7 +121,7 @@ void _testImmutableFrameCapture() {
     expect(overlay.previewRevision, 9);
     expect(overlay.viewCameraRevision, 12);
     expect(overlay.viewCameraOffset, const Offset(10, 20));
-    expect(overlay.overlayPreview, isNull);
+    expect(overlay.overlayPreview, same(inputs.preview));
     expect(overlay.selectionStyle.color, const Color(0xFF123456));
 
     expect(frameFacts.frameRevisionReads, 1);
