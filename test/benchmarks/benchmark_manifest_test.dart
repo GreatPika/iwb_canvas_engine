@@ -58,7 +58,7 @@ void main() {
       expect(contour.osName, 'Ubuntu');
       expect(contour.osVersion, '24.04');
       expect(contour.flutterChannel, 'stable');
-      expect(contour.flutterVersion, '3.38.0');
+      expect(contour.flutterVersion, '3.38.5');
     });
 
     test('derives documentation scale labels from manifest scale data', () {
@@ -428,7 +428,7 @@ void main() {
     test('rejects release contour drift', () {
       final manifest = BenchmarkManifest.parse(
         _manifestText().replaceFirst(
-          '  flutter_version: "3.38.0"',
+          '  flutter_version: "3.38.5"',
           '  flutter_version: "3.39.0"',
         ),
       );
@@ -682,7 +682,7 @@ const _expectedProfilePolicyFingerprint =
     'release:1:5::2000:0:true:all_required_scales';
 
 const _expectedReleaseContourFingerprint =
-    'ubuntu-24.04|Ubuntu|24.04|stable|3.38.0';
+    'ubuntu-24.04|Ubuntu|24.04|stable|3.38.5';
 
 const _expectedCaseBoundaryFingerprints = [
   'edit.add_element|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',

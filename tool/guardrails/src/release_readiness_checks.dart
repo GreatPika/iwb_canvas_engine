@@ -488,7 +488,7 @@ void _checkFlutterSetup(
     final config = step['with'];
     if (config is YamlMap &&
         config['channel'] == 'stable' &&
-        config['flutter-version'] == '3.38.0') {
+        config['flutter-version'] == '3.38.5') {
       return;
     }
   }
@@ -496,7 +496,7 @@ void _checkFlutterSetup(
     GuardrailViolation(
       guardrailId: releaseBenchmarkReadinessGuardrailId,
       path: path,
-      message: 'release workflow must pin Flutter 3.38.0 stable',
+      message: 'release workflow must pin Flutter 3.38.5 stable',
     ),
   );
 }
@@ -527,14 +527,14 @@ String _readFile(String path) {
 const _releaseDiffCommand =
     'dart run tool/bench/diff.dart --profile=release '
     '--baseline=tool/bench/baselines/approved/'
-    'release_ubuntu_24_04_flutter_3_38_0.json '
+    'release_ubuntu_24_04_flutter_3_38_5.json '
     '--current=build/bench/current/'
-    'release_ubuntu_24_04_flutter_3_38_0.json '
+    'release_ubuntu_24_04_flutter_3_38_5.json '
     '--output=build/bench/diff/'
-    'release_ubuntu_24_04_flutter_3_38_0.json';
+    'release_ubuntu_24_04_flutter_3_38_5.json';
 
 const _approvedReleaseBaselinePath =
-    'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json';
+    'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json';
 
 const _approvedBaselineImplementationPaths = {
   'tool/bench/update_baseline.dart',

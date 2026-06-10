@@ -6,18 +6,18 @@ import 'benchmark_report.dart';
 import 'benchmark_sample_summary.dart';
 
 const approvedReleaseBaselinePath =
-    'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json';
+    'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json';
 
 const manualBenchmarkReferenceRoot = 'tool/bench/manual/reference_reports';
 
 const releaseCurrentReportPath =
-    'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
+    'build/bench/current/release_ubuntu_24_04_flutter_3_38_5.json';
 
 const releaseDiffPath =
-    'build/bench/diff/release_ubuntu_24_04_flutter_3_38_0.json';
+    'build/bench/diff/release_ubuntu_24_04_flutter_3_38_5.json';
 
 const releaseCandidateRoot =
-    'build/bench/candidates/release_ubuntu_24_04_flutter_3_38_0';
+    'build/bench/candidates/release_ubuntu_24_04_flutter_3_38_5';
 
 const benchmarkCurrentRoot = 'build/bench/current';
 const schemaImportLoadSuccess50kMaxUs = 574000;

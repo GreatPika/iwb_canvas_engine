@@ -16,7 +16,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.38.0
+          flutter-version: 3.38.5
 
       - name: Install dependencies
         run: flutter pub get
@@ -31,7 +31,7 @@ jobs:
         run: dart run tool/bench/run.dart --profile=release
 
       - name: Diff release benchmarks
-        run: dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_38_0.json
+        run: dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_38_5.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_38_5.json
 
       - name: Check current architecture graph
         run: dart run tool/architecture_graph/check.dart

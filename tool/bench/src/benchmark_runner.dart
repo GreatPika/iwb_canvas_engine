@@ -7,7 +7,7 @@ import 'benchmark_report.dart';
 import 'manual_benchmark_history.dart';
 
 const releaseReportPath =
-    'build/bench/current/release_ubuntu_24_04_flutter_3_38_0.json';
+    'build/bench/current/release_ubuntu_24_04_flutter_3_38_5.json';
 
 const benchmarkRunUsage = '''
 Usage: dart run tool/bench/run.dart --profile=<profile> [options]

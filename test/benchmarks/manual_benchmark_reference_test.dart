@@ -520,7 +520,7 @@ Map<String, Object?> _toolchainJson(String profileId) {
     'dartVersion': '3.12.0',
     'flutterChannel': 'stable',
     'flutterVersion': '3.44.0',
-    'releaseContour': {'flutterVersion': '3.38.0'},
+    'releaseContour': {'flutterVersion': '3.38.5'},
   };
 }
 
