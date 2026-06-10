@@ -21,3 +21,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 ## Step Files
 
 - [x] [Step 1. Current docs without history](plan/step_1_current_docs_without_history.md)
+- [ ] [Step 2. API surface invalid terminal cleanup](plan/step_2_api_surface_invalid_terminal_cleanup.md)
