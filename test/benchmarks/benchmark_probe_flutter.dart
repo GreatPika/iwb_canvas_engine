@@ -2351,6 +2351,7 @@ FrameCaptureInputs _frameInputs(
     preview: preview,
     previewRevision: runtime.state.value.revisions.preview,
     viewCameraOffset: runtime.viewCameraOffset,
+    viewCameraRevision: runtime.state.value.revisions.viewCamera,
     textEditSuppression: null,
   );
 }
