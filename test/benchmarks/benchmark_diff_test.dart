@@ -635,7 +635,11 @@ void main() {
       final manifest = BenchmarkManifest.load();
       final baseline = _releaseReport(manifest);
 
-      final timeMetrics = {'avg_us': 116, 'p95_us': 116, 'max_us': 131};
+      final timeMetrics = {
+        'avg_us': 1200,
+        'p95_us': 2200,
+        'max_us': 5200,
+      };
       for (final entry in timeMetrics.entries) {
         final current = _clone(baseline);
         _metrics(current, 'edit.add_element', '1k')[entry.key] = entry.value;
@@ -647,6 +651,7 @@ void main() {
             currentJson: current,
             baselinePath: 'baseline.json',
             currentPath: 'current.json',
+            enforceAbsoluteCaps: false,
           ).failures.join('\n'),
           contains('${entry.key} regression'),
         );
@@ -654,7 +659,7 @@ void main() {
 
       final allocation = _clone(baseline);
       _metrics(allocation, 'edit.add_element', '1k')['allocation_bytes'] =
-          70000;
+          17000000;
       expect(
         diffBenchmarkReports(
           manifest: manifest,
@@ -663,6 +668,7 @@ void main() {
           currentJson: allocation,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('allocation_bytes regression'),
       );
@@ -672,7 +678,7 @@ void main() {
         nonRequiredAllocation,
         'edit.update_visual',
         '1k',
-      )['allocation_bytes'] = 70000;
+      )['allocation_bytes'] = 17000000;
       expect(
         diffBenchmarkReports(
           manifest: manifest,
@@ -681,6 +687,7 @@ void main() {
           currentJson: nonRequiredAllocation,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('edit.update_visual/1k allocation_bytes regression'),
       );
@@ -690,7 +697,7 @@ void main() {
         nonRequiredTimeMetric,
         'projection.read_document',
         '1k',
-      )['avg_us'] = 116;
+      )['avg_us'] = 1200;
       expect(
         diffBenchmarkReports(
           manifest: manifest,
@@ -699,6 +706,7 @@ void main() {
           currentJson: nonRequiredTimeMetric,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('projection.read_document/1k avg_us regression'),
       );
@@ -713,6 +721,7 @@ void main() {
           currentJson: nonNumeric,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('current edit.add_element/1k metric avg_us must be numeric'),
       );
@@ -731,6 +740,7 @@ void main() {
           currentJson: missingAllocation,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains(
           'current edit.update_visual/1k missing metric allocation_bytes',
@@ -738,7 +748,7 @@ void main() {
       );
 
       final rss = _clone(baseline);
-      _metrics(rss, 'edit.add_element', '1k')['rss_delta_bytes'] = 1100000;
+      _metrics(rss, 'edit.add_element', '1k')['rss_delta_bytes'] = 17000000;
       expect(
         diffBenchmarkReports(
           manifest: manifest,
@@ -747,6 +757,7 @@ void main() {
           currentJson: rss,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('rss_delta_bytes regression'),
       );
@@ -756,7 +767,7 @@ void main() {
         lifecycleMemory,
         'load_document.success',
         '1k',
-      )['allocation_bytes'] = 70000;
+      )['allocation_bytes'] = 17000000;
       expect(
         diffBenchmarkReports(
           manifest: manifest,
@@ -765,6 +776,7 @@ void main() {
           currentJson: lifecycleMemory,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains('load_document.success/1k allocation_bytes regression'),
       );

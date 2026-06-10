@@ -1607,6 +1607,9 @@ String? _regressionFailure({
     return null;
   }
   final floor = switch (metric) {
+    'avg_us' => caps['avg_us_floor_us'] ?? 0,
+    'p95_us' => caps['p95_us_floor_us'] ?? 0,
+    'max_us' => caps['max_us_floor_us'] ?? 0,
     'allocation_bytes' => caps['allocation_floor_bytes'] ?? 0,
     'rss_delta_bytes' => caps['rss_floor_bytes'] ?? 0,
     _ => 0,

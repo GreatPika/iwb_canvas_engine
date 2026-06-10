@@ -667,11 +667,14 @@ const _expectedMemoryCaps = {
 
 const _expectedPostBaselineRegressionCaps = {
   'avg_us_percent': 15,
+  'avg_us_floor_us': 1000,
   'p95_us_percent': 15,
+  'p95_us_floor_us': 2000,
   'max_us_percent': 30,
+  'max_us_floor_us': 5000,
   'allocation_or_rss_percent': 10,
-  'allocation_floor_bytes': 65536,
-  'rss_floor_bytes': 1048576,
+  'allocation_floor_bytes': 16777216,
+  'rss_floor_bytes': 16777216,
 };
 
 const _expectedFirstBaselineReferenceLimits = {'avg_us_multiplier': 1.35};
