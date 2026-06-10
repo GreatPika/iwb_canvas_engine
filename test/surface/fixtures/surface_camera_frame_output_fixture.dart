@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
+import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 void main() {
   testWidgets('CanvasSurface camera pan keeps ordinary plan identity', (
@@ -31,9 +32,30 @@ Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
   runtime.camera.setOffset(const Offset(12, 0));
   await tester.pump();
   final afterOutput = _mainPainter(tester).output;
+  final afterOverlayOutput = _overlayPainter(tester).output;
+
+  _expectMainCameraPanOutput(
+    beforeOutput: beforeOutput,
+    beforePlanKey: beforePan.key,
+    afterOutput: afterOutput,
+  );
+  _expectOverlayCapturedCamera(
+    output: afterOverlayOutput,
+    mainOutput: afterOutput,
+    runtime: runtime,
+  );
+
+  return true;
+}
+
+void _expectMainCameraPanOutput({
+  required MainFramePaintOutput beforeOutput,
+  required Object beforePlanKey,
+  required MainFramePaintOutput afterOutput,
+}) {
   final afterPan = afterOutput.capturedFrame.snapshot.inputs;
 
-  expect(afterOutput.ordinaryPlan.key, beforePan.key);
+  expect(afterOutput.ordinaryPlan.key, beforePlanKey);
   expect(
     afterPan.viewportWorldBounds,
     beforeOutput.capturedFrame.snapshot.inputs.viewportWorldBounds,
@@ -43,8 +65,28 @@ Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
     afterPan.effectiveWorldBounds,
     afterPan.viewportWorldBounds.shift(const Offset(12, 0)),
   );
+}
 
-  return true;
+void _expectOverlayCapturedCamera({
+  required OverlayFramePaintOutput output,
+  required MainFramePaintOutput mainOutput,
+  required CanvasRuntime runtime,
+}) {
+  final afterPan = mainOutput.capturedFrame.snapshot.inputs;
+
+  expect(
+    output.capturedFrame.viewportWorldBounds,
+    afterPan.viewportWorldBounds,
+  );
+  expect(output.capturedFrame.viewCameraOffset, const Offset(12, 0));
+  expect(
+    output.capturedFrame.viewCameraRevision,
+    runtime.state.value.revisions.viewCamera,
+  );
+  expect(
+    output.capturedFrame.effectiveWorldBounds,
+    afterPan.effectiveWorldBounds,
+  );
 }
 
 void _expectSurfaceCapturedRuntimePreview(
@@ -106,6 +148,18 @@ MainFramePainter _mainPainter(WidgetTester tester) {
   expect(painter, isA<MainFramePainter>());
 
   return painter as MainFramePainter;
+}
+
+OverlayFramePainter _overlayPainter(WidgetTester tester) {
+  final host = find.byKey(
+    const ValueKey<String>('iwb_canvas_surface.paint_host'),
+  );
+  final paintHost = tester.widget<CustomPaint>(host);
+  final painter = paintHost.foregroundPainter;
+
+  expect(painter, isA<OverlayFramePainter>());
+
+  return painter as OverlayFramePainter;
 }
 
 final class _NoopResolver implements CanvasResourceResolver {
