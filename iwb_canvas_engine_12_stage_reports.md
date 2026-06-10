@@ -15,61 +15,7 @@ test/api_contract/**
 В окружении отсутствуют dart/flutter CLI, поэтому analyzer, flutter pub get и тесты не запускались. Выводы ниже основаны на статическом чтении кода, контрактов, example и public-facing fixtures.
 
 Итог:
-Найдено 1 проблема.
-
-
-ID: API-002
-Этап: Этап 1. Публичный API и сценарий внешнего потребителя
-Название проблемы: Публичный CanvasPointerSample не позволяет представить documented invalid terminal cleanup
-Приоритет: P1
-Вероятность проявления: R2
-Краткое описание:
-Контракт public API v1 говорит, что pointer position должна быть finite для down/move, а invalid terminal samples должны маршрутизироваться в cleanup logic. Но публичная фабрика CanvasPointerSample валидирует position без учёта phase и отклоняет non-finite Offset для любых фаз, включая up и cancel. В результате внешний потребитель не может создать terminal sample, который контракт обещает обработать как cleanup signal.
-
-Дополнительно surface adapter также отбрасывает любой PointerEvent с non-finite localPosition до создания CanvasPointerSample, включая up/cancel. Это усиливает проблему на публичной границе: terminal cleanup, описанный в public API, фактически недостижим через стандартный surface path.
-
-Доказательство в коде:
-docs/contracts/public_api_v1.md:1774-1783:
-validation contract: pointer position -> finite for down/move; invalid terminal samples are routed to cleanup logic.
-
-lib/src/contracts/public/canvas_pointer.dart:92-103:
-CanvasPointerSample factory всегда вызывает validateOffset(position, path: 'pointer.position') до создания sample, независимо от phase.
-
-lib/src/surface/pointer_adapter.dart:35-39:
-CanvasSurfacePointerAdapter._route возвращается без routeSample, если localPosition не finite, независимо от того, является ли phase down/move/up/cancel.
-
-lib/src/surface/pointer_adapter.dart:41-48:
-только после finite-check создаётся CanvasPointerSample и передаётся в routeSample.
-
-Пользовательский или инженерный сценарий проявления:
-Внешний потребитель реализует собственный pointer adapter или использует CanvasSurfaceWidget. Во время drag/preview platform layer или transform даёт terminal cancel/up событие без finite localPosition. Контракт обещает, что invalid terminal sample будет использован для cleanup. На практике public API либо не даёт создать такой CanvasPointerSample, либо surface adapter молча отбрасывает событие. Активная pointer/session cleanup логика не получает terminal signal через documented public path.
-
-Почему это не теоретический edge case:
-Pointer cancel/up при потере pointer stream, detach/rebuild surface, некорректной coordinate conversion или synthetic platform event — реалистичный lifecycle-сценарий для Flutter integration. Контракт специально описывает invalid terminal cleanup, значит этот сценарий считается частью API surface, а не произвольным out-of-contract вводом.
-
-Рекомендуемое исправление:
-Сделать validation CanvasPointerSample phase-aware.
-
-Возможная реализация:
-- для CanvasPointerLifecyclePhase.down и CanvasPointerLifecyclePhase.move оставить обязательный validateOffset(position);
-- для CanvasPointerLifecyclePhase.up и CanvasPointerLifecyclePhase.cancel разрешить documented invalid terminal representation;
-- либо добавить отдельный публичный constructor/factory, например CanvasPointerSample.terminalCleanup(...), который не требует finite position и явно выражает cleanup-only terminal event;
-- обновить CanvasSurfacePointerAdapter так, чтобы non-finite up/cancel не отбрасывались молча, а маршрутизировались как terminal cleanup;
-- сохранить rejection для non-finite down/move.
-
-Также нужно синхронизировать docs/contracts/public_api_v1.md с фактической моделью: либо invalid terminal cleanup действительно поддерживается public API, либо этот пункт должен быть удалён из public contract.
-
-Минимальная проверка после исправления:
-Добавить public-only contract test:
-- создать CanvasPointerSample с phase cancel или up и non-finite position через documented public API;
-- передать sample в runtime.tools.handlePointer(...);
-- проверить, что вызов не бросает validation exception;
-- проверить, что active preview/session cleanup выполняется согласно public contract.
-
-Добавить surface-level public boundary test:
-- смоделировать terminal PointerCancelEvent или PointerUpEvent с non-finite localPosition;
-- проверить, что adapter не теряет terminal cleanup event;
-- проверить, что routeSample вызывается cleanup-safe representation.
+Найдено 0 проблем.
 Основание проверки: стратегия код-ревью, Этап 3 — Store, edit kernel, commit semantics и revision model. fileciteturn0file0
 
 ID: EDIT-002
@@ -249,42 +195,6 @@ Overlay preview обновляется на обычных pointer move собы
 
 Ограничение проверки:
 Ревью выполнено статически по файлам этапа 7. Dart/Flutter test suite не запускался, потому что в контейнере отсутствуют команды dart и flutter.
-ID: SURFACE-002
-Этап: Этап 10. Flutter surface, widget lifecycle и platform integration
-Название проблемы: PointerAdapter отбрасывает invalid terminal Flutter events вместо cleanup-routing активной pointer session
-Приоритет: P1
-Вероятность проявления: R1
-Краткое описание:
-CanvasSurfacePointerAdapter отбрасывает любой PointerEvent с non-finite localPosition до учёта phase. Это безопасно для down/move, но для up/cancel нарушает terminal cleanup semantics: если active pointer session уже создана конечным finite down/move, а terminal event пришёл с NaN/Infinity localPosition, runtime не получает никакого terminal signal. Preview/session могут остаться активными до следующего внешнего cleanup: tool switch, runtime reset, dispose или interactive=false.
-
-Доказательство в коде:
-- docs/contracts/public_api_v1.md:1778-1782 фиксирует различие: pointer position finite для down/move, а invalid terminal samples должны маршрутизироваться в cleanup logic.
-- lib/src/surface/pointer_adapter.dart:25-30 route вызывается для onPointerUp и onPointerCancel.
-- lib/src/surface/pointer_adapter.dart:35-39 сразу возвращает управление при non-finite event.localPosition, не различая down/move и up/cancel.
-- lib/src/contracts/public/canvas_pointer.dart:92-101 CanvasPointerSample требует position и валидирует validateOffset(position), то есть текущий public sample shape не позволяет surface передать terminal cleanup sample с invalid position.
-- test/surface/fixtures/pointer_adapter_finite_normalization_fixture.dart покрывает non-finite down/move как no-effect, но не покрывает сценарий finite down -> non-finite up/cancel при active pointer session.
-
-Пользовательский или инженерный сценарий проявления:
-Пользователь начинает stroke/move/eraser gesture: finite pointer down создаёт active pointer session и preview. Затем Flutter присылает PointerCancelEvent или PointerUpEvent с non-finite localPosition, например из-за временно некорректной transform/hit-test геометрии, platform-view/desktop edge case, test harness или ancestor transform. Adapter silently drops terminal event. Engine не выполняет cleanup, а пользователь видит зависший preview или незавершённое интерактивное состояние.
-
-Почему это не теоретический edge case:
-Репозиторий уже содержит surface fixture, который вручную создаёт PointerEvent с NaN/Infinity localPosition, значит такой boundary case признан релевантным для surface. Контракт отдельно выделяет invalid terminal cleanup. Повреждённый terminal event опаснее повреждённого move: он закрывает session, и его потеря оставляет runtime в visible stale interaction state.
-
-Рекомендуемое исправление:
-Не пытаться превращать invalid terminal в обычный CanvasPointerSample с фиктивной позицией, потому что это может привести к commit по неверной координате. Нужен отдельный cleanup-only path на surface/runtime boundary:
-- либо добавить internal/public terminal cleanup sample, несущий pointerId, phase up/cancel, kind, timestampMs и признак invalidPosition без position;
-- либо добавить в CanvasRuntimeSurfacePort метод handleInvalidPointerTerminal(token, pointerId, phase, kind, timestampMs), который вызывает interaction cleanup-only path без commit intent;
-- down/move с non-finite localPosition по-прежнему должны игнорироваться без runtime effects;
-- up/cancel с non-finite localPosition должны выполнять cleanup-only для matching active pointer session и не создавать edit/action commit.
-
-Минимальная проверка после исправления:
-Добавить widget test:
-1. Mount CanvasSurface(interactive: true), включить draw mode.
-2. Синтетически отправить finite PointerDownEvent через Listener, убедиться, что runtime.preview стал CanvasPencilStrokePreview.
-3. Отправить PointerUpEvent или PointerCancelEvent с тем же pointerId и Offset(double.nan, 1) / Offset(1, double.infinity).
-4. Проверить, что runtime.preview стал CanvasNoPreview, active session очищена, document не изменился, actions пустой или нет commit action.
-5. Отдельно сохранить существующую проверку: non-finite down/move без active session не должны создавать runtime effects.
-
 Что дополнительно проверено и не вынесено как проблема:
 - CanvasSurface attach/detach/runtime swap/session drop в целом реализованы явно: attachSurface -> SurfaceResourceSession -> installSurfaceResourceSession, rollback при ошибке, detach/drop при dispose/runtime swap.
 - Rebuild с новым runtime очищает старый surface binding и подключает новый runtime через CanvasRuntimeSurfacePort.
