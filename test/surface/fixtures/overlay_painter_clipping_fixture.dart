@@ -70,12 +70,12 @@ OverlayFramePaintOutput _overlayOutputWithOutsidePreview() {
 OverlayFramePaintOutput _translatedOverlayOutput() {
   final frame = capturedOverlayFrameFor(
     const CanvasLinePreview(
-      start: Offset(24, 14),
-      end: Offset(30, 14),
+      start: Offset(31, 25),
+      end: Offset(37, 25),
       color: Color(0xFFFF0000),
       thickness: 4,
     ),
-    viewport: const Rect.fromLTWH(0, 0, 16, 16),
+    viewport: const Rect.fromLTWH(7, 11, 16, 16),
     viewCameraOffset: const Offset(20, 10),
   );
   final plan = const OverlayPreviewPlanner().build(frame);

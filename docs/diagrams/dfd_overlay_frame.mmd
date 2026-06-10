@@ -37,12 +37,12 @@ flowchart LR
   Surface -->|"paint asks for overlay UI"| OverlayRepaint
   OverlayRepaint -->|"capture once for this paint"| Capture
 
-  Surface -->|"viewportRect, effectiveWorldBounds,\nselectionStyle"| Capture
+  Surface -->|"viewportRect,\nselectionStyle"| Capture
   Capture -->|"read view camera once"| CameraState
   CameraState -->|"view camera facts"| Capture
   Capture -->|"read preview state once"| PreviewSnapshot
   PreviewSnapshot -->|"previewRevision and previewState"| Capture
-  Capture -->|"compact captured overlay facts"| CapturedFrame
+  Capture -->|"compact captured overlay facts\nincluding derived effectiveWorldBounds"| CapturedFrame
 
   CapturedFrame -->|"captured CanvasPreviewState only"| PreviewAdmission
   PreviewAdmission -->|"admitted overlay variant payloads"| CapturedOverlayKinds
