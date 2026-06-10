@@ -70,29 +70,6 @@ Pointer cancel/up при потере pointer stream, detach/rebuild surface, н
 - смоделировать terminal PointerCancelEvent или PointerUpEvent с non-finite localPosition;
 - проверить, что adapter не теряет terminal cleanup event;
 - проверить, что routeSample вызывается cleanup-safe representation.
-```
-
-```text
-Этап 2. Контракт JSON schema v1, codec и загрузка документа
-
-Метод проверки:
-Статический анализ репозитория. Тесты не запускались: в окружении не обнаружены dart/flutter CLI.
-
-Проверенная область:
-lib/src/codec/**
-lib/src/edit/staged_document_load.dart
-lib/src/store/schema_v1_store_import.dart
-lib/src/api/canvas_codec.dart
-docs/contracts/schema_v1.md
-docs/contracts/codec_boundary.md
-docs/contracts/load_document.md
-docs/contracts/validation_limits.md
-test/codec/**
-релевантные store/load fixtures
-
-```
-
-```text
 Основание проверки: стратегия код-ревью, Этап 3 — Store, edit kernel, commit semantics и revision model. fileciteturn0file0
 
 ID: EDIT-002
@@ -234,28 +211,6 @@ ID: RUNTIME-002
 - Test B: настроить `moveCommitResolver: (_) => const CanvasMoveCancel()`, выполнить selected move terminal с `timestampMs: 10`, затем выполнить следующее реальное action с `timestampMs: null`; проверить, что timestamp cursor не учитывает cancelled resolver path.
 - Test C: сохранить существующее поведение accepted resolver path: resolver request timestamp и последующий move action timestamp остаются монотонными и различимыми.
 
-
-```text
-Этап 5. Interaction engine, pointer tools и preview/commit flow
-
-Проверенная область:
-lib/src/interaction/**
-lib/src/api/canvas_pointer.dart
-lib/src/api/canvas_tools.dart
-lib/src/api/canvas_preview.dart
-lib/src/runtime/runtime_root.dart в части доставки pointer/context/text-edit interaction intents
-lib/src/runtime/runtime_interaction_read_adapter.dart в части interaction read facts
-docs/contracts/interaction_engine.md
-docs/diagrams/state_pending_context_action_request.mmd
-docs/contracts/operation_matrix.md
-test/interaction/**
-test/selection/** в части scenarios через tools
-
-Ограничение проверки:
-Dart-тесты в среде не запускались; вывод основан на статическом чтении кода, контрактов и существующих тестовых фикстур.
-
----
-
 ID: FRAME-001
 Этап: Этап 7. Frame rendering, paint planning и cache invalidation
 Название проблемы: Overlay frame захватывает full main-frame snapshot вместо минимальных overlay facts
@@ -294,85 +249,6 @@ Overlay preview обновляется на обычных pointer move собы
 
 Ограничение проверки:
 Ревью выполнено статически по файлам этапа 7. Dart/Flutter test suite не запускался, потому что в контейнере отсутствуют команды dart и flutter.
-```
-
-```text
-Этап 8. Resources, resolver lifecycle и asset consistency
-
-Основание области проверки: этап 8 стратегии код-ревью — resources, resolver lifecycle, asset consistency; область включает `lib/src/resources/**`, `lib/src/store/resource_table.dart`, resource-facing части frame/surface bridge, `docs/contracts/resources.md`, `docs/contracts/cache_policy.md`, `test/resources/**`. fileciteturn3file2
-
-Проверенная область:
-- `docs/contracts/resources.md`
-- `docs/contracts/cache_policy.md`
-- `docs/diagrams/dfd_cache_invalidation.mmd`
-- `docs/diagrams/seq_resource_resolution.mmd`
-- `lib/src/resources/resource_cache.dart`
-- `lib/src/resources/resource_kernel.dart`
-- `lib/src/resources/resource_resolver_adapter.dart`
-- `lib/src/resources/surface_resource_session.dart`
-- `lib/src/store/resource_table.dart`
-- `lib/src/store/document_store_kernel.dart`
-- `lib/src/store/schema_v1_store_import.dart`
-- `lib/src/store/committed_document.dart`
-- `lib/src/store/store_revision_delta.dart`
-- `lib/src/edit/commit_compiler.dart`
-- `lib/src/edit/commit_applier.dart`
-- `lib/src/edit/draft_document.dart`
-- `lib/src/edit/edit_kernel.dart`
-- `lib/src/edit/edit_session.dart`
-- `lib/src/edit/touched_set_builder.dart`
-- `lib/src/runtime/runtime_root.dart`
-- `lib/src/frame/paint_asset_binding_service.dart`
-- `lib/src/frame/main_frame_asset_images.dart`
-- `lib/src/frame/frame_engine.dart`
-- `lib/src/frame/frame_capture_service.dart`
-- `lib/src/frame/captured_frame.dart`
-- `lib/src/surface/image_bridge.dart`
-- `lib/src/surface/canvas_surface_widget.dart`
-- `test/resources/**`
-- resource-related runtime/surface tests
-
-Найдено проблем: 0.
-
-Проверено без отдельной проблемы:
-- Missing/null resolver result path реализован как degraded behavior через placeholders и same-frame null suppression в `SurfaceResourceSession`.
-- Resolver replacement и drop очищают generation/cache/null suppression/pending flag.
-- `ImageResolveCache` имеет LRU capacity 1024, поэтому отдельного неограниченного роста cache в базовом implementation не найдено.
-
-Оставшиеся неопределённости:
-- Полный `flutter test` не запускался в рамках этого ответа; вывод основан на статическом чтении кода, контрактов и тестовых fixtures.
-- Визуальная корректность всего frame, schema parsing ресурсов на JSON boundary и общий Flutter widget lifecycle вне resource bridge не оценивались, так как они исключены из области этапа 8.
-```
-
-fileciteturn0file0
-
-```text
-Этап 9. Diagnostics, errors и публичная наблюдаемость отказов
-
-Проверенная область:
-lib/src/diagnostics/**
-lib/src/api/canvas_diagnostics.dart
-lib/src/api/canvas_errors.dart
-lib/src/api/canvas_error_details_sanitizer.dart
-lib/src/contracts/public/canvas_diagnostics.dart
-lib/src/contracts/public/canvas_errors.dart
-lib/src/contracts/public/canvas_error_details_sanitizer.dart
-lib/src/codec/schema_v1_diagnostics.dart
-lib/src/codec/schema_v1_decoder.dart
-lib/src/codec/schema_v1_import_emitter.dart
-lib/src/edit/staged_document_load.dart
-lib/src/runtime/runtime_root.dart
-lib/src/runtime/runtime_interaction_diagnostics_adapter.dart
-test/diagnostics/**
-test/codec/schema_v1/diagnostics_routing_test.dart
-test/edit/fixtures/staged_document_load_success_failure_fixture.dart
-
-Ограничение проверки:
-Статический анализ. Dart/Flutter toolchain в среде недоступен, поэтому тесты не запускались.
-
-Найдено проблем: 0
-
-
 ID: SURFACE-002
 Этап: Этап 10. Flutter surface, widget lifecycle и platform integration
 Название проблемы: PointerAdapter отбрасывает invalid terminal Flutter events вместо cleanup-routing активной pointer session
@@ -415,9 +291,6 @@ CanvasSurfacePointerAdapter отбрасывает любой PointerEvent с no
 - MainFramePainter и OverlayFramePainter читают immutable paint outputs и не импортируют CanvasRuntime/DocumentStore/SurfaceResourceSession.
 - CanvasTextEditingOverlay использует public CanvasTextEditingPort.activeSession, EditableText, runtime-owned session commit/dismiss и не дублирует TextPainter measurement.
 - Example app использует package barrel package:iwb_canvas_engine/iwb_canvas_engine.dart в example/lib/** и не импортирует package:iwb_canvas_engine/src/**.
-```
-
-```text
 Источник стратегии этапа 11: fileciteturn0file0
 
 
