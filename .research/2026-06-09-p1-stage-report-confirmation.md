@@ -4,36 +4,28 @@ researcher: Codex
 commit: fdefe361
 branch: new-architecture
 research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.md against the current codebase."
-post_research_update: "Pruned after quick-fix commits through 7d56e6f8; retained commit records the original static research snapshot."
+post_research_update: "Pruned after quick-fix commits through 7d56e6f8 and compact overlay frame capture completion; retained commit records the original static research snapshot."
 ---
 
 # Research: P1 Stage Report Confirmation
 
 ## Summary
 
-2 P1 entries from `iwb_canvas_engine_12_stage_reports.md` remain documented here after the implemented quick fixes were removed from this remaining-problems document.
+1 P1 entry from `iwb_canvas_engine_12_stage_reports.md` remains documented here after the implemented fixes were removed from this remaining-problems document.
 
-The original research was static. This document now tracks only the remaining P1 entries after the implemented quick fixes were removed.
+The original research was static. This document now tracks only the remaining P1 entry after the implemented fixes were removed.
 
 ## Remaining Problem Groups
 
-The 2 remaining P1 entries collapse into 2 unique problem groups when overlapping symptoms are grouped by owning code path. The original report IDs stay listed for traceability.
+The remaining P1 entry maps to 1 unique problem group. The original report ID stays listed for traceability.
 
 | Group | Remaining report IDs | Owning code path | Grouping basis |
 | --- | --- | --- | --- |
-| 1 | `FRAME-001` | Overlay frame capture | Overlay capture uses a full main-frame snapshot instead of minimal overlay facts. |
-| 2 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
+| 1 | `TEST-001` | Release benchmark baseline gate | Release benchmark diff runs against an approved baseline file whose current status is `unapproved`, and diff fails closed. |
 
 ## Detailed Findings
 
-### 1. Frame Capture
-
-- **Location**: primary `lib/src/frame/frame_capture_service.dart:40`; additional `lib/src/frame/captured_frame.dart:90`.
-- **Description**: `FRAME-001` is confirmed. Frame contract describes `CapturedOverlayFrame` as preview/camera/style facts (`docs/contracts/frame_rendering.md:85`, `docs/contracts/frame_rendering.md:88`, `docs/contracts/frame_rendering.md:94`) and says overlay primitives are admitted from `CapturedOverlayFrame` (`docs/contracts/frame_rendering.md:175`, `docs/contracts/frame_rendering.md:178`). Current `captureOverlayFrame` calls `_captureSnapshot(inputs)` (`lib/src/frame/frame_capture_service.dart:40`, `lib/src/frame/frame_capture_service.dart:41`). `_captureSnapshot` reads revisions, selection facts, spatial paint query, resolved elements/descriptors, background, and spatial candidates (`lib/src/frame/frame_capture_service.dart:52`, `lib/src/frame/frame_capture_service.dart:55`, `lib/src/frame/frame_capture_service.dart:56`, `lib/src/frame/frame_capture_service.dart:69`, `lib/src/frame/frame_capture_service.dart:76`, `lib/src/frame/frame_capture_service.dart:80`). `CapturedOverlayFrame` stores a full `CapturedFrameSnapshot` (`lib/src/frame/captured_frame.dart:90`, `lib/src/frame/captured_frame.dart:92`, `lib/src/frame/captured_frame.dart:96`), and that snapshot includes main-frame fields (`lib/src/frame/captured_frame.dart:56`, `lib/src/frame/captured_frame.dart:57`, `lib/src/frame/captured_frame.dart:58`, `lib/src/frame/captured_frame.dart:61`, `lib/src/frame/captured_frame.dart:62`). Existing fixture expects overlay snapshot spatial candidates and doubled reads (`test/frame/fixtures/main_overlay_capture_fixture.dart:76`, `test/frame/fixtures/main_overlay_capture_fixture.dart:115`, `test/frame/fixtures/main_overlay_capture_fixture.dart:132`).
-- **Dependencies**: frame capture service, captured frame models, runtime frame facts, overlay planner.
-- **Data flow**: Overlay frame request -> full snapshot capture -> overlay planner uses overlay preview plus snapshot inputs.
-
-### 2. Release Readiness
+### 1. Release Readiness
 
 - **Location**: primary `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:3`; additional `.github/workflows/release_benchmarks.yml:30`, `tool/bench/src/benchmark_diff.dart:168`.
 - **Description**: `TEST-001` is confirmed. Release benchmark workflow runs release benchmarks and diffs against the approved baseline path (`.github/workflows/release_benchmarks.yml:30`, `.github/workflows/release_benchmarks.yml:34`). The committed approved baseline exists and has `"status": "unapproved"` (`tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:3`) with a message that no measured release baseline has been approved (`tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:5`). Diff code treats `status == 'unapproved'` as a failure (`tool/bench/src/benchmark_diff.dart:168`, `tool/bench/src/benchmark_diff.dart:174`), and the CLI returns exit code 1 when diff is not passed (`tool/bench/src/benchmark_diff.dart:235`, `tool/bench/src/benchmark_diff.dart:240`). Tests and docs also describe this fail-closed placeholder (`test/benchmarks/benchmark_diff_test.dart:36`, `test/benchmarks/benchmark_diff_test.dart:58`, `docs/verification/benchmarks.md:111`, `docs/verification/benchmarks.md:115`).
@@ -42,9 +34,8 @@ The 2 remaining P1 entries collapse into 2 unique problem groups when overlappin
 
 ## Code References
 
-- `iwb_canvas_engine_12_stage_reports.md` - remaining P1 report entries:
-  `FRAME-001` and `TEST-001`.
-- `lib/src/frame/frame_capture_service.dart:40` - overlay capture uses `_captureSnapshot`.
+- `iwb_canvas_engine_12_stage_reports.md` - remaining P1 report entry:
+  `TEST-001`.
 - `tool/bench/src/benchmark_diff.dart:168` - unapproved baseline status creates failure.
 
 ## Search Coverage
@@ -62,16 +53,14 @@ The 2 remaining P1 entries collapse into 2 unique problem groups when overlappin
 - Searched: `rg -n "CanvasContextActionRequested|loadDocumentFromJson|skippedCandidateCount|RejectedContextTargetRead|MarqueeCommitFacts|_withPointerCleanupEffects|_deliverPendingContextRequests" lib test docs`.
 - Searched: `rg -n "invert\\(|CanvasTransform\\(|validateOffset\\(|_hitBox|_hitPath|_eraserHitsPath|spatialCandidateResultWithinBudget|CapturedOverlayFrame|captureOverlayFrame|_captureSnapshot" lib test docs`.
 - Searched: `rg -n "unapproved|approved baseline is not initialized|release_ubuntu_24_04_flutter_3_38_0|release_benchmarks" .github tool docs test`.
-- Not found: current zero-read overlay capture fixture.
 - Not found: measured approved release baseline replacing the unapproved placeholder at the approved release baseline path.
 
 ## Observed Architecture Facts
 
-- Overlay/main capture coupling: overlay frame capture currently owns a full main-frame snapshot, including spatial/resource/selection facts (`lib/src/frame/frame_capture_service.dart:40`, `lib/src/frame/captured_frame.dart:56`).
 - Release benchmark gate state: the current approved baseline path is intentionally present but unapproved, and diff code fails closed on that status (`tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_0.json:3`, `tool/bench/src/benchmark_diff.dart:168`).
 
 ## Open Questions
 
 - This research did not execute Dart, Flutter, DCM, guardrail, docs, or benchmark commands.
 - This research did not evaluate P2 entries from `iwb_canvas_engine_12_stage_reports.md`.
-- This research did not choose remediation order or implementation ownership for the confirmed P1 entries.
+- This research did not choose remediation order or implementation ownership for the confirmed P1 entry.
