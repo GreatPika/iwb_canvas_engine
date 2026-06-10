@@ -17,11 +17,13 @@ final class FrameCaptureInputs {
     required this.preview,
     required this.previewRevision,
     this.viewCameraOffset = Offset.zero,
+    this.viewCameraRevision = 0,
     this.textEditSuppression,
   });
 
   final Rect viewportWorldBounds;
   final Offset viewCameraOffset;
+  final int viewCameraRevision;
   final double devicePixelRatio;
   final CanvasSelectionStyle selectionStyle;
   final CanvasGridStyle gridStyle;
@@ -89,10 +91,54 @@ final class CapturedMainFrame {
 
 final class CapturedOverlayFrame {
   const CapturedOverlayFrame({
-    required this.snapshot,
+    required this.viewportWorldBounds,
+    required this.effectiveWorldBounds,
+    required this.previewRevision,
+    required this.viewCameraRevision,
+    required this.viewCameraOffset,
     required this.overlayPreview,
+    required this.selectionStyle,
   });
 
-  final CapturedFrameSnapshot snapshot;
+  final Rect viewportWorldBounds;
+  final Rect effectiveWorldBounds;
+  final int previewRevision;
+  final int viewCameraRevision;
+  final Offset viewCameraOffset;
   final CanvasPreviewState? overlayPreview;
+  final CanvasSelectionStyle selectionStyle;
+
+  CanvasPreviewState get preview => overlayPreview ?? const CanvasNoPreview();
+
+  CapturedFrameSnapshot get snapshot => CapturedFrameSnapshot(
+    revisions: const FrameRevisionFacts(
+      documentRevision: 0,
+      structuralRevision: 0,
+      boundsRevision: 0,
+      elementVisualRevision: 0,
+      backgroundRevision: 0,
+      gridRevision: 0,
+      resourceRevision: 0,
+    ),
+    capturedHandles: const [],
+    elements: const [],
+    resourceDescriptors: const [],
+    background: const CanvasBackground(),
+    selection: SelectionFacts(
+      selectedElementIds: const [],
+      selectionRevision: 0,
+    ),
+    inputs: FrameCaptureInputs(
+      viewportWorldBounds: viewportWorldBounds,
+      devicePixelRatio: 1,
+      selectionStyle: selectionStyle,
+      gridStyle: CanvasGridStyle.defaultStyle,
+      preview: preview,
+      previewRevision: previewRevision,
+      viewCameraOffset: viewCameraOffset,
+      viewCameraRevision: viewCameraRevision,
+    ),
+    spatialPaintResult: const SpatialCandidatesResult(orderedCandidates: []),
+    spatialPaintCandidates: const [],
+  );
 }

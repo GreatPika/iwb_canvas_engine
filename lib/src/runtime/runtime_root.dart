@@ -440,6 +440,7 @@ final class RuntimeRoot
       preview: preview,
       previewRevision: _interactionEngine.previewRevision,
       viewCameraOffset: _viewCamera.offset,
+      viewCameraRevision: _viewCameraRevision,
       textEditSuppression: _textEditingPort.activeFrameSuppression,
     );
   }

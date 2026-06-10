@@ -38,14 +38,17 @@ final class FrameCaptureService {
   }
 
   CapturedOverlayFrame captureOverlayFrame(FrameCaptureInputs inputs) {
-    final snapshot = _captureSnapshot(inputs);
-
     return CapturedOverlayFrame(
-      snapshot: snapshot,
+      viewportWorldBounds: inputs.viewportWorldBounds,
+      effectiveWorldBounds: inputs.effectiveWorldBounds,
+      previewRevision: inputs.previewRevision,
+      viewCameraRevision: inputs.viewCameraRevision,
+      viewCameraOffset: inputs.viewCameraOffset,
       overlayPreview: switch (inputs.preview) {
         CanvasNoPreview() || CanvasSelectedMovePreview() => null,
         final preview => preview,
       },
+      selectionStyle: inputs.selectionStyle,
     );
   }
 

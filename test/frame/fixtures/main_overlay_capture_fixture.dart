@@ -71,6 +71,8 @@ void _testImmutableFrameCapture() {
     final inputs = _inputs(
       preview: const CanvasSelectedMovePreview(delta: Offset(4, 5)),
       previewRevision: 9,
+      viewCameraOffset: const Offset(10, 20),
+      viewCameraRevision: 12,
     );
 
     final main = capture.captureMainFrame(inputs);
@@ -107,32 +109,37 @@ void _testImmutableFrameCapture() {
     expect(main.snapshot.inputs.devicePixelRatio, 2);
     expect(main.snapshot.inputs.selectionStyle.color, const Color(0xFF123456));
     expect(main.snapshot.inputs.gridStyle.strokeWidth, 2.5);
+    expect(main.snapshot.inputs.viewCameraOffset, const Offset(10, 20));
+    expect(main.snapshot.inputs.viewCameraRevision, 12);
     expect(main.snapshot.preview, same(inputs.preview));
     expect(main.snapshot.previewRevision, 9);
     expect(main.snapshot.spatialPaintCandidates.map((handle) => handle.id), [
       CanvasElementId('b'),
     ]);
-    expect(overlay.snapshot.revisions.documentRevision, 1);
-    expect(overlay.snapshot.spatialPaintCandidates.single.id, handleB.id);
+    expect(overlay.viewportWorldBounds, const Rect.fromLTWH(1, 2, 3, 4));
+    expect(overlay.effectiveWorldBounds, const Rect.fromLTWH(11, 22, 3, 4));
+    expect(overlay.previewRevision, 9);
+    expect(overlay.viewCameraRevision, 12);
+    expect(overlay.viewCameraOffset, const Offset(10, 20));
+    expect(overlay.overlayPreview, isNull);
+    expect(overlay.selectionStyle.color, const Color(0xFF123456));
 
-    expect(frameFacts.frameRevisionReads, 2);
-    expect(frameFacts.backgroundReads, 2);
+    expect(frameFacts.frameRevisionReads, 1);
+    expect(frameFacts.backgroundReads, 1);
     expect(frameFacts.elementHandlesReads, 0);
-    expect(frameFacts.elementHandleForIdReads, 2);
-    expect(frameFacts.resolveElementReads, 4);
+    expect(frameFacts.elementHandleForIdReads, 1);
+    expect(frameFacts.resolveElementReads, 2);
     expect(frameFacts.resolvedIds, [
       CanvasElementId('b'),
       CanvasElementId('a'),
-      CanvasElementId('b'),
-      CanvasElementId('a'),
     ]);
-    expect(frameFacts.resourceDescriptorReads, 2);
-    expect(selectionFacts.reads, 2);
-    expect(spatialQueries, hasLength(2));
-    expect(spatialQueries.map((query) => query.structuralRevision), [2, 2]);
+    expect(frameFacts.resourceDescriptorReads, 1);
+    expect(selectionFacts.reads, 1);
+    expect(spatialQueries, hasLength(1));
+    expect(spatialQueries.single.structuralRevision, 2);
     expect(
-      spatialQueries.map((query) => query.boundsWorld),
-      everyElement(const Rect.fromLTWH(1, 2, 3, 4)),
+      spatialQueries.single.boundsWorld,
+      const Rect.fromLTWH(11, 22, 3, 4),
     );
   });
 }
@@ -216,6 +223,8 @@ FrameCaptureService _emptyCaptureService() {
 FrameCaptureInputs _inputs({
   CanvasPreviewState preview = const CanvasNoPreview(),
   int previewRevision = 0,
+  Offset viewCameraOffset = Offset.zero,
+  int viewCameraRevision = 0,
 }) {
   return FrameCaptureInputs(
     viewportWorldBounds: const Rect.fromLTWH(1, 2, 3, 4),
@@ -227,6 +236,8 @@ FrameCaptureInputs _inputs({
     gridStyle: CanvasGridStyle(strokeWidth: 2.5),
     preview: preview,
     previewRevision: previewRevision,
+    viewCameraOffset: viewCameraOffset,
+    viewCameraRevision: viewCameraRevision,
   );
 }
 
