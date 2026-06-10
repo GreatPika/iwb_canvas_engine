@@ -209,9 +209,12 @@ internals, or resource/session internals.
 `lib/src/interaction/pointer_sample_normalizer.dart` is the target pointer
 admission boundary. It owns conversion from constructible public pointer
 samples to finite normalized world-space samples, plus invalid-terminal cleanup
-decisions for internal raw terminal facts. It does not read document,
-selection, spatial, resolver, edit, resource, frame, runtime stream, or Flutter
-state.
+decisions for no-position `CanvasPointerTerminalCleanup` inputs and internal raw
+terminal facts. Cleanup inputs branch in `InteractionEngine` before coordinate
+normalization; the normalizer classifies whether the terminal is same-session
+cleanup, stale pointer/epoch cleanup or rejection, or no-active-session no-op.
+It does not read document, selection, spatial, resolver, edit, resource, frame,
+runtime stream, or Flutter state.
 
 `lib/src/contracts/internal/command_facts_port.dart` is the target
 runtime-owned high-level command facts boundary. It supplies immutable facts

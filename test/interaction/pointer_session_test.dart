@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_diagnostics_sink.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
@@ -25,6 +26,13 @@ void main() {
   test('routes terminal cleanup input before sample normalization', () {
     expect(_verifyTerminalCleanupInputRouting, returnsNormally);
   });
+
+  test(
+    'records cleanup diagnostics without false stale terminal rejection',
+    () {
+      expect(_verifyTerminalCleanupDiagnostics, returnsNormally);
+    },
+  );
 
   test('closes an admitted terminal sample', () {
     expect(_verifyAdmittedTerminalClose, returnsNormally);
@@ -346,11 +354,53 @@ void _verifyPointerContextTimestampResolver() {
   );
 }
 
-InteractionEngine _engine() {
+void _verifyTerminalCleanupDiagnostics() {
+  final cleanupDiagnostics = _RecordingInteractionDiagnosticsSink();
+  final cleanupEngine = _engine(diagnosticsSink: cleanupDiagnostics)
+    ..handlePointerInput(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(controllerEpoch: 1),
+    );
+
+  cleanupEngine.handlePointerInput(
+    _cleanup(1, CanvasPointerLifecyclePhase.cancel),
+    _context(controllerEpoch: 1),
+  );
+
+  expect(cleanupDiagnostics.invalidTerminalCleanupReasons, [
+    'invalidTerminalPosition',
+  ]);
+  expect(cleanupDiagnostics.staleTerminalRejectedReasons, isEmpty);
+
+  final staleDiagnostics = _RecordingInteractionDiagnosticsSink();
+  final staleEngine = _engine(diagnosticsSink: staleDiagnostics)
+    ..handlePointerSample(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(controllerEpoch: 1),
+    );
+
+  staleEngine.handlePointerSample(
+    _sample(1, const Offset(5, 5), CanvasPointerLifecyclePhase.up),
+    _context(controllerEpoch: 2),
+  );
+
+  expect(staleDiagnostics.invalidTerminalCleanupReasons, [
+    'staleControllerEpoch',
+  ]);
+  expect(staleDiagnostics.staleTerminalRejectedReasons, [
+    'staleControllerEpoch',
+  ]);
+}
+
+InteractionEngine _engine({
+  InteractionDiagnosticsSink diagnosticsSink =
+      const NoopInteractionDiagnosticsSink(),
+}) {
   return InteractionEngine(
     initialMode: CanvasInteractionMode.move,
     initialDrawStyle: CanvasDrawStyle.defaultStyle,
     pointerPolicy: CanvasPointerPolicy.defaultPolicy,
+    diagnosticsSink: diagnosticsSink,
   )..attachReadPort(const _PointerSessionReadPort());
 }
 
@@ -474,6 +524,56 @@ final class _PointerSessionReadPort implements InteractionReadPort {
     );
   }
 }
+
+final class _RecordingInteractionDiagnosticsSink
+    implements InteractionDiagnosticsSink {
+  final invalidTerminalCleanupReasons = <String>[];
+  final staleTerminalRejectedReasons = <String>[];
+
+  @override
+  void recordHitTestFallbackObserved({
+    required String reason,
+    required int? budget,
+    required int? observed,
+  }) => _discardDiagnosticEvent();
+
+  @override
+  void recordInteractionQueryBudgetExceeded({
+    required String reason,
+    required int? budget,
+    required int? observed,
+  }) => _discardDiagnosticEvent();
+
+  @override
+  void recordInvalidTerminalCleanup({required String reason}) {
+    invalidTerminalCleanupReasons.add(reason);
+  }
+
+  @override
+  void recordResolverReentrantMutationRejected({required String operation}) =>
+      _discardDiagnosticEvent();
+
+  @override
+  void recordSelectedMoveStartDeniedNotMovable({
+    required int selectedCount,
+    required int movableCount,
+  }) => _discardDiagnosticEvent();
+
+  @override
+  void recordStaleCandidateRejected({
+    required String reason,
+    required int? expectedRevision,
+    required int? observedRevision,
+    required int skippedCandidateCount,
+  }) => _discardDiagnosticEvent();
+
+  @override
+  void recordStaleTerminalRejected({required String reason}) {
+    staleTerminalRejectedReasons.add(reason);
+  }
+}
+
+int _discardDiagnosticEvent() => 0;
 
 CanvasPointerSample _sample(
   int pointerId,

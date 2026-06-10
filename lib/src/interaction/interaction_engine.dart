@@ -1429,12 +1429,14 @@ final class InteractionEngine {
     InvalidTerminalCleanupDecision decision,
   ) {
     _recordInvalidTerminalCleanup(decision);
+    if (_isStaleTerminalDecision(decision)) {
+      _recordStaleTerminalRejected(decision);
+    }
     final shouldCleanup =
         decision.shouldCleanupActiveSession ||
         _shouldCleanupLineInvalidTerminal(decision);
     InteractionCleanupOutcome? outcome;
     if (shouldCleanup) {
-      _recordStaleTerminalRejected(decision);
       outcome = _cleanupWithReason(_invalidTerminalCleanupReason(decision));
     }
 
@@ -1447,6 +1449,16 @@ final class InteractionEngine {
       selectionReplacement: outcome?.selectionReplacement,
       cleanupDecision: decision,
     );
+  }
+
+  bool _isStaleTerminalDecision(InvalidTerminalCleanupDecision decision) {
+    return switch (decision.kind) {
+      InvalidTerminalCleanupKind.stalePointer ||
+      InvalidTerminalCleanupKind.staleControllerEpoch => true,
+      InvalidTerminalCleanupKind.none ||
+      InvalidTerminalCleanupKind.invalidTerminalPosition ||
+      InvalidTerminalCleanupKind.noActiveSession => false,
+    };
   }
 
   bool _shouldCleanupLineInvalidTerminal(

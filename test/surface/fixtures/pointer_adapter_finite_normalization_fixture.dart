@@ -311,12 +311,19 @@ Future<void> _expectNonFiniteTerminalSurfaceCleanup(
   _routeSurfacePencilDown(listener);
   await tester.pump();
   expect(runtime.preview, isA<CanvasPencilStrokePreview>());
+  final beforeTerminalState = runtime.state.value;
+  final beforeTerminalStateTicks = observer.stateTicks;
 
   routeTerminal(listener);
   await tester.pump();
 
   observer.expectNoOutputsAndSameDocument(runtime);
   expect(runtime.preview, isA<CanvasNoPreview>());
+  observer.expectPublishedPreviewCleanup(
+    runtime,
+    previousState: beforeTerminalState,
+    previousStateTicks: beforeTerminalStateTicks,
+  );
   _expectNextLineFirstTapTimestampZero(runtime, listener);
   observer.expectNoOutputsAndSameDocument(runtime);
 }
@@ -493,6 +500,22 @@ final class _RuntimeSideEffectObserver {
     expect(runtime.readDocument(), same(beforeDocument));
     expect(actions, isEmpty);
     expect(requests, isEmpty);
+  }
+
+  void expectPublishedPreviewCleanup(
+    CanvasRuntime runtime, {
+    required CanvasRuntimeState previousState,
+    required int previousStateTicks,
+  }) {
+    expect(
+      runtime.state.value.revisions.preview,
+      previousState.revisions.preview + 1,
+    );
+    expect(
+      runtime.state.value.revisions.document,
+      previousState.revisions.document,
+    );
+    expect(stateTicks, previousStateTicks + 1);
   }
 
   Future<void> dispose() async {
