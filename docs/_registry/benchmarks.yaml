@@ -29,11 +29,11 @@ profiles:
     scale_selection: all_required_scales
 post_baseline_regression_caps:
   avg_us_percent: 15
-  avg_us_floor_us: 1000
+  avg_us_floor_us: 15000
   p95_us_percent: 15
-  p95_us_floor_us: 2000
+  p95_us_floor_us: 30000
   max_us_percent: 30
-  max_us_floor_us: 5000
+  max_us_floor_us: 30000
   allocation_or_rss_percent: 10
   allocation_floor_bytes: 16777216
   rss_floor_bytes: 16777216

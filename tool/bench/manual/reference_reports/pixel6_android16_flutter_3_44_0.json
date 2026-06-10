@@ -2,7 +2,7 @@
   "kind": "manual_benchmark_reference",
   "schemaVersion": 4,
   "manifestVersion": "benchmark_measurement_boundary_v3",
-  "manifestFingerprint": "c5af449e",
+  "manifestFingerprint": "5fe7de3a",
   "profile": {
     "id": "release",
     "warmups": 1,

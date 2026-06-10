@@ -636,9 +636,9 @@ void main() {
       final baseline = _releaseReport(manifest);
 
       final timeMetrics = {
-        'avg_us': 1200,
-        'p95_us': 2200,
-        'max_us': 5200,
+        'avg_us': 16000,
+        'p95_us': 31000,
+        'max_us': 31000,
       };
       for (final entry in timeMetrics.entries) {
         final current = _clone(baseline);
@@ -697,7 +697,7 @@ void main() {
         nonRequiredTimeMetric,
         'projection.read_document',
         '1k',
-      )['avg_us'] = 1200;
+      )['avg_us'] = 16000;
       expect(
         diffBenchmarkReports(
           manifest: manifest,

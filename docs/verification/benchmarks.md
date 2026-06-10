@@ -65,7 +65,7 @@ exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: c5af449e -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: 5fe7de3a -->
 
 Required benchmark cases:
 
