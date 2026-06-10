@@ -2021,7 +2021,7 @@ Map<String, Object?> _overlayFrameCaptureAction(RuntimeRoot runtime) {
   );
 
   return {
-    'captured_handle_count': frame.snapshot.capturedHandles.length,
+    'captured_view_camera_revision': frame.viewCameraRevision,
     'overlay_preview_count': frame.overlayPreview == null ? 0 : 1,
   };
 }

@@ -107,38 +107,4 @@ final class CapturedOverlayFrame {
   final Offset viewCameraOffset;
   final CanvasPreviewState? overlayPreview;
   final CanvasSelectionStyle selectionStyle;
-
-  CanvasPreviewState get preview => overlayPreview ?? const CanvasNoPreview();
-
-  CapturedFrameSnapshot get snapshot => CapturedFrameSnapshot(
-    revisions: const FrameRevisionFacts(
-      documentRevision: 0,
-      structuralRevision: 0,
-      boundsRevision: 0,
-      elementVisualRevision: 0,
-      backgroundRevision: 0,
-      gridRevision: 0,
-      resourceRevision: 0,
-    ),
-    capturedHandles: const [],
-    elements: const [],
-    resourceDescriptors: const [],
-    background: const CanvasBackground(),
-    selection: SelectionFacts(
-      selectedElementIds: const [],
-      selectionRevision: 0,
-    ),
-    inputs: FrameCaptureInputs(
-      viewportWorldBounds: viewportWorldBounds,
-      devicePixelRatio: 1,
-      selectionStyle: selectionStyle,
-      gridStyle: CanvasGridStyle.defaultStyle,
-      preview: preview,
-      previewRevision: previewRevision,
-      viewCameraOffset: viewCameraOffset,
-      viewCameraRevision: viewCameraRevision,
-    ),
-    spatialPaintResult: const SpatialCandidatesResult(orderedCandidates: []),
-    spatialPaintCandidates: const [],
-  );
 }

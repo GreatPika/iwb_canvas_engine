@@ -70,6 +70,12 @@ void main() {
             .primitives,
         isEmpty,
       );
+      expect(
+        planner
+            .build(capturedOverlayFrameFor(const CanvasNoPreview()))
+            .primitives,
+        isEmpty,
+      );
     },
   );
 }

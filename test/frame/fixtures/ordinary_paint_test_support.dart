@@ -65,6 +65,8 @@ CapturedMainFrame capturedMainFrame({
 
 CapturedOverlayFrame capturedOverlayFrameFor(
   CanvasPreviewState preview, {
+  Rect viewport = const Rect.fromLTWH(0, 0, 10, 10),
+  Offset viewCameraOffset = Offset.zero,
   CanvasSelectionStyle selectionStyle = CanvasSelectionStyle.defaultStyle,
 }) {
   final frameFacts = frameFactsPort(elements: const []);
@@ -76,12 +78,13 @@ CapturedOverlayFrame capturedOverlayFrameFor(
 
   return capture.captureOverlayFrame(
     FrameCaptureInputs(
-      viewportWorldBounds: const Rect.fromLTWH(0, 0, 10, 10),
+      viewportWorldBounds: viewport,
       devicePixelRatio: 1,
       selectionStyle: selectionStyle,
       gridStyle: CanvasGridStyle.defaultStyle,
       preview: preview,
       previewRevision: 1,
+      viewCameraOffset: viewCameraOffset,
     ),
   );
 }

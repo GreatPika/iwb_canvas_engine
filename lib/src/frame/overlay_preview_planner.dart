@@ -143,7 +143,7 @@ MarqueeOverlayPrimitive _marqueePrimitive(
   CapturedOverlayFrame frame,
   CanvasMarqueePreview preview,
 ) {
-  final style = frame.snapshot.inputs.selectionStyle;
+  final style = frame.selectionStyle;
 
   return MarqueeOverlayPrimitive(
     rect: preview.rect,
