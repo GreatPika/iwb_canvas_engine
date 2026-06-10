@@ -516,24 +516,24 @@ void main() {
       );
     });
 
-    test('rejects absolute time caps and first-baseline memory caps', () {
+    test('first-baseline accepts plain release reports without bootstrap caps', () {
       final manifest = BenchmarkManifest.load();
       final report = _releaseReport(manifest);
-      _metrics(report, 'edit.add_element', '1k')['avg_us'] = 1001;
+
       expect(
         validateFirstBaselineCandidate(
           manifest: manifest,
           profile: 'release',
           candidateJson: report,
           candidatePath: 'candidate.json',
-        ).failures.join('\n'),
-        contains('absolute cap'),
+        ).failures,
+        isEmpty,
       );
 
       final missingTimeReport = _releaseReport(manifest);
       _metrics(
         missingTimeReport,
-        'projection.read_document',
+        'edit.add_element',
         '1k',
       ).remove('avg_us');
       expect(
@@ -543,20 +543,7 @@ void main() {
           candidateJson: missingTimeReport,
           candidatePath: 'candidate.json',
         ).failures.join('\n'),
-        contains('candidate projection.read_document/1k missing metric avg_us'),
-      );
-
-      final memoryReport = _releaseReport(manifest);
-      _metrics(memoryReport, 'edit.add_element', '1k')['allocation_bytes'] =
-          1000000;
-      expect(
-        validateFirstBaselineCandidate(
-          manifest: manifest,
-          profile: 'release',
-          candidateJson: memoryReport,
-          candidatePath: 'candidate.json',
-        ).failures.join('\n'),
-        contains('first-baseline cap'),
+        contains('candidate edit.add_element/1k missing metric avg_us'),
       );
 
       final missingMemoryReport = _releaseReport(manifest);
@@ -578,6 +565,26 @@ void main() {
           contains('missing metric allocation_bytes'),
           contains('missing metric rss_delta_bytes'),
         ),
+      );
+    });
+
+    test('absolute time caps remain available for explicit policy checks', () {
+      final manifest = BenchmarkManifest.load();
+      final baseline = _releaseReport(manifest);
+      final current = _clone(baseline);
+      _metrics(current, 'edit.add_element', '1k')['avg_us'] = 1001;
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: current,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: true,
+        ).failures.join('\n'),
+        contains('absolute cap'),
       );
     });
 
@@ -612,22 +619,14 @@ void main() {
         );
 
         final bootstrapReport = _releaseReport(manifest);
-        final bootstrapMetrics = _metrics(
-          bootstrapReport,
-          'edit.add_element',
-          '1k',
-        );
-        bootstrapMetrics['avg_us'] = 200;
-        bootstrapMetrics['reference_avg_us'] = 100;
-
         expect(
           validateFirstBaselineCandidate(
             manifest: manifest,
             profile: 'release',
             candidateJson: bootstrapReport,
             candidatePath: 'candidate.json',
-          ).failures.join('\n'),
-          contains('reference_avg_us'),
+          ).failures,
+          isEmpty,
         );
       },
     );
