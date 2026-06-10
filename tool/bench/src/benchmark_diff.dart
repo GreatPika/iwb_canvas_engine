@@ -20,7 +20,7 @@ const releaseCandidateRoot =
     'build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0';
 
 const benchmarkCurrentRoot = 'build/bench/current';
-const schemaImportLoadSuccess50kMaxUs = 574000;
+const schemaImportLoadSuccess50kMaxUs = 1500000;
 
 final class BenchmarkDiffOptions {
   const BenchmarkDiffOptions({

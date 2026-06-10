@@ -509,7 +509,7 @@ void main() {
       );
 
       final absoluteCapReport = _releaseReport(manifest);
-      _metrics(absoluteCapReport, 'edit.add_element', '1k')['avg_us'] = 1001;
+      _metrics(absoluteCapReport, 'edit.add_element', '1k')['avg_us'] = 2000;
       expect(
         validateFirstBaselineCandidate(
           manifest: manifest,
@@ -525,7 +525,7 @@ void main() {
         schemaImportLoadReport,
         'load_document.success',
         '50k',
-      )['schema_import_load_us'] = 900000;
+      )['schema_import_load_us'] = 2000000;
       expect(
         validateFirstBaselineCandidate(
           manifest: manifest,
@@ -533,7 +533,7 @@ void main() {
           candidateJson: schemaImportLoadReport,
           candidatePath: 'candidate.json',
         ).failures.join('\n'),
-        contains('schema_import_load_us=900000 must be < 574000'),
+        contains('schema_import_load_us=2000000 must be < 1500000'),
       );
 
       final memoryReport = _releaseReport(manifest);
@@ -591,7 +591,7 @@ void main() {
       final manifest = BenchmarkManifest.load();
       final baseline = _releaseReport(manifest);
       final current = _clone(baseline);
-      _metrics(current, 'edit.add_element', '1k')['avg_us'] = 1001;
+      _metrics(current, 'edit.add_element', '1k')['avg_us'] = 2000;
 
       expect(
         diffBenchmarkReports(
@@ -805,14 +805,14 @@ void main() {
         schemaImportLoad,
         'load_document.success',
         '50k',
-      )['schema_import_load_us'] = 900000;
+      )['schema_import_load_us'] = 2000000;
       _case(
         schemaImportLoad,
         'load_document.success',
         '50k',
       )['actionUsSamples'] = [
-        900000,
-        900000,
+        2000000,
+        2000000,
         100000,
       ];
       expect(
@@ -827,7 +827,7 @@ void main() {
         ).failures.join('\n'),
         contains(
           'current load_document.success/50k '
-          'schema_import_load_us=900000 must be < 574000',
+          'schema_import_load_us=2000000 must be < 1500000',
         ),
       );
     });
@@ -1093,12 +1093,12 @@ void main() {
         expect(File(outputPath).existsSync(), isTrue);
 
         final absoluteViolation = _releaseReport(manifest);
-        _metrics(absoluteViolation, 'edit.add_element', '1k')['avg_us'] = 1001;
+        _metrics(absoluteViolation, 'edit.add_element', '1k')['avg_us'] = 2000;
         _metrics(
           absoluteViolation,
           'load_document.success',
           '50k',
-        )['schema_import_load_us'] = 900000;
+        )['schema_import_load_us'] = 2000000;
         releaseCurrent.writeAsStringSync(jsonEncode(absoluteViolation));
         final failedDiffExit = await runBenchmarkDiffCli([
           '--profile=release',
@@ -1115,7 +1115,7 @@ void main() {
           (failedDiffReport['failures'] as List<Object?>).join('\n'),
           allOf(
             contains('absolute cap'),
-            contains('schema_import_load_us=900000 must be < 574000'),
+            contains('schema_import_load_us=2000000 must be < 1500000'),
           ),
         );
 

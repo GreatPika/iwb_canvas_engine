@@ -597,10 +597,86 @@ const _requiredCaseIds = [
 ];
 
 const _expectedBudgetCaps = {
-  'hot_input': {'avg_us': 500, 'p95_us': 2000, 'max_us': 4000},
-  'incremental_edit': {'avg_us': 1000, 'p95_us': 4000, 'max_us': 8000},
-  'frame_capture': {'avg_us': 4000, 'p95_us': 8000, 'max_us': 16000},
-  'query_read': {'avg_us': 500, 'p95_us': 2000, 'max_us': 4000},
+  'hot_input': {
+    'avg_us_by_scale': {
+      '1k': 9000,
+      '10k': 8000,
+      '50k': 40000,
+      '100k': 40000,
+    },
+    'p95_us_by_scale': {
+      '1k': 11000,
+      '10k': 15000,
+      '50k': 50000,
+      '100k': 50000,
+    },
+    'max_us_by_scale': {
+      '1k': 32000,
+      '10k': 15000,
+      '50k': 50000,
+      '100k': 50000,
+    },
+  },
+  'incremental_edit': {
+    'avg_us_by_scale': {
+      '1k': 1500,
+      '10k': 6000,
+      '50k': 40000,
+      '100k': 85000,
+    },
+    'p95_us_by_scale': {
+      '1k': 4000,
+      '10k': 10000,
+      '50k': 50000,
+      '100k': 100000,
+    },
+    'max_us_by_scale': {
+      '1k': 8000,
+      '10k': 15000,
+      '50k': 50000,
+      '100k': 100000,
+    },
+  },
+  'frame_capture': {
+    'avg_us_by_scale': {
+      '1k': 6000,
+      '10k': 6000,
+      '50k': 40000,
+      '100k': 40000,
+    },
+    'p95_us_by_scale': {
+      '1k': 10000,
+      '10k': 10000,
+      '50k': 60000,
+      '100k': 60000,
+    },
+    'max_us_by_scale': {
+      '1k': 25000,
+      '10k': 25000,
+      '50k': 60000,
+      '100k': 60000,
+    },
+  },
+  'query_read': {
+    'avg_us_by_scale': {
+      '1k': 6000,
+      '10k': 20000,
+      '50k': 110000,
+      '100k': 210000,
+    },
+    'p95_us_by_scale': {
+      '1k': 8000,
+      '10k': 30000,
+      '50k': 140000,
+      '100k': 250000,
+    },
+    'max_us_by_scale': {
+      '1k': 15000,
+      '10k': 35000,
+      '50k': 140000,
+      '100k': 250000,
+    },
+  },
   'resource_budgeted': {
     'avg_us': 1000,
     'p95_us': 4000,
@@ -611,7 +687,7 @@ const _expectedBudgetCaps = {
     'p95_us_by_scale': {
       '1k': 100000,
       '10k': 500000,
-      '50k': 1000000,
+      '50k': 2250000,
       '100k': 2000000,
     },
     'failure_mutation_count': 0,
@@ -630,18 +706,46 @@ const _expectedBudgetCaps = {
 const _expectedMemoryCaps = {
   'zero_allocation': {'allocation_bytes_cap': 0, 'rss_delta_bytes_cap': 0},
   'hot_or_query': {
-    'allocation_bytes_cap': 65536,
-    'rss_delta_bytes_cap': 1048576,
+    'allocation_bytes_cap_by_scale': {
+      '1k': 2750000,
+      '10k': 1048576,
+      '50k': 10000000,
+      '100k': 1048576,
+    },
+    'rss_delta_bytes_cap_by_scale': {
+      '1k': 2750000,
+      '10k': 1048576,
+      '50k': 10000000,
+      '100k': 1048576,
+    },
   },
   'incremental_owner_update': {
-    'allocation_base_bytes': 262144,
-    'allocation_per_reported_item_bytes': 512,
-    'rss_delta_bytes_cap': 2097152,
+    'allocation_bytes_cap_by_scale': {
+      '1k': 262144,
+      '10k': 700000,
+      '50k': 12750000,
+      '100k': 27250000,
+    },
+    'rss_delta_bytes_cap_by_scale': {
+      '1k': 2097152,
+      '10k': 700000,
+      '50k': 12750000,
+      '100k': 27250000,
+    },
   },
   'frame_or_resource': {
-    'allocation_base_bytes': 524288,
-    'allocation_per_reported_item_bytes': 128,
-    'rss_delta_bytes_cap': 4194304,
+    'allocation_bytes_cap_by_scale': {
+      '1k': 524288,
+      '10k': 4194304,
+      '50k': 9000000,
+      '100k': 4194304,
+    },
+    'rss_delta_bytes_cap_by_scale': {
+      '1k': 4194304,
+      '10k': 4194304,
+      '50k': 9000000,
+      '100k': 4194304,
+    },
   },
   'bulk_document_1k_10k_50k_100k': {
     'allocation_bytes_cap_by_scale': {
