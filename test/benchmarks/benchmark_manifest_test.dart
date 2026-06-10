@@ -709,13 +709,13 @@ const _expectedMemoryCaps = {
     'allocation_bytes_cap_by_scale': {
       '1k': 2750000,
       '10k': 1048576,
-      '50k': 10000000,
+      '50k': 22000000,
       '100k': 1048576,
     },
     'rss_delta_bytes_cap_by_scale': {
       '1k': 2750000,
       '10k': 1048576,
-      '50k': 10000000,
+      '50k': 22000000,
       '100k': 1048576,
     },
   },
