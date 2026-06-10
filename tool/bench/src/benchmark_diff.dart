@@ -190,12 +190,12 @@ BenchmarkDiffResult validateFirstBaselineCandidate({
     report: candidate,
     profile: profile,
     sourceRole: 'candidate',
-      requireReferenceBaselineMetrics: false,
-      requireFirstBaselineMemoryCaps: false,
-      requireCasePolicyFields: true,
-      requireSamples: true,
-      requireObservedReleaseContour: true,
-      enforceAbsoluteCaps: false,
+    requireReferenceBaselineMetrics: false,
+    requireFirstBaselineMemoryCaps: true,
+    requireCasePolicyFields: true,
+    requireSamples: true,
+    requireObservedReleaseContour: true,
+    enforceAbsoluteCaps: true,
   );
 
   return _result(
@@ -229,7 +229,7 @@ Future<int> runBenchmarkDiffCli(
     currentJson: _readJsonObject(options.current),
     baselinePath: options.baseline,
     currentPath: options.current,
-    enforceAbsoluteCaps: false,
+    enforceAbsoluteCaps: !_isManualBaselinePath(options.baseline),
   );
   _writeJsonObject(options.output, result.report);
   if (!result.passed) {
@@ -966,13 +966,13 @@ void _validateCaseCaps(
   })
   input,
 ) {
+  input.failures.addAll(
+    _validateSchemaImportLoadAcceptanceGate(
+      actual: input.actual,
+      caseName: input.caseName,
+    ),
+  );
   if (input.enforceAbsoluteCaps) {
-    input.failures.addAll(
-      _validateSchemaImportLoadAcceptanceGate(
-        actual: input.actual,
-        caseName: input.caseName,
-      ),
-    );
     input.failures.addAll(
       _validateAbsoluteCaps(
         manifest: input.manifest,

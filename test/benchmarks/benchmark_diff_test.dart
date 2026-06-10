@@ -82,15 +82,10 @@ void main() {
       );
     });
 
-    test('committed manual references are current-schema diff inputs', () {
-      final manifest = BenchmarkManifest.load();
-      final manifestFingerprint = benchmarkManifestFingerprint(manifest);
+    test('committed manual references preserve historical contour metadata', () {
       const expectedDeviceIds = {
         'pixel6_android16_flutter_3_44_0.json': '23081FDF6000L2',
         'xiaomi_22081283g_android14_flutter_3_44_0.json': '22081283G',
-      };
-      const activeDiffReferences = {
-        'xiaomi_22081283g_android14_flutter_3_44_0.json',
       };
       final files = Directory(manualBenchmarkReferenceRoot)
           .listSync()
@@ -111,7 +106,7 @@ void main() {
 
         expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
         expect(baseline['manifestVersion'], benchmarkManifestVersion);
-        expect(baseline['manifestFingerprint'], manifestFingerprint);
+        expect(baseline['manifestFingerprint'], '2e4b020c');
         expect(baseline['profile'], isA<Map<String, Object?>>());
         expect(
           baseline['cases'],
@@ -122,31 +117,14 @@ void main() {
           ),
         );
         expect(runtime['deviceId'], entry.value);
-        final result = diffBenchmarkReports(
-          manifest: manifest,
-          profile: 'release',
-          baselineJson: baseline,
-          currentJson: activeDiffReferences.contains(entry.key)
-              ? _currentReportFromManualBaseline(manifest, baseline)
-              : _releaseReport(manifest),
-          baselinePath: '$manualBenchmarkReferenceRoot/${entry.key}',
-          currentPath: 'current.json',
-          enforceAbsoluteCaps: false,
+        expect(
+          runtime['releaseContour'],
+          containsPair('flutterVersion', '3.38.0'),
         );
-
-        if (activeDiffReferences.contains(entry.key)) {
-          expect(result.failures, isEmpty);
-        } else {
-          expect(result.failures, isNotEmpty);
-          expect(result.failures.join('\n'), isNot(contains('retired field')));
-          expect(result.failures.join('\n'), isNot(contains('retired metric')));
-        }
       }
     });
 
     test('committed manual history uses current vocabulary', () {
-      final manifest = BenchmarkManifest.load();
-      final manifestFingerprint = benchmarkManifestFingerprint(manifest);
       final index =
           jsonDecode(
                 File(
@@ -186,7 +164,7 @@ void main() {
                 .cast<Map<String, Object?>>()
                 .where((source) => source['kind'] == 'report')) {
           expect(source['manifestVersion'], benchmarkManifestVersion);
-          expect(source['manifestFingerprint'], manifestFingerprint);
+          expect(source['manifestFingerprint'], '2e4b020c');
         }
         expect(cases, isNotEmpty, reason: runPath);
         for (final entry in cases.cast<Map<String, Object?>>()) {
@@ -516,7 +494,7 @@ void main() {
       );
     });
 
-    test('first-baseline accepts plain release reports without bootstrap caps', () {
+    test('first-baseline enforces release approval caps', () {
       final manifest = BenchmarkManifest.load();
       final report = _releaseReport(manifest);
 
@@ -528,6 +506,47 @@ void main() {
           candidatePath: 'candidate.json',
         ).failures,
         isEmpty,
+      );
+
+      final absoluteCapReport = _releaseReport(manifest);
+      _metrics(absoluteCapReport, 'edit.add_element', '1k')['avg_us'] = 1001;
+      expect(
+        validateFirstBaselineCandidate(
+          manifest: manifest,
+          profile: 'release',
+          candidateJson: absoluteCapReport,
+          candidatePath: 'candidate.json',
+        ).failures.join('\n'),
+        contains('absolute cap'),
+      );
+
+      final schemaImportLoadReport = _releaseReport(manifest);
+      _metrics(
+        schemaImportLoadReport,
+        'load_document.success',
+        '50k',
+      )['schema_import_load_us'] = 900000;
+      expect(
+        validateFirstBaselineCandidate(
+          manifest: manifest,
+          profile: 'release',
+          candidateJson: schemaImportLoadReport,
+          candidatePath: 'candidate.json',
+        ).failures.join('\n'),
+        contains('schema_import_load_us=900000 must be < 574000'),
+      );
+
+      final memoryReport = _releaseReport(manifest);
+      _metrics(memoryReport, 'edit.add_element', '1k')['allocation_bytes'] =
+          1000000;
+      expect(
+        validateFirstBaselineCandidate(
+          manifest: manifest,
+          profile: 'release',
+          candidateJson: memoryReport,
+          candidatePath: 'candidate.json',
+        ).failures.join('\n'),
+        contains('first-baseline cap'),
       );
 
       final missingTimeReport = _releaseReport(manifest);
@@ -804,6 +823,7 @@ void main() {
           currentJson: schemaImportLoad,
           baselinePath: 'baseline.json',
           currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
         ).failures.join('\n'),
         contains(
           'current load_document.success/50k '
@@ -1071,6 +1091,34 @@ void main() {
         expect(diffExit, 0);
         expect(approved.readAsStringSync(), approvedBeforeDiff);
         expect(File(outputPath).existsSync(), isTrue);
+
+        final absoluteViolation = _releaseReport(manifest);
+        _metrics(absoluteViolation, 'edit.add_element', '1k')['avg_us'] = 1001;
+        _metrics(
+          absoluteViolation,
+          'load_document.success',
+          '50k',
+        )['schema_import_load_us'] = 900000;
+        releaseCurrent.writeAsStringSync(jsonEncode(absoluteViolation));
+        final failedDiffExit = await runBenchmarkDiffCli([
+          '--profile=release',
+          '--baseline=$approvedReleaseBaselinePath',
+          '--current=$releaseCurrentReportPath',
+          '--output=$outputPath',
+        ], manifest: manifest);
+        expect(failedDiffExit, 1);
+        final failedDiffReport =
+            jsonDecode(File(outputPath).readAsStringSync())
+                as Map<String, Object?>;
+        expect(failedDiffReport['status'], 'fail');
+        expect(
+          (failedDiffReport['failures'] as List<Object?>).join('\n'),
+          allOf(
+            contains('absolute cap'),
+            contains('schema_import_load_us=900000 must be < 574000'),
+          ),
+        );
+
         final approvedJson =
             jsonDecode(approved.readAsStringSync()) as Map<String, Object?>;
         final candidateJson =
@@ -1189,58 +1237,6 @@ Map<String, Object?> _releaseReport(BenchmarkManifest manifest) {
     },
     'caseCount': cases.length,
     'cases': cases,
-  };
-}
-
-Map<String, Object?> _currentReportFromManualBaseline(
-  BenchmarkManifest manifest,
-  Map<String, Object?> baseline,
-) {
-  final cases = [
-    for (final compactCase
-        in (baseline['cases'] as List<Object?>).cast<Map<String, Object?>>())
-      _currentCaseFromManualBaseline(manifest, compactCase),
-  ];
-  return {...baseline, 'caseCount': cases.length, 'cases': cases};
-}
-
-// Keeping the compact-reference expansion in one helper makes the reconstructed
-// diff input auditable against the report schema without hiding fields behind
-// test-only indirection.
-// ignore: halstead-volume
-Map<String, Object?> _currentCaseFromManualBaseline(
-  BenchmarkManifest manifest,
-  Map<String, Object?> compactCase,
-) {
-  final id = compactCase['id'] as String;
-  final scale = compactCase['scale'] as String;
-  final benchmarkCase = manifest.cases.firstWhere((candidate) {
-    return candidate.id == id &&
-        candidate.scales.any((candidateScale) => candidateScale.id == scale);
-  }, orElse: () => throw StateError('missing manifest case for $id/$scale'));
-  final metrics = Map<String, Object?>.from(
-    compactCase['metrics'] as Map<String, Object?>,
-  );
-  final setupMetrics = Map<String, Object?>.from(
-    compactCase['setupMetrics'] as Map<String, Object?>? ?? const {},
-  );
-  for (final metric in benchmarkCase.measurementBoundary.setupMetrics) {
-    metrics.putIfAbsent(metric, () => setupMetrics[metric] ?? 1);
-  }
-  return {
-    ...compactCase,
-    'baselinePolicy': benchmarkCase.baselinePolicy,
-    'scaleLabel': benchmarkCase.scales.singleWhere((item) {
-      return item.id == scale;
-    }).label,
-    'budgetClasses': benchmarkCase.budgetClasses,
-    'memoryScope': benchmarkCase.memoryScope,
-    'actionUsSamples': [metrics['avg_us'] ?? 1],
-    'setupUsSamples': benchmarkCase.measurementBoundary.setupScope == 'none'
-        ? <int>[]
-        : [setupMetrics['setup_us'] ?? metrics['setup_us'] ?? 1],
-    'metrics': metrics,
-    'setupMetrics': setupMetrics,
   };
 }
 

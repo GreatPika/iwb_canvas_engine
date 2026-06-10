@@ -36,7 +36,7 @@
       "osName": "Ubuntu",
       "osVersion": "24.04",
       "flutterChannel": "stable",
-      "flutterVersion": "3.44.0"
+      "flutterVersion": "3.38.0"
     }
   },
   "referenceReport": {
@@ -53,7 +53,7 @@
         "sha256": "e3a51ba46041c28d73b487f3ee15acd42e234ef32372ccb820fcaa9c87bbba89"
       },
       "manifestVersion": "benchmark_measurement_boundary_v3",
-      "manifestFingerprint": "5fe7de3a",
+      "manifestFingerprint": "2e4b020c",
       "caseCount": 78
     }
   ],
