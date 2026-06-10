@@ -25,6 +25,12 @@ jobs:
       - name: Run release benchmark candidate
         run: dart run tool/bench/run.dart --profile=release --output=${CANDIDATE_PATH}
 
+      - name: Upload release benchmark candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-benchmark-candidate
+          path: ${{ env.CANDIDATE_PATH }}
+
       - name: Accept baseline candidate
         run: dart run tool/bench/update_baseline.dart --profile=release --candidate=${CANDIDATE_PATH} --approved=${APPROVED_PATH}
 
