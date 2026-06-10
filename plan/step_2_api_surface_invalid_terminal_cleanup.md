@@ -493,7 +493,7 @@ Depends On:
 - Unit 2
 - Unit 3
 
-### [ ] Unit 5: Final mixed-change verification
+### [x] Unit 5: Final mixed-change verification
 
 Owner:
 
