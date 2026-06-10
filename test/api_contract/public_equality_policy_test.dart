@@ -124,6 +124,20 @@ void main() {
       ),
     );
     _expectValueEquality(
+      CanvasPointerTerminalCleanup(
+        pointerId: 1,
+        phase: CanvasPointerLifecyclePhase.up,
+        kind: PointerDeviceKind.touch,
+        timestampMs: 3,
+      ),
+      CanvasPointerTerminalCleanup(
+        pointerId: 1,
+        phase: CanvasPointerLifecyclePhase.up,
+        kind: PointerDeviceKind.touch,
+        timestampMs: 3,
+      ),
+    );
+    _expectValueEquality(
       CanvasDrawStyle(tool: CanvasDrawTool.marker),
       CanvasDrawStyle(tool: CanvasDrawTool.marker),
     );

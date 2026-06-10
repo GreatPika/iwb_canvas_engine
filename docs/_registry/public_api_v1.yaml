@@ -63,7 +63,9 @@ public_exports:
   - CanvasInteractionMode
   - CanvasDrawStyle
   - CanvasPointerPolicy
+  - CanvasPointerInput
   - CanvasPointerSample
+  - CanvasPointerTerminalCleanup
   - CanvasPointerLifecyclePhase
   - CanvasPreviewState
   - CanvasNoPreview

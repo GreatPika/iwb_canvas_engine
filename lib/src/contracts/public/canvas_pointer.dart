@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import 'canvas_contract_limits.dart';
+import 'canvas_errors.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasPointerLifecyclePhase].
@@ -87,8 +88,14 @@ final class CanvasPointerPolicy {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasPointerInput].
+sealed class CanvasPointerInput {
+  const CanvasPointerInput();
+}
+
+@immutable
 /// Public API v1 declaration for [CanvasPointerSample].
-final class CanvasPointerSample {
+final class CanvasPointerSample extends CanvasPointerInput {
   factory CanvasPointerSample({
     required int pointerId,
     required Offset position,
@@ -117,7 +124,7 @@ final class CanvasPointerSample {
     required this.phase,
     required this.kind,
     this.timestampMs,
-  });
+  }) : super();
 
   final int pointerId;
   final Offset position;
@@ -138,4 +145,72 @@ final class CanvasPointerSample {
   @override
   int get hashCode =>
       Object.hash(pointerId, position, timestampMs, phase, kind);
+}
+
+@immutable
+/// Public API v1 declaration for [CanvasPointerTerminalCleanup].
+final class CanvasPointerTerminalCleanup extends CanvasPointerInput {
+  factory CanvasPointerTerminalCleanup({
+    required int pointerId,
+    required CanvasPointerLifecyclePhase phase,
+    required PointerDeviceKind kind,
+    int? timestampMs,
+  }) {
+    validateNonNegativeInt(pointerId, path: 'pointer.pointerId');
+    _validateTerminalCleanupPhase(phase);
+    if (timestampMs != null) {
+      validateNonNegativeInt(timestampMs, path: 'pointer.timestampMs');
+    }
+
+    return CanvasPointerTerminalCleanup._(
+      pointerId: pointerId,
+      phase: phase,
+      kind: kind,
+      timestampMs: timestampMs,
+    );
+  }
+
+  const CanvasPointerTerminalCleanup._({
+    required this.pointerId,
+    required this.phase,
+    required this.kind,
+    this.timestampMs,
+  }) : super();
+
+  final int pointerId;
+  final CanvasPointerLifecyclePhase phase;
+  final PointerDeviceKind kind;
+  final int? timestampMs;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasPointerTerminalCleanup &&
+        other.pointerId == pointerId &&
+        other.phase == phase &&
+        other.kind == kind &&
+        other.timestampMs == timestampMs;
+  }
+
+  @override
+  int get hashCode => Object.hash(pointerId, phase, kind, timestampMs);
+}
+
+void _validateTerminalCleanupPhase(CanvasPointerLifecyclePhase phase) {
+  if (phase == CanvasPointerLifecyclePhase.up ||
+      phase == CanvasPointerLifecyclePhase.cancel) {
+    return;
+  }
+
+  throw CanvasDataException(
+    code: CanvasDataErrorCode.fieldMustBeInRange,
+    message: 'pointer.phase must be a terminal phase.',
+    path: 'pointer.phase',
+    details: {
+      'allowed': [
+        CanvasPointerLifecyclePhase.up.name,
+        CanvasPointerLifecyclePhase.cancel.name,
+      ],
+      'actual': phase.name,
+    },
+  );
 }

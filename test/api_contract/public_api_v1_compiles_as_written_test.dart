@@ -383,7 +383,16 @@ void _exerciseP2ContractSurface() {
     kind: PointerDeviceKind.touch,
     timestampMs: 10,
   );
+  final CanvasPointerInput finitePointerInput = pointerSample;
+  final CanvasPointerInput terminalPointerInput = CanvasPointerTerminalCleanup(
+    pointerId: 1,
+    phase: CanvasPointerLifecyclePhase.cancel,
+    kind: PointerDeviceKind.touch,
+    timestampMs: 11,
+  );
   _use(pointerSample.phase);
+  _use(finitePointerInput);
+  _use(terminalPointerInput);
   _use(CanvasPointerLifecyclePhase.values);
 
   final previews = <CanvasPreviewState>[

@@ -236,7 +236,7 @@ All-Or-Nothing Failure Boundary:
 
 ## Execution Units
 
-### [ ] Unit 1: Public pointer input declarations and equality
+### [x] Unit 1: Public pointer input declarations and equality
 
 Owner:
 
