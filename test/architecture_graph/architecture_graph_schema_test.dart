@@ -21,6 +21,7 @@ void main() {
     _registerMissingAnchorLineTest();
     _registerOutOfBoundsAnchorTest();
     _registerMalformedCoverageTest();
+    _registerCoverageIgnoredPathTest();
     _registerRepositoryRelativeCoveragePathTest();
   });
   group('source coverage diagnostics', () {
@@ -265,6 +266,28 @@ void _registerMalformedCoverageTest() {
     );
 
     expect(_diagnosticIds(graph), contains('coverage.empty_glob'));
+  });
+}
+
+void _registerCoverageIgnoredPathTest() {
+  test('schema validation rejects coverage globs emptied by ignored paths', () {
+    _withTemporaryRepositoryUnderTestPath((repositoryRoot) {
+      File('${repositoryRoot.path}/lib/src/helper_only/only_helper.dart')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('// ignored helper\n');
+
+      expect(
+        _diagnosticIds(
+          _minimalCoverageGraph(
+            publicSurfaces: const ['lib/iwb_canvas_engine.dart'],
+            architectureOwners: const ['lib/src/helper_only/**'],
+            ignored: const ['**/*_helper.dart'],
+          ),
+          repositoryRoot: repositoryRoot.path,
+        ),
+        contains('coverage.empty_glob'),
+      );
+    });
   });
 }
 
@@ -587,6 +610,7 @@ void _withTemporaryRepositoryUnderTestPath(void Function(Directory) callback) {
 ExpectedArchitectureGraph _minimalCoverageGraph({
   required List<String> publicSurfaces,
   required List<String> architectureOwners,
+  List<String>? ignored,
 }) {
   return ExpectedArchitectureGraph(
     schemaVersion: _minimalSourceCoverageGraph.schemaVersion,
@@ -595,7 +619,7 @@ ExpectedArchitectureGraph _minimalCoverageGraph({
       architectureOwners: architectureOwners,
       sensitiveThrows: _minimalSourceCoverageGraph.coverage.sensitiveThrows,
       placeholders: _minimalSourceCoverageGraph.coverage.placeholders,
-      ignored: _minimalSourceCoverageGraph.coverage.ignored,
+      ignored: ignored ?? _minimalSourceCoverageGraph.coverage.ignored,
     ),
     nodes: _minimalSourceCoverageGraph.nodes,
     edges: _minimalSourceCoverageGraph.edges,

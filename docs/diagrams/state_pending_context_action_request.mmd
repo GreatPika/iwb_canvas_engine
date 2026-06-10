@@ -63,11 +63,14 @@ stateDiagram-v2
     and topmost content paint order.
     element.isSelectable is not a gate.
     Background-only coverage resolves as empty canvas.
+    Invalid-index, stale-index, budget-exceeded,
+    and unresolved or skipped candidate reads
+    reject without pending tap or request.
   end note
 
   TopTargetFirst --> PendingContentTarget: "top content target / store id, generation, elementRevision, family, positions, timestamp, epoch"
   TopTargetFirst --> PendingEmptyCanvas: "no qualifying content target / store empty-canvas candidate"
-  TopTargetFirst --> Idle: "invalid-index, stale-index, or budget-exceeded / no pending tap or request"
+  TopTargetFirst --> Idle: "unreliable target read / no pending tap or request"
 
   state "Pending content target" as PendingContentTarget
   note right of PendingContentTarget
@@ -112,11 +115,14 @@ stateDiagram-v2
     A content target must still be the same topmost
     visible content element. An empty-canvas target
     must still have no qualifying content target.
+    Invalid-index, stale-index, budget-exceeded,
+    and unresolved or skipped candidate reads
+    clear pending state without request.
   end note
 
   TopTargetSecond --> CandidateMatch: "same target class"
   TopTargetSecond --> CleanupOnly: "target class changed / clear pending only"
-  TopTargetSecond --> CleanupOnly: "invalid-index, stale-index, or budget-exceeded / clear pending only"
+  TopTargetSecond --> CleanupOnly: "unreliable target read / clear pending only"
 
   state "Candidate match gate" as CandidateMatch
   note right of CandidateMatch
@@ -152,6 +158,20 @@ stateDiagram-v2
 
   EmitContentRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
   EmitEmptyCanvasRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
+  EmitContentRequest --> QueuedRequestSuppressed: "load/dispose before scheduled delivery / suppress queued request"
+  EmitEmptyCanvasRequest --> QueuedRequestSuppressed: "load/dispose before scheduled delivery / suppress queued request"
+
+  state "Queued request suppressed" as QueuedRequestSuppressed
+  note right of QueuedRequestSuppressed
+    Load or dispose cleanup may run after the
+    request id is issued but before the scheduled
+    stream delivery turn. Suppression clears the
+    queued request without publishing a stream event
+    or leaving a live app-observable request.
+  end note
+
+  QueuedRequestSuppressed --> Idle: "load cleanup completed"
+  QueuedRequestSuppressed --> Disposed: "dispose cleanup completed"
 
   state "Issued request remains live" as IssuedRequestLive
   note right of IssuedRequestLive
@@ -185,9 +205,9 @@ stateDiagram-v2
     It publishes no context request, action event,
     document revision, selection change, preview update,
     spatial update, projection eviction, or repaint.
-    Stale-index and budget-exceeded target-read rejections
-    record bounded interaction diagnostics; invalid-index
-    records none.
+    Stale-index, budget-exceeded, and unresolved/skipped
+    target-read rejections record bounded interaction
+    diagnostics; invalid-index records none.
   end note
 
   CleanupOnly --> CleanupCoordinator: "typed cleanup request"

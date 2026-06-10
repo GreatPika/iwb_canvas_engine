@@ -128,7 +128,7 @@ void _expectRootPackageBenchmarkChecks(
     contains('dart run docs/tool/sync_generated_docs.dart --check'),
   );
   expect(runCommands, contains('dart run docs/tool/check_docs.dart'));
-  expect(benchmarkTestCommand, isNotEmpty);
+  expect(benchmarkTestCommand, _expectedBenchmarkTestCommand);
   for (final benchmarkTest in _benchmarkTestPaths()) {
     expect(
       _benchmarkCommandCoversPath(benchmarkTestCommand, benchmarkTest),
@@ -153,6 +153,7 @@ void _expectExamplePackageChecks(String workflowContent) {
   final steps = _workflowSteps(exampleJob);
   final runCommands = _runCommands(steps);
 
+  _expectNoWorkflowBypass(exampleJob, steps);
   expect(runCommands, contains('flutter pub get'));
   expect(runCommands, contains('flutter test'));
   expect(runCommands, contains('flutter analyze'));
@@ -344,16 +345,15 @@ bool _benchmarkCommandCoversPath(String command, String path) {
   const benchmarkDirectory = 'test/benchmarks/';
   final benchmarkFileName = path.replaceFirst(benchmarkDirectory, '');
 
-  return _isDynamicBenchmarkTestCommand(command) &&
+  return command == _expectedBenchmarkTestCommand &&
       path.startsWith(benchmarkDirectory) &&
       !benchmarkFileName.contains('/') &&
       path.endsWith('_test.dart');
 }
 
 bool _isDynamicBenchmarkTestCommand(String command) {
-  return command.startsWith('dart test ') &&
-      command.contains('find test/benchmarks') &&
-      command.contains('-maxdepth 1') &&
-      command.contains("-name '*_test.dart'") &&
-      command.contains('-print');
+  return command == _expectedBenchmarkTestCommand;
 }
+
+const _expectedBenchmarkTestCommand =
+    "dart test \$(find test/benchmarks -maxdepth 1 -name '*_test.dart' -print | sort)";

@@ -432,10 +432,12 @@ final class _SchemaAndCoverageValidator {
     _coverageGlobsMatchProductionDartFiles(
       graph.coverage.publicSurfaces,
       'coverage.publicSurfaces',
+      ignoredPatterns: graph.coverage.ignored,
     );
     _coverageGlobsMatchProductionDartFiles(
       graph.coverage.architectureOwners,
       'coverage.architectureOwners',
+      ignoredPatterns: graph.coverage.ignored,
     );
     context.requiredNonEmpty(
       graph.coverage.sensitiveThrows,
@@ -461,8 +463,9 @@ final class _SchemaAndCoverageValidator {
 
   void _coverageGlobsMatchProductionDartFiles(
     List<String> values,
-    String path,
-  ) {
+    String path, {
+    required List<String> ignoredPatterns,
+  }) {
     for (final value in values) {
       if (value.trim().isEmpty) {
         continue;
@@ -470,6 +473,7 @@ final class _SchemaAndCoverageValidator {
       if (!_coveragePatternMatchesProductionDartFile(
         value,
         repositoryRoot: context.repositoryRoot,
+        ignoredPatterns: ignoredPatterns,
       )) {
         context.add(
           'coverage.empty_glob',
@@ -491,61 +495,87 @@ final class _SchemaAndCoverageValidator {
 bool _coveragePatternMatchesProductionDartFile(
   String pattern, {
   required String repositoryRoot,
+  required List<String> ignoredPatterns,
 }) {
   final normalized = pattern.replaceAll('\\', '/');
   if (!normalized.contains('*')) {
     final file = File('$repositoryRoot/$normalized');
 
-    return file.existsSync() && _isProductionDartPath(normalized);
+    return file.existsSync() &&
+        _isProductionDartPath(normalized, ignoredPatterns: ignoredPatterns);
   }
   if (normalized.endsWith('/**')) {
     final directoryPath = normalized.replaceFirst(RegExp(r'/\*\*$'), '');
-    final directory = Directory('$repositoryRoot/$directoryPath');
 
-    return _directoryContainsProductionDartFile(
-      directory,
+    return _directoryCoveragePatternMatchesProductionDartFile(
+      directoryPath,
       repositoryRoot: repositoryRoot,
+      ignoredPatterns: ignoredPatterns,
     );
   }
   if (normalized.endsWith('/*')) {
     final directoryPath = normalized.replaceFirst(RegExp(r'/\*$'), '');
-    final directory = Directory('$repositoryRoot/$directoryPath');
 
-    if (!directory.existsSync()) {
-      return false;
-    }
-
-    return directory
-        .listSync(followLinks: false)
-        .whereType<File>()
-        .map(
-          (file) => _repositoryRelativePath(
-            file.path,
-            repositoryRoot: repositoryRoot,
-          ),
-        )
-        .any(_isProductionDartPath);
+    return _directChildCoveragePatternMatchesProductionDartFile(
+      directoryPath,
+      repositoryRoot: repositoryRoot,
+      ignoredPatterns: ignoredPatterns,
+    );
   }
 
   return false;
 }
 
-bool _directoryContainsProductionDartFile(
-  Directory directory, {
+bool _directoryCoveragePatternMatchesProductionDartFile(
+  String directoryPath, {
   required String repositoryRoot,
+  required List<String> ignoredPatterns,
 }) {
+  final directory = Directory('$repositoryRoot/$directoryPath');
   if (!directory.existsSync()) {
     return false;
   }
 
-  return directory
-      .listSync(recursive: true, followLinks: false)
+  return _containsProductionDartPath(
+    directory.listSync(recursive: true, followLinks: false),
+    repositoryRoot: repositoryRoot,
+    ignoredPatterns: ignoredPatterns,
+  );
+}
+
+bool _directChildCoveragePatternMatchesProductionDartFile(
+  String directoryPath, {
+  required String repositoryRoot,
+  required List<String> ignoredPatterns,
+}) {
+  final directory = Directory('$repositoryRoot/$directoryPath');
+  if (!directory.existsSync()) {
+    return false;
+  }
+
+  return _containsProductionDartPath(
+    directory.listSync(followLinks: false),
+    repositoryRoot: repositoryRoot,
+    ignoredPatterns: ignoredPatterns,
+  );
+}
+
+bool _containsProductionDartPath(
+  List<FileSystemEntity> entries, {
+  required String repositoryRoot,
+  required List<String> ignoredPatterns,
+}) {
+  return entries
       .whereType<File>()
-      .map(
-        (file) =>
-            _repositoryRelativePath(file.path, repositoryRoot: repositoryRoot),
-      )
-      .any(_isProductionDartPath);
+      .map((file) {
+        return _repositoryRelativePath(
+          file.path,
+          repositoryRoot: repositoryRoot,
+        );
+      })
+      .any((path) {
+        return _isProductionDartPath(path, ignoredPatterns: ignoredPatterns);
+      });
 }
 
 String _repositoryRelativePath(String path, {required String repositoryRoot}) {
@@ -564,14 +594,31 @@ String _repositoryRelativePath(String path, {required String repositoryRoot}) {
   return normalizedPath;
 }
 
-bool _isProductionDartPath(String path) {
+bool _isProductionDartPath(
+  String path, {
+  required List<String> ignoredPatterns,
+}) {
   final normalized = path.replaceAll('\\', '/');
 
   return normalized.endsWith('.dart') &&
       !normalized.startsWith('test/') &&
       !normalized.contains('/test/') &&
       !normalized.startsWith('fixtures/') &&
-      !normalized.contains('/fixtures/');
+      !normalized.contains('/fixtures/') &&
+      !_isCoverageIgnoredPath(normalized, ignoredPatterns);
+}
+
+bool _isCoverageIgnoredPath(String path, List<String> ignoredPatterns) {
+  return ignoredPatterns.any((pattern) {
+    if (pattern == '**/fixtures/**') {
+      return path.contains('/fixtures/');
+    }
+    if (pattern == '**/*_helper.dart') {
+      return path.endsWith('_helper.dart');
+    }
+
+    return path == pattern;
+  });
 }
 
 final class _GraphEntryValidator {

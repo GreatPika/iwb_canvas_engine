@@ -10,6 +10,7 @@ void main() {
   _testExportFixtureEdges();
   _testRootBarrelFixtureEdges();
   _testPackageDotSegmentFixtureEdges();
+  _testUnownedProductionSourceFixture();
   _testRequiredForbiddenEdges();
   _testOwnerFixtureInventory();
   _testOwnerPolicyInventory();
@@ -143,6 +144,19 @@ void _testPackageDotSegmentFixtureEdges() {
 
     expect(violations, hasLength(1));
     expect(violations.single.guardrailId, ownerDagGuardrailId);
+  });
+}
+
+void _testUnownedProductionSourceFixture() {
+  test('unowned lib/src production sources fail closed', () {
+    final violations = checkOwnerDagFile(
+      path: 'lib/src/tools/reintroduced_tool.dart',
+      content: 'final value = 1;\n',
+    );
+
+    expect(violations, hasLength(1));
+    expect(violations.single.guardrailId, ownerDagGuardrailId);
+    expect(violations.single.message, contains('not assigned'));
   });
 }
 

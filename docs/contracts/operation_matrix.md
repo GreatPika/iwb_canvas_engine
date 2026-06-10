@@ -135,11 +135,13 @@ Notes:
   an immutable public
   `CanvasElement` snapshot and boundsWorld; empty-canvas targets carry no
   element snapshot. Delivery is asynchronous through the context request stream.
-  Rejected invalid-index, stale-index, and budget-exceeded target reads emit no
-  request; stale and budget rejected reads record bounded interaction
-  diagnostics, while invalid-index rejected reads record none. Request delivery
-  itself has no document, selection, preview, repaint, spatial, projection,
-  resource, or action effect.
+  Rejected invalid-index, stale-index, budget-exceeded, and unresolved/skipped
+  candidate target reads emit no request. Stale, budget, and unresolved/skipped
+  rejected reads record bounded interaction diagnostics, while invalid-index
+  rejected reads record none. Accepted request delivery is suppressed if
+  load/dispose cleanup runs before the scheduled stream emission. Request
+  delivery itself has no document, selection, preview, repaint, spatial,
+  projection, resource, or action effect.
 - `commitTextEdit` rejects stale request ids by request id, controller epoch,
   target kind, element generation, elementRevision, missing element,
   empty-canvas target, non-text target, and current text-family mismatch.

@@ -68,7 +68,7 @@ List<GuardrailViolation> ownerDagViolationsForFile({
 }) {
   final sourceOwner = ownerForPath(path);
   if (sourceOwner == null) {
-    return const [];
+    return _unownedProductionSourceViolation(path);
   }
 
   final violations = <GuardrailViolation>[];
@@ -86,6 +86,20 @@ List<GuardrailViolation> ownerDagViolationsForFile({
   }
 
   return violations;
+}
+
+List<GuardrailViolation> _unownedProductionSourceViolation(String path) {
+  if (!path.startsWith('lib/src/') || !path.endsWith('.dart')) {
+    return const [];
+  }
+
+  return [
+    GuardrailViolation(
+      guardrailId: ownerDagGuardrailId,
+      path: path,
+      message: 'production source is not assigned to an owner DAG boundary',
+    ),
+  ];
 }
 
 GuardrailViolation? _ownerDagViolationForReference({

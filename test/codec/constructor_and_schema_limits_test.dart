@@ -503,7 +503,7 @@ Map<String, Object?> _aggregateMetadataLimitJson() {
         'elements': [
           for (var index = 0; index < 18; index += 1)
             {
-              'id': 'element-\$index',
+              'id': 'element-' + index.toString(),
               'kind': 'rect',
               'size': {'w': 1, 'h': 1},
               'fillColor': null,

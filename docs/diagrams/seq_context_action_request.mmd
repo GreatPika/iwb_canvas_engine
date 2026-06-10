@@ -54,17 +54,27 @@ sequenceDiagram
         IE->>Registry: issue request id with content target kind and guard facts
         Registry-->>IE: issued request id
         IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
-        Requests->>Signals: publish context-action request notification only
-        Signals-->>App: deliver CanvasContextActionRequested
-        App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
+        alt load/dispose cleanup before scheduled delivery
+          IE->>Requests: suppress queued context request
+          Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+        else delivery turn runs
+          Requests->>Signals: publish context-action request notification only
+          Signals-->>App: deliver CanvasContextActionRequested
+          App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
+        end
       else current empty-canvas target
         IE->>IE: resolve timestamp through runtime cursor
         IE->>Registry: issue request id with empty-canvas target kind
         Registry-->>IE: issued request id
         IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
-        Requests->>Signals: publish context-action request notification only
-        Signals-->>App: deliver CanvasContextActionRequested
-        App->>AppUI: open app-owned empty-canvas context UI
+        alt load/dispose cleanup before scheduled delivery
+          IE->>Requests: suppress queued context request
+          Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+        else delivery turn runs
+          Requests->>Signals: publish context-action request notification only
+          Signals-->>App: deliver CanvasContextActionRequested
+          App->>AppUI: open app-owned empty-canvas context UI
+        end
       end
       end
     end
@@ -148,9 +158,14 @@ sequenceDiagram
     IE->>Registry: issue request id with content target kind and guard facts
     Registry-->>IE: issued request id
     IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
-    Requests->>Signals: publish context-action request notification only
-    Signals-->>App: deliver CanvasContextActionRequested
-    App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
+    alt load/dispose cleanup before scheduled delivery
+      IE->>Requests: suppress queued context request
+      Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+    else delivery turn runs
+      Requests->>Signals: publish context-action request notification only
+      Signals-->>App: deliver CanvasContextActionRequested
+      App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
+    end
     Note over App,AppUI: Context menu, editor overlay, IME, focus, accessibility, text selection, hide/show policy, and lifetime belong to the application.
     Note over IE,Frame: InteractionRequestRegistry stores stale-guard facts only. It is not an app UI session and not CanvasPreviewState.
     IE->>Cleanup: typed cleanup request for successful context tap cleanup
@@ -160,9 +175,14 @@ sequenceDiagram
     IE->>Registry: issue request id with empty-canvas target kind
     Registry-->>IE: issued request id
     IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
-    Requests->>Signals: publish context-action request notification only
-    Signals-->>App: deliver CanvasContextActionRequested
-    App->>AppUI: open app-owned empty-canvas context UI
+    alt load/dispose cleanup before scheduled delivery
+      IE->>Requests: suppress queued context request
+      Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+    else delivery turn runs
+      Requests->>Signals: publish context-action request notification only
+      Signals-->>App: deliver CanvasContextActionRequested
+      App->>AppUI: open app-owned empty-canvas context UI
+    end
     IE->>Cleanup: typed cleanup request for successful context tap cleanup
     Cleanup-->>IE: PointerCleanupOutcome(no preview, no repaint, pending tap cleared)
     IE-->>Tools: finish double-tap handling

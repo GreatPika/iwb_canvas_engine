@@ -4,6 +4,7 @@ researcher: Codex
 commit: fdefe361
 branch: new-architecture
 research_question: "Confirm all P1 issues in iwb_canvas_engine_12_stage_reports.md against the current codebase."
+post_research_update: "Pruned after quick-fix commits through 7d56e6f8; retained commit records the original static research snapshot."
 ---
 
 # Research: P1 Stage Report Confirmation
