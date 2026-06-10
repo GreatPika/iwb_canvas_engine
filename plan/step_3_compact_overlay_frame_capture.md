@@ -120,7 +120,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Repair Overlay Frame Source Of Truth
+### [x] Unit 1: Repair Overlay Frame Source Of Truth
 
 Owner: frame rendering documentation and registered overlay diagrams.
 
@@ -132,7 +132,7 @@ Completion Check: `dart run docs/tool/sync_generated_docs.dart --check`, `dart r
 
 Depends On: none.
 
-### [ ] Unit 2: Introduce Compact Overlay Capture
+### [x] Unit 2: Introduce Compact Overlay Capture
 
 Owner: `FrameCaptureService` and captured-frame model under `lib/src/frame/**`, with runtime/frame value input flow where required for camera revision.
 
@@ -144,7 +144,7 @@ Completion Check: A focused frame capture fixture proves main capture still read
 
 Depends On: Unit 1.
 
-### [ ] Unit 3: Migrate Overlay Consumers To Compact Fields
+### [x] Unit 3: Migrate Overlay Consumers To Compact Fields
 
 Owner: overlay planner/output/painter consumers under frame and surface rendering.
 
@@ -156,7 +156,7 @@ Completion Check: Overlay preview admission tests still assert marquee, pencil s
 
 Depends On: Unit 2.
 
-### [ ] Unit 4: Prove Compatibility And Regression Boundaries
+### [x] Unit 4: Prove Compatibility And Regression Boundaries
 
 Owner: focused frame/runtime/surface tests and verification surfaces.
 
