@@ -218,7 +218,7 @@ continue-on-error: true
             GuardrailSourceSnapshot(
               path: 'tool/bench/rogue.dart',
               content:
-                  'const path = "tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json";',
+                  'const path = "tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json";',
             ),
           ],
         ),
@@ -310,7 +310,7 @@ continue-on-error: true
           _checkWith(
             extraWorkflowFiles: const {
               '.github/workflows/bad.yml':
-                  'run: cp current.json tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json',
+                  'run: cp current.json tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json',
             },
           ),
         ),
@@ -373,11 +373,11 @@ List<GuardrailViolation> _checkWith({
 const _releaseDiffCommand =
     'dart run tool/bench/diff.dart --profile=release '
     '--baseline=tool/bench/baselines/approved/'
-    'release_ubuntu_24_04_flutter_3_38_5.json '
+    'release_ubuntu_24_04_flutter_3_44_0.json '
     '--current=build/bench/current/'
-    'release_ubuntu_24_04_flutter_3_38_5.json '
+    'release_ubuntu_24_04_flutter_3_44_0.json '
     '--output=build/bench/diff/'
-    'release_ubuntu_24_04_flutter_3_38_5.json';
+    'release_ubuntu_24_04_flutter_3_44_0.json';
 
 const _validReleaseWorkflow =
     '''
@@ -388,7 +388,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.38.5
+          flutter-version: 3.44.0
       - run: dart run docs/tool/sync_generated_docs.dart --check
       - run: dart run docs/tool/check_docs.dart
       - run: dart run tool/bench/run.dart --profile=release

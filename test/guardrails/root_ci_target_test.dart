@@ -206,7 +206,7 @@ void _expectPinnedReleaseContour(YamlMap job, List<YamlMap> steps) {
   expect(flutterStep['uses'], 'subosito/flutter-action@v2');
   final withConfig = flutterStep['with'] as YamlMap;
   expect(withConfig['channel'], 'stable');
-  expect(withConfig['flutter-version'], '3.38.5');
+  expect(withConfig['flutter-version'], '3.44.0');
 }
 
 void _expectReleaseBenchmarkCommands(List<YamlMap> steps) {
@@ -221,11 +221,11 @@ void _expectReleaseBenchmarkCommands(List<YamlMap> steps) {
     contains(
       'dart run tool/bench/diff.dart --profile=release '
       '--baseline=tool/bench/baselines/approved/'
-      'release_ubuntu_24_04_flutter_3_38_5.json '
+      'release_ubuntu_24_04_flutter_3_44_0.json '
       '--current=build/bench/current/'
-      'release_ubuntu_24_04_flutter_3_38_5.json '
+      'release_ubuntu_24_04_flutter_3_44_0.json '
       '--output=build/bench/diff/'
-      'release_ubuntu_24_04_flutter_3_38_5.json',
+      'release_ubuntu_24_04_flutter_3_44_0.json',
     ),
   );
   expect(runCommands, contains('dart run tool/architecture_graph/check.dart'));
@@ -245,7 +245,7 @@ void _expectManualBaselineUpdateCommands(
   expect(
     workflowContent,
     contains(
-      'build/bench/candidates/release_ubuntu_24_04_flutter_3_38_5/'
+      'build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0/'
       r'${{ github.run_id }}.json',
     ),
   );
@@ -253,7 +253,7 @@ void _expectManualBaselineUpdateCommands(
     workflowContent,
     contains(
       'tool/bench/baselines/approved/'
-      'release_ubuntu_24_04_flutter_3_38_5.json',
+      'release_ubuntu_24_04_flutter_3_44_0.json',
     ),
   );
   expect(

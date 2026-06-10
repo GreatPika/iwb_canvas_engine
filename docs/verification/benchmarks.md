@@ -109,13 +109,13 @@ Release benchmark interpretation:
 - Current release reports are transient under `build/bench/current/`.
 - Diff reports are transient under `build/bench/diff/`.
 - The approved release baseline path is
-  `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json`.
+  `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`.
 - Until a pinned release/manual update accepts real measurements, that path may
   contain only an uninitialized fail-closed placeholder and release diff must
   fail rather than infer baseline numbers.
-- `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_38_5.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_38_5.json`
+- `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_44_0.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_44_0.json`
   is read-only with respect to approved baselines.
-- `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_38_5/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json`
+- `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`
   is the manual approved-baseline write path after first-baseline acceptance.
 - Manual device reference reports for optimization work live under
   `tool/bench/manual/reference_reports/`. They are accepted comparison inputs for
@@ -187,7 +187,7 @@ Benchmark CI routing:
   tests, required-case dry-run proof, diff fixtures, benchmark runner proof, and
   docs projection checks. It then runs all non-benchmark Flutter tests with
   `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
-- Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.38.5` stable,
+- Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.44.0` stable,
   writes the current release report, runs the read-only release diff, and then
   blocks on current graph closure, generated-view, and guardrail checks.
 - Release baseline update is a separate `workflow_dispatch` route that writes a

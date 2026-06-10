@@ -5,7 +5,7 @@ release_contour:
   os_name: "Ubuntu"
   os_version: "24.04"
   flutter_channel: "stable"
-  flutter_version: "3.38.5"
+  flutter_version: "3.44.0"
 profiles:
   - id: dry_run
     warmups: 0

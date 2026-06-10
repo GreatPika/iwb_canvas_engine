@@ -508,7 +508,7 @@ Map<String, Object?> _runtimeJson({String? deviceId}) {
     'dartVersion': '3.12.0',
     'flutterChannel': 'stable',
     'flutterVersion': '3.44.0',
-    'releaseContour': {'flutterVersion': '3.38.5'},
+    'releaseContour': {'flutterVersion': '3.44.0'},
     'profileId': 'release',
     'runtimeMode': 'flutter_test',
     'assertionsEnabled': true,
