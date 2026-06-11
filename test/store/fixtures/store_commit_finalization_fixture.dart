@@ -35,6 +35,15 @@ void main() {
     'sparse implicit layer add prepares accepted layer touch',
     () => expect(_sparseImplicitLayerAddPreparesLayerTouch, returnsNormally),
   );
+  test(
+    'sparse content removal prepares accepted base layer touch',
+    () => expect(_sparseContentRemovalPreparesBaseLayerTouch, returnsNormally),
+  );
+  test(
+    'sparse spatial-only update prepares accepted geometry touch',
+    () =>
+        expect(_sparseSpatialOnlyUpdatePreparesGeometryTouch, returnsNormally),
+  );
 }
 
 void _materializedFinalEqualityPreparesAsNoOp() {
@@ -150,6 +159,58 @@ void _sparseImplicitLayerAddPreparesLayerTouch() {
     CanvasElementId('implicit-layer-add'),
   });
   expect(sparsePrepared.touchedFacts.layerIds, {CanvasLayerId('layer-1')});
+  expect(store.projectionBuildCount, 0);
+}
+
+void _sparseContentRemovalPreparesBaseLayerTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final sparsePrepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      mutations: [StoreSparseRemoveElement(CanvasElementId('rect-1'))],
+      revisionDelta: const StoreRevisionDelta.structural(),
+    ),
+  );
+
+  expect(sparsePrepared.hasChanges, isTrue);
+  expect(sparsePrepared.touchedFacts.removedElementIds, {
+    CanvasElementId('rect-1'),
+  });
+  expect(sparsePrepared.touchedFacts.layerIds, {CanvasLayerId('layer-1')});
+  expect(store.projectionBuildCount, 0);
+}
+
+void _sparseSpatialOnlyUpdatePreparesGeometryTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final before = store.elementById(CanvasElementId('rect-1'));
+  if (before is! CanvasRectElement) {
+    throw StateError('Expected rect-1 to be a committed rect.');
+  }
+  final after = CanvasRectElement(
+    id: before.id,
+    revision: before.revision + 1,
+    size: const Size(1, 1),
+    isSelectable: false,
+  );
+  final sparsePrepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      mutations: [
+        StoreSparseUpdateElement(
+          before: before,
+          element: after,
+          elementRevisionDelta: const StoreRevisionDelta.projectionOnly(),
+        ),
+      ],
+      revisionDelta: const StoreRevisionDelta.projectionOnly(),
+    ),
+  );
+
+  expect(sparsePrepared.hasChanges, isTrue);
+  expect(sparsePrepared.touchedFacts.updatedElementIds, {
+    CanvasElementId('rect-1'),
+  });
+  expect(sparsePrepared.touchedFacts.geometryElementIds, {
+    CanvasElementId('rect-1'),
+  });
   expect(store.projectionBuildCount, 0);
 }
 

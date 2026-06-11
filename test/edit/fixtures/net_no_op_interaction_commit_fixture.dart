@@ -33,6 +33,18 @@ void main() {
     () => expect(_implicitLayerAddReturnsSpatialLayerTouch, returnsNormally),
   );
   test(
+    'content removal interaction returns base layer spatial touch',
+    () => expect(_contentRemovalReturnsSpatialLayerTouch, returnsNormally),
+  );
+  test(
+    'background removal interaction returns spatial touch',
+    () => expect(_backgroundRemovalReturnsSpatialTouch, returnsNormally),
+  );
+  test(
+    'spatial-only update interaction returns geometry touch',
+    () => expect(_spatialOnlyUpdateReturnsGeometryTouch, returnsNormally),
+  );
+  test(
     'throwing interaction augmentation rolls back before install',
     () => expect(_throwingInteractionAugmentationRollsBack, returnsNormally),
   );
@@ -120,6 +132,60 @@ void _implicitLayerAddReturnsSpatialLayerTouch() {
   expect(store.projectionBuildCount, 0);
 }
 
+void _contentRemovalReturnsSpatialLayerTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final scenario = _InteractionCommitScenario(store);
+
+  final result = scenario.kernel.prepareInteractionCommit((edit) {
+    edit.removeElement(CanvasElementId('rect-1'));
+  });
+
+  final spatial = result.effects.whereType<SpatialDeliveryEffect>().single;
+  expect(spatial.touchedSet.removedElementIds, {CanvasElementId('rect-1')});
+  expect(spatial.touchedSet.layerIds, {CanvasLayerId('layer-1')});
+  expect(scenario.installCount, 1);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _backgroundRemovalReturnsSpatialTouch() {
+  final store = documentStoreWithDocument(
+    _baseDocument(backgroundElementIds: ['background-1']),
+  );
+  final scenario = _InteractionCommitScenario(store);
+
+  final result = scenario.kernel.prepareInteractionCommit((edit) {
+    edit.removeElement(CanvasElementId('background-1'));
+  });
+
+  final spatial = result.effects.whereType<SpatialDeliveryEffect>().single;
+  expect(spatial.touchedSet.removedElementIds, {
+    CanvasElementId('background-1'),
+  });
+  expect(spatial.touchedSet.backgroundLayerChanged, isTrue);
+  expect(scenario.installCount, 1);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _spatialOnlyUpdateReturnsGeometryTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final scenario = _InteractionCommitScenario(store);
+
+  final result = scenario.kernel.prepareInteractionCommit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        isSelectable: const CanvasFieldSet(false),
+      ),
+    );
+  });
+
+  final spatial = result.effects.whereType<SpatialDeliveryEffect>().single;
+  expect(spatial.touchedSet.updatedElementIds, {CanvasElementId('rect-1')});
+  expect(spatial.touchedSet.geometryElementIds, {CanvasElementId('rect-1')});
+  expect(scenario.installCount, 1);
+  expect(store.projectionBuildCount, 0);
+}
+
 void _expectAcceptedBackgroundPlan(CommitPlan plan) {
   expect(plan.hasChanges, isTrue);
   expect(plan.revisionDelta.document, isTrue);
@@ -200,8 +266,12 @@ void _nestedInteractionAugmentationRollsBack() {
   before.expectUnchanged(store, scenario);
 }
 
-CanvasDocument _baseDocument() {
+CanvasDocument _baseDocument({List<String> backgroundElementIds = const []}) {
   return CanvasDocument(
+    backgroundElements: [
+      for (final id in backgroundElementIds)
+        CanvasRectElement(id: CanvasElementId(id), size: const Size(1, 1)),
+    ],
     layers: [
       CanvasLayer(
         id: CanvasLayerId('layer-1'),

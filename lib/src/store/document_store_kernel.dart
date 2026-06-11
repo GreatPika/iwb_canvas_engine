@@ -1027,7 +1027,7 @@ void _recordElementTouch(
   if (before.transform != after.transform) {
     facts.transformedElementIds.add(id);
   }
-  if (delta.bounds) {
+  if (_committedElementTouchesSpatial(before, after, delta)) {
     facts.geometryElementIds.add(id);
   }
   if (delta.elementVisual) {
@@ -1309,7 +1309,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
       candidate.elements,
       limitedToIds: touched.allElements
           ? null
-          : _sparseTouchedLayerIds(candidate.elements, touched),
+          : _sparseTouchedLayerIds(base.elements, candidate.elements, touched),
     ),
     aggregateTouches: _sparseAggregateTouchedFacts(
       base: base,
@@ -1344,11 +1344,18 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
 }
 
 Set<CanvasLayerId> _sparseTouchedLayerIds(
+  ElementRegistry base,
   ElementRegistry candidate,
   _SparseTouchedCommittedFacts touched,
 ) {
   return {
     ...touched.layerIds,
+    for (final id in touched.elementIds)
+      if (base.elementLocationFacts[id] case ElementLocationFacts(
+        kind: ElementLocationKind.content,
+        layerId: final layerId?,
+      ))
+        layerId,
     for (final id in touched.elementIds)
       if (candidate.elementLocationFacts[id] case ElementLocationFacts(
         kind: ElementLocationKind.content,
@@ -1365,7 +1372,11 @@ _AggregateTouchedFacts _sparseAggregateTouchedFacts({
 }) {
   return _AggregateTouchedFacts(
     backgroundLayerChanged:
-        touched.backgroundElementOrder &&
+        _sparseTouchesBackgroundElementOrder(
+          base.elements,
+          candidate.elements,
+          touched,
+        ) &&
         !_sameList(
           base.elements.backgroundElementIds,
           candidate.elements.backgroundElementIds,
@@ -1378,6 +1389,34 @@ _AggregateTouchedFacts _sparseAggregateTouchedFacts({
         touched.background && base.background.grid != candidate.background.grid,
     palette: touched.palette && !_samePalette(base.palette, candidate.palette),
   );
+}
+
+bool _committedElementTouchesSpatial(
+  CanvasElement before,
+  CanvasElement after,
+  StoreRevisionDelta delta,
+) {
+  return delta.bounds || before.isSelectable != after.isSelectable;
+}
+
+bool _sparseTouchesBackgroundElementOrder(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  if (touched.backgroundElementOrder) {
+    return true;
+  }
+
+  return touched.elementIds.any(
+    (id) =>
+        _isBackgroundLocation(base.elementLocationFacts[id]) ||
+        _isBackgroundLocation(candidate.elementLocationFacts[id]),
+  );
+}
+
+bool _isBackgroundLocation(ElementLocationFacts? location) {
+  return location?.kind == ElementLocationKind.background;
 }
 
 bool _anyChanged(List<bool> changes) {

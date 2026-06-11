@@ -73,7 +73,8 @@ bool _needsSpatialEffect(
 ) {
   return revisionDelta.bounds ||
       touchedSet.geometryElementIds.isNotEmpty ||
-      touchedSet.layerIds.isNotEmpty;
+      touchedSet.layerIds.isNotEmpty ||
+      touchedSet.backgroundLayerChanged;
 }
 
 bool _needsMainRepaint(
