@@ -263,6 +263,7 @@ void _expectCompensatingSparseNoOp(StoreSparseCommit commit) {
 
   expect(prepared.hasChanges, isFalse);
   expect(prepared.revisionDelta, const StoreRevisionDelta());
+  expect(prepared.touchedFacts.hasTouches, isFalse);
   expect(prepared.admittedElementIds, isEmpty);
   expect(prepared.admittedLayerIds, isEmpty);
   expect(prepared.admittedResourceIds, isEmpty);

@@ -19,10 +19,12 @@ import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'element_registry.dart';
 import 'family_tables.dart';
+import 'layer_table.dart';
 import 'resource_table.dart';
 import 'revision_state.dart';
 import 'schema_v1_store_import.dart';
 import 'sparse_store_commit.dart';
+import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
 // DocumentStoreKernel is the single owner for committed document facts, read
@@ -314,6 +316,41 @@ final class DocumentStoreKernel {
     );
   }
 
+  PreparedMaterializedStoreCommit prepareMaterializedCommit(
+    CanvasDocument document,
+    StoreRevisionDelta revisionDelta,
+  ) {
+    final providedDelta = _validatedSparseRevisionDelta(revisionDelta);
+    final candidate = CommittedDocument(document);
+    final acceptedDelta = _committedDocumentRevisionDelta(_document, candidate);
+    if (!acceptedDelta.hasChanges) {
+      return PreparedMaterializedStoreCommit(
+        baseDocument: _document,
+        document: _document,
+        revisionDelta: const StoreRevisionDelta(),
+        touchedFacts: AcceptedStoreTouchedFacts.empty(),
+      );
+    }
+    if (!providedDelta.hasChanges) {
+      throw ArgumentError.value(
+        revisionDelta,
+        'revisionDelta',
+        'materialized store commits that change facts must advance revisions.',
+      );
+    }
+    _validateSparseRevisionCoverage(
+      provided: providedDelta,
+      required: acceptedDelta,
+    );
+
+    return PreparedMaterializedStoreCommit(
+      baseDocument: _document,
+      document: _acceptFullDocument(candidate, acceptedDelta),
+      revisionDelta: acceptedDelta,
+      touchedFacts: _committedDocumentTouchedFacts(_document, candidate),
+    );
+  }
+
   void installPreparedSchemaV1Import(PreparedStoreDocumentImport prepared) {
     prepared.consume(_document.revisions);
     if (!prepared.hasChanges) {
@@ -336,7 +373,10 @@ final class DocumentStoreKernel {
 
   // Sparse preparation validates, applies, and records admitted-id deltas in
   // one pass so commit acceptance cannot drift from generator admission.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  // Keeping validation, mutation application, final equality, and accepted
+  // payload construction together is safer than splitting the transaction
+  // boundary into metric-shaped phases.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
     final revisionDelta = _validatedSparseRevisionDelta(commit.revisionDelta);
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
@@ -379,29 +419,50 @@ final class DocumentStoreKernel {
       }
       index += 1;
     }
-    if (didMutateFacts && !revisionDelta.hasChanges) {
+    final finalNoOp =
+        didMutateFacts &&
+        _sameSparseTouchedCommittedFacts(
+          base: _document,
+          candidate: nextDocument,
+          mutations: commit.mutations,
+        );
+    if (didMutateFacts && !finalNoOp && !revisionDelta.hasChanges) {
       throw ArgumentError.value(
         commit.revisionDelta,
         'revisionDelta',
         'sparse store commits that change facts must advance revisions.',
       );
     }
-    _validateSparseRevisionCoverage(
-      provided: revisionDelta,
-      required: requiredRevisionDelta,
-    );
+    final acceptedDelta = finalNoOp
+        ? const StoreRevisionDelta()
+        : requiredRevisionDelta;
+    if (!finalNoOp) {
+      _validateSparseRevisionCoverage(
+        provided: revisionDelta,
+        required: acceptedDelta,
+      );
+    }
+
+    final accepted = didMutateFacts && !finalNoOp;
 
     return PreparedSparseStoreCommit(
       baseRevisions: _document.revisions,
-      document: didMutateFacts
-          ? nextDocument.copyWith(revisions: acceptedRevisions)
+      document: accepted
+          ? nextDocument.copyWith(
+              revisions: acceptedDelta.advance(_document.revisions),
+            )
           : _document,
-      revisionDelta: didMutateFacts
-          ? revisionDelta
-          : const StoreRevisionDelta(),
-      admittedElementIds: didMutateFacts ? admittedIds.elementIds : const [],
-      admittedLayerIds: didMutateFacts ? admittedIds.layerIds : const [],
-      admittedResourceIds: didMutateFacts ? admittedIds.resourceIds : const [],
+      revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
+      touchedFacts: accepted
+          ? _sparseAcceptedTouchedFacts(
+              base: _document,
+              candidate: nextDocument,
+              mutations: commit.mutations,
+            )
+          : AcceptedStoreTouchedFacts.empty(),
+      admittedElementIds: accepted ? admittedIds.elementIds : const [],
+      admittedLayerIds: accepted ? admittedIds.layerIds : const [],
+      admittedResourceIds: accepted ? admittedIds.resourceIds : const [],
     );
   }
 
@@ -711,6 +772,691 @@ final class DocumentStoreKernel {
   }
 }
 
+bool _sameSparseTouchedCommittedFacts({
+  required CommittedDocument base,
+  required CommittedDocument candidate,
+  required List<StoreSparseMutation> mutations,
+}) {
+  final touched = _SparseTouchedCommittedFacts.fromMutations(mutations);
+  if (touched.background && base.background != candidate.background) {
+    return false;
+  }
+  if (touched.camera && base.camera != candidate.camera) {
+    return false;
+  }
+  if (touched.palette && !_samePalette(base.palette, candidate.palette)) {
+    return false;
+  }
+
+  return _sameTouchedResources(base, candidate, touched) &&
+      _sameTouchedElements(base, candidate, touched);
+}
+
+StoreRevisionDelta _committedDocumentRevisionDelta(
+  CommittedDocument base,
+  CommittedDocument candidate,
+) {
+  var delta = const StoreRevisionDelta();
+  if (base.camera != candidate.camera ||
+      !_samePalette(base.palette, candidate.palette) ||
+      base.metadata != candidate.metadata) {
+    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
+  }
+  if (base.background.color != candidate.background.color) {
+    delta = delta.merge(const StoreRevisionDelta.background());
+  }
+  if (base.background.grid != candidate.background.grid) {
+    delta = delta.merge(const StoreRevisionDelta.grid());
+  }
+  if (!_sameResourceTables(base.resourceTable, candidate.resourceTable)) {
+    delta = delta.merge(const StoreRevisionDelta.resource());
+  }
+
+  return delta.merge(
+    _elementRegistryRevisionDelta(base.elements, candidate.elements),
+  );
+}
+
+AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
+  CommittedDocument base,
+  CommittedDocument candidate,
+) {
+  final resourceTouches = _resourceTouchedFacts(base, candidate);
+  final elementTouches = _elementTouchedFacts(
+    base.elements,
+    candidate.elements,
+  );
+
+  return _acceptedStoreTouchedFacts(
+    elementTouches: elementTouches,
+    resourceTouches: resourceTouches,
+    layerIds: _changedLayerIds(base.elements, candidate.elements),
+    aggregateTouches: _AggregateTouchedFacts(
+      backgroundLayerChanged: !_sameList(
+        base.elements.backgroundElementIds,
+        candidate.elements.backgroundElementIds,
+      ),
+      persistedCamera: base.camera != candidate.camera,
+      background: base.background.color != candidate.background.color,
+      grid: base.background.grid != candidate.background.grid,
+      palette: !_samePalette(base.palette, candidate.palette),
+    ),
+  );
+}
+
+bool _sameTouchedResources(
+  CommittedDocument base,
+  CommittedDocument candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  if (touched.resourceIds.isEmpty && !touched.allResources) {
+    return true;
+  }
+  if (base.resourceTable.count != candidate.resourceTable.count) {
+    return false;
+  }
+  if (touched.allResources) {
+    return _sameResourceTables(base.resourceTable, candidate.resourceTable);
+  }
+  for (final id in touched.resourceIds) {
+    final before = base.resourceDescriptor(id);
+    final after = candidate.resourceDescriptor(id);
+    if (before == null || after == null) {
+      if (before != after) {
+        return false;
+      }
+      continue;
+    }
+    if (!after.hasSameResourceFacts(before)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+_ResourceTouchedFacts _resourceTouchedFacts(
+  CommittedDocument base,
+  CommittedDocument candidate, {
+  Iterable<CanvasResourceId>? limitedToIds,
+}) {
+  final ids =
+      limitedToIds ??
+      {
+        ...base.resourceTable.descriptors.keys,
+        ...candidate.resourceTable.descriptors.keys,
+      };
+  final descriptorChangedIds = <CanvasResourceId>{};
+  final visualChangedIds = <CanvasResourceId>{};
+  for (final id in ids) {
+    final before = base.resourceDescriptor(id);
+    final after = candidate.resourceDescriptor(id);
+    final changed =
+        before == null || after == null || !after.hasSameResourceFacts(before);
+    if (!changed) {
+      continue;
+    }
+    descriptorChangedIds.add(id);
+    if (base.elements.referencesResource(id) ||
+        candidate.elements.referencesResource(id)) {
+      visualChangedIds.add(id);
+    }
+  }
+
+  return _ResourceTouchedFacts(
+    descriptorChangedIds: descriptorChangedIds,
+    visualChangedIds: visualChangedIds,
+  );
+}
+
+bool _sameResourceTables(ResourceTable base, ResourceTable candidate) {
+  if (base.count != candidate.count) {
+    return false;
+  }
+  for (final id in base.descriptors.keys) {
+    final before = base.descriptors[id];
+    final after = candidate.descriptors[id];
+    if (before == null ||
+        after == null ||
+        !after.hasSameResourceFacts(before)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+StoreRevisionDelta _elementRegistryRevisionDelta(
+  ElementRegistry base,
+  ElementRegistry candidate,
+) {
+  var delta = const StoreRevisionDelta();
+  if (!_sameList(base.backgroundElementIds, candidate.backgroundElementIds) ||
+      !_sameList(base.frameElementOrder, candidate.frameElementOrder)) {
+    delta = delta.merge(const StoreRevisionDelta.structural());
+  }
+  delta = delta.merge(
+    _layerRowsRevisionDelta(base.layerTable.rows, candidate.layerTable.rows),
+  );
+  if (delta.structural) {
+    return delta;
+  }
+
+  for (final id in base.frameElementOrder) {
+    final before = base.elementById(id);
+    final after = candidate.elementById(id);
+    if (before == null || after == null) {
+      return delta.merge(const StoreRevisionDelta.structural());
+    }
+    delta = delta.merge(
+      _committedElementRevisionDelta(before: before, after: after),
+    );
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _layerRowsRevisionDelta(
+  List<LayerRow> base,
+  List<LayerRow> candidate,
+) {
+  if (base.length != candidate.length) {
+    return const StoreRevisionDelta.layerStructural();
+  }
+
+  var delta = const StoreRevisionDelta();
+  for (var index = 0; index < base.length; index += 1) {
+    final before = base[index];
+    final after = candidate[index];
+    if (before.id != after.id || before.metadata != after.metadata) {
+      delta = delta.merge(const StoreRevisionDelta.layerStructural());
+    }
+    if (!_sameList(before.elementIds, after.elementIds)) {
+      delta = delta.merge(const StoreRevisionDelta.structural());
+    }
+  }
+
+  return delta;
+}
+
+_ElementTouchedFacts _elementTouchedFacts(
+  ElementRegistry base,
+  ElementRegistry candidate, {
+  Iterable<CanvasElementId>? limitedToIds,
+}) {
+  final ids =
+      limitedToIds ??
+      {...base.frameElementOrder, ...candidate.frameElementOrder};
+  final facts = _ElementTouchedFacts();
+  for (final id in ids) {
+    _recordElementTouch(
+      facts,
+      id: id,
+      before: base.elementById(id),
+      after: candidate.elementById(id),
+    );
+  }
+
+  return facts;
+}
+
+void _recordElementTouch(
+  _ElementTouchedFacts facts, {
+  required CanvasElementId id,
+  required CanvasElement? before,
+  required CanvasElement? after,
+}) {
+  if (before == null && after == null) {
+    return;
+  }
+  if (before == null) {
+    facts.addedElementIds.add(id);
+
+    return;
+  }
+  if (after == null) {
+    facts.removedElementIds.add(id);
+
+    return;
+  }
+  final delta = _committedElementRevisionDelta(before: before, after: after);
+  if (!delta.hasChanges) {
+    return;
+  }
+  facts.updatedElementIds.add(id);
+  if (before.transform != after.transform) {
+    facts.transformedElementIds.add(id);
+  }
+  if (delta.bounds) {
+    facts.geometryElementIds.add(id);
+  }
+  if (delta.elementVisual) {
+    facts.visualElementIds.add(id);
+  }
+}
+
+Set<CanvasLayerId> _changedLayerIds(
+  ElementRegistry base,
+  ElementRegistry candidate, {
+  Iterable<CanvasLayerId>? limitedToIds,
+}) {
+  final ids =
+      limitedToIds ??
+      {
+        for (final row in base.layerTable.rows) row.id,
+        for (final row in candidate.layerTable.rows) row.id,
+      };
+
+  return {
+    for (final id in ids)
+      if (!_sameLayerFacts(
+        _layerRowById(base, id),
+        _layerRowById(candidate, id),
+      ))
+        id,
+  };
+}
+
+LayerRow? _layerRowById(ElementRegistry registry, CanvasLayerId id) {
+  for (final row in registry.layerTable.rows) {
+    if (row.id == id) {
+      return row;
+    }
+  }
+
+  return null;
+}
+
+bool _sameLayerFacts(LayerRow? before, LayerRow? after) {
+  if (before == null || after == null) {
+    return before == after;
+  }
+
+  return before.id == after.id &&
+      before.metadata == after.metadata &&
+      _sameList(before.elementIds, after.elementIds);
+}
+
+StoreRevisionDelta _committedElementRevisionDelta({
+  required CanvasElement before,
+  required CanvasElement after,
+}) {
+  if (before.kind != after.kind) {
+    return const StoreRevisionDelta.structural();
+  }
+
+  return _committedCommonElementDelta(
+    before: before,
+    after: after,
+  ).merge(_committedElementFamilyDelta(before, after));
+}
+
+StoreRevisionDelta _committedCommonElementDelta({
+  required CanvasElement before,
+  required CanvasElement after,
+}) {
+  var delta = const StoreRevisionDelta();
+  if (before.transform != after.transform ||
+      before.isVisible != after.isVisible) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.opacity != after.opacity) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+  if (before.hitPadding != after.hitPadding) {
+    delta = delta.merge(const StoreRevisionDelta.elementBoundsOnly());
+  }
+  if (before.isSelectable != after.isSelectable ||
+      before.isLocked != after.isLocked ||
+      before.isDeletable != after.isDeletable ||
+      before.isTransformable != after.isTransformable ||
+      before.metadata != after.metadata) {
+    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedElementFamilyDelta(
+  CanvasElement before,
+  CanvasElement after,
+) {
+  return switch ((before, after)) {
+    (final CanvasImageElement before, final CanvasImageElement after) =>
+      _committedImageDelta(before, after),
+    (final CanvasPathElement before, final CanvasPathElement after) =>
+      _committedPathDelta(before, after),
+    (final CanvasTextElement before, final CanvasTextElement after) =>
+      _committedTextDelta(before, after),
+    (final CanvasStrokeElement before, final CanvasStrokeElement after) =>
+      _committedStrokeDelta(before, after),
+    (final CanvasLineElement before, final CanvasLineElement after) =>
+      _committedLineDelta(before, after),
+    (final CanvasRectElement before, final CanvasRectElement after) =>
+      _committedRectDelta(before, after),
+    _ => const StoreRevisionDelta(),
+  };
+}
+
+StoreRevisionDelta _committedImageDelta(
+  CanvasImageElement before,
+  CanvasImageElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.size != after.size) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.resourceId != after.resourceId ||
+      before.naturalSize != after.naturalSize) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedPathDelta(
+  CanvasPathElement before,
+  CanvasPathElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.svgPathData != after.svgPathData ||
+      before.strokeWidth != after.strokeWidth) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.fillColor != after.fillColor ||
+      before.fillRule != after.fillRule) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+  if (before.strokeColor != after.strokeColor) {
+    delta = delta.merge(
+      _strokePaintedBoundsChanged(
+            before.strokeColor,
+            before.strokeWidth,
+            after.strokeColor,
+            after.strokeWidth,
+          )
+          ? const StoreRevisionDelta.elementBounds()
+          : const StoreRevisionDelta.elementVisual(),
+    );
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedTextDelta(
+  CanvasTextElement before,
+  CanvasTextElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (_anyChanged([
+    before.text != after.text,
+    before.fontSize != after.fontSize,
+    before.align != after.align,
+    before.textDirection != after.textDirection,
+    before.isBold != after.isBold,
+    before.isItalic != after.isItalic,
+    before.fontFamily != after.fontFamily,
+    before.maxWidth != after.maxWidth,
+    before.lineHeight != after.lineHeight,
+  ])) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.color != after.color || before.isUnderline != after.isUnderline) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedStrokeDelta(
+  CanvasStrokeElement before,
+  CanvasStrokeElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (!_sameList(before.points, after.points) ||
+      before.thickness != after.thickness) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.color != after.color) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedLineDelta(
+  CanvasLineElement before,
+  CanvasLineElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.start != after.start ||
+      before.end != after.end ||
+      before.thickness != after.thickness) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.color != after.color) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedRectDelta(
+  CanvasRectElement before,
+  CanvasRectElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.size != after.size || before.strokeWidth != after.strokeWidth) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.fillColor != after.fillColor) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+  if (before.strokeColor != after.strokeColor) {
+    delta = delta.merge(
+      _strokePaintedBoundsChanged(
+            before.strokeColor,
+            before.strokeWidth,
+            after.strokeColor,
+            after.strokeWidth,
+          )
+          ? const StoreRevisionDelta.elementBounds()
+          : const StoreRevisionDelta.elementVisual(),
+    );
+  }
+
+  return delta;
+}
+
+bool _strokePaintedBoundsChanged(
+  Color? beforeColor,
+  double beforeStrokeWidth,
+  Color? afterColor,
+  double afterStrokeWidth,
+) {
+  return _isPaintedStroke(beforeColor, beforeStrokeWidth) !=
+          _isPaintedStroke(afterColor, afterStrokeWidth) ||
+      beforeStrokeWidth != afterStrokeWidth;
+}
+
+bool _isPaintedStroke(Color? color, double strokeWidth) {
+  return color != null && strokeWidth > 0;
+}
+
+AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
+  required CommittedDocument base,
+  required CommittedDocument candidate,
+  required List<StoreSparseMutation> mutations,
+}) {
+  final touched = _SparseTouchedCommittedFacts.fromMutations(mutations);
+  final resourceIds = touched.allResources ? null : touched.resourceIds;
+  final resourceTouches = _resourceTouchedFacts(
+    base,
+    candidate,
+    limitedToIds: resourceIds,
+  );
+  final elementTouches = _elementTouchedFacts(
+    base.elements,
+    candidate.elements,
+    limitedToIds: touched.elementIds,
+  );
+
+  return _acceptedStoreTouchedFacts(
+    elementTouches: elementTouches,
+    resourceTouches: resourceTouches,
+    layerIds: _changedLayerIds(
+      base.elements,
+      candidate.elements,
+      limitedToIds: touched.layerIds,
+    ),
+    aggregateTouches: _sparseAggregateTouchedFacts(
+      base: base,
+      candidate: candidate,
+      touched: touched,
+    ),
+  );
+}
+
+AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
+  required _ElementTouchedFacts elementTouches,
+  required _ResourceTouchedFacts resourceTouches,
+  required Set<CanvasLayerId> layerIds,
+  required _AggregateTouchedFacts aggregateTouches,
+}) {
+  return AcceptedStoreTouchedFacts(
+    addedElementIds: elementTouches.addedElementIds,
+    removedElementIds: elementTouches.removedElementIds,
+    updatedElementIds: elementTouches.updatedElementIds,
+    transformedElementIds: elementTouches.transformedElementIds,
+    geometryElementIds: elementTouches.geometryElementIds,
+    visualElementIds: elementTouches.visualElementIds,
+    resourceDescriptorChangedIds: resourceTouches.descriptorChangedIds,
+    resourceVisualChangedIds: resourceTouches.visualChangedIds,
+    layerIds: layerIds,
+    backgroundLayerChanged: aggregateTouches.backgroundLayerChanged,
+    persistedCamera: aggregateTouches.persistedCamera,
+    background: aggregateTouches.background,
+    grid: aggregateTouches.grid,
+    palette: aggregateTouches.palette,
+  );
+}
+
+_AggregateTouchedFacts _sparseAggregateTouchedFacts({
+  required CommittedDocument base,
+  required CommittedDocument candidate,
+  required _SparseTouchedCommittedFacts touched,
+}) {
+  return _AggregateTouchedFacts(
+    backgroundLayerChanged:
+        touched.backgroundElementOrder &&
+        !_sameList(
+          base.elements.backgroundElementIds,
+          candidate.elements.backgroundElementIds,
+        ),
+    persistedCamera: touched.camera && base.camera != candidate.camera,
+    background:
+        touched.background &&
+        base.background.color != candidate.background.color,
+    grid:
+        touched.background && base.background.grid != candidate.background.grid,
+    palette: touched.palette && !_samePalette(base.palette, candidate.palette),
+  );
+}
+
+bool _anyChanged(List<bool> changes) {
+  return changes.contains(true);
+}
+
+bool _sameTouchedElements(
+  CommittedDocument base,
+  CommittedDocument candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  if (!touched.touchedElementStructure && touched.elementIds.isEmpty) {
+    return true;
+  }
+  if (!_sameTouchedElementAggregates(base, candidate) ||
+      !_sameTouchedBackgroundOrder(base, candidate, touched) ||
+      !_sameTouchedLayers(base, candidate, touched)) {
+    return false;
+  }
+
+  return _sameTouchedElementRows(base, candidate, touched);
+}
+
+bool _sameTouchedElementAggregates(
+  CommittedDocument base,
+  CommittedDocument candidate,
+) {
+  return base.elements.elementCount == candidate.elements.elementCount &&
+      base.elements.layerTable.rows.length ==
+          candidate.elements.layerTable.rows.length;
+}
+
+bool _sameTouchedBackgroundOrder(
+  CommittedDocument base,
+  CommittedDocument candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  return !touched.backgroundElementOrder ||
+      _sameList(
+        base.elements.backgroundElementIds,
+        candidate.elements.backgroundElementIds,
+      );
+}
+
+bool _sameTouchedLayers(
+  CommittedDocument base,
+  CommittedDocument candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  for (final id in touched.layerIds) {
+    if (!_sameList(
+      _elementIdsInCommittedLayer(base, id),
+      _elementIdsInCommittedLayer(candidate, id),
+    )) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _sameTouchedElementRows(
+  CommittedDocument base,
+  CommittedDocument candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  for (final id in touched.elementIds) {
+    final before = base.elements.elementById(id);
+    final after = candidate.elements.elementById(id);
+    if (before == null || after == null) {
+      if (before != after) {
+        return false;
+      }
+      continue;
+    }
+    if (!sameCanvasElementSnapshot(before, after)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+List<CanvasElementId> _elementIdsInCommittedLayer(
+  CommittedDocument document,
+  CanvasLayerId id,
+) {
+  for (final row in document.elements.layerTable.rows) {
+    if (row.id == id) {
+      return row.elementIds;
+    }
+  }
+
+  return const [];
+}
+
 Set<CanvasElementId> _normalizeSelectionInCommittedDocument(
   CommittedDocument document,
   Iterable<CanvasElementId> ids,
@@ -908,6 +1654,108 @@ bool _sameList<T>(List<T> left, List<T> right) {
   }
 
   return true;
+}
+
+final class _ResourceTouchedFacts {
+  const _ResourceTouchedFacts({
+    required this.descriptorChangedIds,
+    required this.visualChangedIds,
+  });
+
+  final Set<CanvasResourceId> descriptorChangedIds;
+  final Set<CanvasResourceId> visualChangedIds;
+}
+
+final class _ElementTouchedFacts {
+  final Set<CanvasElementId> addedElementIds = {};
+  final Set<CanvasElementId> removedElementIds = {};
+  final Set<CanvasElementId> updatedElementIds = {};
+  final Set<CanvasElementId> transformedElementIds = {};
+  final Set<CanvasElementId> geometryElementIds = {};
+  final Set<CanvasElementId> visualElementIds = {};
+}
+
+final class _AggregateTouchedFacts {
+  const _AggregateTouchedFacts({
+    required this.backgroundLayerChanged,
+    required this.persistedCamera,
+    required this.background,
+    required this.grid,
+    required this.palette,
+  });
+
+  final bool backgroundLayerChanged;
+  final bool persistedCamera;
+  final bool background;
+  final bool grid;
+  final bool palette;
+}
+
+// Sparse finalization records only candidate-touched rows and aggregate
+// families so net no-op detection stays bounded to the sparse mutation input.
+// ignore: coupling-between-object-classes
+final class _SparseTouchedCommittedFacts {
+  _SparseTouchedCommittedFacts.fromMutations(
+    Iterable<StoreSparseMutation> mutations,
+  ) {
+    for (final mutation in mutations) {
+      addMutation(mutation);
+    }
+  }
+
+  final Set<CanvasElementId> elementIds = {};
+  final Set<CanvasLayerId> layerIds = {};
+  final Set<CanvasResourceId> resourceIds = {};
+  bool touchedElementStructure = false;
+  bool backgroundElementOrder = false;
+  bool allResources = false;
+  bool background = false;
+  bool camera = false;
+  bool palette = false;
+
+  // Keeping the sparse mutation taxonomy together makes omissions visible when
+  // new sparse mutation types are added.
+  // ignore: cyclomatic-complexity
+  void addMutation(StoreSparseMutation mutation) {
+    switch (mutation) {
+      case StoreSparseEnsureLayer(:final id):
+        touchedElementStructure = true;
+        layerIds.add(id);
+      case StoreSparseAddElement(
+        :final element,
+        :final layerId,
+        :final background,
+      ):
+        touchedElementStructure = true;
+        backgroundElementOrder = backgroundElementOrder || background;
+        elementIds.add(element.id);
+        if (layerId != null) {
+          layerIds.add(layerId);
+        }
+      case StoreSparseUpdateElement(:final before, :final element):
+        elementIds.add(before.id);
+        elementIds.add(element.id);
+      case StoreSparseRemoveElement(:final id):
+        touchedElementStructure = true;
+        elementIds.add(id);
+      case StoreSparseUpsertResource(:final resource):
+        resourceIds.add(resource.id);
+      case StoreSparseRemoveUnusedResource(:final id):
+        resourceIds.add(id);
+      case StoreSparseClearContent(:final removeUnusedResources):
+        touchedElementStructure = true;
+        backgroundElementOrder = true;
+        if (removeUnusedResources) {
+          allResources = true;
+        }
+      case StoreSparseSetBackground():
+        background = true;
+      case StoreSparseSetCamera():
+        camera = true;
+      case StoreSparseSetPalette():
+        palette = true;
+    }
+  }
 }
 
 // Sparse admission names every mutation family that can create ids; splitting
