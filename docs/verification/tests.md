@@ -532,9 +532,10 @@ behavioral tests, and the required guardrail list remains owned by
 #### `test/guardrails/release_readiness_guardrail_test.dart`
 - proves `release.benchmark_readiness` is runner-backed in the blocking and
   release suites without running the full benchmark matrix;
-- rejects missing release diff routing, public benchmark exports, public integration
-  names in production source, benchmark route outside release policy imports, and approved
-  baseline writes outside the manual update workflow.
+- rejects GitHub release benchmark workflows, GitHub workflow benchmark commands,
+  public benchmark exports, public integration names in production source,
+  benchmark route outside release policy imports, and approved baseline writes
+  from workflows.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
 - proves runtime dispose keeps state.value readable;

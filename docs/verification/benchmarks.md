@@ -108,15 +108,15 @@ Release benchmark interpretation:
 
 - Current release reports are transient under `build/bench/current/`.
 - Diff reports are transient under `build/bench/diff/`.
-- The approved release baseline path is
-  `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`.
-- Until a pinned release/manual update accepts real measurements, that path may
-  contain only an uninitialized fail-closed placeholder and release diff must
-  fail rather than infer baseline numbers.
-- `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json --current=build/bench/current/release_ubuntu_24_04_flutter_3_44_0.json --output=build/bench/diff/release_ubuntu_24_04_flutter_3_44_0.json`
-  is read-only with respect to approved baselines.
-- `dart run tool/bench/update_baseline.dart --profile=release --candidate=build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0/<timestamp>.json --approved=tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`
-  is the manual approved-baseline write path after first-baseline acceptance.
+- No approved GitHub release baseline is committed while GitHub performance
+  benchmarking is quarantined. The reserved local tooling path is
+  `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`,
+  but it must not be populated or used by GitHub workflows until that route is
+  rebuilt.
+- Local approved-baseline tooling remains fail-closed: first-baseline acceptance
+  still requires reference metrics, absolute caps, and first-baseline memory
+  caps. Do not use it to create a GitHub performance gate until the GitHub route
+  is rebuilt.
 - Manual device reference reports for optimization work live under
   `tool/bench/manual/reference_reports/`. They are accepted comparison inputs for
   a named local device and toolchain, not release-approval baselines.
@@ -131,8 +131,10 @@ Release benchmark interpretation:
   `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json`.
 - Refresh a device report with
   `dart run tool/bench/run.dart --profile=release --device=<device-id> --output=build/bench/current/<device>_release.json`.
-- Record that report in manual run history with
-  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
+- Record the first bootstrap report in manual run history with
+  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>"`.
+  Add `--reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`
+  only for later runs that compare against an already accepted reference.
 - Accept a manual reference report from history with
   `dart run tool/bench/accept_manual_reference.dart --policy=stable_window_median_v1 --run=<history-run-1> --run=<history-run-2> --run=<history-run-3> --output=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --reason="<why this run window is accepted>"`.
 - `stable_window_median_v1` requires at least three compatible history runs and
@@ -142,8 +144,13 @@ Release benchmark interpretation:
 - Compare a new device report with its committed manual reference report with
   `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
 - Manual device-reference diff is for regression tracking during optimization;
-  it must preserve same-contour runtime metadata, including `deviceId`, but it
-  does not replace the approved Ubuntu release baseline or release workflow.
+  it must preserve same-contour runtime metadata, including `deviceId`.
+- GitHub release benchmark workflows are quarantined until the release
+  benchmark policy is rebuilt around stable device references and a non-RSS hard
+  memory signal. Do not add `.github/workflows/release_benchmarks.yml`,
+  `.github/workflows/update_benchmark_baseline.yml`, or GitHub workflow steps
+  that run `tool/bench/run.dart`, `tool/bench/diff.dart`, or
+  `tool/bench/update_baseline.dart`.
 
 Manual benchmark history ledger:
 
@@ -154,14 +161,16 @@ Manual benchmark history ledger:
   `tool/bench/manual/run_history/index.json`.
 - History records are committed decision traces: they store the run label,
   recorded UTC time, subject git head, dirty flag, device identity, toolchain
-  contour, reference report path, source file paths, source size, source SHA-256,
-  metrics, and compact sample summaries.
+  contour, optional prior reference report path, source file paths, source size,
+  source SHA-256, metrics, and compact sample summaries.
 - History records do not replace manual reference reports. Reference reports
   under `tool/bench/manual/reference_reports/` are the accepted comparison
   inputs; history records explain which local observations supported an
   optimization or regression decision.
 - Archive a full manual device report with
-  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
+  `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>"`.
+  Add `--reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`
+  only when that run is measured against a previously accepted reference.
 - Archive focused single-case probe logs with
   `dart run tool/bench/archive_manual_run.dart --label=<reason> --probe-log=build/bench/current/<probe>.log --probe-log=build/bench/current/<probe-rerun>.log --device-name="<device name>" --device-id=<device-id> --device-os="<os>" --reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`.
 - To write history automatically after a benchmark run, pass
@@ -187,9 +196,7 @@ Benchmark CI routing:
   tests, required-case dry-run proof, diff fixtures, benchmark runner proof, and
   docs projection checks. It then runs all non-benchmark Flutter tests with
   `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
-- Release benchmark CI runs on `ubuntu-24.04` with Flutter `3.44.0` stable,
-  writes the current release report, runs the read-only release diff, and then
-  blocks on current graph closure, generated-view, and guardrail checks.
-- Release baseline update is a separate `workflow_dispatch` route that writes a
-  candidate under `build/bench/candidates/`, runs `update_baseline`, and uploads
-  the accepted release-baseline artifact without auto-committing it.
+- There is no GitHub release benchmark CI while the GitHub performance route is
+  quarantined. Device/manual reports remain the performance comparison route.
+- Approved baseline writes must not run from GitHub workflows. Manual device
+  references are accepted through `tool/bench/accept_manual_reference.dart`.

@@ -29,50 +29,41 @@ void main() {
     _expectNoDcmCommandsInCi();
   });
 
-  test('benchmark release workflow is pinned and fail-closed', () {
-    final workflowFile = File('.github/workflows/release_benchmarks.yml');
-
-    expect(workflowFile.existsSync(), isTrue);
-
-    final workflowContent = workflowFile.readAsStringSync();
-    final releaseJob = _workflowJob(workflowContent, 'release-benchmarks');
-    final steps = _workflowSteps(releaseJob);
-
-    _expectNoWorkflowBypass(releaseJob, steps);
-    _expectPinnedReleaseContour(releaseJob, steps);
-    _expectReleaseBenchmarkCommands(steps);
-    _expectNoBaselineWrites(workflowContent);
+  test('GitHub performance benchmark workflows stay quarantined', () {
+    expect(
+      File('.github/workflows/release_benchmarks.yml').existsSync(),
+      false,
+    );
+    expect(
+      File('.github/workflows/update_benchmark_baseline.yml').existsSync(),
+      false,
+    );
+    for (final workflow in Directory('.github/workflows').listSync()) {
+      if (workflow is! File || !_isWorkflowFile(workflow)) {
+        continue;
+      }
+      final content = workflow.readAsStringSync();
+      expect(content, isNot(contains('tool/bench/run.dart')));
+      expect(content, isNot(contains('tool/bench/diff.dart')));
+      expect(content, isNot(contains('tool/bench/update_baseline.dart')));
+      expect(content, isNot(contains('--approved=')));
+    }
     _expectNoDcmCommandsInCi();
   });
 
-  test(
-    'manual benchmark baseline update stays separate from release checks',
-    () {
-      final workflowFile = File(
-        '.github/workflows/update_benchmark_baseline.yml',
-      );
-
-      expect(workflowFile.existsSync(), isTrue);
-
-      final workflowContent = workflowFile.readAsStringSync();
-      final updateJob = _workflowJob(
-        workflowContent,
-        'update-benchmark-baseline',
-      );
-      final steps = _workflowSteps(updateJob);
-
-      expect(workflowContent, contains('workflow_dispatch:'));
-      expect(workflowContent, isNot(contains('pull_request:')));
-      expect(workflowContent, isNot(contains('push:')));
-      expect(workflowContent, isNot(contains('schedule:')));
-      _expectNoWorkflowBypass(updateJob, steps);
-      _expectPinnedReleaseContour(updateJob, steps);
-      _expectManualBaselineUpdateCommands(workflowContent, steps);
-      expect(workflowContent, isNot(contains('git commit')));
-      expect(workflowContent, isNot(contains('git push')));
-      _expectNoDcmCommandsInCi();
-    },
-  );
+  test('approved benchmark baseline writes stay out of GitHub workflows', () {
+    var workflowCount = 0;
+    for (final workflow in Directory('.github/workflows').listSync()) {
+      if (workflow is! File || !_isWorkflowFile(workflow)) {
+        continue;
+      }
+      workflowCount += 1;
+      final workflowContent = workflow.readAsStringSync();
+      _expectNoBaselineWrites(workflowContent);
+    }
+    expect(workflowCount, greaterThan(0));
+    _expectNoDcmCommandsInCi();
+  });
 }
 
 void _expectRootPackageChecks(List<YamlMap> steps) {
@@ -137,10 +128,8 @@ void _expectRootPackageBenchmarkChecks(
     );
   }
   expect(workflowContent, isNot(contains('tool/bench/update_baseline.dart')));
-  expect(
-    workflowContent,
-    isNot(contains('tool/bench/run.dart --profile=release')),
-  );
+  expect(workflowContent, isNot(contains('tool/bench/run.dart')));
+  expect(workflowContent, isNot(contains('tool/bench/diff.dart')));
   expect(workflowContent, isNot(contains('paths-ignore:')));
   expect(workflowContent, isNot(contains('paths:')));
 }
@@ -198,78 +187,6 @@ void _expectNoWorkflowBypass(YamlMap job, List<YamlMap> steps) {
     expect(step.containsKey('continue-on-error'), isFalse);
     expect(step.containsKey('if'), isFalse);
   }
-}
-
-void _expectPinnedReleaseContour(YamlMap job, List<YamlMap> steps) {
-  expect(job['runs-on'], 'ubuntu-24.04');
-  final flutterStep = _stepNamed(steps, 'Set up Flutter');
-  expect(flutterStep['uses'], 'subosito/flutter-action@v2');
-  final withConfig = flutterStep['with'] as YamlMap;
-  expect(withConfig['channel'], 'stable');
-  expect(withConfig['flutter-version'], '3.44.0');
-}
-
-void _expectReleaseBenchmarkCommands(List<YamlMap> steps) {
-  final runCommands = _runCommands(steps);
-
-  expect(
-    runCommands,
-    contains('dart run tool/bench/run.dart --profile=release'),
-  );
-  expect(
-    runCommands,
-    contains(
-      'dart run tool/bench/diff.dart --profile=release '
-      '--baseline=tool/bench/baselines/approved/'
-      'release_ubuntu_24_04_flutter_3_44_0.json '
-      '--current=build/bench/current/'
-      'release_ubuntu_24_04_flutter_3_44_0.json '
-      '--output=build/bench/diff/'
-      'release_ubuntu_24_04_flutter_3_44_0.json',
-    ),
-  );
-  expect(runCommands, contains('dart run tool/architecture_graph/check.dart'));
-  expect(
-    runCommands,
-    contains('dart run tool/architecture_graph/generate_views.dart --check'),
-  );
-  expect(runCommands, contains('dart run tool/guardrails/run.dart'));
-}
-
-void _expectManualBaselineUpdateCommands(
-  String workflowContent,
-  List<YamlMap> steps,
-) {
-  final runCommands = _runCommands(steps);
-
-  expect(
-    workflowContent,
-    contains(
-      'build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0/'
-      r'${{ github.run_id }}.json',
-    ),
-  );
-  expect(
-    workflowContent,
-    contains(
-      'tool/bench/baselines/approved/'
-      'release_ubuntu_24_04_flutter_3_44_0.json',
-    ),
-  );
-  expect(
-    runCommands,
-    contains(
-      'dart run tool/bench/run.dart --profile=release '
-      r'--output=${CANDIDATE_PATH}',
-    ),
-  );
-  expect(
-    runCommands,
-    contains(
-      'dart run tool/bench/update_baseline.dart --profile=release '
-      r'--candidate=${CANDIDATE_PATH} --approved=${APPROVED_PATH}',
-    ),
-  );
 }
 
 void _expectNoBaselineWrites(String workflowContent) {

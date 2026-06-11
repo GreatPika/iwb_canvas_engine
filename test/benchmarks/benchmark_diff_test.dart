@@ -82,11 +82,12 @@ void main() {
       );
     });
 
-    test('committed manual references preserve historical contour metadata', () {
+    test('committed manual references remain diffable inputs', () async {
+      final manifest = BenchmarkManifest.load();
       const expectedDeviceIds = {
-        'pixel6_android16_flutter_3_44_0.json': '23081FDF6000L2',
-        'xiaomi_22081283g_android14_flutter_3_44_0.json': '22081283G',
+        'xiaomi_22081283g_android14_flutter_3_44_0.json': 'Z9NBMVIRY5KRGAJF',
       };
+      final expectedFingerprint = benchmarkManifestFingerprint(manifest);
       final files = Directory(manualBenchmarkReferenceRoot)
           .listSync()
           .whereType<File>()
@@ -106,7 +107,7 @@ void main() {
 
         expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
         expect(baseline['manifestVersion'], benchmarkManifestVersion);
-        expect(baseline['manifestFingerprint'], '2e4b020c');
+        expect(baseline['manifestFingerprint'], expectedFingerprint);
         expect(baseline['profile'], isA<Map<String, Object?>>());
         expect(
           baseline['cases'],
@@ -119,8 +120,31 @@ void main() {
         expect(runtime['deviceId'], entry.value);
         expect(
           runtime['releaseContour'],
-          containsPair('flutterVersion', '3.38.0'),
+          containsPair('flutterVersion', '3.44.0'),
         );
+
+        final currentPath = 'build/bench/current/manual_reference_${entry.key}';
+        final outputPath = 'build/bench/diff/manual_reference_${entry.key}';
+        addTearDown(() {
+          for (final path in [currentPath, outputPath]) {
+            final file = File(path);
+            if (file.existsSync()) {
+              file.deleteSync();
+            }
+          }
+        });
+        final current = _manualReferenceAsCurrentReport(manifest, baseline);
+        File(currentPath)
+          ..parent.createSync(recursive: true)
+          ..writeAsStringSync(jsonEncode(current));
+
+        final exitCode = await runBenchmarkDiffCli([
+          '--profile=release',
+          '--baseline=$manualBenchmarkReferenceRoot/${entry.key}',
+          '--current=$currentPath',
+          '--output=$outputPath',
+        ], manifest: manifest);
+        expect(exitCode, 0);
       }
     });
 
@@ -164,7 +188,10 @@ void main() {
                 .cast<Map<String, Object?>>()
                 .where((source) => source['kind'] == 'report')) {
           expect(source['manifestVersion'], benchmarkManifestVersion);
-          expect(source['manifestFingerprint'], '2e4b020c');
+          expect(
+            source['manifestFingerprint'],
+            allOf(isA<String>(), isNotEmpty),
+          );
         }
         expect(cases, isNotEmpty, reason: runPath);
         for (final entry in cases.cast<Map<String, Object?>>()) {
@@ -172,6 +199,45 @@ void main() {
           expect(entry, isNot(contains('classification')), reason: runPath);
           final metrics = entry['metrics'] as Map<String, Object?>;
           expect(metrics, isNot(contains('legacy_avg_us')), reason: runPath);
+        }
+      }
+    });
+
+    test('committed manual reference decisions remain auditable', () {
+      final decisions =
+          jsonDecode(
+                File(
+                  'tool/bench/manual/reference_decisions.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
+      final records = (decisions['records'] as List<Object?>)
+          .cast<Map<String, Object?>>();
+
+      for (final record in records) {
+        final acceptedAt = DateTime.parse(record['acceptedAtUtc'] as String);
+        final referencePath = record['referencePath'] as String;
+        final acceptedFromRuns = (record['acceptedFromRuns'] as List<Object?>)
+            .cast<String>();
+
+        for (final runPath in acceptedFromRuns) {
+          final history =
+              jsonDecode(File(runPath).readAsStringSync())
+                  as Map<String, Object?>;
+          final recordedAt = DateTime.parse(history['recordedAtUtc'] as String);
+          final referenceReport =
+              history['referenceReport'] as Map<String, Object?>;
+
+          expect(
+            acceptedAt.isBefore(recordedAt),
+            false,
+            reason: '$referencePath accepted before $runPath was recorded',
+          );
+          expect(
+            referenceReport['path'],
+            isNot(referencePath),
+            reason: '$runPath must not cite the reference it produces',
+          );
         }
       }
     });
@@ -550,11 +616,7 @@ void main() {
       );
 
       final missingTimeReport = _releaseReport(manifest);
-      _metrics(
-        missingTimeReport,
-        'edit.add_element',
-        '1k',
-      ).remove('avg_us');
+      _metrics(missingTimeReport, 'edit.add_element', '1k').remove('avg_us');
       expect(
         validateFirstBaselineCandidate(
           manifest: manifest,
@@ -563,6 +625,24 @@ void main() {
           candidatePath: 'candidate.json',
         ).failures.join('\n'),
         contains('candidate edit.add_element/1k missing metric avg_us'),
+      );
+
+      final missingReferenceReport = _releaseReport(manifest);
+      _metrics(
+        missingReferenceReport,
+        'edit.add_element',
+        '1k',
+      ).remove('reference_avg_us');
+      expect(
+        validateFirstBaselineCandidate(
+          manifest: manifest,
+          profile: 'release',
+          candidateJson: missingReferenceReport,
+          candidatePath: 'candidate.json',
+        ).failures.join('\n'),
+        contains(
+          'candidate edit.add_element/1k missing metric reference_avg_us',
+        ),
       );
 
       final missingMemoryReport = _releaseReport(manifest);
@@ -654,11 +734,7 @@ void main() {
       final manifest = BenchmarkManifest.load();
       final baseline = _releaseReport(manifest);
 
-      final timeMetrics = {
-        'avg_us': 16000,
-        'p95_us': 31000,
-        'max_us': 31000,
-      };
+      final timeMetrics = {'avg_us': 16000, 'p95_us': 31000, 'max_us': 31000};
       for (final entry in timeMetrics.entries) {
         final current = _clone(baseline);
         _metrics(current, 'edit.add_element', '1k')[entry.key] = entry.value;
@@ -1169,9 +1245,17 @@ Future<void> _writeTemporaryApprovedBaseline(BenchmarkManifest manifest) async {
       '$releaseCandidateRoot/benchmark_diff_test_positive.json';
   final approved = File(approvedReleaseBaselinePath);
   final candidate = File(candidatePath)..parent.createSync(recursive: true);
-  final approvedBefore = approved.readAsStringSync();
+  final approvedBefore = approved.existsSync()
+      ? approved.readAsStringSync()
+      : null;
   addTearDown(() {
-    approved.writeAsStringSync(approvedBefore);
+    if (approvedBefore == null) {
+      if (approved.existsSync()) {
+        approved.deleteSync();
+      }
+    } else {
+      approved.writeAsStringSync(approvedBefore);
+    }
     if (candidate.existsSync()) {
       candidate.deleteSync();
     }
@@ -1255,6 +1339,28 @@ Map<String, Object?> _oldSchemaReport(BenchmarkManifest manifest) {
       ..remove('setupMetrics');
   }
   return report;
+}
+
+Map<String, Object?> _manualReferenceAsCurrentReport(
+  BenchmarkManifest manifest,
+  Map<String, Object?> reference,
+) {
+  final current = _clone(reference);
+  final cases = (current['cases'] as List<Object?>)
+      .cast<Map<String, Object?>>();
+  final manifestCases = {
+    for (final benchmarkCase in manifest.cases) benchmarkCase.id: benchmarkCase,
+  };
+  for (final entry in cases) {
+    final benchmarkCase = manifestCases[entry['id']]!;
+    final scale = benchmarkCase.scales.singleWhere(
+      (candidate) => candidate.id == entry['scale'],
+    );
+    entry.addAll(_caseIdentityJson(benchmarkCase, scale));
+    entry.addAll(_caseExecutionJson(benchmarkCase));
+  }
+
+  return current;
 }
 
 Map<String, Object?> _caseReport(

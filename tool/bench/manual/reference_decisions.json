@@ -1,25 +1,14 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-08T10:40:39.349752Z",
+  "updatedAtUtc": "2026-06-11T02:30:00.000Z",
   "records": [
     {
-      "referencePath": "tool/bench/manual/reference_reports/pixel6_android16_flutter_3_44_0.json",
-      "acceptedAtUtc": "2026-06-06T19:50:00.000Z",
-      "acceptedReason": "Bootstrap Pixel 6 manual reference from existing local full-device report; stable window not available yet.",
+      "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
+      "acceptedAtUtc": "2026-06-11T02:30:00.000Z",
+      "acceptedReason": "Bootstrap current Xiaomi release reference after quarantining GitHub performance workflows; stable multi-run device window is still pending.",
       "selectionPolicy": "bootstrap_single_run_v1",
       "acceptedFromRuns": [
-        "tool/bench/manual/run_history/2026-06-06_pixel_6_unrecord_existing_full_release_report.json"
-      ]
-    },
-    {
-      "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
-      "acceptedAtUtc": "2026-06-08T10:40:39.349752Z",
-      "acceptedReason": "Accept Xiaomi 22081283G schema import load reference after canonical JSON load architecture.",
-      "selectionPolicy": "stable_window_median_v1",
-      "acceptedFromRuns": [
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_1.json",
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_2.json",
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_3.json"
+        "tool/bench/manual/run_history/2026-06-11_xiaomi_22081283g_b353e4b0_github_perf_quarantine_bootstrap_release.json"
       ]
     }
   ]

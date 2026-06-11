@@ -36,47 +36,214 @@ void main() {
     },
   );
 
-  test('release benchmark readiness guardrail rejects missing diff gate', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-            'run: $_releaseDiffCommand',
-            '# $_releaseDiffCommand',
+  test(
+    'release benchmark readiness guardrail rejects quarantined workflow',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/release_benchmarks.yml': 'name: Release',
+            },
           ),
         ),
-      ),
-      contains(contains('release workflow missing required command')),
-    );
-  });
+        contains(contains('GitHub release benchmark workflow is quarantined')),
+      );
+    },
+  );
 
-  test('release benchmark readiness guardrail rejects bypassed diff steps', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-            'run: $_releaseDiffCommand',
-            '''
-if: false
-        run: $_releaseDiffCommand''',
+  test(
+    'release benchmark readiness guardrail rejects baseline update workflow',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/update_benchmark_baseline.yml':
+                  'name: Update benchmark baseline',
+            },
           ),
         ),
-      ),
-      contains(contains('release benchmark step must not use if')),
-    );
+        contains(contains('GitHub release benchmark workflow is quarantined')),
+      );
+    },
+  );
+
+  test(
+    'release benchmark readiness guardrail rejects workflow benchmark run',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/bad.yml':
+                  'run: dart run tool/bench/run.dart --profile=\${BENCH_PROFILE}',
+            },
+          ),
+        ),
+        contains(
+          contains(
+            'GitHub workflow must not run quarantined benchmark command',
+          ),
+        ),
+      );
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/bad.yml':
+                  'run: dart run tool/bench/diff.dart --baseline=baseline.json',
+            },
+          ),
+        ),
+        contains(
+          contains(
+            'GitHub workflow must not run quarantined benchmark command',
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'release benchmark readiness guardrail rejects interpolated benchmark run',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/bad.yml': r'''
+jobs:
+  bad:
+    runs-on: ubuntu-24.04
+    env:
+      BENCH_DIR: tool/bench
+    strategy:
+      matrix:
+        script:
+          - run.dart
+    steps:
+      - run: dart run ${BENCH_DIR}/${{ matrix.script }} --profile=release
+''',
+            },
+          ),
+        ),
+        contains(
+          contains(
+            'GitHub workflow must not run quarantined benchmark command',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('release benchmark readiness guardrail rejects matrix include run', () {
     expect(
       _violationMessages(
         _checkWith(
-          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-            'run: $_releaseDiffCommand',
-            '''
-continue-on-error: true
-        run: $_releaseDiffCommand''',
-          ),
+          extraWorkflowFiles: const {
+            '.github/workflows/bad.yml': r'''
+jobs:
+  bad:
+    runs-on: ubuntu-24.04
+    env:
+      BENCH_DIR: tool/bench
+    strategy:
+      matrix:
+        include:
+          - script: run.dart
+    steps:
+      - run: dart run ${BENCH_DIR}/${{ matrix.script }} --profile=release
+''',
+          },
         ),
       ),
       contains(
-        contains('release benchmark step must not use continue-on-error'),
+        contains('GitHub workflow must not run quarantined benchmark command'),
+      ),
+    );
+  });
+
+  test('release benchmark readiness guardrail rejects compact expressions', () {
+    expect(
+      _violationMessages(
+        _checkWith(
+          extraWorkflowFiles: const {
+            '.github/workflows/bad.yml': r'''
+jobs:
+  bad:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        script:
+          - run.dart
+    steps:
+      - run: dart run ${{env.BENCH_DIR}}/${{matrix.script}} --profile=release
+        env:
+          BENCH_DIR: tool/bench
+''',
+          },
+        ),
+      ),
+      contains(
+        contains('GitHub workflow must not run quarantined benchmark command'),
+      ),
+    );
+  });
+
+  test(
+    'release benchmark readiness guardrail rejects quoted path segments',
+    () {
+      expect(
+        _violationMessages(
+          _checkWith(
+            extraWorkflowFiles: const {
+              '.github/workflows/bad.yml': r'''
+jobs:
+  bad:
+    runs-on: ubuntu-24.04
+    env:
+      BENCH_DIR: tool/bench
+    steps:
+      - run: dart run tool/bench/"run.dart" --profile=release
+      - run: dart run "$BENCH_DIR"/diff.dart --profile=release
+''',
+            },
+          ),
+        ),
+        contains(
+          contains(
+            'GitHub workflow must not run quarantined benchmark command',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('release benchmark readiness guardrail rejects nested expressions', () {
+    expect(
+      _violationMessages(
+        _checkWith(
+          extraWorkflowFiles: const {
+            '.github/workflows/bad.yml': r'''
+jobs:
+  bad:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        script:
+          - run.dart
+    steps:
+      - run: dart run ${{ env.BENCH_DIR }}/${{ env.BENCH_SCRIPT }} --profile=release
+        env:
+          BENCH_DIR: tool/bench
+          BENCH_SCRIPT: ${{ matrix.script }}
+''',
+          },
+        ),
+      ),
+      contains(
+        contains('GitHub workflow must not run quarantined benchmark command'),
       ),
     );
   });
@@ -244,65 +411,6 @@ continue-on-error: true
   });
 
   test(
-    'release benchmark readiness guardrail rejects retired workflow commands',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-              '      - run: dart run tool/guardrails/run.dart',
-              '''
-      - run: dart run legacy/tool/bench/run_load_profiles.dart
-      - run: dart run tool/guardrails/run.dart''',
-            ),
-          ),
-        ),
-        contains(
-          contains(
-            'release benchmark workflow must not invoke retired package paths',
-          ),
-        ),
-      );
-    },
-  );
-
-  test('release benchmark readiness guardrail rejects phase graph commands', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-            '      - run: dart run tool/architecture_graph/check.dart',
-            '      - run: dart run tool/architecture_graph/check.dart --phase P14',
-          ),
-        ),
-      ),
-      contains(
-        contains('release benchmark workflow must use current graph commands'),
-      ),
-    );
-  });
-
-  test('release benchmark readiness guardrail rejects retired docs routes', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          releaseWorkflow: _validReleaseWorkflow.replaceFirst(
-            '      - run: dart run tool/guardrails/run.dart',
-            '''
-      - run: dart run tool/docs_release_check.dart docs/indexes/by_phase.md
-      - run: dart run tool/guardrails/run.dart''',
-          ),
-        ),
-      ),
-      contains(
-        contains(
-          'release benchmark workflow must not invoke retired docs routes',
-        ),
-      ),
-    );
-  });
-
-  test(
     'release benchmark readiness guardrail rejects direct baseline path writes',
     () {
       expect(
@@ -320,24 +428,22 @@ continue-on-error: true
   );
 
   test(
-    'release benchmark readiness guardrail rejects automatic baseline update',
+    'release benchmark readiness guardrail rejects baseline update command',
     () {
       expect(
         _violationMessages(
           _checkWith(
-            baselineUpdateWorkflow: '''
-on:
-  workflow_dispatch:
-  push:
-jobs:
-  update-benchmark-baseline:
-    runs-on: ubuntu-24.04
-    steps:
-      - run: dart run tool/bench/update_baseline.dart
-''',
+            extraWorkflowFiles: const {
+              '.github/workflows/bad.yml':
+                  'run: dart run tool/bench/update_baseline.dart',
+            },
           ),
         ),
-        contains(contains('manual baseline update workflow is incomplete')),
+        contains(
+          contains(
+            'GitHub workflow must not run quarantined benchmark command',
+          ),
+        ),
       );
     },
   );
@@ -352,8 +458,6 @@ List<String> _violationMessages(Iterable<Object> violations) {
 // ignore: number-of-parameters
 List<GuardrailViolation> _checkWith({
   Iterable<GuardrailSourceSnapshot> publicSurfaceSources = const [],
-  String releaseWorkflow = _validReleaseWorkflow,
-  String baselineUpdateWorkflow = _validBaselineUpdateWorkflow,
   Iterable<GuardrailSourceSnapshot> productionSources = const [],
   Iterable<GuardrailSourceSnapshot> benchmarkSources = const [],
   Map<String, String> extraWorkflowFiles = const {},
@@ -362,48 +466,6 @@ List<GuardrailViolation> _checkWith({
     publicSurfaceSources: publicSurfaceSources,
     productionSources: productionSources,
     benchmarkSources: benchmarkSources,
-    workflowFiles: {
-      '.github/workflows/release_benchmarks.yml': releaseWorkflow,
-      '.github/workflows/update_benchmark_baseline.yml': baselineUpdateWorkflow,
-      ...extraWorkflowFiles,
-    },
+    workflowFiles: extraWorkflowFiles,
   );
 }
-
-const _releaseDiffCommand =
-    'dart run tool/bench/diff.dart --profile=release '
-    '--baseline=tool/bench/baselines/approved/'
-    'release_ubuntu_24_04_flutter_3_44_0.json '
-    '--current=build/bench/current/'
-    'release_ubuntu_24_04_flutter_3_44_0.json '
-    '--output=build/bench/diff/'
-    'release_ubuntu_24_04_flutter_3_44_0.json';
-
-const _validReleaseWorkflow =
-    '''
-jobs:
-  release-benchmarks:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.44.0
-      - run: dart run docs/tool/sync_generated_docs.dart --check
-      - run: dart run docs/tool/check_docs.dart
-      - run: dart run tool/bench/run.dart --profile=release
-      - run: $_releaseDiffCommand
-      - run: dart run tool/architecture_graph/check.dart
-      - run: dart run tool/architecture_graph/generate_views.dart --check
-      - run: dart run tool/guardrails/run.dart
-''';
-
-const _validBaselineUpdateWorkflow = '''
-on:
-  workflow_dispatch:
-jobs:
-  update-benchmark-baseline:
-    runs-on: ubuntu-24.04
-    steps:
-      - run: dart run tool/bench/update_baseline.dart
-''';

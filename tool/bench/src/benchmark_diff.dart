@@ -190,7 +190,7 @@ BenchmarkDiffResult validateFirstBaselineCandidate({
     report: candidate,
     profile: profile,
     sourceRole: 'candidate',
-    requireReferenceBaselineMetrics: false,
+    requireReferenceBaselineMetrics: true,
     requireFirstBaselineMemoryCaps: true,
     requireCasePolicyFields: true,
     requireSamples: true,

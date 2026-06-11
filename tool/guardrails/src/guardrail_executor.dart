@@ -564,7 +564,7 @@ const _structuralDescriptions = {
   spatialFallbackBudgetGuardrailId:
       'spatial fallback budget no-partial result check',
   releaseBenchmarkReadinessGuardrailId:
-      'benchmark release-readiness workflow and policy check',
+      'benchmark GitHub workflow quarantine and policy check',
 };
 
 const _coreBoundaryIds = {

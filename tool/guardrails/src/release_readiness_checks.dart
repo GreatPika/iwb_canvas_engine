@@ -53,7 +53,7 @@ List<GuardrailViolation> checkReleaseBenchmarkReadinessSources({
   _checkPublicSurfaceSources(publicSurfaceSources, violations);
   _checkProductionSources(productionSources, violations);
   _checkBenchmarkSources(benchmarkSources, violations);
-  _checkReleaseWorkflow(workflowFiles, violations);
+  _checkGitHubPerformanceWorkflowQuarantine(workflowFiles, violations);
   _checkBaselineWriteRoutes(workflowFiles, violations);
 
   return violations;
@@ -173,142 +173,237 @@ bool _containsForbiddenBenchmarkBaselineWriter(GuardrailSourceSnapshot source) {
   return false;
 }
 
-void _checkReleaseWorkflow(
+void _checkGitHubPerformanceWorkflowQuarantine(
   Map<String, String> workflowFiles,
   List<GuardrailViolation> violations,
 ) {
-  const releaseWorkflowPath = '.github/workflows/release_benchmarks.yml';
-  final job = _releaseWorkflowJob(
-    releaseWorkflowPath,
-    workflowFiles[releaseWorkflowPath],
-    violations,
-  );
-  if (job == null) {
-    return;
-  }
-  _checkNoBypassFields(releaseWorkflowPath, job, violations);
-  if (job['runs-on'] != 'ubuntu-24.04') {
-    violations.add(
-      const GuardrailViolation(
-        guardrailId: releaseBenchmarkReadinessGuardrailId,
-        path: releaseWorkflowPath,
-        message: 'release workflow must run on ubuntu-24.04',
-      ),
-    );
-  }
-
-  final steps = _workflowSteps(releaseWorkflowPath, job, violations);
-  _checkFlutterSetup(releaseWorkflowPath, steps, violations);
-  _checkRequiredReleaseCommands(
-    releaseWorkflowPath,
-    _runCommands(steps),
-    violations,
-  );
-  _checkNoRetiredWorkflowCommands(
-    releaseWorkflowPath,
-    _runCommands(steps),
-    violations,
-  );
-}
-
-YamlMap? _releaseWorkflowJob(
-  String releaseWorkflowPath,
-  String? workflow,
-  List<GuardrailViolation> violations,
-) {
-  if (workflow == null) {
+  for (final path in _quarantinedGitHubPerformanceWorkflowPaths) {
+    if (!workflowFiles.containsKey(path)) {
+      continue;
+    }
     violations.add(
       GuardrailViolation(
         guardrailId: releaseBenchmarkReadinessGuardrailId,
-        path: releaseWorkflowPath,
-        message: 'release benchmark workflow must exist',
+        path: path,
+        message: 'GitHub release benchmark workflow is quarantined',
       ),
     );
-
-    return null;
   }
-  final parsed = _workflowMap(releaseWorkflowPath, workflow, violations);
+  for (final entry in workflowFiles.entries) {
+    final path = entry.key;
+    final content = entry.value;
+    if (_containsQuarantinedGitHubPerformanceCommand(path, content)) {
+      violations.add(
+        GuardrailViolation(
+          guardrailId: releaseBenchmarkReadinessGuardrailId,
+          path: path,
+          message: 'GitHub workflow must not run quarantined benchmark command',
+        ),
+      );
+    }
+  }
+}
+
+bool _containsQuarantinedGitHubPerformanceCommand(
+  String path,
+  String workflowContent,
+) {
+  if (_containsQuarantinedBenchmarkPath(workflowContent)) {
+    return true;
+  }
+  final parsed = _workflowMap(path, workflowContent);
   if (parsed == null) {
-    return null;
+    return false;
   }
 
-  return _workflowJob(
-    releaseWorkflowPath,
-    parsed,
-    'release-benchmarks',
-    violations,
-  );
-}
-
-void _checkRequiredReleaseCommands(
-  String releaseWorkflowPath,
-  Set<String> runCommands,
-  List<GuardrailViolation> violations,
-) {
-  for (final required in const [
-    'dart run docs/tool/sync_generated_docs.dart --check',
-    'dart run docs/tool/check_docs.dart',
-    'dart run tool/bench/run.dart --profile=release',
-    _releaseDiffCommand,
-    'dart run tool/architecture_graph/check.dart',
-    'dart run tool/architecture_graph/generate_views.dart --check',
-    'dart run tool/guardrails/run.dart',
-  ]) {
-    if (!runCommands.contains(required)) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: releaseBenchmarkReadinessGuardrailId,
-          path: releaseWorkflowPath,
-          message: 'release workflow missing required command: $required',
-        ),
-      );
+  final substitutions = _workflowCommandSubstitutions(parsed);
+  for (final command in _workflowRunCommands(parsed)) {
+    if (_containsQuarantinedBenchmarkPath(command)) {
+      return true;
     }
-  }
-}
-
-void _checkNoRetiredWorkflowCommands(
-  String releaseWorkflowPath,
-  Set<String> runCommands,
-  List<GuardrailViolation> violations,
-) {
-  for (final command in runCommands) {
-    if (command.contains('legacy/')) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: releaseBenchmarkReadinessGuardrailId,
-          path: releaseWorkflowPath,
-          message:
-              'release benchmark workflow must not invoke retired package paths',
-        ),
-      );
-    }
-    if (command.contains('--phase') || command.contains('P14')) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: releaseBenchmarkReadinessGuardrailId,
-          path: releaseWorkflowPath,
-          message: 'release benchmark workflow must use current graph commands',
-        ),
-      );
-    }
-    for (final token in const [
-      'docs/indexes/by_phase.md',
-      'docs/indexes/donor_to_phase.md',
-      'docs/donors',
-      'docs/implementation',
-    ]) {
-      if (command.contains(token)) {
-        violations.add(
-          GuardrailViolation(
-            guardrailId: releaseBenchmarkReadinessGuardrailId,
-            path: releaseWorkflowPath,
-            message:
-                'release benchmark workflow must not invoke retired docs routes',
-          ),
-        );
+    for (final expanded in _expandWorkflowCommand(command, substitutions)) {
+      if (_containsQuarantinedBenchmarkPath(expanded)) {
+        return true;
       }
     }
   }
+
+  return false;
+}
+
+bool _containsQuarantinedBenchmarkPath(String content) {
+  final normalized = _normalizeShellPathSegments(content);
+  return normalized.contains('tool/bench/update_baseline.dart') ||
+      normalized.contains('tool/bench/run.dart') ||
+      normalized.contains('tool/bench/diff.dart');
+}
+
+String _normalizeShellPathSegments(String content) {
+  return content.replaceAll('"', '').replaceAll("'", '');
+}
+
+YamlMap? _workflowMap(String _, String content) {
+  try {
+    final parsed = loadYaml(content);
+    if (parsed is YamlMap) {
+      return parsed;
+    }
+  } on YamlException {
+    return null;
+  }
+
+  return null;
+}
+
+Map<String, Set<String>> _workflowCommandSubstitutions(YamlMap workflow) {
+  final substitutions = <String, Set<String>>{};
+  _collectWorkflowSubstitutions(workflow, substitutions);
+
+  return substitutions;
+}
+
+void _collectWorkflowSubstitutions(
+  Object? node,
+  Map<String, Set<String>> substitutions,
+) {
+  if (node is YamlMap) {
+    final env = node['env'];
+    if (env is YamlMap) {
+      _collectNamedScalarValues(env, substitutions);
+    }
+    final matrix = node['matrix'];
+    if (matrix is YamlMap) {
+      _collectNamedScalarValues(matrix, substitutions);
+    }
+    for (final value in node.values) {
+      _collectWorkflowSubstitutions(value, substitutions);
+    }
+    return;
+  }
+  if (node is YamlList) {
+    for (final value in node) {
+      _collectWorkflowSubstitutions(value, substitutions);
+    }
+  }
+}
+
+void _collectNamedScalarValues(
+  YamlMap values,
+  Map<String, Set<String>> substitutions,
+) {
+  for (final entry in values.entries) {
+    final key = entry.key;
+    if (key is! String) {
+      continue;
+    }
+    _collectMatrixObjectEntries(entry.value, substitutions);
+    final scalarValues = _scalarStrings(entry.value);
+    if (scalarValues.isEmpty) {
+      continue;
+    }
+    substitutions.putIfAbsent(key, () => {}).addAll(scalarValues);
+  }
+}
+
+void _collectMatrixObjectEntries(
+  Object? value,
+  Map<String, Set<String>> substitutions,
+) {
+  if (value is! YamlList) {
+    return;
+  }
+  for (final element in value) {
+    if (element is YamlMap) {
+      _collectNamedScalarValues(element, substitutions);
+    }
+  }
+}
+
+Set<String> _scalarStrings(Object? value) {
+  if (value is String) {
+    return {value};
+  }
+  if (value is num || value is bool) {
+    return {'$value'};
+  }
+  if (value is YamlList) {
+    return {
+      for (final element in value)
+        if (element is String || element is num || element is bool) '$element',
+    };
+  }
+
+  return const {};
+}
+
+Iterable<String> _workflowRunCommands(Object? node) sync* {
+  if (node is YamlMap) {
+    final run = node['run'];
+    if (run is String) {
+      yield run;
+    }
+    for (final value in node.values) {
+      yield* _workflowRunCommands(value);
+    }
+    return;
+  }
+  if (node is YamlList) {
+    for (final value in node) {
+      yield* _workflowRunCommands(value);
+    }
+  }
+}
+
+Set<String> _expandWorkflowCommand(
+  String command,
+  Map<String, Set<String>> substitutions,
+) {
+  var expanded = <String>{command};
+  var changed = true;
+  var pass = 0;
+  while (changed && pass < _maxWorkflowCommandExpansionPasses) {
+    changed = false;
+    final next = <String>{...expanded};
+    for (final candidate in expanded) {
+      for (final entry in substitutions.entries) {
+        for (final value in entry.value) {
+          next.addAll(
+            _replaceWorkflowVariableForms(candidate, entry.key, value),
+          );
+        }
+      }
+    }
+    if (next.length != expanded.length || !expanded.containsAll(next)) {
+      changed = true;
+    }
+    expanded = next.take(_maxWorkflowCommandExpansions).toSet();
+    pass += 1;
+  }
+
+  return expanded;
+}
+
+Set<String> _replaceWorkflowVariableForms(
+  String command,
+  String key,
+  String value,
+) {
+  return {
+    command.replaceAll('\${$key}', value),
+    command.replaceAll('\$$key', value),
+    command.replaceAll(_githubExpression('env', key), value),
+    command.replaceAll(_githubExpression('matrix', key), value),
+  };
+}
+
+RegExp _githubExpression(String context, String key) {
+  return RegExp(
+    r'\$\{\{\s*' +
+        RegExp.escape(context) +
+        r'\.' +
+        RegExp.escape(key) +
+        r'\s*\}\}',
+  );
 }
 
 void _checkBaselineWriteRoutes(
@@ -318,28 +413,6 @@ void _checkBaselineWriteRoutes(
   for (final entry in workflowFiles.entries) {
     final path = entry.key;
     final content = entry.value;
-    final isManualUpdate =
-        path == '.github/workflows/update_benchmark_baseline.yml';
-    if (isManualUpdate) {
-      final parsed = _workflowMap(path, content, violations);
-      if (parsed == null) {
-        continue;
-      }
-      final triggers = _workflowTriggers(parsed);
-      final allowedTrigger =
-          triggers.length == 1 && triggers.contains('workflow_dispatch');
-      if (!allowedTrigger ||
-          !content.contains('dart run tool/bench/update_baseline.dart')) {
-        violations.add(
-          GuardrailViolation(
-            guardrailId: releaseBenchmarkReadinessGuardrailId,
-            path: path,
-            message: 'manual baseline update workflow is incomplete',
-          ),
-        );
-      }
-      continue;
-    }
 
     if (_containsForbiddenBaselineWrite(content)) {
       violations.add(
@@ -372,150 +445,6 @@ Iterable<String> _linesContaining(String content, String pattern) {
   return content.split('\n').where((line) => line.contains(pattern));
 }
 
-YamlMap? _workflowMap(
-  String path,
-  String content,
-  List<GuardrailViolation> violations,
-) {
-  try {
-    final parsed = loadYaml(content);
-    if (parsed is YamlMap) {
-      return parsed;
-    }
-  } on YamlException {
-    // Report below through the common malformed-workflow violation.
-  }
-  violations.add(
-    GuardrailViolation(
-      guardrailId: releaseBenchmarkReadinessGuardrailId,
-      path: path,
-      message: 'workflow must be valid YAML mapping',
-    ),
-  );
-
-  return null;
-}
-
-YamlMap? _workflowJob(
-  String path,
-  YamlMap workflow,
-  String jobId,
-  List<GuardrailViolation> violations,
-) {
-  final jobs = workflow['jobs'];
-  if (jobs is YamlMap && jobs[jobId] is YamlMap) {
-    return jobs[jobId] as YamlMap;
-  }
-  violations.add(
-    GuardrailViolation(
-      guardrailId: releaseBenchmarkReadinessGuardrailId,
-      path: path,
-      message: 'workflow missing job $jobId',
-    ),
-  );
-
-  return null;
-}
-
-List<YamlMap> _workflowSteps(
-  String path,
-  YamlMap job,
-  List<GuardrailViolation> violations,
-) {
-  final steps = job['steps'];
-  if (steps is YamlList) {
-    return steps.whereType<YamlMap>().toList();
-  }
-  violations.add(
-    GuardrailViolation(
-      guardrailId: releaseBenchmarkReadinessGuardrailId,
-      path: path,
-      message: 'workflow job must declare executable steps',
-    ),
-  );
-
-  return const [];
-}
-
-void _checkNoBypassFields(
-  String path,
-  YamlMap job,
-  List<GuardrailViolation> violations,
-) {
-  for (final forbidden in const ['if', 'continue-on-error']) {
-    if (job.containsKey(forbidden)) {
-      violations.add(
-        GuardrailViolation(
-          guardrailId: releaseBenchmarkReadinessGuardrailId,
-          path: path,
-          message: 'release benchmark job must not use $forbidden',
-        ),
-      );
-    }
-  }
-  for (final step in _workflowSteps(path, job, violations)) {
-    for (final forbidden in const ['if', 'continue-on-error']) {
-      if (step.containsKey(forbidden)) {
-        violations.add(
-          GuardrailViolation(
-            guardrailId: releaseBenchmarkReadinessGuardrailId,
-            path: path,
-            message: 'release benchmark step must not use $forbidden',
-          ),
-        );
-      }
-    }
-  }
-}
-
-Set<String> _runCommands(List<YamlMap> steps) {
-  return steps
-      .map((step) => step['run'])
-      .whereType<String>()
-      .map((command) => command.trim())
-      .toSet();
-}
-
-void _checkFlutterSetup(
-  String path,
-  List<YamlMap> steps,
-  List<GuardrailViolation> violations,
-) {
-  for (final step in steps) {
-    if (step['uses'] != 'subosito/flutter-action@v2') {
-      continue;
-    }
-    final config = step['with'];
-    if (config is YamlMap &&
-        config['channel'] == 'stable' &&
-        config['flutter-version'] == '3.44.0') {
-      return;
-    }
-  }
-  violations.add(
-    GuardrailViolation(
-      guardrailId: releaseBenchmarkReadinessGuardrailId,
-      path: path,
-      message: 'release workflow must pin Flutter 3.44.0 stable',
-    ),
-  );
-}
-
-Set<String> _workflowTriggers(YamlMap workflow) {
-  final triggers = workflow['on'];
-  if (triggers is String) {
-    return {triggers};
-  }
-  if (triggers is YamlList) {
-    return triggers.whereType<String>().toSet();
-  }
-  if (triggers is YamlMap) {
-    return triggers.keys.whereType<String>().toSet();
-  }
-
-  return const {};
-}
-
 bool _isWorkflowPath(String path) {
   return path.endsWith('.yml') || path.endsWith('.yaml');
 }
@@ -535,6 +464,14 @@ const _releaseDiffCommand =
 
 const _approvedReleaseBaselinePath =
     'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json';
+
+const _quarantinedGitHubPerformanceWorkflowPaths = {
+  '.github/workflows/release_benchmarks.yml',
+  '.github/workflows/update_benchmark_baseline.yml',
+};
+
+const _maxWorkflowCommandExpansions = 128;
+const _maxWorkflowCommandExpansionPasses = 8;
 
 const _approvedBaselineImplementationPaths = {
   'tool/bench/update_baseline.dart',
