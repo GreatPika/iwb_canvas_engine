@@ -23,3 +23,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 1. Current docs without history](plan/step_1_current_docs_without_history.md)
 - [x] [Step 2. API surface invalid terminal cleanup](plan/step_2_api_surface_invalid_terminal_cleanup.md)
 - [x] [Step 3. Compact overlay frame capture](plan/step_3_compact_overlay_frame_capture.md)
+- [ ] [Step 4. Runtime timestamp-silent cancellations](plan/step_4_runtime_timestamp_silent_cancellations.md)
