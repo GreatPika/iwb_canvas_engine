@@ -220,10 +220,21 @@ void main() {
           .cast<Map<String, Object?>>();
 
       for (final record in records) {
-        final acceptedAt = DateTime.parse(record['acceptedAtUtc'] as String);
         final referencePath = record['referencePath'] as String;
+        final reference =
+            jsonDecode(File(referencePath).readAsStringSync())
+                as Map<String, Object?>;
+        final acceptedAt = DateTime.parse(record['acceptedAtUtc'] as String);
         final acceptedFromRuns = (record['acceptedFromRuns'] as List<Object?>)
             .cast<String>();
+
+        expect(reference['acceptedAtUtc'], record['acceptedAtUtc']);
+        expect(reference['acceptedReason'], record['acceptedReason']);
+        expect(reference['selectionPolicy'], record['selectionPolicy']);
+        expect(
+          (reference['acceptedFromRuns'] as List<Object?>).cast<String>(),
+          acceptedFromRuns,
+        );
 
         for (final runPath in acceptedFromRuns) {
           final history =
@@ -1067,6 +1078,49 @@ void main() {
         );
 
         expect(File(baselinePath).readAsStringSync(), before);
+        final approved = File(approvedReleaseBaselinePath);
+        final approvedExisted = approved.existsSync();
+        final approvedBefore = approvedExisted
+            ? approved.readAsStringSync()
+            : null;
+        if (approvedExisted) {
+          approved.deleteSync();
+        }
+        final unapprovedDiffExit = await runBenchmarkDiffCli([
+          '--profile=release',
+          '--baseline=$approvedReleaseBaselinePath',
+          '--current=$releaseCurrentReportPath',
+          '--output=$outputPath',
+        ], manifest: manifest);
+        expect(unapprovedDiffExit, 1);
+        final unapprovedDiffReport =
+            jsonDecode(File(outputPath).readAsStringSync())
+                as Map<String, Object?>;
+        expect(
+          (unapprovedDiffReport['failures'] as List<Object?>).join('\n'),
+          contains('approved baseline is not initialized'),
+        );
+        final absoluteUnapprovedDiffExit = await runBenchmarkDiffCli([
+          '--profile=release',
+          '--baseline=${approved.absolute.path}',
+          '--current=$releaseCurrentReportPath',
+          '--output=$outputPath',
+        ], manifest: manifest);
+        expect(absoluteUnapprovedDiffExit, 1);
+        final absoluteUnapprovedDiffReport =
+            jsonDecode(File(outputPath).readAsStringSync())
+                as Map<String, Object?>;
+        expect(
+          (absoluteUnapprovedDiffReport['failures'] as List<Object?>).join(
+            '\n',
+          ),
+          contains('approved baseline is not initialized'),
+        );
+        if (approvedBefore != null) {
+          approved
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync(approvedBefore);
+        }
         expect(
           () => runBenchmarkBaselineUpdateCli([
             '--profile=release',
@@ -1127,13 +1181,8 @@ void main() {
 
         const candidatePath =
             '$releaseCandidateRoot/benchmark_diff_test_candidate.json';
-        final approved = File(approvedReleaseBaselinePath);
         final candidate = File(candidatePath)
           ..parent.createSync(recursive: true);
-        final approvedExisted = approved.existsSync();
-        final approvedBefore = approvedExisted
-            ? approved.readAsStringSync()
-            : null;
         addTearDown(() {
           if (approvedBefore == null) {
             if (approved.existsSync()) {

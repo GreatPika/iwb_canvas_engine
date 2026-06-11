@@ -149,6 +149,9 @@ bool _containsForbiddenBenchmarkBaselineWriter(GuardrailSourceSnapshot source) {
   if (_approvedBaselineImplementationPaths.contains(source.path)) {
     return false;
   }
+  if (_containsApprovedBaselineNamespace(source.content)) {
+    return true;
+  }
   for (final forbidden in const [
     _approvedReleaseBaselinePath,
     'approvedReleaseBaselinePath',
@@ -163,12 +166,27 @@ bool _containsForbiddenBenchmarkBaselineWriter(GuardrailSourceSnapshot source) {
   return false;
 }
 
+bool _containsApprovedBaselineNamespace(String content) {
+  if (content.contains(_approvedBaselineRootPath)) {
+    return true;
+  }
+
+  final compactSource = content.replaceAll(
+    RegExp(r'''[\s'"`+,\[\]\(\)]'''),
+    '',
+  );
+  return compactSource.contains(_approvedBaselineRootPath) ||
+      compactSource.contains('toolbenchbaselinesapproved');
+}
+
 String _readFile(String path) {
   return File(path).readAsStringSync();
 }
 
 const _approvedReleaseBaselinePath =
     'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json';
+
+const _approvedBaselineRootPath = 'tool/bench/baselines/approved/';
 
 const _approvedBaselineImplementationPaths = {
   'tool/bench/update_baseline.dart',

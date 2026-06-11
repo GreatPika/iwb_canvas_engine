@@ -1994,7 +1994,16 @@ BenchmarkDiffResult _result({
 }
 
 Map<String, Object?> _readJsonObject(String path) {
-  final decoded = jsonDecode(File(path).readAsStringSync());
+  final file = File(path);
+  if (_isApprovedReleaseBaselinePath(path) && !file.existsSync()) {
+    return const {
+      'schemaVersion': 1,
+      'status': 'unapproved',
+      'profile': 'release',
+      'message': 'approved release baseline file is not committed',
+    };
+  }
+  final decoded = jsonDecode(file.readAsStringSync());
   if (decoded is Map<String, Object?>) {
     return decoded;
   }
@@ -2022,12 +2031,8 @@ void _validateBaselineUpdateCandidatePath(String candidate) {
 }
 
 void _validateDiffBaselinePath(String path) {
-  final approved = File(
-    approvedReleaseBaselinePath,
-  ).absolute.uri.normalizePath();
-  final target = File(path).absolute.uri.normalizePath();
   final manualBaseline = _isManualBaselinePath(path);
-  if (target.path != approved.path && !manualBaseline) {
+  if (!_isApprovedReleaseBaselinePath(path) && !manualBaseline) {
     throw const FormatException(
       'Approved benchmark baseline path must be '
       '$approvedReleaseBaselinePath or a JSON file under '
@@ -2036,13 +2041,18 @@ void _validateDiffBaselinePath(String path) {
   }
 }
 
-void _validateApprovedBaselineWritePath(String path) {
-  _validateNoParentTraversal(path);
+bool _isApprovedReleaseBaselinePath(String path) {
   final approved = File(
     approvedReleaseBaselinePath,
   ).absolute.uri.normalizePath();
   final target = File(path).absolute.uri.normalizePath();
-  if (target.path != approved.path) {
+
+  return target.path == approved.path;
+}
+
+void _validateApprovedBaselineWritePath(String path) {
+  _validateNoParentTraversal(path);
+  if (!_isApprovedReleaseBaselinePath(path)) {
     throw const FormatException(
       'Approved benchmark baseline write path must be '
       '$approvedReleaseBaselinePath. Manual device references must be accepted '

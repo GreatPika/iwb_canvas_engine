@@ -533,8 +533,8 @@ behavioral tests, and the required guardrail list remains owned by
 - proves `release.benchmark_readiness` is runner-backed in the blocking and
   release suites without running the full benchmark matrix;
 - rejects public benchmark exports, public integration names in production
-  source, benchmark route outside release policy imports, and rogue approved
-  baseline writers in benchmark tooling.
+  source, retired benchmark package imports, and rogue approved baseline writers
+  in benchmark tooling.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
 - proves runtime dispose keeps state.value readable;

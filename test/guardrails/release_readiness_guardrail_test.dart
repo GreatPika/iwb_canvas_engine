@@ -165,6 +165,54 @@ void main() {
         contains('approved baseline writes must stay behind update_baseline'),
       ),
     );
+    expect(
+      _violationMessages(
+        _checkWith(
+          benchmarkSources: const [
+            GuardrailSourceSnapshot(
+              path: 'tool/bench/rogue.dart',
+              content:
+                  'const path = "tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_38_5.json";',
+            ),
+          ],
+        ),
+      ),
+      contains(
+        contains('approved baseline writes must stay behind update_baseline'),
+      ),
+    );
+    expect(
+      _violationMessages(
+        _checkWith(
+          benchmarkSources: const [
+            GuardrailSourceSnapshot(
+              path: 'tool/bench/rogue.dart',
+              content:
+                  "final path = ['tool', 'bench', 'baselines', 'approved', 'rogue.json'].join('/');",
+            ),
+          ],
+        ),
+      ),
+      contains(
+        contains('approved baseline writes must stay behind update_baseline'),
+      ),
+    );
+    expect(
+      _violationMessages(
+        _checkWith(
+          benchmarkSources: const [
+            GuardrailSourceSnapshot(
+              path: 'tool/bench/rogue.dart',
+              content:
+                  "const path = 'tool/bench/baselines/' 'approved/rogue.json';",
+            ),
+          ],
+        ),
+      ),
+      contains(
+        contains('approved baseline writes must stay behind update_baseline'),
+      ),
+    );
   });
 }
 
