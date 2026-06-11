@@ -353,8 +353,8 @@ registry change is made unless a new tracked benchmark case is intentionally
 added.
 
 Completion Evidence: 2026-06-11 clean Xiaomi 22081283G Android 14 release
-benchmark ran on commit `95f6ff95031ad7d21431ea885569920a874d969f` with
-`repositoryDirty: false`:
+benchmark ran on commit `890db3fcf9c2cacf0ccab488478add16ac08c6f7` with
+`repositoryDirty: false` and device id `Z9NBMVIRY5KRGAJF`:
 `dart run tool/bench/run.dart --profile=release --device=Z9NBMVIRY5KRGAJF --output=build/bench/current/xiaomi_22081283g_step5_net_no_op_release_2026_06_11.json --history-label=xiaomi_step5_net_no_op_release --history-device-name="Xiaomi 22081283G" --history-device-id=Z9NBMVIRY5KRGAJF --history-device-os="Android 14" --history-reference=tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json --history-output=tool/bench/manual/run_history/2026-06-11_xiaomi_22081283g_step5_net_no_op_release.json`.
 The manual history is recorded at
 `tool/bench/manual/run_history/2026-06-11_xiaomi_22081283g_step5_net_no_op_release.json`.
