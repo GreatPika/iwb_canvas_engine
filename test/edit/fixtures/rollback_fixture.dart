@@ -21,6 +21,14 @@ void main() {
     expect(_expectDraftReplacementRollsBack, returnsNormally);
   });
 
+  test('equivalent draft replacement still publishes replacement effects', () {
+    expect(_expectEquivalentDraftReplacementPublishes, returnsNormally);
+  });
+
+  test('materialized finalization failure rolls back before install', () {
+    expect(_expectMaterializedFinalizationFailureRollsBack, returnsNormally);
+  });
+
   test('selection-prune rollback leaves committed owners unchanged', () {
     expect(_expectSelectionPruneRollsBack, returnsNormally);
   });
@@ -146,6 +154,62 @@ void _expectDraftReplacementValidationFailureRollsBack() {
   );
   expect(validationRoot.state.value, beforeValidationState);
   before.expectUnchanged(validationRoot, validationEffects);
+}
+
+void _expectEquivalentDraftReplacementPublishes() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final before = root.state.value;
+  final replacement = root.readDocument();
+
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(replacement);
+  });
+
+  final installed = root.readDocument();
+  expect(
+    installed.layers.single.elements.single.id,
+    replacement.layers.single.elements.single.id,
+  );
+  expect(installed.background.color, replacement.background.color);
+  expect(root.state.value.revisions.document, before.revisions.document + 1);
+  expect(root.state.value.revisions.epoch, before.revisions.epoch + 1);
+  expect(effectBatches, hasLength(1));
+  expect(effectBatches.single.whereType<SpatialDeliveryEffect>(), hasLength(1));
+  expect(
+    effectBatches.single.whereType<PublicStateDeliveryEffect>(),
+    hasLength(1),
+  );
+}
+
+void _expectMaterializedFinalizationFailureRollsBack() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  root.selection.setSelection([CanvasElementId('element-1')]);
+  final before = _RollbackSnapshot.capture(root, effectBatches);
+
+  expect(
+    () => root.edits.edit((edit) {
+      edit.readDraftDocument();
+      edit.addElement(
+        CanvasImageElement(
+          id: CanvasElementId('missing-materialized-image'),
+          resourceId: CanvasResourceId('missing-resource'),
+          size: const Size(1, 1),
+        ),
+        layerId: CanvasLayerId('layer-1'),
+      );
+    }),
+    throwsA(
+      isA<CanvasDataException>().having(
+        (error) => error.code,
+        'code',
+        CanvasDataErrorCode.missingResourceReference,
+      ),
+    ),
+  );
+
+  before.expectUnchanged(root, effectBatches);
 }
 
 void _expectSelectionPruneRollsBack() {

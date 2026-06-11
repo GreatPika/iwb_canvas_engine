@@ -382,7 +382,6 @@ final class DocumentStoreKernel {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
     var didMutateFacts = false;
-    var requiredRevisionDelta = const StoreRevisionDelta();
     final admittedIds = _SparseAdmittedIds();
     for (var index = 0; index < commit.mutations.length;) {
       final mutation = commit.mutations[index];
@@ -399,9 +398,6 @@ final class DocumentStoreKernel {
         final applied = _updateElements(nextDocument, updates);
         nextDocument = applied.document;
         didMutateFacts = didMutateFacts || applied.didMutateFacts;
-        requiredRevisionDelta = requiredRevisionDelta.merge(
-          applied.requiredRevisionDelta,
-        );
         continue;
       }
       final applied = _applySparseMutation(
@@ -411,39 +407,35 @@ final class DocumentStoreKernel {
       );
       nextDocument = applied.document;
       didMutateFacts = didMutateFacts || applied.didMutateFacts;
-      requiredRevisionDelta = requiredRevisionDelta.merge(
-        applied.requiredRevisionDelta,
-      );
       if (applied.didMutateFacts) {
         admittedIds.addMutation(mutation);
       }
       index += 1;
     }
-    final finalNoOp =
-        didMutateFacts &&
-        _sameSparseTouchedCommittedFacts(
-          base: _document,
-          candidate: nextDocument,
-          mutations: commit.mutations,
-        );
-    if (didMutateFacts && !finalNoOp && !revisionDelta.hasChanges) {
+    final touched = _SparseTouchedCommittedFacts.fromMutations(
+      commit.mutations,
+    );
+    final acceptedDelta = didMutateFacts
+        ? _sparseAcceptedRevisionDelta(
+            base: _document,
+            candidate: nextDocument,
+            touched: touched,
+          )
+        : const StoreRevisionDelta();
+    final accepted = didMutateFacts && acceptedDelta.hasChanges;
+    if (accepted && !revisionDelta.hasChanges) {
       throw ArgumentError.value(
         commit.revisionDelta,
         'revisionDelta',
         'sparse store commits that change facts must advance revisions.',
       );
     }
-    final acceptedDelta = finalNoOp
-        ? const StoreRevisionDelta()
-        : requiredRevisionDelta;
-    if (!finalNoOp) {
+    if (accepted) {
       _validateSparseRevisionCoverage(
         provided: revisionDelta,
         required: acceptedDelta,
       );
     }
-
-    final accepted = didMutateFacts && !finalNoOp;
 
     return PreparedSparseStoreCommit(
       baseRevisions: _document.revisions,
@@ -772,26 +764,6 @@ final class DocumentStoreKernel {
   }
 }
 
-bool _sameSparseTouchedCommittedFacts({
-  required CommittedDocument base,
-  required CommittedDocument candidate,
-  required List<StoreSparseMutation> mutations,
-}) {
-  final touched = _SparseTouchedCommittedFacts.fromMutations(mutations);
-  if (touched.background && base.background != candidate.background) {
-    return false;
-  }
-  if (touched.camera && base.camera != candidate.camera) {
-    return false;
-  }
-  if (touched.palette && !_samePalette(base.palette, candidate.palette)) {
-    return false;
-  }
-
-  return _sameTouchedResources(base, candidate, touched) &&
-      _sameTouchedElements(base, candidate, touched);
-}
-
 StoreRevisionDelta _committedDocumentRevisionDelta(
   CommittedDocument base,
   CommittedDocument candidate,
@@ -815,6 +787,124 @@ StoreRevisionDelta _committedDocumentRevisionDelta(
   return delta.merge(
     _elementRegistryRevisionDelta(base.elements, candidate.elements),
   );
+}
+
+StoreRevisionDelta _sparseAcceptedRevisionDelta({
+  required CommittedDocument base,
+  required CommittedDocument candidate,
+  required _SparseTouchedCommittedFacts touched,
+}) {
+  var delta = const StoreRevisionDelta();
+  if (touched.camera && base.camera != candidate.camera) {
+    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
+  }
+  if (touched.palette && !_samePalette(base.palette, candidate.palette)) {
+    delta = delta.merge(const StoreRevisionDelta.projectionOnly());
+  }
+  if (touched.background) {
+    if (base.background.color != candidate.background.color) {
+      delta = delta.merge(const StoreRevisionDelta.background());
+    }
+    if (base.background.grid != candidate.background.grid) {
+      delta = delta.merge(const StoreRevisionDelta.grid());
+    }
+  }
+  if (!_sameTouchedResources(base, candidate, touched)) {
+    delta = delta.merge(const StoreRevisionDelta.resource());
+  }
+
+  return delta.merge(
+    _sparseTouchedElementRevisionDelta(
+      base.elements,
+      candidate.elements,
+      touched,
+    ),
+  );
+}
+
+StoreRevisionDelta _sparseTouchedElementRevisionDelta(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  var delta = _sparseTouchedElementStructureRevisionDelta(
+    base,
+    candidate,
+    touched,
+  );
+  for (final id in touched.elementIds) {
+    final before = base.elementById(id);
+    final after = candidate.elementById(id);
+    if (before == null || after == null) {
+      if (before != after) {
+        delta = delta.merge(const StoreRevisionDelta.structural());
+      }
+      continue;
+    }
+    delta = delta.merge(
+      _committedElementRevisionDelta(before: before, after: after),
+    );
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _sparseTouchedElementStructureRevisionDelta(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  if (!touched.touchedElementStructure) {
+    return const StoreRevisionDelta();
+  }
+  var delta = const StoreRevisionDelta();
+  if (base.elementCount != candidate.elementCount ||
+      !_sameTouchedBackgroundOrderForRegistries(base, candidate, touched)) {
+    delta = delta.merge(const StoreRevisionDelta.structural());
+  }
+  if (base.layerTable.rows.length != candidate.layerTable.rows.length) {
+    delta = delta.merge(const StoreRevisionDelta.layerStructural());
+  }
+  delta = delta.merge(
+    _sparseTouchedLayerRevisionDelta(base, candidate, touched),
+  );
+
+  return delta;
+}
+
+StoreRevisionDelta _sparseTouchedLayerRevisionDelta(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  var delta = const StoreRevisionDelta();
+  for (final id in touched.layerIds) {
+    final before = _layerRowById(base, id);
+    final after = _layerRowById(candidate, id);
+    if (before == null || after == null) {
+      if (before != after) {
+        delta = delta.merge(const StoreRevisionDelta.layerStructural());
+      }
+      continue;
+    }
+    if (before.id != after.id || before.metadata != after.metadata) {
+      delta = delta.merge(const StoreRevisionDelta.layerStructural());
+    }
+    if (!_sameList(before.elementIds, after.elementIds)) {
+      delta = delta.merge(const StoreRevisionDelta.structural());
+    }
+  }
+
+  return delta;
+}
+
+bool _sameTouchedBackgroundOrderForRegistries(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  return !touched.backgroundElementOrder ||
+      _sameList(base.backgroundElementIds, candidate.backgroundElementIds);
 }
 
 AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
@@ -1517,96 +1607,6 @@ bool _isBackgroundLocation(ElementLocationFacts? location) {
 
 bool _anyChanged(List<bool> changes) {
   return changes.contains(true);
-}
-
-bool _sameTouchedElements(
-  CommittedDocument base,
-  CommittedDocument candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  if (!touched.touchedElementStructure && touched.elementIds.isEmpty) {
-    return true;
-  }
-  if (!_sameTouchedElementAggregates(base, candidate) ||
-      !_sameTouchedBackgroundOrder(base, candidate, touched) ||
-      !_sameTouchedLayers(base, candidate, touched)) {
-    return false;
-  }
-
-  return _sameTouchedElementRows(base, candidate, touched);
-}
-
-bool _sameTouchedElementAggregates(
-  CommittedDocument base,
-  CommittedDocument candidate,
-) {
-  return base.elements.elementCount == candidate.elements.elementCount &&
-      base.elements.layerTable.rows.length ==
-          candidate.elements.layerTable.rows.length;
-}
-
-bool _sameTouchedBackgroundOrder(
-  CommittedDocument base,
-  CommittedDocument candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  return !touched.backgroundElementOrder ||
-      _sameList(
-        base.elements.backgroundElementIds,
-        candidate.elements.backgroundElementIds,
-      );
-}
-
-bool _sameTouchedLayers(
-  CommittedDocument base,
-  CommittedDocument candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  for (final id in touched.layerIds) {
-    if (!_sameList(
-      _elementIdsInCommittedLayer(base, id),
-      _elementIdsInCommittedLayer(candidate, id),
-    )) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool _sameTouchedElementRows(
-  CommittedDocument base,
-  CommittedDocument candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  for (final id in touched.elementIds) {
-    final before = base.elements.elementById(id);
-    final after = candidate.elements.elementById(id);
-    if (before == null || after == null) {
-      if (before != after) {
-        return false;
-      }
-      continue;
-    }
-    if (!sameCanvasElementSnapshot(before, after)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-List<CanvasElementId> _elementIdsInCommittedLayer(
-  CommittedDocument document,
-  CanvasLayerId id,
-) {
-  for (final row in document.elements.layerTable.rows) {
-    if (row.id == id) {
-      return row.elementIds;
-    }
-  }
-
-  return const [];
 }
 
 Set<CanvasElementId> _normalizeSelectionInCommittedDocument(

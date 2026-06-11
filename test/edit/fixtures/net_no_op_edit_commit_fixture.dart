@@ -16,6 +16,14 @@ void main() {
     () => expectLater(_sparseCompensatingFieldsAreSilent(), completes),
   );
   test(
+    'sparse compensating element edits commit as delivery-silent no-op',
+    () => expectLater(_sparseCompensatingElementIsSilent(), completes),
+  );
+  test(
+    'sparse partial compensation advances only accepted final families',
+    () => expectLater(_sparsePartialCompensationUsesFinalFamilies(), completes),
+  );
+  test(
     'sparse add then remove commit is delivery-silent no-op',
     () => expectLater(_sparseAddRemoveIsSilent(), completes),
   );
@@ -57,6 +65,52 @@ Future<void> _sparseAddRemoveIsSilent() {
       edit.removeElement(CanvasElementId('temporary'));
     },
   );
+}
+
+Future<void> _sparseCompensatingElementIsSilent() {
+  return _expectSilentNetNoOpCommit(
+    mutate: (edit) {
+      edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('rect-1'),
+          fillColor: const CanvasFieldSet(Color(0xFF112233)),
+        ),
+      );
+      edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('rect-1'),
+          fillColor: const CanvasFieldClear<Color>(),
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _baseDocument(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (effects) => effectBatches.add(effects),
+  );
+  final beforeFrameRevisions = root.frameRevisions;
+
+  root.edits.edit((edit) {
+    edit.setGrid(CanvasGrid(cellSize: 24));
+    edit.setGrid(CanvasGrid());
+    edit.setBackgroundColor(const Color(0xFF112233));
+  });
+  await Future<void>.delayed(Duration.zero);
+
+  expect(
+    root.frameRevisions.backgroundRevision,
+    beforeFrameRevisions.backgroundRevision + 1,
+  );
+  expect(root.frameRevisions.gridRevision, beforeFrameRevisions.gridRevision);
+  expect(root.background.color, const Color(0xFF112233));
+  expect(effectBatches, hasLength(1));
+  expect(effectBatches.single.whereType<RepaintDeliveryEffect>(), hasLength(1));
+  root.dispose();
 }
 
 Future<void> _sparseResourceCompensationIsSilent() {

@@ -19,4 +19,12 @@ void main() {
       completes,
     );
   });
+  test('accepted interaction commits use final store facts', () {
+    return expectLater(
+      runFlutterInPackageTest(
+        'test/edit/fixtures/accepted_interaction_commit_fixture.dart',
+      ),
+      completes,
+    );
+  });
 }

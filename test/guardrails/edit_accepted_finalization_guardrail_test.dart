@@ -17,9 +17,9 @@ void main() {
     final unit = units['lib/src/store/document_store_kernel.dart']!;
     final finalizationUnit =
         units['lib/src/store/store_commit_finalization.dart']!;
-    final sparseFinalizerSurface = _transitiveTopLevelFunctions(
+    final sparseAcceptedDeltaSurface = _transitiveTopLevelFunctions(
       unit,
-      '_sameSparseTouchedCommittedFacts',
+      '_sparseAcceptedRevisionDelta',
     );
     final touchedFacts = _classDeclaration(
       unit,
@@ -33,7 +33,7 @@ void main() {
     _expectEditRoutesCompileFromAcceptedFinalization(
       units['lib/src/edit/edit_kernel.dart']!,
     );
-    _expectSparseFinalizerAvoidsFullDiff(sparseFinalizerSurface);
+    _expectSparseAcceptedDeltaAvoidsFullDiff(sparseAcceptedDeltaSurface);
     _expectTouchedFactsAreBounded(touchedFacts);
     expect(_forbiddenOwnerImports(unit), isEmpty);
     expect(_forbiddenOwnerImports(finalizationUnit), isEmpty);
@@ -239,7 +239,10 @@ void _expectSparsePreparationUsesFinalizer(CompilationUnit unit) {
 
   expect(
     _methodInvocations(prepareSparseCommit),
-    contains('_sameSparseTouchedCommittedFacts'),
+    allOf(
+      contains('_sparseAcceptedRevisionDelta'),
+      contains('_validateSparseRevisionCoverage'),
+    ),
   );
 }
 
@@ -267,7 +270,9 @@ void _expectStorePreparationReturnsAcceptedDeltas(CompilationUnit unit) {
   expect(
     prepareSparseCommit.toSource(),
     allOf(
-      contains('final acceptedDelta = finalNoOp'),
+      contains('final acceptedDelta = didMutateFacts'),
+      contains('_sparseAcceptedRevisionDelta'),
+      contains('_validateSparseRevisionCoverage'),
       contains('acceptedDelta.advance(_document.revisions)'),
       contains('revisionDelta: accepted ? acceptedDelta'),
       isNot(contains('revisionDelta: accepted ? revisionDelta')),
@@ -276,19 +281,19 @@ void _expectStorePreparationReturnsAcceptedDeltas(CompilationUnit unit) {
   );
 }
 
-void _expectSparseFinalizerAvoidsFullDiff(
-  List<FunctionDeclaration> finalizerSurface,
+void _expectSparseAcceptedDeltaAvoidsFullDiff(
+  List<FunctionDeclaration> acceptedDeltaSurface,
 ) {
-  final invocations = _combinedMethodInvocations(finalizerSurface);
+  final invocations = _combinedMethodInvocations(acceptedDeltaSurface);
 
   expect(
-    finalizerSurface.map((function) => function.name.lexeme),
+    acceptedDeltaSurface.map((function) => function.name.lexeme),
     containsAll({
-      '_sameSparseTouchedCommittedFacts',
+      '_sparseAcceptedRevisionDelta',
       '_sameTouchedResources',
-      '_sameTouchedElements',
+      '_sparseTouchedElementRevisionDelta',
     }),
-    reason: 'guardrail must inspect delegated sparse finalizer helpers',
+    reason: 'guardrail must inspect delegated sparse accepted-delta helpers',
   );
   expect(
     invocations,
@@ -301,7 +306,7 @@ void _expectSparseFinalizerAvoidsFullDiff(
     reason: 'ordinary sparse finalization must not build public projection',
   );
   expect(
-    _combinedCreatedTypeNames(finalizerSurface),
+    _combinedCreatedTypeNames(acceptedDeltaSurface),
     isNot(contains('DocumentProjectionCache')),
   );
 }
