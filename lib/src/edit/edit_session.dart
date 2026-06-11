@@ -12,6 +12,7 @@ import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
+import '../contracts/internal/touched_set.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
@@ -42,8 +43,10 @@ final class EditSession implements CanvasEdit {
 
   bool get didChange => _backing.didChange;
   StoreRevisionDelta get revisionDelta => _backing.revisionDelta;
+  TouchedSet get touchedSet => _backing.touchedSet;
   CommitPlan get commitPlan => _backing.commitPlan;
   bool get hasMaterializedDraft => _backing.isMaterialized;
+  bool get didReplaceDraftDocument => _backing.documentReplaced;
   StoreSparseCommit get sparseCommit => _backing.sparseCommit;
 
   void close() {
@@ -179,7 +182,9 @@ abstract interface class SparseEditSessionFacts {
 abstract interface class _EditSessionBacking {
   bool get didChange;
   bool get isMaterialized;
+  bool get documentReplaced;
   StoreRevisionDelta get revisionDelta;
+  TouchedSet get touchedSet;
   CommitPlan get commitPlan;
   StoreSparseCommit get sparseCommit;
   CanvasDocument readDraftDocument();
@@ -221,7 +226,13 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   StoreRevisionDelta get revisionDelta => _draft.revisionDelta;
 
   @override
+  TouchedSet get touchedSet => _draft.touchedSet;
+
+  @override
   CommitPlan get commitPlan => _draft.commitPlan;
+
+  @override
+  bool get documentReplaced => _draft.documentReplaced;
 
   @override
   StoreSparseCommit get sparseCommit {
@@ -383,6 +394,11 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   @override
+  TouchedSet get touchedSet {
+    return _draft?.touchedSet ?? _touchedSet.build();
+  }
+
+  @override
   CommitPlan get commitPlan {
     final draft = _draft;
     if (draft != null) {
@@ -394,6 +410,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
       touchedSet: _touchedSet.build(),
     );
   }
+
+  @override
+  bool get documentReplaced => _draft?.documentReplaced ?? false;
 
   @override
   StoreSparseCommit get sparseCommit {

@@ -3,6 +3,7 @@ import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
 import '../store/committed_document.dart';
 import '../store/sparse_store_commit.dart';
+import '../store/store_commit_finalization.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
 
@@ -60,6 +61,13 @@ final class AcceptedSparseStoreDocument extends AcceptedCommitDocument {
     : super(revisionDelta: commit.revisionDelta);
 
   final PreparedSparseStoreCommit commit;
+}
+
+final class AcceptedMaterializedStoreDocument extends AcceptedCommitDocument {
+  AcceptedMaterializedStoreDocument({required this.commit})
+    : super(revisionDelta: commit.revisionDelta);
+
+  final PreparedMaterializedStoreCommit commit;
 }
 
 final class AcceptedUnchangedStoreDocument extends AcceptedCommitDocument {
@@ -124,6 +132,8 @@ void _installAcceptedDocument(
       }
     case AcceptedSparseStoreDocument():
       documentInstallers.installSparseCommit(document.commit);
+    case AcceptedMaterializedStoreDocument(:final commit):
+      documentInstallers.installDocument(commit.document, commit.revisionDelta);
     case AcceptedUnchangedStoreDocument():
       break;
   }

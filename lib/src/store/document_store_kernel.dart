@@ -1298,7 +1298,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   final elementTouches = _elementTouchedFacts(
     base.elements,
     candidate.elements,
-    limitedToIds: touched.elementIds,
+    limitedToIds: touched.allElements ? null : touched.elementIds,
   );
 
   return _acceptedStoreTouchedFacts(
@@ -1307,7 +1307,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
     layerIds: _changedLayerIds(
       base.elements,
       candidate.elements,
-      limitedToIds: touched.layerIds,
+      limitedToIds: touched.allElements ? null : touched.layerIds,
     ),
     aggregateTouches: _sparseAggregateTouchedFacts(
       base: base,
@@ -1706,6 +1706,7 @@ final class _SparseTouchedCommittedFacts {
   final Set<CanvasElementId> elementIds = {};
   final Set<CanvasLayerId> layerIds = {};
   final Set<CanvasResourceId> resourceIds = {};
+  bool allElements = false;
   bool touchedElementStructure = false;
   bool backgroundElementOrder = false;
   bool allResources = false;
@@ -1743,6 +1744,7 @@ final class _SparseTouchedCommittedFacts {
       case StoreSparseRemoveUnusedResource(:final id):
         resourceIds.add(id);
       case StoreSparseClearContent(:final removeUnusedResources):
+        allElements = true;
         touchedElementStructure = true;
         backgroundElementOrder = true;
         if (removeUnusedResources) {

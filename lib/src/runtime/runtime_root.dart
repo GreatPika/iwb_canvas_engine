@@ -219,6 +219,7 @@ final class RuntimeRoot
     readSparseFacts: () => _StoreSparseEditFacts(_store),
     selectedElementIds: () => _selection.selectedElementIds,
     prepareSparseCommit: _store.prepareSparseCommit,
+    prepareMaterializedCommit: _store.prepareMaterializedCommit,
     installCommit: _applyEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
     installLoadedDocument: _loadDocumentFromJson,
@@ -1595,6 +1596,11 @@ final class RuntimeRoot
                 elementIds,
               )
             : _store.normalizeSelection(elementIds),
+      AcceptedMaterializedStoreDocument(:final commit) =>
+        _store.normalizeSelectionForCommittedDocument(
+          commit.document,
+          elementIds,
+        ),
       AcceptedSparseStoreDocument(:final commit) =>
         _store.normalizeSelectionForSparseCommit(commit, elementIds),
       AcceptedUnchangedStoreDocument() => _store.normalizeSelection(elementIds),

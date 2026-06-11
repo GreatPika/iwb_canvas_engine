@@ -60,8 +60,10 @@ final class DraftDocument {
   final Set<CanvasElementId> _selectedElementIds;
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
   final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
+  bool _documentReplaced = false;
 
   bool get didChange => _revisionDelta.hasChanges;
+  bool get documentReplaced => _documentReplaced;
   StoreRevisionDelta get revisionDelta => _revisionDelta;
   TouchedSet get touchedSet => _touchedSet.build();
   CommitPlan get commitPlan {
@@ -297,6 +299,7 @@ final class DraftDocument {
             metadata: layer.metadata,
           ),
       ]);
+    _documentReplaced = true;
     _touchedSet.touchDocumentReplacement();
     if (!_selectionValidForReplacement()) {
       _touchedSet.touchSelection();

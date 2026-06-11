@@ -70,6 +70,7 @@ Future<void> _sparseResourceCompensationIsSilent() {
 
 Future<void> _materializedCompensationIsSilent() {
   return _expectSilentNetNoOpCommit(
+    expectedProjectionBuildDelta: 1,
     mutate: (edit) {
       edit.readDraftDocument();
       edit.setBackgroundColor(const Color(0xFF112233));
@@ -82,6 +83,7 @@ Future<void> _materializedCompensationIsSilent() {
 
 Future<void> _expectSilentNetNoOpCommit({
   required void Function(CanvasEdit edit) mutate,
+  int expectedProjectionBuildDelta = 0,
 }) async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
@@ -94,7 +96,9 @@ Future<void> _expectSilentNetNoOpCommit({
   root.edits.edit(mutate);
   await Future<void>.delayed(Duration.zero);
 
-  probe.expectSilent();
+  probe.expectSilent(
+    expectedProjectionBuildDelta: expectedProjectionBuildDelta,
+  );
   await probe.dispose();
 }
 
@@ -118,11 +122,14 @@ final class _NetNoOpProbe {
   final List<CanvasActionCommitted> actions = [];
   late final StreamSubscription<CanvasActionCommitted> subscription;
 
-  void expectSilent() {
+  void expectSilent({required int expectedProjectionBuildDelta}) {
     _expectNoPublicStateChange(root, beforeState);
     _expectNoDocumentFactChange(root, beforeDocumentFacts);
     _expectNoFrameRevisionChange(root, beforeFrameRevisions);
-    expect(root.projectionBuildCount, beforeProjectionBuilds);
+    expect(
+      root.projectionBuildCount,
+      beforeProjectionBuilds + expectedProjectionBuildDelta,
+    );
     expect(notifications, isEmpty);
     expect(actions, isEmpty);
     expect(effectBatches, isEmpty);

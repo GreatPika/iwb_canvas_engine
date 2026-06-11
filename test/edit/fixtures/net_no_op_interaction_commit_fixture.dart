@@ -20,6 +20,8 @@ void main() {
 
 void _interactionCompensationSkipsAugmentPlan() {
   final store = documentStoreWithDocument(_baseDocument());
+  final beforeDocumentRevision = store.documentRevision;
+  final beforeProjectionBuilds = store.projectionBuildCount;
   final scenario = _InteractionCommitScenario(store);
   final result = scenario.kernel.prepareInteractionCommit(
     (edit) {
@@ -37,8 +39,8 @@ void _interactionCompensationSkipsAugmentPlan() {
   expect(scenario.installCount, 0);
   expect(scenario.deliverCount, 0);
   expect(scenario.loadCount, 0);
-  expect(store.documentRevision, 0);
-  expect(store.projectionBuildCount, 0);
+  expect(store.documentRevision, beforeDocumentRevision);
+  expect(store.projectionBuildCount, beforeProjectionBuilds);
 }
 
 CanvasDocument _baseDocument() {
@@ -65,6 +67,7 @@ final class _InteractionCommitScenario {
       readSparseFacts: () => _StoreSparseFactsForTest(store),
       selectedElementIds: () => <CanvasElementId>{},
       prepareSparseCommit: store.prepareSparseCommit,
+      prepareMaterializedCommit: store.prepareMaterializedCommit,
       installCommit: _installCommit,
       deliverApplyResult: (_) {
         deliverCount += 1;
