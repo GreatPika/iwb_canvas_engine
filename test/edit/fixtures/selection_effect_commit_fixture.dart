@@ -45,6 +45,10 @@ void main() {
   test('sparse commit prepares selection from accepted store facts', () {
     expect(_verifySparseCommitPreparesSelectionFromStoreFacts, returnsNormally);
   });
+
+  test('selection preparation failure rolls back before sparse install', () {
+    expect(_verifySelectionPreparationFailureRollsBack, returnsNormally);
+  });
 }
 
 void _verifySelectionReplacementCommit() {
@@ -232,6 +236,15 @@ void _verifySparseCommitPreparesSelectionFromStoreFacts() {
   proof.expectAccepted();
 }
 
+void _verifySelectionPreparationFailureRollsBack() {
+  final proof = _SparseSelectionCommitProof();
+  final before = _SparseSelectionCommitSnapshot.capture(proof);
+
+  expect(proof.applyWithThrowingPreparation, throwsStateError);
+
+  before.expectUnchanged(proof);
+}
+
 void _verifyRemovePrunesSelection() {
   final root = _runtimeRoot();
   root.selection.setSelection([CanvasElementId('a'), CanvasElementId('b')]);
@@ -338,6 +351,25 @@ final class _SparseSelectionCommitProof {
     );
   }
 
+  void applyWithThrowingPreparation() {
+    const CommitApplier().apply(
+      document: AcceptedSparseStoreDocument(commit: prepared),
+      plan: plan,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: (_, _) => events.add('document'),
+        replaceDocument: (_, _) => events.add('replacement'),
+        installSparseCommit: _installSparseCommit,
+      ),
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: (_, _) {
+          events.add('prepare-selection');
+          throw StateError('selection preparation failed');
+        },
+        installSelectionEffect: _installSelectionEffect,
+      ),
+    );
+  }
+
   void expectAccepted() {
     expect(events, ['prepare-selection', 'sparse-document', 'selection']);
     expect(selection.selectedElementIds, {CanvasElementId('b')});
@@ -373,6 +405,43 @@ final class _SparseSelectionCommitProof {
     events.add('selection');
 
     return selection.installPreparedEffect(effect);
+  }
+}
+
+final class _SparseSelectionCommitSnapshot {
+  const _SparseSelectionCommitSnapshot({
+    required this.documentRevision,
+    required this.projectionBuildCount,
+    required this.selectedElementIds,
+    required this.selectionRevision,
+    required this.events,
+  });
+
+  factory _SparseSelectionCommitSnapshot.capture(
+    _SparseSelectionCommitProof proof,
+  ) {
+    return _SparseSelectionCommitSnapshot(
+      documentRevision: proof.store.documentRevision,
+      projectionBuildCount: proof.store.projectionBuildCount,
+      selectedElementIds: proof.selection.selectedElementIds,
+      selectionRevision: proof.selection.selectionFacts.selectionRevision,
+      events: List.unmodifiable(proof.events),
+    );
+  }
+
+  final int documentRevision;
+  final int projectionBuildCount;
+  final Set<CanvasElementId> selectedElementIds;
+  final int selectionRevision;
+  final List<String> events;
+
+  void expectUnchanged(_SparseSelectionCommitProof proof) {
+    expect(proof.store.documentRevision, documentRevision);
+    expect(proof.store.elementById(CanvasElementId('a')), isNotNull);
+    expect(proof.store.projectionBuildCount, projectionBuildCount);
+    expect(proof.selection.selectedElementIds, selectedElementIds);
+    expect(proof.selection.selectionFacts.selectionRevision, selectionRevision);
+    expect(proof.events, [...events, 'prepare-selection']);
   }
 }
 

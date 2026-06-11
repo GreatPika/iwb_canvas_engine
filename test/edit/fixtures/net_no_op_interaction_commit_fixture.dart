@@ -29,6 +29,10 @@ void main() {
     () => expect(_acceptedInteractionAugmentsFinalPlan, returnsNormally),
   );
   test(
+    'implicit layer add interaction returns spatial layer touch',
+    () => expect(_implicitLayerAddReturnsSpatialLayerTouch, returnsNormally),
+  );
+  test(
     'throwing interaction augmentation rolls back before install',
     () => expect(_throwingInteractionAugmentationRollsBack, returnsNormally),
   );
@@ -92,6 +96,28 @@ void _acceptedInteractionAugmentsFinalPlan() {
     augmentCallCount: augmentCallCount,
   );
   _expectInstalledWithoutDelivery(scenario);
+}
+
+void _implicitLayerAddReturnsSpatialLayerTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final scenario = _InteractionCommitScenario(store);
+
+  final result = scenario.kernel.prepareInteractionCommit((edit) {
+    edit.addElement(
+      CanvasRectElement(
+        id: CanvasElementId('implicit-layer-add'),
+        size: const Size(2, 3),
+      ),
+    );
+  });
+
+  final spatial = result.effects.whereType<SpatialDeliveryEffect>().single;
+  expect(spatial.touchedSet.addedElementIds, {
+    CanvasElementId('implicit-layer-add'),
+  });
+  expect(spatial.touchedSet.layerIds, {CanvasLayerId('layer-1')});
+  expect(scenario.installCount, 1);
+  expect(store.projectionBuildCount, 0);
 }
 
 void _expectAcceptedBackgroundPlan(CommitPlan plan) {

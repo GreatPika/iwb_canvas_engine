@@ -31,6 +31,10 @@ void main() {
     'sparse changed facts prepare exact accepted delta',
     () => expect(_sparseChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
+  test(
+    'sparse implicit layer add prepares accepted layer touch',
+    () => expect(_sparseImplicitLayerAddPreparesLayerTouch, returnsNormally),
+  );
 }
 
 void _materializedFinalEqualityPreparesAsNoOp() {
@@ -122,6 +126,30 @@ void _sparseChangedFactsPrepareAcceptedDelta() {
   expect(store.background.color, const Color(0xFF112233));
   expect(store.backgroundRevision, beforeRevisions.backgroundRevision + 1);
   expect(store.resourceRevision, beforeRevisions.resourceRevision);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _sparseImplicitLayerAddPreparesLayerTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final sparsePrepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      mutations: [
+        StoreSparseAddElement(
+          element: CanvasRectElement(
+            id: CanvasElementId('implicit-layer-add'),
+            size: const Size(2, 3),
+          ),
+        ),
+      ],
+      revisionDelta: const StoreRevisionDelta.structural(),
+    ),
+  );
+
+  expect(sparsePrepared.hasChanges, isTrue);
+  expect(sparsePrepared.touchedFacts.addedElementIds, {
+    CanvasElementId('implicit-layer-add'),
+  });
+  expect(sparsePrepared.touchedFacts.layerIds, {CanvasLayerId('layer-1')});
   expect(store.projectionBuildCount, 0);
 }
 

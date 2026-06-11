@@ -1307,7 +1307,9 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
     layerIds: _changedLayerIds(
       base.elements,
       candidate.elements,
-      limitedToIds: touched.allElements ? null : touched.layerIds,
+      limitedToIds: touched.allElements
+          ? null
+          : _sparseTouchedLayerIds(candidate.elements, touched),
     ),
     aggregateTouches: _sparseAggregateTouchedFacts(
       base: base,
@@ -1339,6 +1341,21 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
     grid: aggregateTouches.grid,
     palette: aggregateTouches.palette,
   );
+}
+
+Set<CanvasLayerId> _sparseTouchedLayerIds(
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  return {
+    ...touched.layerIds,
+    for (final id in touched.elementIds)
+      if (candidate.elementLocationFacts[id] case ElementLocationFacts(
+        kind: ElementLocationKind.content,
+        layerId: final layerId?,
+      ))
+        layerId,
+  };
 }
 
 _AggregateTouchedFacts _sparseAggregateTouchedFacts({
