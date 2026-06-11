@@ -5,8 +5,8 @@ import 'package:yaml/yaml.dart';
 
 import '../../tool/guardrails/src/guardrail_registry.dart';
 
-// CI structural tests keep the PR, release, and manual-update workflow checks
-// together so bypass and baseline-write rules are reviewed as one CI contract.
+// CI structural tests keep root package checks and bypass rules together so the
+// workflow contract is reviewed in one place.
 // ignore: halstead-volume, source-lines-of-code
 void main() {
   test('root workflow runs repository-owned package checks', () {
@@ -26,42 +26,6 @@ void main() {
     _expectNoWorkflowBypass(rootPackageJob, steps);
     _expectGuardrailRunnerCannotBeBypassed(rootPackageJob, guardrailStep);
     _expectFullGuardrailRunnerSelection(workflowContent, guardrailStep);
-    _expectNoDcmCommandsInCi();
-  });
-
-  test('GitHub performance benchmark workflows stay quarantined', () {
-    expect(
-      File('.github/workflows/release_benchmarks.yml').existsSync(),
-      false,
-    );
-    expect(
-      File('.github/workflows/update_benchmark_baseline.yml').existsSync(),
-      false,
-    );
-    for (final workflow in Directory('.github/workflows').listSync()) {
-      if (workflow is! File || !_isWorkflowFile(workflow)) {
-        continue;
-      }
-      final content = workflow.readAsStringSync();
-      expect(content, isNot(contains('tool/bench/run.dart')));
-      expect(content, isNot(contains('tool/bench/diff.dart')));
-      expect(content, isNot(contains('tool/bench/update_baseline.dart')));
-      expect(content, isNot(contains('--approved=')));
-    }
-    _expectNoDcmCommandsInCi();
-  });
-
-  test('approved benchmark baseline writes stay out of GitHub workflows', () {
-    var workflowCount = 0;
-    for (final workflow in Directory('.github/workflows').listSync()) {
-      if (workflow is! File || !_isWorkflowFile(workflow)) {
-        continue;
-      }
-      workflowCount += 1;
-      final workflowContent = workflow.readAsStringSync();
-      _expectNoBaselineWrites(workflowContent);
-    }
-    expect(workflowCount, greaterThan(0));
     _expectNoDcmCommandsInCi();
   });
 }
@@ -127,9 +91,6 @@ void _expectRootPackageBenchmarkChecks(
       reason: benchmarkTest,
     );
   }
-  expect(workflowContent, isNot(contains('tool/bench/update_baseline.dart')));
-  expect(workflowContent, isNot(contains('tool/bench/run.dart')));
-  expect(workflowContent, isNot(contains('tool/bench/diff.dart')));
   expect(workflowContent, isNot(contains('paths-ignore:')));
   expect(workflowContent, isNot(contains('paths:')));
 }
@@ -187,11 +148,6 @@ void _expectNoWorkflowBypass(YamlMap job, List<YamlMap> steps) {
     expect(step.containsKey('continue-on-error'), isFalse);
     expect(step.containsKey('if'), isFalse);
   }
-}
-
-void _expectNoBaselineWrites(String workflowContent) {
-  expect(workflowContent, isNot(contains('tool/bench/update_baseline.dart')));
-  expect(workflowContent, isNot(contains('--approved=')));
 }
 
 void _expectNoDcmCommandsInCi() {

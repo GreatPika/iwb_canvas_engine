@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-11T02:25:08.364941Z",
+  "updatedAtUtc": "2026-06-08T10:40:13.572151Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -115,19 +115,6 @@
       "device": {
         "name": "Xiaomi 22081283G",
         "id": "22081283G",
-        "os": "Android 14"
-      },
-      "caseCount": 77
-    },
-    {
-      "path": "tool/bench/manual/run_history/2026-06-11_xiaomi_22081283g_b353e4b0_github_perf_quarantine_bootstrap_release.json",
-      "label": "github_perf_quarantine_bootstrap_release",
-      "recordedAtUtc": "2026-06-11T02:25:08.364941Z",
-      "subjectGitHead": "b353e4b07cf6dd5e28b1f8b22f30bba95e6f4e88",
-      "repositoryDirty": true,
-      "device": {
-        "name": "Xiaomi 22081283G",
-        "id": "Z9NBMVIRY5KRGAJF",
         "os": "Android 14"
       },
       "caseCount": 77

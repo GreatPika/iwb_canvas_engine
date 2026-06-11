@@ -169,9 +169,9 @@ work.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-36. GitHub release benchmark workflows remain quarantined; performance
-    comparison uses same-contour device/manual references until the GitHub
-    performance route is rebuilt.
+36. GitHub release benchmark workflows are absent; performance comparison uses
+    same-contour device/manual references until the GitHub performance route is
+    rebuilt.
 37. application canvas port and application adapter names are not present in the engine package.
 ```
 

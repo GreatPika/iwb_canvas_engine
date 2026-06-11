@@ -109,10 +109,9 @@ Release benchmark interpretation:
 - Current release reports are transient under `build/bench/current/`.
 - Diff reports are transient under `build/bench/diff/`.
 - No approved GitHub release baseline is committed while GitHub performance
-  benchmarking is quarantined. The reserved local tooling path is
+  benchmarking is absent. The reserved local tooling path is
   `tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json`,
-  but it must not be populated or used by GitHub workflows until that route is
-  rebuilt.
+  but the repository currently has no GitHub workflow route that uses it.
 - Local approved-baseline tooling remains fail-closed: first-baseline acceptance
   still requires reference metrics, absolute caps, and first-baseline memory
   caps. Do not use it to create a GitHub performance gate until the GitHub route
@@ -145,12 +144,9 @@ Release benchmark interpretation:
   `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
 - Manual device-reference diff is for regression tracking during optimization;
   it must preserve same-contour runtime metadata, including `deviceId`.
-- GitHub release benchmark workflows are quarantined until the release
-  benchmark policy is rebuilt around stable device references and a non-RSS hard
-  memory signal. Do not add `.github/workflows/release_benchmarks.yml`,
-  `.github/workflows/update_benchmark_baseline.yml`, or GitHub workflow steps
-  that run `tool/bench/run.dart`, `tool/bench/diff.dart`, or
-  `tool/bench/update_baseline.dart`.
+- GitHub release benchmark workflows are absent until the release benchmark
+  policy is rebuilt around stable device references and a non-RSS hard memory
+  signal.
 
 Manual benchmark history ledger:
 
@@ -197,6 +193,6 @@ Benchmark CI routing:
   docs projection checks. It then runs all non-benchmark Flutter tests with
   `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
 - There is no GitHub release benchmark CI while the GitHub performance route is
-  quarantined. Device/manual reports remain the performance comparison route.
-- Approved baseline writes must not run from GitHub workflows. Manual device
-  references are accepted through `tool/bench/accept_manual_reference.dart`.
+  absent. Device/manual reports remain the performance comparison route.
+- Manual device references are accepted through
+  `tool/bench/accept_manual_reference.dart`.

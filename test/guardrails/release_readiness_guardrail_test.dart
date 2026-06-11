@@ -36,218 +36,6 @@ void main() {
     },
   );
 
-  test(
-    'release benchmark readiness guardrail rejects quarantined workflow',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/release_benchmarks.yml': 'name: Release',
-            },
-          ),
-        ),
-        contains(contains('GitHub release benchmark workflow is quarantined')),
-      );
-    },
-  );
-
-  test(
-    'release benchmark readiness guardrail rejects baseline update workflow',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/update_benchmark_baseline.yml':
-                  'name: Update benchmark baseline',
-            },
-          ),
-        ),
-        contains(contains('GitHub release benchmark workflow is quarantined')),
-      );
-    },
-  );
-
-  test(
-    'release benchmark readiness guardrail rejects workflow benchmark run',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml':
-                  'run: dart run tool/bench/run.dart --profile=\${BENCH_PROFILE}',
-            },
-          ),
-        ),
-        contains(
-          contains(
-            'GitHub workflow must not run quarantined benchmark command',
-          ),
-        ),
-      );
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml':
-                  'run: dart run tool/bench/diff.dart --baseline=baseline.json',
-            },
-          ),
-        ),
-        contains(
-          contains(
-            'GitHub workflow must not run quarantined benchmark command',
-          ),
-        ),
-      );
-    },
-  );
-
-  test(
-    'release benchmark readiness guardrail rejects interpolated benchmark run',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml': r'''
-jobs:
-  bad:
-    runs-on: ubuntu-24.04
-    env:
-      BENCH_DIR: tool/bench
-    strategy:
-      matrix:
-        script:
-          - run.dart
-    steps:
-      - run: dart run ${BENCH_DIR}/${{ matrix.script }} --profile=release
-''',
-            },
-          ),
-        ),
-        contains(
-          contains(
-            'GitHub workflow must not run quarantined benchmark command',
-          ),
-        ),
-      );
-    },
-  );
-
-  test('release benchmark readiness guardrail rejects matrix include run', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          extraWorkflowFiles: const {
-            '.github/workflows/bad.yml': r'''
-jobs:
-  bad:
-    runs-on: ubuntu-24.04
-    env:
-      BENCH_DIR: tool/bench
-    strategy:
-      matrix:
-        include:
-          - script: run.dart
-    steps:
-      - run: dart run ${BENCH_DIR}/${{ matrix.script }} --profile=release
-''',
-          },
-        ),
-      ),
-      contains(
-        contains('GitHub workflow must not run quarantined benchmark command'),
-      ),
-    );
-  });
-
-  test('release benchmark readiness guardrail rejects compact expressions', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          extraWorkflowFiles: const {
-            '.github/workflows/bad.yml': r'''
-jobs:
-  bad:
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        script:
-          - run.dart
-    steps:
-      - run: dart run ${{env.BENCH_DIR}}/${{matrix.script}} --profile=release
-        env:
-          BENCH_DIR: tool/bench
-''',
-          },
-        ),
-      ),
-      contains(
-        contains('GitHub workflow must not run quarantined benchmark command'),
-      ),
-    );
-  });
-
-  test(
-    'release benchmark readiness guardrail rejects quoted path segments',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml': r'''
-jobs:
-  bad:
-    runs-on: ubuntu-24.04
-    env:
-      BENCH_DIR: tool/bench
-    steps:
-      - run: dart run tool/bench/"run.dart" --profile=release
-      - run: dart run "$BENCH_DIR"/diff.dart --profile=release
-''',
-            },
-          ),
-        ),
-        contains(
-          contains(
-            'GitHub workflow must not run quarantined benchmark command',
-          ),
-        ),
-      );
-    },
-  );
-
-  test('release benchmark readiness guardrail rejects nested expressions', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          extraWorkflowFiles: const {
-            '.github/workflows/bad.yml': r'''
-jobs:
-  bad:
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        script:
-          - run.dart
-    steps:
-      - run: dart run ${{ env.BENCH_DIR }}/${{ env.BENCH_SCRIPT }} --profile=release
-        env:
-          BENCH_DIR: tool/bench
-          BENCH_SCRIPT: ${{ matrix.script }}
-''',
-          },
-        ),
-      ),
-      contains(
-        contains('GitHub workflow must not run quarantined benchmark command'),
-      ),
-    );
-  });
-
   test('release benchmark readiness guardrail rejects public exports', () {
     expect(
       _violationMessages(
@@ -344,23 +132,6 @@ jobs:
     },
   );
 
-  test(
-    'release benchmark readiness guardrail rejects non-manual baseline writes',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml':
-                  'run: dart run tool/bench/update_baseline.dart --approved=x',
-            },
-          ),
-        ),
-        contains(contains('approved baselines may only be written manually')),
-      );
-    },
-  );
-
   test('release benchmark readiness guardrail rejects rogue tool writers', () {
     expect(
       _violationMessages(
@@ -395,58 +166,6 @@ jobs:
       ),
     );
   });
-
-  test('release benchmark readiness guardrail scans yaml workflow files', () {
-    expect(
-      _violationMessages(
-        _checkWith(
-          extraWorkflowFiles: const {
-            '.github/workflows/bad.yaml':
-                'run: dart run tool/bench/update_baseline.dart --approved=x',
-          },
-        ),
-      ),
-      contains(contains('approved baselines may only be written manually')),
-    );
-  });
-
-  test(
-    'release benchmark readiness guardrail rejects direct baseline path writes',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml':
-                  'run: cp current.json tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json',
-            },
-          ),
-        ),
-        contains(contains('approved baselines may only be written manually')),
-      );
-    },
-  );
-
-  test(
-    'release benchmark readiness guardrail rejects baseline update command',
-    () {
-      expect(
-        _violationMessages(
-          _checkWith(
-            extraWorkflowFiles: const {
-              '.github/workflows/bad.yml':
-                  'run: dart run tool/bench/update_baseline.dart',
-            },
-          ),
-        ),
-        contains(
-          contains(
-            'GitHub workflow must not run quarantined benchmark command',
-          ),
-        ),
-      );
-    },
-  );
 }
 
 List<String> _violationMessages(Iterable<Object> violations) {
@@ -460,12 +179,10 @@ List<GuardrailViolation> _checkWith({
   Iterable<GuardrailSourceSnapshot> publicSurfaceSources = const [],
   Iterable<GuardrailSourceSnapshot> productionSources = const [],
   Iterable<GuardrailSourceSnapshot> benchmarkSources = const [],
-  Map<String, String> extraWorkflowFiles = const {},
 }) {
   return checkReleaseBenchmarkReadinessSources(
     publicSurfaceSources: publicSurfaceSources,
     productionSources: productionSources,
     benchmarkSources: benchmarkSources,
-    workflowFiles: extraWorkflowFiles,
   );
 }

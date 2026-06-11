@@ -508,6 +508,6 @@ const _runnerStructuralScanCases = [
       'test/benchmarks/benchmark_diff_test.dart',
       'test/guardrails/release_readiness_guardrail_test.dart',
     ],
-    violationPath: '.github/workflows/release_benchmarks.yml',
+    violationPath: 'lib/src/api/bad_benchmark_export.dart',
   ),
 ];
