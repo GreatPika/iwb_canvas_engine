@@ -1457,21 +1457,25 @@ Runtime timestamp contract (`runtime_created_timestamps_monotonic`):
 - the primary proof covers CanvasActionCommitted.timestampMs and
   CanvasContextActionRequested.timestampMs;
 - the same runtime-local resolver also applies to
-  CanvasPendingLineStartPreview.timestampMs and
-  CanvasMoveCommitRequest.timestampMs because they are timestamped runtime
-  outputs;
-- CanvasPendingLineStartPreview and CanvasMoveCommitRequest remain preview and
-  resolver-request outputs, not user-action events;
+  CanvasPendingLineStartPreview.timestampMs because pending line starts are
+  timestamped runtime preview outputs;
+- CanvasMoveCommitRequest is a resolver callback request, not a timestamped
+  runtime output, and does not expose timestampMs;
+- CanvasPendingLineStartPreview remains a preview output, not a user-action
+  event;
 - CanvasDocument, schema v1 data, resource state, selection state, document
   revisions, and preview revisions do not persist or reconstruct the timestamp
   cursor;
 - no-op, stale rejection, rollback, cancel, `loadDocumentFromJson`, and dispose stream
   close paths do not create timestamped action or context request outputs.
-- current selected-move resolver requests and accepted user actions resolve
-  timestamps only after the path is accepted far enough to create that output;
-  stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
-  rollback, load cleanup, dispose cleanup, invalid direct double tap, and
-  unknown or already-consumed text request ids remain timestamp-silent.
+- selected-move resolver callbacks do not resolve timestamps; only the accepted
+  move action resolves the original terminal timestamp hint during action
+  finalization after the resolver returns a finite non-zero delta and edit
+  preparation succeeds;
+- stale terminals, invalid terminals, no-op movement, cancel, resolver cancel,
+  resolver zero delta, resolver exception, selected-move edit-preparation
+  failure, rollback, load cleanup, dispose cleanup, invalid direct double tap,
+  and unknown or already-consumed text request ids remain timestamp-silent.
 ```
 
 ```dart
@@ -2598,14 +2602,12 @@ final class CanvasMoveCommitRequest {
     required Iterable<CanvasElementRead> movedElements,
     required this.proposedDelta,
     required this.selectionBoundsWorld,
-    required this.timestampMs,
   });
 
   final CanvasDocumentSummary documentSummary;
   List<CanvasElementRead> get movedElements;
   final Offset proposedDelta;
   final Rect selectionBoundsWorld;
-  final int timestampMs;
 }
 
 final class CanvasElementRead {
@@ -2652,6 +2654,8 @@ Resolver rules:
 - reentrant public mutation from inside resolver throws StateError;
 - returned delta must be finite;
 - CanvasMoveCancel discards move commit and emits no action;
+- a zero returned delta discards move commit and emits no action;
+- resolver callback requests are not timestamped runtime outputs;
 - resolver exception clears preview and rethrows through pointer handling boundary as runtime-safe error.
 ```
 

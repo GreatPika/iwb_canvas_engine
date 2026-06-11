@@ -74,6 +74,7 @@ void _registerSelectedMoveTerminalTests() {
 
 void _registerSelectedMoveCleanupTests() {
   _testSelectedMoveResolverCancelDoesNotCommit();
+  _testSelectedMoveResolverZeroDeltaDoesNotCommit();
   _testGroupInteriorResolverCancelDoesNotCommit();
   _testSelectedMoveResolverErrorCleansPreview();
   _testGroupInteriorResolverErrorCleansPreview();
@@ -916,7 +917,6 @@ void _expectResolverRequest(CanvasMoveCommitRequest? request) {
     CanvasElementId('b'),
   ]);
   expect(value.selectionBoundsWorld, const Rect.fromLTRB(-5, -5, 25, 5));
-  expect(value.timestampMs, 0);
 }
 
 void _expectGroupResolverRequest(CanvasMoveCommitRequest request) {
@@ -951,7 +951,7 @@ void _expectOccludedDocumentUnmoved(RuntimeRoot root) {
 void _expectMoveAction(CanvasActionCommitted action) {
   expect(action.type, CanvasActionType.moveSelection);
   expect(action.elementIds, [CanvasElementId('a'), CanvasElementId('b')]);
-  expect(action.timestampMs, 1);
+  expect(action.timestampMs, 0);
   final payload = action.payload as CanvasTransformActionPayload;
   expect(payload.delta, CanvasTransform.translation(const Offset(7, 8)));
   expect(payload.operation, CanvasTransformOperation.move);
@@ -971,7 +971,28 @@ void _testSelectedMoveResolverCancelDoesNotCommit() {
 
     expect(scenario.resolverCalls(), 1);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
+}
+
+void _testSelectedMoveResolverZeroDeltaDoesNotCommit() {
+  test(
+    'selected move resolver zero delta cleans preview without action',
+    () async {
+      final scenario = _noCommitScenario(
+        resolver: (_) => const CanvasMoveCommit(delta: Offset.zero),
+      );
+      final root = scenario.root;
+      root.selection.setSelection([CanvasElementId('a')]);
+
+      _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(scenario.resolverCalls(), 1);
+      _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+      _expectNextAcceptedMoveStartsTimestampCursor(scenario);
+    },
+  );
 }
 
 void _testGroupInteriorResolverCancelDoesNotCommit() {
@@ -1009,6 +1030,7 @@ void _testSelectedMoveResolverErrorCleansPreview() {
       throwsStateError,
     );
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1051,6 +1073,7 @@ void _testSelectedMoveNonFiniteResolverDeltaCleansPreview() {
       throwsArgumentError,
     );
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1169,6 +1192,7 @@ void _testSelectedMoveEditFailureCleansPreview() {
     );
     expect(scenario.resolverCalls(), 1);
     _expectNoMoveEffects(scenario, expectedResolverCalls: 1);
+    _expectNextAcceptedMoveStartsTimestampCursor(scenario);
   });
 }
 
@@ -1239,6 +1263,15 @@ void _expectNoMoveEffects(
   expect(scenario.actions, isEmpty);
   expect(_rect(scenario.root, 'a').transform, CanvasTransform.identity);
   expect(_rect(scenario.root, 'a').isLocked, expectedLocked);
+}
+
+void _expectNextAcceptedMoveStartsTimestampCursor(_NoCommitScenario scenario) {
+  scenario.root.selection.moveSelection(const Offset(2, 0));
+
+  expect(scenario.actions, hasLength(1));
+  final action = scenario.actions.single;
+  expect(action.type, CanvasActionType.moveSelection);
+  expect(action.timestampMs, 0);
 }
 
 void _testSelectedMoveResolverReentrancy() {

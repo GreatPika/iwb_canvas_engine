@@ -189,7 +189,6 @@ CanvasRuntimeConfig _runtimeConfig() {
       _use(request.movedElements);
       _use(request.proposedDelta);
       _use(request.selectionBoundsWorld);
-      _use(request.timestampMs);
 
       return const CanvasMoveCancel();
     },

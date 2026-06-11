@@ -208,7 +208,7 @@ Mandatory guardrails:
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |
 | `events.action_after_state_order` | accepted public state is published before user action events emitted by interaction and command commits |
-| `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, pending line start previews, and selected move resolver requests |
+| `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, and pending line start previews; selected move resolver callback requests are not timestamped outputs |
 | `load.prepares_before_interrupt` | failed schema-v1 JSON load does not interrupt gesture, clear selection, publish state, emit actions, build public projection, or install partial store rows |
 | `load.success_interrupts_before_install` | successful schema-v1 JSON load parses JSON, emits codec-owned import events, prepares store-owned rows, prepares interaction cleanup before atomic install, performs no post-install interaction owner call to finish load cleanup, and publishes exactly one accepted runtime state without building first projection |
 | `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |

@@ -482,7 +482,6 @@ void _exerciseP2ContractSurface() {
     movedElements: [elementRead],
     proposedDelta: const Offset(1, 1),
     selectionBoundsWorld: const Rect.fromLTWH(0, 0, 10, 10),
-    timestampMs: 1,
   );
   final CanvasMoveResolution moveCommit =
       const CanvasMoveCommit(delta: Offset(1, 1));

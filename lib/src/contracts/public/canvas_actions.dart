@@ -228,14 +228,12 @@ final class CanvasMoveCommitRequest {
     required Iterable<CanvasElementRead> movedElements,
     required this.proposedDelta,
     required this.selectionBoundsWorld,
-    required this.timestampMs,
   }) : _movedElements = List.unmodifiable(movedElements);
 
   final CanvasDocumentSummary documentSummary;
   final List<CanvasElementRead> _movedElements;
   final Offset proposedDelta;
   final Rect selectionBoundsWorld;
-  final int timestampMs;
   List<CanvasElementRead> get movedElements => _movedElements;
 }
 

@@ -1865,18 +1865,11 @@ final class RuntimeRoot
     required int? timestampHintMs,
   }) {
     final resolver = config.moveCommitResolver;
-    final requestTimestamp = resolver == null
-        ? null
-        : _actionFinalizer.reserveTimestamp(timestampHintMs);
     final Offset? resolvedDelta;
     try {
       resolvedDelta = resolver == null
           ? intent.proposedDelta
-          : _resolveSelectedMoveDelta(
-              intent: intent,
-              timestampMs: requestTimestamp as int,
-              resolver: resolver,
-            );
+          : _resolveSelectedMoveDelta(intent: intent, resolver: resolver);
     } on Object {
       _cleanupSelectedMove(PointerCleanupReason.resolverError);
       rethrow;
@@ -1890,7 +1883,7 @@ final class RuntimeRoot
       final applyResult = _prepareSelectedMoveCommit(
         intent: intent,
         delta: resolvedDelta,
-        timestampHintMs: requestTimestamp ?? timestampHintMs,
+        timestampHintMs: timestampHintMs,
       );
       _cleanupSelectedMove(
         PointerCleanupReason.postSuccessCommit,
@@ -1906,7 +1899,6 @@ final class RuntimeRoot
 
   Offset? _resolveSelectedMoveDelta({
     required SelectedMoveCommitIntent intent,
-    required int timestampMs,
     required CanvasMoveCommitResolver resolver,
   }) {
     final resolution = runResolverCallback(
@@ -1916,7 +1908,6 @@ final class RuntimeRoot
           movedElements: intent.movedElements,
           proposedDelta: intent.proposedDelta,
           selectionBoundsWorld: intent.selectionBoundsWorld,
-          timestampMs: timestampMs,
         ),
       ),
     );

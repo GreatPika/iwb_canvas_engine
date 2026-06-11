@@ -56,7 +56,7 @@ Resource and interaction owners own their resource and interaction rows.
 | setSelection/toggleSelection/clearSelection/selectAll | selection owner | state.revisions.selection | none | no | main | none |
 | marquee commit | selection owner | state.revisions.selection, state.revisions.preview if active preview cleared | none | no | main + overlay cleanup | selectMarquee if changed; `runtime_created_timestamps_monotonic` |
 | selected move preview | preview only | state.revisions.preview | none | no | main only | none |
-| selected move commit | transforms | state.revisions.document, state.revisions.preview if active preview cleared; internal bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection; resolver request timestamp proof `runtime_created_timestamps_monotonic` |
+| selected move commit | transforms | state.revisions.document, state.revisions.preview if active preview cleared; internal bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection; `runtime_created_timestamps_monotonic` |
 | rotate/flip selection | transforms | state.revisions.document; internal bounds, elementVisual, projection | touched update | evict | main | transformSelection; `runtime_created_timestamps_monotonic` |
 | deleteSelection | elements/layers plus selection-owner prune | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection | remove ids | evict | main | deleteElements; `runtime_created_timestamps_monotonic` |
 | CanvasEdit.clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | none |
@@ -169,13 +169,14 @@ Notes:
   spatial updates just like other geometry/bounds edits.
 - Rows that name `runtime_created_timestamps_monotonic` resolve timestampMs
   through the public runtime timestamp contract before publishing the
-  timestamped action, request, preview, or resolver request output. Preview and
-  resolver request rows remain non-user-action outputs.
+  timestamped action, request, or preview output. Preview rows remain
+  non-user-action outputs.
 - Action rows emit only after the accepted state for the same operation has
   been installed and published. No-op, stale, invalid, cancel, resolver cancel,
-  rollback, load cleanup, dispose cleanup, unknown text request ids, and
-  invalid direct double tap do not resolve action/request timestamps and emit no
-  action or context request.
+  resolver zero delta, resolver exception, selected-move edit-preparation
+  failure, rollback, load cleanup, dispose cleanup, unknown text request ids,
+  and invalid direct double tap do not resolve action/request timestamps and
+  emit no action or context request.
 ```
 
 ### Compact row expanded dimensions

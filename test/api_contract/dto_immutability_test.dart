@@ -136,7 +136,6 @@ void main() {
       movedElements: moved,
       proposedDelta: Offset.zero,
       selectionBoundsWorld: const Rect.fromLTWH(0, 0, 1, 1),
-      timestampMs: 1,
     );
     final preview = CanvasPencilStrokePreview(
       points: points,

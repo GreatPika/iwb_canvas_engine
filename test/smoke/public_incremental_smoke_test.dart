@@ -650,7 +650,6 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
     expect(resolverCalls, 1);
     final request = moveRequest as CanvasMoveCommitRequest;
     expect(request.proposedDelta, const Offset(3, 4));
-    expect(request.timestampMs, 21);
     expect(request.movedElements.map((element) => element.id), [
       CanvasElementId('a'),
       CanvasElementId('b'),
@@ -661,7 +660,7 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
     expect(actions, hasLength(2));
     final moveAction = actions.last;
     expect(moveAction.type, CanvasActionType.moveSelection);
-    expect(moveAction.timestampMs, 22);
+    expect(moveAction.timestampMs, 21);
     expect(moveAction.elementIds, [
       CanvasElementId('a'),
       CanvasElementId('b'),
