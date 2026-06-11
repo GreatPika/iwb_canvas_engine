@@ -273,7 +273,7 @@ void _expectStorePreparationReturnsAcceptedDeltas(CompilationUnit unit) {
       contains('final acceptedDelta = didMutateFacts'),
       contains('_sparseAcceptedRevisionDelta'),
       contains('_validateSparseRevisionCoverage'),
-      contains('acceptedDelta.advance(_document.revisions)'),
+      contains('_acceptSparseDocument(nextDocument, acceptedDelta, touched)'),
       contains('revisionDelta: accepted ? acceptedDelta'),
       isNot(contains('revisionDelta: accepted ? revisionDelta')),
     ),

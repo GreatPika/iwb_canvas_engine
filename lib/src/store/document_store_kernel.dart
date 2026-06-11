@@ -440,9 +440,7 @@ final class DocumentStoreKernel {
     return PreparedSparseStoreCommit(
       baseRevisions: _document.revisions,
       document: accepted
-          ? nextDocument.copyWith(
-              revisions: acceptedDelta.advance(_document.revisions),
-            )
+          ? _acceptSparseDocument(nextDocument, acceptedDelta, touched)
           : _document,
       revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
       touchedFacts: accepted
@@ -466,6 +464,27 @@ final class DocumentStoreKernel {
 
     return document.copyWith(
       revisions: acceptedRevisions,
+      resourceTable: document.resourceTable.withAcceptedResourceRevisions(
+        _document.resourceTable,
+        acceptedRevision: acceptedRevisions.resourceRevision,
+      ),
+    );
+  }
+
+  CommittedDocument _acceptSparseDocument(
+    CommittedDocument document,
+    StoreRevisionDelta delta,
+    _SparseTouchedCommittedFacts touched,
+  ) {
+    final acceptedRevisions = delta.advance(_document.revisions);
+
+    return document.copyWith(
+      revisions: acceptedRevisions,
+      elements: _acceptSparseElementRows(
+        base: _document,
+        candidate: document,
+        touched: touched,
+      ),
       resourceTable: document.resourceTable.withAcceptedResourceRevisions(
         _document.resourceTable,
         acceptedRevision: acceptedRevisions.resourceRevision,
@@ -859,7 +878,8 @@ StoreRevisionDelta _sparseTouchedElementStructureRevisionDelta(
   }
   var delta = const StoreRevisionDelta();
   if (base.elementCount != candidate.elementCount ||
-      !_sameTouchedBackgroundOrderForRegistries(base, candidate, touched)) {
+      !_sameTouchedBackgroundOrderForRegistries(base, candidate, touched) ||
+      !_sameList(base.contentElementOrder, candidate.contentElementOrder)) {
     delta = delta.merge(const StoreRevisionDelta.structural());
   }
   if (base.layerTable.rows.length != candidate.layerTable.rows.length) {
@@ -905,6 +925,52 @@ bool _sameTouchedBackgroundOrderForRegistries(
 ) {
   return !touched.backgroundElementOrder ||
       _sameList(base.backgroundElementIds, candidate.backgroundElementIds);
+}
+
+ElementRegistry _acceptSparseElementRows({
+  required CommittedDocument base,
+  required CommittedDocument candidate,
+  required _SparseTouchedCommittedFacts touched,
+}) {
+  final replacements = <CanvasElement>[];
+  for (final id in _sparseElementIdsForRevisionNormalization(
+    base.elements,
+    candidate.elements,
+    touched,
+  )) {
+    final before = base.elements.elementById(id);
+    final after = candidate.elements.elementById(id);
+    if (before == null || after == null) {
+      continue;
+    }
+    if (!_committedElementRevisionDelta(
+      before: before,
+      after: after,
+    ).hasChanges) {
+      replacements.add(before);
+    }
+  }
+  if (replacements.isEmpty) {
+    return candidate.elements;
+  }
+
+  return candidate.elements.updateElements(
+        replacements,
+        resourceIds: candidate.resourceTable.admittedIds,
+      ) ??
+      candidate.elements;
+}
+
+Iterable<CanvasElementId> _sparseElementIdsForRevisionNormalization(
+  ElementRegistry base,
+  ElementRegistry candidate,
+  _SparseTouchedCommittedFacts touched,
+) {
+  if (!touched.allElements) {
+    return touched.elementIds;
+  }
+
+  return {...base.frameElementOrder, ...candidate.frameElementOrder};
 }
 
 AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(

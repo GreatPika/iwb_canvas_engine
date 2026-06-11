@@ -24,6 +24,17 @@ void main() {
     () => expectLater(_sparsePartialCompensationUsesFinalFamilies(), completes),
   );
   test(
+    'sparse partial compensation restores unchanged row revisions',
+    () => expectLater(
+      _sparsePartialCompensationRestoresRowRevisions(),
+      completes,
+    ),
+  );
+  test(
+    'sparse implicit re-add publishes content order change',
+    () => expectLater(_sparseImplicitReAddPublishesContentOrder(), completes),
+  );
+  test(
     'sparse add then remove commit is delivery-silent no-op',
     () => expectLater(_sparseAddRemoveIsSilent(), completes),
   );
@@ -113,6 +124,88 @@ Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
   root.dispose();
 }
 
+Future<void> _sparsePartialCompensationRestoresRowRevisions() async {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _baseDocument(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final before = _RowRevisionProbe.capture(root);
+
+  _applyCompensatedRowRevisionEdit(root);
+  await Future<void>.delayed(Duration.zero);
+
+  before.expectOnlyBackgroundAccepted(root);
+  root.dispose();
+}
+
+Future<void> _sparseImplicitReAddPublishesContentOrder() async {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _twoElementDocument(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (effects) => effectBatches.add(effects),
+  );
+  final beforeFrameRevisions = root.frameRevisions;
+
+  _applyImplicitReAdd(root);
+  await Future<void>.delayed(Duration.zero);
+
+  _expectImplicitReAddAccepted(
+    root: root,
+    beforeFrameRevisions: beforeFrameRevisions,
+    effectBatches: effectBatches,
+  );
+  root.dispose();
+}
+
+void _applyCompensatedRowRevisionEdit(RuntimeRoot root) {
+  root.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        fillColor: const CanvasFieldSet(Color(0xFF112233)),
+      ),
+    );
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        fillColor: const CanvasFieldClear<Color>(),
+      ),
+    );
+    edit.upsertResource(_resource('resource-1', appKey: 'resource-1-next'));
+    edit.upsertResource(_resource('resource-1'));
+    edit.setBackgroundColor(const Color(0xFF445566));
+  });
+}
+
+void _applyImplicitReAdd(RuntimeRoot root) {
+  root.edits.edit((edit) {
+    edit.removeElement(CanvasElementId('rect-1'));
+    edit.addElement(_rect('rect-1'));
+  });
+}
+
+void _expectImplicitReAddAccepted({
+  required RuntimeRoot root,
+  required FrameRevisionFacts beforeFrameRevisions,
+  required List<List<CommitDeliveryEffect>> effectBatches,
+}) {
+  expect(
+    root.frameRevisions.documentRevision,
+    beforeFrameRevisions.documentRevision + 1,
+  );
+  expect(
+    root.frameRevisions.structuralRevision,
+    beforeFrameRevisions.structuralRevision + 1,
+  );
+  expect(
+    root.readDocument().layers.single.elements.map((element) => element.id),
+    [CanvasElementId('rect-2'), CanvasElementId('rect-1')],
+  );
+  expect(effectBatches, hasLength(1));
+  expect(effectBatches.single.whereType<SpatialDeliveryEffect>(), hasLength(1));
+}
+
 Future<void> _sparseResourceCompensationIsSilent() {
   return _expectSilentNetNoOpCommit(
     mutate: (edit) {
@@ -200,6 +293,49 @@ final class _NetNoOpProbe {
   }
 }
 
+final class _RowRevisionProbe {
+  const _RowRevisionProbe({
+    required this.elementRevision,
+    required this.resourceRevision,
+    required this.frameRevisions,
+  });
+
+  factory _RowRevisionProbe.capture(RuntimeRoot root) {
+    return _RowRevisionProbe(
+      elementRevision: _documentElementRevision(root, 'rect-1'),
+      resourceRevision: root
+          .resourceDescriptor(CanvasResourceId('resource-1'))
+          ?.resourceRevision,
+      frameRevisions: root.frameRevisions,
+    );
+  }
+
+  final int? elementRevision;
+  final int? resourceRevision;
+  final FrameRevisionFacts frameRevisions;
+
+  void expectOnlyBackgroundAccepted(RuntimeRoot root) {
+    expect(root.background.color, const Color(0xFF445566));
+    expect(
+      root.frameRevisions.backgroundRevision,
+      frameRevisions.backgroundRevision + 1,
+    );
+    expect(
+      root.frameRevisions.elementVisualRevision,
+      frameRevisions.elementVisualRevision,
+    );
+    expect(
+      root.frameRevisions.resourceRevision,
+      frameRevisions.resourceRevision,
+    );
+    expect(_documentElementRevision(root, 'rect-1'), elementRevision);
+    expect(
+      root.resourceDescriptor(CanvasResourceId('resource-1'))?.resourceRevision,
+      resourceRevision,
+    );
+  }
+}
+
 void _expectNoPublicStateChange(
   RuntimeRoot root,
   CanvasRuntimeState beforeState,
@@ -262,6 +398,30 @@ CanvasDocument _baseDocument() {
       CanvasLayer(id: CanvasLayerId('layer-1'), elements: [_rect('rect-1')]),
     ],
   );
+}
+
+CanvasDocument _twoElementDocument() {
+  return CanvasDocument(
+    resources: [_resource('resource-1')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [_rect('rect-1'), _rect('rect-2')],
+      ),
+    ],
+  );
+}
+
+int? _documentElementRevision(RuntimeRoot root, String id) {
+  for (final layer in root.readDocument().layers) {
+    for (final element in layer.elements) {
+      if (element.id.value == id) {
+        return element.revision;
+      }
+    }
+  }
+
+  return null;
 }
 
 CanvasImageResource _resource(String id, {String? appKey}) {
