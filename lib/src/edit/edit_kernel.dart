@@ -213,7 +213,6 @@ final class EditKernel {
           document: AcceptedMaterializedStoreDocument(commit: prepared),
           revisionDelta: prepared.revisionDelta,
           touchedFacts: prepared.touchedFacts,
-          provisionalTouchedSet: session.touchedSet,
           selectedElementIds: selectedElementIds,
         ),
       );
@@ -226,7 +225,6 @@ final class EditKernel {
         document: AcceptedSparseStoreDocument(commit: prepared),
         revisionDelta: prepared.revisionDelta,
         touchedFacts: prepared.touchedFacts,
-        provisionalTouchedSet: session.touchedSet,
         selectedElementIds: selectedElementIds,
       ),
     );
@@ -238,14 +236,12 @@ final class _AcceptedStoreCommitInput {
     required this.document,
     required this.revisionDelta,
     required this.touchedFacts,
-    required this.provisionalTouchedSet,
     required this.selectedElementIds,
   });
 
   final AcceptedCommitDocument document;
   final StoreRevisionDelta revisionDelta;
   final AcceptedStoreTouchedFacts touchedFacts;
-  final TouchedSet provisionalTouchedSet;
   final Set<CanvasElementId> selectedElementIds;
 }
 
@@ -262,7 +258,6 @@ _AcceptedEditCommit _acceptedPreparedStoreCommit(
       revisionDelta: input.revisionDelta,
       touchedSet: _touchedSetForAcceptedFacts(
         input.touchedFacts,
-        provisionalTouchedSet: input.provisionalTouchedSet,
         selectedElementIds: input.selectedElementIds,
       ),
     ),
@@ -285,7 +280,6 @@ final class _AcceptedEditCommit {
 
 TouchedSet _touchedSetForAcceptedFacts(
   AcceptedStoreTouchedFacts facts, {
-  required TouchedSet provisionalTouchedSet,
   required Set<CanvasElementId> selectedElementIds,
 }) {
   return TouchedSet(
@@ -299,9 +293,7 @@ TouchedSet _touchedSetForAcceptedFacts(
     resourceVisualChangedIds: facts.resourceVisualChangedIds,
     layerIds: facts.layerIds,
     backgroundLayerChanged: facts.backgroundLayerChanged,
-    selection:
-        provisionalTouchedSet.selection &&
-        _acceptedTouchesSelection(facts, selectedElementIds),
+    selection: _acceptedTouchesSelection(facts, selectedElementIds),
     persistedCamera: facts.persistedCamera,
     background: facts.background,
     grid: facts.grid,
@@ -318,7 +310,7 @@ bool _acceptedTouchesSelection(
   }
 
   return facts.removedElementIds.any(selectedElementIds.contains) ||
-      facts.updatedElementIds.any(selectedElementIds.contains);
+      facts.selectionPruneElementIds.any(selectedElementIds.contains);
 }
 
 final class _EditKernelPort implements CanvasEditPort {

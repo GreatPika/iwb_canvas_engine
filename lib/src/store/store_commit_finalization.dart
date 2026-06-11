@@ -26,6 +26,7 @@ final class AcceptedStoreTouchedFacts {
     Iterable<CanvasElementId> transformedElementIds = const [],
     Iterable<CanvasElementId> geometryElementIds = const [],
     Iterable<CanvasElementId> visualElementIds = const [],
+    Iterable<CanvasElementId> selectionPruneElementIds = const [],
     Iterable<CanvasResourceId> resourceDescriptorChangedIds = const [],
     Iterable<CanvasResourceId> resourceVisualChangedIds = const [],
     Iterable<CanvasLayerId> layerIds = const [],
@@ -40,6 +41,7 @@ final class AcceptedStoreTouchedFacts {
        transformedElementIds = Set.unmodifiable(transformedElementIds),
        geometryElementIds = Set.unmodifiable(geometryElementIds),
        visualElementIds = Set.unmodifiable(visualElementIds),
+       selectionPruneElementIds = Set.unmodifiable(selectionPruneElementIds),
        resourceDescriptorChangedIds = Set.unmodifiable(
          resourceDescriptorChangedIds,
        ),
@@ -54,6 +56,7 @@ final class AcceptedStoreTouchedFacts {
   final Set<CanvasElementId> transformedElementIds;
   final Set<CanvasElementId> geometryElementIds;
   final Set<CanvasElementId> visualElementIds;
+  final Set<CanvasElementId> selectionPruneElementIds;
   final Set<CanvasResourceId> resourceDescriptorChangedIds;
   final Set<CanvasResourceId> resourceVisualChangedIds;
   final Set<CanvasLayerId> layerIds;
@@ -71,6 +74,7 @@ final class AcceptedStoreTouchedFacts {
           transformedElementIds,
           geometryElementIds,
           visualElementIds,
+          selectionPruneElementIds,
           resourceDescriptorChangedIds,
           resourceVisualChangedIds,
           layerIds,

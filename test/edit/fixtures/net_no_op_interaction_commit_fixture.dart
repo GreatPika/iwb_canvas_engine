@@ -29,8 +29,8 @@ void main() {
     () => expect(_acceptedInteractionAugmentsFinalPlan, returnsNormally),
   );
   test(
-    'implicit layer add interaction returns spatial layer touch',
-    () => expect(_implicitLayerAddReturnsSpatialLayerTouch, returnsNormally),
+    'append add interaction returns spatial element touch without layer rebuild',
+    () => expect(_appendAddReturnsElementTouchOnly, returnsNormally),
   );
   test(
     'content removal interaction returns base layer spatial touch',
@@ -43,6 +43,13 @@ void main() {
   test(
     'spatial-only update interaction returns geometry touch',
     () => expect(_spatialOnlyUpdateReturnsGeometryTouch, returnsNormally),
+  );
+  test(
+    'transient selection prune does not deliver accepted selection effect',
+    () => expect(
+      _transientSelectionPruneDoesNotDeliverAcceptedSelectionEffect,
+      returnsNormally,
+    ),
   );
   test(
     'throwing interaction augmentation rolls back before install',
@@ -110,7 +117,7 @@ void _acceptedInteractionAugmentsFinalPlan() {
   _expectInstalledWithoutDelivery(scenario);
 }
 
-void _implicitLayerAddReturnsSpatialLayerTouch() {
+void _appendAddReturnsElementTouchOnly() {
   final store = documentStoreWithDocument(_baseDocument());
   final scenario = _InteractionCommitScenario(store);
 
@@ -127,7 +134,7 @@ void _implicitLayerAddReturnsSpatialLayerTouch() {
   expect(spatial.touchedSet.addedElementIds, {
     CanvasElementId('implicit-layer-add'),
   });
-  expect(spatial.touchedSet.layerIds, {CanvasLayerId('layer-1')});
+  expect(spatial.touchedSet.layerIds, isEmpty);
   expect(scenario.installCount, 1);
   expect(store.projectionBuildCount, 0);
 }
@@ -184,6 +191,40 @@ void _spatialOnlyUpdateReturnsGeometryTouch() {
   expect(spatial.touchedSet.geometryElementIds, {CanvasElementId('rect-1')});
   expect(scenario.installCount, 1);
   expect(store.projectionBuildCount, 0);
+}
+
+void _transientSelectionPruneDoesNotDeliverAcceptedSelectionEffect() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final scenario = _InteractionCommitScenario(
+    store,
+    selectedElementIds: {CanvasElementId('rect-1')},
+  );
+
+  final result = scenario.kernel.prepareInteractionCommit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        isSelectable: const CanvasFieldSet(false),
+      ),
+    );
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('rect-1'),
+        isSelectable: const CanvasFieldSet(true),
+        opacity: const CanvasFieldSet(0.5),
+      ),
+    );
+  });
+
+  expect(result.effects.whereType<SelectionDeliveryEffect>(), isEmpty);
+  expect(scenario.prepareSelectionCount, 0);
+  expect(scenario.installCount, 1);
+  final element = store.elementById(CanvasElementId('rect-1'));
+  if (element is! CanvasRectElement) {
+    throw StateError('Expected rect-1 to remain a committed rect.');
+  }
+  expect(element.isSelectable, isTrue);
+  expect(element.opacity, 0.5);
 }
 
 void _expectAcceptedBackgroundPlan(CommitPlan plan) {
@@ -287,12 +328,15 @@ CanvasDocument _baseDocument({List<String> backgroundElementIds = const []}) {
 }
 
 final class _InteractionCommitScenario {
-  _InteractionCommitScenario(this.store) {
+  _InteractionCommitScenario(
+    this.store, {
+    Set<CanvasElementId> selectedElementIds = const {},
+  }) : selectedElementIds = Set.unmodifiable(selectedElementIds) {
     kernel = EditKernel(
       mutationGuard: _AllowMutationGuard(),
       readDocument: store.readDocument,
       readSparseFacts: () => _StoreSparseFactsForTest(store),
-      selectedElementIds: () => <CanvasElementId>{},
+      selectedElementIds: () => this.selectedElementIds,
       prepareSparseCommit: store.prepareSparseCommit,
       prepareMaterializedCommit: store.prepareMaterializedCommit,
       installCommit: _installCommit,
@@ -306,10 +350,12 @@ final class _InteractionCommitScenario {
   }
 
   final DocumentStoreKernel store;
+  final Set<CanvasElementId> selectedElementIds;
   late final EditKernel kernel;
   int installCount = 0;
   int deliverCount = 0;
   int loadCount = 0;
+  int prepareSelectionCount = 0;
 
   CommitInstaller get _installCommit {
     return (document, plan) {
@@ -324,7 +370,11 @@ final class _InteractionCommitScenario {
           installSparseCommit: store.installSparseCommit,
         ),
         selectionInstallers: CommitSelectionInstallers(
-          prepareSelectionEffect: (_, _) => PreparedSelectionEffect(const []),
+          prepareSelectionEffect: (_, _) {
+            prepareSelectionCount += 1;
+
+            return PreparedSelectionEffect(const []);
+          },
           installSelectionEffect: (_) => false,
         ),
       );

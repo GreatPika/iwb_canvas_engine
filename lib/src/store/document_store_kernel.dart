@@ -1016,6 +1016,7 @@ void _recordElementTouch(
   }
   if (after == null) {
     facts.removedElementIds.add(id);
+    facts.selectionPruneElementIds.add(id);
 
     return;
   }
@@ -1033,6 +1034,14 @@ void _recordElementTouch(
   if (delta.elementVisual) {
     facts.visualElementIds.add(id);
   }
+  if (_requiresSelectionPrune(before, after)) {
+    facts.selectionPruneElementIds.add(id);
+  }
+}
+
+bool _requiresSelectionPrune(CanvasElement before, CanvasElement after) {
+  return (before.isVisible && !after.isVisible) ||
+      (before.isSelectable && !after.isSelectable);
 }
 
 Set<CanvasLayerId> _changedLayerIds(
@@ -1304,13 +1313,13 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   return _acceptedStoreTouchedFacts(
     elementTouches: elementTouches,
     resourceTouches: resourceTouches,
-    layerIds: _changedLayerIds(
-      base.elements,
-      candidate.elements,
-      limitedToIds: touched.allElements
-          ? null
-          : _sparseTouchedLayerIds(base.elements, candidate.elements, touched),
-    ),
+    layerIds: touched.allElements
+        ? _changedLayerIds(base.elements, candidate.elements)
+        : _sparseAcceptedLayerIds(
+            base: base.elements,
+            candidate: candidate.elements,
+            mutations: mutations,
+          ),
     aggregateTouches: _sparseAggregateTouchedFacts(
       base: base,
       candidate: candidate,
@@ -1332,6 +1341,7 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
     transformedElementIds: elementTouches.transformedElementIds,
     geometryElementIds: elementTouches.geometryElementIds,
     visualElementIds: elementTouches.visualElementIds,
+    selectionPruneElementIds: elementTouches.selectionPruneElementIds,
     resourceDescriptorChangedIds: resourceTouches.descriptorChangedIds,
     resourceVisualChangedIds: resourceTouches.visualChangedIds,
     layerIds: layerIds,
@@ -1343,26 +1353,112 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
   );
 }
 
-Set<CanvasLayerId> _sparseTouchedLayerIds(
+Set<CanvasLayerId> _sparseAcceptedLayerIds({
+  required ElementRegistry base,
+  required ElementRegistry candidate,
+  required List<StoreSparseMutation> mutations,
+}) {
+  final layerIds = <CanvasLayerId>{};
+  for (final mutation in mutations) {
+    _addSparseAcceptedLayerIdsForMutation(
+      layerIds,
+      base: base,
+      candidate: candidate,
+      mutation: mutation,
+    );
+  }
+
+  return layerIds;
+}
+
+void _addSparseAcceptedLayerIdsForMutation(
+  Set<CanvasLayerId> layerIds, {
+  required ElementRegistry base,
+  required ElementRegistry candidate,
+  required StoreSparseMutation mutation,
+}) {
+  switch (mutation) {
+    case StoreSparseEnsureLayer(:final id):
+      _addAcceptedEnsuredLayerId(layerIds, base, candidate, id);
+    case final StoreSparseAddElement mutation:
+      _addAcceptedAddedElementLayerId(
+        layerIds,
+        base: base,
+        candidate: candidate,
+        mutation: mutation,
+      );
+    case StoreSparseRemoveElement(:final id):
+      _addAcceptedRemovedElementLayerId(layerIds, base, candidate, id);
+    case StoreSparseClearContent():
+      layerIds.addAll(_nonEmptyContentLayerIds(base));
+    case StoreSparseUpdateElement() ||
+        StoreSparseUpsertResource() ||
+        StoreSparseRemoveUnusedResource() ||
+        StoreSparseSetBackground() ||
+        StoreSparseSetCamera() ||
+        StoreSparseSetPalette():
+      break;
+  }
+}
+
+void _addAcceptedEnsuredLayerId(
+  Set<CanvasLayerId> layerIds,
   ElementRegistry base,
   ElementRegistry candidate,
-  _SparseTouchedCommittedFacts touched,
+  CanvasLayerId id,
 ) {
-  return {
-    ...touched.layerIds,
-    for (final id in touched.elementIds)
-      if (base.elementLocationFacts[id] case ElementLocationFacts(
-        kind: ElementLocationKind.content,
-        layerId: final layerId?,
-      ))
-        layerId,
-    for (final id in touched.elementIds)
-      if (candidate.elementLocationFacts[id] case ElementLocationFacts(
-        kind: ElementLocationKind.content,
-        layerId: final layerId?,
-      ))
-        layerId,
-  };
+  if (!base.containsLayer(id) && candidate.containsLayer(id)) {
+    layerIds.add(id);
+  }
+}
+
+void _addAcceptedAddedElementLayerId(
+  Set<CanvasLayerId> layerIds, {
+  required ElementRegistry base,
+  required ElementRegistry candidate,
+  required StoreSparseAddElement mutation,
+}) {
+  final elementId = mutation.element.id;
+  if (mutation.index != null &&
+      !mutation.background &&
+      base.elementById(elementId) == null &&
+      candidate.elementById(elementId) != null) {
+    _addContentLayerForElement(layerIds, candidate, elementId);
+  }
+}
+
+void _addAcceptedRemovedElementLayerId(
+  Set<CanvasLayerId> layerIds,
+  ElementRegistry base,
+  ElementRegistry candidate,
+  CanvasElementId id,
+) {
+  if (base.elementById(id) != null && candidate.elementById(id) == null) {
+    _addContentLayerForElement(layerIds, base, id);
+  }
+}
+
+void _addContentLayerForElement(
+  Set<CanvasLayerId> layerIds,
+  ElementRegistry registry,
+  CanvasElementId elementId,
+) {
+  if (registry.elementLocationFacts[elementId] case ElementLocationFacts(
+    kind: ElementLocationKind.content,
+    layerId: final layerId?,
+  )) {
+    layerIds.add(layerId);
+  }
+}
+
+Iterable<CanvasLayerId> _nonEmptyContentLayerIds(
+  ElementRegistry registry,
+) sync* {
+  for (final row in registry.layerTable.rows) {
+    if (row.elementIds.isNotEmpty) {
+      yield row.id;
+    }
+  }
 }
 
 _AggregateTouchedFacts _sparseAggregateTouchedFacts({
@@ -1729,6 +1825,7 @@ final class _ElementTouchedFacts {
   final Set<CanvasElementId> transformedElementIds = {};
   final Set<CanvasElementId> geometryElementIds = {};
   final Set<CanvasElementId> visualElementIds = {};
+  final Set<CanvasElementId> selectionPruneElementIds = {};
 }
 
 final class _AggregateTouchedFacts {

@@ -15,7 +15,7 @@ research_agents:
 
 ## Summary
 
-The stage report identifies EDIT-002 as a P2/R2 issue: an edit callback can mutate document facts and then restore them inside the same commit, while the current commit delta remains based on intermediate operations rather than a final comparison with the original committed facts (`iwb_canvas_engine_12_stage_reports.md:1`, `iwb_canvas_engine_12_stage_reports.md:7`). The report names background color rollback, temporary add/remove, and palette rollback as scenarios where the final document can match the starting document while revisions, effects, listeners, and cache invalidation still run (`iwb_canvas_engine_12_stage_reports.md:35`, `iwb_canvas_engine_12_stage_reports.md:48`).
+The retired stage-report scratchpad identified EDIT-002 as a P2/R2 issue: an edit callback can mutate document facts and then restore them inside the same commit, while the current commit delta remains based on intermediate operations rather than a final comparison with the original committed facts. The report named background color rollback, temporary add/remove, and palette rollback as scenarios where the final document can match the starting document while revisions, effects, listeners, and cache invalidation still run.
 
 The current edit path is operation-journal based. `DraftDocument` stores a mutable `StoreRevisionDelta` and derives `didChange` from whether that accumulated delta has any flags (`lib/src/edit/draft_document.dart:61`, `lib/src/edit/draft_document.dart:64`). It also accumulates touched facts through `TouchedSetBuilder`, whose touch methods mutate sets/flags directly and whose `build()` method emits the accumulated `TouchedSet` (`lib/src/edit/touched_set_builder.dart:7`, `lib/src/edit/touched_set_builder.dart:25`, `lib/src/edit/touched_set_builder.dart:97`). Sparse edit sessions similarly record sparse mutations, touched state, and an accumulated `StoreRevisionDelta` during the callback (`lib/src/edit/edit_session.dart:326`, `lib/src/edit/edit_session.dart:327`, `lib/src/edit/edit_session.dart:329`). `DocumentStoreKernel.prepareSparseCommit` applies sparse mutations sequentially and treats the commit as changed if any applied mutation changed the running `nextDocument` (`lib/src/store/document_store_kernel.dart:343`, `lib/src/store/document_store_kernel.dart:344`, `lib/src/store/document_store_kernel.dart:361`, `lib/src/store/document_store_kernel.dart:373`).
 
@@ -25,10 +25,10 @@ The public delivery path uses the resulting revision delta to decide whether to 
 
 ### 1. Problem Statement Source
 
-- **Location**: primary `iwb_canvas_engine_12_stage_reports.md:1`.
-- **Description**: The report names EDIT-002 as a net-no-op edit issue where revisions and effects can advance without an actual document change (`iwb_canvas_engine_12_stage_reports.md:3`). It states that commit delta is accumulated from intermediate operations, not from a final diff between the original committed document and final document facts (`iwb_canvas_engine_12_stage_reports.md:7`).
-- **Dependencies**: The report points to `lib/src/edit/draft_document.dart`, `lib/src/edit/edit_session.dart`, `lib/src/store/document_store_kernel.dart`, and `docs/contracts/edit_kernel.md` as source areas (`iwb_canvas_engine_12_stage_reports.md:9`, `iwb_canvas_engine_12_stage_reports.md:17`, `iwb_canvas_engine_12_stage_reports.md:25`, `iwb_canvas_engine_12_stage_reports.md:32`).
-- **Data flow**: User edit callback -> intermediate mutations -> accumulated delta -> accepted commit/effects, with scenarios listed for background, add/remove, and palette rollback (`iwb_canvas_engine_12_stage_reports.md:35`, `iwb_canvas_engine_12_stage_reports.md:40`, `iwb_canvas_engine_12_stage_reports.md:44`).
+- **Location**: retired stage-report scratchpad, EDIT-002 entry.
+- **Description**: The report names EDIT-002 as a net-no-op edit issue where revisions and effects can advance without an actual document change. It states that commit delta is accumulated from intermediate operations, not from a final diff between the original committed document and final document facts.
+- **Dependencies**: The report points to `lib/src/edit/draft_document.dart`, `lib/src/edit/edit_session.dart`, `lib/src/store/document_store_kernel.dart`, and `docs/contracts/edit_kernel.md` as source areas.
+- **Data flow**: User edit callback -> intermediate mutations -> accumulated delta -> accepted commit/effects, with scenarios listed for background, add/remove, and palette rollback.
 
 ### 2. Materialized Draft Path
 
@@ -73,7 +73,7 @@ The public delivery path uses the resulting revision delta to decide whether to 
 
 ## Code References
 
-- `iwb_canvas_engine_12_stage_reports.md:7` - EDIT-002 describes intermediate-operation delta accumulation instead of a final base-vs-final diff.
+- Retired stage-report scratchpad, EDIT-002 entry - describes intermediate-operation delta accumulation instead of a final base-vs-final diff.
 - `lib/src/edit/draft_document.dart:61` - materialized draft stores accumulated `_revisionDelta`.
 - `lib/src/edit/draft_document.dart:64` - materialized draft `didChange` is derived from `_revisionDelta.hasChanges`.
 - `lib/src/edit/draft_document.dart:105` - materialized `addElement` touches added element id.
@@ -109,7 +109,7 @@ The public delivery path uses the resulting revision delta to decide whether to 
 ## Search Coverage
 
 - **Inspected**:
-  - Read completely: `iwb_canvas_engine_12_stage_reports.md` lines 1-99.
+  - Read completely: retired stage-report scratchpad EDIT-002 section.
   - Read completely: `lib/src/edit/draft_document.dart` lines 1-656.
   - Read completely: `lib/src/edit/edit_session.dart` lines 1-1156.
   - Read completely: `lib/src/store/document_store_kernel.dart` lines 1-1178.

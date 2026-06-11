@@ -55,15 +55,15 @@ unit, proof surface, or review consequence it supports.
   current Flutter surface drops non-finite terminal events before runtime
   cleanup -> supports a surface adapter contract change that routes terminal
   cleanup input.
-- `iwb_canvas_engine_12_stage_reports.md:21` - API-002 is a public API issue ->
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` - API-002 is a public API issue ->
   supports public API owner participation in the future contract.
-- `iwb_canvas_engine_12_stage_reports.md:27` - the public API contract expects
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` - the public API contract expects
   invalid terminal samples to route to cleanup logic -> supports preserving the
   behavior while changing the representation.
-- `iwb_canvas_engine_12_stage_reports.md:252` - SURFACE-002 is a Flutter
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` - SURFACE-002 is a Flutter
   surface issue -> supports a surface boundary proof, not only direct
   `CanvasToolPort` tests.
-- `iwb_canvas_engine_12_stage_reports.md:258` - dropping non-finite terminal
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` - dropping non-finite terminal
   events can leave preview/session active until another cleanup path -> supports
   runtime state cleanup as the direct outcome.
 - `docs/contracts/public_api_v1.md:1573` - pointer lifecycle phases are
@@ -296,7 +296,7 @@ them forward.
 |---|---|---|---|
 | D1 | Public pointer input becomes a sealed finite-sample / terminal-cleanup union; `CanvasToolPort.handlePointer` accepts the union instead of only `CanvasPointerSample`. | User clarification on 2026-06-10; `docs/contracts/public_api_v1.md:1726`; `lib/src/contracts/public/canvas_preview.dart:16`; `docs/contracts/public_api_v1.md:328` | `Target Profile`, `Public API Compatibility`, public API execution unit, public compile proof |
 | D2 | `CanvasPointerSample` remains finite-only for every phase; invalid terminal cleanup is represented by a no-position cleanup variant. | `lib/src/contracts/public/canvas_pointer.dart:100`; `docs/contracts/public_api_v1.md:1787`; `lib/src/interaction/pointer_sample_normalizer.dart:53` | `Boundaries.Source of Truth`, public DTO unit, constructor validation tests |
-| D3 | Surface admission drops non-finite down/move and routes non-finite up/cancel as terminal cleanup input. | `lib/src/surface/pointer_adapter.dart:25`; `lib/src/surface/pointer_adapter.dart:28`; `lib/src/surface/pointer_adapter.dart:37`; `iwb_canvas_engine_12_stage_reports.md:258` | surface adapter unit, surface widget tests |
+| D3 | Surface admission drops non-finite down/move and routes non-finite up/cancel as terminal cleanup input. | `lib/src/surface/pointer_adapter.dart:25`; `lib/src/surface/pointer_adapter.dart:28`; `lib/src/surface/pointer_adapter.dart:37`; `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` | surface adapter unit, surface widget tests |
 | D4 | Runtime interaction branches on cleanup input before coordinate normalization and routes through existing invalid-terminal cleanup admission. | `lib/src/interaction/interaction_engine.dart:348`; `lib/src/interaction/interaction_engine.dart:831`; `lib/src/interaction/interaction_engine.dart:1395`; `lib/src/interaction/pointer_sample_normalizer.dart:61` | interaction unit, normalizer/classifier tests, runtime cleanup proof |
 | D5 | Cleanup input is terminal-only and timestamp-silent: no commits, user actions, context requests, or output timestamp reservations. | `docs/contracts/public_api_v1.md:1466`; `docs/contracts/public_api_v1.md:1470`; `lib/src/runtime/runtime_root.dart:1266`; `lib/src/runtime/runtime_root.dart:1272` | verification strategy, negative runtime/API tests |
 | D6 | Docs, public registry, durable diagrams, and public compile fixtures must be updated by the future Change Contract because the public source of truth changes. | `docs/_registry/public_api_v1.yaml:66`; `docs/_registry/public_api_v1.yaml:67`; `docs/diagrams/dfd_pointer_preview_commit.mmd:72`; `test/api_contract/public_api_v1_compiles_as_written_test.dart:379` | `Source-Of-Truth Impact`, docs/registry unit, documentation checks |
@@ -499,10 +499,7 @@ Use focused behavior tests before broad checks:
   `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13`,
   `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:15`,
   `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:17`,
-  `iwb_canvas_engine_12_stage_reports.md:21`,
-  `iwb_canvas_engine_12_stage_reports.md:27`,
-  `iwb_canvas_engine_12_stage_reports.md:252`,
-  `iwb_canvas_engine_12_stage_reports.md:258`,
+  `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13`,
   `docs/contracts/public_api_v1.md:1726`,
   `docs/contracts/public_api_v1.md:1787`,
   `docs/contracts/public_api_v1.md:1466`,

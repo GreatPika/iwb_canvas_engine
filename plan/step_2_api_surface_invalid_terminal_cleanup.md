@@ -16,7 +16,6 @@ coordinates are finite.
 - Other:
   - `AGENTS.md`
   - `docs/README.md`
-  - `iwb_canvas_engine_12_stage_reports.md`
   - user clarification recorded by the design on 2026-06-10: there are no
     current external users, so public API breakage is acceptable when it
     improves cleanliness, simplicity, and reliability.
@@ -52,8 +51,8 @@ Obligations: BUG_FIX, PUBLIC_API_CHANGE
 - `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` / `Shared cause`: API-002 and SURFACE-002 both concern terminal pointer input with non-finite position -> one shared public/surface design is required instead of local patches.
 - `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:15` / `Public API gap`: current constructor cannot represent non-finite terminal up/cancel samples -> public API representation must change.
 - `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:17` / `Surface gap`: current Flutter surface drops non-finite terminal events before runtime cleanup -> surface routing must admit terminal cleanup input.
-- `iwb_canvas_engine_12_stage_reports.md:21` / `Issue source`: API-002 is classified as a public API issue -> public contract and export surfaces are in scope.
-- `iwb_canvas_engine_12_stage_reports.md:252` / `Issue source`: SURFACE-002 is classified as a Flutter surface issue -> surface widget proof is in scope.
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` / `Issue source`: API-002 is classified as a public API issue -> public contract and export surfaces are in scope.
+- `.research/2026-06-10-api-surface-invalid-terminal-cleanup.md:13` / `Issue source`: SURFACE-002 is classified as a Flutter surface issue -> surface widget proof is in scope.
 - `docs/contracts/public_api_v1.md:1466` / `Timestamp contract`: no-op, stale rejection, rollback, cancel, load cleanup, and dispose close paths do not create timestamped action or context request outputs -> terminal cleanup input must remain timestamp-silent.
 - `docs/contracts/public_api_v1.md:1470` / `Timestamp contract`: invalid terminals remain timestamp-silent -> cleanup proof must assert no timestamped output, not only preview cleanup.
 - `docs/contracts/public_api_v1.md:166` / `Public equality`: equality behavior is part of the public API contract -> new concrete public pointer input types need an explicit equality policy.

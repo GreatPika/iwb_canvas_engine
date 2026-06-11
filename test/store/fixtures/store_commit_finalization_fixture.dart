@@ -11,6 +11,15 @@ import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 import '../../support/document_store_with_document.dart';
 
 void main() {
+  _registerStoreCommitFinalizationTests();
+}
+
+void _registerStoreCommitFinalizationTests() {
+  _registerMaterializedFinalizationTests();
+  _registerSparseFinalizationTests();
+}
+
+void _registerMaterializedFinalizationTests() {
   test(
     'materialized final equality prepares as accepted no-op',
     () => expect(_materializedFinalEqualityPreparesAsNoOp, returnsNormally),
@@ -27,13 +36,20 @@ void main() {
     () =>
         expect(_materializedChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
+}
+
+void _registerSparseFinalizationTests() {
   test(
     'sparse changed facts prepare exact accepted delta',
     () => expect(_sparseChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
   test(
-    'sparse implicit layer add prepares accepted layer touch',
-    () => expect(_sparseImplicitLayerAddPreparesLayerTouch, returnsNormally),
+    'sparse append add prepares accepted element touch without layer rebuild',
+    () => expect(_sparseAppendAddPreparesElementTouchOnly, returnsNormally),
+  );
+  test(
+    'sparse indexed add prepares accepted layer touch',
+    () => expect(_sparseIndexedAddPreparesLayerTouch, returnsNormally),
   );
   test(
     'sparse content removal prepares accepted base layer touch',
@@ -43,6 +59,10 @@ void main() {
     'sparse spatial-only update prepares accepted geometry touch',
     () =>
         expect(_sparseSpatialOnlyUpdatePreparesGeometryTouch, returnsNormally),
+  );
+  test(
+    'sparse no-op ensure layer does not prepare accepted layer touch',
+    () => expect(_sparseNoOpEnsureLayerDoesNotTouchLayer, returnsNormally),
   );
 }
 
@@ -138,7 +158,7 @@ void _sparseChangedFactsPrepareAcceptedDelta() {
   expect(store.projectionBuildCount, 0);
 }
 
-void _sparseImplicitLayerAddPreparesLayerTouch() {
+void _sparseAppendAddPreparesElementTouchOnly() {
   final store = documentStoreWithDocument(_baseDocument());
   final sparsePrepared = store.prepareSparseCommit(
     StoreSparseCommit(
@@ -157,6 +177,32 @@ void _sparseImplicitLayerAddPreparesLayerTouch() {
   expect(sparsePrepared.hasChanges, isTrue);
   expect(sparsePrepared.touchedFacts.addedElementIds, {
     CanvasElementId('implicit-layer-add'),
+  });
+  expect(sparsePrepared.touchedFacts.layerIds, isEmpty);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _sparseIndexedAddPreparesLayerTouch() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final sparsePrepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      mutations: [
+        StoreSparseAddElement(
+          element: CanvasRectElement(
+            id: CanvasElementId('indexed-layer-add'),
+            size: const Size(2, 3),
+          ),
+          layerId: CanvasLayerId('layer-1'),
+          index: 0,
+        ),
+      ],
+      revisionDelta: const StoreRevisionDelta.structural(),
+    ),
+  );
+
+  expect(sparsePrepared.hasChanges, isTrue);
+  expect(sparsePrepared.touchedFacts.addedElementIds, {
+    CanvasElementId('indexed-layer-add'),
   });
   expect(sparsePrepared.touchedFacts.layerIds, {CanvasLayerId('layer-1')});
   expect(store.projectionBuildCount, 0);
@@ -205,13 +251,48 @@ void _sparseSpatialOnlyUpdatePreparesGeometryTouch() {
   );
 
   expect(sparsePrepared.hasChanges, isTrue);
-  expect(sparsePrepared.touchedFacts.updatedElementIds, {
-    CanvasElementId('rect-1'),
-  });
-  expect(sparsePrepared.touchedFacts.geometryElementIds, {
+  _expectSparseSpatialOnlyTouches(sparsePrepared.touchedFacts);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _sparseNoOpEnsureLayerDoesNotTouchLayer() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final before = store.elementById(CanvasElementId('rect-1'));
+  if (before is! CanvasRectElement) {
+    throw StateError('Expected rect-1 to be a committed rect.');
+  }
+  final after = CanvasRectElement(
+    id: before.id,
+    revision: before.revision + 1,
+    size: const Size(1, 1),
+    opacity: 0.5,
+  );
+  final sparsePrepared = store.prepareSparseCommit(
+    StoreSparseCommit(
+      mutations: [
+        StoreSparseEnsureLayer(CanvasLayerId('layer-1')),
+        StoreSparseUpdateElement(
+          before: before,
+          element: after,
+          elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+        ),
+      ],
+      revisionDelta: const StoreRevisionDelta.elementVisual(),
+    ),
+  );
+
+  expect(sparsePrepared.hasChanges, isTrue);
+  expect(sparsePrepared.touchedFacts.layerIds, isEmpty);
+  expect(sparsePrepared.touchedFacts.visualElementIds, {
     CanvasElementId('rect-1'),
   });
   expect(store.projectionBuildCount, 0);
+}
+
+void _expectSparseSpatialOnlyTouches(AcceptedStoreTouchedFacts facts) {
+  expect(facts.updatedElementIds, {CanvasElementId('rect-1')});
+  expect(facts.geometryElementIds, {CanvasElementId('rect-1')});
+  expect(facts.selectionPruneElementIds, {CanvasElementId('rect-1')});
 }
 
 void _expectBackgroundOnlyAcceptedDelta(StoreRevisionDelta delta) {
