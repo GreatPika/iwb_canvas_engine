@@ -68,6 +68,10 @@ void _registerSparseUpdateInstallTests() {
     'no-op and missing-id updates leave committed facts unchanged',
     () => expect(_noOpAndMissingIdUpdatesLeaveFactsUnchanged, returnsNormally),
   );
+  test(
+    'compensating sparse candidates prepare as final no-ops',
+    () => expect(_compensatingSparseCandidatesPrepareAsNoOps, returnsNormally),
+  );
 }
 
 void _registerSparseValidationTests() {
@@ -241,6 +245,95 @@ void _noOpAndMissingIdUpdatesLeaveFactsUnchanged() {
   expect(store.documentRevision, beforeRevision);
   expect(store.projectionBuildCount, beforeProjectionBuilds);
   expect(_requireFacts(store, CanvasElementId('e-content')).revision, 0);
+}
+
+void _compensatingSparseCandidatesPrepareAsNoOps() {
+  _expectCompensatingSparseNoOp(_backgroundCompensation());
+  _expectCompensatingSparseNoOp(_cameraCompensation());
+  _expectCompensatingSparseNoOp(_paletteCompensation());
+  _expectCompensatingSparseNoOp(_addRemoveElementCompensation());
+  _expectCompensatingSparseNoOp(_resourceCompensation());
+}
+
+void _expectCompensatingSparseNoOp(StoreSparseCommit commit) {
+  final store = documentStoreWithDocument(_baseDocument());
+  final beforeDocumentRevision = store.documentRevision;
+  final beforeProjectionBuilds = store.projectionBuildCount;
+  final prepared = store.prepareSparseCommit(commit);
+
+  expect(prepared.hasChanges, isFalse);
+  expect(prepared.revisionDelta, const StoreRevisionDelta());
+  expect(prepared.admittedElementIds, isEmpty);
+  expect(prepared.admittedLayerIds, isEmpty);
+  expect(prepared.admittedResourceIds, isEmpty);
+  expect(store.documentRevision, beforeDocumentRevision);
+  expect(store.projectionBuildCount, beforeProjectionBuilds);
+}
+
+StoreSparseCommit _backgroundCompensation() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.background(),
+    mutations: const [
+      StoreSparseSetBackground(CanvasBackground(color: Color(0xFF112233))),
+      StoreSparseSetBackground(CanvasBackground(color: Color(0xFFFFFFFF))),
+    ],
+  );
+}
+
+StoreSparseCommit _cameraCompensation() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.projectionOnly(),
+    mutations: [
+      StoreSparseSetCamera(CanvasCamera(offset: const Offset(4, 5))),
+      StoreSparseSetCamera(CanvasCamera()),
+    ],
+  );
+}
+
+StoreSparseCommit _paletteCompensation() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.projectionOnly(),
+    mutations: [
+      StoreSparseSetPalette(_alternatePalette()),
+      const StoreSparseSetPalette(CanvasPalette.defaults()),
+    ],
+  );
+}
+
+StoreSparseCommit _addRemoveElementCompensation() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.structural(),
+    mutations: [
+      StoreSparseAddElement(
+        element: CanvasRectElement(
+          id: CanvasElementId('temporary'),
+          size: const Size(1, 1),
+        ),
+        layerId: CanvasLayerId('layer-a'),
+      ),
+      StoreSparseRemoveElement(CanvasElementId('temporary')),
+    ],
+  );
+}
+
+StoreSparseCommit _resourceCompensation() {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.resource(),
+    mutations: [
+      StoreSparseUpsertResource(
+        CanvasImageResource(
+          id: CanvasResourceId('resource-a'),
+          source: CanvasResourceSource.appKey('asset-b'),
+        ),
+      ),
+      StoreSparseUpsertResource(
+        CanvasImageResource(
+          id: CanvasResourceId('resource-a'),
+          source: CanvasResourceSource.appKey('asset-a'),
+        ),
+      ),
+    ],
+  );
 }
 
 void _validatesAddFailuresBeforeSwap() {
@@ -954,6 +1047,14 @@ CanvasDocument _multiRectDocument() {
         ],
       ),
     ],
+  );
+}
+
+CanvasPalette _alternatePalette() {
+  return CanvasPalette(
+    penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
+    backgroundColors: const [Color(0xFF112233)],
+    gridSizes: const [8, 16],
   );
 }
 
