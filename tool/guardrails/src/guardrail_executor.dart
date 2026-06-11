@@ -231,6 +231,7 @@ const _testProofPaths = {
     'test/store/no_projection_hot_path_test.dart',
     'test/guardrails/store_projection_checks_test.dart',
     'test/guardrails/edit_sparse_routes_no_eager_projection_guardrail_test.dart',
+    'test/guardrails/edit_accepted_finalization_guardrail_test.dart',
   ],
   'selection.owner_separate_from_document': [
     'test/selection/runtime_owner_separation_test.dart',
@@ -285,10 +286,14 @@ const _testProofPaths = {
     'test/edit/edit_matrix_effects_test.dart',
     'test/edit/field_update_admission_effects_test.dart',
     'test/edit/exact_touched_invalidation_test.dart',
+    'test/edit/net_no_op_edit_commit_test.dart',
+    'test/guardrails/edit_accepted_finalization_guardrail_test.dart',
   ],
   'edit.no_global_invalidation_except_replacement': [
     'test/edit/exact_touched_invalidation_test.dart',
     'test/edit/edit_matrix_effects_test.dart',
+    'test/edit/net_no_op_edit_commit_test.dart',
+    'test/guardrails/edit_accepted_finalization_guardrail_test.dart',
   ],
   'edit.typed_effects_no_frame_dependency': [
     'test/edit/typed_effects_no_frame_dependency_test.dart',

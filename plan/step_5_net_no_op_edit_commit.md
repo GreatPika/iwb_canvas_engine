@@ -182,7 +182,7 @@ delivery, and public state listeners unchanged.
 
 ## Execution Units
 
-### [ ] Unit 1: Compensating no-op failing proof
+### [x] Unit 1: Compensating no-op failing proof
 
 Owner: edit/runtime/store tests and guardrail fixtures.
 
@@ -214,7 +214,7 @@ ids, and unchanged projection build count without reading a public projection.
 
 Depends On: none.
 
-### [ ] Unit 2: Store-owned accepted finalization
+### [x] Unit 2: Store-owned accepted finalization
 
 Owner: `DocumentStoreKernel` or a store-owned internal collaborator and
 store-owned accepted-change data structures.
@@ -262,7 +262,7 @@ changes.
 
 Depends On: Unit 1.
 
-### [ ] Unit 3: Edit route and compiler migration
+### [x] Unit 3: Edit route and compiler migration
 
 Owner: `EditKernel`, `EditSession`, `DraftDocument`, `StoreSparseCommit`,
 `CommitCompiler`, and internal accepted commit payloads.
@@ -315,7 +315,7 @@ consumed as accepted commit truth.
 
 Depends On: Unit 2.
 
-### [ ] Unit 4: Guardrails, source-of-truth docs, and verification closure
+### [x] Unit 4: Guardrails, source-of-truth docs, and verification closure
 
 Owner: docs contracts, verification docs, guardrail registry/tests, generated
 documentation, and local verification commands.

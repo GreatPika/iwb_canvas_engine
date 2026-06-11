@@ -56,7 +56,8 @@ Set<String> _editOwnedRowsFromOperationMatrix() {
 
   return {
     for (final row in rows)
-      if (_isEditOwnedOperationRow(row, editMethods)) row,
+      if (_isEditOwnedOperationRow(row, editMethods))
+        _canonicalEditOperationRow(row),
   };
 }
 
@@ -70,7 +71,7 @@ Set<String> _implementedEditMethodsMissingFromOperationMatrix() {
 }
 
 bool _isEditOwnedOperationRow(String row, Set<String> editMethods) {
-  if (row == 'no-op edit') {
+  if (row.startsWith('no-op edit')) {
     return true;
   }
 
@@ -81,6 +82,14 @@ bool _isEditOwnedOperationRow(String row, Set<String> editMethods) {
 
 bool _operationRowsContainEditMethod(Set<String> rows, String method) {
   return rows.any((row) => _editMethodNameFromOperationRow(row) == method);
+}
+
+String _canonicalEditOperationRow(String row) {
+  if (row.startsWith('no-op edit')) {
+    return 'no-op edit';
+  }
+
+  return row;
 }
 
 String? _editMethodNameFromOperationRow(String row) {

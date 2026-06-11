@@ -1,3 +1,8 @@
+// This cohesive guardrail parses production ASTs and slices source markers in
+// one route check; splitting imports across files would make the enforced edit
+// migration order harder to audit than this localized file-metric exception.
+// ignore_for_file: number-of-external-imports
+
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';

@@ -198,12 +198,12 @@ Mandatory guardrails:
 | `core.single_runtime_root` | exactly one production RuntimeRoot |
 | `store.no_public_document_live_state` | DocumentStoreKernel stores compact committed tables, not a live mutable `CanvasDocument` |
 | `selection.owner_separate_from_document` | selected ids and selectionRevision are owned by the internal selection owner, not DocumentStoreKernel, CommittedDocument, CanvasDocument projection, schema v1, or public DTO state |
-| `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths and never by the runtime JSON load route before first explicit read |
+| `projection.only_explicit_read_paths` | `CanvasDocument` projection is built only by read/encode/test/tool or explicit draft-read paths, never pointer/hit/paint hot paths, runtime JSON load before first explicit read, or ordinary sparse accepted-finalization/no-op routing |
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |
-| `edit.operation_matrix_complete` | every operation matrix row has executable assertions for expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior, and rollback behavior |
-| `edit.no_global_invalidation_except_replacement` | ordinary edits compile exact touched invalidation; only document replacement may use global invalidation |
+| `edit.operation_matrix_complete` | every operation matrix row has executable assertions for expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior including compensating final fact no-ops, and rollback behavior |
+| `edit.no_global_invalidation_except_replacement` | ordinary edits compile exact accepted touched invalidation from store-finalized facts; only document replacement may use global invalidation |
 | `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |
 | `events.commands_emit_user_actions` | high-level commands and interaction commits own user action events |

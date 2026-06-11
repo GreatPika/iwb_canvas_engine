@@ -163,6 +163,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 
+## test.edit.net_no_op_edit_commit
+
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
+
 ## test.edit.rollback
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
@@ -270,6 +274,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.guardrails.codec_no_runtime_imports
 
 - Sections: `section_19_codec_boundary`, `section_23_tests`
+
+## test.guardrails.edit_accepted_finalization_guardrail
+
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
 
 ## test.guardrails.frame_committed_facts_via_frame_facts_port
 
@@ -498,6 +506,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.store.read_document_projection
 
 - Sections: `section_10_runtime_data_model`, `section_23_tests`
+
+## test.store.store_commit_finalization
+
+- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
 
 ## test.surface.interactive_false_active_session_cancel
 

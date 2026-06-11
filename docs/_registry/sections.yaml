@@ -322,6 +322,9 @@
   - test.edit.rollback
   - test.edit.field_update_admission_effects
   - test.edit.exact_touched_invalidation
+  - test.edit.net_no_op_edit_commit
+  - test.store.store_commit_finalization
+  - test.guardrails.edit_accepted_finalization_guardrail
   - test.edit.typed_effects_no_frame_dependency
   do_not_assume:
   - no edit-session owner bypass
@@ -379,6 +382,9 @@
   tests:
   - test.edit.sync_non_nested_async_stale
   - test.edit.edit_matrix_effects
+  - test.edit.net_no_op_edit_commit
+  - test.store.store_commit_finalization
+  - test.guardrails.edit_accepted_finalization_guardrail
   - test.api.runtime_timestamp_order
   - test.interaction.runtime_created_timestamps_monotonic
   - test.interaction.context_action_request
@@ -879,10 +885,12 @@
   - test.store.read_document_projection
   - test.store.no_projection_hot_path
   - test.store.public_document_is_projection_only
+  - test.store.store_commit_finalization
   - test.edit.sync_non_nested_async_stale
   - test.edit.rollback
   - test.edit.field_update_admission_effects
   - test.edit.edit_matrix_effects
+  - test.edit.net_no_op_edit_commit
   - test.edit.exact_touched_invalidation
   - test.edit.typed_effects_no_frame_dependency
   - test.edit.staged_document_load_success_failure
@@ -912,6 +920,7 @@
   - test.surface.selection_chrome_hit_target_boundary
   - test.frame.paint_plan_write_all_or_nothing
   - test.frame.measured_text_layout
+  - test.guardrails.edit_accepted_finalization_guardrail
   - test.guardrails.text_surface_guardrail_checks
   - test.guardrails.geometry_committed_handle_order
   - test.guardrails.geometry_eraser_exact_budget_inputs

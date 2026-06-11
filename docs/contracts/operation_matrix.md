@@ -16,6 +16,9 @@ Related diagrams:
 Required tests:
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.edit_matrix_effects`
+- `test.edit.net_no_op_edit_commit`
+- `test.store.store_commit_finalization`
+- `test.guardrails.edit_accepted_finalization_guardrail`
 - `test.api.runtime_timestamp_order`
 - `test.interaction.runtime_created_timestamps_monotonic`
 - `test.interaction.context_action_request`
@@ -86,7 +89,7 @@ Resource and interaction owners own their resource and interaction rows.
 | commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
 | commitTextEdit changed accepted | text element content through EditKernel plus consume/remove live request facts after successful prepare | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
-| no-op edit | none | none | none | none | none | none |
+| no-op edit, including compensating final fact no-op | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
 
@@ -106,8 +109,11 @@ Notes:
   `CanvasRuntimeState` through the runtime/applier boundary.
 - Edit-backed document rows may execute through the ordinary sparse route or
   through explicit materialized fallback after `readDraftDocument` or
-  `replaceDraftDocument`. The row outcomes do not change: both implementations
-  must compile the same revision families, touched-set categories, selection
+  `replaceDraftDocument`. Ordinary sparse and materialized candidates finalize
+  accepted committed facts in the store before edit plan compilation, so
+  provisional operation journals cannot publish extra revision or touched
+  families. The row outcomes do not change: both implementations must compile
+  the same revision families, touched-set categories, selection
   effects, projection invalidation, repaint intent, and action/no-action
   behavior.
 - Runtime view camera rows do not mutate persisted document camera and do not
@@ -217,8 +223,11 @@ User-action notification: the row's `Events` cell.
 No-op behavior: successful no-op paths publish no public state snapshot and
 produce no spatial, projection, resource, repaint, or event effects unless the
 row explicitly names state touched for that no-op, such as request consumption.
-Rows with no successful no-op path treat validation failure, stale handle,
-nested/async edit rejection, and callback failure as rollback rather than no-op.
+This includes compensating edit callbacks that temporarily change background,
+camera, palette, elements, or resources and then restore the final committed
+facts before acceptance. Rows with no successful no-op path treat validation
+failure, stale handle, nested/async edit rejection, and callback failure as
+rollback rather than no-op.
 
 Rollback behavior: the edit rollback contract applies to edit-backed rows. For
 runtime rows outside an edit callback, failed validation or rejection leaves the
@@ -287,8 +296,11 @@ Repaint target: main.
 
 User-action notification: none.
 
-No-op behavior: replacing with an equivalent document is still a document
-replacement inside the edit session and publishes the replacement effects.
+No-op behavior: replacing with an equivalent document is still a forced
+document replacement inside the edit session and publishes the replacement
+effects. This exception applies only to explicit `replaceDraftDocument`, not to
+ordinary sparse/materialized candidates that merely compensate back to the base
+committed facts.
 
 Rollback behavior: original committed document, selection owner, epoch,
 resources, spatial index, projection, repaint, and notifications remain

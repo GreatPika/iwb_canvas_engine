@@ -24,4 +24,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 2. API surface invalid terminal cleanup](plan/step_2_api_surface_invalid_terminal_cleanup.md)
 - [x] [Step 3. Compact overlay frame capture](plan/step_3_compact_overlay_frame_capture.md)
 - [x] [Step 4. Runtime timestamp-silent cancellations](plan/step_4_runtime_timestamp_silent_cancellations.md)
-- [ ] [Step 5. Net no-op edit commit](plan/step_5_net_no_op_edit_commit.md)
+- [x] [Step 5. Net no-op edit commit](plan/step_5_net_no_op_edit_commit.md)

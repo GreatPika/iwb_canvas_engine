@@ -24,6 +24,9 @@ Required tests:
 - `test.edit.rollback`
 - `test.edit.field_update_admission_effects`
 - `test.edit.exact_touched_invalidation`
+- `test.edit.net_no_op_edit_commit`
+- `test.store.store_commit_finalization`
+- `test.guardrails.edit_accepted_finalization_guardrail`
 - `test.edit.typed_effects_no_frame_dependency`
 Guardrails:
 - `edit.sync_non_nested`
@@ -67,8 +70,9 @@ sequenceDiagram
     Caller->>Draft: compatible draft mutation
   end
   EK->>EK: reject Future result
-  EK->>CC: compile touched set + invalidation
-  EK->>Store: prepare sparse commit or materialized fallback
+  EK->>Store: prepare sparse commit or ordinary materialized fallback
+  Store-->>EK: accepted final document delta + touched facts
+  EK->>CC: compile accepted touched set + invalidation
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
   Applier->>Selection: prepare accepted selection effects before store install
@@ -86,21 +90,27 @@ sequenceDiagram
 ```
 
 Ordinary public edit, command, and interaction commit routes open a sparse edit
-session. The session records a callback-local sparse journal, reads committed
-facts from `DocumentStoreKernel`, and compiles exact touched-set/revision
-deltas without building a public `CanvasDocument` projection. `draftSummary`
-uses the committed summary plus sparse deltas. `readDraftDocument` and
-`replaceDraftDocument` are explicit materialization fallbacks: they materialize a
-rollback-safe `DraftDocument`, replay prior sparse mutations, and then commit
-through the materialized payload path.
+session. The session records a callback-local sparse journal and reads committed
+facts from `DocumentStoreKernel` without building a public `CanvasDocument`
+projection. `draftSummary` uses the committed summary plus sparse deltas.
+`readDraftDocument` and `replaceDraftDocument` are explicit materialization
+fallbacks: they materialize a rollback-safe `DraftDocument` and replay prior
+sparse mutations. Ordinary sparse and materialized candidates then ask the store
+to finalize accepted committed facts before `CommitCompiler` builds a plan.
+The compiler consumes only the store-accepted revision delta and touched facts,
+not provisional session or draft revision journals.
 
-`DocumentStoreKernel` prepares accepted sparse commits before the irreversible
-store swap. Duplicate ids, resource references, update-kind validation,
-revision-family alignment, and projection invalidation are validated against
-the accepted committed tables. Selection effects are also prepared before
-the swap from accepted committed document facts. After the swap, `SelectionKernel`
-installs only the prepared selected ids; it does not re-read public document
-membership from the current store.
+`DocumentStoreKernel` prepares accepted sparse and ordinary materialized commits
+before the irreversible store swap. Duplicate ids, resource references,
+update-kind validation, revision-family alignment, projection invalidation, and
+final committed-fact equality are validated against the accepted committed
+tables. A candidate whose final committed facts match the base becomes an empty
+accepted document change: it advances no revisions, compiles no document plan,
+skips interaction plan augmentation, installs nothing, delivers no typed
+effects, and publishes no public state. Selection effects are also prepared
+before the swap from accepted committed document facts. After the swap,
+`SelectionKernel` installs only the prepared selected ids; it does not re-read
+public document membership from the current store.
 
 `CommitApplier` returns the contract-owned immutable commit delivery payloads
 after document and selection effects have both installed. The runtime/applier
@@ -259,9 +269,13 @@ unchanged.
 
 After an accepted edit commit, `RuntimeRoot` publishes exactly one public state
 snapshot that combines document, selection-prune, resource-visual, preview
-cleanup, interaction, and epoch effects produced by the operation. A no-op edit
-does not publish a new snapshot. `CanvasEdit.setCameraOffset` is the persisted
-document camera mutation path and advances document/projection effects; it does
-not mutate runtime view camera state.
+cleanup, interaction, and epoch effects produced by the operation. A no-op edit,
+including a compensating edit whose intermediate operations changed facts but
+whose final committed facts equal the base, does not publish a new snapshot.
+`CanvasEdit.replaceDraftDocument` is the explicit replacement exception:
+replacing with an equivalent document still commits replacement effects.
+`CanvasEdit.setCameraOffset` is the persisted document camera mutation path and
+advances document/projection effects; it does not mutate runtime view camera
+state.
 
 ---

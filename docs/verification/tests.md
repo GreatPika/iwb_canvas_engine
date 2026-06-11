@@ -85,10 +85,12 @@ Required tests:
 - `test.store.read_document_projection`
 - `test.store.no_projection_hot_path`
 - `test.store.public_document_is_projection_only`
+- `test.store.store_commit_finalization`
 - `test.edit.sync_non_nested_async_stale`
 - `test.edit.rollback`
 - `test.edit.field_update_admission_effects`
 - `test.edit.edit_matrix_effects`
+- `test.edit.net_no_op_edit_commit`
 - `test.edit.exact_touched_invalidation`
 - `test.edit.typed_effects_no_frame_dependency`
 - `test.edit.staged_document_load_success_failure`
@@ -118,6 +120,7 @@ Required tests:
 - `test.surface.selection_chrome_hit_target_boundary`
 - `test.frame.paint_plan_write_all_or_nothing`
 - `test.frame.measured_text_layout`
+- `test.guardrails.edit_accepted_finalization_guardrail`
 - `test.guardrails.text_surface_guardrail_checks`
 - `test.guardrails.geometry_committed_handle_order`
 - `test.guardrails.geometry_eraser_exact_budget_inputs`
@@ -256,10 +259,12 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/store/read_document_projection_test.dart`
 - `test/store/no_projection_hot_path_test.dart`
 - `test/store/public_document_is_projection_only_test.dart`
+- `test/store/store_commit_finalization_test.dart`
 - `test/edit/sync_non_nested_async_stale_test.dart`
 - `test/edit/rollback_test.dart`
 - `test/edit/field_update_admission_effects_test.dart`
 - `test/edit/edit_matrix_effects_test.dart`
+- `test/edit/net_no_op_edit_commit_test.dart`
 - `test/edit/exact_touched_invalidation_test.dart`
 - `test/edit/typed_effects_no_frame_dependency_test.dart`
 - `test/edit/staged_document_load_success_failure_test.dart`
@@ -323,6 +328,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`
 - `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`
 - `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`
+- `test/guardrails/edit_accepted_finalization_guardrail_test.dart`
 - `test/guardrails/text_surface_guardrail_checks_test.dart`
 - `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
 
@@ -332,6 +338,15 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
+
+`test.edit.net_no_op_edit_commit`, `test.store.store_commit_finalization`, and
+`test.guardrails.edit_accepted_finalization_guardrail` cover store-owned
+accepted finalization for ordinary sparse and materialized edit candidates.
+They prove compensating final fact no-ops collapse before edit plan
+compilation, interaction augmentation, store install, public state publication,
+typed effect delivery, action emission, observer notification, and public
+projection reads, while explicit `replaceDraftDocument` remains the forced
+replacement path.
 
 `test.api.runtime_timestamp_order` covers the public runtime timestamp
 contract for committed action events: nullable or backwards `timestampMs` hints
