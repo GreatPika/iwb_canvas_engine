@@ -1,17 +1,5 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-08T10:40:39.349752Z",
-  "records": [
-    {
-      "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
-      "acceptedAtUtc": "2026-06-08T10:40:39.349752Z",
-      "acceptedReason": "Accept Xiaomi 22081283G schema import load reference after canonical JSON load architecture.",
-      "selectionPolicy": "stable_window_median_v1",
-      "acceptedFromRuns": [
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_1.json",
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_2.json",
-        "tool/bench/manual/run_history/2026-06-08_xiaomi_22081283g_schema_import_load_release_run_3.json"
-      ]
-    }
-  ]
+  "updatedAtUtc": "2026-06-11T00:00:00.000Z",
+  "records": []
 }

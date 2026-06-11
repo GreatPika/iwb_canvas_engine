@@ -82,49 +82,23 @@ void main() {
       );
     });
 
-    test(
-      'committed manual references preserve historical contour metadata',
-      () {
-        const expectedDeviceIds = {
-          'xiaomi_22081283g_android14_flutter_3_44_0.json': '22081283G',
-        };
-        final files = Directory(manualBenchmarkReferenceRoot)
-            .listSync()
-            .whereType<File>()
-            .map((file) => file.uri.pathSegments.last)
-            .toSet();
+    test('no stale manual references are active comparison inputs', () {
+      final files = Directory(manualBenchmarkReferenceRoot)
+          .listSync()
+          .whereType<File>()
+          .map((file) => file.uri.pathSegments.last)
+          .toSet();
+      final decisions =
+          jsonDecode(
+                File(
+                  'tool/bench/manual/reference_decisions.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, Object?>;
 
-        expect(files, expectedDeviceIds.keys.toSet());
-        for (final entry in expectedDeviceIds.entries) {
-          final baseline =
-              jsonDecode(
-                    File(
-                      '$manualBenchmarkReferenceRoot/${entry.key}',
-                    ).readAsStringSync(),
-                  )
-                  as Map<String, Object?>;
-          final runtime = baseline['runtime'] as Map<String, Object?>;
-
-          expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
-          expect(baseline['manifestVersion'], benchmarkManifestVersion);
-          expect(baseline['manifestFingerprint'], '2e4b020c');
-          expect(baseline['profile'], isA<Map<String, Object?>>());
-          expect(
-            baseline['cases'],
-            isA<List<Object?>>().having(
-              (cases) => cases.length,
-              'length',
-              greaterThan(0),
-            ),
-          );
-          expect(runtime['deviceId'], entry.value);
-          expect(
-            runtime['releaseContour'],
-            containsPair('flutterVersion', '3.38.0'),
-          );
-        }
-      },
-    );
+      expect(files, isEmpty);
+      expect(decisions['records'], isEmpty);
+    });
 
     test('committed manual history uses current vocabulary', () {
       final index =

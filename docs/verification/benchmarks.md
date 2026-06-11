@@ -116,9 +116,10 @@ Release benchmark interpretation:
   still requires reference metrics, absolute caps, and first-baseline memory
   caps. Do not use it to create a GitHub performance gate until the GitHub route
   is rebuilt.
-- Manual device reference reports for optimization work live under
-  `tool/bench/manual/reference_reports/`. They are accepted comparison inputs for
-  a named local device and toolchain, not release-approval baselines.
+- Active manual device reference reports for optimization work live under
+  `tool/bench/manual/reference_reports/` when a same-contour reference has been
+  accepted. No active manual reference is committed until a clean current-contour
+  device window is accepted.
 - Runtime-based prepared fixtures may report `spatial_rebuild_setup_us` in
   setup metrics. That diagnostic keeps the lazy spatial-index rebuild displaced
   by document load visible without charging steady-state frame/spatial action
@@ -126,8 +127,6 @@ Release benchmark interpretation:
 - Manual reference decisions are recorded in
   `tool/bench/manual/reference_decisions.json`. A reference report is valid only
   when that decision log says which history run or run window produced it.
-- The Xiaomi 22081283G Android 14 Flutter 3.44.0 manual reference report is
-  `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json`.
 - Refresh a device report with
   `dart run tool/bench/run.dart --profile=release --device=<device-id> --output=build/bench/current/<device>_release.json`.
 - Record the first bootstrap report in manual run history with
@@ -140,13 +139,12 @@ Release benchmark interpretation:
   writes median numeric metrics across that run window. Use
   `bootstrap_single_run_v1` only for initial device setup when no stable window
   exists yet; it must say that in `--reason`.
-- Compare a new device report with its committed manual reference report with
+- After a same-contour reference is accepted, compare a new device report with
+  its committed manual reference report with
   `dart run tool/bench/diff.dart --profile=release --baseline=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json --current=build/bench/current/<device>_release.json --output=build/bench/diff/<device>_release.json`.
 - Manual device-reference diff is for regression tracking during optimization;
   it must preserve same-contour runtime metadata, including `deviceId`.
-- GitHub release benchmark workflows are absent until the release benchmark
-  policy is rebuilt around stable device references and a non-RSS hard memory
-  signal.
+- There is currently no dedicated GitHub release benchmark workflow.
 
 Manual benchmark history ledger:
 
@@ -160,9 +158,9 @@ Manual benchmark history ledger:
   contour, optional prior reference report path, source file paths, source size,
   source SHA-256, metrics, and compact sample summaries.
 - History records do not replace manual reference reports. Reference reports
-  under `tool/bench/manual/reference_reports/` are the accepted comparison
-  inputs; history records explain which local observations supported an
-  optimization or regression decision.
+  under `tool/bench/manual/reference_reports/`, when present, are the accepted
+  comparison inputs; history records explain which local observations supported
+  an optimization or regression decision.
 - Archive a full manual device report with
   `dart run tool/bench/archive_manual_run.dart --label=<reason> --report=build/bench/current/<device>_release.json --device-name="<device name>" --device-id=<device-id> --device-os="<os>"`.
   Add `--reference=tool/bench/manual/reference_reports/<device>_<os>_flutter_<version>.json`
@@ -192,7 +190,8 @@ Benchmark CI routing:
   tests, required-case dry-run proof, diff fixtures, benchmark runner proof, and
   docs projection checks. It then runs all non-benchmark Flutter tests with
   `flutter test --concurrency=1`, followed by `dart analyze` and guardrails.
-- There is no GitHub release benchmark CI while the GitHub performance route is
-  absent. Device/manual reports remain the performance comparison route.
+- There is no dedicated GitHub release benchmark CI. Device/manual reports are
+  the performance measurement route; a diff comparison requires an accepted
+  same-contour manual reference.
 - Manual device references are accepted through
   `tool/bench/accept_manual_reference.dart`.
