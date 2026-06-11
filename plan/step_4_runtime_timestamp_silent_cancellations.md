@@ -123,7 +123,7 @@ All-Or-Nothing Failure Boundary:
 
 ## Execution Units
 
-### [ ] Unit 1: Make Suppressed Context Requests Timestamp-Silent
+### [x] Unit 1: Make Suppressed Context Requests Timestamp-Silent
 
 Owner: `RuntimeRoot` context request delivery boundary, with `InteractionEngine` request intent shape and matching interaction source-of-truth docs/diagrams only as needed to stop eager timestamp resolution for context-action requests.
 
@@ -135,7 +135,7 @@ Completion Check: Focused tests cover both direct double-tap and pointer-sample 
 
 Depends On: none.
 
-### [ ] Unit 2: Remove Resolver Callback Timestamp Output
+### [x] Unit 2: Remove Resolver Callback Timestamp Output
 
 Owner: `CanvasMoveCommitRequest` public DTO shape and `RuntimeRoot` selected-move resolver boundary.
 
