@@ -82,23 +82,76 @@ void main() {
       );
     });
 
-    test('no stale manual references are active comparison inputs', () {
-      final files = Directory(manualBenchmarkReferenceRoot)
-          .listSync()
-          .whereType<File>()
-          .map((file) => file.uri.pathSegments.last)
-          .toSet();
-      final decisions =
-          jsonDecode(
-                File(
-                  'tool/bench/manual/reference_decisions.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, Object?>;
+    test(
+      'committed manual references remain current-contour diffable inputs',
+      () async {
+        final manifest = BenchmarkManifest.load();
+        const expectedDeviceIds = {
+          'xiaomi_22081283g_android14_flutter_3_44_0.json': 'Z9NBMVIRY5KRGAJF',
+        };
+        final expectedFingerprint = benchmarkManifestFingerprint(manifest);
+        final files = Directory(manualBenchmarkReferenceRoot)
+            .listSync()
+            .whereType<File>()
+            .map((file) => file.uri.pathSegments.last)
+            .toSet();
 
-      expect(files, isEmpty);
-      expect(decisions['records'], isEmpty);
-    });
+        expect(files, expectedDeviceIds.keys.toSet());
+        for (final entry in expectedDeviceIds.entries) {
+          final baseline =
+              jsonDecode(
+                    File(
+                      '$manualBenchmarkReferenceRoot/${entry.key}',
+                    ).readAsStringSync(),
+                  )
+                  as Map<String, Object?>;
+          final runtime = baseline['runtime'] as Map<String, Object?>;
+
+          expect(baseline['schemaVersion'], benchmarkToolSchemaVersion);
+          expect(baseline['manifestVersion'], benchmarkManifestVersion);
+          expect(baseline['manifestFingerprint'], expectedFingerprint);
+          expect(baseline['selectionPolicy'], 'stable_window_median_v1');
+          expect(baseline['profile'], isA<Map<String, Object?>>());
+          expect(
+            baseline['cases'],
+            isA<List<Object?>>().having(
+              (cases) => cases.length,
+              'length',
+              greaterThan(0),
+            ),
+          );
+          expect(runtime['deviceId'], entry.value);
+          expect(
+            runtime['releaseContour'],
+            containsPair('flutterVersion', '3.44.0'),
+          );
+
+          final currentPath =
+              'build/bench/current/manual_reference_${entry.key}';
+          final outputPath = 'build/bench/diff/manual_reference_${entry.key}';
+          addTearDown(() {
+            for (final path in [currentPath, outputPath]) {
+              final file = File(path);
+              if (file.existsSync()) {
+                file.deleteSync();
+              }
+            }
+          });
+          final current = _manualReferenceAsCurrentReport(manifest, baseline);
+          File(currentPath)
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync(jsonEncode(current));
+
+          final exitCode = await runBenchmarkDiffCli([
+            '--profile=release',
+            '--baseline=$manualBenchmarkReferenceRoot/${entry.key}',
+            '--current=$currentPath',
+            '--output=$outputPath',
+          ], manifest: manifest);
+          expect(exitCode, 0);
+        }
+      },
+    );
 
     test('committed manual history uses current vocabulary', () {
       final index =
@@ -1284,6 +1337,28 @@ Map<String, Object?> _oldSchemaReport(BenchmarkManifest manifest) {
       ..remove('setupMetrics');
   }
   return report;
+}
+
+Map<String, Object?> _manualReferenceAsCurrentReport(
+  BenchmarkManifest manifest,
+  Map<String, Object?> reference,
+) {
+  final current = _clone(reference);
+  final cases = (current['cases'] as List<Object?>)
+      .cast<Map<String, Object?>>();
+  final manifestCases = {
+    for (final benchmarkCase in manifest.cases) benchmarkCase.id: benchmarkCase,
+  };
+  for (final entry in cases) {
+    final benchmarkCase = manifestCases[entry['id']]!;
+    final scale = benchmarkCase.scales.singleWhere(
+      (candidate) => candidate.id == entry['scale'],
+    );
+    entry.addAll(_caseIdentityJson(benchmarkCase, scale));
+    entry.addAll(_caseExecutionJson(benchmarkCase));
+  }
+
+  return current;
 }
 
 Map<String, Object?> _caseReport(
