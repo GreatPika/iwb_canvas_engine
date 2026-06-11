@@ -240,6 +240,12 @@ Future<void> _verifyLoadSuccessSuppressesQueuedRequest() async {
 
     expect(contextRequests, isEmpty);
     expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
+
+    root.handleDoubleTap(position: Offset.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(contextRequests, hasLength(1));
+    expect(contextRequests.single.timestampMs, 0);
   } finally {
     await subscription.cancel();
     root.dispose();

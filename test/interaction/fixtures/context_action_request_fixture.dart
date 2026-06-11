@@ -70,6 +70,12 @@ void _registerAsyncContextRequestStreamTests() {
   test('accepted direct request delivery is asynchronous', () {
     return expectLater(_verifyAcceptedDirectRequestIsAsync(), completes);
   });
+  test('direct requests resolve delivery timestamps monotonically', () {
+    return expectLater(_verifyDirectRequestTimestampOrder(), completes);
+  });
+  test('pointer requests resolve delivery timestamps monotonically', () {
+    return expectLater(_verifyPointerRequestTimestampOrder(), completes);
+  });
   test('dispose suppresses accepted queued request before stream done', () {
     return expectLater(
       _verifyDisposeSuppressesQueuedRequestBeforeDone(),
@@ -167,6 +173,47 @@ Future<void> _verifyAcceptedDirectRequestIsAsync() async {
     expect(scenario.requests, hasLength(1));
     _expectContentRequest(scenario.requests.single);
     _expectNoIncidentalEffects(scenario);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+Future<void> _verifyDirectRequestTimestampOrder() async {
+  final scenario = _RuntimeContextRequestScenario();
+  try {
+    scenario.root.handleDoubleTap(
+      position: const Offset(20, 0),
+      timestampMs: 5,
+    );
+    await _flushEvents();
+    scenario.root.handleDoubleTap(
+      position: const Offset(200, 200),
+      timestampMs: 2,
+    );
+    await _flushEvents();
+    scenario.root.handleDoubleTap(position: const Offset(20, 0));
+    await _flushEvents();
+
+    expect(scenario.requests.map((request) => request.timestampMs), [5, 6, 7]);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+Future<void> _verifyPointerRequestTimestampOrder() async {
+  final scenario = _RuntimeContextRequestScenario();
+  try {
+    _tapPointer(scenario.root, const Offset(20, 0), timestampMs: 1);
+    _tapPointer(scenario.root, const Offset(21, 0), timestampMs: 5);
+    await _flushEvents();
+    _tapPointer(scenario.root, const Offset(20, 0), timestampMs: 1);
+    _tapPointer(scenario.root, const Offset(21, 0), timestampMs: 2);
+    await _flushEvents();
+    _tapPointer(scenario.root, const Offset(20, 0));
+    _tapPointer(scenario.root, const Offset(21, 0));
+    await _flushEvents();
+
+    expect(scenario.requests.map((request) => request.timestampMs), [5, 6, 7]);
   } finally {
     await scenario.dispose();
   }
@@ -576,7 +623,7 @@ Future<void> _flushEvents() => Future<void>.delayed(Duration.zero);
 void _tapPointer(
   RuntimeRoot root,
   Offset position, {
-  required int timestampMs,
+  int? timestampMs,
   Offset? movePosition,
 }) {
   root.handlePointer(

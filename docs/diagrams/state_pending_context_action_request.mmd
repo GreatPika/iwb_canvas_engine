@@ -140,20 +140,23 @@ stateDiagram-v2
   state "Issue content context request" as EmitContentRequest
   note right of EmitContentRequest
     InteractionEngine issues CanvasInteractionRequestId
-    through InteractionRequestRegistry, then emits
-    asynchronous CanvasContextActionRequested with doubleTap trigger,
+    through InteractionRequestRegistry, then queues
+    an asynchronous pending request with doubleTap trigger,
     content target kind, immutable CanvasElement snapshot,
-    boundsWorld, positions, timestamp, controllerEpoch,
-    and documentRevision. documentRevision is observation-only.
+    boundsWorld, positions, timestamp hint,
+    controllerEpoch, and documentRevision. Runtime delivery
+    resolves the timestamp after suppression filtering.
+    documentRevision is observation-only.
   end note
 
   state "Issue empty-canvas context request" as EmitEmptyCanvasRequest
   note right of EmitEmptyCanvasRequest
     InteractionEngine issues CanvasInteractionRequestId
-    through InteractionRequestRegistry, then emits
-    asynchronous CanvasContextActionRequested with doubleTap trigger,
-    empty-canvas target kind, positions, timestamp,
-    controllerEpoch, and documentRevision.
+    through InteractionRequestRegistry, then queues
+    an asynchronous pending request with doubleTap trigger,
+    empty-canvas target kind, positions, timestamp hint,
+    controllerEpoch, and documentRevision. Runtime delivery
+    resolves the timestamp after suppression filtering.
   end note
 
   EmitContentRequest --> IssuedRequestLive: "request delivered / clear pending tap and keep request id live"
@@ -167,7 +170,8 @@ stateDiagram-v2
     request id is issued but before the scheduled
     stream delivery turn. Suppression clears the
     queued request without publishing a stream event
-    or leaving a live app-observable request.
+    or advancing the runtime timestamp cursor, and
+    without leaving a live app-observable request.
   end note
 
   QueuedRequestSuppressed --> Idle: "load cleanup completed"

@@ -291,11 +291,9 @@ final class InteractionEngine {
     if (facts == null) {
       return null;
     }
-    final timestampMs = context.resolveOutputTimestamp(timestampHintMs);
-
     return _issueContextRequest(
       facts: facts,
-      timestampMs: timestampMs,
+      timestampHintMs: timestampHintMs,
       viewPosition: viewPosition,
       worldPosition: worldPosition,
     );
@@ -984,7 +982,7 @@ final class InteractionEngine {
 
   InteractionPointerAdmission _contextTapRequestAdmission(
     NormalizedPointerSample sample,
-    InteractionPointerContext context,
+    InteractionPointerContext _,
     ContextTargetReadFacts facts,
     _ContextTapAdmissionCarry carry,
   ) {
@@ -998,7 +996,7 @@ final class InteractionEngine {
       selectionReplacement: updatedCarry.selectionReplacement,
       contextRequest: _issueContextRequest(
         facts: facts,
-        timestampMs: context.resolveOutputTimestamp(sample.timestampMs),
+        timestampHintMs: sample.timestampMs,
         viewPosition: sample.viewPosition,
         worldPosition: sample.worldPosition,
       ),
@@ -1567,7 +1565,7 @@ final class InteractionEngine {
 
   ContextActionRequestIntent _issueContextRequest({
     required ContextTargetReadFacts facts,
-    required int timestampMs,
+    required int? timestampHintMs,
     required Offset viewPosition,
     required Offset worldPosition,
   }) {
@@ -1576,7 +1574,7 @@ final class InteractionEngine {
     return _contextActionRouter.requestIntent((
       requestId: guard.requestId,
       facts: facts,
-      timestampMs: timestampMs,
+      timestampHintMs: timestampHintMs,
       viewPosition: viewPosition,
       worldPosition: worldPosition,
     ));

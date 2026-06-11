@@ -564,7 +564,7 @@ CanvasInteractionRequestId _issueTextRequest(InteractionEngine engine) {
     fail('text context request was not issued.');
   }
 
-  return request.request.requestId;
+  return request.pendingRequest.requestId;
 }
 
 // Only context issuance and text guard reads are valid in this fixture; other

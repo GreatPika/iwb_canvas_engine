@@ -191,7 +191,7 @@ final class RuntimeRoot
   int _epochRevision = 0;
   int _textEditInteractionRevision = 0;
   int _contextRequestGeneration = 0;
-  final List<({int generation, CanvasContextActionRequested request})>
+  final List<({int generation, PendingContextActionRequest pendingRequest})>
   _pendingContextRequests = [];
   bool _isContextRequestDeliveryScheduled = false;
 
@@ -1818,7 +1818,7 @@ final class RuntimeRoot
   void _emitContextRequest(ContextActionRequestIntent intent) {
     _pendingContextRequests.add((
       generation: _contextRequestGeneration,
-      request: intent.request,
+      pendingRequest: intent.pendingRequest,
     ));
     if (_isContextRequestDeliveryScheduled) {
       return;
@@ -1826,7 +1826,11 @@ final class RuntimeRoot
     _isContextRequestDeliveryScheduled = true;
     scheduleMicrotask(() {
       _isContextRequestDeliveryScheduled = false;
-      for (final request in _takeDeliverablePendingContextRequests()) {
+      for (final pendingRequest in _takeDeliverablePendingContextRequests()) {
+        final timestampMs = _actionFinalizer.reserveTimestamp(
+          pendingRequest.timestampHintMs,
+        );
+        final request = pendingRequest.toRequest(timestampMs: timestampMs);
         _contextActionRequests.add(request);
       }
     });
@@ -1837,7 +1841,7 @@ final class RuntimeRoot
     _pendingContextRequests.clear();
   }
 
-  List<CanvasContextActionRequested> _takeDeliverablePendingContextRequests() {
+  List<PendingContextActionRequest> _takeDeliverablePendingContextRequests() {
     if (_pendingContextRequests.isEmpty || _contextActionRequests.isClosed) {
       _pendingContextRequests.clear();
 
@@ -1845,10 +1849,10 @@ final class RuntimeRoot
     }
     final pending = List.of(_pendingContextRequests);
     _pendingContextRequests.clear();
-    final deliverable = <CanvasContextActionRequested>[];
+    final deliverable = <PendingContextActionRequest>[];
     for (final entry in pending) {
       if (entry.generation == _contextRequestGeneration) {
-        deliverable.add(entry.request);
+        deliverable.add(entry.pendingRequest);
       }
     }
 

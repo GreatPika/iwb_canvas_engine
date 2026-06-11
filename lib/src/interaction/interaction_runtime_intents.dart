@@ -8,9 +8,44 @@ import 'pointer_cleanup_protocol.dart';
 import 'pointer_session_identity.dart';
 
 final class ContextActionRequestIntent {
-  const ContextActionRequestIntent({required this.request});
+  const ContextActionRequestIntent({required this.pendingRequest});
 
-  final CanvasContextActionRequested request;
+  final PendingContextActionRequest pendingRequest;
+}
+
+final class PendingContextActionRequest {
+  const PendingContextActionRequest({
+    required this.requestId,
+    required this.trigger,
+    required this.target,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    required this.timestampHintMs,
+    required this.viewPosition,
+    required this.worldPosition,
+  });
+
+  final CanvasInteractionRequestId requestId;
+  final CanvasContextActionTrigger trigger;
+  final CanvasContextActionTarget target;
+  final int controllerEpoch;
+  final int documentRevision;
+  final int? timestampHintMs;
+  final Offset viewPosition;
+  final Offset worldPosition;
+
+  CanvasContextActionRequested toRequest({required int timestampMs}) {
+    return CanvasContextActionRequested(
+      requestId: requestId,
+      trigger: trigger,
+      target: target,
+      controllerEpoch: controllerEpoch,
+      documentRevision: documentRevision,
+      timestampMs: timestampMs,
+      viewPosition: viewPosition,
+      worldPosition: worldPosition,
+    );
+  }
 }
 
 final class SelectedMoveCommitIntent {

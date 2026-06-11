@@ -50,27 +50,27 @@ sequenceDiagram
         ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, family, documentRevision, and controllerEpoch
         Store-->>ReadPort: current target facts
         ReadPort-->>IE: current target facts
-        IE->>IE: resolve timestamp through runtime cursor
         IE->>Registry: issue request id with content target kind and guard facts
         Registry-->>IE: issued request id
-        IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
+        IE->>Requests: enqueue asynchronous pending request with timestamp hint
         alt load/dispose cleanup before scheduled delivery
           IE->>Requests: suppress queued context request
-          Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+          Note over IE,Signals: Suppressed queued requests produce no stream event, no timestamp cursor advancement, and no live request observable by the app.
         else delivery turn runs
+          Requests->>Requests: resolve timestamp through runtime cursor
           Requests->>Signals: publish context-action request notification only
           Signals-->>App: deliver CanvasContextActionRequested
           App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
         end
       else current empty-canvas target
-        IE->>IE: resolve timestamp through runtime cursor
         IE->>Registry: issue request id with empty-canvas target kind
         Registry-->>IE: issued request id
-        IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
+        IE->>Requests: enqueue asynchronous pending request with timestamp hint
         alt load/dispose cleanup before scheduled delivery
           IE->>Requests: suppress queued context request
-          Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+          Note over IE,Signals: Suppressed queued requests produce no stream event, no timestamp cursor advancement, and no live request observable by the app.
         else delivery turn runs
+          Requests->>Requests: resolve timestamp through runtime cursor
           Requests->>Signals: publish context-action request notification only
           Signals-->>App: deliver CanvasContextActionRequested
           App->>AppUI: open app-owned empty-canvas context UI
@@ -157,11 +157,12 @@ sequenceDiagram
     IE->>IE: verify same id, generation, elementRevision, family, epoch, visibility, and top-hit status
     IE->>Registry: issue request id with content target kind and guard facts
     Registry-->>IE: issued request id
-    IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, content element target)
+    IE->>Requests: enqueue asynchronous pending request with timestamp hint
     alt load/dispose cleanup before scheduled delivery
       IE->>Requests: suppress queued context request
-      Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+      Note over IE,Signals: Suppressed queued requests produce no stream event, no timestamp cursor advancement, and no live request observable by the app.
     else delivery turn runs
+      Requests->>Requests: resolve timestamp through runtime cursor
       Requests->>Signals: publish context-action request notification only
       Signals-->>App: deliver CanvasContextActionRequested
       App->>AppUI: open menu or text editor when target snapshot is CanvasTextElement
@@ -174,11 +175,12 @@ sequenceDiagram
   else empty-canvas target still has no qualifying content target
     IE->>Registry: issue request id with empty-canvas target kind
     Registry-->>IE: issued request id
-    IE->>Requests: enqueue asynchronous CanvasContextActionRequested(doubleTap, empty-canvas target)
+    IE->>Requests: enqueue asynchronous pending request with timestamp hint
     alt load/dispose cleanup before scheduled delivery
       IE->>Requests: suppress queued context request
-      Note over IE,Signals: Suppressed queued requests produce no stream event and no live request observable by the app.
+      Note over IE,Signals: Suppressed queued requests produce no stream event, no timestamp cursor advancement, and no live request observable by the app.
     else delivery turn runs
+      Requests->>Requests: resolve timestamp through runtime cursor
       Requests->>Signals: publish context-action request notification only
       Signals-->>App: deliver CanvasContextActionRequested
       App->>AppUI: open app-owned empty-canvas context UI

@@ -336,6 +336,10 @@ either a content element or empty canvas after candidate spatial admission
 succeeds and all candidate handles resolve to current immutable facts. The
 queued request is delivered only if runtime load/dispose cleanup does not
 suppress pending context requests before the scheduled delivery microtask.
+The runtime resolves the request timestamp during that delivery turn, after
+closed-stream and generation suppression filtering and immediately before
+building the public `CanvasContextActionRequested`. Suppressed queued requests
+discard their timestamp hint without advancing the runtime timestamp cursor.
 Rejected invalid-index, stale-index, budget-exceeded, and
 unresolved/skipped-candidate context target reads emit no public request.
 Rejected stale-index, budget-exceeded, and unresolved/skipped-candidate reads
@@ -351,14 +355,14 @@ first-tap history, move mode, or absence of an active pointer preview/session.
 On a valid direct double-tap, the interaction engine clears any pending context
 tap history through `PointerToolCleanupCoordinator`, resolves the current
 context-action target at the supplied position, admits only candidate spatial
-results whose handles all resolve, then resolves the request timestamp through
-the runtime timestamp cursor, issues a `CanvasInteractionRequestId`, records
-live guard facts in `InteractionRequestRegistry`, and queues exactly one
-asynchronous context-action request for the current content target or empty
-canvas. Load/dispose cleanup may suppress that queued request before stream
-delivery; disposal remains a stream-close-only path. Emitting the direct request
-must not clear active pointer preview/session state by itself. A non-finite
-position is rejected before target resolution and request emission.
+results whose handles all resolve, issues a `CanvasInteractionRequestId`,
+records live guard facts in `InteractionRequestRegistry`, and queues exactly
+one asynchronous pending context-action request for the current content target
+or empty canvas with the original timestamp hint. Load/dispose cleanup may
+suppress that queued request before stream delivery and before any timestamp is
+committed; disposal remains a stream-close-only path. Emitting the direct
+request must not clear active pointer preview/session state by itself. A
+non-finite position is rejected before target resolution and request emission.
 
 Engine-owned pointer-sample recognition remains separate: the first tap may
 store a pending context tap candidate, and the second tap must revalidate the
@@ -370,6 +374,10 @@ recognized as the second tap. Pointer-sample context taps remain guarded by
 move-mode and pointer-session policy. Direct `handleDoubleTap` bypasses that
 pending candidate requirement while still clearing stale pending context tap
 history before it resolves the current target.
+When one or both pointer samples omit a timestamp, double-tap delay cannot
+reject the pair; target identity, controller epoch, and slop matching still
+guard request admission, and the delivered request timestamp resolves through
+the runtime cursor at stream delivery.
 
 Content-element targets carry an immutable public `CanvasElement` snapshot and
 `boundsWorld`. Empty-canvas targets carry no element snapshot. Text editing is

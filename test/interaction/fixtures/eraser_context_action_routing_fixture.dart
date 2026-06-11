@@ -66,8 +66,8 @@ void _registerContextTapTests() {
     expect(_verifyContextTapMismatchCleanup, returnsNormally);
   });
 
-  test('context tap missing timestamps cannot match', () {
-    expect(_verifyContextTapMissingTimestampsCleanup, returnsNormally);
+  test('context tap missing timestamps can match by target and slop', () {
+    expect(_verifyContextTapMissingTimestampsMatch, returnsNormally);
   });
 
   test('orphan terminal taps cannot request context actions', () {
@@ -222,7 +222,7 @@ void _verifyContextTapPendingAndSecondTap() {
 
   final second = _tapContext(engine, _contextTap(const Offset(12, 10)));
 
-  final request = second.contextRequest?.request;
+  final request = second.contextRequest?.pendingRequest;
   expect(request, isNotNull);
   expect(request?.requestId, CanvasInteractionRequestId('request-0'));
   expect(request?.target, isA<CanvasContentElementContextActionTarget>());
@@ -249,7 +249,7 @@ void _verifyContextTapMoveJitter() {
 
   expect(first.kind, InteractionPointerAdmissionKind.ignored);
   expect(
-    second.contextRequest?.request.requestId,
+    second.contextRequest?.pendingRequest.requestId,
     (CanvasInteractionRequestId('request-0')),
   );
   expect(readPort.pendingContextReads, 1);
@@ -271,7 +271,7 @@ void _verifyContextTapTerminalJitter() {
 
   expect(first.kind, InteractionPointerAdmissionKind.ignored);
   expect(
-    second.contextRequest?.request.requestId,
+    second.contextRequest?.pendingRequest.requestId,
     CanvasInteractionRequestId('request-0'),
   );
   expect(readPort.pendingContextReads, 1);
@@ -293,7 +293,7 @@ void _verifyContextTapMismatchCleanup() {
   expect(engine.pendingContextTap, isNull);
 }
 
-void _verifyContextTapMissingTimestampsCleanup() {
+void _verifyContextTapMissingTimestampsMatch() {
   final readPort = _FakeReadPort(contextElementId: CanvasElementId('ctx-a'));
   final engine = _contextEngine(readPort);
 
@@ -307,8 +307,11 @@ void _verifyContextTapMissingTimestampsCleanup() {
   );
 
   expect(first.kind, InteractionPointerAdmissionKind.ignored);
-  expect(second.kind, InteractionPointerAdmissionKind.cleanupOnly);
-  expect(second.contextRequest, isNull);
+  expect(second.kind, InteractionPointerAdmissionKind.admitted);
+  final request = second.contextRequest?.pendingRequest;
+  expect(request, isNotNull);
+  expect(request?.requestId, CanvasInteractionRequestId('request-0'));
+  expect(request?.timestampHintMs, isNull);
   expect(engine.pendingContextTap, isNull);
   expect(readPort.pendingContextReads, 1);
   expect(readPort.secondContextReads, 1);
@@ -359,8 +362,8 @@ void _verifyDirectDoubleTapCleanupBeforeTargetRead() {
     timestampHintMs: 5,
   );
 
-  expect(request?.request.timestampMs, 5);
-  expect(timestampReads, 1);
+  expect(request?.pendingRequest.timestampHintMs, 5);
+  expect(timestampReads, 0);
   expect(readPort.directContextReads, 1);
 }
 

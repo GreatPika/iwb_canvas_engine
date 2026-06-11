@@ -48,13 +48,13 @@ final class ContextActionRouter {
 
   ContextActionRequestIntent requestIntent(ContextRequestIntentInput input) {
     return ContextActionRequestIntent(
-      request: CanvasContextActionRequested(
+      pendingRequest: PendingContextActionRequest(
         requestId: input.requestId,
         trigger: CanvasContextActionTrigger.doubleTap,
         target: _publicTarget(input.facts),
         controllerEpoch: input.facts.controllerEpoch,
         documentRevision: input.facts.documentRevision,
-        timestampMs: input.timestampMs,
+        timestampHintMs: input.timestampHintMs,
         viewPosition: input.viewPosition,
         worldPosition: input.worldPosition,
       ),
@@ -73,7 +73,7 @@ typedef ContextSecondTapMatchInput = ({
 typedef ContextRequestIntentInput = ({
   CanvasInteractionRequestId requestId,
   ContextTargetReadFacts facts,
-  int timestampMs,
+  int? timestampHintMs,
   Offset viewPosition,
   Offset worldPosition,
 });
@@ -175,7 +175,7 @@ bool _withinSlop(Offset first, Offset second, double slop) {
 
 bool _withinDelay(int? firstMs, int? secondMs, int maxDelayMs) {
   if (firstMs == null || secondMs == null) {
-    return false;
+    return true;
   }
 
   return secondMs >= firstMs && secondMs - firstMs <= maxDelayMs;
