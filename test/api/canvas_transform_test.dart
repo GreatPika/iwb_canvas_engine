@@ -88,6 +88,22 @@ void main() {
     expect(() => transform.writeToCanvasTransform(Float64List(15)), throwsArgumentError);
   });
 
+  test('invert does not reapply public coordinate admission', () {
+    final transform = CanvasTransform(
+      a: 1e-4,
+      b: 0,
+      c: 0,
+      d: 1e-4,
+      tx: 2000,
+      ty: 0,
+    );
+
+    final inverse = transform.invert();
+
+    expect(inverse, isNotNull);
+    expect(inverse!.tx, -20000000);
+  });
+
   test('invalid transform construction rejects non-finite values', () {
     expect(
       () => CanvasTransform(a: 1, b: 0, c: 0, d: 1, tx: double.nan, ty: 0),

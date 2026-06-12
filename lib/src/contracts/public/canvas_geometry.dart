@@ -143,7 +143,7 @@ final class CanvasTransform {
 
   CanvasTransform? invert() {
     final determinant = a * d - b * c;
-    if (determinant == 0) {
+    if (!determinant.isFinite || determinant == 0) {
       return null;
     }
 
@@ -151,14 +151,25 @@ final class CanvasTransform {
     final inverseB = -b / determinant;
     final inverseC = -c / determinant;
     final inverseD = a / determinant;
+    final inverseTx = -(inverseA * tx + inverseC * ty);
+    final inverseTy = -(inverseB * tx + inverseD * ty);
 
-    return CanvasTransform(
+    if (!inverseA.isFinite ||
+        !inverseB.isFinite ||
+        !inverseC.isFinite ||
+        !inverseD.isFinite ||
+        !inverseTx.isFinite ||
+        !inverseTy.isFinite) {
+      return null;
+    }
+
+    return CanvasTransform._(
       a: inverseA,
       b: inverseB,
       c: inverseC,
       d: inverseD,
-      tx: -(inverseA * tx + inverseC * ty),
-      ty: -(inverseB * tx + inverseD * ty),
+      tx: inverseTx,
+      ty: inverseTy,
     );
   }
 
