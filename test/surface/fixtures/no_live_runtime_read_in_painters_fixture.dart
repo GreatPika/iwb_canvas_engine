@@ -1,12 +1,53 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
+import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 void main() {
+  _registerBehavioralPainterBoundaryTests();
   _registerPainterBoundaryTests();
   _registerLayerHostBoundaryTests();
   _registerOverlayPainterBoundaryTests();
   _registerMainPainterBoundaryTests();
+}
+
+void _registerBehavioralPainterBoundaryTests() {
+  testWidgets(
+    'surface painters do not invoke live resolver paths during paint',
+    (tester) async {
+      final image = _createImage();
+      final resolver = _CountingResolver(image);
+      final runtime = CanvasRuntime();
+      addTearDown(runtime.dispose);
+      addTearDown(image.dispose);
+      runtime.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(_document()),
+      );
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: CanvasSurface(runtime: runtime, resourceResolver: resolver),
+          ),
+        ),
+      );
+
+      final stateBeforePaint = runtime.state.value;
+      expect(resolver.calls, 1);
+      _paintCurrentOutputs(tester);
+      _paintCurrentOutputs(tester);
+
+      expect(resolver.calls, 1);
+      expect(runtime.state.value, same(stateBeforePaint));
+    },
+  );
 }
 
 void _registerPainterBoundaryTests() {
@@ -84,4 +125,80 @@ void _expectNoLivePaintInputs(String source) {
 
 int _tokenCount(String source, String token) {
   return token.allMatches(source).length;
+}
+
+void _paintCurrentOutputs(WidgetTester tester) {
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+  _mainPainter(tester).paint(canvas, const Size(100, 100));
+  _overlayPainter(tester).paint(canvas, const Size(100, 100));
+  recorder.endRecording().dispose();
+}
+
+MainFramePainter _mainPainter(WidgetTester tester) {
+  final paintHost = tester.widget<CustomPaint>(
+    find.byKey(const ValueKey<String>('iwb_canvas_surface.main_paint_host')),
+  );
+  final painter = paintHost.painter;
+  expect(painter, isA<MainFramePainter>());
+
+  return painter as MainFramePainter;
+}
+
+OverlayFramePainter _overlayPainter(WidgetTester tester) {
+  final paintHost = tester.widget<CustomPaint>(
+    find.byKey(const ValueKey<String>('iwb_canvas_surface.overlay_paint_host')),
+  );
+  final painter = paintHost.painter;
+  expect(painter, isA<OverlayFramePainter>());
+
+  return painter as OverlayFramePainter;
+}
+
+ui.Image _createImage() {
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+  canvas.drawRect(
+    const Rect.fromLTWH(0, 0, 1, 1),
+    ui.Paint()..color = const Color(0xFFFFFFFF),
+  );
+
+  return recorder.endRecording().toImageSync(1, 1);
+}
+
+CanvasDocument _document() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-a'),
+        source: CanvasResourceSource.appKey('asset-a'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-a'),
+            resourceId: CanvasResourceId('resource-a'),
+            size: const Size(10, 10),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+final class _CountingResolver implements CanvasResourceResolver {
+  _CountingResolver(this._image);
+
+  final ui.Image _image;
+  int calls = 0;
+
+  @override
+  ui.Image? resolveImage(CanvasImageResource resource) {
+    calls += 1;
+
+    return _image;
+  }
 }

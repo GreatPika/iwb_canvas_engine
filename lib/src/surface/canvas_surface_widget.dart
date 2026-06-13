@@ -226,6 +226,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   }
 
   void _updateOutputCacheForBuildInputs(_SurfaceFrameBuildInputs inputs) {
+    final previousMainOutput = _outputCache.mainOutput.value;
     _outputCache.updateLocalInputs(
       SurfaceFrameLocalInputKey(
         runtimeKey: inputs.runtime,
@@ -254,6 +255,13 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
         buildMain: () => _buildMainOutput(inputs),
       );
     }
+    if (!identical(previousMainOutput, _outputCache.mainOutput.value)) {
+      _scheduleBudgetFollowUpFrameIfNeeded(
+        runtime: inputs.runtime,
+        port: inputs.port,
+        session: inputs.session,
+      );
+    }
   }
 
   void _handleSurfaceFrame() {
@@ -279,11 +287,6 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       selectionStyle: inputs.selectionStyle,
       gridStyle: inputs.gridStyle,
       bindAssets: const CanvasSurfaceImageBridge().bindAssets(inputs.session),
-    );
-    _scheduleBudgetFollowUpFrameIfNeeded(
-      runtime: inputs.runtime,
-      port: inputs.port,
-      session: inputs.session,
     );
 
     return output;
