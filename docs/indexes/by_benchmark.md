@@ -123,3 +123,11 @@ Benchmark ownership generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_24_benchmarks`
 
+## surface.overlay_preview_route
+
+- Sections: `section_24_benchmarks`
+
+## surface.selected_move_route
+
+- Sections: `section_24_benchmarks`
+

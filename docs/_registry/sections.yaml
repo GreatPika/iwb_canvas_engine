@@ -985,6 +985,8 @@
   - frame.main_capture
   - frame.overlay_capture
   - frame.paint_candidates
+  - surface.overlay_preview_route
+  - surface.selected_move_route
   - resources.resolve_sync
   - resources.resolve_sync_cold_budget
   - resources.mark_dirty

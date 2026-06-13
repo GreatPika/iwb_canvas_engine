@@ -8,10 +8,12 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:characters/characters.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' hide Image;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_codec.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_runtime.dart' as canvas_api;
 import 'package:iwb_canvas_engine/src/codec/schema_v1_decoder.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/document_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
@@ -38,6 +40,9 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/surface/canvas_surface_widget.dart';
+import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
+import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 import '../../tool/bench/src/benchmark_manifest.dart';
 
@@ -49,7 +54,7 @@ void main() {
 }
 
 void _registerProbeProtocolTests() {
-  _helperTest(
+  _widgetHelperTest(
     'benchmark probe executes requested case',
     _probeExecutesRequestedCase,
   );
@@ -138,6 +143,10 @@ void _registerPreparedCaseTests() {
     'runtime case plans prepare spatial state outside action samples',
     _runtimeCasePlansPrepareSpatialStateOutsideActionSamples,
   );
+  _widgetHelperTest(
+    'surface case plans exercise canvas surface delegates',
+    _surfaceCasePlansExerciseCanvasSurfaceDelegates,
+  );
 }
 
 void _helperTest(String description, FutureOr<void> Function() body) {
@@ -145,6 +154,20 @@ void _helperTest(String description, FutureOr<void> Function() body) {
   // reviewable while the test registration stays compact.
   // ignore: missing-test-assertion
   test(description, body);
+}
+
+void _widgetHelperTest(String description, FutureOr<void> Function() body) {
+  // Surface probe cases need a WidgetTester while preserving the existing
+  // machine-readable benchmark probe test name and stdout protocol.
+  // ignore: missing-test-assertion
+  testWidgets(description, (tester) async {
+    _activeWidgetTester = tester;
+    try {
+      await body();
+    } finally {
+      _activeWidgetTester = null;
+    }
+  }, semanticsEnabled: false);
 }
 
 Future<void> _probeExecutesRequestedCase() async {
@@ -877,6 +900,30 @@ Future<void> _runtimeCasePlansPrepareSpatialStateOutsideActionSamples() async {
   );
 }
 
+Future<void> _surfaceCasePlansExerciseCanvasSurfaceDelegates() async {
+  final overlayResult = await _runProbePlan(
+    _fakeOptions(caseId: 'surface.overlay_preview_route'),
+    _casePlan('surface.overlay_preview_route', '1k'),
+  );
+  final selectedResult = await _runProbePlan(
+    _fakeOptions(caseId: 'surface.selected_move_route'),
+    _casePlan('surface.selected_move_route', '1k'),
+  );
+
+  final overlayMetrics = overlayResult['metrics'] as Map<String, Object?>;
+  expect(
+    overlayMetrics,
+    containsPair('overlay_primitive_count', greaterThan(0)),
+  );
+  expect(overlayMetrics, contains('main_output_identity_changes'));
+  expect(overlayMetrics, contains('main_should_repaint_count'));
+
+  final selectedMetrics = selectedResult['metrics'] as Map<String, Object?>;
+  expect(selectedMetrics, containsPair('selected_move_main_signal_count', 1));
+  expect(selectedMetrics, contains('overlay_output_identity_changes'));
+  expect(selectedMetrics, contains('overlay_should_repaint_count'));
+}
+
 List<String> _probeArgs() {
   final encoded = Platform.environment['BENCHMARK_PROBE_ARGS'];
   if (encoded == null) {
@@ -1223,6 +1270,8 @@ final _casePlanFactoriesByDomain =
           _projectionCasePlan(caseId, setupScope, scaleId),
       'spatial': (caseId, setupScope, scaleId, _) =>
           _spatialCasePlan(caseId, setupScope, scaleId),
+      'surface': (caseId, setupScope, scaleId, _) =>
+          _surfaceCasePlan(caseId, setupScope, scaleId),
       'resources': (caseId, setupScope, scaleId, _) =>
           _resourceCasePlan(caseId, setupScope, scaleId),
       'codec': (caseId, setupScope, scaleId, _) =>
@@ -1431,6 +1480,26 @@ _BenchmarkCasePlan _spatialCasePlan(
   };
 }
 
+_BenchmarkCasePlan _surfaceCasePlan(
+  String caseId,
+  String setupScope,
+  String scaleId,
+) {
+  return switch (caseId) {
+    'surface.overlay_preview_route' => _surfaceRoutePlan(
+      setupScope,
+      scaleId,
+      _surfaceOverlayPreviewAction,
+    ),
+    'surface.selected_move_route' => _surfaceRoutePlan(
+      setupScope,
+      scaleId,
+      _surfaceSelectedMoveAction,
+    ),
+    _ => throw StateError('No surface benchmark case plan for $caseId.'),
+  };
+}
+
 _BenchmarkCasePlan _resourceCasePlan(
   String caseId,
   String setupScope,
@@ -1532,6 +1601,197 @@ _BenchmarkCasePlan _runtimeCasePlan(
     },
   );
 }
+
+_BenchmarkCasePlan _surfaceRoutePlan(
+  String setupScope,
+  String scaleId,
+  FutureOr<void> Function(_SurfaceRouteFixture fixture) applyAction,
+) {
+  return _BenchmarkCasePlan(
+    setupScope: setupScope,
+    prepare: () async {
+      final tester = _surfaceWidgetTester();
+      final runtime = _surfaceRuntime(scaleId);
+      try {
+        await tester.pumpWidget(_SurfaceProbeHost(runtime: runtime));
+        final delegates = _surfaceDelegates(tester);
+        return _PreparedProbeFixture(
+          value: _SurfaceRouteFixture(
+            tester: tester,
+            runtime: runtime,
+            beforeMain: delegates.main,
+            beforeOverlay: delegates.overlay,
+          ),
+        );
+      } catch (_) {
+        runtime.dispose();
+        rethrow;
+      }
+    },
+    measure: (fixture) async {
+      final surfaceFixture = fixture as _SurfaceRouteFixture;
+      await applyAction(surfaceFixture);
+      await surfaceFixture.tester.pump();
+      final after = _surfaceDelegates(surfaceFixture.tester);
+      return surfaceFixture.metricsAfter(after);
+    },
+    cleanup: (fixture) async {
+      if (fixture == null) {
+        return;
+      }
+      final surfaceFixture = fixture as _SurfaceRouteFixture;
+      await surfaceFixture.tester.pumpWidget(const SizedBox.shrink());
+      surfaceFixture.runtime.dispose();
+    },
+  );
+}
+
+void _surfaceOverlayPreviewAction(_SurfaceRouteFixture fixture) {
+  _surfaceRootFor(fixture.runtime).replaceInteractionPreview(
+    const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
+  );
+}
+
+void _surfaceSelectedMoveAction(_SurfaceRouteFixture fixture) {
+  fixture.runtime.selection.setSelection([CanvasElementId('rect-a')]);
+  _surfaceRootFor(fixture.runtime).replaceInteractionPreview(
+    const CanvasSelectedMovePreview(delta: Offset(4, 5)),
+  );
+}
+
+WidgetTester? _activeWidgetTester;
+
+WidgetTester _surfaceWidgetTester() {
+  final tester = _activeWidgetTester;
+  if (tester == null) {
+    throw StateError('Surface benchmark cases require a widget test context.');
+  }
+
+  return tester;
+}
+
+final class _SurfaceRouteFixture {
+  const _SurfaceRouteFixture({
+    required this.tester,
+    required this.runtime,
+    required this.beforeMain,
+    required this.beforeOverlay,
+  });
+
+  final WidgetTester tester;
+  final canvas_api.CanvasRuntime runtime;
+  final MainFramePainter beforeMain;
+  final OverlayFramePainter beforeOverlay;
+
+  Map<String, Object?> metricsAfter(_SurfaceDelegates after) {
+    return {
+      'main_output_identity_changes':
+          identical(beforeMain.output, after.main.output) ? 0 : 1,
+      'main_should_repaint_count': after.main.shouldRepaint(beforeMain) ? 1 : 0,
+      'overlay_output_identity_changes':
+          identical(beforeOverlay.output, after.overlay.output) ? 0 : 1,
+      'overlay_should_repaint_count': after.overlay.shouldRepaint(beforeOverlay)
+          ? 1
+          : 0,
+      'overlay_primitive_count':
+          after.overlay.output.overlayPreviewPlan.primitives.length,
+      'selected_move_main_signal_count':
+          after.main.output.repaintSignal.reason == 'selected_move_preview'
+          ? 1
+          : 0,
+    };
+  }
+}
+
+final class _SurfaceDelegates {
+  const _SurfaceDelegates({required this.main, required this.overlay});
+
+  final MainFramePainter main;
+  final OverlayFramePainter overlay;
+}
+
+final class _SurfaceProbeHost extends StatelessWidget {
+  const _SurfaceProbeHost({required this.runtime});
+
+  final canvas_api.CanvasRuntime runtime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: SizedBox(
+        width: 100,
+        height: 100,
+        child: CanvasSurface(runtime: runtime, interactive: false),
+      ),
+    );
+  }
+}
+
+_SurfaceDelegates _surfaceDelegates(WidgetTester tester) {
+  final finder = find.byKey(_surfacePaintHostKey);
+  final matchCount = finder.evaluate().length;
+  if (matchCount != 1) {
+    throw StateError(
+      'Expected exactly one keyed CanvasSurface paint host, found $matchCount.',
+    );
+  }
+  final paintHost = tester.widget<CustomPaint>(finder);
+  final main = paintHost.painter;
+  final overlay = paintHost.foregroundPainter;
+  if (main is! MainFramePainter) {
+    throw StateError(
+      'CanvasSurface paint host did not expose MainFramePainter.',
+    );
+  }
+  if (overlay is! OverlayFramePainter) {
+    throw StateError(
+      'CanvasSurface paint host did not expose OverlayFramePainter.',
+    );
+  }
+
+  return _SurfaceDelegates(main: main, overlay: overlay);
+}
+
+RuntimeRoot _surfaceRootFor(canvas_api.CanvasRuntime runtime) {
+  final root = canvasRuntimeFrameRootForSurface(runtime);
+  if (root == null) {
+    throw StateError('CanvasRuntime frame root is not attached.');
+  }
+
+  return root;
+}
+
+canvas_api.CanvasRuntime _surfaceRuntime(String scaleId) {
+  final runtime = canvas_api.CanvasRuntime();
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_surfaceDocument(scaleId)),
+  );
+
+  return runtime;
+}
+
+CanvasDocument _surfaceDocument(String scaleId) {
+  final elementCount = _scaleElementCount(scaleId);
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: _layerId,
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('rect-a'),
+            size: const Size(10, 10),
+            fillColor: const Color(0xFF336699),
+          ),
+          for (var index = 1; index < elementCount; index++)
+            _rect('surface-$index'),
+        ],
+      ),
+    ],
+  );
+}
+
+const _surfacePaintHostKey = ValueKey<String>('iwb_canvas_surface.paint_host');
 
 final class _RuntimeCaseOptions {
   const _RuntimeCaseOptions({

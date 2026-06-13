@@ -27,6 +27,8 @@ Benchmarks:
 - `frame.main_capture`
 - `frame.overlay_capture`
 - `frame.paint_candidates`
+- `surface.overlay_preview_route`
+- `surface.selected_move_route`
 - `resources.resolve_sync`
 - `resources.resolve_sync_cold_budget`
 - `resources.mark_dirty`
@@ -65,7 +67,7 @@ exact invariants, and profile membership is
 `docs/_registry/benchmarks.yaml`. This section is a checked human projection of
 that manifest.
 
-<!-- BENCHMARK-MANIFEST-FINGERPRINT: d862d7fe -->
+<!-- BENCHMARK-MANIFEST-FINGERPRINT: e911e634 -->
 
 Required benchmark cases:
 
@@ -87,6 +89,8 @@ Required benchmark cases:
 | `frame.main_capture` | 1k/10k/50k/100k | action_only | normal_spread | avg/P95/max, alloc bytes |
 | `frame.overlay_capture` | active previews | action_only | active_preview | avg/P95/max, alloc bytes |
 | `frame.paint_candidates` | 1k/10k/50k/100k | action_only | normal_spread | candidate count, offscreen-layer/saveLayer count |
+| `surface.overlay_preview_route` | 1k/10k/50k | action_only | normal_spread | main route counters, overlay primitive count, avg/P95/max |
+| `surface.selected_move_route` | 1k/10k/50k | action_only | normal_spread | overlay route counters, selected move signal count, avg/P95/max |
 | `resources.resolve_sync` | 1k resources | action_only | resource_set | SurfaceResourceSession resolver calls, session cache hits, repaint count |
 | `resources.resolve_sync_cold_budget` | 1k uncached image records | action_only | resource_set | session budget resolver calls <= 128, budget placeholders, throttled repaint count |
 | `resources.mark_dirty` | 1k resources | action_only | resource_set | repaint count, target session cache invalidation cost |

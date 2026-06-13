@@ -517,6 +517,50 @@ cases:
       - {id: "10k", label: "10k", profiles: [dry_run, release]}
       - {id: "50k", label: "50k", profiles: [dry_run, release]}
       - {id: "100k", label: "100k", profiles: [dry_run, release]}
+  - id: surface.overlay_preview_route
+    baseline_policy: absolute_budget
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
+    docs_metrics_label: "main route counters, overlay primitive count, avg/P95/max"
+    required_metrics: [main_output_identity_changes, main_should_repaint_count, overlay_output_identity_changes, overlay_should_repaint_count, overlay_primitive_count, avg_us, p95_us, max_us]
+    exact_invariants:
+      - {name: main_output_identity_changes_no_positive_drift, metric: main_output_identity_changes}
+      - {name: main_should_repaint_count_no_positive_drift, metric: main_should_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: surface.selected_move_route
+    baseline_policy: absolute_budget
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
+    docs_metrics_label: "overlay route counters, selected move signal count, avg/P95/max"
+    required_metrics: [overlay_output_identity_changes, overlay_should_repaint_count, main_output_identity_changes, main_should_repaint_count, selected_move_main_signal_count, avg_us, p95_us, max_us]
+    exact_invariants:
+      - {name: overlay_output_identity_changes_no_positive_drift, metric: overlay_output_identity_changes}
+      - {name: overlay_should_repaint_count_no_positive_drift, metric: overlay_should_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
   - id: resources.resolve_sync
     baseline_policy: absolute_budget
     budget_classes: [resource_budgeted, exact_invariant]

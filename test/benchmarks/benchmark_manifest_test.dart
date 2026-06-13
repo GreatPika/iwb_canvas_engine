@@ -14,21 +14,13 @@ void main() {
 
       expect(manifest.manifestVersion, benchmarkManifestVersion);
       expect(manifest.toolSchemaVersion, benchmarkToolSchemaVersion);
-      expect(manifest.cases, hasLength(30));
+      expect(manifest.cases, hasLength(32));
       expect(manifest.profiles.map((profile) => profile.id), [
         'dry_run',
         'smoke',
         'release',
       ]);
       expect(manifest.casesById.keys, _requiredCaseIds);
-      expect(
-        manifest.casesById,
-        isNot(contains('surface.overlay_preview_route')),
-      );
-      expect(
-        manifest.casesById,
-        isNot(contains('surface.selected_move_route')),
-      );
       expect(
         manifest.casesById['diagnostics.disabled_pointer']!.exactInvariants.map(
           (invariant) => invariant.name,
@@ -303,10 +295,8 @@ void main() {
       );
     });
 
-    test('accepts fixture-only surface route case policy', () {
-      final manifest = BenchmarkManifest.parse(
-        _manifestWithSurfaceRouteCases(),
-      );
+    test('locks surface route case policy', () {
+      final manifest = BenchmarkManifest.load();
       final overlay = manifest.casesById['surface.overlay_preview_route']!;
       final selected = manifest.casesById['surface.selected_move_route']!;
 
@@ -548,57 +538,6 @@ void main() {
 
 String _manifestText() => File(benchmarkManifestPath).readAsStringSync();
 
-String _manifestWithSurfaceRouteCases() {
-  return _manifestText() + _surfaceRouteCaseYaml;
-}
-
-const _surfaceRouteCaseYaml = '''
-  - id: surface.overlay_preview_route
-    baseline_policy: absolute_budget
-    budget_classes: [hot_input, exact_invariant]
-    memory_scope: hot_or_query
-    measurement_boundary:
-      timed_scope: action_only
-      setup_scope: per_sample_prepared_fixture
-      teardown_scope: excluded
-      primary_timing: action
-      primary_memory: action
-      setup_metrics: [setup_us]
-      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
-    fixture_shape: normal_spread
-    docs_metrics_label: "main route counters, overlay primitive count, avg/P95/max"
-    required_metrics: [main_output_identity_changes, main_should_repaint_count, overlay_output_identity_changes, overlay_should_repaint_count, overlay_primitive_count, avg_us, p95_us, max_us]
-    exact_invariants:
-      - {name: main_output_identity_changes_no_positive_drift, metric: main_output_identity_changes}
-      - {name: main_should_repaint_count_no_positive_drift, metric: main_should_repaint_count}
-    scales:
-      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
-      - {id: "10k", label: "10k", profiles: [dry_run, release]}
-      - {id: "50k", label: "50k", profiles: [dry_run, release]}
-  - id: surface.selected_move_route
-    baseline_policy: absolute_budget
-    budget_classes: [hot_input, exact_invariant]
-    memory_scope: hot_or_query
-    measurement_boundary:
-      timed_scope: action_only
-      setup_scope: per_sample_prepared_fixture
-      teardown_scope: excluded
-      primary_timing: action
-      primary_memory: action
-      setup_metrics: [setup_us]
-      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
-    fixture_shape: normal_spread
-    docs_metrics_label: "overlay route counters, selected move signal count, avg/P95/max"
-    required_metrics: [overlay_output_identity_changes, overlay_should_repaint_count, main_output_identity_changes, main_should_repaint_count, selected_move_main_signal_count, avg_us, p95_us, max_us]
-    exact_invariants:
-      - {name: overlay_output_identity_changes_no_positive_drift, metric: overlay_output_identity_changes}
-      - {name: overlay_should_repaint_count_no_positive_drift, metric: overlay_should_repaint_count}
-    scales:
-      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
-      - {id: "10k", label: "10k", profiles: [dry_run, release]}
-      - {id: "50k", label: "50k", profiles: [dry_run, release]}
-''';
-
 Map<String, Map<String, Object?>> _budgetCapsById(BenchmarkManifest manifest) {
   return {
     for (final budget in manifest.budgetClasses) budget.id: budget.absoluteCaps,
@@ -736,6 +675,8 @@ const _requiredCaseIds = [
   'frame.main_capture',
   'frame.overlay_capture',
   'frame.paint_candidates',
+  'surface.overlay_preview_route',
+  'surface.selected_move_route',
   'resources.resolve_sync',
   'resources.resolve_sync_cold_budget',
   'resources.mark_dirty',
@@ -919,6 +860,8 @@ const _expectedCaseBoundaryFingerprints = [
   'frame.main_capture|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
   'frame.overlay_capture|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|active_preview',
   'frame.paint_candidates|action_only|per_run_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'surface.overlay_preview_route|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+  'surface.selected_move_route|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
   'resources.resolve_sync|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
   'resources.resolve_sync_cold_budget|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
   'resources.mark_dirty|action_only|per_sample_prepared_fixture|excluded|action|action|setup_us|setup_allocation_bytes,setup_rss_delta_bytes|resource_set',
@@ -952,6 +895,8 @@ const _expectedCasePolicyFingerprints = [
   'frame.main_capture|reference_comparison|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
   'frame.overlay_capture|absolute_budget|frame_capture,allocation_budget|frame_or_resource|avg_us,p95_us,max_us,allocation_bytes||active_previews:dry_run,smoke,release',
   'frame.paint_candidates|absolute_budget|frame_capture,allocation_budget,exact_invariant|frame_or_resource|candidate_count,offscreen_layer_count,save_layer_count|save_layer_count_zero:save_layer_count:0:,offscreen_layer_count_zero:offscreen_layer_count:0:|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release;100k:dry_run,release',
+  'surface.overlay_preview_route|absolute_budget|hot_input,exact_invariant|hot_or_query|main_output_identity_changes,main_should_repaint_count,overlay_output_identity_changes,overlay_should_repaint_count,overlay_primitive_count,avg_us,p95_us,max_us|main_output_identity_changes_no_positive_drift:main_output_identity_changes::,main_should_repaint_count_no_positive_drift:main_should_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
+  'surface.selected_move_route|absolute_budget|hot_input,exact_invariant|hot_or_query|overlay_output_identity_changes,overlay_should_repaint_count,main_output_identity_changes,main_should_repaint_count,selected_move_main_signal_count,avg_us,p95_us,max_us|overlay_output_identity_changes_no_positive_drift:overlay_output_identity_changes::,overlay_should_repaint_count_no_positive_drift:overlay_should_repaint_count::|1k:dry_run,smoke,release;10k:dry_run,release;50k:dry_run,release',
   'resources.resolve_sync|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|surface_resource_session_resolver_calls,session_cache_hits,repaint_count|resolver_calls_bounded:surface_resource_session_resolver_calls::|1k_resources:dry_run,smoke,release',
   'resources.resolve_sync_cold_budget|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|session_budget_resolver_calls,budget_placeholders,throttled_repaint_count|session_budget_resolver_calls_lte_128:session_budget_resolver_calls::128|1k_uncached_image_records:dry_run,smoke,release',
   'resources.mark_dirty|absolute_budget|resource_budgeted,exact_invariant|frame_or_resource|repaint_count,target_session_cache_invalidation_cost|target_session_cache_invalidation_bounded:target_session_cache_invalidation_cost::|1k_resources:dry_run,smoke,release',
