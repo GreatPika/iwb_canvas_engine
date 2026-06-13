@@ -1495,6 +1495,7 @@ _BenchmarkCasePlan _surfaceCasePlan(
       setupScope,
       scaleId,
       _surfaceSelectedMoveAction,
+      prepareRuntime: _surfaceSelectRectA,
     ),
     _ => throw StateError('No surface benchmark case plan for $caseId.'),
   };
@@ -1605,29 +1606,12 @@ _BenchmarkCasePlan _runtimeCasePlan(
 _BenchmarkCasePlan _surfaceRoutePlan(
   String setupScope,
   String scaleId,
-  FutureOr<void> Function(_SurfaceRouteFixture fixture) applyAction,
-) {
+  FutureOr<void> Function(_SurfaceRouteFixture fixture) applyAction, {
+  void Function(canvas_api.CanvasRuntime runtime)? prepareRuntime,
+}) {
   return _BenchmarkCasePlan(
     setupScope: setupScope,
-    prepare: () async {
-      final tester = _surfaceWidgetTester();
-      final runtime = _surfaceRuntime(scaleId);
-      try {
-        await tester.pumpWidget(_SurfaceProbeHost(runtime: runtime));
-        final delegates = _surfaceDelegates(tester);
-        return _PreparedProbeFixture(
-          value: _SurfaceRouteFixture(
-            tester: tester,
-            runtime: runtime,
-            beforeMain: delegates.main,
-            beforeOverlay: delegates.overlay,
-          ),
-        );
-      } catch (_) {
-        runtime.dispose();
-        rethrow;
-      }
-    },
+    prepare: () => _prepareSurfaceRouteFixture(scaleId, prepareRuntime),
     measure: (fixture) async {
       final surfaceFixture = fixture as _SurfaceRouteFixture;
       await applyAction(surfaceFixture);
@@ -1646,14 +1630,41 @@ _BenchmarkCasePlan _surfaceRoutePlan(
   );
 }
 
+Future<_PreparedProbeFixture> _prepareSurfaceRouteFixture(
+  String scaleId,
+  void Function(canvas_api.CanvasRuntime runtime)? prepareRuntime,
+) async {
+  final tester = _surfaceWidgetTester();
+  final runtime = _surfaceRuntime(scaleId);
+  try {
+    prepareRuntime?.call(runtime);
+    await tester.pumpWidget(_SurfaceProbeHost(runtime: runtime));
+    final delegates = _surfaceDelegates(tester);
+    return _PreparedProbeFixture(
+      value: _SurfaceRouteFixture(
+        tester: tester,
+        runtime: runtime,
+        beforeMain: delegates.main,
+        beforeOverlay: delegates.overlay,
+      ),
+    );
+  } catch (_) {
+    runtime.dispose();
+    rethrow;
+  }
+}
+
 void _surfaceOverlayPreviewAction(_SurfaceRouteFixture fixture) {
   _surfaceRootFor(fixture.runtime).replaceInteractionPreview(
     const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
   );
 }
 
+void _surfaceSelectRectA(canvas_api.CanvasRuntime runtime) {
+  runtime.selection.setSelection([CanvasElementId('rect-a')]);
+}
+
 void _surfaceSelectedMoveAction(_SurfaceRouteFixture fixture) {
-  fixture.runtime.selection.setSelection([CanvasElementId('rect-a')]);
   _surfaceRootFor(fixture.runtime).replaceInteractionPreview(
     const CanvasSelectedMovePreview(delta: Offset(4, 5)),
   );
