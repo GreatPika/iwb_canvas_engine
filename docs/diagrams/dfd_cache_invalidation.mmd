@@ -2,7 +2,7 @@
 flowchart LR
 
   App["Application"]
-  Surface["CanvasSurface\npaint and repaint host"]
+  Surface["CanvasSurface\nactive surface listener"]
 
   subgraph Sources["Invalidation sources"]
     Touched["TouchedSet\nadded/removed/updated/transformed ids,\ngeometry/element visual changed ids,\nresource descriptor/visual ids,\nlayer order, background layer,\nselection, persisted camera, background, grid,\npalette, documentReplaced"]
@@ -54,6 +54,12 @@ flowchart LR
     EpochPublicRevision["epoch"]
   end
 
+  subgraph SurfaceBridge["Runtime-surface bridge"]
+    SurfaceFrame["CanvasRuntimeSurfaceFrame\ncurrent state + generation"]
+    SurfaceTarget["CanvasSurfaceRepaintTarget\nmainCanvas / overlayCanvas / reason"]
+    FrameSignalBoundary["FrameRepaintSignal\noutput metadata only,\nnot pre-output scheduling"]
+  end
+
   subgraph Selection["SelectionKernel"]
     SelectionEffect["Selection effect\nset, prune, clear, normalize"]
     SelectionRevision["selectionRevision"]
@@ -91,6 +97,14 @@ flowchart LR
     MainRepaint["Main repaint bus"]
     OverlayRepaint["Overlay repaint bus\npreview cleanup, load success, view camera"]
     PreviewSnapshot["PreviewStateSnapshot\npreviewRevision"]
+  end
+
+  subgraph SurfaceCache["CanvasSurface transient output cache"]
+    OutputCache["SurfaceFrameOutputCache\npre-output layer routing"]
+    MainOutputNotifier["Main layer output notifier"]
+    OverlayOutputNotifier["Overlay layer output notifier"]
+    MainPaintHost["Main RepaintBoundary + CustomPaint"]
+    OverlayPaintHost["Overlay RepaintBoundary + CustomPaint"]
   end
 
   subgraph Forbidden["Forbidden effects"]
@@ -166,6 +180,7 @@ flowchart LR
   ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
+  ResourceVisualRevision -->|"main-only pre-output target"| SurfaceTarget
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview
   ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
@@ -186,6 +201,7 @@ flowchart LR
   ViewCameraRevision -->|"public runtime state domain"| RuntimeStateRevision
   ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
   ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
+  ViewCameraDispatch -->|"both-layer pre-output target"| SurfaceTarget
   InteractionConfigCall -->|"interaction settings changed"| InteractionConfigDispatch
   InteractionConfigDispatch -->|"increment public interaction revision"| InteractionPublicRevision
   InteractionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
@@ -207,6 +223,16 @@ flowchart LR
   PreviewSnapshot -->|"overlay preview\npreviewRevision + overlay repaint"| OverlayRepaint
   PreviewSnapshot -->|"selected move preview\npreviewRevision + main repaint"| MainRepaint
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
+  PreviewSnapshot -->|"preview-owned target meaning\naggregated by RuntimeRoot"| SurfaceTarget
+  LoadSuccess -->|"both-layer pre-output target"| SurfaceTarget
 
-  MainRepaint --> Surface
-  OverlayRepaint --> Surface
+  MainRepaint -.->|"output metadata after build"| FrameSignalBoundary
+  OverlayRepaint -.->|"output metadata after build"| FrameSignalBoundary
+  RuntimeStateRevision -->|"current runtime state"| SurfaceFrame
+  SurfaceTarget -->|"targeted invalidation before output build"| SurfaceFrame
+  SurfaceFrame -->|"active token listener"| Surface
+  Surface -->|"apply target + local input keys"| OutputCache
+  OutputCache -->|"build/publish if main targeted"| MainOutputNotifier
+  OutputCache -->|"build/publish if overlay targeted"| OverlayOutputNotifier
+  MainOutputNotifier --> MainPaintHost
+  OverlayOutputNotifier --> OverlayPaintHost

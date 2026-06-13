@@ -772,8 +772,24 @@ behavioral tests, and the required guardrail list remains owned by
   committed document, selection, resources, mode, or actions.
 - `test/surface/widget_paint_test.dart` and
   `test/surface/surface_camera_frame_output_test.dart` prove the public surface
-  paint host remains stable while frame-owned main and overlay outputs render
-  through surface-owned painter adapters.
+  wrapper remains stable while frame-owned main and overlay outputs render
+  through independently repaintable surface-owned layer hosts.
+- `test/api/runtime_surface_frame_bridge_test.dart` proves the internal
+  runtime-surface bridge publishes `CanvasRuntimeSurfaceFrame` values with
+  runtime-owned `CanvasSurfaceRepaintTarget` values before output construction,
+  maps preview, selection, resource, load, camera, and fallback paths to the
+  expected main/overlay flags, preserves the public runtime state value, and
+  does not expose or import `FrameRepaintSignal`.
+- `test/surface/surface_frame_output_cache_test.dart` proves
+  `SurfaceFrameOutputCache` calls only the targeted main and/or overlay output
+  builders, maps local surface inputs to layer invalidation, leaves untouched
+  layer output identity and notifier state stable, and publishes no notifier
+  update until the targeted build succeeds.
+- `test/surface/widget_paint_test.dart` proves real `CanvasSurface` bootstrap,
+  local input, runtime swap, resource dirty, resolver replacement, budget
+  follow-up, and inactive/rejected attach paths route through the surface
+  listener, frame builders, layer output notifiers, and render paint marks
+  without using painter-owned output construction.
 - `test/smoke/public_incremental_smoke_test.dart` appends the surface root-barrel
   public consumer scenario named
   `public consumer uses CanvasSurface pointer and resource bridge`, covering
@@ -816,7 +832,9 @@ behavioral tests, and the required guardrail list remains owned by
 #### `test/surface/no_live_runtime_read_in_painters_test.dart`
 - proves surface-owned `MainFramePainter` and `OverlayFramePainter` consume
   immutable frame paint outputs and do not read runtime, store, document
-  projection, resolver, or session state during paint.
+  projection, resolver, or session state during paint;
+- proves main and overlay painters are installed below distinct repaint
+  boundaries and receive output through layer output listenables.
 
 #### `test/surface/overlay_drawable_policy_test.dart`
 - proves the surface-owned overlay painter renders one-point stroke previews and
@@ -960,9 +978,9 @@ Current implemented proof:
   through `RenderPrimitiveCacheSnapshot` for painter consumption.
 
 #### `test/surface/surface_camera_frame_output_test.dart`
-- proves the public `CanvasSurface` passive frame path rebuilds captured frame
-  output after runtime camera pan while preserving ordinary paint plan identity
-  and capturing the runtime preview source.
+- proves the public `CanvasSurface` passive frame path rebuilds both captured
+  layer outputs after runtime camera pan while preserving ordinary paint plan
+  identity and capturing the runtime preview source.
 
 #### `test/guardrails/selection_boundary_checks_test.dart`
 - proves InteractionEngine does not import concrete SelectionKernel or

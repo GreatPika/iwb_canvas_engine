@@ -181,6 +181,17 @@ It starts the frame resource pass before image resolution so resolver budgets,
 same-frame null suppression, and budget follow-up throttles belong to the
 current main paint frame.
 
+Surface repaint routing is split before frame output construction. `RuntimeRoot`
+aggregates runtime-owned repaint intent into the internal
+`CanvasSurfaceRepaintTarget` published through the runtime-surface bridge, and
+`CanvasSurface` consumes that target to decide whether to rebuild main output,
+overlay output, or both. `FrameRepaintSignal` remains frame-owned metadata on
+immutable frame outputs after they have been built; it is not the pre-output
+surface scheduling source. Main and overlay painters consume only their layer
+output listenables and immutable output values, so painter repaint remains
+output-only and never reads runtime, store, resolver, session, or public
+document state during paint.
+
 Overlay preview primitives are immutable frame output admitted from
 `CapturedOverlayFrame`. Marquee primitives carry the captured
 `CanvasSelectionStyle` values needed for stroke and fill output; the overlay

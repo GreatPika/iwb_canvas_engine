@@ -275,7 +275,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, repaint signals, and bounded frame cache orchestration.
+      - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, FrameRepaintSignal output metadata, and bounded frame cache orchestration; runtime/surface pre-output invalidation targets are owned outside frame.
     actual:
       declarations:
         - FrameEngine
@@ -341,11 +341,15 @@ nodes:
     coverageScope: publicSurfaces
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/contracts/public_api_v1.md
     evidence:
-      - Flutter widget integration is current public surface scope.
+      - Flutter widget integration owns CanvasSurface lifecycle, internal runtime-surface listener attachment, SurfaceFrameOutputCache, local invalidation keys, output notifier publication, and independent main/overlay paint hosts; it consumes runtime-owned CanvasSurfaceRepaintTarget without owning interaction repaint policy or FrameRepaintSignal metadata.
     actual:
       declarations:
         - CanvasSurface
+        - SurfaceFrameOutputCache
+        - LayerPaintHost
   - id: release.measurement
     label: Measurement and release alignment
     kind: measurement_scope
@@ -789,7 +793,7 @@ edges:
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
     evidence:
-      - Flutter surface integration reaches runtime behavior through CanvasRuntime and the narrow runtime-surface bridge, not RuntimeRoot.
+      - Flutter surface integration reaches runtime behavior and pre-output repaint targets through CanvasRuntime and the narrow runtime-surface bridge, not RuntimeRoot.
     actual:
       imports:
         - lib/src/api/canvas_runtime.dart

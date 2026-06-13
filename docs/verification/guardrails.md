@@ -255,6 +255,22 @@ Mandatory guardrails:
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass finite pointer samples or terminal cleanup input into runtime routing without owning world normalization |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 
+Surface repaint routing is currently enforced by focused API and surface tests
+rather than new guardrail runner ids. `test/api/runtime_surface_frame_bridge_test.dart`
+proves runtime/surface pre-output invalidation uses
+`CanvasSurfaceRepaintTarget` without importing or exposing `FrameRepaintSignal`.
+`test/surface/surface_frame_output_cache_test.dart` proves
+`SurfaceFrameOutputCache` owns targeted main/overlay output rebuilds, local
+surface invalidation mapping, output identity stability, and all-or-nothing
+notifier publication. `test/surface/no_live_runtime_read_in_painters_test.dart`
+proves painters consume immutable layer outputs through repaint listenables and
+do not read runtime, store, public document projection, resolver, or session
+state during paint. `test/surface/widget_paint_test.dart` proves the stable
+public surface wrapper contains independent main and overlay paint hosts, and
+targeted layer output notifier dispatch marks only the affected paint layer.
+These proof surfaces must not be invoked through `--guardrail=<id>` unless a
+future implementation contract adds runner metadata under `tool/guardrails/**`.
+
 `api.integration_surface_complete` is executable only when the guardrail runner
 or its delegated proof compiles
 `test/api_contract/fixtures/public_integration_compile_fixture.dart` and

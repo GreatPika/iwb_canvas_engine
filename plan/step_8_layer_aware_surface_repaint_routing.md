@@ -124,7 +124,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Publish runtime-owned surface frame targets
+### [x] Unit 1: Publish runtime-owned surface frame targets
 
 Owner: `lib/src/runtime/runtime_root.dart`; `lib/src/api/canvas_runtime_surface_bridge.dart`; `lib/src/contracts/internal/commit_delivery.dart`; focused runtime/API tests under `test/runtime/**` or `test/api/**`
 
@@ -136,7 +136,7 @@ Completion Check: Focused runtime/API tests observe the internal surface-frame s
 
 Depends On: none
 
-### [ ] Unit 2: Add the surface output cache owner
+### [x] Unit 2: Add the surface output cache owner
 
 Owner: `lib/src/surface/surface_frame_output_cache.dart`; supporting tests under `test/surface/**`
 
@@ -148,7 +148,7 @@ Completion Check: Cache unit tests with counting main/overlay builders prove ove
 
 Depends On: Unit 1
 
-### [ ] Unit 3: Migrate CanvasSurface and painters to independent layer repaint
+### [x] Unit 3: Migrate CanvasSurface and painters to independent layer repaint
 
 Owner: `lib/src/surface/canvas_surface_widget.dart`; `lib/src/surface/main_painter.dart`; `lib/src/surface/overlay_painter.dart`; supporting surface widget and painter tests under `test/surface/**`
 
@@ -160,7 +160,7 @@ Completion Check: Surface widget tests pump the real public `CanvasSurface` and 
 
 Depends On: Unit 2
 
-### [ ] Unit 4: Prove lifecycle, local invalidation, resource, and camera behavior
+### [x] Unit 4: Prove lifecycle, local invalidation, resource, and camera behavior
 
 Owner: `lib/src/surface/canvas_surface_widget.dart`; `lib/src/resources/surface_resource_session.dart`; existing resource/runtime/surface tests under `test/surface/**`, `test/resources/**`, or `test/runtime/**`
 
@@ -172,7 +172,7 @@ Completion Check: Lifecycle tests prove a rejected second active `CanvasSurface`
 
 Depends On: Unit 3
 
-### [ ] Unit 5: Update source-of-truth docs, diagrams, and verification registries
+### [x] Unit 5: Update source-of-truth docs, diagrams, and verification registries
 
 Owner: `docs/contracts/frame_rendering.md`; `docs/contracts/public_api_v1.md`; `docs/architecture/01_runtime_ownership.md`; `docs/architecture/architecture_graph.yaml`; durable diagrams under `docs/diagrams/**` when their meaning changes; `docs/verification/tests.md`; `docs/verification/guardrails.md`; generated documentation indexes when affected
 

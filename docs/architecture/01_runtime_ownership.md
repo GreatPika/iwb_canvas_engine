@@ -63,6 +63,7 @@ Runtime responsibilities are split as follows:
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | own app domain assets, resolved image references, or committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | own committed descriptors, public runtime state, or Flutter widget lifecycle |
+| CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or read runtime/store/session state from painters |
 | SpatialKernel | coarse candidate lookup, outlier policy | be the document source of truth |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | depend on Flutter widgets or gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | add a public stream without an API decision |
@@ -73,6 +74,17 @@ after accepted document, selection, preview, view camera, resource visual,
 interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
+
+Runtime-to-surface repaint routing has a separate internal surface-frame seam.
+`RuntimeRoot` aggregates operation, interaction, camera, resource, load, and
+fallback repaint intent into `CanvasSurfaceRepaintTarget` before Flutter surface
+output construction. The runtime-surface bridge publishes that target with the
+current runtime state for the active surface token only. `CanvasSurface` owns the
+transient `SurfaceFrameOutputCache`, local input invalidation mapping, output
+notifier publication, and the independent main/overlay paint hosts. `FrameEngine`
+still owns frame output construction and `FrameRepaintSignal` metadata inside
+immutable main/overlay outputs; that frame-owned signal must not be read as
+ownership of pre-output surface invalidation scheduling.
 
 Frame, cache, lifecycle, and public edit diagrams use this public runtime state
 model: `CanvasRuntime.state` carries runtime-visible revisions, runtime view

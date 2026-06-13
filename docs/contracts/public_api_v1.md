@@ -534,6 +534,10 @@ Surface contract:
   StateError('CanvasRuntime already has an active CanvasSurface.') before
   pointer routing, paint, repaint-listener, or resourceResolver attachment side
   effects;
+- successful attach installs the surface's internal runtime repaint listener,
+  output cache, resource session, and stable main/overlay paint hosts only after
+  the active-surface admission succeeds; these internals do not change the public
+  constructor or any public DTO shape;
 - after the active CanvasSurface detaches, another CanvasSurface may attach to
   the same CanvasRuntime;
 - interactive=false disables pointer routing on CanvasSurface only;
@@ -566,8 +570,10 @@ Surface contract:
   cache, pointer routing, paint, or repaint-listener side effects;
 - replacing resourceResolver on the active CanvasSurface refreshes that
   surface's session generation and prevents old resolver results from being
-  reused;
-- detach, dispose, or runtime swap drops the `SurfaceResourceSession`;
+  reused; the refresh is a surface-local main-layer invalidation and does not
+  require public runtime state or overlay output changes;
+- detach, dispose, or runtime swap removes the internal repaint listener, drops
+  cached layer outputs, and drops the `SurfaceResourceSession`;
 - CanvasSurface does not own or dispose app-provided ui.Image instances.
 ```
 
@@ -1982,7 +1988,8 @@ v1 resource rules:
 - markResourceDirty invalidates active session image entries for the target
   resource but does not mutate document;
 - markResourceDirty publishes main repaint intent; an attached CanvasSurface
-  observes it if present;
+  observes it if present and rebuilds only main-layer output unless another
+  runtime or local surface invalidation target also requires overlay work;
 - resolver must return a stable visual result for the same resource descriptor
   unless the app calls markResourceDirty/markAllResourcesDirty.
 ```
