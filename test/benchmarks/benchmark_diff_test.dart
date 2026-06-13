@@ -1019,6 +1019,27 @@ void main() {
         ).failures,
         isEmpty,
       );
+
+      final canonicalManifest = BenchmarkManifest.load();
+      final canonicalBaseline = _releaseReport(canonicalManifest);
+      final boundedInvariantDrift = _clone(canonicalBaseline);
+      _metrics(
+        boundedInvariantDrift,
+        'input.marquee_preview',
+        '1k',
+      )['overlay_repaint_count'] = 2;
+      expect(
+        diffBenchmarkReports(
+          manifest: canonicalManifest,
+          profile: 'release',
+          baselineJson: canonicalBaseline,
+          currentJson: boundedInvariantDrift,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
+        ).failures.join('\n'),
+        isNot(contains('overlay_repaint_count positive drift')),
+      );
     });
 
     test('does not apply first-baseline memory caps during ordinary diff', () {

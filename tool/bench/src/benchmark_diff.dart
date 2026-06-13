@@ -1568,7 +1568,7 @@ List<String> _validateExactInvariantRegression({
 }) {
   final failures = <String>[];
   for (final invariant in benchmarkCase.exactInvariants) {
-    if (invariant.expected != null || invariant.max != null) {
+    if (!_disallowsPositiveDrift(invariant)) {
       continue;
     }
     final baselineValue = _metricNumber(baseline, invariant.metric);
@@ -1584,6 +1584,11 @@ List<String> _validateExactInvariantRegression({
   }
   return failures;
 }
+
+bool _disallowsPositiveDrift(BenchmarkExactInvariant invariant) =>
+    invariant.name.endsWith('_no_positive_drift') &&
+    invariant.expected == null &&
+    invariant.max == null;
 
 // Regression failure formatting keeps the metric-specific caps and floors next
 // to the emitted message so threshold mistakes are reviewable in one place.
