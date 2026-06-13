@@ -183,7 +183,7 @@ flowchart LR
   ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
-  ResourceVisualRevision -->|"main-only resource target"| SurfaceTargetAggregation
+  ResourceVisualRevision -->|"resource repaint facts"| SurfaceTargetAggregation
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview
   ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
@@ -191,14 +191,14 @@ flowchart LR
   SelectionEffect -->|"membership changed"| SelectionRevision
   SelectionRevision -->|"public selection domain"| SelectionPublicRevision
   SelectionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
-  SelectionRevision -->|"main-only selection target"| SurfaceTargetAggregation
+  SelectionRevision -->|"selection repaint facts"| SurfaceTargetAggregation
   StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
-  StructuralRevision -->|"main-only structure target"| SurfaceTargetAggregation
+  StructuralRevision -->|"structure repaint facts"| SurfaceTargetAggregation
   BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
-  BoundsRevision -->|"main-only commit target"| SurfaceTargetAggregation
+  BoundsRevision -->|"bounds repaint facts"| SurfaceTargetAggregation
   BoundsRevision -->|"selection bounds changed"| SelectionDecorationInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
-  ElementVisualRevision -->|"main-only visual target"| SurfaceTargetAggregation
+  ElementVisualRevision -->|"visual repaint facts"| SurfaceTargetAggregation
   SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
   StructuralRevision -->|"selected chrome family may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
@@ -208,7 +208,7 @@ flowchart LR
   ViewCameraRevision -->|"public runtime state domain"| RuntimeStateRevision
   ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
   ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
-  ViewCameraDispatch -->|"both-layer view-camera target"| SurfaceTargetAggregation
+  ViewCameraDispatch -->|"view-camera repaint facts"| SurfaceTargetAggregation
   InteractionConfigCall -->|"interaction settings changed"| InteractionConfigDispatch
   InteractionConfigDispatch -->|"increment public interaction revision"| InteractionPublicRevision
   InteractionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
@@ -217,9 +217,9 @@ flowchart LR
   InteractionConfigDispatch -->|"pending preview style or cleanup target"| RuntimeRepaintEffects
 
   BackgroundRevision -->|"background document metadata only"| StaticFrameInvalidation
-  BackgroundRevision -->|"main-only background target"| SurfaceTargetAggregation
+  BackgroundRevision -->|"background repaint facts"| SurfaceTargetAggregation
   GridRevision -->|"grid document metadata only"| StaticFrameInvalidation
-  GridRevision -->|"main-only grid target"| SurfaceTargetAggregation
+  GridRevision -->|"grid repaint facts"| SurfaceTargetAggregation
   ElementVisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
   SelectionDecorationInvalidation -->|"selection UI changed"| MainRepaint
@@ -233,8 +233,8 @@ flowchart LR
   PreviewSnapshot -->|"overlay preview\npreviewRevision + overlay repaint"| OverlayRepaint
   PreviewSnapshot -->|"selected move preview\npreviewRevision + main repaint"| MainRepaint
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
-  PreviewSnapshot -->|"preview-owned target meaning"| SurfaceTargetAggregation
-  LoadSuccess -->|"both-layer load target"| SurfaceTargetAggregation
+  PreviewSnapshot -->|"preview repaint facts"| SurfaceTargetAggregation
+  LoadSuccess -->|"load repaint facts"| SurfaceTargetAggregation
   RuntimeRepaintEffects -->|"classified runtime repaint target"| SurfaceTargetAggregation
   SurfaceTargetAggregation -->|"runtime-owned target"| SurfaceTarget
 

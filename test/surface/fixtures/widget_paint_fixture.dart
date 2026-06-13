@@ -15,6 +15,17 @@ import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 void main() {
+  test('CanvasSurface layer host isolates repaint boundaries', () {
+    final source = File(
+      'lib/src/surface/layer_paint_host.dart',
+    ).readAsStringSync();
+
+    expect(_tokenCount(source, 'RepaintBoundary('), 2);
+    expect(_tokenCount(source, 'CustomPaint('), 2);
+    expect(source, contains('iwb_canvas_surface.main_paint_host'));
+    expect(source, contains('iwb_canvas_surface.overlay_paint_host'));
+  });
+
   testWidgets('CanvasSurface paints empty and resource-free documents', (
     tester,
   ) async {
@@ -929,6 +940,10 @@ void _expectPaintHost() {
   expect(_paintHosts(), findsOneWidget);
   expect(_mainPaintHosts(), findsOneWidget);
   expect(_overlayPaintHosts(), findsOneWidget);
+}
+
+int _tokenCount(String source, String token) {
+  return token.allMatches(source).length;
 }
 
 Finder _paintHosts() {

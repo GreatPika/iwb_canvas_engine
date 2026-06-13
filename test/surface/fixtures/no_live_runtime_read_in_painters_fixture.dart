@@ -10,7 +10,6 @@ import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 void main() {
   _registerBehavioralPainterBoundaryTests();
   _registerPainterBoundaryTests();
-  _registerLayerHostBoundaryTests();
   _registerOverlayPainterBoundaryTests();
   _registerMainPainterBoundaryTests();
 }
@@ -55,19 +54,6 @@ void _registerPainterBoundaryTests() {
     expect(File('lib/src/surface/main_painter.dart').existsSync(), isTrue);
     _expectPainterBoundary('lib/src/surface/main_painter.dart');
     _expectPainterBoundary('lib/src/surface/overlay_painter.dart');
-  });
-}
-
-void _registerLayerHostBoundaryTests() {
-  test('surface layer host isolates main and overlay repaint boundaries', () {
-    final source = File(
-      'lib/src/surface/layer_paint_host.dart',
-    ).readAsStringSync();
-
-    expect(_tokenCount(source, 'RepaintBoundary('), 2);
-    expect(_tokenCount(source, 'CustomPaint('), 2);
-    expect(source, contains('iwb_canvas_surface.main_paint_host'));
-    expect(source, contains('iwb_canvas_surface.overlay_paint_host'));
   });
 }
 
@@ -121,10 +107,6 @@ void _expectNoLivePaintInputs(String source) {
   ]) {
     expect(source, isNot(contains(forbidden)));
   }
-}
-
-int _tokenCount(String source, String token) {
-  return token.allMatches(source).length;
 }
 
 void _paintCurrentOutputs(WidgetTester tester) {
