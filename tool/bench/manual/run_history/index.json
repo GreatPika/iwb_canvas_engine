@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-13T21:16:08.059509Z",
+  "updatedAtUtc": "2026-06-13T21:22:26.737714Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -407,6 +407,33 @@
             "path": "build/bench/current/xiaomi_22081283g_android14_flutter_3_44_0_run_2.json",
             "sizeBytes": 9891117,
             "sha256": "de24bfe9bb6608126802a164cab187f8169677eada230abcabc9a82cc62ef6e0"
+          },
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
+          "caseCount": 83
+        }
+      ]
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_77d3f054_surface_layer_baseline_refresh_run_3.json",
+      "label": "surface_layer_baseline_refresh_run_3",
+      "recordedAtUtc": "2026-06-13T21:22:26.737714Z",
+      "subjectGitHead": "77d3f0544616e44974243713785372d4b51d0a75",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 83,
+      "sources": [
+        {
+          "path": "build/bench/current/xiaomi_22081283g_android14_flutter_3_44_0_run_3.json",
+          "kind": "report",
+          "source": {
+            "path": "build/bench/current/xiaomi_22081283g_android14_flutter_3_44_0_run_3.json",
+            "sizeBytes": 9839465,
+            "sha256": "ef1cabbb328bd1805f24363c02a80f17913b029d94201599d29c56e4557a30be"
           },
           "manifestVersion": "benchmark_measurement_boundary_v3",
           "manifestFingerprint": "e911e634",
