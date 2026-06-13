@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -53,6 +54,13 @@ void main() {
     tester,
   ) async {
     await _expectSynchronousRuntimeFrameCoalescing(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface rebuilds both layers for document replacement', (
+    tester,
+  ) async {
+    await _expectDocumentReplacementRebuildsBothLayers(tester);
     expect(_paintHosts(), findsOneWidget);
   });
 
@@ -310,6 +318,35 @@ Future<void> _expectSynchronousRuntimeFrameCoalescing(
   expect(resolver.calls, 0);
 }
 
+Future<void> _expectDocumentReplacementRebuildsBothLayers(
+  WidgetTester tester,
+) async {
+  final runtime = runtimeWithDocument(_rectDocument());
+  final resolver = _RecordingResolver((_) => null);
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  runtime.edits.edit((edit) {
+    edit.replaceDraftDocument(_textAndRectDocument());
+  });
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(_mainRecordIds(tester), contains(_surfaceTextId));
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 1);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
+}
+
 Future<void> _expectInlineTextSuppressionSurfaceRepaint(
   WidgetTester tester,
 ) async {
@@ -341,12 +378,21 @@ Future<void> _expectPainterPaintDoesNotBuildOutputs(WidgetTester tester) async {
   addTearDown(image.dispose);
 
   await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
 
   expect(resolver.calls, 1);
   _paintCurrentOutputs(tester);
   _paintCurrentOutputs(tester);
 
+  expect(_mainPainter(tester).output, same(beforeMain));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(probe.mainDispatches, 0);
+  expect(probe.overlayDispatches, 0);
   expect(resolver.calls, 1);
+  _expectPaintersDoNotCallSurfaceFrameBuilders();
 }
 
 Future<void> _expectLocalInputInvalidationRouting(WidgetTester tester) async {
@@ -505,6 +551,7 @@ Future<void> _expectRejectedAttachInstallsNoLayerListener(
   runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
   await tester.pump(null, EnginePhase.layout);
 
+  expect(tester.takeException(), isNull);
   expect(_mainPainter(tester).output, isNot(same(beforeMain)));
   expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(acceptedResolver.calls, beforeAcceptedResolverCalls + 1);
@@ -918,6 +965,20 @@ void _paintCurrentOutputs(WidgetTester tester) {
   _mainPainter(tester).paint(canvas, const Size(100, 100));
   _overlayPainter(tester).paint(canvas, const Size(100, 100));
   recorder.endRecording().dispose();
+}
+
+void _expectPaintersDoNotCallSurfaceFrameBuilders() {
+  final mainPainterSource = File(
+    'lib/src/surface/main_painter.dart',
+  ).readAsStringSync();
+  final overlayPainterSource = File(
+    'lib/src/surface/overlay_painter.dart',
+  ).readAsStringSync();
+
+  for (final source in [mainPainterSource, overlayPainterSource]) {
+    expect(source, isNot(contains('buildSurfaceMainFrame')));
+    expect(source, isNot(contains('buildSurfaceOverlayFrame')));
+  }
 }
 
 Finder _mainPaintHosts() {

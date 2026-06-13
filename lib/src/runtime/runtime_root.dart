@@ -205,6 +205,7 @@ final class RuntimeRoot
   // Runtime revision counters.
   int _viewCameraRevision = 0;
   int _surfaceFrameGeneration = 0;
+  int _runtimeStatePublicationGeneration = 0;
   int _epochRevision = 0;
   int _textEditInteractionRevision = 0;
   int _contextRequestGeneration = 0;
@@ -1570,6 +1571,8 @@ final class RuntimeRoot
   void _publishRuntimeState({
     required _RuntimeSurfaceRepaintTarget? surfaceRepaintTarget,
   }) {
+    _runtimeStatePublicationGeneration += 1;
+    final publicationGeneration = _runtimeStatePublicationGeneration;
     final state = _runtimeState(
       _store,
       _selection.selectionFacts,
@@ -1583,10 +1586,13 @@ final class RuntimeRoot
             _textEditInteractionRevision,
       ),
     );
-    _state.value = state;
     if (surfaceRepaintTarget != null) {
       _publishSurfaceFrame(state, surfaceRepaintTarget);
     }
+    if (publicationGeneration != _runtimeStatePublicationGeneration) {
+      return;
+    }
+    _state.value = state;
   }
 
   void _publishSurfaceFrame(
@@ -1861,9 +1867,13 @@ final class RuntimeRoot
           _epochRevision += 1;
         }
         _publishRuntimeState(
-          surfaceRepaintTarget: _surfaceRepaintTargetForEffects(
-            applyResult.effects,
-          ),
+          surfaceRepaintTarget: applyResult.replacedDocument
+              ? _surfaceRepaintTarget(
+                  mainCanvas: true,
+                  overlayCanvas: true,
+                  reason: 'document_replaced',
+                )
+              : _surfaceRepaintTargetForEffects(applyResult.effects),
         );
         _emitActions(applyResult.actionIntents);
       }

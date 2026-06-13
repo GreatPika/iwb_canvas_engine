@@ -29,12 +29,24 @@ void main() {
     _runtimeMapsStateEffectsToSurfaceRepaintTargets,
   );
   test(
+    'surface frame publication is not overwritten by reentrant state listeners',
+    _surfaceFramePublicationRejectsReentrantStaleOverwrite,
+  );
+  test(
+    'public state publication is not overwritten by reentrant surface listeners',
+    _publicStatePublicationRejectsReentrantStaleOverwrite,
+  );
+  test(
     'text edit interaction state publishes conservative surface repaint target',
     _textEditInteractionPublishesConservativeSurfaceRepaintTarget,
   );
   test(
     'surface bridge does not expose frame repaint signal ownership',
     _surfaceBridgeDoesNotExposeFrameRepaintSignalOwnership,
+  );
+  test(
+    'runtime state publication requires explicit surface target classification',
+    _runtimeStatePublicationRequiresExplicitSurfaceTargetClassification,
   );
 }
 
@@ -160,9 +172,12 @@ void _expectSelectedMovePreviewTarget(
   RuntimeRoot root,
   List<RuntimeSurfaceFrameSignal> frames,
 ) {
+  final beforeSelectedMove = frames.length;
   root.replaceInteractionPreview(
     const CanvasSelectedMovePreview(delta: Offset(2, 3)),
   );
+  expect(frames, hasLength(beforeSelectedMove + 2));
+  _expectTargetAt(frames, beforeSelectedMove, main: false, overlay: true);
   _expectLastTarget(frames, main: true, overlay: false);
 }
 
@@ -203,7 +218,7 @@ void _runtimeMapsStateEffectsToSurfaceRepaintTargets() {
   _expectSelectionAndResourceTargets(root, frames);
   _expectBothLayerRuntimeTargets(root, frames);
 
-  expect(frames.map((frame) => frame.generation), [1, 2, 3, 4, 5]);
+  expect(frames.map((frame) => frame.generation), [1, 2, 3, 4, 5, 6]);
   root.dispose();
 }
 
@@ -228,8 +243,61 @@ void _expectBothLayerRuntimeTargets(
   root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(_document()));
   _expectLastTarget(frames, main: true, overlay: true);
 
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(_replacementDocument());
+  });
+  _expectLastTarget(frames, main: true, overlay: true);
+
   root.publishUnclassifiedRuntimeStateForTesting();
   _expectLastTarget(frames, main: true, overlay: true);
+}
+
+void _surfaceFramePublicationRejectsReentrantStaleOverwrite() {
+  final root = _runtimeRoot();
+  final token = Object();
+  root.attachSurface(token);
+  final frames = _recordFrames(root);
+  var reentered = false;
+  root.state.addListener(() {
+    if (reentered) {
+      return;
+    }
+    reentered = true;
+    root.setCameraOffset(const Offset(13, 17));
+  });
+
+  root.selection.setSelection([CanvasElementId('rect-a')]);
+
+  expect(frames, hasLength(2));
+  _expectTargetAt(frames, 0, main: true, overlay: false);
+  _expectTargetAt(frames, 1, main: true, overlay: true);
+  expect(frames.last.state, root.state.value);
+  expect(frames.last.generation, 2);
+  root.dispose();
+}
+
+void _publicStatePublicationRejectsReentrantStaleOverwrite() {
+  final root = _runtimeRoot();
+  final token = Object();
+  root.attachSurface(token);
+  final frames = _recordFrames(root);
+  var reentered = false;
+  root.surfaceFrameSignal.addListener(() {
+    if (reentered || root.surfaceFrameSignal.value == null) {
+      return;
+    }
+    reentered = true;
+    root.setCameraOffset(const Offset(21, 34));
+  });
+
+  root.selection.setSelection([CanvasElementId('rect-a')]);
+
+  expect(frames, hasLength(2));
+  _expectTargetAt(frames, 0, main: true, overlay: false);
+  _expectTargetAt(frames, 1, main: true, overlay: true);
+  expect(root.state.value, frames.last.state);
+  expect(frames.last.generation, 2);
+  root.dispose();
 }
 
 Future<void>
@@ -267,6 +335,27 @@ void _surfaceBridgeDoesNotExposeFrameRepaintSignalOwnership() {
   expect(source, isNot(contains('FrameRepaintSignal')));
 }
 
+void _runtimeStatePublicationRequiresExplicitSurfaceTargetClassification() {
+  final source = File('lib/src/runtime/runtime_root.dart').readAsStringSync();
+
+  expect(
+    source,
+    contains('required _RuntimeSurfaceRepaintTarget? surfaceRepaintTarget'),
+  );
+  expect(source, isNot(contains('_publishRuntimeState();')));
+  for (final match in '_publishRuntimeState('.allMatches(source)) {
+    final callStart = match.start;
+    if (source.indexOf('_publishRuntimeState({', callStart) == callStart) {
+      continue;
+    }
+    final callEnd = source.indexOf(';', callStart);
+    expect(callEnd, isNonNegative);
+    final targetArgument = source.indexOf('surfaceRepaintTarget:', callStart);
+    expect(targetArgument, isNonNegative);
+    expect(targetArgument, lessThan(callEnd));
+  }
+}
+
 List<RuntimeSurfaceFrameSignal> _recordFrames(RuntimeRoot root) {
   final frames = <RuntimeSurfaceFrameSignal>[];
   root.surfaceFrameSignal.addListener(() {
@@ -286,6 +375,19 @@ void _expectLastTarget(
 }) {
   expect(frames, isNotEmpty);
   final frame = frames.last;
+  expect(frame.state, isA<CanvasRuntimeState>());
+  expect(frame.mainCanvas, main);
+  expect(frame.overlayCanvas, overlay);
+  expect(frame.reason, isNotEmpty);
+}
+
+void _expectTargetAt(
+  List<RuntimeSurfaceFrameSignal> frames,
+  int index, {
+  required bool main,
+  required bool overlay,
+}) {
+  final frame = frames[index];
   expect(frame.state, isA<CanvasRuntimeState>());
   expect(frame.mainCanvas, main);
   expect(frame.overlayCanvas, overlay);
@@ -323,6 +425,22 @@ CanvasDocument _document() {
       CanvasImageResource(
         id: CanvasResourceId('resource-a'),
         source: CanvasResourceSource.appKey('asset-a'),
+      ),
+    ],
+  );
+}
+
+CanvasDocument _replacementDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('replacement-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('replacement-rect'),
+            size: const Size(8, 9),
+          ),
+        ],
       ),
     ],
   );

@@ -18,6 +18,8 @@ flowchart LR
     ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
     ViewCameraDispatch["Runtime view camera orchestration\nstate.revisions.viewCamera + repaint"]
     InteractionConfigDispatch["Interaction config orchestration\nstate.revisions.interaction + affected cleanup"]
+    RuntimeRepaintEffects["RepaintDeliveryEffect and cleanup repaint targets\nruntime-owned main/overlay flags"]
+    SurfaceTargetAggregation["Runtime/effect repaint target aggregation\npre-output surface invalidation"]
     DeferredSpatialRepair["Deferred invalid-index repair\nrebuild or retry outside hot pointer/paint path"]
   end
 
@@ -121,6 +123,7 @@ flowchart LR
   Touched -->|"non-empty exact facts"| ExactPlan
 
   ExactPlan -->|"ordinary edit, no documentReplaced"| OrdinaryScope
+  ExactPlan -->|"typed repaint effects"| RuntimeRepaintEffects
   ExactPlan -->|"documentReplaced"| ReplacementScope
   ExactPlan -.->|"not allowed"| ForbiddenGlobal
   ForbiddenGlobal -.->|"blocked unless replacement scope"| ExactPlan
@@ -180,7 +183,7 @@ flowchart LR
   ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
-  ResourceVisualRevision -->|"main-only pre-output target"| SurfaceTarget
+  ResourceVisualRevision -->|"main-only resource target"| SurfaceTargetAggregation
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision
   ResourceDirtyCall -.->|"forbidden"| DirtySelectionPreview
   ResourceDirtyCall -.->|"forbidden"| DirtyActionEvent
@@ -188,10 +191,14 @@ flowchart LR
   SelectionEffect -->|"membership changed"| SelectionRevision
   SelectionRevision -->|"public selection domain"| SelectionPublicRevision
   SelectionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
+  SelectionRevision -->|"main-only selection target"| SurfaceTargetAggregation
   StructuralRevision -->|"structure/order changed"| PaintPlanInvalidation
+  StructuralRevision -->|"main-only structure target"| SurfaceTargetAggregation
   BoundsRevision -->|"bounds changed"| PaintPlanInvalidation
+  BoundsRevision -->|"main-only commit target"| SurfaceTargetAggregation
   BoundsRevision -->|"selection bounds changed"| SelectionDecorationInvalidation
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
+  ElementVisualRevision -->|"main-only visual target"| SurfaceTargetAggregation
   SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
   StructuralRevision -->|"selected chrome family may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
@@ -207,9 +214,12 @@ flowchart LR
   InteractionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
   InteractionConfigDispatch -->|"selection changed by mode entry"| SelectionEffect
   InteractionConfigDispatch -->|"active preview cleared"| PreviewCleanup
+  InteractionConfigDispatch -->|"pending preview style or cleanup target"| RuntimeRepaintEffects
 
   BackgroundRevision -->|"background document metadata only"| StaticFrameInvalidation
+  BackgroundRevision -->|"main-only background target"| SurfaceTargetAggregation
   GridRevision -->|"grid document metadata only"| StaticFrameInvalidation
+  GridRevision -->|"main-only grid target"| SurfaceTargetAggregation
   ElementVisualRevision -->|"changed text, path, or stroke inputs"| TextPathInvalidation
   PaintPlanInvalidation -->|"scene records changed"| MainRepaint
   SelectionDecorationInvalidation -->|"selection UI changed"| MainRepaint
@@ -225,6 +235,8 @@ flowchart LR
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
   PreviewSnapshot -->|"preview-owned target meaning\naggregated by RuntimeRoot"| SurfaceTarget
   LoadSuccess -->|"both-layer pre-output target"| SurfaceTarget
+  RuntimeRepaintEffects -->|"classified runtime repaint target"| SurfaceTargetAggregation
+  SurfaceTargetAggregation -->|"runtime-owned target"| SurfaceTarget
 
   MainRepaint -.->|"output metadata after build"| FrameSignalBoundary
   OverlayRepaint -.->|"output metadata after build"| FrameSignalBoundary
