@@ -86,7 +86,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Enforce bounded surface layout
+### [x] Unit 1: Enforce bounded surface layout
 
 Owner: `lib/src/surface/canvas_surface_widget.dart`
 
@@ -98,7 +98,7 @@ Completion Check: The new focused widget fixture proves three direct outcomes th
 
 Depends On: none
 
-### [ ] Unit 2: Document bounded layout contract
+### [x] Unit 2: Document bounded layout contract
 
 Owner: `docs/contracts/public_api_v1.md`; `docs/verification/tests.md`; `docs/_registry/sections.yaml`
 
