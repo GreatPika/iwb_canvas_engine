@@ -1740,28 +1740,46 @@ final class _SurfaceProbeHost extends StatelessWidget {
 }
 
 _SurfaceDelegates _surfaceDelegates(WidgetTester tester) {
-  final finder = find.byKey(_surfacePaintHostKey);
+  final hostCount = find.byKey(_surfacePaintHostKey).evaluate().length;
+  if (hostCount != 1) {
+    throw StateError(
+      'Expected exactly one keyed CanvasSurface paint host, found $hostCount.',
+    );
+  }
+  final main = _surfacePainter<MainFramePainter>(
+    tester,
+    _surfaceMainPaintHostKey,
+    'MainFramePainter',
+  );
+  final overlay = _surfacePainter<OverlayFramePainter>(
+    tester,
+    _surfaceOverlayPaintHostKey,
+    'OverlayFramePainter',
+  );
+
+  return _SurfaceDelegates(main: main, overlay: overlay);
+}
+
+T _surfacePainter<T extends CustomPainter>(
+  WidgetTester tester,
+  Key key,
+  String label,
+) {
+  final finder = find.byKey(key);
   final matchCount = finder.evaluate().length;
   if (matchCount != 1) {
     throw StateError(
-      'Expected exactly one keyed CanvasSurface paint host, found $matchCount.',
+      'Expected exactly one keyed CanvasSurface $label host, '
+      'found $matchCount.',
     );
   }
   final paintHost = tester.widget<CustomPaint>(finder);
-  final main = paintHost.painter;
-  final overlay = paintHost.foregroundPainter;
-  if (main is! MainFramePainter) {
-    throw StateError(
-      'CanvasSurface paint host did not expose MainFramePainter.',
-    );
-  }
-  if (overlay is! OverlayFramePainter) {
-    throw StateError(
-      'CanvasSurface paint host did not expose OverlayFramePainter.',
-    );
+  final painter = paintHost.painter;
+  if (painter is T) {
+    return painter;
   }
 
-  return _SurfaceDelegates(main: main, overlay: overlay);
+  throw StateError('CanvasSurface paint host did not expose $label.');
 }
 
 RuntimeRoot _surfaceRootFor(canvas_api.CanvasRuntime runtime) {
@@ -1803,6 +1821,12 @@ CanvasDocument _surfaceDocument(String scaleId) {
 }
 
 const _surfacePaintHostKey = ValueKey<String>('iwb_canvas_surface.paint_host');
+const _surfaceMainPaintHostKey = ValueKey<String>(
+  'iwb_canvas_surface.main_paint_host',
+);
+const _surfaceOverlayPaintHostKey = ValueKey<String>(
+  'iwb_canvas_surface.overlay_paint_host',
+);
 
 final class _RuntimeCaseOptions {
   const _RuntimeCaseOptions({
