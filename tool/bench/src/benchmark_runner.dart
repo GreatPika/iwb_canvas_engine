@@ -442,6 +442,8 @@ bool _invariantPassed({
           actual <= _boundedScaleForInvariant(scale.id, max: 10000),
     'rebuilt_pages_match_touched_set' =>
       actual == _boundedScaleForInvariant(scale.id, max: 64),
+    _ when invariant.name.endsWith('_no_positive_drift') =>
+      actual is num && actual >= 0,
     _ => throw StateError(
       '${benchmarkCase.id}/${scale.id} invariant ${invariant.name} has no '
       'checkable expected value, max, or runner semantic.',

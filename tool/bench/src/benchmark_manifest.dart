@@ -258,6 +258,8 @@ final class _BenchmarkManifestParser {
     'input.draw_preview': _normalActionPerSample,
     'input.line_preview': _normalActionPerSample,
     'input.eraser_preview': _normalActionPerSample,
+    'surface.overlay_preview_route': _normalActionPerSample,
+    'surface.selected_move_route': _normalActionPerSample,
     'input.eraser_budget_exceeded': _ExpectedBenchmarkBoundary(
       timedScope: 'action_only',
       setupScope: 'per_sample_prepared_fixture',

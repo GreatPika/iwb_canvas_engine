@@ -438,6 +438,44 @@ void main() {
       );
     });
 
+    test('validates fixture surface route report schema', () {
+      final manifest = _surfaceRouteManifest();
+      final baseline = _releaseReport(manifest);
+      final current = _clone(baseline);
+      final missingRouteMetric = _clone(baseline);
+      _metrics(
+        missingRouteMetric,
+        'surface.overlay_preview_route',
+        '1k',
+      ).remove('main_output_identity_changes');
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: current,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures,
+        isEmpty,
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: missingRouteMetric,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+        ).failures.join('\n'),
+        contains(
+          'current surface.overlay_preview_route/1k missing metric '
+          'main_output_identity_changes',
+        ),
+      );
+    });
+
     test('rejects old-schema reports and baseline payloads', () {
       final manifest = BenchmarkManifest.load();
       final oldReport = _oldSchemaReport(manifest);
@@ -914,6 +952,72 @@ void main() {
           'current load_document.success/50k '
           'schema_import_load_us=2000000 must be < 1500000',
         ),
+      );
+    });
+
+    test('rejects positive drift for surface route exact invariants', () {
+      final manifest = _surfaceRouteManifest();
+      final baseline = _releaseReport(manifest);
+      final mainRouteDrift = _clone(baseline);
+      _metrics(
+        mainRouteDrift,
+        'surface.overlay_preview_route',
+        '1k',
+      )['main_output_identity_changes'] = 2;
+      final overlayRouteDrift = _clone(baseline);
+      _metrics(
+        overlayRouteDrift,
+        'surface.selected_move_route',
+        '1k',
+      )['overlay_output_identity_changes'] = 2;
+      final lowered = _clone(baseline);
+      _metrics(
+        lowered,
+        'surface.overlay_preview_route',
+        '1k',
+      )['main_output_identity_changes'] = 0;
+
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: mainRouteDrift,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
+        ).failures.join('\n'),
+        contains(
+          'surface.overlay_preview_route/1k main_output_identity_changes '
+          'positive drift',
+        ),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: overlayRouteDrift,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
+        ).failures.join('\n'),
+        contains(
+          'surface.selected_move_route/1k overlay_output_identity_changes '
+          'positive drift',
+        ),
+      );
+      expect(
+        diffBenchmarkReports(
+          manifest: manifest,
+          profile: 'release',
+          baselineJson: baseline,
+          currentJson: lowered,
+          baselinePath: 'baseline.json',
+          currentPath: 'current.json',
+          enforceAbsoluteCaps: false,
+        ).failures,
+        isEmpty,
       );
     });
 
@@ -1409,6 +1513,117 @@ Map<String, Object?> _manualReferenceAsCurrentReport(
 
   return current;
 }
+
+BenchmarkManifest _surfaceRouteManifest() {
+  final manifest = BenchmarkManifest.load();
+  return BenchmarkManifest(
+    manifestVersion: manifest.manifestVersion,
+    toolSchemaVersion: manifest.toolSchemaVersion,
+    releaseContour: manifest.releaseContour,
+    profiles: manifest.profiles,
+    budgetClasses: manifest.budgetClasses,
+    memoryScopes: manifest.memoryScopes,
+    cases: [_surfaceOverlayCase(), _surfaceSelectedMoveCase()],
+    postBaselineRegressionCaps: manifest.postBaselineRegressionCaps,
+    firstBaselineReferenceLimits: manifest.firstBaselineReferenceLimits,
+  );
+}
+
+BenchmarkCase _surfaceOverlayCase() {
+  return const BenchmarkCase(
+    id: 'surface.overlay_preview_route',
+    baselinePolicy: 'absolute_budget',
+    budgetClasses: ['hot_input', 'exact_invariant'],
+    memoryScope: 'hot_or_query',
+    measurementBoundary: _normalSurfaceBoundary,
+    fixtureShape: 'normal_spread',
+    docsMetricsLabel:
+        'main route counters, overlay primitive count, avg/P95/max',
+    requiredMetrics: [
+      'main_output_identity_changes',
+      'main_should_repaint_count',
+      'overlay_output_identity_changes',
+      'overlay_should_repaint_count',
+      'overlay_primitive_count',
+      'avg_us',
+      'p95_us',
+      'max_us',
+    ],
+    exactInvariants: [
+      BenchmarkExactInvariant(
+        name: 'main_output_identity_changes_no_positive_drift',
+        metric: 'main_output_identity_changes',
+        expected: null,
+        max: null,
+      ),
+      BenchmarkExactInvariant(
+        name: 'main_should_repaint_count_no_positive_drift',
+        metric: 'main_should_repaint_count',
+        expected: null,
+        max: null,
+      ),
+    ],
+    scales: _surfaceScales,
+  );
+}
+
+BenchmarkCase _surfaceSelectedMoveCase() {
+  return const BenchmarkCase(
+    id: 'surface.selected_move_route',
+    baselinePolicy: 'absolute_budget',
+    budgetClasses: ['hot_input', 'exact_invariant'],
+    memoryScope: 'hot_or_query',
+    measurementBoundary: _normalSurfaceBoundary,
+    fixtureShape: 'normal_spread',
+    docsMetricsLabel:
+        'overlay route counters, selected move signal count, avg/P95/max',
+    requiredMetrics: [
+      'overlay_output_identity_changes',
+      'overlay_should_repaint_count',
+      'main_output_identity_changes',
+      'main_should_repaint_count',
+      'selected_move_main_signal_count',
+      'avg_us',
+      'p95_us',
+      'max_us',
+    ],
+    exactInvariants: [
+      BenchmarkExactInvariant(
+        name: 'overlay_output_identity_changes_no_positive_drift',
+        metric: 'overlay_output_identity_changes',
+        expected: null,
+        max: null,
+      ),
+      BenchmarkExactInvariant(
+        name: 'overlay_should_repaint_count_no_positive_drift',
+        metric: 'overlay_should_repaint_count',
+        expected: null,
+        max: null,
+      ),
+    ],
+    scales: _surfaceScales,
+  );
+}
+
+const _normalSurfaceBoundary = BenchmarkMeasurementBoundary(
+  timedScope: 'action_only',
+  setupScope: 'per_sample_prepared_fixture',
+  teardownScope: 'excluded',
+  primaryTiming: 'action',
+  primaryMemory: 'action',
+  setupMetrics: ['setup_us'],
+  setupMemoryMetrics: ['setup_allocation_bytes', 'setup_rss_delta_bytes'],
+);
+
+const _surfaceScales = [
+  BenchmarkScale(
+    id: '1k',
+    label: '1k',
+    profiles: ['dry_run', 'smoke', 'release'],
+  ),
+  BenchmarkScale(id: '10k', label: '10k', profiles: ['dry_run', 'release']),
+  BenchmarkScale(id: '50k', label: '50k', profiles: ['dry_run', 'release']),
+];
 
 Map<String, Object?> _caseReport(
   BenchmarkCase benchmarkCase,

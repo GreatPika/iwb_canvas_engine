@@ -22,6 +22,14 @@ void main() {
       ]);
       expect(manifest.casesById.keys, _requiredCaseIds);
       expect(
+        manifest.casesById,
+        isNot(contains('surface.overlay_preview_route')),
+      );
+      expect(
+        manifest.casesById,
+        isNot(contains('surface.selected_move_route')),
+      );
+      expect(
         manifest.casesById['diagnostics.disabled_pointer']!.exactInvariants.map(
           (invariant) => invariant.name,
         ),
@@ -295,6 +303,103 @@ void main() {
       );
     });
 
+    test('accepts fixture-only surface route case policy', () {
+      final manifest = BenchmarkManifest.parse(
+        _manifestWithSurfaceRouteCases(),
+      );
+      final overlay = manifest.casesById['surface.overlay_preview_route']!;
+      final selected = manifest.casesById['surface.selected_move_route']!;
+
+      expect(overlay.baselinePolicy, 'absolute_budget');
+      expect(overlay.budgetClasses, ['hot_input', 'exact_invariant']);
+      expect(overlay.memoryScope, 'hot_or_query');
+      expect(
+        overlay.docsMetricsLabel,
+        'main route counters, overlay primitive count, avg/P95/max',
+      );
+      expect(overlay.requiredMetrics, [
+        'main_output_identity_changes',
+        'main_should_repaint_count',
+        'overlay_output_identity_changes',
+        'overlay_should_repaint_count',
+        'overlay_primitive_count',
+        'avg_us',
+        'p95_us',
+        'max_us',
+      ]);
+      expect(
+        overlay.exactInvariants.map((invariant) {
+          return '${invariant.name}:${invariant.metric}:'
+              '${invariant.expected ?? ''}:${invariant.max ?? ''}';
+        }),
+        [
+          'main_output_identity_changes_no_positive_drift:'
+              'main_output_identity_changes::',
+          'main_should_repaint_count_no_positive_drift:'
+              'main_should_repaint_count::',
+        ],
+      );
+      expect(
+        _caseBoundaryFingerprints(manifest),
+        contains(
+          'surface.overlay_preview_route|action_only|'
+          'per_sample_prepared_fixture|excluded|action|action|setup_us|'
+          'setup_allocation_bytes,setup_rss_delta_bytes|normal_spread',
+        ),
+      );
+      expect(
+        _casePolicyFingerprints(manifest),
+        contains(
+          'surface.selected_move_route|absolute_budget|'
+          'hot_input,exact_invariant|hot_or_query|'
+          'overlay_output_identity_changes,overlay_should_repaint_count,'
+          'main_output_identity_changes,main_should_repaint_count,'
+          'selected_move_main_signal_count,avg_us,p95_us,max_us|'
+          'overlay_output_identity_changes_no_positive_drift:'
+          'overlay_output_identity_changes::,'
+          'overlay_should_repaint_count_no_positive_drift:'
+          'overlay_should_repaint_count::|'
+          '1k:dry_run,smoke,release;10k:dry_run,release;'
+          '50k:dry_run,release',
+        ),
+      );
+      expect(
+        selected.docsMetricsLabel,
+        'overlay route counters, selected move signal count, avg/P95/max',
+      );
+    });
+
+    test('rejects unregistered benchmark ids', () {
+      final error = _parseFailure(
+        '${_manifestText()}\n'
+        '  - id: surface.unregistered_route\n'
+        '    baseline_policy: absolute_budget\n'
+        '    budget_classes: [hot_input]\n'
+        '    memory_scope: hot_or_query\n'
+        '    measurement_boundary:\n'
+        '      timed_scope: action_only\n'
+        '      setup_scope: per_sample_prepared_fixture\n'
+        '      teardown_scope: excluded\n'
+        '      primary_timing: action\n'
+        '      primary_memory: action\n'
+        '      setup_metrics: [setup_us]\n'
+        '      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]\n'
+        '    fixture_shape: normal_spread\n'
+        '    docs_metrics_label: "fixture"\n'
+        '    required_metrics: [avg_us, p95_us, max_us]\n'
+        '    exact_invariants: []\n'
+        '    scales:\n'
+        '      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}\n',
+      );
+
+      expect(
+        error.message,
+        contains(
+          'surface.unregistered_route has no selected measurement boundary policy',
+        ),
+      );
+    });
+
     test('requires dense spatial fallback policy', () {
       final error = _parseFailure(
         _removeCase(_manifestText(), 'spatial.query_point_dense_stress'),
@@ -442,6 +547,57 @@ void main() {
 }
 
 String _manifestText() => File(benchmarkManifestPath).readAsStringSync();
+
+String _manifestWithSurfaceRouteCases() {
+  return _manifestText() + _surfaceRouteCaseYaml;
+}
+
+const _surfaceRouteCaseYaml = '''
+  - id: surface.overlay_preview_route
+    baseline_policy: absolute_budget
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
+    docs_metrics_label: "main route counters, overlay primitive count, avg/P95/max"
+    required_metrics: [main_output_identity_changes, main_should_repaint_count, overlay_output_identity_changes, overlay_should_repaint_count, overlay_primitive_count, avg_us, p95_us, max_us]
+    exact_invariants:
+      - {name: main_output_identity_changes_no_positive_drift, metric: main_output_identity_changes}
+      - {name: main_should_repaint_count_no_positive_drift, metric: main_should_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+  - id: surface.selected_move_route
+    baseline_policy: absolute_budget
+    budget_classes: [hot_input, exact_invariant]
+    memory_scope: hot_or_query
+    measurement_boundary:
+      timed_scope: action_only
+      setup_scope: per_sample_prepared_fixture
+      teardown_scope: excluded
+      primary_timing: action
+      primary_memory: action
+      setup_metrics: [setup_us]
+      setup_memory_metrics: [setup_allocation_bytes, setup_rss_delta_bytes]
+    fixture_shape: normal_spread
+    docs_metrics_label: "overlay route counters, selected move signal count, avg/P95/max"
+    required_metrics: [overlay_output_identity_changes, overlay_should_repaint_count, main_output_identity_changes, main_should_repaint_count, selected_move_main_signal_count, avg_us, p95_us, max_us]
+    exact_invariants:
+      - {name: overlay_output_identity_changes_no_positive_drift, metric: overlay_output_identity_changes}
+      - {name: overlay_should_repaint_count_no_positive_drift, metric: overlay_should_repaint_count}
+    scales:
+      - {id: "1k", label: "1k", profiles: [dry_run, smoke, release]}
+      - {id: "10k", label: "10k", profiles: [dry_run, release]}
+      - {id: "50k", label: "50k", profiles: [dry_run, release]}
+''';
 
 Map<String, Map<String, Object?>> _budgetCapsById(BenchmarkManifest manifest) {
   return {
@@ -598,64 +754,19 @@ const _requiredCaseIds = [
 
 const _expectedBudgetCaps = {
   'hot_input': {
-    'avg_us_by_scale': {
-      '1k': 9000,
-      '10k': 8000,
-      '50k': 40000,
-      '100k': 40000,
-    },
-    'p95_us_by_scale': {
-      '1k': 11000,
-      '10k': 15000,
-      '50k': 70000,
-      '100k': 50000,
-    },
-    'max_us_by_scale': {
-      '1k': 32000,
-      '10k': 15000,
-      '50k': 70000,
-      '100k': 50000,
-    },
+    'avg_us_by_scale': {'1k': 9000, '10k': 8000, '50k': 40000, '100k': 40000},
+    'p95_us_by_scale': {'1k': 11000, '10k': 15000, '50k': 70000, '100k': 50000},
+    'max_us_by_scale': {'1k': 32000, '10k': 15000, '50k': 70000, '100k': 50000},
   },
   'incremental_edit': {
-    'avg_us_by_scale': {
-      '1k': 1500,
-      '10k': 8000,
-      '50k': 40000,
-      '100k': 85000,
-    },
-    'p95_us_by_scale': {
-      '1k': 4000,
-      '10k': 10000,
-      '50k': 50000,
-      '100k': 100000,
-    },
-    'max_us_by_scale': {
-      '1k': 8000,
-      '10k': 15000,
-      '50k': 50000,
-      '100k': 100000,
-    },
+    'avg_us_by_scale': {'1k': 1500, '10k': 8000, '50k': 40000, '100k': 85000},
+    'p95_us_by_scale': {'1k': 4000, '10k': 10000, '50k': 50000, '100k': 100000},
+    'max_us_by_scale': {'1k': 8000, '10k': 15000, '50k': 50000, '100k': 100000},
   },
   'frame_capture': {
-    'avg_us_by_scale': {
-      '1k': 6000,
-      '10k': 6000,
-      '50k': 40000,
-      '100k': 40000,
-    },
-    'p95_us_by_scale': {
-      '1k': 10000,
-      '10k': 10000,
-      '50k': 60000,
-      '100k': 60000,
-    },
-    'max_us_by_scale': {
-      '1k': 25000,
-      '10k': 25000,
-      '50k': 60000,
-      '100k': 60000,
-    },
+    'avg_us_by_scale': {'1k': 6000, '10k': 6000, '50k': 40000, '100k': 40000},
+    'p95_us_by_scale': {'1k': 10000, '10k': 10000, '50k': 60000, '100k': 60000},
+    'max_us_by_scale': {'1k': 25000, '10k': 25000, '50k': 60000, '100k': 60000},
   },
   'query_read': {
     'avg_us_by_scale': {
