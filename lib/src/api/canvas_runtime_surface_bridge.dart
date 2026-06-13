@@ -26,14 +26,53 @@ CanvasRuntimeSurfacePort? canvasRuntimeSurfacePortFor(Object runtime) {
   return _canvasRuntimeSurfacePorts[runtime];
 }
 
+final class CanvasSurfaceRepaintTarget {
+  const CanvasSurfaceRepaintTarget({
+    required this.mainCanvas,
+    required this.overlayCanvas,
+    required this.reason,
+  });
+
+  final bool mainCanvas;
+  final bool overlayCanvas;
+  final String reason;
+}
+
+final class CanvasRuntimeSurfaceFrame {
+  const CanvasRuntimeSurfaceFrame({
+    required this.state,
+    required this.generation,
+    required this.repaintTarget,
+  });
+
+  final CanvasRuntimeState state;
+  final int generation;
+  final CanvasSurfaceRepaintTarget repaintTarget;
+}
+
+// The surface port is the single active-surface bridge; keeping attach,
+// listener, resource, pointer, and frame methods together preserves the audited
+// runtime/surface handoff instead of scattering one bridge across fragments.
+// ignore: coupling-between-object-classes, number-of-methods
 final class CanvasRuntimeSurfacePort {
-  const CanvasRuntimeSurfacePort._(this._root);
+  CanvasRuntimeSurfacePort._(this._root)
+    : _surfaceFrame = ValueNotifier<CanvasRuntimeSurfaceFrame?>(
+        _surfaceFrameFromRoot(_root.surfaceFrameSignal.value),
+      ) {
+    _root.surfaceFrameSignal.addListener(_publishSurfaceFrame);
+  }
 
   final RuntimeRoot _root;
+  final ValueNotifier<CanvasRuntimeSurfaceFrame?> _surfaceFrame;
 
   ValueListenable<CanvasRuntimeState> get state => _root.state;
+  ValueListenable<CanvasRuntimeSurfaceFrame?> get surfaceFrame => _surfaceFrame;
 
   ResolverMutationGuard get resolverMutationGuard => _root;
+
+  void _publishSurfaceFrame() {
+    _surfaceFrame.value = _surfaceFrameFromRoot(_root.surfaceFrameSignal.value);
+  }
 
   void attachSurface(Object token) {
     _root.attachSurface(token);
@@ -110,4 +149,22 @@ final class CanvasRuntimeSurfacePort {
       gridStyle: gridStyle,
     );
   }
+}
+
+CanvasRuntimeSurfaceFrame? _surfaceFrameFromRoot(
+  RuntimeSurfaceFrameSignal? frame,
+) {
+  if (frame == null) {
+    return null;
+  }
+
+  return CanvasRuntimeSurfaceFrame(
+    state: frame.state,
+    generation: frame.generation,
+    repaintTarget: CanvasSurfaceRepaintTarget(
+      mainCanvas: frame.mainCanvas,
+      overlayCanvas: frame.overlayCanvas,
+      reason: frame.reason,
+    ),
+  );
 }

@@ -82,6 +82,20 @@ typedef TextEditPrepareInput = ({
 typedef TextEditPrepareOverride =
     CommitDeliveryResult Function(TextEditPrepareInput input);
 
+typedef RuntimeSurfaceFrameSignal = ({
+  CanvasRuntimeState state,
+  int generation,
+  bool mainCanvas,
+  bool overlayCanvas,
+  String reason,
+});
+
+typedef _RuntimeSurfaceRepaintTarget = ({
+  bool mainCanvas,
+  bool overlayCanvas,
+  String reason,
+});
+
 // RuntimeRoot is intentionally the one place where public runtime behavior,
 // store read facts, and selection ownership meet.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
@@ -156,7 +170,8 @@ final class RuntimeRoot
        ),
        _state = ValueNotifier<CanvasRuntimeState>(
          _runtimeState(store, null, const _RuntimeRevisionFacts()),
-       ) {
+       ),
+       _surfaceFrameSignal = ValueNotifier<RuntimeSurfaceFrameSignal?>(null) {
     _interactionEngine.attachReadPort(_interactionReadPort);
     _spatial.rebuild(this);
   }
@@ -181,6 +196,7 @@ final class RuntimeRoot
   // Public state and event streams.
   CanvasCamera _viewCamera;
   final ValueNotifier<CanvasRuntimeState> _state;
+  final ValueNotifier<RuntimeSurfaceFrameSignal?> _surfaceFrameSignal;
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast(sync: true);
   final StreamController<CanvasContextActionRequested> _contextActionRequests =
@@ -188,6 +204,7 @@ final class RuntimeRoot
 
   // Runtime revision counters.
   int _viewCameraRevision = 0;
+  int _surfaceFrameGeneration = 0;
   int _epochRevision = 0;
   int _textEditInteractionRevision = 0;
   int _contextRequestGeneration = 0;
@@ -257,6 +274,8 @@ final class RuntimeRoot
 
   // Public state.
   ValueListenable<CanvasRuntimeState> get state => _state;
+  ValueListenable<RuntimeSurfaceFrameSignal?> get surfaceFrameSignal =>
+      _surfaceFrameSignal;
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
 
@@ -345,6 +364,7 @@ final class RuntimeRoot
     }
     _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
+    _clearSurfaceFrameSignal();
 
     return true;
   }
@@ -1162,7 +1182,9 @@ final class RuntimeRoot
     final outcome = _interactionEngine.interactiveDisabledCleanup();
     _applyPointerCleanupSelection(outcome);
     if (outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
   }
 
@@ -1182,7 +1204,17 @@ final class RuntimeRoot
         config.clearSelectionOnDrawModeEnter &&
         _selection.clearSelection();
     if (didChangeMode || didClearSelection || outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget:
+            _surfaceRepaintTargetForCleanup(outcome) ??
+            (didClearSelection
+                ? _surfaceRepaintTarget(
+                    mainCanvas: true,
+                    overlayCanvas: false,
+                    reason: 'selection',
+                  )
+                : null),
+      );
     }
   }
 
@@ -1192,7 +1224,9 @@ final class RuntimeRoot
     final outcome = _interactionEngine.setDrawStyle(style);
     _applyPointerCleanupSelection(outcome);
     if (previous != style || outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
   }
 
@@ -1202,7 +1236,9 @@ final class RuntimeRoot
     final outcome = _interactionEngine.setPointerPolicy(policy);
     _applyPointerCleanupSelection(outcome);
     if (previous != policy || outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
   }
 
@@ -1215,7 +1251,13 @@ final class RuntimeRoot
     }
     _viewCamera = camera;
     _viewCameraRevision += 1;
-    _publishRuntimeState();
+    _publishRuntimeState(
+      surfaceRepaintTarget: _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: true,
+        reason: 'view_camera',
+      ),
+    );
   }
 
   void panCameraBy(Offset delta) {
@@ -1227,7 +1269,9 @@ final class RuntimeRoot
     ensureRuntimeMutationAllowed();
     final didChange = _interactionEngine.replacePreview(preview);
     if (didChange) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForPreview(preview),
+      );
     }
 
     return didChange;
@@ -1235,9 +1279,12 @@ final class RuntimeRoot
 
   bool clearInteractionPreview() {
     ensureRuntimeMutationAllowed();
+    final previous = _interactionEngine.preview;
     final didChange = _interactionEngine.clearPreview();
     if (didChange) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForPreview(previous),
+      );
     }
 
     return didChange;
@@ -1275,7 +1322,7 @@ final class RuntimeRoot
       return;
     }
     if (admission.publishRuntimeState) {
-      _publishRuntimeState();
+      _publishPointerAdmissionRuntimeState(admission);
     }
   }
 
@@ -1319,7 +1366,7 @@ final class RuntimeRoot
     final contextRequest = admission.contextRequest;
     if (contextRequest != null) {
       if (admission.publishRuntimeState) {
-        _publishRuntimeState();
+        _publishPointerAdmissionRuntimeState(admission);
       }
       _emitContextRequest(contextRequest);
 
@@ -1327,6 +1374,16 @@ final class RuntimeRoot
     }
 
     return false;
+  }
+
+  void _publishPointerAdmissionRuntimeState(
+    InteractionPointerAdmission admission,
+  ) {
+    _publishRuntimeState(
+      surfaceRepaintTarget:
+          _surfaceRepaintTargetForCleanup(admission.cleanupOutcome) ??
+          _surfaceRepaintTargetForPreview(_interactionEngine.preview),
+    );
   }
 
   void handleDoubleTap({required Offset position, int? timestampMs}) {
@@ -1373,11 +1430,15 @@ final class RuntimeRoot
     _isDisposed = true;
     _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
+    _clearSurfaceFrameSignal();
     if (cleanupOutcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(cleanupOutcome),
+      );
     }
     _frameEngine.dispose();
     _textEditingPort.dispose();
+    _surfaceFrameSignal.dispose();
     _state.dispose();
     unawaited(_actions.close());
     unawaited(_contextActionRequests.close());
@@ -1493,11 +1554,19 @@ final class RuntimeRoot
     if (!didChange) {
       return;
     }
-    _publishRuntimeState();
+    _publishRuntimeState(
+      surfaceRepaintTarget: _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: false,
+        reason: 'selection',
+      ),
+    );
   }
 
-  void _publishRuntimeState() {
-    _state.value = _runtimeState(
+  void _publishRuntimeState({
+    required _RuntimeSurfaceRepaintTarget? surfaceRepaintTarget,
+  }) {
+    final state = _runtimeState(
       _store,
       _selection.selectionFacts,
       _RuntimeRevisionFacts(
@@ -1510,6 +1579,130 @@ final class RuntimeRoot
             _textEditInteractionRevision,
       ),
     );
+    _state.value = state;
+    if (surfaceRepaintTarget != null) {
+      _publishSurfaceFrame(state, surfaceRepaintTarget);
+    }
+  }
+
+  void _publishSurfaceFrame(
+    CanvasRuntimeState state,
+    _RuntimeSurfaceRepaintTarget repaintTarget,
+  ) {
+    if (_activeSurfaceToken == null) {
+      return;
+    }
+    _surfaceFrameGeneration += 1;
+    _surfaceFrameSignal.value = (
+      state: state,
+      generation: _surfaceFrameGeneration,
+      mainCanvas: repaintTarget.mainCanvas,
+      overlayCanvas: repaintTarget.overlayCanvas,
+      reason: repaintTarget.reason,
+    );
+  }
+
+  void _clearSurfaceFrameSignal() {
+    _surfaceFrameSignal.value = null;
+  }
+
+  @visibleForTesting
+  void publishUnclassifiedRuntimeStateForTesting() {
+    ensureRuntimeMutationAllowed();
+    _publishRuntimeState(
+      surfaceRepaintTarget: _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: true,
+        reason: 'unclassified_runtime_state',
+      ),
+    );
+  }
+
+  _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForCleanup(
+    InteractionCleanupOutcome? outcome,
+  ) {
+    if (outcome == null) {
+      return null;
+    }
+
+    return _surfaceRepaintTargetForPointerCleanup(outcome.repaintTarget);
+  }
+
+  _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForPointerCleanup(
+    PointerCleanupRepaintTarget target,
+  ) {
+    return switch (target) {
+      PointerCleanupRepaintTarget.none => null,
+      PointerCleanupRepaintTarget.main => _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: false,
+        reason: 'pointer_cleanup_main',
+      ),
+      PointerCleanupRepaintTarget.overlay => _surfaceRepaintTarget(
+        mainCanvas: false,
+        overlayCanvas: true,
+        reason: 'pointer_cleanup_overlay',
+      ),
+      PointerCleanupRepaintTarget.mainAndOverlay => _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: true,
+        reason: 'pointer_cleanup_main_and_overlay',
+      ),
+    };
+  }
+
+  _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForPreview(
+    CanvasPreviewState preview,
+  ) {
+    return switch (preview.kind) {
+      CanvasPreviewKind.none => null,
+      CanvasPreviewKind.selectedMove => _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: false,
+        reason: 'selected_move_preview',
+      ),
+      CanvasPreviewKind.marquee ||
+      CanvasPreviewKind.pencilStroke ||
+      CanvasPreviewKind.markerStroke ||
+      CanvasPreviewKind.pendingLineStart ||
+      CanvasPreviewKind.linePreview ||
+      CanvasPreviewKind.eraser => _surfaceRepaintTarget(
+        mainCanvas: false,
+        overlayCanvas: true,
+        reason: 'overlay_preview',
+      ),
+    };
+  }
+
+  _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForEffects(
+    Iterable<CommitDeliveryEffect> effects,
+  ) {
+    for (final effect in effects) {
+      if (effect case RepaintDeliveryEffect(
+        :final mainCanvas,
+        :final overlayCanvas,
+      )) {
+        return _surfaceRepaintTarget(
+          mainCanvas: mainCanvas,
+          overlayCanvas: overlayCanvas,
+          reason: 'commit_repaint',
+        );
+      }
+    }
+
+    return null;
+  }
+
+  _RuntimeSurfaceRepaintTarget _surfaceRepaintTarget({
+    required bool mainCanvas,
+    required bool overlayCanvas,
+    required String reason,
+  }) {
+    return (
+      mainCanvas: mainCanvas,
+      overlayCanvas: overlayCanvas,
+      reason: reason,
+    );
   }
 
   void _markTextEditInteractionChanged() {
@@ -1518,7 +1711,13 @@ final class RuntimeRoot
 
   void _publishTextEditInteractionState() {
     _markTextEditInteractionChanged();
-    _publishRuntimeState();
+    _publishRuntimeState(
+      surfaceRepaintTarget: _surfaceRepaintTarget(
+        mainCanvas: true,
+        overlayCanvas: true,
+        reason: 'text_edit_interaction',
+      ),
+    );
   }
 
   // Load pipeline.
@@ -1647,7 +1846,11 @@ final class RuntimeRoot
         if (applyResult.replacedDocument) {
           _epochRevision += 1;
         }
-        _publishRuntimeState();
+        _publishRuntimeState(
+          surfaceRepaintTarget: _surfaceRepaintTargetForEffects(
+            applyResult.effects,
+          ),
+        );
         _emitActions(applyResult.actionIntents);
       }
       _deliverCommitEffectObserver(applyResult.effects);
@@ -1664,7 +1867,9 @@ final class RuntimeRoot
     try {
       _deliverSpatialEffects(effects);
       _deliverResourceEffects(effects);
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForEffects(effects),
+      );
       if (didClearTextEditing) {
         _textEditingPort.notifyActiveSessionChanged();
       }
@@ -1720,7 +1925,9 @@ final class RuntimeRoot
   void _deliverResourceDirtyResult(List<CommitDeliveryEffect> effects) {
     _isDeliveringCommitEffects = true;
     try {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForEffects(effects),
+      );
       _deliverCommitEffectObserver(effects);
     } finally {
       _isDeliveringCommitEffects = false;
@@ -1898,7 +2105,6 @@ final class RuntimeRoot
       _deliverEditCommitResult(applyResult);
     } on Object {
       _cleanupSelectedMove(PointerCleanupReason.editFailure);
-      _publishRuntimeState();
       rethrow;
     }
   }
@@ -1964,7 +2170,9 @@ final class RuntimeRoot
     final outcome = _interactionEngine.finishSelectedMove(reason);
     _applyPointerCleanupSelection(outcome);
     if (publish && outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
   }
 
@@ -1997,7 +2205,6 @@ final class RuntimeRoot
       );
     } on Object {
       _cleanupMarquee(PointerCleanupReason.editFailure);
-      _publishRuntimeState();
       rethrow;
     }
   }
@@ -2012,7 +2219,9 @@ final class RuntimeRoot
       preservePendingContextTap: preservePendingContextTap,
     );
     if (publish && outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
 
     return outcome;
@@ -2039,7 +2248,6 @@ final class RuntimeRoot
       );
     } on Object {
       _cleanupDrawStroke(PointerCleanupReason.editFailure);
-      _publishRuntimeState();
       rethrow;
     }
   }
@@ -2081,7 +2289,9 @@ final class RuntimeRoot
   }) {
     final outcome = _interactionEngine.finishDrawStroke(reason);
     if (publish && outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
 
     return outcome;
@@ -2108,7 +2318,6 @@ final class RuntimeRoot
       );
     } on Object {
       _cleanupLineEndpoint(PointerCleanupReason.editFailure);
-      _publishRuntimeState();
       rethrow;
     }
   }
@@ -2151,7 +2360,9 @@ final class RuntimeRoot
   }) {
     final outcome = _interactionEngine.finishLineEndpoint(reason);
     if (publish && outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
 
     return outcome;
@@ -2179,7 +2390,6 @@ final class RuntimeRoot
       );
     } on Object {
       _cleanupEraser(PointerCleanupReason.editFailure);
-      _publishRuntimeState();
       rethrow;
     }
   }
@@ -2211,7 +2421,9 @@ final class RuntimeRoot
   }) {
     final outcome = _interactionEngine.finishEraser(reason);
     if (publish && outcome.publicStateNeeded) {
-      _publishRuntimeState();
+      _publishRuntimeState(
+        surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
+      );
     }
 
     return outcome;

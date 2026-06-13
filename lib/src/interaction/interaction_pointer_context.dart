@@ -16,6 +16,7 @@ final class InteractionPointerAdmission {
     this.selectionReplacement,
     this.markProvisionalSelectionReplacementApplied = false,
     this.cleanupDecision,
+    this.cleanupOutcome,
     this.selectedMoveCommit,
     this.marqueeCommit,
     this.strokeCommit,
@@ -30,6 +31,7 @@ final class InteractionPointerAdmission {
   final InteractionSelectionReplacement? selectionReplacement;
   final bool markProvisionalSelectionReplacementApplied;
   final InvalidTerminalCleanupDecision? cleanupDecision;
+  final InteractionCleanupOutcome? cleanupOutcome;
   final SelectedMoveCommitIntent? selectedMoveCommit;
   final MarqueeCommitIntent? marqueeCommit;
   final DrawStrokeCommitIntent? strokeCommit;

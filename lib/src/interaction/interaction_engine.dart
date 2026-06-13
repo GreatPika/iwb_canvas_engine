@@ -977,6 +977,7 @@ final class InteractionEngine {
       sample: sample,
       publishRuntimeState: updatedCarry.publicStateNeeded,
       selectionReplacement: updatedCarry.selectionReplacement,
+      cleanupOutcome: outcome,
     );
   }
 
@@ -994,6 +995,7 @@ final class InteractionEngine {
       sample: sample,
       publishRuntimeState: updatedCarry.publicStateNeeded,
       selectionReplacement: updatedCarry.selectionReplacement,
+      cleanupOutcome: outcome,
       contextRequest: _issueContextRequest(
         facts: facts,
         timestampHintMs: sample.timestampMs,
@@ -1446,6 +1448,7 @@ final class InteractionEngine {
       publishRuntimeState: outcome?.publicStateNeeded ?? false,
       selectionReplacement: outcome?.selectionReplacement,
       cleanupDecision: decision,
+      cleanupOutcome: outcome,
     );
   }
 
@@ -1704,6 +1707,7 @@ final class InteractionEngine {
       sample: sample,
       publishRuntimeState: outcome.publicStateNeeded,
       selectionReplacement: outcome.selectionReplacement,
+      cleanupOutcome: outcome,
     );
   }
 
