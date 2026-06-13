@@ -208,7 +208,7 @@ flowchart LR
   ViewCameraRevision -->|"public runtime state domain"| RuntimeStateRevision
   ViewCameraDispatch -->|"view camera changed"| StaticFrameInvalidation
   ViewCameraDispatch -->|"view camera changed"| OverlayRepaint
-  ViewCameraDispatch -->|"both-layer pre-output target"| SurfaceTarget
+  ViewCameraDispatch -->|"both-layer view-camera target"| SurfaceTargetAggregation
   InteractionConfigCall -->|"interaction settings changed"| InteractionConfigDispatch
   InteractionConfigDispatch -->|"increment public interaction revision"| InteractionPublicRevision
   InteractionPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
@@ -233,8 +233,8 @@ flowchart LR
   PreviewSnapshot -->|"overlay preview\npreviewRevision + overlay repaint"| OverlayRepaint
   PreviewSnapshot -->|"selected move preview\npreviewRevision + main repaint"| MainRepaint
   LoadSuccess -->|"load success overlay repaint"| OverlayRepaint
-  PreviewSnapshot -->|"preview-owned target meaning\naggregated by RuntimeRoot"| SurfaceTarget
-  LoadSuccess -->|"both-layer pre-output target"| SurfaceTarget
+  PreviewSnapshot -->|"preview-owned target meaning"| SurfaceTargetAggregation
+  LoadSuccess -->|"both-layer load target"| SurfaceTargetAggregation
   RuntimeRepaintEffects -->|"classified runtime repaint target"| SurfaceTargetAggregation
   SurfaceTargetAggregation -->|"runtime-owned target"| SurfaceTarget
 

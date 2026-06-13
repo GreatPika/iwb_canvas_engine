@@ -153,6 +153,7 @@
   - test.surface.single_active_surface
   - test.surface.surface_resource_session_lifecycle
   - test.surface.canvas_surface_layout_constraints
+  - test.api.runtime_surface_frame_bridge
   do_not_assume:
   - no unregistered public API shape
   - no unregistered field-update export
@@ -538,6 +539,8 @@
   - test.frame.camera_pan_preserves_ordinary_paint_plan
   - test.frame.selected_supplement_staging_no_global_sort
   - test.api_contract.preview_state_sealed_union
+  - test.api.runtime_surface_frame_bridge
+  - test.surface.surface_frame_output_cache
   - test.surface.widget_paint
   do_not_assume:
   - no live runtime reads in painters
@@ -637,6 +640,7 @@
   - test.frame.paint_plan_excludes_preview_delta
   - test.frame.paint_plan_excludes_selection_state
   - test.frame.camera_pan_preserves_ordinary_paint_plan
+  - test.surface.surface_frame_output_cache
   do_not_assume:
   - no unbounded cache owner sprawl
   - no cache keys tied to non-owned snapshot facts
@@ -934,6 +938,8 @@
   - test.frame.cache_keys_use_current_revisions
   - test.frame.cache_capacity_eviction_policy
   - test.frame.selected_supplement_staging_no_global_sort
+  - test.api.runtime_surface_frame_bridge
+  - test.surface.surface_frame_output_cache
   - test.interaction.preview_public_state
   - test.interaction.eraser_context_action_routing
   - test.interaction.move_machine

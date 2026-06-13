@@ -15,6 +15,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
+## test.api.runtime_surface_frame_bridge
+
+- Sections: `section_04_public_api_v1`, `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.api.runtime_timestamp_order
 
 - Sections: `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
@@ -558,6 +562,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.surface.single_active_surface
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
+
+## test.surface.surface_frame_output_cache
+
+- Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 
 ## test.surface.surface_resource_session_lifecycle
 

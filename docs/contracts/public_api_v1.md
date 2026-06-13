@@ -45,6 +45,7 @@ Required tests:
 - `test.surface.single_active_surface`
 - `test.surface.surface_resource_session_lifecycle`
 - `test.surface.canvas_surface_layout_constraints`
+- `test.api.runtime_surface_frame_bridge`
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`

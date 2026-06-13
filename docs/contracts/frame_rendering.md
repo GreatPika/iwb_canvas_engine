@@ -40,6 +40,8 @@ Required tests:
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.frame.selected_supplement_staging_no_global_sort`
 - `test.api_contract.preview_state_sealed_union`
+- `test.api.runtime_surface_frame_bridge`
+- `test.surface.surface_frame_output_cache`
 - `test.surface.widget_paint`
 Guardrails:
 - `preview.selected_move_main_repaint`

@@ -133,6 +133,8 @@ Required tests:
 - `test.frame.cache_keys_use_current_revisions`
 - `test.frame.cache_capacity_eviction_policy`
 - `test.frame.selected_supplement_staging_no_global_sort`
+- `test.api.runtime_surface_frame_bridge`
+- `test.surface.surface_frame_output_cache`
 - `test.interaction.preview_public_state`
 - `test.interaction.eraser_context_action_routing`
 - `test.interaction.move_machine`
