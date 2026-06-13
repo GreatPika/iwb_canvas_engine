@@ -63,6 +63,49 @@ void main() {
     expect(_paintHosts(), findsOneWidget);
   });
 
+  testWidgets('CanvasSurface routes local input invalidations by layer', (
+    tester,
+  ) async {
+    await _expectLocalInputInvalidationRouting(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface routes resource invalidations by layer', (
+    tester,
+  ) async {
+    await _expectResourceInvalidationRouting(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface rebuilds both layers for runtime swap', (
+    tester,
+  ) async {
+    await _expectRuntimeSwapRebuildsBothLayers(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets(
+    'CanvasSurface ignores inactive runtime publications after swap',
+    (tester) async {
+      await _expectInactiveRuntimePublicationIgnoredAfterSwap(tester);
+      expect(_paintHosts(), findsOneWidget);
+    },
+  );
+
+  testWidgets('CanvasSurface rejected attach installs no layer listener', (
+    tester,
+  ) async {
+    await _expectRejectedAttachInstallsNoLayerListener(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface ignores runtime publications after detach', (
+    tester,
+  ) async {
+    await _expectDetachedSurfaceIgnoresRuntimePublications(tester);
+    expect(_paintHosts(), findsNothing);
+  });
+
   testWidgets('CanvasSurface rebuilds for inline text paint suppression', (
     tester,
   ) async {
@@ -139,14 +182,26 @@ Future<void> _expectResourceBudgetFollowUpFrame(WidgetTester tester) async {
   addTearDown(runtime.dispose);
 
   await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
 
   expect(resolver.calls, 128);
   expect(_budgetPlaceholders(tester), 12);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
 
-  await tester.pump();
+  await tester.pump(null, EnginePhase.layout);
 
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(resolver.calls, 140);
   expect(_budgetPlaceholders(tester), 0);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
 
   await tester.pump();
 
@@ -160,7 +215,7 @@ Future<void> _expectStaleBudgetFollowUpIgnored(WidgetTester tester) async {
   final oldImage = await _createImage();
   final newImage = await _createImage();
   final oldRuntime = runtimeWithDocument(_manyImageDocument(140));
-  final newRuntime = runtimeWithDocument(_manyImageDocument(140));
+  final newRuntime = runtimeWithDocument(_imageDocument());
   final oldResolver = _RecordingResolver((_) => oldImage);
   final newResolver = _RecordingResolver((_) => newImage);
   addTearDown(oldRuntime.dispose);
@@ -174,14 +229,29 @@ Future<void> _expectStaleBudgetFollowUpIgnored(WidgetTester tester) async {
   await tester.pumpWidget(
     _SurfaceHost(runtime: newRuntime, resolver: newResolver),
   );
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
 
   expect(oldResolver.calls, 128);
-  expect(newResolver.calls, 128);
+  expect(newResolver.calls, 1);
+  probe.reset();
+  _rootFor(oldRuntime).replaceInteractionPreview(
+    const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
+  );
 
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, same(beforeMain));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(oldResolver.calls, 128);
+  expect(newResolver.calls, 1);
+  expect(probe.mainDispatches, 0);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isFalse);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
   await tester.pump();
-
-  expect(oldResolver.calls, 128);
-  expect(newResolver.calls, 140);
   expect(oldImage.debugDisposed, isFalse);
   expect(newImage.debugDisposed, isFalse);
   oldImage.dispose();
@@ -279,6 +349,200 @@ Future<void> _expectPainterPaintDoesNotBuildOutputs(WidgetTester tester) async {
   expect(resolver.calls, 1);
 }
 
+Future<void> _expectLocalInputInvalidationRouting(WidgetTester tester) async {
+  final runtime = runtimeWithDocument(_rectDocument());
+  final resolver = _RecordingResolver((_) => null);
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+
+  await _expectGridStyleMainOnly(tester, runtime, resolver, probe);
+  await _expectSelectionStyleBothLayers(tester, runtime, resolver, probe);
+  await _expectDevicePixelRatioBothLayers(tester, runtime, resolver, probe);
+  await _expectLayoutSizeBothLayers(tester, runtime, resolver, probe);
+}
+
+Future<void> _expectResourceInvalidationRouting(WidgetTester tester) async {
+  final firstImage = await _createImage();
+  final secondImage = await _createImage();
+  final runtime = runtimeWithDocument(_imageDocument());
+  final firstResolver = _RecordingResolver((_) => firstImage);
+  final secondResolver = _RecordingResolver((_) => secondImage);
+  addTearDown(runtime.dispose);
+  addTearDown(firstImage.dispose);
+  addTearDown(secondImage.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: runtime, resolver: firstResolver),
+  );
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+
+  await _expectResourceDirtyMainOnly(tester, runtime, firstResolver, probe);
+  await _expectAllResourcesDirtyMainOnly(tester, runtime, firstResolver, probe);
+  await _expectResolverReplacementMainOnly(
+    tester,
+    runtime,
+    secondResolver,
+    probe,
+  );
+}
+
+Future<void> _expectRuntimeSwapRebuildsBothLayers(WidgetTester tester) async {
+  final oldRuntime = runtimeWithDocument(_rectDocument());
+  final newRuntime = runtimeWithDocument(_textAndRectDocument());
+  final resolver = _RecordingResolver((_) => null);
+  addTearDown(oldRuntime.dispose);
+  addTearDown(newRuntime.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: oldRuntime, resolver: resolver),
+  );
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: newRuntime, resolver: resolver),
+    phase: EnginePhase.layout,
+  );
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(_mainRecordIds(tester), contains(_surfaceTextId));
+  expect(probe.mainDispatches, greaterThanOrEqualTo(1));
+  expect(probe.overlayDispatches, greaterThanOrEqualTo(1));
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
+}
+
+Future<void> _expectInactiveRuntimePublicationIgnoredAfterSwap(
+  WidgetTester tester,
+) async {
+  final oldImage = await _createImage();
+  final oldRuntime = runtimeWithDocument(_imageDocument());
+  final newRuntime = runtimeWithDocument(_rectDocument());
+  final oldResolver = _RecordingResolver((_) => oldImage);
+  final newResolver = _RecordingResolver((_) => null);
+  addTearDown(oldRuntime.dispose);
+  addTearDown(newRuntime.dispose);
+  addTearDown(oldImage.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: oldRuntime, resolver: oldResolver),
+  );
+  expect(oldResolver.calls, 1);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: newRuntime, resolver: newResolver),
+  );
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeOldResolverCalls = oldResolver.calls;
+  probe.reset();
+
+  oldRuntime.resources.markResourceDirty(CanvasResourceId('resource-a'));
+  _rootFor(oldRuntime).replaceInteractionPreview(
+    const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
+  );
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, same(beforeMain));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(oldResolver.calls, beforeOldResolverCalls);
+  expect(probe.mainDispatches, 0);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isFalse);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
+}
+
+Future<void> _expectRejectedAttachInstallsNoLayerListener(
+  WidgetTester tester,
+) async {
+  final runtime = runtimeWithDocument(_imageDocument());
+  final image = await _createImage();
+  final acceptedResolver = _RecordingResolver((_) => image);
+  final rejectedResolver = _RecordingResolver((_) => image);
+  addTearDown(runtime.dispose);
+  addTearDown(image.dispose);
+
+  await tester.pumpWidget(
+    _TwoSurfaceHost(
+      runtime: runtime,
+      acceptedResolver: acceptedResolver,
+      rejectedResolver: null,
+    ),
+  );
+  expect(acceptedResolver.calls, 1);
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+
+  await tester.pumpWidget(
+    _TwoSurfaceHost(
+      runtime: runtime,
+      acceptedResolver: acceptedResolver,
+      rejectedResolver: rejectedResolver,
+    ),
+  );
+  final error = tester.takeException();
+  expect(error, isStateError);
+  expect(_paintHosts(), findsOneWidget);
+  expect(rejectedResolver.calls, 0);
+
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeAcceptedResolverCalls = acceptedResolver.calls;
+  probe.reset();
+
+  runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(acceptedResolver.calls, beforeAcceptedResolverCalls + 1);
+  expect(rejectedResolver.calls, 0);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
+}
+
+Future<void> _expectDetachedSurfaceIgnoresRuntimePublications(
+  WidgetTester tester,
+) async {
+  final image = await _createImage();
+  final runtime = runtimeWithDocument(_imageDocument());
+  final resolver = _RecordingResolver((_) => image);
+  addTearDown(runtime.dispose);
+  addTearDown(image.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  expect(resolver.calls, 1);
+
+  await tester.pumpWidget(const SizedBox.shrink());
+  expect(_paintHosts(), findsNothing);
+  final beforeResolverCalls = resolver.calls;
+
+  runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
+  _rootFor(runtime).replaceInteractionPreview(
+    const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
+  );
+  await tester.pump();
+
+  expect(_paintHosts(), findsNothing);
+  expect(resolver.calls, beforeResolverCalls);
+  expect(tester.takeException(), isNull);
+}
+
 Future<void> _expectSelectedMoveMainRepaint(
   WidgetTester tester,
   CanvasRuntime runtime,
@@ -307,6 +571,199 @@ Future<void> _expectSelectedMoveMainRepaint(
     'selected_move_preview',
   );
   expect(_overlayPainter(tester).output.overlayPreviewPlan.primitives, isEmpty);
+}
+
+Future<void> _expectGridStyleMainOnly(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeResolverCalls = resolver.calls;
+  probe.reset();
+
+  await tester.pumpWidget(
+    _SurfaceHost(
+      runtime: runtime,
+      resolver: resolver,
+      gridStyle: CanvasGridStyle(strokeWidth: 2),
+    ),
+    phase: EnginePhase.layout,
+  );
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(resolver.calls, beforeResolverCalls);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
+}
+
+Future<void> _expectSelectionStyleBothLayers(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  await tester.pumpWidget(
+    _SurfaceHost(
+      runtime: runtime,
+      resolver: resolver,
+      gridStyle: CanvasGridStyle(strokeWidth: 2),
+      selectionStyle: CanvasSelectionStyle(color: const Color(0xFFFF0000)),
+    ),
+    phase: EnginePhase.layout,
+  );
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 1);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
+}
+
+Future<void> _expectDevicePixelRatioBothLayers(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  await tester.pumpWidget(
+    _SurfaceHost(
+      runtime: runtime,
+      resolver: resolver,
+      devicePixelRatio: 2,
+      gridStyle: CanvasGridStyle(strokeWidth: 2),
+      selectionStyle: CanvasSelectionStyle(color: const Color(0xFFFF0000)),
+    ),
+    phase: EnginePhase.layout,
+  );
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 1);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
+}
+
+Future<void> _expectLayoutSizeBothLayers(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  await tester.pumpWidget(
+    _SurfaceHost(
+      runtime: runtime,
+      resolver: resolver,
+      size: const Size(120, 80),
+      devicePixelRatio: 2,
+      gridStyle: CanvasGridStyle(strokeWidth: 2),
+      selectionStyle: CanvasSelectionStyle(color: const Color(0xFFFF0000)),
+    ),
+    phase: EnginePhase.layout,
+  );
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(
+    _mainPainter(
+      tester,
+    ).output.capturedFrame.snapshot.inputs.viewportWorldBounds,
+    const Rect.fromLTWH(0, 0, 120, 80),
+  );
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 1);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
+}
+
+Future<void> _expectResourceDirtyMainOnly(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeResolverCalls = resolver.calls;
+  probe.reset();
+
+  runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(resolver.calls, beforeResolverCalls + 1);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
+}
+
+Future<void> _expectAllResourcesDirtyMainOnly(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeResolverCalls = resolver.calls;
+  probe.reset();
+
+  runtime.resources.markAllResourcesDirty();
+  await tester.pump(null, EnginePhase.layout);
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(resolver.calls, beforeResolverCalls + 1);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
+}
+
+Future<void> _expectResolverReplacementMainOnly(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
+) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(resolver.calls, 1);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
 }
 
 Future<void> _expectMarqueeOverlayOnly(
@@ -340,23 +797,82 @@ Future<void> _expectMarqueeOverlayOnly(
 }
 
 final class _SurfaceHost extends StatelessWidget {
-  const _SurfaceHost({required this.runtime, required this.resolver});
+  const _SurfaceHost({
+    required this.runtime,
+    required this.resolver,
+    this.size = const Size(100, 100),
+    this.devicePixelRatio = 1,
+    this.selectionStyle = CanvasSelectionStyle.defaultStyle,
+    this.gridStyle = CanvasGridStyle.defaultStyle,
+  });
 
   final CanvasRuntime runtime;
   final CanvasResourceResolver resolver;
+  final Size size;
+  final double devicePixelRatio;
+  final CanvasSelectionStyle selectionStyle;
+  final CanvasGridStyle gridStyle;
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: SizedBox(
-        width: 100,
-        height: 100,
-        child: CanvasSurface(
-          runtime: runtime,
-          resourceResolver: resolver,
-          interactive: false,
+      child: MediaQuery(
+        data: MediaQueryData(devicePixelRatio: devicePixelRatio),
+        child: Center(
+          child: SizedBox(
+            width: size.width,
+            height: size.height,
+            child: CanvasSurface(
+              runtime: runtime,
+              resourceResolver: resolver,
+              selectionStyle: selectionStyle,
+              gridStyle: gridStyle,
+              interactive: false,
+            ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+final class _TwoSurfaceHost extends StatelessWidget {
+  const _TwoSurfaceHost({
+    required this.runtime,
+    required this.acceptedResolver,
+    required this.rejectedResolver,
+  });
+
+  final CanvasRuntime runtime;
+  final CanvasResourceResolver acceptedResolver;
+  final CanvasResourceResolver? rejectedResolver;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondResolver = rejectedResolver;
+
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(
+        children: [
+          Expanded(
+            child: CanvasSurface(
+              runtime: runtime,
+              resourceResolver: acceptedResolver,
+              interactive: false,
+            ),
+          ),
+          Expanded(
+            child: secondResolver == null
+                ? const SizedBox.shrink()
+                : CanvasSurface(
+                    runtime: runtime,
+                    resourceResolver: secondResolver,
+                    interactive: false,
+                  ),
+          ),
+        ],
       ),
     );
   }

@@ -11,10 +11,7 @@ void main() {
     await _pumpBoundedSurface(tester);
     expect(tester.takeException(), isNull);
     expect(_paintHosts(), findsOneWidget);
-    expect(
-      tester.widget<CustomPaint>(_paintHosts()).size,
-      const Size(100, 100),
-    );
+    expect(tester.getSize(_paintHosts()), const Size(100, 100));
   });
 
   testWidgets('vertically unbounded CanvasSurface reports FlutterError', (

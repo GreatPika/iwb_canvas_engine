@@ -25,7 +25,9 @@ Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
 
   await tester.pumpWidget(_SurfaceHost(runtime: runtime));
   final beforeOutput = _mainPainter(tester).output;
+  final beforeOverlayOutput = _overlayPainter(tester).output;
   final beforePan = beforeOutput.ordinaryPlan;
+  final beforeDocument = runtime.readDocument();
 
   _expectSurfaceCapturedRuntimePreview(beforeOutput, runtime);
 
@@ -39,6 +41,9 @@ Future<bool> _surfaceCameraPanKeepsOrdinaryPlanIdentity(
     beforePlanKey: beforePan.key,
     afterOutput: afterOutput,
   );
+  expect(afterOutput, isNot(same(beforeOutput)));
+  expect(afterOverlayOutput, isNot(same(beforeOverlayOutput)));
+  expect(runtime.readDocument(), same(beforeDocument));
   _expectOverlayCapturedCamera(
     output: afterOverlayOutput,
     mainOutput: afterOutput,
