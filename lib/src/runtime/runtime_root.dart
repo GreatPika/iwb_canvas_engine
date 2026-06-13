@@ -1267,11 +1267,15 @@ final class RuntimeRoot
   // Preview.
   bool replaceInteractionPreview(CanvasPreviewState preview) {
     ensureRuntimeMutationAllowed();
+    final previous = _interactionEngine.preview;
     final didChange = _interactionEngine.replacePreview(preview);
     if (didChange) {
-      _publishRuntimeState(
-        surfaceRepaintTarget: _surfaceRepaintTargetForPreview(preview),
-      );
+      final cleanupTarget = _surfaceRepaintTargetForPreview(previous);
+      final previewTarget = _surfaceRepaintTargetForPreview(preview);
+      if (_targetsDifferentLayers(cleanupTarget, previewTarget)) {
+        _publishRuntimeState(surfaceRepaintTarget: cleanupTarget);
+      }
+      _publishRuntimeState(surfaceRepaintTarget: previewTarget);
     }
 
     return didChange;
@@ -1691,6 +1695,16 @@ final class RuntimeRoot
     }
 
     return null;
+  }
+
+  bool _targetsDifferentLayers(
+    _RuntimeSurfaceRepaintTarget? first,
+    _RuntimeSurfaceRepaintTarget? second,
+  ) {
+    return first != null &&
+        second != null &&
+        (first.mainCanvas != second.mainCanvas ||
+            first.overlayCanvas != second.overlayCanvas);
   }
 
   _RuntimeSurfaceRepaintTarget _surfaceRepaintTarget({

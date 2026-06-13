@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_surface_styles.dart';
@@ -60,7 +61,7 @@ Picture _recordMarqueePicture() {
   );
   final recorder = PictureRecorder();
   OverlayFramePainter(
-    output: output,
+    outputListenable: ValueNotifier(output),
   ).paint(Canvas(recorder), const Size(32, 32));
 
   return recorder.endRecording();

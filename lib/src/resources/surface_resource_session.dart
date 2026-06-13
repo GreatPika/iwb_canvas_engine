@@ -31,6 +31,7 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   bool _isDropped = false;
 
   bool get hasPendingBudgetFollowUpRepaint => _hasPendingBudgetFollowUpRepaint;
+  int get resolverGeneration => _resolverGeneration;
 
   void beginFrameResourcePass() {
     _resolverCallsThisFrame = 0;

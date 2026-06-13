@@ -197,7 +197,7 @@ final class _SurfaceHost extends StatelessWidget {
 
 MainFramePainter _mainPainter(WidgetTester tester) {
   final host = find.byKey(
-    const ValueKey<String>('iwb_canvas_surface.paint_host'),
+    const ValueKey<String>('iwb_canvas_surface.main_paint_host'),
   );
   final paintHost = tester.widget<CustomPaint>(host);
   final painter = paintHost.painter;
@@ -241,7 +241,7 @@ Future<_Pixel> _recordedPixelAt(
 ) async {
   final recorder = ui.PictureRecorder();
   MainFramePainter(
-    output: output,
+    outputListenable: ValueNotifier(output),
   ).paint(ui.Canvas(recorder), const Size(64, 64));
   final image = await recorder.endRecording().toImage(64, 64);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);

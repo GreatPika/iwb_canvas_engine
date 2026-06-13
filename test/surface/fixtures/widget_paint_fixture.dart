@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -44,6 +46,20 @@ void main() {
     tester,
   ) async {
     await _expectMainAndOverlayPreviewRouting(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface coalesces synchronous runtime repaint frames', (
+    tester,
+  ) async {
+    await _expectSynchronousRuntimeFrameCoalescing(tester);
+    expect(_paintHosts(), findsOneWidget);
+  });
+
+  testWidgets('CanvasSurface painters do not construct outputs during paint', (
+    tester,
+  ) async {
+    await _expectPainterPaintDoesNotBuildOutputs(tester);
     expect(_paintHosts(), findsOneWidget);
   });
 
@@ -173,13 +189,54 @@ Future<void> _expectStaleBudgetFollowUpIgnored(WidgetTester tester) async {
 }
 
 Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
+  final image = await _createImage();
+  final runtime = runtimeWithDocument(_imageDocument());
+  final resolver = _RecordingResolver((_) => image);
+  addTearDown(runtime.dispose);
+  addTearDown(image.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+
+  expect(resolver.calls, 1);
+  await _expectSelectedMoveMainRepaint(tester, runtime, resolver, probe);
+  _rootFor(runtime).clearInteractionPreview();
+  await tester.pump();
+  probe.reset();
+
+  await _expectMarqueeOverlayOnly(tester, runtime, resolver, probe);
+}
+
+Future<void> _expectSynchronousRuntimeFrameCoalescing(
+  WidgetTester tester,
+) async {
   final runtime = runtimeWithDocument(_rectDocument());
   final resolver = _RecordingResolver((_) => null);
   addTearDown(runtime.dispose);
 
   await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
-  await _expectSelectedMoveMainRepaint(tester, runtime);
-  await _expectMarqueeOverlayOnly(tester, runtime);
+
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  runtime.selection.setSelection([CanvasElementId('rect-a')]);
+  _rootFor(runtime).replaceInteractionPreview(
+    const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
+  );
+  await tester.pump();
+
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(
+    _mainPainter(
+      tester,
+    ).output.capturedFrame.snapshot.selection.selectedElementIds,
+    [CanvasElementId('rect-a')],
+  );
+  expect(
+    _overlayPainter(tester).output.overlayPreviewPlan.primitives,
+    isNotEmpty,
+  );
   expect(resolver.calls, 0);
 }
 
@@ -206,16 +263,45 @@ Future<void> _expectInlineTextSuppressionSurfaceRepaint(
   expect(_mainRecordIds(tester), contains(_surfaceTextId));
 }
 
+Future<void> _expectPainterPaintDoesNotBuildOutputs(WidgetTester tester) async {
+  final image = await _createImage();
+  final runtime = runtimeWithDocument(_imageDocument());
+  final resolver = _RecordingResolver((_) => image);
+  addTearDown(runtime.dispose);
+  addTearDown(image.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+
+  expect(resolver.calls, 1);
+  _paintCurrentOutputs(tester);
+  _paintCurrentOutputs(tester);
+
+  expect(resolver.calls, 1);
+}
+
 Future<void> _expectSelectedMoveMainRepaint(
   WidgetTester tester,
   CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
 ) async {
-  runtime.selection.setSelection([CanvasElementId('rect-a')]);
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  probe.reset();
+  runtime.selection.setSelection([CanvasElementId('image-a')]);
   _rootFor(runtime).replaceInteractionPreview(
     const CanvasSelectedMovePreview(delta: Offset(4, 5)),
   );
-  await tester.pump();
+  await tester.pump(null, EnginePhase.layout);
 
+  expect(_mainPainter(tester).output, isNot(same(beforeMain)));
+  expect(_overlayPainter(tester).output, same(beforeOverlay));
+  expect(resolver.calls, greaterThanOrEqualTo(1));
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
+  await tester.pump();
   expect(
     _mainPainter(tester).output.repaintSignal.reason,
     'selected_move_preview',
@@ -226,12 +312,26 @@ Future<void> _expectSelectedMoveMainRepaint(
 Future<void> _expectMarqueeOverlayOnly(
   WidgetTester tester,
   CanvasRuntime runtime,
+  _RecordingResolver resolver,
+  _LayerDispatchProbe probe,
 ) async {
+  final beforeMain = _mainPainter(tester).output;
+  final beforeOverlay = _overlayPainter(tester).output;
+  final beforeResolverCalls = resolver.calls;
+  probe.reset();
   _rootFor(runtime).replaceInteractionPreview(
     const CanvasMarqueePreview(rect: Rect.fromLTWH(1, 2, 3, 4)),
   );
-  await tester.pump();
+  await tester.pump(null, EnginePhase.layout);
 
+  expect(_mainPainter(tester).output, same(beforeMain));
+  expect(_overlayPainter(tester).output, isNot(same(beforeOverlay)));
+  expect(resolver.calls, beforeResolverCalls);
+  expect(probe.mainDispatches, 0);
+  expect(probe.overlayDispatches, 1);
+  expect(_mainRenderObject(tester).debugNeedsPaint, isFalse);
+  expect(_overlayRenderObject(tester).debugNeedsPaint, isTrue);
+  await tester.pump();
   expect(_mainPainter(tester).output.capturedFrame.selectedMovePreview, isNull);
   expect(
     _overlayPainter(tester).output.overlayPreviewPlan.primitives,
@@ -264,7 +364,8 @@ final class _SurfaceHost extends StatelessWidget {
 
 void _expectPaintHost() {
   expect(_paintHosts(), findsOneWidget);
-  expect(find.byType(CustomPaint), findsOneWidget);
+  expect(_mainPaintHosts(), findsOneWidget);
+  expect(_overlayPaintHosts(), findsOneWidget);
 }
 
 Finder _paintHosts() {
@@ -272,7 +373,7 @@ Finder _paintHosts() {
 }
 
 MainFramePainter _mainPainter(WidgetTester tester) {
-  final paintHost = tester.widget<CustomPaint>(_paintHosts());
+  final paintHost = tester.widget<CustomPaint>(_mainPaintHosts());
   final painter = paintHost.painter;
   expect(painter, isA<MainFramePainter>());
 
@@ -280,11 +381,39 @@ MainFramePainter _mainPainter(WidgetTester tester) {
 }
 
 OverlayFramePainter _overlayPainter(WidgetTester tester) {
-  final paintHost = tester.widget<CustomPaint>(_paintHosts());
-  final painter = paintHost.foregroundPainter;
+  final paintHost = tester.widget<CustomPaint>(_overlayPaintHosts());
+  final painter = paintHost.painter;
   expect(painter, isA<OverlayFramePainter>());
 
   return painter as OverlayFramePainter;
+}
+
+RenderCustomPaint _mainRenderObject(WidgetTester tester) {
+  return tester.renderObject<RenderCustomPaint>(_mainPaintHosts());
+}
+
+RenderCustomPaint _overlayRenderObject(WidgetTester tester) {
+  return tester.renderObject<RenderCustomPaint>(_overlayPaintHosts());
+}
+
+void _paintCurrentOutputs(WidgetTester tester) {
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+  _mainPainter(tester).paint(canvas, const Size(100, 100));
+  _overlayPainter(tester).paint(canvas, const Size(100, 100));
+  recorder.endRecording().dispose();
+}
+
+Finder _mainPaintHosts() {
+  return find.byKey(
+    const ValueKey<String>('iwb_canvas_surface.main_paint_host'),
+  );
+}
+
+Finder _overlayPaintHosts() {
+  return find.byKey(
+    const ValueKey<String>('iwb_canvas_surface.overlay_paint_host'),
+  );
 }
 
 int _budgetPlaceholders(WidgetTester tester) {
@@ -309,6 +438,39 @@ RuntimeRoot _rootFor(CanvasRuntime runtime) {
   }
 
   throw StateError('CanvasRuntime frame root is not attached.');
+}
+
+final class _LayerDispatchProbe {
+  _LayerDispatchProbe(this._tester) {
+    _mainListenable = _mainPainter(_tester).outputListenable;
+    _overlayListenable = _overlayPainter(_tester).outputListenable;
+    _mainListenable.addListener(_handleMainDispatch);
+    _overlayListenable.addListener(_handleOverlayDispatch);
+  }
+
+  final WidgetTester _tester;
+  late final ValueListenable<Object?> _mainListenable;
+  late final ValueListenable<Object?> _overlayListenable;
+  int mainDispatches = 0;
+  int overlayDispatches = 0;
+
+  void reset() {
+    mainDispatches = 0;
+    overlayDispatches = 0;
+  }
+
+  void dispose() {
+    _mainListenable.removeListener(_handleMainDispatch);
+    _overlayListenable.removeListener(_handleOverlayDispatch);
+  }
+
+  void _handleMainDispatch() {
+    mainDispatches += 1;
+  }
+
+  void _handleOverlayDispatch() {
+    overlayDispatches += 1;
+  }
 }
 
 final class _InlineTextSurfaceScenario {

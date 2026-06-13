@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
@@ -117,8 +118,9 @@ Future<int> _overlayAlphaAt(
   );
 
   return _alphaAt(
-    (canvas) =>
-        OverlayFramePainter(output: output).paint(canvas, const Size(32, 32)),
+    (canvas) => OverlayFramePainter(
+      outputListenable: ValueNotifier(output),
+    ).paint(canvas, const Size(32, 32)),
     x,
     y,
   );

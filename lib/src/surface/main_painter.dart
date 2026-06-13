@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../frame/frame_paint_output.dart';
@@ -7,9 +8,19 @@ import '../frame/render_element_record.dart';
 import '../frame/selection_decoration_planner.dart';
 
 final class MainFramePainter extends CustomPainter {
-  const MainFramePainter({required this.output});
+  MainFramePainter({required this.outputListenable})
+    : super(repaint: outputListenable);
 
-  final MainFramePaintOutput output;
+  final ValueListenable<MainFramePaintOutput?> outputListenable;
+
+  MainFramePaintOutput get output {
+    final value = outputListenable.value;
+    if (value == null) {
+      throw StateError('Main frame output has not been built.');
+    }
+
+    return value;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -28,7 +39,7 @@ final class MainFramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant MainFramePainter oldDelegate) {
-    return !identical(oldDelegate.output, output);
+    return !identical(oldDelegate.outputListenable, outputListenable);
   }
 }
 

@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
@@ -17,8 +18,9 @@ void main() {
 
     expect(
       await alphaAt(
-        (canvas) =>
-            MainFramePainter(output: output).paint(canvas, const Size(32, 32)),
+        (canvas) => MainFramePainter(
+          outputListenable: ValueNotifier(output),
+        ).paint(canvas, const Size(32, 32)),
         x: 36,
         y: 12,
       ),

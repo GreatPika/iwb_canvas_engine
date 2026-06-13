@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../frame/frame_drawable_policy.dart';
@@ -7,9 +8,19 @@ import '../frame/overlay_preview_planner.dart';
 const _drawablePolicy = FrameDrawablePolicy();
 
 final class OverlayFramePainter extends CustomPainter {
-  const OverlayFramePainter({required this.output});
+  OverlayFramePainter({required this.outputListenable})
+    : super(repaint: outputListenable);
 
-  final OverlayFramePaintOutput output;
+  final ValueListenable<OverlayFramePaintOutput?> outputListenable;
+
+  OverlayFramePaintOutput get output {
+    final value = outputListenable.value;
+    if (value == null) {
+      throw StateError('Overlay frame output has not been built.');
+    }
+
+    return value;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -25,7 +36,7 @@ final class OverlayFramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant OverlayFramePainter oldDelegate) {
-    return !identical(oldDelegate.output, output);
+    return !identical(oldDelegate.outputListenable, outputListenable);
   }
 }
 

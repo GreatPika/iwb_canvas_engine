@@ -140,7 +140,7 @@ final class _SurfaceHost extends StatelessWidget {
 
 MainFramePainter _mainPainter(WidgetTester tester) {
   final host = find.byKey(
-    const ValueKey<String>('iwb_canvas_surface.paint_host'),
+    const ValueKey<String>('iwb_canvas_surface.main_paint_host'),
   );
   final paintHost = tester.widget<CustomPaint>(host);
   final painter = paintHost.painter;
@@ -152,10 +152,10 @@ MainFramePainter _mainPainter(WidgetTester tester) {
 
 OverlayFramePainter _overlayPainter(WidgetTester tester) {
   final host = find.byKey(
-    const ValueKey<String>('iwb_canvas_surface.paint_host'),
+    const ValueKey<String>('iwb_canvas_surface.overlay_paint_host'),
   );
   final paintHost = tester.widget<CustomPaint>(host);
-  final painter = paintHost.foregroundPainter;
+  final painter = paintHost.painter;
 
   expect(painter, isA<OverlayFramePainter>());
 

@@ -4,11 +4,12 @@ import '../api/canvas_runtime.dart';
 import '../api/canvas_runtime_surface_bridge.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
+import '../frame/frame_paint_output.dart';
 import '../resources/surface_resource_session.dart';
 import 'image_bridge.dart';
-import 'main_painter.dart';
-import 'overlay_painter.dart';
+import 'layer_paint_host.dart';
 import 'pointer_adapter.dart';
+import 'surface_frame_output_cache.dart';
 
 /// Public API v1 declaration for [CanvasSurface].
 final class CanvasSurface extends StatefulWidget {
@@ -41,8 +42,12 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   CanvasRuntime? _activeRuntime;
   CanvasRuntimeSurfacePort? _activePort;
   SurfaceResourceSession? _activeSession;
+  final SurfaceFrameOutputCache<MainFramePaintOutput, OverlayFramePaintOutput>
+  _outputCache = SurfaceFrameOutputCache();
+  CanvasRuntimeSurfaceFrame? _pendingRuntimeFrame;
   bool _isSurfaceAttached = false;
   bool _hasPendingBudgetFollowUpFrame = false;
+  bool _applyBudgetFollowUpOnNextBuild = false;
 
   @override
   void initState() {
@@ -78,6 +83,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       _activePort?.handleSurfaceInteractiveDisabled(_surfaceToken);
     }
     _detachSurface();
+    _outputCache.dispose();
     super.dispose();
   }
 
@@ -88,21 +94,16 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       return const SizedBox.shrink();
     }
 
-    return ValueListenableBuilder(
-      valueListenable: port.state,
-      builder: (context, _, _) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final paintSize = _paintSizeFor(constraints);
-            final viewport = Offset.zero & paintSize;
-            final devicePixelRatio = _devicePixelRatioFor(context);
-            return _buildPaintHost(
-              port: port,
-              paintSize: paintSize,
-              viewport: viewport,
-              devicePixelRatio: devicePixelRatio,
-            );
-          },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final paintSize = _paintSizeFor(constraints);
+        final viewport = Offset.zero & paintSize;
+        final devicePixelRatio = _devicePixelRatioFor(context);
+        return _buildPaintHost(
+          port: port,
+          paintSize: paintSize,
+          viewport: viewport,
+          devicePixelRatio: devicePixelRatio,
         );
       },
     );
@@ -130,6 +131,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activePort = port;
     _activeSession = session;
     _isSurfaceAttached = true;
+    port.surfaceFrame.addListener(_handleSurfaceFrame);
   }
 
   CanvasRuntimeSurfacePort? _currentSurfacePort() {
@@ -144,23 +146,31 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       return port;
     }
 
+    _activePort?.surfaceFrame.removeListener(_handleSurfaceFrame);
     _isSurfaceAttached = false;
     _activeSession = null;
     _activeRuntime = null;
     _activePort = null;
     _hasPendingBudgetFollowUpFrame = false;
+    _applyBudgetFollowUpOnNextBuild = false;
+    _pendingRuntimeFrame = null;
+    _outputCache.clear();
 
     return null;
   }
 
   void _detachSurface() {
     final session = _activeSession;
+    _activePort?.surfaceFrame.removeListener(_handleSurfaceFrame);
     _hasPendingBudgetFollowUpFrame = false;
+    _applyBudgetFollowUpOnNextBuild = false;
     if (!_isSurfaceAttached) {
       session?.drop();
       _activeSession = null;
       _activeRuntime = null;
       _activePort = null;
+      _pendingRuntimeFrame = null;
+      _outputCache.clear();
 
       return;
     }
@@ -172,6 +182,9 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activeSession = null;
     _activeRuntime = null;
     _activePort = null;
+    _pendingRuntimeFrame = null;
+    _applyBudgetFollowUpOnNextBuild = false;
+    _outputCache.clear();
   }
 
   Widget _buildPaintHost({
@@ -184,32 +197,21 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     if (session == null) {
       return const SizedBox.shrink();
     }
-    final mainOutput = port.buildSurfaceMainFrame(
-      _surfaceToken,
-      viewportWorldBounds: viewport,
-      devicePixelRatio: devicePixelRatio,
-      selectionStyle: widget.selectionStyle,
-      gridStyle: widget.gridStyle,
-      bindAssets: const CanvasSurfaceImageBridge().bindAssets(session),
-    );
-    _scheduleBudgetFollowUpFrameIfNeeded(
+    final inputs = _SurfaceFrameBuildInputs(
       runtime: widget.runtime,
       port: port,
       session: session,
-    );
-    final overlayOutput = port.buildSurfaceOverlayFrame(
-      _surfaceToken,
-      viewportWorldBounds: viewport,
+      viewport: viewport,
       devicePixelRatio: devicePixelRatio,
       selectionStyle: widget.selectionStyle,
       gridStyle: widget.gridStyle,
     );
+    _updateOutputCacheForBuildInputs(inputs);
 
-    final paintHost = CustomPaint(
-      key: const ValueKey<String>('iwb_canvas_surface.paint_host'),
-      painter: MainFramePainter(output: mainOutput),
-      foregroundPainter: OverlayFramePainter(output: overlayOutput),
-      size: paintSize,
+    final paintHost = LayerPaintHost(
+      paintSize: paintSize,
+      mainOutputListenable: _outputCache.mainOutput,
+      overlayOutputListenable: _outputCache.overlayOutput,
     );
     if (!widget.interactive) {
       return paintHost;
@@ -220,6 +222,80 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
         port.handlePointer(_surfaceToken, input);
       },
       child: paintHost,
+    );
+  }
+
+  void _updateOutputCacheForBuildInputs(_SurfaceFrameBuildInputs inputs) {
+    _outputCache.updateLocalInputs(
+      SurfaceFrameLocalInputKey(
+        runtimeKey: inputs.runtime,
+        viewportWorldBounds: inputs.viewport,
+        devicePixelRatio: inputs.devicePixelRatio,
+        selectionStyle: inputs.selectionStyle,
+        gridStyle: inputs.gridStyle,
+        resolverGeneration: inputs.session.resolverGeneration,
+      ),
+      buildMain: () => _buildMainOutput(inputs),
+      buildOverlay: () => _buildOverlayOutput(inputs),
+    );
+    final pendingRuntimeFrame = _pendingRuntimeFrame;
+    if (pendingRuntimeFrame != null) {
+      _outputCache.applyRuntimeFrame(
+        pendingRuntimeFrame,
+        buildMain: () => _buildMainOutput(inputs),
+        buildOverlay: () => _buildOverlayOutput(inputs),
+      );
+      _pendingRuntimeFrame = null;
+    }
+    if (_applyBudgetFollowUpOnNextBuild) {
+      _applyBudgetFollowUpOnNextBuild = false;
+      _outputCache.applyLocalRepaintRequest(
+        SurfaceFrameLocalRepaintRequest.resourceBudgetFollowUp,
+        buildMain: () => _buildMainOutput(inputs),
+      );
+    }
+  }
+
+  void _handleSurfaceFrame() {
+    final frame = _activePort?.surfaceFrame.value;
+    if (!_isSurfaceAttached || frame == null) {
+      return;
+    }
+    if (mounted) {
+      setState(() {
+        _pendingRuntimeFrame = _mergePendingRuntimeFrame(
+          _pendingRuntimeFrame,
+          frame,
+        );
+      });
+    }
+  }
+
+  MainFramePaintOutput _buildMainOutput(_SurfaceFrameBuildInputs inputs) {
+    final output = inputs.port.buildSurfaceMainFrame(
+      _surfaceToken,
+      viewportWorldBounds: inputs.viewport,
+      devicePixelRatio: inputs.devicePixelRatio,
+      selectionStyle: inputs.selectionStyle,
+      gridStyle: inputs.gridStyle,
+      bindAssets: const CanvasSurfaceImageBridge().bindAssets(inputs.session),
+    );
+    _scheduleBudgetFollowUpFrameIfNeeded(
+      runtime: inputs.runtime,
+      port: inputs.port,
+      session: inputs.session,
+    );
+
+    return output;
+  }
+
+  OverlayFramePaintOutput _buildOverlayOutput(_SurfaceFrameBuildInputs inputs) {
+    return inputs.port.buildSurfaceOverlayFrame(
+      _surfaceToken,
+      viewportWorldBounds: inputs.viewport,
+      devicePixelRatio: inputs.devicePixelRatio,
+      selectionStyle: inputs.selectionStyle,
+      gridStyle: inputs.gridStyle,
     );
   }
 
@@ -261,7 +337,61 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       }
       setState(() {
         _hasPendingBudgetFollowUpFrame = false;
+        _applyBudgetFollowUpOnNextBuild = true;
       });
     });
   }
+}
+
+CanvasRuntimeSurfaceFrame _mergePendingRuntimeFrame(
+  CanvasRuntimeSurfaceFrame? previous,
+  CanvasRuntimeSurfaceFrame next,
+) {
+  if (previous == null) {
+    return next;
+  }
+
+  return CanvasRuntimeSurfaceFrame(
+    state: next.state,
+    generation: next.generation,
+    repaintTarget: CanvasSurfaceRepaintTarget(
+      mainCanvas:
+          previous.repaintTarget.mainCanvas || next.repaintTarget.mainCanvas,
+      overlayCanvas:
+          previous.repaintTarget.overlayCanvas ||
+          next.repaintTarget.overlayCanvas,
+      reason: _mergeRepaintReasons(
+        previous.repaintTarget.reason,
+        next.repaintTarget.reason,
+      ),
+    ),
+  );
+}
+
+String _mergeRepaintReasons(String previous, String next) {
+  if (previous == next) {
+    return next;
+  }
+
+  return '$previous+$next';
+}
+
+final class _SurfaceFrameBuildInputs {
+  const _SurfaceFrameBuildInputs({
+    required this.runtime,
+    required this.port,
+    required this.session,
+    required this.viewport,
+    required this.devicePixelRatio,
+    required this.selectionStyle,
+    required this.gridStyle,
+  });
+
+  final CanvasRuntime runtime;
+  final CanvasRuntimeSurfacePort port;
+  final SurfaceResourceSession session;
+  final Rect viewport;
+  final double devicePixelRatio;
+  final CanvasSelectionStyle selectionStyle;
+  final CanvasGridStyle gridStyle;
 }
