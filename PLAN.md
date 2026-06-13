@@ -27,3 +27,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 5. Net no-op edit commit](plan/step_5_net_no_op_edit_commit.md)
 - [x] [Step 6. CanvasSurface bounded layout](plan/step_6_canvas_surface_bounded_layout.md)
 - [x] [Step 7. Surface repaint routing benchmark proof](plan/step_7_surface_repaint_routing_benchmark_proof.md)
+- [ ] [Step 8. Layer-aware surface repaint routing](plan/step_8_layer_aware_surface_repaint_routing.md)
