@@ -224,10 +224,15 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   }
 
   Size _paintSizeFor(BoxConstraints constraints) {
-    return Size(
-      constraints.maxWidth.isFinite ? constraints.maxWidth : 0.0,
-      constraints.maxHeight.isFinite ? constraints.maxHeight : 0.0,
-    );
+    if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
+      throw FlutterError(
+        'CanvasSurface requires bounded width and height.\n'
+        'Wrap CanvasSurface in SizedBox, Expanded, AspectRatio, or another '
+        'widget that supplies finite layout constraints.',
+      );
+    }
+
+    return constraints.biggest;
   }
 
   double _devicePixelRatioFor(BuildContext context) {
