@@ -248,6 +248,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/surface/text_editing_overlay_test.dart`
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
+- `test/api/runtime_surface_frame_bridge_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
 - `test/runtime/load_document_state_publication_test.dart`
 - `test/surface/interactive_false_pointer_routing_test.dart`
@@ -258,6 +259,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/surface/surface_resource_session_lifecycle_test.dart`
 - `test/surface/pointer_adapter_finite_normalization_test.dart`
 - `test/surface/canvas_surface_layout_constraints_test.dart`
+- `test/surface/surface_frame_output_cache_test.dart`
 - `test/surface/widget_paint_test.dart`
 - `test/surface/surface_camera_frame_output_test.dart`
 - `test/store/read_document_projection_test.dart`
