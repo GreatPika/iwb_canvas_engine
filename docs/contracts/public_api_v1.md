@@ -44,6 +44,7 @@ Required tests:
 - `test.surface.interactive_false_pending_line_preserved`
 - `test.surface.single_active_surface`
 - `test.surface.surface_resource_session_lifecycle`
+- `test.surface.canvas_surface_layout_constraints`
 Guardrails:
 - `api.integration_surface_complete`
 - `api.public_exports_complete`
@@ -547,6 +548,14 @@ Surface contract:
   cleanup, mode/tool change, prepared load cleanup, dispose, or terminal line
   decision;
 - toggling interactive back to true resumes routing only for subsequent pointer events;
+- CanvasSurface requires bounded Flutter layout width and height; if either
+  axis is unbounded, it throws a FlutterError on the ordinary execution path
+  instead of silently painting a zero-size surface;
+- applications should place CanvasSurface in a finite-constraints parent such
+  as SizedBox, Expanded, AspectRatio, or an equivalent layout owner;
+- valid bounded layout remains a constant-time surface boundary check that
+  returns the bounded constraint size and does not add runtime, frame, cache,
+  painter, pointer, resource, or interaction work;
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer input into InteractionEngine: finite samples for
   usable coordinates and terminal cleanup input for non-finite up/cancel;

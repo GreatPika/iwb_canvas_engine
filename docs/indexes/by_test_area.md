@@ -511,6 +511,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
 
+## test.surface.canvas_surface_layout_constraints
+
+- Sections: `section_04_public_api_v1`, `section_23_tests`
+
 ## test.surface.interactive_false_active_session_cancel
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`

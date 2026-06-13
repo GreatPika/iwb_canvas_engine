@@ -77,6 +77,7 @@ Required tests:
 - `test.surface.single_active_surface`
 - `test.surface.surface_resource_session_lifecycle`
 - `test.surface.pointer_adapter_finite_normalization`
+- `test.surface.canvas_surface_layout_constraints`
 - `test.codec.constructor_and_schema_limits`
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
@@ -254,6 +255,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/surface/single_active_surface_test.dart`
 - `test/surface/surface_resource_session_lifecycle_test.dart`
 - `test/surface/pointer_adapter_finite_normalization_test.dart`
+- `test/surface/canvas_surface_layout_constraints_test.dart`
 - `test/surface/widget_paint_test.dart`
 - `test/surface/surface_camera_frame_output_test.dart`
 - `test/store/read_document_projection_test.dart`
@@ -754,6 +756,12 @@ behavioral tests, and the required guardrail list remains owned by
   public pointer samples, maps non-finite up/cancel to terminal cleanup input,
   leaves world normalization in interaction, and keeps stale callbacks and
   non-finite down/move events runtime-effect silent.
+- `test/surface/canvas_surface_layout_constraints_test.dart` proves bounded
+  `CanvasSurface` layout preserves the finite paint host size, vertically and
+  horizontally unbounded layout constraints report a FlutterError on the
+  ordinary execution path, and the rejection stays local to the constant-time
+  surface layout boundary instead of debug-only, release-excluded, or runtime,
+  frame, cache, painter, pointer, resource, or interaction work.
 - `test/surface/interactive_false_pointer_routing_test.dart`,
   `test/surface/interactive_false_active_session_cancel_test.dart`,
   `test/surface/interactive_false_pending_line_preserved_test.dart`, and
