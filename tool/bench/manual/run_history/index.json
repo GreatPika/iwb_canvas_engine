@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-11T18:18:57.326817Z",
+  "updatedAtUtc": "2026-06-13T16:40:00.000Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -170,6 +170,114 @@
         "os": "Android 14"
       },
       "caseCount": 77
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_1.json",
+      "label": "surface-route-release-run-1",
+      "recordedAtUtc": "2026-06-13T16:10:00.000Z",
+      "subjectGitHead": "d8448d118bbaa8810851afa54a9ade56ce8f5c0e",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 83,
+      "sources": [
+        {
+          "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_1.json",
+          "kind": "report",
+          "source": {
+            "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_1.json",
+            "sizeBytes": 9957541,
+            "sha256": "f09d031411a090b2f3646876cf31a0389bde19790e25265206968b0a8842532d"
+          },
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
+          "caseCount": 83
+        }
+      ]
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_2.json",
+      "label": "surface-route-release-run-2",
+      "recordedAtUtc": "2026-06-13T16:20:00.000Z",
+      "subjectGitHead": "d8448d118bbaa8810851afa54a9ade56ce8f5c0e",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 83,
+      "sources": [
+        {
+          "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_2.json",
+          "kind": "report",
+          "source": {
+            "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_2.json",
+            "sizeBytes": 7869089,
+            "sha256": "2e0b674c571e3fa92431802557307b17330efcdf0062dd8acc22a882fb8c3f75"
+          },
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
+          "caseCount": 83
+        }
+      ]
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_3.json",
+      "label": "surface-route-release-run-3",
+      "recordedAtUtc": "2026-06-13T16:30:00.000Z",
+      "subjectGitHead": "d8448d118bbaa8810851afa54a9ade56ce8f5c0e",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 83,
+      "sources": [
+        {
+          "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_3.json",
+          "kind": "report",
+          "source": {
+            "path": "build/bench/current/xiaomi_22081283g_surface_route_release_run_3.json",
+            "sizeBytes": 9317649,
+            "sha256": "a7515b45480cf919b46db5f53ac4ffeee33178388a6ca7abd69d7d52a2735ddf"
+          },
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
+          "caseCount": 83
+        }
+      ]
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_4.json",
+      "label": "surface-route-release-run-4",
+      "recordedAtUtc": "2026-06-13T16:40:00.000Z",
+      "subjectGitHead": "d8448d118bbaa8810851afa54a9ade56ce8f5c0e",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 83,
+      "sources": [
+        {
+          "path": "build/bench/current/xiaomi_22081283g_surface_route_release_diff_check.json",
+          "kind": "report",
+          "source": {
+            "path": "build/bench/current/xiaomi_22081283g_surface_route_release_diff_check.json",
+            "sizeBytes": 9500345,
+            "sha256": "9b8f6d13040b8f38b8fff69ed46bf2548b6352245e97a341d38f69150959f253"
+          },
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
+          "caseCount": 83
+        }
+      ]
     }
   ]
 }

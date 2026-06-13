@@ -1,8 +1,15 @@
 {
-  "kind": "manual_benchmark_reference",
   "schemaVersion": 4,
-  "manifestVersion": "benchmark_measurement_boundary_v3",
-  "manifestFingerprint": "e911e634",
+  "kind": "manual_benchmark_history",
+  "recordedAtUtc": "2026-06-13T16:40:00.000Z",
+  "label": "surface-route-release-run-4",
+  "subjectGitHead": "d8448d118bbaa8810851afa54a9ade56ce8f5c0e",
+  "repositoryDirty": false,
+  "device": {
+    "name": "Xiaomi 22081283G",
+    "id": "Z9NBMVIRY5KRGAJF",
+    "os": "Android 14"
+  },
   "profile": {
     "id": "release",
     "warmups": 1,
@@ -13,7 +20,11 @@
     "timingClaims": true,
     "scaleSelection": "all_required_scales"
   },
-  "runtime": {
+  "toolchain": {
+    "profileId": "release",
+    "runtimeMode": "flutter_test",
+    "assertionsEnabled": true,
+    "debugInvariantMode": false,
     "runnerLabel": "local",
     "osName": "macos",
     "osVersion": "Version 26.5 (Build 25F71)",
@@ -26,25 +37,33 @@
       "osVersion": "24.04",
       "flutterChannel": "stable",
       "flutterVersion": "3.44.0"
-    },
-    "runtimeMode": "flutter_test",
-    "assertionsEnabled": true,
-    "debugInvariantMode": false,
-    "deviceId": "Z9NBMVIRY5KRGAJF"
+    }
   },
-  "acceptedAtUtc": "2026-06-13T16:45:00.000Z",
-  "acceptedReason": "Refresh Xiaomi 22081283G current-contour reference after adding surface repaint-route benchmark cases; accepted from the stable post-warmup run window.",
-  "selectionPolicy": "stable_window_median_v1",
-  "acceptedFromRuns": [
-    "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_2.json",
-    "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_3.json",
-    "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_4.json"
+  "referenceReport": {
+    "kind": null,
+    "path": null
+  },
+  "sources": [
+    {
+      "path": "build/bench/current/xiaomi_22081283g_surface_route_release_diff_check.json",
+      "kind": "report",
+      "source": {
+        "path": "build/bench/current/xiaomi_22081283g_surface_route_release_diff_check.json",
+        "sizeBytes": 9500345,
+        "sha256": "9b8f6d13040b8f38b8fff69ed46bf2548b6352245e97a341d38f69150959f253"
+      },
+      "manifestVersion": "benchmark_measurement_boundary_v3",
+      "manifestFingerprint": "e911e634",
+      "caseCount": 83
+    }
   ],
   "caseCount": 83,
   "cases": [
     {
       "id": "edit.add_element",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -59,46 +78,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 371,
-          "min_us": 136,
-          "avg_us": 188,
-          "p50_us": 162,
-          "p95_us": 326,
+          "count": 384,
+          "min_us": 132,
+          "avg_us": 178,
+          "p50_us": 157,
+          "p95_us": 241,
           "max_us": 697
         },
         "setupUs": {
           "available": true,
-          "count": 371,
-          "min_us": 4790,
-          "avg_us": 5181,
-          "p50_us": 4957,
-          "p95_us": 5616,
-          "max_us": 17170
+          "count": 384,
+          "min_us": 4706,
+          "avg_us": 5012,
+          "p50_us": 4829,
+          "p95_us": 5379,
+          "max_us": 17470
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 188,
-        "p95_us": 326,
+        "avg_us": 178,
+        "p95_us": 241,
         "max_us": 697,
-        "setup_us": 5181
+        "setup_us": 5012
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2674,
-        "setup_allocation_bytes": 16384,
-        "setup_rss_delta_bytes": 16384,
-        "setup_us": 5181
+        "spatial_rebuild_setup_us": 2588,
+        "setup_allocation_bytes": 32768,
+        "setup_rss_delta_bytes": 32768,
+        "setup_us": 5012
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.add_element",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -113,46 +133,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 28,
-          "min_us": 1331,
-          "avg_us": 1804,
-          "p50_us": 1527,
-          "p95_us": 2908,
+          "count": 29,
+          "min_us": 1274,
+          "avg_us": 1735,
+          "p50_us": 1430,
+          "p95_us": 2810,
           "max_us": 3500
         },
         "setupUs": {
           "available": true,
-          "count": 28,
-          "min_us": 66374,
-          "avg_us": 70032,
-          "p50_us": 69275,
-          "p95_us": 75334,
+          "count": 29,
+          "min_us": 64868,
+          "avg_us": 67767,
+          "p50_us": 66252,
+          "p95_us": 74833,
           "max_us": 81948
         }
       },
       "metrics": {
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 1804,
-        "p95_us": 2908,
+        "avg_us": 1735,
+        "p95_us": 2810,
         "max_us": 3500,
-        "setup_us": 70032
+        "setup_us": 67767
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 39802,
+        "spatial_rebuild_setup_us": 35833,
         "setup_allocation_bytes": 2129920,
         "setup_rss_delta_bytes": 2129920,
-        "setup_us": 70032
+        "setup_us": 67767
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.add_element",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -167,25 +188,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 6,
-          "min_us": 7294,
+          "min_us": 7010,
           "avg_us": 9674,
-          "p50_us": 8280,
+          "p50_us": 11326,
           "p95_us": 12411,
           "max_us": 12411
         },
         "setupUs": {
           "available": true,
           "count": 6,
-          "min_us": 354341,
-          "avg_us": 380921,
-          "p50_us": 383813,
-          "p95_us": 437366,
-          "max_us": 437366
+          "min_us": 344713,
+          "avg_us": 361534,
+          "p50_us": 358660,
+          "p95_us": 397953,
+          "max_us": 397953
         }
       },
       "metrics": {
@@ -194,19 +214,21 @@
         "avg_us": 9674,
         "p95_us": 12411,
         "max_us": 12411,
-        "setup_us": 380921
+        "setup_us": 361534
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 207226,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 380921
+        "setup_us": 361534
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.add_element",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -221,46 +243,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 16218,
-          "avg_us": 19022,
-          "p50_us": 18949,
-          "p95_us": 22339,
-          "max_us": 22339
+          "min_us": 15525,
+          "avg_us": 16882,
+          "p50_us": 15903,
+          "p95_us": 18913,
+          "max_us": 18913
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 743738,
-          "avg_us": 778972,
-          "p50_us": 781400,
-          "p95_us": 825678,
-          "max_us": 825678
+          "min_us": 695279,
+          "avg_us": 742359,
+          "p50_us": 752861,
+          "p95_us": 791339,
+          "max_us": 791339
         }
       },
       "metrics": {
-        "allocation_bytes": 21987328,
-        "rss_delta_bytes": 21987328,
-        "avg_us": 19022,
-        "p95_us": 22339,
-        "max_us": 22339,
-        "setup_us": 778972
+        "allocation_bytes": 21954560,
+        "rss_delta_bytes": 21954560,
+        "avg_us": 16882,
+        "p95_us": 18913,
+        "max_us": 18913,
+        "setup_us": 742359
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 443795,
+        "spatial_rebuild_setup_us": 419629,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 778972
+        "setup_us": 742359
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_visual",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -275,47 +298,48 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 374,
-          "min_us": 121,
-          "avg_us": 177,
-          "p50_us": 150,
-          "p95_us": 234,
-          "max_us": 2328
+          "count": 383,
+          "min_us": 120,
+          "avg_us": 159,
+          "p50_us": 141,
+          "p95_us": 229,
+          "max_us": 651
         },
         "setupUs": {
           "available": true,
-          "count": 374,
-          "min_us": 4784,
-          "avg_us": 5144,
-          "p50_us": 4984,
-          "p95_us": 5431,
-          "max_us": 16431
+          "count": 383,
+          "min_us": 4734,
+          "avg_us": 5036,
+          "p50_us": 4869,
+          "p95_us": 5300,
+          "max_us": 16412
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 177,
-        "p95_us": 234,
-        "max_us": 2328,
-        "setup_us": 5144
+        "avg_us": 159,
+        "p95_us": 229,
+        "max_us": 651,
+        "setup_us": 5036
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2651,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 5144
+        "spatial_rebuild_setup_us": 2570,
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 5036
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_visual",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -330,47 +354,48 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 28,
-          "min_us": 1156,
-          "avg_us": 1361,
-          "p50_us": 1270,
-          "p95_us": 1976,
-          "max_us": 2108
+          "count": 30,
+          "min_us": 1105,
+          "avg_us": 1260,
+          "p50_us": 1185,
+          "p95_us": 1696,
+          "max_us": 2065
         },
         "setupUs": {
           "available": true,
-          "count": 28,
-          "min_us": 67325,
-          "avg_us": 70667,
-          "p50_us": 70386,
-          "p95_us": 76660,
-          "max_us": 76879
+          "count": 30,
+          "min_us": 64175,
+          "avg_us": 67353,
+          "p50_us": 66692,
+          "p95_us": 71799,
+          "max_us": 76576
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 1361,
-        "p95_us": 1976,
-        "max_us": 2108,
-        "setup_us": 70667
+        "avg_us": 1260,
+        "p95_us": 1696,
+        "max_us": 2065,
+        "setup_us": 67353
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 47323,
         "setup_allocation_bytes": 5603328,
         "setup_rss_delta_bytes": 5603328,
-        "setup_us": 70667
+        "setup_us": 67353
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_visual",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -385,25 +410,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 6,
-          "min_us": 5016,
+          "min_us": 4870,
           "avg_us": 5835,
-          "p50_us": 5705,
-          "p95_us": 6366,
-          "max_us": 6366
+          "p50_us": 5287,
+          "p95_us": 9176,
+          "max_us": 9176
         },
         "setupUs": {
           "available": true,
           "count": 6,
-          "min_us": 349056,
-          "avg_us": 373909,
-          "p50_us": 377225,
-          "p95_us": 406893,
-          "max_us": 406893
+          "min_us": 340066,
+          "avg_us": 360997,
+          "p50_us": 361018,
+          "p95_us": 395092,
+          "max_us": 395092
         }
       },
       "metrics": {
@@ -411,21 +435,23 @@
         "allocation_bytes": 5406720,
         "rss_delta_bytes": 5406720,
         "avg_us": 5835,
-        "p95_us": 6366,
-        "max_us": 6366,
-        "setup_us": 373909
+        "p95_us": 9176,
+        "max_us": 9176,
+        "setup_us": 360997
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 224118,
+        "spatial_rebuild_setup_us": 206705,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 373909
+        "setup_us": 360997
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_visual",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -440,14 +466,13 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 10355,
-          "avg_us": 11295,
-          "p50_us": 11350,
+          "min_us": 10077,
+          "avg_us": 11076,
+          "p50_us": 10312,
           "p95_us": 12772,
           "max_us": 12772
         },
@@ -455,32 +480,34 @@
           "available": true,
           "count": 5,
           "min_us": 736314,
-          "avg_us": 792497,
-          "p50_us": 785997,
-          "p95_us": 881536,
-          "max_us": 881536
+          "avg_us": 776844,
+          "p50_us": 752039,
+          "p95_us": 870782,
+          "max_us": 870782
         }
       },
       "metrics": {
         "touched_count": 1,
         "allocation_bytes": 11763712,
         "rss_delta_bytes": 11763712,
-        "avg_us": 11295,
+        "avg_us": 11076,
         "p95_us": 12772,
         "max_us": 12772,
-        "setup_us": 792497
+        "setup_us": 776844
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 395903,
+        "spatial_rebuild_setup_us": 427526,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 792497
+        "setup_us": 776844
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_transform",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -495,23 +522,22 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 374,
-          "min_us": 131,
-          "avg_us": 190,
-          "p50_us": 162,
-          "p95_us": 273,
+          "count": 377,
+          "min_us": 129,
+          "avg_us": 192,
+          "p50_us": 161,
+          "p95_us": 302,
           "max_us": 1453
         },
         "setupUs": {
           "available": true,
-          "count": 374,
-          "min_us": 4814,
-          "avg_us": 5135,
-          "p50_us": 4973,
+          "count": 377,
+          "min_us": 4759,
+          "avg_us": 5083,
+          "p50_us": 4912,
           "p95_us": 5462,
           "max_us": 16778
         }
@@ -520,22 +546,24 @@
         "spatial_touched_pages": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 190,
-        "p95_us": 273,
+        "avg_us": 192,
+        "p95_us": 302,
         "max_us": 1453,
-        "setup_us": 5135
+        "setup_us": 5083
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2735,
+        "spatial_rebuild_setup_us": 2723,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5135
+        "setup_us": 5083
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_transform",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -550,47 +578,48 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 28,
-          "min_us": 1158,
-          "avg_us": 1378,
-          "p50_us": 1283,
-          "p95_us": 1954,
-          "max_us": 2246
+          "count": 29,
+          "min_us": 1131,
+          "avg_us": 1376,
+          "p50_us": 1254,
+          "p95_us": 1944,
+          "max_us": 2801
         },
         "setupUs": {
           "available": true,
-          "count": 28,
-          "min_us": 67703,
-          "avg_us": 71844,
-          "p50_us": 70951,
-          "p95_us": 76585,
-          "max_us": 90426
+          "count": 29,
+          "min_us": 64466,
+          "avg_us": 68730,
+          "p50_us": 68774,
+          "p95_us": 72849,
+          "max_us": 75715
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 1378,
-        "p95_us": 1954,
-        "max_us": 2246,
-        "setup_us": 71844
+        "avg_us": 1376,
+        "p95_us": 1944,
+        "max_us": 2801,
+        "setup_us": 68730
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 49689,
+        "spatial_rebuild_setup_us": 38577,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 71844
+        "setup_us": 68730
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_transform",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -605,47 +634,48 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 6,
-          "min_us": 5222,
-          "avg_us": 5667,
-          "p50_us": 5747,
-          "p95_us": 6807,
-          "max_us": 6807
+          "min_us": 4951,
+          "avg_us": 5573,
+          "p50_us": 5549,
+          "p95_us": 6809,
+          "max_us": 6809
         },
         "setupUs": {
           "available": true,
           "count": 6,
-          "min_us": 345689,
-          "avg_us": 371622,
-          "p50_us": 371320,
-          "p95_us": 403232,
-          "max_us": 403232
+          "min_us": 341300,
+          "avg_us": 361006,
+          "p50_us": 363237,
+          "p95_us": 386196,
+          "max_us": 386196
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "allocation_bytes": 5406720,
         "rss_delta_bytes": 5406720,
-        "avg_us": 5667,
-        "p95_us": 6807,
-        "max_us": 6807,
-        "setup_us": 371622
+        "avg_us": 5573,
+        "p95_us": 6809,
+        "max_us": 6809,
+        "setup_us": 361006
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 225972,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 371622
+        "spatial_rebuild_setup_us": 206265,
+        "setup_allocation_bytes": 753664,
+        "setup_rss_delta_bytes": 753664,
+        "setup_us": 361006
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.update_transform",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -660,47 +690,48 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 10293,
-          "avg_us": 11712,
-          "p50_us": 11593,
-          "p95_us": 12823,
-          "max_us": 12823
+          "min_us": 9791,
+          "avg_us": 10956,
+          "p50_us": 10952,
+          "p95_us": 12117,
+          "max_us": 12117
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 763194,
-          "avg_us": 779934,
-          "p50_us": 769137,
-          "p95_us": 815296,
-          "max_us": 815296
+          "min_us": 715897,
+          "avg_us": 752469,
+          "p50_us": 728061,
+          "p95_us": 803103,
+          "max_us": 803103
         }
       },
       "metrics": {
         "spatial_touched_pages": 1,
         "allocation_bytes": 11780096,
         "rss_delta_bytes": 11780096,
-        "avg_us": 11712,
-        "p95_us": 12823,
-        "max_us": 12823,
-        "setup_us": 779934
+        "avg_us": 10956,
+        "p95_us": 12117,
+        "max_us": 12117,
+        "setup_us": 752469
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 437265,
+        "spatial_rebuild_setup_us": 419303,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 779934
+        "setup_us": 752469
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.move_selection",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -715,24 +746,23 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 337,
-          "min_us": 336,
-          "avg_us": 524,
-          "p50_us": 438,
-          "p95_us": 990,
+          "count": 349,
+          "min_us": 330,
+          "avg_us": 485,
+          "p50_us": 408,
+          "p95_us": 910,
           "max_us": 1641
         },
         "setupUs": {
           "available": true,
-          "count": 337,
-          "min_us": 4814,
-          "avg_us": 5388,
-          "p50_us": 5170,
-          "p95_us": 5988,
+          "count": 349,
+          "min_us": 4780,
+          "avg_us": 5226,
+          "p50_us": 4999,
+          "p95_us": 5955,
           "max_us": 16481
         }
       },
@@ -740,16 +770,16 @@
         "selected_count": 16,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 524,
-        "p95_us": 990,
+        "avg_us": 485,
+        "p95_us": 910,
         "max_us": 1641,
-        "setup_us": 5388
+        "setup_us": 5226
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 3038,
         "setup_allocation_bytes": 2097152,
         "setup_rss_delta_bytes": 2097152,
-        "setup_us": 5388
+        "setup_us": 5226
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -764,6 +794,8 @@
     {
       "id": "edit.move_selection",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -778,41 +810,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
-          "min_us": 2268,
-          "avg_us": 2661,
-          "p50_us": 2461,
+          "count": 29,
+          "min_us": 2091,
+          "avg_us": 2562,
+          "p50_us": 2223,
           "p95_us": 4805,
-          "max_us": 5176
+          "max_us": 4956
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 70304,
-          "avg_us": 76902,
-          "p50_us": 75219,
-          "p95_us": 84645,
-          "max_us": 106170
+          "count": 29,
+          "min_us": 62834,
+          "avg_us": 68355,
+          "p50_us": 67508,
+          "p95_us": 74495,
+          "max_us": 75370
         }
       },
       "metrics": {
         "selected_count": 16,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 2661,
+        "avg_us": 2562,
         "p95_us": 4805,
-        "max_us": 5176,
-        "setup_us": 76902
+        "max_us": 4956,
+        "setup_us": 68355
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 49374,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 76902
+        "setup_us": 68355
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -827,6 +858,8 @@
     {
       "id": "edit.move_selection",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -841,41 +874,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 5,
-          "min_us": 11904,
-          "avg_us": 13751,
-          "p50_us": 13923,
+          "count": 6,
+          "min_us": 9762,
+          "avg_us": 11650,
+          "p50_us": 10671,
           "p95_us": 16314,
           "max_us": 16314
         },
         "setupUs": {
           "available": true,
-          "count": 5,
-          "min_us": 364583,
-          "avg_us": 407569,
-          "p50_us": 391423,
-          "p95_us": 504529,
-          "max_us": 504529
+          "count": 6,
+          "min_us": 347223,
+          "avg_us": 368046,
+          "p50_us": 368141,
+          "p95_us": 401730,
+          "max_us": 401730
         }
       },
       "metrics": {
         "selected_count": 16,
-        "allocation_bytes": 8699904,
-        "rss_delta_bytes": 8699904,
-        "avg_us": 13751,
+        "allocation_bytes": 8716288,
+        "rss_delta_bytes": 8716288,
+        "avg_us": 11650,
         "p95_us": 16314,
         "max_us": 16314,
-        "setup_us": 407569
+        "setup_us": 368046
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 271943,
+        "spatial_rebuild_setup_us": 202817,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 407569
+        "setup_us": 368046
       },
       "exactInvariants": {
         "selected_count_matches_input": {
@@ -890,6 +922,8 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -904,41 +938,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 381,
+          "count": 403,
           "min_us": 13,
-          "avg_us": 20,
-          "p50_us": 19,
-          "p95_us": 32,
-          "max_us": 70
+          "avg_us": 18,
+          "p50_us": 17,
+          "p95_us": 24,
+          "max_us": 48
         },
         "setupUs": {
           "available": true,
-          "count": 381,
-          "min_us": 4889,
-          "avg_us": 5213,
-          "p50_us": 5106,
-          "p95_us": 5402,
-          "max_us": 17110
+          "count": 403,
+          "min_us": 4721,
+          "avg_us": 4929,
+          "p50_us": 4816,
+          "p95_us": 5010,
+          "max_us": 16641
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 20,
-        "p95_us": 32,
-        "max_us": 70,
-        "setup_us": 5213
+        "avg_us": 18,
+        "p95_us": 24,
+        "max_us": 48,
+        "setup_us": 4929
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2831,
+        "spatial_rebuild_setup_us": 2587,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5213
+        "setup_us": 4929
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -953,6 +986,8 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -967,25 +1002,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 27,
+          "count": 30,
           "min_us": 52,
           "avg_us": 95,
-          "p50_us": 92,
-          "p95_us": 136,
+          "p50_us": 85,
+          "p95_us": 183,
           "max_us": 216
         },
         "setupUs": {
           "available": true,
-          "count": 27,
-          "min_us": 70694,
-          "avg_us": 76939,
-          "p50_us": 74498,
-          "p95_us": 82621,
-          "max_us": 87963
+          "count": 30,
+          "min_us": 64408,
+          "avg_us": 67565,
+          "p50_us": 67035,
+          "p95_us": 72798,
+          "max_us": 79870
         }
       },
       "metrics": {
@@ -993,15 +1027,15 @@
         "allocation_bytes": 16384,
         "rss_delta_bytes": 16384,
         "avg_us": 95,
-        "p95_us": 136,
+        "p95_us": 183,
         "max_us": 216,
-        "setup_us": 76939
+        "setup_us": 67565
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 49056,
+        "spatial_rebuild_setup_us": 41437,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 76939
+        "setup_us": 67565
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1016,6 +1050,8 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1030,41 +1066,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 5,
-          "min_us": 104,
-          "avg_us": 136,
-          "p50_us": 135,
-          "p95_us": 171,
-          "max_us": 171
+          "count": 6,
+          "min_us": 95,
+          "avg_us": 111,
+          "p50_us": 101,
+          "p95_us": 160,
+          "max_us": 160
         },
         "setupUs": {
           "available": true,
-          "count": 5,
-          "min_us": 372716,
-          "avg_us": 411247,
-          "p50_us": 393094,
-          "p95_us": 500878,
-          "max_us": 500878
+          "count": 6,
+          "min_us": 334444,
+          "avg_us": 360844,
+          "p50_us": 362775,
+          "p95_us": 389785,
+          "max_us": 389785
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 136,
-        "p95_us": 171,
-        "max_us": 171,
-        "setup_us": 411247
+        "avg_us": 111,
+        "p95_us": 160,
+        "max_us": 160,
+        "setup_us": 360844
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 292023,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 411247
+        "spatial_rebuild_setup_us": 201920,
+        "setup_allocation_bytes": 3162112,
+        "setup_rss_delta_bytes": 3162112,
+        "setup_us": 360844
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1079,6 +1114,8 @@
     {
       "id": "edit.set_camera_offset",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1093,41 +1130,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 111,
-          "avg_us": 142,
-          "p50_us": 132,
-          "p95_us": 173,
-          "max_us": 173
+          "min_us": 105,
+          "avg_us": 113,
+          "p50_us": 111,
+          "p95_us": 126,
+          "max_us": 126
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 783886,
-          "avg_us": 850324,
-          "p50_us": 825864,
-          "p95_us": 941390,
-          "max_us": 941390
+          "min_us": 726014,
+          "avg_us": 749802,
+          "p50_us": 735863,
+          "p95_us": 792828,
+          "max_us": 792828
         }
       },
       "metrics": {
         "ordinary_paint_plan_invalidations": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 142,
-        "p95_us": 173,
-        "max_us": 173,
-        "setup_us": 850324
+        "avg_us": 113,
+        "p95_us": 126,
+        "max_us": 126,
+        "setup_us": 749802
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 441364,
+        "spatial_rebuild_setup_us": 417423,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 850324
+        "setup_us": 749802
       },
       "exactInvariants": {
         "ordinary_paint_plan_invalidations_zero": {
@@ -1142,6 +1178,8 @@
     {
       "id": "edit.add_line",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1156,46 +1194,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 360,
-          "min_us": 92,
-          "avg_us": 132,
-          "p50_us": 113,
+          "count": 385,
+          "min_us": 86,
+          "avg_us": 128,
+          "p50_us": 109,
           "p95_us": 190,
-          "max_us": 812
+          "max_us": 679
         },
         "setupUs": {
           "available": true,
-          "count": 360,
-          "min_us": 4930,
-          "avg_us": 5409,
-          "p50_us": 5217,
-          "p95_us": 5822,
-          "max_us": 18043
+          "count": 385,
+          "min_us": 4709,
+          "avg_us": 5037,
+          "p50_us": 4870,
+          "p95_us": 5355,
+          "max_us": 16817
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 132,
+        "avg_us": 128,
         "p95_us": 190,
-        "max_us": 812,
-        "setup_us": 5409
+        "max_us": 679,
+        "setup_us": 5037
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 3028,
+        "spatial_rebuild_setup_us": 2617,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5409
+        "setup_us": 5037
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.add_line",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1210,46 +1249,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 27,
-          "min_us": 537,
-          "avg_us": 631,
-          "p50_us": 585,
+          "count": 29,
+          "min_us": 491,
+          "avg_us": 589,
+          "p50_us": 541,
           "p95_us": 900,
-          "max_us": 1024
+          "max_us": 917
         },
         "setupUs": {
           "available": true,
-          "count": 27,
-          "min_us": 71119,
-          "avg_us": 77181,
-          "p50_us": 74845,
-          "p95_us": 92217,
-          "max_us": 113631
+          "count": 29,
+          "min_us": 63394,
+          "avg_us": 68736,
+          "p50_us": 67323,
+          "p95_us": 82440,
+          "max_us": 84877
         }
       },
       "metrics": {
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 631,
+        "avg_us": 589,
         "p95_us": 900,
-        "max_us": 1024,
-        "setup_us": 77181
+        "max_us": 917,
+        "setup_us": 68736
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 67879,
+        "spatial_rebuild_setup_us": 42284,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 77181
+        "setup_us": 68736
       },
       "exactInvariants": {}
     },
     {
       "id": "edit.add_line",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1264,46 +1304,47 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 5,
-          "min_us": 2604,
-          "avg_us": 3602,
-          "p50_us": 3654,
-          "p95_us": 4385,
-          "max_us": 4385
+          "count": 6,
+          "min_us": 2306,
+          "avg_us": 2961,
+          "p50_us": 3204,
+          "p95_us": 4162,
+          "max_us": 4162
         },
         "setupUs": {
           "available": true,
-          "count": 5,
-          "min_us": 395118,
-          "avg_us": 421153,
-          "p50_us": 403137,
-          "p95_us": 490451,
-          "max_us": 490451
+          "count": 6,
+          "min_us": 347350,
+          "avg_us": 367200,
+          "p50_us": 370925,
+          "p95_us": 400576,
+          "max_us": 400576
         }
       },
       "metrics": {
         "allocation_bytes": 4915200,
         "rss_delta_bytes": 4915200,
-        "avg_us": 3602,
-        "p95_us": 4385,
-        "max_us": 4385,
-        "setup_us": 421153
+        "avg_us": 2961,
+        "p95_us": 4162,
+        "max_us": 4162,
+        "setup_us": 367200
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 265770,
+        "spatial_rebuild_setup_us": 216984,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 421153
+        "setup_us": 367200
       },
       "exactInvariants": {}
     },
     {
       "id": "input.selected_move_preview",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1318,41 +1359,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 231,
-          "min_us": 1957,
-          "avg_us": 2420,
-          "p50_us": 2128,
-          "p95_us": 3421,
-          "max_us": 11878
+          "count": 251,
+          "min_us": 1798,
+          "avg_us": 2208,
+          "p50_us": 1905,
+          "p95_us": 3177,
+          "max_us": 10776
         },
         "setupUs": {
           "available": true,
-          "count": 231,
-          "min_us": 5299,
-          "avg_us": 6149,
-          "p50_us": 5768,
-          "p95_us": 9384,
-          "max_us": 17684
+          "count": 251,
+          "min_us": 4962,
+          "avg_us": 5691,
+          "p50_us": 5343,
+          "p95_us": 7909,
+          "max_us": 16883
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 2420,
-        "p95_us": 3421,
-        "max_us": 11878,
-        "setup_us": 6149
+        "avg_us": 2208,
+        "p95_us": 3177,
+        "max_us": 10776,
+        "setup_us": 5691
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2811,
+        "spatial_rebuild_setup_us": 2660,
         "setup_allocation_bytes": 2097152,
         "setup_rss_delta_bytes": 2097152,
-        "setup_us": 6149
+        "setup_us": 5691
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1367,6 +1407,8 @@
     {
       "id": "input.selected_move_preview",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1381,41 +1423,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
-          "min_us": 1525,
-          "avg_us": 1848,
-          "p50_us": 1695,
-          "p95_us": 2868,
-          "max_us": 3114
+          "count": 29,
+          "min_us": 1391,
+          "avg_us": 1587,
+          "p50_us": 1476,
+          "p95_us": 2509,
+          "max_us": 2867
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 69396,
-          "avg_us": 78098,
-          "p50_us": 76634,
-          "p95_us": 85924,
-          "max_us": 111386
+          "count": 29,
+          "min_us": 64575,
+          "avg_us": 68399,
+          "p50_us": 67845,
+          "p95_us": 73826,
+          "max_us": 76645
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 1848,
-        "p95_us": 2868,
-        "max_us": 3114,
-        "setup_us": 78098
+        "avg_us": 1587,
+        "p95_us": 2509,
+        "max_us": 2867,
+        "setup_us": 68399
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 70241,
+        "spatial_rebuild_setup_us": 41313,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 78098
+        "setup_us": 68399
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1430,6 +1471,8 @@
     {
       "id": "input.selected_move_preview",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1444,41 +1487,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 5,
-          "min_us": 6227,
-          "avg_us": 7258,
-          "p50_us": 7476,
-          "p95_us": 8243,
-          "max_us": 8243
+          "count": 6,
+          "min_us": 5419,
+          "avg_us": 6028,
+          "p50_us": 6036,
+          "p95_us": 6494,
+          "max_us": 6494
         },
         "setupUs": {
           "available": true,
-          "count": 5,
-          "min_us": 400711,
-          "avg_us": 429199,
-          "p50_us": 404566,
-          "p95_us": 525885,
-          "max_us": 525885
+          "count": 6,
+          "min_us": 350400,
+          "avg_us": 370238,
+          "p50_us": 357817,
+          "p95_us": 409937,
+          "max_us": 409937
         }
       },
       "metrics": {
         "scene_repaint_count": 1,
         "allocation_bytes": 7995392,
         "rss_delta_bytes": 7995392,
-        "avg_us": 7258,
-        "p95_us": 8243,
-        "max_us": 8243,
-        "setup_us": 429199
+        "avg_us": 6028,
+        "p95_us": 6494,
+        "max_us": 6494,
+        "setup_us": 370238
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 279877,
+        "spatial_rebuild_setup_us": 214963,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 429199
+        "setup_us": 370238
       },
       "exactInvariants": {
         "scene_repaint_count_bounded": {
@@ -1493,6 +1535,8 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -1507,42 +1551,41 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 829,
-          "min_us": 2194,
-          "avg_us": 2406,
-          "p50_us": 2369,
-          "p95_us": 2604,
-          "max_us": 3884
+          "count": 900,
+          "min_us": 2082,
+          "avg_us": 2216,
+          "p50_us": 2160,
+          "p95_us": 2381,
+          "max_us": 3370
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 21048,
-          "avg_us": 21048,
-          "p50_us": 21048,
-          "p95_us": 21048,
-          "max_us": 21048
+          "min_us": 18717,
+          "avg_us": 18717,
+          "p50_us": 18717,
+          "p95_us": 18717,
+          "max_us": 18717
         }
       },
       "metrics": {
         "ordinary_plan_hit_rate": 1.0,
         "supplement_count": 1,
         "cached_preview_delta_count": 0,
-        "allocation_bytes": 16384,
-        "rss_delta_bytes": 16384,
-        "avg_us": 2406,
-        "p95_us": 2604,
-        "max_us": 3884,
-        "setup_us": 21048
+        "allocation_bytes": 65536,
+        "rss_delta_bytes": 65536,
+        "avg_us": 2216,
+        "p95_us": 2381,
+        "max_us": 3370,
+        "setup_us": 18717
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 4390912,
-        "setup_rss_delta_bytes": 4390912,
-        "setup_us": 21048
+        "setup_allocation_bytes": 4259840,
+        "setup_rss_delta_bytes": 4259840,
+        "setup_us": 18717
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1557,6 +1600,8 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -1571,25 +1616,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 6778,
-          "min_us": 245,
-          "avg_us": 291,
-          "p50_us": 282,
-          "p95_us": 340,
-          "max_us": 1263
+          "count": 7648,
+          "min_us": 234,
+          "avg_us": 258,
+          "p50_us": 248,
+          "p95_us": 304,
+          "max_us": 1215
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 86662,
-          "avg_us": 86662,
-          "p50_us": 86662,
-          "p95_us": 86662,
-          "max_us": 86662
+          "min_us": 70815,
+          "avg_us": 70815,
+          "p50_us": 70815,
+          "p95_us": 70815,
+          "max_us": 70815
         }
       },
       "metrics": {
@@ -1598,15 +1642,15 @@
         "cached_preview_delta_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 291,
-        "p95_us": 340,
-        "max_us": 1263,
-        "setup_us": 86662
+        "avg_us": 258,
+        "p95_us": 304,
+        "max_us": 1215,
+        "setup_us": 70815
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 8519680,
-        "setup_rss_delta_bytes": 8519680,
-        "setup_us": 86662
+        "setup_allocation_bytes": 5373952,
+        "setup_rss_delta_bytes": 5373952,
+        "setup_us": 70815
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1621,6 +1665,8 @@
     {
       "id": "frame.selected_move_preview_cached_ordinary_plan",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -1635,42 +1681,41 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 6705,
-          "min_us": 257,
-          "avg_us": 294,
-          "p50_us": 285,
-          "p95_us": 343,
+          "count": 7616,
+          "min_us": 228,
+          "avg_us": 259,
+          "p50_us": 242,
+          "p95_us": 308,
           "max_us": 4156
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 423263,
-          "avg_us": 423263,
-          "p50_us": 423263,
-          "p95_us": 423263,
-          "max_us": 423263
+          "min_us": 377573,
+          "avg_us": 377573,
+          "p50_us": 377573,
+          "p95_us": 377573,
+          "max_us": 377573
         }
       },
       "metrics": {
         "ordinary_plan_hit_rate": 0.0,
         "supplement_count": 0,
         "cached_preview_delta_count": 0,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 294,
-        "p95_us": 343,
+        "allocation_bytes": 16384,
+        "rss_delta_bytes": 16384,
+        "avg_us": 259,
+        "p95_us": 308,
         "max_us": 4156,
-        "setup_us": 423263
+        "setup_us": 377573
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 966656,
-        "setup_rss_delta_bytes": 966656,
-        "setup_us": 423263
+        "setup_allocation_bytes": 2162688,
+        "setup_rss_delta_bytes": 2162688,
+        "setup_us": 377573
       },
       "exactInvariants": {
         "cached_preview_delta_absent": {
@@ -1685,6 +1730,8 @@
     {
       "id": "input.marquee_preview",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1699,41 +1746,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 369,
-          "min_us": 25,
-          "avg_us": 36,
-          "p50_us": 34,
+          "count": 400,
+          "min_us": 22,
+          "avg_us": 34,
+          "p50_us": 32,
           "p95_us": 52,
-          "max_us": 121
+          "max_us": 108
         },
         "setupUs": {
           "available": true,
-          "count": 369,
-          "min_us": 5062,
-          "avg_us": 5359,
-          "p50_us": 5198,
-          "p95_us": 5553,
-          "max_us": 16989
+          "count": 400,
+          "min_us": 4710,
+          "avg_us": 4942,
+          "p50_us": 4834,
+          "p95_us": 5020,
+          "max_us": 16107
         }
       },
       "metrics": {
         "overlay_repaint_count": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 36,
+        "avg_us": 34,
         "p95_us": 52,
-        "max_us": 121,
-        "setup_us": 5359
+        "max_us": 108,
+        "setup_us": 4942
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2761,
+        "spatial_rebuild_setup_us": 2552,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5359
+        "setup_us": 4942
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -1748,6 +1794,8 @@
     {
       "id": "input.marquee_preview",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1762,41 +1810,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
-          "min_us": 94,
-          "avg_us": 149,
-          "p50_us": 151,
-          "p95_us": 185,
-          "max_us": 196
+          "count": 30,
+          "min_us": 86,
+          "avg_us": 135,
+          "p50_us": 138,
+          "p95_us": 167,
+          "max_us": 173
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 72048,
-          "avg_us": 79396,
-          "p50_us": 77384,
-          "p95_us": 93176,
-          "max_us": 106423
+          "count": 30,
+          "min_us": 64431,
+          "avg_us": 67615,
+          "p50_us": 67440,
+          "p95_us": 69738,
+          "max_us": 81887
         }
       },
       "metrics": {
         "overlay_repaint_count": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 149,
-        "p95_us": 185,
-        "max_us": 196,
-        "setup_us": 79396
+        "avg_us": 135,
+        "p95_us": 167,
+        "max_us": 173,
+        "setup_us": 67615
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 74133,
+        "spatial_rebuild_setup_us": 42769,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 79396
+        "setup_us": 67615
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -1811,6 +1858,8 @@
     {
       "id": "input.marquee_preview",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1825,41 +1874,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 5,
-          "min_us": 188,
-          "avg_us": 235,
-          "p50_us": 225,
-          "p95_us": 296,
-          "max_us": 296
+          "count": 6,
+          "min_us": 169,
+          "avg_us": 194,
+          "p50_us": 182,
+          "p95_us": 256,
+          "max_us": 256
         },
         "setupUs": {
           "available": true,
-          "count": 5,
-          "min_us": 393859,
-          "avg_us": 426941,
-          "p50_us": 403886,
-          "p95_us": 527866,
-          "max_us": 527866
+          "count": 6,
+          "min_us": 362281,
+          "avg_us": 390194,
+          "p50_us": 389824,
+          "p95_us": 433881,
+          "max_us": 433881
         }
       },
       "metrics": {
         "overlay_repaint_count": 2,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 235,
-        "p95_us": 296,
-        "max_us": 296,
-        "setup_us": 426941
+        "allocation_bytes": 16384,
+        "rss_delta_bytes": 16384,
+        "avg_us": 194,
+        "p95_us": 256,
+        "max_us": 256,
+        "setup_us": 390194
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 281646,
+        "spatial_rebuild_setup_us": 249937,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 426941
+        "setup_us": 390194
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -1874,6 +1922,8 @@
     {
       "id": "input.draw_preview",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1888,41 +1938,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 366,
-          "min_us": 25,
-          "avg_us": 38,
-          "p50_us": 34,
-          "p95_us": 61,
-          "max_us": 138
+          "count": 397,
+          "min_us": 22,
+          "avg_us": 35,
+          "p50_us": 32,
+          "p95_us": 56,
+          "max_us": 136
         },
         "setupUs": {
           "available": true,
-          "count": 366,
-          "min_us": 5056,
-          "avg_us": 5396,
-          "p50_us": 5234,
-          "p95_us": 5675,
-          "max_us": 17340
+          "count": 397,
+          "min_us": 4737,
+          "avg_us": 4981,
+          "p50_us": 4842,
+          "p95_us": 5203,
+          "max_us": 16284
         }
       },
       "metrics": {
         "point_count": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 38,
-        "p95_us": 61,
-        "max_us": 138,
-        "setup_us": 5396
+        "avg_us": 35,
+        "p95_us": 56,
+        "max_us": 136,
+        "setup_us": 4981
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2765,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 5396
+        "spatial_rebuild_setup_us": 2640,
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 4981
       },
       "exactInvariants": {
         "point_count_matches_input": {
@@ -1937,6 +1986,8 @@
     {
       "id": "input.draw_preview",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -1951,25 +2002,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
+          "count": 28,
           "min_us": 88,
           "avg_us": 148,
-          "p50_us": 150,
+          "p50_us": 140,
           "p95_us": 187,
-          "max_us": 324
+          "max_us": 342
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 73409,
-          "avg_us": 78158,
-          "p50_us": 76715,
-          "p95_us": 92018,
-          "max_us": 93927
+          "count": 28,
+          "min_us": 68393,
+          "avg_us": 72558,
+          "p50_us": 71684,
+          "p95_us": 79281,
+          "max_us": 80210
         }
       },
       "metrics": {
@@ -1978,14 +2028,14 @@
         "rss_delta_bytes": 0,
         "avg_us": 148,
         "p95_us": 187,
-        "max_us": 324,
-        "setup_us": 78158
+        "max_us": 342,
+        "setup_us": 72558
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 57381,
+        "spatial_rebuild_setup_us": 48072,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 78158
+        "setup_us": 72558
       },
       "exactInvariants": {
         "point_count_matches_input": {
@@ -2000,6 +2050,8 @@
     {
       "id": "input.line_preview",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2014,41 +2066,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 365,
+          "count": 384,
           "min_us": 21,
-          "avg_us": 36,
-          "p50_us": 32,
+          "avg_us": 35,
+          "p50_us": 30,
           "p95_us": 61,
           "max_us": 138
         },
         "setupUs": {
           "available": true,
-          "count": 365,
-          "min_us": 5097,
-          "avg_us": 5424,
-          "p50_us": 5231,
-          "p95_us": 5722,
-          "max_us": 17630
+          "count": 384,
+          "min_us": 4835,
+          "avg_us": 5144,
+          "p50_us": 5008,
+          "p95_us": 5362,
+          "max_us": 16509
         }
       },
       "metrics": {
         "overlay_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 36,
+        "avg_us": 35,
         "p95_us": 61,
         "max_us": 138,
-        "setup_us": 5424
+        "setup_us": 5144
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2789,
+        "spatial_rebuild_setup_us": 2652,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5424
+        "setup_us": 5144
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -2063,6 +2114,8 @@
     {
       "id": "input.line_preview",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2077,23 +2130,22 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
+          "count": 27,
           "min_us": 117,
-          "avg_us": 148,
-          "p50_us": 151,
-          "p95_us": 185,
-          "max_us": 227
+          "avg_us": 145,
+          "p50_us": 140,
+          "p95_us": 178,
+          "max_us": 180
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 71569,
-          "avg_us": 77017,
-          "p50_us": 77161,
+          "count": 27,
+          "min_us": 69863,
+          "avg_us": 74535,
+          "p50_us": 72832,
           "p95_us": 83472,
           "max_us": 90653
         }
@@ -2102,16 +2154,16 @@
         "overlay_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 148,
-        "p95_us": 185,
-        "max_us": 227,
-        "setup_us": 77017
+        "avg_us": 145,
+        "p95_us": 178,
+        "max_us": 180,
+        "setup_us": 74535
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 46633,
+        "spatial_rebuild_setup_us": 43147,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 77017
+        "setup_us": 74535
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -2126,6 +2178,8 @@
     {
       "id": "input.line_preview",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2140,41 +2194,40 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 160,
-          "avg_us": 216,
-          "p50_us": 215,
-          "p95_us": 265,
-          "max_us": 265
+          "min_us": 152,
+          "avg_us": 188,
+          "p50_us": 177,
+          "p95_us": 258,
+          "max_us": 258
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 394200,
-          "avg_us": 439422,
-          "p50_us": 401921,
-          "p95_us": 540295,
-          "max_us": 540295
+          "min_us": 381368,
+          "avg_us": 404685,
+          "p50_us": 386533,
+          "p95_us": 483217,
+          "max_us": 483217
         }
       },
       "metrics": {
         "overlay_repaint_count": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 216,
-        "p95_us": 265,
-        "max_us": 265,
-        "setup_us": 439422
+        "avg_us": 188,
+        "p95_us": 258,
+        "max_us": 258,
+        "setup_us": 404685
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 295059,
-        "setup_allocation_bytes": 1785856,
-        "setup_rss_delta_bytes": 1785856,
-        "setup_us": 439422
+        "spatial_rebuild_setup_us": 284990,
+        "setup_allocation_bytes": 1703936,
+        "setup_rss_delta_bytes": 1703936,
+        "setup_us": 404685
       },
       "exactInvariants": {
         "overlay_repaint_count_bounded": {
@@ -2189,6 +2242,8 @@
     {
       "id": "input.eraser_preview",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2203,24 +2258,23 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 213,
-          "min_us": 2676,
-          "avg_us": 3268,
-          "p50_us": 3271,
-          "p95_us": 3730,
-          "max_us": 10708
+          "count": 220,
+          "min_us": 2509,
+          "avg_us": 3121,
+          "p50_us": 3165,
+          "p95_us": 3694,
+          "max_us": 9153
         },
         "setupUs": {
           "available": true,
-          "count": 213,
-          "min_us": 5268,
-          "avg_us": 6103,
-          "p50_us": 5731,
-          "p95_us": 10237,
+          "count": 220,
+          "min_us": 5057,
+          "avg_us": 5956,
+          "p50_us": 5581,
+          "p95_us": 9483,
           "max_us": 16480
         }
       },
@@ -2229,18 +2283,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 1572864,
-        "rss_delta_bytes": 1572864,
-        "avg_us": 3268,
-        "p95_us": 3730,
-        "max_us": 10708,
-        "setup_us": 6103
+        "allocation_bytes": 2621440,
+        "rss_delta_bytes": 2621440,
+        "avg_us": 3121,
+        "p95_us": 3694,
+        "max_us": 9153,
+        "setup_us": 5956
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2991,
+        "spatial_rebuild_setup_us": 2844,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 6103
+        "setup_us": 5956
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2255,6 +2309,8 @@
     {
       "id": "input.eraser_preview",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2269,25 +2325,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 25,
-          "min_us": 1471,
-          "avg_us": 2046,
-          "p50_us": 1615,
-          "p95_us": 4132,
-          "max_us": 5322
+          "count": 26,
+          "min_us": 1459,
+          "avg_us": 1821,
+          "p50_us": 1540,
+          "p95_us": 3767,
+          "max_us": 3903
         },
         "setupUs": {
           "available": true,
-          "count": 25,
-          "min_us": 71944,
-          "avg_us": 78157,
-          "p50_us": 77461,
-          "p95_us": 85778,
-          "max_us": 86531
+          "count": 26,
+          "min_us": 71490,
+          "avg_us": 75428,
+          "p50_us": 73992,
+          "p95_us": 81528,
+          "max_us": 83576
         }
       },
       "metrics": {
@@ -2297,16 +2352,16 @@
         "partial_erase_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 2046,
-        "p95_us": 4132,
-        "max_us": 5322,
-        "setup_us": 78157
+        "avg_us": 1821,
+        "p95_us": 3767,
+        "max_us": 3903,
+        "setup_us": 75428
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 47598,
-        "setup_allocation_bytes": 2048000,
-        "setup_rss_delta_bytes": 2048000,
-        "setup_us": 78157
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 75428
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2321,6 +2376,8 @@
     {
       "id": "input.eraser_preview",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2335,12 +2392,11 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 6934,
+          "min_us": 6763,
           "avg_us": 8677,
           "p50_us": 7717,
           "p95_us": 11940,
@@ -2349,11 +2405,11 @@
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 389390,
-          "avg_us": 429568,
-          "p50_us": 408360,
-          "p95_us": 539322,
-          "max_us": 539322
+          "min_us": 371282,
+          "avg_us": 420818,
+          "p50_us": 405346,
+          "p95_us": 530303,
+          "max_us": 530303
         }
       },
       "metrics": {
@@ -2366,13 +2422,13 @@
         "avg_us": 8677,
         "p95_us": 11940,
         "max_us": 11940,
-        "setup_us": 429568
+        "setup_us": 420818
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 294563,
+        "spatial_rebuild_setup_us": 282220,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 429568
+        "setup_us": 420818
       },
       "exactInvariants": {
         "eraser_exact_checks_match_candidates": {
@@ -2387,6 +2443,8 @@
     {
       "id": "input.eraser_budget_exceeded",
       "scale": "dense_50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -2401,23 +2459,22 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "dense_stress",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 7691,
-          "avg_us": 10564,
-          "p50_us": 9644,
+          "min_us": 7353,
+          "avg_us": 10553,
+          "p50_us": 8728,
           "p95_us": 16017,
           "max_us": 16017
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 405647,
-          "avg_us": 437392,
-          "p50_us": 422422,
+          "min_us": 386792,
+          "avg_us": 430538,
+          "p50_us": 397875,
           "p95_us": 543061,
           "max_us": 543061
         }
@@ -2427,18 +2484,18 @@
         "exact_check_count": 128,
         "budget_exceeded_count": 128,
         "partial_erase_count": 0,
-        "allocation_bytes": 12550144,
-        "rss_delta_bytes": 12550144,
-        "avg_us": 10564,
+        "allocation_bytes": 10256384,
+        "rss_delta_bytes": 10256384,
+        "avg_us": 10553,
         "p95_us": 16017,
         "max_us": 16017,
-        "setup_us": 437392
+        "setup_us": 430538
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 298084,
+        "spatial_rebuild_setup_us": 297909,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 437392
+        "setup_us": 430538
       },
       "exactInvariants": {
         "partial_erase_count_zero": {
@@ -2453,6 +2510,8 @@
     {
       "id": "frame.main_capture",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2467,25 +2526,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 2371,
-          "min_us": 776,
-          "avg_us": 838,
-          "p50_us": 819,
-          "p95_us": 944,
+          "count": 2399,
+          "min_us": 752,
+          "avg_us": 829,
+          "p50_us": 808,
+          "p95_us": 929,
           "max_us": 7817
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 18271,
-          "avg_us": 18271,
-          "p50_us": 18271,
-          "p95_us": 18271,
-          "max_us": 18271
+          "min_us": 17609,
+          "avg_us": 17609,
+          "p50_us": 17609,
+          "p95_us": 17609,
+          "max_us": 17609
         }
       },
       "metrics": {
@@ -2494,22 +2552,24 @@
         "resource_descriptor_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 838,
-        "p95_us": 944,
+        "avg_us": 829,
+        "p95_us": 929,
         "max_us": 7817,
-        "setup_us": 18271
+        "setup_us": 17609
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 12094,
+        "spatial_rebuild_setup_us": 11694,
         "setup_allocation_bytes": 3850240,
         "setup_rss_delta_bytes": 3850240,
-        "setup_us": 18271
+        "setup_us": 17609
       },
       "exactInvariants": {}
     },
     {
       "id": "frame.main_capture",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2524,7 +2584,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -2533,7 +2592,7 @@
           "avg_us": 270,
           "p50_us": 261,
           "p95_us": 321,
-          "max_us": 3227
+          "max_us": 1355
         },
         "setupUs": {
           "available": true,
@@ -2553,13 +2612,13 @@
         "rss_delta_bytes": 0,
         "avg_us": 270,
         "p95_us": 321,
-        "max_us": 3227,
+        "max_us": 1355,
         "setup_us": 76703
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 42414,
-        "setup_allocation_bytes": 573440,
-        "setup_rss_delta_bytes": 573440,
+        "spatial_rebuild_setup_us": 42056,
+        "setup_allocation_bytes": 32768,
+        "setup_rss_delta_bytes": 32768,
         "setup_us": 76703
       },
       "exactInvariants": {}
@@ -2567,6 +2626,8 @@
     {
       "id": "frame.main_capture",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2581,7 +2642,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -2590,16 +2650,16 @@
           "avg_us": 284,
           "p50_us": 271,
           "p95_us": 340,
-          "max_us": 1107
+          "max_us": 840
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 393917,
-          "avg_us": 393917,
-          "p50_us": 393917,
-          "p95_us": 393917,
-          "max_us": 393917
+          "min_us": 380646,
+          "avg_us": 380646,
+          "p50_us": 380646,
+          "p95_us": 380646,
+          "max_us": 380646
         }
       },
       "metrics": {
@@ -2610,20 +2670,22 @@
         "rss_delta_bytes": 0,
         "avg_us": 284,
         "p95_us": 340,
-        "max_us": 1107,
-        "setup_us": 393917
+        "max_us": 840,
+        "setup_us": 380646
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 227899,
+        "spatial_rebuild_setup_us": 212151,
         "setup_allocation_bytes": 3751936,
         "setup_rss_delta_bytes": 3751936,
-        "setup_us": 393917
+        "setup_us": 380646
       },
       "exactInvariants": {}
     },
     {
       "id": "frame.main_capture",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2638,7 +2700,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -2647,16 +2708,16 @@
           "avg_us": 305,
           "p50_us": 288,
           "p95_us": 390,
-          "max_us": 1432
+          "max_us": 1535
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 850067,
-          "avg_us": 850067,
-          "p50_us": 850067,
-          "p95_us": 850067,
-          "max_us": 850067
+          "min_us": 847084,
+          "avg_us": 847084,
+          "p50_us": 847084,
+          "p95_us": 847084,
+          "max_us": 847084
         }
       },
       "metrics": {
@@ -2667,20 +2728,22 @@
         "rss_delta_bytes": 0,
         "avg_us": 305,
         "p95_us": 390,
-        "max_us": 1432,
-        "setup_us": 850067
+        "max_us": 1535,
+        "setup_us": 847084
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 493246,
-        "setup_allocation_bytes": 11403264,
-        "setup_rss_delta_bytes": 11403264,
-        "setup_us": 850067
+        "setup_allocation_bytes": 18251776,
+        "setup_rss_delta_bytes": 18251776,
+        "setup_us": 847084
       },
       "exactInvariants": {}
     },
     {
       "id": "frame.overlay_capture",
       "scale": "active_previews",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2695,16 +2758,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "active_preview",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 381167,
+          "count": 385835,
           "min_us": 3,
           "avg_us": 3,
           "p50_us": 3,
           "p95_us": 4,
-          "max_us": 360
+          "max_us": 339
         },
         "setupUs": {
           "available": true,
@@ -2723,7 +2785,7 @@
         "rss_delta_bytes": 0,
         "avg_us": 3,
         "p95_us": 4,
-        "max_us": 360,
+        "max_us": 339,
         "setup_us": 444
       },
       "setupMetrics": {
@@ -2737,6 +2799,8 @@
     {
       "id": "frame.paint_candidates",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2751,15 +2815,14 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 874,
           "min_us": 2070,
           "avg_us": 2284,
-          "p50_us": 2235,
-          "p95_us": 2487,
+          "p50_us": 2223,
+          "p95_us": 2459,
           "max_us": 10865
         },
         "setupUs": {
@@ -2779,7 +2842,7 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 2284,
-        "p95_us": 2487,
+        "p95_us": 2459,
         "max_us": 10865,
         "setup_us": 17985
       },
@@ -2809,6 +2872,8 @@
     {
       "id": "frame.paint_candidates",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2823,43 +2888,42 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 7154,
+          "count": 7367,
           "min_us": 238,
-          "avg_us": 275,
-          "p50_us": 266,
-          "p95_us": 322,
+          "avg_us": 267,
+          "p50_us": 261,
+          "p95_us": 311,
           "max_us": 1566
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 93609,
-          "avg_us": 93609,
-          "p50_us": 93609,
-          "p95_us": 93609,
-          "max_us": 93609
+          "min_us": 91251,
+          "avg_us": 91251,
+          "p50_us": 91251,
+          "p95_us": 91251,
+          "max_us": 91251
         }
       },
       "metrics": {
         "candidate_count": 0,
         "offscreen_layer_count": 0,
         "save_layer_count": 0,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 275,
-        "p95_us": 322,
+        "allocation_bytes": 16384,
+        "rss_delta_bytes": 16384,
+        "avg_us": 267,
+        "p95_us": 311,
         "max_us": 1566,
-        "setup_us": 93609
+        "setup_us": 91251
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 48228,
+        "spatial_rebuild_setup_us": 46891,
         "setup_allocation_bytes": 3588096,
         "setup_rss_delta_bytes": 3588096,
-        "setup_us": 93609
+        "setup_us": 91251
       },
       "exactInvariants": {
         "save_layer_count_zero": {
@@ -2881,6 +2945,8 @@
     {
       "id": "frame.paint_candidates",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2895,13 +2961,12 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 6785,
-          "min_us": 254,
-          "avg_us": 290,
+          "count": 6821,
+          "min_us": 245,
+          "avg_us": 289,
           "p50_us": 280,
           "p95_us": 345,
           "max_us": 1346
@@ -2922,15 +2987,15 @@
         "save_layer_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 290,
+        "avg_us": 289,
         "p95_us": 345,
         "max_us": 1346,
         "setup_us": 513699
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 283397,
-        "setup_allocation_bytes": 2195456,
-        "setup_rss_delta_bytes": 2195456,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
         "setup_us": 513699
       },
       "exactInvariants": {
@@ -2953,6 +3018,8 @@
     {
       "id": "frame.paint_candidates",
       "scale": "100k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -2967,16 +3034,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 6674,
-          "min_us": 244,
-          "avg_us": 295,
+          "count": 6717,
+          "min_us": 229,
+          "avg_us": 293,
           "p50_us": 277,
           "p95_us": 382,
-          "max_us": 1501
+          "max_us": 917
         },
         "setupUs": {
           "available": true,
@@ -2994,15 +3060,15 @@
         "save_layer_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 295,
+        "avg_us": 293,
         "p95_us": 382,
-        "max_us": 1501,
+        "max_us": 917,
         "setup_us": 942817
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 495387,
-        "setup_allocation_bytes": 2375680,
-        "setup_rss_delta_bytes": 2375680,
+        "setup_allocation_bytes": 3211264,
+        "setup_rss_delta_bytes": 3211264,
         "setup_us": 942817
       },
       "exactInvariants": {
@@ -3025,6 +3091,8 @@
     {
       "id": "surface.overlay_preview_route",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3039,25 +3107,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 91,
-          "min_us": 2774,
-          "avg_us": 3488,
-          "p50_us": 3412,
-          "p95_us": 4862,
-          "max_us": 7007
+          "count": 93,
+          "min_us": 2719,
+          "avg_us": 3461,
+          "p50_us": 3356,
+          "p95_us": 4849,
+          "max_us": 6640
         },
         "setupUs": {
           "available": true,
-          "count": 91,
-          "min_us": 15286,
-          "avg_us": 18204,
+          "count": 93,
+          "min_us": 15007,
+          "avg_us": 17964,
           "p50_us": 16769,
-          "p95_us": 24025,
-          "max_us": 42771
+          "p95_us": 22573,
+          "max_us": 40488
         }
       },
       "metrics": {
@@ -3069,15 +3136,15 @@
         "selected_move_main_signal_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 3488,
-        "p95_us": 4862,
-        "max_us": 7007,
-        "setup_us": 18204
+        "avg_us": 3461,
+        "p95_us": 4849,
+        "max_us": 6640,
+        "setup_us": 17964
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 18204
+        "setup_allocation_bytes": 2555904,
+        "setup_rss_delta_bytes": 2555904,
+        "setup_us": 17964
       },
       "exactInvariants": {
         "main_output_identity_changes_no_positive_drift": {
@@ -3099,6 +3166,8 @@
     {
       "id": "surface.overlay_preview_route",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3113,16 +3182,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 12,
           "min_us": 617,
-          "avg_us": 783,
+          "avg_us": 778,
           "p50_us": 725,
-          "p95_us": 1111,
-          "max_us": 1159
+          "p95_us": 980,
+          "max_us": 1030
         },
         "setupUs": {
           "available": true,
@@ -3130,7 +3198,7 @@
           "min_us": 155962,
           "avg_us": 171759,
           "p50_us": 166429,
-          "p95_us": 200157,
+          "p95_us": 183489,
           "max_us": 235763
         }
       },
@@ -3143,14 +3211,14 @@
         "selected_move_main_signal_count": 0,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 783,
-        "p95_us": 1111,
-        "max_us": 1159,
+        "avg_us": 778,
+        "p95_us": 980,
+        "max_us": 1030,
         "setup_us": 171759
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 7520256,
-        "setup_rss_delta_bytes": 7520256,
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
         "setup_us": 171759
       },
       "exactInvariants": {
@@ -3173,6 +3241,8 @@
     {
       "id": "surface.overlay_preview_route",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3187,16 +3257,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
           "min_us": 764,
           "avg_us": 1952,
-          "p50_us": 1015,
-          "p95_us": 4602,
-          "max_us": 4602
+          "p50_us": 832,
+          "p95_us": 4033,
+          "max_us": 4033
         },
         "setupUs": {
           "available": true,
@@ -3204,8 +3273,8 @@
           "min_us": 795465,
           "avg_us": 845716,
           "p50_us": 849345,
-          "p95_us": 925379,
-          "max_us": 925379
+          "p95_us": 883295,
+          "max_us": 883295
         }
       },
       "metrics": {
@@ -3218,13 +3287,13 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 1952,
-        "p95_us": 4602,
-        "max_us": 4602,
+        "p95_us": 4033,
+        "max_us": 4033,
         "setup_us": 845716
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 8962048,
-        "setup_rss_delta_bytes": 8962048,
+        "setup_allocation_bytes": 6799360,
+        "setup_rss_delta_bytes": 6799360,
         "setup_us": 845716
       },
       "exactInvariants": {
@@ -3247,6 +3316,8 @@
     {
       "id": "surface.selected_move_route",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3261,7 +3332,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -3269,8 +3339,8 @@
           "min_us": 3409,
           "avg_us": 4610,
           "p50_us": 4421,
-          "p95_us": 5911,
-          "max_us": 9598
+          "p95_us": 5789,
+          "max_us": 9831
         },
         "setupUs": {
           "available": true,
@@ -3292,8 +3362,8 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 4610,
-        "p95_us": 5911,
-        "max_us": 9598,
+        "p95_us": 5789,
+        "max_us": 9831,
         "setup_us": 21673
       },
       "setupMetrics": {
@@ -3321,6 +3391,8 @@
     {
       "id": "surface.selected_move_route",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3335,16 +3407,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 12,
-          "min_us": 1854,
-          "avg_us": 2358,
-          "p50_us": 2142,
-          "p95_us": 2977,
-          "max_us": 3393
+          "min_us": 1805,
+          "avg_us": 2271,
+          "p50_us": 2090,
+          "p95_us": 2921,
+          "max_us": 3035
         },
         "setupUs": {
           "available": true,
@@ -3365,9 +3436,9 @@
         "selected_move_main_signal_count": 1,
         "allocation_bytes": 16384,
         "rss_delta_bytes": 16384,
-        "avg_us": 2358,
-        "p95_us": 2977,
-        "max_us": 3393,
+        "avg_us": 2271,
+        "p95_us": 2921,
+        "max_us": 3035,
         "setup_us": 168534
       },
       "setupMetrics": {
@@ -3395,6 +3466,8 @@
     {
       "id": "surface.selected_move_route",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3409,25 +3482,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
           "min_us": 6765,
           "avg_us": 7451,
-          "p50_us": 7281,
-          "p95_us": 8432,
-          "max_us": 8432
+          "p50_us": 7238,
+          "p95_us": 8374,
+          "max_us": 8374
         },
         "setupUs": {
           "available": true,
           "count": 5,
           "min_us": 781384,
           "avg_us": 825932,
-          "p50_us": 822716,
-          "p95_us": 886513,
-          "max_us": 886513
+          "p50_us": 808522,
+          "p95_us": 874928,
+          "max_us": 874928
         }
       },
       "metrics": {
@@ -3437,16 +3509,16 @@
         "overlay_should_repaint_count": 1,
         "overlay_primitive_count": 0,
         "selected_move_main_signal_count": 1,
-        "allocation_bytes": 1654784,
-        "rss_delta_bytes": 1654784,
+        "allocation_bytes": 1687552,
+        "rss_delta_bytes": 1687552,
         "avg_us": 7451,
-        "p95_us": 8432,
-        "max_us": 8432,
+        "p95_us": 8374,
+        "max_us": 8374,
         "setup_us": 825932
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 1835008,
-        "setup_rss_delta_bytes": 1835008,
+        "setup_allocation_bytes": 65536,
+        "setup_rss_delta_bytes": 65536,
         "setup_us": 825932
       },
       "exactInvariants": {
@@ -3469,6 +3541,8 @@
     {
       "id": "resources.resolve_sync",
       "scale": "1k_resources",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3483,25 +3557,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "resource_set",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 793,
+          "count": 814,
           "min_us": 18,
-          "avg_us": 30,
-          "p50_us": 24,
-          "p95_us": 68,
-          "max_us": 207
+          "avg_us": 28,
+          "p50_us": 23,
+          "p95_us": 63,
+          "max_us": 166
         },
         "setupUs": {
           "available": true,
-          "count": 793,
-          "min_us": 2263,
-          "avg_us": 2464,
-          "p50_us": 2417,
-          "p95_us": 2621,
-          "max_us": 6667
+          "count": 814,
+          "min_us": 2258,
+          "avg_us": 2404,
+          "p50_us": 2374,
+          "p95_us": 2559,
+          "max_us": 5385
         }
       },
       "metrics": {
@@ -3511,15 +3584,15 @@
         "cold_sync_resolver_calls": 32,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 30,
-        "p95_us": 68,
-        "max_us": 207,
-        "setup_us": 2464
+        "avg_us": 28,
+        "p95_us": 63,
+        "max_us": 166,
+        "setup_us": 2404
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 2464
+        "setup_us": 2404
       },
       "exactInvariants": {
         "resolver_calls_bounded": {
@@ -3534,6 +3607,8 @@
     {
       "id": "resources.resolve_sync_cold_budget",
       "scale": "1k_uncached_image_records",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3548,24 +3623,23 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "resource_set",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 761,
-          "min_us": 54,
-          "avg_us": 73,
-          "p50_us": 59,
+          "count": 784,
+          "min_us": 51,
+          "avg_us": 70,
+          "p50_us": 58,
           "p95_us": 147,
-          "max_us": 443
+          "max_us": 357
         },
         "setupUs": {
           "available": true,
-          "count": 761,
-          "min_us": 2285,
-          "avg_us": 2525,
-          "p50_us": 2452,
-          "p95_us": 2716,
+          "count": 784,
+          "min_us": 2175,
+          "avg_us": 2453,
+          "p50_us": 2420,
+          "p95_us": 2660,
           "max_us": 7058
         }
       },
@@ -3576,15 +3650,15 @@
         "cold_sync_resolver_calls": 128,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 73,
+        "avg_us": 70,
         "p95_us": 147,
-        "max_us": 443,
-        "setup_us": 2525
+        "max_us": 357,
+        "setup_us": 2453
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 2525
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 2453
       },
       "exactInvariants": {
         "session_budget_resolver_calls_lte_128": {
@@ -3599,6 +3673,8 @@
     {
       "id": "resources.mark_dirty",
       "scale": "1k_resources",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3613,25 +3689,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "resource_set",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 811,
-          "min_us": 14,
+          "count": 814,
+          "min_us": 13,
           "avg_us": 19,
           "p50_us": 18,
-          "p95_us": 29,
-          "max_us": 112
+          "p95_us": 28,
+          "max_us": 70
         },
         "setupUs": {
           "available": true,
-          "count": 811,
-          "min_us": 2191,
-          "avg_us": 2421,
-          "p50_us": 2397,
+          "count": 814,
+          "min_us": 2178,
+          "avg_us": 2412,
+          "p50_us": 2392,
           "p95_us": 2621,
-          "max_us": 5986
+          "max_us": 5766
         }
       },
       "metrics": {
@@ -3640,14 +3715,14 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 19,
-        "p95_us": 29,
-        "max_us": 112,
-        "setup_us": 2421
+        "p95_us": 28,
+        "max_us": 70,
+        "setup_us": 2412
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 2421
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 2412
       },
       "exactInvariants": {
         "target_session_cache_invalidation_bounded": {
@@ -3662,6 +3737,8 @@
     {
       "id": "resources.mark_all_dirty",
       "scale": "1k_resources",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "resource_set",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -3676,25 +3753,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "resource_set",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 804,
-          "min_us": 13,
-          "avg_us": 18,
-          "p50_us": 17,
-          "p95_us": 27,
-          "max_us": 90
+          "count": 816,
+          "min_us": 12,
+          "avg_us": 17,
+          "p50_us": 16,
+          "p95_us": 25,
+          "max_us": 57
         },
         "setupUs": {
           "available": true,
-          "count": 804,
-          "min_us": 2183,
-          "avg_us": 2443,
-          "p50_us": 2419,
-          "p95_us": 2634,
-          "max_us": 6038
+          "count": 816,
+          "min_us": 2168,
+          "avg_us": 2406,
+          "p50_us": 2387,
+          "p95_us": 2610,
+          "max_us": 5976
         }
       },
       "metrics": {
@@ -3702,15 +3778,15 @@
         "all_entry_session_cache_invalidation_cost": 2,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 18,
-        "p95_us": 27,
-        "max_us": 90,
-        "setup_us": 2443
+        "avg_us": 17,
+        "p95_us": 25,
+        "max_us": 57,
+        "setup_us": 2406
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 2443
+        "setup_us": 2406
       },
       "exactInvariants": {
         "all_entry_session_cache_invalidation_bounded": {
@@ -3725,6 +3801,8 @@
     {
       "id": "projection.read_document",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
         "setupScope": "per_sample_prepared_fixture",
@@ -3739,25 +3817,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 300,
-          "min_us": 511,
-          "avg_us": 662,
-          "p50_us": 569,
-          "p95_us": 1056,
+          "count": 307,
+          "min_us": 488,
+          "avg_us": 648,
+          "p50_us": 555,
+          "p95_us": 1052,
           "max_us": 1771
         },
         "setupUs": {
           "available": true,
-          "count": 300,
-          "min_us": 5204,
-          "avg_us": 5991,
-          "p50_us": 5733,
+          "count": 307,
+          "min_us": 5046,
+          "avg_us": 5845,
+          "p50_us": 5599,
           "p95_us": 7497,
-          "max_us": 19506
+          "max_us": 19001
         }
       },
       "metrics": {
@@ -3765,22 +3842,24 @@
         "cache_hit_us": 1,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 662,
-        "p95_us": 1056,
+        "avg_us": 648,
+        "p95_us": 1052,
         "max_us": 1771,
-        "setup_us": 5991
+        "setup_us": 5845
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 2905,
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 5991
+        "spatial_rebuild_setup_us": 2732,
+        "setup_allocation_bytes": 16384,
+        "setup_rss_delta_bytes": 16384,
+        "setup_us": 5845
       },
       "exactInvariants": {}
     },
     {
       "id": "projection.read_document",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
         "setupScope": "per_sample_prepared_fixture",
@@ -3795,48 +3874,49 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 24,
-          "min_us": 5988,
+          "min_us": 5797,
           "avg_us": 7757,
-          "p50_us": 6832,
+          "p50_us": 6340,
           "p95_us": 14097,
           "max_us": 15612
         },
         "setupUs": {
           "available": true,
           "count": 24,
-          "min_us": 71362,
-          "avg_us": 77283,
+          "min_us": 70651,
+          "avg_us": 77076,
           "p50_us": 76039,
-          "p95_us": 85773,
-          "max_us": 120485
+          "p95_us": 83801,
+          "max_us": 96080
         }
       },
       "metrics": {
-        "first_read_us": 10649,
-        "cache_hit_us": 2,
+        "first_read_us": 15455,
+        "cache_hit_us": 3,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 7757,
         "p95_us": 14097,
         "max_us": 15612,
-        "setup_us": 77283
+        "setup_us": 77076
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 64718,
+        "spatial_rebuild_setup_us": 52459,
         "setup_allocation_bytes": 9732096,
         "setup_rss_delta_bytes": 9732096,
-        "setup_us": 77283
+        "setup_us": 77076
       },
       "exactInvariants": {}
     },
     {
       "id": "projection.read_document",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
         "setupScope": "per_sample_prepared_fixture",
@@ -3851,48 +3931,49 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 31319,
-          "avg_us": 39522,
-          "p50_us": 32292,
-          "p95_us": 54007,
-          "max_us": 54007
+          "min_us": 30366,
+          "avg_us": 35869,
+          "p50_us": 30866,
+          "p95_us": 52529,
+          "max_us": 52529
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 386793,
-          "avg_us": 418390,
-          "p50_us": 399206,
+          "min_us": 366996,
+          "avg_us": 398401,
+          "p50_us": 372547,
           "p95_us": 497528,
           "max_us": 497528
         }
       },
       "metrics": {
-        "first_read_us": 53879,
+        "first_read_us": 52406,
         "cache_hit_us": 5,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 39522,
-        "p95_us": 54007,
-        "max_us": 54007,
-        "setup_us": 418390
+        "avg_us": 35869,
+        "p95_us": 52529,
+        "max_us": 52529,
+        "setup_us": 398401
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 271792,
+        "spatial_rebuild_setup_us": 266066,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 418390
+        "setup_us": 398401
       },
       "exactInvariants": {}
     },
     {
       "id": "projection.read_document",
       "scale": "100k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "projection_split",
         "setupScope": "per_sample_prepared_fixture",
@@ -3907,12 +3988,11 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 63334,
+          "min_us": 63328,
           "avg_us": 70586,
           "p50_us": 64313,
           "p95_us": 91232,
@@ -3921,11 +4001,11 @@
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 801515,
-          "avg_us": 871728,
-          "p50_us": 824453,
-          "p95_us": 1014272,
-          "max_us": 1014272
+          "min_us": 792828,
+          "avg_us": 855535,
+          "p50_us": 820655,
+          "p95_us": 946789,
+          "max_us": 946789
         }
       },
       "metrics": {
@@ -3936,19 +4016,21 @@
         "avg_us": 70586,
         "p95_us": 91232,
         "max_us": 91232,
-        "setup_us": 871728
+        "setup_us": 855535
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 461215,
+        "spatial_rebuild_setup_us": 458284,
         "setup_allocation_bytes": 3719168,
         "setup_rss_delta_bytes": 3719168,
-        "setup_us": 871728
+        "setup_us": 855535
       },
       "exactInvariants": {}
     },
     {
       "id": "codec.decode_v1",
       "scale": "all_fixtures",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_run_prepared_fixture",
@@ -3963,16 +4045,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "codec_fixture",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 106692,
+          "count": 107816,
           "min_us": 14,
           "avg_us": 17,
           "p50_us": 15,
           "p95_us": 22,
-          "max_us": 1068
+          "max_us": 598
         },
         "setupUs": {
           "available": true,
@@ -3991,7 +4072,7 @@
         "rss_delta_bytes": 0,
         "avg_us": 17,
         "p95_us": 22,
-        "max_us": 1068,
+        "max_us": 598,
         "setup_us": 179
       },
       "setupMetrics": {
@@ -4012,6 +4093,8 @@
     {
       "id": "load_document.success",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -4026,48 +4109,49 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 218,
-          "min_us": 4017,
-          "avg_us": 4739,
-          "p50_us": 4470,
-          "p95_us": 5974,
-          "max_us": 14878
+          "count": 223,
+          "min_us": 3879,
+          "avg_us": 4650,
+          "p50_us": 4390,
+          "p95_us": 5200,
+          "max_us": 14150
         },
         "setupUs": {
           "available": true,
-          "count": 218,
-          "min_us": 4040,
-          "avg_us": 4411,
-          "p50_us": 4288,
-          "p95_us": 4957,
-          "max_us": 8957
+          "count": 223,
+          "min_us": 3894,
+          "avg_us": 4283,
+          "p50_us": 4223,
+          "p95_us": 4571,
+          "max_us": 8358
         }
       },
       "metrics": {
         "loaded_element_count": 1000,
         "rebuild_cost": 128,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 4739,
-        "p95_us": 5974,
-        "max_us": 14878,
-        "schema_import_load_us": 5944,
-        "setup_us": 4411
+        "allocation_bytes": 3145728,
+        "rss_delta_bytes": 3145728,
+        "avg_us": 4650,
+        "p95_us": 5200,
+        "max_us": 14150,
+        "schema_import_load_us": 5176,
+        "setup_us": 4283
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 344064,
-        "setup_rss_delta_bytes": 344064,
-        "setup_us": 4411
+        "setup_allocation_bytes": 0,
+        "setup_rss_delta_bytes": 0,
+        "setup_us": 4283
       },
       "exactInvariants": {}
     },
     {
       "id": "load_document.success",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -4082,25 +4166,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 18,
-          "min_us": 61317,
-          "avg_us": 65209,
-          "p50_us": 63781,
-          "p95_us": 68737,
+          "min_us": 58297,
+          "avg_us": 63285,
+          "p50_us": 61307,
+          "p95_us": 65174,
           "max_us": 87129
         },
         "setupUs": {
           "available": true,
           "count": 18,
-          "min_us": 49358,
-          "avg_us": 53225,
-          "p50_us": 51988,
-          "p95_us": 54496,
-          "max_us": 79387
+          "min_us": 47541,
+          "avg_us": 50350,
+          "p50_us": 50647,
+          "p95_us": 52173,
+          "max_us": 52199
         }
       },
       "metrics": {
@@ -4108,22 +4191,24 @@
         "rebuild_cost": 128,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 65209,
-        "p95_us": 68737,
+        "avg_us": 63285,
+        "p95_us": 65174,
         "max_us": 87129,
-        "schema_import_load_us": 68655,
-        "setup_us": 53225
+        "schema_import_load_us": 65101,
+        "setup_us": 50350
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 0,
-        "setup_rss_delta_bytes": 0,
-        "setup_us": 53225
+        "setup_allocation_bytes": 6537216,
+        "setup_rss_delta_bytes": 6537216,
+        "setup_us": 50350
       },
       "exactInvariants": {}
     },
     {
       "id": "load_document.success",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -4138,21 +4223,20 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 306792,
-          "avg_us": 342520,
-          "p50_us": 347771,
-          "p95_us": 399593,
-          "max_us": 399593
+          "min_us": 306040,
+          "avg_us": 334926,
+          "p50_us": 326047,
+          "p95_us": 369072,
+          "max_us": 369072
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 235143,
+          "min_us": 225009,
           "avg_us": 271768,
           "p50_us": 266062,
           "p95_us": 342039,
@@ -4162,12 +4246,12 @@
       "metrics": {
         "loaded_element_count": 50000,
         "rebuild_cost": 128,
-        "allocation_bytes": 46186496,
-        "rss_delta_bytes": 46186496,
-        "avg_us": 342520,
-        "p95_us": 399593,
-        "max_us": 399593,
-        "schema_import_load_us": 399450,
+        "allocation_bytes": 49676288,
+        "rss_delta_bytes": 49676288,
+        "avg_us": 334926,
+        "p95_us": 369072,
+        "max_us": 369072,
+        "schema_import_load_us": 368978,
         "setup_us": 271768
       },
       "setupMetrics": {
@@ -4180,6 +4264,8 @@
     {
       "id": "load_document.breakdown",
       "scale": "1k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_run_prepared_fixture",
@@ -4194,12 +4280,11 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "codec_fixture",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 202,
-          "min_us": 8725,
+          "min_us": 8578,
           "avg_us": 9923,
           "p50_us": 9344,
           "p95_us": 14212,
@@ -4216,14 +4301,14 @@
         }
       },
       "metrics": {
-        "decode_us": 3809,
+        "decode_us": 3465,
         "runtime_construct_us": 20,
         "first_projection_us": 573,
         "loaded_element_count": 1000,
         "projected_element_count": 1000,
         "encoded_byte_count": 340542,
-        "allocation_bytes": 704512,
-        "rss_delta_bytes": 704512,
+        "allocation_bytes": 2785280,
+        "rss_delta_bytes": 2785280,
         "avg_us": 9923,
         "p95_us": 14212,
         "max_us": 17832,
@@ -4231,8 +4316,8 @@
         "setup_us": 6436
       },
       "setupMetrics": {
-        "setup_allocation_bytes": 868352,
-        "setup_rss_delta_bytes": 868352,
+        "setup_allocation_bytes": 442368,
+        "setup_rss_delta_bytes": 442368,
         "setup_us": 6436
       },
       "exactInvariants": {}
@@ -4240,6 +4325,8 @@
     {
       "id": "load_document.breakdown",
       "scale": "10k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_run_prepared_fixture",
@@ -4254,7 +4341,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "codec_fixture",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -4268,11 +4354,11 @@
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 63353,
-          "avg_us": 63353,
-          "p50_us": 63353,
-          "p95_us": 63353,
-          "max_us": 63353
+          "min_us": 63296,
+          "avg_us": 63296,
+          "p50_us": 63296,
+          "p95_us": 63296,
+          "max_us": 63296
         }
       },
       "metrics": {
@@ -4282,24 +4368,26 @@
         "loaded_element_count": 10000,
         "projected_element_count": 10000,
         "encoded_byte_count": 3369688,
-        "allocation_bytes": 688128,
-        "rss_delta_bytes": 688128,
+        "allocation_bytes": 81920,
+        "rss_delta_bytes": 81920,
         "avg_us": 139891,
         "p95_us": 165992,
         "max_us": 181652,
         "schema_import_load_us": 74654,
-        "setup_us": 63353
+        "setup_us": 63296
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 63353
+        "setup_us": 63296
       },
       "exactInvariants": {}
     },
     {
       "id": "load_document.breakdown",
       "scale": "50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "codec_fixture",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_run_prepared_fixture",
@@ -4314,52 +4402,53 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "codec_fixture",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 635630,
-          "avg_us": 681065,
-          "p50_us": 665506,
+          "min_us": 624019,
+          "avg_us": 679718,
+          "p50_us": 661476,
           "p95_us": 747214,
           "max_us": 747214
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 268609,
-          "avg_us": 268609,
-          "p50_us": 268609,
-          "p95_us": 268609,
-          "max_us": 268609
+          "min_us": 262084,
+          "avg_us": 262084,
+          "p50_us": 262084,
+          "p95_us": 262084,
+          "max_us": 262084
         }
       },
       "metrics": {
         "decode_us": 281550,
-        "runtime_construct_us": 103,
+        "runtime_construct_us": 94,
         "first_projection_us": 33176,
         "loaded_element_count": 50000,
         "projected_element_count": 50000,
         "encoded_byte_count": 16872525,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
-        "avg_us": 681065,
+        "allocation_bytes": 1294336,
+        "rss_delta_bytes": 1294336,
+        "avg_us": 679718,
         "p95_us": 747214,
         "max_us": 747214,
         "schema_import_load_us": 429349,
-        "setup_us": 268609
+        "setup_us": 262084
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 268609
+        "setup_us": 262084
       },
       "exactInvariants": {}
     },
     {
       "id": "load_document.failure",
       "scale": "invalid_1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_sample_prepared_fixture",
@@ -4374,25 +4463,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "invalid_document",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 704,
-          "min_us": 192,
-          "avg_us": 242,
-          "p50_us": 227,
-          "p95_us": 335,
+          "count": 710,
+          "min_us": 187,
+          "avg_us": 239,
+          "p50_us": 226,
+          "p95_us": 324,
           "max_us": 788
         },
         "setupUs": {
           "available": true,
-          "count": 704,
-          "min_us": 2411,
-          "avg_us": 2587,
-          "p50_us": 2549,
+          "count": 710,
+          "min_us": 2302,
+          "avg_us": 2566,
+          "p50_us": 2528,
           "p95_us": 2811,
-          "max_us": 8178
+          "max_us": 8092
         }
       },
       "metrics": {
@@ -4401,15 +4489,15 @@
         "error_payload": "duplicateElementId",
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 242,
-        "p95_us": 335,
+        "avg_us": 239,
+        "p95_us": 324,
         "max_us": 788,
-        "setup_us": 2587
+        "setup_us": 2566
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 2587
+        "setup_us": 2566
       },
       "exactInvariants": {
         "committed_mutation_count_zero": {
@@ -4424,6 +4512,8 @@
     {
       "id": "load_document.failure",
       "scale": "invalid_10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_sample_prepared_fixture",
@@ -4438,25 +4528,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "invalid_document",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 53,
-          "min_us": 2190,
-          "avg_us": 3060,
+          "count": 54,
+          "min_us": 2169,
+          "avg_us": 3023,
           "p50_us": 2672,
           "p95_us": 4313,
           "max_us": 5185
         },
         "setupUs": {
           "available": true,
-          "count": 53,
+          "count": 54,
           "min_us": 30801,
-          "avg_us": 35246,
-          "p50_us": 34478,
-          "p95_us": 41350,
-          "max_us": 47866
+          "avg_us": 34746,
+          "p50_us": 34389,
+          "p95_us": 39366,
+          "max_us": 46169
         }
       },
       "metrics": {
@@ -4465,15 +4554,15 @@
         "error_payload": "duplicateElementId",
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 3060,
+        "avg_us": 3023,
         "p95_us": 4313,
         "max_us": 5185,
-        "setup_us": 35246
+        "setup_us": 34746
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 35246
+        "setup_us": 34746
       },
       "exactInvariants": {
         "committed_mutation_count_zero": {
@@ -4488,6 +4577,8 @@
     {
       "id": "load_document.failure",
       "scale": "invalid_50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "invalid_document",
       "measurementBoundary": {
         "timedScope": "lifecycle",
         "setupScope": "per_sample_prepared_fixture",
@@ -4502,36 +4593,35 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "invalid_document",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 10,
           "min_us": 13396,
-          "avg_us": 16308,
-          "p50_us": 16474,
-          "p95_us": 20916,
-          "max_us": 20916
+          "avg_us": 14948,
+          "p50_us": 14756,
+          "p95_us": 18366,
+          "max_us": 18366
         },
         "setupUs": {
           "available": true,
           "count": 10,
           "min_us": 180166,
           "avg_us": 194559,
-          "p50_us": 192760,
-          "p95_us": 273046,
-          "max_us": 273046
+          "p50_us": 187462,
+          "p95_us": 258095,
+          "max_us": 258095
         }
       },
       "metrics": {
         "failure_mutation_count": 0,
         "committed_mutation_count": 0,
         "error_payload": "duplicateElementId",
-        "allocation_bytes": 8732672,
-        "rss_delta_bytes": 8732672,
-        "avg_us": 16308,
-        "p95_us": 20916,
-        "max_us": 20916,
+        "allocation_bytes": 8716288,
+        "rss_delta_bytes": 8716288,
+        "avg_us": 14948,
+        "p95_us": 18366,
+        "max_us": 18366,
         "setup_us": 194559
       },
       "setupMetrics": {
@@ -4552,6 +4642,8 @@
     {
       "id": "spatial.query_point",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -4566,42 +4658,41 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 16753,
           "min_us": 105,
           "avg_us": 117,
-          "p50_us": 112,
+          "p50_us": 111,
           "p95_us": 137,
           "max_us": 923
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 18046,
-          "avg_us": 18046,
-          "p50_us": 18046,
-          "p95_us": 18046,
-          "max_us": 18046
+          "min_us": 17779,
+          "avg_us": 17779,
+          "p50_us": 17779,
+          "p95_us": 17779,
+          "max_us": 17779
         }
       },
       "metrics": {
         "tile_count": 4,
         "fallback_count": 0,
-        "allocation_bytes": 0,
-        "rss_delta_bytes": 0,
+        "allocation_bytes": 16384,
+        "rss_delta_bytes": 16384,
         "avg_us": 117,
         "p95_us": 137,
         "max_us": 923,
-        "setup_us": 18046
+        "setup_us": 17779
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 12140,
-        "setup_allocation_bytes": 5341184,
-        "setup_rss_delta_bytes": 5341184,
-        "setup_us": 18046
+        "spatial_rebuild_setup_us": 11845,
+        "setup_allocation_bytes": 4112384,
+        "setup_rss_delta_bytes": 4112384,
+        "setup_us": 17779
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4616,6 +4707,8 @@
     {
       "id": "spatial.query_point",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -4630,25 +4723,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 7363,
+          "count": 7448,
           "min_us": 229,
-          "avg_us": 268,
+          "avg_us": 265,
           "p50_us": 260,
-          "p95_us": 316,
-          "max_us": 4652
+          "p95_us": 309,
+          "max_us": 3427
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 80381,
-          "avg_us": 80381,
-          "p50_us": 80381,
-          "p95_us": 80381,
-          "max_us": 80381
+          "min_us": 74843,
+          "avg_us": 74843,
+          "p50_us": 74843,
+          "p95_us": 74843,
+          "max_us": 74843
         }
       },
       "metrics": {
@@ -4656,16 +4748,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 268,
-        "p95_us": 316,
-        "max_us": 4652,
-        "setup_us": 80381
+        "avg_us": 265,
+        "p95_us": 309,
+        "max_us": 3427,
+        "setup_us": 74843
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 46427,
-        "setup_allocation_bytes": 3342336,
-        "setup_rss_delta_bytes": 3342336,
-        "setup_us": 80381
+        "spatial_rebuild_setup_us": 41753,
+        "setup_allocation_bytes": 2703360,
+        "setup_rss_delta_bytes": 2703360,
+        "setup_us": 74843
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4680,6 +4772,8 @@
     {
       "id": "spatial.query_point",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -4694,7 +4788,6 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
@@ -4703,16 +4796,16 @@
           "avg_us": 272,
           "p50_us": 263,
           "p95_us": 321,
-          "max_us": 911
+          "max_us": 894
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 397909,
-          "avg_us": 397909,
-          "p50_us": 397909,
-          "p95_us": 397909,
-          "max_us": 397909
+          "min_us": 388817,
+          "avg_us": 388817,
+          "p50_us": 388817,
+          "p95_us": 388817,
+          "max_us": 388817
         }
       },
       "metrics": {
@@ -4722,14 +4815,14 @@
         "rss_delta_bytes": 0,
         "avg_us": 272,
         "p95_us": 321,
-        "max_us": 911,
-        "setup_us": 397909
+        "max_us": 894,
+        "setup_us": 388817
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 226868,
+        "spatial_rebuild_setup_us": 214659,
         "setup_allocation_bytes": 3211264,
         "setup_rss_delta_bytes": 3211264,
-        "setup_us": 397909
+        "setup_us": 388817
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4744,6 +4837,8 @@
     {
       "id": "spatial.query_point",
       "scale": "100k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -4758,25 +4853,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 6401,
-          "min_us": 248,
-          "avg_us": 308,
-          "p50_us": 291,
+          "count": 6574,
+          "min_us": 245,
+          "avg_us": 300,
+          "p50_us": 278,
           "p95_us": 381,
-          "max_us": 4642
+          "max_us": 5264
         },
         "setupUs": {
           "available": true,
           "count": 1,
-          "min_us": 847591,
-          "avg_us": 847591,
-          "p50_us": 847591,
-          "p95_us": 847591,
-          "max_us": 847591
+          "min_us": 816986,
+          "avg_us": 816986,
+          "p50_us": 816986,
+          "p95_us": 816986,
+          "max_us": 816986
         }
       },
       "metrics": {
@@ -4784,16 +4878,16 @@
         "fallback_count": 4097,
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
-        "avg_us": 308,
+        "avg_us": 300,
         "p95_us": 381,
-        "max_us": 4642,
-        "setup_us": 847591
+        "max_us": 5264,
+        "setup_us": 816986
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 496775,
+        "spatial_rebuild_setup_us": 473226,
         "setup_allocation_bytes": 17465344,
         "setup_rss_delta_bytes": 17465344,
-        "setup_us": 847591
+        "setup_us": 816986
       },
       "exactInvariants": {
         "fallback_count_bounded": {
@@ -4808,6 +4902,8 @@
     {
       "id": "spatial.query_point_dense_stress",
       "scale": "dense_50k",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "dense_stress",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_run_prepared_fixture",
@@ -4822,16 +4918,15 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "dense_stress",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 6872,
-          "min_us": 246,
+          "min_us": 245,
           "avg_us": 287,
-          "p50_us": 270,
+          "p50_us": 269,
           "p95_us": 351,
-          "max_us": 1301
+          "max_us": 862
         },
         "setupUs": {
           "available": true,
@@ -4850,13 +4945,13 @@
         "rss_delta_bytes": 0,
         "avg_us": 287,
         "p95_us": 351,
-        "max_us": 1301,
+        "max_us": 862,
         "setup_us": 417851
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 251758,
-        "setup_allocation_bytes": 884736,
-        "setup_rss_delta_bytes": 884736,
+        "setup_allocation_bytes": 557056,
+        "setup_rss_delta_bytes": 557056,
         "setup_us": 417851
       },
       "exactInvariants": {
@@ -4872,6 +4967,8 @@
     {
       "id": "spatial.touched_update",
       "scale": "1k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -4886,25 +4983,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 352,
-          "min_us": 140,
+          "count": 356,
+          "min_us": 139,
           "avg_us": 197,
           "p50_us": 171,
-          "p95_us": 277,
+          "p95_us": 274,
           "max_us": 1075
         },
         "setupUs": {
           "available": true,
-          "count": 352,
-          "min_us": 5097,
-          "avg_us": 5463,
-          "p50_us": 5282,
-          "p95_us": 5841,
-          "max_us": 17432
+          "count": 356,
+          "min_us": 4929,
+          "avg_us": 5399,
+          "p50_us": 5259,
+          "p95_us": 5695,
+          "max_us": 16406
         }
       },
       "metrics": {
@@ -4914,15 +5010,15 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 197,
-        "p95_us": 277,
+        "p95_us": 274,
         "max_us": 1075,
-        "setup_us": 5463
+        "setup_us": 5399
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 2788,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 5463
+        "setup_us": 5399
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -4937,6 +5033,8 @@
     {
       "id": "spatial.touched_update",
       "scale": "10k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -4951,24 +5049,23 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 26,
-          "min_us": 1293,
-          "avg_us": 1511,
-          "p50_us": 1418,
-          "p95_us": 2037,
+          "count": 27,
+          "min_us": 1255,
+          "avg_us": 1468,
+          "p50_us": 1366,
+          "p95_us": 1947,
           "max_us": 2244
         },
         "setupUs": {
           "available": true,
-          "count": 26,
-          "min_us": 71972,
-          "avg_us": 79784,
-          "p50_us": 79505,
-          "p95_us": 85034,
+          "count": 27,
+          "min_us": 70438,
+          "avg_us": 76937,
+          "p50_us": 74366,
+          "p95_us": 83129,
           "max_us": 119287
         }
       },
@@ -4978,16 +5075,16 @@
         "rebuilt_pages": 64,
         "allocation_bytes": 557056,
         "rss_delta_bytes": 557056,
-        "avg_us": 1511,
-        "p95_us": 2037,
+        "avg_us": 1468,
+        "p95_us": 1947,
         "max_us": 2244,
-        "setup_us": 79784
+        "setup_us": 76937
       },
       "setupMetrics": {
-        "spatial_rebuild_setup_us": 73744,
+        "spatial_rebuild_setup_us": 79236,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 79784
+        "setup_us": 76937
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -5002,6 +5099,8 @@
     {
       "id": "spatial.touched_update",
       "scale": "50k",
+      "baselinePolicy": "reference_comparison",
+      "fixtureShape": "normal_spread",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -5016,25 +5115,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "normal_spread",
       "sampleSummary": {
         "actionUs": {
           "available": true,
           "count": 5,
-          "min_us": 5953,
-          "avg_us": 6964,
-          "p50_us": 6374,
-          "p95_us": 8864,
-          "max_us": 8864
+          "min_us": 5714,
+          "avg_us": 6167,
+          "p50_us": 5943,
+          "p95_us": 6984,
+          "max_us": 6984
         },
         "setupUs": {
           "available": true,
           "count": 5,
-          "min_us": 396694,
-          "avg_us": 438664,
-          "p50_us": 426647,
-          "p95_us": 510064,
-          "max_us": 510064
+          "min_us": 380638,
+          "avg_us": 400276,
+          "p50_us": 380723,
+          "p95_us": 467500,
+          "max_us": 467500
         }
       },
       "metrics": {
@@ -5043,16 +5141,16 @@
         "rebuilt_pages": 64,
         "allocation_bytes": 5406720,
         "rss_delta_bytes": 5406720,
-        "avg_us": 6964,
-        "p95_us": 8864,
-        "max_us": 8864,
-        "setup_us": 438664
+        "avg_us": 6167,
+        "p95_us": 6984,
+        "max_us": 6984,
+        "setup_us": 400276
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 275513,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 438664
+        "setup_us": 400276
       },
       "exactInvariants": {
         "rebuilt_pages_match_touched_set": {
@@ -5067,6 +5165,8 @@
     {
       "id": "runtime.dispose_during_gesture",
       "scale": "active_selected_overlay_previews",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "active_preview",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -5081,25 +5181,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "active_preview",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 41436,
+          "count": 43164,
           "min_us": 4,
           "avg_us": 6,
           "p50_us": 4,
           "p95_us": 13,
-          "max_us": 227
+          "max_us": 170
         },
         "setupUs": {
           "available": true,
-          "count": 41436,
+          "count": 43164,
           "min_us": 28,
-          "avg_us": 38,
-          "p50_us": 31,
-          "p95_us": 68,
-          "max_us": 691
+          "avg_us": 36,
+          "p50_us": 29,
+          "p95_us": 65,
+          "max_us": 617
         }
       },
       "metrics": {
@@ -5109,13 +5208,13 @@
         "rss_delta_bytes": 0,
         "avg_us": 6,
         "p95_us": 13,
-        "max_us": 227,
-        "setup_us": 38
+        "max_us": 170,
+        "setup_us": 36
       },
       "setupMetrics": {
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 38
+        "setup_us": 36
       },
       "exactInvariants": {
         "resolver_calls_zero": {
@@ -5137,6 +5236,8 @@
     {
       "id": "diagnostics.disabled_pointer",
       "scale": "hot_pointer",
+      "baselinePolicy": "absolute_budget",
+      "fixtureShape": "hot_pointer",
       "measurementBoundary": {
         "timedScope": "action_only",
         "setupScope": "per_sample_prepared_fixture",
@@ -5151,25 +5252,24 @@
           "setup_rss_delta_bytes"
         ]
       },
-      "fixtureShape": "hot_pointer",
       "sampleSummary": {
         "actionUs": {
           "available": true,
-          "count": 49804,
+          "count": 51985,
           "min_us": 4,
           "avg_us": 5,
           "p50_us": 4,
-          "p95_us": 9,
-          "max_us": 209
+          "p95_us": 8,
+          "max_us": 170
         },
         "setupUs": {
           "available": true,
-          "count": 49804,
+          "count": 51985,
           "min_us": 22,
-          "avg_us": 30,
-          "p50_us": 25,
-          "p95_us": 53,
-          "max_us": 621
+          "avg_us": 28,
+          "p50_us": 24,
+          "p95_us": 48,
+          "max_us": 509
         }
       },
       "metrics": {
@@ -5177,15 +5277,15 @@
         "allocation_bytes": 0,
         "rss_delta_bytes": 0,
         "avg_us": 5,
-        "p95_us": 9,
-        "max_us": 209,
-        "setup_us": 30
+        "p95_us": 8,
+        "max_us": 170,
+        "setup_us": 28
       },
       "setupMetrics": {
         "spatial_rebuild_setup_us": 4,
         "setup_allocation_bytes": 0,
         "setup_rss_delta_bytes": 0,
-        "setup_us": 30
+        "setup_us": 28
       },
       "exactInvariants": {
         "allocation_records_zero": {

@@ -470,7 +470,28 @@ Map<String, Object?> _indexRecord({
     'repositoryDirty': history['repositoryDirty'],
     'device': history['device'],
     'caseCount': history['caseCount'],
+    'sources': _indexSources(history),
   };
+}
+
+List<Map<String, Object?>> _indexSources(Map<String, Object?> history) {
+  final sources = history['sources'];
+  if (sources is! List<Object?>) {
+    return const [];
+  }
+
+  return [
+    for (final source in sources)
+      if (source is Map<String, Object?>)
+        {
+          'path': source['path'],
+          'kind': source['kind'],
+          'source': source['source'],
+          'manifestVersion': source['manifestVersion'],
+          'manifestFingerprint': source['manifestFingerprint'],
+          'caseCount': source['caseCount'],
+        },
+  ];
 }
 
 int _compareRecordedAt(Map<String, Object?> left, Map<String, Object?> right) {

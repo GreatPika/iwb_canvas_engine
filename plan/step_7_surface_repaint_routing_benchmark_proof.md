@@ -104,7 +104,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Prepare surface route invariant semantics
+### [x] Unit 1: Prepare surface route invariant semantics
 
 Owner: `tool/bench/src/benchmark_manifest.dart`; `tool/bench/src/benchmark_runner.dart`; `tool/bench/src/benchmark_diff.dart`; `test/benchmarks/benchmark_manifest_test.dart`; `test/benchmarks/benchmark_runner_test.dart`; `test/benchmarks/benchmark_diff_test.dart`
 
@@ -116,7 +116,7 @@ Completion Check: Canonical `docs/_registry/benchmarks.yaml`, `docs/verification
 
 Depends On: none
 
-### [ ] Unit 2: Add canonical surface route benchmark cases and harness
+### [x] Unit 2: Add canonical surface route benchmark cases and harness
 
 Owner: `docs/_registry/benchmarks.yaml`; `docs/verification/benchmarks.md`; `docs/_registry/sections.yaml`; generated documentation under `docs/indexes/**`; `test/benchmarks/benchmark_probe_flutter.dart`; `test/benchmarks/required_cases_test.dart`; `test/benchmarks/benchmark_manifest_test.dart`; supporting files under `test/benchmarks/**` if extraction is needed.
 
@@ -128,7 +128,7 @@ Completion Check: `docs/_registry/benchmarks.yaml` contains both `surface.overla
 
 Depends On: Unit 1
 
-### [ ] Unit 3: Accept expanded Xiaomi surface-route baseline
+### [x] Unit 3: Accept expanded Xiaomi surface-route baseline
 
 Owner: `tool/bench/manual/run_history/**`; `tool/bench/manual/run_history/index.json`; `tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json`; `tool/bench/manual/reference_decisions.json`
 

@@ -390,7 +390,18 @@ Map<String, Object?> _updatesManualHistoryIndex(Directory sandbox) {
   final reportPath = '${sandbox.path}/pixel6_release.json';
   File(reportPath).writeAsStringSync(jsonEncode(_reportJson()));
   final outputPath = '${sandbox.path}/manual/pixel6.json';
+  _writeIndexedHistoryTwice(sandbox, reportPath, outputPath);
 
+  final index = _readJson('${sandbox.path}/manual/index.json');
+  _expectSingleIndexedHistoryRecord(index, outputPath);
+  return index;
+}
+
+void _writeIndexedHistoryTwice(
+  Directory sandbox,
+  String reportPath,
+  String outputPath,
+) {
   for (var run = 0; run < 2; run += 1) {
     writeManualBenchmarkHistory(
       options: ManualBenchmarkHistoryOptions(
@@ -404,14 +415,25 @@ Map<String, Object?> _updatesManualHistoryIndex(Directory sandbox) {
       recordedAtUtc: DateTime.utc(2026, 6, 6, 18, run),
     );
   }
+}
 
-  final index = _readJson('${sandbox.path}/manual/index.json');
+void _expectSingleIndexedHistoryRecord(
+  Map<String, Object?> index,
+  String outputPath,
+) {
   final records = index['records'] as List<Object?>;
   final matching = records.whereType<Map<String, Object?>>().where(
     (record) => record['path'] == outputPath,
   );
   expect(matching, hasLength(1));
-  return index;
+  _expectIndexedSourceFingerprint(matching.single);
+}
+
+void _expectIndexedSourceFingerprint(Map<String, Object?> record) {
+  final indexedSource =
+      (record['sources'] as List<Object?>).single as Map<String, Object?>;
+  expect(indexedSource['manifestFingerprint'], 'e244be03');
+  expect(indexedSource['source'], contains('sha256'));
 }
 
 void _expectSingleCaseId(Map<String, Object?> history, String id) {
