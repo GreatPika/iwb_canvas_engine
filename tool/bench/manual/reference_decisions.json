@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-13T16:45:00.000Z",
+  "updatedAtUtc": "2026-06-13T18:45:00.000Z",
   "records": [
     {
       "referencePath": "tool/bench/manual/reference_reports/xiaomi_22081283g_android14_flutter_3_44_0.json",
-      "acceptedAtUtc": "2026-06-13T16:45:00.000Z",
-      "acceptedReason": "Refresh Xiaomi 22081283G current-contour reference after adding surface repaint-route benchmark cases; accepted from the stable post-warmup run window.",
+      "acceptedAtUtc": "2026-06-13T18:45:00.000Z",
+      "acceptedReason": "Refresh Xiaomi 22081283G current-contour reference after isolating the selected-move surface repaint-route action.",
       "selectionPolicy": "stable_window_median_v1",
       "acceptedFromRuns": [
-        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_2.json",
-        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_3.json",
-        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_d8448d11_surface_route_release_run_4.json"
+        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_4367ea89_surface_route_isolated_release_run_1.json",
+        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_4367ea89_surface_route_isolated_release_run_2.json",
+        "tool/bench/manual/run_history/2026-06-13_xiaomi_22081283g_4367ea89_surface_route_isolated_release_run_3.json"
       ]
     }
   ]
