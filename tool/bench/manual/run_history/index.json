@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-13T21:22:26.737714Z",
+  "updatedAtUtc": "2026-06-14T11:45:36.824662Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -438,6 +438,33 @@
           "manifestVersion": "benchmark_measurement_boundary_v3",
           "manifestFingerprint": "e911e634",
           "caseCount": 83
+        }
+      ]
+    },
+    {
+      "path": "tool/bench/manual/run_history/2026-06-14_xiaomi_22081283g_3b3abeb1_schema_import_load_release_run_4.json",
+      "label": "schema_import_load_release_run_4",
+      "recordedAtUtc": "2026-06-14T11:45:36.824662Z",
+      "subjectGitHead": "3b3abeb1",
+      "repositoryDirty": false,
+      "device": {
+        "name": "Xiaomi 22081283G",
+        "id": "Z9NBMVIRY5KRGAJF",
+        "os": "Android 14"
+      },
+      "caseCount": 1,
+      "sources": [
+        {
+          "path": "build/bench/probe_logs/2026-06-14_xiaomi_22081283g_3b3abeb1_load_document_success_50k.log",
+          "kind": "probe_log",
+          "source": {
+            "path": "build/bench/probe_logs/2026-06-14_xiaomi_22081283g_3b3abeb1_load_document_success_50k.log",
+            "sizeBytes": 1060,
+            "sha256": "8818eed46a29bddc05e15a7446c53b2ed0a39d6e11cb707875a4cad6b581402c"
+          },
+          "manifestVersion": null,
+          "manifestFingerprint": null,
+          "caseCount": 1
         }
       ]
     }
