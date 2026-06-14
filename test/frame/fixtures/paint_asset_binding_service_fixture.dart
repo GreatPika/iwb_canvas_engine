@@ -26,7 +26,41 @@ import 'ordinary_paint_test_support.dart';
 
 void main() {
   _testFrameEngineAssetBinding();
+  _testFrameBindingContinuesAfterResolverException();
   _testReentrantResolverRejectedThroughAssetBinding();
+  _testNestedResolverRejectedThroughAssetBinding();
+}
+
+void _testFrameBindingContinuesAfterResolverException() {
+  test('asset binding continues after ordinary resolver exception', () async {
+    final image = await createResourceTestImage();
+    final throwingId = CanvasResourceId('throwing-image');
+    final healthyId = CanvasResourceId('healthy-image');
+    final resolver = RecordingResourceResolver((resource) {
+      if (resource.id == throwingId) {
+        throw StateError('ordinary app resolver failure');
+      }
+
+      return image;
+    });
+    final bindings = _bindImageAssets(
+      engine: _engineForExceptionContinuationRecords(),
+      session: SurfaceResourceSession(
+        resolver: resolver,
+        mutationGuard: CountingResolverMutationGuard(),
+      ),
+    );
+
+    expect(
+      bindings.images[throwingId],
+      isA<ResolverExceptionResourceImagePlaceholder>(),
+    );
+    expect(resolvedImage(bindings.images[healthyId]!), same(image));
+    expect(bindings.images.keys, containsAll([throwingId, healthyId]));
+    expect(resolver.callCount, 2);
+
+    image.dispose();
+  });
 }
 
 void _testReentrantResolverRejectedThroughAssetBinding() {
@@ -64,6 +98,35 @@ void _testReentrantResolverRejectedThroughAssetBinding() {
   });
 }
 
+void _testNestedResolverRejectedThroughAssetBinding() {
+  test('asset binding rejects nested resolver callbacks', () async {
+    final image = await createResourceTestImage();
+    final root = runtimeRootWithCommittedDocumentSeed(
+      CanvasDocument(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final resolver = RecordingResourceResolver((_) {
+      return root.runResolverCallback(() => image);
+    });
+
+    expect(
+      () => _bindImageAssets(
+        engine: _engineForImageRecords(),
+        session: SurfaceResourceSession(
+          resolver: resolver,
+          mutationGuard: root,
+        ),
+      ),
+      throwsStateError,
+    );
+    expect(root.state.value.revisions.resourceVisual, 0);
+    expect(resolver.callCount, 1);
+
+    image.dispose();
+    root.dispose();
+  });
+}
+
 void _testFrameEngineAssetBinding() {
   test(
     'frame engine asset binding resolves descriptor snapshots through session',
@@ -76,6 +139,22 @@ void _testFrameEngineAssetBinding() {
       _expectOrdinaryPlanUnchangedByAssetBinding(scenario);
       _expectNoOrdinaryCacheWritesDuringSupplement(scenario.output);
     },
+  );
+}
+
+FrameAssetBindings _bindImageAssets({
+  required FrameEngine engine,
+  required SurfaceResourceSession session,
+}) {
+  final resourceFree = engine.buildResourceFreeMainFrame(
+    inputs: _inputs(),
+    viewCameraBucket: 0,
+  );
+
+  return const PaintAssetBindingService().bind(
+    frame: resourceFree.capturedFrame.snapshot,
+    records: resourceFree.ordinaryPlan.ordinaryRecords,
+    session: session,
   );
 }
 
@@ -171,6 +250,27 @@ void _expectResolvedBindings(FrameAssetBindings bindings) {
   );
 }
 
+FrameEngine _engineForExceptionContinuationRecords() {
+  final throwingId = CanvasResourceId('throwing-image');
+  final healthyId = CanvasResourceId('healthy-image');
+  final frameFacts = frameFactsPort(
+    elements: [
+      imageFacts('throwing-image', orderToken: 1, resourceId: throwingId),
+      imageFacts('healthy-image', orderToken: 2, resourceId: healthyId),
+    ],
+    resourceDescriptors: [
+      _resourceDescriptor(throwingId, appKey: 'asset://throwing-image'),
+      _resourceDescriptor(healthyId, appKey: 'asset://healthy-image'),
+    ],
+  );
+
+  return FrameEngine(
+    frameFacts: frameFacts,
+    selectionFacts: TestSelectionFactsPort.empty(),
+    spatialKernel: SpatialKernel()..rebuild(frameFacts),
+  );
+}
+
 FrameEngine _engineForImageRecords() {
   final frameFacts = _frameFactsWithImageRecords();
 
@@ -194,16 +294,23 @@ TestFrameFactsPort _frameFactsWithImageRecords() {
       ),
     ],
     resourceDescriptors: [
-      FrameResourceDescriptorFacts(
-        id: imageA,
-        appKey: 'asset://image-a',
-        mimeType: 'image/png',
-        contentHash: 'hash-a',
-        byteLength: 4,
-        resourceRevision: 12,
-        metadata: const CanvasMetadata.empty(),
-      ),
+      _resourceDescriptor(imageA, appKey: 'asset://image-a'),
     ],
+  );
+}
+
+FrameResourceDescriptorFacts _resourceDescriptor(
+  CanvasResourceId id, {
+  required String appKey,
+}) {
+  return FrameResourceDescriptorFacts(
+    id: id,
+    appKey: appKey,
+    mimeType: 'image/png',
+    contentHash: 'hash-a',
+    byteLength: 4,
+    resourceRevision: 12,
+    metadata: const CanvasMetadata.empty(),
   );
 }
 
