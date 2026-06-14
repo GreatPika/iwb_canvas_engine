@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/public/canvas_ids.dart';
@@ -143,9 +145,20 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     if (imageResource == null) {
       throw StateError('Descriptor-backed resource request has no image.');
     }
-    final image = _mutationGuard.runResolverCallback(
-      () => resolver.resolveImage(imageResource),
-    );
+    final ui.Image? image;
+    try {
+      image = _mutationGuard.runResolverCallback(
+        () => resolver.resolveImage(imageResource),
+      );
+    } on Object catch (error) {
+      if (error is ResolverCallbackRejection) {
+        rethrow;
+      }
+
+      return ResolverExceptionResourceImagePlaceholder(
+        placeholderBounds: request.placeholderBounds,
+      );
+    }
     if (image == null) {
       _currentFrameNullResults.add(_suppressionKey(request));
 
