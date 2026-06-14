@@ -80,16 +80,24 @@ ui.Image resolvedImage(ResourceImageResolveResult result) {
   return resolved.image;
 }
 
-Future<ui.Image> createResourceTestImage([int color = 0xff00aa00]) async {
+Future<ui.Image> createResourceTestImage([int color = 0xff00aa00]) {
+  return createSizedResourceTestImage(color: color);
+}
+
+Future<ui.Image> createSizedResourceTestImage({
+  int color = 0xff00aa00,
+  int width = 1,
+  int height = 1,
+}) async {
   TestWidgetsFlutterBinding.ensureInitialized();
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
   canvas.drawRect(
-    const ui.Rect.fromLTWH(0, 0, 1, 1),
+    ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
     ui.Paint()..color = ui.Color(color),
   );
   final picture = recorder.endRecording();
-  final image = await picture.toImage(1, 1);
+  final image = await picture.toImage(width, height);
   picture.dispose();
 
   return image;

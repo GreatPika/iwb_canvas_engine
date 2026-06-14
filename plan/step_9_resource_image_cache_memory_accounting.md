@@ -129,7 +129,7 @@ All-Or-Nothing Failure Boundary: The first irreversible in-memory mutation insid
 
 ## Execution Units
 
-### [ ] Unit 1: Byte-aware cache admission
+### [x] Unit 1: Byte-aware cache admission
 
 Owner: `ImageResolveCache` in `lib/src/resources/resource_cache.dart`.
 
