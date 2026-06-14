@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
@@ -9,6 +10,7 @@ void main() {
   _testTargetAndAllInvalidation();
   _testDocumentReplacementReset();
   _testLeastRecentlyUsedEviction();
+  _testOversizedResolveReturnsWithoutRetaining();
   _testDroppedSessionDoesNotResolveAgain();
 }
 
@@ -47,30 +49,33 @@ void _testTargetAndAllInvalidation() {
 }
 
 void _testDocumentReplacementReset() {
-  test('document replacement reset clears cache, null suppression, and budget', () async {
-    final image = await createResourceTestImage();
-    final resolver = RecordingResourceResolver(
-      (resource) => resource.id.value == 'missing-resource' ? null : image,
-    );
-    final session = SurfaceResourceSession(
-      resolver: resolver,
-      mutationGuard: CountingResolverMutationGuard(),
-    );
-    _populateCacheAndNullSuppression(session, resolver);
-    _exhaustResolverBudget(session);
-    final callCountBeforeReset = resolver.callCount;
+  test(
+    'document replacement reset clears cache, null suppression, and budget',
+    () async {
+      final image = await createResourceTestImage();
+      final resolver = RecordingResourceResolver(
+        (resource) => resource.id.value == 'missing-resource' ? null : image,
+      );
+      final session = SurfaceResourceSession(
+        resolver: resolver,
+        mutationGuard: CountingResolverMutationGuard(),
+      );
+      _populateCacheAndNullSuppression(session, resolver);
+      _exhaustResolverBudget(session);
+      final callCountBeforeReset = resolver.callCount;
 
-    session.resetForDocumentReplacement();
+      session.resetForDocumentReplacement();
 
-    _expectReplacementResetClearedSessionState(
-      session,
-      resolver,
-      callCountBeforeReset,
-    );
-    expect(resolver.callCount, greaterThan(callCountBeforeReset));
+      _expectReplacementResetClearedSessionState(
+        session,
+        resolver,
+        callCountBeforeReset,
+      );
+      expect(resolver.callCount, greaterThan(callCountBeforeReset));
 
-    image.dispose();
-  });
+      image.dispose();
+    },
+  );
 }
 
 void _populateCacheAndNullSuppression(
@@ -137,6 +142,27 @@ void _testLeastRecentlyUsedEviction() {
 
     session.resolveImage(descriptorRequest(id: 'resource-1'));
     expect(resolver.callCount, 1026);
+
+    image.dispose();
+  });
+}
+
+void _testOversizedResolveReturnsWithoutRetaining() {
+  test('oversized resolver result returns but is not retained', () async {
+    final image = await createSizedResourceTestImage(width: 3, height: 2);
+    final resolver = RecordingResourceResolver((_) => image);
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: CountingResolverMutationGuard(),
+      cache: ImageResolveCache(maximumSizeBytes: 16),
+    );
+    final request = descriptorRequest(id: 'oversized-resource');
+
+    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(resolver.callCount, 1);
+
+    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(resolver.callCount, 2);
 
     image.dispose();
   });

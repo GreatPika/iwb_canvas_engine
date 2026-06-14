@@ -143,7 +143,7 @@ Negative Proof And Fixture Quarantine: Byte-accounting tests must use test-only 
 
 Depends On: none.
 
-### [ ] Unit 2: Session lifecycle and app-owned image compatibility
+### [x] Unit 2: Session lifecycle and app-owned image compatibility
 
 Owner: `SurfaceResourceSession` in `lib/src/resources/surface_resource_session.dart` and resource lifecycle fixtures under `test/resources/**`.
 

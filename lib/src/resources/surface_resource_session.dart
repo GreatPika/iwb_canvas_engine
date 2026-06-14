@@ -18,11 +18,13 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   SurfaceResourceSession({
     required CanvasResourceResolver? resolver,
     required ResolverMutationGuard mutationGuard,
+    ImageResolveCache? cache,
   }) : _resolver = resolver,
-       _mutationGuard = mutationGuard;
+       _mutationGuard = mutationGuard,
+       _cache = cache ?? ImageResolveCache();
 
   final ResolverMutationGuard _mutationGuard;
-  final ImageResolveCache _cache = ImageResolveCache();
+  final ImageResolveCache _cache;
   final Set<_SuppressedResolveKey> _currentFrameNullResults = {};
   CanvasResourceResolver? _resolver;
   int _resolverGeneration = 0;
