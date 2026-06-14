@@ -118,7 +118,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Shared guard marker
+### [x] Unit 1: Shared guard marker
 
 Owner: `ResolverMutationGuard` internal contract and `RuntimeRoot`.
 
@@ -143,7 +143,7 @@ own those assertions.
 
 Depends On: none
 
-### [ ] Unit 2: Resource exception placeholder outcome
+### [x] Unit 2: Resource exception placeholder outcome
 
 Owner: Resource resolver adapter.
 
@@ -159,7 +159,7 @@ or public resolver API change.
 
 Depends On: none
 
-### [ ] Unit 3: Session-owned exception containment
+### [x] Unit 3: Session-owned exception containment
 
 Owner: `SurfaceResourceSession`.
 
@@ -187,7 +187,7 @@ behavior still counts attempted callbacks.
 
 Depends On: Units 1 and 2
 
-### [ ] Unit 4: Frame binding continuation proof
+### [x] Unit 4: Frame binding continuation proof
 
 Owner: `PaintAssetBindingService` test surface, with production behavior still
 owned by `SurfaceResourceSession`.
@@ -211,7 +211,7 @@ may be added as adjacent coverage, but it does not replace the required
 
 Depends On: Unit 3
 
-### [ ] Unit 5: Resource contract and diagram alignment
+### [x] Unit 5: Resource contract and diagram alignment
 
 Owner: Resource contract documentation and any current resource-resolution
 diagram that explicitly enumerates resolver outcomes.
@@ -239,7 +239,7 @@ must run the sync command, review the generated diff, and rerun both checks.
 
 Depends On: Unit 3
 
-### [ ] Unit 6: Full verification for resource resolver containment
+### [x] Unit 6: Full verification for resource resolver containment
 
 Owner: Verification surface for changed production, tests, and docs.
 
@@ -257,5 +257,19 @@ for changed production/test scopes including `lib/src/resources`,
 `test/frame`, plus the documentation checks from Unit 5. Any unavailable check
 is reported with the exact command, failure reason, and impacted manual
 verification gap.
+
+Implementation Report:
+
+- Passed: `dart test test/resources/resolver_exception_placeholder_test.dart`
+- Passed: `dart test test/frame/paint_asset_binding_service_test.dart`
+- Passed: `dart test test/resources/resolver_reentrancy_rejected_test.dart`
+- Passed: `dart test test/resources/resource_resolver_adapter_shape_test.dart`
+- Passed: `dart test test/contracts/internal_seam_shape_test.dart`
+- Passed: `dart analyze`
+- Passed: `dcm analyze .`
+- Passed: `dcm calculate-metrics lib/src/resources lib/src/runtime lib/src/contracts/internal test/resources test/frame`
+- Passed: `dart run docs/tool/sync_generated_docs.dart --check`
+- Passed: `dart run docs/tool/check_docs.dart`
+- Unavailable checks: none.
 
 Depends On: Units 1, 2, 3, 4, and 5
