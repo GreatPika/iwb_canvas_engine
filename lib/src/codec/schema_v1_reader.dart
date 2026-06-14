@@ -1530,6 +1530,7 @@ CanvasElementKind _readElementKind(
           : CanvasDataErrorCode.invalidFieldType,
       'unknown element kind.',
       'element.kind',
+      details: value == null ? const {} : {'kind': value},
     ),
   };
 }
