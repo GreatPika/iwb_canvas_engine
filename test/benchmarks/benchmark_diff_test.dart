@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 
 import '../../tool/bench/src/benchmark_diff.dart';
 import '../../tool/bench/src/benchmark_manifest.dart';
+import '../../tool/bench/src/manual_benchmark_reference.dart';
 import '../../tool/bench/src/benchmark_report.dart';
 
 // The diff policy tests keep the acceptance and rejection matrix in one group
@@ -249,6 +250,28 @@ void main() {
           );
         }
       }
+
+      final schemaImportReference = _acceptedSchemaImportLoadReference();
+      expect(
+        schemaImportReference.referencePath,
+        contains('xiaomi_22081283g_android14_flutter_3_44_0.json'),
+      );
+      final xiaomiDecision = records.singleWhere(
+        (record) =>
+            record['referencePath'] == schemaImportReference.referencePath,
+      );
+      for (final runPath
+          in (xiaomiDecision['acceptedFromRuns'] as List<Object?>)
+              .cast<String>()) {
+        final history =
+            jsonDecode(File(runPath).readAsStringSync())
+                as Map<String, Object?>;
+        final device = history['device'] as Map<String, Object?>;
+        expect(device['name'], 'Xiaomi 22081283G');
+        expect(device['id'], 'Z9NBMVIRY5KRGAJF');
+        expect(device['os'], 'Android 14');
+      }
+      expect(schemaImportReference.maxUs, 342101);
     });
 
     test('rejects retired report vocabulary even with current fields', () {
@@ -610,6 +633,7 @@ void main() {
     test('first-baseline enforces release approval caps', () {
       final manifest = BenchmarkManifest.load();
       final report = _releaseReport(manifest);
+      final schemaImportReference = _acceptedSchemaImportLoadReference();
 
       expect(
         validateFirstBaselineCandidate(
@@ -646,7 +670,13 @@ void main() {
           candidateJson: schemaImportLoadReport,
           candidatePath: 'candidate.json',
         ).failures.join('\n'),
-        contains('schema_import_load_us=2000000 must be < 1500000'),
+        allOf(
+          contains(
+            'schema_import_load_us=2000000 must be <= '
+            '${schemaImportReference.maxUs}',
+          ),
+          contains(schemaImportReference.referencePath),
+        ),
       );
 
       final memoryReport = _releaseReport(manifest);
@@ -780,6 +810,7 @@ void main() {
     test('rejects approved-baseline time, allocation, and RSS regressions', () {
       final manifest = BenchmarkManifest.load();
       final baseline = _releaseReport(manifest);
+      final schemaImportReference = _acceptedSchemaImportLoadReference();
 
       final timeMetrics = {'avg_us': 16000, 'p95_us': 31000, 'max_us': 31000};
       for (final entry in timeMetrics.entries) {
@@ -948,9 +979,13 @@ void main() {
           currentPath: 'current.json',
           enforceAbsoluteCaps: false,
         ).failures.join('\n'),
-        contains(
-          'current load_document.success/50k '
-          'schema_import_load_us=2000000 must be < 1500000',
+        allOf(
+          contains(
+            'current load_document.success/50k '
+            'schema_import_load_us=2000000 must be <= '
+            '${schemaImportReference.maxUs}',
+          ),
+          contains(schemaImportReference.referencePath),
         ),
       );
     });
@@ -1341,6 +1376,7 @@ void main() {
         expect(File(outputPath).existsSync(), isTrue);
 
         final absoluteViolation = _releaseReport(manifest);
+        final schemaImportReference = _acceptedSchemaImportLoadReference();
         _metrics(absoluteViolation, 'edit.add_element', '1k')['avg_us'] = 2000;
         _metrics(
           absoluteViolation,
@@ -1363,7 +1399,11 @@ void main() {
           (failedDiffReport['failures'] as List<Object?>).join('\n'),
           allOf(
             contains('absolute cap'),
-            contains('schema_import_load_us=2000000 must be < 1500000'),
+            contains(
+              'schema_import_load_us=2000000 must be <= '
+              '${schemaImportReference.maxUs}',
+            ),
+            contains(schemaImportReference.referencePath),
           ),
         );
 
@@ -1901,6 +1941,33 @@ Map<String, Object?> _case(
     }
   }
   throw StateError('Missing fixture case $id/$scale.');
+}
+
+({String referencePath, num maxUs}) _acceptedSchemaImportLoadReference() {
+  final decisions =
+      jsonDecode(File(manualBenchmarkReferenceDecisionPath).readAsStringSync())
+          as Map<String, Object?>;
+  final records = (decisions['records'] as List<Object?>)
+      .cast<Map<String, Object?>>();
+  final referencePath =
+      records.singleWhere(
+            (record) =>
+                record['referencePath'] ==
+                'tool/bench/manual/reference_reports/'
+                    'xiaomi_22081283g_android14_flutter_3_44_0.json',
+          )['referencePath']
+          as String;
+  final reference =
+      jsonDecode(File(referencePath).readAsStringSync())
+          as Map<String, Object?>;
+  final maxUs =
+      _metrics(
+            reference,
+            'load_document.success',
+            '50k',
+          )['schema_import_load_us']
+          as num;
+  return (referencePath: referencePath, maxUs: maxUs);
 }
 
 Map<String, Object?> _invariant(

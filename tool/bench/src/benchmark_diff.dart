@@ -4,6 +4,7 @@ import 'dart:io';
 import 'benchmark_manifest.dart';
 import 'benchmark_report.dart';
 import 'benchmark_sample_summary.dart';
+import 'manual_benchmark_reference.dart';
 
 const approvedReleaseBaselinePath =
     'tool/bench/baselines/approved/release_ubuntu_24_04_flutter_3_44_0.json';
@@ -20,7 +21,15 @@ const releaseCandidateRoot =
     'build/bench/candidates/release_ubuntu_24_04_flutter_3_44_0';
 
 const benchmarkCurrentRoot = 'build/bench/current';
-const schemaImportLoadSuccess50kMaxUs = 1500000;
+const _schemaImportLoadSuccessCaseId = 'load_document.success';
+const _schemaImportLoadSuccessScaleId = '50k';
+const _schemaImportLoadSuccessMetric = 'schema_import_load_us';
+const _schemaImportLoadReferencePath =
+    'tool/bench/manual/reference_reports/'
+    'xiaomi_22081283g_android14_flutter_3_44_0.json';
+const _schemaImportLoadReferenceDeviceId = 'Z9NBMVIRY5KRGAJF';
+const _schemaImportLoadReferenceFlutterVersion = '3.44.0';
+const _schemaImportLoadReferenceMetricUs = 342101;
 
 final class BenchmarkDiffOptions {
   const BenchmarkDiffOptions({
@@ -1000,10 +1009,11 @@ List<String> _validateSchemaImportLoadAcceptanceGate({
   required ParsedCaseReport actual,
   required String caseName,
 }) {
-  if (actual.id != 'load_document.success' || actual.scale != '50k') {
+  if (actual.id != _schemaImportLoadSuccessCaseId ||
+      actual.scale != _schemaImportLoadSuccessScaleId) {
     return const [];
   }
-  const metric = 'schema_import_load_us';
+  const metric = _schemaImportLoadSuccessMetric;
   if (!actual.metrics.containsKey(metric)) {
     return const [];
   }
@@ -1011,15 +1021,159 @@ List<String> _validateSchemaImportLoadAcceptanceGate({
   if (value is! num) {
     return ['$caseName metric $metric must be numeric'];
   }
-  if (value >= schemaImportLoadSuccess50kMaxUs) {
+  final reference = _acceptedSchemaImportLoadReference();
+  final referenceFailure = reference.failure;
+  if (referenceFailure != null) {
+    return [referenceFailure];
+  }
+  if (value > reference.maxUs) {
     return [
-      '$caseName $metric=$value must be < '
-          '$schemaImportLoadSuccess50kMaxUs',
+      '$caseName $metric=$value must be <= ${reference.maxUs} '
+          '(accepted manual reference ${reference.referencePath})',
     ];
   }
 
   return const [];
 }
+
+_SchemaImportLoadReference _acceptedSchemaImportLoadReference() {
+  final cached = _cachedSchemaImportLoadReference;
+  if (cached != null) {
+    return cached;
+  }
+  try {
+    final referencePath = _acceptedXiaomiSchemaImportReferencePath();
+    final maxUs = _schemaImportLoadReferenceMaxUs(referencePath);
+    return _cachedSchemaImportLoadReference = _SchemaImportLoadReference(
+      referencePath: referencePath,
+      maxUs: maxUs,
+    );
+  } on FormatException catch (error) {
+    return _cachedSchemaImportLoadReference =
+        _SchemaImportLoadReference.failure(
+          'accepted manual reference for $_schemaImportLoadSuccessCaseId/'
+          '$_schemaImportLoadSuccessScaleId $_schemaImportLoadSuccessMetric '
+          'is invalid: ${error.message}',
+        );
+  } on FileSystemException catch (error) {
+    return _cachedSchemaImportLoadReference =
+        _SchemaImportLoadReference.failure(
+          'accepted manual reference for $_schemaImportLoadSuccessCaseId/'
+          '$_schemaImportLoadSuccessScaleId $_schemaImportLoadSuccessMetric '
+          'is unreadable: ${error.message}',
+        );
+  }
+}
+
+String _acceptedXiaomiSchemaImportReferencePath() {
+  final decisionJson = _readJsonObject(manualBenchmarkReferenceDecisionPath);
+  final records = decisionJson['records'];
+  if (records is! List<Object?> || records.isEmpty) {
+    throw const FormatException(
+      'accepted manual reference decision has no records',
+    );
+  }
+  final matchingRecords = [
+    for (final record in records)
+      if (_referencePathFromDecisionRecord(record) ==
+          _schemaImportLoadReferencePath)
+        record,
+  ];
+  if (matchingRecords.isEmpty) {
+    throw const FormatException(
+      'accepted Xiaomi schema import load reference decision is missing',
+    );
+  }
+  final referencePath = _referencePathFromDecisionRecord(matchingRecords.last);
+  if (!_isManualBaselinePath(referencePath)) {
+    throw FormatException(
+      'accepted manual reference path is outside '
+      '$manualBenchmarkReferenceRoot: $referencePath',
+    );
+  }
+  return referencePath;
+}
+
+String _referencePathFromDecisionRecord(Object? record) {
+  final decoded = _requireMap(
+    record,
+    '$manualBenchmarkReferenceDecisionPath records item',
+  );
+  return _string(
+    decoded,
+    'referencePath',
+    '$manualBenchmarkReferenceDecisionPath record',
+  );
+}
+
+num _schemaImportLoadReferenceMaxUs(String referencePath) {
+  final report = ParsedBenchmarkReport.parse(
+    _readJsonObject(referencePath),
+    referencePath,
+  );
+  _validateSchemaImportLoadReferenceIdentity(report, referencePath);
+  final referenceCase =
+      report.casesByKey['$_schemaImportLoadSuccessCaseId/'
+          '$_schemaImportLoadSuccessScaleId'];
+  if (referenceCase == null) {
+    throw FormatException(
+      'accepted manual reference missing $_schemaImportLoadSuccessCaseId/'
+      '$_schemaImportLoadSuccessScaleId: $referencePath',
+    );
+  }
+  final maxUs = referenceCase.metrics[_schemaImportLoadSuccessMetric];
+  if (maxUs is! num) {
+    throw FormatException(
+      'accepted manual reference metric $_schemaImportLoadSuccessMetric '
+      'must be numeric: $referencePath',
+    );
+  }
+  if (maxUs != _schemaImportLoadReferenceMetricUs) {
+    throw FormatException(
+      'accepted Xiaomi schema import load metric must be '
+      '$_schemaImportLoadReferenceMetricUs, got $maxUs: $referencePath',
+    );
+  }
+  return maxUs;
+}
+
+void _validateSchemaImportLoadReferenceIdentity(
+  ParsedBenchmarkReport report,
+  String referencePath,
+) {
+  if (report.runtime.deviceId != _schemaImportLoadReferenceDeviceId) {
+    throw FormatException(
+      'accepted Xiaomi schema import load reference has deviceId '
+      '${report.runtime.deviceId}: $referencePath',
+    );
+  }
+  final contour = report.runtime.releaseContour;
+  if (contour.flutterVersion != _schemaImportLoadReferenceFlutterVersion ||
+      report.runtime.flutterVersion !=
+          _schemaImportLoadReferenceFlutterVersion) {
+    throw FormatException(
+      'accepted Xiaomi schema import load reference must use Flutter '
+      '$_schemaImportLoadReferenceFlutterVersion: $referencePath',
+    );
+  }
+}
+
+final class _SchemaImportLoadReference {
+  const _SchemaImportLoadReference({
+    required this.referencePath,
+    required this.maxUs,
+  }) : failure = null;
+
+  const _SchemaImportLoadReference.failure(this.failure)
+    : referencePath = '',
+      maxUs = 0;
+
+  final String referencePath;
+  final num maxUs;
+  final String? failure;
+}
+
+_SchemaImportLoadReference? _cachedSchemaImportLoadReference;
 
 void _validateReferenceBaselineMetrics(
   ({
