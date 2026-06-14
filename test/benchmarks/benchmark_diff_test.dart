@@ -257,8 +257,10 @@ void main() {
         contains('xiaomi_22081283g_android14_flutter_3_44_0.json'),
       );
       final xiaomiDecision = records.singleWhere(
-        (record) =>
-            record['referencePath'] == schemaImportReference.referencePath,
+        (record) => _samePath(
+          record['referencePath'] as String,
+          schemaImportReference.referencePath,
+        ),
       );
       for (final runPath
           in (xiaomiDecision['acceptedFromRuns'] as List<Object?>)
@@ -1951,10 +1953,11 @@ Map<String, Object?> _case(
       .cast<Map<String, Object?>>();
   final referencePath =
       records.singleWhere(
-            (record) =>
-                record['referencePath'] ==
-                'tool/bench/manual/reference_reports/'
-                    'xiaomi_22081283g_android14_flutter_3_44_0.json',
+            (record) => _samePath(
+              record['referencePath'] as String,
+              'tool/bench/manual/reference_reports/'
+              'xiaomi_22081283g_android14_flutter_3_44_0.json',
+            ),
           )['referencePath']
           as String;
   final reference =
@@ -1968,6 +1971,11 @@ Map<String, Object?> _case(
           )['schema_import_load_us']
           as num;
   return (referencePath: referencePath, maxUs: maxUs);
+}
+
+bool _samePath(String left, String right) {
+  return File(left).absolute.uri.normalizePath().path ==
+      File(right).absolute.uri.normalizePath().path;
 }
 
 Map<String, Object?> _invariant(

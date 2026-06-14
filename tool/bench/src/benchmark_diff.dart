@@ -29,7 +29,6 @@ const _schemaImportLoadReferencePath =
     'xiaomi_22081283g_android14_flutter_3_44_0.json';
 const _schemaImportLoadReferenceDeviceId = 'Z9NBMVIRY5KRGAJF';
 const _schemaImportLoadReferenceFlutterVersion = '3.44.0';
-const _schemaImportLoadReferenceMetricUs = 342101;
 
 final class BenchmarkDiffOptions {
   const BenchmarkDiffOptions({
@@ -1075,8 +1074,10 @@ String _acceptedXiaomiSchemaImportReferencePath() {
   }
   final matchingRecords = [
     for (final record in records)
-      if (_referencePathFromDecisionRecord(record) ==
-          _schemaImportLoadReferencePath)
+      if (_sameManualReferencePath(
+        _referencePathFromDecisionRecord(record),
+        _schemaImportLoadReferencePath,
+      ))
         record,
   ];
   if (matchingRecords.isEmpty) {
@@ -1092,6 +1093,26 @@ String _acceptedXiaomiSchemaImportReferencePath() {
     );
   }
   return referencePath;
+}
+
+bool _sameManualReferencePath(String left, String right) {
+  final leftPath = _normalizedManualReferencePath(left);
+  final rightPath = _normalizedManualReferencePath(right);
+  return leftPath == rightPath;
+}
+
+String _normalizedManualReferencePath(String path) {
+  final normalized = File(path).absolute.uri.normalizePath().path;
+  final root = Directory(
+    manualBenchmarkReferenceRoot,
+  ).absolute.uri.normalizePath().path.replaceFirst(RegExp(r'/$'), '');
+  if (!normalized.startsWith('$root/')) {
+    throw FormatException(
+      'accepted manual reference path is outside '
+      '$manualBenchmarkReferenceRoot: $path',
+    );
+  }
+  return normalized;
 }
 
 String _referencePathFromDecisionRecord(Object? record) {
@@ -1126,12 +1147,6 @@ num _schemaImportLoadReferenceMaxUs(String referencePath) {
     throw FormatException(
       'accepted manual reference metric $_schemaImportLoadSuccessMetric '
       'must be numeric: $referencePath',
-    );
-  }
-  if (maxUs != _schemaImportLoadReferenceMetricUs) {
-    throw FormatException(
-      'accepted Xiaomi schema import load metric must be '
-      '$_schemaImportLoadReferenceMetricUs, got $maxUs: $referencePath',
     );
   }
   return maxUs;
