@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAtUtc": "2026-06-14T11:45:36.824662Z",
+  "updatedAtUtc": "2026-06-14T12:02:28.017727Z",
   "records": [
     {
       "path": "tool/bench/manual/run_history/2026-06-06_pixel_6_9369b6f2_sparse_update_source_validation.json",
@@ -442,10 +442,10 @@
       ]
     },
     {
-      "path": "tool/bench/manual/run_history/2026-06-14_xiaomi_22081283g_3b3abeb1_schema_import_load_release_run_4.json",
-      "label": "schema_import_load_release_run_4",
-      "recordedAtUtc": "2026-06-14T11:45:36.824662Z",
-      "subjectGitHead": "3b3abeb1",
+      "path": "tool/bench/manual/run_history/2026-06-14_xiaomi_22081283g_40d6965f_schema_reader_consolidation_load_document_success_50k.json",
+      "label": "schema_reader_consolidation_load_document_success_50k",
+      "recordedAtUtc": "2026-06-14T12:02:28.017727Z",
+      "subjectGitHead": "40d6965f",
       "repositoryDirty": false,
       "device": {
         "name": "Xiaomi 22081283G",
@@ -455,15 +455,15 @@
       "caseCount": 1,
       "sources": [
         {
-          "path": "build/bench/probe_logs/2026-06-14_xiaomi_22081283g_3b3abeb1_load_document_success_50k.log",
-          "kind": "probe_log",
+          "path": "build/bench/current/xiaomi_22081283g_android14_flutter_3_44_0_40d6965f_schema_reader_consolidation_load_document_success_50k.json",
+          "kind": "report",
           "source": {
-            "path": "build/bench/probe_logs/2026-06-14_xiaomi_22081283g_3b3abeb1_load_document_success_50k.log",
-            "sizeBytes": 1060,
-            "sha256": "8818eed46a29bddc05e15a7446c53b2ed0a39d6e11cb707875a4cad6b581402c"
+            "path": "build/bench/current/xiaomi_22081283g_android14_flutter_3_44_0_40d6965f_schema_reader_consolidation_load_document_success_50k.json",
+            "sizeBytes": 2541,
+            "sha256": "04153ae3ae7c0a79f91b16c2bacca2c7a203e2fce6ee20b95b173f085956ed23"
           },
-          "manifestVersion": null,
-          "manifestFingerprint": null,
+          "manifestVersion": "benchmark_measurement_boundary_v3",
+          "manifestFingerprint": "e911e634",
           "caseCount": 1
         }
       ]

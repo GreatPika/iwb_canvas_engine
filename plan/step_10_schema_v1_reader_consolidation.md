@@ -129,7 +129,7 @@ Order Constraints:
 
 ## Execution Units
 
-### [ ] Unit 1: Establish canonical reader seam
+### [x] Unit 1: Establish canonical reader seam
 
 Owner: `CodecBoundary` production code under `lib/src/codec/`.
 
@@ -141,7 +141,7 @@ Completion Check: Focused codec import tests pass for current valid and invalid 
 
 Depends On: none.
 
-### [ ] Unit 2: Migrate public decoder to builder sink
+### [x] Unit 2: Migrate public decoder to builder sink
 
 Owner: `CodecBoundary` production code under `lib/src/codec/`.
 
@@ -153,7 +153,7 @@ Completion Check: Public decoder characterization tests prove that `decodeSchema
 
 Depends On: Unit 1.
 
-### [ ] Unit 3: Preserve runtime admission and failure semantics
+### [x] Unit 3: Preserve runtime admission and failure semantics
 
 Owner: Store import under `lib/src/store/`, runtime/edit load orchestration under `lib/src/edit/` and runtime install boundaries, with codec sink-mode proof from `lib/src/codec/`.
 
@@ -165,7 +165,7 @@ Completion Check: Store import tests prove duplicate ids and missing resource/re
 
 Depends On: Unit 1 and Unit 2.
 
-### [ ] Unit 4: Update source-of-truth docs, diagrams, and guardrails
+### [x] Unit 4: Update source-of-truth docs, diagrams, and guardrails
 
 Owner: Documentation, registry, diagram, and guardrail/test surfaces under `docs/`, `docs/_registry/`, `docs/diagrams/`, and focused codec structural tests.
 
@@ -177,7 +177,7 @@ Completion Check: `docs/diagrams/dfd_schema_v1_import_encode.mmd` and `docs/diag
 
 Depends On: Unit 1, Unit 2, and Unit 3.
 
-### [ ] Unit 5: Reconcile benchmark gate and prove Xiaomi no-regression
+### [x] Unit 5: Reconcile benchmark gate and prove Xiaomi no-regression
 
 Owner: Benchmark source-of-truth and tests under `docs/_registry/benchmarks.yaml`, `tool/bench/`, `test/benchmarks/`, and manual benchmark reference records under `tool/bench/manual/`.
 
