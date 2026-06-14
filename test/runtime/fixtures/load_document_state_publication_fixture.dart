@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/surface_resource_session_lifecycle.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
@@ -51,42 +52,51 @@ void _registerSuccessfulLoadPublicationTests() {
 }
 
 void _registerFailedLoadFactPreservationTests() {
-  test('malformed JSON load leaves runtime facts unchanged', () {
-    expect(
-      () => _expectFailedLoadHasNoSideEffects(
-        '{',
-        CanvasDataErrorCode.invalidJson,
-      ),
-      returnsNormally,
-    );
-  });
+  _registerFailedLoadCase(
+    'oversized raw JSON',
+    () => ' ' * (canvasMaxRawJsonLength + 1),
+    CanvasDataErrorCode.maxRawJsonLength,
+  );
+  _registerFailedLoadCase(
+    'malformed JSON',
+    () => '{',
+    CanvasDataErrorCode.invalidJson,
+  );
+  _registerFailedLoadCase(
+    'non-object JSON',
+    () => jsonEncode(<Object?>[]),
+    CanvasDataErrorCode.invalidJson,
+  );
+  _registerFailedLoadCase(
+    'schema version',
+    () => jsonEncode({'schemaVersion': 2}),
+    CanvasDataErrorCode.unsupportedSchemaVersion,
+  );
+  _registerFailedLoadCase(
+    'import event',
+    _jsonWithImportFieldFailure,
+    CanvasDataErrorCode.missingField,
+  );
+  _registerFailedLoadCase(
+    'missing resource reference',
+    _jsonWithMissingResourceReference,
+    CanvasDataErrorCode.missingResourceReference,
+  );
+  _registerFailedLoadCase(
+    'store preparation',
+    _jsonWithDuplicateElements,
+    CanvasDataErrorCode.duplicateElementId,
+  );
+}
 
-  test('schema version failure leaves runtime facts unchanged', () {
+void _registerFailedLoadCase(
+  String boundary,
+  String Function() json,
+  CanvasDataErrorCode expectedCode,
+) {
+  test('$boundary failure leaves runtime facts unchanged', () {
     expect(
-      () => _expectFailedLoadHasNoSideEffects(
-        jsonEncode({'schemaVersion': 2}),
-        CanvasDataErrorCode.unsupportedSchemaVersion,
-      ),
-      returnsNormally,
-    );
-  });
-
-  test('import event failure leaves runtime facts unchanged', () {
-    expect(
-      () => _expectFailedLoadHasNoSideEffects(
-        _jsonWithImportFieldFailure(),
-        CanvasDataErrorCode.missingField,
-      ),
-      returnsNormally,
-    );
-  });
-
-  test('store preparation failure leaves runtime facts unchanged', () {
-    expect(
-      () => _expectFailedLoadHasNoSideEffects(
-        _jsonWithDuplicateElements(),
-        CanvasDataErrorCode.duplicateElementId,
-      ),
+      () => _expectFailedLoadHasNoSideEffects(json(), expectedCode),
       returnsNormally,
     );
   });
@@ -115,7 +125,9 @@ void _expectSuccessfulLoadStatePublication() {
   );
 
   expect(snapshots, hasLength(1));
+  expect(root.projectionBuildCount, 0);
   _expectReplacementDocumentInstalled(root);
+  expect(root.projectionBuildCount, 1);
   _expectReplacementState(snapshots.single);
   _expectLoadEffects(effectBatches.single);
 }
@@ -370,6 +382,7 @@ final class _RuntimeFactsSnapshot {
     required this.selection,
     required this.cameraOffset,
     required this.preview,
+    required this.projectionBuildCount,
   });
 
   factory _RuntimeFactsSnapshot.capture(RuntimeRoot root) {
@@ -379,6 +392,7 @@ final class _RuntimeFactsSnapshot {
       selection: root.selectedElementIds,
       cameraOffset: root.cameraPort().offset,
       preview: root.preview,
+      projectionBuildCount: root.projectionBuildCount,
     );
   }
 
@@ -387,6 +401,7 @@ final class _RuntimeFactsSnapshot {
   final Set<CanvasElementId> selection;
   final Offset cameraOffset;
   final CanvasPreviewState preview;
+  final int projectionBuildCount;
 
   void expectStillCurrent(RuntimeRoot root) {
     expect(root.state.value, state);
@@ -394,6 +409,7 @@ final class _RuntimeFactsSnapshot {
     expect(root.selectedElementIds, selection);
     expect(root.cameraPort().offset, cameraOffset);
     expect(root.preview, same(preview));
+    expect(root.projectionBuildCount, projectionBuildCount);
   }
 }
 
@@ -529,6 +545,26 @@ String _jsonWithDuplicateElements() {
             'kind': 'rect',
             'size': {'w': 1, 'h': 1},
             'strokeWidth': 0,
+          },
+        ],
+      },
+    ],
+  });
+}
+
+String _jsonWithMissingResourceReference() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'resources': <Object?>[],
+    'layers': [
+      {
+        'id': 'layer',
+        'elements': [
+          {
+            'id': 'image',
+            'kind': 'image',
+            'resourceId': 'missing-resource',
+            'size': {'w': 1, 'h': 1},
           },
         ],
       },
