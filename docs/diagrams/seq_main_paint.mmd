@@ -126,14 +126,18 @@ sequenceDiagram
 
       alt cached resolved image is current
         Session-->>Assets: app-owned image paint asset
-      else descriptor missing or resolver returns null
+      else descriptor missing
         Session-->>Assets: bounded missing image placeholder
       else per-frame resolver budget exceeded
         Session-->>Assets: bounded placeholder, no null/missing cache write
       else cache miss and resolver budget available
         Session->>Resolver: resolveImage(appKey descriptor)
-        Resolver-->>Session: app-owned image or null
-        Session-->>Assets: resolved image or bounded placeholder
+        Resolver-->>Session: app-owned image, null, or ordinary exception
+        alt app throws ordinary resolver exception
+          Session-->>Assets: bounded resolver-exception placeholder, no cache write, no null suppression
+        else app returns image or null
+          Session-->>Assets: resolved image or bounded placeholder
+        end
       end
       Assets-->>Frame: resolved paint asset or placeholder
     end

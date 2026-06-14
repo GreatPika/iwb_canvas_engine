@@ -115,6 +115,7 @@ stateDiagram-v2
   end note
 
   SyncResolverCall --> ReentrantMutationRejected: app attempts public runtime mutation
+  SyncResolverCall --> ResolverExceptionResult: app throws ordinary exception
   SyncResolverCall --> NullResult: app returns null
   SyncResolverCall --> ResolvedResult: app returns ui.Image
 
@@ -125,6 +126,17 @@ stateDiagram-v2
     cache, repaint, or action effect.
   end note
   ReentrantMutationRejected --> SyncResolverCall: resolver continues or unwinds without accepted mutation
+
+  state "Resolver exception placeholder" as ResolverExceptionResult
+  note right of ResolverExceptionResult
+    Ordinary app resolver failures, including ordinary StateError
+    failures, degrade only this resource to a bounded placeholder.
+    The result consumes resolver budget but is not cached, not
+    null-suppressed, and does not write DiagnosticsHub. Later frames
+    may retry the app resolver. Runtime resolver guard rejections
+    remain fail-fast StateError failures instead.
+  end note
+  ResolverExceptionResult --> PlaceholderResult: return bounded placeholder
 
   state "Null resolver result" as NullResult
   NullResult --> SameFrameNullSuppression: remember null result for current frame key(resolverGeneration, resourceId, resourceRevision) only
@@ -146,9 +158,10 @@ stateDiagram-v2
 
   state "Placeholder fallback" as PlaceholderResult
   note right of PlaceholderResult
-    Missing descriptors and unresolved/null images paint a
+    Missing descriptors, resolver exceptions, and unresolved/null images paint a
     bounded placeholder. They do not trigger full-document
-    repaint loops or repeated resolver retry in the same frame.
+    repaint loops. Null results suppress only same-frame retries;
+    resolver exceptions remain retryable on later frames.
   end note
   PlaceholderResult --> ActiveSession: paint completes
 

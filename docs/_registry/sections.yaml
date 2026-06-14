@@ -249,6 +249,7 @@
   - test.resources.surface_session_cache_lifecycle
   - test.resources.resolver_swap_starts_fresh_cache
   - test.resources.resolver_frame_budget
+  - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
   do_not_assume:
   - no engine IO
@@ -856,6 +857,7 @@
   - test.resources.surface_session_cache_lifecycle
   - test.resources.resolver_swap_starts_fresh_cache
   - test.resources.resolver_frame_budget
+  - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
   - test.api.selection_port
   - test.api.selection_transform_commands

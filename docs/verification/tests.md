@@ -51,6 +51,7 @@ Required tests:
 - `test.resources.surface_session_cache_lifecycle`
 - `test.resources.resolver_swap_starts_fresh_cache`
 - `test.resources.resolver_frame_budget`
+- `test.resources.resolver_exception_placeholder`
 - `test.resources.resolver_reentrancy_rejected`
 - `test.api.selection_port`
 - `test.api.selection_transform_commands`
@@ -228,6 +229,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/resources/surface_session_cache_lifecycle_test.dart`
 - `test/resources/resolver_swap_starts_fresh_cache_test.dart`
 - `test/resources/resolver_frame_budget_test.dart`
+- `test/resources/resolver_exception_placeholder_test.dart`
 - `test/resources/resolver_reentrancy_rejected_test.dart`
 - `test/api/selection_port_test.dart`
 - `test/api/selection_transform_commands_test.dart`

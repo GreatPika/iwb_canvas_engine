@@ -411,6 +411,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
+## test.resources.resolver_exception_placeholder
+
+- Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
 ## test.resources.resolver_frame_budget
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`

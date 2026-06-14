@@ -83,7 +83,7 @@ sequenceDiagram
             Runtime--x Resolver: StateError, mutation rejected without runtime effects
             Note over Runtime,Session: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
           end
-          Resolver-->>Session: app-owned ui.Image or null
+          Resolver-->>Session: app-owned ui.Image, null, or ordinary exception
 
           alt app returns ui.Image
             Session->>Cache: admit key with decoded bytes width * height * 4
@@ -96,6 +96,9 @@ sequenceDiagram
           else app returns null
             Session->>Session: suppress null result for current frame key(resolverGeneration, resourceId, resourceRevision)
             Session-->>Assets: bounded missing image placeholder
+          else app throws ordinary resolver exception
+            Session-->>Assets: bounded resolver-exception placeholder, no cache write, no null suppression
+            Note over Session,Resolver: Later frames may retry the resource. Resolver-exception placeholders do not write DiagnosticsHub.
           end
         end
       end

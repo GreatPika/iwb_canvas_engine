@@ -27,6 +27,7 @@ Required tests:
 - `test.resources.surface_session_cache_lifecycle`
 - `test.resources.resolver_swap_starts_fresh_cache`
 - `test.resources.resolver_frame_budget`
+- `test.resources.resolver_exception_placeholder`
 - `test.resources.resolver_reentrancy_rejected`
 Guardrails:
 - `api.resource_source_app_key_publicly_readable`
@@ -257,6 +258,23 @@ schema missing-reference validation at load time uses the staged-load codec-brid
 any future verbose missing-placeholder diagnostic must be added to the routing table before implementation.
 ```
 
+Resolver exception placeholders:
+
+```text
+SurfaceResourceSession catches ordinary synchronous app resolver failures,
+including ordinary StateError failures, and returns a bounded
+resolver-exception placeholder for only the affected image resource;
+runtime resolver guard rejections remain fail-fast StateError failures and are
+not converted to placeholders;
+resolver-exception placeholders are not written to ImageResolveCache;
+resolver-exception placeholders are not added to same-frame null-result
+suppression;
+resolver-exception attempts consume the per-frame resolver-call budget;
+later frames may retry the throwing resource through the app resolver;
+other image resources in the same frame continue resolving and binding;
+resolver-exception placeholders do not write DiagnosticsHub.
+```
+
 Resolver reentrancy:
 
 ```text
@@ -281,9 +299,10 @@ budget-exceeded results are not cached as null, missing, or resolved images.
 null resolver results are suppressed only within the same frame and
 resolverGeneration + resourceId + resourceRevision identity. Missing
 descriptors and absent resolvers return bounded placeholders without resolver
-calls, budget use, or cache writes. Placeholder outcomes are not durable
-cross-frame cache entries, and resolver replacement clears null-result
-suppression state before the next resolve.
+calls, budget use, or cache writes. Resolver exception placeholders consume
+budget for the attempted callback but are not cached or null-suppressed.
+Placeholder outcomes are not durable cross-frame cache entries, and resolver
+replacement clears null-result suppression state before the next resolve.
 ```
 
 ---

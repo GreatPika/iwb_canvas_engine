@@ -57,6 +57,7 @@ flowchart LR
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
     MissingResult["Null resolver result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nmissing/no resolver placeholders do not call resolver"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
+    ResolverExceptionPlaceholder["Resolver-exception placeholder\nordinary app failure only\nno cache write, no null suppression,\nretryable on later frames, no DiagnosticsHub write"]
     Placeholder["Bounded missing image placeholder"]
   end
 
@@ -99,9 +100,11 @@ flowchart LR
   ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
-  AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset
+  AppResolver -->|"returns app-owned ui.Image, null,\nor ordinary exception\nno runtime mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"admit resolved image by key\nestimate width * height * 4\nskip oversized retention"| ImageResolveCache
   ResolvePaintAsset -->|"resolved image"| PaintAsset
+  ResolvePaintAsset -.->|"ordinary app resolver exception\nbudget was consumed"| ResolverExceptionPlaceholder
+  ResolverExceptionPlaceholder -.->|"bounded placeholder result"| Placeholder
   ResolvePaintAsset -.->|"missing resource or null result"| MissingResult
   MissingResult -.->|"bounded placeholder result"| Placeholder
   Placeholder -.->|"placeholder paint asset"| PaintAsset
