@@ -92,6 +92,13 @@ final class NullResourceImagePlaceholder
   const NullResourceImagePlaceholder({required super.placeholderBounds});
 }
 
+final class ResolverExceptionResourceImagePlaceholder
+    extends ResourceImagePlaceholderResult {
+  const ResolverExceptionResourceImagePlaceholder({
+    required super.placeholderBounds,
+  });
+}
+
 final class BudgetExceededResourceImagePlaceholder
     extends ResourceImagePlaceholderResult {
   const BudgetExceededResourceImagePlaceholder({

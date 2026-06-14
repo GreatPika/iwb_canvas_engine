@@ -71,6 +71,7 @@ void _testResultStateShape() {
         'MissingDescriptorResourceImagePlaceholder',
         'NoResolverResourceImagePlaceholder',
         'NullResourceImagePlaceholder',
+        'ResolverExceptionResourceImagePlaceholder',
         'BudgetExceededResourceImagePlaceholder',
       ]),
     );
@@ -80,6 +81,14 @@ void _testResultStateShape() {
     expect(_fieldTypesByName(unit, 'ResolvedResourceImage'), {
       'image': 'ui.Image',
     });
+    expect(
+      _extendedTypeName(unit, 'ResolverExceptionResourceImagePlaceholder'),
+      'ResourceImagePlaceholderResult',
+    );
+    expect(
+      _extendedTypeName(unit, 'ResolverExceptionResourceImagePlaceholder'),
+      isNot('ResolvedResourceImage'),
+    );
   });
 }
 
@@ -141,4 +150,14 @@ Map<String, String> _fieldTypesByName(CompilationUnit unit, String className) {
       for (final variable in field.fields.variables)
         variable.name.lexeme: field.fields.type?.toSource() ?? '',
   };
+}
+
+String? _extendedTypeName(CompilationUnit unit, String className) {
+  final declaration = unit.declarations
+      .whereType<ClassDeclaration>()
+      .singleWhere(
+        (declaration) => declaration.namePart.typeName.lexeme == className,
+      );
+
+  return declaration.extendsClause?.superclass.toSource();
 }
