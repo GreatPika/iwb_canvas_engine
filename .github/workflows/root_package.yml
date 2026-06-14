@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Check Dart formatting
+        run: dart format -o none --set-exit-if-changed .
+
       - name: Check generated docs
         run: dart run docs/tool/sync_generated_docs.dart --check
 

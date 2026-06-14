@@ -69,10 +69,7 @@ void _surfacePortPublishesStateMatchedTargets() {
 
   runtime.selection.setSelection([CanvasElementId('rect-a')]);
 
-  _expectSurfacePortFrameMatchesState(
-    frames,
-    runtime: runtime,
-  );
+  _expectSurfacePortFrameMatchesState(frames, runtime: runtime);
   _expectDetachedSurfacePortClearsFrame(runtime, surfacePort, token);
 }
 

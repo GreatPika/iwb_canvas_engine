@@ -263,11 +263,7 @@ bool _isStoreDocumentEligibilityShape(
       name == 'selectableElementIds';
 }
 
-bool _isStoreSelectionPruneShape(
-  String path,
-  String name,
-  String className,
-) {
+bool _isStoreSelectionPruneShape(String path, String name, String className) {
   return (path == 'lib/src/store/store_commit_finalization.dart' &&
               className == 'AcceptedStoreTouchedFacts' ||
           path == 'lib/src/store/document_store_kernel.dart' &&
