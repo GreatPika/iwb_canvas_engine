@@ -951,6 +951,34 @@ Current implemented proof:
   entry in the active SurfaceResourceSession and the next session resolve uses
   dirty target again instead of reusing the previous resolved image.
 
+#### `test/resources/resource_image_cache_memory_accounting_test.dart`
+- proves `ImageResolveCache` enforces entry-cap LRU with a test-controlled
+  capacity and a decoded-byte budget using `ui.Image.width * ui.Image.height *
+  4`;
+- proves `currentSizeBytes` stays consistent across byte eviction, read
+  promotion, same-key replacement, oversized replacement, target invalidation,
+  and clear;
+- proves a single oversized image is not retained and immediately misses on the
+  next cache read;
+- proves descriptor `byteLength` remains descriptor metadata and does not drive
+  cache pressure or cache identity.
+
+#### `test/resources/surface_session_cache_lifecycle_test.dart`
+- proves `SurfaceResourceSession` returns an oversized resolver result as
+  `ResolvedResourceImage` for the current resolve while the injected
+  small-budget `ImageResolveCache` does not retain it for a later hit;
+- preserves existing proofs for target/all invalidation, document replacement
+  reset, default 1024-entry LRU behavior, dropped sessions, resolver budget
+  state, and same-frame null suppression.
+
+#### `test/resources/app_owned_image_not_disposed_test.dart`
+- proves entry eviction, byte eviction, target invalidation, all invalidation,
+  resolver replacement, document replacement reset, drop, and dispose remove
+  cache references without disposing app-owned `ui.Image` instances;
+- proves byte eviction is observable as a later resolver call for the evicted
+  key while the evicted app-owned image remains undisposed until the fixture
+  explicitly disposes it.
+
 #### `test/resources/mark_all_resources_dirty_test.dart`
 - proves markAllResourcesDirty() clears the active SurfaceResourceSession
   ImageResolveCache while preserving document revision, public document

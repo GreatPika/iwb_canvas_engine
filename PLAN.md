@@ -28,4 +28,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 - [x] [Step 6. CanvasSurface bounded layout](plan/step_6_canvas_surface_bounded_layout.md)
 - [x] [Step 7. Surface repaint routing benchmark proof](plan/step_7_surface_repaint_routing_benchmark_proof.md)
 - [x] [Step 8. Layer-aware surface repaint routing](plan/step_8_layer_aware_surface_repaint_routing.md)
-- [ ] [Step 9. Resource image cache memory accounting](plan/step_9_resource_image_cache_memory_accounting.md)
+- [x] [Step 9. Resource image cache memory accounting](plan/step_9_resource_image_cache_memory_accounting.md)

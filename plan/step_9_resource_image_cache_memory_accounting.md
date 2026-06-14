@@ -157,7 +157,7 @@ Negative Proof And Fixture Quarantine: Session integration tests that need overs
 
 Depends On: Unit 1.
 
-### [ ] Unit 3: Resource cache source of truth
+### [x] Unit 3: Resource cache source of truth
 
 Owner: Resource/cache contracts, verification notes, and resource-resolution diagrams under `docs/contracts/**`, `docs/verification/tests.md`, and `docs/diagrams/**`.
 

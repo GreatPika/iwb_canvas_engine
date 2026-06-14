@@ -86,7 +86,12 @@ sequenceDiagram
           Resolver-->>Session: app-owned ui.Image or null
 
           alt app returns ui.Image
-            Session->>Cache: store key(resolverGeneration, resourceId, resourceRevision) -> app-owned ui.Image reference
+            Session->>Cache: admit key with decoded bytes width * height * 4
+            alt within active-session entry and byte limits
+              Cache-->>Session: retained app-owned image reference after LRU eviction
+            else single image exceeds byte limit
+              Cache-->>Session: not retained for later lookup
+            end
             Session-->>Assets: app-owned ui.Image paint asset
           else app returns null
             Session->>Session: suppress null result for current frame key(resolverGeneration, resourceId, resourceRevision)
@@ -102,7 +107,7 @@ sequenceDiagram
   Painter-->>Surface: draw main scene
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.
-  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images.
+  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images; cache eviction drops references only.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: Resource resolution uses surface session state, frame inputs, and resource descriptors only.

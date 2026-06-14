@@ -133,12 +133,21 @@ primitive and cache policy, while surface wires the instance lifecycle to
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries per active session | target/all invalidation, generation reset, then LRU | resolver-call budget and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
+| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries and 64 MiB decoded bytes per active session | target/all invalidation, generation reset, oversized no-retention, then entry/byte LRU | `length`, `currentSizeBytes`, resolver-call budget, and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
 
 The public dirty-resource revision is a repaint observation signal only. Cache
 identity is the table key above; dirty-resource calls invalidate target entries
 or all entries in the active session explicitly. If no surface is attached,
 there is no session cache to invalidate and the next attach starts empty.
+Resolved-image cache byte pressure is cache-local derived state from decoded
+`ui.Image` dimensions, `image.width * image.height * 4`; descriptor
+`CanvasResource.byteLength` remains descriptor/source metadata and is not cache
+memory truth. A single resolved image whose decoded estimate exceeds the active
+session byte budget is returned for the current resolve result but is not
+retained for a later cache hit. Entry eviction, byte eviction, target
+invalidation, all invalidation, resolver replacement, document replacement,
+drop, and dispose remove only cache references and never dispose app-owned
+`ui.Image` instances.
 Resource-session invalidation and document-replacement reset are
 post-acceptance delivery work: failures from the active invalidation sink or
 surface session must not roll back, rethrow from, or block publication of an

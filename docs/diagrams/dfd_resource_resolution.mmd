@@ -53,7 +53,7 @@ flowchart LR
 
   subgraph Session["SurfaceResourceSession"]
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
-    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
+    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision\n1024 entries + 64 MiB decoded bytes"]
     ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
     MissingResult["Null resolver result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nmissing/no resolver placeholders do not call resolver"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
@@ -92,7 +92,7 @@ flowchart LR
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 
-  ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
+  ResolvePaintAsset -->|"key-only lookup and LRU promotion"| ImageResolveCache
   ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
   ImageResolveCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver
@@ -100,7 +100,7 @@ flowchart LR
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
   AppResolver -->|"returns app-owned ui.Image or null\nno runtime mutation"| ResolvePaintAsset
-  ResolvePaintAsset -->|"store resolved image\nby resolverGeneration + resourceId + resourceRevision"| ImageResolveCache
+  ResolvePaintAsset -->|"admit resolved image by key\nestimate width * height * 4\nskip oversized retention"| ImageResolveCache
   ResolvePaintAsset -->|"resolved image"| PaintAsset
   ResolvePaintAsset -.->|"missing resource or null result"| MissingResult
   MissingResult -.->|"bounded placeholder result"| Placeholder
@@ -115,7 +115,7 @@ flowchart LR
   ResourceDirtyDispatch -->|"forward target/all invalidation before publication"| SessionInvalidationEvent
   ResourceVisualSignal -->|"publish public resource visual domain after invalidation"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
-  SessionInvalidationEvent -->|"if attached, session invalidates target or all entries"| ImageResolveCache
+  SessionInvalidationEvent -->|"if attached, session invalidates target/all entries\nand subtracts bytes or resets currentSizeBytes"| ImageResolveCache
   ResourceVisualSignal -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface
 

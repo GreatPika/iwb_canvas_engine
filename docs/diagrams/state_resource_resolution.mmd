@@ -68,8 +68,11 @@ stateDiagram-v2
 
   state "Cache lookup" as CacheLookup
   note right of CacheLookup
-    ImageResolveCache admission is keyed strictly by
+    ImageResolveCache identity is keyed strictly by
     resolverGeneration + resourceId + resourceRevision.
+    Byte admission is derived from decoded ui.Image
+    dimensions, width * height * 4; descriptor byteLength
+    remains descriptor metadata, not cache pressure truth.
     Dirty-resource operations explicitly invalidate affected
     entries or clear all entries in the active session.
   end note
@@ -128,8 +131,11 @@ stateDiagram-v2
   SameFrameNullSuppression --> PlaceholderResult: return bounded placeholder
 
   state "Resolved resolver result" as ResolvedResult
-  ResolvedResult --> CacheResolvedResult: store app-owned image reference
+  ResolvedResult --> CacheResolvedResult: estimate decoded bytes and admit by key
+  state "Oversized resolved result" as OversizedResolvedResult
+  CacheResolvedResult --> OversizedResolvedResult: single image exceeds 64 MiB
   CacheResolvedResult --> ResolvedVisual: return resolved visual
+  OversizedResolvedResult --> ResolvedVisual: return current image without retention
 
   state "Resolved visual" as ResolvedVisual
   note right of ResolvedVisual
