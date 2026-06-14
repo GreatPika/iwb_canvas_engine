@@ -1423,7 +1423,7 @@ final class RuntimeRoot
     _ensureNoDocumentLoadInProgress();
     if (_isRunningResolverCallback) {
       _recordResolverReentrantMutationRejected('dispose');
-      throw StateError(
+      throw ResolverCallbackRejection(
         'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
       );
     }
@@ -1454,7 +1454,9 @@ final class RuntimeRoot
   T runResolverCallback<T>(T Function() callback) {
     _ensureNotDisposed();
     if (_isRunningResolverCallback) {
-      throw StateError('Nested resource resolver callbacks are not supported.');
+      throw ResolverCallbackRejection(
+        'Nested resource resolver callbacks are not supported.',
+      );
     }
     _isRunningResolverCallback = true;
     try {
@@ -1471,7 +1473,7 @@ final class RuntimeRoot
     _ensureNoDocumentLoadInProgress();
     if (_isRunningResolverCallback) {
       _recordResolverReentrantMutationRejected('runtimeMutation');
-      throw StateError(
+      throw ResolverCallbackRejection(
         'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
       );
     }

@@ -65,15 +65,21 @@ void _testResourceHandoffShape() {
     expect(dirtyOutcome, isNot(contains('ResourceKernel')));
     expect(dirtyOutcome, isNot(contains('SurfaceResourceSession')));
 
-    expect(
-      resolverGuard,
-      contains('abstract interface class ResolverMutationGuard'),
-    );
-    expect(resolverGuard, contains('runResolverCallback'));
-    expect(resolverGuard, contains('ensureRuntimeMutationAllowed'));
-    expect(resolverGuard, isNot(contains('ResourceKernel')));
-    expect(resolverGuard, isNot(contains('CanvasRuntime')));
+    _expectResolverGuardShape(resolverGuard);
   });
+}
+
+void _expectResolverGuardShape(String resolverGuard) {
+  expect(
+    resolverGuard,
+    contains('abstract interface class ResolverMutationGuard'),
+  );
+  expect(resolverGuard, contains('final class ResolverCallbackRejection'));
+  expect(resolverGuard, contains('extends StateError'));
+  expect(resolverGuard, contains('runResolverCallback'));
+  expect(resolverGuard, contains('ensureRuntimeMutationAllowed'));
+  expect(resolverGuard, isNot(contains('ResourceKernel')));
+  expect(resolverGuard, isNot(contains('CanvasRuntime')));
 }
 
 void _testResourceSessionInvalidationSinkShape() {

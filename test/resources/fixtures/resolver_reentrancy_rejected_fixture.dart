@@ -7,6 +7,7 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
@@ -22,6 +23,7 @@ void main() {
   _testNestedResolverCallbackRejected();
   _testAssetBindingMutationRejected();
   _testPublicRuntimeMutationsRejected();
+  _testResolverCallbackDisposeRejected();
 }
 
 void _testNestedResolverCallbackRejected() {
@@ -38,7 +40,7 @@ void _testNestedResolverCallbackRejected() {
 
     expect(
       () => session.resolveImage(descriptorRequest(id: 'resource-a')),
-      throwsStateError,
+      _throwsResolverCallbackRejection,
     );
     expect(resolver.callCount, 1);
     expect(root.state.value.revisions.resourceVisual, 0);
@@ -72,7 +74,7 @@ void _testAssetBindingMutationRejected() {
               session: session,
             ),
       ),
-      throwsStateError,
+      _throwsResolverCallbackRejection,
     );
     expect(root.state.value.revisions.document, 0);
     expect(root.generateElementId(), CanvasElementId('e0'));
@@ -142,7 +144,7 @@ Future<void> _expectRejectedMutation(
 
   expect(
     () => session.resolveImage(descriptorRequest(id: 'resource-a')),
-    throwsStateError,
+    _throwsResolverCallbackRejection,
   );
   expect(resolver.callCount, 1);
   expect(
@@ -165,6 +167,57 @@ Future<void> _expectRejectedMutation(
   await subscription.cancel();
   image.dispose();
   root.dispose();
+}
+
+void _testResolverCallbackDisposeRejected() {
+  test('resolver callbacks cannot dispose the runtime', () async {
+    final image = await createResourceTestImage();
+    final root = _runtime();
+    var attempts = 0;
+    final resolver = RecordingResourceResolver((_) {
+      attempts += 1;
+      if (attempts == 1) {
+        root.dispose();
+      }
+
+      return image;
+    });
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: root,
+    );
+
+    expect(
+      () => session.resolveImage(descriptorRequest(id: 'resource-a')),
+      _throwsResolverCallbackRejection,
+    );
+    expect(resolver.callCount, 1);
+    _expectRuntimeUnchangedAfterResolverDisposeRejection(root);
+    expect(
+      session.resolveImage(descriptorRequest(id: 'resource-a')),
+      isA<ResolvedResourceImage>(),
+    );
+
+    image.dispose();
+    root.dispose();
+  });
+}
+
+void _expectRuntimeUnchangedAfterResolverDisposeRejection(RuntimeRoot root) {
+  expect(root.state.value.revisions.document, 0);
+  expect(root.state.value.revisions.resourceVisual, 0);
+  expect(root.state.value.revisions.selection, 0);
+  expect(root.selectedElementIds, isEmpty);
+}
+
+Matcher get _throwsResolverCallbackRejection {
+  return throwsA(
+    isA<ResolverCallbackRejection>().having(
+      (error) => error,
+      'StateError compatibility',
+      isA<StateError>(),
+    ),
+  );
 }
 
 RuntimeRoot _runtime() {
