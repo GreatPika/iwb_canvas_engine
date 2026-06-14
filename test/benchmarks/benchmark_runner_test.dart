@@ -250,6 +250,33 @@ void main() {
       },
     );
 
+    test('release selector keeps report metadata for one case scale', () async {
+      final manifest = _multiReleaseScaleManifest();
+      const outputPath = 'build/bench/current/selected_release.json';
+      _deleteFileIfExists(outputPath);
+
+      final writtenPath = await runBenchmarkCli([
+        '--profile=release',
+        '--case=edit.add_element',
+        '--scale=10k',
+        '--output=$outputPath',
+      ], manifest: manifest);
+      final decoded =
+          jsonDecode(File(writtenPath).readAsStringSync())
+              as Map<String, Object?>;
+      final cases = decoded['cases'] as List<Object?>;
+      final selectedCase = cases.single as Map<String, Object?>;
+
+      expect(writtenPath, outputPath);
+      expect(decoded['profile'], containsPair('id', 'release'));
+      expect(decoded['manifestFingerprint'], isA<String>());
+      expect(selectedCase['id'], 'edit.add_element');
+      expect(selectedCase['scale'], '10k');
+      expect(decoded['runtime'], containsPair('profileId', 'release'));
+
+      _deleteFileIfExists(outputPath);
+    });
+
     test('writes compact manual history when requested', () async {
       final reportPath = 'build/bench/current/auto_history_report.json';
       final historyRoot = Directory('build/bench/history_test');
@@ -474,6 +501,28 @@ void main() {
         expect(
           () => BenchmarkRunOptions.parse(['--profile=smoke', '--device=']),
           throwsA(isA<FormatException>()),
+        );
+        expect(
+          () => BenchmarkRunOptions.parse(['--profile=smoke', '--case=']),
+          throwsA(isA<FormatException>()),
+        );
+        expect(
+          () => BenchmarkRunOptions.parse(['--profile=smoke', '--scale=']),
+          throwsA(isA<FormatException>()),
+        );
+        await expectLater(
+          runBenchmarkCli([
+            '--profile=smoke',
+            '--case=missing.case',
+            '--output=build/bench/current/missing_case.json',
+          ]),
+          throwsA(
+            isA<FormatException>().having(
+              (error) => error.message,
+              'message',
+              contains('selected no benchmark cases for case=missing.case'),
+            ),
+          ),
         );
         expect(
           () => BenchmarkRunOptions.parse([

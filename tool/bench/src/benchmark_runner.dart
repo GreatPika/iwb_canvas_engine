@@ -18,6 +18,8 @@ Required:
 Options:
   --output=<path>                  Report path under build/bench/**.
   --device=<id>                    Device id passed to real-device probes.
+  --case=<id>                      Restrict the report to one benchmark case.
+  --scale=<id>                     Restrict the report to one benchmark scale.
   --history-label=<label>          Archive a compact manual history entry.
   --history-device-name=<name>     Device name for the history entry.
   --history-device-id=<id>         Device id for the history entry.
@@ -65,6 +67,7 @@ Future<BenchmarkRunCliResult> runBenchmarkCliDetailed(
     manifest: loadedManifest,
     profileId: options.profile,
     deviceTarget: device == null ? null : BenchmarkDeviceTarget(device),
+    selection: options.selection,
   );
   final outputFile = File(outputPath)..parent.createSync(recursive: true);
   outputFile.writeAsStringSync(
@@ -100,11 +103,15 @@ final class BenchmarkRunCliResult {
 
 // The runner builds one report from one manifest/profile pass; splitting the
 // loop would separate case execution from the shared runtime metadata it owns.
-// ignore: halstead-volume, source-lines-of-code
+// Keeping selection in this report pipeline preserves one metadata owner for
+// full and filtered reports; moving it behind another wrapper would obscure the
+// profile/device/selection contract without simplifying the behavior.
+// ignore: halstead-volume, maintainability-index, number-of-parameters, source-lines-of-code
 BenchmarkReport runBenchmarks({
   required BenchmarkManifest manifest,
   required String profileId,
   BenchmarkDeviceTarget? deviceTarget,
+  BenchmarkRunSelection selection = const BenchmarkRunSelection(),
   BenchmarkCaseAdapter adapter = runBenchmarkAdapter,
 }) {
   final profile = manifest.profilesById[profileId];
@@ -114,7 +121,13 @@ BenchmarkReport runBenchmarks({
 
   final caseRuns = <_BenchmarkCaseRun>[];
   for (final benchmarkCase in manifest.cases) {
+    if (!selection.matchesCase(benchmarkCase.id)) {
+      continue;
+    }
     for (final scale in benchmarkCase.scales) {
+      if (!selection.matchesScale(scale.id)) {
+        continue;
+      }
       if (!scale.profiles.contains(profileId)) {
         continue;
       }
@@ -130,7 +143,10 @@ BenchmarkReport runBenchmarks({
     }
   }
   if (caseRuns.isEmpty) {
-    throw FormatException('Profile "$profileId" selected no benchmark cases.');
+    throw FormatException(
+      'Profile "$profileId" selected no benchmark cases'
+      '${selection.descriptionSuffix}.',
+    );
   }
   final probeRuntime = _sharedProbeRuntime(caseRuns);
   final cases = [for (final run in caseRuns) run.report];
@@ -548,18 +564,25 @@ final class BenchmarkRunOptions {
     required this.profile,
     required this.output,
     required this.device,
+    required this.selection,
     required this.history,
   });
 
   final String profile;
   final String? output;
   final String? device;
+  final BenchmarkRunSelection selection;
   final BenchmarkRunHistoryOptions? history;
 
+  // CLI argument admission stays in one place so supported benchmark and
+  // history flags fail closed before any report or history file is written.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   factory BenchmarkRunOptions.parse(List<String> args) {
     String? profile;
     String? output;
     String? device;
+    String? caseId;
+    String? scaleId;
     final history = BenchmarkRunHistoryOptionsBuilder();
     for (final arg in args) {
       if (arg.startsWith('--profile=')) {
@@ -568,6 +591,10 @@ final class BenchmarkRunOptions {
         output = _argumentValue(arg, '--output=');
       } else if (arg.startsWith('--device=')) {
         device = _argumentValue(arg, '--device=');
+      } else if (arg.startsWith('--case=')) {
+        caseId = _argumentValue(arg, '--case=');
+      } else if (arg.startsWith('--scale=')) {
+        scaleId = _argumentValue(arg, '--scale=');
       } else if (history.accepts(arg)) {
         history.add(arg);
       } else {
@@ -580,12 +607,38 @@ final class BenchmarkRunOptions {
     if (device != null && device.isEmpty) {
       throw const FormatException('--device must not be empty.');
     }
+    if (caseId != null && caseId.isEmpty) {
+      throw const FormatException('--case must not be empty.');
+    }
+    if (scaleId != null && scaleId.isEmpty) {
+      throw const FormatException('--scale must not be empty.');
+    }
     return BenchmarkRunOptions(
       profile: profile,
       output: output,
       device: device,
+      selection: BenchmarkRunSelection(caseId: caseId, scaleId: scaleId),
       history: history.build(defaultDeviceId: device),
     );
+  }
+}
+
+final class BenchmarkRunSelection {
+  const BenchmarkRunSelection({this.caseId, this.scaleId});
+
+  final String? caseId;
+  final String? scaleId;
+
+  bool matchesCase(String id) => caseId == null || caseId == id;
+
+  bool matchesScale(String id) => scaleId == null || scaleId == id;
+
+  String get descriptionSuffix {
+    final parts = [
+      if (caseId != null) 'case=$caseId',
+      if (scaleId != null) 'scale=$scaleId',
+    ];
+    return parts.isEmpty ? '' : ' for ${parts.join(' ')}';
   }
 }
 
