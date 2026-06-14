@@ -19,32 +19,107 @@ void main() {
     );
   });
 
-  test('schema v1 import emitter stays codec-owned and non-retained', () {
-    final source = File(
+  test('schema v1 import emitter delegates to canonical reader seam', () {
+    final emitterSource = File(
       'lib/src/codec/schema_v1_import_emitter.dart',
     ).readAsStringSync();
+    final readerSource = File(
+      'lib/src/codec/schema_v1_reader.dart',
+    ).readAsStringSync();
 
-    expect(source, isNot(contains('CanvasDocument')));
-    expect(source, isNot(contains('CanvasImageResource')));
-    expect(source, isNot(contains('../store/')));
-    expect(source, isNot(contains('../runtime/')));
-    expect(source, isNot(contains('../edit/')));
-    expect(source, isNot(contains('../frame/')));
-    expect(source, isNot(contains('package:flutter/widgets.dart')));
-    expect(source, isNot(contains('decodeCanvasDocument')));
-    expect(source, isNot(contains('decodeSchemaV1Document')));
-    expect(source, contains(RegExp(r'void importSchemaV1DocumentFromJson\(')));
-    expect(
-      source,
-      contains(
-        RegExp(r'void importSchemaV1DocumentFromJsonIntoIsolatedSink\('),
-      ),
-    );
-    expect(source, contains(RegExp(r'void importSchemaV1Document\(')));
-    expect(source, isNot(contains('List<SchemaV1')));
-    expect(source, isNot(contains('Map<CanvasElementId')));
+    expect(emitterSource, isNotEmpty);
+    expect(readerSource, isNotEmpty);
+    _expectEmitterFacadeDelegatesToCanonicalReader(emitterSource);
+    _expectCanonicalReaderSeamIsNamed(readerSource);
+    _expectCodecReaderSourceIsOwnedAndNonRetained(emitterSource);
+    _expectCodecReaderSourceIsOwnedAndNonRetained(readerSource);
   });
 }
+
+void _expectEmitterFacadeDelegatesToCanonicalReader(String source) {
+  expect(source, contains(RegExp(r"import 'schema_v1_reader\.dart';")));
+  _expectEmitterFacadeEntryPoints(source);
+  _expectEmitterFacadeReaderCalls(source);
+  _expectEmitterFacadeHasNoTraversalHelpers(source);
+}
+
+void _expectEmitterFacadeEntryPoints(String source) {
+  expect(source, contains(RegExp(r'void importSchemaV1DocumentFromJson\(')));
+  expect(
+    source,
+    contains(RegExp(r'void importSchemaV1DocumentFromJsonIntoIsolatedSink\(')),
+  );
+  expect(source, contains(RegExp(r'void importSchemaV1Document\(')));
+  expect(
+    source,
+    contains(RegExp(r'void importSchemaV1DocumentIntoIsolatedSink\(')),
+  );
+}
+
+void _expectEmitterFacadeReaderCalls(String source) {
+  _expectDelegatingCall(source, 'readSchemaV1DocumentFromJson');
+  _expectDelegatingCall(source, 'readSchemaV1DocumentFromJsonIntoIsolatedSink');
+  _expectDelegatingCall(source, 'readSchemaV1Document');
+  _expectDelegatingCall(source, 'readSchemaV1DocumentIntoIsolatedSink');
+}
+
+void _expectDelegatingCall(String source, String functionName) {
+  expect(
+    source,
+    contains(
+      RegExp(
+        '$functionName'
+        r'\(\s*json,\s*sink,\s*diagnostics: diagnostics,?\s*\)',
+        multiLine: true,
+      ),
+    ),
+  );
+}
+
+void _expectEmitterFacadeHasNoTraversalHelpers(String source) {
+  expect(source, isNot(contains('jsonDecode')));
+  expect(source, isNot(contains('_decodeRoot')));
+  expect(source, isNot(contains(RegExp(r'_read[A-Za-z0-9_]*\('))));
+  expect(source, isNot(contains(RegExp(r'_emit[A-Za-z0-9_]*\('))));
+  expect(source, isNot(contains(RegExp(r'_validateSchema[A-Za-z0-9_]*\('))));
+}
+
+void _expectCanonicalReaderSeamIsNamed(String source) {
+  expect(source, contains(RegExp(r'void readSchemaV1DocumentFromJson\(')));
+  expect(
+    source,
+    contains(RegExp(r'void readSchemaV1DocumentFromJsonIntoIsolatedSink\(')),
+  );
+  expect(source, contains(RegExp(r'void readSchemaV1Document\(')));
+}
+
+void _expectCodecReaderSourceIsOwnedAndNonRetained(String source) {
+  expect(source, isNot(contains('CanvasDocument')));
+  expect(source, isNot(contains('CanvasImageResource')));
+  expect(source, isNot(contains('../store/')));
+  expect(source, isNot(contains('../runtime/')));
+  expect(source, isNot(contains('../edit/')));
+  expect(source, isNot(contains('../frame/')));
+  expect(source, isNot(contains('package:flutter/widgets.dart')));
+  expect(source, isNot(contains('decodeCanvasDocument')));
+  expect(source, isNot(contains('decodeSchemaV1Document')));
+  expect(source, isNot(contains('List<SchemaV1')));
+  expect(source, isNot(contains('Map<CanvasElementId')));
+  for (final retainedPayloadPattern in _retainedImportPayloadPatterns) {
+    expect(source, isNot(contains(retainedPayloadPattern)));
+  }
+}
+
+final _retainedImportPayloadPatterns = [
+  RegExp(r'List<\s*SchemaV1[A-Za-z0-9_]*ImportEvent\b'),
+  RegExp(r'<\s*SchemaV1[A-Za-z0-9_]*ImportEvent\s*>\s*\[\]'),
+  RegExp(r'List<\s*SchemaV1[A-Za-z0-9_]*Fact\b'),
+  RegExp(r'<\s*SchemaV1[A-Za-z0-9_]*Fact\s*>\s*\[\]'),
+  RegExp(r'\b(?:events|facts|eventGraph|factGraph|eventBuffer|factBuffer)\s*='),
+  RegExp(
+    r'\b(?:retained|buffered|pending)(?:Events|Facts|EventGraph|FactGraph)\b',
+  ),
+];
 
 const _schemaV1ImportEmitterSource = r'''
 import 'dart:convert';

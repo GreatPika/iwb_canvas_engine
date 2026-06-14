@@ -21,6 +21,7 @@ void main() {
       'lib/src/codec/schema_v1_decoder.dart',
       'lib/src/codec/schema_v1_diagnostics.dart',
       'lib/src/codec/schema_v1_import_emitter.dart',
+      'lib/src/codec/schema_v1_reader.dart',
       'lib/src/codec/schema_v1_validation.dart',
     ]) {
       final source = File(path).readAsStringSync();
