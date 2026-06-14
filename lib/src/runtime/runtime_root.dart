@@ -2526,6 +2526,7 @@ final class RuntimeRoot
   }
 }
 
+// Internal adapter implementations.
 final class _StoreSelectionMembership implements SelectionMembershipPort {
   const _StoreSelectionMembership(this.store);
 
@@ -2806,12 +2807,14 @@ final class _RuntimeCommandPort implements CanvasCommandPort {
   }
 }
 
+// Default observer helpers.
 void _ignoreCommitEffects(List<CommitDeliveryEffect> effects) {
   _discardValue(effects);
 }
 
 int _discardValue(Object? value) => Object.hash(value, null);
 
+// Text edit input and anchor helpers.
 void _validateTextEditCommandInput(
   CanvasInteractionRequestId requestId,
   String newText,
@@ -2863,6 +2866,7 @@ _TextEditHorizontalAnchor _resolvedHorizontalTextAnchor(
 
 enum _TextEditHorizontalAnchor { left, center, right }
 
+// Transform update helpers.
 CanvasTransform _aroundPivot(CanvasTransform transform, Offset pivot) {
   return CanvasTransform.translation(
     pivot,
@@ -2903,6 +2907,7 @@ CanvasElementUpdate _transformUpdate(
   };
 }
 
+// Commit delivery effect helpers.
 List<CommitDeliveryEffect> _loadEffects({required bool didClearSelection}) {
   return List.unmodifiable([
     const ProjectionDeliveryEffect(),
@@ -2946,6 +2951,7 @@ Color _textLayoutColorFor(StoreElementFacts facts) {
   return color.withAlpha(combinedAlpha);
 }
 
+// Runtime state snapshot helpers.
 CanvasRuntimeState _runtimeState(
   DocumentStoreKernel store,
   SelectionFacts? selectionFacts,
@@ -2990,6 +2996,7 @@ final class _RuntimeRevisionFacts {
   final int interaction;
 }
 
+// Text editing session helpers.
 final class _TextEditActiveSessionNotifier extends ChangeNotifier
     implements ValueListenable<CanvasTextEditSession?> {
   CanvasTextEditSession? _value;
