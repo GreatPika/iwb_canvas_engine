@@ -8,14 +8,15 @@ sequenceDiagram
   participant Codec as CodecBoundary
   participant Schema as Schema v1 validators
   participant Import as SchemaV1ImportSink
+  participant DecodeSink as CanvasDocument builder sink
   participant Store as DocumentStoreKernel
   participant Diagnostics as DiagnosticsHub
 
   App->>API: runtime.edits.loadDocumentFromJson(json)
   API->>Runtime: installLoadedDocument(json)
-  Runtime->>Codec: importSchemaV1DocumentFromJson(json, sink)
-  Codec->>Codec: raw JSON length check
-  Codec->>Codec: JSON parse
+  Runtime->>Codec: importSchemaV1DocumentFromJsonIntoIsolatedSink(json, sink)
+  Codec->>Codec: canonical reader raw JSON length check
+  Codec->>Codec: canonical reader JSON parse
 
   alt raw length or parse fails
     Codec->>Diagnostics: create codec diagnostic with code, path, and sanitized details
@@ -25,7 +26,7 @@ sequenceDiagram
     API--x App: throw CanvasDataException
     Note over Codec,Store: Raw boundary failure emits no import events and mutates no runtime or store state.
   else raw input accepted
-    Codec->>Codec: root object check
+    Codec->>Codec: canonical reader root object check
     Codec->>Schema: schemaVersion gate(read exactly {1})
     Schema->>Schema: known v1 field validation and unknown non-metadata policy
     Schema->>Schema: primitive validation(colors, finite numbers, ids)
@@ -60,6 +61,15 @@ sequenceDiagram
     end
   end
 
+  App->>API: decodeSchemaV1Document / decodeSchemaV1DocumentFromJson(input)
+  API->>Codec: explicit schema v1 decode request
+  Codec->>Codec: canonical reader traverses schema v1 input
+  Codec->>DecodeSink: emit dependency-neutral import events
+  DecodeSink-->>Codec: materialized CanvasDocument DTO
+  Codec->>Codec: decoder-owned duplicate/reference validation
+  Codec-->>API: CanvasDocument
+  API-->>App: decoded public DTO
+
   App->>API: encodeCanvasDocument / encodeCanvasDocumentToJson(document)
   API->>Codec: encode request
   Codec->>Schema: validate contracts/public DTO before writing JSON
@@ -83,4 +93,4 @@ sequenceDiagram
     API--x App: throw CanvasDataException
   end
 
-  Note over Runtime,Store: Runtime load uses import events and store rows, public decode helpers are not exposed as load routes.
+  Note over Runtime,Store: Runtime load uses import events and store rows; explicit decode uses the same reader but a codec-local DTO builder sink, never the runtime load route.

@@ -60,8 +60,9 @@ selection revision.
 
 Sparse public edits prepare and install against these committed tables. Schema
 v1 JSON load prepares replacement committed tables through the same store-owned
-source of truth, but its input is dependency-neutral schema import events rather
-than public `CanvasDocument`. The codec validates JSON and emits import events;
+source of truth, but its input is dependency-neutral schema import events from
+the codec-owned canonical schema v1 reader rather than public `CanvasDocument`.
+The codec reader validates JSON/map wire format and emits import events;
 `DocumentStoreKernel` consumes those events into prepared rows/tables, resource
 descriptor rows, admitted-id facts, reference facts, revision facts, camera
 facts, and projection invalidation facts before runtime install.

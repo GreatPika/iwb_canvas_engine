@@ -7,12 +7,14 @@ flowchart LR
 
   subgraph PublicAPI["Public API facade"]
     LoadEntry["CanvasEditPort.loadDocumentFromJson\nfrom JSON string"]
+    DecodeEntry["decodeSchemaV1Document / FromJson\nexplicit DTO decode path"]
     EncodeEntry["encodeCanvasDocument\nfrom CanvasDocument DTO"]
     PublicDocument["CanvasDocument DTO\nread/output projection only"]
     PublicError["CanvasDataException\nsafe code, path, message, details"]
   end
 
   subgraph Codec["CodecBoundary"]
+    CanonicalReader["Canonical schema v1 reader\nwire-format navigation,\nfield admission, diagnostics"]
     RawLimit["Raw JSON length check\n32 * 1024 * 1024 chars"]
     JsonParse["JSON parse"]
     RootObjectCheck["Root object check"]
@@ -23,7 +25,10 @@ flowchart LR
     ElementValidation["Element validation\nknown element kinds, enums,\nand transform admission"]
     LayerCountValidation["Layer and node count validation\nschema limits"]
     MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
-    ImportEvents["SchemaV1ImportEvent stream\nbegin document, resources, layers, elements"]
+    RuntimeImportEvents["Runtime SchemaV1ImportEvent stream\nisolated sink mode"]
+    DecodeImportEvents["Decode SchemaV1ImportEvent stream\nnon-isolated builder mode"]
+    DecoderSink["Codec-local CanvasDocument builder sink\npublic decode only"]
+    DecodeReferenceValidation["Decoder reference validation\nduplicate ids and missing image resources"]
 
     DtoValidation["Public DTO validation\nconstructor/schema limits"]
     CanonicalEncoder["Canonical v1 encoder\nwrite schemaVersion = 1"]
@@ -55,7 +60,8 @@ flowchart LR
 
   App -->|"runtime load request"| LoadEntry
   JsonInput -->|"JSON string"| LoadEntry
-  LoadEntry -->|"installLoadedDocument(json)"| RawLimit
+  LoadEntry -->|"installLoadedDocument(json)"| CanonicalReader
+  CanonicalReader -->|"runtime JSON input"| RawLimit
   RawLimit -->|"bounded raw text"| JsonParse
   JsonParse -->|"parsed JSON value"| RootObjectCheck
   RootObjectCheck -->|"root object facts"| VersionGate
@@ -66,8 +72,8 @@ flowchart LR
   ResourceValidation -->|"validated resource descriptors"| ElementValidation
   ElementValidation -->|"validated element family records"| LayerCountValidation
   LayerCountValidation -->|"bounded layer and node counts"| MetadataValidation
-  MetadataValidation -->|"validated metadata facts"| ImportEvents
-  ImportEvents -->|"dependency-neutral import events"| StoreImportBuilder
+  MetadataValidation -->|"validated metadata facts"| RuntimeImportEvents
+  RuntimeImportEvents -->|"dependency-neutral import events"| StoreImportBuilder
   StoreImportBuilder -->|"store-owned prepared facts"| StorePrepare
   StorePrepare -->|"unique ids and references accepted"| PreparedRows
   PreparedRows -->|"consume once"| RuntimeInstall
@@ -84,6 +90,15 @@ flowchart LR
   Sanitizer -->|"CanvasDataErrorCode, path, bounded details"| PublicError
   Sanitizer -.->|"when enabled"| InternalSink
   PublicError -.->|"throw projected error"| App
+
+  App -->|"decode request"| DecodeEntry
+  DecodeEntry -->|"schema v1 map or JSON"| CanonicalReader
+  CanonicalReader -->|"separate decode event stream\nnot a runtime load route"| DecodeImportEvents
+  DecodeImportEvents -->|"dependency-neutral events"| DecoderSink
+  DecoderSink -->|"materialized public DTO lists"| DecodeReferenceValidation
+  DecodeReferenceValidation -->|"CanvasDocument output"| PublicDocument
+  PublicDocument -->|"decoded result"| App
+  DecodeReferenceValidation -.->|"duplicate ids or missing image resources"| DiagnosticRecord
 
   App -->|"encode request"| EncodeEntry
   RuntimeProjection -->|"may supply public DTO\nthrough documented read paths"| PublicDocument

@@ -32,8 +32,13 @@ Do not assume:
 
 ### 19.1 Entry points
 
-Production `CodecBoundary` owns schema v1 encode and internal schema v1 import
-validation for runtime JSON load. It must not read or write schema versions outside v1.
+Production `CodecBoundary` owns schema v1 encode and the canonical schema v1
+reader used by both internal runtime import and explicit schema v1 decode
+helpers. The canonical reader lives in codec (`schema_v1_reader.dart`) and owns
+wire-format navigation, field admission, diagnostics wrapping, document/resource
+and layer/element dispatch, metadata budget checks, transform/color/value
+admission, and import sink delivery modes. Codec must not read or write schema
+versions outside v1.
 
 ```dart
 const int canvasSchemaVersionWrite = 1;
@@ -42,7 +47,7 @@ const Set<int> canvasSchemaVersionsRead = {1};
 Map<String, Object?> encodeCanvasDocument(CanvasDocument document);
 String encodeCanvasDocumentToJson(CanvasDocument document);
 
-// Internal only: runtime JSON load validates schema v1 JSON and emits
+// Internal only: runtime JSON load delegates to the canonical reader and emits
 // dependency-neutral import events for store-owned preparation.
 ```
 
@@ -62,13 +67,18 @@ String encodeCanvasDocumentToJson(CanvasDocument document);
 11. no runtime side effects and no committed store side effects.
 ```
 
-The public API does not expose `public decode helper` or
-`public JSON decode helper` as runtime load routes. Runtime JSON load shares
-the schema v1 validation policy, but the codec side does not materialize
-`CanvasDocument`, `CanvasImageResource`, store rows, store sinks, or a retained
-document-sized validated fact/list/tree payload. Duplicate id checks, id
-admission, missing resource reference checks, and cross-row reference checks are
-store-owned preparation responsibilities.
+Explicit schema v1 decode helpers are codec-local read/output routes over the
+same canonical reader: the reader emits dependency-neutral schema v1 import
+events into a non-exported `CanvasDocument` builder sink, the sink materializes
+public DTOs, and decoder-owned reference validation rejects duplicate
+resources/layers/elements and missing image resource references after public DTO
+materialization. Those decode helpers are not runtime load routes. Runtime JSON
+load shares the schema v1 reader policy, but the runtime load path does not
+materialize `CanvasDocument`, `CanvasImageResource`, store rows from public DTOs,
+store sinks outside the import handoff, or a retained document-sized validated
+fact/list/tree payload. Duplicate id checks, id admission, missing resource
+reference checks, and cross-row reference checks remain store-owned preparation
+responsibilities for runtime import.
 
 Public non-isolated import sinks receive events only after the codec-owned
 validation pass succeeds, so invalid schema input cannot partially notify those

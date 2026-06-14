@@ -61,11 +61,12 @@ Success ordering:
 
 ```text
 1. check raw JSON length;
-2. parse JSON and validate the schema v1 root through codec-owned policy;
+2. parse JSON and validate the schema v1 root through the codec-owned canonical
+   schema v1 reader;
 3. stream codec-owned field, metadata, enum, resource, element, and invertible
-   transform validation with dependency-neutral schema import events into an
+   transform validation through dependency-neutral schema import events into an
    isolated sink without constructing CanvasDocument, CanvasImageResource, store
-   rows, or a retained validated fact graph;
+   rows from public DTOs, or a retained validated fact graph;
 4. let DocumentStoreKernel-owned preparation consume the isolated import sink
    into store-owned rows/tables, resource descriptor rows, id admission facts,
    reference checks, revision facts, runtime camera facts, and projection
