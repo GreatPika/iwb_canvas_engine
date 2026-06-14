@@ -1063,6 +1063,7 @@ bool _isAllowedBoundaryImport(String path, String target) {
 
   if (path == 'lib/src/api/canvas_runtime_surface_bridge.dart' &&
       (target == 'lib/src/contracts/internal/resolver_mutation_guard.dart' ||
+          target == 'lib/src/contracts/internal/surface_frame_signal.dart' ||
           target ==
               'lib/src/contracts/internal/surface_resource_session_lifecycle.dart' ||
           target == 'lib/src/frame/frame_engine.dart' ||

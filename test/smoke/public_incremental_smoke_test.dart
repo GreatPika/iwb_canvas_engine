@@ -51,7 +51,16 @@ void main() {
       find.byKey(const ValueKey<String>('iwb_canvas_surface.paint_host')),
       findsOneWidget,
     );
-    expect(find.byType(CustomPaint), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('iwb_canvas_surface.main_paint_host')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        const ValueKey<String>('iwb_canvas_surface.overlay_paint_host'),
+      ),
+      findsOneWidget,
+    );
     expect(resolver.calls, 0);
 
     final initialState = runtime.state.value;
@@ -1029,7 +1038,14 @@ Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   );
   await tester.pump();
   expect(_paintHosts(), findsOneWidget);
-  expect(find.byType(CustomPaint), findsOneWidget);
+  expect(
+    find.byKey(const ValueKey<String>('iwb_canvas_surface.main_paint_host')),
+    findsOneWidget,
+  );
+  expect(
+    find.byKey(const ValueKey<String>('iwb_canvas_surface.overlay_paint_host')),
+    findsOneWidget,
+  );
   expect(resolver.calls, greaterThan(0));
   expect(tester.takeException(), isNull);
 

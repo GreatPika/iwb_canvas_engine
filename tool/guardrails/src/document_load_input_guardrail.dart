@@ -300,6 +300,7 @@ const _allowedCanvasDocumentInputDeclarations = {
   'lib/src/edit/draft_document.dart::DraftDocument',
   'lib/src/edit/draft_document.dart::DraftDocument.replaceDocument',
   'lib/src/edit/edit_kernel.dart::EditKernel',
+  'lib/src/edit/edit_kernel.dart::MaterializedCommitPreparer',
   'lib/src/edit/edit_session.dart::EditSession.replaceDraftDocument',
   'lib/src/edit/edit_session.dart::_EditSessionBacking.replaceDraftDocument',
   'lib/src/edit/edit_session.dart::_MaterializedEditBacking.replaceDraftDocument',
@@ -308,4 +309,5 @@ const _allowedCanvasDocumentInputDeclarations = {
   'lib/src/runtime/runtime_root.dart::RuntimeRoot.deliverCommitPlanForTesting',
   'lib/src/store/committed_document.dart::CommittedDocument',
   'lib/src/store/committed_document.dart::CommittedDocument.withRevisions',
+  'lib/src/store/document_store_kernel.dart::DocumentStoreKernel.prepareMaterializedCommit',
 };

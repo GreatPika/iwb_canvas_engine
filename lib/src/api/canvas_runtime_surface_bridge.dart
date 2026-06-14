@@ -3,9 +3,9 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 
 import '../contracts/internal/resolver_mutation_guard.dart';
+import '../contracts/internal/surface_frame_signal.dart';
 import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/public/canvas_pointer.dart';
-import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../frame/frame_engine.dart';
 import '../frame/frame_paint_output.dart';
@@ -26,30 +26,6 @@ CanvasRuntimeSurfacePort? canvasRuntimeSurfacePortFor(Object runtime) {
   return _canvasRuntimeSurfacePorts[runtime];
 }
 
-final class CanvasSurfaceRepaintTarget {
-  const CanvasSurfaceRepaintTarget({
-    required this.mainCanvas,
-    required this.overlayCanvas,
-    required this.reason,
-  });
-
-  final bool mainCanvas;
-  final bool overlayCanvas;
-  final String reason;
-}
-
-final class CanvasRuntimeSurfaceFrame {
-  const CanvasRuntimeSurfaceFrame({
-    required this.state,
-    required this.generation,
-    required this.repaintTarget,
-  });
-
-  final CanvasRuntimeState state;
-  final int generation;
-  final CanvasSurfaceRepaintTarget repaintTarget;
-}
-
 // The surface port is the single active-surface bridge; keeping attach,
 // listener, resource, pointer, and frame methods together preserves the audited
 // runtime/surface handoff instead of scattering one bridge across fragments.
@@ -65,7 +41,6 @@ final class CanvasRuntimeSurfacePort {
   final RuntimeRoot _root;
   final ValueNotifier<CanvasRuntimeSurfaceFrame?> _surfaceFrame;
 
-  ValueListenable<CanvasRuntimeState> get state => _root.state;
   ValueListenable<CanvasRuntimeSurfaceFrame?> get surfaceFrame => _surfaceFrame;
 
   ResolverMutationGuard get resolverMutationGuard => _root;

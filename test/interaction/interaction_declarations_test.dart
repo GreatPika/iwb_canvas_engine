@@ -181,6 +181,7 @@ void _verifyPointerAdmissionFields() {
     'selectionReplacement',
     'markProvisionalSelectionReplacementApplied',
     'cleanupDecision',
+    'cleanupOutcome',
     'selectedMoveCommit',
     'marqueeCommit',
     'strokeCommit',

@@ -4,9 +4,9 @@ import '../api/canvas_runtime.dart';
 import '../api/canvas_runtime_surface_bridge.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
-import '../frame/frame_paint_output.dart';
 import '../resources/surface_resource_session.dart';
 import 'image_bridge.dart';
+import 'layer_frame_output_cache.dart';
 import 'layer_paint_host.dart';
 import 'pointer_adapter.dart';
 import 'surface_frame_output_cache.dart';
@@ -42,9 +42,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
   CanvasRuntime? _activeRuntime;
   CanvasRuntimeSurfacePort? _activePort;
   SurfaceResourceSession? _activeSession;
-  final SurfaceFrameOutputCache<MainFramePaintOutput, OverlayFramePaintOutput>
-  _outputCache = SurfaceFrameOutputCache();
-  CanvasRuntimeSurfaceFrame? _pendingRuntimeFrame;
+  final LayerFrameOutputCache _outputCache = LayerFrameOutputCache();
   bool _isSurfaceAttached = false;
   bool _hasPendingBudgetFollowUpFrame = false;
   bool _applyBudgetFollowUpOnNextBuild = false;
@@ -79,6 +77,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
 
   @override
   void dispose() {
+    _activePort?.surfaceFrame.removeListener(_handleSurfaceFrame);
     if (widget.interactive) {
       _activePort?.handleSurfaceInteractiveDisabled(_surfaceToken);
     }
@@ -153,7 +152,6 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activePort = null;
     _hasPendingBudgetFollowUpFrame = false;
     _applyBudgetFollowUpOnNextBuild = false;
-    _pendingRuntimeFrame = null;
     _outputCache.clear();
 
     return null;
@@ -169,7 +167,6 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       _activeSession = null;
       _activeRuntime = null;
       _activePort = null;
-      _pendingRuntimeFrame = null;
       _outputCache.clear();
 
       return;
@@ -182,7 +179,6 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activeSession = null;
     _activeRuntime = null;
     _activePort = null;
-    _pendingRuntimeFrame = null;
     _applyBudgetFollowUpOnNextBuild = false;
     _outputCache.clear();
   }
@@ -239,15 +235,10 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       buildMain: () => _buildMainOutput(inputs),
       buildOverlay: () => _buildOverlayOutput(inputs),
     );
-    final pendingRuntimeFrame = _pendingRuntimeFrame;
-    if (pendingRuntimeFrame != null) {
-      _outputCache.applyRuntimeFrame(
-        pendingRuntimeFrame,
-        buildMain: () => _buildMainOutput(inputs),
-        buildOverlay: () => _buildOverlayOutput(inputs),
-      );
-      _pendingRuntimeFrame = null;
-    }
+    _outputCache.applyPendingRuntimeFrame(
+      buildMain: () => _buildMainOutput(inputs),
+      buildOverlay: () => _buildOverlayOutput(inputs),
+    );
     if (_applyBudgetFollowUpOnNextBuild) {
       _applyBudgetFollowUpOnNextBuild = false;
       _outputCache.applyLocalRepaintRequest(
@@ -271,15 +262,12 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     }
     if (mounted) {
       setState(() {
-        _pendingRuntimeFrame = _mergePendingRuntimeFrame(
-          _pendingRuntimeFrame,
-          frame,
-        );
+        _outputCache.queueRuntimeFrame(frame);
       });
     }
   }
 
-  MainFramePaintOutput _buildMainOutput(_SurfaceFrameBuildInputs inputs) {
+  Object _buildMainOutput(_SurfaceFrameBuildInputs inputs) {
     final output = inputs.port.buildSurfaceMainFrame(
       _surfaceToken,
       viewportWorldBounds: inputs.viewport,
@@ -292,7 +280,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     return output;
   }
 
-  OverlayFramePaintOutput _buildOverlayOutput(_SurfaceFrameBuildInputs inputs) {
+  Object _buildOverlayOutput(_SurfaceFrameBuildInputs inputs) {
     return inputs.port.buildSurfaceOverlayFrame(
       _surfaceToken,
       viewportWorldBounds: inputs.viewport,
@@ -344,39 +332,6 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       });
     });
   }
-}
-
-CanvasRuntimeSurfaceFrame _mergePendingRuntimeFrame(
-  CanvasRuntimeSurfaceFrame? previous,
-  CanvasRuntimeSurfaceFrame next,
-) {
-  if (previous == null) {
-    return next;
-  }
-
-  return CanvasRuntimeSurfaceFrame(
-    state: next.state,
-    generation: next.generation,
-    repaintTarget: CanvasSurfaceRepaintTarget(
-      mainCanvas:
-          previous.repaintTarget.mainCanvas || next.repaintTarget.mainCanvas,
-      overlayCanvas:
-          previous.repaintTarget.overlayCanvas ||
-          next.repaintTarget.overlayCanvas,
-      reason: _mergeRepaintReasons(
-        previous.repaintTarget.reason,
-        next.repaintTarget.reason,
-      ),
-    ),
-  );
-}
-
-String _mergeRepaintReasons(String previous, String next) {
-  if (previous == next) {
-    return next;
-  }
-
-  return '$previous+$next';
 }
 
 final class _SurfaceFrameBuildInputs {

@@ -19,7 +19,7 @@ void main() {
     final steps = _workflowSteps(rootPackageJob);
     final guardrailStep = _stepNamed(steps, 'Run guardrails');
 
-    _expectRootPackageChecks(steps);
+    _expectRootPackageChecks(workflowContent, steps);
     _expectRootPackageBenchmarkChecks(workflowContent, steps);
     _expectExamplePackageChecks(workflowContent);
     _expectExampleBoundaryDiffEnvironment(steps);
@@ -30,12 +30,23 @@ void main() {
   });
 }
 
-void _expectRootPackageChecks(List<YamlMap> steps) {
+void _expectRootPackageChecks(String workflowContent, List<YamlMap> steps) {
   final runCommands = _runCommands(steps);
-  final usedActions = _usedActions(steps);
 
-  expect(usedActions, contains('actions/checkout@v4'));
-  expect(usedActions, contains('subosito/flutter-action@v2'));
+  _expectPinnedActionStep(
+    workflowContent,
+    steps,
+    stepName: 'Checkout',
+    actionName: 'actions/checkout',
+    versionComment: '# v4',
+  );
+  _expectPinnedActionStep(
+    workflowContent,
+    steps,
+    stepName: 'Set up Flutter',
+    actionName: 'subosito/flutter-action',
+    versionComment: '# v2',
+  );
   expect(runCommands, contains('flutter pub get'));
   expect(
     runCommands,
@@ -46,6 +57,25 @@ void _expectRootPackageChecks(List<YamlMap> steps) {
   );
   expect(runCommands, contains('dart analyze'));
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
+}
+
+void _expectPinnedActionStep(
+  String workflowContent,
+  List<YamlMap> steps, {
+  required String stepName,
+  required String actionName,
+  required String versionComment,
+}) {
+  final uses = _stepNamed(steps, stepName)['uses'] as String;
+  final prefix = '$actionName@';
+
+  expect(uses.startsWith(prefix), isTrue);
+  final pinnedRef = uses.replaceFirst(prefix, '');
+  expect(pinnedRef, matches(RegExp(r'^[0-9a-f]{40}$')));
+  expect(
+    workflowContent.split('\n').map((line) => line.trim()),
+    contains('uses: $uses $versionComment'),
+  );
 }
 
 void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
@@ -193,14 +223,6 @@ Set<String> _runCommands(List<YamlMap> steps) {
       .map((step) => step['run'])
       .whereType<String>()
       .map((command) => command.trim())
-      .toSet();
-}
-
-Set<String> _usedActions(List<YamlMap> steps) {
-  return steps
-      .map((step) => step['uses'])
-      .whereType<String>()
-      .map((action) => action.trim())
       .toSet();
 }
 

@@ -158,6 +158,8 @@ final class _SelectionStateVisitor extends RecursiveAstVisitor<void> {
 
   bool _isAllowedSelectionStateShape(String name) {
     return _isAllowedActionHistoryName(path, name, _currentClassName) ||
+        _isStoreDocumentEligibilityShape(path, name, _currentClassName) ||
+        _isStoreSelectionPruneShape(path, name, _currentClassName) ||
         _isRuntimeSelectionReadPortState(path, name, _currentClassName) ||
         _isRuntimeSelectionBoundaryReadContext(path, name, _currentClassName) ||
         _isRuntimeSelectionBoundaryReadPort(path, name, _currentClassName) ||
@@ -249,6 +251,28 @@ bool _isAllowedActionHistoryName(String path, String name, String className) {
   final lower = name.toLowerCase();
 
   return lower.contains('previousselection') || lower.contains('nextselection');
+}
+
+bool _isStoreDocumentEligibilityShape(
+  String path,
+  String name,
+  String className,
+) {
+  return path == 'lib/src/store/document_store_kernel.dart' &&
+      className == 'DocumentStoreKernel' &&
+      name == 'selectableElementIds';
+}
+
+bool _isStoreSelectionPruneShape(
+  String path,
+  String name,
+  String className,
+) {
+  return (path == 'lib/src/store/store_commit_finalization.dart' &&
+              className == 'AcceptedStoreTouchedFacts' ||
+          path == 'lib/src/store/document_store_kernel.dart' &&
+              className == '_ElementTouchedFacts') &&
+      name == 'selectionPruneElementIds';
 }
 
 bool _isRuntimeSelectionReadPortState(

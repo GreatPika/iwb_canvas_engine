@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_surface_bridge.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/surface_frame_signal.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../support/runtime_root_with_committed_document_seed.dart';
@@ -71,7 +72,6 @@ void _surfacePortPublishesStateMatchedTargets() {
   _expectSurfacePortFrameMatchesState(
     frames,
     runtime: runtime,
-    surfacePort: surfacePort,
   );
   _expectDetachedSurfacePortClearsFrame(runtime, surfacePort, token);
 }
@@ -79,13 +79,11 @@ void _surfacePortPublishesStateMatchedTargets() {
 void _expectSurfacePortFrameMatchesState(
   List<CanvasRuntimeSurfaceFrame> frames, {
   required CanvasRuntime runtime,
-  required CanvasRuntimeSurfacePort surfacePort,
 }) {
   expect(frames, hasLength(1));
   _expectTarget(frames.single.repaintTarget, main: true, overlay: false);
   expect(frames.single.generation, 1);
   expect(frames.single.state, runtime.state.value);
-  expect(frames.single.state, surfacePort.state.value);
 }
 
 void _expectDetachedSurfacePortClearsFrame(

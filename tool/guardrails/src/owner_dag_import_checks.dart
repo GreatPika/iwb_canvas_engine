@@ -384,6 +384,12 @@ const ownerDagAllowedEdges = [
     source: apiOwner,
     target: contractsInternalOwner,
     sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
+    targetPath: 'lib/src/contracts/internal/surface_frame_signal.dart',
+  ),
+  OwnerEdge(
+    source: apiOwner,
+    target: contractsInternalOwner,
+    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
     targetPath:
         'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
   ),
@@ -710,6 +716,18 @@ const ownerDagAllowedEdges = [
     target: resourcesOwner,
     sourcePath: 'lib/src/surface/image_bridge.dart',
     targetPath: 'lib/src/resources/surface_resource_session.dart',
+  ),
+  OwnerEdge(
+    source: surfaceOwner,
+    target: frameOwner,
+    sourcePath: 'lib/src/surface/layer_frame_output_cache.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
+  ),
+  OwnerEdge(
+    source: surfaceOwner,
+    target: frameOwner,
+    sourcePath: 'lib/src/surface/layer_paint_host.dart',
+    targetPath: 'lib/src/frame/frame_paint_output.dart',
   ),
   OwnerEdge(
     source: surfaceOwner,

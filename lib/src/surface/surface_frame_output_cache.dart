@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 
-import '../api/canvas_runtime_surface_bridge.dart';
+import '../contracts/internal/surface_frame_signal.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 
 typedef SurfaceFrameOutputBuilder<Output extends Object> = Output Function();

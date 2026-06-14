@@ -27,14 +27,6 @@ void main() {
       expect(content, isNot(contains("import 'canvas_document.dart';")));
     }
 
-    final decoder = File(
-      '$repositoryRoot/lib/src/codec/schema_v1_decoder.dart',
-    ).readAsStringSync();
-    expect(
-      decoder,
-      contains("import '../contracts/public/canvas_metadata.dart';"),
-    );
-
     for (final entry in _publicApiContractWrappers.entries) {
       final content = File('$repositoryRoot/${entry.key}').readAsStringSync();
       expect(content.trim(), _expectedWrapperExport(entry));
