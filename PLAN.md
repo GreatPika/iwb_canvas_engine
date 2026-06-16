@@ -21,3 +21,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 ## Step Files
 
 - [x] [Step 1. Flutter performance verification route](plan/step_1_flutter_performance_verification_route.md)
+- [ ] [Step 2. Android Flutter performance benchmark redesign](plan/step_2_android_flutter_performance_benchmark_redesign.md)
