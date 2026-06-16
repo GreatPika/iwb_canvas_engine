@@ -165,11 +165,11 @@ work.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
 36. The Flutter performance verification route is green: the full scenario
-    catalog in `docs/verification/performance.md` completes through
+    group catalog in `docs/verification/performance.md` completes through
     `cd example && flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/perf_canvas_surface_test.dart --profile --no-dds`,
-    and `dart run tool/check_flutter_performance_artifacts.dart --catalog docs/verification/performance.md --results example/build/flutter_performance`
-    finds the required summary and full timeline JSON artifacts for every
-    report key.
+    and the artifact checker for the active route verifies the required nested
+    timeline artifacts, `performance_run_manifest.json`, and
+    `comparison_summary.json` for every report key.
 37. p95, p99, frame-budget, baseline-diff, and regression threshold gates remain
     unclaimed until a later design and contract establish device, environment,
     repeat-count, artifact-retention, and baseline policy.

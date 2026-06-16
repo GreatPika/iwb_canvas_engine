@@ -37,7 +37,7 @@ Obligations: SEAM_MIGRATION
 | Source decision | Contract location | Execution unit / proof surface |
 |---|---|---|
 | `D1` Keep `integration_test` plus `flutter drive --profile --no-dds`, Flutter `traceAction`, and `TimelineSummary` as the measurement boundary. | `Boundaries.Owner`, `Boundaries.Compatibility`, `Unit 2`, `Unit 3` | Route contract test proves one traced runner owns report keys and driver still converts report data through `Timeline.fromJson` / `TimelineSummary.summarize`; profile-drive command proves the official route produces artifacts. |
-| `D2` Change the catalog from one report key per scenario id to scenario groups with canonical `setup`, `warm`, `steady`, and `single` phases. | `Boundaries.Source of Truth`, `Unit 1`, `Unit 2`, `Unit 4` | `docs/verification/performance.md` defines the phase grammar; route contract test and checker reject unsupported phase kinds and malformed report keys. |
+| `D2` Change the catalog from one report key per scenario id to scenario groups with canonical `setup`, `warm`, `steady`, and `single` phases. | `Boundaries.Source of Truth`, `Unit 1`, `Unit 2`, `Unit 4` | `docs/verification/performance.md` records the route policy; Unit 2 translates it into the executable descriptor catalog, and route/checker tests reject unsupported phase kinds and malformed report keys without parsing documentation. |
 | `D3` Separate fixture/document setup from action cost for the seven redesigned Android groups. | `Boundaries.Order Constraints`, `Unit 1`, `Unit 2`, `Unit 4` | Descriptor tests prove setup/action separation for each redesigned group; focused example tests prove warm and steady phases run from pre-prepared state; checker validates separate setup, warm, and steady artifact phases. |
 | `D4` Add warm and repeated steady-state variants for the redesigned groups. | `Unit 1`, `Unit 2`, `Unit 4` | Docs, descriptors, generated manifest, and checker all require exactly five `steady.*` repeats per redesigned group and `repeat_001` for each `warm.*`. |
 | `D5` Keep generated artifacts under `example/build/flutter_performance/` and out of source control while defining a stable nested artifact shape. | `Boundaries.Generated Artifacts`, `Unit 3`, `Unit 4` | Driver writes only under `example/build/flutter_performance/`; checker rejects missing, malformed, unexpected, or misplaced outputs. |
@@ -45,7 +45,7 @@ Obligations: SEAM_MIGRATION
 | `D7` Before/after comparison exposes raw-repeat-derived median and spread without threshold or device-independent precision claims. | `Unit 1`, `Unit 3`, `Unit 4` | Performance and release docs define supported local comparison semantics; generated comparison summary contains raw-repeat-derived local fields only. |
 | `D8` Startup and Android Macrobenchmark remain outside this redesign. | `Boundaries.Out of Scope`, `Unit 1`, `Unit 2`, `Final Verification` | Route contract tests and docs preserve negative proof that startup/Macrobenchmark coverage is absent and unclaimed. |
 | `D9` Retired benchmark infrastructure must not be restored. | `Boundaries.Out of Scope`, `Unit 2`, `Unit 4`, `Final Verification` | Structural tests/search proof reject `tool/bench/**`, `test/benchmarks/**`, retired benchmark ids, and custom benchmark-result schema. |
-| `D10` All 26 current required scenarios remain covered: seven redesigned groups and nineteen `single.current_behavior` groups with `repeat_001`. | `Boundaries.Source of Truth`, `Unit 1`, `Unit 2`, `Unit 4` | Docs catalog, descriptor expansion, route contract tests, manifest validation, and checker prove full catalog migration. |
+| `D10` All 26 current required scenarios remain covered: seven redesigned groups and nineteen `single.current_behavior` groups with `repeat_001`. | `Boundaries.Source of Truth`, `Unit 1`, `Unit 2`, `Unit 4` | Docs record the migration decision; descriptor expansion becomes the executable catalog, and route contract tests, manifest validation, and checker prove full catalog migration without parsing Markdown. |
 | `D11` Every `steady.*` repeat for redesigned groups starts from canonical prepared state equivalent to warm state; reset/reseed cost is outside measured steady traces. | `Boundaries.Order Constraints`, `Generated Artifacts`, `Unit 2`, `Unit 3`, `Unit 4` | Focused example tests use `PerformancePhasePreparationProbe` to compare two pre-action snapshots per redesigned group; manifest entries carry exact `canonicalPreparation`, `resetReason`, `measuredAction`, and `preparationMeasured: false` values; checker tests reject redesigned warm/steady manifest entries that omit or mis-state those fields. |
 
 ## Evidence
@@ -227,9 +227,11 @@ Obligations: SEAM_MIGRATION
   report data with `Timeline.fromJson` and `TimelineSummary.summarize` ->
   comparison summary must derive from official Flutter summaries, not a second
   measurement engine.
-- `tool/check_flutter_performance_artifacts.dart:249` / catalog parser: checker
-  currently reads required scenario ids from docs -> checker must keep docs as
-  source truth while parsing group/phase/repeat expectations.
+- `tool/check_flutter_performance_artifacts.dart:249` / current catalog
+  extraction: checker currently reads required scenario ids from docs -> this
+  redesign must remove documentation parsing from checker enforcement and
+  validate generated outputs against executable/catalog constants owned by the
+  benchmark route implementation and checker tests.
 - `tool/check_flutter_performance_artifacts.dart:263` / current directory check:
   checker currently validates flat scenario directories -> it must migrate to
   nested group/phase/repeat validation.
@@ -243,9 +245,9 @@ Obligations: SEAM_MIGRATION
   structural route proof: tests currently verify a single traced scenario runner
   -> they must migrate to a single phase/repeat traced runner and negative route
   proof.
-- `test/performance/flutter_performance_route_contract_test.dart:116` / docs
-  parser proof: route contract tests parse the performance doc catalog -> tests
-  must migrate with the new source-of-truth catalog grammar.
+- `test/performance/flutter_performance_route_contract_test.dart:116` /
+  structural route proof: route contract tests must verify executable route
+  structure directly and must not parse documentation as a data source.
 - `test/tool/flutter_performance_artifacts_checker_test.dart:13` / accepted
   artifact proof: checker tests already prove accepted artifacts -> extend them
   to the nested generated artifact shape.
@@ -293,13 +295,17 @@ Android Macrobenchmark routes; restored `tool/bench/**`; restored
 `test/benchmarks/**`; retired benchmark ids; custom benchmark-result schema;
 CPU-subsystem ownership claims; device-independent percentage-win claims.
 
-Source of Truth: `docs/verification/performance.md` is the single durable source
-for route command, scenario groups, phase grammar, repeat count, artifact shape,
-comparison semantics, unsupported claims, and full catalog migration. Generated
+Source of Truth: `docs/verification/performance.md` is the durable
+human-readable route policy for the route command, scenario groups, phase
+grammar, repeat count, artifact shape, comparison semantics, unsupported
+claims, and full catalog migration. It must not be parsed by tests or tools as
+a catalog or schema data source. Unit 2 must translate that policy into the
+executable descriptor catalog in `example/lib/perf/performance_scenario.dart`;
+after Unit 2, that descriptor catalog is the machine-readable source used by
+route tests, driver manifest generation, and checker validation. Generated
 `performance_run_manifest.json`, raw timeline files, timeline summaries, and
 `comparison_summary.json` are local build artifacts only and must not become
-source truth. Executable descriptors in `example/lib/perf/performance_scenario.dart`
-must be mechanically checked against the docs source of truth.
+source truth.
 
 Compatibility: The package public API and production runtime semantics must not
 change. The generated artifact shape is allowed to break compatibility with
@@ -310,10 +316,11 @@ same profile-drive family:
 Release acceptance remains completion plus artifact integrity only and must not
 claim numeric pass/fail thresholds.
 
-Order Constraints: Update documentation source of truth before changing parser,
-descriptor, driver, or checker semantics. In Unit 2, implement descriptor-level
-full-catalog phase/repeat expansion before updating the integration runner to
-emit phase report keys. In Unit 2, implement canonical state
+Order Constraints: Update documentation route policy before changing
+descriptor, driver, or checker semantics. Do not parse Markdown documentation
+to drive tests or tools. In Unit 2, implement descriptor-level full-catalog
+phase/repeat expansion before updating the integration runner to emit phase
+report keys. In Unit 2, implement canonical state
 preparation/reset semantics before enabling `steady.*` repeats. Migrate
 executable descriptors before driver/checker validation is made strict.
 Generate raw timeline and timeline summary artifacts before writing manifest
@@ -449,11 +456,13 @@ manifest, and comparison summary validates.
 
 Owner: `docs/verification/performance.md`,
 `docs/verification/tests.md`, `docs/verification/release_gates.md`, and the
-docs-catalog portion of `test/performance/flutter_performance_route_contract_test.dart`.
+obsolete docs-derived catalog proof in
+`test/performance/flutter_performance_route_contract_test.dart`.
 
-Boundary: Documentation and docs-catalog structural proof only. Do not change
-route code, checker code, driver code, generated artifacts, or scenario
-execution behavior in this unit.
+Boundary: Documentation and removal of the old route-contract docs parser only.
+Do not change route code, checker code, driver code, generated artifacts,
+scenario execution behavior, or artifact-checker documentation parsing in this
+unit.
 
 Change: Rewrite `docs/verification/performance.md` so it owns the new scenario
 group model, canonical phase grammar, exact report key grammar, exact five
@@ -477,20 +486,18 @@ retired benchmark boundary, exact `performance_run_manifest.json` and
 required scenarios must be listed as scenario groups with
 `single.current_behavior` and `repeat_001`. Update `docs/verification/tests.md`
 and `docs/verification/release_gates.md` so documented tests and release gates
-match the new route without claiming numeric thresholds. Update the route
-contract test only for docs-catalog parsing and source-of-truth grammar proof:
-it must not yet require executable descriptor migration.
+match the new route without claiming numeric thresholds. Remove the
+route-contract test's docs-derived catalog proof without replacing it with
+another Markdown parser; executable descriptor proof is added in Unit 2 and
+artifact-checker Markdown parsing is retired in Unit 4.
 
 Completion Check: Documentation checks pass with
 `dart run docs/tool/sync_generated_docs.dart --check` and
 `dart run docs/tool/check_docs.dart`; `flutter test
-test/performance/flutter_performance_route_contract_test.dart` passes with a
-docs-catalog test proving the performance doc exposes all 26 scenario groups,
-exactly the seven redesigned phase sets above, exactly five steady repeats for
-redesigned groups, only `setup`, `warm`, `steady`, and `single` phase kinds,
-the exact manifest and comparison-summary schema keys from `Generated
-Artifacts`, and no numeric threshold, baseline, pass/fail, regression-status,
-startup, or Macrobenchmark release claim.
+test/performance/flutter_performance_route_contract_test.dart` passes; repository
+search proves `test/performance/flutter_performance_route_contract_test.dart`
+does not parse `docs/verification/performance.md` or other Markdown
+documentation as a catalog/schema data source.
 
 Depends On: none.
 
@@ -573,16 +580,16 @@ The required group-specific `fixtureMetadata` assertions are fixed:
 `drawToolBeforeAction: "eraser"`, and `erasedElementCountBeforeAction: 0`.
 
 Completion Check: `test/performance/flutter_performance_route_contract_test.dart`
-passes after proving descriptor expansion matches the docs catalog, every
-report key matches the canonical grammar, unsupported phase kinds are absent,
-the integration test delegates to the single phase/repeat traced runner,
-`traceAction` owns report-key measurement, startup/Macrobenchmark route names
-are absent, retired benchmark ids are absent, and no private engine imports or
-production `lib/**` changes are required. Focused example tests pass after
-proving setup/action separation for each redesigned group and proving two
-steady repeats per redesigned group emit `PerformancePhasePreparationSnapshot`
-values that match the equality and group-specific fixture-metadata signals
-above before measured action begins.
+passes after proving descriptor expansion matches the fixed 26-group benchmark
+catalog without parsing documentation, every report key matches the canonical
+grammar, unsupported phase kinds are absent, the integration test delegates to
+the single phase/repeat traced runner, `traceAction` owns report-key
+measurement, startup/Macrobenchmark route names are absent, retired benchmark
+ids are absent, and no private engine imports or production `lib/**` changes
+are required. Focused example tests pass after proving setup/action separation
+for each redesigned group and proving two steady repeats per redesigned group
+emit `PerformancePhasePreparationSnapshot` values that match the equality and
+group-specific fixture-metadata signals above before measured action begins.
 
 Depends On: Unit 1.
 
@@ -645,21 +652,27 @@ Boundary: Artifact checking tool and its tests only. Do not change the route
 descriptors, integration route, driver, docs, generated artifacts, or production
 runtime code in this unit.
 
-Change: Update the checker to parse the new docs source-of-truth catalog and
-validate the generated nested output shape. It must validate scenario group
-directories, phase directories, repeat directories, report key grammar, raw
-timeline JSON shape, Flutter timeline summary shape, manifest shape,
-comparison-summary shape, exact top-level keys and required nested keys for both
-generated JSON files, exact comparison metric field names, exact repeat
-cardinality, all 26 scenario groups, all seven redesigned phase sets, all
-nineteen `single.current_behavior` migrations, unsupported phase names,
-unexpected outputs, and forbidden threshold/pass-fail/baseline/regression-status
-fields. It must reject missing manifest, missing comparison summary, extra root
-files other than the two generated JSON files, malformed JSON, missing repeats,
-duplicate/overwritten repeat keys, redesigned warm/steady manifest entries that
-omit or mis-state `canonicalPreparation`, `resetReason`, `measuredAction`, or
+Change: Update the checker to validate the generated nested output shape
+without parsing Markdown documentation as a catalog or schema data source. It
+must validate scenario group directories, phase directories, repeat
+directories, report key grammar, raw timeline JSON shape, Flutter timeline
+summary shape, manifest shape, comparison-summary shape, exact top-level keys
+and required nested keys for both generated JSON files, exact comparison metric
+field names, exact repeat cardinality, all 26 scenario groups, all seven
+redesigned phase sets, all nineteen `single.current_behavior` migrations,
+unsupported phase names, unexpected outputs, and forbidden
+threshold/pass-fail/baseline/regression-status fields. It must reject missing
+manifest, missing comparison summary, extra root files other than the two
+generated JSON files, malformed JSON, missing repeats, duplicate/overwritten
+repeat keys, redesigned warm/steady manifest entries that omit or mis-state
+`canonicalPreparation`, `resetReason`, `measuredAction`, or
 `preparationMeasured: false`, and outputs that imply restored custom
 benchmark-result schema.
+
+Unit 4 must remove the legacy `--catalog <markdown>` input from
+`tool/check_flutter_performance_artifacts.dart`; the checker must derive
+expected generated output from the Unit 2 executable descriptor catalog and the
+generated manifest, not from `docs/verification/performance.md`.
 
 Completion Check: `flutter test test/tool/flutter_performance_artifacts_checker_test.dart`
 passes with positive fixtures for the complete nested catalog and negative
@@ -672,7 +685,7 @@ comparison metric field names, incorrect raw-repeat-derived `median`, `min`,
 `max`, or `interquartileRange` values including `repeatCount` 1 and 2 cases, and
 missing or incorrect canonical preparation/reset metadata for redesigned
 warm/steady manifest entries. The checker command
-`dart run tool/check_flutter_performance_artifacts.dart --catalog docs/verification/performance.md --results example/build/flutter_performance`
+`dart run tool/check_flutter_performance_artifacts.dart --results example/build/flutter_performance`
 is listed as the post-drive validation command and succeeds against a generated
 profile-drive run.
 
@@ -692,7 +705,7 @@ changed production, test, example, and tool owners; focused tests covering
 `dart run docs/tool/check_docs.dart`; the profile-drive command
 `cd example && flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/perf_canvas_surface_test.dart --profile --no-dds`;
 and the artifact checker command
-`dart run tool/check_flutter_performance_artifacts.dart --catalog docs/verification/performance.md --results example/build/flutter_performance`.
+`dart run tool/check_flutter_performance_artifacts.dart --results example/build/flutter_performance`.
 The final diff contains no checked-in `example/build/flutter_performance/**`
 artifacts, no startup/Macrobenchmark route, no `tool/bench/**`, no
 `test/benchmarks/**`, no retired benchmark ids, and no custom benchmark-result

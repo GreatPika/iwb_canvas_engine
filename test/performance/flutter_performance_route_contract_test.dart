@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-const _performanceDocPath = 'docs/verification/performance.md';
 const _scenarioSourcePath = 'example/lib/perf/performance_scenario.dart';
 const _integrationTestPath =
     'example/integration_test/perf_canvas_surface_test.dart';
@@ -17,24 +16,8 @@ const _retiredRouteKeys = [
 ];
 
 void main() {
-  _registerCatalogContractTest();
   _registerIntegrationRouteContractTest();
   _registerTracedRunnerContractTest();
-}
-
-void _registerCatalogContractTest() {
-  test('Flutter performance scenario descriptors match the docs catalog', () {
-    final docScenarioIds = _performanceDocScenarioIds();
-    final descriptorIds = _performanceScenarioDescriptorIds();
-
-    expect(descriptorIds, unorderedEquals(docScenarioIds));
-    expect(
-      descriptorIds,
-      isNot(anyElement(contains('startup'))),
-      reason: 'startup scenarios are Android Macrobenchmark scope.',
-    );
-    _expectNoRetiredRouteKeys(File(_scenarioSourcePath).readAsStringSync());
-  });
 }
 
 void _registerIntegrationRouteContractTest() {
@@ -81,6 +64,7 @@ void _registerTracedRunnerContractTest() {
     _expectTraceActionWrapsScenarioAndSettle(source);
     _expectNoTraceFallback(source);
     _expectScenarioFramePumping(source);
+    _expectNoRetiredRouteKeys(source);
   });
 }
 
@@ -111,41 +95,6 @@ void _expectScenarioFramePumping(String source) {
   expect(source, contains('PerformanceScenarioTraceRequest'));
   expect(source, contains('required PerformanceScenarioPumpFrame pumpFrame'));
   expect(source, contains('await context.pumpScenarioFrame();'));
-}
-
-List<String> _performanceDocScenarioIds() {
-  final source = File(_performanceDocPath).readAsStringSync();
-  final ids = <String>[];
-  final rowPattern = RegExp(r'^\| `([^`]+)` \| required(?:[^|]*)\|$');
-  for (final line in source.split('\n')) {
-    final match = rowPattern.firstMatch(line.trim());
-    if (match != null) {
-      ids.add(match.group(1) ?? fail('scenario id row did not capture id'));
-    }
-  }
-
-  expect(ids, isNotEmpty);
-
-  return ids;
-}
-
-List<String> _performanceScenarioDescriptorIds() {
-  final source = File(_scenarioSourcePath).readAsStringSync();
-  final descriptorPattern = RegExp(r"id: '([^']+)'");
-  final directIds = descriptorPattern
-      .allMatches(source)
-      .map((match) => match.group(1) ?? fail('descriptor id did not capture'))
-      .toList();
-  final helperPattern = RegExp(
-    r"_loadDocumentScenario\('([^']+)'|_cameraPanScenario\('([^']+)'|"
-    r"_selectionMoveScenario\('([^']+)'|_drawScenario\('([^']+)'|"
-    r"_resourceImageScenario\('([^']+)'",
-  );
-  final helperIds = helperPattern.allMatches(source).map((match) {
-    return match.groups([1, 2, 3, 4, 5]).nonNulls.single;
-  });
-
-  return [...helperIds, ...directIds];
 }
 
 void _expectNoRetiredRouteKeys(String source) {

@@ -471,12 +471,15 @@ behavioral tests, and the required guardrail list remains owned by
 
 #### Example integration performance route
 - `docs/verification/performance.md` owns the official Flutter performance
-  verification route, including the scenario catalog, profile-drive command,
-  artifact contract, completion-only gate semantics, and non-threshold policy;
-- `test/performance/flutter_performance_route_contract_test.dart` proves the
-  documented catalog matches the example `PerformanceScenario.id` values and
-  exact integration-test report keys, and proves the integration test uses the
-  traced runner instead of bypassing it;
+  verification route, including the scenario group catalog, phase grammar,
+  report-key grammar, profile-drive command, nested artifact contract,
+  generated manifest and comparison-summary shapes, completion-only gate
+  semantics, and non-threshold policy;
+- `test/performance/flutter_performance_route_contract_test.dart` proves route
+  source structure directly: the integration test delegates to the traced
+  runner, the traced runner owns the report key and settle boundary, and the
+  retired benchmark route remains absent. It must not parse documentation as a
+  catalog or schema data source;
 - `example/test/performance_host_smoke_test.dart` proves the example
   performance host can mount and drive public runtime, surface, command, tool,
   resource, and text-editing paths through the public package barrel;
@@ -484,13 +487,14 @@ behavioral tests, and the required guardrail list remains owned by
   fixtures used by `load_document.100k` and `camera_pan.100k` fit current
   validation limits without changing validation policy;
 - `test/tool/flutter_performance_artifacts_checker_test.dart` proves the
-  artifact checker rejects missing, malformed, or unexpected profile-run
-  outputs while remaining an inventory/JSON-shape check only;
+  artifact checker rejects missing, malformed, unexpected, or misplaced
+  profile-run outputs against the active descriptor and manifest-owned route
+  catalog while remaining an inventory/JSON-shape check only and not a
+  performance pass/fail threshold;
 - the release-producing route is not ordinary package `flutter test` coverage:
   it must run the example app with
   `cd example && flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/perf_canvas_surface_test.dart --profile --no-dds`
-  and then run
-  `dart run tool/check_flutter_performance_artifacts.dart --catalog docs/verification/performance.md --results example/build/flutter_performance`.
+  and then run the artifact checker for the active route output.
 
 #### `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - compiles the exported API declarations in an empty consumer package;
