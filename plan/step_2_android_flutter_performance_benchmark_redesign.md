@@ -452,7 +452,7 @@ manifest, and comparison summary validates.
 
 ## Execution Units
 
-### [ ] Unit 1: Documentation source-of-truth migration
+### [x] Unit 1: Documentation source-of-truth migration
 
 Owner: `docs/verification/performance.md`,
 `docs/verification/tests.md`, `docs/verification/release_gates.md`, and the
@@ -501,7 +501,7 @@ documentation as a catalog/schema data source.
 
 Depends On: none.
 
-### [ ] Unit 2: Executable descriptor and integration-route migration
+### [x] Unit 2: Executable descriptor and integration-route migration
 
 Owner: `example/lib/perf/performance_scenario.dart`,
 `example/integration_test/perf_canvas_surface_test.dart`, the descriptor/route
@@ -593,7 +593,7 @@ group-specific fixture-metadata signals above before measured action begins.
 
 Depends On: Unit 1.
 
-### [ ] Unit 3: Official Flutter artifact writer and local summaries
+### [x] Unit 3: Official Flutter artifact writer and local summaries
 
 Owner: `example/test_driver/perf_driver.dart` and the new focused writer test
 `test/tool/flutter_performance_driver_writer_test.dart`.
@@ -642,7 +642,7 @@ are absent.
 
 Depends On: Unit 2.
 
-### [ ] Unit 4: Artifact checker enforcement
+### [x] Unit 4: Artifact checker enforcement
 
 Owner: `tool/check_flutter_performance_artifacts.dart`,
 `test/tool/flutter_performance_artifacts_checker_test.dart`, and final
