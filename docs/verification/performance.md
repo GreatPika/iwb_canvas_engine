@@ -45,9 +45,15 @@ Run the profile route from the repository root with:
 cd example && flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/perf_canvas_surface_test.dart --profile --no-dds
 ```
 
-The command must complete every required report key derived from the catalog. A
-non-zero exit, crash, hang, missing report, missing artifact, stale preview or
-overlay completion failure, or malformed artifact is a route failure.
+Then validate the generated route artifacts from the repository root with:
+
+```bash
+dart run tool/check_flutter_performance_artifacts.dart --results example/build/flutter_performance
+```
+
+These commands must complete every required report key derived from the
+catalog. A non-zero exit, crash, hang, missing report, missing artifact, stale
+preview or overlay completion failure, or malformed artifact is a route failure.
 
 ## Scenario group model
 
