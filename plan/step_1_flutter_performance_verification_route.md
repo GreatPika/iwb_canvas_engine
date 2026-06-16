@@ -304,7 +304,7 @@ stable report key for every scenario is exactly its scenario id from
 
 ## Execution Units
 
-### [ ] Unit 1: Register the performance verification source of truth
+### [x] Unit 1: Register the performance verification source of truth
 
 Owner: `docs/verification/performance.md`,
 `docs/_registry/sections.yaml`, generated docs.
@@ -358,7 +358,7 @@ as the only required per-scenario release-run files.
 
 Depends On: none
 
-### [ ] Unit 2: Add the example profile-drive host as a public consumer
+### [x] Unit 2: Add the example profile-drive host as a public consumer
 
 Owner: `example/pubspec.yaml`, `example/lib/perf/**`,
 `example/test/performance_host_smoke_test.dart`, example package checks,
@@ -395,7 +395,7 @@ owner.
 
 Depends On: Unit 1
 
-### [ ] Unit 3: Implement the full Flutter scenario catalog
+### [x] Unit 3: Implement the full Flutter scenario catalog
 
 Owner: `example/lib/perf/performance_scenario.dart`,
 `example/integration_test/perf_canvas_surface_test.dart`, example scenario
@@ -453,7 +453,7 @@ example-test, and root performance-test owners.
 
 Depends On: Unit 2
 
-### [ ] Unit 4: Add the profile driver and artifact inventory proof
+### [x] Unit 4: Add the profile driver and artifact inventory proof
 
 Owner: `example/test_driver/perf_driver.dart`,
 `tool/check_flutter_performance_artifacts.dart`, generated profile-run
@@ -499,7 +499,7 @@ pass.
 
 Depends On: Unit 3
 
-### [ ] Unit 5: Promote the route into test inventory and release gates
+### [x] Unit 5: Promote the route into test inventory and release gates
 
 Owner: `docs/verification/tests.md`, `docs/verification/release_gates.md`,
 generated docs, final verification commands.
