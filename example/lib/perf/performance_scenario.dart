@@ -6,6 +6,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'performance_fixtures.dart';
 import 'performance_host.dart';
+import 'performance_scenario_catalog.dart' as catalog;
 
 typedef PerformanceScenarioAction =
     Future<void> Function(PerformanceScenarioContext context);
@@ -24,6 +25,11 @@ typedef PerformanceScenarioTraceAction =
       Future<void> Function() action, {
       required String reportKey,
     });
+typedef _RedesignedPhaseActions = ({
+  PerformanceScenarioActionPlan setup,
+  PerformanceScenarioActionPlan warm,
+  PerformanceScenarioActionPlan steady,
+});
 typedef _PointerDragGesture = ({
   Offset from,
   Offset to,
@@ -33,7 +39,6 @@ typedef _PointerDragGesture = ({
 });
 
 const _scenarioFrameStep = Duration(milliseconds: 16);
-const _steadyRepeatCount = 5;
 
 final class PerformanceScenarioContext {
   const PerformanceScenarioContext({
@@ -297,234 +302,70 @@ PerformancePhasePreparationSnapshot _preparationSnapshot({
 final List<PerformanceScenarioGroup> allPerformanceScenarioGroups =
     List<PerformanceScenarioGroup>.unmodifiable([
       _redesignedGroup(
-        id: 'load_document.100k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'fixture_json',
-          comparisonRole: 'setup_context',
-          action: _setupLoadDocumentJsonScenario(100000),
+        descriptor: _catalogGroup('load_document.100k'),
+        actions: (
+          setup: _setupLoadDocumentJsonScenario(100000),
+          warm: _loadDocumentFromPreparedJsonScenario(),
+          steady: _loadDocumentFromPreparedJsonScenario(),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'load_document',
-          comparisonRole: 'first_use_action',
-          action: _loadDocumentFromPreparedJsonScenario(),
-          canonicalPreparation: 'empty_runtime_with_prepared_json_fixture',
-          resetReason: 'load_writes_document_state',
-          measuredAction: 'load_document',
-          prepare: _prepareLoadDocument100k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'load_document',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _loadDocumentFromPreparedJsonScenario(),
-          canonicalPreparation: 'empty_runtime_with_prepared_json_fixture',
-          resetReason: 'load_writes_document_state',
-          measuredAction: 'load_document',
-          prepare: _prepareLoadDocument100k,
-        ),
+        prepare: _prepareLoadDocument100k,
       ),
       _redesignedGroup(
-        id: 'first_canvas_frame.50k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'preloaded_runtime',
-          comparisonRole: 'setup_context',
-          action: _firstCanvasFrameSetupScenario(),
+        descriptor: _catalogGroup('first_canvas_frame.50k'),
+        actions: (
+          setup: _firstCanvasFrameSetupScenario(),
+          warm: _firstCanvasFrameScenario(),
+          steady: _firstCanvasFrameScenario(),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'first_canvas_frame',
-          comparisonRole: 'first_use_action',
-          action: _firstCanvasFrameScenario(),
-          canonicalPreparation:
-              'preloaded_runtime_not_rendered_by_measured_surface',
-          resetReason: 'first_frame_cost_disappears_after_render',
-          measuredAction: 'first_canvas_frame',
-          prepare: _prepareFirstCanvasFrame50k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'first_canvas_frame',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _firstCanvasFrameScenario(),
-          canonicalPreparation:
-              'preloaded_runtime_not_rendered_by_measured_surface',
-          resetReason: 'first_frame_cost_disappears_after_render',
-          measuredAction: 'first_canvas_frame',
-          prepare: _prepareFirstCanvasFrame50k,
-        ),
+        prepare: _prepareFirstCanvasFrame50k,
       ),
       _redesignedGroup(
-        id: 'camera_pan.100k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'loaded_document',
-          comparisonRole: 'setup_context',
-          action: _loadDocumentScenario('camera_pan.100k', 100000),
+        descriptor: _catalogGroup('camera_pan.100k'),
+        actions: (
+          setup: _loadDocumentScenario('camera_pan.100k', 100000),
+          warm: _cameraPanActionScenario('camera_pan.100k'),
+          steady: _cameraPanActionScenario('camera_pan.100k'),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'camera_pan',
-          comparisonRole: 'first_use_action',
-          action: _cameraPanActionScenario('camera_pan.100k'),
-          canonicalPreparation: 'loaded_document_camera_origin_settled_surface',
-          resetReason: 'pan_accumulates_camera_offset',
-          measuredAction: 'camera_pan',
-          prepare: _prepareCameraPan100k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'camera_pan',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _cameraPanActionScenario('camera_pan.100k'),
-          canonicalPreparation: 'loaded_document_camera_origin_settled_surface',
-          resetReason: 'pan_accumulates_camera_offset',
-          measuredAction: 'camera_pan',
-          prepare: _prepareCameraPan100k,
-        ),
+        prepare: _prepareCameraPan100k,
       ),
       _redesignedGroup(
-        id: 'selection_move.50k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'loaded_selected_document',
-          comparisonRole: 'setup_context',
-          action: _selectionMoveSetupScenario(),
+        descriptor: _catalogGroup('selection_move.50k'),
+        actions: (
+          setup: _selectionMoveSetupScenario(),
+          warm: _selectionMoveActionScenario('selection_move.50k'),
+          steady: _selectionMoveActionScenario('selection_move.50k'),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'selection_move',
-          comparisonRole: 'first_use_action',
-          action: _selectionMoveActionScenario('selection_move.50k'),
-          canonicalPreparation: 'loaded_selected_document_original_geometry',
-          resetReason: 'move_translates_selected_geometry',
-          measuredAction: 'selection_move',
-          prepare: _prepareSelectionMove50k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'selection_move',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _selectionMoveActionScenario('selection_move.50k'),
-          canonicalPreparation: 'loaded_selected_document_original_geometry',
-          resetReason: 'move_translates_selected_geometry',
-          measuredAction: 'selection_move',
-          prepare: _prepareSelectionMove50k,
-        ),
+        prepare: _prepareSelectionMove50k,
       ),
       _redesignedGroup(
-        id: 'marquee_select.50k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'loaded_document',
-          comparisonRole: 'setup_context',
-          action: _marqueeSelectSetupScenario(),
+        descriptor: _catalogGroup('marquee_select.50k'),
+        actions: (
+          setup: _marqueeSelectSetupScenario(),
+          warm: _marqueeSelectActionScenario(),
+          steady: _marqueeSelectActionScenario(),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'marquee_select',
-          comparisonRole: 'first_use_action',
-          action: _marqueeSelectActionScenario(),
-          canonicalPreparation:
-              'loaded_document_move_mode_no_selection_settled_surface',
-          resetReason: 'marquee_commit_replaces_selection',
-          measuredAction: 'marquee_select',
-          prepare: _prepareMarqueeSelect50k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'marquee_select',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _marqueeSelectActionScenario(),
-          canonicalPreparation:
-              'loaded_document_move_mode_no_selection_settled_surface',
-          resetReason: 'marquee_commit_replaces_selection',
-          measuredAction: 'marquee_select',
-          prepare: _prepareMarqueeSelect50k,
-        ),
+        prepare: _prepareMarqueeSelect50k,
       ),
       _redesignedGroup(
-        id: 'json_export.50k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'loaded_document',
-          comparisonRole: 'setup_context',
-          action: _loadDocumentScenario('json_export.50k', 50000),
+        descriptor: _catalogGroup('json_export.50k'),
+        actions: (
+          setup: _loadDocumentScenario('json_export.50k', 50000),
+          warm: _jsonExportActionScenario(),
+          steady: _jsonExportActionScenario(),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'json_export',
-          comparisonRole: 'first_use_action',
-          action: _jsonExportActionScenario(),
-          canonicalPreparation: 'loaded_document_stable_order_no_pending_edit',
-          resetReason: 'export_reset_keeps_repeats_comparable',
-          measuredAction: 'json_export',
-          prepare: _prepareJsonExport50k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'json_export',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _jsonExportActionScenario(),
-          canonicalPreparation: 'loaded_document_stable_order_no_pending_edit',
-          resetReason: 'export_reset_keeps_repeats_comparable',
-          measuredAction: 'json_export',
-          prepare: _prepareJsonExport50k,
-        ),
+        prepare: _prepareJsonExport50k,
       ),
       _redesignedGroup(
-        id: 'eraser_dense_50k',
-        setup: _phase(
-          kind: 'setup',
-          name: 'loaded_draw_mode_document',
-          comparisonRole: 'setup_context',
-          action: _eraserDenseSetupScenario(),
+        descriptor: _catalogGroup('eraser_dense_50k'),
+        actions: (
+          setup: _eraserDenseSetupScenario(),
+          warm: _eraserDenseActionScenario(),
+          steady: _eraserDenseActionScenario(),
         ),
-        warm: _phase(
-          kind: 'warm',
-          name: 'eraser_dense',
-          comparisonRole: 'first_use_action',
-          action: _eraserDenseActionScenario(),
-          canonicalPreparation:
-              'loaded_draw_mode_eraser_document_without_prior_erasure',
-          resetReason: 'eraser_removes_elements',
-          measuredAction: 'eraser_dense',
-          prepare: _prepareEraserDense50k,
-        ),
-        steady: _phase(
-          kind: 'steady',
-          name: 'eraser_dense',
-          comparisonRole: 'steady_action',
-          repeats: _steadyRepeatCount,
-          action: _eraserDenseActionScenario(),
-          canonicalPreparation:
-              'loaded_draw_mode_eraser_document_without_prior_erasure',
-          resetReason: 'eraser_removes_elements',
-          measuredAction: 'eraser_dense',
-          prepare: _prepareEraserDense50k,
-        ),
+        prepare: _prepareEraserDense50k,
       ),
       for (final action in _singleCurrentBehaviorActions)
-        PerformanceScenarioGroup(
-          id: action.id,
-          migration: 'single.current_behavior',
-          phases: [
-            _phase(
-              kind: 'single',
-              name: 'current_behavior',
-              comparisonRole: 'current_behavior',
-              action: action,
-            ),
-          ],
-        ),
+        _singleCurrentBehaviorGroup(action),
     ]);
 
 final List<PerformanceScenarioPhaseRun> allPerformanceScenarioPhaseRuns =
@@ -551,12 +392,12 @@ String performanceReportKey({
   required String phaseName,
   required int repeat,
 }) {
-  if (repeat < 1 || repeat > 999) {
-    throw RangeError.range(repeat, 1, 999, 'repeat');
-  }
-  return '$scenarioGroup'
-      '__$phaseKind.$phaseName'
-      '__repeat_${repeat.toString().padLeft(3, '0')}';
+  return catalog.performanceReportKey(
+    scenarioGroup: scenarioGroup,
+    phaseKind: phaseKind,
+    phaseName: phaseName,
+    repeat: repeat,
+  );
 }
 
 final List<PerformanceScenarioActionPlan> _singleCurrentBehaviorActions =
@@ -583,42 +424,54 @@ final List<PerformanceScenarioActionPlan> _singleCurrentBehaviorActions =
     ]);
 
 PerformanceScenarioGroup _redesignedGroup({
-  required String id,
-  required PerformanceScenarioPhase setup,
-  required PerformanceScenarioPhase warm,
-  required PerformanceScenarioPhase steady,
+  required catalog.PerformanceScenarioCatalogGroup descriptor,
+  required _RedesignedPhaseActions actions,
+  required PerformanceScenarioPreparation prepare,
 }) {
+  final phases = descriptor.phases;
   return PerformanceScenarioGroup(
-    id: id,
-    migration: 'redesigned',
-    phases: [setup, warm, steady],
+    id: descriptor.id,
+    migration: descriptor.migration,
+    phases: [
+      _phase(descriptor: phases[0], action: actions.setup),
+      _phase(descriptor: phases[1], action: actions.warm, prepare: prepare),
+      _phase(descriptor: phases[2], action: actions.steady, prepare: prepare),
+    ],
   );
 }
 
-// The descriptor factory mirrors the manifest fields so the executable catalog
-// stays legible; splitting these parameters would obscure the phase contract.
-// ignore: number-of-parameters
 PerformanceScenarioPhase _phase({
-  required String kind,
-  required String name,
-  required String comparisonRole,
+  required catalog.PerformanceScenarioCatalogPhase descriptor,
   required PerformanceScenarioActionPlan action,
-  int repeats = 1,
-  String? canonicalPreparation,
-  String? resetReason,
-  String? measuredAction,
   PerformanceScenarioPreparation? prepare,
 }) {
   return PerformanceScenarioPhase(
-    kind: kind,
-    name: name,
-    comparisonRole: comparisonRole,
-    repeats: repeats,
+    kind: descriptor.kind,
+    name: descriptor.name,
+    comparisonRole: descriptor.comparisonRole,
+    repeats: descriptor.repeats,
     action: action,
-    canonicalPreparation: canonicalPreparation,
-    resetReason: resetReason,
-    measuredAction: measuredAction,
+    canonicalPreparation: descriptor.canonicalPreparation,
+    resetReason: descriptor.resetReason,
+    measuredAction: descriptor.measuredAction,
     prepare: prepare,
+  );
+}
+
+PerformanceScenarioGroup _singleCurrentBehaviorGroup(
+  PerformanceScenarioActionPlan action,
+) {
+  final descriptor = _catalogGroup(action.id);
+  return PerformanceScenarioGroup(
+    id: descriptor.id,
+    migration: descriptor.migration,
+    phases: [_phase(descriptor: descriptor.phases.single, action: action)],
+  );
+}
+
+catalog.PerformanceScenarioCatalogGroup _catalogGroup(String id) {
+  return catalog.performanceScenarioCatalogGroups.singleWhere(
+    (group) => group.id == id,
   );
 }
 
