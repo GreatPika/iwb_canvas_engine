@@ -20,4 +20,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 
 ## Step Files
 
-No active step contracts are currently retained.
+- [ ] [Step 1. Flutter performance verification route](plan/step_1_flutter_performance_verification_route.md)
