@@ -9,10 +9,21 @@ import 'performance_host.dart';
 
 typedef PerformanceScenarioAction =
     Future<void> Function(PerformanceScenarioContext context);
+typedef PerformanceScenarioPreparation =
+    Future<PerformancePreparedPhaseAction> Function(
+      PerformanceScenarioContext context,
+    );
 
 typedef PerformanceScenarioSettle = Future<void> Function();
 typedef PerformanceScenarioPumpFrame =
     Future<void> Function([Duration duration]);
+typedef PerformancePhasePreparationProbe =
+    void Function(PerformancePhasePreparationSnapshot snapshot);
+typedef PerformanceScenarioTraceAction =
+    Future<void> Function(
+      Future<void> Function() action, {
+      required String reportKey,
+    });
 typedef _PointerDragGesture = ({
   Offset from,
   Offset to,
@@ -22,6 +33,7 @@ typedef _PointerDragGesture = ({
 });
 
 const _scenarioFrameStep = Duration(milliseconds: 16);
+const _steadyRepeatCount = 5;
 
 final class PerformanceScenarioContext {
   const PerformanceScenarioContext({
@@ -41,8 +53,8 @@ final class PerformanceScenarioContext {
   }
 }
 
-final class PerformanceScenario {
-  const PerformanceScenario({
+final class PerformanceScenarioActionPlan {
+  const PerformanceScenarioActionPlan({
     required this.id,
     required this.action,
     this.afterSettle,
@@ -51,77 +63,514 @@ final class PerformanceScenario {
   final String id;
   final PerformanceScenarioAction action;
   final PerformanceScenarioAction? afterSettle;
+}
 
+final class PerformancePreparedPhaseAction {
+  const PerformancePreparedPhaseAction({
+    required this.action,
+    required this.fixtureMetadata,
+  });
+
+  final PerformanceScenarioAction action;
+  final Map<String, Object?> fixtureMetadata;
+}
+
+final class PerformanceScenarioGroup {
+  const PerformanceScenarioGroup({
+    required this.id,
+    required this.migration,
+    required this.phases,
+  });
+
+  final String id;
+  final String migration;
+  final List<PerformanceScenarioPhase> phases;
+}
+
+final class PerformanceScenarioPhase {
+  const PerformanceScenarioPhase({
+    required this.kind,
+    required this.name,
+    required this.comparisonRole,
+    required this.repeats,
+    required this.action,
+    this.canonicalPreparation,
+    this.resetReason,
+    this.measuredAction,
+    this.prepare,
+  });
+
+  final String kind;
+  final String name;
+  final String comparisonRole;
+  final int repeats;
+  final PerformanceScenarioActionPlan action;
+  final String? canonicalPreparation;
+  final String? resetReason;
+  final String? measuredAction;
+  final PerformanceScenarioPreparation? prepare;
+}
+
+final class PerformanceScenarioPhaseRun {
+  const PerformanceScenarioPhaseRun({
+    required this.scenarioGroup,
+    required this.phase,
+    required this.repeat,
+    required this.reportKey,
+  });
+
+  final PerformanceScenarioGroup scenarioGroup;
+  final PerformanceScenarioPhase phase;
+  final int repeat;
+  final String reportKey;
+
+  String get scenarioGroupId => scenarioGroup.id;
+  String get phaseKey => '${phase.kind}.${phase.name}';
+
+  // Keeping the route dependencies explicit makes the trace boundary easier to
+  // audit than hiding binding, host, pumping, settle, and probe in a bag type.
+  // ignore: number-of-parameters
   Future<void> runTraced({
     required IntegrationTestWidgetsFlutterBinding binding,
     required PerformanceHostController host,
     required PerformanceScenarioPumpFrame pumpFrame,
     required PerformanceScenarioSettle settle,
+    PerformancePhasePreparationProbe? preparationProbe,
+    PerformanceScenarioTraceAction? traceAction,
   }) {
-    return runPerformanceScenarioTraced(
-      PerformanceScenarioTraceRequest(
+    return runPerformanceScenarioPhaseTraced(
+      PerformanceScenarioPhaseTraceRequest(
         binding: binding,
-        scenario: this,
+        phaseRun: this,
         host: host,
         pumpFrame: pumpFrame,
         settle: settle,
+        preparationProbe: preparationProbe,
+        traceAction: traceAction,
       ),
     );
   }
 }
 
-final class PerformanceScenarioTraceRequest {
-  const PerformanceScenarioTraceRequest({
+final class PerformanceScenarioPhaseTraceRequest {
+  const PerformanceScenarioPhaseTraceRequest({
     required this.binding,
-    required this.scenario,
+    required this.phaseRun,
     required this.host,
     required this.pumpFrame,
     required this.settle,
+    this.preparationProbe,
+    this.traceAction,
   });
 
   final IntegrationTestWidgetsFlutterBinding binding;
-  final PerformanceScenario scenario;
+  final PerformanceScenarioPhaseRun phaseRun;
   final PerformanceHostController host;
   final PerformanceScenarioPumpFrame pumpFrame;
   final PerformanceScenarioSettle settle;
+  final PerformancePhasePreparationProbe? preparationProbe;
+  final PerformanceScenarioTraceAction? traceAction;
 }
 
-Future<void> runPerformanceScenarioTraced(
-  PerformanceScenarioTraceRequest request,
-) {
+final class PerformancePhasePreparationSnapshot {
+  const PerformancePhasePreparationSnapshot({
+    required this.scenarioGroup,
+    required this.phaseKey,
+    required this.repeat,
+    required this.canonicalPreparation,
+    required this.resetReason,
+    required this.preparationMeasured,
+    required this.publicState,
+    required this.documentFingerprint,
+    required this.cameraOffset,
+    required this.toolMode,
+    required this.drawTool,
+    required this.fixtureMetadata,
+  });
+
+  final String scenarioGroup;
+  final String phaseKey;
+  final int repeat;
+  final String canonicalPreparation;
+  final String resetReason;
+  final bool preparationMeasured;
+  final CanvasRuntimeState publicState;
+  final String documentFingerprint;
+  final Offset cameraOffset;
+  final CanvasInteractionMode toolMode;
+  final CanvasDrawTool drawTool;
+  final Map<String, Object?> fixtureMetadata;
+}
+
+Future<void> runPerformanceScenarioPhaseTraced(
+  PerformanceScenarioPhaseTraceRequest request,
+) async {
   final context = PerformanceScenarioContext(
     host: request.host,
     pumpFrame: request.pumpFrame,
   );
-  return request.binding.traceAction(() async {
-    await request.scenario.action(context);
+  final phase = request.phaseRun.phase;
+  final prepared = await _preparePhaseAction(context, phase);
+  _capturePreparationSnapshot(
+    request: request,
+    context: context,
+    fixtureMetadata: prepared.fixtureMetadata,
+  );
+  final traceAction =
+      request.traceAction ??
+      (Future<void> Function() action, {required String reportKey}) {
+        return request.binding.traceAction(action, reportKey: reportKey);
+      };
+  await traceAction(() async {
+    await prepared.action(context);
     await request.settle();
-    final afterSettle = request.scenario.afterSettle;
+    final afterSettle = phase.action.afterSettle;
     if (afterSettle != null) {
       await afterSettle(context);
       await request.settle();
     }
-  }, reportKey: request.scenario.id);
+  }, reportKey: request.phaseRun.reportKey);
 }
 
-final List<PerformanceScenario> allPerformanceScenarios =
-    List<PerformanceScenario>.unmodifiable([
+Future<PerformancePreparedPhaseAction> _preparePhaseAction(
+  PerformanceScenarioContext context,
+  PerformanceScenarioPhase phase,
+) async {
+  final prepare = phase.prepare;
+  if (prepare != null) {
+    return prepare(context);
+  }
+  return PerformancePreparedPhaseAction(
+    action: phase.action.action,
+    fixtureMetadata: const <String, Object?>{},
+  );
+}
+
+void _capturePreparationSnapshot({
+  required PerformanceScenarioPhaseTraceRequest request,
+  required PerformanceScenarioContext context,
+  required Map<String, Object?> fixtureMetadata,
+}) {
+  final phase = request.phaseRun.phase;
+  final preparationProbe = request.preparationProbe;
+  if (preparationProbe == null || phase.prepare == null) {
+    return;
+  }
+  preparationProbe(
+    _preparationSnapshot(
+      phaseRun: request.phaseRun,
+      context: context,
+      fixtureMetadata: fixtureMetadata,
+    ),
+  );
+}
+
+PerformancePhasePreparationSnapshot _preparationSnapshot({
+  required PerformanceScenarioPhaseRun phaseRun,
+  required PerformanceScenarioContext context,
+  required Map<String, Object?> fixtureMetadata,
+}) {
+  final phase = phaseRun.phase;
+  final canonicalPreparation = phase.canonicalPreparation;
+  final resetReason = phase.resetReason;
+  if (canonicalPreparation == null || resetReason == null) {
+    throw StateError('${phaseRun.reportKey} has no canonical preparation.');
+  }
+  return PerformancePhasePreparationSnapshot(
+    scenarioGroup: phaseRun.scenarioGroupId,
+    phaseKey: phaseRun.phaseKey,
+    repeat: phaseRun.repeat,
+    canonicalPreparation: canonicalPreparation,
+    resetReason: resetReason,
+    preparationMeasured: false,
+    publicState: context.runtime.state.value,
+    documentFingerprint: encodeCanvasDocumentToJson(
+      context.runtime.readDocument(),
+    ),
+    cameraOffset: context.runtime.camera.offset,
+    toolMode: context.runtime.tools.mode,
+    drawTool: context.runtime.tools.drawStyle.tool,
+    fixtureMetadata: Map<String, Object?>.unmodifiable(fixtureMetadata),
+  );
+}
+
+final List<PerformanceScenarioGroup> allPerformanceScenarioGroups =
+    List<PerformanceScenarioGroup>.unmodifiable([
+      _redesignedGroup(
+        id: 'load_document.100k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'fixture_json',
+          comparisonRole: 'setup_context',
+          action: _setupLoadDocumentJsonScenario(100000),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'load_document',
+          comparisonRole: 'first_use_action',
+          action: _loadDocumentFromPreparedJsonScenario(),
+          canonicalPreparation: 'empty_runtime_with_prepared_json_fixture',
+          resetReason: 'load_writes_document_state',
+          measuredAction: 'load_document',
+          prepare: _prepareLoadDocument100k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'load_document',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _loadDocumentFromPreparedJsonScenario(),
+          canonicalPreparation: 'empty_runtime_with_prepared_json_fixture',
+          resetReason: 'load_writes_document_state',
+          measuredAction: 'load_document',
+          prepare: _prepareLoadDocument100k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'first_canvas_frame.50k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'preloaded_runtime',
+          comparisonRole: 'setup_context',
+          action: _firstCanvasFrameSetupScenario(),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'first_canvas_frame',
+          comparisonRole: 'first_use_action',
+          action: _firstCanvasFrameScenario(),
+          canonicalPreparation:
+              'preloaded_runtime_not_rendered_by_measured_surface',
+          resetReason: 'first_frame_cost_disappears_after_render',
+          measuredAction: 'first_canvas_frame',
+          prepare: _prepareFirstCanvasFrame50k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'first_canvas_frame',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _firstCanvasFrameScenario(),
+          canonicalPreparation:
+              'preloaded_runtime_not_rendered_by_measured_surface',
+          resetReason: 'first_frame_cost_disappears_after_render',
+          measuredAction: 'first_canvas_frame',
+          prepare: _prepareFirstCanvasFrame50k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'camera_pan.100k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'loaded_document',
+          comparisonRole: 'setup_context',
+          action: _loadDocumentScenario('camera_pan.100k', 100000),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'camera_pan',
+          comparisonRole: 'first_use_action',
+          action: _cameraPanActionScenario('camera_pan.100k'),
+          canonicalPreparation: 'loaded_document_camera_origin_settled_surface',
+          resetReason: 'pan_accumulates_camera_offset',
+          measuredAction: 'camera_pan',
+          prepare: _prepareCameraPan100k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'camera_pan',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _cameraPanActionScenario('camera_pan.100k'),
+          canonicalPreparation: 'loaded_document_camera_origin_settled_surface',
+          resetReason: 'pan_accumulates_camera_offset',
+          measuredAction: 'camera_pan',
+          prepare: _prepareCameraPan100k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'selection_move.50k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'loaded_selected_document',
+          comparisonRole: 'setup_context',
+          action: _selectionMoveSetupScenario(),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'selection_move',
+          comparisonRole: 'first_use_action',
+          action: _selectionMoveActionScenario('selection_move.50k'),
+          canonicalPreparation: 'loaded_selected_document_original_geometry',
+          resetReason: 'move_translates_selected_geometry',
+          measuredAction: 'selection_move',
+          prepare: _prepareSelectionMove50k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'selection_move',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _selectionMoveActionScenario('selection_move.50k'),
+          canonicalPreparation: 'loaded_selected_document_original_geometry',
+          resetReason: 'move_translates_selected_geometry',
+          measuredAction: 'selection_move',
+          prepare: _prepareSelectionMove50k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'marquee_select.50k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'loaded_document',
+          comparisonRole: 'setup_context',
+          action: _marqueeSelectSetupScenario(),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'marquee_select',
+          comparisonRole: 'first_use_action',
+          action: _marqueeSelectActionScenario(),
+          canonicalPreparation:
+              'loaded_document_move_mode_no_selection_settled_surface',
+          resetReason: 'marquee_commit_replaces_selection',
+          measuredAction: 'marquee_select',
+          prepare: _prepareMarqueeSelect50k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'marquee_select',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _marqueeSelectActionScenario(),
+          canonicalPreparation:
+              'loaded_document_move_mode_no_selection_settled_surface',
+          resetReason: 'marquee_commit_replaces_selection',
+          measuredAction: 'marquee_select',
+          prepare: _prepareMarqueeSelect50k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'json_export.50k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'loaded_document',
+          comparisonRole: 'setup_context',
+          action: _loadDocumentScenario('json_export.50k', 50000),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'json_export',
+          comparisonRole: 'first_use_action',
+          action: _jsonExportActionScenario(),
+          canonicalPreparation: 'loaded_document_stable_order_no_pending_edit',
+          resetReason: 'export_reset_keeps_repeats_comparable',
+          measuredAction: 'json_export',
+          prepare: _prepareJsonExport50k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'json_export',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _jsonExportActionScenario(),
+          canonicalPreparation: 'loaded_document_stable_order_no_pending_edit',
+          resetReason: 'export_reset_keeps_repeats_comparable',
+          measuredAction: 'json_export',
+          prepare: _prepareJsonExport50k,
+        ),
+      ),
+      _redesignedGroup(
+        id: 'eraser_dense_50k',
+        setup: _phase(
+          kind: 'setup',
+          name: 'loaded_draw_mode_document',
+          comparisonRole: 'setup_context',
+          action: _eraserDenseSetupScenario(),
+        ),
+        warm: _phase(
+          kind: 'warm',
+          name: 'eraser_dense',
+          comparisonRole: 'first_use_action',
+          action: _eraserDenseActionScenario(),
+          canonicalPreparation:
+              'loaded_draw_mode_eraser_document_without_prior_erasure',
+          resetReason: 'eraser_removes_elements',
+          measuredAction: 'eraser_dense',
+          prepare: _prepareEraserDense50k,
+        ),
+        steady: _phase(
+          kind: 'steady',
+          name: 'eraser_dense',
+          comparisonRole: 'steady_action',
+          repeats: _steadyRepeatCount,
+          action: _eraserDenseActionScenario(),
+          canonicalPreparation:
+              'loaded_draw_mode_eraser_document_without_prior_erasure',
+          resetReason: 'eraser_removes_elements',
+          measuredAction: 'eraser_dense',
+          prepare: _prepareEraserDense50k,
+        ),
+      ),
+      for (final action in _singleCurrentBehaviorActions)
+        PerformanceScenarioGroup(
+          id: action.id,
+          migration: 'single.current_behavior',
+          phases: [
+            _phase(
+              kind: 'single',
+              name: 'current_behavior',
+              comparisonRole: 'current_behavior',
+              action: action,
+            ),
+          ],
+        ),
+    ]);
+
+final List<PerformanceScenarioPhaseRun> allPerformanceScenarioPhaseRuns =
+    List<PerformanceScenarioPhaseRun>.unmodifiable([
+      for (final group in allPerformanceScenarioGroups)
+        for (final phase in group.phases)
+          for (var repeat = 1; repeat <= phase.repeats; repeat += 1)
+            PerformanceScenarioPhaseRun(
+              scenarioGroup: group,
+              phase: phase,
+              repeat: repeat,
+              reportKey: performanceReportKey(
+                scenarioGroup: group.id,
+                phaseKind: phase.kind,
+                phaseName: phase.name,
+                repeat: repeat,
+              ),
+            ),
+    ]);
+
+String performanceReportKey({
+  required String scenarioGroup,
+  required String phaseKind,
+  required String phaseName,
+  required int repeat,
+}) {
+  if (repeat < 1 || repeat > 999) {
+    throw RangeError.range(repeat, 1, 999, 'repeat');
+  }
+  return '$scenarioGroup'
+      '__$phaseKind.$phaseName'
+      '__repeat_${repeat.toString().padLeft(3, '0')}';
+}
+
+final List<PerformanceScenarioActionPlan> _singleCurrentBehaviorActions =
+    List<PerformanceScenarioActionPlan>.unmodifiable([
       _loadDocumentScenario('load_document.1k', 1000),
       _loadDocumentScenario('load_document.10k', 10000),
       _loadDocumentScenario('load_document.50k', 50000),
-      _loadDocumentScenario('load_document.100k', 100000),
-      _loadDocumentScenario('first_canvas_frame.50k', 50000),
       _cameraPanScenario('camera_pan.50k', 50000),
-      _cameraPanScenario('camera_pan.100k', 100000),
       _selectionTapScenario(),
       _selectionMoveScenario('selection_move.10k', 10000),
-      _selectionMoveScenario('selection_move.50k', 50000),
-      _marqueeSelectScenario(),
       _drawScenario('pencil_draw.10k', CanvasDrawTool.pencil),
       _drawScenario('marker_draw.10k', CanvasDrawTool.marker),
       _lineTwoTapScenario(),
       _drawScenario('eraser_normal.50k', CanvasDrawTool.eraser),
-      _drawScenario('eraser_dense_50k', CanvasDrawTool.eraser),
       _contextDeleteScenario(),
       _textEditOpenCommitScenario(),
       _textStyleChangeScenario(),
@@ -131,11 +580,53 @@ final List<PerformanceScenario> allPerformanceScenarios =
       _missingResourceScenario(),
       _surfaceRuntimeSwapScenario(),
       _disposeDuringPreviewScenario(),
-      _jsonExportScenario(),
     ]);
 
-PerformanceScenario _loadDocumentScenario(String id, int elementCount) {
-  return PerformanceScenario(
+PerformanceScenarioGroup _redesignedGroup({
+  required String id,
+  required PerformanceScenarioPhase setup,
+  required PerformanceScenarioPhase warm,
+  required PerformanceScenarioPhase steady,
+}) {
+  return PerformanceScenarioGroup(
+    id: id,
+    migration: 'redesigned',
+    phases: [setup, warm, steady],
+  );
+}
+
+// The descriptor factory mirrors the manifest fields so the executable catalog
+// stays legible; splitting these parameters would obscure the phase contract.
+// ignore: number-of-parameters
+PerformanceScenarioPhase _phase({
+  required String kind,
+  required String name,
+  required String comparisonRole,
+  required PerformanceScenarioActionPlan action,
+  int repeats = 1,
+  String? canonicalPreparation,
+  String? resetReason,
+  String? measuredAction,
+  PerformanceScenarioPreparation? prepare,
+}) {
+  return PerformanceScenarioPhase(
+    kind: kind,
+    name: name,
+    comparisonRole: comparisonRole,
+    repeats: repeats,
+    action: action,
+    canonicalPreparation: canonicalPreparation,
+    resetReason: resetReason,
+    measuredAction: measuredAction,
+    prepare: prepare,
+  );
+}
+
+PerformanceScenarioActionPlan _loadDocumentScenario(
+  String id,
+  int elementCount,
+) {
+  return PerformanceScenarioActionPlan(
     id: id,
     action: (context) async {
       context.runtime.edits.loadDocumentFromJson(
@@ -146,22 +637,57 @@ PerformanceScenario _loadDocumentScenario(String id, int elementCount) {
   );
 }
 
-PerformanceScenario _cameraPanScenario(String id, int elementCount) {
-  return PerformanceScenario(
-    id: id,
+PerformanceScenarioActionPlan _setupLoadDocumentJsonScenario(int elementCount) {
+  return PerformanceScenarioActionPlan(
+    id: 'setup.fixture_json',
     action: (context) async {
-      _loadDocument(context.runtime, performanceRectDocument(elementCount));
-      await context.pumpScenarioFrame();
-      for (var index = 0; index < 12; index += 1) {
-        context.runtime.camera.panBy(Offset(8 + index.toDouble(), 4));
-        await context.pumpScenarioFrame();
+      final json = performanceFixtureJson(
+        performanceRectDocument(elementCount),
+      );
+      if (json.isEmpty) {
+        throw StateError('setup.fixture_json produced an empty fixture.');
       }
+      await context.pumpScenarioFrame();
     },
   );
 }
 
-PerformanceScenario _selectionTapScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _loadDocumentFromPreparedJsonScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'warm.load_document',
+    action: (context) async {
+      context.runtime.edits.loadDocumentFromJson(
+        performanceFixtureJson(performanceRectDocument(100000)),
+      );
+      await context.pumpScenarioFrame();
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _cameraPanScenario(String id, int elementCount) {
+  return PerformanceScenarioActionPlan(
+    id: id,
+    action: (context) async {
+      _loadDocument(context.runtime, performanceRectDocument(elementCount));
+      await context.pumpScenarioFrame();
+      await _panCamera(context);
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _cameraPanActionScenario(String id) {
+  return PerformanceScenarioActionPlan(id: id, action: _panCamera);
+}
+
+Future<void> _panCamera(PerformanceScenarioContext context) async {
+  for (var index = 0; index < 12; index += 1) {
+    context.runtime.camera.panBy(Offset(8 + index.toDouble(), 4));
+    await context.pumpScenarioFrame();
+  }
+}
+
+PerformanceScenarioActionPlan _selectionTapScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'selection_tap.10k',
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(10000));
@@ -174,8 +700,11 @@ PerformanceScenario _selectionTapScenario() {
   );
 }
 
-PerformanceScenario _selectionMoveScenario(String id, int elementCount) {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _selectionMoveScenario(
+  String id,
+  int elementCount,
+) {
+  return PerformanceScenarioActionPlan(
     id: id,
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(elementCount));
@@ -184,36 +713,73 @@ PerformanceScenario _selectionMoveScenario(String id, int elementCount) {
         CanvasElementId(performancePrimaryRectId),
       ]);
       await context.pumpScenarioFrame();
-      context.runtime.selection.moveSelection(
-        const Offset(16, 12),
-        timestampMs: 20,
-      );
-      await context.pumpScenarioFrame();
+      await _moveSelection(context);
     },
   );
 }
 
-PerformanceScenario _marqueeSelectScenario() {
-  return PerformanceScenario(
-    id: 'marquee_select.50k',
+PerformanceScenarioActionPlan _selectionMoveSetupScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'selection_move.50k',
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(50000));
       await context.pumpScenarioFrame();
-      await _pointerDrag(context, (
-        from: const Offset(0, 0),
-        to: const Offset(180, 180),
-        drawTool: null,
-        pointerId: 1,
-        includeTerminal: true,
-      ));
+      context.runtime.selection.setSelection([
+        CanvasElementId(performancePrimaryRectId),
+      ]);
+      await context.pumpScenarioFrame();
     },
   );
 }
 
-PerformanceScenario _drawScenario(String id, CanvasDrawTool drawTool) {
+PerformanceScenarioActionPlan _selectionMoveActionScenario(String id) {
+  return PerformanceScenarioActionPlan(id: id, action: _moveSelection);
+}
+
+Future<void> _moveSelection(PerformanceScenarioContext context) async {
+  context.runtime.selection.moveSelection(
+    const Offset(16, 12),
+    timestampMs: 20,
+  );
+  await context.pumpScenarioFrame();
+}
+
+PerformanceScenarioActionPlan _marqueeSelectSetupScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'marquee_select.50k',
+    action: (context) async {
+      _loadDocument(context.runtime, performanceRectDocument(50000));
+      context.runtime.selection.clearSelection();
+      context.runtime.tools.setMode(CanvasInteractionMode.move);
+      await context.pumpScenarioFrame();
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _marqueeSelectActionScenario() {
+  return const PerformanceScenarioActionPlan(
+    id: 'marquee_select.50k',
+    action: _dragMarquee,
+  );
+}
+
+Future<void> _dragMarquee(PerformanceScenarioContext context) {
+  return _pointerDrag(context, (
+    from: const Offset(0, 0),
+    to: const Offset(180, 180),
+    drawTool: null,
+    pointerId: 1,
+    includeTerminal: true,
+  ));
+}
+
+PerformanceScenarioActionPlan _drawScenario(
+  String id,
+  CanvasDrawTool drawTool,
+) {
   final count = id.endsWith('.10k') ? 10000 : 50000;
 
-  return PerformanceScenario(
+  return PerformanceScenarioActionPlan(
     id: id,
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(count));
@@ -229,8 +795,36 @@ PerformanceScenario _drawScenario(String id, CanvasDrawTool drawTool) {
   );
 }
 
-PerformanceScenario _lineTwoTapScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _eraserDenseSetupScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'eraser_dense_50k',
+    action: (context) async {
+      _loadDocument(context.runtime, performanceRectDocument(50000));
+      context.runtime.tools
+        ..setMode(CanvasInteractionMode.draw)
+        ..setDrawTool(CanvasDrawTool.eraser);
+      await context.pumpScenarioFrame();
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _eraserDenseActionScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'eraser_dense_50k',
+    action: (context) {
+      return _pointerDrag(context, (
+        from: const Offset(10, 10),
+        to: const Offset(130, 40),
+        drawTool: CanvasDrawTool.eraser,
+        pointerId: 1,
+        includeTerminal: true,
+      ));
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _lineTwoTapScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'line_two_tap.50k',
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(50000));
@@ -256,8 +850,8 @@ PerformanceScenario _lineTwoTapScenario() {
   );
 }
 
-PerformanceScenario _contextDeleteScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _contextDeleteScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'context_delete.10k',
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(10000));
@@ -272,11 +866,11 @@ PerformanceScenario _contextDeleteScenario() {
   );
 }
 
-PerformanceScenario _textEditOpenCommitScenario() {
+PerformanceScenarioActionPlan _textEditOpenCommitScenario() {
   final requests = <CanvasContextActionRequested>[];
   StreamSubscription<CanvasContextActionRequested>? subscription;
 
-  return PerformanceScenario(
+  return PerformanceScenarioActionPlan(
     id: 'text_edit.open_commit',
     action: (context) async {
       _loadDocument(context.runtime, createPerformanceHostSmokeDocument());
@@ -296,8 +890,8 @@ PerformanceScenario _textEditOpenCommitScenario() {
   );
 }
 
-PerformanceScenario _textStyleChangeScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _textStyleChangeScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'text_style_change.10k',
     action: (context) async {
       _loadDocument(context.runtime, performanceTextDocument(rectCount: 9999));
@@ -319,8 +913,8 @@ PerformanceScenario _textStyleChangeScenario() {
   );
 }
 
-PerformanceScenario _resourceImageScenario(String id, String appKey) {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _resourceImageScenario(String id, String appKey) {
+  return PerformanceScenarioActionPlan(
     id: id,
     action: (context) async {
       _loadDocument(
@@ -337,8 +931,8 @@ PerformanceScenario _resourceImageScenario(String id, String appKey) {
   );
 }
 
-PerformanceScenario _resourceMarkDirtyScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _resourceMarkDirtyScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'resource_mark_dirty',
     action: (context) async {
       _loadDocument(
@@ -357,8 +951,8 @@ PerformanceScenario _resourceMarkDirtyScenario() {
   );
 }
 
-PerformanceScenario _missingResourceScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _missingResourceScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'missing_resource',
     action: (context) async {
       _loadDocument(context.runtime, performanceMissingResourceDocument());
@@ -369,8 +963,8 @@ PerformanceScenario _missingResourceScenario() {
   );
 }
 
-PerformanceScenario _surfaceRuntimeSwapScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _surfaceRuntimeSwapScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'surface_runtime_swap',
     action: (context) async {
       final replacement = CanvasRuntime();
@@ -381,8 +975,8 @@ PerformanceScenario _surfaceRuntimeSwapScenario() {
   );
 }
 
-PerformanceScenario _disposeDuringPreviewScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _disposeDuringPreviewScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'dispose_during_preview',
     action: (context) async {
       _loadDocument(context.runtime, performanceRectDocument(1000));
@@ -421,12 +1015,10 @@ Future<void> _commitTextEditRequest(
   await context.pumpScenarioFrame();
 }
 
-PerformanceScenario _jsonExportScenario() {
-  return PerformanceScenario(
+PerformanceScenarioActionPlan _jsonExportActionScenario() {
+  return PerformanceScenarioActionPlan(
     id: 'json_export.50k',
     action: (context) async {
-      _loadDocument(context.runtime, performanceRectDocument(50000));
-      await context.pumpScenarioFrame();
       final json = context.runtime.edits.edit((edit) {
         return performanceFixtureJson(edit.readDraftDocument());
       });
@@ -434,6 +1026,142 @@ PerformanceScenario _jsonExportScenario() {
         throw StateError('json_export.50k produced an empty document.');
       }
       await context.pumpScenarioFrame();
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _firstCanvasFrameSetupScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'first_canvas_frame.50k',
+    action: (context) async {
+      _loadDocument(context.runtime, performanceRectDocument(50000));
+      await context.pumpScenarioFrame();
+    },
+  );
+}
+
+PerformanceScenarioActionPlan _firstCanvasFrameScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'first_canvas_frame.50k',
+    action: (context) async {
+      await context.pumpScenarioFrame();
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
+  PerformanceScenarioContext context,
+) async {
+  context.host.swapRuntime(CanvasRuntime());
+  final preparedJson = performanceFixtureJson(performanceRectDocument(100000));
+  return PerformancePreparedPhaseAction(
+    action: (actionContext) async {
+      actionContext.runtime.edits.loadDocumentFromJson(preparedJson);
+      await actionContext.pumpScenarioFrame();
+    },
+    fixtureMetadata: {
+      'preparedJsonElementCount': 100000,
+      'targetElementCountBeforeAction': 0,
+      'targetSelectedCountBeforeAction': 0,
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareFirstCanvasFrame50k(
+  PerformanceScenarioContext context,
+) async {
+  final runtime = CanvasRuntime();
+  _loadDocument(runtime, performanceRectDocument(50000));
+  context.host.swapRuntime(runtime);
+  return PerformancePreparedPhaseAction(
+    action: _firstCanvasFrameScenario().action,
+    fixtureMetadata: {
+      'loadedElementCount': 50000,
+      'surfaceRenderState': 'not_rendered_by_measured_surface',
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareCameraPan100k(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceRectDocument(100000));
+  context.runtime.camera.setOffset(Offset.zero);
+  await context.pumpScenarioFrame();
+  return const PerformancePreparedPhaseAction(
+    action: _panCamera,
+    fixtureMetadata: {
+      'loadedElementCount': 100000,
+      'cameraOffsetBeforeAction': Offset.zero,
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareSelectionMove50k(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceRectDocument(50000));
+  context.runtime.selection.setSelection([
+    CanvasElementId(performancePrimaryRectId),
+  ]);
+  await context.pumpScenarioFrame();
+  return const PerformancePreparedPhaseAction(
+    action: _moveSelection,
+    fixtureMetadata: {
+      'loadedElementCount': 50000,
+      'selectedElementId': performancePrimaryRectId,
+      'selectedElementGeometry': 'original',
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareMarqueeSelect50k(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceRectDocument(50000));
+  context.runtime.selection.clearSelection();
+  context.runtime.tools.setMode(CanvasInteractionMode.move);
+  await context.pumpScenarioFrame();
+  return const PerformancePreparedPhaseAction(
+    action: _dragMarquee,
+    fixtureMetadata: {
+      'loadedElementCount': 50000,
+      'selectedCountBeforeAction': 0,
+      'toolModeBeforeAction': 'move',
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareJsonExport50k(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceRectDocument(50000));
+  await context.pumpScenarioFrame();
+  return PerformancePreparedPhaseAction(
+    action: _jsonExportActionScenario().action,
+    fixtureMetadata: const {
+      'loadedElementCount': 50000,
+      'documentOrder': 'stable',
+      'pendingEditSession': false,
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareEraserDense50k(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceRectDocument(50000));
+  context.runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawTool(CanvasDrawTool.eraser);
+  await context.pumpScenarioFrame();
+  return PerformancePreparedPhaseAction(
+    action: _eraserDenseActionScenario().action,
+    fixtureMetadata: const {
+      'loadedElementCount': 50000,
+      'toolModeBeforeAction': 'draw',
+      'drawToolBeforeAction': 'eraser',
+      'erasedElementCountBeforeAction': 0,
     },
   );
 }

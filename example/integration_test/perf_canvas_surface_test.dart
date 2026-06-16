@@ -18,20 +18,20 @@ void main() {
     await tester.pumpWidget(PerformanceHost(controller: controller));
     await tester.pumpAndSettle();
 
-    for (final scenario in allPerformanceScenarios) {
-      debugPrint('PERF_SCENARIO_START ${scenario.id}');
-      await scenario.runTraced(
+    for (final phaseRun in allPerformanceScenarioPhaseRuns) {
+      debugPrint('PERF_SCENARIO_START ${phaseRun.reportKey}');
+      await phaseRun.runTraced(
         binding: binding,
         host: controller,
         pumpFrame: ([duration = Duration.zero]) =>
             _pumpPerformanceScenarioFrame(tester, duration),
         settle: () => _settlePerformanceTraceWindow(tester),
       );
-      debugPrint('PERF_SCENARIO_DONE ${scenario.id}');
+      debugPrint('PERF_SCENARIO_DONE ${phaseRun.reportKey}');
       expect(
         find.byKey(performanceHostSurfaceKey),
         findsOneWidget,
-        reason: scenario.id,
+        reason: phaseRun.reportKey,
       );
     }
   }, timeout: Timeout.none);
