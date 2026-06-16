@@ -262,11 +262,13 @@ Owner: `docs/verification/performance.md` owns durable scenario group policy,
 phase grammar, repeat policy, artifact shape, comparison semantics, unsupported
 claims, and full 26-scenario migration. `docs/verification/tests.md` owns the
 documented test surfaces, and `docs/verification/release_gates.md` owns release
-gate wording. `example/lib/perf/performance_scenario.dart` owns executable
-scenario descriptors, phase expansion, report-key generation, and canonical
-preparation/reset semantics. `example/integration_test/perf_canvas_surface_test.dart`
-owns the integration route and bounded settle helper. `example/test_driver/perf_driver.dart`
-owns generated raw timeline, timeline summary, manifest, and comparison-summary
+gate wording. `example/lib/perf/performance_scenario_catalog.dart` owns the
+machine-readable executable scenario catalog, phase expansion, and report-key
+generation. `example/lib/perf/performance_scenario.dart` owns scenario action
+execution and canonical preparation/reset semantics.
+`example/integration_test/perf_canvas_surface_test.dart` owns the integration
+route and bounded settle helper. `example/test_driver/perf_driver.dart` owns
+generated raw timeline, timeline summary, manifest, and comparison-summary
 writing under the build output. `tool/check_flutter_performance_artifacts.dart`
 owns generated artifact validation. `test/performance`,
 `test/tool`, and focused `example/test` coverage own route, checker, driver,
@@ -300,9 +302,10 @@ human-readable route policy for the route command, scenario groups, phase
 grammar, repeat count, artifact shape, comparison semantics, unsupported
 claims, and full catalog migration. It must not be parsed by tests or tools as
 a catalog or schema data source. Unit 2 must translate that policy into the
-executable descriptor catalog in `example/lib/perf/performance_scenario.dart`;
-after Unit 2, that descriptor catalog is the machine-readable source used by
-route tests, driver manifest generation, and checker validation. Generated
+executable descriptor catalog in
+`example/lib/perf/performance_scenario_catalog.dart`; after Unit 2, that
+descriptor catalog is the machine-readable source used by route tests, driver
+manifest generation, and checker validation. Generated
 `performance_run_manifest.json`, raw timeline files, timeline summaries, and
 `comparison_summary.json` are local build artifacts only and must not become
 source truth.
@@ -503,7 +506,8 @@ Depends On: none.
 
 ### [x] Unit 2: Executable descriptor and integration-route migration
 
-Owner: `example/lib/perf/performance_scenario.dart`,
+Owner: `example/lib/perf/performance_scenario_catalog.dart`,
+`example/lib/perf/performance_scenario.dart`,
 `example/integration_test/perf_canvas_surface_test.dart`, the descriptor/route
 portion of `test/performance/flutter_performance_route_contract_test.dart`, and
 focused `example/test` performance state tests.
