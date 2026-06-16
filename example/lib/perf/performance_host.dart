@@ -9,15 +9,17 @@ const performanceHostTextOverlayKey = ValueKey<String>(
 );
 const performanceHostResourceAppKey = 'perf-host-image';
 
-final class PerformanceHostController {
+final class PerformanceHostController extends ChangeNotifier {
   PerformanceHostController({
     CanvasRuntime? runtime,
     PerformanceHostResourceResolver? resourceResolver,
-  }) : runtime = runtime ?? CanvasRuntime(),
+  }) : _runtime = runtime ?? CanvasRuntime(),
        resourceResolver = resourceResolver ?? PerformanceHostResourceResolver();
 
-  final CanvasRuntime runtime;
+  CanvasRuntime _runtime;
   final PerformanceHostResourceResolver resourceResolver;
+
+  CanvasRuntime get runtime => _runtime;
 
   void loadSmokeDocument() {
     runtime.edits.edit((edit) {
@@ -25,8 +27,17 @@ final class PerformanceHostController {
     });
   }
 
+  void swapRuntime(CanvasRuntime replacement) {
+    final previous = _runtime;
+    _runtime = replacement;
+    notifyListeners();
+    previous.dispose();
+  }
+
+  @override
   void dispose() {
-    runtime.dispose();
+    _runtime.dispose();
+    super.dispose();
   }
 }
 
@@ -37,25 +48,30 @@ final class PerformanceHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: SizedBox.expand(
-        child: Stack(
-          children: [
-            CanvasSurface(
-              key: performanceHostSurfaceKey,
-              runtime: controller.runtime,
-              resourceResolver: controller.resourceResolver,
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox.expand(
+            child: Stack(
+              children: [
+                CanvasSurface(
+                  key: performanceHostSurfaceKey,
+                  runtime: controller.runtime,
+                  resourceResolver: controller.resourceResolver,
+                ),
+                CanvasTextEditingOverlay(
+                  key: performanceHostTextOverlayKey,
+                  runtime: controller.runtime,
+                  autofocus: false,
+                  commitOnFocusLoss: false,
+                ),
+              ],
             ),
-            CanvasTextEditingOverlay(
-              key: performanceHostTextOverlayKey,
-              runtime: controller.runtime,
-              autofocus: false,
-              commitOnFocusLoss: false,
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
