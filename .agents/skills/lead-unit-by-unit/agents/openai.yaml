@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lead Unit By Unit"
+  short_description: "Coordinate unit implementation with workers"
+  default_prompt: "Use $lead-unit-by-unit to coordinate implementation of the accepted step contract through workers, reviewers, and commits."
