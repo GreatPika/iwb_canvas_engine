@@ -166,7 +166,9 @@ Obligations: none
 - `.design/2026-06-16-flutter-performance-verification-route.md:514` /
   temporal surface: no production temporal invariant changes; test trace windows
   begin before scenario action and end after settle/failure -> Unit 3
-  completion checks must prove stable `traceAction()` windows.
+  structural checks must prove the stable `traceAction()` runner boundary, and
+  Unit 4 profile-drive execution must prove the boundary works under the
+  official timeline route.
 - `.design/2026-06-16-flutter-performance-verification-route.md:520` /
   all-or-nothing boundary: release acceptance happens only after drive return
   and artifact inventory check -> Unit 4 owns rejection of missing scenario or
@@ -189,6 +191,16 @@ Obligations: none
   `flutter drive --profile` -> the local checker may validate inventory and JSON
   shape only, not compute performance pass/fail or define a second result
   format.
+- `https://docs.flutter.dev/cookbook/testing/integration/profiling` / official
+  mobile-device route: the profiling recipe runs the traced integration target
+  with `flutter drive --driver=... --target=... --profile` and says to add
+  `--no-dds` on mobile devices or emulators -> the trace-producing catalog is
+  not accepted through ordinary `flutter test`.
+- `https://api.flutter.dev/flutter/package-integration_test_integration_test/IntegrationTestWidgetsFlutterBinding/traceAction.html`
+  / `IntegrationTestWidgetsFlutterBinding.traceAction`: `traceAction()` sends
+  timeline report data back to the host for `flutter_driver` style tests and
+  the host processes it through `integrationDriver` response data -> Unit 4 owns
+  executable report-data and artifact proof.
 - `docs/contracts/public_api_v1.md:125` / external public integration:
   external package code must reference the public surface by importing only
   `package:iwb_canvas_engine/iwb_canvas_engine.dart` -> example route must use
@@ -420,14 +432,20 @@ missing from `example/lib/perf/performance_scenario.dart`, if any
 runner or calls `traceAction()` directly, if the traced runner does not call
 `binding.traceAction(() async { ... }, reportKey: scenario.id)` around action
 plus settle/failure handling, if a startup scenario is included in the Flutter
-gate, or if extra internal benchmark case ids are used as route keys.
+gate, or if extra internal benchmark case ids are used as route keys. The
+contract test also fails if the traced runner catches timeline/VM-service
+failures and re-runs the catalog through an untraced fallback. Unit 3 does not
+claim timeline execution through ordinary `flutter test`; the official
+trace-producing execution path is Unit 4's
+`flutter drive --profile --no-dds` route.
 `cd example && flutter test test/performance_fixture_limits_test.dart`
 fails unless the exact fixture or fixtures used by both `load_document.100k`
-and `camera_pan.100k` are below the current raw JSON limit and remain within
-`200000` total elements; if either 100k proof cannot be made, implementation
+and `camera_pan.100k` are accepted by the current public validation boundary
+without changing limits; if either 100k proof cannot be made, implementation
 stops for a separate validation-limit design instead of changing limits.
-`cd example && flutter test integration_test/perf_canvas_surface_test.dart` and
-`cd example && flutter test` pass. Root `dart analyze`, `dcm analyze .`, and
+`cd example && flutter test` passes for the example package without treating the
+trace catalog as ordinary package coverage. Root `dart analyze`,
+`dcm analyze .`, and
 `dcm calculate-metrics example/integration_test`,
 `dcm calculate-metrics example/test`, and
 `dcm calculate-metrics test/performance` pass for the changed integration,
@@ -511,7 +529,6 @@ test, example, and tool scopes;
 `flutter test test/performance/flutter_performance_route_contract_test.dart`;
 `cd example && flutter test test/performance_host_smoke_test.dart`;
 `cd example && flutter test test/performance_fixture_limits_test.dart`;
-`cd example && flutter test integration_test/perf_canvas_surface_test.dart`;
 `dart run tool/check_flutter_performance_artifacts.dart --catalog docs/verification/performance.md --results example/build/flutter_performance`;
 `cd example && flutter pub get`; `cd example && flutter test`;
 `cd example && flutter analyze`;
