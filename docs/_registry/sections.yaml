@@ -916,6 +916,31 @@
   - test.guardrails.blocking_suite
   do_not_assume:
   - shared behavior needs current owner tests
+- id: section_24_performance_verification
+  source: docs/_registry/sections.yaml / section 24
+  file: docs/verification/performance.md
+  title: 24. Performance verification
+  owners:
+  - test
+  - release
+  subsystems:
+  - quality_gates
+  must_read:
+  - section_23_tests
+  - section_27_final_release_gates
+  diagrams:
+  - none
+  guardrails:
+  - none
+  tests:
+  - test.performance.flutter_route_contract
+  - test.example.performance_host_smoke
+  - test.example.performance_fixture_limits
+  - test.example.performance_profile_drive_artifacts
+  do_not_assume:
+  - no numeric performance threshold gate
+  - no private example route imports
+  - no restored benchmark route
 - id: section_27_final_release_gates
   source: docs/_registry/sections.yaml / section 27
   file: docs/verification/release_gates.md

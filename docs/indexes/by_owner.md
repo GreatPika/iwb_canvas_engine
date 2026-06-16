@@ -33,9 +33,11 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 
 ## release
 
+- `section_24_performance_verification` - 24. Performance verification
 - `section_27_final_release_gates` - 27. Final release gates
 
 ## test
 
 - `section_23_tests` - 23. Tests
+- `section_24_performance_verification` - 24. Performance verification
 

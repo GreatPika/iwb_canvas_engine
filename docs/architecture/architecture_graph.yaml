@@ -1528,6 +1528,9 @@ sourceCoverage:
   - sectionId: section_23_tests
     disposition: non_graph_semantics
     reason: Test inventory completeness is executable proof coverage, not an architecture graph topology fact.
+  - sectionId: section_24_performance_verification
+    disposition: non_graph_semantics
+    reason: Flutter performance verification is release proof coverage and generated artifact policy, not an architecture graph topology fact.
   - sectionId: section_27_final_release_gates
     disposition: graph_obligation
     graphIds:

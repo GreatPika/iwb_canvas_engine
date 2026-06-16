@@ -171,6 +171,18 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_23_tests`
 
+## test.example.performance_fixture_limits
+
+- Sections: `section_24_performance_verification`
+
+## test.example.performance_host_smoke
+
+- Sections: `section_24_performance_verification`
+
+## test.example.performance_profile_drive_artifacts
+
+- Sections: `section_24_performance_verification`
+
 ## test.frame.cache_capacity_eviction_policy
 
 - Sections: `section_18_cache_policy`, `section_23_tests`
@@ -378,6 +390,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.interaction.text_edit_stale_commit_guard
 
 - Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.performance.flutter_route_contract
+
+- Sections: `section_24_performance_verification`
 
 ## test.resources.app_owned_image_not_disposed
 
