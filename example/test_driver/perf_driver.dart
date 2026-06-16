@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_driver/flutter_driver.dart';
-import 'package:iwb_canvas_engine_example/perf/performance_scenario.dart';
+import 'package:iwb_canvas_engine_example/perf/performance_scenario_catalog.dart'
+    as catalog;
 import 'package:integration_test/integration_test_driver.dart';
 
 Future<void> main() {
@@ -43,11 +44,11 @@ Future<void> writePerformanceTimelines(
   await _writeComparisonSummary(outputRoot);
 }
 
-List<PerformanceScenarioPhaseRun> _performanceReportPhaseRuns(
+List<catalog.PerformanceScenarioCatalogRun> _performanceReportPhaseRuns(
   Map<String, dynamic> data,
 ) {
   final phaseRunsByReportKey = {
-    for (final phaseRun in allPerformanceScenarioPhaseRuns)
+    for (final phaseRun in catalog.performanceScenarioCatalogRuns)
       phaseRun.reportKey: phaseRun,
   };
   final actualReportKeys = data.keys.toSet();
@@ -63,8 +64,8 @@ List<PerformanceScenarioPhaseRun> _performanceReportPhaseRuns(
     );
   }
 
-  return List<PerformanceScenarioPhaseRun>.unmodifiable(
-    allPerformanceScenarioPhaseRuns,
+  return List<catalog.PerformanceScenarioCatalogRun>.unmodifiable(
+    catalog.performanceScenarioCatalogRuns,
   );
 }
 
@@ -76,7 +77,7 @@ void _resetResultsDirectory(Directory resultsDirectory) {
 
 Future<void> _writePhaseRunTimeline(
   Map<String, dynamic> data,
-  PerformanceScenarioPhaseRun phaseRun, {
+  catalog.PerformanceScenarioCatalogRun phaseRun, {
   required Directory resultsDirectory,
 }) async {
   final reportKey = phaseRun.reportKey;
@@ -125,7 +126,7 @@ Map<String, Object?> _runManifest() {
       'androidMacrobenchmark': false,
     },
     'scenarioGroups': [
-      for (final group in allPerformanceScenarioGroups)
+      for (final group in catalog.performanceScenarioCatalogGroups)
         {
           'id': group.id,
           'migration': group.migration,
@@ -146,7 +147,9 @@ Map<String, Object?> _runManifest() {
   };
 }
 
-Map<String, Object?> _manifestRepeat(PerformanceScenarioPhaseRun phaseRun) {
+Map<String, Object?> _manifestRepeat(
+  catalog.PerformanceScenarioCatalogRun phaseRun,
+) {
   final phase = phaseRun.phase;
   final reportKey = phaseRun.reportKey;
   final repeat = <String, Object?>{
@@ -169,7 +172,7 @@ Map<String, Object?> _manifestRepeat(PerformanceScenarioPhaseRun phaseRun) {
 }
 
 ({String canonicalPreparation, String resetReason, String measuredAction})
-_requiredPreparationMetadata(PerformanceScenarioPhaseRun phaseRun) {
+_requiredPreparationMetadata(catalog.PerformanceScenarioCatalogRun phaseRun) {
   final phase = phaseRun.phase;
   final canonicalPreparation = phase.canonicalPreparation;
   final resetReason = phase.resetReason;
@@ -190,7 +193,7 @@ _requiredPreparationMetadata(PerformanceScenarioPhaseRun phaseRun) {
 
 Future<void> _writeComparisonSummary(Directory resultsDirectory) async {
   final scenarioGroups = <Map<String, Object?>>[];
-  for (final group in allPerformanceScenarioGroups) {
+  for (final group in catalog.performanceScenarioCatalogGroups) {
     scenarioGroups.add({
       'id': group.id,
       'phases': [
@@ -229,8 +232,8 @@ Future<void> _writeComparisonSummary(Directory resultsDirectory) async {
 
 Future<List<_RawRepeat>> _rawRepeatsFor({
   required Directory resultsDirectory,
-  required PerformanceScenarioGroup group,
-  required PerformanceScenarioPhase phase,
+  required catalog.PerformanceScenarioCatalogGroup group,
+  required catalog.PerformanceScenarioCatalogPhase phase,
   required String summaryField,
 }) async {
   final rawRepeats = <_RawRepeat>[];
@@ -298,11 +301,11 @@ num _median(List<num> sortedValues) {
   return (sortedValues[midpoint - 1] + sortedValues[midpoint]) / 2;
 }
 
-Iterable<PerformanceScenarioPhaseRun> _phaseRunsFor(
-  PerformanceScenarioGroup group,
-  PerformanceScenarioPhase phase,
+Iterable<catalog.PerformanceScenarioCatalogRun> _phaseRunsFor(
+  catalog.PerformanceScenarioCatalogGroup group,
+  catalog.PerformanceScenarioCatalogPhase phase,
 ) sync* {
-  for (final phaseRun in allPerformanceScenarioPhaseRuns) {
+  for (final phaseRun in catalog.performanceScenarioCatalogRuns) {
     if (phaseRun.scenarioGroup == group && phaseRun.phase == phase) {
       yield phaseRun;
     }
@@ -320,7 +323,7 @@ Future<void> _writeGeneratedJson(
 }
 
 String _artifactDirectory(
-  PerformanceScenarioPhaseRun phaseRun, {
+  catalog.PerformanceScenarioCatalogRun phaseRun, {
   String? pathSeparator,
 }) {
   final separator = pathSeparator ?? Platform.pathSeparator;

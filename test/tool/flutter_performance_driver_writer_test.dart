@@ -39,7 +39,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine_example/perf/performance_scenario.dart';
+import 'package:iwb_canvas_engine_example/perf/performance_scenario_catalog.dart'
+    as catalog;
 
 import '../test_driver/perf_driver.dart';
 
@@ -129,7 +130,7 @@ void main() {
     final manifestGroups = _groupsById(manifest);
     final comparisonGroups = _groupsById(comparisonSummary);
     expect(manifestGroups.keys.toSet(), {
-      for (final group in allPerformanceScenarioGroups) group.id,
+      for (final group in catalog.performanceScenarioCatalogGroups) group.id,
     });
     expect(comparisonGroups.keys.toSet(), manifestGroups.keys.toSet());
 
@@ -143,13 +144,13 @@ void main() {
 Map<String, dynamic> _driverResponse() {
   var offset = 0;
   return {
-    for (final phaseRun in allPerformanceScenarioPhaseRuns)
+    for (final phaseRun in catalog.performanceScenarioCatalogRuns)
       phaseRun.reportKey: _timelineJsonFor(phaseRun, offset += 1),
   };
 }
 
 Map<String, Object?> _timelineJsonFor(
-  PerformanceScenarioPhaseRun phaseRun,
+  catalog.PerformanceScenarioCatalogRun phaseRun,
   int offset,
 ) {
   final buildMillis = phaseRun.scenarioGroupId == 'load_document.100k' &&
@@ -367,7 +368,7 @@ void _expectMetricMatchesSummaryFiles({
       .cast<Map<String, dynamic>>()) {
     final repeat = rawRepeat['repeat'] as int;
     final phaseParts = phaseKey.split('.');
-    final reportKey = performanceReportKey(
+    final reportKey = catalog.performanceReportKey(
       scenarioGroup: scenarioGroup,
       phaseKind: phaseParts.first,
       phaseName: phaseParts.last,
