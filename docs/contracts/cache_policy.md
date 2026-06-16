@@ -9,8 +9,6 @@ Must read before editing:
 - `section_17_spatial_kernel` -> `docs/contracts/spatial_kernel.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_cache_invalidation`
 Required tests:

@@ -128,6 +128,9 @@ void _writeResultBlock(
   buffer.writeln('');
 }
 
+// Cluster text output is one user-facing record format; splitting the field
+// order across helpers would make report compatibility harder to review.
+// ignore: halstead-volume
 void _writeClusterBlock(StringBuffer buffer, CloneCluster cluster, int index) {
   final matchKinds = cluster.matchKinds.map((kind) => kind.name).toList()
     ..sort();

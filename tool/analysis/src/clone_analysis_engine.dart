@@ -158,6 +158,9 @@ void _captureSampleIfNeeded(
   stat.hasSample = true;
 }
 
+// Similarity admission keeps the shared-count, overlap, and sample-window math
+// adjacent so the clone score cannot drift between helper layers.
+// ignore: halstead-volume
 SimilarityResult? _buildSimilarityResult(
   PairStat stat,
   Map<int, CodeBlock> byId,
@@ -319,6 +322,9 @@ List<SimilarityResult> _limitResults(
   return results.take(topResults).toList(growable: false);
 }
 
+// Cluster construction keeps graph indexing and component traversal together
+// so connected clone groups remain deterministic and easy to audit.
+// ignore: halstead-volume
 List<CloneCluster> _buildCloneClusters(List<SimilarityResult> results) {
   if (results.isEmpty) {
     return const <CloneCluster>[];

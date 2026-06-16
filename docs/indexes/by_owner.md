@@ -10,10 +10,6 @@ Sections grouped by current owner from `docs/_registry/sections.yaml`.
 - `section_03_package_layout` - 3. Package layout
 - `section_10_runtime_data_model` - 10. Runtime data model
 
-## benchmark
-
-- `section_24_benchmarks` - 24. Benchmarks
-
 ## contract
 
 - `section_04_public_api_v1` - 4. Public API v1: complete surface

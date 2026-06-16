@@ -8,8 +8,6 @@ Must read before editing:
 - `none`
 Current owners:
 - `architecture`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_context`
 - `c4_container`

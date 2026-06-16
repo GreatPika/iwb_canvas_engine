@@ -9,8 +9,6 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_load_document_success_failure`
 - `seq_load_document_success`

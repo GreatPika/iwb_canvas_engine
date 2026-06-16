@@ -9,8 +9,6 @@ Must read before editing:
 - `section_19_codec_boundary` -> `docs/contracts/codec_boundary.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:

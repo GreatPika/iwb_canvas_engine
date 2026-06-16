@@ -7,17 +7,13 @@ Owns:
 Must read before editing:
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 - `section_23_tests` -> `docs/verification/tests.md`
-- `section_24_benchmarks` -> `docs/verification/benchmarks.md`
 Current owners:
 - `release`
-Benchmarks:
-- `none`
 Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.public_integration_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
-- `test.guardrails.release_readiness`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
@@ -94,7 +90,6 @@ Guardrails:
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
-- `release.benchmark_readiness`
 - `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
@@ -169,9 +164,7 @@ work.
 34. full `dart run tool/guardrails/run.dart` is green.
 35. every mandatory guardrail has a runner entry and executable proof, including
     the `api.integration_surface_complete` external app-adapter compile fixture.
-36. No GitHub release benchmark gate is claimed; performance comparison uses
-    same-contour device/manual references until a GitHub performance route is
-    explicitly rebuilt.
+36. No repository-owned release performance gate is currently claimed.
 37. application canvas port and application adapter names are not present in the engine package.
 ```
 

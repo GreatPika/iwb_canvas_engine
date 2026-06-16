@@ -429,12 +429,3 @@
   related_sections:
   - section_02_architecture_model
   graph_view_source: docs/architecture/architecture_graph.yaml
-- id: generated/release_verification
-  kind: architecture_graph_view
-  file: docs/diagrams/generated/release_verification.mmd
-  classification: generated
-  related_owners:
-  - architecture
-  related_sections:
-  - section_02_architecture_model
-  graph_view_source: docs/architecture/architecture_graph.yaml

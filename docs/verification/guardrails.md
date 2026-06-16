@@ -9,15 +9,12 @@ Must read before editing:
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
 Current owners:
 - `guardrail`
-Benchmarks:
-- `none`
 Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.public_integration_compile_fixture`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.text_surface_guardrail_checks`
-- `test.guardrails.release_readiness`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `api.integration_surface_complete`
@@ -97,7 +94,6 @@ Guardrails:
 - `codec.no_runtime_side_effects`
 - `diagnostics.disabled_no_alloc_hot_path`
 - `diagnostics.sanitized_public_projection`
-- `release.benchmark_readiness`
 - `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
@@ -250,7 +246,6 @@ Mandatory guardrails:
 | `codec.no_runtime_side_effects` | schema v1 import/encode validates codec-owned input without mutating runtime or store state; runtime load import emits dependency-neutral events instead of materializing public DTOs |
 | `diagnostics.disabled_no_alloc_hot_path` | schema/codec success paths allocate no diagnostic records while diagnostics are disabled; pointer/paint hot-path proof remains deferred until those runtime owners exist |
 | `diagnostics.sanitized_public_projection` | diagnostic details expose only sanitized bounded public data; the guard uses explicit `diagnostics_public_surface` registry membership plus analyzer-resolved public signature traversal to prevent currently classified runtime-like public types from leaking |
-| `release.benchmark_readiness` | device/manual references own current performance comparison; public/runtime source cannot expose benchmark tooling, public integration names, or benchmark-only production hooks, and scanned benchmark Dart sources keep approved-baseline writes behind benchmark tooling policy |
 | `tools.public_port_behavior` | public tool and command ports expose interaction payload families without source-level internal imports |
 | `surface.pointer_samples_normalized_before_runtime` | Flutter surface adapters pass finite pointer samples or terminal cleanup input into runtime routing without owning world normalization |
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |

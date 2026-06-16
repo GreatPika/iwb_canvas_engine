@@ -1,5 +1,9 @@
 import 'dart:ui';
 
+// This clipping fixture crosses public canvas types, frame capture, spatial
+// setup, and painter output in one behavior proof.
+// ignore_for_file: number-of-imports
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';

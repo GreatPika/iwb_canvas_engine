@@ -115,6 +115,9 @@ Future<List<LspCallItem>> collectCallHierarchyItems(
   return results;
 }
 
+// Implementation lookup must map raw LSP locations back into prepared call
+// items in one pass so repo filtering, dedupe, and retries share one invariant.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 Future<List<LspCallItem>> collectImplementationItems(
   LanguageServerClient client,
   LspCallItem item, {
@@ -163,6 +166,9 @@ Future<List<LspCallItem>> collectImplementationItems(
   return results;
 }
 
+// Flow stitching keeps call hierarchy and implementation fallback in one loop
+// so visited-node handling prevents cycles across both LSP query types.
+// ignore: halstead-volume, source-lines-of-code
 Future<StitchedFlow> tracePrimaryOutgoingFlow(
   LanguageServerClient client,
   LspCallItem start, {

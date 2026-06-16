@@ -20,7 +20,7 @@ void main() {
     final guardrailStep = _stepNamed(steps, 'Run guardrails');
 
     _expectRootPackageChecks(workflowContent, steps);
-    _expectRootPackageBenchmarkChecks(workflowContent, steps);
+    _expectRootPackageDocsChecks(workflowContent, steps);
     _expectExamplePackageChecks(workflowContent);
     _expectExampleBoundaryDiffEnvironment(steps);
     _expectNoWorkflowBypass(rootPackageJob, steps);
@@ -34,48 +34,63 @@ void _expectRootPackageChecks(String workflowContent, List<YamlMap> steps) {
   final runCommands = _runCommands(steps);
 
   _expectPinnedActionStep(
-    workflowContent,
-    steps,
-    stepName: 'Checkout',
-    actionName: 'actions/checkout',
-    versionComment: '# v4',
+    _PinnedActionStepExpectation(
+      workflowContent: workflowContent,
+      steps: steps,
+      stepName: 'Checkout',
+      actionName: 'actions/checkout',
+      versionComment: '# v4',
+    ),
   );
   _expectPinnedActionStep(
-    workflowContent,
-    steps,
-    stepName: 'Set up Flutter',
-    actionName: 'subosito/flutter-action',
-    versionComment: '# v2',
+    _PinnedActionStepExpectation(
+      workflowContent: workflowContent,
+      steps: steps,
+      stepName: 'Set up Flutter',
+      actionName: 'subosito/flutter-action',
+      versionComment: '# v2',
+    ),
   );
   expect(runCommands, contains('flutter pub get'));
   expect(
     runCommands,
     contains(
       "flutter test --concurrency=1 "
-      r"$(find test -path test/benchmarks -prune -o -name '*_test.dart' -print)",
+      r"$(find test -name '*_test.dart' -print)",
     ),
   );
   expect(runCommands, contains('dart analyze'));
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
 }
 
-void _expectPinnedActionStep(
-  String workflowContent,
-  List<YamlMap> steps, {
-  required String stepName,
-  required String actionName,
-  required String versionComment,
-}) {
-  final uses = _stepNamed(steps, stepName)['uses'] as String;
-  final prefix = '$actionName@';
+void _expectPinnedActionStep(_PinnedActionStepExpectation expectation) {
+  final uses =
+      _stepNamed(expectation.steps, expectation.stepName)['uses'] as String;
+  final prefix = '${expectation.actionName}@';
 
   expect(uses.startsWith(prefix), isTrue);
   final pinnedRef = uses.replaceFirst(prefix, '');
   expect(pinnedRef, matches(RegExp(r'^[0-9a-f]{40}$')));
   expect(
-    workflowContent.split('\n').map((line) => line.trim()),
-    contains('uses: $uses $versionComment'),
+    expectation.workflowContent.split('\n').map((line) => line.trim()),
+    contains('uses: $uses ${expectation.versionComment}'),
   );
+}
+
+final class _PinnedActionStepExpectation {
+  const _PinnedActionStepExpectation({
+    required this.workflowContent,
+    required this.steps,
+    required this.stepName,
+    required this.actionName,
+    required this.versionComment,
+  });
+
+  final String workflowContent;
+  final List<YamlMap> steps;
+  final String stepName;
+  final String actionName;
+  final String versionComment;
 }
 
 void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
@@ -83,10 +98,7 @@ void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
   final checkoutWith = checkoutStep['with'] as YamlMap;
   expect(checkoutWith['fetch-depth'], 0);
 
-  final flutterTestStep = _stepNamed(
-    steps,
-    'Test all non-benchmark Flutter tests',
-  );
+  final flutterTestStep = _stepNamed(steps, 'Test all Flutter tests');
   final env = flutterTestStep['env'] as YamlMap;
   expect(
     env['EXAMPLE_BOUNDARY_DIFF_BASE'],
@@ -98,29 +110,14 @@ void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
   );
 }
 
-void _expectRootPackageBenchmarkChecks(
-  String workflowContent,
-  List<YamlMap> steps,
-) {
+void _expectRootPackageDocsChecks(String workflowContent, List<YamlMap> steps) {
   final runCommands = _runCommands(steps);
-  final benchmarkTestCommand = runCommands.singleWhere(
-    _isDynamicBenchmarkTestCommand,
-    orElse: () => '',
-  );
 
   expect(
     runCommands,
     contains('dart run docs/tool/sync_generated_docs.dart --check'),
   );
   expect(runCommands, contains('dart run docs/tool/check_docs.dart'));
-  expect(benchmarkTestCommand, _expectedBenchmarkTestCommand);
-  for (final benchmarkTest in _benchmarkTestPaths()) {
-    expect(
-      _benchmarkCommandCoversPath(benchmarkTestCommand, benchmarkTest),
-      isTrue,
-      reason: benchmarkTest,
-    );
-  }
   expect(workflowContent, isNot(contains('paths-ignore:')));
   expect(workflowContent, isNot(contains('paths:')));
 }
@@ -225,30 +222,3 @@ Set<String> _runCommands(List<YamlMap> steps) {
       .map((command) => command.trim())
       .toSet();
 }
-
-List<String> _benchmarkTestPaths() {
-  return Directory('test/benchmarks')
-      .listSync(followLinks: false)
-      .whereType<File>()
-      .map((file) => file.path.replaceAll('\\', '/'))
-      .where((path) => path.endsWith('_test.dart'))
-      .toList()
-    ..sort();
-}
-
-bool _benchmarkCommandCoversPath(String command, String path) {
-  const benchmarkDirectory = 'test/benchmarks/';
-  final benchmarkFileName = path.replaceFirst(benchmarkDirectory, '');
-
-  return command == _expectedBenchmarkTestCommand &&
-      path.startsWith(benchmarkDirectory) &&
-      !benchmarkFileName.contains('/') &&
-      path.endsWith('_test.dart');
-}
-
-bool _isDynamicBenchmarkTestCommand(String command) {
-  return command == _expectedBenchmarkTestCommand;
-}
-
-const _expectedBenchmarkTestCommand =
-    "dart test \$(find test/benchmarks -maxdepth 1 -name '*_test.dart' -print | sort)";

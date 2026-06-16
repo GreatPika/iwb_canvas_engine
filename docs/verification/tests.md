@@ -9,8 +9,6 @@ Must read before editing:
 - `section_22_guardrails_machine_checks` -> `docs/verification/guardrails.md`
 Current owners:
 - `test`
-Benchmarks:
-- `none`
 Related diagrams:
 - `none`
 Required tests:
@@ -150,11 +148,6 @@ Required tests:
 - `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.surface.widget_paint`
-- `test.guardrails.release_readiness`
-- `test.benchmarks.benchmark_manifest`
-- `test.benchmarks.benchmark_diff`
-- `test.benchmarks.benchmark_runner`
-- `test.benchmarks.required_cases`
 - `test.guardrails.blocking_suite`
 Guardrails:
 - `none`
@@ -193,11 +186,6 @@ Required tests:
 - `test/architecture_graph/current_closure_checker_test.dart`
 - `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
-- `test/guardrails/release_readiness_guardrail_test.dart`
-- `test/benchmarks/benchmark_manifest_test.dart`
-- `test/benchmarks/benchmark_diff_test.dart`
-- `test/benchmarks/benchmark_runner_test.dart`
-- `test/benchmarks/required_cases_test.dart`
 
 The owner-DAG proof is split intentionally: `owner_dag_import_boundaries_test`
 checks wrapper export, named facade bridge, implementation-to-api,
@@ -437,9 +425,9 @@ it must not replace the behavioral test that proves the rule.
 ### Guardrail Test Ownership
 
 `test/guardrails/**` owns executable proof tests that make cross-cutting
-guardrails part of the normal package test gates and CI. Dart-only guardrail and
-benchmark proof may run through `dart test`; Flutter-dependent package tests run
-through `flutter test`. `tool/guardrails/**` owns the guardrail runner, runner
+guardrails part of the normal package test gates and CI. Dart-only guardrail
+proof may run through `dart test`; Flutter-dependent package tests run through
+`flutter test`. `tool/guardrails/**` owns the guardrail runner, runner
 metadata or manifests, and reusable structural check logic. Simple guardrails
 may live entirely as tests. Shared scanner logic or logic used by both tests and
 the runner belongs under `tool/guardrails/**`, with a thin test under
@@ -551,13 +539,6 @@ behavioral tests, and the required guardrail list remains owned by
   explicit `--guardrail=<id>` selection modes execute the intended hard-boundary ids;
 - proves unknown or empty suite selection fails instead of silently running
   an unintended guardrail set.
-
-#### `test/guardrails/release_readiness_guardrail_test.dart`
-- proves `release.benchmark_readiness` is runner-backed in the blocking and
-  release suites without running the full benchmark matrix;
-- rejects public benchmark exports, public integration names in production
-  source, retired benchmark package imports, and rogue approved baseline writers
-  in benchmark tooling.
 
 #### `test/runtime/dispose_lifecycle_test.dart`
 - proves runtime dispose keeps state.value readable;

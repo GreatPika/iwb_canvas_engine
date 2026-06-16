@@ -32,13 +32,6 @@ Current generated outputs:
   - Related owners: `architecture`
   - Related sections: `section_02_architecture_model`
   - Graph view source: `docs/architecture/architecture_graph.yaml`
-- `generated/release_verification`
-  - File: `docs/diagrams/generated/release_verification.mmd`
-  - Kind: `architecture_graph_view`
-  - Classification: `generated`
-  - Related owners: `architecture`
-  - Related sections: `section_02_architecture_model`
-  - Graph view source: `docs/architecture/architecture_graph.yaml`
 
 ## c4_context
 

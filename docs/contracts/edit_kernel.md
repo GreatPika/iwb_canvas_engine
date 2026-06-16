@@ -9,8 +9,6 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_code_edit_kernel`
 - `dfd_public_edit`

@@ -18,7 +18,6 @@ coverage:
     - lib/src/frame/**
     - lib/src/interaction/**
     - lib/src/surface/**
-    - tool/bench/src/release_readiness.dart
   sensitiveThrows:
     - owner: codec.schema_v1
       under: lib/src/codec/**
@@ -350,25 +349,6 @@ nodes:
         - CanvasSurface
         - SurfaceFrameOutputCache
         - LayerPaintHost
-  - id: release.measurement
-    label: Measurement and release alignment
-    kind: measurement_scope
-    owner: release
-    status: measurement
-    coverageScope: architectureOwners
-    sourceDocs:
-      - path: docs/verification/benchmarks.md
-    isolationAllowances:
-      - views:
-          - release_verification
-        sourceDocs:
-          - path: docs/verification/benchmarks.md
-        reason: Release measurement and alignment are release-verification scope, not runtime production ownership with architecture dependencies.
-    evidence:
-      - Release measurement is release-verification scope, not a normal production owner.
-    actual:
-      declarations:
-        - ReleaseReadiness
 edges:
   - id: api.public_surface.exports_runtime
     from: api.public_surface
@@ -1339,12 +1319,6 @@ views:
     output: docs/diagrams/generated/actual_vs_expected_diff.mmd
     sourceDocs:
       - path: docs/verification/release_gates.md
-  - id: release_verification
-    title: Release verification graph
-    kind: expected_release_verification
-    output: docs/diagrams/generated/release_verification.mmd
-    sourceDocs:
-      - path: docs/verification/benchmarks.md
 sourceCoverage:
   - sectionId: section_00_status_and_scope
     disposition: graph_obligation
@@ -1500,8 +1474,6 @@ sourceCoverage:
   - sectionId: section_22_guardrails_machine_checks
     disposition: graph_obligation
     graphIds:
-      - release.measurement
-      - release_verification
       - actual_vs_expected_diff
       - runtime.root.forbidden_api_dependency
       - edit.kernel.forbidden_api_dependency
@@ -1556,15 +1528,8 @@ sourceCoverage:
   - sectionId: section_23_tests
     disposition: non_graph_semantics
     reason: Test inventory completeness is executable proof coverage, not an architecture graph topology fact.
-  - sectionId: section_24_benchmarks
-    disposition: graph_obligation
-    graphIds:
-      - release.measurement
-      - release_verification
   - sectionId: section_27_final_release_gates
     disposition: graph_obligation
     graphIds:
-      - release.measurement
       - full_architecture
       - actual_vs_expected_diff
-      - release_verification

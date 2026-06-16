@@ -1,3 +1,7 @@
+// CanvasSurface owns the public Flutter boundary wiring in one file so attach,
+// detach, pointer, resource, and layer-cache ordering remain auditable.
+// ignore_for_file: number-of-imports
+
 import 'package:flutter/widgets.dart';
 
 import '../api/canvas_runtime.dart';
@@ -36,7 +40,7 @@ final class CanvasSurface extends StatefulWidget {
 // temporal surface lifecycle is auditable at the Flutter boundary.
 // Budget follow-up scheduling stays here so mounted/runtime/session identity
 // guards remain beside attach, detach, and frame binding.
-// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class _CanvasSurfaceState extends State<CanvasSurface> {
   final Object _surfaceToken = Object();
   CanvasRuntime? _activeRuntime;

@@ -59,6 +59,9 @@ void _testFallbackCandidateBudget() {
   });
 }
 
+// The over-budget fixture keeps setup, query, and counter assertions together
+// so no partial-candidate behavior can be hidden behind helper state.
+// ignore: halstead-volume
 void _testTileCandidateBudget() {
   test('tile candidate budget stops during page union', () {
     final counters = SpatialBudgetCounters();

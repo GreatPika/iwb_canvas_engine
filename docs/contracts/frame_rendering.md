@@ -11,8 +11,6 @@ Must read before editing:
 - `section_18_cache_policy` -> `docs/contracts/cache_policy.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_main_paint_frame`
 - `dfd_overlay_frame`

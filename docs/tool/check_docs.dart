@@ -4,32 +4,20 @@
 // diagram catalog membership, and current lookup references. Do not add
 // checks that match free-form Markdown wording, Mermaid edge text, or runtime
 // architecture invariants. Those constraints belong in structured registries,
-// generated documentation, analyzer/lint rules, Dart tests, or benchmarks.
+// generated documentation, analyzer/lint rules, or Dart tests.
 
 import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
-import '../../tool/bench/src/benchmark_manifest.dart';
-import '../../tool/bench/src/benchmark_report.dart';
-
 const _sectionsRegistryPath = 'docs/_registry/sections.yaml';
 const _diagramsRegistryPath = 'docs/_registry/diagrams.yaml';
-const _benchmarksRegistryPath = 'docs/_registry/benchmarks.yaml';
 const _diagramCatalogPath = 'docs/diagrams/catalog.md';
 const _retiredDiagramReadmePath = 'docs/diagrams/README.md';
 const _diagramCatalogMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/diagrams.yaml -->';
 const _generatedIndexMarker =
     '<!-- GENERATED: docs/tool/sync_generated_docs.dart from docs/_registry/sections.yaml -->';
-const _benchmarkPolicySourceNote =
-    'The structured source of truth for section 24 benchmark cases, scales,\n'
-    'measurement boundaries, fixture shapes, metrics, numeric budget classes,\n'
-    'exact invariants, and profile membership is\n'
-    '`docs/_registry/benchmarks.yaml`. This section is a checked human projection of\n'
-    'that manifest.';
-const _benchmarkFingerprintPrefix = '<!-- BENCHMARK-MANIFEST-FINGERPRINT: ';
-
 const _markdownRoots = [
   'docs/architecture',
   'docs/contracts',
@@ -43,7 +31,6 @@ const _generatedIndexPaths = [
   'docs/indexes/by_subsystem.md',
   'docs/indexes/by_guardrail.md',
   'docs/indexes/by_test_area.md',
-  'docs/indexes/by_benchmark.md',
   'docs/indexes/by_diagram.md',
   'docs/indexes/by_release.md',
 ];
@@ -79,7 +66,6 @@ const _rootReadmeTaskRoutes = [
   '- Check subsystem contracts: `docs/indexes/by_subsystem.md`',
   '- Find guardrail coverage: `docs/indexes/by_guardrail.md`',
   '- Find test coverage: `docs/indexes/by_test_area.md`',
-  '- Find benchmark coverage: `docs/indexes/by_benchmark.md`',
   '- Find diagram coverage: `docs/indexes/by_diagram.md`',
   '- Update diagrams: `docs/diagrams/catalog.md`',
   '- Prepare release work: `docs/indexes/by_release.md` and `docs/verification/release_gates.md`',
@@ -119,7 +105,6 @@ void main() {
 
   _checkSectionReferences(sections, sectionIds);
   _checkDiagramCatalogRegistrySymmetry(sections, sectionIds, diagrams);
-  _checkBenchmarkDocsProjection();
   _checkMarkdownPaths(sectionIds);
   _checkMustReadGraph(sections, sectionIds);
 
@@ -135,167 +120,6 @@ void main() {
   stdout.writeln('Docs check passed.');
 }
 
-void _checkBenchmarkDocsProjection() {
-  final manifest = _loadBenchmarkManifest();
-  _checkBenchmarkPolicySourceNote(manifest);
-  final actualRows = _benchmarkRowsFromMarkdown();
-  final expectedRows = [
-    for (final benchmarkCase in manifest.cases)
-      _BenchmarkDocsRow(
-        caseId: benchmarkCase.id,
-        scales: benchmarkCase.docsScaleLabel,
-        boundary: benchmarkCase.measurementBoundary.timedScope,
-        fixtureShape: benchmarkCase.fixtureShape,
-        metrics: benchmarkCase.docsMetricsLabel,
-      ),
-  ];
-
-  if (actualRows.length != expectedRows.length) {
-    _fail(
-      'docs/verification/benchmarks.md section 24 must list exactly '
-      '${expectedRows.length} manifest benchmark cases; found '
-      '${actualRows.length}',
-    );
-    return;
-  }
-  for (var index = 0; index < expectedRows.length; index++) {
-    final actual = actualRows[index];
-    final expected = expectedRows[index];
-    if (!actual.matches(expected)) {
-      _fail(
-        'benchmark docs row ${index + 1} must match '
-        '$_benchmarksRegistryPath: expected ${expected.describe()}, '
-        'found ${actual.describe()}',
-      );
-    }
-  }
-}
-
-void _checkBenchmarkPolicySourceNote(BenchmarkManifest manifest) {
-  final text = _read('docs/verification/benchmarks.md');
-  final match = RegExp(
-    r'Benchmark policy:\s*\n\n([\s\S]*?)\nRequired benchmark cases:',
-  ).firstMatch(text);
-  if (match == null) {
-    _fail('docs/verification/benchmarks.md must name benchmark policy source');
-    return;
-  }
-  final policyText = _matchGroup(match, 1, 'benchmark policy source note');
-  final expected =
-      '$_benchmarkPolicySourceNote\n\n'
-      '$_benchmarkFingerprintPrefix${_benchmarkManifestFingerprint(manifest)} -->';
-  if (policyText.trim() != expected) {
-    _fail(
-      'benchmark policy prose must be only the manifest source note and '
-      'fingerprint: $expected',
-    );
-  }
-}
-
-String _benchmarkManifestFingerprint(BenchmarkManifest manifest) {
-  return benchmarkManifestFingerprint(manifest);
-}
-
-BenchmarkManifest _loadBenchmarkManifest() {
-  try {
-    return BenchmarkManifest.load(path: _benchmarksRegistryPath);
-  } on FormatException catch (error) {
-    _fail(error.message);
-    return const BenchmarkManifest(
-      manifestVersion: '',
-      toolSchemaVersion: 0,
-      releaseContour: BenchmarkReleaseContour(
-        runnerLabel: '',
-        osName: '',
-        osVersion: '',
-        flutterChannel: '',
-        flutterVersion: '',
-      ),
-      profiles: [],
-      budgetClasses: [],
-      memoryScopes: [],
-      cases: [],
-      postBaselineRegressionCaps: {},
-      firstBaselineReferenceLimits: {},
-    );
-  }
-}
-
-// The markdown parser validates the whole human-facing benchmark table as one
-// boundary check so row-shape errors report from the same docs invariant.
-// ignore: halstead-volume, source-lines-of-code
-List<_BenchmarkDocsRow> _benchmarkRowsFromMarkdown() {
-  final text = _read('docs/verification/benchmarks.md');
-  final table = RegExp(
-    r'Required benchmark cases:\s*\n\n'
-    r'(\| Case \| Nodes \| Boundary \| Fixture \| Metrics \|\n'
-    r'\|---\|---:\|---\|---\|---\|\n(?:(?:\|.*\|\n)+))',
-  ).firstMatch(text);
-  if (table == null) {
-    _fail(
-      'docs/verification/benchmarks.md must contain the section 24 cases table',
-    );
-    return const [];
-  }
-
-  final rows = <_BenchmarkDocsRow>[];
-  final tableText = _matchGroup(table, 1, 'benchmark cases table');
-  for (final line in tableText.trim().split('\n').skip(2)) {
-    final cells = line
-        .split('|')
-        .skip(1)
-        .take(5)
-        .map((cell) => cell.trim())
-        .toList();
-    if (cells.length != 5) {
-      _fail('malformed benchmark docs row: $line');
-      continue;
-    }
-    final caseMatch = RegExp(r'^`([^`]+)`$').firstMatch(cells[0]);
-    if (caseMatch == null) {
-      _fail('benchmark docs case cell must contain one code span: $line');
-      continue;
-    }
-    rows.add(
-      _BenchmarkDocsRow(
-        caseId: _matchGroup(caseMatch, 1, 'benchmark docs case id'),
-        scales: cells[1],
-        boundary: cells[2],
-        fixtureShape: cells[3],
-        metrics: cells[4],
-      ),
-    );
-  }
-  return rows;
-}
-
-final class _BenchmarkDocsRow {
-  const _BenchmarkDocsRow({
-    required this.caseId,
-    required this.scales,
-    required this.boundary,
-    required this.fixtureShape,
-    required this.metrics,
-  });
-
-  final String caseId;
-  final String scales;
-  final String boundary;
-  final String fixtureShape;
-  final String metrics;
-
-  String describe() =>
-      '`$caseId` | $scales | $boundary | $fixtureShape | $metrics';
-
-  bool matches(_BenchmarkDocsRow other) {
-    return other.caseId == caseId &&
-        other.scales == scales &&
-        other.boundary == boundary &&
-        other.fixtureShape == fixtureShape &&
-        other.metrics == metrics;
-  }
-}
-
 class _SectionEntry {
   const _SectionEntry({
     required this.id,
@@ -304,7 +128,6 @@ class _SectionEntry {
     required this.owners,
     required this.subsystems,
     required this.mustRead,
-    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -317,7 +140,6 @@ class _SectionEntry {
   final List<String> owners;
   final List<String> subsystems;
   final List<String> mustRead;
-  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;
@@ -352,7 +174,6 @@ void _checkRequiredEntrypoints() {
     'docs/architecture/README.md',
     _sectionsRegistryPath,
     _diagramsRegistryPath,
-    _benchmarksRegistryPath,
     _diagramCatalogPath,
   ];
   const requiredDirs = [
@@ -406,7 +227,6 @@ List<_SectionEntry> _loadSections() {
       owners: _stringListField(entry, 'owners', id),
       subsystems: _stringListField(entry, 'subsystems', id),
       mustRead: _stringListField(entry, 'must_read', id),
-      benchmarks: _stringListField(entry, 'benchmarks', id),
       diagrams: _stringListField(entry, 'diagrams', id),
       guardrails: _stringListField(entry, 'guardrails', id),
       tests: _stringListField(entry, 'tests', id),
@@ -433,7 +253,7 @@ List<_SectionEntry> _loadSections() {
 }
 
 void _rejectRetiredSectionFields(YamlMap entry, String id) {
-  for (final field in const ['phases', 'donors']) {
+  for (final field in const ['phases', 'donors', 'benchmarks']) {
     if (entry.containsKey(field)) {
       _fail('$id must not use retired section field $field');
     }
@@ -451,7 +271,6 @@ void _checkSectionReferences(
     _checkNoneSentinel(section.id, 'must_read', section.mustRead);
     _checkNoneSentinel(section.id, 'owners', section.owners);
     _checkNoneSentinel(section.id, 'subsystems', section.subsystems);
-    _checkNoneSentinel(section.id, 'benchmarks', section.benchmarks);
     _checkNoneSentinel(section.id, 'diagrams', section.diagrams);
     _checkNoneSentinel(section.id, 'guardrails', section.guardrails);
     _checkNoneSentinel(section.id, 'tests', section.tests);
@@ -480,22 +299,6 @@ void _checkSectionReferences(
       } else {
         _fail('${section.id} has unsupported must_read reference $reference');
       }
-    }
-
-    _checkBenchmarkReferences(section);
-  }
-}
-
-void _checkBenchmarkReferences(_SectionEntry section) {
-  final benchmarkIds = _loadBenchmarkManifest().cases.map((entry) {
-    return entry.id;
-  }).toSet();
-  for (final benchmarkId in section.benchmarks) {
-    if (benchmarkId == 'none') {
-      continue;
-    }
-    if (!benchmarkIds.contains(benchmarkId)) {
-      _fail('${section.id} references unknown benchmark $benchmarkId');
     }
   }
 }
@@ -703,7 +506,6 @@ void _checkExplicitCoverage(_SectionEntry section) {
     'owners': section.owners,
     'must_read': section.mustRead,
     'subsystems': section.subsystems,
-    'benchmarks': section.benchmarks,
     'diagrams': section.diagrams,
     'tests': section.tests,
     'guardrails': section.guardrails,

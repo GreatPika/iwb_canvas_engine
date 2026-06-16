@@ -12,6 +12,9 @@ import '../../tool/audit_terminal_cleanup_safety.dart' as terminal_cleanup;
 import '../../tool/lsp_find_thin_wrappers.dart' as thin_wrappers;
 import '../../tool/trace_export_namespace.dart' as export_namespace;
 
+// This is the command-level smoke suite for every root forensics tool; keeping
+// the scenarios together proves the shared invocation contract in one place.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   group('repo forensics root tools', () {
     test('clone analysis runs from the root tool directory', () async {

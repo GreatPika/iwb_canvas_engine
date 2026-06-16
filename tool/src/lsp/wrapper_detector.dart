@@ -33,6 +33,9 @@ final class WrapperCandidate {
   final bool sameNameForwarding;
 }
 
+// Wrapper scanning keeps file traversal, parsing, classification, and stable
+// sorting together so audit reports remain deterministic.
+// ignore: halstead-volume, source-lines-of-code
 List<WrapperCandidate> collectWrapperCandidates({
   required Directory root,
   required String targetPath,
@@ -98,6 +101,9 @@ List<WrapperCandidate> collectWrapperCandidates({
   return candidates;
 }
 
+// Classification needs the method, owner, source location, and private-filter
+// inputs together to distinguish pure wrappers from guarded forwarding.
+// ignore: cyclomatic-complexity, halstead-volume, number-of-parameters, source-lines-of-code
 WrapperCandidate? _classifyMethod({
   required String repoRelativePath,
   required String ownerName,
@@ -178,6 +184,9 @@ String _className(ClassDeclaration declaration) {
   };
 }
 
+// The inspector couples to the analyzer expression/statement nodes it must
+// recognize; hiding that coupling would make wrapper classification opaque.
+// ignore: coupling-between-object-classes
 final class _WrapperInspector extends RecursiveAstVisitor<void> {
   final List<_InvocationSummary> invocations = <_InvocationSummary>[];
   int guardCount = 0;

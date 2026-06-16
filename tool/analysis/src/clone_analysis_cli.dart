@@ -87,6 +87,9 @@ CloneAnalysisParseResult parseCloneAnalysisArgs(List<String> args) {
   return _applyPositionalArgs(config, positionals);
 }
 
+// Positional CLI parsing stays together so each legacy argument keeps its
+// stable index, error label, and copyWith mapping in one auditable block.
+// ignore: halstead-volume, source-lines-of-code
 CloneAnalysisParseResult _applyPositionalArgs(
   CloneAnalysisConfig config,
   List<String> positionals,

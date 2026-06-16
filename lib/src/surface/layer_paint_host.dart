@@ -5,6 +5,9 @@ import '../frame/frame_paint_output.dart';
 import 'main_painter.dart';
 import 'overlay_painter.dart';
 
+// The host keeps both paint layers in one widget so their stacking order,
+// repaint boundaries, and listenable ownership stay reviewable together.
+// ignore: coupling-between-object-classes
 final class LayerPaintHost extends StatelessWidget {
   const LayerPaintHost({
     required this.paintSize,

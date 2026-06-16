@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+// The LSP client owns one protocol session; splitting request, notification,
+// lifecycle, and stream parsing would hide the state that keeps ids ordered.
+// ignore: number-of-methods, response-for-class, weighted-methods-per-class
 final class LanguageServerClient {
   LanguageServerClient._({
     required Process process,
@@ -194,6 +197,9 @@ final class LanguageServerClient {
     _drainStdoutBuffer();
   }
 
+  // The stdout parser is a streaming frame state machine; keeping header,
+  // body, pending-request, and error handling adjacent makes partial reads safe.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
   void _drainStdoutBuffer() {
     while (true) {
       final bytes = _stdoutBuffer.toBytes();

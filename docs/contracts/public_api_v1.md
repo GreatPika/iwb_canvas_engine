@@ -9,8 +9,6 @@ Must read before editing:
 - `section_03_package_layout` -> `docs/architecture/02_package_boundaries.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_context`
 - `dfd_public_edit`

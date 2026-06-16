@@ -8,8 +8,6 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_diagnostics_error_projection`
 Required tests:

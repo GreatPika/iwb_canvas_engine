@@ -110,7 +110,6 @@ List<_SectionEntry> _loadSections(List<String> errors) {
         title: title,
         owners: _stringListField(item, 'owners', id, errors),
         mustRead: _stringListField(item, 'must_read', id, errors),
-        benchmarks: _stringListField(item, 'benchmarks', id, errors),
         diagrams: _stringListField(item, 'diagrams', id, errors),
         guardrails: _stringListField(item, 'guardrails', id, errors),
         tests: _stringListField(item, 'tests', id, errors),
@@ -137,8 +136,6 @@ String _renderSectionContext(
   _writeReferenceList(buffer, section.mustRead, sectionsById, errors);
   buffer.writeln('Current owners:');
   _writeCodeList(buffer, section.owners);
-  buffer.writeln('Benchmarks:');
-  _writeCodeList(buffer, section.benchmarks);
   buffer.writeln('Related diagrams:');
   _writeCodeList(buffer, section.diagrams);
   buffer.writeln('Required tests:');
@@ -299,7 +296,6 @@ class _SectionEntry {
     required this.title,
     required this.owners,
     required this.mustRead,
-    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -311,7 +307,6 @@ class _SectionEntry {
   final String title;
   final List<String> owners;
   final List<String> mustRead;
-  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;

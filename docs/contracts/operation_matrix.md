@@ -8,8 +8,6 @@ Must read before editing:
 - `section_11_edit_kernel` -> `docs/contracts/edit_kernel.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `seq_edit_success`
 - `seq_edit_rollback`

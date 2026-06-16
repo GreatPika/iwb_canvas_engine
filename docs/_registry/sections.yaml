@@ -8,8 +8,6 @@
   - none
   must_read:
   - none
-  benchmarks:
-  - none
   diagrams:
   - c4_context
   - c4_container
@@ -35,14 +33,11 @@
   - selection_runtime
   must_read:
   - section_00_status_and_scope
-  benchmarks:
-  - none
   diagrams:
   - c4_container
   - c4_component_runtime
   - generated/actual_vs_expected_diff
   - generated/full_architecture
-  - generated/release_verification
   - state_runtime_lifecycle
   guardrails:
   - core.single_runtime_root
@@ -64,8 +59,6 @@
   must_read:
   - section_00_status_and_scope
   - section_02_architecture_model
-  benchmarks:
-  - none
   diagrams:
   - c4_container
   guardrails:
@@ -95,8 +88,6 @@
   must_read:
   - section_00_status_and_scope
   - section_03_package_layout
-  benchmarks:
-  - none
   diagrams:
   - c4_context
   - dfd_public_edit
@@ -170,8 +161,6 @@
   must_read:
   - section_04_public_api_v1
   - section_06_validation_limits
-  benchmarks:
-  - none
   diagrams:
   - dfd_schema_v1_import_encode
   - seq_schema_v1_import_encode_order
@@ -199,8 +188,6 @@
   - public_api
   must_read:
   - section_04_public_api_v1
-  benchmarks:
-  - none
   diagrams:
   - dfd_diagnostics_error_projection
   guardrails:
@@ -222,8 +209,6 @@
   must_read:
   - section_04_public_api_v1
   - section_10_runtime_data_model
-  benchmarks:
-  - none
   diagrams:
   - dfd_resource_resolution
   - seq_resource_resolution
@@ -268,8 +253,6 @@
   must_read:
   - section_02_architecture_model
   - section_04_public_api_v1
-  benchmarks:
-  - none
   diagrams:
   - c4_component_runtime
   - dfd_cache_invalidation
@@ -303,8 +286,6 @@
   must_read:
   - section_04_public_api_v1
   - section_10_runtime_data_model
-  benchmarks:
-  - none
   diagrams:
   - c4_code_edit_kernel
   - dfd_public_edit
@@ -344,8 +325,6 @@
   must_read:
   - section_10_runtime_data_model
   - section_11_edit_kernel
-  benchmarks:
-  - none
   diagrams:
   - dfd_load_document_success_failure
   - seq_load_document_success
@@ -369,8 +348,6 @@
   - runtime_store_edit
   must_read:
   - section_11_edit_kernel
-  benchmarks:
-  - none
   diagrams:
   - seq_edit_success
   - seq_edit_rollback
@@ -407,8 +384,6 @@
   - section_11_edit_kernel
   - section_15_frame_render_contract
   - section_16_geometry_policy
-  benchmarks:
-  - none
   diagrams:
   - dfd_pointer_preview_commit
   - seq_selected_move_preview_commit
@@ -501,8 +476,6 @@
   - section_07_resource_lifecycle
   - section_17_spatial_kernel
   - section_18_cache_policy
-  benchmarks:
-  - none
   diagrams:
   - dfd_main_paint_frame
   - dfd_overlay_frame
@@ -557,8 +530,6 @@
   must_read:
   - section_04_public_api_v1
   - section_10_runtime_data_model
-  benchmarks:
-  - none
   diagrams:
   - dfd_pointer_preview_commit
   - seq_hit_test_candidate_resolution
@@ -589,8 +560,6 @@
   must_read:
   - section_10_runtime_data_model
   - section_16_geometry_policy
-  benchmarks:
-  - none
   diagrams:
   - dfd_cache_invalidation
   - dfd_spatial_query_budget
@@ -624,8 +593,6 @@
   must_read:
   - section_10_runtime_data_model
   - section_17_spatial_kernel
-  benchmarks:
-  - none
   diagrams:
   - dfd_cache_invalidation
   guardrails:
@@ -656,8 +623,6 @@
   must_read:
   - section_05_schema_v1_contract
   - section_06_validation_limits
-  benchmarks:
-  - none
   diagrams:
   - dfd_schema_v1_import_encode
   - seq_schema_v1_import_encode_order
@@ -684,8 +649,6 @@
   must_read:
   - section_06_validation_limits
   - section_19_codec_boundary
-  benchmarks:
-  - none
   diagrams:
   - dfd_diagnostics_error_projection
   guardrails:
@@ -708,8 +671,6 @@
   must_read:
   - section_00_status_and_scope
   - section_03_package_layout
-  benchmarks:
-  - none
   diagrams:
   - none
   guardrails:
@@ -790,7 +751,6 @@
   - codec.no_runtime_side_effects
   - diagnostics.disabled_no_alloc_hot_path
   - diagnostics.sanitized_public_projection
-  - release.benchmark_readiness
   - tools.public_port_behavior
   - surface.pointer_samples_normalized_before_runtime
   - surface.interactive_false_pending_line_preserved
@@ -798,7 +758,6 @@
   - test.api_contract.public_integration_compile_fixture
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.guardrails.text_surface_guardrail_checks
-  - test.guardrails.release_readiness
   - test.guardrails.blocking_suite
   do_not_assume:
   - no non-blocking critical guardrail
@@ -813,8 +772,6 @@
   must_read:
   - section_04_public_api_v1
   - section_22_guardrails_machine_checks
-  benchmarks:
-  - none
   diagrams:
   - none
   guardrails:
@@ -956,71 +913,9 @@
   - test.guardrails.action_after_state
   - test.guardrails.interaction_guardrail_enforcement
   - test.surface.widget_paint
-  - test.guardrails.release_readiness
-  - test.benchmarks.benchmark_manifest
-  - test.benchmarks.benchmark_diff
-  - test.benchmarks.benchmark_runner
-  - test.benchmarks.required_cases
   - test.guardrails.blocking_suite
   do_not_assume:
   - shared behavior needs current owner tests
-- id: section_24_benchmarks
-  source: docs/_registry/sections.yaml / section 24
-  file: docs/verification/benchmarks.md
-  title: 24. Benchmarks
-  owners:
-  - benchmark
-  subsystems:
-  - quality_gates
-  must_read:
-  - section_15_frame_render_contract
-  - section_17_spatial_kernel
-  - section_18_cache_policy
-  benchmarks:
-  - edit.add_element
-  - edit.update_visual
-  - edit.update_transform
-  - edit.move_selection
-  - edit.set_camera_offset
-  - edit.add_line
-  - input.selected_move_preview
-  - frame.selected_move_preview_cached_ordinary_plan
-  - input.marquee_preview
-  - input.draw_preview
-  - input.line_preview
-  - input.eraser_preview
-  - input.eraser_budget_exceeded
-  - frame.main_capture
-  - frame.overlay_capture
-  - frame.paint_candidates
-  - surface.overlay_preview_route
-  - surface.selected_move_route
-  - resources.resolve_sync
-  - resources.resolve_sync_cold_budget
-  - resources.mark_dirty
-  - resources.mark_all_dirty
-  - projection.read_document
-  - codec.decode_v1
-  - load_document.success
-  - load_document.breakdown
-  - load_document.failure
-  - spatial.query_point
-  - spatial.query_point_dense_stress
-  - spatial.touched_update
-  - runtime.dispose_during_gesture
-  - diagnostics.disabled_pointer
-  diagrams:
-  - none
-  guardrails:
-  - release.benchmark_readiness
-  tests:
-  - test.benchmarks.benchmark_manifest
-  - test.benchmarks.benchmark_diff
-  - test.benchmarks.benchmark_runner
-  - test.guardrails.release_readiness
-  - test.benchmarks.required_cases
-  do_not_assume:
-  - no feature route regression
 - id: section_27_final_release_gates
   source: docs/_registry/sections.yaml / section 27
   file: docs/verification/release_gates.md
@@ -1032,9 +927,6 @@
   must_read:
   - section_22_guardrails_machine_checks
   - section_23_tests
-  - section_24_benchmarks
-  benchmarks:
-  - none
   diagrams:
   - none
   guardrails:
@@ -1112,14 +1004,12 @@
   - codec.no_runtime_side_effects
   - diagnostics.disabled_no_alloc_hot_path
   - diagnostics.sanitized_public_projection
-  - release.benchmark_readiness
   - tools.public_port_behavior
   - surface.pointer_samples_normalized_before_runtime
   - surface.interactive_false_pending_line_preserved
   tests:
   - test.api_contract.public_integration_compile_fixture
   - test.guardrails.frame_committed_facts_via_frame_facts_port
-  - test.guardrails.release_readiness
   - test.guardrails.blocking_suite
   do_not_assume:
   - no release with blocked imports, private facades, or unproved behavior

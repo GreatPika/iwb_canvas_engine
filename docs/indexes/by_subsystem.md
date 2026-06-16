@@ -23,7 +23,6 @@ Sections grouped by subsystem from `docs/_registry/sections.yaml`.
 
 - `section_22_guardrails_machine_checks` - 22. Guardrails and machine checks
 - `section_23_tests` - 23. Tests
-- `section_24_benchmarks` - 24. Benchmarks
 - `section_27_final_release_gates` - 27. Final release gates
 
 ## resources

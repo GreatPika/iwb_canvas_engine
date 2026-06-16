@@ -12,7 +12,6 @@ import 'guardrail_violation.dart';
 import 'owner_dag_import_checks.dart';
 import 'interaction_guardrail_checks.dart';
 import 'public_api_guardrail_checks.dart';
-import 'release_readiness_checks.dart';
 import 'selection_boundary_checks.dart';
 import 'selection_move_guardrail_suite.dart';
 import 'store_projection_checks.dart';
@@ -423,10 +422,6 @@ const _testProofPaths = {
   spatialFallbackBudgetGuardrailId: [
     'test/guardrails/spatial_fallback_budget_enforced_guardrail_test.dart',
   ],
-  releaseBenchmarkReadinessGuardrailId: [
-    'test/benchmarks/benchmark_diff_test.dart',
-    'test/guardrails/release_readiness_guardrail_test.dart',
-  ],
 };
 
 Map<String, GuardrailViolationRunner> _violationChecksFor(
@@ -493,7 +488,6 @@ final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
   spatialNoFullCloneGuardrailId: checkSpatialNoFullCloneOrdinaryEdit,
   spatialStaleCandidateGuardrailId: checkSpatialStaleCandidateRejected,
   spatialFallbackBudgetGuardrailId: checkSpatialFallbackBudgetEnforced,
-  releaseBenchmarkReadinessGuardrailId: checkReleaseBenchmarkReadiness,
 };
 
 const _structuralDescriptions = {
@@ -568,8 +562,6 @@ const _structuralDescriptions = {
       'spatial stale candidate typed-result and handle-remap check',
   spatialFallbackBudgetGuardrailId:
       'spatial fallback budget no-partial result check',
-  releaseBenchmarkReadinessGuardrailId:
-      'benchmark package boundary and policy check',
 };
 
 const _coreBoundaryIds = {

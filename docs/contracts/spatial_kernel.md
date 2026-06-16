@@ -9,8 +9,6 @@ Must read before editing:
 - `section_16_geometry_policy` -> `docs/contracts/geometry.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_cache_invalidation`
 - `dfd_spatial_query_budget`

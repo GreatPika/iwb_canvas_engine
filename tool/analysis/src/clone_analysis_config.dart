@@ -72,9 +72,9 @@ class CloneAnalysisConfig {
       minOverlap: _resolveDouble(minOverlap, this.minOverlap),
       maxBucketSize: _resolveInt(maxBucketSize, this.maxBucketSize),
       excludeMain: _resolveBool(excludeMain, this.excludeMain),
-      topResults: _resolveTopResults(topResults),
-      outputFormat: _resolveOutputFormat(outputFormat),
-      reportMode: _resolveReportMode(reportMode),
+      topResults: _resolveTopResults(topResults, this.topResults),
+      outputFormat: outputFormat ?? this.outputFormat,
+      reportMode: reportMode ?? this.reportMode,
     );
   }
 
@@ -106,39 +106,29 @@ class CloneAnalysisConfig {
       'reportMode': reportMode.name,
     };
   }
+}
 
-  int? _resolveTopResults(Object? topResults) {
-    if (identical(topResults, noChange)) {
-      return this.topResults;
-    }
-    return topResults as int?;
+int? _resolveTopResults(Object? topResults, int? fallback) {
+  if (identical(topResults, CloneAnalysisConfig.noChange)) {
+    return fallback;
   }
+  return topResults as int?;
+}
 
-  String _resolveString(String? value, String fallback) {
-    return value ?? fallback;
-  }
+String _resolveString(String? value, String fallback) {
+  return value ?? fallback;
+}
 
-  int _resolveInt(int? value, int fallback) {
-    return value ?? fallback;
-  }
+int _resolveInt(int? value, int fallback) {
+  return value ?? fallback;
+}
 
-  double _resolveDouble(double? value, double fallback) {
-    return value ?? fallback;
-  }
+double _resolveDouble(double? value, double fallback) {
+  return value ?? fallback;
+}
 
-  bool _resolveBool(bool? value, bool fallback) {
-    return value ?? fallback;
-  }
-
-  CloneAnalysisOutputFormat _resolveOutputFormat(
-    CloneAnalysisOutputFormat? value,
-  ) {
-    return value ?? outputFormat;
-  }
-
-  CloneAnalysisReportMode _resolveReportMode(CloneAnalysisReportMode? value) {
-    return value ?? reportMode;
-  }
+bool _resolveBool(bool? value, bool fallback) {
+  return value ?? fallback;
 }
 
 String? _firstValidationError(List<String?> candidates) {

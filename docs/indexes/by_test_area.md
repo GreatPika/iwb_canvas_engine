@@ -87,22 +87,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_07_resource_lifecycle`, `section_23_tests`
 
-## test.benchmarks.benchmark_diff
-
-- Sections: `section_23_tests`, `section_24_benchmarks`
-
-## test.benchmarks.benchmark_manifest
-
-- Sections: `section_23_tests`, `section_24_benchmarks`
-
-## test.benchmarks.benchmark_runner
-
-- Sections: `section_23_tests`, `section_24_benchmarks`
-
-## test.benchmarks.required_cases
-
-- Sections: `section_23_tests`, `section_24_benchmarks`
-
 ## test.codec.constructor_and_schema_limits
 
 - Sections: `section_06_validation_limits`, `section_23_tests`
@@ -310,10 +294,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.guardrails.public_api_import_cycles
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
-
-## test.guardrails.release_readiness
-
-- Sections: `section_22_guardrails_machine_checks`, `section_23_tests`, `section_24_benchmarks`, `section_27_final_release_gates`
 
 ## test.guardrails.selection_boundary_checks
 

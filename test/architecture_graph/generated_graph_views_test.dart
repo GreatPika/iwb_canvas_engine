@@ -33,7 +33,6 @@ void _registerRenderedViewsTest() {
     );
     _expectCurrentViews(first);
     _expectRetiredViewsAbsent(first);
-    _expectReleaseView(first);
     _expectDiffView(first);
     _expectNoSelectedPhaseMetadata(first);
   });
@@ -86,13 +85,6 @@ void _expectRetiredViewsAbsent(Map<String, String> views) {
   expect(
     views.keys,
     isNot(contains('docs/diagrams/generated/future_target.mmd')),
-  );
-}
-
-void _expectReleaseView(Map<String, String> views) {
-  expect(
-    views['docs/diagrams/generated/release_verification.mmd'],
-    contains('release_measurement'),
   );
 }
 

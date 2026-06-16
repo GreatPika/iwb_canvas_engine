@@ -9,8 +9,6 @@ Must read before editing:
 - `section_10_runtime_data_model` -> `docs/architecture/03_data_model.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_pointer_preview_commit`
 - `seq_hit_test_candidate_resolution`

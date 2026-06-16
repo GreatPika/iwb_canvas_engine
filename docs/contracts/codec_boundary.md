@@ -9,8 +9,6 @@ Must read before editing:
 - `section_06_validation_limits` -> `docs/contracts/validation_limits.md`
 Current owners:
 - `contract`
-Benchmarks:
-- `none`
 Related diagrams:
 - `dfd_schema_v1_import_encode`
 - `seq_schema_v1_import_encode_order`

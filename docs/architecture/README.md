@@ -30,7 +30,7 @@ the generated navigation that supports owner, subsystem, and diagram lookup.
 
 - `docs/architecture/` owns target-system shape.
 - `docs/contracts/` owns subsystem behavior and invariants.
-- `docs/verification/` owns proof plans, guardrails, tests, benchmarks, and release gates.
+- `docs/verification/` owns proof plans, guardrails, tests, and release gates.
 - `docs/_registry/` owns relationship metadata for generated navigation.
 
 ## Checks

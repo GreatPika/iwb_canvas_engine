@@ -9,8 +9,6 @@ Must read before editing:
 - `section_04_public_api_v1` -> `docs/contracts/public_api_v1.md`
 Current owners:
 - `architecture`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_component_runtime`
 - `dfd_cache_invalidation`

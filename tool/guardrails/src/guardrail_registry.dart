@@ -110,11 +110,6 @@ const _blockingEntries = [
     suites: {'blocking', 'diagnostics'},
   ),
   GuardrailEntry(
-    id: 'release.benchmark_readiness',
-    suites: {'blocking', 'release'},
-    requiresRunnerStructuralProof: true,
-  ),
-  GuardrailEntry(
     id: 'core.no_unapproved_external_package_imports',
     suites: {'blocking', 'core'},
   ),

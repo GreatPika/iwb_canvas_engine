@@ -20,14 +20,4 @@ Step entry template: `- [ ] [Step <number>. <Short step title>](plan/step_<numbe
 
 ## Step Files
 
-- [x] [Step 1. Current docs without history](plan/step_1_current_docs_without_history.md)
-- [x] [Step 2. API surface invalid terminal cleanup](plan/step_2_api_surface_invalid_terminal_cleanup.md)
-- [x] [Step 3. Compact overlay frame capture](plan/step_3_compact_overlay_frame_capture.md)
-- [x] [Step 4. Runtime timestamp-silent cancellations](plan/step_4_runtime_timestamp_silent_cancellations.md)
-- [x] [Step 5. Net no-op edit commit](plan/step_5_net_no_op_edit_commit.md)
-- [x] [Step 6. CanvasSurface bounded layout](plan/step_6_canvas_surface_bounded_layout.md)
-- [x] [Step 7. Surface repaint routing benchmark proof](plan/step_7_surface_repaint_routing_benchmark_proof.md)
-- [x] [Step 8. Layer-aware surface repaint routing](plan/step_8_layer_aware_surface_repaint_routing.md)
-- [x] [Step 9. Resource image cache memory accounting](plan/step_9_resource_image_cache_memory_accounting.md)
-- [x] [Step 10. Schema v1 reader consolidation](plan/step_10_schema_v1_reader_consolidation.md)
-- [x] [Step 11. Resolver exception placeholder](plan/step_11_resolver_exception_placeholder.md)
+No active step contracts are currently retained.

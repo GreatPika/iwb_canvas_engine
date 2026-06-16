@@ -40,14 +40,11 @@ jobs:
       - name: Check generated graph views
         run: dart run tool/architecture_graph/generate_views.dart --check
 
-      - name: Test all benchmark tests
-        run: dart test $(find test/benchmarks -maxdepth 1 -name '*_test.dart' -print | sort)
-
-      - name: Test all non-benchmark Flutter tests
+      - name: Test all Flutter tests
         env:
           EXAMPLE_BOUNDARY_DIFF_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
           EXAMPLE_BOUNDARY_DIFF_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
-        run: flutter test --concurrency=1 $(find test -path test/benchmarks -prune -o -name '*_test.dart' -print)
+        run: flutter test --concurrency=1 $(find test -name '*_test.dart' -print)
 
       - name: Analyze Dart
         run: dart analyze

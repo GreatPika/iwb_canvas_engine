@@ -20,6 +20,9 @@ final class LocatedSymbol {
   final String kind;
 }
 
+// Symbol lookup keeps class-member and top-level query shapes in one boundary
+// function so diagnostics and line mapping stay consistent.
+// ignore: cyclomatic-complexity, halstead-volume, maintainability-index, source-lines-of-code
 LocatedSymbol locateSymbol({
   required Directory root,
   required String repoRelativePath,

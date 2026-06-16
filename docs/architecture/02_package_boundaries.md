@@ -9,8 +9,6 @@ Must read before editing:
 - `section_02_architecture_model` -> `docs/architecture/01_runtime_ownership.md`
 Current owners:
 - `architecture`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_container`
 Required tests:
@@ -171,11 +169,9 @@ The new package is rooted at the repository top level:
     diagnostics/
     surface/
     guardrails/
-    benchmarks/
     support/
   tool/
     guardrails/
-    bench/
     diagrams/
 ```
 
@@ -255,8 +251,8 @@ Production-owned tests mirror the top-level ownership folders under
 `lib/src/**`: `test/edit/**` covers `lib/src/edit/**`, `test/frame/**` covers
 `lib/src/frame/**`, and so on. Cross-cutting proof areas that do not belong to
 one production owner stay outside the mirror: `test/api_contract/**`,
-`test/oracle/**`, `test/guardrails/**`, `test/benchmarks/**`, and
-shared test fixtures live under `test/support/**`.
+`test/oracle/**`, `test/guardrails/**`, and shared test fixtures live under
+`test/support/**`.
 
 The mirror is an ownership and navigation rule, not a rule that every source
 file needs a matching test file. Individual tests are named for the behavior,

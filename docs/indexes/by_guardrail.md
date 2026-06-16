@@ -251,10 +251,6 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## release.benchmark_readiness
-
-- Sections: `section_22_guardrails_machine_checks`, `section_24_benchmarks`, `section_27_final_release_gates`
-
 ## resources.app_key_only
 
 - Sections: `section_07_resource_lifecycle`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`

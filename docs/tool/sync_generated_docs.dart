@@ -16,7 +16,6 @@ const _generatedIndexPaths = [
   'docs/indexes/by_subsystem.md',
   'docs/indexes/by_guardrail.md',
   'docs/indexes/by_test_area.md',
-  'docs/indexes/by_benchmark.md',
   'docs/indexes/by_diagram.md',
   'docs/indexes/by_release.md',
 ];
@@ -100,7 +99,6 @@ class _SectionEntry {
     required this.owners,
     required this.subsystems,
     required this.mustRead,
-    required this.benchmarks,
     required this.diagrams,
     required this.guardrails,
     required this.tests,
@@ -111,7 +109,6 @@ class _SectionEntry {
   final List<String> owners;
   final List<String> subsystems;
   final List<String> mustRead;
-  final List<String> benchmarks;
   final List<String> diagrams;
   final List<String> guardrails;
   final List<String> tests;
@@ -278,7 +275,6 @@ _SectionEntry _sectionEntry(YamlMap map, List<String> errors) {
     owners: _stringListField(map, 'owners', id, errors),
     subsystems: _stringListField(map, 'subsystems', id, errors),
     mustRead: _stringListField(map, 'must_read', id, errors),
-    benchmarks: _stringListField(map, 'benchmarks', id, errors),
     diagrams: _stringListField(map, 'diagrams', id, errors),
     guardrails: _stringListField(map, 'guardrails', id, errors),
     tests: _stringListField(map, 'tests', id, errors),
@@ -289,7 +285,6 @@ void _checkExplicitCoverage(_SectionEntry section, List<String> errors) {
   final coverageFields = {
     'owners': section.owners,
     'must_read': section.mustRead,
-    'benchmarks': section.benchmarks,
     'diagrams': section.diagrams,
     'guardrails': section.guardrails,
     'tests': section.tests,
@@ -358,7 +353,6 @@ void _syncGeneratedIndexes(
     'docs/indexes/by_subsystem.md': _renderBySubsystemIndex(sections),
     'docs/indexes/by_guardrail.md': _renderByGuardrailIndex(sections),
     'docs/indexes/by_test_area.md': _renderByTestAreaIndex(sections),
-    'docs/indexes/by_benchmark.md': _renderByBenchmarkIndex(sections),
     'docs/indexes/by_diagram.md': _renderByDiagramIndex(sections),
     'docs/indexes/by_release.md': _renderByReleaseIndex(sections),
   };
@@ -572,31 +566,6 @@ String _renderByTestAreaIndex(List<_SectionEntry> sections) {
   for (final test in tests.keys.toList()..sort()) {
     final entries = tests[test] ?? const <_SectionEntry>[];
     _writeHeading(buffer, test);
-    buffer
-      ..writeln('- Sections: ${_sectionCodeList(entries)}')
-      ..writeln();
-  }
-  return buffer.toString();
-}
-
-String _renderByBenchmarkIndex(List<_SectionEntry> sections) {
-  final benchmarks = <String, List<_SectionEntry>>{};
-  for (final section in sections) {
-    for (final benchmark in section.benchmarks) {
-      if (benchmark == 'none') {
-        continue;
-      }
-      benchmarks.putIfAbsent(benchmark, () => []).add(section);
-    }
-  }
-
-  final buffer = _indexBuffer(
-    'By benchmark',
-    'Benchmark ownership generated from `$_sectionsRegistryPath`.',
-  );
-  for (final benchmark in benchmarks.keys.toList()..sort()) {
-    final entries = benchmarks[benchmark] ?? const <_SectionEntry>[];
-    _writeHeading(buffer, benchmark);
     buffer
       ..writeln('- Sections: ${_sectionCodeList(entries)}')
       ..writeln();

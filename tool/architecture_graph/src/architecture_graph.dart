@@ -718,7 +718,6 @@ final class _GraphEntryValidator {
       context.unique(view.id);
       context.allowed(view.kind, const {
         'expected_full',
-        'expected_release_verification',
         'actual_vs_expected_diff',
       }, view.id);
       context.requiredText(view.title, '${view.id}.title');

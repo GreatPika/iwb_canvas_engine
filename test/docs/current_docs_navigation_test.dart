@@ -9,6 +9,7 @@ void main() {
   group('current docs navigation', () {
     _registerGeneratedIndexesTest();
     _registerEntrypointRouteTest();
+    _registerSectionRegistryRetiredFieldTest();
     _registerDiagramCatalogOwnerTest();
   });
 }
@@ -38,6 +39,18 @@ void _registerEntrypointRouteTest() {
   });
 }
 
+void _registerSectionRegistryRetiredFieldTest() {
+  test('section registry rejects retired route metadata fields', () {
+    final registryText = File(
+      'docs/_registry/sections.yaml',
+    ).readAsStringSync();
+
+    for (final field in _retiredSectionFields) {
+      expect(registryText, isNot(contains('\n  $field:')), reason: field);
+    }
+  });
+}
+
 void _registerDiagramCatalogOwnerTest() {
   test('generated diagram catalog uses current owner metadata', () {
     final catalog = File('docs/diagrams/catalog.md').readAsStringSync();
@@ -52,7 +65,6 @@ const _currentIndexPaths = {
   'docs/indexes/by_subsystem.md',
   'docs/indexes/by_guardrail.md',
   'docs/indexes/by_test_area.md',
-  'docs/indexes/by_benchmark.md',
   'docs/indexes/by_diagram.md',
   'docs/indexes/by_release.md',
 };
@@ -63,3 +75,5 @@ const _retiredRoutes = {
   'docs/implementation/',
   'docs/donors/',
 };
+
+const _retiredSectionFields = {'phases', 'donors', 'benchmarks'};

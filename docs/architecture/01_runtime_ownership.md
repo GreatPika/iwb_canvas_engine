@@ -8,14 +8,11 @@ Must read before editing:
 - `section_00_status_and_scope` -> `docs/architecture/00_architecture_overview.md`
 Current owners:
 - `architecture`
-Benchmarks:
-- `none`
 Related diagrams:
 - `c4_container`
 - `c4_component_runtime`
 - `generated/actual_vs_expected_diff`
 - `generated/full_architecture`
-- `generated/release_verification`
 - `state_runtime_lifecycle`
 Required tests:
 - `test.guardrails.blocking_suite`

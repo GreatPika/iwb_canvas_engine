@@ -115,10 +115,6 @@ String _renderView(
 ) {
   return switch (view.kind) {
     'expected_full' => _renderFullExpectedView(view, expected),
-    'expected_release_verification' => _renderReleaseVerificationView(
-      view,
-      expected,
-    ),
     'actual_vs_expected_diff' => _renderDiffView(
       title: view.title,
       expected: expected,
@@ -138,26 +134,6 @@ String _renderFullExpectedView(
       title: view.title,
       nodes: _includedNodes(expected.nodes, view),
       edges: expected.edges,
-      enforceConnectivity: true,
-    ),
-  );
-}
-
-String _renderReleaseVerificationView(
-  ArchitectureView view,
-  ExpectedArchitectureGraph expected,
-) {
-  return _renderExpectedGraphView(
-    _ExpectedViewRequest(
-      viewId: view.id,
-      title: view.title,
-      nodes: _includedNodes(
-        expected.nodes,
-        view,
-      ).where((node) => node.status == 'measurement').toList(),
-      edges: expected.edges
-          .where((edge) => edge.status == 'measurement')
-          .toList(),
       enforceConnectivity: true,
     ),
   );

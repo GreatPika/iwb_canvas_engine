@@ -67,10 +67,6 @@ Diagram ownership generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_02_architecture_model`
 
-## generated/release_verification
-
-- Sections: `section_02_architecture_model`
-
 ## seq_context_action_request
 
 - Sections: `section_14_interaction_engine`

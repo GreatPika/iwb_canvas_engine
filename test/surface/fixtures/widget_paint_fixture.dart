@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+// This fixture is the widget-level proof surface for CanvasSurface repaint
+// routing, so it intentionally imports the public widget API and internal probes.
+// ignore_for_file: number-of-external-imports, number-of-imports
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
@@ -14,6 +18,9 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
+// The registration block keeps the full CanvasSurface repaint matrix visible in
+// one fixture instead of scattering the proof across unrelated test files.
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   test('CanvasSurface layer host isolates repaint boundaries', () {
     final source = File(
@@ -194,6 +201,9 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   image.dispose();
 }
 
+// Budget follow-up behavior depends on resolver calls, layer dispatch, and
+// render-object paint flags being asserted in one ordered widget scenario.
+// ignore: halstead-volume
 Future<void> _expectResourceBudgetFollowUpFrame(WidgetTester tester) async {
   final image = await _createImage();
   final runtime = runtimeWithDocument(_manyImageDocument(140));
@@ -230,6 +240,9 @@ Future<void> _expectResourceBudgetFollowUpFrame(WidgetTester tester) async {
   image.dispose();
 }
 
+// The stale follow-up guard must keep old/new runtimes and layer outputs in one
+// scenario so inactive resource publications cannot be mistaken for valid work.
+// ignore: halstead-volume
 Future<void> _expectStaleBudgetFollowUpIgnored(WidgetTester tester) async {
   final oldImage = await _createImage();
   final newImage = await _createImage();
@@ -297,6 +310,9 @@ Future<void> _expectMainAndOverlayPreviewRouting(WidgetTester tester) async {
   await _expectMarqueeOverlayOnly(tester, runtime, resolver, probe);
 }
 
+// Coalescing proof is clearer with all three synchronous runtime publications
+// and layer counters asserted in the same scenario.
+// ignore: halstead-volume
 Future<void> _expectSynchronousRuntimeFrameCoalescing(
   WidgetTester tester,
 ) async {
@@ -329,6 +345,9 @@ Future<void> _expectSynchronousRuntimeFrameCoalescing(
   expect(resolver.calls, 0);
 }
 
+// Document replacement must compare both layer outputs before and after the
+// same runtime mutation, so the proof stays together.
+// ignore: halstead-volume
 Future<void> _expectDocumentReplacementRebuildsBothLayers(
   WidgetTester tester,
 ) async {
@@ -447,6 +466,9 @@ Future<void> _expectResourceInvalidationRouting(WidgetTester tester) async {
   );
 }
 
+// Runtime swap proof needs both runtimes, outputs, and dispatch counters in one
+// ordered flow to catch stale listener behavior.
+// ignore: halstead-volume
 Future<void> _expectRuntimeSwapRebuildsBothLayers(WidgetTester tester) async {
   final oldRuntime = runtimeWithDocument(_rectDocument());
   final newRuntime = runtimeWithDocument(_textAndRectDocument());
@@ -478,6 +500,9 @@ Future<void> _expectRuntimeSwapRebuildsBothLayers(WidgetTester tester) async {
   await tester.pump();
 }
 
+// This stale-publication scenario keeps inactive runtime mutations adjacent to
+// the active output assertions so swap isolation remains auditable.
+// ignore: halstead-volume
 Future<void> _expectInactiveRuntimePublicationIgnoredAfterSwap(
   WidgetTester tester,
 ) async {
@@ -521,6 +546,9 @@ Future<void> _expectInactiveRuntimePublicationIgnoredAfterSwap(
   await tester.pump();
 }
 
+// Rejected attach proof intentionally checks the bad runtime, good runtime, and
+// listener counters in one place to avoid hiding attach-order mistakes.
+// ignore: halstead-volume, source-lines-of-code
 Future<void> _expectRejectedAttachInstallsNoLayerListener(
   WidgetTester tester,
 ) async {
@@ -601,6 +629,9 @@ Future<void> _expectDetachedSurfaceIgnoresRuntimePublications(
   expect(tester.takeException(), isNull);
 }
 
+// Selected move routing compares preview and main-frame repaint effects in one
+// sequence so overlay/main divergence remains explicit.
+// ignore: halstead-volume
 Future<void> _expectSelectedMoveMainRepaint(
   WidgetTester tester,
   CanvasRuntime runtime,
@@ -720,6 +751,9 @@ Future<void> _expectDevicePixelRatioBothLayers(
   await tester.pump();
 }
 
+// Layout-size routing is a two-layer comparison; splitting the assertions would
+// make the shared viewport mutation harder to follow.
+// ignore: halstead-volume
 Future<void> _expectLayoutSizeBothLayers(
   WidgetTester tester,
   CanvasRuntime runtime,
@@ -824,6 +858,9 @@ Future<void> _expectResolverReplacementMainOnly(
   expect(probe.overlayDispatches, 0);
 }
 
+// Marquee routing proves overlay-only invalidation by comparing both layers in
+// the same gesture preview scenario.
+// ignore: halstead-volume
 Future<void> _expectMarqueeOverlayOnly(
   WidgetTester tester,
   CanvasRuntime runtime,
@@ -854,6 +891,9 @@ Future<void> _expectMarqueeOverlayOnly(
   );
 }
 
+// The host deliberately couples runtime, resolver, and surface wiring because
+// every fixture scenario needs the same widget boundary.
+// ignore: coupling-between-object-classes
 final class _SurfaceHost extends StatelessWidget {
   const _SurfaceHost({
     required this.runtime,
