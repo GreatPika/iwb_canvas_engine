@@ -187,7 +187,9 @@ Required tests:
 - `test/guardrails/frame_committed_facts_via_frame_facts_port_test.dart`
 - `test/guardrails/blocking_suite_test.dart`
 - `test/performance/flutter_performance_route_contract_test.dart`
+- `test/tool/flutter_performance_driver_writer_test.dart`
 - `test/tool/flutter_performance_artifacts_checker_test.dart`
+- `example/test/performance_phase_preparation_test.dart`
 - `example/test/performance_host_smoke_test.dart`
 - `example/test/performance_fixture_limits_test.dart`
 
@@ -480,6 +482,12 @@ behavioral tests, and the required guardrail list remains owned by
   runner, the traced runner owns the report key and settle boundary, and the
   retired benchmark route remains absent. It must not parse documentation as a
   catalog or schema data source;
+- `example/test/performance_phase_preparation_test.dart` proves the
+  redesigned warm and steady phases start from canonical prepared state and
+  keep reset/reseed work outside measured traces;
+- `test/tool/flutter_performance_driver_writer_test.dart` proves the host-side
+  performance driver writes official Flutter timeline artifacts, generated
+  manifests, and comparison summaries under the nested route artifact shape;
 - `example/test/performance_host_smoke_test.dart` proves the example
   performance host can mount and drive public runtime, surface, command, tool,
   resource, and text-editing paths through the public package barrel;
