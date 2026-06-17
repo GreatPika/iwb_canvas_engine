@@ -370,20 +370,6 @@ allPerformanceScenarioActionPhaseRuns =
         ),
     ]);
 
-String performanceReportKey({
-  required String scenarioGroup,
-  required String phaseKind,
-  required String phaseName,
-  required int repeat,
-}) {
-  return catalog.performanceReportKey(
-    scenarioGroup: scenarioGroup,
-    phaseKind: phaseKind,
-    phaseName: phaseName,
-    repeat: repeat,
-  );
-}
-
 final List<PerformanceScenarioActionPlan> _singleCurrentBehaviorActions =
     List<PerformanceScenarioActionPlan>.unmodifiable([
       _loadDocumentScenario('load_document.1k', 1000),
