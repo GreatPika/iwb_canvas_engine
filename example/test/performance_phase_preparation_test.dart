@@ -45,11 +45,6 @@ const _expectedFixtureMetadata = {
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  test('executable catalog expands to the required phase report keys', () {
-    expect(allPerformanceScenarioActionGroups, isNotEmpty);
-    _expectExecutableCatalogShape();
-  });
-
   testWidgets('redesigned steady repeats start from canonical public state', (
     _,
   ) async {
@@ -61,21 +56,6 @@ void main() {
     expect(_interactionSetupExpectations, hasLength(3));
     await _expectInteractionSetupSeparation();
   });
-}
-
-void _expectExecutableCatalogShape() {
-  expect(allPerformanceScenarioActionGroups, hasLength(26));
-  expect(allPerformanceScenarioActionPhaseRuns, hasLength(68));
-
-  final reportKeyPattern = RegExp(
-    r'^[a-z0-9_.]+__[a-z]+\.[a-z0-9_]+__repeat_\d{3}$',
-  );
-  for (final run in allPerformanceScenarioActionPhaseRuns) {
-    expect(reportKeyPattern.hasMatch(run.reportKey), isTrue);
-    expect({'setup', 'warm', 'steady', 'single'}, contains(run.phase.kind));
-    expect(run.reportKey, contains(run.scenarioGroupId));
-    expect(run.reportKey, contains(run.phaseKey));
-  }
 }
 
 Future<void> _expectRedesignedSteadyRepeatPreparation(

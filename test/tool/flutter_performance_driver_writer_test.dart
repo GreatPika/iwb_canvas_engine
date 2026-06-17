@@ -71,6 +71,99 @@ const _comparisonSummaryFields = {
   'missed_frame_rasterizer_budget_count',
 };
 
+const _redesignedPhaseMetadata = {
+  'load_document.100k': {
+    'warm.load_document': {
+      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
+      'resetReason': 'load_writes_document_state',
+      'measuredAction': 'load_document',
+    },
+    'steady.load_document': {
+      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
+      'resetReason': 'load_writes_document_state',
+      'measuredAction': 'load_document',
+    },
+  },
+  'first_canvas_frame.50k': {
+    'warm.first_canvas_frame': {
+      'canonicalPreparation':
+          'preloaded_runtime_not_rendered_by_measured_surface',
+      'resetReason': 'first_frame_cost_disappears_after_render',
+      'measuredAction': 'first_canvas_frame',
+    },
+    'steady.first_canvas_frame': {
+      'canonicalPreparation':
+          'preloaded_runtime_not_rendered_by_measured_surface',
+      'resetReason': 'first_frame_cost_disappears_after_render',
+      'measuredAction': 'first_canvas_frame',
+    },
+  },
+  'camera_pan.100k': {
+    'warm.camera_pan': {
+      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
+      'resetReason': 'pan_accumulates_camera_offset',
+      'measuredAction': 'camera_pan',
+    },
+    'steady.camera_pan': {
+      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
+      'resetReason': 'pan_accumulates_camera_offset',
+      'measuredAction': 'camera_pan',
+    },
+  },
+  'selection_move.50k': {
+    'warm.selection_move': {
+      'canonicalPreparation': 'loaded_selected_document_original_geometry',
+      'resetReason': 'move_translates_selected_geometry',
+      'measuredAction': 'selection_move',
+    },
+    'steady.selection_move': {
+      'canonicalPreparation': 'loaded_selected_document_original_geometry',
+      'resetReason': 'move_translates_selected_geometry',
+      'measuredAction': 'selection_move',
+    },
+  },
+  'marquee_select.50k': {
+    'warm.marquee_select': {
+      'canonicalPreparation':
+          'loaded_document_move_mode_no_selection_settled_surface',
+      'resetReason': 'marquee_commit_replaces_selection',
+      'measuredAction': 'marquee_select',
+    },
+    'steady.marquee_select': {
+      'canonicalPreparation':
+          'loaded_document_move_mode_no_selection_settled_surface',
+      'resetReason': 'marquee_commit_replaces_selection',
+      'measuredAction': 'marquee_select',
+    },
+  },
+  'json_export.50k': {
+    'warm.json_export': {
+      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
+      'resetReason': 'export_reset_keeps_repeats_comparable',
+      'measuredAction': 'json_export',
+    },
+    'steady.json_export': {
+      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
+      'resetReason': 'export_reset_keeps_repeats_comparable',
+      'measuredAction': 'json_export',
+    },
+  },
+  'eraser_dense_50k': {
+    'warm.eraser_dense': {
+      'canonicalPreparation':
+          'loaded_draw_mode_eraser_document_without_prior_erasure',
+      'resetReason': 'eraser_removes_elements',
+      'measuredAction': 'eraser_dense',
+    },
+    'steady.eraser_dense': {
+      'canonicalPreparation':
+          'loaded_draw_mode_eraser_document_without_prior_erasure',
+      'resetReason': 'eraser_removes_elements',
+      'measuredAction': 'eraser_dense',
+    },
+  },
+};
+
 void main() {
   test('writer output follows the performance artifact contract', () async {
     final outputRoot = await Directory.systemTemp.createTemp(
@@ -245,44 +338,56 @@ Map<String, Map<String, dynamic>> _groupsById(Map<String, dynamic> jsonObject) {
 void _expectRedesignedWarmAndSteadyManifest(
   Map<String, Map<String, dynamic>> groups,
 ) {
-  final group = groups['load_document.100k']!;
-  expect(group.keys.toSet(), {'id', 'migration', 'phases'});
-  expect(group['migration'], 'redesigned');
-  final phases = _phasesByKey(group);
-  final steady = phases['steady.load_document']!;
-  final warm = phases['warm.load_document']!;
-  expect(steady.keys.toSet(), {
-    'kind',
-    'name',
-    'comparisonRole',
-    'repeats',
-  });
-  expect(steady['comparisonRole'], 'steady_action');
-  expect((steady['repeats'] as List<dynamic>), hasLength(5));
-  expect((warm['repeats'] as List<dynamic>), hasLength(1));
+  for (final entry in _redesignedPhaseMetadata.entries) {
+    final group = groups[entry.key]!;
+    expect(group.keys.toSet(), {'id', 'migration', 'phases'});
+    expect(group['migration'], 'redesigned', reason: entry.key);
+    final phases = _phasesByKey(group);
 
-  for (final repeat in [
-    ...(warm['repeats'] as List<dynamic>),
-    ...(steady['repeats'] as List<dynamic>),
-  ].cast<Map<String, dynamic>>()) {
-    expect(repeat.keys.toSet(), {
-      'repeat',
-      'reportKey',
-      'artifactDirectory',
-      'timelineFile',
-      'timelineSummaryFile',
-      'canonicalPreparation',
-      'resetReason',
-      'measuredAction',
-      'preparationMeasured',
-    });
-    expect(
-      repeat['canonicalPreparation'],
-      'empty_runtime_with_prepared_json_fixture',
-    );
-    expect(repeat['resetReason'], 'load_writes_document_state');
-    expect(repeat['measuredAction'], 'load_document');
-    expect(repeat['preparationMeasured'], false);
+    for (final phaseEntry in entry.value.entries) {
+      final phase = phases[phaseEntry.key]!;
+      expect(phase.keys.toSet(), {
+        'kind',
+        'name',
+        'comparisonRole',
+        'repeats',
+      });
+      expect(
+        phase['comparisonRole'],
+        phaseEntry.key.startsWith('warm.') ? 'first_use_action' : 'steady_action',
+        reason: '${entry.key} ${phaseEntry.key}',
+      );
+      expect(
+        (phase['repeats'] as List<dynamic>),
+        hasLength(phaseEntry.key.startsWith('warm.') ? 1 : 5),
+        reason: '${entry.key} ${phaseEntry.key}',
+      );
+
+      for (final repeat
+          in (phase['repeats'] as List<dynamic>).cast<Map<String, dynamic>>()) {
+        expect(repeat.keys.toSet(), {
+          'repeat',
+          'reportKey',
+          'artifactDirectory',
+          'timelineFile',
+          'timelineSummaryFile',
+          'canonicalPreparation',
+          'resetReason',
+          'measuredAction',
+          'preparationMeasured',
+        });
+        expect(
+          {
+            'canonicalPreparation': repeat['canonicalPreparation'],
+            'resetReason': repeat['resetReason'],
+            'measuredAction': repeat['measuredAction'],
+          },
+          phaseEntry.value,
+          reason: '${entry.key} ${phaseEntry.key} repeat ${repeat['repeat']}',
+        );
+        expect(repeat['preparationMeasured'], false);
+      }
+    }
   }
 }
 

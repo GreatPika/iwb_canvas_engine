@@ -205,6 +205,8 @@ import 'package:integration_test/integration_test.dart';
 import '../integration_test/perf_canvas_surface_test.dart' as performance_route;
 import 'package:iwb_canvas_engine_example/perf/performance_host.dart';
 import 'package:iwb_canvas_engine_example/perf/performance_scenario.dart';
+import 'package:iwb_canvas_engine_example/perf/performance_scenario_catalog.dart'
+    as catalog;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -234,10 +236,11 @@ void main() {
       ),
     );
     final groupsById = {
-      for (final group in allPerformanceScenarioActionGroups) group.id: group,
+      for (final group in catalog.performanceScenarioCatalogGroups)
+        group.id: group,
     };
 
-    expect(allPerformanceScenarioActionGroups, hasLength(26));
+    expect(catalog.performanceScenarioCatalogGroups, hasLength(26));
     expect(groupsById.keys.toSet(), {
       ...redesignedGroups.keys,
       ...singleGroups,
@@ -282,8 +285,13 @@ void main() {
     final reportKeyPattern = RegExp(
       r'^[a-z0-9_.]+__[a-z]+\\.[a-z0-9_]+__repeat_\\d{3}\$',
     );
+    expect(catalog.performanceScenarioCatalogRuns, hasLength(68));
     expect(allPerformanceScenarioActionPhaseRuns, hasLength(68));
-    for (final run in allPerformanceScenarioActionPhaseRuns) {
+    expect(
+      allPerformanceScenarioActionPhaseRuns.map((run) => run.reportKey),
+      catalog.performanceScenarioCatalogRuns.map((run) => run.reportKey),
+    );
+    for (final run in catalog.performanceScenarioCatalogRuns) {
       expect(allowedKinds, contains(run.phase.kind), reason: run.reportKey);
       expect(reportKeyPattern.hasMatch(run.reportKey), isTrue,
           reason: run.reportKey);
@@ -373,6 +381,7 @@ void main() {
           candidate.phaseKey == 'single.current_behavior',
     );
     final routeLog = <String>[];
+    final traceReports = <String>[];
 
     await performance_route.runFlutterPerformanceScenarioCatalog(
       binding: binding,
@@ -382,6 +391,7 @@ void main() {
         log: routeLog.add,
         traceAction: (action, {required reportKey}) async {
           expect(reportKey, run.reportKey);
+          traceReports.add(reportKey);
           await action();
         },
         traceSettleFrameCount: 1,
@@ -393,6 +403,7 @@ void main() {
       'PERF_SCENARIO_START \${run.reportKey}',
       'PERF_SCENARIO_DONE \${run.reportKey}',
     ]);
+    expect(traceReports, [run.reportKey]);
     expect(find.byKey(performanceHostSurfaceKey), findsOneWidget);
   });
 }

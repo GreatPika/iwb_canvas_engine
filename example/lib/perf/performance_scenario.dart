@@ -82,55 +82,47 @@ final class PerformancePreparedPhaseAction {
 
 final class PerformanceScenarioActionGroup {
   const PerformanceScenarioActionGroup({
-    required this.id,
-    required this.migration,
+    required this.descriptor,
     required this.phases,
   });
 
-  final String id;
-  final String migration;
+  final catalog.PerformanceScenarioCatalogGroup descriptor;
   final List<PerformanceScenarioActionPhase> phases;
+
+  String get id => descriptor.id;
 }
 
 final class PerformanceScenarioActionPhase {
   const PerformanceScenarioActionPhase({
-    required this.kind,
-    required this.name,
-    required this.comparisonRole,
-    required this.repeats,
+    required this.descriptor,
     required this.action,
-    this.canonicalPreparation,
-    this.resetReason,
-    this.measuredAction,
     this.prepare,
   });
 
-  final String kind;
-  final String name;
-  final String comparisonRole;
-  final int repeats;
+  final catalog.PerformanceScenarioCatalogPhase descriptor;
   final PerformanceScenarioActionPlan action;
-  final String? canonicalPreparation;
-  final String? resetReason;
-  final String? measuredAction;
   final PerformanceScenarioPreparation? prepare;
+
+  String get kind => descriptor.kind;
+  String get name => descriptor.name;
+  String? get canonicalPreparation => descriptor.canonicalPreparation;
+  String? get resetReason => descriptor.resetReason;
+  String? get measuredAction => descriptor.measuredAction;
 }
 
 final class PerformanceScenarioActionPhaseRun {
   const PerformanceScenarioActionPhaseRun({
-    required this.scenarioGroup,
+    required this.descriptor,
     required this.phase,
-    required this.repeat,
-    required this.reportKey,
   });
 
-  final PerformanceScenarioActionGroup scenarioGroup;
+  final catalog.PerformanceScenarioCatalogRun descriptor;
   final PerformanceScenarioActionPhase phase;
-  final int repeat;
-  final String reportKey;
 
-  String get scenarioGroupId => scenarioGroup.id;
-  String get phaseKey => '${phase.kind}.${phase.name}';
+  int get repeat => descriptor.repeat;
+  String get reportKey => descriptor.reportKey;
+  String get scenarioGroupId => descriptor.scenarioGroupId;
+  String get phaseKey => descriptor.phaseKey;
 
   // Keeping the route dependencies explicit makes the trace boundary easier to
   // audit than hiding binding, host, pumping, settle, and probe in a bag type.
@@ -299,7 +291,7 @@ PerformancePhasePreparationSnapshot _preparationSnapshot({
   );
 }
 
-final List<PerformanceScenarioActionGroup> allPerformanceScenarioActionGroups =
+final List<PerformanceScenarioActionGroup> _performanceScenarioActionGroups =
     List<PerformanceScenarioActionGroup>.unmodifiable([
       _redesignedGroup(
         descriptor: _catalogGroup('load_document.100k'),
@@ -371,20 +363,11 @@ final List<PerformanceScenarioActionGroup> allPerformanceScenarioActionGroups =
 final List<PerformanceScenarioActionPhaseRun>
 allPerformanceScenarioActionPhaseRuns =
     List<PerformanceScenarioActionPhaseRun>.unmodifiable([
-      for (final group in allPerformanceScenarioActionGroups)
-        for (final phase in group.phases)
-          for (var repeat = 1; repeat <= phase.repeats; repeat += 1)
-            PerformanceScenarioActionPhaseRun(
-              scenarioGroup: group,
-              phase: phase,
-              repeat: repeat,
-              reportKey: performanceReportKey(
-                scenarioGroup: group.id,
-                phaseKind: phase.kind,
-                phaseName: phase.name,
-                repeat: repeat,
-              ),
-            ),
+      for (final descriptor in catalog.performanceScenarioCatalogRuns)
+        PerformanceScenarioActionPhaseRun(
+          descriptor: descriptor,
+          phase: _actionPhaseForCatalogRun(descriptor),
+        ),
     ]);
 
 String performanceReportKey({
@@ -431,8 +414,7 @@ PerformanceScenarioActionGroup _redesignedGroup({
 }) {
   final phases = descriptor.phases;
   return PerformanceScenarioActionGroup(
-    id: descriptor.id,
-    migration: descriptor.migration,
+    descriptor: descriptor,
     phases: [
       _phase(descriptor: phases[0], action: actions.setup),
       _phase(descriptor: phases[1], action: actions.warm, prepare: prepare),
@@ -447,14 +429,8 @@ PerformanceScenarioActionPhase _phase({
   PerformanceScenarioPreparation? prepare,
 }) {
   return PerformanceScenarioActionPhase(
-    kind: descriptor.kind,
-    name: descriptor.name,
-    comparisonRole: descriptor.comparisonRole,
-    repeats: descriptor.repeats,
+    descriptor: descriptor,
     action: action,
-    canonicalPreparation: descriptor.canonicalPreparation,
-    resetReason: descriptor.resetReason,
-    measuredAction: descriptor.measuredAction,
     prepare: prepare,
   );
 }
@@ -464,9 +440,19 @@ PerformanceScenarioActionGroup _singleCurrentBehaviorGroup(
 ) {
   final descriptor = _catalogGroup(action.id);
   return PerformanceScenarioActionGroup(
-    id: descriptor.id,
-    migration: descriptor.migration,
+    descriptor: descriptor,
     phases: [_phase(descriptor: descriptor.phases.single, action: action)],
+  );
+}
+
+PerformanceScenarioActionPhase _actionPhaseForCatalogRun(
+  catalog.PerformanceScenarioCatalogRun descriptor,
+) {
+  final group = _performanceScenarioActionGroups.singleWhere(
+    (candidate) => candidate.id == descriptor.scenarioGroupId,
+  );
+  return group.phases.singleWhere(
+    (phase) => phase.descriptor.key == descriptor.phaseKey,
   );
 }
 
