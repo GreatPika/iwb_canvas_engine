@@ -589,6 +589,10 @@ final class _ManifestRepeatValidator {
       group: scope.group,
       phase: scope.phase,
       repeat: repeat,
+      reportKey: scope.group.catalogReportKey(
+        phaseKey: scope.phase.key,
+        repeat: repeat,
+      ),
     );
     final reportKey = repeatJson['reportKey'];
     if (reportKey is! String) {
@@ -777,7 +781,15 @@ final class _NestedArtifactValidator {
     for (var repeat = 1; repeat <= phase.repeats; repeat += 1) {
       _checkRepeatDirectory(
         context.resultsDirectory,
-        _ExpectedRun(group: group, phase: phase, repeat: repeat),
+        _ExpectedRun(
+          group: group,
+          phase: phase,
+          repeat: repeat,
+          reportKey: group.catalogReportKey(
+            phaseKey: phase.key,
+            repeat: repeat,
+          ),
+        ),
         failures,
       );
     }
@@ -1318,6 +1330,13 @@ _ExpectedCatalog _expectedCatalogFromDescriptor() {
         _ExpectedGroup(
           id: group.id,
           migration: group.migration,
+          reportKeysByPhaseAndRepeat: {
+            for (final run in catalog.performanceScenarioCatalogRuns.where(
+              (run) => run.scenarioGroupId == group.id,
+            ))
+              _repeatIdentity(phaseKey: run.phaseKey, repeat: run.repeat):
+                  run.reportKey,
+          },
           phases: [
             for (final phase in group.phases)
               _ExpectedPhase(
@@ -1608,16 +1627,25 @@ final class _ExpectedGroup {
   const _ExpectedGroup({
     required this.id,
     required this.migration,
+    required this.reportKeysByPhaseAndRepeat,
     required this.phases,
   });
 
   final String id;
   final String migration;
+  final Map<String, String> reportKeysByPhaseAndRepeat;
   final List<_ExpectedPhase> phases;
 
   Map<String, _ExpectedPhase> get phasesByKey => {
     for (final phase in phases) phase.key: phase,
   };
+
+  String catalogReportKey({required String phaseKey, required int repeat}) {
+    return reportKeysByPhaseAndRepeat[_repeatIdentity(
+      phaseKey: phaseKey,
+      repeat: repeat,
+    )]!;
+  }
 }
 
 final class _ExpectedPhase {
@@ -1649,14 +1677,13 @@ final class _ExpectedRun {
     required this.group,
     required this.phase,
     required this.repeat,
+    required this.reportKey,
   });
 
   final _ExpectedGroup group;
   final _ExpectedPhase phase;
   final int repeat;
-
-  String get reportKey =>
-      '${group.id}__${phase.key}__repeat_${repeat.toString().padLeft(3, '0')}';
+  final String reportKey;
 
   String get artifactDirectory => [
     group.id,
@@ -1710,8 +1737,17 @@ final class _ComparisonMetricScope {
   String get path => '${group.id}/${phase.key}/$summaryField';
 
   _ExpectedRun run(int repeat) {
-    return _ExpectedRun(group: group, phase: phase, repeat: repeat);
+    return _ExpectedRun(
+      group: group,
+      phase: phase,
+      repeat: repeat,
+      reportKey: group.catalogReportKey(phaseKey: phase.key, repeat: repeat),
+    );
   }
+}
+
+String _repeatIdentity({required String phaseKey, required int repeat}) {
+  return '$phaseKey#$repeat';
 }
 
 final class _PhaseIdentity {
