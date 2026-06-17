@@ -63,6 +63,99 @@ const _singleCurrentBehaviorGroups = [
   'dispose_during_preview',
 ];
 
+const _redesignedPhaseMetadata = {
+  'load_document.100k': {
+    'warm.load_document': {
+      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
+      'resetReason': 'load_writes_document_state',
+      'measuredAction': 'load_document',
+    },
+    'steady.load_document': {
+      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
+      'resetReason': 'load_writes_document_state',
+      'measuredAction': 'load_document',
+    },
+  },
+  'first_canvas_frame.50k': {
+    'warm.first_canvas_frame': {
+      'canonicalPreparation':
+          'preloaded_runtime_not_rendered_by_measured_surface',
+      'resetReason': 'first_frame_cost_disappears_after_render',
+      'measuredAction': 'first_canvas_frame',
+    },
+    'steady.first_canvas_frame': {
+      'canonicalPreparation':
+          'preloaded_runtime_not_rendered_by_measured_surface',
+      'resetReason': 'first_frame_cost_disappears_after_render',
+      'measuredAction': 'first_canvas_frame',
+    },
+  },
+  'camera_pan.100k': {
+    'warm.camera_pan': {
+      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
+      'resetReason': 'pan_accumulates_camera_offset',
+      'measuredAction': 'camera_pan',
+    },
+    'steady.camera_pan': {
+      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
+      'resetReason': 'pan_accumulates_camera_offset',
+      'measuredAction': 'camera_pan',
+    },
+  },
+  'selection_move.50k': {
+    'warm.selection_move': {
+      'canonicalPreparation': 'loaded_selected_document_original_geometry',
+      'resetReason': 'move_translates_selected_geometry',
+      'measuredAction': 'selection_move',
+    },
+    'steady.selection_move': {
+      'canonicalPreparation': 'loaded_selected_document_original_geometry',
+      'resetReason': 'move_translates_selected_geometry',
+      'measuredAction': 'selection_move',
+    },
+  },
+  'marquee_select.50k': {
+    'warm.marquee_select': {
+      'canonicalPreparation':
+          'loaded_document_move_mode_no_selection_settled_surface',
+      'resetReason': 'marquee_commit_replaces_selection',
+      'measuredAction': 'marquee_select',
+    },
+    'steady.marquee_select': {
+      'canonicalPreparation':
+          'loaded_document_move_mode_no_selection_settled_surface',
+      'resetReason': 'marquee_commit_replaces_selection',
+      'measuredAction': 'marquee_select',
+    },
+  },
+  'json_export.50k': {
+    'warm.json_export': {
+      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
+      'resetReason': 'export_reset_keeps_repeats_comparable',
+      'measuredAction': 'json_export',
+    },
+    'steady.json_export': {
+      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
+      'resetReason': 'export_reset_keeps_repeats_comparable',
+      'measuredAction': 'json_export',
+    },
+  },
+  'eraser_dense_50k': {
+    'warm.eraser_dense': {
+      'canonicalPreparation':
+          'loaded_draw_mode_eraser_document_without_prior_erasure',
+      'resetReason': 'eraser_removes_elements',
+      'measuredAction': 'eraser_dense',
+    },
+    'steady.eraser_dense': {
+      'canonicalPreparation':
+          'loaded_draw_mode_eraser_document_without_prior_erasure',
+      'resetReason': 'eraser_removes_elements',
+      'measuredAction': 'eraser_dense',
+    },
+  },
+};
+
 void main() {
   _registerDescriptorCatalogContractTest();
 }
@@ -103,6 +196,7 @@ Future<void> _expectExecutableCatalogRuntime() async {
 String _runtimeCatalogContractTestSource() {
   final redesignedGroupsJson = jsonEncode(_redesignedGroups);
   final singleGroupsJson = jsonEncode(_singleCurrentBehaviorGroups);
+  final redesignedPhaseMetadataJson = jsonEncode(_redesignedPhaseMetadata);
   return '''
 import 'dart:convert';
 
@@ -126,6 +220,19 @@ void main() {
     );
     final singleGroups = (jsonDecode(r'$singleGroupsJson') as List<dynamic>)
         .cast<String>();
+    final expectedMetadata = (jsonDecode(r'$redesignedPhaseMetadataJson')
+            as Map<String, dynamic>)
+        .map(
+      (groupId, phases) => MapEntry(
+        groupId,
+        (phases as Map<String, dynamic>).map(
+          (phaseKey, metadata) => MapEntry(
+            phaseKey,
+            (metadata as Map<String, dynamic>).cast<String, String>(),
+          ),
+        ),
+      ),
+    );
     final groupsById = {
       for (final group in allPerformanceScenarioActionGroups) group.id: group,
     };
@@ -149,6 +256,16 @@ void main() {
           1);
       expect(group.phases.singleWhere((phase) => phase.kind == 'steady').repeats,
           5);
+      final expectedGroupMetadata = expectedMetadata[entry.key]!;
+      final actualGroupMetadata = {
+        for (final phase in group.phases.where((phase) => phase.kind != 'setup'))
+          '\${phase.kind}.\${phase.name}': {
+            'canonicalPreparation': phase.canonicalPreparation,
+            'resetReason': phase.resetReason,
+            'measuredAction': phase.measuredAction,
+          },
+      };
+      expect(actualGroupMetadata, expectedGroupMetadata, reason: entry.key);
     }
 
     for (final groupId in singleGroups) {
