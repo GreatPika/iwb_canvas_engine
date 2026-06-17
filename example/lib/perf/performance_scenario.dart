@@ -907,6 +907,7 @@ Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
   PerformanceScenarioContext context,
 ) async {
   context.host.swapRuntime(CanvasRuntime());
+  await context.pumpScenarioFrame();
   final preparedJson = performanceFixtureJson(performanceRectDocument(100000));
   return PerformancePreparedPhaseAction(
     action: (actionContext) async {

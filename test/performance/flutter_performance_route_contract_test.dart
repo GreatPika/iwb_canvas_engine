@@ -108,6 +108,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import '../integration_test/perf_canvas_surface_test.dart' as performance_route;
 import 'package:iwb_canvas_engine_example/perf/performance_host.dart';
 import 'package:iwb_canvas_engine_example/perf/performance_scenario.dart';
 
@@ -209,6 +210,73 @@ void main() {
     expect(events, contains('pump'));
     expect(events, contains('settle'));
     expect(events.last, 'traceEnd');
+  });
+
+  test('load document preparation pump stays outside trace action', () async {
+    final host = PerformanceHostController();
+    addTearDown(host.dispose);
+    final run = allPerformanceScenarioActionPhaseRuns.singleWhere(
+      (candidate) =>
+          candidate.scenarioGroupId == 'load_document.100k' &&
+          candidate.phaseKey == 'warm.load_document',
+    );
+    final events = <String>[];
+    var insideTrace = false;
+
+    await run.runTraced(
+      binding: binding,
+      host: host,
+      pumpFrame: ([duration = Duration.zero]) async {
+        events.add(insideTrace ? 'tracePump' : 'preparePump');
+      },
+      settle: () async {
+        expect(insideTrace, isTrue);
+        events.add('settle');
+      },
+      traceAction: (action, {required reportKey}) async {
+        expect(reportKey, run.reportKey);
+        insideTrace = true;
+        events.add('traceStart');
+        await action();
+        events.add('traceEnd');
+        insideTrace = false;
+      },
+    );
+
+    expect(events.first, 'preparePump');
+    expect(events.indexOf('preparePump'), lessThan(events.indexOf('traceStart')));
+    expect(events, contains('tracePump'));
+    expect(events.last, 'traceEnd');
+  });
+
+  testWidgets('integration route runner delegates to traced phase runs', (tester) async {
+    final run = allPerformanceScenarioActionPhaseRuns.singleWhere(
+      (candidate) =>
+          candidate.scenarioGroupId == 'load_document.1k' &&
+          candidate.phaseKey == 'single.current_behavior',
+    );
+    final routeLog = <String>[];
+
+    await performance_route.runFlutterPerformanceScenarioCatalog(
+      binding: binding,
+      tester: tester,
+      options: performance_route.FlutterPerformanceRouteOptions(
+        phaseRuns: [run],
+        log: routeLog.add,
+        traceAction: (action, {required reportKey}) async {
+          expect(reportKey, run.reportKey);
+          await action();
+        },
+        traceSettleFrameCount: 1,
+        postSettleRasterDelay: Duration.zero,
+      ),
+    );
+
+    expect(routeLog, [
+      'PERF_SCENARIO_START \${run.reportKey}',
+      'PERF_SCENARIO_DONE \${run.reportKey}',
+    ]);
+    expect(find.byKey(performanceHostSurfaceKey), findsOneWidget);
   });
 }
 ''';
