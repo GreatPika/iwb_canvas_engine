@@ -17,6 +17,7 @@ void main() {
   _registerUnexpectedFileSystemEntryRejectionTest();
   _registerMissingOutputRejectionTest();
   _registerManifestRejectionTests();
+  _registerRepeatRangeRejectionTest();
   _registerMalformedGeneratedJsonRejectionTest();
   _registerGeneratedJsonTopLevelSchemaRejectionTest();
   _registerGeneratedJsonNestedSchemaRejectionTest();
@@ -147,6 +148,46 @@ void _registerManifestRejectionTests() {
       expect(result.stderr, contains('preparationMeasured'));
     },
   );
+}
+
+void _registerRepeatRangeRejectionTest() {
+  test(
+    'rejects out-of-range manifest and raw repeats without crashing',
+    () async {
+      final result = await _runMutatedFixture(_writeOutOfRangeRepeats);
+
+      expect(result.exitCode, 1);
+      expect(result.stderr, contains('unexpected run manifest repeat'));
+      expect(result.stderr, contains('unexpected raw repeat'));
+      expect(result.stderr, isNot(contains('Unhandled exception')));
+    },
+  );
+}
+
+void _writeOutOfRangeRepeats(Directory root) {
+  final manifest = _readRootJson(root, 'performance_run_manifest.json');
+  final manifestRepeat = _manifestRepeat(
+    manifest,
+    groupId: 'load_document.100k',
+    phaseKey: 'steady.load_document',
+    repeat: 1,
+  );
+  manifestRepeat['repeat'] = 6;
+  _writeRootJson(root, 'performance_run_manifest.json', manifest);
+
+  final comparison = _readRootJson(root, 'comparison_summary.json');
+  final metric =
+      _comparisonMetrics(
+        comparison,
+        groupId: 'load_document.100k',
+        phaseKey: 'steady.load_document',
+      ).singleWhere(
+        (candidate) =>
+            candidate['summaryField'] == 'average_frame_build_time_millis',
+      );
+  final rawRepeat = _jsonList(metric['rawRepeats']).first;
+  rawRepeat['repeat'] = 0;
+  _writeRootJson(root, 'comparison_summary.json', comparison);
 }
 
 void _registerMalformedGeneratedJsonRejectionTest() {

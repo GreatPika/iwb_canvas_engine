@@ -584,7 +584,9 @@ final class _ManifestRepeatValidator {
     if (repeat == null) {
       return;
     }
-    _checkRepeatRange(repeat, seen);
+    if (!_checkRepeatRange(repeat, seen)) {
+      return;
+    }
     final expectedRun = _ExpectedRun(
       group: scope.group,
       phase: scope.phase,
@@ -613,13 +615,16 @@ final class _ManifestRepeatValidator {
     return null;
   }
 
-  void _checkRepeatRange(int repeat, _ManifestRepeatSeen seen) {
+  bool _checkRepeatRange(int repeat, _ManifestRepeatSeen seen) {
+    var isValid = true;
     if (!seen.repeats.add(repeat)) {
       failures.add('duplicate run manifest repeat for ${scope.path}: $repeat');
     }
     if (repeat < 1 || repeat > scope.phase.repeats) {
       failures.add('unexpected run manifest repeat for ${scope.path}: $repeat');
+      isValid = false;
     }
+    return isValid;
   }
 
   void _checkReportKeyIdentity(
@@ -1151,6 +1156,10 @@ final class _ComparisonMetricValidator {
     }
     if (!seenRepeats.add(repeat)) {
       failures.add('duplicate raw repeat for ${scope.path}: $repeat');
+    }
+    if (repeat < 1 || repeat > scope.phase.repeats) {
+      failures.add('unexpected raw repeat for ${scope.path}: $repeat');
+      return null;
     }
     _checkRawRepeatSourceValue(scope.run(repeat), value);
     return value;
