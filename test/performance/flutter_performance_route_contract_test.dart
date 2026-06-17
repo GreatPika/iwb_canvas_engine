@@ -278,7 +278,7 @@ void _expectNoTraceFallback(String source) {
 }
 
 void _expectScenarioFramePumping(String source) {
-  expect(source, contains('PerformanceScenarioPhaseTraceRequest'));
+  expect(source, contains('PerformanceScenarioActionPhaseTraceRequest'));
   expect(source, contains('required PerformanceScenarioPumpFrame pumpFrame'));
   expect(source, contains('await context.pumpScenarioFrame();'));
 }

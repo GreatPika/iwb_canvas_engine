@@ -115,7 +115,7 @@ Future<void> _expectRedesignedSteadyRepeatPreparation(
 
 Future<PerformancePhasePreparationSnapshot> _runTracedWithPreparationProbe(
   IntegrationTestWidgetsFlutterBinding binding,
-  PerformanceScenarioPhaseRun run, {
+  PerformanceScenarioActionPhaseRun run, {
   required PerformanceHostController host,
 }) async {
   final snapshots = <PerformancePhasePreparationSnapshot>[];

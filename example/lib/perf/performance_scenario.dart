@@ -80,8 +80,8 @@ final class PerformancePreparedPhaseAction {
   final Map<String, Object?> fixtureMetadata;
 }
 
-final class PerformanceScenarioGroup {
-  const PerformanceScenarioGroup({
+final class PerformanceScenarioActionGroup {
+  const PerformanceScenarioActionGroup({
     required this.id,
     required this.migration,
     required this.phases,
@@ -89,11 +89,11 @@ final class PerformanceScenarioGroup {
 
   final String id;
   final String migration;
-  final List<PerformanceScenarioPhase> phases;
+  final List<PerformanceScenarioActionPhase> phases;
 }
 
-final class PerformanceScenarioPhase {
-  const PerformanceScenarioPhase({
+final class PerformanceScenarioActionPhase {
+  const PerformanceScenarioActionPhase({
     required this.kind,
     required this.name,
     required this.comparisonRole,
@@ -116,16 +116,16 @@ final class PerformanceScenarioPhase {
   final PerformanceScenarioPreparation? prepare;
 }
 
-final class PerformanceScenarioPhaseRun {
-  const PerformanceScenarioPhaseRun({
+final class PerformanceScenarioActionPhaseRun {
+  const PerformanceScenarioActionPhaseRun({
     required this.scenarioGroup,
     required this.phase,
     required this.repeat,
     required this.reportKey,
   });
 
-  final PerformanceScenarioGroup scenarioGroup;
-  final PerformanceScenarioPhase phase;
+  final PerformanceScenarioActionGroup scenarioGroup;
+  final PerformanceScenarioActionPhase phase;
   final int repeat;
   final String reportKey;
 
@@ -143,8 +143,8 @@ final class PerformanceScenarioPhaseRun {
     PerformancePhasePreparationProbe? preparationProbe,
     PerformanceScenarioTraceAction? traceAction,
   }) {
-    return runPerformanceScenarioPhaseTraced(
-      PerformanceScenarioPhaseTraceRequest(
+    return runPerformanceScenarioActionPhaseTraced(
+      PerformanceScenarioActionPhaseTraceRequest(
         binding: binding,
         phaseRun: this,
         host: host,
@@ -157,8 +157,8 @@ final class PerformanceScenarioPhaseRun {
   }
 }
 
-final class PerformanceScenarioPhaseTraceRequest {
-  const PerformanceScenarioPhaseTraceRequest({
+final class PerformanceScenarioActionPhaseTraceRequest {
+  const PerformanceScenarioActionPhaseTraceRequest({
     required this.binding,
     required this.phaseRun,
     required this.host,
@@ -169,7 +169,7 @@ final class PerformanceScenarioPhaseTraceRequest {
   });
 
   final IntegrationTestWidgetsFlutterBinding binding;
-  final PerformanceScenarioPhaseRun phaseRun;
+  final PerformanceScenarioActionPhaseRun phaseRun;
   final PerformanceHostController host;
   final PerformanceScenarioPumpFrame pumpFrame;
   final PerformanceScenarioSettle settle;
@@ -207,8 +207,8 @@ final class PerformancePhasePreparationSnapshot {
   final Map<String, Object?> fixtureMetadata;
 }
 
-Future<void> runPerformanceScenarioPhaseTraced(
-  PerformanceScenarioPhaseTraceRequest request,
+Future<void> runPerformanceScenarioActionPhaseTraced(
+  PerformanceScenarioActionPhaseTraceRequest request,
 ) async {
   final context = PerformanceScenarioContext(
     host: request.host,
@@ -239,7 +239,7 @@ Future<void> runPerformanceScenarioPhaseTraced(
 
 Future<PerformancePreparedPhaseAction> _preparePhaseAction(
   PerformanceScenarioContext context,
-  PerformanceScenarioPhase phase,
+  PerformanceScenarioActionPhase phase,
 ) async {
   final prepare = phase.prepare;
   if (prepare != null) {
@@ -252,7 +252,7 @@ Future<PerformancePreparedPhaseAction> _preparePhaseAction(
 }
 
 void _capturePreparationSnapshot({
-  required PerformanceScenarioPhaseTraceRequest request,
+  required PerformanceScenarioActionPhaseTraceRequest request,
   required PerformanceScenarioContext context,
   required Map<String, Object?> fixtureMetadata,
 }) {
@@ -271,7 +271,7 @@ void _capturePreparationSnapshot({
 }
 
 PerformancePhasePreparationSnapshot _preparationSnapshot({
-  required PerformanceScenarioPhaseRun phaseRun,
+  required PerformanceScenarioActionPhaseRun phaseRun,
   required PerformanceScenarioContext context,
   required Map<String, Object?> fixtureMetadata,
 }) {
@@ -299,8 +299,8 @@ PerformancePhasePreparationSnapshot _preparationSnapshot({
   );
 }
 
-final List<PerformanceScenarioGroup> allPerformanceScenarioActionGroups =
-    List<PerformanceScenarioGroup>.unmodifiable([
+final List<PerformanceScenarioActionGroup> allPerformanceScenarioActionGroups =
+    List<PerformanceScenarioActionGroup>.unmodifiable([
       _redesignedGroup(
         descriptor: _catalogGroup('load_document.100k'),
         actions: (
@@ -368,12 +368,13 @@ final List<PerformanceScenarioGroup> allPerformanceScenarioActionGroups =
         _singleCurrentBehaviorGroup(action),
     ]);
 
-final List<PerformanceScenarioPhaseRun> allPerformanceScenarioActionPhaseRuns =
-    List<PerformanceScenarioPhaseRun>.unmodifiable([
+final List<PerformanceScenarioActionPhaseRun>
+allPerformanceScenarioActionPhaseRuns =
+    List<PerformanceScenarioActionPhaseRun>.unmodifiable([
       for (final group in allPerformanceScenarioActionGroups)
         for (final phase in group.phases)
           for (var repeat = 1; repeat <= phase.repeats; repeat += 1)
-            PerformanceScenarioPhaseRun(
+            PerformanceScenarioActionPhaseRun(
               scenarioGroup: group,
               phase: phase,
               repeat: repeat,
@@ -423,13 +424,13 @@ final List<PerformanceScenarioActionPlan> _singleCurrentBehaviorActions =
       _disposeDuringPreviewScenario(),
     ]);
 
-PerformanceScenarioGroup _redesignedGroup({
+PerformanceScenarioActionGroup _redesignedGroup({
   required catalog.PerformanceScenarioCatalogGroup descriptor,
   required _RedesignedPhaseActions actions,
   required PerformanceScenarioPreparation prepare,
 }) {
   final phases = descriptor.phases;
-  return PerformanceScenarioGroup(
+  return PerformanceScenarioActionGroup(
     id: descriptor.id,
     migration: descriptor.migration,
     phases: [
@@ -440,12 +441,12 @@ PerformanceScenarioGroup _redesignedGroup({
   );
 }
 
-PerformanceScenarioPhase _phase({
+PerformanceScenarioActionPhase _phase({
   required catalog.PerformanceScenarioCatalogPhase descriptor,
   required PerformanceScenarioActionPlan action,
   PerformanceScenarioPreparation? prepare,
 }) {
-  return PerformanceScenarioPhase(
+  return PerformanceScenarioActionPhase(
     kind: descriptor.kind,
     name: descriptor.name,
     comparisonRole: descriptor.comparisonRole,
@@ -458,11 +459,11 @@ PerformanceScenarioPhase _phase({
   );
 }
 
-PerformanceScenarioGroup _singleCurrentBehaviorGroup(
+PerformanceScenarioActionGroup _singleCurrentBehaviorGroup(
   PerformanceScenarioActionPlan action,
 ) {
   final descriptor = _catalogGroup(action.id);
-  return PerformanceScenarioGroup(
+  return PerformanceScenarioActionGroup(
     id: descriptor.id,
     migration: descriptor.migration,
     phases: [_phase(descriptor: descriptor.phases.single, action: action)],
