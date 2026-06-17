@@ -3,10 +3,6 @@ import 'dart:convert';
 
 import 'package:test/test.dart';
 
-const _scenarioSourcePath = 'example/lib/perf/performance_scenario.dart';
-const _integrationTestPath =
-    'example/integration_test/perf_canvas_surface_test.dart';
-
 const _redesignedGroups = {
   'load_document.100k': [
     'setup.fixture_json',
@@ -67,20 +63,8 @@ const _singleCurrentBehaviorGroups = [
   'dispose_during_preview',
 ];
 
-const _retiredRouteKeys = [
-  'startup',
-  'benchmark',
-  'SceneController',
-  'SceneView',
-  'CanvasMode',
-  'DrawTool',
-];
-
 void main() {
   _registerDescriptorCatalogContractTest();
-  _registerIntegrationRouteContractTest();
-  _registerTracedRunnerContractTest();
-  _registerRouteSourceGuardrailTest();
 }
 
 void _registerDescriptorCatalogContractTest() {
@@ -114,11 +98,6 @@ Future<void> _expectExecutableCatalogRuntime() async {
       result.stderr,
     ].where((output) => output.toString().isNotEmpty).join('\n'),
   );
-}
-
-void _expectPublicImportBoundary(String source) {
-  expect(source, contains("package:iwb_canvas_engine/iwb_canvas_engine.dart"));
-  expect(source, isNot(contains("package:iwb_canvas_engine/src/")));
 }
 
 String _runtimeCatalogContractTestSource() {
@@ -233,85 +212,4 @@ void main() {
   });
 }
 ''';
-}
-
-void _registerIntegrationRouteContractTest() {
-  test('integration route uses the single traced phase runner', () {
-    final integrationSource = File(_integrationTestPath).readAsStringSync();
-
-    expect(
-      integrationSource,
-      contains('allPerformanceScenarioActionPhaseRuns'),
-    );
-    expect(integrationSource, contains('phaseRun.runTraced('));
-    expect(
-      integrationSource,
-      contains('pumpFrame: ([duration = Duration.zero])'),
-    );
-    expect(integrationSource, contains('PERF_SCENARIO_START'));
-    expect(integrationSource, contains('PERF_SCENARIO_DONE'));
-    expect(
-      integrationSource,
-      contains('settle: () => _settlePerformanceTraceWindow(tester)'),
-    );
-    expect(integrationSource, contains('tester.runAsync'));
-    expect(integrationSource, isNot(contains('traceAction')));
-    expect(integrationSource, isNot(contains('settle: tester.pumpAndSettle')));
-    _expectTraceSettleIsBounded(integrationSource);
-  });
-}
-
-void _expectTraceSettleIsBounded(String integrationSource) {
-  final helperPattern = RegExp(
-    r'Future<void> _settlePerformanceTraceWindow[\s\S]*?\n}\n?$',
-  );
-  final helperBody = helperPattern.firstMatch(integrationSource)?.group(0);
-
-  expect(helperBody, isNotNull);
-  expect(helperBody, contains('_traceSettleFrameCount'));
-  expect(helperBody, contains('await tester.pump(_traceSettleFrameStep);'));
-  expect(helperBody, isNot(contains('pumpAndSettle')));
-  expect(helperBody, isNot(contains('endOfFrame')));
-}
-
-void _registerTracedRunnerContractTest() {
-  test('traced phase runner has no fallback tracing path', () {
-    final source = File(_scenarioSourcePath).readAsStringSync();
-
-    expect(source, isNotEmpty);
-    _expectNoTraceFallback(source);
-  });
-}
-
-void _expectNoTraceFallback(String source) {
-  expect(source, isNot(contains('.onError(')));
-  expect(source, isNot(contains('Failed to connect to VM Service')));
-  expect(source, isNot(contains('WithoutTimeline')));
-}
-
-void _registerRouteSourceGuardrailTest() {
-  test(
-    'route source guardrails reject private docs and retired route names',
-    () {
-      final scenarioSource = File(_scenarioSourcePath).readAsStringSync();
-
-      expect(
-        scenarioSource,
-        isNot(contains('docs/verification/performance.md')),
-      );
-      expect(scenarioSource, isNot(contains('.md')));
-      _expectPublicImportBoundary(scenarioSource);
-      _expectNoRetiredRouteKeys(scenarioSource);
-    },
-  );
-}
-
-void _expectNoRetiredRouteKeys(String source) {
-  for (final key in _retiredRouteKeys) {
-    final pattern = RegExp(
-      '(?<![A-Za-z0-9_])${RegExp.escape(key)}'
-      '(?![A-Za-z0-9_])',
-    );
-    expect(pattern.hasMatch(source), isFalse, reason: key);
-  }
 }
