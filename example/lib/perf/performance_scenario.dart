@@ -299,7 +299,7 @@ PerformancePhasePreparationSnapshot _preparationSnapshot({
   );
 }
 
-final List<PerformanceScenarioGroup> allPerformanceScenarioGroups =
+final List<PerformanceScenarioGroup> allPerformanceScenarioActionGroups =
     List<PerformanceScenarioGroup>.unmodifiable([
       _redesignedGroup(
         descriptor: _catalogGroup('load_document.100k'),
@@ -368,9 +368,9 @@ final List<PerformanceScenarioGroup> allPerformanceScenarioGroups =
         _singleCurrentBehaviorGroup(action),
     ]);
 
-final List<PerformanceScenarioPhaseRun> allPerformanceScenarioPhaseRuns =
+final List<PerformanceScenarioPhaseRun> allPerformanceScenarioActionPhaseRuns =
     List<PerformanceScenarioPhaseRun>.unmodifiable([
-      for (final group in allPerformanceScenarioGroups)
+      for (final group in allPerformanceScenarioActionGroups)
         for (final phase in group.phases)
           for (var repeat = 1; repeat <= phase.repeats; repeat += 1)
             PerformanceScenarioPhaseRun(

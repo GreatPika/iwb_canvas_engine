@@ -18,7 +18,7 @@ void main() {
     await tester.pumpWidget(PerformanceHost(controller: controller));
     await tester.pumpAndSettle();
 
-    for (final phaseRun in allPerformanceScenarioPhaseRuns) {
+    for (final phaseRun in allPerformanceScenarioActionPhaseRuns) {
       debugPrint('PERF_SCENARIO_START ${phaseRun.reportKey}');
       await phaseRun.runTraced(
         binding: binding,

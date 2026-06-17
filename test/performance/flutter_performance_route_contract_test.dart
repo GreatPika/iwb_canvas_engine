@@ -86,8 +86,8 @@ void _registerDescriptorCatalogContractTest() {
   test('executable descriptor catalog owns the fixed phase catalog', () async {
     final source = File(_scenarioSourcePath).readAsStringSync();
 
-    expect(source, contains('allPerformanceScenarioGroups'));
-    expect(source, contains('allPerformanceScenarioPhaseRuns'));
+    expect(source, contains('allPerformanceScenarioActionGroups'));
+    expect(source, contains('allPerformanceScenarioActionPhaseRuns'));
     expect(source, contains('performanceReportKey('));
     expect(source, isNot(contains('docs/verification/performance.md')));
     expect(source, isNot(contains('.md')));
@@ -149,10 +149,10 @@ void main() {
     final singleGroups = (jsonDecode(r'$singleGroupsJson') as List<dynamic>)
         .cast<String>();
     final groupsById = {
-      for (final group in allPerformanceScenarioGroups) group.id: group,
+      for (final group in allPerformanceScenarioActionGroups) group.id: group,
     };
 
-    expect(allPerformanceScenarioGroups, hasLength(26));
+    expect(allPerformanceScenarioActionGroups, hasLength(26));
     expect(groupsById.keys.toSet(), {
       ...redesignedGroups.keys,
       ...singleGroups,
@@ -187,8 +187,8 @@ void main() {
     final reportKeyPattern = RegExp(
       r'^[a-z0-9_.]+__[a-z]+\\.[a-z0-9_]+__repeat_\\d{3}\$',
     );
-    expect(allPerformanceScenarioPhaseRuns, hasLength(68));
-    for (final run in allPerformanceScenarioPhaseRuns) {
+    expect(allPerformanceScenarioActionPhaseRuns, hasLength(68));
+    for (final run in allPerformanceScenarioActionPhaseRuns) {
       expect(allowedKinds, contains(run.phase.kind), reason: run.reportKey);
       expect(reportKeyPattern.hasMatch(run.reportKey), isTrue,
           reason: run.reportKey);
@@ -204,7 +204,10 @@ void _registerIntegrationRouteContractTest() {
   test('integration route uses the single traced phase runner', () {
     final integrationSource = File(_integrationTestPath).readAsStringSync();
 
-    expect(integrationSource, contains('allPerformanceScenarioPhaseRuns'));
+    expect(
+      integrationSource,
+      contains('allPerformanceScenarioActionPhaseRuns'),
+    );
     expect(integrationSource, contains('phaseRun.runTraced('));
     expect(
       integrationSource,

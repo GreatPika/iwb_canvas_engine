@@ -46,7 +46,7 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   test('executable catalog expands to the required phase report keys', () {
-    expect(allPerformanceScenarioGroups, isNotEmpty);
+    expect(allPerformanceScenarioActionGroups, isNotEmpty);
     _expectExecutableCatalogShape();
   });
 
@@ -64,13 +64,13 @@ void main() {
 }
 
 void _expectExecutableCatalogShape() {
-  expect(allPerformanceScenarioGroups, hasLength(26));
-  expect(allPerformanceScenarioPhaseRuns, hasLength(68));
+  expect(allPerformanceScenarioActionGroups, hasLength(26));
+  expect(allPerformanceScenarioActionPhaseRuns, hasLength(68));
 
   final reportKeyPattern = RegExp(
     r'^[a-z0-9_.]+__[a-z]+\.[a-z0-9_]+__repeat_\d{3}$',
   );
-  for (final run in allPerformanceScenarioPhaseRuns) {
+  for (final run in allPerformanceScenarioActionPhaseRuns) {
     expect(reportKeyPattern.hasMatch(run.reportKey), isTrue);
     expect({'setup', 'warm', 'steady', 'single'}, contains(run.phase.kind));
     expect(run.reportKey, contains(run.scenarioGroupId));
@@ -82,7 +82,7 @@ Future<void> _expectRedesignedSteadyRepeatPreparation(
   IntegrationTestWidgetsFlutterBinding binding,
 ) async {
   for (final groupId in _expectedFixtureMetadata.keys) {
-    final repeats = allPerformanceScenarioPhaseRuns
+    final repeats = allPerformanceScenarioActionPhaseRuns
         .where(
           (run) =>
               run.scenarioGroupId == groupId &&
@@ -147,7 +147,7 @@ Future<PerformancePhasePreparationSnapshot> _runTracedWithPreparationProbe(
 
 Future<void> _expectInteractionSetupSeparation() async {
   for (final expectation in _interactionSetupExpectations) {
-    final run = allPerformanceScenarioPhaseRuns.singleWhere(
+    final run = allPerformanceScenarioActionPhaseRuns.singleWhere(
       (candidate) =>
           candidate.scenarioGroupId == expectation.scenarioGroup &&
           candidate.phaseKey == expectation.phaseKey,
