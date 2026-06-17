@@ -623,7 +623,7 @@ Future<void> _dragMarquee(PerformanceScenarioContext context) {
     drawTool: null,
     pointerId: 1,
     includeTerminal: true,
-  ));
+  ), configureTool: false);
 }
 
 PerformanceScenarioActionPlan _drawScenario(
@@ -671,7 +671,7 @@ PerformanceScenarioActionPlan _eraserDenseActionScenario() {
         drawTool: CanvasDrawTool.eraser,
         pointerId: 1,
         includeTerminal: true,
-      ));
+      ), configureTool: false);
     },
   );
 }
@@ -1027,16 +1027,19 @@ void _loadDocument(CanvasRuntime runtime, CanvasDocument document) {
 
 Future<void> _pointerDrag(
   PerformanceScenarioContext context,
-  _PointerDragGesture gesture,
-) async {
+  _PointerDragGesture gesture, {
+  bool configureTool = true,
+}) async {
   final runtime = context.runtime;
   final drawTool = gesture.drawTool;
-  if (drawTool == null) {
-    runtime.tools.setMode(CanvasInteractionMode.move);
-  } else {
-    runtime.tools
-      ..setMode(CanvasInteractionMode.draw)
-      ..setDrawTool(drawTool);
+  if (configureTool) {
+    if (drawTool == null) {
+      runtime.tools.setMode(CanvasInteractionMode.move);
+    } else {
+      runtime.tools
+        ..setMode(CanvasInteractionMode.draw)
+        ..setDrawTool(drawTool);
+    }
   }
 
   final samples = [

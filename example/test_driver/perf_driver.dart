@@ -29,13 +29,13 @@ Future<void> writePerformanceTimelines(
     throw StateError('Performance profile run returned no response data.');
   }
 
+  final outputRoot = resultsDirectory ?? Directory('build/flutter_performance');
+  _resetResultsDirectory(outputRoot);
+
   final phaseRuns = _performanceReportPhaseRuns(data);
   if (phaseRuns.isEmpty) {
     throw StateError('Performance profile run returned no scenario timelines.');
   }
-
-  final outputRoot = resultsDirectory ?? Directory('build/flutter_performance');
-  _resetResultsDirectory(outputRoot);
 
   for (final phaseRun in phaseRuns) {
     await _writePhaseRunTimeline(data, phaseRun, resultsDirectory: outputRoot);
