@@ -80,18 +80,12 @@ void main() {
   _registerDescriptorCatalogContractTest();
   _registerIntegrationRouteContractTest();
   _registerTracedRunnerContractTest();
+  _registerRouteSourceGuardrailTest();
 }
 
 void _registerDescriptorCatalogContractTest() {
   test('executable descriptor catalog owns the fixed phase catalog', () async {
-    final source = File(_scenarioSourcePath).readAsStringSync();
-
-    expect(source, contains('allPerformanceScenarioActionGroups'));
-    expect(source, contains('allPerformanceScenarioActionPhaseRuns'));
-    expect(source, contains('performanceReportKey('));
-    expect(source, isNot(contains('docs/verification/performance.md')));
-    expect(source, isNot(contains('.md')));
-    _expectPublicImportBoundary(source);
+    expect(_runtimeCatalogContractTestSource(), contains('run.runTraced('));
     await _expectExecutableCatalogRuntime();
   });
 }
@@ -134,9 +128,13 @@ String _runtimeCatalogContractTestSource() {
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:iwb_canvas_engine_example/perf/performance_host.dart';
 import 'package:iwb_canvas_engine_example/perf/performance_scenario.dart';
 
 void main() {
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
   test('runtime performance descriptor catalog matches route contract', () {
     final redesignedGroups = (jsonDecode(r'$redesignedGroupsJson')
             as Map<String, dynamic>)
@@ -196,6 +194,43 @@ void main() {
           '\${run.scenarioGroupId}__\${run.phaseKey}__repeat_\${run.repeat.toString().padLeft(3, '0')}');
     }
   });
+
+  test('traced runner passes report key and settles inside trace action', () async {
+    final host = PerformanceHostController();
+    addTearDown(host.dispose);
+    final run = allPerformanceScenarioActionPhaseRuns.singleWhere(
+      (candidate) =>
+          candidate.scenarioGroupId == 'load_document.1k' &&
+          candidate.phaseKey == 'single.current_behavior',
+    );
+    final events = <String>[];
+    var insideTrace = false;
+
+    await run.runTraced(
+      binding: binding,
+      host: host,
+      pumpFrame: ([duration = Duration.zero]) async {
+        events.add('pump');
+      },
+      settle: () async {
+        expect(insideTrace, isTrue);
+        events.add('settle');
+      },
+      traceAction: (action, {required reportKey}) async {
+        expect(reportKey, run.reportKey);
+        insideTrace = true;
+        events.add('traceStart');
+        await action();
+        events.add('traceEnd');
+        insideTrace = false;
+      },
+    );
+
+    expect(events.first, 'traceStart');
+    expect(events, contains('pump'));
+    expect(events, contains('settle'));
+    expect(events.last, 'traceEnd');
+  });
 }
 ''';
 }
@@ -240,35 +275,12 @@ void _expectTraceSettleIsBounded(String integrationSource) {
 }
 
 void _registerTracedRunnerContractTest() {
-  test('traced phase runner owns report key and settle boundary', () {
+  test('traced phase runner has no fallback tracing path', () {
     final source = File(_scenarioSourcePath).readAsStringSync();
 
     expect(source, isNotEmpty);
-    _expectTraceActionWrapsScenarioAndSettle(source);
     _expectNoTraceFallback(source);
-    _expectScenarioFramePumping(source);
-    _expectNoRetiredRouteKeys(source);
   });
-}
-
-void _expectTraceActionWrapsScenarioAndSettle(String source) {
-  final traceStart = RegExp(
-    r'await\s+traceAction\(\(\)\s+async\s+\{',
-  ).firstMatch(source)?.start;
-  final probeCall = source.indexOf('_capturePreparationSnapshot(');
-  final actionCall = source.indexOf('await prepared.action(context);');
-  final firstSettle = source.indexOf('await request.settle();', actionCall);
-  final reportKey = source.indexOf(
-    'reportKey: request.phaseRun.reportKey',
-    firstSettle,
-  );
-
-  expect(traceStart, isNotNull);
-  expect(probeCall, greaterThan(-1));
-  expect(probeCall, lessThan(traceStart ?? source.length));
-  expect(actionCall, greaterThan(traceStart ?? -1));
-  expect(firstSettle, greaterThan(actionCall));
-  expect(reportKey, greaterThan(firstSettle));
 }
 
 void _expectNoTraceFallback(String source) {
@@ -277,10 +289,21 @@ void _expectNoTraceFallback(String source) {
   expect(source, isNot(contains('WithoutTimeline')));
 }
 
-void _expectScenarioFramePumping(String source) {
-  expect(source, contains('PerformanceScenarioActionPhaseTraceRequest'));
-  expect(source, contains('required PerformanceScenarioPumpFrame pumpFrame'));
-  expect(source, contains('await context.pumpScenarioFrame();'));
+void _registerRouteSourceGuardrailTest() {
+  test(
+    'route source guardrails reject private docs and retired route names',
+    () {
+      final scenarioSource = File(_scenarioSourcePath).readAsStringSync();
+
+      expect(
+        scenarioSource,
+        isNot(contains('docs/verification/performance.md')),
+      );
+      expect(scenarioSource, isNot(contains('.md')));
+      _expectPublicImportBoundary(scenarioSource);
+      _expectNoRetiredRouteKeys(scenarioSource);
+    },
+  );
 }
 
 void _expectNoRetiredRouteKeys(String source) {
