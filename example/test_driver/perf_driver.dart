@@ -25,12 +25,12 @@ Future<void> writePerformanceTimelines(
   Map<String, dynamic>? data, {
   Directory? resultsDirectory,
 }) async {
+  final outputRoot = resultsDirectory ?? Directory('build/flutter_performance');
+  _resetResultsDirectory(outputRoot);
+
   if (data == null) {
     throw StateError('Performance profile run returned no response data.');
   }
-
-  final outputRoot = resultsDirectory ?? Directory('build/flutter_performance');
-  _resetResultsDirectory(outputRoot);
 
   final phaseRuns = _performanceReportPhaseRuns(data);
   if (phaseRuns.isEmpty) {

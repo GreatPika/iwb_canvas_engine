@@ -161,6 +161,25 @@ void main() {
     );
     expect(outputRoot.existsSync(), isFalse);
   });
+
+  test('writer clears stale output before rejecting missing response', () async {
+    final outputRoot = await Directory.systemTemp.createTemp(
+      'flutter_performance_writer_null_test_',
+    );
+    addTearDown(() {
+      if (outputRoot.existsSync()) {
+        outputRoot.deleteSync(recursive: true);
+      }
+    });
+    File('${outputRoot.path}/performance_run_manifest.json')
+        .writeAsStringSync('{"stale":true}');
+
+    await expectLater(
+      writePerformanceTimelines(null, resultsDirectory: outputRoot),
+      throwsStateError,
+    );
+    expect(outputRoot.existsSync(), isFalse);
+  });
 }
 
 Map<String, dynamic> _driverResponse() {
