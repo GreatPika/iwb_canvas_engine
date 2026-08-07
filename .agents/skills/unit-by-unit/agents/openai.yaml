@@ -1,4 +1,0 @@
-interface:
-  display_name: "Unit By Unit"
-  short_description: "Implement contracts one unit at a time"
-  default_prompt: "Use $unit-by-unit to implement the accepted step contract one unit at a time."

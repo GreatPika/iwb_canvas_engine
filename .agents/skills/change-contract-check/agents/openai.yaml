@@ -1,4 +1,0 @@
-interface:
-  display_name: "Change Contract Check"
-  short_description: "Validate traceable contracts before implementation"
-  default_prompt: "Validate this Change Contract or Contract Blocker. Check source inputs, classification, decision trace, evidence, boundaries, units, and completion checks. Return only the verdict, required fixes, optional improvements, and summary."

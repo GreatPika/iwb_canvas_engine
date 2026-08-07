@@ -1,4 +1,0 @@
-interface:
-  display_name: "Architecture Design Review"
-  short_description: "Review design artifacts before contracts"
-  default_prompt: "Use $architecture-design-review to review the design artifact before Change Contract authoring."

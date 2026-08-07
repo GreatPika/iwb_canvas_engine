@@ -1,4 +1,0 @@
-interface:
-  display_name: "Research Codebase"
-  short_description: "Research codebase behavior with coverage"
-  default_prompt: "Research the requested codebase area and save a factual research note with exact file references and search coverage."

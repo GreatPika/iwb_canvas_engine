@@ -1,4 +1,0 @@
-interface:
-  display_name: "Architecture Design Workflow"
-  short_description: "Run design authoring and review together"
-  default_prompt: "Use $architecture-design-workflow to create and review an architecture design artifact."
