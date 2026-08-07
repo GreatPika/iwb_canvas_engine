@@ -14,6 +14,8 @@ the generated navigation that supports owner, subsystem, and diagram lookup.
 
 ## Work routes
 
+- Durable architecture rationale: `architecture/decisions/README.md`; current
+  architecture and contracts remain authoritative for behavior.
 - Public API: `docs/contracts/public_api_v1.md`
 - Schema and codec: `docs/contracts/schema_v1.md` and `docs/contracts/codec_boundary.md`
 - Validation and diagnostics: `docs/contracts/validation_limits.md` and `docs/contracts/diagnostics.md`
