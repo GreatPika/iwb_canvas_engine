@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create New Thread"
+  short_description: "Create repository-scoped threads"
+  default_prompt: "Use $create-new-thread when the user explicitly asks to start, fork, hand off, or run repository work in a new thread."

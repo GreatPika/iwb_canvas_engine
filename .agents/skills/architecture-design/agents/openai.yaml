@@ -1,0 +1,4 @@
+interface:
+  display_name: "Architecture Design"
+  short_description: "Write designs or handle explicit design reviews"
+  default_prompt: "Use $architecture-design when the requested outcome requires creating or editing an architecture design artifact. For read-only work, use only when the user's own message contains 'review' or 'ревью' and names the architecture design artifact as the review target."

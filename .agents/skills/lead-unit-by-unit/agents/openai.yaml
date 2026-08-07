@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lead Unit By Unit"
+  short_description: "Implement accepted active plans unit by unit"
+  default_prompt: "Use $lead-unit-by-unit to implement an accepted active plan unit by unit."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Research Codebase"
+  short_description: "Create research history in docs/history/research/"
+  default_prompt: "Use $research-codebase to create or update a repository research artifact in docs/history/research/."

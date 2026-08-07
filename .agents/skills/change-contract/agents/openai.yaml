@@ -1,0 +1,6 @@
+interface:
+  display_name: "Change Contract"
+  short_description: "Write or explicitly review Change Contracts"
+  default_prompt: "Use $change-contract when the requested outcome requires creating or editing a Change Contract, or when the user explicitly requests a Change Contract review."
+policy:
+  allow_implicit_invocation: true

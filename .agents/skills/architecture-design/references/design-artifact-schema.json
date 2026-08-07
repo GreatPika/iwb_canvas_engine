@@ -1,0 +1,46 @@
+{
+  "frontmatter": {
+    "fields": ["date", "commit", "branch", "disposition", "product_outcome"],
+    "dispositions": ["READY_FOR_CONTRACT", "ARCHITECTURE_GATE", "NEEDS_RESEARCH", "DESIGN_NOT_REQUIRED"],
+    "date_pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+    "commit_pattern": "^[0-9a-f]{7,40}$",
+    "folded_field": "product_outcome"
+  },
+  "sections": [
+    "Source Inputs",
+    "Target Contract Classification",
+    "Repository Evidence",
+    "Design Form Candidates",
+    "Selected Form",
+    "Boundary Locks For Change Contract",
+    "Decision Trace",
+    "Outcome-Proof Fit",
+    "Hard Gate Check",
+    "Known Future Pressures",
+    "Diagram Requirements",
+    "Provisional Diagrams",
+    "Source-Of-Truth Impact",
+    "Verification Strategy",
+    "Change Contract Handoff",
+    "Open Decisions"
+  ],
+  "fields": {
+    "Source Inputs": ["Prior Design", "Research", "PLAN", "Other"],
+    "Target Contract Classification": ["Profile", "Obligations", "ADR Impact"],
+    "Boundary Locks For Change Contract": ["Owner", "In Scope", "Out of Scope", "Source of Truth", "Compatibility", "Order Constraints", "Temporal Surface Closure", "All-Or-Nothing Failure Boundary", "Negative Proof And Fixture Quarantine", "Bounded Recognition Scope"],
+    "Change Contract Handoff": ["Required profile", "Required obligations", "Source inputs to preserve", "Boundary locks to preserve", "Decision IDs to preserve", "Required acceptance oracles and evidence constraints", "Forbidden contract drift", "Contract Blocker triggers"]
+  },
+  "tables": {
+    "Decision Trace": ["Decision ID", "Decision", "Evidence", "Future contract handoff target"],
+    "Outcome-Proof Fit": ["Claim", "Concrete failure mode", "Acceptance oracle", "Proxy risk", "Evidence constraints"],
+    "Hard Gate Check": ["Gate", "Result", "Evidence"],
+    "Known Future Pressures": ["Pressure", "Evidence", "Selected-form response", "Accepted cost or risk"],
+    "Diagram Requirements": ["Type", "Design question", "Reason"]
+  },
+  "core_gates": ["Owner-Level Fix", "Ownership", "Source-Of-Truth Singularity", "Source-Truth Minimality", "Boundary-Owned Policy", "Dependency Direction", "Outcome-Proof Fit", "Verification", "Future Pressure"],
+  "conditional_gates": ["Negative Proof And Fixture Quarantine", "State/Data Ownership", "Sequenced Migration And Retirement", "Temporal Surface Closure", "All-Or-Nothing Failure Boundary", "Bounded Recognition Scope"],
+  "diagram_types": ["none", "context", "container", "component", "data_flow", "sequence", "state"],
+  "template_markers": ["{{DATE}}", "{{COMMIT}}", "{{BRANCH}}", "{{DISPOSITION}}", "{{PRODUCT_OUTCOME}}", "{{VALUE}}", "{{ROW}}"],
+  "forbidden_tokens": ["TODO", "TBD"],
+  "vocabulary": "../../change-contract/references/contract-vocabulary.json"
+}
