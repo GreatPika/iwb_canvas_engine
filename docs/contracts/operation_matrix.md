@@ -106,14 +106,16 @@ Notes:
 - Rows that touch both document content and selection publish one atomic
   `CanvasRuntimeState` through the runtime/applier boundary.
 - Edit-backed document rows may execute through the ordinary sparse route or
-  through explicit materialized fallback after `readDraftDocument` or
-  `replaceDraftDocument`. Ordinary sparse and materialized candidates finalize
-  accepted committed facts in the store before edit plan compilation, so
-  provisional operation journals cannot publish extra revision or touched
-  families. The row outcomes do not change: both implementations must compile
-  the same revision families, touched-set categories, selection
-  effects, projection invalidation, repaint intent, and action/no-action
-  behavior.
+  through explicit materialized fallback after `readDraftDocument`. Both routes
+  finalize accepted committed facts in the store before edit plan compilation,
+  so provisional operation journals cannot publish extra revision or touched
+  families. Their row outcomes do not change: both implementations must compile
+  the same revision families, touched-set categories, selection effects,
+  projection invalidation, repaint intent, and action/no-action behavior.
+- `replaceDraftDocument` is a separate forced-replacement route. It compiles
+  from session replacement facts rather than store final equality and retains
+  document-replacement effects even when the replacement has equal public
+  content.
 - Runtime view camera rows do not mutate persisted document camera and do not
   invalidate public document projection. Persisted camera edits remain document
   edits through `CanvasEdit.setCameraOffset`.

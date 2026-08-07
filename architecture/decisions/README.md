@@ -184,6 +184,11 @@ remain authoritative for present behavior.
 
 | ID | Record | Decision |
 |---|---|---|
+| ADR-0001 | [ADR-0001-single-maintained-acyclic-runtime.md](ADR-0001-single-maintained-acyclic-runtime.md) | Adopt a single maintained package with an acyclic contracts-led runtime |
+| ADR-0002 | [ADR-0002-separate-committed-runtime-and-projection-state.md](ADR-0002-separate-committed-runtime-and-projection-state.md) | Separate committed document truth, lazy public projection, selection, and view camera |
+| ADR-0003 | [ADR-0003-store-finalized-edit-transactions.md](ADR-0003-store-finalized-edit-transactions.md) | Finalize synchronous edits from store-owned accepted facts and eliminate net no-ops |
+| ADR-0004 | [ADR-0004-canonical-schema-reader-and-atomic-load.md](ADR-0004-canonical-schema-reader-and-atomic-load.md) | Load Schema v1 JSON through one codec reader and an atomic staged store install |
+| ADR-0005 | [ADR-0005-surface-owned-resource-resolution.md](ADR-0005-surface-owned-resource-resolution.md) | Own resource resolution and bounded image caching per active surface session |
 
 Add each ADR file, its catalog row, and its concern lookup entry atomically; do
 not reserve an identifier for a record that does not exist.
@@ -196,6 +201,11 @@ relationships; the catalog does not mirror those facts.
 
 | Concern | ADRs |
 |---|---|
+| Package, public boundary, and runtime dependency direction | [ADR-0001](ADR-0001-single-maintained-acyclic-runtime.md) |
+| Document, projection, selection, and camera state ownership | [ADR-0002](ADR-0002-separate-committed-runtime-and-projection-state.md) |
+| Edit, store finalization, typed effects, and no-op semantics | [ADR-0003](ADR-0003-store-finalized-edit-transactions.md) |
+| Schema v1 reading and atomic document replacement | [ADR-0004](ADR-0004-canonical-schema-reader-and-atomic-load.md) |
+| Resource descriptors, resolution sessions, and image cache policy | [ADR-0005](ADR-0005-surface-owned-resource-resolution.md) |
 
 Add each concern entry in the same change as its ADR file and catalog row.
 
