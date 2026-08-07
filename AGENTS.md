@@ -7,22 +7,31 @@ and registries.
 
 ## Change planning
 
-- `PLAN.md` is the active roadmap and the source of truth for planned work.
-- `plan/` stores the linked step contracts for `PLAN.md` entries.
-- When adding a new step to `PLAN.md`, use `$change-contract` directly as the
-  canonical step-contract template. Do not infer the required structure from
-  existing plan steps.
-- Use current code, docs, registries, guardrails, tests, `.design/`, and
-  `.research/` as source inputs when they are relevant to the task.
-- Follow the step contract as written during implementation. If it conflicts
+- `docs/planning/README.md` owns the document lifecycle and naming policy.
+- Direct children of `docs/planning/designs/` are active architecture designs.
+  Direct children of `docs/planning/plans/` are accepted active Change
+  Contracts. Directory membership is the active registration; do not maintain
+  a root roadmap or a second planning index.
+- Name new designs and plans `YYYY-MM-DD-topic.md`. Do not use `step_`, sequence
+  numbers, or filenames without the leading date.
+- Use `$architecture-design` for an active design and `$change-contract` for an
+  active plan. Do not infer either artifact form from existing documents.
+- Use current code, docs, registries, guardrails, tests, active designs, and
+  `docs/history/research/` as source inputs when they are relevant to the task.
+- `docs/planning/FOLLOW_UPS.md` owns confirmed unresolved work discovered
+  outside an accepted plan. A follow-up entry is not implementation authority;
+  implementation still requires an accepted active plan.
+- Follow the accepted active plan as written during implementation. If it conflicts
   with current code, docs, guardrails, tests, registries, or repository-local
   boundary enforcement, stop implementation, report the exact contradiction
   with file-level evidence, and resolve the contract or enforcement before
   continuing. Do not silently reinterpret the plan.
-- After completing a plan step, update the corresponding checkbox entries in
-  `PLAN.md` and any linked step document so finished items are marked done in
-  the same change.
-
+- After verified completion, move the plan with the same filename to
+  `docs/history/plans/`. Move a completed linked design with the same filename
+  to `docs/history/designs/` only when no active plan still references it.
+- Research is historical evidence from creation and lives in
+  `docs/history/research/`; historical research, designs, and plans do not own
+  current package behavior.
 
 ## DCM metrics exceptions
 

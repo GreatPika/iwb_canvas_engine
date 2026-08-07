@@ -24,7 +24,21 @@ const _markdownRoots = [
   'docs/verification',
   'docs/diagrams',
   'docs/indexes',
+  'docs/planning',
 ];
+
+const _artifactRouteDirectories = [
+  'docs/planning/designs',
+  'docs/planning/plans',
+  'docs/history/designs',
+  'docs/history/plans',
+  'docs/history/research',
+];
+
+const _optionalActiveArtifactDirectories = {
+  'docs/planning/designs',
+  'docs/planning/plans',
+};
 
 const _generatedIndexPaths = [
   'docs/indexes/by_owner.md',
@@ -60,7 +74,7 @@ const _architectureReadmeGroups = [
 
 const _rootReadmeTaskRoutes = [
   '- Understand architecture: `docs/architecture/README.md`',
-  '- Plan a change: use a per-task Change Contract in the work item, Codex thread, or PR context',
+  '`docs/planning/README.md`',
   '- Verify behavior: `docs/verification/`',
   '- Find current owners: `docs/indexes/by_owner.md`',
   '- Check subsystem contracts: `docs/indexes/by_subsystem.md`',
@@ -172,6 +186,8 @@ void _checkRequiredEntrypoints() {
   const requiredFiles = [
     'docs/README.md',
     'docs/architecture/README.md',
+    'docs/planning/README.md',
+    'docs/planning/FOLLOW_UPS.md',
     _sectionsRegistryPath,
     _diagramsRegistryPath,
     _diagramCatalogPath,
@@ -183,6 +199,10 @@ void _checkRequiredEntrypoints() {
     'docs/diagrams',
     'docs/indexes',
     'docs/_registry',
+    'docs/history',
+    'docs/history/designs',
+    'docs/history/plans',
+    'docs/history/research',
   ];
 
   for (final path in requiredFiles) {
@@ -333,7 +353,11 @@ void _checkGeneratedIndexes() {
 }
 
 void _checkReadmeInventory() {
-  const allowed = {'docs/README.md', 'docs/architecture/README.md'};
+  const allowed = {
+    'docs/README.md',
+    'docs/architecture/README.md',
+    'docs/planning/README.md',
+  };
   final docsDirectory = Directory('docs');
   if (!docsDirectory.existsSync()) {
     return;
@@ -812,9 +836,25 @@ void _checkDocumentPathsInText(String sourcePath, String text) {
       if (path.contains(' and ')) {
         continue;
       }
+      if (_isAbstractArtifactRoute(path)) {
+        continue;
+      }
       _requirePath(path, source: sourcePath);
     }
   }
+}
+
+bool _isAbstractArtifactRoute(String path) {
+  final normalized = path.split('#').first.split(RegExp(r'\s')).first;
+  for (final directory in _optionalActiveArtifactDirectories) {
+    if (normalized == directory || normalized == '$directory/') {
+      return true;
+    }
+  }
+
+  return _artifactRouteDirectories.any(
+    (directory) => normalized == '$directory/YYYY-MM-DD-topic.md',
+  );
 }
 
 String _matchGroup(Match match, int group, String context) {

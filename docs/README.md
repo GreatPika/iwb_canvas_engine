@@ -7,7 +7,11 @@ drift checks.
 ## Start by task
 
 - Understand architecture: `docs/architecture/README.md`
-- Plan a change: use a per-task Change Contract in the work item, Codex thread, or PR context
+- Research current repository facts: `docs/history/research/`
+- Design a change: `docs/planning/designs/`
+- Plan accepted work: `docs/planning/plans/`
+- Follow the document lifecycle: `docs/planning/README.md`
+- Triage confirmed deferred work: `docs/planning/FOLLOW_UPS.md`
 - Verify behavior: `docs/verification/`
 - Find current owners: `docs/indexes/by_owner.md`
 - Check subsystem contracts: `docs/indexes/by_subsystem.md`
@@ -25,12 +29,15 @@ drift checks.
 - Verification policy: `docs/verification/`
 - Structured relationships: `docs/_registry/`
 - Generated navigation: `docs/indexes/` and `docs/diagrams/catalog.md`
-- Evidence inputs: `.design/` and `.research/`, when a task needs prior design
-  decisions or codebase research
+- Planning lifecycle and naming: `docs/planning/README.md`
+- Active designs and plans: `docs/planning/designs/` and
+  `docs/planning/plans/`
+- Historical evidence: `docs/history/research/`, `docs/history/designs/`, and
+  `docs/history/plans/`
 
-`.design/` and `.research/` are evidence and source-input layers only. They do
-not own active package behavior, release policy, guardrails, roadmaps, external
-routes, removed planning routes, or runtime contracts.
+Historical research, designs, and plans are evidence and source-input layers
+only. They do not own active package behavior, release policy, guardrails,
+planning state, external routes, or runtime contracts.
 
 ## Checks
 
@@ -42,6 +49,8 @@ dart run tool/architecture_graph/generate_views.dart --check
 
 ## Local entrypoints
 
+- `docs/planning/README.md`
+- `docs/planning/FOLLOW_UPS.md`
 - `docs/architecture/README.md`
 - `docs/contracts/`
 - `docs/verification/`

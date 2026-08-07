@@ -53,6 +53,13 @@ location under `docs/planning/designs/` is its active registration. Do not edit
 implementation, product sources of truth, ADRs, active plans, or a Change
 Contract.
 
+`docs/planning/README.md` owns design lifecycle and naming. Write a new design
+as `docs/planning/designs/YYYY-MM-DD-topic.md`; never use step or sequence
+numbering. Historical designs under `docs/history/designs/` are read-only
+evidence and do not own current behavior. This skill never archives a design;
+the workflow closing the last active plan that consumes its completed scope
+owns the guarded move to history.
+
 ## Terminal Outcomes
 
 `READY_FOR_CONTRACT` and `DESIGN_NOT_REQUIRED` require `PASS` on the latest

@@ -66,7 +66,10 @@ exact remaining task. It becomes the unit's only active worker.
 ## Evidence And Contract Boundary
 
 Before assigning work, read the accepted plan and linked design or research
-artifacts. For every unchecked unit, resolve its `Verification Profile` and
+artifacts. Require the plan to be a direct child of `docs/planning/plans/` named
+`YYYY-MM-DD-topic.md`; do not execute a legacy `step_`, order-prefixed, or
+undated plan as active work. For every unchecked unit, resolve its
+`Verification Profile` and
 `Acceptance Outcomes` through the covering `Verification Matrix` rows to their
 evidence and `Permanent Artifact Admissions` entries. Supply the witness,
 evidence surface, pass signal, constraints, durable impact, artifact target, and
@@ -204,10 +207,14 @@ After all units are committed:
    fresh full-range review. Repeat until the latest committed range passes both
    final review and pre-closure terminal verification.
 5. Mark all implemented units complete and move the plan with the same filename
-   from `docs/planning/plans/` to `docs/history/plans/`. Do not edit
-   `docs/planning/README.md` or move a linked active design unless its own
-   lifecycle is complete. Run the documentation and lifecycle checks triggered
-   by this closure. Repair closure artifacts and commit the verified lifecycle
-   closure. If a required repair changes implementation, move the plan back to
-   its active path and return to step 1. Then prove every completion clause in
-   the active Goal and mark it complete.
+   from `docs/planning/plans/` to `docs/history/plans/`. For every linked active
+   design, verify that completed plans cover every in-scope Decision Trace and
+   Change Contract Handoff target. Search every remaining direct-child active
+   plan's `Source Inputs` `Design` rows for the design path. Move the design
+   with the same filename to `docs/history/designs/` only when coverage is
+   complete and no such row declares it; otherwise leave it active. Do not edit
+   `docs/planning/README.md` during closure. Run the documentation and lifecycle
+   checks triggered by these moves. Repair closure artifacts and commit the
+   verified lifecycle closure. If a required repair changes implementation,
+   move the plan back to its active path and return to step 1. Then prove every
+   completion clause in the active Goal and mark it complete.
