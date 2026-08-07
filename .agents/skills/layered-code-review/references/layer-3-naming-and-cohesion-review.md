@@ -22,9 +22,10 @@ Use `Source-Of-Truth Singularity` when naming or placement depends on a governin
 
 ## Production Structure Audit
 
-When the diff triggers `$production-structure`, read
-[Production Structure Authority Resolution](../../production-structure/references/authority-resolution.md)
-and apply it in audit posture:
+When the diff changes production structure, read `AGENTS.md`,
+`docs/architecture/02_package_boundaries.md`, and, when architecture graph nodes
+or edges change, `docs/architecture/architecture_graph.yaml`. Apply those
+authorities in audit posture:
 
 1. Classify the actual final diff.
 2. Reread current authorities and independently derive the expected names,
@@ -35,17 +36,17 @@ and apply it in audit posture:
 5. Record mismatches only as ordinary Layer 3 candidates for Layer 4 synthesis.
 
 This layer remains the sole post-implementation semantic review owner. Do not
-emit a separate production-structure verdict.
+emit a separate structural verdict.
 
 ## Test Structure Audit
 
-When the diff triggers `$test-structure`, read
-[Test Structure Authority Resolution](../../test-structure/references/authority-resolution.md)
-and independently derive the expected proof-owner path, filename, support
+When the diff changes test structure, read `AGENTS.md`,
+`docs/architecture/02_package_boundaries.md`, and `docs/verification/tests.md`,
+then independently derive the expected proof-owner path, filename, support
 location, shared support API, and import/export boundary from the final diff.
 Do not trust the pre-edit handoff or contract assertion. Record mismatches only
 as ordinary Layer 3 candidates; Layer 2 owns duplicated proof and oracle
-independence. Do not emit a separate test-structure verdict.
+independence. Do not emit a separate structural verdict.
 
 ## Decision Test
 

@@ -86,10 +86,10 @@ None
 
 | Check | Scope | Future command or evidence | Pass signal |
 | --- | --- | --- | --- |
-| Finding disposition | All discovered findings | Apply `$numicod-change-verification` disposition | No finding exists only in chat |
-| Canonical route integrity | Current repository routes | `dart run tool/repository_knowledge/verify.dart` | Exit 0 and direct invocation is valid |
+| Finding disposition | All discovered findings | Apply `AGENTS.md#Verification` | No finding exists only in chat |
+| Canonical route integrity | Current repository routes | Repository-local source query excluding history | No retired route remains current |
 | Diff hygiene | Whole change | `git diff --check` | Exit 0 |
-| Lifecycle closure | Temporary design and plan | Exact-path absence before integration | `docs/superpowers` is absent |
+| Lifecycle closure | Temporary design and plan | Registered artifact lifecycle state | No temporary artifact remains active |
 """
 
 VALID_BLOCKER = """# Contract Blocker

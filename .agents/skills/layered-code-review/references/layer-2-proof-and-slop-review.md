@@ -101,15 +101,15 @@ the exact missing or incorrect admission for a concrete new failure family.
 
 ## Test Structure Audit
 
-When the diff triggers `$test-structure`, read
-[Test Structure Authority Resolution](../../test-structure/references/authority-resolution.md)
-and audit the final diff independently. Derive the transforming owner,
+When the diff changes test structure, read `AGENTS.md`,
+`docs/architecture/02_package_boundaries.md`, and `docs/verification/tests.md`,
+then audit the final diff independently. Derive the transforming owner,
 exhaustive scenario ownership, downstream proof, support consumers, import and
 export boundaries, and independent oracle without trusting the pre-edit handoff
 or contract assertion. Treat duplicated downstream proof, a production-derived
 expected result, a test barrel, or a private cross-package test import as
 ordinary Layer 2 candidates. Leave path and naming findings to Layer 3 and emit
-no separate test-structure verdict.
+no separate structural verdict.
 
 ## Permanent Artifact Admissions Review
 

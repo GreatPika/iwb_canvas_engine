@@ -1,6 +1,6 @@
 ---
 name: create-new-thread
-description: Use when the user explicitly asks to start, fork, hand off, or run repository work in a new thread.
+description: Use when the user explicitly asks to start or run repository work in a new thread.
 ---
 
 # Create New Thread
@@ -12,19 +12,20 @@ thread.
 
 1. Discover `list_projects`, `create_thread`, `set_thread_title`, and
    `send_message_to_thread` if they are not already callable.
-2. Run `echo "$CODEX_THREAD_ID"` from `/Users/blackpika/numicod`; this is the
+2. Run `echo "$CODEX_THREAD_ID"` from the current repository root; this is the
    parent thread ID. Stop if it is empty.
-3. Use `list_projects` and choose the project for `/Users/blackpika/numicod`.
+3. Use `list_projects` and choose the project whose path matches the current
+   repository root.
 4. Use the `local` environment by default. Use `worktree` only if the user
    explicitly asks for an isolated worktree.
-5. Create the thread with `create_thread`.
-6. Rename the created thread with `set_thread_title`.
+5. Build the created thread prompt from the `Prompt` template below.
+6. Create the thread with `create_thread`.
+7. Rename the created thread with `set_thread_title`.
    - Use the `threadId` returned by `create_thread`.
    - Set `title` to the required prefix plus the concrete topic, for example
      `research canvas persistence`.
    - If `set_thread_title` is unavailable, start the created thread prompt with
      `Thread title: <required prefix> - <topic>` as a fallback.
-7. Build the created thread prompt from the `Prompt` template below.
 8. In the final response, emit the created-thread directive returned by
    `create_thread`.
 
@@ -79,7 +80,7 @@ Source artifact values by thread type:
 ```text
 Thread title: <required title prefix> - <topic>
 Parent thread ID: <CODEX_THREAD_ID>
-Environment: local
+Environment: <selected environment>
 Use skill: <skill name>
 Source artifact: <value from Source artifact values by thread type>
 

@@ -26,9 +26,11 @@ A reviewer example, convenient repository pattern, candidate owner, or candidate
 
 Only local tactics inside closed semantic boundaries may remain open. Exact new test paths, fixture names/layout, selectors, private identifiers/helpers, injection hooks, regexes, AST visitors, source searches, and future commands remain open unless fixed by an upstream decision, existing owner, or mandatory resolution procedure.
 
-When scope includes a production structural trigger, apply
-`../../production-structure/references/authority-resolution.md` before
-returning a full contract. Preserve source-backed consequences in the existing
+When scope includes a production structural trigger, resolve the structure
+against `AGENTS.md`, `docs/architecture/02_package_boundaries.md`, and, when
+architecture graph nodes or edges change,
+`docs/architecture/architecture_graph.yaml` before returning a full contract.
+Preserve source-backed consequences in the existing
 `Source Inputs`, `Decision Trace`, `Repository Evidence`, `Boundaries`, unit
 owners, outcomes, and verification constraints; do not add a
 `Production Structure Handoff` section or another decision artifact. A direct
@@ -38,20 +40,20 @@ not decide the route. A new Graph node always requires an accepted architecture
 design and this accepted Change Contract, with its ADR gate closed as required
 by the shared procedure.
 
-When scope includes a test structural trigger, apply
-`../../test-structure/references/authority-resolution.md` before returning a
-full contract. Preserve the resolved proof owner, exact target paths and names,
-support and import boundaries, and oracle constraints in `Repository Evidence`,
-`Boundaries`, `Decision Trace`, and applicable verification constraints; do not
-add a `Test Structure Handoff` section. Test structure alone does not require a
-contract. An unresolved material axis blocks the contract through the normal
-rule above.
+When scope includes a test structural trigger, resolve the structure against
+`AGENTS.md`, `docs/architecture/02_package_boundaries.md`, and
+`docs/verification/tests.md` before returning a full contract. Preserve the
+resolved proof owner, exact target paths and names, support and import
+boundaries, and oracle constraints in `Repository Evidence`, `Boundaries`,
+`Decision Trace`, and applicable verification constraints; do not add a `Test
+Structure Handoff` section. Test structure alone does not require a contract.
+An unresolved material axis blocks the contract through the normal rule above.
 
 ## 3. Classification, Keys, And Repository Evidence
 
 Read `contract-vocabulary.json` completely. Select exactly one primary `Profile` from `profiles` and every material `Obligations` token from `obligations`; use the no-obligation value alone only when no material obligation applies. Each unit selects a `Verification Profile` from the same profile vocabulary and may differ from the primary profile only for necessary supporting work. Exclude unrelated profiles and bundled independent changes.
 
-Decision, outcome, evidence, and admission keys are unique lowercase kebab-case contract-local identifiers. They remain stable across unit renumbering/regrouping, contain no unit/step/phase/scheduling marker, and never become code symbols, test names, RCM identifiers, architecture identifiers, or another repository source of truth.
+Decision, outcome, evidence, and admission keys are unique lowercase kebab-case contract-local identifiers. They remain stable across unit renumbering/regrouping, contain no unit/step/phase/scheduling marker, and never become code symbols, test names, architecture identifiers, or another repository source of truth.
 
 `Repository Evidence` rows are decision-bearing and normally cite a line:
 
@@ -204,7 +206,7 @@ Include every material accepted-source and repository-derived decision, includin
 
 Tests may consume but never own or mirror product, model, schema, architecture, or documentation truth. Reject copied inventories as authority, prose parsing as product proof, feature-local general scanners, self-referential fixtures whose expected truth comes from the implementation under test, private-shape proof, and feature-local ownership when a stable central owner governs the failure family.
 
-`Verification Gate` contains only changed-owner, cross-unit, repository, finding-disposition, diff-hygiene, canonical-route, and lifecycle closure not already owned by a Matrix row. It includes every known changed-owner check selected through `$numicod-change-verification`, `Finding disposition`, and `git diff --check`; it also includes canonical-route integrity when routes change and active contract/source lifecycle closure when applicable. Never mechanically duplicate focused unit evidence.
+`Verification Gate` contains only changed-owner, cross-unit, repository, finding-disposition, diff-hygiene, canonical-route, and lifecycle closure not already owned by a Matrix row. It includes every known changed-owner check selected from the repository verification policy in `AGENTS.md`, `Finding disposition`, and `git diff --check`; it also includes canonical-route integrity when routes change and active contract/source lifecycle closure when applicable. Never mechanically duplicate focused unit evidence.
 
 Name each exact established command once in the Matrix or Gate, with working directory when material. New-coverage commands remain implementation-owned unless fixed upstream. Every Gate check names scope, admissible future evidence, and pass signal; vague/prose-only checks are not closure. There is no fixed command count.
 

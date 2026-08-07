@@ -1,5 +1,5 @@
 name = "unit_worker"
-description = "Write-enabled implementation specialist for one bounded execution unit from an accepted Numicod plan or Change Contract."
+description = "Write-enabled implementation specialist for one bounded execution unit from an accepted plan or Change Contract."
 model = "gpt-5.6-terra"
 model_reasoning_effort = "xhigh"
 sandbox_mode = "workspace-write"
@@ -41,6 +41,8 @@ You are not alone in the codebase. Do not revert others' edits; adapt to the
 current repository state. Stay inside the assigned write scope, do not spawn
 subagents, and do not commit.
 
-Before completing the unit, use $numicod-change-verification and resolve every
-failure until verification passes.
+Before completing the unit, run every check required by `AGENTS.md` for the
+unit's changed owners and every check required by the unit's resolved
+Verification Matrix obligations. Resolve every failure until verification
+passes. The lead owns cross-unit and lifecycle `Verification Gate` checks.
 """

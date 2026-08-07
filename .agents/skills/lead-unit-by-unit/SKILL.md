@@ -29,7 +29,7 @@ boundary, invariant, source of truth, or owning module.
 
 Complete only after every unit is separately committed with current
 verification, the full committed range passes fresh final review, every finding
-is dispositioned, terminal numicod-change-verification passes, and the plan is
+is dispositioned, terminal repository verification passes, and the plan is
 moved to history.
 
 If the contract conflicts with repository authorities or no defensible in-scope
@@ -73,8 +73,10 @@ evidence surface, pass signal, constraints, durable impact, artifact target, and
 admission references as that unit's evidence obligations.
 
 If the contract contradicts current code or repository enforcement, stop with
-file-level evidence. Before a structural unit, apply `$production-structure` or
-`$test-structure` and require a ready handoff; a handoff cannot amend accepted
+file-level evidence. Before a structural unit, resolve production structure
+against `AGENTS.md` and `docs/architecture/`, or test structure against
+`AGENTS.md`, `docs/architecture/02_package_boundaries.md`, and
+`docs/verification/tests.md`; require a ready handoff that cannot amend accepted
 scope. Do not otherwise rewrite the contract while implementing.
 
 ### Bounded Contract Amendment
@@ -134,8 +136,8 @@ the work instruction.
 
 Do not implement `ACCEPTED_ADVISORY` or `REJECTED` reports merely to close the
 review. Do not reject a concrete, evidence-backed, durable report solely for
-being outside the contract. Route it through `Finding disposition` in
-`$numicod-change-verification`, deduplicate it, or record it in
+being outside the contract. Route it through `Finding disposition` in the
+active contract's `Verification Gate`, deduplicate it, or record it in
 `docs/planning/FOLLOW_UPS.md` without interrupting the unit.
 
 ## Unit Loop
@@ -194,11 +196,18 @@ After all units are committed:
 3. After implementation changes, keep `START_COMMIT` fixed, advance `END_COMMIT`
    through every fix commit, and repeat the full-range review with a fresh
    `lead_code_reviewer` until no `ACCEPTED_BLOCKING` report remains.
-4. Only after the latest final review and all required evidence pass, mark all
-   implemented units complete and move the plan with the same filename from
-   `docs/planning/plans/` to `docs/history/plans/`. Do not edit
+4. Before lifecycle closure, run every terminal check required by `AGENTS.md`
+   and the contract's `Verification Matrix` and `Verification Gate`, except the
+   checks whose subject is the lifecycle move itself. Repair every required
+   failure or finding. If a repair changes implementation, commit it, keep
+   `START_COMMIT` fixed, advance `END_COMMIT`, and return to step 1 for another
+   fresh full-range review. Repeat until the latest committed range passes both
+   final review and pre-closure terminal verification.
+5. Mark all implemented units complete and move the plan with the same filename
+   from `docs/planning/plans/` to `docs/history/plans/`. Do not edit
    `docs/planning/README.md` or move a linked active design unless its own
-   lifecycle is complete.
-5. Use `$numicod-change-verification` on the terminal state, repair every
-   required failure or finding, and commit the verified lifecycle closure. Then
-   prove every completion clause in the active Goal and mark it complete.
+   lifecycle is complete. Run the documentation and lifecycle checks triggered
+   by this closure. Repair closure artifacts and commit the verified lifecycle
+   closure. If a required repair changes implementation, move the plan back to
+   its active path and return to step 1. Then prove every completion clause in
+   the active Goal and mark it complete.
