@@ -189,6 +189,11 @@ remain authoritative for present behavior.
 | ADR-0003 | [ADR-0003-store-finalized-edit-transactions.md](ADR-0003-store-finalized-edit-transactions.md) | Finalize synchronous edits from store-owned accepted facts and eliminate net no-ops |
 | ADR-0004 | [ADR-0004-canonical-schema-reader-and-atomic-load.md](ADR-0004-canonical-schema-reader-and-atomic-load.md) | Load Schema v1 JSON through one codec reader and an atomic staged store install |
 | ADR-0005 | [ADR-0005-surface-owned-resource-resolution.md](ADR-0005-surface-owned-resource-resolution.md) | Own resource resolution and bounded image caching per active surface session |
+| ADR-0006 | [ADR-0006-derived-spatial-indexing.md](ADR-0006-derived-spatial-indexing.md) | Keep geometry committed and spatial acceleration derived and reliability-typed |
+| ADR-0007 | [ADR-0007-immutable-frame-planning-and-caches.md](ADR-0007-immutable-frame-planning-and-caches.md) | Render from immutable frame captures through specialized planners and bounded caches |
+| ADR-0008 | [ADR-0008-selection-move-and-chrome-ownership.md](ADR-0008-selection-move-and-chrome-ownership.md) | Separate selection truth, move sessions, and frame-owned selection chrome |
+| ADR-0009 | [ADR-0009-interaction-tool-machines-and-cleanup.md](ADR-0009-interaction-tool-machines-and-cleanup.md) | Compose interaction as tool machines with centralized cleanup and admitted asynchronous requests |
+| ADR-0010 | [ADR-0010-runtime-text-edit-session.md](ADR-0010-runtime-text-edit-session.md) | Own text-edit sessions in runtime and the Flutter editor overlay in surface |
 
 Add each ADR file, its catalog row, and its concern lookup entry atomically; do
 not reserve an identifier for a record that does not exist.
@@ -206,6 +211,11 @@ relationships; the catalog does not mirror those facts.
 | Edit, store finalization, typed effects, and no-op semantics | [ADR-0003](ADR-0003-store-finalized-edit-transactions.md) |
 | Schema v1 reading and atomic document replacement | [ADR-0004](ADR-0004-canonical-schema-reader-and-atomic-load.md) |
 | Resource descriptors, resolution sessions, and image cache policy | [ADR-0005](ADR-0005-surface-owned-resource-resolution.md) |
+| Geometry and derived spatial acceleration | [ADR-0006](ADR-0006-derived-spatial-indexing.md) |
+| Frame capture, planning, painter inputs, and caches | [ADR-0007](ADR-0007-immutable-frame-planning-and-caches.md) |
+| Selection, selected move, and selection chrome | [ADR-0008](ADR-0008-selection-move-and-chrome-ownership.md) |
+| Pointer tools, requests, terminal input, and cleanup | [ADR-0009](ADR-0009-interaction-tool-machines-and-cleanup.md) |
+| Inline text-edit ownership | [ADR-0010](ADR-0010-runtime-text-edit-session.md) |
 
 Add each concern entry in the same change as its ADR file and catalog row.
 
