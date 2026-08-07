@@ -194,6 +194,11 @@ remain authoritative for present behavior.
 | ADR-0008 | [ADR-0008-selection-move-and-chrome-ownership.md](ADR-0008-selection-move-and-chrome-ownership.md) | Separate selection truth, move sessions, and frame-owned selection chrome |
 | ADR-0009 | [ADR-0009-interaction-tool-machines-and-cleanup.md](ADR-0009-interaction-tool-machines-and-cleanup.md) | Compose interaction as tool machines with centralized cleanup and admitted asynchronous requests |
 | ADR-0010 | [ADR-0010-runtime-text-edit-session.md](ADR-0010-runtime-text-edit-session.md) | Own text-edit sessions in runtime and the Flutter editor overlay in surface |
+| ADR-0011 | [ADR-0011-surface-lifecycle-and-layer-repaint.md](ADR-0011-surface-lifecycle-and-layer-repaint.md) | Keep CanvasSurface a narrow lifecycle adapter with layer-aware repaint routing |
+| ADR-0012 | [ADR-0012-internal-diagnostics-routing.md](ADR-0012-internal-diagnostics-routing.md) | Route sanitized internal diagnostics through one hub without a public stream |
+| ADR-0013 | [ADR-0013-documentation-graph-and-proof-ownership.md](ADR-0013-documentation-graph-and-proof-ownership.md) | Separate semantic documentation, registries, generated projections, graph closure, and external proof |
+| ADR-0014 | [ADR-0014-custom-numeric-benchmark-route.md](ADR-0014-custom-numeric-benchmark-route.md) | Use a custom benchmark registry with numeric release gates |
+| ADR-0015 | [ADR-0015-flutter-profile-performance-route.md](ADR-0015-flutter-profile-performance-route.md) | Gate releases on the official Flutter profile route and artifact integrity |
 
 Add each ADR file, its catalog row, and its concern lookup entry atomically; do
 not reserve an identifier for a record that does not exist.
@@ -216,6 +221,11 @@ relationships; the catalog does not mirror those facts.
 | Selection, selected move, and selection chrome | [ADR-0008](ADR-0008-selection-move-and-chrome-ownership.md) |
 | Pointer tools, requests, terminal input, and cleanup | [ADR-0009](ADR-0009-interaction-tool-machines-and-cleanup.md) |
 | Inline text-edit ownership | [ADR-0010](ADR-0010-runtime-text-edit-session.md) |
+| Surface lifecycle and layer-aware repaint routing | [ADR-0011](ADR-0011-surface-lifecycle-and-layer-repaint.md) |
+| Internal diagnostics policy, routing, and public-surface guard | [ADR-0012](ADR-0012-internal-diagnostics-routing.md) |
+| Documentation, architecture graph, generated projections, and external proof | [ADR-0013](ADR-0013-documentation-graph-and-proof-ownership.md) |
+| Historical custom numeric benchmark route | [ADR-0014](ADR-0014-custom-numeric-benchmark-route.md) |
+| Flutter profile performance evidence and release admission | [ADR-0015](ADR-0015-flutter-profile-performance-route.md) |
 
 Add each concern entry in the same change as its ADR file and catalog row.
 
