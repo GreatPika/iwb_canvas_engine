@@ -25,7 +25,7 @@ that distinguished hub writes, intentionally pure results, and deferred routes.
 
 Inferring public API membership from names or source layout would be fragile.
 Likewise, making tests, diagrams, or registries independently define diagnostic
-routing would create competing sources of truth and obscure known parity gaps.
+routing would create competing sources of truth and obscure known routing gaps.
 
 ## Decision
 
@@ -63,7 +63,7 @@ ordinary implementation renames.
 - Public clients cannot depend on an engine diagnostics stream in API v1.
 - The retained decision is only partially implemented until the current
   routing owner closes or deliberately resolves its deferred delivery and
-  parity gaps.
+  self-protection gaps.
 
 ## Current owners and enforcement
 
@@ -75,9 +75,9 @@ source used to enforce that promise.
 The implemented policy boundary is in
 `lib/src/diagnostics/diagnostics_hub.dart`, with current producers routed from
 their owning subsystems. The current diagnostics contract also records deferred
-delivery, self-protection, and projection-parity work. Those explicit gaps are
-why the implementation state remains `partially implemented`; the existing hub
-and implemented producers do not establish full routing parity.
+delivery and self-protection work. Those explicit gaps are why the implementation
+state remains `partially implemented`; the existing hub and implemented
+producers do not establish full routing coverage.
 
 ## Source evidence
 
@@ -91,5 +91,5 @@ full routing decision. Commit `23d7c11f` added the canonical routing model and
 `c5fa6bc0` closed its documentation step. Earlier commits `59e4ad95`,
 `c15300b6`, and `3242c272` had already implemented the hub and public-surface
 guard. Current contract and code evidence confirm implemented routing alongside
-unresolved parity, establishing the header date and partially implemented
-state.
+deferred delivery and self-protection, establishing the header date and
+partially implemented state.

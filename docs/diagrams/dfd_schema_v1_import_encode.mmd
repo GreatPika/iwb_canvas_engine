@@ -15,6 +15,7 @@ flowchart LR
 
   subgraph Codec["CodecBoundary"]
     CanonicalReader["Canonical schema v1 reader\nwire-format navigation,\nfield admission, diagnostics"]
+    FailureDiagnosticBridge["recordSchemaV1FailureDiagnostic\nrecord existing exception\nand return it unchanged"]
     RawLimit["Raw JSON length check\n32 * 1024 * 1024 chars"]
     JsonParse["JSON parse"]
     RootObjectCheck["Root object check"]
@@ -79,16 +80,17 @@ flowchart LR
   PreparedRows -->|"consume once"| RuntimeInstall
   RuntimeInstall -.->|"forbidden"| NoMaterializedLoadDto
 
-  VersionGate -.->|"not exactly v1"| DiagnosticRecord
-  ResourceValidation -.->|"source.kind not appKey"| DiagnosticRecord
-  ElementValidation -.->|"unknown element kind, enum,\nor non-invertible transform"| DiagnosticRecord
-  PrimitiveValidation -.->|"invalid primitive or limit"| DiagnosticRecord
-  LayerCountValidation -.->|"layer or node count over limit"| DiagnosticRecord
-  MetadataValidation -.->|"non JSON-like or over limit"| DiagnosticRecord
-  StorePrepare -.->|"duplicate id or missing resource reference"| DiagnosticRecord
-  DiagnosticRecord -->|"safe projection only"| Sanitizer
-  Sanitizer -->|"CanvasDataErrorCode, path, bounded details"| PublicError
-  Sanitizer -.->|"when enabled"| InternalSink
+  VersionGate -.->|"not exactly v1"| FailureDiagnosticBridge
+  ResourceValidation -.->|"source.kind not appKey"| FailureDiagnosticBridge
+  ElementValidation -.->|"unknown element kind, enum,\nor non-invertible transform"| FailureDiagnosticBridge
+  PrimitiveValidation -.->|"invalid primitive or limit"| FailureDiagnosticBridge
+  LayerCountValidation -.->|"layer or node count over limit"| FailureDiagnosticBridge
+  MetadataValidation -.->|"non JSON-like or over limit"| FailureDiagnosticBridge
+  StorePrepare -.->|"rejected exception caught\nby load pipeline"| FailureDiagnosticBridge
+  FailureDiagnosticBridge -->|"same CanvasDataException"| PublicError
+  FailureDiagnosticBridge -->|"policy-gated diagnostic event"| Sanitizer
+  Sanitizer -->|"when enabled"| DiagnosticRecord
+  DiagnosticRecord -.->|"internal retained record"| InternalSink
   PublicError -.->|"throw projected error"| App
 
   App -->|"decode request"| DecodeEntry
@@ -98,7 +100,7 @@ flowchart LR
   DecoderSink -->|"materialized public DTO lists"| DecodeReferenceValidation
   DecodeReferenceValidation -->|"CanvasDocument output"| PublicDocument
   PublicDocument -->|"decoded result"| App
-  DecodeReferenceValidation -.->|"duplicate ids or missing image resources"| DiagnosticRecord
+  DecodeReferenceValidation -.->|"duplicate ids or missing image resources"| FailureDiagnosticBridge
 
   App -->|"encode request"| EncodeEntry
   RuntimeProjection -->|"may supply public DTO\nthrough documented read paths"| PublicDocument
@@ -112,5 +114,5 @@ flowchart LR
   CanonicalMap -->|"Map or encoded string"| JsonOutput
   JsonOutput -->|"encoded result"| App
 
-  DtoValidation -.->|"invalid DTO"| DiagnosticRecord
+  DtoValidation -.->|"invalid DTO"| FailureDiagnosticBridge
   CanonicalEncoder -.->|"forbidden runtime mutation"| NonV1SchemaBlocked
