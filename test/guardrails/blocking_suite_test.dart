@@ -456,6 +456,7 @@ const _runnerStructuralScanCases = [
   _StructuralScanCase(
     id: 'geometry.eraser_exact_budget_no_partial',
     proofPaths: [
+      'test/geometry/eraser_exact_budget_no_partial_commit_test.dart',
       'test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart',
     ],
     violationPath: 'lib/src/geometry/bad_runner_eraser_budget.dart',

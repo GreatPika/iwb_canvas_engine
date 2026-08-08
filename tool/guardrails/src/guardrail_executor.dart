@@ -405,6 +405,7 @@ const _testProofPaths = {
     'test/guardrails/geometry_committed_handle_order_guardrail_test.dart',
   ],
   geometryEraserExactBudgetGuardrailId: [
+    'test/geometry/eraser_exact_budget_no_partial_commit_test.dart',
     'test/guardrails/geometry_eraser_exact_budget_inputs_guardrail_test.dart',
   ],
   spatialNoFullCloneGuardrailId: [
