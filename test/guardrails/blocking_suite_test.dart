@@ -466,6 +466,7 @@ const _runnerStructuralScanCases = [
   _StructuralScanCase(
     id: 'geometry.committed_handle_order',
     proofPaths: [
+      'test/geometry/hit_policy_test.dart',
       'test/guardrails/geometry_committed_handle_order_guardrail_test.dart',
     ],
     violationPath: 'lib/src/geometry/bad_runner_scene_order.dart',

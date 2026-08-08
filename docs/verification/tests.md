@@ -96,7 +96,6 @@ Required tests:
 - `test.edit.staged_document_load_success_failure`
 - `test.spatial.committed_spatial_read_boundary`
 - `test.geometry.hit_policy`
-- `test.geometry.committed_handle_order`
 - `test.geometry.eraser_exact_budget_inputs`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.spatial.tile_outlier_membership`
@@ -138,14 +137,9 @@ Required tests:
 - `test.interaction.eraser_context_action_routing`
 - `test.interaction.move_machine`
 - `test.interaction.select_machine`
-- `test.interaction.move_resolver_reentrancy`
-- `test.interaction.move_resolver_not_called_on_cancel_cleanup`
 - `test.interaction.pointer_tool_cleanup_coordinator`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.diagnostics.interaction_diagnostics`
-- `test.frame.selected_move_main_repaint`
-- `test.frame.marquee_overlay_repaint`
-- `test.guardrails.action_after_state`
 - `test.guardrails.interaction_guardrail_enforcement`
 - `test.surface.widget_paint`
 - `test.guardrails.blocking_suite`
@@ -272,7 +266,6 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/edit/staged_document_load_success_failure_test.dart`
 - `test/spatial/committed_spatial_read_boundary_test.dart`
 - `test/geometry/hit_policy_test.dart`
-- `test/geometry/geometry_committed_handle_order_test.dart`
 - `test/geometry/eraser_exact_budget_inputs_test.dart`
 - `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
 - `test/spatial/tile_outlier_membership_test.dart`
@@ -304,19 +297,14 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/frame/paint_plan_excludes_selection_state_test.dart`
 - `test/frame/camera_pan_preserves_ordinary_paint_plan_test.dart`
 - `test/frame/selected_supplement_staging_no_global_sort_test.dart`
-- `test/frame/selected_move_main_repaint_test.dart`
-- `test/frame/marquee_overlay_repaint_test.dart`
 - `test/interaction/preview_public_state_test.dart`
 - `test/interaction/eraser_context_action_routing_test.dart`
 - `test/interaction/move_machine_test.dart`
 - `test/interaction/select_machine_test.dart`
-- `test/interaction/move_resolver_reentrancy_test.dart`
-- `test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart`
 - `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - `test/interaction/text_edit_stale_commit_guard_test.dart`
 - `test/diagnostics/interaction_diagnostics_test.dart`
 - `test/selection/runtime_owner_separation_test.dart`
-- `test/guardrails/action_after_state_guardrail_test.dart`
 - `test/guardrails/interaction_guardrail_enforcement_test.dart`
 - `test/guardrails/selection_boundary_checks_test.dart`
 - `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`
@@ -332,7 +320,6 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`
 - `test/guardrails/edit_accepted_finalization_guardrail_test.dart`
 - `test/guardrails/text_surface_guardrail_checks_test.dart`
-- `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
 
 ### Behavioral Coverage Notes
 
@@ -943,13 +930,11 @@ behavioral tests, and the required guardrail list remains owned by
   creates no commit intent, and cleanup emits no user action.
 
 #### Frame and interaction guardrail proof tests
-- `test/frame/selected_move_main_repaint_test.dart` and
-  `test/frame/marquee_overlay_repaint_test.dart` prove selected-move preview is
+- `test/frame/repaint_bus_output_test.dart` proves selected-move preview is
   main-only and marquee preview is overlay-only through the frame repaint
   output fixture.
-- `test/guardrails/action_after_state_guardrail_test.dart` proves
-  state-before-action ordering is runner-backed and rejects inverted action
-  fixture order.
+- `test/interaction/commands_emit_user_actions_test.dart` proves
+  state-before-action ordering through observable state and action events.
 - `test/guardrails/interaction_guardrail_enforcement_test.dart` proves
   guardrail ids are registered, blocking, runner-backed or structurally
   checked as appropriate, and reject contract-owned negative fixtures for
@@ -1061,7 +1046,7 @@ Current implemented proof:
   `test/guardrails/cache_keys_use_next_revisions_only_guardrail_test.dart`,
   `test/guardrails/cache_background_grid_not_element_visual_guardrail_test.dart`,
   `test/guardrails/cache_hot_caches_have_capacity_eviction_guardrail_test.dart`,
-  and `test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart`
+  and `test/frame/repaint_bus_output_test.dart`
   prove the frame, cache, and preview guardrail ids are registered,
   runner-backed or structurally checked where required, and reject fixtures
   containing only the forbidden contract shapes. The frame scene-sort proof

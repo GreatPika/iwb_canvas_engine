@@ -447,15 +447,10 @@
   - test.interaction.preview_public_state
   - test.interaction.move_machine
   - test.interaction.select_machine
-  - test.interaction.move_resolver_reentrancy
-  - test.interaction.move_resolver_not_called_on_cancel_cleanup
   - test.interaction.pointer_tool_cleanup_coordinator
   - test.interaction.context_action_request
   - test.interaction.text_edit_stale_commit_guard
   - test.diagnostics.interaction_diagnostics
-  - test.frame.selected_move_main_repaint
-  - test.frame.marquee_overlay_repaint
-  - test.guardrails.action_after_state
   - test.guardrails.interaction_guardrail_enforcement
   - test.guardrails.selection_boundary_checks
   - test.surface.widget_paint
@@ -541,7 +536,6 @@
   tests:
   - test.geometry.hit_policy
   - test.interaction.context_action_request
-  - test.geometry.committed_handle_order
   - test.geometry.eraser_exact_budget_inputs
   - test.geometry.eraser_exact_budget_no_partial_commit
   - test.frame.measured_text_layout
@@ -861,7 +855,6 @@
   - test.edit.staged_document_load_success_failure
   - test.spatial.committed_spatial_read_boundary
   - test.geometry.hit_policy
-  - test.geometry.committed_handle_order
   - test.geometry.eraser_exact_budget_inputs
   - test.geometry.eraser_exact_budget_no_partial_commit
   - test.spatial.tile_outlier_membership
@@ -903,14 +896,9 @@
   - test.interaction.eraser_context_action_routing
   - test.interaction.move_machine
   - test.interaction.select_machine
-  - test.interaction.move_resolver_reentrancy
-  - test.interaction.move_resolver_not_called_on_cancel_cleanup
   - test.interaction.pointer_tool_cleanup_coordinator
   - test.interaction.text_edit_stale_commit_guard
   - test.diagnostics.interaction_diagnostics
-  - test.frame.selected_move_main_repaint
-  - test.frame.marquee_overlay_repaint
-  - test.guardrails.action_after_state
   - test.guardrails.interaction_guardrail_enforcement
   - test.surface.widget_paint
   - test.guardrails.blocking_suite

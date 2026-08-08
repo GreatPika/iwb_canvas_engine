@@ -16,7 +16,6 @@ Related diagrams:
 Required tests:
 - `test.geometry.hit_policy`
 - `test.interaction.context_action_request`
-- `test.geometry.committed_handle_order`
 - `test.geometry.eraser_exact_budget_inputs`
 - `test.geometry.eraser_exact_budget_no_partial_commit`
 - `test.frame.measured_text_layout`

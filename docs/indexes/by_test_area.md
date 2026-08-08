@@ -215,10 +215,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
 
-## test.frame.marquee_overlay_repaint
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
 ## test.frame.measured_text_layout
 
 - Sections: `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_23_tests`
@@ -235,10 +231,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 
-## test.frame.selected_move_main_repaint
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
 ## test.frame.selected_supplement_staging_no_global_sort
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
@@ -246,10 +238,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.frame.selection_decoration_plan
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`
-
-## test.geometry.committed_handle_order
-
-- Sections: `section_16_geometry_policy`, `section_23_tests`
 
 ## test.geometry.eraser_exact_budget_inputs
 
@@ -262,10 +250,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.geometry.hit_policy
 
 - Sections: `section_16_geometry_policy`, `section_23_tests`
-
-## test.guardrails.action_after_state
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.guardrails.blocking_suite
 
@@ -352,14 +336,6 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 
 ## test.interaction.move_machine
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.interaction.move_resolver_not_called_on_cancel_cleanup
-
-- Sections: `section_14_interaction_engine`, `section_23_tests`
-
-## test.interaction.move_resolver_reentrancy
 
 - Sections: `section_14_interaction_engine`, `section_23_tests`
 

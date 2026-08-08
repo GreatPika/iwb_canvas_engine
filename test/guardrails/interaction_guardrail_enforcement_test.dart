@@ -742,18 +742,12 @@ const _runnerBackedProofs = [
   _RunnerBackedProof(
     id: 'load.prepares_before_interrupt',
     suites: {'blocking', 'load'},
-    proofPaths: [
-      'test/runtime/load_document_ordering_test.dart',
-      'test/runtime/load_document_ordering_fixture_shape_test.dart',
-    ],
+    proofPaths: ['test/runtime/load_document_ordering_test.dart'],
   ),
   _RunnerBackedProof(
     id: 'load.success_interrupts_before_install',
     suites: {'blocking', 'load'},
-    proofPaths: [
-      'test/runtime/load_document_ordering_test.dart',
-      'test/runtime/load_document_ordering_fixture_shape_test.dart',
-    ],
+    proofPaths: ['test/runtime/load_document_ordering_test.dart'],
   ),
   _RunnerBackedProof(
     id: 'interaction.pointer_cleanup_coordinator_only',
@@ -766,9 +760,7 @@ const _runnerBackedProofs = [
   _RunnerBackedProof(
     id: interactionNoResolverOnCancelPathsGuardrailId,
     suites: {'blocking', 'interaction'},
-    proofPaths: [
-      'test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart',
-    ],
+    proofPaths: ['test/interaction/move_machine_test.dart'],
   ),
   _RunnerBackedProof(
     id: interactionNoStaleTerminalCommitGuardrailId,
@@ -791,29 +783,22 @@ const _runnerBackedProofs = [
   _RunnerBackedProof(
     id: eventsActionAfterStateOrderGuardrailId,
     suites: {'blocking', 'events'},
-    proofPaths: [
-      'test/interaction/commands_emit_user_actions_test.dart',
-      'test/guardrails/action_after_state_guardrail_test.dart',
-    ],
+    proofPaths: ['test/interaction/commands_emit_user_actions_test.dart'],
   ),
   _RunnerBackedProof(
     id: 'preview.selected_move_main_repaint',
     suites: {'blocking', 'preview'},
-    proofPaths: [
-      'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
-    ],
+    proofPaths: ['test/frame/repaint_bus_output_test.dart'],
   ),
   _RunnerBackedProof(
     id: selectedMoveMainOnlyPreviewGuardrailId,
     suites: {'blocking', 'preview'},
-    proofPaths: [
-      'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
-    ],
+    proofPaths: ['test/frame/repaint_bus_output_test.dart'],
   ),
   _RunnerBackedProof(
     id: marqueeOverlayOnlyPreviewGuardrailId,
     suites: {'blocking', 'preview'},
-    proofPaths: ['test/frame/marquee_overlay_repaint_test.dart'],
+    proofPaths: ['test/frame/repaint_bus_output_test.dart'],
   ),
   _RunnerBackedProof(
     id: toolPublicPortBehaviorGuardrailId,

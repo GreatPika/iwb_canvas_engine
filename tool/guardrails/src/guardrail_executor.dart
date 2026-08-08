@@ -261,7 +261,7 @@ const _testProofPaths = {
     'test/interaction/pointer_tool_cleanup_coordinator_test.dart',
   ],
   interactionNoResolverOnCancelPathsGuardrailId: [
-    'test/interaction/move_resolver_not_called_on_cancel_cleanup_test.dart',
+    'test/interaction/move_machine_test.dart',
   ],
   interactionNoStaleTerminalCommitGuardrailId: [
     'test/interaction/move_machine_test.dart',
@@ -303,22 +303,18 @@ const _testProofPaths = {
   'events.commands_emit_user_actions': [
     'test/interaction/commands_emit_user_actions_test.dart',
     'test/api/typed_action_payloads_test.dart',
-    'test/guardrails/action_after_state_guardrail_test.dart',
   ],
   eventsActionAfterStateOrderGuardrailId: [
     'test/interaction/commands_emit_user_actions_test.dart',
-    'test/guardrails/action_after_state_guardrail_test.dart',
   ],
   'events.runtime_created_timestamps_monotonic': [
     'test/api/runtime_timestamp_order_test.dart',
   ],
   'load.prepares_before_interrupt': [
     'test/runtime/load_document_ordering_test.dart',
-    'test/runtime/load_document_ordering_fixture_shape_test.dart',
   ],
   'load.success_interrupts_before_install': [
     'test/runtime/load_document_ordering_test.dart',
-    'test/runtime/load_document_ordering_fixture_shape_test.dart',
   ],
   'resources.resolver_boundary_owned_by_surface_session': [
     'test/guardrails/import_boundaries_test.dart',
@@ -358,13 +354,13 @@ const _testProofPaths = {
     'test/surface/interactive_false_state_isolation_test.dart',
   ],
   'preview.selected_move_main_repaint': [
-    'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
+    'test/frame/repaint_bus_output_test.dart',
   ],
   selectedMoveMainOnlyPreviewGuardrailId: [
-    'test/guardrails/preview_selected_move_main_repaint_guardrail_test.dart',
+    'test/frame/repaint_bus_output_test.dart',
   ],
   marqueeOverlayOnlyPreviewGuardrailId: [
-    'test/frame/marquee_overlay_repaint_test.dart',
+    'test/frame/repaint_bus_output_test.dart',
   ],
   toolPublicPortBehaviorGuardrailId: [
     'test/api/tool_port_settings_test.dart',
@@ -408,6 +404,7 @@ const _testProofPaths = {
     'test/frame/cache_capacity_eviction_policy_test.dart',
   ],
   geometryCommittedHandleOrderGuardrailId: [
+    'test/geometry/hit_policy_test.dart',
     'test/guardrails/geometry_committed_handle_order_guardrail_test.dart',
   ],
   geometryEraserExactBudgetGuardrailId: [
