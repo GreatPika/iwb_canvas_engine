@@ -936,7 +936,12 @@ String _read(String path) {
 }
 
 void _requirePath(String path, {String? source}) {
-  final normalized = path.split('#').first.split(RegExp(r'\s')).first;
+  final normalized = path
+      .split('#')
+      .first
+      .split(RegExp(r'\s'))
+      .first
+      .replaceFirst(RegExp(r':[0-9]+$'), '');
   if (normalized.endsWith('/')) {
     _requireDirectory(normalized, source: source);
   } else {
