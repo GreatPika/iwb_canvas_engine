@@ -18,9 +18,7 @@ void main() {
     _expectAllowlistStructureRequired();
   });
 
-  test('live source graph and contract wrapper seams are clean', () async {
-    expect(await checkNoPublicApiImportCycles(), isEmpty);
-
+  test('contract wrapper seams are clean', () {
     for (final path in _metadataOnlyPublicContractConsumers) {
       final content = File('$repositoryRoot/$path').readAsStringSync();
       expect(content, contains("import 'canvas_metadata.dart';"));

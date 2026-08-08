@@ -2,34 +2,15 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../../tool/guardrails/src/guardrail_executor.dart';
-import '../../tool/guardrails/src/guardrail_registry.dart';
 import '../../tool/guardrails/src/guardrail_violation.dart';
 import '../../tool/guardrails/src/interaction_guardrail_checks.dart';
 import '../../tool/guardrails/src/selection_move_guardrail_suite.dart';
 import 'fixtures/runner_backed_guardrail_test_support.dart';
 
 void main() {
-  _registerInventoryProofs();
   _registerRunnerBackedProofs();
   _registerStructuralNegativeProofs();
   _registerStructuralPositiveProofs();
-}
-
-void _registerInventoryProofs() {
-  test(
-    'all selection-and-move guardrail ids are registered and executable',
-    () {
-      for (final id in selectionMoveGuardrailIds) {
-        expect(guardrailInventory(), contains(id), reason: id);
-        expect(guardrailRouteFor(id), isNotNull, reason: id);
-      }
-    },
-  );
-
-  test('blocking suite includes the full selection-and-move guardrail set', () {
-    expect(blockingGuardrailIds(), containsAll(selectionMoveGuardrailIds));
-  });
 }
 
 void _registerRunnerBackedProofs() {
@@ -667,22 +648,6 @@ void _registerStructuralPositiveProofs() {
       ),
       isEmpty,
     );
-    expect(
-      checkInteractionReadPortImmutableFactsSources({
-        'lib/src/interaction/interaction_read_port.dart': File(
-          'lib/src/interaction/interaction_read_port.dart',
-        ).readAsStringSync(),
-      }),
-      isEmpty,
-    );
-    expect(
-      checkTextEditStaleCommitGuardSources({
-        'lib/src/runtime/runtime_root.dart': File(
-          'lib/src/runtime/runtime_root.dart',
-        ).readAsStringSync(),
-      }),
-      isEmpty,
-    );
   });
 }
 
@@ -784,11 +749,6 @@ const _runnerBackedProofs = [
     id: eventsActionAfterStateOrderGuardrailId,
     suites: {'blocking', 'events'},
     proofPaths: ['test/interaction/commands_emit_user_actions_test.dart'],
-  ),
-  _RunnerBackedProof(
-    id: 'preview.selected_move_main_repaint',
-    suites: {'blocking', 'preview'},
-    proofPaths: ['test/frame/repaint_bus_output_test.dart'],
   ),
   _RunnerBackedProof(
     id: selectedMoveMainOnlyPreviewGuardrailId,

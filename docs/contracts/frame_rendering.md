@@ -42,7 +42,6 @@ Required tests:
 - `test.surface.surface_frame_output_cache`
 - `test.surface.widget_paint`
 Guardrails:
-- `preview.selected_move_main_repaint`
 - `api.preview_state_sealed_union_publicly_readable`
 - `frame.committed_facts_via_frame_facts_port`
 - `frame.no_global_scene_sort`

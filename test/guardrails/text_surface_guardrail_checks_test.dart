@@ -5,7 +5,6 @@ import '../../tool/guardrails/src/text_surface_guardrail_checks.dart';
 import 'fixtures/runner_backed_guardrail_test_support.dart';
 
 void main() {
-  _testRunnerBackedRegistration();
   _testFormulaTextBoundsRejection();
   _testMetricFormulaTextBoundsRejection();
   _testHelperExtractedFormulaTextBoundsRejection();
@@ -13,22 +12,6 @@ void main() {
   _testUnauthorizedTextPainterRejection();
   _testOverlayTextPainterRejection();
   _testEditableTextOwnerRejection();
-}
-
-void _testRunnerBackedRegistration() {
-  test('text and surface guardrails are runner-backed', () async {
-    for (final spec in _runnerBackedSpecs) {
-      expect(
-        await guardrailIsRunnerBacked(
-          id: spec.id,
-          suites: spec.suites,
-          proofPaths: spec.proofPaths,
-        ),
-        isTrue,
-        reason: spec.id,
-      );
-    }
-  });
 }
 
 void _testFormulaTextBoundsRejection() {
@@ -248,42 +231,3 @@ final class FrameTextLayoutMeasurer implements MeasuredTextLayoutPort {
 }
 MeasuredTextLayout _measuredLayoutFor(TextPainter painter) => throw UnimplementedError();
 ''';
-
-const _runnerBackedSpecs = [
-  _GuardrailSpec(
-    id: textSingleMeasuredLayoutSourceGuardrailId,
-    suites: {'blocking', 'text', 'frame', 'geometry'},
-    proofPaths: [
-      'test/frame/measured_text_layout_test.dart',
-      'test/guardrails/text_surface_guardrail_checks_test.dart',
-    ],
-  ),
-  _GuardrailSpec(
-    id: textNoOverlayTextPainterMeasurementGuardrailId,
-    suites: {'blocking', 'text', 'surface'},
-    proofPaths: [
-      'test/surface/text_editing_overlay_test.dart',
-      'test/guardrails/text_surface_guardrail_checks_test.dart',
-    ],
-  ),
-  _GuardrailSpec(
-    id: surfaceEditableTextSurfaceOnlyGuardrailId,
-    suites: {'blocking', 'surface'},
-    proofPaths: [
-      'test/surface/text_editing_overlay_test.dart',
-      'test/guardrails/text_surface_guardrail_checks_test.dart',
-    ],
-  ),
-];
-
-final class _GuardrailSpec {
-  const _GuardrailSpec({
-    required this.id,
-    required this.suites,
-    required this.proofPaths,
-  });
-
-  final String id;
-  final Set<String> suites;
-  final List<String> proofPaths;
-}

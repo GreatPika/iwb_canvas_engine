@@ -59,7 +59,6 @@ Required tests:
 - `test.guardrails.selection_boundary_checks`
 - `test.surface.widget_paint`
 Guardrails:
-- `preview.selected_move_main_repaint`
 - `preview.selected_move_main_only`
 - `preview.marquee_overlay_only`
 - `api.preview_state_sealed_union_publicly_readable`

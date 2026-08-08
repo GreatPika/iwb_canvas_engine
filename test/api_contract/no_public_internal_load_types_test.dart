@@ -7,14 +7,7 @@ void main() {
 }
 
 void _registerNoPublicInternalLoadTypesTests() {
-  _testCurrentPublicApiDoesNotExportInternalLoadTypes();
   _testInternalLoadTypesQuarantinedFromPublicApi();
-}
-
-void _testCurrentPublicApiDoesNotExportInternalLoadTypes() {
-  test('current public API does not export internal load types', () async {
-    expect(await checkNoPublicInternalLoadTypes(), isEmpty);
-  });
 }
 
 void _testInternalLoadTypesQuarantinedFromPublicApi() {

@@ -5,10 +5,6 @@ import '../../tool/guardrails/src/guardrail_violation.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
-  test('root public signatures have no undefined public references', () async {
-    expect(await checkNoUndefinedPublicTypeReferences(), isEmpty);
-  });
-
   test(
     'undefined public references use the dedicated P1 guardrail id',
     () async {

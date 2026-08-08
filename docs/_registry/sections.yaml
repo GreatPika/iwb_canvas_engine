@@ -402,7 +402,6 @@
   - state_eraser
   - state_pending_context_action_request
   guardrails:
-  - preview.selected_move_main_repaint
   - preview.selected_move_main_only
   - preview.marquee_overlay_only
   - api.preview_state_sealed_union_publicly_readable
@@ -477,7 +476,6 @@
   - seq_main_paint
   - seq_overlay_paint
   guardrails:
-  - preview.selected_move_main_repaint
   - api.preview_state_sealed_union_publicly_readable
   - frame.committed_facts_via_frame_facts_port
   - frame.no_global_scene_sort
@@ -706,7 +704,6 @@
   - events.runtime_created_timestamps_monotonic
   - load.prepares_before_interrupt
   - load.success_interrupts_before_install
-  - preview.selected_move_main_repaint
   - preview.selected_move_main_only
   - preview.marquee_overlay_only
   - interaction.no_concrete_store_imports
@@ -981,7 +978,6 @@
   - events.runtime_created_timestamps_monotonic
   - load.prepares_before_interrupt
   - load.success_interrupts_before_install
-  - preview.selected_move_main_repaint
   - preview.selected_move_main_only
   - preview.marquee_overlay_only
   - interaction.no_concrete_store_imports

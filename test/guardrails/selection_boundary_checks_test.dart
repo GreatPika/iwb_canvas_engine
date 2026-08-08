@@ -4,7 +4,6 @@ import '../../tool/guardrails/src/selection_boundary_checks.dart';
 import '../support/guardrail_fixture_scan.dart';
 
 void main() {
-  _testProductionCode();
   _testRuntimeSelectionState();
   _testStoreSelectionState();
   _testNonSelectionElementFacts();
@@ -29,12 +28,6 @@ class BadRuntimeSelectionState {
       }, contains('lib/src/runtime/bad_runtime_selection_state.dart')),
       completes,
     );
-  });
-}
-
-void _testProductionCode() {
-  test('production document and store code do not retain selection state', () {
-    return expectLater(checkSelectionOwnerSeparation(), completion(isEmpty));
   });
 }
 

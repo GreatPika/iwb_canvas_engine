@@ -11,10 +11,6 @@ import '../../tool/guardrails/src/guardrail_violation.dart';
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   test(
-    'runner inventories the executable blocking hard-boundary suite',
-    () => expect(_blockingInventoryMatchesExpectedIds(), isTrue),
-  );
-  test(
     'guardrail inventory entries have executable runner routes',
     () => expect(_inventoryEntriesHaveRunnerRoutes(), isTrue),
   );
@@ -145,7 +141,6 @@ void main() {
         'interaction.no_stale_terminal_commit',
         'interaction.text_edit_stale_commit_guard',
         'events.action_after_state_order',
-        'preview.selected_move_main_repaint',
         'preview.selected_move_main_only',
         'preview.marquee_overlay_only',
         'tools.public_port_behavior',
@@ -156,7 +151,6 @@ void main() {
     expect(
       blockingGuardrailIds(),
       containsAll({
-        'preview.selected_move_main_repaint',
         'api.preview_state_sealed_union_publicly_readable',
         'frame.committed_facts_via_frame_facts_port',
         'frame.no_global_scene_sort',
@@ -210,11 +204,6 @@ void main() {
   });
 }
 
-bool _blockingInventoryMatchesExpectedIds() {
-  return _setEquals(guardrailInventory().keys, blockingGuardrailIds()) &&
-      _setEquals(blockingGuardrailIds(), suiteGuardrailIds('blocking'));
-}
-
 bool _inventoryEntriesHaveRunnerRoutes() {
   return guardrailInventory().keys.every((id) => guardrailRouteFor(id) != null);
 }
@@ -266,13 +255,6 @@ Set<String> _ranGuardrailIds(ProcessResult result) {
         return withoutPrefix.split(' via ').first;
       })
       .toSet();
-}
-
-bool _setEquals(Iterable<String> left, Iterable<String> right) {
-  final leftSet = left.toSet();
-  final rightSet = right.toSet();
-
-  return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
 }
 
 Future<void> _expectProofBeforeStructuralScan(

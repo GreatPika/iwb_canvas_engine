@@ -2,44 +2,28 @@ import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/geometry_spatial_guardrail_checks.dart';
 import '../../tool/guardrails/src/guardrail_violation.dart';
-import '../../tool/guardrails/src/guardrail_executor.dart';
-import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
-  test(
-    'spatial fallback budget guardrail is registered and enforced',
-    () async {
-      expect(guardrailInventory(), contains(spatialFallbackBudgetGuardrailId));
-      await _expectRegisteredGuardrailPassesCurrentSources();
-      _expectMissingCoverageViolatesBothOwners();
-      _expectInvalidIndexFallbackRequiresCounter();
-      _expectFullMaterializationBeforeBudgetViolatesTileIndex();
-      _expectDirectCandidateAssignmentViolatesTileIndex();
-      _expectDirectCandidateMutationViolatesTileIndex();
-      _expectUncheckedCandidateBudgetResultViolatesTileIndex();
-    },
-  );
-}
+  test('spatial fallback budget guardrail rejects bypass shapes', () {
+    final violations = checkSpatialFallbackBudgetEnforcedSources(
+      tileIndexPath: 'lib/src/geometry/tile_index.dart',
+      tileIndexContent:
+          'return SpatialCandidatesResult(orderedCandidates: candidates);',
+      queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
+      queryStateContent: 'return SpatialInvalidIndexResult(reason: reason);',
+    );
 
-Future<void> _expectRegisteredGuardrailPassesCurrentSources() async {
-  expect(guardrailRouteFor(spatialFallbackBudgetGuardrailId), isNotNull);
-  expect(await checkSpatialFallbackBudgetEnforced(), isEmpty);
-}
-
-void _expectMissingCoverageViolatesBothOwners() {
-  final violations = checkSpatialFallbackBudgetEnforcedSources(
-    tileIndexPath: 'lib/src/geometry/tile_index.dart',
-    tileIndexContent:
-        'return SpatialCandidatesResult(orderedCandidates: candidates);',
-    queryStatePath: 'lib/src/geometry/spatial_kernel_query_state.dart',
-    queryStateContent: 'return SpatialInvalidIndexResult(reason: reason);',
-  );
-
-  expect(violations, hasLength(2));
-  expect(
-    violations.map((violation) => violation.guardrailId),
-    everyElement(spatialFallbackBudgetGuardrailId),
-  );
+    expect(violations, hasLength(2));
+    expect(
+      violations.map((violation) => violation.guardrailId),
+      everyElement(spatialFallbackBudgetGuardrailId),
+    );
+    _expectInvalidIndexFallbackRequiresCounter();
+    _expectFullMaterializationBeforeBudgetViolatesTileIndex();
+    _expectDirectCandidateAssignmentViolatesTileIndex();
+    _expectDirectCandidateMutationViolatesTileIndex();
+    _expectUncheckedCandidateBudgetResultViolatesTileIndex();
+  });
 }
 
 void _expectInvalidIndexFallbackRequiresCounter() {

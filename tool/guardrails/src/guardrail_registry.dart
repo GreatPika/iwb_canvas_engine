@@ -262,10 +262,6 @@ const _blockingEntries = [
     suites: {'blocking', 'resources'},
   ),
   GuardrailEntry(
-    id: 'preview.selected_move_main_repaint',
-    suites: {'blocking', 'preview'},
-  ),
-  GuardrailEntry(
     id: 'preview.selected_move_main_only',
     suites: {'blocking', 'preview'},
   ),

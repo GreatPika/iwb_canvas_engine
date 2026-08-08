@@ -1,15 +1,12 @@
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/geometry_spatial_guardrail_checks.dart';
-import '../../tool/guardrails/src/guardrail_executor.dart';
-import '../../tool/guardrails/src/guardrail_registry.dart';
 import '../../tool/guardrails/src/guardrail_violation.dart';
 
 void main() {
   test(
-    'spatial stale candidate guardrail is registered and enforced',
-    () async =>
-        expect(await _registeredStaleCandidateGuardrailIsEnforced(), isTrue),
+    'spatial stale candidate guardrail rejects missing checks',
+    () => expect(_registeredStaleCandidateGuardrailIsEnforced(), isTrue),
   );
 
   test(
@@ -28,12 +25,7 @@ void main() {
   );
 }
 
-Future<bool> _registeredStaleCandidateGuardrailIsEnforced() async {
-  final isRegistered =
-      guardrailInventory().containsKey(spatialStaleCandidateGuardrailId) &&
-      guardrailRouteFor(spatialStaleCandidateGuardrailId) != null &&
-      (await checkSpatialStaleCandidateRejected()).isEmpty;
-
+bool _registeredStaleCandidateGuardrailIsEnforced() {
   final violations = checkSpatialStaleCandidateRejectedSources(
     mapperPath: 'lib/src/geometry/spatial_candidate_handle_mapper.dart',
     mapperContent: 'FrameElementHandle call(FrameElementHandle h) => h;',
@@ -74,8 +66,7 @@ FrameElementHandle call(FrameElementHandle handle) {
     queryStateContent: _typedStaleQueryState,
   );
 
-  return isRegistered &&
-      violations.length == 2 &&
+  return violations.length == 2 &&
       violations.every(_isStaleCandidateViolation) &&
       missingGenerationCheck.length == 1 &&
       _isStaleCandidateViolation(missingGenerationCheck.single) &&

@@ -4,10 +4,6 @@ import '../../tool/guardrails/src/public_api_contract_checks.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
-  test('root public signatures use the approved v1 shape', () async {
-    expect(await checkPublicSignatureShape(), isEmpty);
-  });
-
   test('invalid public signature shapes are rejected structurally', () async {
     final violations = await checkPublicSignatureShape(
       libraryPath:

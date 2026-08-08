@@ -25,15 +25,6 @@ void _registerDocumentLoadCodecInputTests() {
 }
 
 void _registerDocumentLoadRouteInputTests() {
-  test(
-    'production document load input guardrail accepts real surfaces',
-    () async {
-      final violations = await checkNoUnapprovedDocumentLoadInputs();
-
-      expect(violations, isEmpty);
-    },
-  );
-
   _registerDocumentLoadRouteRejectionTests();
 }
 

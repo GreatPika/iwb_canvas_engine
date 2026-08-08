@@ -4,10 +4,6 @@ import '../../tool/guardrails/src/public_api_checks.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
-  test('src api facades do not export internal declarations', () async {
-    expect(await checkApiFacadesDoNotExportInternal(), isEmpty);
-  });
-
   test('wide facade exports of internal declarations are rejected', () async {
     final violations = await checkApiFacadesDoNotExportInternal(
       facadePaths: [

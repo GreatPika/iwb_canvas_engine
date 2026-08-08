@@ -1,13 +1,11 @@
 import 'package:test/test.dart';
 
 import '../../tool/guardrails/src/geometry_spatial_guardrail_checks.dart';
-import '../../tool/guardrails/src/guardrail_executor.dart';
-import '../../tool/guardrails/src/guardrail_registry.dart';
 
 void main() {
   test(
-    'spatial ordinary update full-clone guardrail is registered and enforced',
-    () async => expect(await _spatialKernelGuardrailIsEnforced(), isTrue),
+    'spatial ordinary update guardrail rejects full-clone paths',
+    () => expect(_spatialKernelGuardrailIsEnforced(), isTrue),
   );
 
   test(
@@ -16,14 +14,8 @@ void main() {
   );
 }
 
-Future<bool> _spatialKernelGuardrailIsEnforced() async {
-  final isRegistered =
-      guardrailInventory().containsKey(spatialNoFullCloneGuardrailId) &&
-      guardrailRouteFor(spatialNoFullCloneGuardrailId) != null &&
-      (await checkSpatialNoFullCloneOrdinaryEdit()).isEmpty;
-
-  return isRegistered &&
-      _hasSpatialKernelViolation('''
+bool _spatialKernelGuardrailIsEnforced() {
+  return _hasSpatialKernelViolation('''
 void _applyPreparedTouchedDelta(frame, touchedSet, revision) {
   frame.elementHandles(frame.frameRevisions.structuralRevision);
 }

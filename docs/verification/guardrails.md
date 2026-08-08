@@ -55,7 +55,6 @@ Guardrails:
 - `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
-- `preview.selected_move_main_repaint`
 - `preview.selected_move_main_only`
 - `preview.marquee_overlay_only`
 - `interaction.no_concrete_store_imports`
@@ -207,7 +206,6 @@ Mandatory guardrails:
 | `events.runtime_created_timestamps_monotonic` | runtime-created `timestampMs` outputs resolve nullable and backwards hints through one runtime-local monotonic cursor, including stale host timestamps, action events, context-action requests, and pending line start previews; selected move resolver callback requests are not timestamped outputs |
 | `load.prepares_before_interrupt` | failed schema-v1 JSON load does not interrupt gesture, clear selection, publish state, emit actions, build public projection, or install partial store rows |
 | `load.success_interrupts_before_install` | successful schema-v1 JSON load parses JSON, emits codec-owned import events, prepares store-owned rows, prepares interaction cleanup before atomic install, performs no post-install interaction owner call to finish load cleanup, and publishes exactly one accepted runtime state without building first projection |
-| `preview.selected_move_main_repaint` | selected move preview increments main repaint, not overlay |
 | `preview.selected_move_main_only` | selected move preview is routed only through the main repaint domain |
 | `preview.marquee_overlay_only` | marquee preview is routed only through the overlay repaint domain |
 | `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |

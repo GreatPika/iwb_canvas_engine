@@ -243,10 +243,6 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## preview.selected_move_main_repaint
-
-- Sections: `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
 ## projection.only_explicit_read_paths
 
 - Sections: `section_10_runtime_data_model`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`

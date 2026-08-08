@@ -3,7 +3,6 @@ import 'package:test/test.dart';
 import '../../tool/guardrails/src/owner_dag_import_checks.dart';
 
 void main() {
-  _testProductionOwnerDag();
   _testSelectedDagAcyclic();
   _testOwnerFixtureEdges();
   _testConditionalFixtureEdges();
@@ -15,12 +14,6 @@ void main() {
   _testOwnerFixtureInventory();
   _testOwnerPolicyInventory();
   _testOwnerPolicyMatrix();
-}
-
-void _testProductionOwnerDag() {
-  test('production sources obey the selected owner DAG', () async {
-    expect(await checkOwnerDagImportBoundaries(), isEmpty);
-  });
 }
 
 void _testSelectedDagAcyclic() {

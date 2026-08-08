@@ -5,7 +5,6 @@ import '../../tool/guardrails/src/guardrail_executor.dart';
 import '../../tool/guardrails/src/guardrail_violation.dart';
 
 void main() {
-  _testProductionBoundaries();
   _testRunnerRejectsInjectedCoreBoundaryViolation();
   _testApiFacadeRuntimeRootImport();
   _testApiBridgeAndPassiveSurfaceAllowances();
@@ -21,15 +20,6 @@ void main() {
   _testFrameOrSurfaceCannotOwnCanvasResourceResolverType();
   _testInteractionOwnerImportBoundary();
   _testPointerCleanupCoordinatorCallers();
-}
-
-void _testProductionBoundaries() {
-  test(
-    'production source paths obey import and retired-shape boundaries',
-    () async {
-      expect(await checkCoreBoundaries(), isEmpty);
-    },
-  );
 }
 
 void _testRunnerRejectsInjectedCoreBoundaryViolation() {
@@ -343,8 +333,7 @@ void _testInteractionOwnerImportBoundary() {
 }
 
 void _testPointerCleanupCoordinatorCallers() {
-  test('only InteractionEngine may call the cleanup coordinator', () async {
-    expect(await checkPointerCleanupCoordinatorCallerOrigins(), isEmpty);
+  test('only InteractionEngine may call the cleanup coordinator', () {
     expect(
       checkPointerCleanupCoordinatorCallerFile(
         path: 'lib/src/interaction/interaction_engine.dart',

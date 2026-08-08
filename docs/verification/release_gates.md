@@ -54,7 +54,6 @@ Guardrails:
 - `events.runtime_created_timestamps_monotonic`
 - `load.prepares_before_interrupt`
 - `load.success_interrupts_before_install`
-- `preview.selected_move_main_repaint`
 - `preview.selected_move_main_only`
 - `preview.marquee_overlay_only`
 - `interaction.no_concrete_store_imports`

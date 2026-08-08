@@ -353,9 +353,6 @@ const _testProofPaths = {
     'test/surface/interactive_false_pending_line_preserved_test.dart',
     'test/surface/interactive_false_state_isolation_test.dart',
   ],
-  'preview.selected_move_main_repaint': [
-    'test/frame/repaint_bus_output_test.dart',
-  ],
   selectedMoveMainOnlyPreviewGuardrailId: [
     'test/frame/repaint_bus_output_test.dart',
   ],

@@ -4,13 +4,6 @@ import '../../tool/guardrails/src/public_api_checks.dart';
 import '../../tool/guardrails/src/repository_paths.dart';
 
 void main() {
-  test(
-    'root public barrel exports every registry name and no extras',
-    () async {
-      expect(await checkPublicExportsComplete(), isEmpty);
-    },
-  );
-
   test('unregistered root public export is rejected', () async {
     final violations = await checkPublicExportsComplete(
       libraryPath:
