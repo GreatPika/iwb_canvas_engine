@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:ui';
+import 'dart:ui' show Offset, Size;
 
 import 'canvas_contract_limits.dart';
 import 'canvas_errors.dart';

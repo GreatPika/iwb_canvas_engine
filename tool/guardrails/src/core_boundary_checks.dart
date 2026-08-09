@@ -11,8 +11,18 @@ import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
 const _vectorGraphicsImport = 'package:vector_graphics/vector_graphics.dart';
-const _vectorPreparationApprovedThirdPartyImports = {
+const _vectorPreparationCapabilityFreeExternalImports = {
+  'dart:convert',
+  'dart:math',
+  'dart:typed_data',
+  'package:flutter/gestures.dart',
   'package:characters/characters.dart',
+};
+const _vectorPreparationRestrictedNamespaces = <String, Set<String>>{
+  'dart:ui': {'Offset', 'Picture', 'Size'},
+  'package:flutter/foundation.dart': {'internal'},
+  'package:flutter/widgets.dart': {'BuildContext'},
+  _vectorGraphicsImport: {'BytesLoader', 'PictureInfo', 'vg'},
 };
 
 // Resolving every production unit and collecting each boundary outcome in one
@@ -658,8 +668,9 @@ List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
       if (directive case ImportDirective() || ExportDirective()) {
         for (final reference in directiveUriReferences(directive)) {
           violations.addAll(
-            _checkVectorPreparationExternalImport(
+            _checkVectorPreparationCapabilityDirective(
               path,
+              directive,
               reference.uri,
               root: root,
             ),
@@ -709,14 +720,27 @@ String? _findVectorPreparationClosureRoot(
   return null;
 }
 
-List<GuardrailViolation> _checkVectorPreparationExternalImport(
+List<GuardrailViolation> _checkVectorPreparationCapabilityDirective(
   String path,
+  Directive directive,
   String uri, {
   required String root,
 }) {
-  if (!_isExternalImport(uri) ||
-      _isCapabilityFreeVectorPreparationImport(uri) ||
-      (uri == _vectorGraphicsImport && path == root)) {
+  if (!_isExternalImport(uri) || _isPackageOwnedImport(uri)) {
+    return const [];
+  }
+
+  if (_isCapabilityFreeVectorPreparationImport(uri)) {
+    return const [];
+  }
+
+  final allowedSymbols = _vectorPreparationRestrictedNamespaces[uri];
+  if (allowedSymbols != null &&
+      _isAllowedVectorPreparationNamespaceDirective(
+        directive,
+        allowedSymbols,
+        uri == _vectorGraphicsImport && path == root,
+      )) {
     return const [];
   }
 
@@ -725,21 +749,44 @@ List<GuardrailViolation> _checkVectorPreparationExternalImport(
       guardrailId: 'core.import_boundaries',
       path: path,
       message:
-          'vector preparation dependencies may import only approved SDK and '
-          'external libraries, found $uri',
+          'vector preparation dependencies may import only approved '
+          'capability-free namespaces, found $uri',
     ),
   ];
+}
+
+bool _isAllowedVectorPreparationNamespaceDirective(
+  Directive directive,
+  Set<String> allowedSymbols,
+  bool isVectorPreparationRoot,
+) {
+  if (directive is! ImportDirective ||
+      (directiveUriReferences(
+            directive,
+          ).any((reference) => reference.uri == _vectorGraphicsImport) &&
+          !isVectorPreparationRoot)) {
+    return false;
+  }
+
+  final combinators = directive.combinators;
+  if (combinators.isEmpty || combinators.any((it) => it is! ShowCombinator)) {
+    return false;
+  }
+
+  return combinators
+      .whereType<ShowCombinator>()
+      .expand((combinator) => combinator.shownNames)
+      .every((name) => allowedSymbols.contains(name.name));
 }
 
 bool _isExternalImport(String uri) =>
     uri.startsWith('dart:') || uri.startsWith('package:');
 
-bool _isCapabilityFreeVectorPreparationImport(String uri) {
-  return (uri.startsWith('dart:') && uri != 'dart:io') ||
-      uri.startsWith('package:flutter/') ||
-      uri.startsWith('package:iwb_canvas_engine/') ||
-      _vectorPreparationApprovedThirdPartyImports.contains(uri);
-}
+bool _isPackageOwnedImport(String uri) =>
+    uri.startsWith('package:iwb_canvas_engine/');
+
+bool _isCapabilityFreeVectorPreparationImport(String uri) =>
+    _vectorPreparationCapabilityFreeExternalImports.contains(uri);
 
 bool _isRetiredPackageUri(String uri) {
   return uri.startsWith('../legacy/') ||

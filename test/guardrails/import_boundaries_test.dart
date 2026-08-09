@@ -372,22 +372,29 @@ Future<ui.ImmutableBuffer> loadVectorAssetTearOff() {
 
 void _testVectorPreparationDependencyRuntimeRejectsForbiddenImports() {
   test(
-    'vector preparation dependency closure rejects asset and global error helpers',
+    'vector preparation dependency closure rejects external capability helpers',
     () {
       for (final helper in _forbiddenVectorPreparationHelpers.entries) {
         expect(
           checkVectorPreparationDependencyBoundaryFiles({
             'lib/src/api/relocated_vector_preparation.dart':
-                "import 'package:vector_graphics/vector_graphics.dart';\n"
+                "import 'package:vector_graphics/vector_graphics.dart' "
+                "as vg show BytesLoader, PictureInfo, vg;\n"
                 "import '${helper.key}';\n",
             'lib/src/api/${helper.key}': helper.value,
           }),
           contains(
-            isA<GuardrailViolation>().having(
-              (violation) => violation.guardrailId,
-              'guardrailId',
-              'core.import_boundaries',
-            ),
+            isA<GuardrailViolation>()
+                .having(
+                  (violation) => violation.guardrailId,
+                  'guardrailId',
+                  'core.import_boundaries',
+                )
+                .having(
+                  (violation) => violation.path,
+                  'path',
+                  'lib/src/api/${helper.key}',
+                ),
           ),
           reason: helper.key,
         );
@@ -397,24 +404,75 @@ void _testVectorPreparationDependencyRuntimeRejectsForbiddenImports() {
 }
 
 void _testVectorPreparationDependencyRuntimeAllowsApprovedImports() {
-  test('vector preparation closure allows capability-free SDK imports', () {
-    expect(
-      checkVectorPreparationDependencyBoundaryFiles({
-        'lib/src/api/relocated_vector_preparation.dart':
-            "import 'package:vector_graphics/vector_graphics.dart';\n"
-            "import 'vector_preparation_sdk_helper.dart';\n",
-        'lib/src/api/vector_preparation_sdk_helper.dart':
-            "import 'dart:convert';\n"
-            "import 'dart:math';\n"
-            "import 'package:flutter/gestures.dart';\n"
-            "import 'package:characters/characters.dart';\n",
-      }),
-      isEmpty,
-    );
-  });
+  test(
+    'vector preparation closure allows explicit capability-free imports',
+    () {
+      expect(
+        checkVectorPreparationDependencyBoundaryFiles({
+          'lib/src/api/relocated_vector_preparation.dart':
+              "import 'package:vector_graphics/vector_graphics.dart' "
+              "as vg show BytesLoader, PictureInfo, vg;\n"
+              "import 'vector_preparation_sdk_helper.dart';\n",
+          'lib/src/api/vector_preparation_sdk_helper.dart':
+              "import 'dart:convert';\n"
+              "import 'dart:math';\n"
+              "import 'dart:typed_data';\n"
+              "import 'dart:ui' show Offset, Picture, Size;\n"
+              "import 'package:flutter/foundation.dart' show internal;\n"
+              "import 'package:flutter/gestures.dart';\n"
+              "import 'package:flutter/widgets.dart' show BuildContext;\n"
+              "import 'package:characters/characters.dart';\n",
+        }),
+        isEmpty,
+      );
+    },
+  );
 }
 
 const _forbiddenVectorPreparationHelpers = <String, String>{
+  'vector_preparation_image_network_helper.dart': '''
+import 'package:flutter/widgets.dart' show BuildContext, Image;
+
+final vectorImage = Image.network('https://example.com/vector.png');
+''',
+  'vector_preparation_platform_message_helper.dart': '''
+import 'dart:ui' show PlatformDispatcher;
+
+void sendVectorPlatformMessage() {
+  PlatformDispatcher.instance.sendPlatformMessage('vectors', null, (_) {});
+}
+''',
+  'vector_preparation_reexport_helper.dart': '''
+export 'package:flutter/widgets.dart' hide Image;
+''',
+  'vector_preparation_network_image_helper.dart': '''
+import 'package:flutter/widgets.dart';
+
+final vectorImage = const NetworkImage('https://example.com/vector.png');
+''',
+  'vector_preparation_asset_image_helper.dart': '''
+import 'package:flutter/widgets.dart';
+
+final vectorImage = const AssetImage('vector.png');
+''',
+  'vector_preparation_image_asset_helper.dart': '''
+import 'package:flutter/widgets.dart';
+
+final vectorImage = const Image.asset('vector.png');
+''',
+  'vector_preparation_method_channel_helper.dart': '''
+import 'package:flutter/services.dart';
+
+final vectorChannel = MethodChannel('vectors');
+''',
+  'vector_preparation_isolate_helper.dart': "import 'dart:isolate';\n",
+  'vector_preparation_platform_dispatcher_error_helper.dart': '''
+import 'dart:ui';
+
+void installVectorErrorHandler() {
+  PlatformDispatcher.instance.onError = (_, _) => false;
+}
+''',
   'vector_preparation_root_bundle_helper.dart': '''
 import 'package:flutter/services.dart';
 

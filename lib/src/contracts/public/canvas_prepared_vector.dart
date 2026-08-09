@@ -1,6 +1,6 @@
-import 'dart:ui' as ui;
+import 'dart:ui' as ui show Picture, Size;
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show internal;
 
 /// An application-owned vector Picture prepared for synchronous use.
 final class CanvasPreparedVector {

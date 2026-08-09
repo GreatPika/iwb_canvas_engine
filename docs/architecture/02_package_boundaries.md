@@ -183,13 +183,14 @@ contract files instead of using the API facade as a type library. The
 `lib/src/api/canvas_surface.dart` facade is the narrow public widget exception:
 it re-exports only the surface-owned public widgets `CanvasSurface` and
 `CanvasTextEditingOverlay` plus public surface style contracts. The
-`lib/src/api/canvas_vector_preparation.dart` API boundary is the sole exception
-that performs preparation: it owns the direct private `vector_graphics` call,
-an exact caller-view copy, invocation-time context handoff, selected-Future
-error projection, intrinsic admission, and unpublished Picture cleanup. It
-re-exports only `CanvasPreparedVector`, leaves the upstream and raw Picture
-types private, and retains neither the caller bytes nor context after
-settlement.
+unique API-owned vector-preparation root is the sole production
+`vector_graphics` importer and preparation boundary; that ownership is stable
+if its private file is relocated. It owns the direct private
+`vector_graphics` call, an exact caller-view copy, invocation-time context
+handoff, selected-Future error projection, intrinsic admission, and
+unpublished Picture cleanup. It re-exports only `CanvasPreparedVector`, leaves
+the upstream and raw Picture types private, and retains neither the caller
+bytes nor context after settlement.
 
 The target frame collaborator files listed under `lib/src/frame/**` are
 implementation layout names for the `FrameEngine` internal split, not files
@@ -291,11 +292,18 @@ lib/src/api/**               -> may not import/export contracts/internal except
                                  and
                                  ../contracts/internal/surface_resource_session_lifecycle.dart;
                                  only named facade bridges may import runtime/codec implementation
-lib/src/api/canvas_vector_preparation.dart
-                              -> is the sole production `vector_graphics` import;
-                                 may not perform file, asset, network, external
-                                 reference, fork, global-interceptor, or duplicate
-                                 vector-recognition work
+unique API-owned vector-preparation root
+                              -> is the sole production `vector_graphics` importer;
+                                 its owned dependency closure may use only the
+                                 explicit capability-free import policy. Its
+                                 capability-bearing namespaces must use `show`
+                                 for only `dart:ui` Offset/Picture/Size, Flutter
+                                 widgets BuildContext, Flutter foundation
+                                 internal, and vector_graphics
+                                 BytesLoader/PictureInfo/vg; it may not
+                                 perform file, asset, network, platform-channel,
+                                 isolate, global-error-handler, external reference,
+                                 fork, or duplicate vector-recognition work
 lib/src/contracts/public/**  -> may not import/export src/api or implementation owners
 lib/src/contracts/internal/** -> may not import/export src/api or implementation owners
 lib/src/runtime/**           -> may not import src/api or the root public barrel as a type library

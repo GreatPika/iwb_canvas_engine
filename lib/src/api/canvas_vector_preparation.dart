@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
-import 'package:vector_graphics/vector_graphics.dart' as vg;
+import 'package:flutter/widgets.dart' show BuildContext;
+import 'package:vector_graphics/vector_graphics.dart'
+    as vg
+    show BytesLoader, PictureInfo, vg;
 
 import '../contracts/public/canvas_contract_limits.dart';
 import '../contracts/public/canvas_errors.dart';
