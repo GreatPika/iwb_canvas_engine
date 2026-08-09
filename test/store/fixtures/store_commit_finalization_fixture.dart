@@ -50,6 +50,13 @@ void _registerMaterializedFinalizationTests() {
       returnsNormally,
     ),
   );
+  test(
+    'materialized wrong resource kind is rejected before install',
+    () => expect(
+      _materializedWrongResourceKindIsRejectedBeforeInstall,
+      returnsNormally,
+    ),
+  );
 }
 
 void _registerSparseFinalizationTests() {
@@ -181,6 +188,46 @@ void _materializedMissingResourceIsRejectedBeforeInstall() {
     ),
   );
   expect(store.documentSummary, beforeSummary);
+  expect(store.projectionBuildCount, beforeProjectionBuilds);
+}
+
+void _materializedWrongResourceKindIsRejectedBeforeInstall() {
+  _expectMaterializedResourceKindRejectedBeforeInstall(
+    _documentWithImageUsingVectorResource(),
+    'image.resourceId',
+  );
+  _expectMaterializedResourceKindRejectedBeforeInstall(
+    _documentWithVectorUsingImageResource(),
+    'vector.resourceId',
+  );
+}
+
+void _expectMaterializedResourceKindRejectedBeforeInstall(
+  CanvasDocument candidate,
+  String path,
+) {
+  final store = documentStoreWithDocument(_baseDocument());
+  final beforeSummary = store.documentSummary;
+  final beforeDocumentRevision = store.documentRevision;
+  final beforeProjectionBuilds = store.projectionBuildCount;
+
+  expect(
+    () => store.prepareMaterializedCommit(
+      candidate,
+      const StoreRevisionDelta.structural(),
+    ),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.resourceKindMismatch,
+          )
+          .having((error) => error.path, 'path', path),
+    ),
+  );
+  expect(store.documentSummary, beforeSummary);
+  expect(store.documentRevision, beforeDocumentRevision);
   expect(store.projectionBuildCount, beforeProjectionBuilds);
 }
 
@@ -391,6 +438,13 @@ CanvasImageResource _resource(String id, {String? appKey}) {
   );
 }
 
+CanvasVectorResource _vectorResource(String id) {
+  return CanvasVectorResource(
+    id: CanvasResourceId(id),
+    source: CanvasResourceSource.appKey(id),
+  );
+}
+
 CanvasDocument _baseDocument({
   Color backgroundColor = const Color(0xFFFFFFFF),
 }) {
@@ -421,6 +475,42 @@ CanvasDocument _documentWithMissingImageResource() {
           CanvasImageElement(
             id: CanvasElementId('missing-image-resource'),
             resourceId: CanvasResourceId('missing-resource'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithImageUsingVectorResource() {
+  return CanvasDocument(
+    resources: [_vectorResource('resource-1')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-with-vector-resource'),
+            resourceId: CanvasResourceId('resource-1'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithVectorUsingImageResource() {
+  return CanvasDocument(
+    resources: [_resource('resource-1')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasVectorElement(
+            id: CanvasElementId('vector-with-image-resource'),
+            resourceId: CanvasResourceId('resource-1'),
             size: const Size(1, 1),
           ),
         ],
