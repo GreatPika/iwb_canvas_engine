@@ -27,18 +27,18 @@ void _testResolverReplacementStartsFresh() {
       final request = descriptorRequest(id: 'resource-a');
 
       expect(
-        identical(resolvedImage(session.resolveImage(request)), firstImage),
+        identical(resolvedImage(session.resolveResource(request)), firstImage),
         isTrue,
       );
       expect(
-        identical(resolvedImage(session.resolveImage(request)), firstImage),
+        identical(resolvedImage(session.resolveResource(request)), firstImage),
         isTrue,
       );
       expect(firstResolver.callCount, 1);
 
       session.replaceResolver(secondResolver);
       expect(
-        identical(resolvedImage(session.resolveImage(request)), secondImage),
+        identical(resolvedImage(session.resolveResource(request)), secondImage),
         isTrue,
       );
       expect(secondResolver.callCount, 1);
@@ -46,18 +46,18 @@ void _testResolverReplacementStartsFresh() {
       final nullResolver = RecordingResourceResolver((_) => null);
       session.replaceResolver(nullResolver);
       expect(
-        session.resolveImage(request),
-        isA<NullResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NullResourceAssetPlaceholder>(),
       );
       expect(
-        session.resolveImage(request),
-        isA<NullResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NullResourceAssetPlaceholder>(),
       );
       expect(nullResolver.callCount, 1);
 
       session.replaceResolver(firstResolver);
       expect(
-        identical(resolvedImage(session.resolveImage(request)), firstImage),
+        identical(resolvedImage(session.resolveResource(request)), firstImage),
         isTrue,
       );
       expect(firstResolver.callCount, 2);

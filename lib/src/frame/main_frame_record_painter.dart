@@ -1,19 +1,7 @@
-import 'dart:ui'
-    show
-        BlendMode,
-        Canvas,
-        Color,
-        ColorFilter,
-        Image,
-        Offset,
-        Paint,
-        PaintingStyle,
-        Rect,
-        Size;
-
 import 'package:flutter/painting.dart';
 
 import '../contracts/public/canvas_ids.dart';
+import '../resources/resource_resolver_adapter.dart';
 import 'frame_drawable_policy.dart';
 import 'render_element_record.dart';
 import 'render_primitive_cache_snapshot.dart';
@@ -23,12 +11,12 @@ const _drawablePolicy = FrameDrawablePolicy();
 void paintMainFrameRecord(
   Canvas canvas,
   RenderElementRecord record,
-  Map<CanvasResourceId, Image> imageBindings,
+  Map<CanvasResourceId, ResourceAsset> assetBindings,
   RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   switch (record.row) {
     case final ImageRenderRow row:
-      _paintImageRecord(canvas, record, row, imageBindings);
+      _paintImageRecord(canvas, record, row, assetBindings);
     case final RectRenderRow row:
       _paintRectRecord(canvas, record, row);
     case final PathRenderRow row:
@@ -46,13 +34,14 @@ void _paintImageRecord(
   Canvas canvas,
   RenderElementRecord record,
   ImageRenderRow row,
-  Map<CanvasResourceId, Image> imageBindings,
+  Map<CanvasResourceId, ResourceAsset> assetBindings,
 ) {
   final resourceId = record.resourceId;
-  final image = resourceId == null ? null : imageBindings[resourceId];
+  final asset = resourceId == null ? null : assetBindings[resourceId];
   _withRecordTransform(canvas, record, () {
     final localBounds = _localRectForSize(row.size);
-    if (image != null) {
+    if (asset case final ImageResourceAsset imageAsset) {
+      final image = imageAsset.image;
       canvas.drawImageRect(
         image,
         Offset.zero & Size(image.width.toDouble(), image.height.toDouble()),

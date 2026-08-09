@@ -87,8 +87,8 @@ flowchart LR
   end
 
   subgraph Session["lib/src/resources SurfaceResourceSession"]
-    DescriptorCacheEvict["ImageResolveCache eviction\nresource descriptor changed"]
-    DirtyResourceEvict["ImageResolveCache eviction\nexplicit dirty target or all"]
+    DescriptorCacheEvict["ResourceAssetCache eviction\nresource descriptor changed"]
+    DirtyResourceEvict["ResourceAssetCache eviction\nexplicit dirty target or all"]
   end
 
   subgraph Frame["FrameEngine facade and frame-private collaborators"]

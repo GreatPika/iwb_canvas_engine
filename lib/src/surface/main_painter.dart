@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import '../frame/frame_paint_output.dart';
-import '../frame/main_frame_asset_images.dart';
+import '../frame/main_frame_asset_bindings.dart';
 import '../frame/main_frame_record_painter.dart';
 import '../frame/render_element_record.dart';
 import '../frame/selection_decoration_planner.dart';
@@ -72,14 +72,14 @@ void paintMainFrameRecordsAndSelectionDecorations(
   Canvas canvas,
   MainFramePaintOutput output,
 ) {
-  final imageBindings = resolvedMainFrameImages(output);
+  final assetBindings = resolvedMainFrameAssets(output);
   for (final record in mainFrameRecordsInPaintOrder(
     output.selectedMoveSupplementPlan.mergedRecords,
   )) {
     paintMainFrameRecord(
       canvas,
       record,
-      imageBindings,
+      assetBindings,
       output.renderPrimitiveSnapshot,
     );
   }

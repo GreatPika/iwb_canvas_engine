@@ -660,7 +660,7 @@ const ownerDagAllowedEdges = [
   OwnerEdge(
     source: frameOwner,
     target: resourcesOwner,
-    sourcePath: 'lib/src/frame/main_frame_asset_images.dart',
+    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
   OwnerEdge(
@@ -739,7 +739,7 @@ const ownerDagAllowedEdges = [
     source: surfaceOwner,
     target: frameOwner,
     sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/main_frame_asset_images.dart',
+    targetPath: 'lib/src/frame/main_frame_asset_bindings.dart',
   ),
   OwnerEdge(
     source: surfaceOwner,

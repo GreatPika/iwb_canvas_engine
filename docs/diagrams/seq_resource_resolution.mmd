@@ -14,7 +14,7 @@ sequenceDiagram
   participant Facts as contracts/internal FrameFactsPort
   participant Store as DocumentStoreKernel
   participant Session as SurfaceResourceSession
-  participant Cache as ImageResolveCache
+  participant Cache as ResourceAssetCache
   participant Resolver as contracts/public CanvasResourceResolver
   participant Painter as Main painter
   participant Port as contracts/public CanvasResourcePort
@@ -62,13 +62,13 @@ sequenceDiagram
       Assets->>Session: resolve paint image(descriptor snapshot, resourceRevision)
 
       alt descriptor is missing
-        Session-->>Assets: bounded missing image placeholder
+        Session-->>Assets: bounded missing resource placeholder
       else descriptor exists
         Session->>Cache: lookup key(resolverGeneration, resourceId, resourceRevision)
 
         alt cache hit
-          Cache-->>Session: cached app-owned ui.Image
-          Session-->>Assets: app-owned ui.Image
+          Cache-->>Session: cached typed app-owned asset
+          Session-->>Assets: typed app-owned asset
         else same-frame null result already seen
           Session-->>Assets: bounded placeholder without retry
         else per-frame resolver budget exceeded
@@ -86,16 +86,16 @@ sequenceDiagram
           Resolver-->>Session: app-owned ui.Image, null, or ordinary exception
 
           alt app returns ui.Image
-            Session->>Cache: admit key with decoded bytes width * height * 4
+            Session->>Cache: admit key with current image cache weight
             alt within active-session entry and byte limits
-              Cache-->>Session: retained app-owned image reference after LRU eviction
-            else single image exceeds byte limit
+              Cache-->>Session: retained app-owned asset reference after LRU eviction
+            else current asset exceeds admission policy
               Cache-->>Session: not retained for later lookup
             end
-            Session-->>Assets: app-owned ui.Image paint asset
+            Session-->>Assets: app-owned image asset
           else app returns null
             Session->>Session: suppress null result for current frame key(resolverGeneration, resourceId, resourceRevision)
-            Session-->>Assets: bounded missing image placeholder
+            Session-->>Assets: bounded missing resource placeholder
           else app throws ordinary resolver exception
             Session-->>Assets: bounded resolver-exception placeholder, no cache write, no null suppression
             Note over Session,Resolver: Later frames may retry the resource. Resolver-exception placeholders do not write DiagnosticsHub.
@@ -106,7 +106,7 @@ sequenceDiagram
     end
   end
 
-  Frame->>Painter: paint immutable records with resolved image assets or placeholders
+  Frame->>Painter: paint immutable records with resolved typed assets or placeholders
   Painter-->>Surface: draw main scene
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.

@@ -155,7 +155,7 @@ Future<void> _expectDirtyObserverFailureContainment() async {
 // ignore: halstead-volume, source-lines-of-code
 Future<void> _expectPostRemovalObserverFailureIsContained() async {
   final image = await createResourceTestImage();
-  final cache = ImageResolveCache();
+  final cache = ResourceAssetCache();
   final retainedOutput = _RetainedOutputProbe()..retain('resource-a');
   final snapshots = <CanvasRuntimeState>[];
   final deliveredEffects = <List<CommitDeliveryEffect>>[];
@@ -177,7 +177,7 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
     releaseAllRetainedResources: retainedOutput.releaseAll,
   );
   root.attachResourceSessionReleaseSink(session);
-  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  session.resolveResource(descriptorRequest(id: 'resource-a'));
   root.state.addListener(() {
     _expectNoBorrow(cache, retainedOutput);
     snapshots.add(root.state.value);
@@ -204,7 +204,7 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
   root.dispose();
 }
 
-void _expectNoBorrow(ImageResolveCache cache, _RetainedOutputProbe output) {
+void _expectNoBorrow(ResourceAssetCache cache, _RetainedOutputProbe output) {
   expect(
     cache.read(
       resolverGeneration: 0,

@@ -26,14 +26,14 @@ void _testTargetReleaseClearsNullSuppression() {
     );
     final request = descriptorRequest(id: 'resource-a');
 
-    session.resolveImage(request);
-    session.resolveImage(request);
+    session.resolveResource(request);
+    session.resolveResource(request);
     expect(resolver.callCount, 1);
 
     session.releaseResource(CanvasResourceId('resource-a'));
     expect(resolver.callCount, 1);
 
-    session.resolveImage(request);
+    session.resolveResource(request);
     expect(resolver.callCount, 2);
   });
 }
@@ -51,20 +51,20 @@ void _testTargetAndAllInvalidation() {
       final requestA = descriptorRequest(id: 'resource-a');
       final requestB = descriptorRequest(id: 'resource-b');
 
-      session.resolveImage(requestA);
-      session.resolveImage(requestB);
-      session.resolveImage(requestA);
-      session.resolveImage(requestB);
+      session.resolveResource(requestA);
+      session.resolveResource(requestB);
+      session.resolveResource(requestA);
+      session.resolveResource(requestB);
       expect(resolver.callCount, 2);
 
       session.releaseResource(CanvasResourceId('resource-a'));
-      session.resolveImage(requestA);
-      session.resolveImage(requestB);
+      session.resolveResource(requestA);
+      session.resolveResource(requestB);
       expect(resolver.callCount, 3);
 
       session.releaseAllResources();
-      session.resolveImage(requestA);
-      session.resolveImage(requestB);
+      session.resolveResource(requestA);
+      session.resolveResource(requestB);
       expect(resolver.callCount, 5);
 
       image.dispose();
@@ -106,22 +106,22 @@ void _populateCacheAndNullSuppression(
   SurfaceResourceSession session,
   RecordingResourceResolver resolver,
 ) {
-  session.resolveImage(descriptorRequest(id: 'resource-a'));
-  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  session.resolveResource(descriptorRequest(id: 'resource-a'));
+  session.resolveResource(descriptorRequest(id: 'resource-a'));
   expect(resolver.callCount, 1);
 
-  session.resolveImage(descriptorRequest(id: 'missing-resource'));
-  session.resolveImage(descriptorRequest(id: 'missing-resource'));
+  session.resolveResource(descriptorRequest(id: 'missing-resource'));
+  session.resolveResource(descriptorRequest(id: 'missing-resource'));
   expect(resolver.callCount, 2);
 }
 
 void _exhaustResolverBudget(SurfaceResourceSession session) {
   for (var index = 0; index < 128; index += 1) {
-    session.resolveImage(descriptorRequest(id: 'budget-$index'));
+    session.resolveResource(descriptorRequest(id: 'budget-$index'));
   }
   expect(
-    session.resolveImage(descriptorRequest(id: 'budget-over')),
-    isA<BudgetExceededResourceImagePlaceholder>(),
+    session.resolveResource(descriptorRequest(id: 'budget-over')),
+    isA<BudgetExceededResourceAssetPlaceholder>(),
   );
   expect(session.hasPendingBudgetFollowUpRepaint, isTrue);
 }
@@ -132,8 +132,8 @@ void _expectReplacementResetClearedSessionState(
   int callCountBeforeReset,
 ) {
   expect(session.hasPendingBudgetFollowUpRepaint, isFalse);
-  session.resolveImage(descriptorRequest(id: 'resource-a'));
-  session.resolveImage(descriptorRequest(id: 'missing-resource'));
+  session.resolveResource(descriptorRequest(id: 'resource-a'));
+  session.resolveResource(descriptorRequest(id: 'missing-resource'));
   expect(resolver.callCount, callCountBeforeReset + 2);
 }
 
@@ -150,21 +150,21 @@ void _testLeastRecentlyUsedEviction() {
       if (index % 128 == 0) {
         session.beginFrameResourcePass();
       }
-      session.resolveImage(descriptorRequest(id: 'resource-$index'));
+      session.resolveResource(descriptorRequest(id: 'resource-$index'));
     }
     expect(resolver.callCount, 1024);
 
-    session.resolveImage(descriptorRequest(id: 'resource-0'));
+    session.resolveResource(descriptorRequest(id: 'resource-0'));
     expect(resolver.callCount, 1024);
 
     session.beginFrameResourcePass();
-    session.resolveImage(descriptorRequest(id: 'resource-1024'));
+    session.resolveResource(descriptorRequest(id: 'resource-1024'));
     expect(resolver.callCount, 1025);
 
-    session.resolveImage(descriptorRequest(id: 'resource-0'));
+    session.resolveResource(descriptorRequest(id: 'resource-0'));
     expect(resolver.callCount, 1025);
 
-    session.resolveImage(descriptorRequest(id: 'resource-1'));
+    session.resolveResource(descriptorRequest(id: 'resource-1'));
     expect(resolver.callCount, 1026);
 
     image.dispose();
@@ -178,14 +178,14 @@ void _testOversizedResolveReturnsWithoutRetaining() {
     final session = SurfaceResourceSession(
       resolver: resolver,
       mutationGuard: CountingResolverMutationGuard(),
-      cache: ImageResolveCache(maximumSizeBytes: 16),
+      cache: ResourceAssetCache(maximumSizeBytes: 16),
     );
     final request = descriptorRequest(id: 'oversized-resource');
 
-    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(session.resolveResource(request), isA<ResolvedResourceAsset>());
     expect(resolver.callCount, 1);
 
-    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(session.resolveResource(request), isA<ResolvedResourceAsset>());
     expect(resolver.callCount, 2);
 
     image.dispose();
@@ -202,28 +202,28 @@ void _testDroppedSessionDoesNotResolveAgain() {
     );
     final request = descriptorRequest(id: 'resource-a');
 
-    expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+    expect(session.resolveResource(request), isA<ResolvedResourceAsset>());
     expect(resolver.callCount, 1);
 
     session.drop();
     expect(
-      session.resolveImage(request),
-      isA<NoResolverResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<NoResolverResourceAssetPlaceholder>(),
     );
     expect(resolver.callCount, 1);
 
     session.replaceResolver(resolver);
     session.beginFrameResourcePass();
     expect(
-      session.resolveImage(request),
-      isA<NoResolverResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<NoResolverResourceAssetPlaceholder>(),
     );
     expect(resolver.callCount, 1);
 
     session.dispose();
     expect(
-      session.resolveImage(request),
-      isA<NoResolverResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<NoResolverResourceAssetPlaceholder>(),
     );
     expect(resolver.callCount, 1);
 

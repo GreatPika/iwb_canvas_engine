@@ -39,11 +39,11 @@ void _testOrdinaryStateErrorBecomesBoundedPlaceholder() {
     );
 
     _expectResolverExceptionPlaceholder(
-      session.resolveImage(throwingRequest),
+      session.resolveResource(throwingRequest),
       throwingRequest.placeholderBounds,
     );
     expect(
-      resolvedImage(session.resolveImage(descriptorRequest(id: 'healthy'))),
+      resolvedImage(session.resolveResource(descriptorRequest(id: 'healthy'))),
       same(image),
     );
     expect(resolver.callCount, 2);
@@ -64,7 +64,7 @@ void _testOrdinaryNonStateErrorBecomesBoundedPlaceholder() {
     final request = descriptorRequest(id: 'format-error');
 
     _expectResolverExceptionPlaceholder(
-      session.resolveImage(request),
+      session.resolveResource(request),
       request.placeholderBounds,
     );
     expect(resolver.callCount, 1);
@@ -92,11 +92,12 @@ void _testResolverGuardRejectionsBubble() {
     );
 
     expect(
-      () => nestedSession.resolveImage(descriptorRequest(id: 'resource-a')),
+      () => nestedSession.resolveResource(descriptorRequest(id: 'resource-a')),
       throwsStateError,
     );
     expect(
-      () => mutationSession.resolveImage(descriptorRequest(id: 'resource-a')),
+      () =>
+          mutationSession.resolveResource(descriptorRequest(id: 'resource-a')),
       throwsStateError,
     );
     expect(mutationRoot.generateElementId(), CanvasElementId('e0'));
@@ -121,13 +122,13 @@ void _testResolverExceptionsAreRetried() {
     final request = descriptorRequest(id: 'retry-resource');
 
     expect(
-      session.resolveImage(request),
-      isA<ResolverExceptionResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<ResolverExceptionResourceAssetPlaceholder>(),
     );
     session.beginFrameResourcePass();
     expect(
-      session.resolveImage(request),
-      isA<ResolverExceptionResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<ResolverExceptionResourceAssetPlaceholder>(),
     );
     expect(throwingCalls, 2);
     expect(resolver.callCount, 2);
@@ -152,11 +153,17 @@ void _testResolverExceptionsDoNotEnterNullSuppression() {
     final request = descriptorRequest(id: 'null-after-exception');
 
     expect(
-      session.resolveImage(request),
-      isA<ResolverExceptionResourceImagePlaceholder>(),
+      session.resolveResource(request),
+      isA<ResolverExceptionResourceAssetPlaceholder>(),
     );
-    expect(session.resolveImage(request), isA<NullResourceImagePlaceholder>());
-    expect(session.resolveImage(request), isA<NullResourceImagePlaceholder>());
+    expect(
+      session.resolveResource(request),
+      isA<NullResourceAssetPlaceholder>(),
+    );
+    expect(
+      session.resolveResource(request),
+      isA<NullResourceAssetPlaceholder>(),
+    );
     expect(resolver.callCount, 2);
   });
 }
@@ -173,23 +180,23 @@ void _testResolverExceptionsConsumeBudget() {
 
     for (var index = 0; index < 128; index += 1) {
       expect(
-        session.resolveImage(descriptorRequest(id: 'throwing-$index')),
-        isA<ResolverExceptionResourceImagePlaceholder>(),
+        session.resolveResource(descriptorRequest(id: 'throwing-$index')),
+        isA<ResolverExceptionResourceAssetPlaceholder>(),
       );
     }
     expect(
-      session.resolveImage(descriptorRequest(id: 'over-budget')),
-      isA<BudgetExceededResourceImagePlaceholder>(),
+      session.resolveResource(descriptorRequest(id: 'over-budget')),
+      isA<BudgetExceededResourceAssetPlaceholder>(),
     );
     expect(resolver.callCount, 128);
   });
 }
 
 void _expectResolverExceptionPlaceholder(
-  ResourceImageResolveResult result,
+  ResourceAssetResolveResult result,
   Rect placeholderBounds,
 ) {
-  final placeholder = result as ResolverExceptionResourceImagePlaceholder;
+  final placeholder = result as ResolverExceptionResourceAssetPlaceholder;
 
   expect(placeholder.placeholderBounds, placeholderBounds);
 }

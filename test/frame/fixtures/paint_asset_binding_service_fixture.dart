@@ -52,11 +52,11 @@ void _testFrameBindingContinuesAfterResolverException() {
     );
 
     expect(
-      bindings.images[throwingId],
-      isA<ResolverExceptionResourceImagePlaceholder>(),
+      bindings.assets[throwingId],
+      isA<ResolverExceptionResourceAssetPlaceholder>(),
     );
-    expect(resolvedImage(bindings.images[healthyId]!), same(image));
-    expect(bindings.images.keys, containsAll([throwingId, healthyId]));
+    expect(resolvedImage(bindings.assets[healthyId]!), same(image));
+    expect(bindings.assets.keys, containsAll([throwingId, healthyId]));
     expect(resolver.callCount, 2);
 
     image.dispose();
@@ -134,7 +134,7 @@ void _testFrameEngineAssetBinding() {
       final scenario = await _buildAssetBindingScenario();
       addTearDown(scenario.image.dispose);
 
-      expect(scenario.output.assetBindings.images, isNotEmpty);
+      expect(scenario.output.assetBindings.assets, isNotEmpty);
       _expectResolvedBindings(scenario.output.assetBindings);
       _expectOrdinaryPlanUnchangedByAssetBinding(scenario);
       _expectNoOrdinaryCacheWritesDuringSupplement(scenario.output);
@@ -233,7 +233,7 @@ SurfaceResourceSession _warmedSession(RecordingResourceResolver resolver) {
     mutationGuard: CountingResolverMutationGuard(),
   );
   for (var index = 0; index < kMaxSyncResourceResolverCallsPerFrame; index++) {
-    session.resolveImage(descriptorRequest(id: 'warm-$index'));
+    session.resolveResource(descriptorRequest(id: 'warm-$index'));
   }
 
   return session;
@@ -241,12 +241,12 @@ SurfaceResourceSession _warmedSession(RecordingResourceResolver resolver) {
 
 void _expectResolvedBindings(FrameAssetBindings bindings) {
   expect(
-    bindings.images[CanvasResourceId('image-a')],
-    isA<ResolvedResourceImage>(),
+    bindings.assets[CanvasResourceId('image-a')],
+    isA<ResolvedResourceAsset>(),
   );
   expect(
-    bindings.images[CanvasResourceId('missing')],
-    isA<MissingDescriptorResourceImagePlaceholder>(),
+    bindings.assets[CanvasResourceId('missing')],
+    isA<MissingDescriptorResourceAssetPlaceholder>(),
   );
 }
 

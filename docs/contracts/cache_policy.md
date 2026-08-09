@@ -40,7 +40,7 @@ Do not assume:
 | StrokePathCache | Frame | pointsKey/thickness/transform scale | stroke update | 1024 entries | scan-resistant LRU | entries, hit/miss, eviction count | yes bounded |
 | StaticBackgroundCache | Frame | backgroundRevision, gridRevision, gridStrokeWidth, viewCameraBucket, viewportRect, devicePixelRatio | view camera bucket/background/grid/captured grid style input | 1 latest picture for the current full static-background key | replace and dispose previous picture on key change or invalidation | picture count, rebuild count | yes bounded |
 | OrdinaryPaintRecordCache | Frame | structuralRevision, boundsRevision, elementVisualRevision, viewportRect, devicePixelRatio | typed invalidation excluding background, grid, view camera, preview, selection-only, and style-only changes | 16 viewport/revision entries, each capped at 1024 record-key entries | LRU by viewport/revision tuple and per-entry record key | entry count, hit/miss, eviction/write probes | yes bounded |
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration, resourceId, resourceRevision | resolver replacement, descriptor change, resource dirty target/all release, detach/dispose/runtime swap | 1024 entries and 64 MiB decoded bytes per active session | target/all release, generation reset, oversized no-retention, then entry/byte LRU | `length`, `currentSizeBytes`, resolver-call budget, and pending budget follow-up flag | yes bounded sync resolver |
+| ResourceAssetCache | SurfaceResourceSession | resolverGeneration, resourceId, resourceRevision | resolver replacement, descriptor change, resource dirty target/all release, detach/dispose/runtime swap | 1024 aggregate ready assets and 64 MiB decoded image bytes per active session | target/all release, generation reset, oversized no-retention, then aggregate-entry/image-byte LRU | `length`, `currentSizeBytes`, fixed 128-call resolver guard, and pending budget follow-up flag | yes bounded sync resolver |
 | SurfaceFrameOutputCache | CanvasSurface | runtime identity, viewportWorldBounds, devicePixelRatio, selectionStyle, gridStyle, resolverGeneration, runtime-owned surface repaint target, resource budget follow-up request | runtime surface-frame publication, local input key change, resolver replacement, resource budget follow-up, detach/dispose/runtime swap | 1 main output and 1 overlay output per active surface | replace targeted layer output after successful build; build both targeted outputs before publishing either for both-layer targets; clear on detach/dispose/runtime swap | builder counts, output identity, notifier dispatch, render paint marks | yes bounded surface adapter |
 | SelectionDecorationPlan | Frame | selectionRevision, structuralRevision, boundsRevision, selected-move chrome hidden flag, captured selectionStyle, devicePixelRatio | selection/structure/bounds/selected-move active state/captured style/DPR input | 1 current decoration plan | replace on revision, bounds, selected-move active state, style, or DPR change | selected count, rebuild count | yes bounded |
 | SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
@@ -52,15 +52,16 @@ Cache miss in hot path must be bounded by candidate count, not total scene size.
 Hot caches must declare capacity, eviction, key components, invalidation owner,
 and a metric/probe before implementation.
 
-`ImageResolveCache` byte admission estimates decoded image retention as
+`ResourceAssetCache` admits typed ready assets under one aggregate entry limit.
+The current image asset reports decoded retention as
 `ui.Image.width * ui.Image.height * 4` after the synchronous app resolver
-returns. `CanvasResource.byteLength` remains descriptor/source metadata and is
-not a cache weight. Oversized single images are returned to the current resolve
-without being retained, and all resource-cache eviction/release paths drop
-references only; the application remains responsible for disposing app-owned
-`ui.Image` objects. Resource cache byte accounting is proven by focused
-resource tests and is not covered by the frame-cache guardrail, whose scope is
-`lib/src/frame/**`.
+returns; `CanvasResource.byteLength` remains descriptor/source metadata and is
+not a cache weight. Oversized current image assets are returned to the current
+resolve without being retained, and all resource-cache eviction/release paths
+drop references only; the application remains responsible for disposing
+app-owned `ui.Image` objects. Resource cache byte accounting is proven by
+focused resource tests and is not covered by the frame-cache guardrail, whose
+scope is `lib/src/frame/**`.
 
 Accepted sparse edits invalidate `projectionRevision` through store revision
 state when the operation changes public document projection. They must not call

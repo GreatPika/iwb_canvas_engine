@@ -33,7 +33,7 @@ void _testAppOwnedImagesStayAlive() {
       if (index % 128 == 0) {
         session.beginFrameResourcePass();
       }
-      session.resolveImage(descriptorRequest(id: 'resource-$index'));
+      session.resolveResource(descriptorRequest(id: 'resource-$index'));
     }
     expect(image.debugDisposed, isFalse);
 
@@ -43,7 +43,7 @@ void _testAppOwnedImagesStayAlive() {
     session.releaseAllResources();
     expect(image.debugDisposed, isFalse);
 
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
     session.replaceResolver(null);
     expect(image.debugDisposed, isFalse);
 
@@ -159,13 +159,13 @@ final class _ByteNoDisposeFixture {
       session: SurfaceResourceSession(
         resolver: resolver,
         mutationGuard: CountingResolverMutationGuard(),
-        cache: ImageResolveCache(maximumSizeBytes: 16),
+        cache: ResourceAssetCache(maximumSizeBytes: 16),
       ),
     );
   }
 
   void resolve(String id) {
-    session.resolveImage(descriptorRequest(id: id));
+    session.resolveResource(descriptorRequest(id: id));
   }
 
   void disposeImages() {

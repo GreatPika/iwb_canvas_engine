@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_resource.dart';
 import '../resources/resource_resolver_adapter.dart';
 import '../resources/surface_resource_session.dart';
 import 'captured_frame.dart';
@@ -9,28 +10,28 @@ import 'render_element_record.dart';
 
 final class FrameAssetBindings {
   FrameAssetBindings({
-    required Map<CanvasResourceId, ResourceImageResolveResult> images,
-  }) : images = Map.unmodifiable(images);
+    required Map<CanvasResourceId, ResourceAssetResolveResult> assets,
+  }) : assets = Map.unmodifiable(assets);
 
-  static final empty = FrameAssetBindings(images: const {});
+  static final empty = FrameAssetBindings(assets: const {});
 
-  final Map<CanvasResourceId, ResourceImageResolveResult> images;
+  final Map<CanvasResourceId, ResourceAssetResolveResult> assets;
 
   FrameAssetBindings withoutResource(CanvasResourceId id) {
-    if (!images.containsKey(id)) {
+    if (!assets.containsKey(id)) {
       return this;
     }
 
     return FrameAssetBindings(
-      images: {
-        for (final entry in images.entries)
+      assets: {
+        for (final entry in assets.entries)
           if (entry.key != id) entry.key: entry.value,
       },
     );
   }
 
   FrameAssetBindings withoutResources() {
-    if (images.isEmpty) {
+    if (assets.isEmpty) {
       return this;
     }
 
@@ -38,6 +39,10 @@ final class FrameAssetBindings {
   }
 }
 
+// This frame boundary deliberately joins captured descriptor facts with the
+// session-owned typed asset result. Keeping that translation here prevents
+// resolver/cache details from leaking into capture, planners, or painters.
+// ignore: coupling-between-object-classes
 final class PaintAssetBindingService {
   const PaintAssetBindingService();
 
@@ -51,13 +56,13 @@ final class PaintAssetBindingService {
       for (final descriptor in frame.resourceDescriptors)
         descriptor.id: descriptor,
     };
-    final images = <CanvasResourceId, ResourceImageResolveResult>{};
+    final assets = <CanvasResourceId, ResourceAssetResolveResult>{};
     for (final record in records) {
       final resourceId = record.resourceId;
-      if (resourceId == null || images.containsKey(resourceId)) {
+      if (resourceId == null || assets.containsKey(resourceId)) {
         continue;
       }
-      images[resourceId] = session.resolveImage(
+      assets[resourceId] = session.resolveResource(
         _requestFor(
           resourceId: resourceId,
           descriptor: descriptors[resourceId],
@@ -67,17 +72,17 @@ final class PaintAssetBindingService {
       );
     }
 
-    return FrameAssetBindings(images: images);
+    return FrameAssetBindings(assets: assets);
   }
 
-  ResourceImageResolveRequest _requestFor({
+  ResourceAssetResolveRequest _requestFor({
     required CanvasResourceId resourceId,
     required FrameResourceDescriptorFacts? descriptor,
     required int fallbackResourceRevision,
     required Rect placeholderBounds,
   }) {
     if (descriptor == null) {
-      return ResourceImageResolveRequest.missingDescriptor(
+      return ResourceAssetResolveRequest.missingDescriptor(
         resourceId: resourceId,
         resourceRevision: fallbackResourceRevision,
         placeholderBounds: placeholderBounds,
@@ -86,13 +91,15 @@ final class PaintAssetBindingService {
 
     return switch (descriptor) {
       FrameImageResourceDescriptorFacts() =>
-        ResourceImageResolveRequest.descriptor(
-          resourceId: descriptor.id,
-          appKey: descriptor.appKey,
-          mimeType: descriptor.mimeType,
-          contentHash: descriptor.contentHash,
-          byteLength: descriptor.byteLength,
-          metadata: descriptor.metadata,
+        ResourceAssetResolveRequest.descriptor(
+          resource: CanvasImageResource(
+            id: descriptor.id,
+            source: CanvasResourceSource.appKey(descriptor.appKey),
+            mimeType: descriptor.mimeType,
+            contentHash: descriptor.contentHash,
+            byteLength: descriptor.byteLength,
+            metadata: descriptor.metadata,
+          ),
           resourceRevision: descriptor.resourceRevision,
           placeholderBounds: placeholderBounds,
         ),

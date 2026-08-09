@@ -228,8 +228,8 @@ Future<void> _expectRuntimeSwapDropsOldSession(WidgetTester tester) async {
   expect(_rootFor(oldRuntime).activeSurfaceResourceSessionForTesting, isNull);
   expect(_activeSession(newRuntime), isA<SurfaceResourceSession>());
   expect(
-    oldSession.resolveImage(descriptorRequest(id: 'resource-a')),
-    isA<NoResolverResourceImagePlaceholder>(),
+    oldSession.resolveResource(descriptorRequest(id: 'resource-a')),
+    isA<NoResolverResourceAssetPlaceholder>(),
   );
   expect(oldImage.debugDisposed, isFalse);
   oldImage.dispose();
@@ -255,7 +255,9 @@ Future<void> _expectRuntimeDisposeDropsSessionBeforeWidgetDetach(
   final root = _rootFor(runtime);
   expect(
     identical(
-      resolvedImage(session.resolveImage(descriptorRequest(id: 'resource-a'))),
+      resolvedImage(
+        session.resolveResource(descriptorRequest(id: 'resource-a')),
+      ),
       image,
     ),
     isTrue,
@@ -264,8 +266,8 @@ Future<void> _expectRuntimeDisposeDropsSessionBeforeWidgetDetach(
   runtime.dispose();
   expect(root.activeSurfaceResourceSessionForTesting, isNull);
   expect(
-    session.resolveImage(descriptorRequest(id: 'resource-a')),
-    isA<NoResolverResourceImagePlaceholder>(),
+    session.resolveResource(descriptorRequest(id: 'resource-a')),
+    isA<NoResolverResourceAssetPlaceholder>(),
   );
   await _expectDisposedRuntimeRebuildDetachesSurface(
     tester,
@@ -579,11 +581,11 @@ CanvasDocument _documentWithResource([String resourceId = 'resource-a']) {
 
 void _expectSessionResolvesImage(
   SurfaceResourceSession session,
-  ResourceImageResolveRequest request,
+  ResourceAssetResolveRequest request,
   Object image,
 ) {
   expect(
-    identical(resolvedImage(session.resolveImage(request)), image),
+    identical(resolvedImage(session.resolveResource(request)), image),
     isTrue,
   );
 }

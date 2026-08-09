@@ -40,9 +40,9 @@ flowchart LR
 
   subgraph Frame["FrameEngine"]
     MainPaint["Main paint frame\ncaptured once"]
-    RenderRecords["Immutable RenderElementRecord list\nimage resource ids"]
-    AssetRequest["Paint asset request\nresourceId -> descriptor"]
-    PaintAsset["Paint asset\nui.Image or bounded placeholder"]
+    RenderRecords["Immutable RenderElementRecord list\nresource ids"]
+    AssetRequest["Typed resource-asset request\nresourceId -> descriptor"]
+    PaintAsset["Typed paint asset\ncurrent image asset or bounded placeholder"]
     MainRepaint["Main repaint request"]
   end
 
@@ -53,12 +53,12 @@ flowchart LR
 
   subgraph Session["SurfaceResourceSession"]
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
-    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision\n1024 entries + 64 MiB decoded bytes"]
-    ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
+    ResourceAssetCache["ResourceAssetCache\nresolverGeneration + resourceId + resourceRevision\naggregate entry and image-byte policy"]
+    ResolverFrameBudget["Resolver frame budget\nfixed per-frame guard"]
     MissingResult["Null resolver result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nmissing/no resolver placeholders do not call resolver"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
     ResolverExceptionPlaceholder["Resolver-exception placeholder\nordinary app failure only\nno cache write, no null suppression,\nretryable on later frames, no DiagnosticsHub write"]
-    Placeholder["Bounded missing image placeholder"]
+    Placeholder["Bounded missing resource placeholder"]
   end
 
   subgraph SurfaceOutput["CanvasSurface retained output"]
@@ -89,7 +89,7 @@ flowchart LR
   ResourceTable -->|"stores source.kind = appKey only\npublic source is CanvasAppKeyResourceSource.key"| AppKeyDescriptor
 
   Surface -->|"main paint asks for records"| MainPaint
-  MainPaint -->|"image elements carry resource ids"| RenderRecords
+  MainPaint -->|"records carry resource ids"| RenderRecords
   RenderRecords -->|"resourceId"| AssetRequest
   AssetRequest -->|"request descriptor facts through FrameFactsPort"| DescriptorFacts
   DescriptorFacts -->|"resourceId lookup"| ResourceTable
@@ -97,16 +97,16 @@ flowchart LR
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 
-  ResolvePaintAsset -->|"key-only lookup and LRU promotion"| ImageResolveCache
-  ImageResolveCache -->|"cache hit: app-owned image"| ResolvePaintAsset
-  ImageResolveCache -->|"cache miss"| ResolverFrameBudget
+  ResolvePaintAsset -->|"key-only lookup and LRU promotion"| ResourceAssetCache
+  ResourceAssetCache -->|"cache hit: typed app-owned asset"| ResolvePaintAsset
+  ResourceAssetCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync resolve request"| AppResolver
   ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
   AppResolver -->|"returns app-owned ui.Image, null,\nor ordinary exception\nno runtime mutation"| ResolvePaintAsset
-  ResolvePaintAsset -->|"admit resolved image by key\nestimate width * height * 4\nskip oversized retention"| ImageResolveCache
-  ResolvePaintAsset -->|"resolved image"| PaintAsset
+  ResolvePaintAsset -->|"admit resolved asset by key\ncurrent image weight is policy-owned\nskip oversized retention"| ResourceAssetCache
+  ResolvePaintAsset -->|"resolved asset"| PaintAsset
   ResolvePaintAsset -.->|"ordinary app resolver exception\nbudget was consumed"| ResolverExceptionPlaceholder
   ResolverExceptionPlaceholder -.->|"bounded placeholder result"| Placeholder
   ResolvePaintAsset -.->|"missing resource or null result"| MissingResult
@@ -122,7 +122,7 @@ flowchart LR
   ResourceDirtyDispatch -->|"forward target/all release before publication"| SessionReleaseEvent
   ResourceVisualSignal -->|"publish public resource visual domain after release"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
-  SessionReleaseEvent -->|"if attached, remove matching cache/suppression borrows"| ImageResolveCache
+  SessionReleaseEvent -->|"if attached, remove matching cache/suppression borrows"| ResourceAssetCache
   SessionReleaseEvent -->|"active identity removes addressed binding or all; stale identity is no-op"| RetainedMainBindings
   ResourceVisualSignal -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface

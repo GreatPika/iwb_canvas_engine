@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
+import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 
 import 'surface_resource_session_test_support.dart';
 
@@ -20,7 +21,7 @@ void _testByteCapEvictsLeastRecentlyUsedEntries() {
   test('cache keeps retained decoded bytes within maximum size', () async {
     final imageA = await createSizedResourceTestImage(width: 2, height: 2);
     final imageB = await createSizedResourceTestImage(width: 2, height: 2);
-    final cache = ImageResolveCache(maximumSizeBytes: 16);
+    final cache = ResourceAssetCache(maximumSizeBytes: 16);
 
     _writeCache(cache, id: CanvasResourceId('resource-a'), image: imageA);
     _writeCache(cache, id: CanvasResourceId('resource-b'), image: imageB);
@@ -37,7 +38,7 @@ void _testByteCapEvictsLeastRecentlyUsedEntries() {
 void _testOversizedImagesAreNotRetained() {
   test('single oversized image misses immediately after write', () async {
     final image = await createSizedResourceTestImage(width: 3, height: 2);
-    final cache = ImageResolveCache(maximumSizeBytes: 16);
+    final cache = ResourceAssetCache(maximumSizeBytes: 16);
 
     _writeCache(cache, id: CanvasResourceId('oversized'), image: image);
 
@@ -54,7 +55,7 @@ void _testEntryCapAndReadPromotion() {
     final imageA = await createResourceTestImage();
     final imageB = await createResourceTestImage();
     final imageC = await createResourceTestImage();
-    final cache = ImageResolveCache(capacity: 2);
+    final cache = ResourceAssetCache(capacity: 2);
 
     _writeCache(cache, id: CanvasResourceId('resource-a'), image: imageA);
     _writeCache(cache, id: CanvasResourceId('resource-b'), image: imageB);
@@ -78,7 +79,7 @@ void _testReplacementAccounting() {
   test('replacement subtracts the old decoded size before admission', () async {
     final first = await createSizedResourceTestImage(width: 2, height: 2);
     final replacement = await createSizedResourceTestImage(width: 3, height: 3);
-    final cache = ImageResolveCache(maximumSizeBytes: 40);
+    final cache = ResourceAssetCache(maximumSizeBytes: 40);
     final id = CanvasResourceId('replaced');
 
     _writeCache(cache, id: id, image: first);
@@ -97,7 +98,7 @@ void _testOversizedReplacementDropsOldEntry() {
   test('oversized replacement removes the previous retained entry', () async {
     final first = await createSizedResourceTestImage(width: 2, height: 2);
     final oversized = await createSizedResourceTestImage(width: 3, height: 2);
-    final cache = ImageResolveCache(maximumSizeBytes: 16);
+    final cache = ResourceAssetCache(maximumSizeBytes: 16);
     final id = CanvasResourceId('oversized-replacement');
 
     _writeCache(cache, id: id, image: first);
@@ -118,7 +119,7 @@ void _testInvalidationAndClearAccounting() {
     () async {
       final first = await createSizedResourceTestImage(width: 3, height: 3);
       final other = await createResourceTestImage();
-      final cache = ImageResolveCache(maximumSizeBytes: 40);
+      final cache = ResourceAssetCache(maximumSizeBytes: 40);
       final firstId = CanvasResourceId('first');
       final otherId = CanvasResourceId('other');
 
@@ -144,7 +145,7 @@ void _testDescriptorByteLengthDoesNotDriveCachePressure() {
   test('descriptor byte length is not part of cache pressure', () async {
     final imageA = await createResourceTestImage();
     final imageB = await createSizedResourceTestImage(width: 2, height: 2);
-    final cache = ImageResolveCache(maximumSizeBytes: 16);
+    final cache = ResourceAssetCache(maximumSizeBytes: 16);
     final requestA = descriptorRequest(id: 'resource-a', byteLength: 1 << 20);
     final requestB = descriptorRequest(id: 'resource-b', byteLength: 1);
 
@@ -176,7 +177,7 @@ void _testDescriptorByteLengthDoesNotDriveCachePressure() {
 }
 
 void _writeCache(
-  ImageResolveCache cache, {
+  ResourceAssetCache cache, {
   required CanvasResourceId id,
   required ui.Image image,
   int revision = 0,
@@ -185,12 +186,12 @@ void _writeCache(
     resolverGeneration: 0,
     resourceId: id,
     resourceRevision: revision,
-    image: image,
+    asset: ImageResourceAsset(image),
   );
 }
 
 void _expectCacheHit(
-  ImageResolveCache cache,
+  ResourceAssetCache cache,
   CanvasResourceId id,
   ui.Image image, {
   int revision = 0,
@@ -199,7 +200,7 @@ void _expectCacheHit(
 }
 
 void _expectCacheMiss(
-  ImageResolveCache cache,
+  ResourceAssetCache cache,
   CanvasResourceId id, {
   int revision = 0,
 }) {
@@ -207,13 +208,15 @@ void _expectCacheMiss(
 }
 
 ui.Image? _readCache(
-  ImageResolveCache cache,
+  ResourceAssetCache cache,
   CanvasResourceId id, {
   int revision = 0,
 }) {
-  return cache.read(
+  final asset = cache.read(
     resolverGeneration: 0,
     resourceId: id,
     resourceRevision: revision,
   );
+
+  return asset is ImageResourceAsset ? asset.image : null;
 }

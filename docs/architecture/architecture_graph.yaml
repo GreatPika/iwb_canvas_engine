@@ -250,7 +250,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/resources.md
     evidence:
-      - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, ImageResolveCache, per-frame resolver budget, same-frame null-result suppression, and bounded placeholder policy for missing descriptors and absent resolvers.
+      - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset request/result flow, per-frame resolver budget, same-frame null-result suppression, and bounded placeholder policy for missing descriptors and absent resolvers.
     actual:
       declarations:
         - SurfaceResourceSession
@@ -665,7 +665,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - PaintAssetBindingService binds sealed current image descriptor facts through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not own typed CanvasResourceResolver references.
+      - PaintAssetBindingService binds sealed descriptor facts through SurfaceResourceSession after ordinary record planning; painters and ordinary planners consume immutable typed asset bindings and do not own CanvasResourceResolver references.
     actual:
       delegationMembers:
         - PaintAssetBindingService.bind

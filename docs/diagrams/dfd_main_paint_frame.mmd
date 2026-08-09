@@ -39,10 +39,10 @@ flowchart LR
 
   subgraph Resources["lib/src/resources SurfaceResourceSession"]
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
-    ImageResolveCache["ImageResolveCache\nresolverGeneration + resourceId + resourceRevision"]
-    ResolverFrameBudget["Resolver frame budget\nkMaxSyncResourceResolverCallsPerFrame = 128"]
+    ResourceAssetCache["ResourceAssetCache\nresolverGeneration + resourceId + resourceRevision"]
+    ResolverFrameBudget["Resolver frame budget\nfixed per-frame guard"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
-    MissingPlaceholder["Bounded missing image placeholder"]
+    MissingPlaceholder["Bounded missing resource placeholder"]
   end
 
   subgraph Frame["FrameEngine facade and frame-private collaborators"]
@@ -62,7 +62,7 @@ flowchart LR
     RenderCaches["Frame render caches\ntext, path, stroke"]
     StaticBackgroundCache["StaticBackgroundPlanner\nStaticBackgroundCache\nbackgroundRevision + gridRevision\n+ gridStrokeWidth + view camera bucket\n+ viewportRect + devicePixelRatio"]
     AssetBinding["PaintAssetBindingService\ndescriptor-to-asset binding\nthrough SurfaceResourceSession"]
-    ResolvedAssets["Resolved paint assets\nimages or placeholders"]
+    ResolvedAssets["Resolved paint assets\ntyped assets or placeholders"]
     PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
     ExplicitLayerEffect["Future saveLayer effect\nexplicit RenderElementRecord field,\nbudgeted, metric-counted,\nand guarded by contract update"]
     ProjectionBlocked["No CanvasDocument materialization\nin main paint"]
@@ -128,21 +128,21 @@ flowchart LR
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
-  Records -->|"image resource ids"| AssetBinding
+  Records -->|"resource ids"| AssetBinding
   AssetBinding -->|"request descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
   Committed -->|"sealed immutable current image descriptor facts"| DescriptorFacts
   ExplicitSessionCaller -->|"passes SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| AssetBinding
   AssetBinding -->|"resolve via session only"| ResolvePaintAsset
-  ResolvePaintAsset -->|"cache lookup and bounded update"| ImageResolveCache
-  ImageResolveCache -->|"cached app-owned image"| ResolvePaintAsset
-  ImageResolveCache -->|"cache miss"| ResolverFrameBudget
+  ResolvePaintAsset -->|"cache lookup and bounded update"| ResourceAssetCache
+  ResourceAssetCache -->|"cached app-owned asset"| ResolvePaintAsset
+  ResourceAssetCache -->|"cache miss"| ResolverFrameBudget
   ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver
   ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| ResolvedAssets
   AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ResolvePaintAsset
-  ResolvePaintAsset -->|"resolved image"| ResolvedAssets
+  ResolvePaintAsset -->|"resolved asset"| ResolvedAssets
   ResolvePaintAsset -.->|"missing or unresolved"| MissingPlaceholder
   MissingPlaceholder -.->|"bounded placeholder asset"| ResolvedAssets
 

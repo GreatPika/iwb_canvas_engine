@@ -1,32 +1,31 @@
-import 'dart:ui' as ui;
-
 import '../contracts/public/canvas_ids.dart';
+import 'resource_resolver_adapter.dart';
 
-const int kMaxResolvedResourceImagesPerSession = 1024;
+const int kMaxResolvedResourceAssetsPerSession = 1024;
 const int kMaxResolvedResourceImageBytesPerSession = 64 * 1024 * 1024;
 
-typedef _ImageResolveCacheKey = ({
+typedef _ResourceAssetCacheKey = ({
   int resolverGeneration,
   CanvasResourceId resourceId,
   int resourceRevision,
 });
 
-final class ImageResolveCache {
-  ImageResolveCache({
-    int capacity = kMaxResolvedResourceImagesPerSession,
+final class ResourceAssetCache {
+  ResourceAssetCache({
+    int capacity = kMaxResolvedResourceAssetsPerSession,
     int maximumSizeBytes = kMaxResolvedResourceImageBytesPerSession,
   }) : _capacity = capacity,
        _maximumSizeBytes = maximumSizeBytes;
 
   final int _capacity;
   final int _maximumSizeBytes;
-  final Map<_ImageResolveCacheKey, _ImageResolveCacheEntry> _entries = {};
+  final Map<_ResourceAssetCacheKey, _ResourceAssetCacheEntry> _entries = {};
   int _currentSizeBytes = 0;
 
   int get length => _entries.length;
   int get currentSizeBytes => _currentSizeBytes;
 
-  ui.Image? read({
+  ResourceAsset? read({
     required int resolverGeneration,
     required CanvasResourceId resourceId,
     required int resourceRevision,
@@ -43,14 +42,14 @@ final class ImageResolveCache {
 
     _entries[key] = entry;
 
-    return entry.image;
+    return entry.asset;
   }
 
   void write({
     required int resolverGeneration,
     required CanvasResourceId resourceId,
     required int resourceRevision,
-    required ui.Image image,
+    required ResourceAsset asset,
   }) {
     final key = (
       resolverGeneration: resolverGeneration,
@@ -62,13 +61,13 @@ final class ImageResolveCache {
       _currentSizeBytes -= replaced.estimatedBytes;
     }
 
-    final estimatedBytes = _estimateDecodedBytes(image);
+    final estimatedBytes = asset.cacheWeightBytes;
     if (estimatedBytes > _maximumSizeBytes) {
       return;
     }
 
-    _entries[key] = _ImageResolveCacheEntry(
-      image: image,
+    _entries[key] = _ResourceAssetCacheEntry(
+      asset: asset,
       estimatedBytes: estimatedBytes,
     );
     _currentSizeBytes += estimatedBytes;
@@ -97,18 +96,14 @@ final class ImageResolveCache {
     _entries.clear();
     _currentSizeBytes = 0;
   }
-
-  int _estimateDecodedBytes(ui.Image image) {
-    return image.width * image.height * 4;
-  }
 }
 
-final class _ImageResolveCacheEntry {
-  const _ImageResolveCacheEntry({
-    required this.image,
+final class _ResourceAssetCacheEntry {
+  const _ResourceAssetCacheEntry({
+    required this.asset,
     required this.estimatedBytes,
   });
 
-  final ui.Image image;
+  final ResourceAsset asset;
   final int estimatedBytes;
 }

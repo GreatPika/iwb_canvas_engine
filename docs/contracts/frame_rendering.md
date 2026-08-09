@@ -131,7 +131,7 @@ Rules:
 - frame paint admission accepts only explicit spatial candidate results;
   typed non-candidate spatial results stay visible as rejected admissions
   instead of becoming successful candidate streams;
-- `SurfaceResourceSession` is the only image resolution boundary in paint, and
+- `SurfaceResourceSession` is the only resource-asset resolution boundary in paint, and
   app resolver callbacks cannot mutate runtime;
 - v1 resolver calls are synchronous and bounded by the per-frame resolver budget;
 - runtime view camera changes use `state.revisions.viewCamera`, repaint affected
@@ -164,7 +164,7 @@ frame-private collaborators:
 | `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record cache lookup/build inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
 | `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
 | `SelectionDecorationPlanner` | single-element or multi-select group selection UI decoration, chrome placement metadata, and `SelectionDecorationPlan` key including `boundsRevision`, structural invalidation, plus selected-move preview chrome suppression | ordinary record cache identity, selected move supplement records, static background identity |
-| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using sealed immutable image descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
+| `PaintAssetBindingService` | descriptor-to-asset binding for records with resource ids, using sealed immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
 
@@ -177,10 +177,12 @@ document element rows.
 `PaintAssetBindingService` is the only target frame collaborator that receives
 `SurfaceResourceSession`; painters remain immutable-output consumers and never
 receive store, runtime, resolver, or public document read access.
-It starts the frame resource pass before image resolution so resolver budgets,
+It starts the frame resource pass before resource-asset resolution so resolver budgets,
 same-frame null suppression, and budget follow-up throttles belong to the
-current main paint frame. Its current image request is selected by the captured
-descriptor subtype, not by nullable MIME data.
+current main paint frame. Its typed resource-asset request is selected by the
+captured descriptor subtype, not by nullable MIME data. `FrameAssetBindings`
+retains typed resolve results by resource id; painters consume that immutable
+output and select the current image asset only for image records.
 
 Surface repaint routing is split before frame output construction. `RuntimeRoot`
 aggregates runtime-owned repaint intent into the internal

@@ -204,10 +204,10 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   _expectPaintHost();
   expect(resolver.calls, 1);
   expect(
-    _mainPainter(tester).output.assetBindings.images[CanvasResourceId(
+    _mainPainter(tester).output.assetBindings.assets[CanvasResourceId(
       'resource-a',
     )],
-    isA<ResolvedResourceImage>(),
+    isA<ResolvedResourceAsset>(),
   );
 
   runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
@@ -238,7 +238,7 @@ Future<void> _expectTargetReleasePrecedesDirtyPublication(
 
   final mainBeforeRelease = _mainPainter(tester).output;
   final overlayBeforeRelease = _overlayPainter(tester).output;
-  expect(mainBeforeRelease.assetBindings.images.keys, {
+  expect(mainBeforeRelease.assetBindings.assets.keys, {
     CanvasResourceId('resource-a'),
     CanvasResourceId('resource-b'),
   });
@@ -248,11 +248,11 @@ Future<void> _expectTargetReleasePrecedesDirtyPublication(
   runtime.state.addListener(() {
     final output = _mainPainter(tester).output;
     expect(
-      output.assetBindings.images.containsKey(CanvasResourceId('resource-a')),
+      output.assetBindings.assets.containsKey(CanvasResourceId('resource-a')),
       isFalse,
     );
     expect(
-      output.assetBindings.images.containsKey(CanvasResourceId('resource-b')),
+      output.assetBindings.assets.containsKey(CanvasResourceId('resource-b')),
       isTrue,
     );
     expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
@@ -266,13 +266,13 @@ Future<void> _expectTargetReleasePrecedesDirtyPublication(
   expect(
     _mainPainter(
       tester,
-    ).output.assetBindings.images.containsKey(CanvasResourceId('resource-a')),
+    ).output.assetBindings.assets.containsKey(CanvasResourceId('resource-a')),
     isFalse,
   );
   expect(
     _mainPainter(
       tester,
-    ).output.assetBindings.images.containsKey(CanvasResourceId('resource-b')),
+    ).output.assetBindings.assets.containsKey(CanvasResourceId('resource-b')),
     isTrue,
   );
   expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
@@ -375,7 +375,7 @@ Future<void> _expectStaleSessionDoesNotReleaseCurrentOutput(
 
 void _expectRetainedImages(WidgetTester tester, Set<String> expectedIds) {
   expect(
-    _mainPainter(tester).output.assetBindings.images.keys.map((id) => id.value),
+    _mainPainter(tester).output.assetBindings.assets.keys.map((id) => id.value),
     expectedIds,
   );
 }
@@ -1228,8 +1228,8 @@ Finder _overlayPaintHosts() {
 }
 
 int _budgetPlaceholders(WidgetTester tester) {
-  return _mainPainter(tester).output.assetBindings.images.values
-      .whereType<BudgetExceededResourceImagePlaceholder>()
+  return _mainPainter(tester).output.assetBindings.assets.values
+      .whereType<BudgetExceededResourceAssetPlaceholder>()
       .length;
 }
 

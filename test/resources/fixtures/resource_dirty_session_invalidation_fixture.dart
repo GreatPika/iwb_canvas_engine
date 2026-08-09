@@ -31,18 +31,18 @@ void _testTargetDirtyActiveSessionInvalidation() {
     final subscription = root.actions.listen(actions.add);
     root.attachResourceSessionReleaseSink(session);
 
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
-    session.resolveImage(descriptorRequest(id: 'resource-b'));
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
-    session.resolveImage(descriptorRequest(id: 'resource-b'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-b'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-b'));
     expect(resolver.callCount, 2);
 
     root.resources.markResourceDirty(CanvasResourceId('resource-a'));
     expect(root.state.value.revisions.resourceVisual, 1);
     _expectTargetDirtyEffects(effects.single);
 
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
-    session.resolveImage(descriptorRequest(id: 'resource-b'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-b'));
     expect(resolver.callCount, 3);
     expect(resolver.resources.map((resource) => resource.id), [
       CanvasResourceId('resource-a'),

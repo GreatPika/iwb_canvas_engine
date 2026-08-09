@@ -36,16 +36,16 @@ void _testSyncResolutionAndRevisionCache() {
         metadata: CanvasMetadata.fromMap({'role': 'fixture'}),
       );
 
-      final first = session.resolveImage(request);
-      final cached = session.resolveImage(request);
-      final revisionMiss = session.resolveImage(
+      final first = session.resolveResource(request);
+      final cached = session.resolveResource(request);
+      final revisionMiss = session.resolveResource(
         descriptorRequest(id: 'resource-a', resourceRevision: 1),
       );
       final resolvedResource = resolver.resources.first;
       final resolvedSource =
           resolvedResource.source as CanvasAppKeyResourceSource;
 
-      expect(first, isA<ResolvedResourceImage>());
+      expect(first, isA<ResolvedResourceAsset>());
       expect(identical(resolvedImage(first), firstImage), isTrue);
       expect(identical(resolvedImage(cached), firstImage), isTrue);
       expect(identical(resolvedImage(revisionMiss), secondImage), isTrue);

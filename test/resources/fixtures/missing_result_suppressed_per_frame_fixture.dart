@@ -25,48 +25,48 @@ void _testFrameScopedNullSuppressionAndPlaceholders() {
       final request = descriptorRequest(id: 'resource-a');
 
       expect(
-        session.resolveImage(request),
-        isA<NullResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NullResourceAssetPlaceholder>(),
       );
       expect(
-        session.resolveImage(request),
-        isA<NullResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NullResourceAssetPlaceholder>(),
       );
       expect(nullResolver.callCount, 1);
       expect(guard.callbackCount, 1);
 
       session.beginFrameResourcePass();
       expect(
-        session.resolveImage(request),
-        isA<NullResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NullResourceAssetPlaceholder>(),
       );
       expect(nullResolver.callCount, 2);
 
       final missing = missingRequest(id: 'missing');
       expect(
-        session.resolveImage(missing),
-        isA<MissingDescriptorResourceImagePlaceholder>(),
+        session.resolveResource(missing),
+        isA<MissingDescriptorResourceAssetPlaceholder>(),
       );
       expect(
-        session.resolveImage(missing).placeholderBounds,
+        session.resolveResource(missing).placeholderBounds,
         missing.placeholderBounds,
       );
       expect(nullResolver.callCount, 2);
 
       session.replaceResolver(null);
       expect(
-        session.resolveImage(request),
-        isA<NoResolverResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NoResolverResourceAssetPlaceholder>(),
       );
       expect(
-        session.resolveImage(request),
-        isA<NoResolverResourceImagePlaceholder>(),
+        session.resolveResource(request),
+        isA<NoResolverResourceAssetPlaceholder>(),
       );
       expect(guard.callbackCount, 2);
 
       final imageResolver = RecordingResourceResolver((_) => image);
       session.replaceResolver(imageResolver);
-      expect(session.resolveImage(request), isA<ResolvedResourceImage>());
+      expect(session.resolveResource(request), isA<ResolvedResourceAsset>());
       expect(imageResolver.callCount, 1);
 
       image.dispose();

@@ -1,107 +1,94 @@
 import 'dart:ui' as ui;
 
 import '../contracts/public/canvas_ids.dart';
-import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 
 const int kMaxSyncResourceResolverCallsPerFrame = 128;
 
-final class ResourceImageResolveRequest {
-  ResourceImageResolveRequest.descriptor({
-    required CanvasResourceId resourceId,
-    required String appKey,
-    required String? mimeType,
-    required String? contentHash,
-    required int? byteLength,
-    required CanvasMetadata metadata,
+final class ResourceAssetResolveRequest {
+  ResourceAssetResolveRequest.descriptor({
+    required CanvasResource resource,
     required this.resourceRevision,
     required this.placeholderBounds,
-  }) : id = resourceId,
-       appKey = appKey,
-       mimeType = mimeType,
-       contentHash = contentHash,
-       byteLength = byteLength,
-       metadata = metadata,
-       imageResource = CanvasImageResource(
-         id: resourceId,
-         source: CanvasResourceSource.appKey(appKey),
-         mimeType: mimeType,
-         contentHash: contentHash,
-         byteLength: byteLength,
-         metadata: metadata,
-       );
+  }) : id = resource.id,
+       resource = resource;
 
-  const ResourceImageResolveRequest.missingDescriptor({
+  const ResourceAssetResolveRequest.missingDescriptor({
     required CanvasResourceId resourceId,
     required this.resourceRevision,
     required this.placeholderBounds,
   }) : id = resourceId,
-       appKey = null,
-       mimeType = null,
-       contentHash = null,
-       byteLength = null,
-       metadata = const CanvasMetadata.empty(),
-       imageResource = null;
+       resource = null;
 
   final CanvasResourceId id;
-  final String? appKey;
-  final String? mimeType;
-  final String? contentHash;
-  final int? byteLength;
-  final CanvasMetadata metadata;
+  final CanvasResource? resource;
   final int resourceRevision;
   final ui.Rect placeholderBounds;
-  final CanvasImageResource? imageResource;
 
-  bool get hasDescriptor => imageResource != null;
+  bool get hasDescriptor => resource != null;
 }
 
-sealed class ResourceImageResolveResult {
-  const ResourceImageResolveResult({required this.placeholderBounds});
+sealed class ResourceAsset {
+  const ResourceAsset();
+
+  int get cacheWeightBytes;
+}
+
+final class ImageResourceAsset extends ResourceAsset {
+  const ImageResourceAsset(this.image);
+
+  final ui.Image image;
+
+  @override
+  int get cacheWeightBytes => image.width * image.height * 4;
+}
+
+sealed class ResourceAssetResolveResult {
+  const ResourceAssetResolveResult({required this.placeholderBounds});
 
   final ui.Rect placeholderBounds;
 }
 
-final class ResolvedResourceImage extends ResourceImageResolveResult {
-  const ResolvedResourceImage({
-    required this.image,
+final class ResolvedResourceAsset extends ResourceAssetResolveResult {
+  const ResolvedResourceAsset({
+    required this.asset,
     required super.placeholderBounds,
   });
 
-  final ui.Image image;
+  final ResourceAsset asset;
 }
 
-sealed class ResourceImagePlaceholderResult extends ResourceImageResolveResult {
-  const ResourceImagePlaceholderResult({required super.placeholderBounds});
+sealed class ResourceAssetPlaceholderResult extends ResourceAssetResolveResult {
+  const ResourceAssetPlaceholderResult({required super.placeholderBounds});
 }
 
-final class MissingDescriptorResourceImagePlaceholder
-    extends ResourceImagePlaceholderResult {
-  const MissingDescriptorResourceImagePlaceholder({
-    required super.placeholderBounds,
-  });
-}
-
-final class NoResolverResourceImagePlaceholder
-    extends ResourceImagePlaceholderResult {
-  const NoResolverResourceImagePlaceholder({required super.placeholderBounds});
-}
-
-final class NullResourceImagePlaceholder
-    extends ResourceImagePlaceholderResult {
-  const NullResourceImagePlaceholder({required super.placeholderBounds});
-}
-
-final class ResolverExceptionResourceImagePlaceholder
-    extends ResourceImagePlaceholderResult {
-  const ResolverExceptionResourceImagePlaceholder({
+final class MissingDescriptorResourceAssetPlaceholder
+    extends ResourceAssetPlaceholderResult {
+  const MissingDescriptorResourceAssetPlaceholder({
     required super.placeholderBounds,
   });
 }
 
-final class BudgetExceededResourceImagePlaceholder
-    extends ResourceImagePlaceholderResult {
-  const BudgetExceededResourceImagePlaceholder({
+final class NoResolverResourceAssetPlaceholder
+    extends ResourceAssetPlaceholderResult {
+  const NoResolverResourceAssetPlaceholder({required super.placeholderBounds});
+}
+
+final class NullResourceAssetPlaceholder
+    extends ResourceAssetPlaceholderResult {
+  const NullResourceAssetPlaceholder({required super.placeholderBounds});
+}
+
+final class ResolverExceptionResourceAssetPlaceholder
+    extends ResourceAssetPlaceholderResult {
+  const ResolverExceptionResourceAssetPlaceholder({
+    required super.placeholderBounds,
+  });
+}
+
+final class BudgetExceededResourceAssetPlaceholder
+    extends ResourceAssetPlaceholderResult {
+  const BudgetExceededResourceAssetPlaceholder({
     required super.placeholderBounds,
   });
 }

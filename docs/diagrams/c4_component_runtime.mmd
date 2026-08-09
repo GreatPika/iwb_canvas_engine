@@ -23,7 +23,7 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(OverlayPreviewPlanner, "OverlayPreviewPlanner", "lib/src/frame/", "Immutable overlay primitive admission owner.")
   Component(SpatialKernel, "SpatialKernel", "lib/src/geometry/", "Hit testing, bounds, and spatial indexes derived from document state.")
   Component(ResourceKernel, "ResourceKernel", "lib/src/resources/", "Resource API, dirty resource ids, public resource visual state, and target/all resource release outcomes.")
-  Component(SurfaceResourceSession, "SurfaceResourceSession", "lib/src/resources/", "Surface-scoped resolver reference, resolverGeneration, ImageResolveCache, budget, same-frame suppression, and retained-output release callback.")
+  Component(SurfaceResourceSession, "SurfaceResourceSession", "lib/src/resources/", "Surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed asset resolution, budget, same-frame suppression, and retained-output release callback.")
   Component(CodecBoundary, "CodecBoundary", "lib/src/codec/", "Schema v1 JSON decode, encode, validation, and diagnostics.")
   Component(DiagnosticsHub, "DiagnosticsHub", "lib/src/diagnostics/", "Structured validation and runtime error projection.")
 }

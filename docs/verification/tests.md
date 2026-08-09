@@ -960,14 +960,13 @@ Current implemented proof:
 - proves markResourceDirty publishes state.revisions.resourceVisual without
   incrementing state.revisions.document, evicting public document projection,
   clearing selection, clearing preview, or emitting an action event.
-- proves markResourceDirty(resourceId) evicts the target ImageResolveCache
+- proves markResourceDirty(resourceId) evicts the target ResourceAssetCache
   entry in the active SurfaceResourceSession and the next session resolve uses
   dirty target again instead of reusing the previous resolved image.
 
 #### `test/resources/resource_image_cache_memory_accounting_test.dart`
-- proves `ImageResolveCache` enforces entry-cap LRU with a test-controlled
-  capacity and a decoded-byte budget using `ui.Image.width * ui.Image.height *
-  4`;
+- proves `ResourceAssetCache` enforces aggregate entry LRU with a
+  test-controlled capacity and the current image decoded-byte policy;
 - proves `currentSizeBytes` stays consistent across byte eviction, read
   promotion, same-key replacement, oversized replacement, target invalidation,
   and clear;
@@ -978,10 +977,10 @@ Current implemented proof:
 
 #### `test/resources/surface_session_cache_lifecycle_test.dart`
 - proves `SurfaceResourceSession` returns an oversized resolver result as
-  `ResolvedResourceImage` for the current resolve while the injected
-  small-budget `ImageResolveCache` does not retain it for a later hit;
+  `ResolvedResourceAsset` for the current resolve while the injected
+  small-budget `ResourceAssetCache` does not retain it for a later hit;
 - preserves existing proofs for target/all invalidation, document replacement
-  reset, default 1024-entry LRU behavior, dropped sessions, resolver budget
+  reset, default aggregate-entry LRU behavior, dropped sessions, resolver budget
   state, and same-frame null suppression.
 
 #### `test/resources/app_owned_image_not_disposed_test.dart`
@@ -994,7 +993,7 @@ Current implemented proof:
 
 #### `test/resources/mark_all_resources_dirty_test.dart`
 - proves markAllResourcesDirty() clears the active SurfaceResourceSession
-  ImageResolveCache while preserving document revision, public document
+  ResourceAssetCache while preserving document revision, public document
   projection, selection, preview, dirty repaint/effect delivery, and
   action-event behavior.
 

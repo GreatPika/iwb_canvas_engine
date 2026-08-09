@@ -39,7 +39,7 @@ void _testNestedResolverCallbackRejected() {
     );
 
     expect(
-      () => session.resolveImage(descriptorRequest(id: 'resource-a')),
+      () => session.resolveResource(descriptorRequest(id: 'resource-a')),
       _throwsResolverCallbackRejection,
     );
     expect(resolver.callCount, 1);
@@ -143,13 +143,13 @@ Future<void> _expectRejectedMutation(
   );
 
   expect(
-    () => session.resolveImage(descriptorRequest(id: 'resource-a')),
+    () => session.resolveResource(descriptorRequest(id: 'resource-a')),
     _throwsResolverCallbackRejection,
   );
   expect(resolver.callCount, 1);
   expect(
-    session.resolveImage(descriptorRequest(id: 'resource-a')),
-    isA<ResolvedResourceImage>(),
+    session.resolveResource(descriptorRequest(id: 'resource-a')),
+    isA<ResolvedResourceAsset>(),
   );
   expect(resolver.callCount, 2);
   expect(root.state.value.revisions.document, 0);
@@ -188,14 +188,14 @@ void _testResolverCallbackDisposeRejected() {
     );
 
     expect(
-      () => session.resolveImage(descriptorRequest(id: 'resource-a')),
+      () => session.resolveResource(descriptorRequest(id: 'resource-a')),
       _throwsResolverCallbackRejection,
     );
     expect(resolver.callCount, 1);
     _expectRuntimeUnchangedAfterResolverDisposeRejection(root);
     expect(
-      session.resolveImage(descriptorRequest(id: 'resource-a')),
-      isA<ResolvedResourceImage>(),
+      session.resolveResource(descriptorRequest(id: 'resource-a')),
+      isA<ResolvedResourceAsset>(),
     );
 
     image.dispose();

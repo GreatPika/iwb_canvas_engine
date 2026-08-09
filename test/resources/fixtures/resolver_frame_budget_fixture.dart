@@ -22,30 +22,30 @@ void _testResolverFrameBudget() {
         mutationGuard: CountingResolverMutationGuard(),
       );
 
-      session.resolveImage(descriptorRequest(id: 'cached'));
+      session.resolveResource(descriptorRequest(id: 'cached'));
       session.beginFrameResourcePass();
-      session.resolveImage(descriptorRequest(id: 'cached'));
+      session.resolveResource(descriptorRequest(id: 'cached'));
       for (var index = 0; index < 16; index += 1) {
-        session.resolveImage(missingRequest(id: 'missing-$index'));
+        session.resolveResource(missingRequest(id: 'missing-$index'));
       }
       expect(resolver.callCount, 1);
 
       for (var index = 0; index < 128; index += 1) {
         expect(
-          session.resolveImage(descriptorRequest(id: 'resource-$index')),
-          isA<ResolvedResourceImage>(),
+          session.resolveResource(descriptorRequest(id: 'resource-$index')),
+          isA<ResolvedResourceAsset>(),
         );
       }
       expect(resolver.callCount, 129);
 
       final throttledRequest = descriptorRequest(id: 'resource-128');
       expect(
-        session.resolveImage(throttledRequest),
-        isA<BudgetExceededResourceImagePlaceholder>(),
+        session.resolveResource(throttledRequest),
+        isA<BudgetExceededResourceAssetPlaceholder>(),
       );
       expect(
-        session.resolveImage(throttledRequest),
-        isA<BudgetExceededResourceImagePlaceholder>(),
+        session.resolveResource(throttledRequest),
+        isA<BudgetExceededResourceAssetPlaceholder>(),
       );
       expect(resolver.callCount, 129);
       expect(session.hasPendingBudgetFollowUpRepaint, isTrue);
@@ -53,8 +53,8 @@ void _testResolverFrameBudget() {
       session.beginFrameResourcePass();
       expect(session.hasPendingBudgetFollowUpRepaint, isFalse);
       expect(
-        session.resolveImage(throttledRequest),
-        isA<ResolvedResourceImage>(),
+        session.resolveResource(throttledRequest),
+        isA<ResolvedResourceAsset>(),
       );
       expect(resolver.callCount, 130);
 

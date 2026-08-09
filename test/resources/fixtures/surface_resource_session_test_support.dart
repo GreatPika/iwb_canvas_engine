@@ -40,7 +40,7 @@ int _allowRuntimeMutation() => 0;
 // The request fixture builder mirrors the public descriptor payload so tests can
 // vary one field without hiding the app-key resolver contract behind presets.
 // ignore: number-of-parameters
-ResourceImageResolveRequest descriptorRequest({
+ResourceAssetResolveRequest descriptorRequest({
   required String id,
   String appKey = 'asset-a',
   String? mimeType = 'image/png',
@@ -50,34 +50,40 @@ ResourceImageResolveRequest descriptorRequest({
   ui.Rect placeholderBounds = const ui.Rect.fromLTWH(1, 2, 3, 4),
   CanvasMetadata? metadata,
 }) {
-  return ResourceImageResolveRequest.descriptor(
-    resourceId: CanvasResourceId(id),
-    appKey: appKey,
-    mimeType: mimeType,
-    contentHash: contentHash,
-    byteLength: byteLength,
-    metadata: metadata ?? CanvasMetadata.fromMap({'role': id}),
+  return ResourceAssetResolveRequest.descriptor(
+    resource: CanvasImageResource(
+      id: CanvasResourceId(id),
+      source: CanvasResourceSource.appKey(appKey),
+      mimeType: mimeType,
+      contentHash: contentHash,
+      byteLength: byteLength,
+      metadata: metadata ?? CanvasMetadata.fromMap({'role': id}),
+    ),
     resourceRevision: resourceRevision,
     placeholderBounds: placeholderBounds,
   );
 }
 
-ResourceImageResolveRequest missingRequest({
+ResourceAssetResolveRequest missingRequest({
   required String id,
   int resourceRevision = 0,
   ui.Rect placeholderBounds = const ui.Rect.fromLTWH(5, 6, 7, 8),
 }) {
-  return ResourceImageResolveRequest.missingDescriptor(
+  return ResourceAssetResolveRequest.missingDescriptor(
     resourceId: CanvasResourceId(id),
     resourceRevision: resourceRevision,
     placeholderBounds: placeholderBounds,
   );
 }
 
-ui.Image resolvedImage(ResourceImageResolveResult result) {
-  final resolved = result as ResolvedResourceImage;
+ui.Image resolvedImage(ResourceAssetResolveResult result) {
+  final resolved = result as ResolvedResourceAsset;
+  final asset = resolved.asset;
+  if (asset is! ImageResourceAsset) {
+    throw StateError('Expected the current image resource asset.');
+  }
 
-  return resolved.image;
+  return asset.image;
 }
 
 Future<ui.Image> createResourceTestImage([int color = 0xff00aa00]) {

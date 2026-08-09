@@ -539,7 +539,7 @@ const _bridgeFixtures = [
   _OwnerDagFixture(
     sourceOwner: 'frame',
     targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/main_frame_asset_images.dart',
+    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
     directiveKind: 'import',
   ),
@@ -925,7 +925,7 @@ const _expectedAllowedOwnerEdges = [
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'frame',
     targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/main_frame_asset_images.dart',
+    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
   _ExpectedAllowedOwnerEdge(
@@ -1022,7 +1022,7 @@ const _expectedAllowedOwnerEdges = [
     sourceOwner: 'surface',
     targetOwner: 'frame',
     sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/main_frame_asset_images.dart',
+    targetPath: 'lib/src/frame/main_frame_asset_bindings.dart',
   ),
   _ExpectedAllowedOwnerEdge(
     sourceOwner: 'surface',

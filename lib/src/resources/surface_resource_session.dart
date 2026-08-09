@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/public/canvas_ids.dart';
@@ -37,17 +35,17 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
         _ignoreRetainedResourceRelease,
     RetainedResourcesRelease releaseAllRetainedResources =
         _ignoreRetainedResourcesRelease,
-    ImageResolveCache? cache,
+    ResourceAssetCache? cache,
   }) : _resolver = resolver,
        _mutationGuard = mutationGuard,
        _releaseRetainedResource = releaseRetainedResource,
        _releaseAllRetainedResources = releaseAllRetainedResources,
-       _cache = cache ?? ImageResolveCache();
+       _cache = cache ?? ResourceAssetCache();
 
   final ResolverMutationGuard _mutationGuard;
   final RetainedResourceRelease _releaseRetainedResource;
   final RetainedResourcesRelease _releaseAllRetainedResources;
-  final ImageResolveCache _cache;
+  final ResourceAssetCache _cache;
   final Set<_SuppressedResolveKey> _currentFrameNullResults = {};
   CanvasResourceResolver? _resolver;
   int _resolverGeneration = 0;
@@ -64,7 +62,9 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     _currentFrameNullResults.clear();
   }
 
-  ResourceImageResolveResult resolveImage(ResourceImageResolveRequest request) {
+  ResourceAssetResolveResult resolveResource(
+    ResourceAssetResolveRequest request,
+  ) {
     if (_isDropped) {
       return _noResolverPlaceholder(request);
     }
@@ -72,9 +72,9 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     if (missingDescriptor != null) {
       return missingDescriptor;
     }
-    final cachedImage = _cachedImageResult(request);
-    if (cachedImage != null) {
-      return cachedImage;
+    final cachedAsset = _cachedAssetResult(request);
+    if (cachedAsset != null) {
+      return cachedAsset;
     }
     final resolver = _resolver;
     if (resolver == null) {
@@ -92,59 +92,59 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     return _resolveThroughResolver(request, resolver);
   }
 
-  ResourceImageResolveResult? _missingDescriptorPlaceholder(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult? _missingDescriptorPlaceholder(
+    ResourceAssetResolveRequest request,
   ) {
     if (request.hasDescriptor) {
       return null;
     }
 
-    return MissingDescriptorResourceImagePlaceholder(
+    return MissingDescriptorResourceAssetPlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
   }
 
-  ResourceImageResolveResult? _cachedImageResult(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult? _cachedAssetResult(
+    ResourceAssetResolveRequest request,
   ) {
-    final cachedImage = _cache.read(
+    final cachedAsset = _cache.read(
       resolverGeneration: _resolverGeneration,
       resourceId: request.id,
       resourceRevision: request.resourceRevision,
     );
-    if (cachedImage == null) {
+    if (cachedAsset == null) {
       return null;
     }
 
-    return ResolvedResourceImage(
-      image: cachedImage,
+    return ResolvedResourceAsset(
+      asset: cachedAsset,
       placeholderBounds: request.placeholderBounds,
     );
   }
 
-  ResourceImageResolveResult _noResolverPlaceholder(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult _noResolverPlaceholder(
+    ResourceAssetResolveRequest request,
   ) {
-    return NoResolverResourceImagePlaceholder(
+    return NoResolverResourceAssetPlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
   }
 
-  ResourceImageResolveResult? _suppressedNullPlaceholder(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult? _suppressedNullPlaceholder(
+    ResourceAssetResolveRequest request,
   ) {
     final nullKey = _suppressionKey(request);
     if (!_currentFrameNullResults.contains(nullKey)) {
       return null;
     }
 
-    return NullResourceImagePlaceholder(
+    return NullResourceAssetPlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
   }
 
-  ResourceImageResolveResult? _budgetPlaceholder(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult? _budgetPlaceholder(
+    ResourceAssetResolveRequest request,
   ) {
     if (_resolverCallsThisFrame < kMaxSyncResourceResolverCallsPerFrame) {
       return null;
@@ -152,38 +152,38 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
 
     _hasPendingBudgetFollowUpRepaint = true;
 
-    return BudgetExceededResourceImagePlaceholder(
+    return BudgetExceededResourceAssetPlaceholder(
       placeholderBounds: request.placeholderBounds,
     );
   }
 
-  ResourceImageResolveResult _resolveThroughResolver(
-    ResourceImageResolveRequest request,
+  ResourceAssetResolveResult _resolveThroughResolver(
+    ResourceAssetResolveRequest request,
     CanvasResourceResolver resolver,
   ) {
     _resolverCallsThisFrame += 1;
-    final imageResource = request.imageResource;
-    if (imageResource == null) {
-      throw StateError('Descriptor-backed resource request has no image.');
+    final resource = request.resource;
+    if (resource == null) {
+      throw StateError('Descriptor-backed resource request has no resource.');
     }
-    final ui.Image? image;
+    final ResourceAsset? asset;
     try {
-      image = _mutationGuard.runResolverCallback(
-        () => resolver.resolveImage(imageResource),
+      asset = _mutationGuard.runResolverCallback(
+        () => _resolveAsset(resource, resolver),
       );
     } on Object catch (error) {
       if (error is ResolverCallbackRejection) {
         rethrow;
       }
 
-      return ResolverExceptionResourceImagePlaceholder(
+      return ResolverExceptionResourceAssetPlaceholder(
         placeholderBounds: request.placeholderBounds,
       );
     }
-    if (image == null) {
+    if (asset == null) {
       _currentFrameNullResults.add(_suppressionKey(request));
 
-      return NullResourceImagePlaceholder(
+      return NullResourceAssetPlaceholder(
         placeholderBounds: request.placeholderBounds,
       );
     }
@@ -192,11 +192,11 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
       resolverGeneration: _resolverGeneration,
       resourceId: request.id,
       resourceRevision: request.resourceRevision,
-      image: image,
+      asset: asset,
     );
 
-    return ResolvedResourceImage(
-      image: image,
+    return ResolvedResourceAsset(
+      asset: asset,
       placeholderBounds: request.placeholderBounds,
     );
   }
@@ -257,7 +257,25 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     drop();
   }
 
-  _SuppressedResolveKey _suppressionKey(ResourceImageResolveRequest request) {
+  ResourceAsset? _resolveAsset(
+    CanvasResource resource,
+    CanvasResourceResolver resolver,
+  ) {
+    return switch (resource) {
+      final CanvasImageResource image => _resolveImageAsset(image, resolver),
+    };
+  }
+
+  ResourceAsset? _resolveImageAsset(
+    CanvasImageResource resource,
+    CanvasResourceResolver resolver,
+  ) {
+    final image = resolver.resolveImage(resource);
+
+    return image == null ? null : ImageResourceAsset(image);
+  }
+
+  _SuppressedResolveKey _suppressionKey(ResourceAssetResolveRequest request) {
     return (
       resolverGeneration: _resolverGeneration,
       resourceId: request.id,

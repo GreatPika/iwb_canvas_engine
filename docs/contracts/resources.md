@@ -65,7 +65,7 @@ disposed, or a post-acceptance resource-session release/reset target fails and
 must not be reused.
 Each active `CanvasSurface` creates one concrete `SurfaceResourceSession`
 instance under `lib/src/resources/**` for synchronous resolver lifecycle and
-resolved-image cache/suppression state. CanvasSurface wires the session to the
+resolved-resource asset cache/suppression state. CanvasSurface wires the session to the
 runtime lifecycle port after successful attach and supplies the narrow callback
 that releases matching retained main-output bindings.
 
@@ -83,7 +83,7 @@ Runtime resource orchestration:
 SurfaceResourceSession:
   CanvasResourceResolver?;
   resolverGeneration;
-  ImageResolveCache;
+  ResourceAssetCache;
   per-frame resolver-call budget;
   same-frame null-result suppression;
   budget-exceeded follow-up throttle.
@@ -114,10 +114,11 @@ build records, but it does not receive descriptor snapshots or resolver/session
 APIs. In the target frame split, `PaintAssetBindingService` is the only frame
 collaborator that receives `SurfaceResourceSession`; after ordinary and
 supplement records are known, it reads descriptor facts through
-`FrameFactsPort`, performs descriptor-to-asset binding, and produces resolved
-paint assets or placeholders for painter inputs. This keeps descriptor binding
-and resolver access out of capture, ordinary planning, painters, and app
-resolver ownership.
+`FrameFactsPort`, creates a `ResourceAssetResolveRequest`, and produces a
+`ResourceAssetResolveResult` for each immutable `FrameAssetBindings` entry.
+The painter receives only those immutable resource-asset results and selects the
+current image asset for image records. This keeps descriptor binding and resolver
+access out of capture, ordinary planning, painters, and app resolver ownership.
 The binding service calls `beginFrameResourcePass()` before resolving any image
 for a main paint frame. That call resets the session-owned per-frame resolver
 budget, clears same-frame null-result suppression for the new frame, and clears
@@ -133,29 +134,24 @@ surface receives a different `resourceResolver`, the session increments
 `resolverGeneration` and releases stale session/output borrows before the next
 resolve.
 
-### 7.1.1 Image resolve cache policy
+### 7.1.1 Resource asset cache lifecycle
 
-`ImageResolveCache` is `SurfaceResourceSession` policy owned by the resources
+`ResourceAssetCache` is `SurfaceResourceSession` policy owned by the resources
 module, not a frame/spatial cache prerequisite and not runtime-wide resource
-state. Frame rendering consumes the session boundary; resource owns the session
-primitive and cache policy, while surface wires the instance lifecycle to
-`CanvasSurface`.
+state. The cache holds typed `ResourceAsset` values behind the internal
+generation/resource/revision identity; the cache-policy ledger is the sole
+owner of its numeric limits, byte accounting, and eviction detail. Frame
+rendering consumes only the session boundary, while surface wires the instance
+lifecycle to `CanvasSurface`.
 
-| Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
-|---|---|---|---|---:|---|---|---|
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all release, detach/dispose/runtime swap | 1024 entries and 64 MiB decoded bytes per active session | target/all release, generation reset, oversized no-retention, then entry/byte LRU | `length`, `currentSizeBytes`, resolver-call budget, and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
-
-The public dirty-resource revision is a repaint observation signal only. Cache
-identity is the table key above; dirty-resource calls release matching target
-entries or all entries in the active session explicitly. If no surface is
-attached, there is no session cache or retained output to release and the next
-attach starts empty.
-Resolved-image cache byte pressure is cache-local derived state from decoded
-`ui.Image` dimensions, `image.width * image.height * 4`; descriptor
+The public dirty-resource revision is a repaint observation signal only.
+Dirty-resource calls release matching target entries or all entries in the
+active session explicitly. If no surface is attached, there is no session cache
+or retained output to release and the next attach starts empty. The current
+image asset reports decoded image byte weight; descriptor
 `CanvasResource.byteLength` remains descriptor/source metadata and is not cache
-memory truth. A single resolved image whose decoded estimate exceeds the active
-session byte budget is returned for the current resolve result but is not
-retained for a later cache hit. Entry eviction and byte eviction remove cache
+memory truth. An asset refused by cache admission remains valid for its current
+resolve result but is not retained for a later cache hit. Eviction removes cache
 references only. Target/all release, resolver replacement, document replacement,
 drop, and dispose synchronously remove matching cache/suppression borrows and
 the matching retained main-output borrow; they never call the resolver or
@@ -255,7 +251,7 @@ publication still completes and there is no release work to perform.
   identity from `CanvasAppKeyResourceSource.key` through the public barrel only;
 - resource mutation remains inside CanvasEdit;
 - resolver calls are synchronous and app-owned;
-- resolver calls are bounded by internal `kMaxSyncResourceResolverCallsPerFrame = 128`;
+- resolver calls are bounded by the internal per-frame resolver-call guard;
 - reentrant public runtime mutation from inside the resolver throws `StateError`;
 - no engine IO;
 - no asset-bundle loading;
@@ -282,10 +278,10 @@ Resolver exception placeholders:
 ```text
 SurfaceResourceSession catches ordinary synchronous app resolver failures,
 including ordinary StateError failures, and returns a bounded
-resolver-exception placeholder for only the affected image resource;
+resolver-exception placeholder for only the affected resource;
 runtime resolver guard rejections remain fail-fast StateError failures and are
 not converted to placeholders;
-resolver-exception placeholders are not written to ImageResolveCache;
+resolver-exception placeholders are not written to ResourceAssetCache;
 resolver-exception placeholders are not added to same-frame null-result
 suppression;
 resolver-exception attempts consume the per-frame resolver-call budget;
@@ -306,7 +302,6 @@ not change document, selection, preview, cache, repaint, or action state.
 Resolver frame budget:
 
 ```text
-kMaxSyncResourceResolverCallsPerFrame = 128;
 the counter resets for each main paint frame;
 cache hits and missing descriptors do not consume the resolver-call budget;
 after the budget is exhausted, SurfaceResourceSession returns a bounded placeholder;
@@ -314,7 +309,7 @@ SurfaceResourceSession owns the budget-exceeded follow-up throttle;
 budget-exceeded results may schedule at most one pending throttled follow-up repaint;
 the pending follow-up repaint flag is cleared by the next main frame resource pass;
 painters and app resolvers must not schedule budget-exceeded follow-up repaints;
-budget-exceeded results are not cached as null, missing, or resolved images.
+budget-exceeded results are not cached as null, missing, or resolved assets.
 null resolver results are suppressed only within the same frame and
 resolverGeneration + resourceId + resourceRevision identity. Missing
 descriptors and absent resolvers return bounded placeholders without resolver

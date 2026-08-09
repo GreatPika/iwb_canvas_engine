@@ -31,8 +31,8 @@ void _testMarkAllDirtyActiveSessionInvalidation() {
     final subscription = root.actions.listen(actions.add);
     root.attachResourceSessionReleaseSink(session);
 
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
-    session.resolveImage(descriptorRequest(id: 'resource-b'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-b'));
     expect(resolver.callCount, 2);
 
     root.resources.markAllResourcesDirty();
@@ -45,8 +45,8 @@ void _testMarkAllDirtyActiveSessionInvalidation() {
     expect(root.state.value.revisions.interaction, 0);
     expect(root.state.value.revisions.epoch, 0);
 
-    session.resolveImage(descriptorRequest(id: 'resource-a'));
-    session.resolveImage(descriptorRequest(id: 'resource-b'));
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    session.resolveResource(descriptorRequest(id: 'resource-b'));
     expect(resolver.callCount, 4);
     await Future<void>.delayed(Duration.zero);
     expect(actions, isEmpty);

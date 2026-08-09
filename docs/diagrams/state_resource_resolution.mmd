@@ -6,7 +6,7 @@ stateDiagram-v2
   note right of NoSurface
     Resource descriptors remain committed document input.
     Runtime resource orchestration can publish dirty-resource
-    repaint state, but there is no image session cache to retain.
+    repaint state, but there is no resource-asset session cache to retain.
   end note
 
   NoSurface --> ActiveSession: successful CanvasSurface attach / create SurfaceResourceSession
@@ -24,13 +24,14 @@ stateDiagram-v2
   state "Active SurfaceResourceSession" as ActiveSession
   note right of ActiveSession
     SurfaceResourceSession owns the surface resolver reference,
-    resolverGeneration, ImageResolveCache, per-frame resolver budget,
+    resolverGeneration, ResourceAssetCache, typed resource-asset resolution,
+    per-frame resolver budget,
     same-frame null-result suppression, and budget follow-up throttle.
     Missing descriptors and absent resolvers return bounded placeholders.
     There is no file, network, remote, or asset-bundle IO.
   end note
 
-  ActiveSession --> ResolveRequested: main paint image record carries resourceId
+  ActiveSession --> ResolveRequested: main paint record carries resourceId
   ActiveSession --> ActiveSession: rejected second surface attach / existing session remains alive
   ActiveSession --> ResolverReplaced: active surface receives different resourceResolver
   ActiveSession --> DescriptorMutation: CanvasEdit or loadDocumentFromJson success mutates descriptors
@@ -64,25 +65,24 @@ stateDiagram-v2
     and descriptor CanvasMetadata.
   end note
 
-  AppKeyDescriptor --> CacheLookup: lookup ImageResolveCache
+  AppKeyDescriptor --> CacheLookup: lookup ResourceAssetCache
 
   state "Cache lookup" as CacheLookup
   note right of CacheLookup
-    ImageResolveCache identity is keyed strictly by
+    ResourceAssetCache identity is keyed strictly by
     resolverGeneration + resourceId + resourceRevision.
-    Byte admission is derived from decoded ui.Image
-    dimensions, width * height * 4; descriptor byteLength
+    Current image byte admission is policy-owned; descriptor byteLength
     remains descriptor metadata, not cache pressure truth.
     Dirty-resource operations explicitly invalidate affected
     entries or clear all entries in the active session.
   end note
 
-  CacheLookup --> CachedResolved: cache hit with ui.Image
+  CacheLookup --> CachedResolved: cache hit with typed asset
   CacheLookup --> SameFrameSuppressed: same-frame null result already seen
   CacheLookup --> CacheMiss: cache miss
 
   state "Cached resolved result" as CachedResolved
-  CachedResolved --> ResolvedVisual: use app-owned image reference
+  CachedResolved --> ResolvedVisual: use app-owned asset reference
 
   state "Same-frame suppressed result" as SameFrameSuppressed
   SameFrameSuppressed --> PlaceholderResult: use bounded placeholder
@@ -92,13 +92,13 @@ stateDiagram-v2
 
   state "Resolver budget gate" as ResolverBudgetGate
   note right of ResolverBudgetGate
-    kMaxSyncResourceResolverCallsPerFrame = 128.
-    Budget-exceeded results paint placeholders and may schedule at most one
+    The fixed per-frame guard limits resolver callbacks. Budget-exceeded
+    results paint placeholders and may schedule at most one
     pending throttled follow-up repaint. The session owns
     that throttle and clears the pending flag on the next
     main frame resource pass. Painters and app resolvers must not
     schedule budget-exceeded follow-up repaints. Budget-exceeded
-    results are not cached as null, missing, or resolved images.
+    results are not cached as null, missing, or resolved assets.
   end note
 
   ResolverBudgetGate --> BudgetExceededPlaceholder: budget exhausted
@@ -109,7 +109,7 @@ stateDiagram-v2
 
   state "Synchronous app resolver call" as SyncResolverCall
   note right of SyncResolverCall
-    The session is the only image resolution boundary in paint.
+    The session is the only resource-asset resolution boundary in paint.
     Resolver calls are synchronous, app-owned, and must not mutate runtime,
     Store, SelectionKernel, CanvasDocument, descriptors, or preview.
   end note
@@ -143,11 +143,11 @@ stateDiagram-v2
   SameFrameNullSuppression --> PlaceholderResult: return bounded placeholder
 
   state "Resolved resolver result" as ResolvedResult
-  ResolvedResult --> CacheResolvedResult: estimate decoded bytes and admit by key
+  ResolvedResult --> CacheResolvedResult: derive current asset weight and admit by key
   state "Oversized resolved result" as OversizedResolvedResult
-  CacheResolvedResult --> OversizedResolvedResult: single image exceeds 64 MiB
+  CacheResolvedResult --> OversizedResolvedResult: current asset exceeds policy admission
   CacheResolvedResult --> ResolvedVisual: return resolved visual
-  OversizedResolvedResult --> ResolvedVisual: return current image without retention
+  OversizedResolvedResult --> ResolvedVisual: return current asset without retention
 
   state "Resolved visual" as ResolvedVisual
   note right of ResolvedVisual
@@ -158,7 +158,7 @@ stateDiagram-v2
 
   state "Placeholder fallback" as PlaceholderResult
   note right of PlaceholderResult
-    Missing descriptors, resolver exceptions, and unresolved/null images paint a
+    Missing descriptors, resolver exceptions, and unresolved/null results paint a
     bounded placeholder. They do not trigger full-document
     repaint loops. Null results suppress only same-frame retries;
     resolver exceptions remain retryable on later frames.
