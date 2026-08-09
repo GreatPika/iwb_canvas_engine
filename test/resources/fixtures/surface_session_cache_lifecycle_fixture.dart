@@ -267,7 +267,7 @@ void _testVectorLifecycleReleasesSessionAndRetainedBorrows() {
       final session = SurfaceResourceSession(
         resolver: resolver,
         mutationGuard: CountingResolverMutationGuard(),
-        releaseRetainedResource: releasedTargets.add,
+        releaseRetainedResources: releasedTargets.addAll,
         releaseAllRetainedResources: () {
           releasedAllCount += 1;
         },

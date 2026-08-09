@@ -124,10 +124,10 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       session = SurfaceResourceSession(
         resolver: widget.resourceResolver,
         mutationGuard: port.resolverMutationGuard,
-        releaseRetainedResource: (id) {
+        releaseRetainedResources: (ids) {
           final currentSession = session;
           if (currentSession != null) {
-            _releaseRetainedResource(currentSession, id);
+            _releaseRetainedResources(currentSession, ids);
           }
         },
         releaseAllRetainedResources: () {
@@ -150,14 +150,14 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     port.surfaceFrame.addListener(_handleSurfaceFrame);
   }
 
-  void _releaseRetainedResource(
+  void _releaseRetainedResources(
     SurfaceResourceSession session,
-    CanvasResourceId id,
+    Set<CanvasResourceId> ids,
   ) {
     if (!identical(_activeSession, session)) {
       return;
     }
-    _outputCache.releaseResource(id);
+    _outputCache.releaseResources(ids);
   }
 
   void _releaseAllRetainedResources(SurfaceResourceSession session) {

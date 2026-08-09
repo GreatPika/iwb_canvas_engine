@@ -77,17 +77,20 @@ final class LayerFrameOutputCache {
     );
   }
 
-  void releaseResource(CanvasResourceId id) {
+  void releaseResources(Set<CanvasResourceId> ids) {
+    if (ids.isEmpty) {
+      return;
+    }
     _inner.transformMainOutput(
       (output) =>
-          output.withAssetBindings(output.assetBindings.withoutResource(id)),
+          output.withAssetBindings(output.assetBindings.withoutResources(ids)),
     );
   }
 
   void releaseAllResources() {
     _inner.transformMainOutput(
       (output) =>
-          output.withAssetBindings(output.assetBindings.withoutResources()),
+          output.withAssetBindings(output.assetBindings.withoutAllResources()),
     );
   }
 

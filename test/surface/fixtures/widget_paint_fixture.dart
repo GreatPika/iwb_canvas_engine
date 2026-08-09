@@ -15,6 +15,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
 import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
+import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
@@ -55,6 +56,14 @@ void main() {
     'CanvasSurface releases retained target bindings before dirty publication',
     (tester) async {
       await _expectTargetReleasePrecedesDirtyPublication(tester);
+      expect(_paintHosts(), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CanvasSurface batch target release publishes one retained main output',
+    (tester) async {
+      await _expectBatchTargetReleasePublishesOnce(tester);
       expect(_paintHosts(), findsOneWidget);
     },
   );
@@ -299,6 +308,88 @@ Future<void> _expectTargetReleasePrecedesDirtyPublication(
   expect(secondImage.debugDisposed, isFalse);
   firstImage.dispose();
   secondImage.dispose();
+}
+
+// Reverting batch delivery to one target release per id must fail this witness:
+// the retained main output would publish once per removed binding. The cache,
+// retained output, unrelated binding, and overlay are one release boundary.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectBatchTargetReleasePublishesOnce(WidgetTester tester) async {
+  final firstImage = await _createImage();
+  final secondImage = await _createImage();
+  final thirdImage = await _createImage();
+  final runtime = runtimeWithDocument(_threeImageDocument());
+  final resolver = _RecordingResolver(
+    (resource) => switch (resource.id.value) {
+      'resource-a' => firstImage,
+      'resource-b' => secondImage,
+      _ => thirdImage,
+    },
+  );
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+
+  final session = _activeSurfaceSession(runtime);
+  final cacheResourceRevision = _rootFor(
+    runtime,
+  ).frameRevisions.resourceRevision;
+  final overlayBeforeRelease = _overlayPainter(tester).output;
+  final probe = _LayerDispatchProbe(tester);
+  addTearDown(probe.dispose);
+  var statePublications = 0;
+  runtime.state.addListener(() {
+    statePublications += 1;
+    _expectRetainedImages(tester, {'resource-c'});
+    expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
+  });
+
+  final changed = runtime.edits.edit((edit) {
+    edit.upsertResource(
+      _imageResource(id: 'resource-a', appKey: 'updated-image-a'),
+    );
+
+    return edit.upsertResource(
+      _imageResource(id: 'resource-b', appKey: 'updated-image-b'),
+    );
+  });
+
+  expect(changed, isTrue);
+  expect(probe.mainDispatches, 1);
+  expect(probe.overlayDispatches, 0);
+  expect(statePublications, 1);
+  _expectRetainedImages(tester, {'resource-c'});
+  expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
+
+  final resolverCallsBeforeCacheCheck = resolver.calls;
+  session.resolveResource(
+    _imageAssetRequest('resource-a', resourceRevision: cacheResourceRevision),
+  );
+  session.resolveResource(
+    _imageAssetRequest('resource-b', resourceRevision: cacheResourceRevision),
+  );
+  session.resolveResource(
+    _imageAssetRequest('resource-c', resourceRevision: cacheResourceRevision),
+  );
+  expect(resolver.calls, resolverCallsBeforeCacheCheck + 2);
+
+  firstImage.dispose();
+  secondImage.dispose();
+  thirdImage.dispose();
+}
+
+ResourceAssetResolveRequest _imageAssetRequest(
+  String id, {
+  required int resourceRevision,
+}) {
+  return ResourceAssetResolveRequest.descriptor(
+    resource: CanvasImageResource(
+      id: CanvasResourceId(id),
+      source: CanvasResourceSource.appKey(id),
+    ),
+    resourceRevision: resourceRevision,
+    placeholderBounds: Rect.zero,
+  );
 }
 
 // Removing any active all-release callback leaves the retained main output
@@ -1678,12 +1769,7 @@ CanvasDocument _twoImageDocument() {
   return CanvasDocument(
     resources: [
       _imageResource(),
-      CanvasImageResource(
-        id: CanvasResourceId('resource-b'),
-        source: CanvasResourceSource.appKey('image-b'),
-        mimeType: 'image/png',
-        byteLength: 24,
-      ),
+      _imageResource(id: 'resource-b', appKey: 'image-b'),
     ],
     layers: [
       CanvasLayer(
@@ -1699,6 +1785,40 @@ CanvasDocument _twoImageDocument() {
             resourceId: CanvasResourceId('resource-b'),
             size: const Size(10, 10),
             transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _threeImageDocument() {
+  return CanvasDocument(
+    resources: [
+      _imageResource(),
+      _imageResource(id: 'resource-b', appKey: 'image-b'),
+      _imageResource(id: 'resource-c', appKey: 'image-c'),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-a'),
+            resourceId: CanvasResourceId('resource-a'),
+            size: const Size(10, 10),
+          ),
+          CanvasImageElement(
+            id: CanvasElementId('image-b'),
+            resourceId: CanvasResourceId('resource-b'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
+          CanvasImageElement(
+            id: CanvasElementId('image-c'),
+            resourceId: CanvasResourceId('resource-c'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(40, 0)),
           ),
         ],
       ),
@@ -1778,10 +1898,13 @@ CanvasDocument _manyImageDocument(int count) {
   );
 }
 
-CanvasImageResource _imageResource() {
+CanvasImageResource _imageResource({
+  String id = 'resource-a',
+  String appKey = 'image-a',
+}) {
   return CanvasImageResource(
-    id: CanvasResourceId('resource-a'),
-    source: CanvasResourceSource.appKey('image-a'),
+    id: CanvasResourceId(id),
+    source: CanvasResourceSource.appKey(appKey),
     mimeType: 'image/png',
     byteLength: 24,
   );

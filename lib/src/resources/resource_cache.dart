@@ -82,8 +82,15 @@ final class ResourceAssetCache {
   }
 
   void invalidateResource(CanvasResourceId id) {
+    invalidateResources({id});
+  }
+
+  void invalidateResources(Set<CanvasResourceId> ids) {
+    if (ids.isEmpty) {
+      return;
+    }
     _entries.removeWhere((key, entry) {
-      if (key.resourceId != id) {
+      if (!ids.contains(key.resourceId)) {
         return false;
       }
       _currentSizeBytes -= entry.estimatedBytes;

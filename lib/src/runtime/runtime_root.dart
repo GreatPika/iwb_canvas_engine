@@ -1938,9 +1938,7 @@ final class RuntimeRoot
 
         return;
       }
-      for (final id in outcome.dirtyResourceIds) {
-        sink.releaseResource(id);
-      }
+      sink.releaseResources(outcome.dirtyResourceIds);
     } on Object {
       _dropFailedResourceReleaseTarget(sink);
     }
@@ -2005,8 +2003,8 @@ final class RuntimeRoot
           sink?.releaseAllResources();
           continue;
         }
-        for (final id in touchedSet.resourceIds) {
-          sink?.releaseResource(id);
+        if (touchedSet.resourceIds.isNotEmpty) {
+          sink?.releaseResources(touchedSet.resourceIds);
         }
       }
     } on Object {

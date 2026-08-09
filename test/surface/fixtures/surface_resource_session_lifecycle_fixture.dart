@@ -579,6 +579,11 @@ final class _RecordingLifecycleSession
   }
 
   @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    releasedIds.addAll(ids);
+  }
+
+  @override
   void releaseAllResources() {
     releaseAllCount += 1;
   }

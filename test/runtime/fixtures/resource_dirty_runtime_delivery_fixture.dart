@@ -173,7 +173,11 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
     resolver: RecordingResourceResolver((_) => image),
     mutationGuard: root,
     cache: cache,
-    releaseRetainedResource: (id) => retainedOutput.release(id.value),
+    releaseRetainedResources: (ids) {
+      for (final id in ids) {
+        retainedOutput.release(id.value);
+      }
+    },
     releaseAllRetainedResources: retainedOutput.releaseAll,
   );
   root.attachResourceSessionReleaseSink(session);
@@ -529,6 +533,11 @@ final class _RecordingResourceSessionReleaseSink
   }
 
   @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    releasedIds.addAll(ids);
+  }
+
+  @override
   void releaseAllResources() {
     releaseAllCount += 1;
   }
@@ -542,6 +551,11 @@ final class _ThrowingResourceSessionReleaseSink
     implements ResourceSessionReleaseSink {
   @override
   void releaseResource(CanvasResourceId id) {
+    throw StateError('resource release failed');
+  }
+
+  @override
+  void releaseResources(Set<CanvasResourceId> ids) {
     throw StateError('resource release failed');
   }
 

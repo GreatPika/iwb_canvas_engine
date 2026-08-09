@@ -503,6 +503,11 @@ final class _RecordingLifecycleSession
   }
 
   @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    releasedIds.addAll(ids);
+  }
+
+  @override
   void releaseAllResources() {
     releaseAllCount += 1;
   }
@@ -527,6 +532,11 @@ final class _ThrowingResetLifecycleSession
   @override
   void releaseResource(CanvasResourceId id) {
     targetReleaseCount += 1;
+  }
+
+  @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    targetReleaseCount += ids.length;
   }
 
   @override

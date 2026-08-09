@@ -12,10 +12,10 @@ typedef _SuppressedResolveKey = ({
   int resourceRevision,
 });
 
-typedef RetainedResourceRelease = void Function(CanvasResourceId id);
+typedef RetainedResourceBatchRelease = void Function(Set<CanvasResourceId> ids);
 typedef RetainedResourcesRelease = void Function();
 
-void _ignoreRetainedResourceRelease(CanvasResourceId _) {
+void _ignoreRetainedResourceBatchRelease(Set<CanvasResourceId> _) {
   return;
 }
 
@@ -32,19 +32,19 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   SurfaceResourceSession({
     required CanvasResourceResolver? resolver,
     required ResolverMutationGuard mutationGuard,
-    RetainedResourceRelease releaseRetainedResource =
-        _ignoreRetainedResourceRelease,
+    RetainedResourceBatchRelease releaseRetainedResources =
+        _ignoreRetainedResourceBatchRelease,
     RetainedResourcesRelease releaseAllRetainedResources =
         _ignoreRetainedResourcesRelease,
     ResourceAssetCache? cache,
   }) : _resolver = resolver,
        _mutationGuard = mutationGuard,
-       _releaseRetainedResource = releaseRetainedResource,
+       _releaseRetainedResources = releaseRetainedResources,
        _releaseAllRetainedResources = releaseAllRetainedResources,
        _cache = cache ?? ResourceAssetCache();
 
   final ResolverMutationGuard _mutationGuard;
-  final RetainedResourceRelease _releaseRetainedResource;
+  final RetainedResourceBatchRelease _releaseRetainedResources;
   final RetainedResourcesRelease _releaseAllRetainedResources;
   final ResourceAssetCache _cache;
   final Set<_SuppressedResolveKey> _currentFrameNullResults = {};
@@ -221,9 +221,17 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
 
   @override
   void releaseResource(CanvasResourceId id) {
-    _cache.invalidateResource(id);
-    _currentFrameNullResults.removeWhere((key) => key.resourceId == id);
-    _releaseRetainedResource(id);
+    releaseResources({id});
+  }
+
+  @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    if (ids.isEmpty) {
+      return;
+    }
+    _cache.invalidateResources(ids);
+    _currentFrameNullResults.removeWhere((key) => ids.contains(key.resourceId));
+    _releaseRetainedResources(ids);
   }
 
   @override

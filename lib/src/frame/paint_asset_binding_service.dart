@@ -17,20 +17,28 @@ final class FrameAssetBindings {
 
   final Map<CanvasResourceId, FrameAssetBinding> assets;
 
-  FrameAssetBindings withoutResource(CanvasResourceId id) {
-    if (!assets.containsKey(id)) {
+  FrameAssetBindings withoutResources(Set<CanvasResourceId> ids) {
+    if (ids.isEmpty) {
       return this;
     }
 
-    return FrameAssetBindings(
-      assets: {
-        for (final entry in assets.entries)
-          if (entry.key != id) entry.key: entry.value,
-      },
-    );
+    final remainingAssets = <CanvasResourceId, FrameAssetBinding>{};
+    var didRemoveAsset = false;
+    for (final entry in assets.entries) {
+      if (ids.contains(entry.key)) {
+        didRemoveAsset = true;
+        continue;
+      }
+      remainingAssets[entry.key] = entry.value;
+    }
+    if (!didRemoveAsset) {
+      return this;
+    }
+
+    return FrameAssetBindings(assets: remainingAssets);
   }
 
-  FrameAssetBindings withoutResources() {
+  FrameAssetBindings withoutAllResources() {
     if (assets.isEmpty) {
       return this;
     }
