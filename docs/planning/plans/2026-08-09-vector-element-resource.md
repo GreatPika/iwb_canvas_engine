@@ -140,7 +140,7 @@ Bounded Recognition Scope: No new analyzer, schema validator architecture, gener
 
 ## Execution Units
 
-### [ ] Unit 1: Close generic resource release semantics and graph ownership
+### [x] Unit 1: Close generic resource release semantics and graph ownership
 
 Owner: Release-specific resource and operation contracts, runtime-ownership documentation, semantic diagrams, the existing runtime-to-session graph edge, and their generated projections.
 Boundary: Start from the current generic non-fallible target/all release implementation and close its still-stale current source owners without adding vector resolution, changing image resolver/cache policy, or reopening application ownership and accepted-publication behavior.
@@ -158,7 +158,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Add the bounded public vector preparation boundary
+### [x] Unit 2: Add the bounded public vector preparation boundary
 
 Owner: Public contracts own `CanvasDataErrorCode.invalidVectorData`, the prepared-result/default-identity contract, and the exact helper signature; the API preparation adapter owns `vg.loadPicture`, byte/context admission, failure projection, intrinsic validation, private Picture access, and cleanup; current public API, validation, preparation, dependency-boundary, registry, architecture, and generated-projection owners record that boundary in the same unit.
 Boundary: Add preparation and prepared-result lifecycle and close every semantic or structured owner affected by that public boundary without yet admitting a vector document family, `resourceKindMismatch`, or frame resolver branch; third-party types and raw Picture remain private, and generated projections remain non-authoritative.
@@ -181,7 +181,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 3: Make current resource facts and relationships kind-aware
+### [x] Unit 3: Make current resource facts and relationships kind-aware
 
 Owner: Public resource descriptors, store final-candidate relationships, codec-local descriptor admission, immutable frame resource facts, and the affected schema/resource/frame/data-model/architecture owners, diagrams, graph relationships, and generated projections.
 Boundary: Preserve the current image-only public API, Schema v1 wire form, store behavior, and frame output while replacing nullable MIME and id-membership inference with an explicit kind-aware owner and closing its current source owners; no vector public family or wire branch is introduced in this unit.
@@ -197,7 +197,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 4: Generalize the current resolved-asset pipeline
+### [x] Unit 4: Generalize the current resolved-asset pipeline
 
 Owner: Resource request/result/cache/session owners, immutable frame binding/output owners, existing image lifecycle consumers, and the affected resource/cache/frame/architecture contracts, diagrams, graph relationships, and generated projections.
 Boundary: Preserve all current image resolution, cache, placeholder, binding, output, and application-ownership behavior while making the existing path family-neutral and aggregate-ready and closing its current source owners; no public vector resolver branch is introduced in this unit.
@@ -216,7 +216,7 @@ Depends On:
 - Unit 1 — produces: generic non-fallible target/all session-output release; consumed as: the sole lifecycle seam for the generalized asset path.
 - Unit 3 — produces: explicit current descriptor kind and kind-aware immutable facts; consumed as: typed request, cache, binding, and output discrimination without MIME inference.
 
-### [ ] Unit 5: Admit the vector family through every runtime owner
+### [x] Unit 5: Admit the vector family through every runtime owner
 
 Owner: Public model, store, codec, edit/load, resource session, frame, geometry, interaction, their atomic seam consumers, and every affected public/schema/codec/operation/resource/cache/frame/geometry/interaction/architecture contract, registry, diagram, graph relationship, proof registration, and generated projection.
 Boundary: Add the sealed public vector element/resource variants only together with every remaining production exhaustive branch, resolver implementation, binding, fake, test double, public export-registry entry, and current semantic or structured owner required for a compiling and mechanically consistent repository. Extend the existing interaction/render mirrors with vector only as the design-required temporary migration state; Units 6 and 7 retire them after direct vector outcomes pass.
@@ -254,7 +254,7 @@ Depends On:
 - Unit 3 — produces: explicit descriptor kind, shared relationship admission, and kind-aware immutable facts; consumed as: the second descriptor kind, exact mismatch classification, and vector frame facts.
 - Unit 4 — produces: one family-neutral request/result/cache/binding/output path with preserved image policy; consumed as: vector resolution, aggregate cache admission, immutable binding, and retained-output lifecycle without a parallel pipeline.
 
-### [ ] Unit 6: Retire the duplicate interaction family discriminator after vector admission
+### [x] Unit 6: Retire the duplicate interaction family discriminator after vector admission
 
 Owner: Interaction read facts, request guards, runtime interaction adapters, their stable behavioral fixtures, and the affected interaction/runtime-ownership contracts, diagrams, graph relationships, proof registrations, and generated projections.
 Boundary: Preserve image/path/text/stroke/line/rect/vector context targeting, background exclusion, and text-commit behavior while making the already-carried `CanvasElementKind` the sole semantic discriminator and closing every current owner of that retirement in the same unit.
@@ -272,7 +272,7 @@ Depends On:
 
 - Unit 5 — produces: passing image/path/text/stroke/line/rect/vector context reconstruction and text-only rejection through the temporary complete mirror; consumed as: the retirement gate required by the accepted sequence.
 
-### [ ] Unit 7: Retire the duplicate frame family discriminator after vector admission
+### [x] Unit 7: Retire the duplicate frame family discriminator after vector admission
 
 Owner: Frame immutable-record, selected-move supplement, painter, selection-decoration owners, and the affected frame/runtime-ownership contracts, diagrams, graph relationships, proof registrations, and generated projections.
 Boundary: Preserve image/path/text/stroke/line/rect/vector record, paint, cache, and selection outcomes while making sealed render rows the only frame payload discriminator and closing every current owner of that retirement in the same unit.

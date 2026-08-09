@@ -21,7 +21,7 @@ change under those owners.
 - Keep the filename stable after acceptance, including after supersession or
   retirement.
 - Reserve an identifier only when its ADR file and catalog row are added in the
-  same change. The next identifier is `ADR-0001`.
+  same change. The next identifier is `ADR-0017`.
 
 ### Required header
 
@@ -199,6 +199,7 @@ remain authoritative for present behavior.
 | ADR-0013 | [ADR-0013-documentation-graph-and-proof-ownership.md](ADR-0013-documentation-graph-and-proof-ownership.md) | Separate semantic documentation, registries, generated projections, graph closure, and external proof |
 | ADR-0014 | [ADR-0014-custom-numeric-benchmark-route.md](ADR-0014-custom-numeric-benchmark-route.md) | Use a custom benchmark registry with numeric release gates |
 | ADR-0015 | [ADR-0015-flutter-profile-performance-route.md](ADR-0015-flutter-profile-performance-route.md) | Gate releases on the official Flutter profile route and artifact integrity |
+| ADR-0016 | [ADR-0016-vector-resources-raster-free-rendering.md](ADR-0016-vector-resources-raster-free-rendering.md) | Keep vector resources application-prepared and raster-free |
 
 Add each ADR file, its catalog row, and its concern lookup entry atomically; do
 not reserve an identifier for a record that does not exist.
@@ -226,6 +227,7 @@ relationships; the catalog does not mirror those facts.
 | Documentation, architecture graph, generated projections, and external proof | [ADR-0013](ADR-0013-documentation-graph-and-proof-ownership.md) |
 | Historical custom numeric benchmark route | [ADR-0014](ADR-0014-custom-numeric-benchmark-route.md) |
 | Flutter profile performance evidence and release admission | [ADR-0015](ADR-0015-flutter-profile-performance-route.md) |
+| Vector resources, preparation, borrowed resolution, and direct Picture rendering | [ADR-0016](ADR-0016-vector-resources-raster-free-rendering.md) |
 
 Add each concern entry in the same change as its ADR file and catalog row.
 
