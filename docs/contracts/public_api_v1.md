@@ -229,9 +229,10 @@ CanvasDataException
 CanvasPreparedVector
 ```
 
-These runtime-owned objects, larger snapshots, operation records, and event
-records may contain collections, callbacks, widget state, or runtime-specific
-facts. `CanvasDataException` also uses identity equality, but its public fields
+These runtime-owned records and snapshots, together with application-owned
+lifecycle handles such as `CanvasPreparedVector`, may contain collections,
+callbacks, widget state, or runtime-specific facts. `CanvasDataException` also
+uses identity equality, but its public fields
 are limited to the safe diagnostic projection: code, message, path, and
 sanitized bounded details. Callers must compare ids, revisions, or fields
 explicitly when they need semantic comparison.
