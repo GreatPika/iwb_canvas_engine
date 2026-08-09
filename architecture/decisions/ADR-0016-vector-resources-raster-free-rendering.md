@@ -4,8 +4,8 @@
 - Date: 2026-08-09
 - Implementation state: implemented
 - Source designs:
-  - `docs/planning/designs/2026-08-08-vector-element-resource.md`
-  - `docs/planning/plans/2026-08-09-vector-element-resource.md`
+  - `docs/history/designs/2026-08-08-vector-element-resource.md`
+  - `docs/history/plans/2026-08-09-vector-element-resource.md`
   - `docs/history/research/2026-08-07-full-svg-node-resource-surface.md`
 - Current owners:
   - `docs/contracts/public_api_v1.md`

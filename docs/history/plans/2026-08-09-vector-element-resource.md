@@ -8,7 +8,7 @@ The maintained package supports one serializable vector-document element backed 
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `vector-element-resource-design` | docs/planning/designs/2026-08-08-vector-element-resource.md |
+| Design | `vector-element-resource-design` | docs/history/designs/2026-08-08-vector-element-resource.md |
 | Research | `full-svg-surface-research` | docs/history/research/2026-08-07-full-svg-node-resource-surface.md |
 | PLAN | none | none |
 | Other | `user-request` | user request |
@@ -83,8 +83,8 @@ Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RET
 
 ## Repository Evidence
 
-- `docs/planning/designs/2026-08-08-vector-element-resource.md:5` / disposition: the active design is `READY_FOR_CONTRACT` -> implementation decomposition is authorized.
-- `docs/planning/designs/2026-08-08-vector-element-resource.md:414` / open decisions: the section resolves to `None` at `:416` -> implementation requires no additional architecture choice.
+- `docs/history/designs/2026-08-08-vector-element-resource.md:5` / disposition: the active design is `READY_FOR_CONTRACT` -> implementation decomposition is authorized.
+- `docs/history/designs/2026-08-08-vector-element-resource.md:414` / open decisions: the section resolves to `None` at `:416` -> implementation requires no additional architecture choice.
 - `lib/src/contracts/public/canvas_element.dart:12` / public element discriminator: six families are closed in `CanvasElementKind` -> vector admission must update every exhaustive consumer atomically.
 - `lib/src/contracts/public/canvas_element.dart:57` / sized resource-backed model: image already owns the accepted resource id, size, natural size, and inherited-field pattern -> vector reuses value semantics without overloading image rendering.
 - `lib/src/contracts/public/canvas_resource.dart:12` / descriptor owner: base resource fields are centralized, while `CanvasImageResource` at `:47` is the only current subtype -> vector adds a typed descriptor without copying source or payload bytes.
