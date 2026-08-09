@@ -336,4 +336,7 @@ final class _RecordingResourceResolver implements CanvasResourceResolver {
 
     return null;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }

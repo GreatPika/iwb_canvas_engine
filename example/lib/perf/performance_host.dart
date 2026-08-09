@@ -88,6 +88,9 @@ final class PerformanceHostResourceResolver implements CanvasResourceResolver {
 
     return null;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
 
 CanvasDocument createPerformanceHostSmokeDocument() {

@@ -18,4 +18,7 @@ final class SampleImageResolver implements CanvasResourceResolver {
 
     return null;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
