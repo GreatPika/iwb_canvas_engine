@@ -24,6 +24,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
+  test('public enum indices preserve append-only value compatibility', () {
+    expect(CanvasElementKind.path.index, 1);
+    expect(CanvasElementKind.rect.index, 5);
+    expect(CanvasElementKind.vector.index, 6);
+
+    expect(CanvasDataErrorCode.unsupportedSchemaVersion.index, 1);
+    expect(CanvasDataErrorCode.maxItems.index, 16);
+    expect(CanvasDataErrorCode.invalidMetadata.index, 19);
+    expect(CanvasDataErrorCode.invalidVectorData.index, 20);
+    expect(CanvasDataErrorCode.resourceKindMismatch.index, 21);
+  });
+
   test('contract-listed value types compare by public values', () {
     _expectValueEquality(CanvasElementId('element-1'), CanvasElementId('element-1'));
     _expectValueEquality(CanvasLayerId('layer-1'), CanvasLayerId('layer-1'));

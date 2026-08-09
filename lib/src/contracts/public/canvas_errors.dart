@@ -3,7 +3,6 @@ import 'canvas_error_details_sanitizer.dart';
 /// Public API v1 declaration for [CanvasDataErrorCode].
 enum CanvasDataErrorCode {
   invalidJson,
-  invalidVectorData,
   unsupportedSchemaVersion,
   missingField,
   invalidFieldType,
@@ -19,11 +18,12 @@ enum CanvasDataErrorCode {
   duplicateLayerId,
   duplicateResourceId,
   missingResourceReference,
-  resourceKindMismatch,
   maxItems,
   maxNodes,
   maxRawJsonLength,
   invalidMetadata,
+  invalidVectorData,
+  resourceKindMismatch,
 }
 
 /// Public API v1 declaration for [CanvasDataException].

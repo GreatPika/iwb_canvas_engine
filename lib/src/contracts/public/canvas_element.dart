@@ -9,7 +9,7 @@ import 'canvas_transform_admission.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasElementKind].
-enum CanvasElementKind { image, vector, path, text, stroke, line, rect }
+enum CanvasElementKind { image, path, text, stroke, line, rect, vector }
 
 /// Public API v1 declaration for [CanvasPathFillRule].
 enum CanvasPathFillRule { nonZero, evenOdd }

@@ -824,15 +824,18 @@ The current package exposes `CanvasTransform` as a six-component affine transfor
 with JSON shape `{a,b,c,d,tx,ty}` and Flutter canvas matrix conversion. The
 public `CanvasTransform` keeps that complete behavior under the current API name.
 
+Public enum members are append-only so existing `Enum.index` values remain
+stable.
+
 ```dart
 enum CanvasElementKind {
   image,
-  vector,
   path,
   text,
   stroke,
   line,
   rect,
+  vector,
 }
 
 enum CanvasPathFillRule {
@@ -2761,7 +2764,6 @@ Resolver rules:
 ```dart
 enum CanvasDataErrorCode {
   invalidJson,
-  invalidVectorData,
   unsupportedSchemaVersion,
   missingField,
   invalidFieldType,
@@ -2777,11 +2779,12 @@ enum CanvasDataErrorCode {
   duplicateLayerId,
   duplicateResourceId,
   missingResourceReference,
-  resourceKindMismatch,
   maxItems,
   maxNodes,
   maxRawJsonLength,
   invalidMetadata,
+  invalidVectorData,
+  resourceKindMismatch,
 }
 
 final class CanvasDataException implements Exception {

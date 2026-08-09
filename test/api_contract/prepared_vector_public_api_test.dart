@@ -36,6 +36,7 @@ void main() {
     final prepareVector = prepare as TopLevelFunctionElement;
     _expectPreparedVectorMembers(vectorClass);
     _expectPrepareVectorSignature(prepareVector, vectorClass);
+    _expectResolveVectorSignature(surface, vectorClass);
     _expectNoForbiddenPreparedVectorSurfaceTypes(
       surface,
       vectorClass,
@@ -58,6 +59,41 @@ void _expectNoForbiddenPreparedVectorSurfaceTypes(
   }
 
   expect(visitor.violations, isEmpty);
+}
+
+void _expectResolveVectorSignature(
+  PublicApiSurface surface,
+  ClassElement vectorClass,
+) {
+  final resolver = surface.exportedElements['CanvasResourceResolver'];
+
+  expect(resolver, isA<ClassElement>());
+  final resolveVector = (resolver as ClassElement).getMethod('resolveVector');
+  expect(resolveVector, isA<MethodElement>());
+
+  final method = resolveVector as MethodElement;
+  expect(method.typeParameters, isEmpty);
+  expect(method.returnType.nullabilitySuffix, NullabilitySuffix.question);
+  expect(
+    _expectInterfaceType(
+      method.returnType,
+      name: 'CanvasPreparedVector',
+      libraryUri:
+          'package:iwb_canvas_engine/src/contracts/public/'
+          'canvas_prepared_vector.dart',
+    ).element,
+    same(vectorClass),
+  );
+
+  expect(method.formalParameters, hasLength(1));
+  final resource = method.formalParameters.single;
+  expect(resource.isRequiredPositional, isTrue);
+  _expectInterfaceType(
+    resource.type,
+    name: 'CanvasVectorResource',
+    libraryUri:
+        'package:iwb_canvas_engine/src/contracts/public/canvas_resource.dart',
+  );
 }
 
 void _expectPreparedVectorMembers(ClassElement vectorClass) {
@@ -156,6 +192,8 @@ final class _PreparedVectorSurfaceTypeVisitor {
         );
       case TopLevelVariableElement():
         _visitType(name, element.type, permitsPreparedVector: false);
+      case GetterElement():
+        _visitExecutable(name, element, permitsPreparedVectorInReturn: false);
       case ExtensionElement():
         _visitExtension(name, element);
     }
