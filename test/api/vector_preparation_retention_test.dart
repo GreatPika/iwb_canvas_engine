@@ -11,68 +11,30 @@ import 'fixtures/vm_retention_observer.dart';
 // Flutter's test runner supplies this mutually exclusive VM-service intent.
 const _vmServiceDisabledArgument = '--disable-vm-service';
 
-// The snapshot census must keep anchor setup, live Pictures, and bounded VM
-// observation in one sequence; splitting it would hide settled ownership.
-// ignore: halstead-volume, source-lines-of-code
 void main() {
+  _testUnresolvedVmObjectIdentity();
+  _testPreparationRetention();
+}
+
+void _testUnresolvedVmObjectIdentity() {
   test(
-    'preparation owns an exact caller view and releases settled snapshots',
+    'unresolved VM object identity leaves retention observation incomplete',
     () async {
       final observer = await VmRetentionObserver.connect();
       addTearDown(observer.dispose);
-      final observedPictures = <ui.Picture>[];
-      final previousOnCreate = ui.Picture.onCreate;
-      ui.Picture.onCreate = observedPictures.add;
-      addTearDown(() => ui.Picture.onCreate = previousOnCreate);
 
-      final fixtureAnchor = _uniquelyMarkedVectorBytes();
-      final preparedVectors = <CanvasPreparedVector>[];
-      for (var index = 0; index < 4; index++) {
-        final prepared = await _prepareFromErasableOffsetView(fixtureAnchor);
-        preparedVectors.add(prepared);
-        expect(prepared.intrinsicSize, const ui.Size(13.25, 20));
-        expect(observedPictures, hasLength(index + 1));
-      }
+      final observation = await observer.observeObjectId('objects/invalid');
 
-      await observer.collectGarbage();
-      final census = await observer.censusUint8ListsWithBytes(fixtureAnchor);
-      final anchorMatches = census.matchingInstances
-          .where(
-            (instance) =>
-                instance.identityHashCode == census.anchor.identityHashCode,
-          )
-          .toList();
-      expect(anchorMatches, hasLength(1));
-
-      final extraMatches = census.matchingInstances
-          .where(
-            (instance) =>
-                instance.identityHashCode != census.anchor.identityHashCode,
-          )
-          .toList();
-      final extraObservations = await Future.wait(
-        extraMatches.map(
-          (instance) => observer.observeObjectId(instance.objectId),
-        ),
-      );
+      expect(observation.retainingPathComplete, isFalse);
       expect(
-        extraMatches,
-        isEmpty,
-        reason:
-            'Completed preparation retained exact-copy snapshots: '
-            '$extraObservations',
+        observation.retainingPathIncompleteReasons,
+        contains(startsWith('retaining path unavailable')),
       );
-
-      final anchorObservation = await observer.observeObjectId(
-        census.anchor.objectId,
+      expect(observation.inboundTraversalComplete, isFalse);
+      expect(
+        observation.inboundTraversalLimitReasons,
+        contains(startsWith('inbound references unavailable')),
       );
-      expect(anchorObservation.retainingPathLength, greaterThan(0));
-      expect(anchorObservation.retainingPathRoot, isNotEmpty);
-      expect(_hasEngineOrUpstreamOwner(anchorObservation), isFalse);
-
-      for (final prepared in preparedVectors) {
-        prepared.dispose();
-      }
     },
     skip: Platform.executableArguments.contains(_vmServiceDisabledArgument)
         ? 'Requires flutter test --enable-vmservice for VM retaining-path evidence.'
@@ -80,18 +42,152 @@ void main() {
   );
 }
 
-bool _hasEngineOrUpstreamOwner(VmRetentionObservation observation) {
-  return observation.ownershipSources.any(
+void _testPreparationRetention() {
+  test(
+    'preparation owns an exact caller view and releases settled snapshots',
+    () async {
+      final observation = await _runPreparationRetentionScenario();
+
+      expect(observation.retainingPathLength, greaterThan(0));
+      expect(observation.retainingPathRoot, isNotEmpty);
+      expect(
+        observation.inboundTraversalComplete,
+        isTrue,
+        reason: observation.inboundTraversalLimitReasons.join(', '),
+      );
+      expect(observation.inboundTraversalLimitReasons, isEmpty);
+      expect(
+        _hasEngineOrUpstreamOwner(observation.inboundOwnershipSources),
+        isFalse,
+      );
+    },
+    skip: Platform.executableArguments.contains(_vmServiceDisabledArgument)
+        ? 'Requires flutter test --enable-vmservice for VM retaining-path evidence.'
+        : false,
+  );
+}
+
+Future<VmRetentionObservation> _runPreparationRetentionScenario() async {
+  final observer = await VmRetentionObserver.connect();
+  addTearDown(observer.dispose);
+  final observedPictures = <ui.Picture>[];
+  final previousOnCreate = ui.Picture.onCreate;
+  ui.Picture.onCreate = observedPictures.add;
+  addTearDown(() => ui.Picture.onCreate = previousOnCreate);
+
+  final callerBytes = _RetainedCallerVectorBytes();
+  final preparedVectors = await _prepareCallerViews(
+    callerBytes,
+    observedPictures,
+  );
+  final census = await _censusCallerBytes(observer, callerBytes);
+  final observation = await _observeCallerOwnership(
+    observer,
+    census.anchor.objectId,
+  );
+
+  for (final prepared in preparedVectors) {
+    prepared.dispose();
+  }
+  return observation;
+}
+
+Future<List<CanvasPreparedVector>> _prepareCallerViews(
+  _RetainedCallerVectorBytes callerBytes,
+  List<ui.Picture> observedPictures,
+) async {
+  final preparedVectors = <CanvasPreparedVector>[];
+  for (var index = 0; index < 4; index++) {
+    final prepared = await callerBytes.prepare();
+    preparedVectors.add(prepared);
+    expect(prepared.intrinsicSize, const ui.Size(13.25, 20));
+    expect(observedPictures, hasLength(index + 1));
+  }
+  return preparedVectors;
+}
+
+Future<VmTypedDataCensus> _censusCallerBytes(
+  VmRetentionObserver observer,
+  _RetainedCallerVectorBytes callerBytes,
+) async {
+  await observer.collectGarbage();
+  final census = await callerBytes.census(observer);
+  final anchorMatches = census.matchingInstances
+      .where(
+        (instance) =>
+            instance.identityHashCode == census.anchor.identityHashCode,
+      )
+      .toList();
+  expect(anchorMatches, hasLength(1));
+  await _expectNoRetainedSnapshots(observer, census);
+  return census;
+}
+
+Future<void> _expectNoRetainedSnapshots(
+  VmRetentionObserver observer,
+  VmTypedDataCensus census,
+) async {
+  final extraMatches = census.matchingInstances
+      .where(
+        (instance) =>
+            instance.identityHashCode != census.anchor.identityHashCode,
+      )
+      .toList();
+  final extraObservations = await Future.wait(
+    extraMatches.map((instance) => observer.observeObjectId(instance.objectId)),
+  );
+  expect(
+    extraMatches,
+    isEmpty,
+    reason:
+        'Completed preparation retained exact-copy snapshots: '
+        '$extraObservations',
+  );
+}
+
+Future<VmRetentionObservation> _observeCallerOwnership(
+  VmRetentionObserver observer,
+  String anchorObjectId,
+) => observer.observeReleasedObjectId(
+  anchorObjectId,
+  isTerminalOwnershipRoot: _isExplicitTestOrServiceOwnership,
+);
+
+bool _hasEngineOrUpstreamOwner(Iterable<VmRetentionSource> sources) {
+  return sources.any(
     (source) =>
         source.libraryUri.startsWith('package:iwb_canvas_engine/src/api/') ||
         source.libraryUri.startsWith('package:vector_graphics/'),
   );
 }
 
+bool _isExplicitTestOrServiceOwnership(VmRetentionSource source) {
+  final libraryUri = source.libraryUri;
+  return libraryUri.startsWith('dart:developer') ||
+      libraryUri.startsWith('package:vm_service/') ||
+      libraryUri.startsWith('package:flutter_test/') ||
+      libraryUri.startsWith('package:test_api/') ||
+      libraryUri.contains('/test/api/') ||
+      (libraryUri.startsWith('package:flutter/src/widgets/') &&
+          source.className.endsWith('Element'));
+}
+
 Uint8List _uniquelyMarkedVectorBytes() {
   final bytes = Uint8List.fromList(_viewBytes(basicVectorBytes()));
   ByteData.sublistView(bytes).setFloat32(6, 13.25, Endian.little);
   return bytes;
+}
+
+final class _RetainedCallerVectorBytes {
+  _RetainedCallerVectorBytes() : _bytes = _uniquelyMarkedVectorBytes();
+
+  final Uint8List _bytes;
+
+  Future<CanvasPreparedVector> prepare() =>
+      _prepareFromErasableOffsetView(_bytes);
+
+  Future<VmTypedDataCensus> census(VmRetentionObserver observer) =>
+      observer.censusUint8ListsWithBytes(_bytes);
 }
 
 Future<CanvasPreparedVector> _prepareFromErasableOffsetView(

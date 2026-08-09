@@ -104,13 +104,22 @@ void main() {
     }
 
     expect(observation.targetId, settled.invocationContextId);
-    expect(_hasEngineOrUpstreamOwner(observation), isFalse);
     expect(
       observation.inboundTraversalComplete,
       isTrue,
       reason: observation.inboundTraversalLimitReasons.join(', '),
     );
-    expect(_hasOnlyExplicitTestOrServiceOwnership(observation), isTrue);
+    expect(observation.inboundTraversalLimitReasons, isEmpty);
+    expect(
+      _hasEngineOrUpstreamOwner(observation.inboundOwnershipSources),
+      isFalse,
+    );
+    expect(
+      _hasOnlyExplicitTestOrServiceOwnership(
+        observation.inboundOwnershipSources,
+      ),
+      isTrue,
+    );
   }, skip: Platform.executableArguments.contains(_vmServiceDisabledArgument));
 }
 
@@ -262,8 +271,8 @@ Future<Uint8List> _pixelsFor(CanvasPreparedVector prepared) async {
   }
 }
 
-bool _hasEngineOrUpstreamOwner(VmRetentionObservation observation) {
-  return observation.ownershipSources.any(
+bool _hasEngineOrUpstreamOwner(Iterable<VmRetentionSource> sources) {
+  return sources.any(
     (source) =>
         source.libraryUri.startsWith('package:iwb_canvas_engine/src/api/') ||
         source.libraryUri.startsWith('package:vector_graphics/'),
@@ -271,15 +280,14 @@ bool _hasEngineOrUpstreamOwner(VmRetentionObservation observation) {
 }
 
 bool _hasOnlyExplicitTestOrServiceOwnership(
-  VmRetentionObservation observation,
+  Iterable<VmRetentionSource> sources,
 ) {
-  return observation.ownershipSources.every(_isExplicitTestOrServiceOwnership);
+  return sources.every(_isExplicitTestOrServiceOwnership);
 }
 
 bool _isExplicitTestOrServiceOwnership(VmRetentionSource source) {
   final libraryUri = source.libraryUri;
-  return libraryUri.isEmpty ||
-      libraryUri.startsWith('dart:developer') ||
+  return libraryUri.startsWith('dart:developer') ||
       libraryUri.startsWith('package:vm_service/') ||
       libraryUri.startsWith('package:flutter_test/') ||
       libraryUri.startsWith('package:test_api/') ||
