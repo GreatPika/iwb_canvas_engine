@@ -134,8 +134,9 @@ by the runtime/selection boundary and may be batched into `InteractionReadPort`
 responses when the interaction intent needs document order plus selected ids.
 The port returns only immutable, batched, intent-specific facts: hit/order
 facts, immutable element snapshots, `boundsWorld`, element generation,
-`elementRevision`, `CanvasElementKind`, `controllerEpoch`, visibility, and top-hit
-status. It must not expose mutation APIs, draft access, `CanvasDocument`
+`elementRevision`, `CanvasElementKind` as the sole semantic target
+discriminator, `controllerEpoch`, visibility, and top-hit status. It must not
+expose mutation APIs, draft access, `CanvasDocument`
 projection, store internals, resource/session internals, selection internals, or
 per-property concrete owner probes. Committed mutations requested by interaction
 still go through `EditKernel`.

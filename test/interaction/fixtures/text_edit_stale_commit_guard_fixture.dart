@@ -32,37 +32,39 @@ void main() {
     );
   });
 
-  test('current vector guard facts reject and consume a stale text request', () {
-    final readPort = _TextGuardReadPort(
-      textGuardFacts: TextCommitGuardReadFacts.current(
-        targetElementId: _textId,
-        targetKind: CanvasElementKind.vector,
-        generation: 1,
-        elementRevision: 0,
-        family: InteractionElementFamily.vector,
-        controllerEpoch: 1,
-        documentRevision: 1,
-        currentText: 'not-text',
-      ),
-    );
-    final engine = _textGuardEngine(readPort);
-    final requestId = _issueTextRequest(engine);
+  test(
+    'current vector guard facts reject and consume a stale text request',
+    () {
+      final readPort = _TextGuardReadPort(
+        textGuardFacts: TextCommitGuardReadFacts.current(
+          targetElementId: _textId,
+          targetKind: CanvasElementKind.vector,
+          generation: 1,
+          elementRevision: 0,
+          controllerEpoch: 1,
+          documentRevision: 1,
+          currentText: 'not-text',
+        ),
+      );
+      final engine = _textGuardEngine(readPort);
+      final requestId = _issueTextRequest(engine);
 
-    expect(
-      engine.textEditGuardDecision(requestId).kind,
-      TextEditGuardDecisionKind.rejectedAndConsumed,
-    );
-    expect(engine.requestFactsFor(requestId), isNull);
-    expect(readPort.textGuardReads, 1);
-  });
+      expect(
+        engine.textEditGuardDecision(requestId).kind,
+        TextEditGuardDecisionKind.rejectedAndConsumed,
+      );
+      expect(engine.requestFactsFor(requestId), isNull);
+      expect(readPort.textGuardReads, 1);
+    },
+  );
 
   test('vector context requests are no-op text commits', () {
     return expectLater(_expectCommitFalse(_vectorRequestScenario()), completes);
   });
 
-  test('vector replacement makes a text request stale and no-op', () {
+  test('vector kind replacement makes a text request stale and no-op', () {
     return expectLater(
-      _expectCommitFalse(_vectorFamilyStaleScenario()),
+      _expectCommitFalse(_vectorKindStaleScenario()),
       completes,
     );
   });
@@ -102,7 +104,7 @@ Future<void> _verifyRejectedRequests() async {
   await _expectCommitFalse(_missingTextScenario());
   await _expectCommitFalse(_epochStaleScenario());
   await _expectCommitFalse(_revisionStaleScenario());
-  await _expectCommitFalse(_familyStaleScenario());
+  await _expectCommitFalse(_kindStaleScenario());
 }
 
 void _verifyGenerationMismatchConsumesRequest() {
@@ -112,7 +114,6 @@ void _verifyGenerationMismatchConsumesRequest() {
       targetKind: CanvasElementKind.text,
       generation: 2,
       elementRevision: 0,
-      family: InteractionElementFamily.text,
       controllerEpoch: 1,
       documentRevision: 1,
       currentText: 'hello',
@@ -193,7 +194,6 @@ Future<_IssuedScenario> _vectorRequestScenario() async {
   final guard = scenario.root.interactionEngine.requestFactsFor(requestId);
 
   expect(guard?.contentElementKind, CanvasElementKind.vector);
-  expect(guard?.family, InteractionElementFamily.vector);
 
   return scenario.issued(requestId);
 }
@@ -228,7 +228,7 @@ Future<_IssuedScenario> _revisionStaleScenario() async {
   return scenario.issued(requestId);
 }
 
-Future<_IssuedScenario> _familyStaleScenario() async {
+Future<_IssuedScenario> _kindStaleScenario() async {
   final scenario = _Scenario();
   final requestId = await scenario.issueTextRequest();
   scenario.root.edits.edit((edit) {
@@ -240,7 +240,7 @@ Future<_IssuedScenario> _familyStaleScenario() async {
   return scenario.issued(requestId);
 }
 
-Future<_IssuedScenario> _vectorFamilyStaleScenario() async {
+Future<_IssuedScenario> _vectorKindStaleScenario() async {
   final scenario = _Scenario();
   final requestId = await scenario.issueTextRequest();
   scenario.root.edits.edit((edit) {
@@ -341,7 +341,6 @@ void _verifyAcceptedGuardKeepsRequestLiveUntilRuntimeConsume() {
       targetKind: CanvasElementKind.text,
       generation: 1,
       elementRevision: 0,
-      family: InteractionElementFamily.text,
       controllerEpoch: 1,
       documentRevision: 0,
       currentText: 'hello',
@@ -670,7 +669,6 @@ final class _TextGuardReadPort implements InteractionReadPort {
         boundsWorld: const Rect.fromLTWH(120, 0, 10, 10),
         generation: 1,
         elementRevision: 0,
-        family: InteractionElementFamily.text,
         controllerEpoch: 1,
         documentRevision: 0,
       ),

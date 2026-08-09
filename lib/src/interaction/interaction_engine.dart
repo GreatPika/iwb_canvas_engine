@@ -180,7 +180,7 @@ final class InteractionEngine {
         current.controllerEpoch == guard.controllerEpoch &&
         current.generation == guard.generation &&
         current.elementRevision == guard.elementRevision &&
-        current.family == guard.family &&
+        current.targetKind == guard.contentElementKind &&
         current.currentText != null;
   }
 

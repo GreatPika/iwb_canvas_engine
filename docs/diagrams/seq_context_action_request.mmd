@@ -106,7 +106,7 @@ sequenceDiagram
     ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, CanvasElementKind, and controllerEpoch
     Store-->>ReadPort: elementSnapshot, boundsWorld, generation, elementRevision, CanvasElementKind, and epoch
     ReadPort-->>IE: content target facts
-    IE->>IE: store pending content target, generation, elementRevision, CanvasElementKind, controllerEpoch, timestamp, viewPosition, and worldPosition
+    IE->>IE: store pending content target, generation, elementRevision, CanvasElementKind as sole target discriminator, controllerEpoch, timestamp, viewPosition, and worldPosition
     Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
     opt first tap also selects content in move mode
       IE->>IE: pair same finite terminal sample with zero-area marquee selection intent
@@ -155,7 +155,7 @@ sequenceDiagram
     Store-->>ReadPort: current target facts
     ReadPort-->>IE: current target facts
     IE->>IE: verify same id, generation, elementRevision, CanvasElementKind, epoch, visibility, and top-hit status
-    IE->>Registry: issue request id with content target kind and guard facts
+    IE->>Registry: issue request id with CanvasElementKind target guard facts
     Registry-->>IE: issued request id
     IE->>Requests: enqueue asynchronous pending request with timestamp hint
     alt load/dispose cleanup before scheduled delivery

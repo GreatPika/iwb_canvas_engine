@@ -430,7 +430,6 @@ void _testContextTargetReadFacts() {
       expect(contentFacts.boundsWorld, const Rect.fromLTRB(-5, 15, 5, 25));
       expect(contentFacts.generation, 0);
       expect(contentFacts.elementRevision, 0);
-      expect(contentFacts.family, InteractionElementFamily.rect);
       expect(contentFacts.controllerEpoch, 0);
       expect(contentFacts.documentRevision, 0);
 
@@ -468,7 +467,6 @@ void _testVectorContextTargetReadFacts() {
       expect(content.facts.elementId, CanvasElementId('vector-a'));
       expect(content.facts.elementKind, CanvasElementKind.vector);
       expect(content.facts.elementSnapshot, isA<CanvasVectorElement>());
-      expect(content.facts.family, InteractionElementFamily.vector);
 
       final background =
           root.interactionReadPort.directContextTargetFacts(
@@ -554,7 +552,7 @@ void _testBudgetExceededContextTargetReadOutcome() {
 }
 
 void _testTextCommitGuardFacts() {
-  test('text guard facts include current family and observation revision', () {
+  test('text guard facts include current kind and observation revision', () {
     final root = _runtimeRoot();
     addTearDown(root.dispose);
 
@@ -566,7 +564,6 @@ void _testTextCommitGuardFacts() {
     expect(textFacts.targetKind, CanvasElementKind.text);
     expect(textFacts.generation, 0);
     expect(textFacts.elementRevision, 0);
-    expect(textFacts.family, InteractionElementFamily.text);
     expect(textFacts.currentText, 'hello');
     expect(textFacts.controllerEpoch, 0);
     expect(textFacts.documentRevision, 0);

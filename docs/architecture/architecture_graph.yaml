@@ -299,7 +299,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - InteractionEngine is the current boundary for pointer sessions, tool preview intents, vector-inclusive selection/move behavior, text-only guarded commits, and terminal commit coordination. CanvasElementKind is semantic authority; the complete InteractionElementFamily mirror is a Unit 6 retirement bridge.
+      - InteractionEngine is the current boundary for pointer sessions, tool preview intents, vector-inclusive selection/move behavior, text-only guarded commits, and terminal commit coordination. CanvasElementKind is the sole semantic interaction discriminator for context target identity and stale request guards.
     actual:
       declarations:
         - InteractionEngine

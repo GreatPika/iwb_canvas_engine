@@ -416,10 +416,8 @@ draft mutation, and delegates changed text to EditKernel before emitting
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
 non-request synchronization API.
 
-`CanvasElementKind` is the semantic interaction discriminator. During Unit 5,
-the internal `InteractionElementFamily` mirror remains complete for all seven
-committed kinds so existing reads bridge safely; it carries no additional
-meaning and Unit 6 retires it. No interaction behavior may branch on MIME data
-or a resource descriptor subtype instead of immutable element kind.
+`CanvasElementKind` is the sole semantic interaction discriminator for context
+target identity and stale request guards. No interaction behavior may branch on
+MIME data or a resource descriptor subtype instead of immutable element kind.
 
 ---

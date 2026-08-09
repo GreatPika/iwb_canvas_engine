@@ -793,7 +793,6 @@ ContextTargetReadOutcome _contextOutcome(CanvasElementId? id) {
       boundsWorld: const Rect.fromLTWH(10, 10, 10, 10),
       generation: 1,
       elementRevision: 0,
-      family: InteractionElementFamily.rect,
       controllerEpoch: 1,
       documentRevision: 0,
     ),

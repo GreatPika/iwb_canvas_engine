@@ -731,8 +731,9 @@ the release route for that evidence.
 
 #### eraser/context-action eraser and context-action request tests
 - `test/interaction/interaction_read_port_test.dart` proves eraser/context-action immutable read
-  facts for eraser, context targets, and text guard inputs without exposing
-  store tables or mutation owners to interaction machines.
+  facts for eraser, context targets, and text guard inputs, with
+  `CanvasElementKind` as the context-target and stale-guard discriminator,
+  without exposing store tables or mutation owners to interaction machines.
 - `test/interaction/eraser_context_action_routing_test.dart` proves eraser machine routing,
   immutable preview publication, terminal commit intent decisions, direct
   double-tap request production, and two-tap context revalidation behavior.

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contracts/public/canvas_actions.dart';
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import 'interaction_runtime_intents.dart';
 import 'interaction_read_port.dart';
@@ -119,13 +120,13 @@ final class ContentContextTargetKey extends ContextTargetKey {
     required this.elementId,
     required this.generation,
     required this.elementRevision,
-    required this.family,
+    required this.elementKind,
   });
 
   final CanvasElementId elementId;
   final int generation;
   final int elementRevision;
-  final InteractionElementFamily family;
+  final CanvasElementKind elementKind;
 
   // Context target keys are immutable value objects; the interaction owner must
   // not import Flutter foundation only to carry the @immutable annotation.
@@ -136,13 +137,13 @@ final class ContentContextTargetKey extends ContextTargetKey {
         other.elementId == elementId &&
         other.generation == generation &&
         other.elementRevision == elementRevision &&
-        other.family == family;
+        other.elementKind == elementKind;
   }
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes, immutable key type with final fields
   int get hashCode =>
-      Object.hash(elementId, generation, elementRevision, family);
+      Object.hash(elementId, generation, elementRevision, elementKind);
 }
 
 ContextTargetKey _targetKey(ContextTargetReadFacts facts) {
@@ -152,7 +153,7 @@ ContextTargetKey _targetKey(ContextTargetReadFacts facts) {
       elementId: _required(facts.elementId, 'elementId'),
       generation: _required(facts.generation, 'generation'),
       elementRevision: _required(facts.elementRevision, 'elementRevision'),
-      family: _required(facts.family, 'family'),
+      elementKind: _required(facts.elementKind, 'elementKind'),
     ),
   };
 }

@@ -312,8 +312,6 @@ final class RejectedContextTargetRead extends ContextTargetReadOutcome {
 
 enum ContextActionReadTargetKind { contentElement, emptyCanvas }
 
-enum InteractionElementFamily { image, vector, path, text, stroke, line, rect }
-
 final class ContextTargetReadFacts {
   const ContextTargetReadFacts.emptyCanvas({
     required this.controllerEpoch,
@@ -325,8 +323,7 @@ final class ContextTargetReadFacts {
        elementSnapshot = null,
        boundsWorld = null,
        generation = null,
-       elementRevision = null,
-       family = null;
+       elementRevision = null;
 
   const ContextTargetReadFacts.contentElement({
     required this.elementId,
@@ -335,7 +332,6 @@ final class ContextTargetReadFacts {
     required this.boundsWorld,
     required this.generation,
     required this.elementRevision,
-    required this.family,
     required this.controllerEpoch,
     required this.documentRevision,
     this.query = const InteractionReadQueryFacts.notRun(),
@@ -348,7 +344,6 @@ final class ContextTargetReadFacts {
   final Rect? boundsWorld;
   final int? generation;
   final int? elementRevision;
-  final InteractionElementFamily? family;
   final int controllerEpoch;
   final int documentRevision;
   final InteractionReadQueryFacts query;
@@ -369,7 +364,6 @@ final class TextCommitGuardReadFacts {
        targetKind = null,
        generation = null,
        elementRevision = null,
-       family = null,
        currentText = null;
 
   const TextCommitGuardReadFacts.current({
@@ -377,7 +371,6 @@ final class TextCommitGuardReadFacts {
     required this.targetKind,
     required this.generation,
     required this.elementRevision,
-    required this.family,
     required this.controllerEpoch,
     required this.documentRevision,
     this.currentText,
@@ -388,7 +381,6 @@ final class TextCommitGuardReadFacts {
   final CanvasElementKind? targetKind;
   final int? generation;
   final int? elementRevision;
-  final InteractionElementFamily? family;
   final int controllerEpoch;
   final int documentRevision;
   final String? currentText;

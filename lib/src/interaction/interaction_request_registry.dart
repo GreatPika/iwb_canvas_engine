@@ -14,7 +14,6 @@ final class InteractionRequestGuardFacts {
     this.contentElementKind,
     this.generation,
     this.elementRevision,
-    this.family,
   });
 
   final CanvasInteractionRequestId requestId;
@@ -25,7 +24,6 @@ final class InteractionRequestGuardFacts {
   final CanvasElementKind? contentElementKind;
   final int? generation;
   final int? elementRevision;
-  final InteractionElementFamily? family;
 }
 
 final class InteractionRequestRegistry {
@@ -51,7 +49,6 @@ final class InteractionRequestRegistry {
       contentElementKind: target.elementKind,
       generation: target.generation,
       elementRevision: target.elementRevision,
-      family: target.family,
     );
     _facts[requestId] = facts;
 

@@ -75,7 +75,7 @@ stateDiagram-v2
   state "Pending content target" as PendingContentTarget
   note right of PendingContentTarget
     Pending state is input history only:
-    element id, generation, elementRevision, CanvasElementKind,
+    element id, generation, elementRevision, CanvasElementKind as sole semantic discriminator,
     view/world positions, timestamp, and controllerEpoch.
     It is not CanvasPreviewState and not Store state.
   end note
@@ -127,7 +127,7 @@ stateDiagram-v2
   state "Candidate match gate" as CandidateMatch
   note right of CandidateMatch
     Content targets match by current element id,
-    generation, elementRevision, CanvasElementKind,
+    generation, elementRevision, CanvasElementKind as sole semantic discriminator,
     controllerEpoch, visibility, and top-hit status.
     Empty-canvas targets match by still having no
     qualifying content target.

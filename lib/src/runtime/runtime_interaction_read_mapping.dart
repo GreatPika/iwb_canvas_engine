@@ -97,18 +97,6 @@ FrameElementFacts? interactionFactsForId(
   return null;
 }
 
-InteractionElementFamily interactionElementFamily(FrameElementFacts facts) {
-  return switch (facts.kind) {
-    CanvasElementKind.image => InteractionElementFamily.image,
-    CanvasElementKind.vector => InteractionElementFamily.vector,
-    CanvasElementKind.path => InteractionElementFamily.path,
-    CanvasElementKind.text => InteractionElementFamily.text,
-    CanvasElementKind.stroke => InteractionElementFamily.stroke,
-    CanvasElementKind.line => InteractionElementFamily.line,
-    CanvasElementKind.rect => InteractionElementFamily.rect,
-  };
-}
-
 String? interactionTextValue(FrameElementFacts facts) {
   return facts.kind == CanvasElementKind.text ? facts.text : null;
 }
