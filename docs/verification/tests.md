@@ -430,6 +430,12 @@ The runner is only a dispatcher over proof commands. It must not replace
 behavioral tests, and the required guardrail list remains owned by
 `section_22_guardrails_machine_checks`.
 
+`test/guardrails/root_ci_target_test.dart` owns the root-workflow contract. In
+addition to ordinary package tests, that workflow must run the two vector
+preparation retaining-path suites with `flutter test --enable-vmservice`; their
+ordinary local route may visibly skip VM-service-only assertions, but cannot be
+the release route for that evidence.
+
 ### Test Responsibilities
 
 #### `test/api_contract/public_integration_compile_fixture_test.dart`

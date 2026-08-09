@@ -1,4 +1,5 @@
 const int canvasMaxRawJsonLength = 32 * 1024 * 1024;
+const int canvasMaxVectorByteLength = 32 * 1024 * 1024;
 const int canvasMaxContentLayers = 4096;
 const int canvasMaxTotalElements = 200000;
 const int canvasMaxResources = 4096;

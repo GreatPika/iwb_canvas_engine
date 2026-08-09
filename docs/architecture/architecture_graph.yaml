@@ -41,8 +41,10 @@ nodes:
     actual:
       declarations:
         - CanvasRuntime
+        - prepareVector
       exports:
         - lib/src/api/canvas_runtime.dart
+        - lib/src/api/canvas_vector_preparation.dart
   - id: api.canvas_runtime
     label: Canvas runtime facade
     kind: facade
@@ -88,6 +90,7 @@ nodes:
         - CanvasResourcePort
         - CanvasResourceResolver
         - CanvasDataException
+        - CanvasPreparedVector
   - id: contracts.internal_ports
     label: Internal owner ports and fact contracts
     kind: contract_owner
@@ -369,12 +372,14 @@ edges:
     status: required
     sourceDocs:
       - path: docs/architecture/02_package_boundaries.md
+      - path: docs/architecture/01_runtime_ownership.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - API declaration files are public facade wrappers that re-export public contract declarations.
+      - API declarations expose the public preparation helper and re-export the application-owned prepared value while raw Picture and vector_graphics types remain private.
     actual:
       exports:
         - lib/src/contracts/public/canvas_document.dart
+        - lib/src/contracts/public/canvas_prepared_vector.dart
   - id: contracts.internal_ports.uses_public_contracts
     from: contracts.internal_ports
     to: contracts.public

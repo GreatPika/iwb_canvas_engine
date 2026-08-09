@@ -11,6 +11,9 @@ void main() {
   _testSurfaceFacadeAllowances();
   _testSurfaceReservedRuntimeBoundaries();
   _testApiContractWrapperExports();
+  _testVectorPreparationImportBoundary();
+  _testVectorPreparationRuntimeBoundary();
+  _testVectorPreparationDependencyRuntimeBoundary();
   _testRetiredFlutterBridgeOwnerCannotBeImported();
   _testFrameCannotUseResourceCatalogPort();
   _testFrameCannotImportApiFacades();
@@ -212,6 +215,154 @@ void _testApiContractWrapperExports() {
       ),
     );
   });
+}
+
+void _testVectorPreparationImportBoundary() {
+  test(
+    'only the vector preparation adapter may import vector graphics or engine IO',
+    () {
+      expect(
+        checkCoreBoundaryFile(
+          path: 'lib/src/api/canvas_vector_preparation.dart',
+          content:
+              "import 'package:vector_graphics/vector_graphics.dart' as vg;\n",
+        ),
+        isEmpty,
+      );
+
+      for (final fixture in {
+        'lib/src/api/vector_preparation_helper.dart':
+            "import 'package:vector_graphics/vector_graphics.dart';\n",
+        'lib/src/api/vector_preparation_io_helper.dart': "import 'dart:io';\n",
+        'lib/src/api/vector_preparation_network_helper.dart':
+            "import 'package:http/http.dart';\n",
+        'lib/src/contracts/public/vector_preparation_codec_helper.dart':
+            "import 'package:vector_graphics_codec/vector_graphics_codec.dart';\n",
+      }.entries) {
+        expect(
+          checkCoreBoundaryFile(path: fixture.key, content: fixture.value),
+          contains(
+            isA<GuardrailViolation>().having(
+              (violation) => violation.guardrailId,
+              'guardrailId',
+              'core.import_boundaries',
+            ),
+          ),
+          reason: fixture.key,
+        );
+      }
+    },
+  );
+}
+
+void _testVectorPreparationRuntimeBoundary() {
+  test(
+    'vector preparation adapter cannot load assets or intercept Flutter errors',
+    () {
+      for (final content in [
+        '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes() => rootBundle.load('vector.vec');
+''',
+        '''
+import 'package:flutter/foundation.dart';
+
+void installVectorErrorHandler() {
+  FlutterError.onError = (details) {};
+}
+''',
+        '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadPlatformVectorBytes(PlatformAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+        '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadNetworkVectorBytes(NetworkAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+      ]) {
+        expect(
+          checkCoreBoundaryFile(
+            path: 'lib/src/api/canvas_vector_preparation.dart',
+            content: content,
+          ),
+          contains(
+            isA<GuardrailViolation>().having(
+              (violation) => violation.guardrailId,
+              'guardrailId',
+              'core.import_boundaries',
+            ),
+          ),
+        );
+      }
+    },
+  );
+}
+
+void _testVectorPreparationDependencyRuntimeBoundary() {
+  test(
+    'vector preparation dependency closure rejects asset and global error helpers',
+    () {
+      for (final helper in {
+        'vector_preparation_root_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes() => rootBundle.load('vector.vec');
+''',
+        'vector_preparation_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(AssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+        'vector_preparation_default_asset_bundle_helper.dart': '''
+import 'package:flutter/widgets.dart';
+
+Future<ByteData> loadVectorBytes(BuildContext context) =>
+    DefaultAssetBundle.of(context).load('vector.vec');
+''',
+        'vector_preparation_platform_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(PlatformAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+        'vector_preparation_network_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(NetworkAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+        'vector_preparation_flutter_error_helper.dart': '''
+import 'package:flutter/foundation.dart' as foundation;
+
+void installVectorErrorHandler() {
+  foundation.FlutterError.onError = (details) {};
+}
+''',
+      }.entries) {
+        expect(
+          checkVectorPreparationDependencyBoundaryFiles({
+            'lib/src/api/canvas_vector_preparation.dart':
+                "import '${helper.key}';\n",
+            'lib/src/api/${helper.key}': helper.value,
+          }),
+          contains(
+            isA<GuardrailViolation>().having(
+              (violation) => violation.guardrailId,
+              'guardrailId',
+              'core.import_boundaries',
+            ),
+          ),
+          reason: helper.key,
+        );
+      }
+    },
+  );
 }
 
 void _testRetiredFlutterBridgeOwnerCannotBeImported() {

@@ -46,6 +46,9 @@ jobs:
           EXAMPLE_BOUNDARY_DIFF_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
         run: flutter test --concurrency=1 $(find test -name '*_test.dart' -print)
 
+      - name: Run vector preparation VM retaining-path evidence
+        run: flutter test --enable-vmservice --concurrency=1 test/preparation/vector_preparation_retention_test.dart test/preparation/vector_preparation_context_test.dart
+
       - name: Analyze Dart
         run: dart analyze
 

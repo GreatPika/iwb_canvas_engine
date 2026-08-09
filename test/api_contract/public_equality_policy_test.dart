@@ -16,6 +16,8 @@ void main() {
 }
 
 const _equalityPolicySource = '''
+import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -216,7 +218,33 @@ void main() {
       ),
     );
   });
+
+  test('prepared vectors retain default identity through disposal', () async {
+    final first = await prepareVector(_basicPreparedVectorBytes());
+    final second = await prepareVector(_basicPreparedVectorBytes());
+    final firstHashCode = first.hashCode;
+    final secondHashCode = second.hashCode;
+
+    expect(first.intrinsicSize, second.intrinsicSize);
+    expect(identical(first, second), isFalse);
+    expect(first == second, isFalse);
+
+    first.dispose();
+    second.dispose();
+
+    expect(first == second, isFalse);
+    expect(first.hashCode, firstHashCode);
+    expect(second.hashCode, secondHashCode);
+  });
 }
+
+ByteData _basicPreparedVectorBytes() => ByteData.sublistView(
+  Uint8List.fromList(
+    base64Decode(
+      'Yi2IAAEpAAAgQQAAoEEcmWYz/wMAAP//GwAAAAUAAAAAAQEBAwgAAAAAAAAAAAAAAAAAAAAAIEEAAAAAAAAgQQAAoEEAAAAAAACgQTAeAAAAAP//',
+    ),
+  ),
+);
 
 void _expectValueEquality(Object left, Object right) {
   expect(identical(left, right), isFalse);

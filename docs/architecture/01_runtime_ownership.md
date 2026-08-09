@@ -50,7 +50,7 @@ Runtime responsibilities are split as follows:
 
 | Zone | Owns | Must not do |
 |---|---|---|
-| Public API | stable DTOs, operations, events, errors | expose tables, handles, caches, or runtime internals |
+| Public API | stable DTOs, operations, events, errors, and application-owned prepared vector values | expose tables, handles, caches, runtime internals, raw Picture liveness, or upstream types |
 | DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | read gesture state, selection state, or Flutter widget state |
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
@@ -71,6 +71,13 @@ after accepted document, selection, preview, view camera, resource visual,
 interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
+
+Raster-free vector preparation is a separate public API boundary, not a runtime
+or resource-session route. It captures the invocation context while preparing
+caller bytes and returns an application-owned prepared value; only the
+application disposes that value. `RuntimeRoot`, `ResourceKernel`,
+`SurfaceResourceSession`, and `CanvasSurface` neither retain nor dispose its
+private Picture.
 
 Runtime-to-surface repaint routing has a separate internal surface-frame seam.
 `RuntimeRoot` aggregates operation, interaction, camera, resource, load, and

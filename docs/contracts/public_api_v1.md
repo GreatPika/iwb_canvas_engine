@@ -225,6 +225,7 @@ CanvasContextActionTarget and target family types
 CanvasMoveCommitRequest
 CanvasResource and resource family types
 CanvasDataException
+CanvasPreparedVector
 ```
 
 These runtime-owned objects, larger snapshots, operation records, and event
@@ -2681,6 +2682,7 @@ Resolver rules:
 ```dart
 enum CanvasDataErrorCode {
   invalidJson,
+  invalidVectorData,
   unsupportedSchemaVersion,
   missingField,
   invalidFieldType,
@@ -2794,5 +2796,44 @@ policy and exception declarations are classified in
 `docs/_registry/public_api_v1.yaml` under `diagnostics_public_surface` so
 `diagnostics.sanitized_public_projection` can traverse the registry-owned
 diagnostics public surface with analyzer-resolved signatures.
+
+---
+
+### 4.22 Vector preparation
+
+```dart
+final class CanvasPreparedVector {
+  final Size intrinsicSize;
+
+  void dispose();
+}
+
+Future<CanvasPreparedVector> prepareVector(
+  ByteData bytes, {
+  BuildContext? context,
+});
+```
+
+`CanvasPreparedVector` has no public constructor, liveness flag, raw
+`ui.Picture`, upstream type, or preparation diagnostics. Only `prepareVector`
+constructs it. It has default identity equality as classified in §4.1.2.
+`dispose` is application-owned and idempotent; it releases the owned Picture
+once and later calls do nothing.
+
+`prepareVector` accepts only the supplied `ByteData` view. It rejects a view
+larger than `32 * 1024 * 1024` bytes with `CanvasDataException` code
+`fieldMaxLength` at `vector.bytes` before copying or upstream work. It copies
+exactly that view before its first await, captures the supplied effective
+locale and text direction at invocation, and does not retain the caller bytes
+or `BuildContext` after completion.
+
+The helper accepts precompiled raster-free vector bytes only; it performs no
+file, asset, network, or external lookup. A failure of the selected upstream
+preparation Future is projected as `CanvasDataException` code
+`invalidVectorData` at `vector.bytes`, without an upstream error identity,
+message, or stack-trace contract. On success, intrinsic size uses the existing
+finite, positive, maximum-size validation under `vector.intrinsicSize`; a
+rejected intrinsic disposes its unpublished Picture before the validation
+error propagates.
 
 ---

@@ -18,8 +18,13 @@ import '../../src/directive_uri_references.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
+const _vectorPreparationAdapterPath =
+    'lib/src/api/canvas_vector_preparation.dart';
+const _vectorGraphicsImport = 'package:vector_graphics/vector_graphics.dart';
+
 Future<List<GuardrailViolation>> checkCoreBoundaries() async {
   final violations = <GuardrailViolation>[];
+  final units = <String, CompilationUnit>{};
   final collection = AnalysisContextCollection(
     includedPaths: ['$repositoryRoot/lib'],
     sdkPath: analysisDartSdkPath,
@@ -40,12 +45,19 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
         );
         continue;
       }
+      units[path] = result.unit;
 
       violations
         ..addAll(_checkDirectives(path, result.unit))
         ..addAll(_checkRetiredShapeReferences(path, result.unit))
         ..addAll(_checkResourceResolverTypeReferences(path, result.unit));
     }
+    violations.addAll(
+      _checkVectorPreparationDependencyBoundary(
+        units,
+        requireResolvedElement: true,
+      ),
+    );
   } finally {
     await collection.dispose();
   }
@@ -277,8 +289,31 @@ List<GuardrailViolation> checkCoreBoundaryFile({
       unit,
       requireResolvedElement: false,
     ),
+    ..._checkVectorPreparationRuntimeReferences(
+      path,
+      unit,
+      requireResolvedElement: false,
+    ),
     ...checkPointerCleanupCoordinatorCallerFile(path: path, content: content),
   ];
+}
+
+List<GuardrailViolation> checkVectorPreparationDependencyBoundaryFiles(
+  Map<String, String> files,
+) {
+  final units = <String, CompilationUnit>{
+    for (final entry in files.entries)
+      entry.key: parseString(
+        content: entry.value,
+        path: entry.key,
+        featureSet: FeatureSet.latestLanguageVersion(),
+      ).unit,
+  };
+
+  return _checkVectorPreparationDependencyBoundary(
+    units,
+    requireResolvedElement: false,
+  );
 }
 
 List<GuardrailViolation> checkSingleRuntimeRoot() {
@@ -372,6 +407,7 @@ List<GuardrailViolation> _checkImport(String path, String uri) {
     ..._checkInteractionFlutterImport(path, uri),
     ..._checkResourcePlatformImport(path, uri),
     ..._checkResourceNetworkImport(path, uri),
+    ..._checkVectorPreparationImports(path, uri),
   ];
   final target = _targetPath(path, uri);
   if (target != null) {
@@ -482,6 +518,39 @@ List<GuardrailViolation> _checkResourceNetworkImport(String path, String uri) {
   ];
 }
 
+List<GuardrailViolation> _checkVectorPreparationImports(
+  String path,
+  String uri,
+) {
+  if (uri == _vectorGraphicsImport && path == _vectorPreparationAdapterPath) {
+    return const [];
+  }
+
+  if (uri.startsWith('package:vector_graphics/')) {
+    return [_vectorPreparationImportViolation(path, uri)];
+  }
+
+  if (uri.startsWith('package:vector_graphics_codec/')) {
+    return [_vectorPreparationImportViolation(path, uri)];
+  }
+
+  if (uri == 'dart:io' || _isNetworkLoadingImport(uri)) {
+    return [_vectorPreparationImportViolation(path, uri)];
+  }
+
+  return const [];
+}
+
+GuardrailViolation _vectorPreparationImportViolation(String path, String uri) {
+  return GuardrailViolation(
+    guardrailId: 'core.import_boundaries',
+    path: path,
+    message:
+        'production code may not import $uri; only $_vectorPreparationAdapterPath '
+        'may import $_vectorGraphicsImport and vector preparation consumes caller bytes',
+  );
+}
+
 List<GuardrailViolation> _checkResolvedImportTarget(
   String path,
   String uri,
@@ -584,6 +653,78 @@ List<GuardrailViolation> _checkResourceResolverTypeReferences(
   bool requireResolvedElement = true,
 }) {
   final visitor = _ResourceResolverBoundaryVisitor(
+    path,
+    requireResolvedElement: requireResolvedElement,
+  );
+  unit.accept(visitor);
+
+  return visitor.violations;
+}
+
+List<GuardrailViolation> _checkVectorPreparationRuntimeReferences(
+  String path,
+  CompilationUnit unit, {
+  required bool requireResolvedElement,
+}) {
+  if (path != _vectorPreparationAdapterPath) {
+    return const [];
+  }
+
+  final visitor = _VectorPreparationRuntimeBoundaryVisitor(
+    path,
+    requireResolvedElement: requireResolvedElement,
+  );
+  unit.accept(visitor);
+
+  return visitor.violations;
+}
+
+List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
+  Map<String, CompilationUnit> units, {
+  required bool requireResolvedElement,
+}) {
+  final candidates = <String>[_vectorPreparationAdapterPath];
+  final visited = <String>{};
+  final violations = <GuardrailViolation>[];
+
+  for (var index = 0; index < candidates.length; index++) {
+    final path = candidates[index];
+    if (!visited.add(path)) {
+      continue;
+    }
+    final unit = units[path];
+    if (unit == null) {
+      continue;
+    }
+
+    violations.addAll(
+      _checkVectorPreparationDependencyRuntimeReferences(
+        path,
+        unit,
+        requireResolvedElement: requireResolvedElement,
+      ),
+    );
+    for (final directive in unit.directives) {
+      if (directive case ImportDirective() || ExportDirective()) {
+        for (final reference in directiveUriReferences(directive)) {
+          final target = _targetPath(path, reference.uri);
+          if (target != null && units.containsKey(target)) {
+            candidates.add(target);
+          }
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+List<GuardrailViolation> _checkVectorPreparationDependencyRuntimeReferences(
+  String path,
+  CompilationUnit unit, {
+  required bool requireResolvedElement,
+}) {
+  final visitor = _VectorPreparationRuntimeBoundaryVisitor(
     path,
     requireResolvedElement: requireResolvedElement,
   );
@@ -709,6 +850,80 @@ final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
+final class _VectorPreparationRuntimeBoundaryVisitor
+    extends RecursiveAstVisitor<void> {
+  _VectorPreparationRuntimeBoundaryVisitor(
+    this.path, {
+    required this.requireResolvedElement,
+  });
+
+  final String path;
+  final bool requireResolvedElement;
+  final List<GuardrailViolation> violations = [];
+  final Set<int> _assetReferenceOffsets = {};
+
+  @override
+  void visitSimpleIdentifier(SimpleIdentifier node) {
+    _recordAssetReference(
+      offset: node.offset,
+      name: node.name,
+      element: node.element,
+    );
+  }
+
+  @override
+  void visitNamedType(NamedType node) {
+    _recordAssetReference(
+      offset: node.offset,
+      name: node.name.lexeme,
+      element: node.element,
+    );
+    super.visitNamedType(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    if (_isVectorPreparationAssetLoad(
+      node,
+      requireResolvedElement: requireResolvedElement,
+    )) {
+      _recordAssetViolation(node.target?.offset ?? node.offset);
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  @override
+  void visitAssignmentExpression(AssignmentExpression node) {
+    if (_isFlutterErrorOnErrorAssignment(
+      node.leftHandSide,
+      requireResolvedElement: requireResolvedElement,
+    )) {
+      violations.add(_vectorPreparationRuntimeViolation(path));
+    }
+    super.visitAssignmentExpression(node);
+  }
+
+  void _recordAssetReference({
+    required int offset,
+    required String name,
+    required Element? element,
+  }) {
+    if (_isVectorPreparationAssetReference(
+      name: name,
+      element: element,
+      requireResolvedElement: requireResolvedElement,
+    )) {
+      _recordAssetViolation(offset);
+    }
+  }
+
+  void _recordAssetViolation(int offset) {
+    if (_assetReferenceOffsets.add(offset)) {
+      violations.add(_vectorPreparationRuntimeViolation(path));
+    }
+  }
+}
+
 bool _isCanvasResourceResolverTypeReference({
   required String name,
   required Element? element,
@@ -721,6 +936,134 @@ bool _isCanvasResourceResolverTypeReference({
   }
 
   return !requireResolvedElement && name == 'CanvasResourceResolver';
+}
+
+bool _isVectorPreparationAssetReference({
+  required String name,
+  required Element? element,
+  required bool requireResolvedElement,
+}) {
+  if (!requireResolvedElement) {
+    return name == 'rootBundle' || name.endsWith('AssetBundle');
+  }
+
+  if (name == 'rootBundle') {
+    return _isFlutterServicesElement(element);
+  }
+
+  return _isFlutterAssetBundleElement(element);
+}
+
+bool _isVectorPreparationAssetLoad(
+  MethodInvocation invocation, {
+  required bool requireResolvedElement,
+}) {
+  final target = invocation.target;
+  if (invocation.methodName.name != 'load' || target == null) {
+    return false;
+  }
+
+  if (requireResolvedElement) {
+    return _isFlutterAssetBundleType(target.staticType);
+  }
+
+  return switch (target) {
+    MethodInvocation(:final target, :final methodName)
+        when methodName.name == 'of' &&
+            _isDefaultAssetBundleReference(target) =>
+      true,
+    _ => false,
+  };
+}
+
+bool _isFlutterAssetBundleType(DartType? type) {
+  return type is InterfaceType && _isFlutterAssetBundleElement(type.element);
+}
+
+bool _isFlutterAssetBundleElement(Element? element) {
+  return _isExactFlutterAssetBundleElement(element) ||
+      (element is InterfaceElement &&
+          element.allSupertypes.any(
+            (supertype) => _isExactFlutterAssetBundleElement(supertype.element),
+          ));
+}
+
+bool _isExactFlutterAssetBundleElement(Element? element) {
+  return element?.displayName == 'AssetBundle' &&
+      _isFlutterServicesElement(element);
+}
+
+bool _isDefaultAssetBundleReference(Expression? expression) {
+  final reference = switch (expression) {
+    SimpleIdentifier() => expression,
+    PrefixedIdentifier(:final identifier) => identifier,
+    _ => null,
+  };
+
+  return reference is SimpleIdentifier &&
+      reference.name == 'DefaultAssetBundle';
+}
+
+bool _isFlutterErrorOnErrorAssignment(
+  Expression expression, {
+  required bool requireResolvedElement,
+}) {
+  return switch (expression) {
+    PropertyAccess(:final target, :final propertyName) =>
+      propertyName.name == 'onError' &&
+          _isFlutterErrorReference(
+            target,
+            requireResolvedElement: requireResolvedElement,
+          ),
+    PrefixedIdentifier(:final prefix, :final identifier) =>
+      identifier.name == 'onError' &&
+          _isFlutterErrorReference(
+            prefix,
+            requireResolvedElement: requireResolvedElement,
+          ),
+    _ => false,
+  };
+}
+
+bool _isFlutterErrorReference(
+  Expression? expression, {
+  required bool requireResolvedElement,
+}) {
+  final reference = switch (expression) {
+    SimpleIdentifier() => expression,
+    PrefixedIdentifier(:final identifier) => identifier,
+    _ => null,
+  };
+  if (reference is! SimpleIdentifier || reference.name != 'FlutterError') {
+    return false;
+  }
+
+  return !requireResolvedElement ||
+      _isFlutterFoundationElement(reference.element);
+}
+
+bool _isFlutterServicesElement(Element? element) =>
+    _isFlutterLibraryElement(element, '/services/');
+
+bool _isFlutterFoundationElement(Element? element) =>
+    _isFlutterLibraryElement(element, '/foundation/');
+
+bool _isFlutterLibraryElement(Element? element, String libraryPath) {
+  final libraryUri = element?.library?.uri.toString();
+
+  return libraryUri != null &&
+      libraryUri.startsWith('package:flutter/') &&
+      libraryUri.contains(libraryPath);
+}
+
+GuardrailViolation _vectorPreparationRuntimeViolation(String path) {
+  return GuardrailViolation(
+    guardrailId: 'core.import_boundaries',
+    path: path,
+    message:
+        'vector preparation dependencies may not load assets or assign '
+        'FlutterError.onError',
+  );
 }
 
 bool _isPublicCanvasResourceResolverElement(Element? element) {

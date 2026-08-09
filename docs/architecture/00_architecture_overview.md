@@ -61,6 +61,7 @@ v1 includes these package-owned capabilities:
 - CanvasPalette;
 - CanvasGrid.color;
 - CanvasSurface(interactive=false).
+- raster-free vector preparation into application-owned prepared values.
 ```
 
 The package boundary excludes:

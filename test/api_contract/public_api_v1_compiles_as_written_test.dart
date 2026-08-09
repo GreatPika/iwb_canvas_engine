@@ -93,6 +93,17 @@ $publicUses
 
 void _use(Object? value) {}
 
+Future<void> exercisePreparedVectorContract(
+  ByteData bytes, {
+  BuildContext? context,
+}) async {
+  final prepared = await prepareVector(bytes, context: context);
+  final Size intrinsicSize = prepared.intrinsicSize;
+  _use(intrinsicSize);
+  prepared.dispose();
+  prepared.dispose();
+}
+
 void _exerciseP2ContractSurface() {
   final elementId = CanvasElementId('element-1');
   final secondElementId = CanvasElementId('element-2');
@@ -587,6 +598,7 @@ void _exerciseP2ContractSurface() {
   );
   final Map<String, Object?> details = error.details;
   _use(details);
+  _use(CanvasDataErrorCode.invalidVectorData);
   _use(CanvasDataErrorCode.values);
 
   final encode = encodeCanvasDocument;

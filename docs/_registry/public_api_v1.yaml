@@ -108,11 +108,13 @@ public_exports:
   - CanvasDiagnosticsVerbose
   - CanvasDataException
   - CanvasDataErrorCode
+  - CanvasPreparedVector
   - CanvasTransform
   - encodeCanvasDocument
   - encodeCanvasDocumentToJson
   - canvasSchemaVersionWrite
   - canvasSchemaVersionsRead
+  - prepareVector
 diagnostics_public_surface:
   - CanvasDiagnosticPolicy
   - CanvasDiagnosticsDisabled

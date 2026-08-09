@@ -16,3 +16,4 @@ export 'src/api/canvas_runtime.dart';
 export 'src/api/canvas_surface.dart';
 export 'src/api/canvas_text_editing.dart';
 export 'src/api/canvas_tools.dart';
+export 'src/api/canvas_vector_preparation.dart';

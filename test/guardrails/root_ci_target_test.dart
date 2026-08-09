@@ -20,6 +20,7 @@ void main() {
     final guardrailStep = _stepNamed(steps, 'Run guardrails');
 
     _expectRootPackageChecks(workflowContent, steps);
+    _expectVectorPreparationVmRetentionRoute(steps);
     _expectRootPackageDocsChecks(workflowContent, steps);
     _expectExamplePackageChecks(workflowContent);
     _expectExampleBoundaryDiffEnvironment(steps);
@@ -61,6 +62,20 @@ void _expectRootPackageChecks(String workflowContent, List<YamlMap> steps) {
   );
   expect(runCommands, contains('dart analyze'));
   expect(runCommands, contains('dart run tool/guardrails/run.dart'));
+}
+
+void _expectVectorPreparationVmRetentionRoute(List<YamlMap> steps) {
+  final retentionStep = _stepNamed(
+    steps,
+    'Run vector preparation VM retaining-path evidence',
+  );
+
+  expect(
+    retentionStep['run'],
+    'flutter test --enable-vmservice --concurrency=1 '
+    'test/preparation/vector_preparation_retention_test.dart '
+    'test/preparation/vector_preparation_context_test.dart',
+  );
 }
 
 void _expectPinnedActionStep(_PinnedActionStepExpectation expectation) {

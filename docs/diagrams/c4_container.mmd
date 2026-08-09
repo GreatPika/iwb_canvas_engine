@@ -1,6 +1,7 @@
 flowchart TB
   Public[lib/iwb_canvas_engine.dart exports src/api wrappers] --> API[lib/src/api facade]
   API --> ContractsPublic[contracts/public declarations]
+  API --> VectorGraphics["vector_graphics\nprivate raster-free preparation"]
   ContractsInternal[contracts/internal owner seams] --> ContractsPublic
   API --> RuntimeRoot
   Surface["CanvasSurface public widget\none active surface per RuntimeRoot"] --> RuntimeRoot

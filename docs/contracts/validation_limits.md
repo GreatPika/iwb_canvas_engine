@@ -27,6 +27,7 @@ These limits are mandatory for v1 and define the current package validation boun
 | Limit | Value |
 |---|---:|
 | max raw JSON length | `32 * 1024 * 1024` chars |
+| max vector preparation view length | `32 * 1024 * 1024` bytes |
 | max content layers | `4096` |
 | max total elements | `200000` |
 | max resources | `4096` |
@@ -75,6 +76,7 @@ Validation is applied at:
 - interaction config mutation;
 - interaction request id generation and guarded request commit;
 - pointer input routing.
+- public vector preparation before caller-byte copying or upstream work.
 ```
 
 Element transform admission uses the same validation boundary list. Every
