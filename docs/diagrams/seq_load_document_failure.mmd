@@ -34,7 +34,7 @@ sequenceDiagram
       Codec->>Import: emit dependency-neutral import events
       Import-->>Store: event stream
       Runtime->>Store: prepare schema-v1 store import
-      Store->>Store: check duplicate ids, id admission, references, layer order, and descriptor rows
+      Store->>Store: check duplicate ids, id admission, final-candidate descriptor relationships, layer order, and sealed descriptor rows
       Store--x Runtime: CanvasDataException or StateError
     else prepared cleanup fails
       Store-->>Runtime: PreparedStoreDocumentImport

@@ -12,7 +12,6 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 import 'package:iwb_canvas_engine/src/store/resource_table.dart';
-import 'package:iwb_canvas_engine/src/store/revision_state.dart';
 import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
@@ -173,10 +172,10 @@ void _expectResourceImportBuilderConsumeOnce() {
 
 void _expectFamilyImportBuilderConsumeOnce() {
   final familyBuilder = FamilyTablesSchemaV1ImportBuilder()
-    ..add(_rectEvent('rect-a'), const {});
+    ..add(_rectEvent('rect-a'));
   familyBuilder.consume();
   expect(
-    () => familyBuilder.add(_rectEvent('rect-b'), const {}),
+    () => familyBuilder.add(_rectEvent('rect-b')),
     throwsA(isA<StateError>()),
   );
   expect(() => familyBuilder.consume(), throwsA(isA<StateError>()));
@@ -212,27 +211,35 @@ void _testStoreImportBuilderIsOneShot() {
         throwsA(isA<StateError>()),
       );
 
-      final failedBuilder = StoreSchemaV1ImportBuilder();
-      expect(
-        () => importSchemaV1Document(
-          _documentWithMissingResourceReference(),
-          failedBuilder,
-        ),
-        throwsA(isA<CanvasDataException>()),
-      );
-      expect(
-        () => failedBuilder.imageResource(_resourceEvent('late-resource')),
-        throwsA(isA<StateError>()),
-      );
-      expect(
-        () => failedBuilder.prepare(
-          baseRevisions: const RevisionState(),
-          revisionDelta: _replacementDelta,
-        ),
-        throwsA(isA<StateError>()),
-      );
+      _expectMissingRelationshipRejectedDuringStorePreparation();
     },
   );
+}
+
+void _expectMissingRelationshipRejectedDuringStorePreparation() {
+  final builder = StoreSchemaV1ImportBuilder();
+  importSchemaV1Document(_documentWithMissingResourceReference(), builder);
+  expect(
+    () => builder.imageResource(_resourceEvent('late-resource')),
+    throwsA(isA<StateError>()),
+  );
+  final store = DocumentStoreKernel();
+  final beforeSummary = store.documentSummary;
+  final beforeProjectionBuilds = store.projectionBuildCount;
+  expect(
+    () => store.prepareSchemaV1Import(builder, _replacementDelta),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.missingResourceReference,
+          )
+          .having((error) => error.path, 'path', 'image.resourceId'),
+    ),
+  );
+  expect(store.documentSummary, beforeSummary);
+  expect(store.projectionBuildCount, beforeProjectionBuilds);
 }
 
 PreparedStoreDocumentImport _prepare(

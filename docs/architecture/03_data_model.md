@@ -68,9 +68,11 @@ facts, and projection invalidation facts before runtime install.
 Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
 build the accepted `CommittedDocument` snapshot before the irreversible
 swap.
-The store validates id admission, layer/resource membership, image references,
-row placement, revision-family alignment, and projection invalidation in that
-prepare step. A successful sparse install swaps committed tables and revision
+The store validates id admission, layer/resource membership, sealed image
+descriptor relationships against the completed candidate, row placement,
+revision-family alignment, and projection invalidation in that prepare step.
+The descriptor subtype, never nullable MIME data, is the current relationship
+discriminator. A successful sparse install swaps committed tables and revision
 state directly; it does not create or retain a public `CanvasDocument`.
 Materialized fallback remains available only for explicit draft projection
 requests such as `CanvasEdit.readDraftDocument` and whole-draft replacement.
@@ -124,6 +126,11 @@ RectRows
 ```
 
 Each row table stores only family-specific fields plus common packed fields needed by render/hit/update. Public DTOs are projections.
+
+`ResourceTable` stores sealed descriptor facts. The sole current image fact
+variant carries its optional MIME field; a resource reference is checked once by
+`DocumentStoreKernel` against the final `CommittedDocument` candidate, rather
+than against a resource-id set while family rows are being assembled.
 
 Runtime view camera is not stored in `CommittedDocument`. It is runtime state
 owned by `RuntimeRoot` through the camera boundary. Runtime construction creates

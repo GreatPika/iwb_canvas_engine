@@ -67,16 +67,18 @@ String encodeCanvasDocumentToJson(CanvasDocument document);
 
 Explicit schema v1 decode helpers are codec-local read/output routes over the
 same canonical reader: the reader emits dependency-neutral schema v1 import
-events into a non-exported `CanvasDocument` builder sink, the sink materializes
-public DTOs, and decoder-owned reference validation rejects duplicate
-resources/layers/elements and missing image resource references after public DTO
-materialization. Those decode helpers are not runtime load routes. Runtime JSON
-load shares the schema v1 reader policy, but the runtime load path does not
+events with the admitted typed image descriptor event into a non-exported
+`CanvasDocument` builder sink. The sink materializes public DTOs and its
+relationship validation rejects duplicate resources/layers/elements and missing
+image resource references after public DTO materialization. The reader rejects
+unknown `resource.kind` before either sink; MIME fields are descriptor data, not
+kind inference. Those decode helpers are not runtime load routes. Runtime JSON
+load shares the reader policy, but the runtime load path does not
 materialize `CanvasDocument`, `CanvasImageResource`, store rows from public DTOs,
 store sinks outside the import handoff, or a retained document-sized validated
 fact/list/tree payload. Duplicate id checks, id admission, missing resource
-reference checks, and cross-row reference checks remain store-owned preparation
-responsibilities for runtime import.
+reference checks, and final-candidate descriptor relationship checks remain
+store-owned preparation responsibilities for runtime import.
 
 Public non-isolated import sinks receive events only after the codec-owned
 validation pass succeeds, so invalid schema input cannot partially notify those

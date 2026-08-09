@@ -163,7 +163,7 @@ void _verifyResourceDescriptorFacts(RuntimeRoot root) {
     CanvasResourceId('resource-a'),
   );
   expect(maybeDescriptor, isNotNull);
-  final descriptor = maybeDescriptor as FrameResourceDescriptorFacts;
+  final descriptor = maybeDescriptor as FrameImageResourceDescriptorFacts;
   expect(descriptor.id, CanvasResourceId('resource-a'));
   expect(descriptor.appKey, 'asset-a');
   expect(descriptor.mimeType, 'image/png');

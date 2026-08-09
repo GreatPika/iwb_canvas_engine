@@ -43,7 +43,7 @@ void _testImmutableFrameCapture() {
         handleC.id: _rectFacts(handleC),
       },
       descriptors: {
-        resourceId: FrameResourceDescriptorFacts(
+        resourceId: FrameImageResourceDescriptorFacts(
           id: resourceId,
           appKey: 'asset://image-a',
           mimeType: 'image/png',

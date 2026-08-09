@@ -22,14 +22,14 @@ flowchart LR
     VersionGate["schemaVersion gate\nread exactly {1}"]
     FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
     PrimitiveValidation["Primitive validation\nfinite numbers, colors, ids"]
-    ResourceValidation["Resource validation\nimage resources, appKey source only"]
+    ResourceValidation["Resource validation\nkind=image → typed descriptor\nappKey source only"]
     ElementValidation["Element validation\nknown element kinds, enums,\nand transform admission"]
     LayerCountValidation["Layer and node count validation\nschema limits"]
     MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
     RuntimeImportEvents["Runtime SchemaV1ImportEvent stream\nisolated sink mode"]
     DecodeImportEvents["Decode SchemaV1ImportEvent stream\nnon-isolated builder mode"]
     DecoderSink["Codec-local CanvasDocument builder sink\npublic decode only"]
-    DecodeReferenceValidation["Decoder reference validation\nduplicate ids and missing image resources"]
+    DecodeReferenceValidation["Decoder relationship validation\nduplicate ids and missing image descriptors"]
 
     DtoValidation["Public DTO validation\nconstructor/schema limits"]
     CanonicalEncoder["Canonical v1 encoder\nwrite schemaVersion = 1"]
@@ -100,7 +100,7 @@ flowchart LR
   DecoderSink -->|"materialized public DTO lists"| DecodeReferenceValidation
   DecodeReferenceValidation -->|"CanvasDocument output"| PublicDocument
   PublicDocument -->|"decoded result"| App
-  DecodeReferenceValidation -.->|"duplicate ids or missing image resources"| FailureDiagnosticBridge
+  DecodeReferenceValidation -.->|"duplicate ids or missing image descriptors"| FailureDiagnosticBridge
 
   App -->|"encode request"| EncodeEntry
   RuntimeProjection -->|"may supply public DTO\nthrough documented read paths"| PublicDocument

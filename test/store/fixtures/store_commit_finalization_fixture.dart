@@ -36,6 +36,13 @@ void _registerMaterializedFinalizationTests() {
     () =>
         expect(_materializedChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
+  test(
+    'materialized missing resource admission precedes revision delta rejection',
+    () => expect(
+      _materializedMissingResourcePrecedesRevisionDeltaRejection,
+      returnsNormally,
+    ),
+  );
 }
 
 void _registerSparseFinalizationTests() {
@@ -129,6 +136,30 @@ void _materializedChangedFactsPrepareAcceptedDelta() {
   _expectBackgroundOnlyMaterializedRevisions(prepared, beforeRevisions);
   expect(store.documentRevision, beforeRevisions.documentRevision);
   expect(store.projectionBuildCount, 0);
+}
+
+void _materializedMissingResourcePrecedesRevisionDeltaRejection() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final beforeSummary = store.documentSummary;
+  final beforeProjectionBuilds = store.projectionBuildCount;
+
+  expect(
+    () => store.prepareMaterializedCommit(
+      _documentWithMissingImageResource(),
+      const StoreRevisionDelta(),
+    ),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.missingResourceReference,
+          )
+          .having((error) => error.path, 'path', 'image.resourceId'),
+    ),
+  );
+  expect(store.documentSummary, beforeSummary);
+  expect(store.projectionBuildCount, beforeProjectionBuilds);
 }
 
 void _sparseChangedFactsPrepareAcceptedDelta() {
@@ -350,6 +381,24 @@ CanvasDocument _baseDocument({
         elements: [
           CanvasRectElement(
             id: CanvasElementId('rect-1'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithMissingImageResource() {
+  return CanvasDocument(
+    resources: [_resource('resource-1')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('missing-image-resource'),
+            resourceId: CanvasResourceId('missing-resource'),
             size: const Size(1, 1),
           ),
         ],

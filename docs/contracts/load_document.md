@@ -66,9 +66,9 @@ Success ordering:
    isolated sink without constructing CanvasDocument, CanvasImageResource, store
    rows from public DTOs, or a retained validated fact graph;
 4. let DocumentStoreKernel-owned preparation consume the isolated import sink
-   into store-owned rows/tables, resource descriptor rows, id admission facts,
-   reference checks, revision facts, runtime camera facts, and projection
-   invalidation facts;
+   into store-owned rows/tables, sealed resource descriptor rows, id admission
+   facts, final-candidate descriptor relationship checks, revision facts,
+   runtime camera facts, and projection invalidation facts;
 5. if import and store preparation succeed, request prepared interaction cleanup;
 6. produce the LoadInteractionCleanupOutcome before the document install commit
    point; the outcome records whether prepared cleanup changed public preview

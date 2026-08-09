@@ -44,7 +44,6 @@ final class CommittedDocument {
       elements: ElementRegistry(
         backgroundElements: document.backgroundElements,
         layers: document.layers,
-        resourceIds: resourceTable.admittedIds,
       ),
       metadata: document.metadata,
       resourceTable: resourceTable,

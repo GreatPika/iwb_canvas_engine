@@ -255,7 +255,7 @@ FrameEngine _frameEngineWithImageRecord() {
       ),
     ],
     resourceDescriptors: [
-      FrameResourceDescriptorFacts(
+      FrameImageResourceDescriptorFacts(
         id: CanvasResourceId('resource-a'),
         appKey: 'asset-a',
         mimeType: 'image/png',

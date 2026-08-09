@@ -65,6 +65,7 @@ Unknown fields policy:
 - metadata is the only roundtripped extension area;
 - unsupported schemaVersion is rejected.
 - unknown element kind is rejected;
+- unknown resource kind is rejected;
 - unknown resource source kind is rejected;
 - unknown enum value is rejected.
 ```
@@ -108,6 +109,8 @@ Image resource:
 Rules:
 
 ```text
+kind=image           -> admits the typed image descriptor; mimeType does not
+                         determine descriptor kind;
 source.kind=appKey    -> requires key;
 appKey                -> non-empty string, no leading/trailing whitespace,
                          raw length <= 1024, no control characters;

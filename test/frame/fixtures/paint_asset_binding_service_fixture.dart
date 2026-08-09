@@ -303,7 +303,7 @@ FrameResourceDescriptorFacts _resourceDescriptor(
   CanvasResourceId id, {
   required String appKey,
 }) {
-  return FrameResourceDescriptorFacts(
+  return FrameImageResourceDescriptorFacts(
     id: id,
     appKey: appKey,
     mimeType: 'image/png',

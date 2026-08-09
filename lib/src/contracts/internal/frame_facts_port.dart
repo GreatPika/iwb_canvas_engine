@@ -131,11 +131,10 @@ final class FrameElementFacts {
   final double? thickness;
 }
 
-final class FrameResourceDescriptorFacts {
+sealed class FrameResourceDescriptorFacts {
   const FrameResourceDescriptorFacts({
     required this.id,
     required this.appKey,
-    required this.mimeType,
     required this.contentHash,
     required this.byteLength,
     required this.resourceRevision,
@@ -144,11 +143,25 @@ final class FrameResourceDescriptorFacts {
 
   final CanvasResourceId id;
   final String appKey;
-  final String? mimeType;
   final String? contentHash;
   final int? byteLength;
   final int resourceRevision;
   final CanvasMetadata metadata;
+}
+
+final class FrameImageResourceDescriptorFacts
+    extends FrameResourceDescriptorFacts {
+  const FrameImageResourceDescriptorFacts({
+    required super.id,
+    required super.appKey,
+    required this.mimeType,
+    required super.contentHash,
+    required super.byteLength,
+    required super.resourceRevision,
+    required super.metadata,
+  });
+
+  final String? mimeType;
 }
 
 abstract interface class FrameFactsPort {

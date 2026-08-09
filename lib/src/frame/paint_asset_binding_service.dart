@@ -84,15 +84,18 @@ final class PaintAssetBindingService {
       );
     }
 
-    return ResourceImageResolveRequest.descriptor(
-      resourceId: descriptor.id,
-      appKey: descriptor.appKey,
-      mimeType: descriptor.mimeType,
-      contentHash: descriptor.contentHash,
-      byteLength: descriptor.byteLength,
-      metadata: descriptor.metadata,
-      resourceRevision: descriptor.resourceRevision,
-      placeholderBounds: placeholderBounds,
-    );
+    return switch (descriptor) {
+      FrameImageResourceDescriptorFacts() =>
+        ResourceImageResolveRequest.descriptor(
+          resourceId: descriptor.id,
+          appKey: descriptor.appKey,
+          mimeType: descriptor.mimeType,
+          contentHash: descriptor.contentHash,
+          byteLength: descriptor.byteLength,
+          metadata: descriptor.metadata,
+          resourceRevision: descriptor.resourceRevision,
+          placeholderBounds: placeholderBounds,
+        ),
+    };
   }
 }

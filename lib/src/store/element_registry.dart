@@ -27,7 +27,6 @@ final class ElementRegistry {
   ElementRegistry({
     required Iterable<CanvasElement> backgroundElements,
     required Iterable<CanvasLayer> layers,
-    required Set<String> resourceIds,
   }) : this._(
          backgroundElementIds: [
            for (final element in backgroundElements) element.id,
@@ -35,7 +34,7 @@ final class ElementRegistry {
          familyTables: FamilyTables([
            ...backgroundElements,
            for (final layer in layers) ...layer.elements,
-         ], resourceIds: resourceIds),
+         ]),
          layerTable: LayerTable(
            layers.map(
              (layer) => LayerRow(
@@ -167,12 +166,11 @@ final class ElementRegistry {
 
   ElementRegistry addElement(
     CanvasElement element, {
-    required Set<String> resourceIds,
     CanvasLayerId? layerId,
     int? index,
   }) {
     final appendLayerId = _contentAppendLayerId(layerId: layerId, index: index);
-    final nextFamilyTables = familyTables.addElement(element, resourceIds);
+    final nextFamilyTables = familyTables.addElement(element);
     final nextLayerTable = layerTable.addElement(
       element.id,
       layerId: layerId,
@@ -195,11 +193,7 @@ final class ElementRegistry {
     );
   }
 
-  ElementRegistry addBackgroundElement(
-    CanvasElement element, {
-    required Set<String> resourceIds,
-    int? index,
-  }) {
+  ElementRegistry addBackgroundElement(CanvasElement element, {int? index}) {
     final nextBackgroundIds = backgroundElementIds.toList();
     nextBackgroundIds.insert(
       _clampedInsertIndex(index, nextBackgroundIds.length),
@@ -208,23 +202,17 @@ final class ElementRegistry {
 
     return ElementRegistry._(
       backgroundElementIds: nextBackgroundIds,
-      familyTables: familyTables.addElement(element, resourceIds),
+      familyTables: familyTables.addElement(element),
       layerTable: layerTable,
     );
   }
 
-  ElementRegistry? updateElements(
-    Iterable<CanvasElement> elements, {
-    required Set<String> resourceIds,
-  }) {
+  ElementRegistry? updateElements(Iterable<CanvasElement> elements) {
     final updateList = List<CanvasElement>.unmodifiable(elements);
     if (updateList.isEmpty) {
       return null;
     }
-    final updatedFamilyTables = familyTables.replaceElements(
-      updateList,
-      resourceIds,
-    );
+    final updatedFamilyTables = familyTables.replaceElements(updateList);
 
     return ElementRegistry._withUpdatedFamilies(
       familyTables: updatedFamilyTables,

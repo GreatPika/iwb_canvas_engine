@@ -138,7 +138,7 @@ nodes:
       - path: docs/contracts/schema_v1.md
       - path: docs/contracts/codec_boundary.md
     evidence:
-      - Schema v1 decode and encode own JSON boundary validation.
+      - Schema v1 decode and encode own JSON boundary validation and typed current descriptor admission.
     actual:
       declarations:
         - decodeSchemaV1Document
@@ -183,8 +183,9 @@ nodes:
     coverageScope: architectureOwners
     sourceDocs:
       - path: docs/contracts/cache_policy.md
+      - path: docs/architecture/03_data_model.md
     evidence:
-      - DocumentStoreKernel owns committed document facts and projection cache input.
+      - DocumentStoreKernel owns committed sealed descriptor facts, final-candidate descriptor relationships, and projection cache input.
     actual:
       declarations:
         - DocumentStoreKernel
@@ -455,7 +456,7 @@ edges:
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - RuntimeRoot implements FrameFactsPort so FrameEngine and frame collaborators consume committed frame facts through the internal facts boundary instead of store internals.
+      - RuntimeRoot implements FrameFactsPort so FrameEngine and frame collaborators consume committed frame facts, including sealed descriptor snapshots, through the internal facts boundary instead of store internals.
     actual:
       implementedInterfaces:
         - FrameFactsPort
@@ -664,7 +665,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - PaintAssetBindingService binds image descriptors through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not own typed CanvasResourceResolver references.
+      - PaintAssetBindingService binds sealed current image descriptor facts through SurfaceResourceSession after ordinary record planning; painters and ordinary planners do not own typed CanvasResourceResolver references.
     actual:
       delegationMembers:
         - PaintAssetBindingService.bind

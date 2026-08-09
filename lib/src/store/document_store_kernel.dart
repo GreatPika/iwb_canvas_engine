@@ -33,11 +33,13 @@ import 'store_revision_delta.dart';
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
+    _validateFinalCandidateResourceRelationships(_document);
     _resetIdAdmission();
   }
 
   @visibleForTesting
   DocumentStoreKernel.withCommittedDocumentForTesting(this._document) {
+    _validateFinalCandidateResourceRelationships(_document);
     _resetIdAdmission();
   }
 
@@ -256,6 +258,7 @@ final class DocumentStoreKernel {
   }
 
   void installDocument(CommittedDocument document, StoreRevisionDelta delta) {
+    _validateFinalCandidateResourceRelationships(document);
     if (!delta.hasChanges) {
       return;
     }
@@ -266,6 +269,7 @@ final class DocumentStoreKernel {
   }
 
   void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
+    _validateFinalCandidateResourceRelationships(document);
     if (!delta.hasChanges) {
       return;
     }
@@ -288,6 +292,7 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreRevisionDelta delta,
   ) {
+    _validateFinalCandidateResourceRelationships(document);
     if (!delta.hasChanges) {
       return;
     }
@@ -310,18 +315,22 @@ final class DocumentStoreKernel {
     StoreSchemaV1ImportBuilder builder,
     StoreRevisionDelta delta,
   ) {
-    return builder.prepare(
+    final prepared = builder.prepare(
       baseRevisions: _document.revisions,
       revisionDelta: delta,
     );
+    _validateFinalCandidateResourceRelationships(prepared.document);
+
+    return prepared;
   }
 
   PreparedMaterializedStoreCommit prepareMaterializedCommit(
     CanvasDocument document,
     StoreRevisionDelta revisionDelta,
   ) {
-    final providedDelta = _validatedSparseRevisionDelta(revisionDelta);
     final candidate = CommittedDocument(document);
+    _validateFinalCandidateResourceRelationships(candidate);
+    final providedDelta = _validatedSparseRevisionDelta(revisionDelta);
     final acceptedDelta = _committedDocumentRevisionDelta(_document, candidate);
     if (!acceptedDelta.hasChanges) {
       return PreparedMaterializedStoreCommit(
@@ -378,11 +387,13 @@ final class DocumentStoreKernel {
   // boundary into metric-shaped phases.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
-    final revisionDelta = _validatedSparseRevisionDelta(commit.revisionDelta);
+    final revisionDelta = commit.revisionDelta;
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
     var didMutateFacts = false;
     final admittedIds = _SparseAdmittedIds();
+    final deferredElementUpdateValidation =
+        <_DeferredSparseElementUpdateValidation>[];
     for (var index = 0; index < commit.mutations.length;) {
       final mutation = commit.mutations[index];
       if (mutation is StoreSparseUpdateElement) {
@@ -395,7 +406,11 @@ final class DocumentStoreKernel {
           updates.add(current);
           index += 1;
         }
-        final applied = _updateElements(nextDocument, updates);
+        final applied = _updateElements(
+          nextDocument,
+          updates,
+          deferredValidation: deferredElementUpdateValidation,
+        );
         nextDocument = applied.document;
         didMutateFacts = didMutateFacts || applied.didMutateFacts;
         continue;
@@ -412,6 +427,11 @@ final class DocumentStoreKernel {
       }
       index += 1;
     }
+    _validateFinalCandidateResourceRelationships(nextDocument);
+    final validatedRevisionDelta = _validatedSparseRevisionDelta(revisionDelta);
+    for (final validation in deferredElementUpdateValidation) {
+      validation.validate();
+    }
     final touched = _SparseTouchedCommittedFacts.fromMutations(
       commit.mutations,
     );
@@ -423,7 +443,7 @@ final class DocumentStoreKernel {
           )
         : const StoreRevisionDelta();
     final accepted = didMutateFacts && acceptedDelta.hasChanges;
-    if (accepted && !revisionDelta.hasChanges) {
+    if (accepted && !validatedRevisionDelta.hasChanges) {
       throw ArgumentError.value(
         commit.revisionDelta,
         'revisionDelta',
@@ -432,7 +452,7 @@ final class DocumentStoreKernel {
     }
     if (accepted) {
       _validateSparseRevisionCoverage(
-        provided: revisionDelta,
+        provided: validatedRevisionDelta,
         required: acceptedDelta,
       );
     }
@@ -568,12 +588,10 @@ final class DocumentStoreKernel {
     final elements = mutation.background
         ? document.elements.addBackgroundElement(
             mutation.element,
-            resourceIds: document.resourceTable.admittedIds,
             index: mutation.index,
           )
         : document.elements.addElement(
             mutation.element,
-            resourceIds: document.resourceTable.admittedIds,
             layerId: mutation.layerId,
             index: mutation.index,
           );
@@ -588,21 +606,28 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreSparseUpdateElement mutation,
   ) {
-    return _updateElements(document, [mutation]);
+    final deferredValidation = <_DeferredSparseElementUpdateValidation>[];
+    final result = _updateElements(document, [
+      mutation,
+    ], deferredValidation: deferredValidation);
+    for (final validation in deferredValidation) {
+      validation.validate();
+    }
+
+    return result;
   }
 
   _SparseMutationResult _updateElements(
     CommittedDocument document,
-    List<StoreSparseUpdateElement> updates,
-  ) {
+    List<StoreSparseUpdateElement> updates, {
+    required List<_DeferredSparseElementUpdateValidation> deferredValidation,
+  }) {
     final batch = _prepareSparseElementUpdateBatch(document, updates);
+    deferredValidation.addAll(batch.deferredValidation);
     if (!batch.hasChanges) {
       return _SparseMutationResult.unchanged(document);
     }
-    final elements = document.elements.updateElements(
-      batch.elements,
-      resourceIds: document.resourceTable.admittedIds,
-    );
+    final elements = document.elements.updateElements(batch.elements);
     if (elements == null) {
       return _SparseMutationResult.unchanged(document);
     }
@@ -618,6 +643,7 @@ final class DocumentStoreKernel {
     List<StoreSparseUpdateElement> updates,
   ) {
     final changedById = <CanvasElementId, CanvasElement>{};
+    final deferredValidation = <_DeferredSparseElementUpdateValidation>[];
     var requiredRevisionDelta = const StoreRevisionDelta();
     for (final update in updates) {
       final element = update.element;
@@ -630,10 +656,9 @@ final class DocumentStoreKernel {
       if (_isSparseElementUpdateNoOp(before: before, update: update)) {
         continue;
       }
-      _validateSparseElementUpdate(
-        before: before,
-        update: update,
-        resourceIds: document.resourceTable.admittedIds,
+      _validateSparseElementUpdateKind(before: before, update: update);
+      deferredValidation.add(
+        _DeferredSparseElementUpdateValidation(before: before, update: update),
       );
       requiredRevisionDelta = requiredRevisionDelta.merge(
         update.elementRevisionDelta,
@@ -644,6 +669,7 @@ final class DocumentStoreKernel {
     return _SparseElementUpdateBatch(
       elements: changedById.values,
       requiredRevisionDelta: requiredRevisionDelta,
+      deferredValidation: deferredValidation,
     );
   }
 
@@ -954,11 +980,7 @@ ElementRegistry _acceptSparseElementRows({
     return candidate.elements;
   }
 
-  return candidate.elements.updateElements(
-        replacements,
-        resourceIds: candidate.resourceTable.admittedIds,
-      ) ??
-      candidate.elements;
+  return candidate.elements.updateElements(replacements) ?? candidate.elements;
 }
 
 Iterable<CanvasElementId> _sparseElementIdsForRevisionNormalization(
@@ -1815,10 +1837,9 @@ void _validateSparseElementUpdateSource({
   }
 }
 
-void _validateSparseElementUpdate({
+void _validateSparseElementUpdateKind({
   required CanvasElement before,
   required StoreSparseUpdateElement update,
-  required Set<String> resourceIds,
 }) {
   final after = update.element;
   if (before.kind != after.kind) {
@@ -1828,28 +1849,34 @@ void _validateSparseElementUpdate({
       'element update kind does not match the target element.',
     );
   }
-  _validateSparseUpdateResourceReferences(after, resourceIds);
-  if (!update.elementRevisionDelta.hasChanges) {
-    throw ArgumentError.value(
-      update.elementRevisionDelta,
-      'elementRevisionDelta',
-      'changed sparse element updates must carry an element revision delta.',
-    );
-  }
-  _validateSparseElementRevision(before: before, after: after);
 }
 
-void _validateSparseUpdateResourceReferences(
-  CanvasElement element,
-  Set<String> resourceIds,
-) {
-  if (element case CanvasImageElement(:final resourceId)) {
-    if (!resourceIds.contains(resourceId.value)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.missingResourceReference,
-        message: 'image element references a missing resource.',
-        path: 'image.resourceId',
-      );
+void _validateFinalCandidateResourceRelationships(CommittedDocument document) {
+  for (final elementId in document.elements.frameElementOrder) {
+    final element = document.elements.elementById(elementId);
+    if (element == null) {
+      throw StateError('committed element order references a missing row.');
+    }
+    switch (element) {
+      case CanvasImageElement(:final resourceId):
+        final descriptor = document.resourceDescriptor(resourceId);
+        if (descriptor == null) {
+          throw CanvasDataException(
+            code: CanvasDataErrorCode.missingResourceReference,
+            message: 'image element references a missing resource.',
+            path: 'image.resourceId',
+          );
+        }
+        switch (descriptor) {
+          case StoreImageResourceDescriptorFacts():
+            break;
+        }
+      case CanvasPathElement() ||
+          CanvasTextElement() ||
+          CanvasStrokeElement() ||
+          CanvasLineElement() ||
+          CanvasRectElement():
+        break;
     }
   }
 }
@@ -2021,12 +2048,37 @@ final class _SparseElementUpdateBatch {
   _SparseElementUpdateBatch({
     required Iterable<CanvasElement> elements,
     required this.requiredRevisionDelta,
-  }) : elements = List.unmodifiable(elements);
+    required Iterable<_DeferredSparseElementUpdateValidation>
+    deferredValidation,
+  }) : elements = List.unmodifiable(elements),
+       deferredValidation = List.unmodifiable(deferredValidation);
 
   final List<CanvasElement> elements;
   final StoreRevisionDelta requiredRevisionDelta;
+  final List<_DeferredSparseElementUpdateValidation> deferredValidation;
 
   bool get hasChanges => elements.isNotEmpty;
+}
+
+final class _DeferredSparseElementUpdateValidation {
+  const _DeferredSparseElementUpdateValidation({
+    required this.before,
+    required this.update,
+  });
+
+  final CanvasElement before;
+  final StoreSparseUpdateElement update;
+
+  void validate() {
+    if (!update.elementRevisionDelta.hasChanges) {
+      throw ArgumentError.value(
+        update.elementRevisionDelta,
+        'elementRevisionDelta',
+        'changed sparse element updates must carry an element revision delta.',
+      );
+    }
+    _validateSparseElementRevision(before: before, after: update.element);
+  }
 }
 
 final class _SparseMutationResult {

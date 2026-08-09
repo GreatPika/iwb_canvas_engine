@@ -99,10 +99,11 @@ The compiler consumes only the store-accepted revision delta and touched facts,
 not provisional session or draft revision journals.
 
 `DocumentStoreKernel` prepares accepted sparse and ordinary materialized commits
-before the irreversible store swap. Duplicate ids, resource references,
-update-kind validation, revision-family alignment, projection invalidation, and
-final committed-fact equality are validated against the accepted committed
-tables. A candidate whose final committed facts match the base becomes an empty
+before the irreversible store swap. Duplicate ids, sealed descriptor
+relationships against the final candidate, update-kind validation,
+revision-family alignment, projection invalidation, and final committed-fact
+equality are validated against the accepted committed tables. A candidate whose
+final committed facts match the base becomes an empty
 accepted document change: it advances no revisions, compiles no document plan,
 skips interaction plan augmentation, installs nothing, delivers no typed
 effects, and publishes no public state. Selection effects are also prepared

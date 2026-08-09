@@ -46,7 +46,7 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   @override
   void backgroundElement(SchemaV1ElementImportEvent event) {
     _acceptEvent(() {
-      _families.add(event, _resources.admittedIds);
+      _families.add(event);
       _elementOrder.addBackground(event.common.id);
     });
   }
@@ -61,7 +61,7 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   @override
   void layerElement(CanvasLayerId layerId, SchemaV1ElementImportEvent event) {
     _acceptEvent(() {
-      _families.add(event, _resources.admittedIds);
+      _families.add(event);
       _layers.addElement(layerId, event.common.id);
       _elementOrder.addContent(layerId, event.common.id);
     });

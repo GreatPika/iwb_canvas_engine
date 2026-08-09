@@ -172,7 +172,7 @@ Target ownership boundaries:
 | `OrdinaryPaintPlanner` | per-frame ordinary spatial admission and committed render-record cache lookup/build inside the 16-entry viewport/revision OrdinaryPaintRecordCache | selection revision, selection style, selected move delta, preview state, resource resolver/session, static background identity |
 | `SelectedMoveSupplementPlanner` | per-frame selected move filtering, shifted candidate lookup, row resolution, and merge by `orderToken` | ordinary `OrdinaryPaintRecordCache` writes, overlay rendering, global scene sort |
 | `SelectionDecorationPlanner` | selection UI decoration and `SelectionDecorationPlan` key including `boundsRevision` | ordinary record cache identity, selected move supplement records, static background identity |
-| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using immutable descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
+| `PaintAssetBindingService` | descriptor-to-asset binding for records with image resource ids, using sealed immutable image descriptor facts and `SurfaceResourceSession` | ordinary paint plan construction, painter resolver calls, app resolver ownership |
 | `StaticBackgroundPlanner` | static background/grid plan and cache identity | selection, preview, resource visual, ordinary element visual identity |
 | `OverlayPreviewPlanner` | immutable overlay primitives admitted from `CapturedOverlayFrame` | selected move rendering, resource resolver reads, cache invalidation, repaint scheduling |
 

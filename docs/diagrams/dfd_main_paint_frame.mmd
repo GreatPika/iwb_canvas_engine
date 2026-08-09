@@ -131,7 +131,7 @@ flowchart LR
   Records -->|"image resource ids"| AssetBinding
   AssetBinding -->|"request descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
-  Committed -->|"immutable descriptor facts"| DescriptorFacts
+  Committed -->|"sealed immutable current image descriptor facts"| DescriptorFacts
   ExplicitSessionCaller -->|"passes SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| AssetBinding
   AssetBinding -->|"resolve via session only"| ResolvePaintAsset

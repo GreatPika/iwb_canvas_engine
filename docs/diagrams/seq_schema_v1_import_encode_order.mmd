@@ -30,7 +30,7 @@ sequenceDiagram
     Codec->>Schema: schemaVersion gate(read exactly {1})
     Schema->>Schema: known v1 field validation and unknown non-metadata policy
     Schema->>Schema: primitive validation(colors, finite numbers, ids)
-    Schema->>Schema: resource validation(appKey source only)
+    Schema->>Schema: resource validation(kind=image typed descriptor, appKey source only)
     Schema->>Schema: element validation(known kinds, enums, and transform admission)
     Schema->>Schema: layer and node count checks
     Schema->>Schema: metadata validation(JSON-only bounded extension area)
@@ -39,7 +39,7 @@ sequenceDiagram
       Schema-->>Codec: validated streamable import facts
       Codec->>Import: begin document and emit resource/layer/element events
       Import->>Store: prepareSchemaV1Import
-      Store->>Store: duplicate id and cross-row reference checks
+      Store->>Store: duplicate id and final-candidate descriptor relationship checks
       alt store preparation accepts
         Store-->>Runtime: PreparedStoreDocumentImport consume-once rows
         Runtime->>Runtime: prepared interaction cleanup before install

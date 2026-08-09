@@ -76,7 +76,7 @@ void _registerSparseUpdateInstallTests() {
 
 void _registerSparseValidationTests() {
   test(
-    'validates duplicate ids and image resource references before swap',
+    'validates image resource relationships against the final candidate before swap',
     () => expect(_validatesAddFailuresBeforeSwap, returnsNormally),
   );
   test(
@@ -338,6 +338,8 @@ StoreSparseCommit _resourceCompensation() {
 }
 
 void _validatesAddFailuresBeforeSwap() {
+  _acceptsImageAndResourceAddedInEitherOrder();
+
   final store = documentStoreWithDocument(_baseDocument());
   final beforeSummary = store.documentSummary;
 
@@ -346,10 +348,75 @@ void _validatesAddFailuresBeforeSwap() {
 
   expect(
     _prepareMissingResourceAdd(store),
-    throwsA(isA<CanvasDataException>()),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.missingResourceReference,
+          )
+          .having((error) => error.path, 'path', 'image.resourceId'),
+    ),
+  );
+  expect(
+    _prepareMissingResourceAdd(
+      store,
+      revisionDelta: const StoreRevisionDelta(document: true, structural: true),
+    ),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.missingResourceReference,
+          )
+          .having((error) => error.path, 'path', 'image.resourceId'),
+    ),
   );
   expect(store.documentSummary, beforeSummary);
   expect(store.projectionBuildCount, 0);
+}
+
+// Keeping both callback orders together makes their shared final-candidate
+// invariant visible as one behavior.
+// ignore: halstead-volume
+void _acceptsImageAndResourceAddedInEitherOrder() {
+  for (final elementFirst in [true, false]) {
+    final store = documentStoreWithDocument(_baseDocument());
+    final image = CanvasImageElement(
+      id: CanvasElementId('e-final-candidate-$elementFirst'),
+      resourceId: CanvasResourceId('resource-final-candidate-$elementFirst'),
+      size: const Size(1, 1),
+    );
+    final resource = CanvasImageResource(
+      id: image.resourceId,
+      source: CanvasResourceSource.appKey(
+        'asset-final-candidate-$elementFirst',
+      ),
+    );
+    final mutations = elementFirst
+        ? [
+            StoreSparseAddElement(element: image),
+            StoreSparseUpsertResource(resource),
+          ]
+        : [
+            StoreSparseUpsertResource(resource),
+            StoreSparseAddElement(element: image),
+          ];
+
+    final prepared = store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.structural().merge(
+          const StoreRevisionDelta.resource(),
+        ),
+        mutations: mutations,
+      ),
+    );
+
+    store.installSparseCommit(prepared);
+    expect(store.elementById(image.id), isA<CanvasImageElement>());
+    expect(store.resourceById(image.resourceId), isA<CanvasImageResource>());
+  }
 }
 
 void _rejectsSparseRevisionDeltaWithoutProjection() {
@@ -880,10 +947,13 @@ void Function() _prepareDuplicateAdd(DocumentStoreKernel store) {
   );
 }
 
-void Function() _prepareMissingResourceAdd(DocumentStoreKernel store) {
+void Function() _prepareMissingResourceAdd(
+  DocumentStoreKernel store, {
+  StoreRevisionDelta revisionDelta = const StoreRevisionDelta.structural(),
+}) {
   return () => store.prepareSparseCommit(
     StoreSparseCommit(
-      revisionDelta: const StoreRevisionDelta.structural(),
+      revisionDelta: revisionDelta,
       mutations: [
         StoreSparseAddElement(
           element: CanvasImageElement(

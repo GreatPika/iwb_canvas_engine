@@ -246,6 +246,9 @@ lib/src/contracts/internal/**   -> declaration-only owner ports, immutable facts
 `family_tables.dart`, resource tables, `document_projection_cache.dart`, drafts,
 or public projection internals to capture frames, resolve render-row snapshots,
 or read descriptor snapshots.
+The descriptor facts crossing this port remain sealed internal variants, so
+frame binding uses descriptor type rather than nullable MIME data to select the
+current image path.
 
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only

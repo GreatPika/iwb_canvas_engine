@@ -27,15 +27,11 @@ final class FamilyTables {
         rectRows: const {},
       );
 
-  FamilyTables(
-    Iterable<CanvasElement> elements, {
-    required Set<String> resourceIds,
-  }) : this._(_admitElements(elements, resourceIds));
+  FamilyTables(Iterable<CanvasElement> elements)
+    : this._(_admitElements(elements));
 
-  FamilyTables.fromSchemaV1Import(
-    Iterable<SchemaV1ElementImportEvent> elements, {
-    required Set<String> resourceIds,
-  }) : this._(_admitSchemaV1Elements(elements, resourceIds));
+  FamilyTables.fromSchemaV1Import(Iterable<SchemaV1ElementImportEvent> elements)
+    : this._(_admitSchemaV1Elements(elements));
 
   FamilyTables._(_AdmittedRows admitted)
     : this._fromTables(
@@ -93,7 +89,7 @@ final class FamilyTables {
         rectRows[value]?.toElement();
   }
 
-  FamilyTables addElement(CanvasElement element, Set<String> resourceIds) {
+  FamilyTables addElement(CanvasElement element) {
     if (_commonById(element.id.value) != null) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
@@ -101,8 +97,6 @@ final class FamilyTables {
         path: 'elements.id',
       );
     }
-    _validateElementResourceReferences(element, resourceIds);
-
     return _withSameFamilyElement(element);
   }
 
@@ -116,14 +110,11 @@ final class FamilyTables {
     return FamilyTables._(_AdmittedRows());
   }
 
-  FamilyTables replaceElements(
-    Iterable<CanvasElement> elements,
-    Set<String> resourceIds,
-  ) {
+  FamilyTables replaceElements(Iterable<CanvasElement> elements) {
     final batchRows = _MutableFamilyRows.fromTables(this);
 
     for (final element in elements) {
-      batchRows.replace(element, resourceIds);
+      batchRows.replace(element);
     }
 
     return batchRows.toFamilyTables();
@@ -360,8 +351,7 @@ final class _MutableFamilyRows {
   final Map<String, LineRow> lineRows;
   final Map<String, RectRow> rectRows;
 
-  void replace(CanvasElement element, Set<String> resourceIds) {
-    _validateElementResourceReferences(element, resourceIds);
+  void replace(CanvasElement element) {
     final id = element.id.value;
     switch (element) {
       case CanvasImageElement():
@@ -394,8 +384,8 @@ final class _MutableFamilyRows {
 final class FamilyTablesSchemaV1ImportBuilder {
   _AdmittedRows? _rows = _AdmittedRows();
 
-  void add(SchemaV1ElementImportEvent event, Set<String> resourceIds) {
-    _liveRows.addSchemaV1Import(event, resourceIds);
+  void add(SchemaV1ElementImportEvent event) {
+    _liveRows.addSchemaV1Import(event);
   }
 
   FamilyTables consume() {
@@ -507,7 +497,7 @@ final class _AdmittedRows {
   final Map<String, RectRow> rectRows = {};
   final Set<String> ids = {};
 
-  void add(CanvasElement element, Set<String> resourceIds) {
+  void add(CanvasElement element) {
     final id = element.id.value;
     if (!ids.add(id)) {
       throw CanvasDataException(
@@ -519,13 +509,6 @@ final class _AdmittedRows {
 
     switch (element) {
       case CanvasImageElement():
-        if (!resourceIds.contains(element.resourceId.value)) {
-          throw CanvasDataException(
-            code: CanvasDataErrorCode.missingResourceReference,
-            message: 'image element references a missing resource.',
-            path: 'image.resourceId',
-          );
-        }
         imageRows[id] = ImageRow(element);
       case CanvasPathElement():
         pathRows[id] = PathRow(element);
@@ -540,10 +523,7 @@ final class _AdmittedRows {
     }
   }
 
-  void addSchemaV1Import(
-    SchemaV1ElementImportEvent event,
-    Set<String> resourceIds,
-  ) {
+  void addSchemaV1Import(SchemaV1ElementImportEvent event) {
     final id = event.common.id.value;
     if (!ids.add(id)) {
       throw CanvasDataException(
@@ -555,13 +535,6 @@ final class _AdmittedRows {
 
     switch (event) {
       case SchemaV1ImageElementImportEvent():
-        if (!resourceIds.contains(event.resourceId.value)) {
-          throw CanvasDataException(
-            code: CanvasDataErrorCode.missingResourceReference,
-            message: 'image element references a missing resource.',
-            path: 'image.resourceId',
-          );
-        }
         imageRows[id] = ImageRow.fromSchemaV1Import(event);
       case SchemaV1PathElementImportEvent():
         pathRows[id] = PathRow.fromSchemaV1Import(event);
@@ -589,13 +562,10 @@ final class _AdmittedRows {
   }
 }
 
-_AdmittedRows _admitElements(
-  Iterable<CanvasElement> elements,
-  Set<String> resourceIds,
-) {
+_AdmittedRows _admitElements(Iterable<CanvasElement> elements) {
   final admitted = _AdmittedRows();
   for (final element in elements) {
-    admitted.add(element, resourceIds);
+    admitted.add(element);
   }
 
   return admitted;
@@ -603,11 +573,10 @@ _AdmittedRows _admitElements(
 
 _AdmittedRows _admitSchemaV1Elements(
   Iterable<SchemaV1ElementImportEvent> elements,
-  Set<String> resourceIds,
 ) {
   final admitted = _AdmittedRows();
   for (final element in elements) {
-    admitted.addSchemaV1Import(element, resourceIds);
+    admitted.addSchemaV1Import(element);
   }
 
   return admitted;
@@ -926,20 +895,5 @@ final class RectRow {
       isTransformable: common.isTransformable,
       metadata: common.metadata,
     );
-  }
-}
-
-void _validateElementResourceReferences(
-  CanvasElement element,
-  Set<String> resourceIds,
-) {
-  if (element case CanvasImageElement(:final resourceId)) {
-    if (!resourceIds.contains(resourceId.value)) {
-      throw CanvasDataException(
-        code: CanvasDataErrorCode.missingResourceReference,
-        message: 'image element references a missing resource.',
-        path: 'image.resourceId',
-      );
-    }
   }
 }

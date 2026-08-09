@@ -63,6 +63,7 @@ import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/committed_document.dart';
 import '../store/document_store_kernel.dart';
+import '../store/resource_table.dart';
 import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
 import 'runtime_action_finalizer.dart';
@@ -626,15 +627,17 @@ final class RuntimeRoot
       return null;
     }
 
-    return FrameResourceDescriptorFacts(
-      id: facts.id,
-      appKey: facts.appKey,
-      mimeType: facts.mimeType,
-      contentHash: facts.contentHash,
-      byteLength: facts.byteLength,
-      resourceRevision: facts.resourceRevision,
-      metadata: facts.metadata,
-    );
+    return switch (facts) {
+      StoreImageResourceDescriptorFacts() => FrameImageResourceDescriptorFacts(
+        id: facts.id,
+        appKey: facts.appKey,
+        mimeType: facts.mimeType,
+        contentHash: facts.contentHash,
+        byteLength: facts.byteLength,
+        resourceRevision: facts.resourceRevision,
+        metadata: facts.metadata,
+      ),
+    };
   }
 
   FrameElementFacts? _frameFactsForElement(CanvasElementId id) {

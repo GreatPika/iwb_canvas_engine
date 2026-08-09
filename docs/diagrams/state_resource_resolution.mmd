@@ -46,13 +46,13 @@ stateDiagram-v2
   state "Descriptor snapshot" as DescriptorSnapshot
   note right of DescriptorSnapshot
     FrameFactsPort reads committed resource descriptors from the
-    committed-state owner and passes immutable descriptor facts
+    committed-state owner and passes sealed immutable current image descriptor facts
     to the session boundary.
     The resolver cannot create, remove, or update descriptors.
   end note
 
   DescriptorSnapshot --> MissingDescriptor: descriptor missing
-  DescriptorSnapshot --> AppKeyDescriptor: CanvasImageResource source is appKey
+  DescriptorSnapshot --> AppKeyDescriptor: current image descriptor source is appKey
 
   state "Missing descriptor" as MissingDescriptor
   MissingDescriptor --> PlaceholderResult: return bounded placeholder

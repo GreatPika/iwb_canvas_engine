@@ -95,7 +95,9 @@ CanvasSurface retained output:
 
 Paint/resource resolution receives immutable descriptor snapshots and
 `resourceRevision` through the `contracts/internal/**` `FrameFactsPort`, which
-is backed by the committed document owner for frame paint. The resource module
+is backed by the committed document owner for frame paint. Store and frame facts
+preserve the descriptor's sealed current image subtype; nullable `mimeType` is
+only image metadata and never chooses the descriptor kind. The resource module
 must not import, read, or mutate `DocumentStoreKernel` or `RuntimeRoot`; it owns
 session policy, resolver-safe placeholder results, and generic release
 boundaries through narrow contract inputs only.
@@ -103,7 +105,10 @@ Schema v1 runtime load imports resource declarations as store-owned descriptor
 rows during `DocumentStoreKernel` preparation. Load must not construct public
 `CanvasImageResource` instances or call app resolvers. Public
 `CanvasImageResource` appears only when an explicit read/resource/resolver-facing
-projection asks for a public resource view.
+projection asks for a public resource view. Store relationship admission runs
+once against the final candidate's sealed descriptor rows, so resource and
+image-element edits may be assembled in either callback order without using an
+id-membership or MIME heuristic.
 Ordinary frame planning receives immutable row facts and resource ids needed to
 build records, but it does not receive descriptor snapshots or resolver/session
 APIs. In the target frame split, `PaintAssetBindingService` is the only frame

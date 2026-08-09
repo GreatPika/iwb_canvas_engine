@@ -26,8 +26,8 @@ flowchart LR
   end
 
   subgraph Store["DocumentStoreKernel"]
-    ResourceTable["Committed resource descriptor table\nCanvasImageResource"]
-    AppKeyDescriptor["CanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
+    ResourceTable["Committed sealed descriptor facts\ncurrent image variant"]
+    AppKeyDescriptor["Current image descriptor\nCanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
     ProjectionRevision["projectionRevision\npublic document projection version"]
@@ -93,7 +93,7 @@ flowchart LR
   RenderRecords -->|"resourceId"| AssetRequest
   AssetRequest -->|"request descriptor facts through FrameFactsPort"| DescriptorFacts
   DescriptorFacts -->|"resourceId lookup"| ResourceTable
-  ResourceTable -->|"CanvasImageResource with CanvasAppKeyResourceSource.key"| DescriptorFacts
+  ResourceTable -->|"sealed current image descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 

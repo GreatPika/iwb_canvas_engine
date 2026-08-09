@@ -84,11 +84,13 @@ Future<void> _expectFramePortSurface(Set<String> forbiddenReadPortTypes) async {
   _expectFinalClass(framePort, 'FrameRevisionFacts');
   _expectFinalClass(framePort, 'FrameElementHandle');
   _expectFinalClass(framePort, 'FrameElementFacts');
-  _expectFinalClass(framePort, 'FrameResourceDescriptorFacts');
+  _expectSealedClass(framePort, 'FrameResourceDescriptorFacts');
+  _expectFinalClass(framePort, 'FrameImageResourceDescriptorFacts');
   _expectOnlyFinalFields(framePort, 'FrameRevisionFacts');
   _expectOnlyFinalFields(framePort, 'FrameElementHandle');
   _expectOnlyFinalFields(framePort, 'FrameElementFacts');
   _expectOnlyFinalFields(framePort, 'FrameResourceDescriptorFacts');
+  _expectOnlyFinalFields(framePort, 'FrameImageResourceDescriptorFacts');
   _expectFrozenCollectionFields(framePort, 'FrameElementFacts');
 }
 
@@ -209,6 +211,10 @@ void _expectNoTypeReferences(
 
 void _expectFinalClass(CompilationUnit unit, String className) {
   expect(_classDeclaration(unit, className).finalKeyword, isNotNull);
+}
+
+void _expectSealedClass(CompilationUnit unit, String className) {
+  expect(_classDeclaration(unit, className).sealedKeyword, isNotNull);
 }
 
 void _expectInterface(CompilationUnit unit, String className) {

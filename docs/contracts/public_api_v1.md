@@ -1959,6 +1959,8 @@ final class CanvasAppKeyResourceSource extends CanvasResourceSource {
 
 Application code may type-test or pattern-match `CanvasImageResource.source` as
 `CanvasAppKeyResourceSource` and read `key` without importing `src/**`.
+`CanvasImageResource` is the sole current sealed descriptor kind; its subtype,
+not nullable `mimeType`, defines current image semantics.
 
 Resolver:
 

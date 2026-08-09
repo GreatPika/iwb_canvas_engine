@@ -28,7 +28,7 @@ sequenceDiagram
 
   Import-->>Store: event stream
   Runtime->>Store: prepare schema-v1 store import from current revisions
-  Store->>Store: build resource descriptor rows, family rows, layer order, ids, references, revisions, and camera facts
+  Store->>Store: build sealed descriptor rows, family rows, layer order, ids, final-candidate relationships, revisions, and camera facts
   Store-->>Runtime: PreparedStoreDocumentImport
   Note over Runtime,Store: No interaction interrupt, selection clear, cache eviction, repaint, state publication, or projection build occurs before preparation succeeds.
 

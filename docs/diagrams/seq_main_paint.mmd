@@ -120,8 +120,8 @@ sequenceDiagram
     loop for each image resource id in records
       Assets->>Facts: read descriptor facts by resourceId
       Facts->>Store: read descriptor facts from committed state
-      Store-->>Facts: appKey descriptor, resourceRevision, or missing descriptor
-      Facts-->>Assets: immutable descriptor facts or missing descriptor
+      Store-->>Facts: sealed current image descriptor, resourceRevision, or missing descriptor
+      Facts-->>Assets: immutable typed descriptor facts or missing descriptor
       Assets->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
 
       alt cached resolved image is current
