@@ -48,8 +48,8 @@ flowchart LR
   runtime_root -->|owns and creates| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort| frame_renderer
   runtime_root -->|emits user actions| api_canvas_runtime
-  runtime_root -->|invalidates resource session through| resource_surface_session
   runtime_root -->|composition| resource_kernel
   runtime_root -->|owns and creates| selection_kernel
   runtime_root -->|owns and creates| store_document_kernel
   runtime_root -->|read port adapter| interaction_engine
+  runtime_root -->|releases resource borrows through| resource_surface_session

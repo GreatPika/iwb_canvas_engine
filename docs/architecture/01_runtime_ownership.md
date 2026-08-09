@@ -58,9 +58,9 @@ Runtime responsibilities are split as follows:
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
 | CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
-| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime session invalidation | own app domain assets, resolved image references, or committed descriptors |
-| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders for missing descriptors and absent resolvers | own committed descriptors, public runtime state, or Flutter widget lifecycle |
-| CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or read runtime/store/session state from painters |
+| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image references, or committed descriptors |
+| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ImageResolveCache, resolver budget, same-frame null-result suppression, bounded placeholders, and cache/suppression retirement before narrow retained-output release callback | own committed descriptors, public runtime state, or Flutter widget lifecycle |
+| CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, identity-aware retained main-output target/all release, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or read runtime/store/session state from painters |
 | SpatialKernel | coarse candidate lookup, outlier policy | be the document source of truth |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | depend on Flutter widgets or gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | add a public stream without an API decision |
@@ -213,7 +213,7 @@ RuntimeRoot
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel
   ├─ ResourceKernel
-  ├─ active ResourceSessionInvalidationSink? (nullable active surface bridge)
+  ├─ active ResourceSessionReleaseSink? (nullable active surface bridge)
   ├─ CodecBoundary
   └─ DiagnosticsHub
 ```

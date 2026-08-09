@@ -1,7 +1,7 @@
-import 'resource_session_invalidation_sink.dart';
+import 'resource_session_release_sink.dart';
 
 abstract interface class SurfaceResourceSessionLifecycle
-    implements ResourceSessionInvalidationSink {
+    implements ResourceSessionReleaseSink {
   void resetForDocumentReplacement();
   void drop();
 }

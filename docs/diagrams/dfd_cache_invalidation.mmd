@@ -15,7 +15,7 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
-    ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + cache eviction"]
+    ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + target/all release"]
     ViewCameraDispatch["Runtime view camera orchestration\nstate.revisions.viewCamera + repaint"]
     InteractionConfigDispatch["Interaction config orchestration\nstate.revisions.interaction + affected cleanup"]
     RuntimeRepaintEffects["RepaintDeliveryEffect and cleanup repaint targets\nruntime-owned main/overlay flags"]
@@ -83,7 +83,7 @@ flowchart LR
 
   subgraph ResourceRuntime["RuntimeRoot / contract-owned dirty outcome"]
     ResourceVisualRevision["resourceVisualRevision"]
-    ResourceSessionInvalidation["Active session invalidation event\ndescriptor changed or dirty target/all"]
+    ResourceSessionRelease["Active target/all resource release\ncache/suppression and retained main output\nbefore notification"]
   end
 
   subgraph Session["lib/src/resources SurfaceResourceSession"]
@@ -103,6 +103,7 @@ flowchart LR
 
   subgraph SurfaceCache["CanvasSurface transient output cache"]
     OutputCache["SurfaceFrameOutputCache\npre-output layer routing"]
+    RetainedMainBindings["Retained main-output resource bindings\nidentity-aware target/all release\nunrelated bindings and overlay preserved for target"]
     MainOutputNotifier["Main layer output notifier"]
     OverlayOutputNotifier["Overlay layer output notifier"]
     MainPaintHost["Main RepaintBoundary + CustomPaint"]
@@ -170,18 +171,20 @@ flowchart LR
   ProjectionRevision -->|"evict changed public projection entries"| ProjectionEvict
   ProjectionEvict -.->|"hot paths still use compact records"| NoProjectionHotPath
 
-  ReplacementScope -->|"clear active resource session cache"| ResourceSessionInvalidation
-  LoadSuccess -->|"clear active resource session cache typed effect"| ResourceSessionInvalidation
-  ResourceRevision -->|"descriptor upsert/remove"| ResourceSessionInvalidation
-  ResourceSessionInvalidation -->|"descriptor changed"| DescriptorCacheEvict
+  ReplacementScope -->|"release all active session/output borrows"| ResourceSessionRelease
+  LoadSuccess -->|"release all active session/output borrows typed effect"| ResourceSessionRelease
+  ResourceRevision -->|"descriptor upsert/remove target release"| ResourceSessionRelease
+  ResourceSessionRelease -->|"descriptor changed cache/suppression release"| DescriptorCacheEvict
   DescriptorCacheEvict -->|"resource-dependent paint changed"| MainRepaint
 
-  ResourceDirtyCall -->|"explicit external visual invalidation"| ResourceDirtyDispatch
-  ResourceDirtyDispatch -->|"target/all active session entries before publication"| ResourceSessionInvalidation
+  ResourceDirtyCall -->|"explicit external visual release"| ResourceDirtyDispatch
+  ResourceDirtyDispatch -->|"target/all active session/output release before publication"| ResourceSessionRelease
   ResourceDirtyDispatch -->|"increment runtime resource visual revision"| ResourceVisualRevision
-  ResourceVisualRevision -->|"public resource visual domain after invalidation"| ResourceVisualPublicRevision
+  ResourceVisualRevision -->|"public resource visual domain after release"| ResourceVisualPublicRevision
   ResourceVisualPublicRevision -->|"public runtime state domain"| RuntimeStateRevision
-  ResourceSessionInvalidation -->|"dirty target or all"| DirtyResourceEvict
+  ResourceSessionRelease -->|"dirty target/all cache/suppression release"| DirtyResourceEvict
+  ResourceSessionRelease -->|"active identity releases target/all binding; stale does not mutate current output"| RetainedMainBindings
+  RetainedMainBindings -->|"immediate retained main-output update"| MainOutputNotifier
   ResourceVisualRevision -->|"resource visuals changed"| MainRepaint
   ResourceVisualRevision -->|"resource repaint facts"| SurfaceTargetAggregation
   ResourceDirtyCall -.->|"forbidden"| DirtyDocumentRevision

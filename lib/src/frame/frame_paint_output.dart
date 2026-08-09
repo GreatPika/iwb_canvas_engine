@@ -31,6 +31,24 @@ final class MainFramePaintOutput {
   final RenderPrimitiveCacheSnapshot renderPrimitiveSnapshot;
   final FrameAssetBindings assetBindings;
   final FrameRepaintSignal repaintSignal;
+
+  MainFramePaintOutput withAssetBindings(FrameAssetBindings nextBindings) {
+    if (identical(nextBindings, assetBindings)) {
+      return this;
+    }
+
+    return MainFramePaintOutput(
+      capturedFrame: capturedFrame,
+      ordinaryPlan: ordinaryPlan,
+      staticBackgroundPlan: staticBackgroundPlan,
+      selectionDecorationPlan: selectionDecorationPlan,
+      selectedOrderSnapshot: selectedOrderSnapshot,
+      selectedMoveSupplementPlan: selectedMoveSupplementPlan,
+      renderPrimitiveSnapshot: renderPrimitiveSnapshot,
+      assetBindings: nextBindings,
+      repaintSignal: repaintSignal,
+    );
+  }
 }
 
 final class OverlayFramePaintOutput {

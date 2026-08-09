@@ -1983,9 +1983,11 @@ v1 resource rules:
 - all ui.Image objects returned by CanvasResourceResolver are app-owned;
 - the engine never disposes app-provided ui.Image instances;
 - the runtime stores only resource descriptors and render cache references;
-- resolved image references live only inside the active `SurfaceResourceSession`;
-- markResourceDirty invalidates active session image entries for the target
-  resource but does not mutate document;
+- resolved image references can be retained by the active
+  `SurfaceResourceSession` and the active CanvasSurface main output;
+- markResourceDirty synchronously releases matching active session and retained
+  main-output references for the target resource before public publication, but
+  does not mutate document, call the resolver, or dispose the image;
 - markResourceDirty publishes main repaint intent; an attached CanvasSurface
   observes it if present and rebuilds only main-layer output unless another
   runtime or local surface invalidation target also requires overlay work;

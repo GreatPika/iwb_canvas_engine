@@ -37,10 +37,10 @@ void _testAppOwnedImagesStayAlive() {
     }
     expect(image.debugDisposed, isFalse);
 
-    session.invalidateResourceImage(CanvasResourceId('resource-1024'));
+    session.releaseResource(CanvasResourceId('resource-1024'));
     expect(image.debugDisposed, isFalse);
 
-    session.invalidateAllResourceImages();
+    session.releaseAllResources();
     expect(image.debugDisposed, isFalse);
 
     session.resolveImage(descriptorRequest(id: 'resource-a'));
@@ -78,11 +78,11 @@ void _testByteInvalidationLeavesAppOwnedImagesAlive() {
     final fixture = await _ByteNoDisposeFixture.create();
 
     fixture.resolve('second');
-    fixture.session.invalidateResourceImage(CanvasResourceId('second'));
+    fixture.session.releaseResource(CanvasResourceId('second'));
     expect(fixture.disposedStates, everyElement(isFalse));
 
     fixture.resolve('second');
-    fixture.session.invalidateAllResourceImages();
+    fixture.session.releaseAllResources();
     expect(fixture.disposedStates, everyElement(isFalse));
 
     fixture.resolve('first');

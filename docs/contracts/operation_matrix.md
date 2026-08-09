@@ -69,7 +69,7 @@ Resource and interaction owners own their resource and interaction rows.
 | setPalette | meta | state.revisions.document; internal projection | no | evict | no canvas repaint | none |
 | upsertResource new/changed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used | none |
 | removeUnusedResource removed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used by stale resource visuals only | none |
-| markResourceDirty/markAllResourcesDirty | cache only | state.revisions.resourceVisual | no | no | main | none |
+| markResourceDirty/markAllResourcesDirty | active session/output resource borrows only | state.revisions.resourceVisual | no | no | main | none |
 | setMode/setDrawStyle/setDrawTool/setDrawColor/setPointerPolicy | interaction settings | state.revisions.interaction, state.revisions.selection if draw-mode entry clears selection, state.revisions.preview if active preview cleared | none | no | main/overlay only for changed affected state | none |
 | CanvasToolPort.handlePointer dispatcher | validates/routes pointer input to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
 | loadDocumentFromJson success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
@@ -216,6 +216,18 @@ document resource descriptor mutation unless the row says `resource table` or
 `Element update field-effect taxonomy`, the executable check must resolve that
 owner and assert the resource effects enumerated there.
 
+For an accepted resource effect with an attached surface, RuntimeRoot invokes
+the generic target/all release before any public-state, commit-effect, or
+listener notification. The active session removes matching cache/suppression
+borrows, then its identity-aware surface callback removes the matching retained
+main-output borrow; a stale session proves absence and does not mutate current
+output. Target release preserves unrelated bindings and overlay output, and
+release neither calls the resolver nor disposes application-owned images. A
+later notification failure is contained after removal: accepted state,
+revisions, repaint intent, operation return, and the no-borrow postcondition
+still publish. Rejected and successful no-op rows mutate neither retention
+owner.
+
 Repaint target: the row's `Repaint` cell.
 
 User-action notification: the row's `Events` cell.
@@ -255,8 +267,8 @@ Spatial effect: none.
 
 Projection effect: evict public document projection when removed.
 
-Resource effect: remove the unused descriptor and invalidate descriptor cache
-state for that id.
+Resource effect: remove the unused descriptor and release matching target
+session/output borrows for that id.
 
 Repaint target: main only if an attached surface still has stale visual cache
 state for the removed descriptor.
@@ -290,7 +302,7 @@ Spatial effect: rebuild from the replacement document.
 Projection effect: evict public document projection.
 
 Resource effect: replace descriptor table with the replacement document's
-resource descriptors.
+resource descriptors and release all previous session/output borrows.
 
 Repaint target: main.
 
@@ -327,8 +339,7 @@ Spatial effect: rebuild from the replacement document.
 Projection effect: evict public document projection.
 
 Resource effect: replace descriptor table with the loaded document's resource
-descriptors, invalidate resource caches for the replacement, and clear
-surface-session resource state that depends on the previous document.
+descriptors and release all previous session/output borrows before publication.
 
 Repaint target: main plus overlay.
 
@@ -561,7 +572,7 @@ Spatial effect: none.
 Projection effect: none.
 
 Resource effect: mark the requested resource id dirty and send target
-invalidation to the active surface resource session if attached.
+release to the active surface resource session if attached.
 
 Repaint target: main.
 
@@ -570,7 +581,7 @@ User-action notification: none.
 No-op behavior: no catalog hit means no `resourceVisualRevision`, no public
 state publication, no repaint/effect delivery, and no action event.
 
-Rollback behavior: resource visual state, session cache, repaint, and
+Rollback behavior: resource visual state, session/output borrows, repaint, and
 notifications remain unchanged.
 
 #### markAllResourcesDirty
@@ -587,7 +598,7 @@ Spatial effect: none.
 Projection effect: none.
 
 Resource effect: mark all registered resources dirty and send all-resource
-invalidation to the active surface resource session if attached.
+release to the active surface resource session if attached.
 
 Repaint target: main.
 
@@ -596,7 +607,7 @@ User-action notification: none.
 No-op behavior: no publication when there is no registered resource visual
 state to dirty.
 
-Rollback behavior: resource visual state, session cache, repaint, and
+Rollback behavior: resource visual state, session/output borrows, repaint, and
 notifications remain unchanged.
 
 ---

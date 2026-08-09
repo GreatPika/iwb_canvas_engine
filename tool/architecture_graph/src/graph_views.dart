@@ -15,7 +15,7 @@ const _edgeKindLabels = {
   'read_port': 'reads from',
   'frame_facts_provider': 'provides FrameFactsPort',
   'resource_boundary': 'resolves resources through',
-  'resource_invalidation': 'invalidates resource session through',
+  'resource_release': 'releases resource borrows through',
   'ui_boundary': 'drives public runtime ports',
   'tool_commit': 'commits through',
   'preview_intent_boundary': 'produces preview intents',

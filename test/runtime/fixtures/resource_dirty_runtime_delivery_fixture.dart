@@ -1,19 +1,20 @@
-import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
-import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_invalidation_sink.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_release_sink.dart';
+import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
+import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+
+import '../../resources/fixtures/surface_resource_session_test_support.dart';
 
 void main() {
   _registerDirtyAcceptanceTests();
   _registerDirtyGuardTests();
-  _registerSessionInvalidationTests();
-  _registerBoundaryTests();
+  _registerSessionReleaseTests();
 }
 
 void _registerDirtyAcceptanceTests() {
@@ -38,49 +39,43 @@ void _registerDirtyGuardTests() {
   test('observer failure does not roll back accepted dirty revision', () {
     return expectLater(_expectDirtyObserverFailureContainment(), completes);
   });
+
+  test(
+    'post-removal observer failure preserves accepted dirty publication',
+    () {
+      return expectLater(
+        _expectPostRemovalObserverFailureIsContained(),
+        completes,
+      );
+    },
+  );
 }
 
-void _registerSessionInvalidationTests() {
-  test('active session invalidates before dirty publication', () {
+void _registerSessionReleaseTests() {
+  test('active session releases before dirty publication', () {
     return expectLater(
       _expectActiveSessionInvalidatesBeforePublish(),
       completes,
     );
   });
 
-  test('dirty invalidation failure drops sink after publication', () {
-    return expectLater(_expectDirtyInvalidationFailureIsContained(), completes);
+  test('dirty release failure drops sink after publication', () {
+    return expectLater(_expectDirtyReleaseFailureIsContained(), completes);
   });
 
-  test(
-    'edit resource effects invalidate active session before publication',
-    () {
-      return expectLater(
-        _expectEditResourceEffectsInvalidateBeforePublish(),
-        completes,
-      );
-    },
-  );
+  test('edit resource effects release active session before publication', () {
+    return expectLater(
+      _expectEditResourceEffectsInvalidateBeforePublish(),
+      completes,
+    );
+  });
 
-  test('edit resource invalidation failure drops sink after publication', () {
-    expect(_expectEditResourceInvalidationFailureIsContained, returnsNormally);
+  test('edit resource release failure drops sink after publication', () {
+    expect(_expectEditResourceReleaseFailureIsContained, returnsNormally);
   });
 
   test('cleared active session is not mutated by later dirty calls', () {
     return expectLater(_expectClearedActiveSessionIsIgnored(), completes);
-  });
-}
-
-void _registerBoundaryTests() {
-  test('resource kernel does not import session invalidation sink', () {
-    expect(
-      _resourceKernelSource(),
-      isNot(contains('ResourceSessionInvalidationSink')),
-    );
-    expect(
-      _resourceKernelSource(),
-      isNot(contains('resource_session_invalidation_sink')),
-    );
   });
 }
 
@@ -153,31 +148,99 @@ Future<void> _expectDirtyObserverFailureContainment() async {
   root.dispose();
 }
 
+// Removing retained-output release from SurfaceResourceSession must fail this
+// scenario: the accepted dirty publication would still expose a matching borrow.
+// Cache/output removal, accepted state, and post-acceptance failure are one
+// ordered transaction here; splitting the assertions would hide that contract.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectPostRemovalObserverFailureIsContained() async {
+  final image = await createResourceTestImage();
+  final cache = ImageResolveCache();
+  final retainedOutput = _RetainedOutputProbe()..retain('resource-a');
+  final snapshots = <CanvasRuntimeState>[];
+  final deliveredEffects = <List<CommitDeliveryEffect>>[];
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithResource(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (effects) {
+      _expectNoBorrow(cache, retainedOutput);
+      deliveredEffects.add(effects);
+      throw StateError('observer failed after release');
+    },
+  );
+  final session = SurfaceResourceSession(
+    resolver: RecordingResourceResolver((_) => image),
+    mutationGuard: root,
+    cache: cache,
+    releaseRetainedResource: (id) => retainedOutput.release(id.value),
+    releaseAllRetainedResources: retainedOutput.releaseAll,
+  );
+  root.attachResourceSessionReleaseSink(session);
+  session.resolveImage(descriptorRequest(id: 'resource-a'));
+  root.state.addListener(() {
+    _expectNoBorrow(cache, retainedOutput);
+    snapshots.add(root.state.value);
+  });
+
+  expect(
+    () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
+    returnsNormally,
+  );
+
+  _expectNoBorrow(cache, retainedOutput);
+  expect(snapshots, hasLength(1));
+  expect(root.state.value.revisions.resourceVisual, 1);
+  expect(deliveredEffects, hasLength(1));
+  expect(
+    deliveredEffects.single
+        .whereType<RepaintDeliveryEffect>()
+        .single
+        .mainCanvas,
+    isTrue,
+  );
+  expect(root.activeSurfaceResourceSessionForTesting, isNull);
+  image.dispose();
+  root.dispose();
+}
+
+void _expectNoBorrow(ImageResolveCache cache, _RetainedOutputProbe output) {
+  expect(
+    cache.read(
+      resolverGeneration: 0,
+      resourceId: CanvasResourceId('resource-a'),
+      resourceRevision: 0,
+    ),
+    isNull,
+  );
+  expect(output.hasBorrow('resource-a'), isFalse);
+}
+
 Future<void> _expectActiveSessionInvalidatesBeforePublish() {
-  final sink = _RecordingResourceSessionInvalidationSink();
+  final sink = _RecordingResourceSessionReleaseSink();
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (_) {
-      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+      sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
   );
-  root.attachResourceSessionInvalidationSink(sink);
+  root.attachResourceSessionReleaseSink(sink);
   root.state.addListener(() {
-    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    sink.expectTargetReleased(CanvasResourceId('resource-a'));
   });
 
   root.resources.markResourceDirty(CanvasResourceId('resource-a'));
 
-  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
-  expect(sink.allInvalidationCount, 0);
+  expect(sink.releasedIds, [CanvasResourceId('resource-a')]);
+  expect(sink.releaseAllCount, 0);
   root.dispose();
 
   return Future<void>.value();
 }
 
-Future<void> _expectDirtyInvalidationFailureIsContained() {
+Future<void> _expectDirtyReleaseFailureIsContained() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final snapshots = <CanvasRuntimeState>[];
   final root = runtimeRootWithCommittedDocumentSeed(
@@ -188,9 +251,7 @@ Future<void> _expectDirtyInvalidationFailureIsContained() {
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
-  root.attachResourceSessionInvalidationSink(
-    _ThrowingResourceSessionInvalidationSink(),
-  );
+  root.attachResourceSessionReleaseSink(_ThrowingResourceSessionReleaseSink());
 
   root.resources.markResourceDirty(CanvasResourceId('resource-a'));
 
@@ -214,18 +275,18 @@ Future<void> _expectEditResourceEffectsInvalidateBeforePublish() {
 }
 
 void _expectEditUpsertResourceInvalidatesBeforePublish() {
-  final sink = _RecordingResourceSessionInvalidationSink();
+  final sink = _RecordingResourceSessionReleaseSink();
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (_) {
-      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+      sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
   );
-  root.attachResourceSessionInvalidationSink(sink);
+  root.attachResourceSessionReleaseSink(sink);
   root.state.addListener(() {
-    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    sink.expectTargetReleased(CanvasResourceId('resource-a'));
   });
 
   final changed = root.edits.edit((edit) {
@@ -238,24 +299,24 @@ void _expectEditUpsertResourceInvalidatesBeforePublish() {
   });
 
   expect(changed, isTrue);
-  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
-  expect(sink.allInvalidationCount, 0);
+  expect(sink.releasedIds, [CanvasResourceId('resource-a')]);
+  expect(sink.releaseAllCount, 0);
   root.dispose();
 }
 
 void _expectEditRemoveResourceInvalidatesBeforePublish() {
-  final sink = _RecordingResourceSessionInvalidationSink();
+  final sink = _RecordingResourceSessionReleaseSink();
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
     config: const CanvasRuntimeConfig(),
     commitEffectObserver: (_) {
-      sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+      sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
   );
-  root.attachResourceSessionInvalidationSink(sink);
+  root.attachResourceSessionReleaseSink(sink);
   root.state.addListener(() {
-    sink.expectTargetInvalidated(CanvasResourceId('resource-a'));
+    sink.expectTargetReleased(CanvasResourceId('resource-a'));
   });
 
   final changed = root.edits.edit((edit) {
@@ -263,12 +324,12 @@ void _expectEditRemoveResourceInvalidatesBeforePublish() {
   });
 
   expect(changed, isTrue);
-  expect(sink.targetInvalidations, [CanvasResourceId('resource-a')]);
-  expect(sink.allInvalidationCount, 0);
+  expect(sink.releasedIds, [CanvasResourceId('resource-a')]);
+  expect(sink.releaseAllCount, 0);
   root.dispose();
 }
 
-void _expectEditResourceInvalidationFailureIsContained() {
+void _expectEditResourceReleaseFailureIsContained() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final snapshots = <CanvasRuntimeState>[];
   final root = runtimeRootWithCommittedDocumentSeed(
@@ -279,9 +340,7 @@ void _expectEditResourceInvalidationFailureIsContained() {
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
-  root.attachResourceSessionInvalidationSink(
-    _ThrowingResourceSessionInvalidationSink(),
-  );
+  root.attachResourceSessionReleaseSink(_ThrowingResourceSessionReleaseSink());
 
   final changed = _upsertResourceA(root);
 
@@ -321,20 +380,20 @@ void _expectDirtyAfterFailedSinkIsDropped(RuntimeRoot root) {
 }
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
-  final sink = _RecordingResourceSessionInvalidationSink();
+  final sink = _RecordingResourceSessionReleaseSink();
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
   );
-  root.attachResourceSessionInvalidationSink(sink);
-  root.clearResourceSessionInvalidationSink(sink);
+  root.attachResourceSessionReleaseSink(sink);
+  root.clearResourceSessionReleaseSink(sink);
 
   root.resources.markResourceDirty(CanvasResourceId('resource-a'));
   root.resources.markAllResourcesDirty();
 
   expect(root.state.value.revisions.resourceVisual, 2);
-  expect(sink.targetInvalidations, isEmpty);
-  expect(sink.allInvalidationCount, 0);
+  expect(sink.releasedIds, isEmpty);
+  expect(sink.releaseAllCount, 0);
   root.dispose();
 
   return Future<void>.value();
@@ -352,7 +411,7 @@ final class _DirtyRuntimeScenario {
       commitEffectObserver: effectBatches.add,
     );
     before = _RuntimeFactsSnapshot.capture(root);
-    subscription = root.actions.listen(actions.add);
+    _cancelActions = root.actions.listen(actions.add).cancel;
     root.state.addListener(() {
       snapshots.add(root.state.value);
     });
@@ -360,7 +419,7 @@ final class _DirtyRuntimeScenario {
 
   late final RuntimeRoot root;
   late final _RuntimeFactsSnapshot before;
-  late final StreamSubscription<CanvasActionCommitted> subscription;
+  late final Future<void> Function() _cancelActions;
   final List<CanvasRuntimeState> snapshots = [];
   final List<List<CommitDeliveryEffect>> effectBatches = [];
   final List<CanvasActionCommitted> actions = [];
@@ -411,8 +470,10 @@ final class _DirtyRuntimeScenario {
     expect(actions, isEmpty);
   }
 
+  Future<void> cancelActionSubscription() => _cancelActions();
+
   Future<void> dispose() async {
-    await subscription.cancel();
+    await cancelActionSubscription();
     root.dispose();
   }
 
@@ -457,41 +518,55 @@ void _expectMainRepaintOnly(List<CommitDeliveryEffect> effects) {
   expect(effects.whereType<PublicStateDeliveryEffect>(), hasLength(1));
 }
 
-String _resourceKernelSource() {
-  return File('lib/src/resources/resource_kernel.dart').readAsStringSync();
-}
-
-final class _RecordingResourceSessionInvalidationSink
-    implements ResourceSessionInvalidationSink {
-  final List<CanvasResourceId> targetInvalidations = [];
-  int allInvalidationCount = 0;
+final class _RecordingResourceSessionReleaseSink
+    implements ResourceSessionReleaseSink {
+  final List<CanvasResourceId> releasedIds = [];
+  int releaseAllCount = 0;
 
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
-    targetInvalidations.add(id);
+  void releaseResource(CanvasResourceId id) {
+    releasedIds.add(id);
   }
 
   @override
-  void invalidateAllResourceImages() {
-    allInvalidationCount += 1;
+  void releaseAllResources() {
+    releaseAllCount += 1;
   }
 
-  void expectTargetInvalidated(CanvasResourceId id) {
-    expect(targetInvalidations, contains(id));
+  void expectTargetReleased(CanvasResourceId id) {
+    expect(releasedIds, contains(id));
   }
 }
 
-final class _ThrowingResourceSessionInvalidationSink
-    implements ResourceSessionInvalidationSink {
+final class _ThrowingResourceSessionReleaseSink
+    implements ResourceSessionReleaseSink {
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
-    throw StateError('resource invalidation failed');
+  void releaseResource(CanvasResourceId id) {
+    throw StateError('resource release failed');
   }
 
   @override
-  void invalidateAllResourceImages() {
-    throw StateError('resource invalidation failed');
+  void releaseAllResources() {
+    throw StateError('resource release failed');
   }
+}
+
+final class _RetainedOutputProbe {
+  final Set<String> _borrowedIds = {};
+
+  void retain(String id) {
+    _borrowedIds.add(id);
+  }
+
+  void release(String id) {
+    _borrowedIds.remove(id);
+  }
+
+  void releaseAll() {
+    _borrowedIds.clear();
+  }
+
+  bool hasBorrow(String id) => _borrowedIds.contains(id);
 }
 
 Future<void> _expectDisposedGuard() async {
@@ -508,7 +583,7 @@ Future<void> _expectDisposedGuard() async {
   expect(scenario.snapshots, isEmpty);
   expect(scenario.effectBatches, isEmpty);
   await scenario.expectNoActions();
-  await scenario.subscription.cancel();
+  await scenario.cancelActionSubscription();
 }
 
 Future<void> _expectActiveEditGuard() async {

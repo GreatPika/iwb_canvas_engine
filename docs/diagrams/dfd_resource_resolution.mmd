@@ -17,12 +17,12 @@ flowchart LR
 
   subgraph Runtime["RuntimeRoot"]
     ResourceDirtyDispatch["Resource dirty orchestration\nResourceKernel delegation"]
-    SessionInvalidationEvent["Target/all invalidation event\nfor active SurfaceResourceSession\nbefore dirty publication"]
+    SessionReleaseEvent["Target/all generic release\nfor active SurfaceResourceSession and\nretained main output before publication"]
   end
 
   subgraph Edit["EditKernel"]
     ResourceMutation["Resource descriptor mutation\ninside rollback-safe edit only"]
-    CommitPlan["CommitPlan\nresource descriptor invalidation"]
+    CommitPlan["CommitPlan\nresource descriptor release scope"]
   end
 
   subgraph Store["DocumentStoreKernel"]
@@ -61,6 +61,10 @@ flowchart LR
     Placeholder["Bounded missing image placeholder"]
   end
 
+  subgraph SurfaceOutput["CanvasSurface retained output"]
+    RetainedMainBindings["Immutable main-output resource bindings\nidentity-aware target/all release\nunrelated bindings and overlay preserved for target"]
+  end
+
   subgraph Resources["ResourceKernel"]
     ResourceVisualSignal["Resource visual revision\nResourceKernel runtime visual version"]
   end
@@ -81,7 +85,7 @@ flowchart LR
   CommitPlan -->|"committed document state changed"| DocumentRevision
   CommitPlan -->|"public projection facts changed"| ProjectionRevision
   ProjectionRevision -->|"evict descriptor projection entries"| ProjectionEvict
-  CommitPlan -->|"emit descriptor-dependent target/all invalidation event"| SessionInvalidationEvent
+  CommitPlan -->|"emit descriptor-dependent target/all release"| SessionReleaseEvent
   ResourceTable -->|"stores source.kind = appKey only\npublic source is CanvasAppKeyResourceSource.key"| AppKeyDescriptor
 
   Surface -->|"main paint asks for records"| MainPaint
@@ -115,10 +119,11 @@ flowchart LR
   DirtyCall -->|"declared by"| PublicResourceContracts
   ResourceDirtyDispatch -->|"ResourceDirtyOutcome"| InternalResourceContracts
   ResourceDirtyDispatch -->|"increment ResourceKernel visual revision only"| ResourceVisualSignal
-  ResourceDirtyDispatch -->|"forward target/all invalidation before publication"| SessionInvalidationEvent
-  ResourceVisualSignal -->|"publish public resource visual domain after invalidation"| ResourceVisualState
+  ResourceDirtyDispatch -->|"forward target/all release before publication"| SessionReleaseEvent
+  ResourceVisualSignal -->|"publish public resource visual domain after release"| ResourceVisualState
   ResourceVisualState -->|"public runtime state domain"| RuntimeStateRevision
-  SessionInvalidationEvent -->|"if attached, session invalidates target/all entries\nand subtracts bytes or resets currentSizeBytes"| ImageResolveCache
+  SessionReleaseEvent -->|"if attached, remove matching cache/suppression borrows"| ImageResolveCache
+  SessionReleaseEvent -->|"active identity removes addressed binding or all; stale identity is no-op"| RetainedMainBindings
   ResourceVisualSignal -->|"schedule main repaint"| MainRepaint
   MainRepaint --> Surface
 

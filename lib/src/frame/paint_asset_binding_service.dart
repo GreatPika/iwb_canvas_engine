@@ -15,6 +15,27 @@ final class FrameAssetBindings {
   static final empty = FrameAssetBindings(images: const {});
 
   final Map<CanvasResourceId, ResourceImageResolveResult> images;
+
+  FrameAssetBindings withoutResource(CanvasResourceId id) {
+    if (!images.containsKey(id)) {
+      return this;
+    }
+
+    return FrameAssetBindings(
+      images: {
+        for (final entry in images.entries)
+          if (entry.key != id) entry.key: entry.value,
+      },
+    );
+  }
+
+  FrameAssetBindings withoutResources() {
+    if (images.isEmpty) {
+      return this;
+    }
+
+    return empty;
+  }
 }
 
 final class PaintAssetBindingService {

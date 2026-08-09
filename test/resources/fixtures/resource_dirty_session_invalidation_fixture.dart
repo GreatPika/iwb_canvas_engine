@@ -29,7 +29,7 @@ void _testTargetDirtyActiveSessionInvalidation() {
     );
     final actions = <CanvasActionCommitted>[];
     final subscription = root.actions.listen(actions.add);
-    root.attachResourceSessionInvalidationSink(session);
+    root.attachResourceSessionReleaseSink(session);
 
     session.resolveImage(descriptorRequest(id: 'resource-a'));
     session.resolveImage(descriptorRequest(id: 'resource-b'));

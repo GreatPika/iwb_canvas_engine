@@ -110,7 +110,7 @@ sequenceDiagram
   Painter-->>Surface: draw main scene
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.
-  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images; cache eviction drops references only.
+  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images; cache eviction and release drop references only.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: Resource resolution uses surface session state, frame inputs, and resource descriptors only.
@@ -119,23 +119,26 @@ sequenceDiagram
     App->>Port: markResourceDirty(resourceId) or markAllResourcesDirty()
     Port->>Runtime: delegate resource dirty signal
     Runtime->>Resources: increment resourceVisualRevision
-    Resources-->>Runtime: ResourceDirtyOutcome with target/all invalidation
-    Runtime->>Session: invalidate target resource entries or clear all entries if attached
-    Session->>Cache: invalidate entries by resourceId or all
+    Resources-->>Runtime: ResourceDirtyOutcome with target/all release
+    Runtime->>Session: release target resource or all active borrows if attached
+    Session->>Cache: remove matching cache/suppression borrows
+    Session->>Surface: active identity releases matching retained main-output binding; stale identity is no-op
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual
     Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene
 
-    Note over Port,Resources: Dirty visual invalidation publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
-    Note over Runtime: Dirty visual invalidation does not mutate the selection owner.
+    Note over Port,Resources: Dirty visual release publishes resourceVisual public state only. It does not mutate descriptors, document revision, action events, preview, or CanvasDocument projection.
+    Note over Runtime: Target release preserves unrelated retained bindings and overlay output, calls no resolver, and does not mutate the selection owner.
   end
 
   opt active surface receives a different resourceResolver
     Surface->>Session: replace resolver
-    Session->>Session: increment resolverGeneration and clear stale cache entries
+    Session->>Session: increment resolverGeneration and release stale cache/suppression borrows
+    Session->>Surface: release all matching retained main-output bindings before return
   end
 
   opt surface detaches, disposes, or swaps runtime
     Surface->>Session: drop session
-    Session->>Cache: drop entries without disposing app-owned ui.Image
+    Session->>Cache: drop cache/suppression borrows without disposing app-owned ui.Image
+    Session->>Surface: release matching retained main-output borrows before return
   end

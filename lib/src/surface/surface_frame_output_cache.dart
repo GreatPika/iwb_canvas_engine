@@ -80,6 +80,17 @@ final class SurfaceFrameOutputCache<
     }
   }
 
+  void transformMainOutput(MainOutput Function(MainOutput output) transform) {
+    final current = mainOutput.value;
+    if (current == null) {
+      return;
+    }
+    final next = transform(current);
+    if (!identical(next, current)) {
+      mainOutput.value = next;
+    }
+  }
+
   void clear() {
     _localInputKey = null;
     mainOutput.value = null;

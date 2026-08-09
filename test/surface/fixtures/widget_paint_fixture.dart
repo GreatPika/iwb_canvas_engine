@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
+import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
@@ -46,6 +47,22 @@ void main() {
     await _expectImageResourcePaintAndDirtyRepaint(tester);
     expect(_paintHosts(), findsOneWidget);
   });
+
+  testWidgets(
+    'CanvasSurface releases retained target bindings before dirty publication',
+    (tester) async {
+      await _expectTargetReleasePrecedesDirtyPublication(tester);
+      expect(_paintHosts(), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CanvasSurface releases all retained bindings for lifecycle paths and stale sessions',
+    (tester) async {
+      await _expectAllRetainedReleasePaths(tester);
+      expect(_paintHosts(), findsOneWidget);
+    },
+  );
 
   testWidgets('CanvasSurface schedules resource budget follow-up frames', (
     tester,
@@ -199,6 +216,168 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
   expect(resolver.calls, 2);
   expect(image.debugDisposed, isFalse);
   image.dispose();
+}
+
+// Removing the retained main-output release after session-cache retirement
+// must fail this scenario: publication would still expose resource-a's image.
+// Cache removal, retained output, overlay preservation, and publication order
+// are one synchronous contract, so splitting this proof would hide the failure.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectTargetReleasePrecedesDirtyPublication(
+  WidgetTester tester,
+) async {
+  final firstImage = await _createImage();
+  final secondImage = await _createImage();
+  final runtime = runtimeWithDocument(_twoImageDocument());
+  final resolver = _RecordingResolver(
+    (resource) => resource.id.value == 'resource-a' ? firstImage : secondImage,
+  );
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+
+  final mainBeforeRelease = _mainPainter(tester).output;
+  final overlayBeforeRelease = _overlayPainter(tester).output;
+  expect(mainBeforeRelease.assetBindings.images.keys, {
+    CanvasResourceId('resource-a'),
+    CanvasResourceId('resource-b'),
+  });
+  expect(resolver.calls, 2);
+
+  var observedBeforePublication = false;
+  runtime.state.addListener(() {
+    final output = _mainPainter(tester).output;
+    expect(
+      output.assetBindings.images.containsKey(CanvasResourceId('resource-a')),
+      isFalse,
+    );
+    expect(
+      output.assetBindings.images.containsKey(CanvasResourceId('resource-b')),
+      isTrue,
+    );
+    expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
+    expect(resolver.calls, 2);
+    observedBeforePublication = true;
+  });
+
+  runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
+
+  expect(observedBeforePublication, isTrue);
+  expect(
+    _mainPainter(
+      tester,
+    ).output.assetBindings.images.containsKey(CanvasResourceId('resource-a')),
+    isFalse,
+  );
+  expect(
+    _mainPainter(
+      tester,
+    ).output.assetBindings.images.containsKey(CanvasResourceId('resource-b')),
+    isTrue,
+  );
+  expect(_overlayPainter(tester).output, same(overlayBeforeRelease));
+  expect(firstImage.debugDisposed, isFalse);
+  expect(secondImage.debugDisposed, isFalse);
+  firstImage.dispose();
+  secondImage.dispose();
+}
+
+// Removing any active all-release callback leaves the retained main output
+// borrowed after mark-all, replacement, reset, or drop and fails this scenario.
+// Lifecycle ordering and output identity share one witness; keeping it together
+// makes stale-session mutation and all-release regressions directly observable.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectAllRetainedReleasePaths(WidgetTester tester) async {
+  final firstImage = await _createImage();
+  final secondImage = await _createImage();
+  final runtime = runtimeWithDocument(_twoImageDocument());
+  final resolver = _RecordingResolver(
+    (resource) => resource.id.value == 'resource-a' ? firstImage : secondImage,
+  );
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final session = _activeSurfaceSession(runtime);
+  final overlay = _overlayPainter(tester).output;
+  _expectRetainedImages(tester, {'resource-a', 'resource-b'});
+
+  runtime.resources.markAllResourcesDirty();
+  _expectRetainedImages(tester, <String>{});
+  expect(_overlayPainter(tester).output, same(overlay));
+  expect(resolver.calls, 2);
+  await tester.pump();
+  _expectRetainedImages(tester, {'resource-a', 'resource-b'});
+
+  session.replaceResolver(resolver);
+  _expectRetainedImages(tester, <String>{});
+  expect(_overlayPainter(tester).output, same(overlay));
+  expect(resolver.calls, 4);
+
+  runtime.resources.markAllResourcesDirty();
+  await tester.pump();
+  _expectRetainedImages(tester, {'resource-a', 'resource-b'});
+
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_twoImageDocument()),
+  );
+  _expectRetainedImages(tester, <String>{});
+  expect(_overlayPainter(tester).output, same(overlay));
+  await tester.pump();
+  _expectRetainedImages(tester, {'resource-a', 'resource-b'});
+
+  session.drop();
+  _expectRetainedImages(tester, <String>{});
+  expect(firstImage.debugDisposed, isFalse);
+  expect(secondImage.debugDisposed, isFalse);
+
+  await _expectStaleSessionDoesNotReleaseCurrentOutput(
+    tester,
+    oldImage: firstImage,
+    newImage: secondImage,
+  );
+  firstImage.dispose();
+  secondImage.dispose();
+}
+
+Future<void> _expectStaleSessionDoesNotReleaseCurrentOutput(
+  WidgetTester tester, {
+  required ui.Image oldImage,
+  required ui.Image newImage,
+}) async {
+  final oldRuntime = runtimeWithDocument(_imageDocument());
+  final newRuntime = runtimeWithDocument(_twoImageDocument());
+  final oldResolver = _RecordingResolver((_) => oldImage);
+  final newResolver = _RecordingResolver(
+    (resource) => resource.id.value == 'resource-a' ? oldImage : newImage,
+  );
+  addTearDown(oldRuntime.dispose);
+  addTearDown(newRuntime.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: oldRuntime, resolver: oldResolver),
+  );
+  final staleSession = _activeSurfaceSession(oldRuntime);
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: newRuntime, resolver: newResolver),
+  );
+  final currentOutput = _mainPainter(tester).output;
+
+  staleSession.releaseResource(CanvasResourceId('resource-a'));
+  staleSession.releaseAllResources();
+  staleSession.resetForDocumentReplacement();
+  staleSession.drop();
+
+  expect(_mainPainter(tester).output, same(currentOutput));
+  _expectRetainedImages(tester, {'resource-a', 'resource-b'});
+  expect(oldResolver.calls, 1);
+  expect(newResolver.calls, 2);
+}
+
+void _expectRetainedImages(WidgetTester tester, Set<String> expectedIds) {
+  expect(
+    _mainPainter(tester).output.assetBindings.images.keys.map((id) => id.value),
+    expectedIds,
+  );
 }
 
 // Budget follow-up behavior depends on resolver calls, layer dispatch, and
@@ -595,7 +774,7 @@ Future<void> _expectRejectedAttachInstallsNoLayerListener(
   expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(acceptedResolver.calls, beforeAcceptedResolverCalls + 1);
   expect(rejectedResolver.calls, 0);
-  expect(probe.mainDispatches, 1);
+  expect(probe.mainDispatches, 2);
   expect(probe.overlayDispatches, 0);
   expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
   expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
@@ -808,7 +987,7 @@ Future<void> _expectResourceDirtyMainOnly(
   expect(_mainPainter(tester).output, isNot(same(beforeMain)));
   expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(resolver.calls, beforeResolverCalls + 1);
-  expect(probe.mainDispatches, 1);
+  expect(probe.mainDispatches, 2);
   expect(probe.overlayDispatches, 0);
   expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
   expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
@@ -832,7 +1011,7 @@ Future<void> _expectAllResourcesDirtyMainOnly(
   expect(_mainPainter(tester).output, isNot(same(beforeMain)));
   expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(resolver.calls, beforeResolverCalls + 1);
-  expect(probe.mainDispatches, 1);
+  expect(probe.mainDispatches, 2);
   expect(probe.overlayDispatches, 0);
   expect(_mainRenderObject(tester).debugNeedsPaint, isTrue);
   expect(_overlayRenderObject(tester).debugNeedsPaint, isFalse);
@@ -854,7 +1033,7 @@ Future<void> _expectResolverReplacementMainOnly(
   expect(_mainPainter(tester).output, isNot(same(beforeMain)));
   expect(_overlayPainter(tester).output, same(beforeOverlay));
   expect(resolver.calls, 1);
-  expect(probe.mainDispatches, 1);
+  expect(probe.mainDispatches, 2);
   expect(probe.overlayDispatches, 0);
 }
 
@@ -1072,6 +1251,15 @@ RuntimeRoot _rootFor(CanvasRuntime runtime) {
   throw StateError('CanvasRuntime frame root is not attached.');
 }
 
+SurfaceResourceSession _activeSurfaceSession(CanvasRuntime runtime) {
+  final session = _rootFor(runtime).activeSurfaceResourceSessionForTesting;
+  if (session is SurfaceResourceSession) {
+    return session;
+  }
+
+  throw StateError('CanvasRuntime has no active SurfaceResourceSession.');
+}
+
 final class _LayerDispatchProbe {
   _LayerDispatchProbe(this._tester) {
     _mainListenable = _mainPainter(_tester).outputListenable;
@@ -1206,6 +1394,38 @@ CanvasDocument _imageDocument() {
             id: CanvasElementId('image-a'),
             resourceId: CanvasResourceId('resource-a'),
             size: const Size(10, 10),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _twoImageDocument() {
+  return CanvasDocument(
+    resources: [
+      _imageResource(),
+      CanvasImageResource(
+        id: CanvasResourceId('resource-b'),
+        source: CanvasResourceSource.appKey('image-b'),
+        mimeType: 'image/png',
+        byteLength: 24,
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-a'),
+            resourceId: CanvasResourceId('resource-a'),
+            size: const Size(10, 10),
+          ),
+          CanvasImageElement(
+            id: CanvasElementId('image-b'),
+            resourceId: CanvasResourceId('resource-b'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
           ),
         ],
       ),

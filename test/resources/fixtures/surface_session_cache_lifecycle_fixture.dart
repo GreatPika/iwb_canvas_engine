@@ -8,10 +8,34 @@ import 'surface_resource_session_test_support.dart';
 
 void main() {
   _testTargetAndAllInvalidation();
+  _testTargetReleaseClearsNullSuppression();
   _testDocumentReplacementReset();
   _testLeastRecentlyUsedEviction();
   _testOversizedResolveReturnsWithoutRetaining();
   _testDroppedSessionDoesNotResolveAgain();
+}
+
+// Removing target suppression release would keep the next externally requested
+// resolve suppressed even though synchronous resource release already returned.
+void _testTargetReleaseClearsNullSuppression() {
+  test('target release clears matching null suppression without resolving', () {
+    final resolver = RecordingResourceResolver((_) => null);
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: CountingResolverMutationGuard(),
+    );
+    final request = descriptorRequest(id: 'resource-a');
+
+    session.resolveImage(request);
+    session.resolveImage(request);
+    expect(resolver.callCount, 1);
+
+    session.releaseResource(CanvasResourceId('resource-a'));
+    expect(resolver.callCount, 1);
+
+    session.resolveImage(request);
+    expect(resolver.callCount, 2);
+  });
 }
 
 void _testTargetAndAllInvalidation() {
@@ -33,12 +57,12 @@ void _testTargetAndAllInvalidation() {
       session.resolveImage(requestB);
       expect(resolver.callCount, 2);
 
-      session.invalidateResourceImage(CanvasResourceId('resource-a'));
+      session.releaseResource(CanvasResourceId('resource-a'));
       session.resolveImage(requestA);
       session.resolveImage(requestB);
       expect(resolver.callCount, 3);
 
-      session.invalidateAllResourceImages();
+      session.releaseAllResources();
       session.resolveImage(requestA);
       session.resolveImage(requestB);
       expect(resolver.callCount, 5);

@@ -13,19 +13,40 @@ typedef _SuppressedResolveKey = ({
   int resourceRevision,
 });
 
+typedef RetainedResourceRelease = void Function(CanvasResourceId id);
+typedef RetainedResourcesRelease = void Function();
+
+void _ignoreRetainedResourceRelease(CanvasResourceId _) {
+  return;
+}
+
+void _ignoreRetainedResourcesRelease() {
+  return;
+}
+
 // The session intentionally coordinates every explicit resolver outcome in one
 // owner so cache, suppression, budget, and resolver generation cannot drift.
-// ignore: coupling-between-object-classes, number-of-methods
+// Its release branches stay here as well so both borrows retire in one
+// synchronous order rather than being split across lifecycle helpers.
+// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
 final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   SurfaceResourceSession({
     required CanvasResourceResolver? resolver,
     required ResolverMutationGuard mutationGuard,
+    RetainedResourceRelease releaseRetainedResource =
+        _ignoreRetainedResourceRelease,
+    RetainedResourcesRelease releaseAllRetainedResources =
+        _ignoreRetainedResourcesRelease,
     ImageResolveCache? cache,
   }) : _resolver = resolver,
        _mutationGuard = mutationGuard,
+       _releaseRetainedResource = releaseRetainedResource,
+       _releaseAllRetainedResources = releaseAllRetainedResources,
        _cache = cache ?? ImageResolveCache();
 
   final ResolverMutationGuard _mutationGuard;
+  final RetainedResourceRelease _releaseRetainedResource;
+  final RetainedResourcesRelease _releaseAllRetainedResources;
   final ImageResolveCache _cache;
   final Set<_SuppressedResolveKey> _currentFrameNullResults = {};
   CanvasResourceResolver? _resolver;
@@ -186,19 +207,21 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     }
     _resolver = resolver;
     _resolverGeneration += 1;
-    _cache.clear();
-    _currentFrameNullResults.clear();
-    _hasPendingBudgetFollowUpRepaint = false;
+    _releaseAllSessionBorrows();
+    _releaseAllRetainedResources();
   }
 
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
+  void releaseResource(CanvasResourceId id) {
     _cache.invalidateResource(id);
+    _currentFrameNullResults.removeWhere((key) => key.resourceId == id);
+    _releaseRetainedResource(id);
   }
 
   @override
-  void invalidateAllResourceImages() {
-    _cache.clear();
+  void releaseAllResources() {
+    _releaseAllSessionBorrows();
+    _releaseAllRetainedResources();
   }
 
   @override
@@ -207,17 +230,24 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
       return;
     }
     _resolverCallsThisFrame = 0;
-    _hasPendingBudgetFollowUpRepaint = false;
-    _cache.clear();
-    _currentFrameNullResults.clear();
+    _releaseAllSessionBorrows();
+    _releaseAllRetainedResources();
   }
 
   @override
   void drop() {
+    if (_isDropped) {
+      return;
+    }
     _isDropped = true;
     _resolver = null;
     _resolverGeneration += 1;
     _resolverCallsThisFrame = 0;
+    _releaseAllSessionBorrows();
+    _releaseAllRetainedResources();
+  }
+
+  void _releaseAllSessionBorrows() {
     _hasPendingBudgetFollowUpRepaint = false;
     _cache.clear();
     _currentFrameNullResults.clear();

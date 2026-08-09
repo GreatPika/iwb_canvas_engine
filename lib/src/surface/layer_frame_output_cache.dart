@@ -1,11 +1,15 @@
 import 'package:flutter/foundation.dart';
 
 import '../contracts/internal/surface_frame_signal.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../frame/frame_paint_output.dart';
 import 'surface_frame_output_cache.dart';
 
 typedef LayerFrameOutputBuilder = Object Function();
 
+// Target and all-resource release stay beside the retained main output so the
+// surface can preserve unrelated output without taking over cache mechanics.
+// ignore: number-of-methods
 final class LayerFrameOutputCache {
   final SurfaceFrameOutputCache<MainFramePaintOutput, OverlayFramePaintOutput>
   _inner = SurfaceFrameOutputCache();
@@ -70,6 +74,20 @@ final class LayerFrameOutputCache {
     _inner.applyLocalRepaintRequest(
       request,
       buildMain: () => buildMain() as MainFramePaintOutput,
+    );
+  }
+
+  void releaseResource(CanvasResourceId id) {
+    _inner.transformMainOutput(
+      (output) =>
+          output.withAssetBindings(output.assetBindings.withoutResource(id)),
+    );
+  }
+
+  void releaseAllResources() {
+    _inner.transformMainOutput(
+      (output) =>
+          output.withAssetBindings(output.assetBindings.withoutResources()),
     );
   }
 

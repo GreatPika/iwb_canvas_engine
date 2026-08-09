@@ -29,15 +29,9 @@ void _registerSuccessfulLoadPublicationTests() {
     expect(_expectSuccessfulLoadPublishesPreviewCleanup, returnsNormally);
   });
 
-  test(
-    'successful load invalidates active resource session before publish',
-    () {
-      expect(
-        _expectSuccessfulLoadInvalidatesActiveResourceSession,
-        returnsNormally,
-      );
-    },
-  );
+  test('successful load releases active resource session before publish', () {
+    expect(_expectSuccessfulLoadReleasesActiveResourceSession, returnsNormally);
+  });
 
   test('successful load drops failed resource session after publish', () {
     expect(_expectSuccessfulLoadDropsFailedResourceSession, returnsNormally);
@@ -103,9 +97,9 @@ void _registerFailedLoadCase(
 }
 
 void _registerFailedLoadSessionTests() {
-  test('failed load does not invalidate active resource session', () {
+  test('failed load does not release active resource session', () {
     expect(
-      _expectFailedLoadDoesNotInvalidateActiveResourceSession,
+      _expectFailedLoadDoesNotReleaseActiveResourceSession,
       returnsNormally,
     );
   });
@@ -176,7 +170,7 @@ void _expectSuccessfulLoadPublishesPreviewCleanup() {
   _expectLoadEffects(effectBatches.single);
 }
 
-void _expectSuccessfulLoadInvalidatesActiveResourceSession() {
+void _expectSuccessfulLoadReleasesActiveResourceSession() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   final token = Object();
@@ -192,8 +186,8 @@ void _expectSuccessfulLoadInvalidatesActiveResourceSession() {
   );
 
   expect(session.replacementResetCount, 1);
-  expect(session.allInvalidationCount, 0);
-  expect(session.targetInvalidations, isEmpty);
+  expect(session.releaseAllCount, 0);
+  expect(session.releasedIds, isEmpty);
   expect(effectBatches, hasLength(1));
   root.dispose();
 }
@@ -231,7 +225,7 @@ void _expectSuccessfulLoadDropsFailedSessionWithDifferentSink() {
   final sink = _RecordingLifecycleSession();
   root.attachSurface(token);
   root.installSurfaceResourceSession(token, session);
-  root.attachResourceSessionInvalidationSink(sink);
+  root.attachResourceSessionReleaseSink(sink);
 
   root.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_replacementDocument()),
@@ -241,7 +235,7 @@ void _expectSuccessfulLoadDropsFailedSessionWithDifferentSink() {
   expect(effectBatches, hasLength(1));
   expect(session.dropCount, 1);
   expect(sink.dropCount, 0);
-  expect(sink.allInvalidationCount, 0);
+  expect(sink.releaseAllCount, 0);
   expect(root.activeSurfaceResourceSessionForTesting, isNull);
   root.dispose();
 }
@@ -275,7 +269,7 @@ void _expectFailedLoadHasNoSideEffects(
   expect(root.generateElementId(), CanvasElementId('e0'));
 }
 
-void _expectFailedLoadDoesNotInvalidateActiveResourceSession() {
+void _expectFailedLoadDoesNotReleaseActiveResourceSession() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = _runtimeRoot(effectBatches);
   final token = Object();
@@ -285,8 +279,8 @@ void _expectFailedLoadDoesNotInvalidateActiveResourceSession() {
 
   _expectLoadRejected(root, '{', CanvasDataErrorCode.invalidJson);
 
-  expect(session.targetInvalidations, isEmpty);
-  expect(session.allInvalidationCount, 0);
+  expect(session.releasedIds, isEmpty);
+  expect(session.releaseAllCount, 0);
   expect(session.replacementResetCount, 0);
   expect(root.state.value.revisions.document, 0);
   expect(effectBatches, isEmpty);
@@ -424,19 +418,19 @@ final class _PreviewChangedLoadBoundary implements LoadInteractionBoundary {
 
 final class _RecordingLifecycleSession
     implements SurfaceResourceSessionLifecycle {
-  final List<CanvasResourceId> targetInvalidations = [];
-  int allInvalidationCount = 0;
+  final List<CanvasResourceId> releasedIds = [];
+  int releaseAllCount = 0;
   int replacementResetCount = 0;
   int dropCount = 0;
 
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
-    targetInvalidations.add(id);
+  void releaseResource(CanvasResourceId id) {
+    releasedIds.add(id);
   }
 
   @override
-  void invalidateAllResourceImages() {
-    allInvalidationCount += 1;
+  void releaseAllResources() {
+    releaseAllCount += 1;
   }
 
   @override
@@ -452,18 +446,18 @@ final class _RecordingLifecycleSession
 
 final class _ThrowingResetLifecycleSession
     implements SurfaceResourceSessionLifecycle {
-  int targetInvalidationCount = 0;
-  int allInvalidationCount = 0;
+  int targetReleaseCount = 0;
+  int releaseAllCount = 0;
   int dropCount = 0;
 
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
-    targetInvalidationCount += 1;
+  void releaseResource(CanvasResourceId id) {
+    targetReleaseCount += 1;
   }
 
   @override
-  void invalidateAllResourceImages() {
-    allInvalidationCount += 1;
+  void releaseAllResources() {
+    releaseAllCount += 1;
   }
 
   @override

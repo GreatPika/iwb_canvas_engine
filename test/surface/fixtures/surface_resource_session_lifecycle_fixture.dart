@@ -342,14 +342,14 @@ void _expectTargetDirtyInvalidatesBeforePublish() {
   root.attachSurface(token);
   root.installSurfaceResourceSession(token, session);
   root.state.addListener(() {
-    expect(session.targetInvalidations, [CanvasResourceId('resource-a')]);
+    expect(session.releasedIds, [CanvasResourceId('resource-a')]);
   });
 
   root.resources.markResourceDirty(CanvasResourceId('resource-a'));
 
   expect(root.state.value.revisions.resourceVisual, 1);
-  expect(session.targetInvalidations, [CanvasResourceId('resource-a')]);
-  expect(session.allInvalidationCount, 0);
+  expect(session.releasedIds, [CanvasResourceId('resource-a')]);
+  expect(session.releaseAllCount, 0);
   root.dispose();
 }
 
@@ -363,14 +363,14 @@ void _expectMarkAllInvalidatesBeforePublish() {
   root.attachSurface(token);
   root.installSurfaceResourceSession(token, session);
   root.state.addListener(() {
-    expect(session.allInvalidationCount, 1);
+    expect(session.releaseAllCount, 1);
   });
 
   root.resources.markAllResourcesDirty();
 
   expect(root.state.value.revisions.resourceVisual, 1);
-  expect(session.targetInvalidations, isEmpty);
-  expect(session.allInvalidationCount, 1);
+  expect(session.releasedIds, isEmpty);
+  expect(session.releaseAllCount, 1);
   root.dispose();
 }
 
@@ -394,11 +394,11 @@ void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
   root.resources.markResourceDirty(CanvasResourceId('resource-a'));
   root.resources.markAllResourcesDirty();
 
-  expect(activeSession.targetInvalidations, isEmpty);
-  expect(activeSession.allInvalidationCount, 0);
+  expect(activeSession.releasedIds, isEmpty);
+  expect(activeSession.releaseAllCount, 0);
   expect(activeSession.dropCount, 1);
-  expect(staleSession.targetInvalidations, isEmpty);
-  expect(staleSession.allInvalidationCount, 0);
+  expect(staleSession.releasedIds, isEmpty);
+  expect(staleSession.releaseAllCount, 0);
   expect(staleSession.dropCount, 0);
   expect(root.state.value.revisions.resourceVisual, 2);
   root.dispose();
@@ -408,10 +408,7 @@ bool _lifecycleSeamShapeIsNarrow() {
   final lifecycleSource = File(
     'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
   ).readAsStringSync();
-  expect(
-    lifecycleSource,
-    contains('implements ResourceSessionInvalidationSink'),
-  );
+  expect(lifecycleSource, contains('implements ResourceSessionReleaseSink'));
   expect(lifecycleSource, contains('void resetForDocumentReplacement();'));
   expect(lifecycleSource, contains('void drop();'));
   expect(lifecycleSource, isNot(contains('resolveImage')));
@@ -593,19 +590,19 @@ void _expectSessionResolvesImage(
 
 final class _RecordingLifecycleSession
     implements SurfaceResourceSessionLifecycle {
-  final List<CanvasResourceId> targetInvalidations = [];
-  int allInvalidationCount = 0;
+  final List<CanvasResourceId> releasedIds = [];
+  int releaseAllCount = 0;
   int replacementResetCount = 0;
   int dropCount = 0;
 
   @override
-  void invalidateResourceImage(CanvasResourceId id) {
-    targetInvalidations.add(id);
+  void releaseResource(CanvasResourceId id) {
+    releasedIds.add(id);
   }
 
   @override
-  void invalidateAllResourceImages() {
-    allInvalidationCount += 1;
+  void releaseAllResources() {
+    releaseAllCount += 1;
   }
 
   @override

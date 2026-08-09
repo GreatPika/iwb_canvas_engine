@@ -18,7 +18,7 @@ import '../contracts/internal/measured_text_layout.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/resource_dirty_outcome.dart';
-import '../contracts/internal/resource_session_invalidation_sink.dart';
+import '../contracts/internal/resource_session_release_sink.dart';
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/internal/selection_membership_port.dart';
@@ -220,7 +220,7 @@ final class RuntimeRoot
   bool _isRunningResolverCallback = false;
   Object? _activeSurfaceToken;
   SurfaceResourceSessionLifecycle? _activeSurfaceResourceSession;
-  ResourceSessionInvalidationSink? _activeResourceSessionInvalidationSink;
+  ResourceSessionReleaseSink? _activeResourceSessionReleaseSink;
 
   // Lazy internal adapters and kernels.
   late final InteractionReadPort _interactionReadPort =
@@ -384,7 +384,7 @@ final class RuntimeRoot
     }
     _dropActiveSurfaceResourceSession();
     _activeSurfaceResourceSession = session;
-    _activeResourceSessionInvalidationSink = session;
+    _activeResourceSessionReleaseSink = session;
   }
 
   @visibleForTesting
@@ -467,20 +467,16 @@ final class RuntimeRoot
     );
   }
 
-  // Resource session sink API.
-  void attachResourceSessionInvalidationSink(
-    ResourceSessionInvalidationSink sink,
-  ) {
+  // Resource session release API.
+  void attachResourceSessionReleaseSink(ResourceSessionReleaseSink sink) {
     ensureRuntimeMutationAllowed();
-    _activeResourceSessionInvalidationSink = sink;
+    _activeResourceSessionReleaseSink = sink;
   }
 
-  void clearResourceSessionInvalidationSink(
-    ResourceSessionInvalidationSink sink,
-  ) {
+  void clearResourceSessionReleaseSink(ResourceSessionReleaseSink sink) {
     ensureRuntimeMutationAllowed();
-    if (identical(_activeResourceSessionInvalidationSink, sink)) {
-      _activeResourceSessionInvalidationSink = null;
+    if (identical(_activeResourceSessionReleaseSink, sink)) {
+      _activeResourceSessionReleaseSink = null;
     }
   }
 
@@ -1911,28 +1907,28 @@ final class RuntimeRoot
     if (!outcome.hasDirtyResources) {
       return;
     }
-    _invalidateActiveResourceSessionForDirtyOutcome(outcome);
+    _releaseActiveResourceSessionForDirtyOutcome(outcome);
     _deliverResourceDirtyResult(_resourceDirtyEffects(outcome));
   }
 
-  void _invalidateActiveResourceSessionForDirtyOutcome(
+  void _releaseActiveResourceSessionForDirtyOutcome(
     ResourceDirtyOutcome outcome,
   ) {
-    final sink = _activeResourceSessionInvalidationSink;
+    final sink = _activeResourceSessionReleaseSink;
     if (sink == null) {
       return;
     }
     try {
       if (outcome.allResourcesDirty) {
-        sink.invalidateAllResourceImages();
+        sink.releaseAllResources();
 
         return;
       }
       for (final id in outcome.dirtyResourceIds) {
-        sink.invalidateResourceImage(id);
+        sink.releaseResource(id);
       }
     } on Object {
-      _dropFailedResourceInvalidationTarget(sink);
+      _dropFailedResourceReleaseTarget(sink);
     }
   }
 
@@ -1942,8 +1938,8 @@ final class RuntimeRoot
       return;
     }
     _activeSurfaceResourceSession = null;
-    if (identical(_activeResourceSessionInvalidationSink, session)) {
-      _activeResourceSessionInvalidationSink = null;
+    if (identical(_activeResourceSessionReleaseSink, session)) {
+      _activeResourceSessionReleaseSink = null;
     }
     session.drop();
   }
@@ -1980,7 +1976,7 @@ final class RuntimeRoot
   }
 
   void _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
-    final sink = _activeResourceSessionInvalidationSink;
+    final sink = _activeResourceSessionReleaseSink;
     if (sink == null && _activeSurfaceResourceSession == null) {
       return;
     }
@@ -1992,15 +1988,15 @@ final class RuntimeRoot
           continue;
         }
         if (touchedSet.allResourceVisualsChanged) {
-          sink?.invalidateAllResourceImages();
+          sink?.releaseAllResources();
           continue;
         }
         for (final id in touchedSet.resourceIds) {
-          sink?.invalidateResourceImage(id);
+          sink?.releaseResource(id);
         }
       }
     } on Object {
-      _dropFailedResourceInvalidationTarget(sink);
+      _dropFailedResourceReleaseTarget(sink);
     }
   }
 
@@ -2015,11 +2011,11 @@ final class RuntimeRoot
 
       return;
     }
-    _activeResourceSessionInvalidationSink?.invalidateAllResourceImages();
+    _activeResourceSessionReleaseSink?.releaseAllResources();
   }
 
-  void _dropFailedResourceInvalidationTarget(
-    ResourceSessionInvalidationSink? failedSink,
+  void _dropFailedResourceReleaseTarget(
+    ResourceSessionReleaseSink? failedSink,
   ) {
     final session = _activeSurfaceResourceSession;
     if (session != null &&
@@ -2029,16 +2025,16 @@ final class RuntimeRoot
       return;
     }
     if (failedSink != null &&
-        identical(_activeResourceSessionInvalidationSink, failedSink)) {
-      _activeResourceSessionInvalidationSink = null;
+        identical(_activeResourceSessionReleaseSink, failedSink)) {
+      _activeResourceSessionReleaseSink = null;
     }
   }
 
   void _dropActiveSurfaceResourceSessionBestEffort() {
     final session = _activeSurfaceResourceSession;
     _activeSurfaceResourceSession = null;
-    if (identical(_activeResourceSessionInvalidationSink, session)) {
-      _activeResourceSessionInvalidationSink = null;
+    if (identical(_activeResourceSessionReleaseSink, session)) {
+      _activeResourceSessionReleaseSink = null;
     }
     try {
       session?.drop();

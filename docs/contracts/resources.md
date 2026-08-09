@@ -58,15 +58,16 @@ and must not use the catalog seam for asset binding. `ResourceKernel` owns the
 implemented non-surface resource API, catalog read delegation,
 `resourceVisualRevision`, and dirty-resource no-op/acceptance orchestration.
 `RuntimeRoot` holds the nullable active `SurfaceResourceSessionLifecycle` port,
-which extends `ResourceSessionInvalidationSink` with `drop()`. Runtime uses the
-invalidation side before dirty public-state/effect publication and the drop side
-when the active surface detaches, swaps runtimes, the runtime is disposed, or a
-post-acceptance resource-session invalidation/reset target fails and must not be
-reused.
+which extends `ResourceSessionReleaseSink` with `drop()`. Runtime invokes its
+generic target/all release side before dirty public-state/effect publication and
+the drop side when the active surface detaches, swaps runtimes, the runtime is
+disposed, or a post-acceptance resource-session release/reset target fails and
+must not be reused.
 Each active `CanvasSurface` creates one concrete `SurfaceResourceSession`
 instance under `lib/src/resources/**` for synchronous resolver lifecycle and
-resolved-image cache state; surface wires that instance to the runtime lifecycle
-port after successful surface attach.
+resolved-image cache/suppression state. CanvasSurface wires the session to the
+runtime lifecycle port after successful attach and supplies the narrow callback
+that releases matching retained main-output bindings.
 
 ```text
 Committed document:
@@ -75,7 +76,7 @@ Committed document:
 Runtime resource orchestration:
   dirty resource ids;
   resource visual public-state publication;
-  target/all session invalidation events;
+  target/all resource release before publication;
   active session drop on detach/runtime swap/dispose;
   resolver reentrancy rejection.
 
@@ -86,13 +87,17 @@ SurfaceResourceSession:
   per-frame resolver-call budget;
   same-frame null-result suppression;
   budget-exceeded follow-up throttle.
+
+CanvasSurface retained output:
+  identity-aware target/all main-output binding release;
+  unrelated bindings and overlay preserved for target release.
 ```
 
 Paint/resource resolution receives immutable descriptor snapshots and
 `resourceRevision` through the `contracts/internal/**` `FrameFactsPort`, which
 is backed by the committed document owner for frame paint. The resource module
 must not import, read, or mutate `DocumentStoreKernel` or `RuntimeRoot`; it owns
-session policy, resolver-safe placeholder results, and dirty invalidation
+session policy, resolver-safe placeholder results, and generic release
 boundaries through narrow contract inputs only.
 Schema v1 runtime load imports resource declarations as store-owned descriptor
 rows during `DocumentStoreKernel` preparation. Load must not construct public
@@ -117,10 +122,11 @@ the pending budget follow-up repaint flag before resolver work begins.
 single-active-surface attachment. Rejected attachment creates no session and
 performs no resolver side effects. The runtime-surface bridge installs the
 session through `SurfaceResourceSessionLifecycle`; detach, dispose, runtime
-swap, and runtime disposal call `drop()` through that lifecycle port and clear
-the cache without disposing app-owned `ui.Image` instances. If an active surface
-receives a different `resourceResolver`, the session increments
-`resolverGeneration` and clears stale entries before the next resolve.
+swap, and runtime disposal remove matching session and retained-output borrows
+before return, without disposing app-owned `ui.Image` instances. If an active
+surface receives a different `resourceResolver`, the session increments
+`resolverGeneration` and releases stale session/output borrows before the next
+resolve.
 
 ### 7.1.1 Image resolve cache policy
 
@@ -132,28 +138,35 @@ primitive and cache policy, while surface wires the instance lifecycle to
 
 | Cache | Owner | Key | Invalidated by | Capacity | Eviction | Metric/probe | Hot path allowed? |
 |---|---|---|---|---:|---|---|---|
-| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all, detach/dispose/runtime swap | 1024 entries and 64 MiB decoded bytes per active session | target/all invalidation, generation reset, oversized no-retention, then entry/byte LRU | `length`, `currentSizeBytes`, resolver-call budget, and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
+| ImageResolveCache | SurfaceResourceSession | resolverGeneration + resourceId + resourceRevision | resolver replacement, descriptor change, resource dirty target/all release, detach/dispose/runtime swap | 1024 entries and 64 MiB decoded bytes per active session | target/all release, generation reset, oversized no-retention, then entry/byte LRU | `length`, `currentSizeBytes`, resolver-call budget, and pending budget follow-up flag | yes, sync app resolver only with `kMaxSyncResourceResolverCallsPerFrame = 128` |
 
 The public dirty-resource revision is a repaint observation signal only. Cache
-identity is the table key above; dirty-resource calls invalidate target entries
-or all entries in the active session explicitly. If no surface is attached,
-there is no session cache to invalidate and the next attach starts empty.
+identity is the table key above; dirty-resource calls release matching target
+entries or all entries in the active session explicitly. If no surface is
+attached, there is no session cache or retained output to release and the next
+attach starts empty.
 Resolved-image cache byte pressure is cache-local derived state from decoded
 `ui.Image` dimensions, `image.width * image.height * 4`; descriptor
 `CanvasResource.byteLength` remains descriptor/source metadata and is not cache
 memory truth. A single resolved image whose decoded estimate exceeds the active
 session byte budget is returned for the current resolve result but is not
-retained for a later cache hit. Entry eviction, byte eviction, target
-invalidation, all invalidation, resolver replacement, document replacement,
-drop, and dispose remove only cache references and never dispose app-owned
-`ui.Image` instances.
-Resource-session invalidation and document-replacement reset are
-post-acceptance delivery work: failures from the active invalidation sink or
-surface session must not roll back, rethrow from, or block publication of an
-accepted edit, accepted load, or accepted dirty-resource result. Runtime clears
-the failed sink; when the failed target is the active surface session, runtime
-drops and detaches that session before continuing publication so stale resolved
-images cannot be reused.
+retained for a later cache hit. Entry eviction and byte eviction remove cache
+references only. Target/all release, resolver replacement, document replacement,
+drop, and dispose synchronously remove matching cache/suppression borrows and
+the matching retained main-output borrow; they never call the resolver or
+dispose app-owned `ui.Image` instances. Target release preserves unrelated
+bindings and overlay output. A stale session callback proves no matching active
+output and never mutates the current surface output.
+
+Generic release and document-replacement reset are post-acceptance delivery
+work: reference removal completes before a fallible notification boundary.
+Later notification failures must not roll back, rethrow from, or block
+publication of an accepted edit, accepted load, or accepted dirty-resource
+result; accepted state, revisions, repaint intent, operation return, and the
+no-borrow postcondition remain observable. Rejected and no-op operations mutate
+neither retention owner. Runtime clears a failed sink; when the failed target is
+the active surface session, runtime drops and detaches that session before
+continuing publication so stale resolved images cannot be reused.
 
 ### 7.2 Atomic operations
 
@@ -176,7 +189,7 @@ If any operation throws, both resource and element changes roll back.
 - returns false if resource does not exist;
 - returns false if any element references it;
 - references include background elements, hidden elements, locked elements and non-deletable elements;
-- removes resource and invalidates resource cache if unused;
+- removes resource and releases matching resource borrows if unused;
 - emits no action event;
 - increments document/resource revision if removed.
 ```
@@ -197,8 +210,9 @@ Semantics:
 - does not change document revision;
 - increments `state.revisions.resourceVisual`;
 - sends target/all dirty outcome through `RuntimeRoot` to the active
-  `ResourceSessionInvalidationSink`, if attached, before dirty state listeners
-  or commit-effect observers run;
+  `ResourceSessionReleaseSink`, if attached, which synchronously releases
+  matching session and retained-output borrows before dirty state listeners or
+  commit-effect observers run;
 - publishes main repaint intent;
 - publishes one `CanvasRuntimeState` when the dirty request changes resource
   visual state;
@@ -213,22 +227,24 @@ Semantics:
 public `state.revisions.resourceVisual` domain. The public resource port
 delegates the revision increment to ResourceKernel/RuntimeRoot orchestration.
 `ResourceKernel` emits only `ResourceDirtyOutcome`; `RuntimeRoot` owns the
-active-session invalidation slot and forwards target/all invalidation to the
-attached resource session, if any. If that invalidation target fails,
-`RuntimeRoot` contains the failure by clearing the failed sink or dropping the
-failed surface session, then still publishes the accepted dirty state and repaint
-effect. The repaint intent is runtime-owned and does not require an attached
-`CanvasSurface`; an attached surface observes it if present.
+active-session release slot and forwards target/all release to the attached
+resource session, if any. The active session clears matching cache/suppression
+borrows before its identity-aware CanvasSurface callback releases matching
+retained main-output bindings. If that release target fails, `RuntimeRoot`
+contains the failure by clearing the failed sink or dropping the failed surface
+session, then still publishes the accepted dirty state and repaint effect. The
+repaint intent is runtime-owned and does not require an attached CanvasSurface;
+an attached surface observes it if present.
 
 `markAllResourcesDirty` applies the same rule to every registered resource and
-clears the active session cache when a `ResourceSessionInvalidationSink` is
-attached. With no attached session, the dirty publication still completes and
-there is no session cache work to perform.
+releases all active session and retained-output borrows when a
+`ResourceSessionReleaseSink` is attached. With no attached session, the dirty
+publication still completes and there is no release work to perform.
 
 ### 7.5 v1 resource boundary
 
 ```text
-- mandatory v1 supports appKey resource descriptors and dirty invalidation;
+- mandatory v1 supports appKey resource descriptors and dirty-resource release;
 - `CanvasResourceSource.appKey` constructs the public readable
   `CanvasAppKeyResourceSource`; application resolvers read the app-owned
   identity from `CanvasAppKeyResourceSource.key` through the public barrel only;

@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../api/canvas_runtime.dart';
 import '../api/canvas_runtime_surface_bridge.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../resources/surface_resource_session.dart';
@@ -123,6 +124,18 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       session = SurfaceResourceSession(
         resolver: widget.resourceResolver,
         mutationGuard: port.resolverMutationGuard,
+        releaseRetainedResource: (id) {
+          final currentSession = session;
+          if (currentSession != null) {
+            _releaseRetainedResource(currentSession, id);
+          }
+        },
+        releaseAllRetainedResources: () {
+          final currentSession = session;
+          if (currentSession != null) {
+            _releaseAllRetainedResources(currentSession);
+          }
+        },
       );
       port.installSurfaceResourceSession(_surfaceToken, session);
     } catch (_) {
@@ -135,6 +148,23 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
     _activeSession = session;
     _isSurfaceAttached = true;
     port.surfaceFrame.addListener(_handleSurfaceFrame);
+  }
+
+  void _releaseRetainedResource(
+    SurfaceResourceSession session,
+    CanvasResourceId id,
+  ) {
+    if (!identical(_activeSession, session)) {
+      return;
+    }
+    _outputCache.releaseResource(id);
+  }
+
+  void _releaseAllRetainedResources(SurfaceResourceSession session) {
+    if (!identical(_activeSession, session)) {
+      return;
+    }
+    _outputCache.releaseAllResources();
   }
 
   CanvasRuntimeSurfacePort? _currentSurfacePort() {

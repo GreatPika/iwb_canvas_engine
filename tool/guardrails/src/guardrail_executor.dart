@@ -332,7 +332,6 @@ const _testProofPaths = {
   ],
   'resources.app_key_only': [
     'test/api_contract/public_readable_union_variants_test.dart',
-    'test/resources/resource_resolver_adapter_shape_test.dart',
   ],
   'resources.dirty_no_document_revision': [
     'test/resources/resource_dirty_port_test.dart',
