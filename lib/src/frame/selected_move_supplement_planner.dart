@@ -211,7 +211,6 @@ final class SelectedMoveSupplementPlanner {
 
     return RenderElementRecord(
       id: record.id,
-      family: record.family,
       generation: record.generation,
       orderToken: record.orderToken,
       transform: shiftedTransform,

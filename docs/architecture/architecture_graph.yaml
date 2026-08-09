@@ -279,7 +279,7 @@ nodes:
       - path: docs/contracts/frame_rendering.md
     evidence:
       - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, FrameRepaintSignal output metadata, and bounded frame cache orchestration. Typed vector bindings paint via clip/translate/anisotropic scale/drawPicture with record-local opacity; runtime/surface pre-output invalidation targets are owned outside frame.
-      - RenderElementFamily remains a complete temporary render-row mirror through Unit 5 so vector records are represented before its Unit 7 sealed-row retirement; it is not a second semantic element-kind owner.
+      - Sealed RenderElementRow variants are the sole frame payload discriminator across record capture, ordinary cache, selected-move supplement, asset binding, selection decoration, and painting; RenderElementRecord stores no render-family mirror or alternate mapping.
     actual:
       declarations:
         - FrameEngine

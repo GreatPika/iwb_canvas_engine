@@ -27,7 +27,7 @@ final class OrdinaryPaintPlanRejected extends OrdinaryPaintPlanResult {
 }
 
 // Ordinary planning is the single cache-write boundary for captured committed
-// facts, spatial admission, reusable render records, and render-family probes.
+// facts, spatial admission, reusable render records, and render-primitive probes.
 // ignore: coupling-between-object-classes
 final class OrdinaryPaintPlanner {
   OrdinaryPaintPlanner({

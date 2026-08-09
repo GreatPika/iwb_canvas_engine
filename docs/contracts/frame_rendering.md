@@ -344,10 +344,11 @@ exactly one record-local target-bounded layer around that direct Picture draw.
 It never converts a `Picture` to an image. Missing, failed, or stale bindings
 use the record's sized placeholder and do not alter its geometry.
 
-Unit 5 introduces and completes `RenderElementFamily` as a temporary
-compatibility mirror for all seven rows. It persists unchanged through Unit 6
-while carrying no rendering payload authority; sealed row type does. Unit 7
-retires that mirror after its remaining consumers migrate.
+Sealed `RenderElementRow` variants are the sole frame payload discriminator.
+Record capture creates one immutable row; ordinary record caching,
+selected-move supplementation, asset binding, selection decoration, and
+painting carry or pattern-match that row directly. `RenderElementRecord` stores
+no render-family mirror, mapping, or parallel payload discriminator.
 
 ### 15.4 Render primitive cache misses
 

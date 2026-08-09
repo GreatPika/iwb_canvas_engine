@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -12,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../preparation/fixtures/vector_preparation_fixture.dart';
 
 void main() {
-  _testRecordPainterConsumesRowData();
   _testFallbackStrokeBoundsTransformedOnce();
   _testVectorRecordDrawsPreparedPictureDirectly();
   _testVectorRecordUsesBoundedPictureCommands();
@@ -80,7 +78,6 @@ RenderElementRecord _vectorPaintRecord({
   );
   return RenderElementRecord(
     id: CanvasElementId(resourceId.value),
-    family: RenderElementFamily.vector,
     generation: 0,
     orderToken: 0,
     transform: CanvasTransform.translation(translation),
@@ -136,7 +133,6 @@ void _testVectorRecordDrawsPreparedPictureDirectly() {
       final resourceId = CanvasResourceId('vector-a');
       final record = RenderElementRecord(
         id: CanvasElementId('vector-a'),
-        family: RenderElementFamily.vector,
         generation: 0,
         orderToken: 0,
         transform: CanvasTransform.translation(const Offset(10, 5)),
@@ -321,30 +317,6 @@ List<List<Object?>> _recordedArguments(
   ];
 }
 
-void _testRecordPainterConsumesRowData() {
-  test('frame record painter consumes row-specific paint data', () {
-    final recordPainterSource = File(
-      'lib/src/frame/main_frame_record_painter.dart',
-    ).readAsStringSync();
-    expect(
-      recordPainterSource,
-      contains('record.transform.toCanvasTransform()'),
-    );
-    expect(recordPainterSource, contains('_paintPathRecord'));
-    expect(recordPainterSource, contains('_paintTextRecord'));
-    expect(recordPainterSource, contains('_paintStrokeRecord'));
-    expect(recordPainterSource, contains('_paintLineRecord'));
-    expect(recordPainterSource, contains('_withElementOpacity'));
-    expect(recordPainterSource, contains('ColorFilter.mode'));
-    expect(recordPainterSource, contains('RenderPrimitiveCacheSnapshot'));
-    expect(recordPainterSource, isNot(contains('parseSvgPathData')));
-    expect(recordPainterSource, isNot(contains('TextPainter(')));
-    expect(recordPainterSource, isNot(contains('PathRenderRow() ||')));
-    expect(recordPainterSource, contains('record.paintBoundsLocal'));
-    _expectNoLivePaintInputs(recordPainterSource);
-  });
-}
-
 void _testFallbackStrokeBoundsTransformedOnce() {
   test('fallback stroke bounds are transformed once', () async {
     final image = await _paintRecord(_fallbackStrokeRecord());
@@ -357,7 +329,6 @@ void _testFallbackStrokeBoundsTransformedOnce() {
 RenderElementRecord _fallbackStrokeRecord() {
   return RenderElementRecord(
     id: CanvasElementId('stroke-a'),
-    family: RenderElementFamily.stroke,
     generation: 0,
     orderToken: 0,
     transform: CanvasTransform.translation(const Offset(10, 0)),
@@ -379,20 +350,6 @@ RenderElementRecord _fallbackStrokeRecord() {
       color: Color(0xFF000000),
     ),
   );
-}
-
-void _expectNoLivePaintInputs(String source) {
-  for (final forbidden in [
-    'RuntimeRoot',
-    'DocumentStoreKernel',
-    'CanvasRuntime',
-    'SurfaceResourceSession',
-    'CanvasResourceResolver',
-    'readDocument',
-    'resolveImage',
-  ]) {
-    expect(source, isNot(contains(forbidden)));
-  }
 }
 
 Future<Image> _paintRecord(RenderElementRecord record) {

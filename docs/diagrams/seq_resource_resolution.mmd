@@ -50,7 +50,7 @@ sequenceDiagram
     Supplement-->>Frame: merged ordinary and supplement records
   end
   Note over Ordinary,Supplement: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation/orderToken stale rejection.
-  Note over Frame: Each resource-backed render record carries resourceId from a committed row fact.
+  Note over Frame: Each resource-backed render record carries resourceId from a committed row fact and uses its sealed row as the sole payload discriminator.
 
   opt records contain resource ids
     loop for each resource-backed RenderElementRecord

@@ -9,8 +9,6 @@ import '../geometry/geometry_policy.dart';
 import 'frame_cache.dart';
 import 'frame_text_layout_measurer.dart';
 
-enum RenderElementFamily { image, vector, path, text, stroke, line, rect }
-
 sealed class RenderElementRow {
   const RenderElementRow();
 }
@@ -138,7 +136,6 @@ final class RectRenderRow extends RenderElementRow {
 final class RenderElementRecord {
   const RenderElementRecord({
     required this.id,
-    required this.family,
     required this.generation,
     required this.orderToken,
     required this.transform,
@@ -152,7 +149,6 @@ final class RenderElementRecord {
   });
 
   final CanvasElementId id;
-  final RenderElementFamily family;
   final int generation;
   final int orderToken;
   final CanvasTransform transform;
@@ -164,10 +160,17 @@ final class RenderElementRecord {
   final CanvasResourceId? resourceId;
   final RenderElementRow row;
 
-  bool get requiresSaveLayer =>
-      family == RenderElementFamily.vector &&
-      primitiveAlpha > 0 &&
-      primitiveAlpha < 255;
+  bool get requiresSaveLayer {
+    return switch (row) {
+      VectorRenderRow() => primitiveAlpha > 0 && primitiveAlpha < 255,
+      ImageRenderRow() ||
+      PathRenderRow() ||
+      TextRenderRow() ||
+      StrokeRenderRow() ||
+      LineRenderRow() ||
+      RectRenderRow() => false,
+    };
+  }
 
   factory RenderElementRecord.fromFacts(
     FrameElementFacts facts, {
@@ -177,7 +180,6 @@ final class RenderElementRecord {
 
     return RenderElementRecord(
       id: facts.id,
-      family: _familyFor(facts.kind),
       generation: facts.generation,
       orderToken: facts.orderToken,
       transform: facts.transform,
@@ -190,18 +192,6 @@ final class RenderElementRecord {
       row: _rowFor(facts),
     );
   }
-}
-
-RenderElementFamily _familyFor(CanvasElementKind kind) {
-  return switch (kind) {
-    CanvasElementKind.image => RenderElementFamily.image,
-    CanvasElementKind.vector => RenderElementFamily.vector,
-    CanvasElementKind.path => RenderElementFamily.path,
-    CanvasElementKind.text => RenderElementFamily.text,
-    CanvasElementKind.stroke => RenderElementFamily.stroke,
-    CanvasElementKind.line => RenderElementFamily.line,
-    CanvasElementKind.rect => RenderElementFamily.rect,
-  };
 }
 
 RenderElementRow _rowFor(FrameElementFacts facts) {

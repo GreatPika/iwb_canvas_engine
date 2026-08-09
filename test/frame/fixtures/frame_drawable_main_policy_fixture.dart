@@ -169,11 +169,6 @@ Future<int> _alphaAt(void Function(Canvas canvas) paint, int x, int y) async {
 RenderElementRecord _record(RenderElementRow row) {
   return RenderElementRecord(
     id: CanvasElementId('record'),
-    family: switch (row) {
-      StrokeRenderRow() => RenderElementFamily.stroke,
-      LineRenderRow() => RenderElementFamily.line,
-      _ => throw StateError('unsupported drawable test row'),
-    },
     generation: 1,
     orderToken: 1,
     transform: CanvasTransform.identity,

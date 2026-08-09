@@ -47,10 +47,7 @@ void _testVectorFrameBindingDoesNotAllocateDiagnostics() {
       ),
     );
 
-    expect(
-      bindings.assets[resourceId],
-      isA<FrameAssetPlaceholderBinding>(),
-    );
+    expect(bindings.assets[resourceId], isA<FrameAssetPlaceholderBinding>());
     expect(DiagnosticRecord.allocations.count, 0);
   });
 }
@@ -78,7 +75,6 @@ void _testFrameEngineCapturesVectorRecord() {
     ).buildResourceFreeMainFrame(inputs: _inputs(), viewCameraBucket: 0);
 
     final record = output.ordinaryPlan.ordinaryRecords.single;
-    expect(record.family, RenderElementFamily.vector);
     expect(record.row, isA<VectorRenderRow>());
   });
 }
@@ -163,7 +159,6 @@ CapturedFrameSnapshot _vectorFrame(CanvasResourceId resourceId) {
 RenderElementRecord _vectorRecord(CanvasResourceId resourceId) {
   return RenderElementRecord(
     id: CanvasElementId('vector-a'),
-    family: RenderElementFamily.vector,
     generation: 1,
     orderToken: 1,
     transform: CanvasTransform.identity,
@@ -201,10 +196,7 @@ void _testFrameBindingContinuesAfterResolverException() {
       ),
     );
 
-    expect(
-      bindings.assets[throwingId],
-      isA<FrameAssetPlaceholderBinding>(),
-    );
+    expect(bindings.assets[throwingId], isA<FrameAssetPlaceholderBinding>());
     expect(
       (bindings.assets[healthyId] as FrameImageAssetBinding).image,
       same(image),

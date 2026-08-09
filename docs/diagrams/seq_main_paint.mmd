@@ -62,7 +62,7 @@ sequenceDiagram
         alt handle generation, structuralRevision, and orderToken still match the captured frame
           Store-->>Facts: immutable family row view, common paint fields, and resourceId if any
           Facts-->>Ordinary: immutable committed row facts
-          Ordinary->>Ordinary: build ordinary committed RenderElementRecord
+          Ordinary->>Ordinary: build ordinary committed RenderElementRecord with one sealed row
         else stale candidate
           Store-->>Facts: reject stale candidate
           Facts-->>Ordinary: stale candidate rejection
@@ -91,7 +91,7 @@ sequenceDiagram
         Store-->>Facts: immutable selected row view or stale rejection
         alt selected row facts are current
           Facts-->>Supplement: selected row facts
-          Supplement->>Supplement: build per-frame supplement RenderElementRecord with previewDelta
+          Supplement->>Supplement: build per-frame supplement RenderElementRecord preserving its sealed row with previewDelta
         else stale selected candidate
           Facts-->>Supplement: stale candidate rejection
           Supplement->>Supplement: skip selected supplement candidate
@@ -101,6 +101,7 @@ sequenceDiagram
       Supplement-->>Frame: merged records with per-frame supplement
     end
     Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
+    Note over Ordinary,Supplement: RenderElementRecord payload dispatch uses only its sealed RenderElementRow; no render-family mirror is cached or copied.
   end
 
   Frame->>Background: build static background plan

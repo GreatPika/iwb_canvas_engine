@@ -165,7 +165,7 @@ Iterable<SelectionDecorationPrimitive> _selectionDecorationPrimitivesFor(
         boundsWorld: _selectionDecorationBoundsFor(record),
         selectedElementCount: 1,
         chromeForm: SelectionDecorationChromeForm.singleElement,
-        strokePlacement: _strokePlacementFor(record.family),
+        strokePlacement: _strokePlacementFor(record.row),
         color: style.color,
         strokeWidth: style.strokeWidth,
         haloWidth: style.haloWidth,
@@ -225,17 +225,14 @@ Rect _unionSelectionDecorationBounds(List<RenderElementRecord> records) {
   return bounds;
 }
 
-SelectionDecorationStrokePlacement _strokePlacementFor(
-  RenderElementFamily family,
-) {
-  return switch (family) {
-    RenderElementFamily.image ||
-    RenderElementFamily.vector ||
-    RenderElementFamily.rect => SelectionDecorationStrokePlacement.outsideBox,
-    RenderElementFamily.line ||
-    RenderElementFamily.path ||
-    RenderElementFamily.stroke ||
-    RenderElementFamily.text =>
-      SelectionDecorationStrokePlacement.boundsOutline,
+SelectionDecorationStrokePlacement _strokePlacementFor(RenderElementRow row) {
+  return switch (row) {
+    ImageRenderRow() ||
+    VectorRenderRow() ||
+    RectRenderRow() => SelectionDecorationStrokePlacement.outsideBox,
+    LineRenderRow() ||
+    PathRenderRow() ||
+    StrokeRenderRow() ||
+    TextRenderRow() => SelectionDecorationStrokePlacement.boundsOutline,
   };
 }

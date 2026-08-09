@@ -185,6 +185,11 @@ Committed document facts stay store-owned and enter frame code only through the
 contract-owned `FrameFactsPort`. Selection facts stay selection-owned and enter
 frame code through contract-owned selection fact seams. Preview and view-camera
 facts stay runtime/interaction-owned and are captured at frame boundaries.
+Sealed `RenderElementRow` variants are the sole frame payload discriminator:
+record capture creates the immutable row once, and the ordinary cache,
+selected-move supplement, asset binding, selection decoration, and painter
+carry or pattern-match it directly. `RenderElementRecord` has no render-family
+mirror or alternate payload mapping.
 Resolver/cache state stays owned by the future `SurfaceResourceSession` under
 `lib/src/resources/**`; among the target frame collaborators, only
 `PaintAssetBindingService` receives that session. Committed resource catalog
