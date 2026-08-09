@@ -66,6 +66,8 @@ Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RET
 | `single-element-kind` | Design D8 requires sized-box geometry and selection, vector content interaction, background exclusion, and retirement of both duplicate family enums. | Boundaries; Units 5, 6, and 7 | `vector-geometry-and-interaction` |
 | `vector-selection-owner` | Design D8 separately requires direct vector `outsideBox`, unchanged current single-family placement, union-box multi-selection, and retirement through sealed-row dispatch. | Units 5 and 7 | `vector-selection-placement` |
 | `typed-relationship-errors` | Design D9 requires independent codec/export/store admission, absent-id `missingResourceReference`, wrong-kind `resourceKindMismatch`, exact element paths, and internal decode helpers. | Boundaries; Units 3 and 5 | `resource-relationship-classification` |
+| `referenced-resource-removal-parity` | The existing family-neutral `CanvasEdit.removeUnusedResource` contract returns false without publication for any referenced resource, so adding a vector resource-backed element must preserve that behavior in materialized and sparse edits. | Boundaries; Unit 5 | `referenced-vector-resource-removal` |
+| `resource-upsert-noop-parity` | The existing edit operation contract mutates only new or changed resource descriptors, so an equal vector descriptor must remain a no-op in materialized and sparse edits. | Boundaries; Unit 5 | `identical-vector-resource-upsert-noop` |
 | `schema-v1-extension` | Design D10 extends Schema v1 in place while preserving old canonical output and independent unknown element/resource rejection. | Boundaries; Unit 5 | `schema-v1-compatibility` |
 | `generic-invalidation-retirement` | Design D11 replaces image-named invalidation with resource-generic target/all release, preserves accepted publication after later notification failure, and retires private mirrors without a permanent token scanner; current production already carries that seam, so Unit 1 closes its still-stale source owners and graph while preserving the behavior. | Boundaries; Unit 1 | `generic-resource-release` |
 | `release-owner-order-correction` | The user authorizes moving release-specific semantic-owner and graph closure from Unit 8 into Unit 1 so the generic release seam, its current source documents, and architecture enforcement remain atomically committable. | Boundaries; Units 1 and 8; Verification Gate | `release-semantic-owner-closure` |
@@ -88,6 +90,8 @@ Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RET
 - `lib/src/contracts/public/canvas_resource.dart:12` / descriptor owner: base resource fields are centralized, while `CanvasImageResource` at `:47` is the only current subtype -> vector adds a typed descriptor without copying source or payload bytes.
 - `lib/src/contracts/public/canvas_resource.dart:98` / resolver port: the only current callback is synchronous image resolution -> preparation stays outside the resolver and the resolver seam migrates atomically.
 - `lib/src/contracts/public/canvas_errors.dart:4` / public data error vocabulary: absent-resource failure exists but wrong-kind failure does not -> the family-neutral mismatch code belongs here.
+- `docs/contracts/operation_matrix.md:258` / public edit operation detail: `removeUnusedResource` returns false and publishes no state when any element still references the descriptor -> vector references must participate in the existing materialized and sparse no-op rule.
+- `docs/contracts/operation_matrix.md:71` / resource upsert operation row: only new or changed descriptors mutate resource state -> equal vector descriptor facts must preserve the existing no-op behavior rather than create a family-specific revision.
 - `lib/src/store/family_tables.dart:69` / committed family tables: six family maps own committed state, and reference lookup at `:78` is image-only -> vector needs a peer row and typed relationship admission at this owner.
 - `lib/src/store/family_tables.dart:520` / current relationship guard: membership alone produces `missingResourceReference` -> final candidate validation must distinguish absence from a present wrong-kind descriptor.
 - `lib/src/codec/schema_v1_reader.dart:552` / resource reader: one canonical reader accepts only image descriptors, while element mapping at `:1515` is exhaustive -> both known vector branches extend the same reader and retain unknown-kind rejection.
@@ -117,7 +121,7 @@ Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RET
 Owner: Public vector element/update/resource/result/resolver declarations, result lifecycle, raster-free input contract, and public error taxonomy belong to `contracts/public`; `prepareVector`, exact-view copying, invocation-time context capture, intrinsic validation, selected-upstream-Future mapping, and the private upstream adapter belong behind API. Store owns committed rows and final candidate relationships; codec owns the one Schema v1 traversal, codec-local public-DTO sink, and canonical encode. `CanvasElementKind` is the sole semantic element-kind discriminator; sealed render rows own frame payload variants. Geometry owns sized-box bounds and hit policy. Frame owns immutable vector rows/bindings, selection placement, clipping, scaling, group opacity, and `drawPicture`. Resources owns synchronous resolver admission, aggregate borrowed references, suppression/retry, and non-fallible target/all retirement; cache numbers live only in `docs/contracts/cache_policy.md`; surface owns retained frame output and its narrow synchronous release implementation. The application owns prepared-result freshness, publication aliases, aggregate release-before-dispose authorization, and disposal. Existing codec and interaction diagnostic routes remain their owners; preparation, resources, and frame remain non-hub. Existing architecture graph nodes own these routes; no new graph owner is introduced.
   `docs/contracts/public_api_v1.md` owns the explicit default-identity equality classification for `CanvasPreparedVector`; wrapper identity remains independent of intrinsic size, private Picture identity, and mutable liveness.
 
-In Scope: Retire both duplicate family discriminators and their manual mirrors; introduce resource-generic target/all invalidation and total identity-aware retained-output release before vector consumers; preserve accepted dirty/edit/load publication when later notification fails; add `CanvasPreparedVector` and public raster-free preparation with exact-view admission, context closure, bounded failure mapping, intrinsic cleanup, and idempotent disposal; add one vector element, sparse update, descriptor, synchronous resolver branch, typed store/import/frame facts, Schema v1 branches, relationship classification, background/content projection, geometry, interaction snapshots, aggregate image/vector borrowing, placeholders, direct painting, selection chrome, and group opacity; update affected current semantic owners, public registry, section/diagram relationships, architecture graph, ADR catalog, proof registration, durable verification inventory, and generated projections.
+In Scope: Retire both duplicate family discriminators and their manual mirrors; introduce resource-generic target/all invalidation and total identity-aware retained-output release before vector consumers; preserve accepted dirty/edit/load publication when later notification fails; add `CanvasPreparedVector` and public raster-free preparation with exact-view admission, context closure, bounded failure mapping, intrinsic cleanup, and idempotent disposal; add one vector element, sparse update, descriptor, synchronous resolver branch, typed store/import/frame facts, Schema v1 branches, relationship classification, family-neutral referenced-resource removal and equal-descriptor no-op edit behavior, background/content projection, geometry, interaction snapshots, aggregate image/vector borrowing, placeholders, direct painting, selection chrome, and group opacity; update affected current semantic owners, public registry, section/diagram relationships, architecture graph, ADR catalog, proof registration, durable verification inventory, and generated projections.
 
 Out of Scope: Raw SVG compilation or parsing; embedded PNG/JPEG or other raster commands as supported input; a fork or patch of `vector_graphics`; process-global Flutter error interception; a duplicate `.vec` parser, raster-command recognizer, hostile-content sandbox, exact decoded-command or decoded-memory bound; engine file, network, asset-bundle, or external-reference IO; serialized `.vec`, SVG, or base64 payloads; public `PictureInfo`, upstream exceptions/types, `ui.Picture`, prepared constructor, or liveness getter; asynchronous resolver state, pending preparation, lazy attach-time decode, or completion repaint; an engine reverse wrapper-to-key/session registry; application-visible generation/revision keys; session/frame disposal of application values; natural-size synchronization; image rasterization, path-level Picture hits, color/theme remapping, Schema v2, a diagnostics field or vector-specific diagnostic route, a successful-release result taxonomy, an invalidation compatibility alias, a permanent legacy-name scanner, restored retired benchmark machinery, or a frame-wide opacity degradation cap.
 
@@ -140,7 +144,7 @@ Bounded Recognition Scope: No new analyzer, schema validator architecture, gener
 
 ## Execution Units
 
-### [x] Unit 1: Close generic resource release semantics and graph ownership
+### [ ] Unit 1: Close generic resource release semantics and graph ownership
 
 Owner: Release-specific resource and operation contracts, runtime-ownership documentation, semantic diagrams, the existing runtime-to-session graph edge, and their generated projections.
 Boundary: Start from the current generic non-fallible target/all release implementation and close its still-stale current source owners without adding vector resolution, changing image resolver/cache policy, or reopening application ownership and accepted-publication behavior.
@@ -158,7 +162,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [x] Unit 2: Add the bounded public vector preparation boundary
+### [ ] Unit 2: Add the bounded public vector preparation boundary
 
 Owner: Public contracts own `CanvasDataErrorCode.invalidVectorData`, the prepared-result/default-identity contract, and the exact helper signature; the API preparation adapter owns `vg.loadPicture`, byte/context admission, failure projection, intrinsic validation, private Picture access, and cleanup; current public API, validation, preparation, dependency-boundary, registry, architecture, and generated-projection owners record that boundary in the same unit.
 Boundary: Add preparation and prepared-result lifecycle and close every semantic or structured owner affected by that public boundary without yet admitting a vector document family, `resourceKindMismatch`, or frame resolver branch; third-party types and raw Picture remain private, and generated projections remain non-authoritative.
@@ -181,7 +185,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [x] Unit 3: Make current resource facts and relationships kind-aware
+### [ ] Unit 3: Make current resource facts and relationships kind-aware
 
 Owner: Public resource descriptors, store final-candidate relationships, codec-local descriptor admission, immutable frame resource facts, and the affected schema/resource/frame/data-model/architecture owners, diagrams, graph relationships, and generated projections.
 Boundary: Preserve the current image-only public API, Schema v1 wire form, store behavior, and frame output while replacing nullable MIME and id-membership inference with an explicit kind-aware owner and closing its current source owners; no vector public family or wire branch is introduced in this unit.
@@ -197,7 +201,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [x] Unit 4: Generalize the current resolved-asset pipeline
+### [ ] Unit 4: Generalize the current resolved-asset pipeline
 
 Owner: Resource request/result/cache/session owners, immutable frame binding/output owners, existing image lifecycle consumers, and the affected resource/cache/frame/architecture contracts, diagrams, graph relationships, and generated projections.
 Boundary: Preserve all current image resolution, cache, placeholder, binding, output, and application-ownership behavior while making the existing path family-neutral and aggregate-ready and closing its current source owners; no public vector resolver branch is introduced in this unit.
@@ -216,7 +220,7 @@ Depends On:
 - Unit 1 — produces: generic non-fallible target/all session-output release; consumed as: the sole lifecycle seam for the generalized asset path.
 - Unit 3 — produces: explicit current descriptor kind and kind-aware immutable facts; consumed as: typed request, cache, binding, and output discrimination without MIME inference.
 
-### [x] Unit 5: Admit the vector family through every runtime owner
+### [ ] Unit 5: Admit the vector family through every runtime owner
 
 Owner: Public model, store, codec, edit/load, resource session, frame, geometry, interaction, their atomic seam consumers, and every affected public/schema/codec/operation/resource/cache/frame/geometry/interaction/architecture contract, registry, diagram, graph relationship, proof registration, and generated projection.
 Boundary: Add the sealed public vector element/resource variants only together with every remaining production exhaustive branch, resolver implementation, binding, fake, test double, public export-registry entry, and current semantic or structured owner required for a compiling and mechanically consistent repository. Extend the existing interaction/render mirrors with vector only as the design-required temporary migration state; Units 6 and 7 retire them after direct vector outcomes pass.
@@ -228,6 +232,8 @@ Acceptance Outcomes:
 | Outcome key | Starting state | System action | Observable result | Required side conditions |
 | --- | --- | --- | --- | --- |
 | `vector-model-and-update` | Public/store families do not contain vector values. | External code constructs vector element/resource/update values, commits and reads them, and applies sparse updates. | All common and vector fields survive projection; only supplied update fields change; invalid size/natural-size paths reject before mutation. | Common-field truth is inherited, not copied into a second schema or feature inventory. |
+| `referenced-vector-resource-removal` | A vector descriptor is referenced by a committed vector element, either unchanged or through a sparse local element override. | A materialized or sparse edit calls `removeUnusedResource` for that descriptor. | The call returns false, the descriptor remains installed, and no resource mutation or relationship exception occurs. | An independent sparse element update may commit normally, but removal adds no document/resource revision or publication; behavior matches the existing image rule without a copied family inventory. |
+| `identical-vector-resource-upsert-noop` | A document already contains a vector descriptor with the same complete public facts as the supplied value. | A materialized or sparse edit upserts the equal descriptor. | The call returns false and document identity, public state, document revision, and resource revision remain unchanged. | Equality is derived from the sealed descriptor facts at the edit owner; no private helper name, vector-only revision rule, or duplicate resource schema becomes proof authority. |
 | `vector-schema-roundtrip` | Schema v1 has image-only descriptor and six element branches. | Vector resources/elements are decoded and canonically encoded in background and content. | Descriptor-only JSON roundtrips all accepted fields with no `.vec`/SVG/base64 payload. | One reader/writer remains; current unknown-field policy and metadata owner remain unchanged. |
 | `resource-relationship-classification` | Current sinks distinguish only present membership from absence. | Codec-local public DTO decode, exported encode, edit commit, and runtime load receive absent and both wrong-kind directions. | Absence yields `missingResourceReference`; existing wrong kind yields one `resourceKindMismatch`; each uses `image.resourceId` or `vector.resourceId` and returns/installs nothing partial. | Internal decode helpers stay unexported; assertions use code/path, not message text; no per-family mismatch codes appear. |
 | `document-admission-atomicity` | A candidate may change a resource kind and every reference in one edit or may fail relationship admission. | Resource-plus-element edits run in either callback order and invalid edits/loads are attempted. | Coherent candidates succeed independent of callback order; rejected candidates preserve document, revisions, selection, and output. | Final-candidate validation precedes irreversible install and codec-local DTO return remains independently guarded. |
@@ -254,7 +260,7 @@ Depends On:
 - Unit 3 — produces: explicit descriptor kind, shared relationship admission, and kind-aware immutable facts; consumed as: the second descriptor kind, exact mismatch classification, and vector frame facts.
 - Unit 4 — produces: one family-neutral request/result/cache/binding/output path with preserved image policy; consumed as: vector resolution, aggregate cache admission, immutable binding, and retained-output lifecycle without a parallel pipeline.
 
-### [x] Unit 6: Retire the duplicate interaction family discriminator after vector admission
+### [ ] Unit 6: Retire the duplicate interaction family discriminator after vector admission
 
 Owner: Interaction read facts, request guards, runtime interaction adapters, their stable behavioral fixtures, and the affected interaction/runtime-ownership contracts, diagrams, graph relationships, proof registrations, and generated projections.
 Boundary: Preserve image/path/text/stroke/line/rect/vector context targeting, background exclusion, and text-commit behavior while making the already-carried `CanvasElementKind` the sole semantic discriminator and closing every current owner of that retirement in the same unit.
@@ -272,7 +278,7 @@ Depends On:
 
 - Unit 5 — produces: passing image/path/text/stroke/line/rect/vector context reconstruction and text-only rejection through the temporary complete mirror; consumed as: the retirement gate required by the accepted sequence.
 
-### [x] Unit 7: Retire the duplicate frame family discriminator after vector admission
+### [ ] Unit 7: Retire the duplicate frame family discriminator after vector admission
 
 Owner: Frame immutable-record, selected-move supplement, painter, selection-decoration owners, and the affected frame/runtime-ownership contracts, diagrams, graph relationships, proof registrations, and generated projections.
 Boundary: Preserve image/path/text/stroke/line/rect/vector record, paint, cache, and selection outcomes while making sealed render rows the only frame payload discriminator and closing every current owner of that retirement in the same unit.
@@ -341,6 +347,8 @@ Depends On:
 | `resource-pipeline-foundation-evidence` | `resource-pipeline-foundation` | `TEST` | Existing image resource request/result/cache/session, immutable binding/output, painter, budget, placeholder, and lifecycle owner suites. | Current image-specific request/result/cache/binding shapes cannot admit another family without duplication. | Every current image hit/miss/retry/eviction/release/binding/output/paint outcome remains exact through one family-neutral pipeline with unchanged limits, accounting, budget, placeholders, and no-dispose ownership. | Direct current behavior across each stable owner is admissible; private type-name locking, a copied family inventory, or a second cache is rejected. | `UPDATE_EXISTING` | Existing image resource session/cache, frame binding/output, painter, budget, placeholder, and lifecycle artifact families | None |
 | `resource-pipeline-owner-doc-evidence` | `resource-pipeline-owner-closure` | `MANUAL_INSPECTION` | Unit 4 resource/cache/frame/architecture contract, diagram, graph, and projection diff. | Current owners describe image-shaped request, cache, binding, and output shapes. | Affected current owners record the family-neutral image-preserving pipeline, unchanged cache policy, generic release, and application no-dispose ownership before Unit 4 commits. | Direct current-owner and structured relationship review is admissible; vector semantics, duplicated cache numbers, Unit 8 prose, or generated output as authority is rejected. | `NONE` | None | None |
 | `vector-model-evidence` | `vector-model-and-update` | `TEST` | External root-barrel DTO/update use, constructor admission, edit/store projection, and before/after sparse-update outcomes. | Vector constructors, committed rows, and updates do not exist. | All common/vector fields project and only supplied fields change; invalid size paths reject before draft mutation. | External behavior and state snapshots are admissible; construction alone, copied common-field inventory, or roundtrip alone is rejected. | `EXTEND_COVERAGE` | Existing public API, edit field-update, and store projection artifact families | `vector-model-admission` |
+| `referenced-vector-removal-evidence` | `referenced-vector-resource-removal` | `TEST` | Existing edit-matrix owner exercises materialized and sparse public edits over a committed vector reference and observes return value, installed descriptor, committed document, public state, and revisions. | Image references are recognized, but a vector reference is treated as unused: removal can return true and later fail relationship admission instead of remaining a false/no-op. | Both edit backings return false; the vector descriptor remains; removal adds no revision/publication and raises no relationship failure. | Public edit results and committed snapshots are admissible; private reference helpers, source switches, one backing, or exception-only checks are rejected. | `EXTEND_COVERAGE` | `test/edit/fixtures/edit_matrix_effects_fixture.dart` | `referenced-vector-removal-admission` |
+| `identical-vector-upsert-evidence` | `identical-vector-resource-upsert-noop` | `TEST` | Existing edit-matrix owner exercises materialized and sparse public upsert with an equal vector descriptor and observes return value, document/state identity, and revisions. | Equal image descriptors are no-ops, but the vector descriptor is classified as changed and returns true. | Both edit backings return false and preserve document/state identity plus document/resource revisions. | Public return/state/revision observations are admissible; private equality helpers, source comparisons, or one backing are rejected. | `EXTEND_COVERAGE` | `test/edit/fixtures/edit_matrix_effects_fixture.dart` | `identical-vector-upsert-admission` |
 | `vector-schema-evidence` | `vector-schema-roundtrip`, `schema-v1-compatibility` | `TEST` | Canonical Schema v1 codec owners for vector resources/background/content elements, existing exact image documents, and independent unknown element/resource kinds. | Reader/writer have no vector branches, so a canonical vector document is rejected while existing compatibility fixtures alone already pass. | Descriptor-only vector JSON roundtrips exactly with all accepted fields and no payload bytes; old canonical bytes/maps remain exact and both unknown-kind branches still reject. | Public canonical maps, known-vector roundtrip, old canonical output, and independent unknown-kind rejection are admissible; field existence, old always-green fixtures alone, vector roundtrip alone, fixture vocabulary in production, or a copied allowed-kind inventory is rejected. | `EXTEND_COVERAGE` | Existing Schema v1 canonical roundtrip, resource, and unknown-kind artifact families | `vector-schema-admission` |
 | `relationship-classification-evidence` | `resource-relationship-classification` | `TEST` | Codec-local public-DTO, exported encode, edit commit, runtime load, and public export parity owners. | Present wrong-kind descriptors are not representable/classified and only absence has a public code. | All sinks independently return exact absent/mismatch code and element path with no partial result/install; public export includes the new code and decode helpers remain private. | Code/path and old/new state are admissible; exception text, one sink, constructor validation, or per-family error inventories are rejected. | `EXTEND_COVERAGE` | Existing codec, edit, runtime load, and public export artifact families | `relationship-classification-admission` |
 | `document-atomicity-evidence` | `document-admission-atomicity` | `TEST` | Edit/store/load owner snapshots around coherent two-sided changes and rejected candidates. | No vector relationship candidate exists and current coverage cannot witness callback-order independence. | Both callback orders succeed for coherent candidates; rejected candidates leave document/revisions/selection/output unchanged. | Final public/store snapshots are admissible; one callback order, exception-only checks, or partial helper state is rejected. | `EXTEND_COVERAGE` | Existing edit matrix, store finalization, and staged load artifact families | `vector-document-atomicity-admission` |
@@ -462,6 +470,30 @@ Current verification gap: no vector DTO, row, or update exists
 Failing witness: external construction and vector update code do not compile
 Durable and refactor-stable value: public/store behavior survives private row and update-helper refactors
 Artifact target: Existing public API, edit field-update, and store projection artifact families
+
+### `referenced-vector-removal-admission`: Referenced vector descriptor removal no-op
+
+Covers: `referenced-vector-resource-removal`
+Impact: `EXTEND_COVERAGE`
+Failure family: edit resource-reference detection can omit vector elements and treat a live descriptor as unused
+Failure mode or stable invariant: materialized and sparse removal of a referenced descriptor returns false, preserves the descriptor, and adds no removal mutation
+Verification owner: existing edit operation-matrix suite
+Current verification gap: referenced-resource no-op coverage exercises only image elements
+Failing witness: a referenced vector descriptor can be removed from the edit candidate and reach final relationship rejection instead of returning false
+Durable and refactor-stable value: public return, installed document, state identity, and revisions survive edit-backing and reference-lookup refactors
+Artifact target: `test/edit/fixtures/edit_matrix_effects_fixture.dart`
+
+### `identical-vector-upsert-admission`: Equal vector descriptor upsert no-op
+
+Covers: `identical-vector-resource-upsert-noop`
+Impact: `EXTEND_COVERAGE`
+Failure family: resource equality can remain image-only and classify an equal vector descriptor as changed
+Failure mode or stable invariant: materialized and sparse upsert of complete equal vector facts returns false and publishes no document or resource revision
+Verification owner: existing edit operation-matrix suite
+Current verification gap: equal-resource no-op coverage exercises only image descriptors
+Failing witness: an equal vector descriptor returns true and schedules a resource mutation
+Durable and refactor-stable value: public no-op behavior survives descriptor subtype and edit-backing refactors without locking a private comparison helper
+Artifact target: `test/edit/fixtures/edit_matrix_effects_fixture.dart`
 
 ### `vector-schema-admission`: Vector Schema v1 projection and compatibility
 
