@@ -1036,9 +1036,11 @@ Current implemented proof:
   before preparation reports the bounded intrinsic-size validation failure.
 
 #### `test/api/vector_preparation_context_test.dart`
-- proves preparation uses invocation-time direction after its context unmounts
-  and, after settlement, retains no invocation context through engine or
-  upstream ownership.
+- proves preparation synchronously registers an invocation `Locale`
+  inherited-dependency before settlement; separately proves direction-sensitive
+  rendered output after context unmounts without claiming locale-specific
+  pixels; and, after settlement, retains no invocation context through engine
+  or upstream ownership.
 
 #### `test/api/vector_preparation_input_failure_test.dart`
 - proves the supplied view limit is rejected before preparation, selected

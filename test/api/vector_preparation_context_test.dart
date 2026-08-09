@@ -13,12 +13,13 @@ import 'fixtures/vm_retention_observer.dart';
 // Flutter's test runner supplies this mutually exclusive VM-service intent.
 const _vmServiceDisabledArgument = '--disable-vm-service';
 
-// These scenarios share one widget lifecycle so unmount-before-settlement stays
-// explicit; splitting them would hide the context-ownership ordering.
-// ignore: halstead-volume, source-lines-of-code
+// Keeping the related lifecycle scenarios together makes their shared
+// invocation, settlement, and unmount ordering explicit; splitting them only
+// for metrics would make that ownership harder to follow.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void main() {
   testWidgets(
-    'preparation captures invocation direction before context unmount',
+    'preparation renders direction-sensitive output after context unmount',
     (tester) async {
       final englishLtr = await _prepareAfterContextUnmount(
         tester,
@@ -41,6 +42,34 @@ void main() {
       );
 
       expect(englishLtrPixels, isNot(equals(englishRtlPixels)));
+    },
+  );
+
+  testWidgets(
+    'preparation registers its invocation locale dependency before settlement',
+    (tester) async {
+      final probeKey = GlobalKey<_LocaleDependencyProbeState>();
+      await _pumpLocaleDependencyProbe(
+        tester,
+        key: probeKey,
+        locale: const Locale('en'),
+      );
+      final probe = probeKey.currentState;
+      if (probe == null) {
+        throw StateError('The locale dependency probe was not mounted.');
+      }
+      final preparation = probe.preparation;
+      expect(probe.dependencyChanges, 1);
+
+      await _pumpLocaleDependencyProbe(
+        tester,
+        key: probeKey,
+        locale: const Locale('ar'),
+      );
+
+      expect(probe.dependencyChanges, 2);
+      final prepared = await preparation;
+      addTearDown(prepared.dispose);
     },
   );
 
@@ -136,6 +165,20 @@ Future<_SettledInvocationPreparation> _prepareAndReleaseInvocationContext(
   );
 }
 
+Future<void> _pumpLocaleDependencyProbe(
+  WidgetTester tester, {
+  required GlobalKey<_LocaleDependencyProbeState> key,
+  required Locale locale,
+}) {
+  return tester.pumpWidget(
+    _ContextRoot(
+      locale: locale,
+      textDirection: TextDirection.ltr,
+      child: _LocaleDependencyProbe(key: key),
+    ),
+  );
+}
+
 final class _SettledInvocationPreparation {
   const _SettledInvocationPreparation({
     required this.invocationContextId,
@@ -150,12 +193,14 @@ final class _ContextRoot extends StatelessWidget {
   const _ContextRoot({
     required this.locale,
     required this.textDirection,
-    required this.onContext,
+    this.onContext,
+    this.child = const SizedBox(),
   });
 
   final Locale locale;
   final TextDirection textDirection;
-  final ValueChanged<BuildContext> onContext;
+  final ValueChanged<BuildContext>? onContext;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
@@ -166,13 +211,40 @@ final class _ContextRoot extends StatelessWidget {
         textDirection: textDirection,
         child: Builder(
           builder: (context) {
-            onContext(context);
-            return const SizedBox();
+            onContext?.call(context);
+            return child;
           },
         ),
       ),
     );
   }
+}
+
+final class _LocaleDependencyProbe extends StatefulWidget {
+  const _LocaleDependencyProbe({super.key});
+
+  @override
+  State<_LocaleDependencyProbe> createState() => _LocaleDependencyProbeState();
+}
+
+final class _LocaleDependencyProbeState extends State<_LocaleDependencyProbe> {
+  late final Future<CanvasPreparedVector> preparation;
+  int dependencyChanges = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    dependencyChanges += 1;
+    if (dependencyChanges == 1) {
+      preparation = prepareVector(
+        contextSensitiveVectorBytes(),
+        context: context,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox();
 }
 
 Future<Uint8List> _pixelsFor(CanvasPreparedVector prepared) async {

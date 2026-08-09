@@ -17,7 +17,11 @@ export '../contracts/public/canvas_prepared_vector.dart'
 Future<CanvasPreparedVector> prepareVector(
   ByteData bytes, {
   BuildContext? context,
-}) async {
+}) => Future<CanvasPreparedVector>.sync(
+  () => _prepareAdmittedVector(_admitVectorInput(bytes), context: context),
+);
+
+_AdmittedVectorInput _admitVectorInput(ByteData bytes) {
   if (bytes.lengthInBytes > canvasMaxVectorByteLength) {
     throw CanvasDataException(
       code: CanvasDataErrorCode.fieldMaxLength,
@@ -30,8 +34,17 @@ Future<CanvasPreparedVector> prepareVector(
     );
   }
 
-  final snapshot = _copyExactView(bytes);
-  final selected = vg.vg.loadPicture(_VectorBytesLoader(snapshot), context);
+  return _AdmittedVectorInput._(bytes);
+}
+
+Future<CanvasPreparedVector> _prepareAdmittedVector(
+  _AdmittedVectorInput input, {
+  required BuildContext? context,
+}) async {
+  final selected = vg.vg.loadPicture(
+    _VectorBytesLoader(input.copyExactSnapshot()),
+    context,
+  );
   late vg.PictureInfo pictureInfo;
   try {
     pictureInfo = await selected;
@@ -59,12 +72,18 @@ Never _throwInvalidVectorData() {
   );
 }
 
-ByteData _copyExactView(ByteData bytes) {
-  final view = bytes.buffer.asUint8List(
-    bytes.offsetInBytes,
-    bytes.lengthInBytes,
-  );
-  return ByteData.sublistView(Uint8List.fromList(view));
+final class _AdmittedVectorInput {
+  const _AdmittedVectorInput._(this._bytes);
+
+  final ByteData _bytes;
+
+  ByteData copyExactSnapshot() {
+    final view = _bytes.buffer.asUint8List(
+      _bytes.offsetInBytes,
+      _bytes.lengthInBytes,
+    );
+    return ByteData.sublistView(Uint8List.fromList(view));
+  }
 }
 
 final class _VectorBytesLoader extends vg.BytesLoader {
