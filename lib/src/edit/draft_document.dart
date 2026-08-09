@@ -15,6 +15,7 @@ import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
 import 'element_update_application.dart';
+import 'resource_edit_policy.dart';
 import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
 
@@ -141,7 +142,6 @@ final class DraftDocument {
     if (updated == null) {
       return false;
     }
-    _validateElementResourceReferences(updated);
     target.replace(updated);
     final compiledUpdate = const CommitCompiler().compileElementUpdate(
       before: before,
@@ -196,7 +196,7 @@ final class DraftDocument {
 
       return true;
     }
-    if (_sameResource(resources[index], resource)) {
+    if (hasSameResourceFacts(resources[index], resource)) {
       return false;
     }
     resources[index] = ResourceTable.copy(resource);
@@ -341,18 +341,6 @@ final class DraftDocument {
         path: 'elements.id',
       );
     }
-    if (element case CanvasImageElement(:final resourceId)) {
-      final hasResource = resources.any(
-        (resource) => resource.id == resourceId,
-      );
-      if (!hasResource) {
-        throw CanvasDataException(
-          code: CanvasDataErrorCode.missingResourceReference,
-          message: 'image element references a missing resource.',
-          path: 'image.resourceId',
-        );
-      }
-    }
   }
 
   _ClearedElements _clearElements() {
@@ -479,24 +467,9 @@ final class DraftDocument {
   }
 
   bool _isResourceReferenced(CanvasResourceId id) {
-    return _allElements().any((element) {
-      return element is CanvasImageElement && element.resourceId == id;
-    });
-  }
-
-  void _validateElementResourceReferences(CanvasElement element) {
-    if (element case CanvasImageElement(:final resourceId)) {
-      final hasResource = resources.any(
-        (resource) => resource.id == resourceId,
-      );
-      if (!hasResource) {
-        throw CanvasDataException(
-          code: CanvasDataErrorCode.missingResourceReference,
-          message: 'image element references a missing resource.',
-          path: 'image.resourceId',
-        );
-      }
-    }
+    return _allElements().any(
+      (element) => elementReferencesResource(element, id),
+    );
   }
 
   Iterable<CanvasElement> _allElements() sync* {
@@ -617,17 +590,6 @@ int _clampedInsertIndex(int? requestedIndex, int length) {
   }
 
   return index;
-}
-
-bool _sameResource(CanvasResource left, CanvasResource right) {
-  return left is CanvasImageResource &&
-      right is CanvasImageResource &&
-      left.id == right.id &&
-      left.source == right.source &&
-      left.mimeType == right.mimeType &&
-      left.contentHash == right.contentHash &&
-      left.byteLength == right.byteLength &&
-      left.metadata == right.metadata;
 }
 
 bool _samePalette(CanvasPalette left, CanvasPalette right) {

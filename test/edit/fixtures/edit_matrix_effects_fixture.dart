@@ -16,6 +16,9 @@ void main() {
   _registerTaxonomyRows();
 }
 
+// Direct edit-operation registrations stay together so this fixture shows the
+// complete behavior owner; splitting the list only for metrics would hide it.
+// ignore: halstead-volume, source-lines-of-code
 void _registerBasicEditRows() {
   test('accepted content add installs after callback commit', () {
     expect(_expectAddElementInstallsAfterCommit, returnsNormally);
@@ -25,16 +28,64 @@ void _registerBasicEditRows() {
     expect(_expectEnsureLayerRevisionFamilies, returnsNormally);
   });
 
-  test('duplicate and missing resource admission use public error codes', () {
-    expect(_expectAdmissionErrorsUsePublicCodes, returnsNormally);
+  test(
+    'duplicate and unresolved resource rejection use public error codes',
+    () {
+      expect(_expectAdmissionErrorsUsePublicCodes, returnsNormally);
+    },
+  );
+
+  test('image resource update rejects unresolved resource without install', () {
+    expect(
+      _expectImageResourceUpdateRejectsUnresolvedResource,
+      returnsNormally,
+    );
   });
 
-  test('image resource update validates descriptors before install', () {
-    expect(_expectImageResourceUpdatePreflightsDescriptor, returnsNormally);
+  test('sparse image reference and resource accept both callback orders', () {
+    expect(
+      () =>
+          _expectImageReferenceAndResourceAcceptBothOrders(materialized: false),
+      returnsNormally,
+    );
   });
+
+  test(
+    'materialized image reference and resource accept both callback orders',
+    () {
+      expect(
+        () => _expectImageReferenceAndResourceAcceptBothOrders(
+          materialized: true,
+        ),
+        returnsNormally,
+      );
+    },
+  );
 
   test('removeUnusedResource is false for missing or referenced resources', () {
     expect(_expectRemoveUnusedResourceNoOps, returnsNormally);
+  });
+
+  test('materialized vector reference keeps its resource installed', () {
+    expect(_expectMaterializedVectorReferenceKeepsResource, returnsNormally);
+  });
+
+  test('sparse vector override keeps its resource installed', () {
+    expect(_expectSparseVectorOverrideKeepsResource, returnsNormally);
+  });
+
+  test('materialized identical vector resource upsert is a no-op', () {
+    expect(
+      () => _expectIdenticalVectorResourceUpsertIsNoOp(materialized: true),
+      returnsNormally,
+    );
+  });
+
+  test('sparse identical vector resource upsert is a no-op', () {
+    expect(
+      () => _expectIdenticalVectorResourceUpsertIsNoOp(materialized: false),
+      returnsNormally,
+    );
   });
 
   test('removeUnusedResource removes only unused descriptors', () {
@@ -539,6 +590,7 @@ void _expectAdmissionErrorsUsePublicCodes() {
     }),
     _throwsCanvasDataCode(CanvasDataErrorCode.duplicateElementId),
   );
+  var missingImageMutationCompleted = false;
   expect(
     () => root.edits.edit((edit) {
       edit.addElement(
@@ -549,14 +601,16 @@ void _expectAdmissionErrorsUsePublicCodes() {
         ),
         layerId: CanvasLayerId('layer-1'),
       );
+      missingImageMutationCompleted = true;
     }),
     _throwsCanvasDataCode(CanvasDataErrorCode.missingResourceReference),
   );
+  expect(missingImageMutationCompleted, isTrue);
   expect(root.readDocument().layers.single.elements, hasLength(1));
   expect(root.documentFacts.documentRevision, 0);
 }
 
-void _expectImageResourceUpdatePreflightsDescriptor() {
+void _expectImageResourceUpdateRejectsUnresolvedResource() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
     config: const CanvasRuntimeConfig(),
@@ -582,6 +636,49 @@ void _expectImageResourceUpdatePreflightsDescriptor() {
   );
 }
 
+// This single assertion intentionally covers all four final transaction cases.
+// Separating them would repeat the same external result.
+// ignore: halstead-volume
+void _expectImageReferenceAndResourceAcceptBothOrders({
+  required bool materialized,
+}) {
+  for (final resourceFirst in [true, false]) {
+    final root = runtimeRootWithCommittedDocumentSeed(
+      _documentWithUnusedResource(),
+      config: const CanvasRuntimeConfig(),
+    );
+    final resource = CanvasImageResource(
+      id: CanvasResourceId('new-image-resource'),
+      source: CanvasResourceSource.appKey('new-image-resource'),
+    );
+    final element = _imageElement(id: 'new-image', resourceId: resource.id);
+
+    final changed = root.edits.edit((edit) {
+      if (materialized) {
+        edit.readDraftDocument();
+      }
+      if (resourceFirst) {
+        expect(edit.upsertResource(resource), isTrue);
+      }
+      edit.addElement(element, layerId: CanvasLayerId('layer-1'));
+      if (!resourceFirst) {
+        expect(edit.upsertResource(resource), isTrue);
+      }
+
+      return true;
+    });
+
+    expect(changed, isTrue);
+    final document = root.readDocument();
+    expect(document.resources.map((item) => item.id), contains(resource.id));
+    expect(
+      document.layers.single.elements.map((item) => item.id),
+      contains(element.id),
+    );
+    expect(root.documentFacts.documentRevision, 1);
+  }
+}
+
 void _expectRemoveUnusedResourceNoOps() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
@@ -601,6 +698,84 @@ void _expectRemoveUnusedResourceNoOps() {
   expect(root.readDocument(), same(before));
   expect(root.documentFacts.documentRevision, 0);
   expect(root.frameRevisions.resourceRevision, 0);
+}
+
+void _expectMaterializedVectorReferenceKeepsResource() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithReferencedVectorResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final beforeDocument = root.readDocument();
+  final beforeState = root.state.value;
+
+  final removed = root.edits.edit((edit) {
+    edit.readDraftDocument();
+
+    return edit.removeUnusedResource(CanvasResourceId('vector-resource-1'));
+  });
+
+  expect(removed, isFalse);
+  expect(root.readDocument(), same(beforeDocument));
+  expect(root.state.value, same(beforeState));
+  expect(root.documentFacts.documentRevision, 0);
+  expect(root.frameRevisions.resourceRevision, 0);
+}
+
+void _expectSparseVectorOverrideKeepsResource() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithReferencedVectorResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final beforeResourceRevision = root.frameRevisions.resourceRevision;
+
+  final removed = root.edits.edit((edit) {
+    expect(
+      edit.updateElement(
+        CanvasVectorElementUpdate(
+          id: CanvasElementId('vector-1'),
+          opacity: const CanvasFieldSet(0.5),
+        ),
+      ),
+      isTrue,
+    );
+
+    return edit.removeUnusedResource(CanvasResourceId('vector-resource-1'));
+  });
+
+  final vector =
+      root.readDocument().layers.single.elements.single as CanvasVectorElement;
+  expect(removed, isFalse);
+  expect(vector.opacity, 0.5);
+  expect(
+    root.readDocument().resources.single.id,
+    CanvasResourceId('vector-resource-1'),
+  );
+  expect(root.documentFacts.documentRevision, 1);
+  expect(root.frameRevisions.resourceRevision, beforeResourceRevision);
+}
+
+void _expectIdenticalVectorResourceUpsertIsNoOp({required bool materialized}) {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithReferencedVectorResource(),
+    config: const CanvasRuntimeConfig(),
+  );
+  final beforeDocument = root.readDocument();
+  final beforeState = root.state.value;
+  final beforeResourceRevision = root.frameRevisions.resourceRevision;
+
+  final changed = root.edits.edit((edit) {
+    if (materialized) {
+      edit.readDraftDocument();
+    }
+
+    return edit.upsertResource(_vectorResource());
+  });
+
+  expect(changed, isFalse);
+  expect(root.readDocument(), same(beforeDocument));
+  expect(root.state.value, same(beforeState));
+  expect(root.documentFacts.documentRevision, 0);
+  expect(root.frameRevisions.resourceRevision, beforeResourceRevision);
 }
 
 void _expectUnusedResourceRemovalInstalls() {
@@ -1345,6 +1520,34 @@ CanvasDocument _documentWithReferencedResource() {
         ],
       ),
     ],
+  );
+}
+
+CanvasDocument _documentWithReferencedVectorResource() {
+  return CanvasDocument(
+    resources: [_vectorResource()],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasVectorElement(
+            id: CanvasElementId('vector-1'),
+            resourceId: CanvasResourceId('vector-resource-1'),
+            size: const Size(20, 10),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasVectorResource _vectorResource() {
+  return CanvasVectorResource(
+    id: CanvasResourceId('vector-resource-1'),
+    source: CanvasResourceSource.appKey('vector-resource-1'),
+    contentHash: 'sha256:vector-resource-1',
+    byteLength: 42,
+    metadata: CanvasMetadata.fromMap({'label': 'Vector resource'}),
   );
 }
 

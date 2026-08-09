@@ -59,8 +59,8 @@ Runtime responsibilities are split as follows:
 | CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
 | ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image/vector references, or committed descriptors |
-| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset resolution, resolver budget, same-frame null-result suppression, bounded placeholders, and cache/suppression retirement before narrow retained-output release callback | own committed descriptors, public runtime state, or Flutter widget lifecycle |
-| CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, identity-aware retained main-output target/all release, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or read runtime/store/session state from painters |
+| SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset resolution, resolver budget, same-frame null-result suppression, bounded placeholders, and synchronous cache/suppression wrapper-borrow retirement before its narrow retained-output release callback | own committed descriptors, public runtime state, Flutter widget lifecycle, or application assets/Pictures |
+| CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, identity-aware retained main-output target/all wrapper-borrow release, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or dispose application assets/Pictures |
 | SpatialKernel | coarse candidate lookup, outlier policy | be the document source of truth |
 | CodecBoundary | schema v1 encode/decode, validation, diagnostics | depend on Flutter widgets or gestures |
 | DiagnosticsHub | internal diagnostic records, public error projection | add a public stream without an API decision |
@@ -75,13 +75,16 @@ widget state to publish core runtime state.
 Raster-free vector preparation is a separate public API boundary, not a runtime
 or resource-session route. It captures the invocation context while preparing
 caller bytes and returns an application-owned prepared value; only the
-application disposes that value. `RuntimeRoot`, `ResourceKernel`,
-`SurfaceResourceSession`, and `CanvasSurface` neither retain nor dispose its
-private Picture. The application owns wrapper publication and freshness across
-resource ids and attached runtime/surface aliases: it publishes a current value
-before attaching it, synchronously releases every old alias before disposal,
-and discards an out-of-order completion without publication. Engine generation
-or revision keys are not application-visible lifecycle state.
+application disposes that value and its private Picture. `RuntimeRoot` and
+`ResourceKernel` neither retain nor dispose prepared-vector wrappers or
+Pictures. The active `SurfaceResourceSession` cache and `CanvasSurface` retained
+main output may temporarily borrow a wrapper for paint; both synchronously drop
+only those borrows on target/all release, replacement, reset, or drop and never
+dispose the wrapper or its Picture. The application owns wrapper publication and
+freshness across resource ids and attached runtime/surface aliases: it publishes
+a current value before attaching it, synchronously releases every old alias
+before disposal, and discards an out-of-order completion without publication.
+Engine generation or revision keys are not application-visible lifecycle state.
 
 Runtime-to-surface repaint routing has a separate internal surface-frame seam.
 `RuntimeRoot` aggregates operation, interaction, camera, resource, load, and
@@ -230,7 +233,8 @@ RuntimeRoot
   ├─ FrameEngine (frame-internal facade)
   ├─ SpatialKernel
   ├─ ResourceKernel
-  ├─ active ResourceSessionReleaseSink? (nullable active surface bridge)
+  ├─ active ResourceSessionReleaseSink? (nullable target/all release port)
+  ├─ active SurfaceResourceSessionLifecycle? (nullable reset/drop lifecycle port)
   ├─ CodecBoundary
   └─ DiagnosticsHub
 ```

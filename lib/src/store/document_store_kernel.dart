@@ -360,6 +360,21 @@ final class DocumentStoreKernel {
     );
   }
 
+  void installPreparedMaterializedCommit(
+    PreparedMaterializedStoreCommit commit,
+  ) {
+    if (!commit.hasChanges) {
+      return;
+    }
+    if (!identical(commit.baseDocument, _document)) {
+      throw StateError('Prepared materialized store commit is stale.');
+    }
+    _document = commit.document;
+    _elementIds.admitAll(_document.admittedElementIds);
+    _layerIds.admitAll(_document.admittedLayerIds);
+    _resourceIds.admitAll(_document.admittedResourceIds);
+  }
+
   void installPreparedSchemaV1Import(PreparedStoreDocumentImport prepared) {
     prepared.consume(_document.revisions);
     if (!prepared.hasChanges) {
@@ -391,6 +406,8 @@ final class DocumentStoreKernel {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
     var didMutateFacts = false;
+    var needsFullResourceRelationshipValidation = false;
+    final resourceRelationshipElementIds = <CanvasElementId>{};
     final admittedIds = _SparseAdmittedIds();
     final deferredElementUpdateValidation =
         <_DeferredSparseElementUpdateValidation>[];
@@ -413,8 +430,19 @@ final class DocumentStoreKernel {
         );
         nextDocument = applied.document;
         didMutateFacts = didMutateFacts || applied.didMutateFacts;
+        if (applied.didMutateFacts) {
+          _addSparseResourceRelationshipElementIds(
+            resourceRelationshipElementIds,
+            updates,
+          );
+        }
         continue;
       }
+      final resourceDescriptorBeforeMutation = switch (mutation) {
+        StoreSparseUpsertResource(:final resource) =>
+          nextDocument.resourceDescriptor(resource.id),
+        _ => null,
+      };
       final applied = _applySparseMutation(
         nextDocument,
         mutation,
@@ -424,10 +452,42 @@ final class DocumentStoreKernel {
       didMutateFacts = didMutateFacts || applied.didMutateFacts;
       if (applied.didMutateFacts) {
         admittedIds.addMutation(mutation);
+        switch (mutation) {
+          case StoreSparseAddElement(:final element):
+            if (_isResourceBackedElement(element)) {
+              resourceRelationshipElementIds.add(element.id);
+            }
+          case StoreSparseUpsertResource(:final resource):
+            needsFullResourceRelationshipValidation =
+                needsFullResourceRelationshipValidation ||
+                _resourceDescriptorKindChanged(
+                  before: resourceDescriptorBeforeMutation,
+                  after: nextDocument.resourceDescriptor(resource.id),
+                );
+          case StoreSparseEnsureLayer() ||
+              StoreSparseUpdateElement() ||
+              StoreSparseRemoveElement() ||
+              StoreSparseRemoveUnusedResource() ||
+              StoreSparseClearContent() ||
+              StoreSparseSetBackground() ||
+              StoreSparseSetCamera() ||
+              StoreSparseSetPalette():
+            break;
+        }
       }
       index += 1;
     }
-    _validateFinalCandidateResourceRelationships(nextDocument);
+    resourceRelationshipElementIds.removeWhere(
+      (id) => !nextDocument.elements.containsElement(id),
+    );
+    if (needsFullResourceRelationshipValidation) {
+      _validateFinalCandidateResourceRelationships(nextDocument);
+    } else if (resourceRelationshipElementIds.isNotEmpty) {
+      _validateFinalCandidateResourceRelationships(
+        nextDocument,
+        elementIds: resourceRelationshipElementIds,
+      );
+    }
     final validatedRevisionDelta = _validatedSparseRevisionDelta(revisionDelta);
     for (final validation in deferredElementUpdateValidation) {
       validation.validate();
@@ -1869,8 +1929,58 @@ void _validateSparseElementUpdateKind({
   }
 }
 
-void _validateFinalCandidateResourceRelationships(CommittedDocument document) {
-  for (final elementId in document.elements.frameElementOrder) {
+void _addSparseResourceRelationshipElementIds(
+  Set<CanvasElementId> elementIds,
+  Iterable<StoreSparseUpdateElement> updates,
+) {
+  for (final update in updates) {
+    if (_sparseElementUpdateChangesResourceRelationships(update)) {
+      elementIds.add(update.element.id);
+    }
+  }
+}
+
+bool _sparseElementUpdateChangesResourceRelationships(
+  StoreSparseUpdateElement update,
+) {
+  final before = update.before;
+  final after = update.element;
+  if (before is CanvasImageElement && after is CanvasImageElement) {
+    return before.resourceId != after.resourceId;
+  }
+  if (before is CanvasVectorElement && after is CanvasVectorElement) {
+    return before.resourceId != after.resourceId;
+  }
+
+  return _isResourceBackedElement(before) || _isResourceBackedElement(after);
+}
+
+bool _isResourceBackedElement(CanvasElement? element) {
+  return element is CanvasImageElement || element is CanvasVectorElement;
+}
+
+bool _resourceDescriptorKindChanged({
+  required StoreResourceDescriptorFacts? before,
+  required StoreResourceDescriptorFacts? after,
+}) {
+  if (before == null || after == null) {
+    return false;
+  }
+
+  return switch (before) {
+    StoreImageResourceDescriptorFacts() =>
+      after is StoreVectorResourceDescriptorFacts,
+    StoreVectorResourceDescriptorFacts() =>
+      after is StoreImageResourceDescriptorFacts,
+  };
+}
+
+void _validateFinalCandidateResourceRelationships(
+  CommittedDocument document, {
+  Iterable<CanvasElementId>? elementIds,
+}) {
+  final ids = elementIds ?? document.elements.frameElementOrder;
+  for (final elementId in ids) {
     final element = document.elements.elementById(elementId);
     if (element == null) {
       throw StateError('committed element order references a missing row.');

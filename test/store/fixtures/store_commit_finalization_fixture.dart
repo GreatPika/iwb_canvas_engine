@@ -37,9 +37,16 @@ void _registerMaterializedFinalizationTests() {
         expect(_materializedChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
   test(
-    'materialized missing resource admission precedes revision delta rejection',
+    'prepared materialized commit installs accepted facts',
     () => expect(
-      _materializedMissingResourcePrecedesRevisionDeltaRejection,
+      _preparedMaterializedCommitInstallsAcceptedFacts,
+      returnsNormally,
+    ),
+  );
+  test(
+    'materialized missing resource is rejected before install',
+    () => expect(
+      _materializedMissingResourceIsRejectedBeforeInstall,
       returnsNormally,
     ),
   );
@@ -138,7 +145,22 @@ void _materializedChangedFactsPrepareAcceptedDelta() {
   expect(store.projectionBuildCount, 0);
 }
 
-void _materializedMissingResourcePrecedesRevisionDeltaRejection() {
+void _preparedMaterializedCommitInstallsAcceptedFacts() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final beforeDocumentRevision = store.documentRevision;
+  final prepared = store.prepareMaterializedCommit(
+    _baseDocument(backgroundColor: const Color(0xFF112233)),
+    const StoreRevisionDelta.background(),
+  );
+
+  store.installPreparedMaterializedCommit(prepared);
+
+  expect(store.background.color, const Color(0xFF112233));
+  expect(store.documentRevision, beforeDocumentRevision + 1);
+  expect(store.projectionBuildCount, 0);
+}
+
+void _materializedMissingResourceIsRejectedBeforeInstall() {
   final store = documentStoreWithDocument(_baseDocument());
   final beforeSummary = store.documentSummary;
   final beforeProjectionBuilds = store.projectionBuildCount;
@@ -146,7 +168,7 @@ void _materializedMissingResourcePrecedesRevisionDeltaRejection() {
   expect(
     () => store.prepareMaterializedCommit(
       _documentWithMissingImageResource(),
-      const StoreRevisionDelta(),
+      const StoreRevisionDelta.structural(),
     ),
     throwsA(
       isA<CanvasDataException>()

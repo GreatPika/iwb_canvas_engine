@@ -28,18 +28,28 @@ stateDiagram-v2
     per-frame resolver budget,
     same-frame null-result suppression, and budget follow-up throttle.
     Missing descriptors and absent resolvers return bounded placeholders.
+    Target/all/replacement/reset/drop first release session cache/suppression
+    borrows, then invoke the identity-aware CanvasSurface callback to release
+    matching retained main-output image/vector wrapper borrows.
     There is no file, network, remote, or asset-bundle IO.
   end note
 
   ActiveSession --> ResolveRequested: main paint record carries resourceId
   ActiveSession --> ActiveSession: rejected second surface attach / existing session remains alive
-  ActiveSession --> ResolverReplaced: active surface receives different resourceResolver
-  ActiveSession --> DescriptorMutation: CanvasEdit or loadDocumentFromJson success mutates descriptors
+  ActiveSession --> ResolverReplaced: CanvasSurface calls replaceResolver
+  ActiveSession --> DescriptorMutation: accepted CanvasEdit mutates descriptors
+  ActiveSession --> DocumentReset: accepted loadDocumentFromJson replaces the document
   ActiveSession --> DirtySignal: markResourceDirty(id) or markAllResourcesDirty()
-  ActiveSession --> NoSurface: detach/runtime swap / drop session
-  ActiveSession --> Disposed: dispose() / drop session
+  ActiveSession --> DroppingSession: detach or runtime swap / lifecycle drop
+  ActiveSession --> Disposed: dispose() / lifecycle drop
 
-  ResolverReplaced --> ActiveSession: increment resolverGeneration and clear stale cache entries
+  ResolverReplaced --> ActiveSession: release cache/suppression, then identity-aware retained output; increment resolverGeneration
+
+  state "Document replacement reset" as DocumentReset
+  DocumentReset --> ActiveSession: RuntimeRoot calls lifecycle reset; session and retained-output borrows release before publication
+
+  state "Dropping active session" as DroppingSession
+  DroppingSession --> NoSurface: lifecycle drop releases session cache/suppression, then retained output, before return
 
   state "Resolve request" as ResolveRequested
   ResolveRequested --> DescriptorSnapshot: Frame asks FrameFactsPort for descriptor facts
@@ -73,8 +83,9 @@ stateDiagram-v2
     resolverGeneration + resourceId + resourceRevision.
     Image byte and vector-zero-byte admission are policy-owned; descriptor byteLength
     remains descriptor metadata, not cache pressure truth.
-    Dirty-resource operations explicitly invalidate affected
-    entries or clear all entries in the active session.
+    Dirty-resource operations release affected/all active-session
+    cache/suppression borrows, then matching retained main-output borrows,
+    before public publication.
   end note
 
   CacheLookup --> CachedResolved: cache hit with typed asset
@@ -151,8 +162,11 @@ stateDiagram-v2
 
   state "Resolved visual" as ResolvedVisual
   note right of ResolvedVisual
-    The engine may cache and paint the reference, but the
-    application still owns the resolved asset and its disposal.
+    The session cache and CanvasSurface retained main output may
+    temporarily borrow the reference for paint, but the application
+    owns the asset and its disposal. The engine never owns or
+    disposes app-provided ui.Image, CanvasPreparedVector, or the
+    prepared vector's private Picture.
   end note
   ResolvedVisual --> ActiveSession: paint completes
 
@@ -172,8 +186,8 @@ stateDiagram-v2
     side channel.
   end note
   DescriptorMutation --> DescriptorRevisionChanged: atomic install succeeds
-  DescriptorRevisionChanged --> DescriptorCacheInvalidated: invalidate target/all active session entries
-  DescriptorCacheInvalidated --> ActiveSession: main repaint if used
+  DescriptorRevisionChanged --> DescriptorCacheReleased: release target/all session cache/suppression and retained main-output borrows
+  DescriptorCacheReleased --> ActiveSession: main repaint if used
 
   state "Resource dirty signal" as DirtySignal
   note left of DirtySignal
@@ -182,15 +196,16 @@ stateDiagram-v2
     selection, preview, or action streams.
   end note
   DirtySignal --> VisualRevisionChanged: accept dirty and increment resourceVisualRevision
-  VisualRevisionChanged --> DirtyCacheInvalidated: evict target resource or all active session entries before publication
-  DirtyCacheInvalidated --> ActiveSession: publish CanvasRuntimeState and schedule main repaint
+  VisualRevisionChanged --> DirtyResourceReleased: release target resource or all session cache/suppression and retained main-output borrows before publication
+  DirtyResourceReleased --> ActiveSession: publish CanvasRuntimeState and schedule main repaint
 
   state "Disposed runtime" as Disposed
   note right of Disposed
-    Dispose drops any active SurfaceResourceSession and cache entries
-    without disposing app-owned image/vector assets. Later resource
-    resolution cannot revive session state, call the app resolver,
-    or mutate Store.
+    Dispose drops any active SurfaceResourceSession after its cache/suppression
+    and retained main-output wrapper borrows release, without disposing
+    app-owned ui.Image, CanvasPreparedVector, or a prepared vector's private
+    Picture. Later resource resolution cannot revive session state, call the
+    app resolver, or mutate Store.
   end note
   Disposed --> Disposed: dispose again / no side effects
   Disposed --> Disposed: later resolve, dirty signal, edit, load, or pointer input / StateError

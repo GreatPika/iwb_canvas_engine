@@ -13,7 +13,7 @@ sequenceDiagram
   App->>SurfaceA: mount with CanvasRuntime A
   SurfaceA->>RuntimeA: attach surface token
   RuntimeA-->>SurfaceA: attach accepted
-  SurfaceA->>SessionA: creates SurfaceResourceSession after successful attach
+  SurfaceA->>SessionA: creates SurfaceResourceSession with resolver and retained-output release callbacks
 
   App->>SurfaceB: mount with CanvasRuntime A
   SurfaceB->>RuntimeA: attach surface token
@@ -25,14 +25,18 @@ sequenceDiagram
   App->>SurfaceB: mount with CanvasRuntime B
   SurfaceB->>RuntimeB: attach surface token
   RuntimeB-->>SurfaceB: attach accepted
-  SurfaceB->>SessionB: creates SurfaceResourceSession after successful attach
+  SurfaceB->>SessionB: creates SurfaceResourceSession with resolver and retained-output release callbacks
   Note over RuntimeA,RuntimeB: Independent runtimes may have independent active surfaces at the same time.
 
   App->>SurfaceA: unmount
   SurfaceA->>RuntimeA: detach surface token
-  SurfaceA->>SessionA: drop session without disposing app-owned image/vector assets
+  RuntimeA->>SessionA: drop lifecycle session
+  SessionA->>SessionA: release cache/suppression image/vector wrapper borrows
+  SessionA->>SurfaceA: identity-aware all retained main-output release
+  SurfaceA->>SurfaceA: remove retained main-output image/vector wrapper borrows
+  Note over SessionA,SurfaceA: Neither release disposes app-owned ui.Image, CanvasPreparedVector, or its private Picture.
   RuntimeA-->>SurfaceA: detach accepted
   App->>SurfaceC: mount with CanvasRuntime A
   SurfaceC->>RuntimeA: attach surface token
   RuntimeA-->>SurfaceC: attach accepted
-  SurfaceC->>SessionC: creates SurfaceResourceSession after successful attach
+  SurfaceC->>SessionC: creates SurfaceResourceSession with resolver and retained-output release callbacks

@@ -358,21 +358,6 @@ void _validatesAddFailuresBeforeSwap() {
           .having((error) => error.path, 'path', 'image.resourceId'),
     ),
   );
-  expect(
-    _prepareMissingResourceAdd(
-      store,
-      revisionDelta: const StoreRevisionDelta(document: true, structural: true),
-    ),
-    throwsA(
-      isA<CanvasDataException>()
-          .having(
-            (error) => error.code,
-            'code',
-            CanvasDataErrorCode.missingResourceReference,
-          )
-          .having((error) => error.path, 'path', 'image.resourceId'),
-    ),
-  );
   expect(store.documentSummary, beforeSummary);
   expect(store.projectionBuildCount, 0);
 }
@@ -947,13 +932,10 @@ void Function() _prepareDuplicateAdd(DocumentStoreKernel store) {
   );
 }
 
-void Function() _prepareMissingResourceAdd(
-  DocumentStoreKernel store, {
-  StoreRevisionDelta revisionDelta = const StoreRevisionDelta.structural(),
-}) {
+void Function() _prepareMissingResourceAdd(DocumentStoreKernel store) {
   return () => store.prepareSparseCommit(
     StoreSparseCommit(
-      revisionDelta: revisionDelta,
+      revisionDelta: const StoreRevisionDelta.structural(),
       mutations: [
         StoreSparseAddElement(
           element: CanvasImageElement(

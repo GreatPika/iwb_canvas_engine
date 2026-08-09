@@ -7,6 +7,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 
+## test.api.canvas_prepared_vector_lifecycle
+
+- Sections: `section_23_tests`
+
 ## test.api.canvas_transform
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
@@ -38,6 +42,26 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.api.typed_action_payloads
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_23_tests`
+
+## test.api.vector_preparation_cleanup
+
+- Sections: `section_23_tests`
+
+## test.api.vector_preparation_context
+
+- Sections: `section_23_tests`
+
+## test.api.vector_preparation_input_failure
+
+- Sections: `section_23_tests`
+
+## test.api.vector_preparation_private_adapter
+
+- Sections: `section_23_tests`
+
+## test.api.vector_preparation_retention
+
+- Sections: `section_23_tests`
 
 ## test.api_contract.api_facades_do_not_export_internal
 
@@ -223,6 +247,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_16_geometry_policy`, `section_23_tests`
 
+## test.frame.paint_asset_binding_service
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.frame.paint_plan_excludes_preview_delta
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
@@ -375,7 +403,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_24_performance_verification`
 
-## test.resources.app_owned_image_not_disposed
+## test.resources.app_owned_resource_asset_not_disposed
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
@@ -407,19 +435,19 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
+## test.resources.resource_asset_cache_memory_accounting
+
+- Sections: `section_07_resource_lifecycle`, `section_18_cache_policy`, `section_23_tests`
+
 ## test.resources.resource_dirty
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
-
-## test.resources.resource_image_cache_memory_accounting
-
-- Sections: `section_07_resource_lifecycle`, `section_18_cache_policy`, `section_23_tests`
 
 ## test.resources.surface_session_cache_lifecycle
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
-## test.resources.sync_image_resolver
+## test.resources.sync_resource_resolver
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 

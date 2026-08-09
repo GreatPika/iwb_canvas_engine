@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
 
-import 'fixtures/vector_preparation_fixture.dart';
+import '../support/vector_preparation_fixture.dart';
 
+// This scenario keeps hooks, disposal, and assertions together so the required
+// reference-retirement ordering remains visible rather than split across setup.
+// ignore: halstead-volume, maximum-nesting-level, source-lines-of-code
 void main() {
   test(
     'prepared vector retires its Picture before idempotent disposal',

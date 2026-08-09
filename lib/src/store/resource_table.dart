@@ -225,10 +225,7 @@ final class StoreResourceDescriptorImportBuilder {
 
   void addSchemaV1Import(SchemaV1ResourceImportEvent event) {
     final descriptors = _liveDescriptors;
-    _admitPendingDescriptor(
-      descriptors,
-      event,
-    );
+    _admitPendingDescriptor(descriptors, event);
   }
 
   ResourceTable consume({required int resourceRevision}) {

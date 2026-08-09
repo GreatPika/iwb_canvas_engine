@@ -13,7 +13,8 @@ sequenceDiagram
   participant Selection as SelectionKernel
   participant Projection as DocumentProjectionCache
   participant Spatial as SpatialKernel
-  participant Resources as ResourceKernel
+  participant Session as SurfaceResourceSession
+  participant Surface as CanvasSurface
   participant Frame as FrameEngine
   participant Signals as Public state/effects
 
@@ -47,7 +48,11 @@ sequenceDiagram
 
   Store->>Projection: invalidate public projection without building it
   Runtime->>Spatial: rebuild replacement spatial index from committed rows
-  Runtime->>Resources: invalidate descriptor-backed resource visuals
+  Runtime->>Session: resetForDocumentReplacement() through lifecycle port
+  Session->>Session: release cache and same-frame suppression borrows
+  Session->>Surface: identity-aware all retained-main-output resource release
+  Surface->>Surface: remove retained main-output resource bindings
+  Note over Session,Surface: Reset returns only after both session and retained-output borrows are absent; no app resolver call or app asset disposal occurs.
   Runtime->>Frame: reset replacement-scoped caches and schedule repaint
   Runtime->>Signals: publish one CanvasRuntimeState after install
   Note over Signals: JSON load emits no CanvasActionCommitted event and does not build the first CanvasDocument projection.

@@ -1,27 +1,23 @@
-// This guardrail intentionally keeps one analyzer-backed source scanner in one
-// file so boundary rules, AST directives, and resolved retired-shape checks can
-// be audited together instead of through metric-only proxy modules.
-// ignore_for_file: type=metrics
-
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/type.dart';
 
 import '../../src/directive_uri_references.dart';
+import 'core_boundary_type_checks.dart';
 import 'guardrail_violation.dart';
 import 'repository_paths.dart';
 
-const _vectorPreparationAdapterPath =
-    'lib/src/api/canvas_vector_preparation.dart';
 const _vectorGraphicsImport = 'package:vector_graphics/vector_graphics.dart';
+const _vectorPreparationApprovedThirdPartyImports = {
+  'package:characters/characters.dart',
+};
 
+// Resolving every production unit and collecting each boundary outcome in one
+// pass keeps the reported path tied to the resolved source that produced it.
+// ignore: halstead-volume
 Future<List<GuardrailViolation>> checkCoreBoundaries() async {
   final violations = <GuardrailViolation>[];
   final units = <String, CompilationUnit>{};
@@ -49,8 +45,8 @@ Future<List<GuardrailViolation>> checkCoreBoundaries() async {
 
       violations
         ..addAll(_checkDirectives(path, result.unit))
-        ..addAll(_checkRetiredShapeReferences(path, result.unit))
-        ..addAll(_checkResourceResolverTypeReferences(path, result.unit));
+        ..addAll(checkRetiredShapeReferences(path, result.unit))
+        ..addAll(checkResourceResolverTypeReferences(path, result.unit));
     }
     violations.addAll(
       _checkVectorPreparationDependencyBoundary(
@@ -87,6 +83,9 @@ checkPointerCleanupCoordinatorCallerOrigins() async {
   return violations;
 }
 
+// Surface pointer admission keeps adapter and host obligations in one check.
+// The combined assertion preserves their required ownership ordering.
+// ignore: halstead-volume, source-lines-of-code
 Future<List<GuardrailViolation>> checkSurfacePointerReservedBoundary() async {
   final violations = <GuardrailViolation>[];
   const adapterPath = 'lib/src/surface/pointer_adapter.dart';
@@ -275,21 +274,17 @@ List<GuardrailViolation> checkCoreBoundaryFile({
   required String path,
   required String content,
 }) {
-  final unit = parseString(
-    content: content,
-    path: path,
-    featureSet: FeatureSet.latestLanguageVersion(),
-  ).unit;
+  final unit = parseString(content: content, path: path).unit;
 
   return [
     ..._checkDirectives(path, unit),
-    ..._checkRetiredShapeReferences(path, unit),
-    ..._checkResourceResolverTypeReferences(
+    ...checkRetiredShapeReferences(path, unit),
+    ...checkResourceResolverTypeReferences(
       path,
       unit,
       requireResolvedElement: false,
     ),
-    ..._checkVectorPreparationRuntimeReferences(
+    ...checkVectorPreparationApiRuntimeReferences(
       path,
       unit,
       requireResolvedElement: false,
@@ -303,11 +298,7 @@ List<GuardrailViolation> checkVectorPreparationDependencyBoundaryFiles(
 ) {
   final units = <String, CompilationUnit>{
     for (final entry in files.entries)
-      entry.key: parseString(
-        content: entry.value,
-        path: entry.key,
-        featureSet: FeatureSet.latestLanguageVersion(),
-      ).unit,
+      entry.key: parseString(content: entry.value, path: entry.key).unit,
   };
 
   return _checkVectorPreparationDependencyBoundary(
@@ -360,11 +351,7 @@ List<String> runtimeRootDeclarationsForFile({
   required String path,
   required String content,
 }) {
-  final unit = parseString(
-    content: content,
-    path: path,
-    featureSet: FeatureSet.latestLanguageVersion(),
-  ).unit;
+  final unit = parseString(content: content, path: path).unit;
 
   return _runtimeRootDeclarations(path, unit).toList();
 }
@@ -522,7 +509,8 @@ List<GuardrailViolation> _checkVectorPreparationImports(
   String path,
   String uri,
 ) {
-  if (uri == _vectorGraphicsImport && path == _vectorPreparationAdapterPath) {
+  if (uri == _vectorGraphicsImport &&
+      path.startsWith(vectorPreparationApiOwnerPath)) {
     return const [];
   }
 
@@ -534,10 +522,6 @@ List<GuardrailViolation> _checkVectorPreparationImports(
     return [_vectorPreparationImportViolation(path, uri)];
   }
 
-  if (uri == 'dart:io' || _isNetworkLoadingImport(uri)) {
-    return [_vectorPreparationImportViolation(path, uri)];
-  }
-
   return const [];
 }
 
@@ -546,8 +530,8 @@ GuardrailViolation _vectorPreparationImportViolation(String path, String uri) {
     guardrailId: 'core.import_boundaries',
     path: path,
     message:
-        'production code may not import $uri; only $_vectorPreparationAdapterPath '
-        'may import $_vectorGraphicsImport and vector preparation consumes caller bytes',
+        'production code may not import $uri; the unique vector graphics importer '
+        'must be API-owned and vector preparation consumes caller bytes',
   );
 }
 
@@ -637,55 +621,21 @@ List<GuardrailViolation> _checkSourceBoundary(String path, String target) {
   return violations;
 }
 
-List<GuardrailViolation> _checkRetiredShapeReferences(
-  String path,
-  CompilationUnit unit,
-) {
-  final visitor = _RetiredShapeVisitor(path);
-  unit.accept(visitor);
-
-  return [..._checkRetiredShapeDeclarations(path, unit), ...visitor.violations];
-}
-
-List<GuardrailViolation> _checkResourceResolverTypeReferences(
-  String path,
-  CompilationUnit unit, {
-  bool requireResolvedElement = true,
-}) {
-  final visitor = _ResourceResolverBoundaryVisitor(
-    path,
-    requireResolvedElement: requireResolvedElement,
-  );
-  unit.accept(visitor);
-
-  return visitor.violations;
-}
-
-List<GuardrailViolation> _checkVectorPreparationRuntimeReferences(
-  String path,
-  CompilationUnit unit, {
-  required bool requireResolvedElement,
-}) {
-  if (path != _vectorPreparationAdapterPath) {
-    return const [];
-  }
-
-  final visitor = _VectorPreparationRuntimeBoundaryVisitor(
-    path,
-    requireResolvedElement: requireResolvedElement,
-  );
-  unit.accept(visitor);
-
-  return visitor.violations;
-}
-
+// The closure walk preserves import order, resolved capability calls, and the
+// root relationship; extracting branches would obscure which owner is reached.
+// ignore: cyclomatic-complexity, halstead-volume, maximum-nesting-level, source-lines-of-code
 List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
   Map<String, CompilationUnit> units, {
   required bool requireResolvedElement,
 }) {
-  final candidates = <String>[_vectorPreparationAdapterPath];
-  final visited = <String>{};
   final violations = <GuardrailViolation>[];
+  final root = _findVectorPreparationClosureRoot(units, violations);
+  if (root == null) {
+    return violations;
+  }
+
+  final candidates = <String>[root];
+  final visited = <String>{};
 
   for (var index = 0; index < candidates.length; index++) {
     final path = candidates[index];
@@ -698,7 +648,7 @@ List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
     }
 
     violations.addAll(
-      _checkVectorPreparationDependencyRuntimeReferences(
+      checkVectorPreparationDependencyRuntimeReferences(
         path,
         unit,
         requireResolvedElement: requireResolvedElement,
@@ -707,6 +657,13 @@ List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
     for (final directive in unit.directives) {
       if (directive case ImportDirective() || ExportDirective()) {
         for (final reference in directiveUriReferences(directive)) {
+          violations.addAll(
+            _checkVectorPreparationExternalImport(
+              path,
+              reference.uri,
+              root: root,
+            ),
+          );
           final target = _targetPath(path, reference.uri);
           if (target != null && units.containsKey(target)) {
             candidates.add(target);
@@ -719,42 +676,69 @@ List<GuardrailViolation> _checkVectorPreparationDependencyBoundary(
   return violations;
 }
 
-List<GuardrailViolation> _checkVectorPreparationDependencyRuntimeReferences(
-  String path,
-  CompilationUnit unit, {
-  required bool requireResolvedElement,
-}) {
-  final visitor = _VectorPreparationRuntimeBoundaryVisitor(
-    path,
-    requireResolvedElement: requireResolvedElement,
-  );
-  unit.accept(visitor);
-
-  return visitor.violations;
-}
-
-List<GuardrailViolation> _checkRetiredShapeDeclarations(
-  String path,
-  CompilationUnit unit,
+String? _findVectorPreparationClosureRoot(
+  Map<String, CompilationUnit> units,
+  List<GuardrailViolation> violations,
 ) {
-  return _topLevelDeclarationNames(unit)
-      .where(_isRetiredShapeName)
-      .map((name) => _retiredShapeViolation(path, name))
+  final importers = <String>{
+    for (final entry in units.entries)
+      if (entry.value.directives.whereType<ImportDirective>().any(
+        (directive) => directiveUriReferences(
+          directive,
+        ).any((reference) => reference.uri == _vectorGraphicsImport),
+      ))
+        entry.key,
+  };
+  final apiImporters = importers
+      .where((path) => path.startsWith(vectorPreparationApiOwnerPath))
       .toList();
+
+  if (importers.length == 1 && apiImporters.length == 1) {
+    return apiImporters.single;
+  }
+
+  violations.add(
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: apiImporters.firstOrNull ?? vectorPreparationApiOwnerPath,
+      message:
+          'vector preparation requires exactly one API-owned importer of '
+          '$_vectorGraphicsImport, found ${importers.join(', ')}',
+    ),
+  );
+  return null;
 }
 
-Iterable<String> _topLevelDeclarationNames(CompilationUnit unit) sync* {
-  for (final declaration in unit.declarations) {
-    final name = _compilationUnitDeclarationName(declaration);
-    if (name != null) {
-      yield name;
-    }
-    if (declaration case TopLevelVariableDeclaration(:final variables)) {
-      for (final variable in variables.variables) {
-        yield variable.name.lexeme;
-      }
-    }
+List<GuardrailViolation> _checkVectorPreparationExternalImport(
+  String path,
+  String uri, {
+  required String root,
+}) {
+  if (!_isExternalImport(uri) ||
+      _isCapabilityFreeVectorPreparationImport(uri) ||
+      (uri == _vectorGraphicsImport && path == root)) {
+    return const [];
   }
+
+  return [
+    GuardrailViolation(
+      guardrailId: 'core.import_boundaries',
+      path: path,
+      message:
+          'vector preparation dependencies may import only approved SDK and '
+          'external libraries, found $uri',
+    ),
+  ];
+}
+
+bool _isExternalImport(String uri) =>
+    uri.startsWith('dart:') || uri.startsWith('package:');
+
+bool _isCapabilityFreeVectorPreparationImport(String uri) {
+  return (uri.startsWith('dart:') && uri != 'dart:io') ||
+      uri.startsWith('package:flutter/') ||
+      uri.startsWith('package:iwb_canvas_engine/') ||
+      _vectorPreparationApprovedThirdPartyImports.contains(uri);
 }
 
 bool _isRetiredPackageUri(String uri) {
@@ -792,362 +776,6 @@ String? _targetPath(String sourcePath, String uri) {
   return resolved.startsWith(prefix) ? resolved.replaceFirst(prefix, '') : null;
 }
 
-final class _RetiredShapeVisitor extends RecursiveAstVisitor<void> {
-  _RetiredShapeVisitor(this.path);
-
-  final String path;
-  final List<GuardrailViolation> violations = [];
-
-  @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    _recordName(node.name, node.element);
-  }
-
-  @override
-  void visitNamedType(NamedType node) {
-    _recordName(node.name.lexeme, node.element);
-    super.visitNamedType(node);
-  }
-
-  void _recordName(String name, Element? element) {
-    if (!_isRetiredShapeDependency(name, element)) {
-      return;
-    }
-    violations.add(_retiredShapeViolation(path, name));
-  }
-}
-
-final class _ResourceResolverBoundaryVisitor extends RecursiveAstVisitor<void> {
-  _ResourceResolverBoundaryVisitor(
-    this.path, {
-    required this.requireResolvedElement,
-  });
-
-  final String path;
-  final bool requireResolvedElement;
-  final List<GuardrailViolation> violations = [];
-
-  @override
-  void visitNamedType(NamedType node) {
-    _record(name: node.name.lexeme, element: node.element, type: node.type);
-    super.visitNamedType(node);
-  }
-
-  void _record({
-    required String name,
-    required Element? element,
-    required DartType? type,
-  }) {
-    if (!_isCanvasResourceResolverTypeReference(
-      name: name,
-      element: element,
-      type: type,
-      requireResolvedElement: requireResolvedElement,
-    )) {
-      return;
-    }
-    violations.addAll(_resolverBoundaryViolation(path));
-  }
-}
-
-final class _VectorPreparationRuntimeBoundaryVisitor
-    extends RecursiveAstVisitor<void> {
-  _VectorPreparationRuntimeBoundaryVisitor(
-    this.path, {
-    required this.requireResolvedElement,
-  });
-
-  final String path;
-  final bool requireResolvedElement;
-  final List<GuardrailViolation> violations = [];
-  final Set<int> _assetReferenceOffsets = {};
-
-  @override
-  void visitSimpleIdentifier(SimpleIdentifier node) {
-    _recordAssetReference(
-      offset: node.offset,
-      name: node.name,
-      element: node.element,
-    );
-  }
-
-  @override
-  void visitNamedType(NamedType node) {
-    _recordAssetReference(
-      offset: node.offset,
-      name: node.name.lexeme,
-      element: node.element,
-    );
-    super.visitNamedType(node);
-  }
-
-  @override
-  void visitMethodInvocation(MethodInvocation node) {
-    if (_isVectorPreparationAssetLoad(
-      node,
-      requireResolvedElement: requireResolvedElement,
-    )) {
-      _recordAssetViolation(node.target?.offset ?? node.offset);
-    }
-    super.visitMethodInvocation(node);
-  }
-
-  @override
-  void visitAssignmentExpression(AssignmentExpression node) {
-    if (_isFlutterErrorOnErrorAssignment(
-      node.leftHandSide,
-      requireResolvedElement: requireResolvedElement,
-    )) {
-      violations.add(_vectorPreparationRuntimeViolation(path));
-    }
-    super.visitAssignmentExpression(node);
-  }
-
-  void _recordAssetReference({
-    required int offset,
-    required String name,
-    required Element? element,
-  }) {
-    if (_isVectorPreparationAssetReference(
-      name: name,
-      element: element,
-      requireResolvedElement: requireResolvedElement,
-    )) {
-      _recordAssetViolation(offset);
-    }
-  }
-
-  void _recordAssetViolation(int offset) {
-    if (_assetReferenceOffsets.add(offset)) {
-      violations.add(_vectorPreparationRuntimeViolation(path));
-    }
-  }
-}
-
-bool _isCanvasResourceResolverTypeReference({
-  required String name,
-  required Element? element,
-  required DartType? type,
-  required bool requireResolvedElement,
-}) {
-  if (_isPublicCanvasResourceResolverElement(type?.element) ||
-      _isPublicCanvasResourceResolverElement(element)) {
-    return true;
-  }
-
-  return !requireResolvedElement && name == 'CanvasResourceResolver';
-}
-
-bool _isVectorPreparationAssetReference({
-  required String name,
-  required Element? element,
-  required bool requireResolvedElement,
-}) {
-  if (!requireResolvedElement) {
-    return name == 'rootBundle' || name.endsWith('AssetBundle');
-  }
-
-  if (name == 'rootBundle') {
-    return _isFlutterServicesElement(element);
-  }
-
-  return _isFlutterAssetBundleElement(element);
-}
-
-bool _isVectorPreparationAssetLoad(
-  MethodInvocation invocation, {
-  required bool requireResolvedElement,
-}) {
-  final target = invocation.target;
-  if (invocation.methodName.name != 'load' || target == null) {
-    return false;
-  }
-
-  if (requireResolvedElement) {
-    return _isFlutterAssetBundleType(target.staticType);
-  }
-
-  return switch (target) {
-    MethodInvocation(:final target, :final methodName)
-        when methodName.name == 'of' &&
-            _isDefaultAssetBundleReference(target) =>
-      true,
-    _ => false,
-  };
-}
-
-bool _isFlutterAssetBundleType(DartType? type) {
-  return type is InterfaceType && _isFlutterAssetBundleElement(type.element);
-}
-
-bool _isFlutterAssetBundleElement(Element? element) {
-  return _isExactFlutterAssetBundleElement(element) ||
-      (element is InterfaceElement &&
-          element.allSupertypes.any(
-            (supertype) => _isExactFlutterAssetBundleElement(supertype.element),
-          ));
-}
-
-bool _isExactFlutterAssetBundleElement(Element? element) {
-  return element?.displayName == 'AssetBundle' &&
-      _isFlutterServicesElement(element);
-}
-
-bool _isDefaultAssetBundleReference(Expression? expression) {
-  final reference = switch (expression) {
-    SimpleIdentifier() => expression,
-    PrefixedIdentifier(:final identifier) => identifier,
-    _ => null,
-  };
-
-  return reference is SimpleIdentifier &&
-      reference.name == 'DefaultAssetBundle';
-}
-
-bool _isFlutterErrorOnErrorAssignment(
-  Expression expression, {
-  required bool requireResolvedElement,
-}) {
-  return switch (expression) {
-    PropertyAccess(:final target, :final propertyName) =>
-      propertyName.name == 'onError' &&
-          _isFlutterErrorReference(
-            target,
-            requireResolvedElement: requireResolvedElement,
-          ),
-    PrefixedIdentifier(:final prefix, :final identifier) =>
-      identifier.name == 'onError' &&
-          _isFlutterErrorReference(
-            prefix,
-            requireResolvedElement: requireResolvedElement,
-          ),
-    _ => false,
-  };
-}
-
-bool _isFlutterErrorReference(
-  Expression? expression, {
-  required bool requireResolvedElement,
-}) {
-  final reference = switch (expression) {
-    SimpleIdentifier() => expression,
-    PrefixedIdentifier(:final identifier) => identifier,
-    _ => null,
-  };
-  if (reference is! SimpleIdentifier || reference.name != 'FlutterError') {
-    return false;
-  }
-
-  return !requireResolvedElement ||
-      _isFlutterFoundationElement(reference.element);
-}
-
-bool _isFlutterServicesElement(Element? element) =>
-    _isFlutterLibraryElement(element, '/services/');
-
-bool _isFlutterFoundationElement(Element? element) =>
-    _isFlutterLibraryElement(element, '/foundation/');
-
-bool _isFlutterLibraryElement(Element? element, String libraryPath) {
-  final libraryUri = element?.library?.uri.toString();
-
-  return libraryUri != null &&
-      libraryUri.startsWith('package:flutter/') &&
-      libraryUri.contains(libraryPath);
-}
-
-GuardrailViolation _vectorPreparationRuntimeViolation(String path) {
-  return GuardrailViolation(
-    guardrailId: 'core.import_boundaries',
-    path: path,
-    message:
-        'vector preparation dependencies may not load assets or assign '
-        'FlutterError.onError',
-  );
-}
-
-bool _isPublicCanvasResourceResolverElement(Element? element) {
-  final libraryUri = element?.library?.uri.toString();
-
-  return element?.displayName == 'CanvasResourceResolver' &&
-      libraryUri ==
-          'package:iwb_canvas_engine/src/contracts/public/canvas_resource.dart';
-}
-
-List<GuardrailViolation> _resolverBoundaryViolation(String path) {
-  if (_isUnauthorizedResourceResolverOwnerPath(path)) {
-    return [
-      GuardrailViolation(
-        guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
-        path: path,
-        message:
-            'resource code must route typed CanvasResourceResolver ownership '
-            'through SurfaceResourceSession',
-      ),
-    ];
-  }
-  if (!path.startsWith('lib/src/frame/') &&
-      !path.startsWith('lib/src/interaction/') &&
-      !_isSurfacePainterPath(path)) {
-    return const [];
-  }
-
-  return [
-    GuardrailViolation(
-      guardrailId: 'resources.resolver_boundary_owned_by_surface_session',
-      path: path,
-      message:
-          'frame, interaction, and surface painter code must not own typed '
-          'CanvasResourceResolver references',
-    ),
-  ];
-}
-
-GuardrailViolation _retiredShapeViolation(String path, String name) {
-  if (_sceneControllerShapeNames.contains(name)) {
-    return GuardrailViolation(
-      guardrailId: 'core.no_unapproved_controller_shape_dependency',
-      path: path,
-      message: 'references unapproved controller shape $name',
-    );
-  }
-
-  return GuardrailViolation(
-    guardrailId: 'core.no_unapproved_patch_shape_dependency',
-    path: path,
-    message: 'references unapproved patch shape $name',
-  );
-}
-
-bool _isRetiredShapeDependency(String name, Element? element) {
-  final isRetiredName = _isRetiredShapeName(name);
-
-  if (!isRetiredName) {
-    return false;
-  }
-
-  return element == null ||
-      _isRetiredPackageElement(element) ||
-      _isProductionElement(element);
-}
-
-bool _isRetiredShapeName(String name) {
-  return _sceneControllerShapeNames.contains(name) ||
-      _nodeSpecPatchShapeNames.contains(name);
-}
-
-bool _isRetiredPackageElement(Element element) {
-  final uri = element.library?.uri.toString();
-
-  return uri != null && uri.contains('legacy/iwb_canvas_engine');
-}
-
-bool _isProductionElement(Element element) {
-  final uri = element.library?.uri.toString();
-
-  return uri != null && uri.startsWith('package:iwb_canvas_engine/src/');
-}
-
 bool _isFlutterWidgetSurface(String uri) {
   return uri == 'package:flutter/widgets.dart' ||
       uri == 'package:flutter/material.dart' ||
@@ -1175,22 +803,6 @@ bool _isNetworkLoadingImport(String uri) {
       uri.startsWith('package:chopper/') ||
       uri.startsWith('package:retrofit/');
 }
-
-bool _isSurfacePainterPath(String path) {
-  if (!path.startsWith('lib/src/surface/')) {
-    return false;
-  }
-
-  return path.split('/').last.contains('painter');
-}
-
-bool _isUnauthorizedResourceResolverOwnerPath(String path) {
-  return path.startsWith('lib/src/resources/') &&
-      path != 'lib/src/resources/surface_resource_session.dart';
-}
-
-const _sceneControllerShapeNames = {'SceneController', 'SceneSnapshot'};
-const _nodeSpecPatchShapeNames = {'NodeSpec', 'NodePatch', 'PatchField'};
 
 const _boundaryRules = [
   _BoundaryRule(
@@ -1388,6 +1000,9 @@ final class _BoundaryRule {
   }
 }
 
+// These exceptional ownership pairs stay visibly centralized so boundary
+// reviewers can audit every cross-owner allowance in one place.
+// ignore: cyclomatic-complexity
 bool _isAllowedBoundaryImport(String path, String target) {
   if (path == 'lib/src/api/canvas_runtime.dart' &&
       target == 'lib/src/runtime/runtime_root.dart') {
@@ -1475,8 +1090,5 @@ String? _compilationUnitDeclarationName(CompilationUnitMember declaration) {
 }
 
 ParseStringResult _parseFile(File file) {
-  return parseFile(
-    path: file.path,
-    featureSet: FeatureSet.latestLanguageVersion(),
-  );
+  return parseString(content: file.readAsStringSync(), path: file.path);
 }

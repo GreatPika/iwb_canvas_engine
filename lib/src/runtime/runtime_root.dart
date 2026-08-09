@@ -1801,6 +1801,8 @@ final class RuntimeRoot
         installDocument: _store.installDocument,
         replaceDocument: _store.replaceDocument,
         installSparseCommit: _store.installSparseCommit,
+        installPreparedMaterializedCommit:
+            _store.installPreparedMaterializedCommit,
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareCommitSelectionEffect,

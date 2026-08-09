@@ -660,12 +660,6 @@ const ownerDagAllowedEdges = [
   OwnerEdge(
     source: frameOwner,
     target: resourcesOwner,
-    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
-  ),
-  OwnerEdge(
-    source: frameOwner,
-    target: resourcesOwner,
     sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
     targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
   ),
@@ -702,19 +696,19 @@ const ownerDagAllowedEdges = [
   OwnerEdge(
     source: surfaceOwner,
     target: frameOwner,
-    sourcePath: 'lib/src/surface/image_bridge.dart',
+    sourcePath: 'lib/src/surface/asset_bridge.dart',
     targetPath: 'lib/src/frame/frame_engine.dart',
   ),
   OwnerEdge(
     source: surfaceOwner,
     target: frameOwner,
-    sourcePath: 'lib/src/surface/image_bridge.dart',
+    sourcePath: 'lib/src/surface/asset_bridge.dart',
     targetPath: 'lib/src/frame/paint_asset_binding_service.dart',
   ),
   OwnerEdge(
     source: surfaceOwner,
     target: resourcesOwner,
-    sourcePath: 'lib/src/surface/image_bridge.dart',
+    sourcePath: 'lib/src/surface/asset_bridge.dart',
     targetPath: 'lib/src/resources/surface_resource_session.dart',
   ),
   OwnerEdge(

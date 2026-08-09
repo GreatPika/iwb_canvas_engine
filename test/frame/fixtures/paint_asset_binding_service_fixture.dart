@@ -21,7 +21,7 @@ import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 import 'ordinary_paint_test_support.dart';
 
 void main() {
@@ -32,6 +32,7 @@ void main() {
   _testVectorFrameBindingUsesPreparedAsset();
   _testVectorFrameBindingDoesNotAllocateDiagnostics();
   _testFrameEngineCapturesVectorRecord();
+  _testFrameCapturesAndBindsBackgroundAndContentVectors();
 }
 
 void _testVectorFrameBindingDoesNotAllocateDiagnostics() {
@@ -79,14 +80,91 @@ void _testFrameEngineCapturesVectorRecord() {
   });
 }
 
-FrameElementFacts _vectorFacts(CanvasResourceId resourceId) {
+// Both placement records, their binding order, and binding immutability form
+// one capture-to-paint boundary witness and must remain adjacent.
+// ignore: halstead-volume, source-lines-of-code
+void _testFrameCapturesAndBindsBackgroundAndContentVectors() {
+  test(
+    'background and content vectors retain ordered immutable prepared bindings',
+    () async {
+      final prepared = await prepareVector(basicVectorBytes());
+      final backgroundId = CanvasResourceId('background-vector');
+      final contentId = CanvasResourceId('content-vector');
+      final facts = frameFactsPort(
+        elements: [
+          _vectorFacts(
+            backgroundId,
+            elementId: 'background-vector',
+            orderToken: 1,
+            locationKind: FrameElementLocationKind.background,
+          ),
+          _vectorFacts(contentId, elementId: 'content-vector', orderToken: 2),
+        ],
+        resourceDescriptors: [
+          _vectorDescriptor(backgroundId, appKey: 'vector-background'),
+          _vectorDescriptor(contentId, appKey: 'vector-content'),
+        ],
+      );
+      final output = FrameEngine(
+        frameFacts: facts,
+        selectionFacts: TestSelectionFactsPort.empty(),
+        spatialKernel: SpatialKernel()..rebuild(facts),
+      ).buildResourceFreeMainFrame(inputs: _inputs(), viewCameraBucket: 0);
+      final records = output.ordinaryPlan.ordinaryRecords;
+      final resolver = RecordingResourceResolver(
+        (_) => null,
+        resolvePreparedVector: (_) => prepared,
+      );
+      final bindings = const PaintAssetBindingService().bind(
+        frame: output.capturedFrame.snapshot,
+        records: records,
+        session: SurfaceResourceSession(
+          resolver: resolver,
+          mutationGuard: CountingResolverMutationGuard(),
+        ),
+      );
+
+      expect(records.map((record) => record.id.value), [
+        'content-vector',
+        'background-vector',
+      ]);
+      expect(
+        records.map((record) => record.row),
+        everyElement(isA<VectorRenderRow>()),
+      );
+      expect(
+        (bindings.assets[backgroundId] as FrameVectorAssetBinding).prepared,
+        same(prepared),
+      );
+      expect(
+        (bindings.assets[contentId] as FrameVectorAssetBinding).prepared,
+        same(prepared),
+      );
+      expect(bindings.assets.keys.map((id) => id.value), [
+        'content-vector',
+        'background-vector',
+      ]);
+      expect(() => bindings.assets.clear(), throwsUnsupportedError);
+      expect(resolver.vectorCallCount, 2);
+
+      prepared.dispose();
+    },
+  );
+}
+
+FrameElementFacts _vectorFacts(
+  CanvasResourceId resourceId, {
+  String elementId = 'vector-a',
+  int orderToken = 1,
+  FrameElementLocationKind locationKind = FrameElementLocationKind.content,
+}) {
   return FrameElementFacts(
-    id: CanvasElementId('vector-a'),
+    id: CanvasElementId(elementId),
     kind: CanvasElementKind.vector,
     revision: 1,
     generation: 1,
-    orderToken: 1,
-    locationKind: FrameElementLocationKind.content,
+    orderToken: orderToken,
+    locationKind: locationKind,
     transform: CanvasTransform.identity,
     opacity: 1,
     hitPadding: 0,
@@ -98,6 +176,20 @@ FrameElementFacts _vectorFacts(CanvasResourceId resourceId) {
     metadata: const CanvasMetadata.empty(),
     resourceId: resourceId,
     size: const Size(30, 40),
+  );
+}
+
+FrameVectorResourceDescriptorFacts _vectorDescriptor(
+  CanvasResourceId resourceId, {
+  required String appKey,
+}) {
+  return FrameVectorResourceDescriptorFacts(
+    id: resourceId,
+    appKey: appKey,
+    contentHash: 'sha256:$appKey',
+    byteLength: 42,
+    resourceRevision: 12,
+    metadata: const CanvasMetadata.empty(),
   );
 }
 

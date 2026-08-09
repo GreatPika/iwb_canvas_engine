@@ -8,7 +8,7 @@ import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
 import 'surface_resource_session_test_support.dart';
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 
 void main() {
   _testTargetAndAllInvalidation();
@@ -197,20 +197,27 @@ void _testOversizedResolveReturnsWithoutRetaining() {
   });
 }
 
+// The resolver, cache, and no-revival assertions must stay in one chronological
+// drop contract; splitting them would hide a cache leak behind the terminal guard.
+// ignore: halstead-volume
 void _testDroppedSessionDoesNotResolveAgain() {
   test('dropped session cannot revive resolver or cache entries', () async {
     final image = await createResourceTestImage();
     final resolver = RecordingResourceResolver((_) => image);
+    final cache = ResourceAssetCache();
     final session = SurfaceResourceSession(
       resolver: resolver,
       mutationGuard: CountingResolverMutationGuard(),
+      cache: cache,
     );
     final request = descriptorRequest(id: 'resource-a');
 
     expect(session.resolveResource(request), isA<ResolvedResourceAsset>());
     expect(resolver.callCount, 1);
+    expect(cache.length, 1);
 
     session.drop();
+    expect(cache.length, 0);
     expect(
       session.resolveResource(request),
       isA<NoResolverResourceAssetPlaceholder>(),
@@ -278,14 +285,17 @@ void _testVectorLifecycleReleasesSessionAndRetainedBorrows() {
       session.releaseAllResources();
       expect(releasedAllCount, 1);
       expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+      expect(resolver.vectorCallCount, 4);
 
       session.replaceResolver(resolver);
       expect(releasedAllCount, 2);
       expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+      expect(resolver.vectorCallCount, 5);
 
       session.resetForDocumentReplacement();
       expect(releasedAllCount, 3);
       expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+      expect(resolver.vectorCallCount, 6);
 
       session.drop();
       expect(releasedAllCount, 4);

@@ -10,9 +10,8 @@ import 'captured_frame.dart';
 import 'render_element_record.dart';
 
 final class FrameAssetBindings {
-  FrameAssetBindings({
-    required Map<CanvasResourceId, FrameAssetBinding> assets,
-  }) : assets = Map.unmodifiable(assets);
+  FrameAssetBindings({required Map<CanvasResourceId, FrameAssetBinding> assets})
+    : assets = Map.unmodifiable(assets);
 
   static final empty = FrameAssetBindings(assets: const {});
 

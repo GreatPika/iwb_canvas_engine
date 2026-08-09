@@ -188,24 +188,27 @@ void main() {
       'test/api_contract/public_readable_union_variants_test.dart': 1,
     });
   });
-  test('public integration guardrail runs prepared vector boundary proof', () async {
-    final proofRuns = <String>[];
+  test(
+    'public integration guardrail runs prepared vector boundary proof',
+    () async {
+      final proofRuns = <String>[];
 
-    final result = await runGuardrailsWithProofRunner(
-      ['api.integration_surface_complete'],
-      runDartTest: (_, path) async {
-        proofRuns.add(path);
+      final result = await runGuardrailsWithProofRunner(
+        ['api.integration_surface_complete'],
+        runDartTest: (_, path) async {
+          proofRuns.add(path);
 
-        return 0;
-      },
-    );
+          return 0;
+        },
+      );
 
-    expect(result.exitCode, 0);
-    expect(proofRuns, [
-      'test/api_contract/public_integration_compile_fixture_test.dart',
-      'test/api_contract/prepared_vector_public_api_test.dart',
-    ]);
-  });
+      expect(result.exitCode, 0);
+      expect(proofRuns, [
+        'test/api_contract/public_integration_compile_fixture_test.dart',
+        'test/api_contract/prepared_vector_public_api_test.dart',
+      ]);
+    },
+  );
   for (final scanCase in _runnerStructuralScanCases) {
     test('${scanCase.id} runs proof tests before structural scan', () async {
       await expectLater(_expectProofBeforeStructuralScan(scanCase), completes);

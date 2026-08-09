@@ -420,7 +420,10 @@ Dispose contract:
 - CanvasRuntime does not own application listeners; CanvasSurface removes only
   listeners it registered during detach, dispose, or runtime swap, and
   applications remove listeners they registered directly;
-- mandatory v1 resource caches are cleared without disposing app-provided ui.Image objects.
+- mandatory v1 resource caches and retained main-output resource borrows are
+  cleared without disposing app-provided `ui.Image` objects or
+  `CanvasPreparedVector` wrappers; a prepared vector's private Picture remains
+  application-owned.
 ```
 
 Runtime state snapshot:
@@ -564,9 +567,10 @@ Surface contract:
 - CanvasSurface never mutates committed document directly;
 - CanvasSurface routes pointer input into InteractionEngine: finite samples for
   usable coordinates and terminal cleanup input for non-finite up/cancel;
-- CanvasSurface resourceResolver is the app-owned synchronous image resolver for that surface;
+- CanvasSurface resourceResolver is the app-owned synchronous image/vector
+  resolver for that surface;
 - successful attach creates an empty `SurfaceResourceSession` for that active
-  surface before paint can resolve image assets;
+  surface before paint can resolve image/vector assets;
 - rejected attach creates no `SurfaceResourceSession` and performs no resolver,
   cache, pointer routing, paint, or repaint-listener side effects;
 - replacing resourceResolver on the active CanvasSurface refreshes that
@@ -575,7 +579,9 @@ Surface contract:
   require public runtime state or overlay output changes;
 - detach, dispose, or runtime swap removes the internal repaint listener, drops
   cached layer outputs, and drops the `SurfaceResourceSession`;
-- CanvasSurface does not own or dispose app-provided ui.Image instances.
+- CanvasSurface does not own or dispose app-provided `ui.Image` instances or
+  `CanvasPreparedVector` wrappers; a prepared vector's private Picture remains
+  application-owned.
 ```
 
 ### 4.7 Visual styles

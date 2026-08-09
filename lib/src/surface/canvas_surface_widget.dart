@@ -10,7 +10,7 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_surface_styles.dart';
 import '../resources/surface_resource_session.dart';
-import 'image_bridge.dart';
+import 'asset_bridge.dart';
 import 'layer_frame_output_cache.dart';
 import 'layer_paint_host.dart';
 import 'pointer_adapter.dart';
@@ -308,7 +308,7 @@ final class _CanvasSurfaceState extends State<CanvasSurface> {
       devicePixelRatio: inputs.devicePixelRatio,
       selectionStyle: inputs.selectionStyle,
       gridStyle: inputs.gridStyle,
-      bindAssets: const CanvasSurfaceImageBridge().bindAssets(inputs.session),
+      bindAssets: const CanvasSurfaceAssetBridge().bindAssets(inputs.session),
     );
 
     return output;

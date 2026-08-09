@@ -47,18 +47,19 @@ stateDiagram-v2
     SelectedMoveCleanup: coordinator-owned selected move cleanup
     SelectedMoveCleanup --> MainCleanupRepaint: request main-scene repaint cleanup
     MainCleanupRepaint: repaint main scene without selected move preview
-    MainCleanupRepaint --> ResourceCacheCleanup
+    MainCleanupRepaint --> ResourceBorrowCleanup
 
     OverlayCleanup: coordinator-owned overlay cleanup
     OverlayCleanup --> OverlayCleanupRepaint: request overlay repaint cleanup
     OverlayCleanupRepaint: repaint overlay without preview primitives
-    OverlayCleanupRepaint --> ResourceCacheCleanup
+    OverlayCleanupRepaint --> ResourceBorrowCleanup
 
     NoGestureCleanup: no gesture cleanup effect
-    NoGestureCleanup --> ResourceCacheCleanup
+    NoGestureCleanup --> ResourceBorrowCleanup
 
-    ResourceCacheCleanup: clear mandatory v1 resource caches
-    ResourceCacheCleanup --> CloseStreams: drop resolved image/vector cache entries
+    ResourceBorrowCleanup: release active session cache/suppression borrows
+    ResourceBorrowCleanup --> RetainedOutputRelease: release retained main-output image/vector wrapper borrows
+    RetainedOutputRelease --> CloseStreams: drop active resource session lifecycle
     CloseStreams: close actions and contextActionRequests streams
     CloseStreams --> FinalizeStateListenable
     FinalizeStateListenable: keep CanvasRuntimeState state.value readable and block post-dispose notifications
@@ -67,7 +68,8 @@ stateDiagram-v2
 
   note right of Disposing
     Dispose never calls the move commit resolver.
-    Dispose does not dispose app-owned image/vector assets
+    Dispose does not dispose app-owned ui.Image values,
+    CanvasPreparedVector wrappers or their private Pictures,
     or the app-owned resource resolver.
   end note
 

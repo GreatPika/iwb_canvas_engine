@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_cache.dart';
 import 'package:iwb_canvas_engine/src/frame/main_frame_record_painter.dart';
 import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
@@ -8,7 +9,7 @@ import 'package:iwb_canvas_engine/src/frame/render_primitive_cache_snapshot.dart
 import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 
 void main() {
   _testFallbackStrokeBoundsTransformedOnce();
@@ -65,10 +66,14 @@ void _testVectorPictureScalesAcrossTargetSizes() {
   });
 }
 
+// Target geometry and optional document natural size stay together so this
+// fixture can contrast them against the prepared intrinsic source extent.
+// ignore: number-of-parameters
 RenderElementRecord _vectorPaintRecord({
   required CanvasResourceId resourceId,
   required Size size,
   required Offset translation,
+  Size? naturalSize,
   double opacity = 1,
 }) {
   final bounds = Rect.fromCenter(
@@ -87,7 +92,11 @@ RenderElementRecord _vectorPaintRecord({
     paintBoundsWorld: bounds.shift(translation),
     hitBoundsWorld: bounds.shift(translation),
     resourceId: resourceId,
-    row: VectorRenderRow(resourceId: resourceId, size: size, naturalSize: null),
+    row: VectorRenderRow(
+      resourceId: resourceId,
+      size: size,
+      naturalSize: naturalSize,
+    ),
   );
 }
 
@@ -97,6 +106,7 @@ RenderElementRecord _vectorPaintRecord({
 void _testVectorRecordUsesBoundedPictureCommands() {
   test('vector painter records only bounded Picture commands', () async {
     final prepared = await prepareVector(basicVectorBytes());
+    final preparedPicture = liveCanvasPreparedVectorPicture(prepared);
     final resourceId = CanvasResourceId('vector-commands');
     final canvas = TestRecordingCanvas();
     paintMainFrameRecord(
@@ -105,6 +115,7 @@ void _testVectorRecordUsesBoundedPictureCommands() {
         resourceId: resourceId,
         size: const Size(20, 10),
         translation: const Offset(10, 5),
+        naturalSize: const Size(200, 100),
       ),
       {resourceId: FrameVectorAssetBinding(prepared)},
       RenderPrimitiveCacheSnapshot.empty,
@@ -115,7 +126,20 @@ void _testVectorRecordUsesBoundedPictureCommands() {
     ]);
     expect(_recordedArguments(canvas, #translate).single, [-10.0, -5.0]);
     expect(_recordedArguments(canvas, #scale).single, [2.0, 0.5]);
-    expect(_recordedArguments(canvas, #drawPicture), hasLength(1));
+    expect(
+      _recordedArguments(canvas, #drawPicture).single.single,
+      same(preparedPicture),
+    );
+    expect(
+      _recordedMembers(canvas),
+      containsAllInOrder([
+        #clipRect,
+        #translate,
+        #scale,
+        #drawPicture,
+        #restore,
+      ]),
+    );
     expect(_recordedArguments(canvas, #drawImage), isEmpty);
     expect(_recordedArguments(canvas, #drawImageRect), isEmpty);
     prepared.dispose();
@@ -162,20 +186,38 @@ void _testVectorRecordDrawsPreparedPictureDirectly() {
   );
 }
 
-// One record, its opacity effect, and the rendered alpha are inseparable for
-// the record-local compositing guarantee.
-// ignore: halstead-volume
+// The record, its opacity effect, bounded layer, and overlap alpha are one
+// record-local compositing guarantee; splitting them would hide group paint.
+// ignore: halstead-volume, source-lines-of-code
 void _testVectorPartialOpacityUsesRecordLocalEffect() {
   test(
-    'partial vector opacity composites only the record-local Picture',
+    'partial vector opacity group-composites opaque shapes in one Picture',
     () async {
-      final prepared = await prepareVector(basicVectorBytes());
+      final prepared = _twoOverlappingOpaqueShapesPicture();
       final resourceId = CanvasResourceId('vector-opacity');
       final record = _vectorPaintRecord(
         resourceId: resourceId,
         size: const Size(20, 10),
         translation: const Offset(10, 5),
         opacity: 0.5,
+      );
+      expect(record.requiresSaveLayer, isTrue);
+      expect(
+        _vectorPaintRecord(
+          resourceId: resourceId,
+          size: const Size(20, 10),
+          translation: const Offset(10, 5),
+          opacity: 0,
+        ).requiresSaveLayer,
+        isFalse,
+      );
+      expect(
+        _vectorPaintRecord(
+          resourceId: resourceId,
+          size: const Size(20, 10),
+          translation: const Offset(10, 5),
+        ).requiresSaveLayer,
+        isFalse,
       );
       final commands = TestRecordingCanvas();
       paintMainFrameRecord(commands, record, {
@@ -192,7 +234,8 @@ void _testVectorPartialOpacityUsesRecordLocalEffect() {
       }, RenderPrimitiveCacheSnapshot.empty);
       final image = await recorder.endRecording().toImage(40, 20);
 
-      expect(await _alphaAt(image, 10, 5), inInclusiveRange(100, 155));
+      expect(await _alphaAt(image, 5, 5), inInclusiveRange(100, 155));
+      expect(await _alphaAt(image, 15, 5), inInclusiveRange(100, 155));
       image.dispose();
       prepared.dispose();
     },
@@ -315,6 +358,25 @@ List<List<Object?>> _recordedArguments(
       if (recorded.invocation.memberName == memberName)
         List<Object?>.from(recorded.invocation.positionalArguments),
   ];
+}
+
+List<Symbol> _recordedMembers(TestRecordingCanvas canvas) {
+  return [
+    for (final recorded in canvas.invocations) recorded.invocation.memberName,
+  ];
+}
+
+CanvasPreparedVector _twoOverlappingOpaqueShapesPicture() {
+  final recorder = PictureRecorder();
+  final canvas = Canvas(recorder);
+  final paint = Paint()..color = const Color(0xFFFFFFFF);
+  canvas.drawRect(const Rect.fromLTWH(0, 0, 10, 10), paint);
+  canvas.drawRect(const Rect.fromLTWH(5, 0, 10, 10), paint);
+
+  return createCanvasPreparedVector(
+    picture: recorder.endRecording(),
+    intrinsicSize: const Size(10, 10),
+  );
 }
 
 void _testFallbackStrokeBoundsTransformedOnce() {

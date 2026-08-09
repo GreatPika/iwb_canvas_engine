@@ -289,6 +289,8 @@ CommitDeliveryResult _applyPlan(
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
       installSparseCommit: (_) => events.add('sparse-document'),
+      installPreparedMaterializedCommit: (_) =>
+          events.add('prepared-materialized-document'),
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (effect, _) {
@@ -343,6 +345,8 @@ final class _SparseSelectionCommitProof {
         installDocument: (_, _) => events.add('document'),
         replaceDocument: (_, _) => events.add('replacement'),
         installSparseCommit: _installSparseCommit,
+        installPreparedMaterializedCommit: (_) =>
+            events.add('prepared-materialized-document'),
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareSelectionEffect,
@@ -359,6 +363,8 @@ final class _SparseSelectionCommitProof {
         installDocument: (_, _) => events.add('document'),
         replaceDocument: (_, _) => events.add('replacement'),
         installSparseCommit: _installSparseCommit,
+        installPreparedMaterializedCommit: (_) =>
+            events.add('prepared-materialized-document'),
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: (_, _) {

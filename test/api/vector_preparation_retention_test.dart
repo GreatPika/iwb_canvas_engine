@@ -5,12 +5,15 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import 'fixtures/vector_preparation_fixture.dart';
+import '../support/vector_preparation_fixture.dart';
 import 'fixtures/vm_retention_observer.dart';
 
 // Flutter's test runner supplies this mutually exclusive VM-service intent.
 const _vmServiceDisabledArgument = '--disable-vm-service';
 
+// The snapshot census must keep anchor setup, live Pictures, and bounded VM
+// observation in one sequence; splitting it would hide settled ownership.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test(
     'preparation owns an exact caller view and releases settled snapshots',

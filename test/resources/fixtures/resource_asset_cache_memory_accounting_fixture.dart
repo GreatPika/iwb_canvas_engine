@@ -5,7 +5,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 import 'surface_resource_session_test_support.dart';
 
 void main() {

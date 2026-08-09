@@ -273,6 +273,26 @@ void main() {
           resourceId: CanvasResourceId('vector-a'),
           size: const Size(20, 10),
           naturalSize: const Size(40, 20),
+          revision: 31,
+          transform: CanvasTransform(
+            a: 0.8,
+            b: 0.2,
+            c: -0.3,
+            d: 1.4,
+            tx: 6,
+            ty: -5,
+          ),
+          opacity: 0.65,
+          hitPadding: 2.5,
+          isVisible: false,
+          isSelectable: false,
+          isLocked: true,
+          isDeletable: false,
+          isTransformable: false,
+          metadata: CanvasMetadata.fromMap({
+            'owner': 'vectorBackground',
+            'placement': 'background',
+          }),
         ),
       ],
       layers: [
@@ -283,6 +303,22 @@ void main() {
               id: CanvasElementId('vector-content-a'),
               resourceId: CanvasResourceId('vector-a'),
               size: const Size(30, 15),
+              naturalSize: const Size(60, 30),
+              revision: 32,
+              transform: CanvasTransform(
+                a: 1.1,
+                b: -0.2,
+                c: 0.3,
+                d: 0.9,
+                tx: -4,
+                ty: 7,
+              ),
+              opacity: 0.4,
+              hitPadding: 1.5,
+              metadata: CanvasMetadata.fromMap({
+                'owner': 'vectorContent',
+                'placement': 'content',
+              }),
             ),
           ],
         ),
@@ -301,10 +337,58 @@ void main() {
       'metadata': {'owner': 'vectorResource'},
     });
     expect(resource.containsKey('mimeType'), isFalse);
+
+    final backgroundLayer = encoded['backgroundLayer'] as Map<String, Object?>;
+    final background = (backgroundLayer['elements'] as List<Object?>).single
+        as Map<String, Object?>;
+    expect(background, {
+      'id': 'vector-background-a',
+      'kind': 'vector',
+      'revision': 31,
+      'transform': {'a': 0.8, 'b': 0.2, 'c': -0.3, 'd': 1.4, 'tx': 6.0, 'ty': -5.0},
+      'opacity': 0.65,
+      'hitPadding': 2.5,
+      'isVisible': false,
+      'isSelectable': false,
+      'isLocked': true,
+      'isDeletable': false,
+      'isTransformable': false,
+      'metadata': {
+        'owner': 'vectorBackground',
+        'placement': 'background',
+      },
+      'resourceId': 'vector-a',
+      'size': {'w': 20.0, 'h': 10.0},
+      'naturalSize': {'w': 40.0, 'h': 20.0},
+    });
+
+    final contentLayer = (encoded['layers'] as List<Object?>).single
+        as Map<String, Object?>;
+    final content = (contentLayer['elements'] as List<Object?>).single
+        as Map<String, Object?>;
+    expect(content, {
+      'id': 'vector-content-a',
+      'kind': 'vector',
+      'revision': 32,
+      'transform': {'a': 1.1, 'b': -0.2, 'c': 0.3, 'd': 0.9, 'tx': -4.0, 'ty': 7.0},
+      'opacity': 0.4,
+      'hitPadding': 1.5,
+      'isVisible': true,
+      'isSelectable': true,
+      'isLocked': false,
+      'isDeletable': true,
+      'isTransformable': true,
+      'metadata': {
+        'owner': 'vectorContent',
+        'placement': 'content',
+      },
+      'resourceId': 'vector-a',
+      'size': {'w': 30.0, 'h': 15.0},
+      'naturalSize': {'w': 60.0, 'h': 30.0},
+    });
+
     final decoded = decodeSchemaV1Document(encoded);
-    expect(decoded.resources.single, isA<CanvasVectorResource>());
-    expect(decoded.backgroundElements.single, isA<CanvasVectorElement>());
-    expect(decoded.layers.single.elements.single, isA<CanvasVectorElement>());
+    _expectDocumentEquivalent(decoded, document);
     expect(encodeCanvasDocument(decoded), encoded);
   });
 
@@ -496,12 +580,12 @@ void _expectResourceEquivalent(CanvasResource actual, CanvasResource expected) {
   expect(actual.byteLength, expected.byteLength);
   expect(actual.metadata, expected.metadata);
 
-  expect(actual, isA<CanvasImageResource>());
-  expect(expected, isA<CanvasImageResource>());
-  expect(
-    (actual as CanvasImageResource).mimeType,
-    (expected as CanvasImageResource).mimeType,
-  );
+  if (actual is CanvasImageResource && expected is CanvasImageResource) {
+    expect(actual.mimeType, expected.mimeType);
+  } else if (actual is! CanvasVectorResource ||
+      expected is! CanvasVectorResource) {
+    fail('unexpected resource pair: ${actual.runtimeType} vs ${expected.runtimeType}');
+  }
 }
 
 void _expectResourceSourceEquivalent(
@@ -550,6 +634,11 @@ void _expectElementEquivalent(CanvasElement actual, CanvasElement expected) {
   expect(actual.metadata, expected.metadata);
 
   if (actual is CanvasImageElement && expected is CanvasImageElement) {
+    expect(actual.resourceId.value, expected.resourceId.value);
+    expect(actual.size, expected.size);
+    expect(actual.naturalSize, expected.naturalSize);
+  } else if (actual is CanvasVectorElement &&
+      expected is CanvasVectorElement) {
     expect(actual.resourceId.value, expected.resourceId.value);
     expect(actual.size, expected.size);
     expect(actual.naturalSize, expected.naturalSize);

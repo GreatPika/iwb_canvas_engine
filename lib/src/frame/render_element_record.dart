@@ -133,6 +133,10 @@ final class RectRenderRow extends RenderElementRow {
   final double strokeWidth;
 }
 
+// Keeping the captured frame facts and exhaustive row-dependent opacity policy
+// together makes every new render-row variant choose its layer behavior
+// explicitly; moving the same references elsewhere would only hide coupling.
+// ignore: coupling-between-object-classes
 final class RenderElementRecord {
   const RenderElementRecord({
     required this.id,

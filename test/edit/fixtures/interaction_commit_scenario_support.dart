@@ -72,6 +72,8 @@ final class InteractionCommitScenario {
           installDocument: store.installDocument,
           replaceDocument: store.replaceDocument,
           installSparseCommit: store.installSparseCommit,
+          installPreparedMaterializedCommit:
+              store.installPreparedMaterializedCommit,
         ),
         selectionInstallers: CommitSelectionInstallers(
           prepareSelectionEffect: (_, _) {

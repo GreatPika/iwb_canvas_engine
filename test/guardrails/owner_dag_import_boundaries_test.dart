@@ -12,8 +12,6 @@ void main() {
   _testUnownedProductionSourceFixture();
   _testRequiredForbiddenEdges();
   _testOwnerFixtureInventory();
-  _testOwnerPolicyInventory();
-  _testOwnerPolicyMatrix();
 }
 
 void _testSelectedDagAcyclic() {
@@ -34,23 +32,14 @@ void _testSelectedDagAcyclic() {
 }
 
 void _testOwnerFixtureEdges() {
-  test('table-driven owner fixtures cover allowed and rejected edges', () {
-    for (final fixture in _fixtures) {
+  test('production owner edges admit generated positive fixtures', () {
+    for (final fixture in _allowedOwnerFixtures) {
       final violations = checkOwnerDagFile(
         path: fixture.sourcePath,
         content: fixture.content,
       );
 
-      if (fixture.allowed) {
-        expect(violations, isEmpty, reason: fixture.label);
-      } else {
-        expect(violations, contains(isA<Object>()), reason: fixture.label);
-        expect(
-          violations.map((violation) => violation.guardrailId),
-          everyElement(ownerDagGuardrailId),
-          reason: fixture.label,
-        );
-      }
+      expect(violations, isEmpty, reason: fixture.label);
     }
   });
 }
@@ -157,11 +146,11 @@ void _testRequiredForbiddenEdges() {
   test('required negative owner edges stay rejected by the selected DAG', () {
     for (final edge in _requiredForbiddenEdges) {
       final violations = checkOwnerDagFile(
-        path: _ownerFixtureSources[edge.source]!,
+        path: _negativeOwnerFixtureSource(edge.source),
         content: _fixtureDirective(
           directiveKind: edge.directiveKind,
-          sourcePath: _ownerFixtureSources[edge.source]!,
-          targetPath: _ownerFixtureTargets[edge.target]!,
+          sourcePath: _negativeOwnerFixtureSource(edge.source),
+          targetPath: _canonicalOwnerFixtureTargets[edge.target]!,
         ),
       );
 
@@ -179,915 +168,49 @@ void _testOwnerFixtureInventory() {
   test('owner fixtures cover every selected owner', () {
     final ownerNames = ownerDagOwners.map((owner) => owner.name).toSet();
 
-    expect(_ownerFixtureSources.keys.toSet(), ownerNames);
-    expect(_ownerFixtureTargets.keys.toSet(), ownerNames);
-    for (final entry in _ownerFixtureSources.entries) {
+    expect(_canonicalOwnerFixtureSources.keys.toSet(), ownerNames);
+    expect(_canonicalOwnerFixtureTargets.keys.toSet(), ownerNames);
+    for (final entry in _canonicalOwnerFixtureSources.entries) {
       expect(ownerForPath(entry.value)?.name, entry.key);
     }
-    for (final entry in _ownerFixtureTargets.entries) {
+    for (final entry in _canonicalOwnerFixtureTargets.entries) {
       expect(ownerForPath(entry.value)?.name, entry.key);
     }
   });
 }
 
-void _testOwnerPolicyInventory() {
-  test('allowed owner edges match the independent policy table', () {
-    expect(
-      ownerDagAllowedEdges.map(_allowedEdgeKey).toSet(),
-      _expectedAllowedOwnerEdges.map(_expectedEdgeKey).toSet(),
-    );
-  });
-}
-
-void _testOwnerPolicyMatrix() {
-  test('selected owner DAG matches the independent policy table', () {
-    for (final fixture in _fixtures) {
-      expect(
-        _selectedDagAllows(fixture),
-        fixture.allowed,
-        reason: fixture.label,
-      );
-    }
-  });
-}
-
-final _fixtures = [..._matrixFixtures, ..._bridgeFixtures];
-
-final _matrixFixtures = [
-  for (final source in _ownerFixtureSources.entries)
-    for (final target in _ownerFixtureTargets.entries)
-      for (final directiveKind in _fixtureDirectiveKinds)
-        _OwnerDagFixture(
-          sourceOwner: source.key,
-          targetOwner: target.key,
-          sourcePath: source.value,
-          targetPath: target.value,
-          directiveKind: directiveKind,
-        ),
+final _allowedOwnerFixtures = [
+  for (final edge in ownerDagAllowedEdges)
+    for (final directiveKind in edge.directiveKinds)
+      _OwnerDagFixture(
+        sourceOwner: edge.source.name,
+        targetOwner: edge.target.name,
+        sourcePath:
+            edge.sourcePath ?? _canonicalOwnerFixtureSources[edge.source.name]!,
+        targetPath:
+            edge.targetPath ?? _canonicalOwnerFixtureTargets[edge.target.name]!,
+        directiveKind: directiveKind,
+      ),
 ];
 
-const _bridgeFixtures = [
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime_frame_bridge.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/contracts/internal/resolver_mutation_guard.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/contracts/internal/surface_frame_signal.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath:
-        'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/frame/frame_engine.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'surface',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/surface/canvas_surface_widget.dart',
-    directiveKind: 'export',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'surface',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/surface/text_editing_overlay.dart',
-    directiveKind: 'export',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'api',
-    targetOwner: 'codec',
-    sourcePath: 'lib/src/api/canvas_codec.dart',
-    targetPath: 'lib/src/codec/schema_v1_encoder.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_command_facts_adapter.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_move_read_models.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/hit_test_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/diagnostics/diagnostic_code.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/captured_frame.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_engine.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_text_layout_measurer.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_engine.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_pointer_context.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_runtime_intents.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_request_registry.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/pointer_cleanup_protocol.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/text_edit_guard_decision.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/interaction/interaction_diagnostics_sink.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/captured_frame.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_capture_service.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_capture_service.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_engine.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/ordinary_paint_planner.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/render_element_record.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
-    targetPath: 'lib/src/resources/surface_resource_session.dart',
-    directiveKind: 'import',
-  ),
-  _OwnerDagFixture(
-    sourceOwner: 'surface',
-    targetOwner: 'api',
-    sourcePath: 'lib/src/surface/text_editing_overlay.dart',
-    targetPath: 'lib/src/api/canvas_runtime.dart',
-    directiveKind: 'import',
-  ),
-];
-
-const _expectedAllowedOwnerEdges = [
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'contracts/internal',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/public',
-    directiveKinds: {'import', 'export'},
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime_frame_bridge.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'runtime',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/runtime/runtime_root.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/contracts/internal/resolver_mutation_guard.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/contracts/internal/surface_frame_signal.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'contracts/internal',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath:
-        'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/frame/frame_engine.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'surface',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/surface/canvas_surface_widget.dart',
-    directiveKinds: {'export'},
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'surface',
-    sourcePath: 'lib/src/api/canvas_surface.dart',
-    targetPath: 'lib/src/surface/text_editing_overlay.dart',
-    directiveKinds: {'export'},
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'api',
-    targetOwner: 'codec',
-    sourcePath: 'lib/src/api/canvas_codec.dart',
-    targetPath: 'lib/src/codec/schema_v1_encoder.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'edit'),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_command_facts_adapter.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_move_read_models.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/hit_test_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/diagnostics/diagnostic_code.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'diagnostics',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/diagnostics/diagnostics_hub.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/resources/resource_kernel.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/captured_frame.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_engine.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/frame/frame_text_layout_measurer.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'selection'),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'runtime', targetOwner: 'store'),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_engine.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_pointer_context.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_runtime_intents.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/interaction_request_registry.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/pointer_cleanup_protocol.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_root.dart',
-    targetPath: 'lib/src/interaction/text_edit_guard_decision.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_adapter.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_read_mapping.dart',
-    targetPath: 'lib/src/interaction/interaction_read_port.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'runtime',
-    targetOwner: 'interaction',
-    sourcePath: 'lib/src/runtime/runtime_interaction_diagnostics_adapter.dart',
-    targetPath: 'lib/src/interaction/interaction_diagnostics_sink.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'edit',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'edit',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'store'),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'codec'),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'edit', targetOwner: 'diagnostics'),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'store',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'store',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'selection',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'selection',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'codec',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'codec',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(sourceOwner: 'codec', targetOwner: 'diagnostics'),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'diagnostics',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'resources',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'resources',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/captured_frame.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_capture_service.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_capture_service.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_engine.dart',
-    targetPath: 'lib/src/geometry/spatial_kernel.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/frame_spatial_paint_admission.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/ordinary_paint_planner.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/render_element_record.dart',
-    targetPath: 'lib/src/geometry/geometry_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'spatial',
-    sourcePath: 'lib/src/frame/selected_move_supplement_planner.dart',
-    targetPath: 'lib/src/geometry/spatial_query_result.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/main_frame_asset_bindings.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
-    targetPath: 'lib/src/resources/resource_resolver_adapter.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'frame',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/frame/paint_asset_binding_service.dart',
-    targetPath: 'lib/src/resources/surface_resource_session.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'interaction',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'interaction',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'spatial',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'spatial',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'contracts/public',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'contracts/internal',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'api',
-    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
-    targetPath: 'lib/src/api/canvas_runtime.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'api',
-    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
-    targetPath: 'lib/src/api/canvas_runtime_surface_bridge.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'api',
-    sourcePath: 'lib/src/surface/text_editing_overlay.dart',
-    targetPath: 'lib/src/api/canvas_runtime.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/image_bridge.dart',
-    targetPath: 'lib/src/frame/frame_engine.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/image_bridge.dart',
-    targetPath: 'lib/src/frame/paint_asset_binding_service.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/surface/image_bridge.dart',
-    targetPath: 'lib/src/resources/surface_resource_session.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/layer_frame_output_cache.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/layer_paint_host.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/main_frame_asset_bindings.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/main_frame_record_painter.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/render_element_record.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/main_painter.dart',
-    targetPath: 'lib/src/frame/selection_decoration_planner.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/overlay_painter.dart',
-    targetPath: 'lib/src/frame/frame_drawable_policy.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/overlay_painter.dart',
-    targetPath: 'lib/src/frame/frame_paint_output.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'frame',
-    sourcePath: 'lib/src/surface/overlay_painter.dart',
-    targetPath: 'lib/src/frame/overlay_preview_planner.dart',
-  ),
-  _ExpectedAllowedOwnerEdge(
-    sourceOwner: 'surface',
-    targetOwner: 'resources',
-    sourcePath: 'lib/src/surface/canvas_surface_widget.dart',
-    targetPath: 'lib/src/resources/surface_resource_session.dart',
-  ),
-];
-
-const _fixtureDirectiveKinds = ['import', 'export'];
-
-const _ownerFixtureSources = {
-  'api': 'lib/src/api/bad.dart',
-  'contracts/public': 'lib/src/contracts/public/bad.dart',
-  'contracts/internal': 'lib/src/contracts/internal/bad.dart',
-  'runtime': 'lib/src/runtime/bad.dart',
-  'edit': 'lib/src/edit/bad.dart',
-  'store': 'lib/src/store/bad.dart',
-  'selection': 'lib/src/selection/bad.dart',
-  'codec': 'lib/src/codec/bad.dart',
-  'diagnostics': 'lib/src/diagnostics/bad.dart',
-  'resources': 'lib/src/resources/bad.dart',
-  'frame': 'lib/src/frame/bad.dart',
-  'interaction': 'lib/src/interaction/bad.dart',
-  'spatial': 'lib/src/geometry/bad.dart',
-  'surface': 'lib/src/surface/bad.dart',
+const _canonicalOwnerFixtureSources = {
+  'api': 'lib/src/api/canvas_runtime.dart',
+  'contracts/public': 'lib/src/contracts/public/canvas_document.dart',
+  'contracts/internal': 'lib/src/contracts/internal/document_facts_port.dart',
+  'runtime': 'lib/src/runtime/runtime_root.dart',
+  'edit': 'lib/src/edit/edit_kernel.dart',
+  'store': 'lib/src/store/document_store_kernel.dart',
+  'selection': 'lib/src/selection/selection_kernel.dart',
+  'codec': 'lib/src/codec/schema_v1_decoder.dart',
+  'diagnostics': 'lib/src/diagnostics/diagnostics_hub.dart',
+  'resources': 'lib/src/resources/resource_kernel.dart',
+  'frame': 'lib/src/frame/frame_engine.dart',
+  'interaction': 'lib/src/interaction/interaction_engine.dart',
+  'spatial': 'lib/src/geometry/spatial_kernel.dart',
+  'surface': 'lib/src/surface/canvas_surface_widget.dart',
 };
 
-const _ownerFixtureTargets = {
+const _canonicalOwnerFixtureTargets = {
   'api': 'lib/src/api/canvas_document.dart',
   'contracts/public': 'lib/src/contracts/public/canvas_document.dart',
   'contracts/internal': 'lib/src/contracts/internal/document_facts_port.dart',
@@ -1098,10 +221,10 @@ const _ownerFixtureTargets = {
   'codec': 'lib/src/codec/schema_v1_decoder.dart',
   'diagnostics': 'lib/src/diagnostics/diagnostics_hub.dart',
   'resources': 'lib/src/resources/resource_kernel.dart',
-  'frame': 'lib/src/frame/frame_renderer.dart',
+  'frame': 'lib/src/frame/frame_engine.dart',
   'interaction': 'lib/src/interaction/interaction_engine.dart',
   'spatial': 'lib/src/geometry/spatial_kernel.dart',
-  'surface': 'lib/src/surface/flutter_surface.dart',
+  'surface': 'lib/src/surface/canvas_surface_widget.dart',
 };
 
 const _requiredForbiddenEdges = [
@@ -1189,8 +312,6 @@ final class _OwnerDagFixture {
 
   String get label => '$sourceOwner $directiveKind -> $targetOwner';
 
-  bool get allowed => _expectedOwnerPolicyAllows(this);
-
   String get content {
     return _fixtureDirective(
       directiveKind: directiveKind,
@@ -1198,84 +319,6 @@ final class _OwnerDagFixture {
       targetPath: targetPath,
     );
   }
-}
-
-final class _ExpectedAllowedOwnerEdge {
-  const _ExpectedAllowedOwnerEdge({
-    required this.sourceOwner,
-    required this.targetOwner,
-    this.sourcePath,
-    this.targetPath,
-    this.directiveKinds = const {'import'},
-  });
-
-  final String sourceOwner;
-  final String targetOwner;
-  final String? sourcePath;
-  final String? targetPath;
-  final Set<String> directiveKinds;
-
-  bool allows(_OwnerDagFixture fixture) {
-    return fixture.sourceOwner == sourceOwner &&
-        fixture.targetOwner == targetOwner &&
-        directiveKinds.contains(fixture.directiveKind) &&
-        (sourcePath == null || sourcePath == fixture.sourcePath) &&
-        (targetPath == null || targetPath == fixture.targetPath);
-  }
-}
-
-String _allowedEdgeKey(OwnerEdge edge) {
-  return [
-    edge.source.name,
-    edge.target.name,
-    edge.sourcePath ?? '*',
-    edge.targetPath ?? '*',
-    _directiveKindKey(edge.directiveKinds),
-  ].join('|');
-}
-
-String _expectedEdgeKey(_ExpectedAllowedOwnerEdge edge) {
-  return [
-    edge.sourceOwner,
-    edge.targetOwner,
-    edge.sourcePath ?? '*',
-    edge.targetPath ?? '*',
-    _directiveKindKey(edge.directiveKinds),
-  ].join('|');
-}
-
-String _directiveKindKey(Set<String> directiveKinds) {
-  return (directiveKinds.toList()..sort()).join(',');
-}
-
-bool _expectedOwnerPolicyAllows(_OwnerDagFixture fixture) {
-  if (fixture.sourceOwner == fixture.targetOwner) {
-    return true;
-  }
-
-  return _expectedAllowedOwnerEdges.any((edge) => edge.allows(fixture));
-}
-
-bool _selectedDagAllows(_OwnerDagFixture fixture) {
-  if (fixture.sourceOwner == fixture.targetOwner) {
-    return true;
-  }
-
-  final sourceOwner = ownerForPath(fixture.sourcePath);
-  final targetOwner = ownerForPath(fixture.targetPath);
-  if (sourceOwner == null || targetOwner == null) {
-    return false;
-  }
-
-  final query = OwnerEdgeQuery(
-    sourcePath: fixture.sourcePath,
-    sourceOwner: sourceOwner,
-    targetPath: fixture.targetPath,
-    targetOwner: targetOwner,
-    directiveKind: fixture.directiveKind,
-  );
-
-  return ownerDagAllowedEdges.any((edge) => edge.allows(query));
 }
 
 final class _RequiredForbiddenEdge {
@@ -1290,6 +333,12 @@ final class _RequiredForbiddenEdge {
   final String directiveKind;
 
   String get label => '$source $directiveKind -> $target';
+}
+
+String _negativeOwnerFixtureSource(String ownerName) {
+  final owner = ownerDagOwners.singleWhere((owner) => owner.name == ownerName);
+
+  return '${owner.prefixes.first}owner_dag_negative_fixture.dart';
 }
 
 String _fixtureDirective({

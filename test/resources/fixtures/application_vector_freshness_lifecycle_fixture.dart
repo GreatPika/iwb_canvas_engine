@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

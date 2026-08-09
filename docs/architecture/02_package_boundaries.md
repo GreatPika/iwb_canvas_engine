@@ -151,7 +151,7 @@ The new package is rooted at the repository top level:
         pointer_adapter.dart
         main_painter.dart
         overlay_painter.dart
-        image_bridge.dart
+        asset_bridge.dart
   test/
     api_contract/
     oracle/

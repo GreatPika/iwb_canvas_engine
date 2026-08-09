@@ -427,14 +427,14 @@ void _expectSparseValidationFailures() {
     throwsA(isA<CanvasDataException>()),
   );
   expect(
-    () => session.addElement(
+    session.addElement(
       CanvasImageElement(
         id: CanvasElementId('image-missing'),
         resourceId: CanvasResourceId('missing'),
         size: const Size(1, 1),
       ),
     ),
-    throwsA(isA<CanvasDataException>()),
+    CanvasElementId('image-missing'),
   );
   expect(
     () => session.updateElement(

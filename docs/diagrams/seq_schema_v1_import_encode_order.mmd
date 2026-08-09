@@ -4,6 +4,7 @@ sequenceDiagram
 
   actor App as Application
   participant API as Public runtime or codec API
+  participant InternalCaller as Internal codec/test/tool caller
   participant Runtime as RuntimeRoot
   participant Codec as CodecBoundary
   participant Schema as Schema v1 validators
@@ -64,14 +65,13 @@ sequenceDiagram
     end
   end
 
-  Note over API,Codec: Explicit DTO decode helpers are codec-local and are not root-barrel API.
-  API->>Codec: codec-local explicit schema v1 decode request
+  Note over InternalCaller,Codec: Explicit DTO decode helpers are codec-local and are not root-barrel API.
+  InternalCaller->>Codec: codec-local explicit schema v1 decode request
   Codec->>Codec: canonical reader traverses schema v1 input
   Codec->>DecodeSink: emit dependency-neutral import events
   DecodeSink-->>Codec: materialized CanvasDocument DTO
   Codec->>Codec: decoder-owned duplicate/absent/wrong-kind relationship validation
-  Codec-->>API: CanvasDocument
-  API-->>App: decoded public DTO
+  Codec-->>InternalCaller: CanvasDocument
 
   App->>API: encodeCanvasDocument / encodeCanvasDocumentToJson(document)
   API->>Codec: encode request

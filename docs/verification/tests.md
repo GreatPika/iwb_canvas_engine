@@ -28,6 +28,12 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api_contract.public_integration_compile_fixture`
 - `test.api_contract.prepared_vector_public_api`
+- `test.api.canvas_prepared_vector_lifecycle`
+- `test.api.vector_preparation_cleanup`
+- `test.api.vector_preparation_context`
+- `test.api.vector_preparation_input_failure`
+- `test.api.vector_preparation_private_adapter`
+- `test.api.vector_preparation_retention`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.store_projection_checks`
 - `test.guardrails.selection_boundary_checks`
@@ -42,8 +48,8 @@ Required tests:
 - `test.diagnostics.sanitizer_and_public_projection`
 - `test.diagnostics.disabled_no_alloc_hot_path`
 - `test.diagnostics.diagnostics_public_surface`
-- `test.resources.sync_image_resolver`
-- `test.resources.app_owned_image_not_disposed`
+- `test.resources.sync_resource_resolver`
+- `test.resources.app_owned_resource_asset_not_disposed`
 - `test.resources.resource_dirty`
 - `test.resources.mark_all_resources_dirty`
 - `test.resources.missing_result_suppressed_per_frame`
@@ -53,7 +59,7 @@ Required tests:
 - `test.resources.resolver_exception_placeholder`
 - `test.resources.resolver_reentrancy_rejected`
 - `test.resources.application_vector_freshness_lifecycle`
-- `test.resources.resource_image_cache_memory_accounting`
+- `test.resources.resource_asset_cache_memory_accounting`
 - `test.api.selection_port`
 - `test.api.selection_transform_commands`
 - `test.api.command_port_actions`
@@ -109,6 +115,7 @@ Required tests:
 - `test.spatial.invalid_index_fallback`
 - `test.spatial.runtime_delivery_order`
 - `test.frame.main_overlay_capture`
+- `test.frame.paint_asset_binding_service`
 - `test.frame.frame_record_painter_boundary`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.frame_spatial_paint_admission`
@@ -173,6 +180,13 @@ Required tests:
 - `test/api_contract/public_signature_shape_test.dart`
 - `test/api_contract/id_validation_no_extension_type_escape_test.dart`
 - `test/api_contract/public_integration_compile_fixture_test.dart`
+- `test/api_contract/prepared_vector_public_api_test.dart`
+- `test/api/canvas_prepared_vector_lifecycle_test.dart`
+- `test/api/vector_preparation_cleanup_test.dart`
+- `test/api/vector_preparation_context_test.dart`
+- `test/api/vector_preparation_input_failure_test.dart`
+- `test/api/vector_preparation_private_adapter_test.dart`
+- `test/api/vector_preparation_retention_test.dart`
 - `test/api_contract/public_facade_wrapper_test.dart`
 - `test/contracts/contract_declaration_shape_test.dart`
 - `test/contracts/internal_seam_shape_test.dart`
@@ -208,8 +222,9 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/diagnostics/sanitizer_and_public_projection_test.dart`
 - `test/diagnostics/disabled_no_alloc_hot_path_test.dart`
 - `test/diagnostics/diagnostics_public_surface_test.dart`
-- `test/resources/sync_image_resolver_test.dart`
-- `test/resources/app_owned_image_not_disposed_test.dart`
+- `test/resources/sync_resource_resolver_test.dart`
+- `test/resources/app_owned_resource_asset_not_disposed_test.dart`
+- `test/resources/resource_asset_cache_memory_accounting_test.dart`
 - `test/runtime/resource_catalog_port_test.dart`
 - `test/resources/resource_kernel_read_port_test.dart`
 - `test/resources/resource_dirty_port_test.dart`
@@ -613,7 +628,7 @@ the release route for that evidence.
   pending-line preservation, committed stroke/line document elements, and typed
   draw action delivery after accepted state publication;
 - appends surface `public consumer uses CanvasSurface pointer and resource bridge`
-  coverage for resource-free zero resolver calls, app-key image/vector resource
+  coverage for resource-free zero resolver calls, app-key image resource
   resolution through `CanvasSurface`, resolver replacement, bounded null
   resolver behavior, Flutter pointer gestures on the public paint host,
   `interactive=false` no-route isolation, and pending-line preservation through
@@ -968,7 +983,7 @@ Current implemented proof:
   entry in the active SurfaceResourceSession and the next session resolve uses
   dirty target again instead of reusing the previous resolved image.
 
-#### `test/resources/resource_image_cache_memory_accounting_test.dart`
+#### `test/resources/resource_asset_cache_memory_accounting_test.dart`
 - proves `ResourceAssetCache` enforces aggregate entry LRU with a
   test-controlled capacity and the current image decoded-byte policy;
 - proves image/vector interleaving shares that LRU, and a vector contributes
@@ -989,10 +1004,11 @@ Current implemented proof:
   reset, default aggregate-entry LRU behavior, dropped sessions, resolver budget
   state, and same-frame null suppression.
 
-#### `test/resources/app_owned_image_not_disposed_test.dart`
+#### `test/resources/app_owned_resource_asset_not_disposed_test.dart`
 - proves entry eviction, byte eviction, target invalidation, all invalidation,
   resolver replacement, document replacement reset, drop, and dispose remove
-  cache references without disposing app-owned `ui.Image` instances;
+  cache references without disposing app-owned `ui.Image` instances or prepared
+  vector wrappers;
 - proves byte eviction is observable as a later resolver call for the evicted
   key while the evicted app-owned image remains undisposed until the fixture
   explicitly disposes it.
@@ -1009,6 +1025,43 @@ Current implemented proof:
 - compiles the permitted root-barrel preparation use and rejects external access
   to prepared/vector diagnostics, raw Picture, codec-local decode helpers,
   internal helpers, and the upstream vector type.
+
+#### `test/api/canvas_prepared_vector_lifecycle_test.dart`
+- proves the wrapper retires the exact prepared `Picture` before native disposal
+  under non-interfering observation hooks, is idempotent, and rejects later
+  internal Picture access.
+
+#### `test/api/vector_preparation_cleanup_test.dart`
+- proves an intrinsically invalid prepared Picture is disposed exactly once
+  before preparation reports the bounded intrinsic-size validation failure.
+
+#### `test/api/vector_preparation_context_test.dart`
+- proves preparation uses invocation-time direction after its context unmounts
+  and, after settlement, retains no invocation context through engine or
+  upstream ownership.
+
+#### `test/api/vector_preparation_input_failure_test.dart`
+- proves the supplied view limit is rejected before preparation, selected
+  malformed-input failures map to the bounded public error, and an
+  assertion-only accepted malformed witness prevents an exhaustive-validity
+  claim.
+
+#### `test/api/vector_preparation_private_adapter_test.dart`
+- proves preparation consumes caller bytes without asset-bundle, file, or
+  network lookup.
+
+#### `test/api/vector_preparation_retention_test.dart`
+- proves a nonzero-offset caller view is independent after invocation and
+  settled preparations retain no copied input snapshots through engine or
+  upstream ownership.
+
+#### `test/frame/frame_record_painter_boundary_test.dart`
+- proves direct prepared-Picture painting uses target clipping, ordered
+  translate/independent scale/`drawPicture`/restore operations, and intrinsic
+  size rather than document natural size as its source extent;
+- proves zero and full vector opacity create no group layer, while each partial
+  vector record creates exactly one target-bounded group layer with correct
+  compositing.
 
 #### `test/resources/mark_all_resources_dirty_test.dart`
 - proves markAllResourcesDirty() clears the active SurfaceResourceSession

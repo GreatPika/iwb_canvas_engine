@@ -23,7 +23,6 @@ void main() {
     );
     expect(_implementedEditMethodsMissingFromOperationMatrix(), isEmpty);
   });
-
 }
 
 Set<String> _operationMatrixRowsCoveredByFixture() {

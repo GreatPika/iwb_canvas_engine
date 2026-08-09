@@ -1,3 +1,7 @@
+// The VM service protocol needs these direct imports for connection, object
+// identity, retaining paths, inbound references, and typed-data inspection.
+// ignore_for_file: number-of-external-imports
+
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:developer' as developer;
@@ -9,6 +13,9 @@ import 'package:vm_service/vm_service_io.dart';
 
 typedef VmOwnershipTerminalPredicate = bool Function(VmRetentionSource source);
 
+// This class owns one bounded VM protocol traversal; splitting it would hide
+// the connection, object identity, and retaining/inbound ownership ordering.
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class VmRetentionObserver {
   VmRetentionObserver._(this._service, this._isolateId);
 
@@ -87,6 +94,9 @@ final class VmRetentionObserver {
     );
   }
 
+  // The observation records each bounded inbound ownership chain in full.
+  // Keeping source context beside queued objects makes release evidence legible.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
   Future<_InboundOwnershipTraversal> _collectInboundOwnership(
     String targetId, {
     required VmOwnershipTerminalPredicate isTerminalOwnershipRoot,
@@ -170,6 +180,9 @@ final class VmRetentionObserver {
 
   Future<void> dispose() => _service.dispose();
 
+  // The census reads anchor identity, exact bytes, and all bounded candidates
+  // atomically; splitting it would hide the snapshot-identity comparison.
+  // ignore: cyclomatic-complexity, halstead-volume
   Future<VmTypedDataCensus> censusUint8ListsWithBytes(
     Uint8List expected,
   ) async {

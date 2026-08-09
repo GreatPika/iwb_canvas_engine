@@ -19,7 +19,7 @@ Required tests:
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.surface.surface_frame_output_cache`
-- `test.resources.resource_image_cache_memory_accounting`
+- `test.resources.resource_asset_cache_memory_accounting`
 Guardrails:
 - `cache.keys_use_next_revisions_only`
 - `cache.hot_caches_have_capacity_eviction`

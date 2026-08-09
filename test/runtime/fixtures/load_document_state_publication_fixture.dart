@@ -97,9 +97,12 @@ void _registerResourceRelationshipFactPreservationTests() {
       returnsNormally,
     );
   });
-  test('wrong image resource kind leaves runtime output and facts unchanged', () {
-    expect(_expectWrongImageResourceKindHasNoSideEffects, returnsNormally);
-  });
+  test(
+    'wrong image resource kind leaves runtime output and facts unchanged',
+    () {
+      expect(_expectWrongImageResourceKindHasNoSideEffects, returnsNormally);
+    },
+  );
 }
 
 void _registerFailedLoadCase(
@@ -330,11 +333,7 @@ void _expectResourceRelationshipLoadHasNoSideEffects(
     () => root.edits.loadDocumentFromJson(json),
     throwsA(
       isA<CanvasDataException>()
-          .having(
-            (error) => error.code,
-            'code',
-            expectedCode,
-          )
+          .having((error) => error.code, 'code', expectedCode)
           .having((error) => error.path, 'path', expectedPath),
     ),
   );

@@ -76,6 +76,8 @@ CommitDeliveryResult _applyPostInstallPlan(
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
       installSparseCommit: (_) => events.add('sparse-document'),
+      installPreparedMaterializedCommit: (_) =>
+          events.add('prepared-materialized-document'),
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (_, _) {
@@ -122,6 +124,8 @@ void _expectEmptyApplyResult() {
       installDocument: (_, _) => events.add('document'),
       replaceDocument: (_, _) => events.add('replacement'),
       installSparseCommit: (_) => events.add('sparse-document'),
+      installPreparedMaterializedCommit: (_) =>
+          events.add('prepared-materialized-document'),
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (_, _) {

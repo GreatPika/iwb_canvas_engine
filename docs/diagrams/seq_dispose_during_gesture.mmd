@@ -76,6 +76,8 @@ sequenceDiagram
 
     Runtime->>Session: drop session for active SurfaceResourceSession
     Session->>Cache: drop resource cache and suppression borrows
+    Session->>Surface: identity-aware release of all retained main-output resource borrows
+    Surface->>Surface: remove retained main-output resource bindings
     Note over Session,Resolver: App-owned resource assets and the app resolver are not disposed by the engine.
 
     Runtime->>Actions: close stream

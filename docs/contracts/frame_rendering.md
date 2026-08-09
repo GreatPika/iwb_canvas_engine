@@ -19,6 +19,7 @@ Related diagrams:
 Required tests:
 - `test.store.no_projection_hot_path`
 - `test.frame.main_overlay_capture`
+- `test.frame.paint_asset_binding_service`
 - `test.frame.frame_record_painter_boundary`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.frame_spatial_paint_admission`

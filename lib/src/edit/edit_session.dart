@@ -19,6 +19,7 @@ import 'commit_compiler.dart';
 import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'element_update_application.dart';
+import 'resource_edit_policy.dart';
 import 'touched_set_builder.dart';
 
 // CanvasEdit is intentionally represented by one session handle: the stale
@@ -559,7 +560,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (after == null) {
       return false;
     }
-    _validateSparseElementResourceReferences(after);
     final compiledUpdate = const CommitCompiler().compileElementUpdate(
       before: before,
       after: after,
@@ -619,7 +619,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return _materializedDraft.upsertResource(resource);
     }
     final current = _resourceById(resource.id);
-    if (current != null && _sameResource(current, resource)) {
+    if (current != null && hasSameResourceFacts(current, resource)) {
       return false;
     }
     _trackSparseResourceUpsert(resource.id);
@@ -882,7 +882,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
         path: 'elements.id',
       );
     }
-    _validateSparseElementResourceReferences(element);
   }
 
   bool _admitSparseLayer(CanvasLayerId id, {int? index}) {
@@ -1024,9 +1023,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   bool _isResourceReferenced(CanvasResourceId id) {
-    final localReference = _elementOverrides.values.any((element) {
-      return element is CanvasImageElement && element.resourceId == id;
-    });
+    final localReference = _elementOverrides.values.any(
+      (element) => elementReferencesResource(element, id),
+    );
     if (localReference) {
       return true;
     }
@@ -1037,21 +1036,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return _facts.isResourceReferenced(id);
     }
 
-    return _acceptedElements().any((element) {
-      return element is CanvasImageElement && element.resourceId == id;
-    });
-  }
-
-  void _validateSparseElementResourceReferences(CanvasElement element) {
-    if (element case CanvasImageElement(:final resourceId)) {
-      if (_resourceById(resourceId) == null) {
-        throw CanvasDataException(
-          code: CanvasDataErrorCode.missingResourceReference,
-          message: 'image element references a missing resource.',
-          path: 'image.resourceId',
-        );
-      }
-    }
+    return _acceptedElements().any(
+      (element) => elementReferencesResource(element, id),
+    );
   }
 
   bool get _canUseCommittedResourceReferenceFact {
@@ -1130,17 +1117,6 @@ final class _SparseClearCandidate {
   final List<CanvasElementId> removedElementIds;
   final List<CanvasElementId> removedBackgroundElementIds;
   final List<CanvasResourceId> removedResourceIds;
-}
-
-bool _sameResource(CanvasResource left, CanvasResource right) {
-  return left is CanvasImageResource &&
-      right is CanvasImageResource &&
-      left.id == right.id &&
-      left.source == right.source &&
-      left.mimeType == right.mimeType &&
-      left.contentHash == right.contentHash &&
-      left.byteLength == right.byteLength &&
-      left.metadata == right.metadata;
 }
 
 int _clampedSparseInsertIndex(int? requestedIndex, int length) {

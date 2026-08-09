@@ -627,10 +627,23 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot holds the nullable active ResourceSessionReleaseSink and forwards accepted target/all resource, resolver-replacement, reset, and detach release to the active SurfaceResourceSession before publication/dispose. The active session removes matching cache/suppression borrows before its identity-aware CanvasSurface callback removes matching retained main-output borrows; a stale identity does not mutate current output. Runtime contains failed release/reset targets by clearing the failed sink or dropping the failed session so accepted edit/load/dirty publication still completes, without ResourceKernel owning application resource borrows or session cache entries.
+      - RuntimeRoot retains the generic ResourceSessionReleaseSink port. The resource contract defines that port's target/all release responsibility; delivery ordering, two-borrow removal, stale identity, and contained post-acceptance failure are owned by the source contracts and behavioral owners rather than inferred from this composition fact.
     actual:
       compositionFields:
         - ResourceSessionReleaseSink
+  - id: runtime.root.manages_active_resource_session_lifecycle
+    from: runtime.root
+    to: resource.surface_session
+    kind: resource_lifecycle
+    status: required
+    sourceDocs:
+      - path: docs/contracts/resources.md
+      - path: docs/architecture/01_runtime_ownership.md
+    evidence:
+      - RuntimeRoot retains SurfaceResourceSessionLifecycle separately from the target/all release port. The source contracts and behavioral owners define its document-replacement reset and active-session drop behavior, including synchronous retirement of session and retained-output borrows without application asset disposal.
+    actual:
+      compositionFields:
+        - SurfaceResourceSessionLifecycle
   - id: runtime.root.finalizes_user_actions
     from: runtime.root
     to: api.canvas_runtime
@@ -786,6 +799,20 @@ edges:
       imports:
         - lib/src/api/canvas_runtime.dart
         - lib/src/api/canvas_runtime_surface_bridge.dart
+  - id: flutter.surface.depends_on_resource_session
+    from: flutter.surface
+    to: resource.surface_session
+    kind: resource_session_dependency
+    status: required
+    sourceDocs:
+      - path: docs/architecture/01_runtime_ownership.md
+      - path: docs/contracts/public_api_v1.md
+      - path: docs/contracts/resources.md
+    evidence:
+      - Flutter surface integration has a direct internal dependency on the concrete SurfaceResourceSession lifecycle boundary. The source contracts and behavioral owners define surface creation, resolver replacement, identity-aware retained-output callbacks, and application ownership; this graph edge claims only that direct dependency.
+    actual:
+      imports:
+        - lib/src/resources/surface_resource_session.dart
 placeholders:
   - id: runtime.canvas_runtime.camera.current_placeholder
     node: api.canvas_runtime
@@ -1399,6 +1426,8 @@ sourceCoverage:
       - resource.surface_session
       - runtime.root.owns_resource_kernel
       - runtime.root.releases_active_resource_session
+      - runtime.root.manages_active_resource_session_lifecycle
+      - flutter.surface.depends_on_resource_session
       - frame.renderer.uses_surface_resource_session
   - sectionId: section_10_runtime_data_model
     disposition: graph_obligation

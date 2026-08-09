@@ -5,10 +5,13 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import 'fixtures/vector_preparation_fixture.dart';
+import '../support/vector_preparation_fixture.dart';
 
 const _vectorByteLimit = 32 * 1024 * 1024;
 
+// Boundary and malformed inputs share one Picture-hook scope so no publication
+// is checked in the same ownership sequence rather than through split helpers.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test(
     'preparation bounds input views and classifies selected failures',
@@ -73,7 +76,7 @@ void main() {
         '--disable-analytics',
         'run',
         '--no-enable-asserts',
-        'test/preparation/fixtures/assertion_only_vector_codec_probe.dart',
+        'test/api/fixtures/assertion_only_vector_codec_probe.dart',
       ]);
 
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');

@@ -3,10 +3,10 @@ import 'package:test/test.dart';
 import '../support/flutter_in_package_test_harness.dart';
 
 void main() {
-  test('surface resource session leaves app-owned images alive', () {
+  test('resource asset cache accounts for decoded image bytes', () {
     return expectLater(
       runFlutterInPackageTest(
-        'test/resources/fixtures/app_owned_image_not_disposed_fixture.dart',
+        'test/resources/fixtures/resource_asset_cache_memory_accounting_fixture.dart',
       ),
       completes,
     );

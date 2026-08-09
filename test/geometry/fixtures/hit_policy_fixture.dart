@@ -48,7 +48,7 @@ void _testBounds() {
 
 // Sized bounds and the three owner-observable vector admissions form one
 // geometry scenario; separating them would obscure their shared immutable row.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _testVectorSizedBoundsAndBoxHit() {
   test('vector size owns bounds and box hit testing', () {
     final vector = _facts(
@@ -56,6 +56,7 @@ void _testVectorSizedBoundsAndBoxHit() {
         id: 'vector',
         kind: CanvasElementKind.vector,
         size: Size(20, 10),
+        naturalSize: Size(200, 100),
         hitPadding: 2,
       ),
     );
@@ -68,11 +69,22 @@ void _testVectorSizedBoundsAndBoxHit() {
       isTrue,
     );
     expect(
+      const HitTestPolicy().exactHit(point: const Offset(50, 0), facts: vector),
+      isFalse,
+    );
+    expect(
       const HitTestPolicy().exactMarquee(
         marquee: const Rect.fromLTRB(-2, -2, 2, 2),
         facts: vector,
       ),
       isTrue,
+    );
+    expect(
+      const HitTestPolicy().exactMarquee(
+        marquee: const Rect.fromLTRB(48, -2, 52, 2),
+        facts: vector,
+      ),
+      isFalse,
     );
     expect(
       const HitTestPolicy().exactEraserHit(
@@ -84,6 +96,17 @@ void _testVectorSizedBoundsAndBoxHit() {
         facts: vector,
       ),
       isTrue,
+    );
+    expect(
+      const HitTestPolicy().exactEraserHit(
+        corridor: const GeometryPolicy().corridorEnvelope(
+          points: [const Offset(50, 0)],
+          eraserThickness: 2,
+          hitPadding: 0,
+        ),
+        facts: vector,
+      ),
+      isFalse,
     );
   });
 }
@@ -836,6 +859,7 @@ FrameElementFacts _facts(_FactSpec spec) {
     isTransformable: true,
     metadata: const CanvasMetadata.empty(),
     size: spec.size,
+    naturalSize: spec.naturalSize,
     start: spec.start,
     end: spec.end,
     thickness: spec.thickness,
@@ -903,6 +927,7 @@ final class _FactSpec {
     this.orderToken = 0,
     this.locationKind = FrameElementLocationKind.content,
     this.size,
+    this.naturalSize,
     this.hitPadding = 0,
     this.isVisible = true,
     this.isSelectable = true,
@@ -926,6 +951,7 @@ final class _FactSpec {
   final int orderToken;
   final FrameElementLocationKind locationKind;
   final Size? size;
+  final Size? naturalSize;
   final double hitPadding;
   final bool isVisible;
   final bool isSelectable;

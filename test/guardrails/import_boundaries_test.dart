@@ -13,7 +13,8 @@ void main() {
   _testApiContractWrapperExports();
   _testVectorPreparationImportBoundary();
   _testVectorPreparationRuntimeBoundary();
-  _testVectorPreparationDependencyRuntimeBoundary();
+  _testVectorPreparationDependencyRuntimeRejectsForbiddenImports();
+  _testVectorPreparationDependencyRuntimeAllowsApprovedImports();
   _testRetiredFlutterBridgeOwnerCannotBeImported();
   _testFrameCannotUseResourceCatalogPort();
   _testFrameCannotImportApiFacades();
@@ -217,13 +218,16 @@ void _testApiContractWrapperExports() {
   });
 }
 
+// Importer location, uniqueness, and package restrictions form one closure
+// rule; splitting them would hide the root relationship under test.
+// ignore: source-lines-of-code
 void _testVectorPreparationImportBoundary() {
   test(
-    'only the vector preparation adapter may import vector graphics or engine IO',
+    'one API-owned vector graphics importer roots the preparation closure',
     () {
       expect(
         checkCoreBoundaryFile(
-          path: 'lib/src/api/canvas_vector_preparation.dart',
+          path: 'lib/src/api/relocated_vector_preparation.dart',
           content:
               "import 'package:vector_graphics/vector_graphics.dart' as vg;\n",
         ),
@@ -231,11 +235,8 @@ void _testVectorPreparationImportBoundary() {
       );
 
       for (final fixture in {
-        'lib/src/api/vector_preparation_helper.dart':
+        'lib/src/runtime/vector_preparation_helper.dart':
             "import 'package:vector_graphics/vector_graphics.dart';\n",
-        'lib/src/api/vector_preparation_io_helper.dart': "import 'dart:io';\n",
-        'lib/src/api/vector_preparation_network_helper.dart':
-            "import 'package:http/http.dart';\n",
         'lib/src/contracts/public/vector_preparation_codec_helper.dart':
             "import 'package:vector_graphics_codec/vector_graphics_codec.dart';\n",
       }.entries) {
@@ -251,10 +252,35 @@ void _testVectorPreparationImportBoundary() {
           reason: fixture.key,
         );
       }
+
+      expect(
+        checkVectorPreparationDependencyBoundaryFiles({
+          'lib/src/api/relocated_vector_preparation.dart':
+              "import 'package:vector_graphics/vector_graphics.dart';\n",
+          'lib/src/api/second_vector_preparation.dart':
+              "import 'package:vector_graphics/vector_graphics.dart';\n",
+        }),
+        contains(isA<GuardrailViolation>()),
+      );
+
+      for (final fixture in {
+        'lib/src/runtime/unrelated_io_helper.dart': "import 'dart:io';\n",
+        'lib/src/runtime/unrelated_network_helper.dart':
+            "import 'package:http/http.dart';\n",
+      }.entries) {
+        expect(
+          checkCoreBoundaryFile(path: fixture.key, content: fixture.value),
+          isEmpty,
+          reason: fixture.key,
+        );
+      }
     },
   );
 }
 
+// The routes share one caller-bytes-only assertion; splitting the list would
+// obscure that every asset-loading capability must produce the same violation.
+// ignore: source-lines-of-code
 void _testVectorPreparationRuntimeBoundary() {
   test(
     'vector preparation adapter cannot load assets or intercept Flutter errors',
@@ -284,6 +310,47 @@ import 'package:flutter/services.dart';
 Future<ByteData> loadNetworkVectorBytes(NetworkAssetBundle assets) =>
     assets.load('vector.vec');
 ''',
+        '''
+import 'package:flutter/widgets.dart';
+
+Future<String> loadDefaultVectorString(BuildContext context) =>
+    DefaultAssetBundle.of(context).loadString('vector.vec');
+''',
+        '''
+import 'package:flutter/widgets.dart';
+
+Future<ByteData> loadDefaultVectorBuffer(BuildContext context) =>
+    DefaultAssetBundle.of(context).loadBuffer('vector.vec');
+''',
+        '''
+import 'package:flutter/widgets.dart';
+
+Future<Object> loadDefaultVectorData(BuildContext context) =>
+    DefaultAssetBundle.of(context).loadStructuredData(
+      'vector.vec',
+      (value) async => value,
+    );
+''',
+        '''
+import 'dart:ui' as ui;
+
+Future<ui.ImmutableBuffer> loadVectorAsset() =>
+    ui.ImmutableBuffer.fromAsset('vector.vec');
+''',
+        '''
+import 'dart:ui' as ui;
+
+Future<ui.ImmutableBuffer> loadVectorFile() =>
+    ui.ImmutableBuffer.fromFilePath('/tmp/vector.vec');
+''',
+        '''
+import 'dart:ui' as ui;
+
+Future<ui.ImmutableBuffer> loadVectorAssetTearOff() {
+  final load = ui.ImmutableBuffer.fromAsset;
+  return load('vector.vec');
+}
+''',
       ]) {
         expect(
           checkCoreBoundaryFile(
@@ -303,51 +370,15 @@ Future<ByteData> loadNetworkVectorBytes(NetworkAssetBundle assets) =>
   );
 }
 
-void _testVectorPreparationDependencyRuntimeBoundary() {
+void _testVectorPreparationDependencyRuntimeRejectsForbiddenImports() {
   test(
     'vector preparation dependency closure rejects asset and global error helpers',
     () {
-      for (final helper in {
-        'vector_preparation_root_bundle_helper.dart': '''
-import 'package:flutter/services.dart';
-
-Future<ByteData> loadVectorBytes() => rootBundle.load('vector.vec');
-''',
-        'vector_preparation_asset_bundle_helper.dart': '''
-import 'package:flutter/services.dart';
-
-Future<ByteData> loadVectorBytes(AssetBundle assets) =>
-    assets.load('vector.vec');
-''',
-        'vector_preparation_default_asset_bundle_helper.dart': '''
-import 'package:flutter/widgets.dart';
-
-Future<ByteData> loadVectorBytes(BuildContext context) =>
-    DefaultAssetBundle.of(context).load('vector.vec');
-''',
-        'vector_preparation_platform_asset_bundle_helper.dart': '''
-import 'package:flutter/services.dart';
-
-Future<ByteData> loadVectorBytes(PlatformAssetBundle assets) =>
-    assets.load('vector.vec');
-''',
-        'vector_preparation_network_asset_bundle_helper.dart': '''
-import 'package:flutter/services.dart';
-
-Future<ByteData> loadVectorBytes(NetworkAssetBundle assets) =>
-    assets.load('vector.vec');
-''',
-        'vector_preparation_flutter_error_helper.dart': '''
-import 'package:flutter/foundation.dart' as foundation;
-
-void installVectorErrorHandler() {
-  foundation.FlutterError.onError = (details) {};
-}
-''',
-      }.entries) {
+      for (final helper in _forbiddenVectorPreparationHelpers.entries) {
         expect(
           checkVectorPreparationDependencyBoundaryFiles({
-            'lib/src/api/canvas_vector_preparation.dart':
+            'lib/src/api/relocated_vector_preparation.dart':
+                "import 'package:vector_graphics/vector_graphics.dart';\n"
                 "import '${helper.key}';\n",
             'lib/src/api/${helper.key}': helper.value,
           }),
@@ -364,6 +395,75 @@ void installVectorErrorHandler() {
     },
   );
 }
+
+void _testVectorPreparationDependencyRuntimeAllowsApprovedImports() {
+  test('vector preparation closure allows capability-free SDK imports', () {
+    expect(
+      checkVectorPreparationDependencyBoundaryFiles({
+        'lib/src/api/relocated_vector_preparation.dart':
+            "import 'package:vector_graphics/vector_graphics.dart';\n"
+            "import 'vector_preparation_sdk_helper.dart';\n",
+        'lib/src/api/vector_preparation_sdk_helper.dart':
+            "import 'dart:convert';\n"
+            "import 'dart:math';\n"
+            "import 'package:flutter/gestures.dart';\n"
+            "import 'package:characters/characters.dart';\n",
+      }),
+      isEmpty,
+    );
+  });
+}
+
+const _forbiddenVectorPreparationHelpers = <String, String>{
+  'vector_preparation_root_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes() => rootBundle.load('vector.vec');
+''',
+  'vector_preparation_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(AssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+  'vector_preparation_default_asset_bundle_helper.dart': '''
+import 'package:flutter/widgets.dart';
+
+Future<ByteData> loadVectorBytes(BuildContext context) =>
+    DefaultAssetBundle.of(context).load('vector.vec');
+''',
+  'vector_preparation_platform_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(PlatformAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+  'vector_preparation_network_asset_bundle_helper.dart': '''
+import 'package:flutter/services.dart';
+
+Future<ByteData> loadVectorBytes(NetworkAssetBundle assets) =>
+    assets.load('vector.vec');
+''',
+  'vector_preparation_flutter_error_helper.dart': '''
+import 'package:flutter/foundation.dart' as foundation;
+
+void installVectorErrorHandler() {
+  foundation.FlutterError.onError = (details) {};
+}
+''',
+  'vector_preparation_immutable_buffer_tear_off_helper.dart': '''
+import 'dart:ui' as ui;
+
+Future<ui.ImmutableBuffer> loadVectorBytes() {
+  final load = ui.ImmutableBuffer.fromAsset;
+  return load('vector.vec');
+}
+''',
+  'vector_preparation_io_helper.dart': "import 'dart:io';\n",
+  'vector_preparation_http_helper.dart': "import 'package:http/http.dart';\n",
+  'vector_preparation_other_network_helper.dart':
+      "import 'package:dio/dio.dart';\n",
+};
 
 void _testRetiredFlutterBridgeOwnerCannotBeImported() {
   test('retired flutter bridge owner remains a forbidden dependency', () {

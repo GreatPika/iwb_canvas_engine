@@ -227,8 +227,8 @@
   - test.api_contract.public_readable_union_variants
   - test.codec.schema_v1.resources_appkey_only
   - test.codec.schema_v1.reject_unknown_resource_source_kind
-  - test.resources.sync_image_resolver
-  - test.resources.app_owned_image_not_disposed
+  - test.resources.sync_resource_resolver
+  - test.resources.app_owned_resource_asset_not_disposed
   - test.resources.resource_dirty
   - test.resources.mark_all_resources_dirty
   - test.resources.missing_result_suppressed_per_frame
@@ -238,7 +238,7 @@
   - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
   - test.resources.application_vector_freshness_lifecycle
-  - test.resources.resource_image_cache_memory_accounting
+  - test.resources.resource_asset_cache_memory_accounting
   do_not_assume:
   - no engine IO
   - no asset-bundle loading
@@ -492,6 +492,7 @@
   tests:
   - test.store.no_projection_hot_path
   - test.frame.main_overlay_capture
+  - test.frame.paint_asset_binding_service
   - test.frame.frame_record_painter_boundary
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.frame.frame_spatial_paint_admission
@@ -606,7 +607,7 @@
   - test.frame.paint_plan_excludes_selection_state
   - test.frame.camera_pan_preserves_ordinary_paint_plan
   - test.surface.surface_frame_output_cache
-  - test.resources.resource_image_cache_memory_accounting
+  - test.resources.resource_asset_cache_memory_accounting
   do_not_assume:
   - no unbounded cache owner sprawl
   - no cache keys tied to non-owned snapshot facts
@@ -793,6 +794,12 @@
   - test.api_contract.public_equality_policy
   - test.api_contract.public_integration_compile_fixture
   - test.api_contract.prepared_vector_public_api
+  - test.api.canvas_prepared_vector_lifecycle
+  - test.api.vector_preparation_cleanup
+  - test.api.vector_preparation_context
+  - test.api.vector_preparation_input_failure
+  - test.api.vector_preparation_private_adapter
+  - test.api.vector_preparation_retention
   - test.guardrails.import_boundaries
   - test.guardrails.store_projection_checks
   - test.guardrails.selection_boundary_checks
@@ -807,8 +814,8 @@
   - test.diagnostics.sanitizer_and_public_projection
   - test.diagnostics.disabled_no_alloc_hot_path
   - test.diagnostics.diagnostics_public_surface
-  - test.resources.sync_image_resolver
-  - test.resources.app_owned_image_not_disposed
+  - test.resources.sync_resource_resolver
+  - test.resources.app_owned_resource_asset_not_disposed
   - test.resources.resource_dirty
   - test.resources.mark_all_resources_dirty
   - test.resources.missing_result_suppressed_per_frame
@@ -818,7 +825,7 @@
   - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
   - test.resources.application_vector_freshness_lifecycle
-  - test.resources.resource_image_cache_memory_accounting
+  - test.resources.resource_asset_cache_memory_accounting
   - test.api.selection_port
   - test.api.selection_transform_commands
   - test.api.command_port_actions
@@ -874,6 +881,7 @@
   - test.spatial.invalid_index_fallback
   - test.spatial.runtime_delivery_order
   - test.frame.main_overlay_capture
+  - test.frame.paint_asset_binding_service
   - test.frame.frame_record_painter_boundary
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.frame.frame_spatial_paint_admission

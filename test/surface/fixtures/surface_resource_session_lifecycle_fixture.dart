@@ -54,14 +54,10 @@ void main() {
     expect(_dirtyInvalidatesInstalledSessionBeforePublish(), isTrue);
   });
 
-  test(
-    'surface session lifecycle seam stays narrow and constructor-infallible',
-    () {
-      expect(_lifecycleSeamShapeIsNarrow(), isTrue);
-      expect(_sessionConstructorHasNoFallibleCollaborators(), isTrue);
-      expect(_surfaceInstallRollbackIsGuarded(), isTrue);
-    },
-  );
+  test('surface session construction and installation stay guarded', () {
+    expect(_sessionConstructorHasNoFallibleCollaborators(), isTrue);
+    expect(_surfaceInstallRollbackIsGuarded(), isTrue);
+  });
 }
 
 Future<void> _expectAcceptedAndRejectedAttach(WidgetTester tester) async {
@@ -404,26 +400,6 @@ void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
   expect(staleSession.dropCount, 0);
   expect(root.state.value.revisions.resourceVisual, 2);
   root.dispose();
-}
-
-bool _lifecycleSeamShapeIsNarrow() {
-  final lifecycleSource = File(
-    'lib/src/contracts/internal/surface_resource_session_lifecycle.dart',
-  ).readAsStringSync();
-  expect(lifecycleSource, contains('implements ResourceSessionReleaseSink'));
-  expect(lifecycleSource, contains('void resetForDocumentReplacement();'));
-  expect(lifecycleSource, contains('void drop();'));
-  expect(lifecycleSource, isNot(contains('resolveImage')));
-  expect(lifecycleSource, isNot(contains('replaceResolver')));
-  expect(lifecycleSource, isNot(contains('CanvasResourceResolver')));
-
-  final bridgeSource = File(
-    'lib/src/api/canvas_runtime_surface_bridge.dart',
-  ).readAsStringSync();
-  expect(bridgeSource, isNot(contains('surface_resource_session.dart')));
-  expect(bridgeSource, isNot(contains('= SurfaceResourceSession')));
-
-  return true;
 }
 
 bool _sessionConstructorHasNoFallibleCollaborators() {

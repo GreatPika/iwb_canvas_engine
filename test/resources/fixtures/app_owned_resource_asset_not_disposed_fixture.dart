@@ -6,7 +6,7 @@ import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.da
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
-import '../../preparation/fixtures/vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 import 'surface_resource_session_test_support.dart';
 
 void main() {

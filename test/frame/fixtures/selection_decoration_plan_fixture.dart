@@ -12,6 +12,9 @@ import 'ordinary_paint_test_support.dart';
 
 // This fixture keeps decoration-key churn and ordinary-key non-churn together
 // so selection invalidation cannot accidentally become an ordinary cache input.
+// Registration stays visible in one owner fixture so each direct placement
+// outcome can be read alongside the current single and multi-selection cases.
+// ignore: source-lines-of-code
 void main() {
   test(
     'selection decoration key includes stable visual inputs',
@@ -30,6 +33,14 @@ void main() {
     'single image is outside box chrome and line or stroke stays outline chrome',
     () => expect(_expectSingleImageBoxChromeAndLineStrokeOutlineChrome(), [
       SelectionDecorationStrokePlacement.outsideBox,
+      SelectionDecorationStrokePlacement.boundsOutline,
+      SelectionDecorationStrokePlacement.boundsOutline,
+    ]),
+  );
+
+  test(
+    'single path and text use bounds-outline chrome',
+    () => expect(_expectSinglePathAndTextOutlineChrome(), [
       SelectionDecorationStrokePlacement.boundsOutline,
       SelectionDecorationStrokePlacement.boundsOutline,
     ]),
@@ -199,6 +210,38 @@ _expectSingleImageBoxChromeAndLineStrokeOutlineChrome() {
   );
 
   return [image.strokePlacement, line.strokePlacement, stroke.strokePlacement];
+}
+
+List<SelectionDecorationStrokePlacement>
+_expectSinglePathAndTextOutlineChrome() {
+  final planner = SelectionDecorationPlanner();
+  final path = _singlePrimitiveFor(
+    planner,
+    _singleSelectionFrame(
+      id: 'path',
+      revision: 6,
+      facts: pathFacts('path', orderToken: 6),
+    ),
+  );
+  final text = _singlePrimitiveFor(
+    planner,
+    _singleSelectionFrame(
+      id: 'text',
+      revision: 7,
+      facts: textFacts('text', orderToken: 7),
+    ),
+  );
+
+  expect(
+    path.strokePlacement,
+    SelectionDecorationStrokePlacement.boundsOutline,
+  );
+  expect(
+    text.strokePlacement,
+    SelectionDecorationStrokePlacement.boundsOutline,
+  );
+
+  return [path.strokePlacement, text.strokePlacement];
 }
 
 SelectionDecorationPrimitive _expectLineStrokeMultiSelectIsGroupBoxChrome() {

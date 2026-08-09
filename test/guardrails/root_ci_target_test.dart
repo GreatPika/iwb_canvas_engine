@@ -73,8 +73,8 @@ void _expectVectorPreparationVmRetentionRoute(List<YamlMap> steps) {
   expect(
     retentionStep['run'],
     'flutter test --enable-vmservice --concurrency=1 '
-    'test/preparation/vector_preparation_retention_test.dart '
-    'test/preparation/vector_preparation_context_test.dart',
+    'test/api/vector_preparation_retention_test.dart '
+    'test/api/vector_preparation_context_test.dart',
   );
 }
 

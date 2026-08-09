@@ -1,6 +1,6 @@
 import 'package:vector_graphics_codec/vector_graphics_codec.dart';
 
-import 'vector_preparation_fixture.dart';
+import '../../support/vector_preparation_fixture.dart';
 
 void main() {
   final response = const VectorGraphicsCodec().decode(

@@ -12,6 +12,8 @@ typedef DocumentInstall =
 typedef DocumentReplace =
     void Function(CommittedDocument document, StoreRevisionDelta delta);
 typedef SparseDocumentInstall = void Function(PreparedSparseStoreCommit commit);
+typedef PreparedMaterializedDocumentInstall =
+    void Function(PreparedMaterializedStoreCommit commit);
 typedef SelectionEffectPrepare =
     PreparedSelectionEffect Function(
       CommitSelectionEffect effect,
@@ -24,11 +26,13 @@ final class CommitDocumentInstallers {
     required this.installDocument,
     required this.replaceDocument,
     required this.installSparseCommit,
+    required this.installPreparedMaterializedCommit,
   });
 
   final DocumentInstall installDocument;
   final DocumentReplace replaceDocument;
   final SparseDocumentInstall installSparseCommit;
+  final PreparedMaterializedDocumentInstall installPreparedMaterializedCommit;
 }
 
 final class CommitSelectionInstallers {
@@ -133,7 +137,7 @@ void _installAcceptedDocument(
     case AcceptedSparseStoreDocument():
       documentInstallers.installSparseCommit(document.commit);
     case AcceptedMaterializedStoreDocument(:final commit):
-      documentInstallers.installDocument(commit.document, commit.revisionDelta);
+      documentInstallers.installPreparedMaterializedCommit(commit);
     case AcceptedUnchangedStoreDocument():
       break;
   }
