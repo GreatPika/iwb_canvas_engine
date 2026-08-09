@@ -27,6 +27,7 @@ Required tests:
 - `test.api_contract.dto_immutability`
 - `test.api_contract.public_equality_policy`
 - `test.api_contract.public_integration_compile_fixture`
+- `test.api_contract.prepared_vector_public_api`
 - `test.guardrails.import_boundaries`
 - `test.guardrails.store_projection_checks`
 - `test.guardrails.selection_boundary_checks`
@@ -51,6 +52,8 @@ Required tests:
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_exception_placeholder`
 - `test.resources.resolver_reentrancy_rejected`
+- `test.resources.application_vector_freshness_lifecycle`
+- `test.resources.resource_image_cache_memory_accounting`
 - `test.api.selection_port`
 - `test.api.selection_transform_commands`
 - `test.api.command_port_actions`
@@ -610,7 +613,7 @@ the release route for that evidence.
   pending-line preservation, committed stroke/line document elements, and typed
   draw action delivery after accepted state publication;
 - appends surface `public consumer uses CanvasSurface pointer and resource bridge`
-  coverage for resource-free zero resolver calls, app-key image resource
+  coverage for resource-free zero resolver calls, app-key image/vector resource
   resolution through `CanvasSurface`, resolver replacement, bounded null
   resolver behavior, Flutter pointer gestures on the public paint host,
   `interactive=false` no-route isolation, and pending-line preservation through
@@ -967,6 +970,8 @@ Current implemented proof:
 #### `test/resources/resource_image_cache_memory_accounting_test.dart`
 - proves `ResourceAssetCache` enforces aggregate entry LRU with a
   test-controlled capacity and the current image decoded-byte policy;
+- proves image/vector interleaving shares that LRU, and a vector contributes
+  zero byte weight while still participating in entry eviction;
 - proves `currentSizeBytes` stays consistent across byte eviction, read
   promotion, same-key replacement, oversized replacement, target invalidation,
   and clear;
@@ -990,6 +995,19 @@ Current implemented proof:
 - proves byte eviction is observable as a later resolver call for the evicted
   key while the evicted app-owned image remains undisposed until the fixture
   explicitly disposes it.
+
+#### `test/resources/application_vector_freshness_lifecycle_test.dart`
+- proves a caller-owned prepared vector is never disposed by the engine, and
+  same-wrapper aliases across resource ids, runtimes, and attached surfaces
+  release before the application disposes it;
+- proves stale/out-of-order preparation completion is disposed immediately
+  without publication, while a current replacement publishes before every old
+  application alias is released and no later paint uses the old wrapper.
+
+#### `test/api_contract/prepared_vector_public_api_test.dart`
+- compiles the permitted root-barrel preparation use and rejects external access
+  to prepared/vector diagnostics, raw Picture, codec-local decode helpers,
+  internal helpers, and the upstream vector type.
 
 #### `test/resources/mark_all_resources_dirty_test.dart`
 - proves markAllResourcesDirty() clears the active SurfaceResourceSession

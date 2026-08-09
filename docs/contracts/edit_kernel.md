@@ -242,6 +242,9 @@ Field taxonomy:
 | `CanvasImageElementUpdate.resourceId` | elementVisual, projection | none | evict | validate referenced resource id; no descriptor-table mutation | main | none |
 | `CanvasImageElementUpdate.size` | bounds, elementVisual, projection | touched update | evict | none | main | none |
 | `CanvasImageElementUpdate.naturalSize` | elementVisual, projection | none | evict | none | main | none |
+| `CanvasVectorElementUpdate.resourceId` | elementVisual, projection | none | evict | validate final referenced descriptor kind; no descriptor-table mutation | main | none |
+| `CanvasVectorElementUpdate.size` | bounds, elementVisual, projection | touched update | evict | none | main | none |
+| `CanvasVectorElementUpdate.naturalSize` | elementVisual, projection | none | evict | none | main | none |
 | `CanvasPathElementUpdate.svgPathData` | bounds, elementVisual, projection | touched update | evict | none | main | none |
 | `CanvasPathElementUpdate.fillColor`, `CanvasPathElementUpdate.strokeColor`, `CanvasPathElementUpdate.strokeWidth`, `CanvasPathElementUpdate.fillRule` | elementVisual, projection; bounds also when stroke width changes paint bounds | touched update only when paint bounds change | evict | none | main | none |
 | `CanvasTextElementUpdate.text`, `CanvasTextElementUpdate.fontSize`, `CanvasTextElementUpdate.align`, `CanvasTextElementUpdate.textDirection`, `CanvasTextElementUpdate.isBold`, `CanvasTextElementUpdate.isItalic`, `CanvasTextElementUpdate.fontFamily`, `CanvasTextElementUpdate.maxWidth`, `CanvasTextElementUpdate.lineHeight` | bounds, elementVisual, projection | touched update when layout or paint bounds change | evict | none | main | none |
@@ -258,6 +261,14 @@ field-effect subroutine, but `CommitCompiler` remains the source-of-truth owner
 for typed invalidation. Resource reference validation is preflighted before
 draft mutation is accepted. Selection normalization effects are installed by
 the selection owner and published atomically with document effects.
+
+The store checks descriptor relationships once against the final sparse or
+materialized candidate, rather than when either resource or element mutation is
+recorded. Consequently an image/vector resource replacement and its referencing
+element may be supplied in either callback order. A missing id is
+`missingResourceReference`; an existing opposite descriptor kind is
+`resourceKindMismatch` at the element reference path. Either rejection leaves
+the committed document, revisions, selection, and frame output untouched.
 
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a

@@ -182,7 +182,8 @@ same-frame null suppression, and budget follow-up throttles belong to the
 current main paint frame. Its typed resource-asset request is selected by the
 captured descriptor subtype, not by nullable MIME data. `FrameAssetBindings`
 retains typed resolve results by resource id; painters consume that immutable
-output and select the current image asset only for image records.
+output and select the matching image or vector asset only for its sealed record
+row.
 
 Surface repaint routing is split before frame output construction. `RuntimeRoot`
 aggregates runtime-owned repaint intent into the internal
@@ -215,9 +216,10 @@ Opacity and layer policy:
 ```text
 - element and stroke opacity are ordinary render inputs applied through primitive paint alpha;
 - ordinary opacity must not create an implicit group opacity or offscreen layer in the hot paint path;
-- any future saveLayer-producing effect must be explicit in RenderElementRecord,
-  budgeted, counted by the frame.paint_candidates offscreen-layer metric, and
-  guarded by a contract update before implementation.
+- a vector record with opacity 0 or 1 uses no layer; a partial-opacity vector
+  record uses exactly one target-bounded layer, then restores it before the
+  next record;
+- this is record-local, never a frame-wide opacity cap or fallback.
 ```
 
 ### 15.2 RenderElementRecord
@@ -227,7 +229,6 @@ Painters receive compact immutable render records, not public `CanvasElement`.
 ```text
 RenderElementRecord
   id
-  family
   generation
   orderToken
   transform
@@ -250,6 +251,7 @@ Family row views:
 
 ```text
 ImageRenderRow: resourceId, size, naturalSize
+VectorRenderRow: resourceId, size, naturalSize
 PathRenderRow: pathDataKey, fillColor, strokeColor, strokeWidth, fillRule
 TextRenderRow: text, fontSize, color, align, direction, bold, italic, underline, fontFamily, maxWidth, lineHeight
 StrokeRenderRow: pointsKey, thickness, color
@@ -317,7 +319,7 @@ primitives; selected-move delta and previewRevision churn while active does not
 rebuild a visually empty decoration plan. Single selection emits one primitive
 for that element when no selected-move preview is active. Multi-select emits one
 group-box primitive whose bounds are the union of selected paint bounds.
-Group-box chrome, single rect chrome, and single image chrome use outside-box
+Group-box chrome, single rect/image/vector chrome use outside-box
 stroke placement so their stroke inner edge aligns with the primitive bounds;
 single line, stroke, text, and path chrome remain bounds/outline placement
 unless a later owner-specific decoration contract changes them. This keeps
@@ -332,6 +334,20 @@ selection decoration state out of ordinary record cache identity, selected move
 supplement records, and static background identity. `MainFramePainter` consumes
 those immutable primitives after the main-record stream so selection chrome
 stays topmost within the main scene.
+
+Vector paint completes an immutable record and binding before painter entry.
+For a resolved vector with primitive alpha zero, it performs no paint work and
+creates no layer. At full alpha it performs, in order: target clip, translate
+to the target origin, independent x/y scale from `intrinsicSize` to target
+`size`, `drawPicture`, and restore without a layer. At partial alpha it uses
+exactly one record-local target-bounded layer around that direct Picture draw.
+It never converts a `Picture` to an image. Missing, failed, or stale bindings
+use the record's sized placeholder and do not alter its geometry.
+
+Unit 5 introduces and completes `RenderElementFamily` as a temporary
+compatibility mirror for all seven rows. It persists unchanged through Unit 6
+while carrying no rendering payload authority; sealed row type does. Unit 7
+retires that mirror after its remaining consumers migrate.
 
 ### 15.4 Render primitive cache misses
 

@@ -30,6 +30,7 @@ Required tests:
 - `test.api_contract.public_equality_policy`
 - `test.api.typed_action_payloads`
 - `test.api_contract.public_integration_compile_fixture`
+- `test.api_contract.prepared_vector_public_api`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.text_editing_port`
@@ -820,6 +821,7 @@ public `CanvasTransform` keeps that complete behavior under the current API name
 ```dart
 enum CanvasElementKind {
   image,
+  vector,
   path,
   text,
   stroke,
@@ -971,6 +973,29 @@ Element families:
 ```dart
 final class CanvasImageElement extends CanvasElement {
   CanvasImageElement({
+    required super.id,
+    required this.resourceId,
+    required this.size,
+    this.naturalSize,
+    super.revision,
+    super.transform,
+    super.opacity,
+    super.hitPadding,
+    super.isVisible,
+    super.isSelectable,
+    super.isLocked,
+    super.isDeletable,
+    super.isTransformable,
+    super.metadata,
+  });
+
+  final CanvasResourceId resourceId;
+  final Size size;
+  final Size? naturalSize;
+}
+
+final class CanvasVectorElement extends CanvasElement {
+  CanvasVectorElement({
     required super.id,
     required this.resourceId,
     required this.size,
@@ -1189,6 +1214,28 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<Size?> naturalSize;
 }
 
+final class CanvasVectorElementUpdate extends CanvasElementUpdate {
+  CanvasVectorElementUpdate({
+    required super.id,
+    super.transform,
+    super.opacity,
+    super.hitPadding,
+    super.isVisible,
+    super.isSelectable,
+    super.isLocked,
+    super.isDeletable,
+    super.isTransformable,
+    super.metadata,
+    this.resourceId = const CanvasFieldUpdate.absent(),
+    this.size = const CanvasFieldUpdate.absent(),
+    this.naturalSize = const CanvasFieldUpdate.absent(),
+  });
+
+  final CanvasFieldUpdate<CanvasResourceId> resourceId;
+  final CanvasFieldUpdate<Size> size;
+  final CanvasFieldUpdate<Size?> naturalSize;
+}
+
 final class CanvasPathElementUpdate extends CanvasElementUpdate {
   CanvasPathElementUpdate({
     required super.id,
@@ -1343,6 +1390,10 @@ Update semantics:
 - dynamic or generated `CanvasElementUpdate.transform` values that are
   non-invertible are rejected with `fieldMustBeInvertible` before draft
   mutation.
+- `CanvasVectorElement` and `CanvasVectorElementUpdate` use the same sparse
+  resourceId, size, and nullable naturalSize shape as image values, but validate
+  at `vector.size` and `vector.naturalSize`; intrinsic prepared-vector size is
+  a paint source extent and never rewrites either document field.
 ```
 
 Changed `CanvasEdit.updateElement` effects are field-granular and are compiled
@@ -1395,7 +1446,14 @@ Edit contract:
 - stale handle operations throw StateError;
 - readDraftDocument may materialize a public document and is not allowed in hot pointer/paint paths;
 - addElement with id collision throws CanvasDataException duplicateElementId;
-- addElement with missing resource reference throws CanvasDataException missingResourceReference;
+- image/vector resource elements with an absent id throw
+  `CanvasDataException(code: CanvasDataErrorCode.missingResourceReference)` at
+  `image.resourceId` or `vector.resourceId`; a present descriptor of the other
+  kind throws the one public `CanvasDataErrorCode.resourceKindMismatch` at the
+  same path;
+- final-candidate relationship admission runs before an edit installs or
+  publishes any partial document, so a resource plus all replacement references
+  may be supplied in either callback order;
 - removeUnusedResource fails with false if resource is referenced by any background/content element, including invisible or locked elements.
 - CanvasEdit.removeElement is a low-level document edit and emits no user action event;
 - CanvasEdit.clearContent is a low-level document edit and emits no user action event.
@@ -1937,6 +1995,16 @@ final class CanvasImageResource extends CanvasResource {
   final String? mimeType;
 }
 
+final class CanvasVectorResource extends CanvasResource {
+  CanvasVectorResource({
+    required super.id,
+    required super.source,
+    super.contentHash,
+    super.byteLength,
+    super.metadata,
+  });
+}
+
 sealed class CanvasResourceSource {
   const CanvasResourceSource();
   factory CanvasResourceSource.appKey(String key) {
@@ -1957,16 +2025,18 @@ final class CanvasAppKeyResourceSource extends CanvasResourceSource {
 }
 ```
 
-Application code may type-test or pattern-match `CanvasImageResource.source` as
+Application code may type-test or pattern-match either resource source as
 `CanvasAppKeyResourceSource` and read `key` without importing `src/**`.
-`CanvasImageResource` is the sole current sealed descriptor kind; its subtype,
-not nullable `mimeType`, defines current image semantics.
+`CanvasImageResource` and `CanvasVectorResource` are the sealed descriptor
+kinds. Their subtype, never nullable `mimeType`, determines descriptor kind;
+the vector descriptor has no MIME inference or serialized vector bytes.
 
 Resolver:
 
 ```dart
 abstract interface class CanvasResourceResolver {
   ui.Image? resolveImage(CanvasImageResource resource);
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource);
 }
 ```
 
@@ -1983,14 +2053,15 @@ v1 resource rules:
 - no file loading;
 - no remote/network loading;
 - resourceResolver is synchronous in v1;
-- all ui.Image objects returned by CanvasResourceResolver are app-owned;
-- the engine never disposes app-provided ui.Image instances;
+- all ui.Image objects and CanvasPreparedVector wrappers returned by
+  CanvasResourceResolver are app-owned;
+- the engine never disposes app-provided images or prepared-vector wrappers;
 - the runtime stores only resource descriptors and render cache references;
-- resolved image references can be retained by the active
+- resolved image/vector references can be retained by the active
   `SurfaceResourceSession` and the active CanvasSurface main output;
 - markResourceDirty synchronously releases matching active session and retained
   main-output references for the target resource before public publication, but
-  does not mutate document, call the resolver, or dispose the image;
+  does not mutate document, call the resolver, or dispose an application asset;
 - markResourceDirty publishes main repaint intent; an attached CanvasSurface
   observes it if present and rebuilds only main-layer output unless another
   runtime or local surface invalidation target also requires overlay work;
@@ -2700,6 +2771,7 @@ enum CanvasDataErrorCode {
   duplicateLayerId,
   duplicateResourceId,
   missingResourceReference,
+  resourceKindMismatch,
   maxItems,
   maxNodes,
   maxRawJsonLength,

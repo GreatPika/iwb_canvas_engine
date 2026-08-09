@@ -15,6 +15,8 @@ Related diagrams:
 Required tests:
 - `test.codec.decode_encode_no_runtime_side_effects`
 - `test.codec.schema_v1.canonical_encode_roundtrip`
+- `test.codec.schema_v1.reject_unknown_element_kind`
+- `test.codec.schema_v1.reject_unknown_resource_source_kind`
 - `test.codec.schema_v1.metadata_projection`
 - `test.guardrails.codec_no_runtime_imports`
 Guardrails:
@@ -66,19 +68,21 @@ String encodeCanvasDocumentToJson(CanvasDocument document);
 ```
 
 Explicit schema v1 decode helpers are codec-local read/output routes over the
-same canonical reader: the reader emits dependency-neutral schema v1 import
-events with the admitted typed image descriptor event into a non-exported
-`CanvasDocument` builder sink. The sink materializes public DTOs and its
-relationship validation rejects duplicate resources/layers/elements and missing
-image resource references after public DTO materialization. The reader rejects
-unknown `resource.kind` before either sink; MIME fields are descriptor data, not
-kind inference. Those decode helpers are not runtime load routes. Runtime JSON
-load shares the reader policy, but the runtime load path does not
-materialize `CanvasDocument`, `CanvasImageResource`, store rows from public DTOs,
-store sinks outside the import handoff, or a retained document-sized validated
-fact/list/tree payload. Duplicate id checks, id admission, missing resource
-reference checks, and final-candidate descriptor relationship checks remain
-store-owned preparation responsibilities for runtime import.
+same canonical reader: after shape and metadata admission, the reader emits
+dependency-neutral typed image/vector descriptor and element events into a
+non-exported `CanvasDocument` builder sink. The sink materializes public DTOs
+and validates duplicate resources/layers/elements plus every final descriptor
+relationship. An absent resource is `missingResourceReference`; an existing
+descriptor of the other sealed kind is `resourceKindMismatch`, at the
+referencing `image.resourceId` or `vector.resourceId` path. The reader itself
+does not own those relationships. It rejects unknown `resource.kind` before
+either sink, and MIME is image metadata rather than kind inference. Those
+decode helpers are not runtime load routes. Runtime JSON load shares the
+reader policy, but does not materialize `CanvasDocument`, public resource DTOs,
+store rows from public DTOs, store sinks outside the import handoff, or a
+retained document-sized validated fact/list/tree payload. Duplicate-id and
+final-candidate descriptor relationship admission remain store-owned
+preparation responsibilities for runtime import.
 
 Public non-isolated import sinks receive events only after the codec-owned
 validation pass succeeds, so invalid schema input cannot partially notify those
@@ -96,7 +100,8 @@ encode is an explicit projection/output path, not the runtime load path:
 ```text
 1. validate `contracts/public` DTO;
 2. reject invalid metadata or non-invertible element transforms;
-3. enforce layer/node/resource limits;
+3. enforce layer/node/resource limits and the same absent-versus-wrong-kind
+   descriptor relationship classification as decode;
 4. no runtime/store side effects.
 ```
 

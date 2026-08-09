@@ -82,7 +82,7 @@ nodes:
       - path: docs/architecture/02_package_boundaries.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - Public DTOs, values, errors, policies, runtime state/config types, and public port interfaces live below the API facade in contracts/public.
+      - Public DTOs, values, errors, policies, runtime state/config types, image/vector resource variants, and public port interfaces live below the API facade in contracts/public.
     actual:
       declarations:
         - CanvasDocument
@@ -138,7 +138,7 @@ nodes:
       - path: docs/contracts/schema_v1.md
       - path: docs/contracts/codec_boundary.md
     evidence:
-      - Schema v1 decode and encode own JSON boundary validation and typed current descriptor admission.
+      - Schema v1 decode and encode own JSON boundary validation and typed image/vector descriptor admission; codec-local DTO decode and exported encode distinguish missing from wrong-kind references without runtime side effects.
     actual:
       declarations:
         - decodeSchemaV1Document
@@ -250,7 +250,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/resources.md
     evidence:
-      - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset request/result flow, per-frame resolver budget, same-frame null-result suppression, and bounded placeholder policy for missing descriptors and absent resolvers.
+      - SurfaceResourceSession owns the surface-scoped resolver reference, resolverGeneration, shared image/vector ResourceAssetCache, typed resource-asset request/result flow, per-frame resolver budget, same-frame null-result suppression, and bounded placeholder policy for missing descriptors, absent resolvers, and stale/disposed vector wrappers. Target/all/replacement/reset/drop release borrows synchronously without engine disposal.
     actual:
       declarations:
         - SurfaceResourceSession
@@ -278,7 +278,8 @@ nodes:
     sourceDocs:
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, FrameRepaintSignal output metadata, and bounded frame cache orchestration; runtime/surface pre-output invalidation targets are owned outside frame.
+      - FrameEngine owns frame capture, ordinary paint planning, selected supplement staging, background/overlay planning, immutable painter output, FrameRepaintSignal output metadata, and bounded frame cache orchestration. Typed vector bindings paint via clip/translate/anisotropic scale/drawPicture with record-local opacity; runtime/surface pre-output invalidation targets are owned outside frame.
+      - RenderElementFamily remains a complete temporary render-row mirror through Unit 5 so vector records are represented before its Unit 7 sealed-row retirement; it is not a second semantic element-kind owner.
     actual:
       declarations:
         - FrameEngine
@@ -298,7 +299,7 @@ nodes:
     sourceDocs:
       - path: docs/contracts/interaction_engine.md
     evidence:
-      - InteractionEngine is the current boundary for pointer sessions, tool preview intents, selection/move behavior, and terminal commit coordination.
+      - InteractionEngine is the current boundary for pointer sessions, tool preview intents, vector-inclusive selection/move behavior, text-only guarded commits, and terminal commit coordination. CanvasElementKind is semantic authority; the complete InteractionElementFamily mirror is a Unit 6 retirement bridge.
     actual:
       declarations:
         - InteractionEngine
@@ -376,7 +377,7 @@ edges:
       - path: docs/architecture/01_runtime_ownership.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - API declarations expose the public preparation helper and re-export the application-owned prepared value while raw Picture and vector_graphics types remain private.
+      - API declarations expose public vector DTO/update/resource/error/resolver use and the application-owned preparation helper while diagnostics fields, codec-local decode helpers, raw Picture, and vector_graphics types remain private.
     actual:
       exports:
         - lib/src/contracts/public/canvas_document.dart
@@ -626,7 +627,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot holds the nullable active ResourceSessionReleaseSink and forwards accepted ResourceDirtyOutcome target/all resource release to the active SurfaceResourceSession before dirty publication. The active session removes matching cache/suppression borrows before its identity-aware CanvasSurface callback removes matching retained main-output borrows; a stale identity does not mutate current output. Runtime contains failed release/reset targets by clearing the failed sink or dropping the failed session so accepted edit/load/dirty publication still completes, without ResourceKernel owning application resource borrows or session cache entries.
+      - RuntimeRoot holds the nullable active ResourceSessionReleaseSink and forwards accepted target/all resource, resolver-replacement, reset, and detach release to the active SurfaceResourceSession before publication/dispose. The active session removes matching cache/suppression borrows before its identity-aware CanvasSurface callback removes matching retained main-output borrows; a stale identity does not mutate current output. Runtime contains failed release/reset targets by clearing the failed sink or dropping the failed session so accepted edit/load/dirty publication still completes, without ResourceKernel owning application resource borrows or session cache entries.
     actual:
       compositionFields:
         - ResourceSessionReleaseSink
@@ -665,7 +666,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/contracts/frame_rendering.md
     evidence:
-      - PaintAssetBindingService binds sealed descriptor facts through SurfaceResourceSession after ordinary record planning; painters and ordinary planners consume immutable typed asset bindings and do not own CanvasResourceResolver references.
+      - PaintAssetBindingService binds sealed image/vector descriptor facts through SurfaceResourceSession only after record completion and resource-pass setup; painters and ordinary planners consume immutable typed asset bindings and do not own CanvasResourceResolver references.
     actual:
       delegationMembers:
         - PaintAssetBindingService.bind

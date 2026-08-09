@@ -1,10 +1,14 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
 import 'surface_resource_session_test_support.dart';
+import '../../preparation/fixtures/vector_preparation_fixture.dart';
 
 void main() {
   _testTargetAndAllInvalidation();
@@ -13,6 +17,7 @@ void main() {
   _testLeastRecentlyUsedEviction();
   _testOversizedResolveReturnsWithoutRetaining();
   _testDroppedSessionDoesNotResolveAgain();
+  _testVectorLifecycleReleasesSessionAndRetainedBorrows();
 }
 
 // Removing target suppression release would keep the next externally requested
@@ -229,4 +234,69 @@ void _testDroppedSessionDoesNotResolveAgain() {
 
     image.dispose();
   });
+}
+
+// Every lifecycle branch is one chronological release contract: the session
+// borrow must disappear before its matching retained-output callback returns.
+// ignore: halstead-volume, source-lines-of-code
+void _testVectorLifecycleReleasesSessionAndRetainedBorrows() {
+  test(
+    'vector target/all and lifecycle release session and retained borrows',
+    () async {
+      final prepared = await prepareVector(basicVectorBytes());
+      final picture = liveCanvasPreparedVectorPicture(prepared);
+      final disposedPictures = <ui.Picture>[];
+      final previousOnDispose = ui.Picture.onDispose;
+      ui.Picture.onDispose = disposedPictures.add;
+      addTearDown(() {
+        ui.Picture.onDispose = previousOnDispose;
+      });
+      final releasedTargets = <CanvasResourceId>[];
+      var releasedAllCount = 0;
+      final resolver = RecordingResourceResolver(
+        (_) => null,
+        resolvePreparedVector: (_) => prepared,
+      );
+      final session = SurfaceResourceSession(
+        resolver: resolver,
+        mutationGuard: CountingResolverMutationGuard(),
+        releaseRetainedResource: releasedTargets.add,
+        releaseAllRetainedResources: () {
+          releasedAllCount += 1;
+        },
+      );
+      final first = vectorDescriptorRequest(id: 'vector-a');
+      final second = vectorDescriptorRequest(id: 'vector-b');
+
+      expect(session.resolveResource(first), isA<ResolvedResourceAsset>());
+      session.releaseResource(first.id);
+      expect(releasedTargets, [first.id]);
+      expect(session.resolveResource(first), isA<ResolvedResourceAsset>());
+      expect(resolver.vectorCallCount, 2);
+
+      expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+      session.releaseAllResources();
+      expect(releasedAllCount, 1);
+      expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+
+      session.replaceResolver(resolver);
+      expect(releasedAllCount, 2);
+      expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+
+      session.resetForDocumentReplacement();
+      expect(releasedAllCount, 3);
+      expect(session.resolveResource(second), isA<ResolvedResourceAsset>());
+
+      session.drop();
+      expect(releasedAllCount, 4);
+      expect(
+        session.resolveResource(second),
+        isA<NoResolverResourceAssetPlaceholder>(),
+      );
+      expect(disposedPictures, isEmpty);
+
+      prepared.dispose();
+      expect(disposedPictures, [picture]);
+    },
+  );
 }

@@ -599,6 +599,7 @@ void _exerciseP2ContractSurface() {
   final Map<String, Object?> details = error.details;
   _use(details);
   _use(CanvasDataErrorCode.invalidVectorData);
+  _use(CanvasDataErrorCode.resourceKindMismatch);
   _use(CanvasDataErrorCode.values);
 
   final encode = encodeCanvasDocument;
@@ -616,6 +617,7 @@ void _exerciseP2ContractSurface() {
   final commandPort = _ConsumerCommandPort(clearResult);
   final cameraPort = _ConsumerCameraPort(camera);
   _use(resourceResolver.resolveImage(resource));
+  _exerciseVectorContractSurface(resourceResolver, metadata);
   _use(resourcePort.resourceById(resourceId));
   _use(editPort.edit((edit) => edit.draftSummary));
   _use(selectionPort.selectedElementIds);
@@ -651,6 +653,40 @@ void _exerciseP2ContractSurface() {
   _use(selectionStyle);
   _use(surface);
   _use(textEditingOverlay);
+}
+
+void _exerciseVectorContractSurface(
+  CanvasResourceResolver resourceResolver,
+  CanvasMetadata metadata,
+) {
+  final resourceId = CanvasResourceId('vector-resource-1');
+  final elementId = CanvasElementId('vector-element-1');
+  final vectorResource = CanvasVectorResource(
+    id: resourceId,
+    source: CanvasResourceSource.appKey('vector-resource-1'),
+    contentHash: 'sha256:vector-resource-1',
+    byteLength: 256,
+    metadata: metadata,
+  );
+  final vectorElement = CanvasVectorElement(
+    id: elementId,
+    resourceId: resourceId,
+    size: const Size(30, 40),
+    naturalSize: const Size(60, 80),
+    opacity: 0.5,
+    metadata: metadata,
+  );
+  final vectorUpdate = CanvasVectorElementUpdate(
+    id: elementId,
+    resourceId: CanvasFieldSet(resourceId),
+    size: const CanvasFieldSet(Size(31, 41)),
+    naturalSize: const CanvasFieldClear<Size>(),
+  );
+  _use(vectorResource);
+  _use(vectorElement.kind == CanvasElementKind.vector);
+  _use(vectorElement.naturalSize);
+  _use(vectorUpdate);
+  _use(resourceResolver.resolveVector(vectorResource));
 }
 
 void _exerciseInlineTextEditingContractSurface(
@@ -708,6 +744,9 @@ CanvasMoveResolution _resolveMove(CanvasMoveCommitRequest request) {
 final class _ConsumerResourceResolver implements CanvasResourceResolver {
   @override
   ui.Image? resolveImage(CanvasImageResource resource) => null;
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
 
 final class _ConsumerResourcePort implements CanvasResourcePort {

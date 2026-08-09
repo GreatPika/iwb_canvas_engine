@@ -7,7 +7,6 @@ flowchart LR
 
   subgraph PublicAPI["Public API facade"]
     LoadEntry["CanvasEditPort.loadDocumentFromJson\nfrom JSON string"]
-    DecodeEntry["decodeSchemaV1Document / FromJson\nexplicit DTO decode path"]
     EncodeEntry["encodeCanvasDocument\nfrom CanvasDocument DTO"]
     PublicDocument["CanvasDocument DTO\nread/output projection only"]
     PublicError["CanvasDataException\nsafe code, path, message, details"]
@@ -22,14 +21,14 @@ flowchart LR
     VersionGate["schemaVersion gate\nread exactly {1}"]
     FieldPolicy["Known v1 field validation\nunknown non-metadata fields ignored"]
     PrimitiveValidation["Primitive validation\nfinite numbers, colors, ids"]
-    ResourceValidation["Resource validation\nkind=image → typed descriptor\nappKey source only"]
+    ResourceValidation["Resource validation\nkind=image/vector → sealed descriptor\nappKey source only"]
     ElementValidation["Element validation\nknown element kinds, enums,\nand transform admission"]
     LayerCountValidation["Layer and node count validation\nschema limits"]
     MetadataValidation["Metadata validation\nJSON-only values and bounded extension area"]
     RuntimeImportEvents["Runtime SchemaV1ImportEvent stream\nisolated sink mode"]
     DecodeImportEvents["Decode SchemaV1ImportEvent stream\nnon-isolated builder mode"]
     DecoderSink["Codec-local CanvasDocument builder sink\npublic decode only"]
-    DecodeReferenceValidation["Decoder relationship validation\nduplicate ids and missing image descriptors"]
+    DecodeReferenceValidation["Decoder relationship validation\nduplicate ids plus absent/wrong-kind\nimage/vector descriptors"]
 
     DtoValidation["Public DTO validation\nconstructor/schema limits"]
     CanonicalEncoder["Canonical v1 encoder\nwrite schemaVersion = 1"]
@@ -71,7 +70,7 @@ flowchart LR
   FieldPolicy -.->|"unknown non-metadata fields are ignored"| UnknownPreserve
   PrimitiveValidation -->|"bounded ids, numbers, colors"| ResourceValidation
   ResourceValidation -->|"validated resource descriptors"| ElementValidation
-  ElementValidation -->|"validated element family records"| LayerCountValidation
+  ElementValidation -->|"validated seven-kind element records"| LayerCountValidation
   LayerCountValidation -->|"bounded layer and node counts"| MetadataValidation
   MetadataValidation -->|"validated metadata facts"| RuntimeImportEvents
   RuntimeImportEvents -->|"dependency-neutral import events"| StoreImportBuilder
@@ -93,14 +92,13 @@ flowchart LR
   DiagnosticRecord -.->|"internal retained record"| InternalSink
   PublicError -.->|"throw projected error"| App
 
-  App -->|"decode request"| DecodeEntry
-  DecodeEntry -->|"schema v1 map or JSON"| CanonicalReader
+  DecodeEntry["codec-local explicit DTO decode\nnot a root-barrel API"] -->|"schema v1 map or JSON"| CanonicalReader
   CanonicalReader -->|"separate decode event stream\nnot a runtime load route"| DecodeImportEvents
   DecodeImportEvents -->|"dependency-neutral events"| DecoderSink
   DecoderSink -->|"materialized public DTO lists"| DecodeReferenceValidation
   DecodeReferenceValidation -->|"CanvasDocument output"| PublicDocument
   PublicDocument -->|"decoded result"| App
-  DecodeReferenceValidation -.->|"duplicate ids or missing image descriptors"| FailureDiagnosticBridge
+  DecodeReferenceValidation -.->|"duplicate ids or absent/wrong-kind descriptors"| FailureDiagnosticBridge
 
   App -->|"encode request"| EncodeEntry
   RuntimeProjection -->|"may supply public DTO\nthrough documented read paths"| PublicDocument
@@ -114,5 +112,5 @@ flowchart LR
   CanonicalMap -->|"Map or encoded string"| JsonOutput
   JsonOutput -->|"encoded result"| App
 
-  DtoValidation -.->|"invalid DTO"| FailureDiagnosticBridge
+  DtoValidation -.->|"invalid DTO or absent/wrong-kind descriptor relationship"| FailureDiagnosticBridge
   CanonicalEncoder -.->|"forbidden runtime mutation"| NonV1SchemaBlocked

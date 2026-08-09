@@ -83,11 +83,11 @@ flowchart LR
 
   subgraph ResourceRuntime["RuntimeRoot / contract-owned dirty outcome"]
     ResourceVisualRevision["resourceVisualRevision"]
-    ResourceSessionRelease["Active target/all resource release\ncache/suppression and retained main output\nbefore notification"]
+    ResourceSessionRelease["Active target/all resource release\nimage/vector cache/suppression and retained main output\nbefore notification"]
   end
 
   subgraph Session["lib/src/resources SurfaceResourceSession"]
-    DescriptorCacheEvict["ResourceAssetCache eviction\nresource descriptor changed"]
+    DescriptorCacheEvict["ResourceAssetCache eviction\nresource descriptor changed; cross-family LRU"]
     DirtyResourceEvict["ResourceAssetCache eviction\nexplicit dirty target or all"]
   end
 
@@ -203,7 +203,7 @@ flowchart LR
   ElementVisualRevision -->|"element visual rows changed"| PaintPlanInvalidation
   ElementVisualRevision -->|"visual repaint facts"| SurfaceTargetAggregation
   SelectionRevision -->|"selection changed"| SelectionDecorationInvalidation
-  StructuralRevision -->|"selected chrome family may change"| SelectionDecorationInvalidation
+  StructuralRevision -->|"selected chrome kind placement may change"| SelectionDecorationInvalidation
   ReplacementScope -->|"full frame cache reset allowed"| PaintPlanInvalidation
   LoadSuccess -->|"full frame cache reset typed effect"| PaintPlanInvalidation
   ViewCameraCall -->|"runtime view camera only"| ViewCameraDispatch

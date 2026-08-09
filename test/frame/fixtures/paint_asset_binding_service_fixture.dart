@@ -6,22 +6,22 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 // ignore_for_file: number-of-imports
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_document.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_ids.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_metadata.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_runtime.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_surface_styles.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/frame/captured_frame.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
+import 'package:iwb_canvas_engine/src/frame/render_element_record.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
+import '../../preparation/fixtures/vector_preparation_fixture.dart';
 import 'ordinary_paint_test_support.dart';
 
 void main() {
@@ -29,6 +29,156 @@ void main() {
   _testFrameBindingContinuesAfterResolverException();
   _testReentrantResolverRejectedThroughAssetBinding();
   _testNestedResolverRejectedThroughAssetBinding();
+  _testVectorFrameBindingUsesPreparedAsset();
+  _testVectorFrameBindingDoesNotAllocateDiagnostics();
+  _testFrameEngineCapturesVectorRecord();
+}
+
+void _testVectorFrameBindingDoesNotAllocateDiagnostics() {
+  test('vector frame binding does not allocate diagnostic records', () {
+    DiagnosticRecord.allocations.reset();
+    final resourceId = CanvasResourceId('vector-non-hub');
+    final bindings = const PaintAssetBindingService().bind(
+      frame: _vectorFrame(resourceId),
+      records: [_vectorRecord(resourceId)],
+      session: SurfaceResourceSession(
+        resolver: null,
+        mutationGuard: CountingResolverMutationGuard(),
+      ),
+    );
+
+    expect(
+      bindings.assets[resourceId],
+      isA<FrameAssetPlaceholderBinding>(),
+    );
+    expect(DiagnosticRecord.allocations.count, 0);
+  });
+}
+
+void _testFrameEngineCapturesVectorRecord() {
+  test('frame engine captures a vector record before resource binding', () {
+    final resourceId = CanvasResourceId('vector-a');
+    final facts = frameFactsPort(
+      elements: [_vectorFacts(resourceId)],
+      resourceDescriptors: [
+        FrameVectorResourceDescriptorFacts(
+          id: resourceId,
+          appKey: 'vector-a',
+          contentHash: 'sha256:vector-a',
+          byteLength: 42,
+          resourceRevision: 12,
+          metadata: const CanvasMetadata.empty(),
+        ),
+      ],
+    );
+    final output = FrameEngine(
+      frameFacts: facts,
+      selectionFacts: TestSelectionFactsPort.empty(),
+      spatialKernel: SpatialKernel()..rebuild(facts),
+    ).buildResourceFreeMainFrame(inputs: _inputs(), viewCameraBucket: 0);
+
+    final record = output.ordinaryPlan.ordinaryRecords.single;
+    expect(record.family, RenderElementFamily.vector);
+    expect(record.row, isA<VectorRenderRow>());
+  });
+}
+
+FrameElementFacts _vectorFacts(CanvasResourceId resourceId) {
+  return FrameElementFacts(
+    id: CanvasElementId('vector-a'),
+    kind: CanvasElementKind.vector,
+    revision: 1,
+    generation: 1,
+    orderToken: 1,
+    locationKind: FrameElementLocationKind.content,
+    transform: CanvasTransform.identity,
+    opacity: 1,
+    hitPadding: 0,
+    isVisible: true,
+    isSelectable: true,
+    isLocked: false,
+    isDeletable: true,
+    isTransformable: true,
+    metadata: const CanvasMetadata.empty(),
+    resourceId: resourceId,
+    size: const Size(30, 40),
+  );
+}
+
+void _testVectorFrameBindingUsesPreparedAsset() {
+  test(
+    'asset binding resolves an immutable vector descriptor synchronously',
+    () async {
+      final prepared = await prepareVector(basicVectorBytes());
+      final resourceId = CanvasResourceId('vector-a');
+      final resolver = RecordingResourceResolver(
+        (_) => null,
+        resolvePreparedVector: (_) => prepared,
+      );
+      final session = SurfaceResourceSession(
+        resolver: resolver,
+        mutationGuard: CountingResolverMutationGuard(),
+      );
+      final bindings = const PaintAssetBindingService().bind(
+        frame: _vectorFrame(resourceId),
+        records: [_vectorRecord(resourceId)],
+        session: session,
+      );
+
+      final asset = bindings.assets[resourceId] as FrameVectorAssetBinding;
+      expect(asset.prepared, same(prepared));
+      expect(resolver.vectorCallCount, 1);
+
+      prepared.dispose();
+    },
+  );
+}
+
+CapturedFrameSnapshot _vectorFrame(CanvasResourceId resourceId) {
+  return CapturedFrameSnapshot(
+    revisions: revisionsFor(resource: 12),
+    capturedHandles: const [],
+    elements: const [],
+    resourceDescriptors: [
+      FrameVectorResourceDescriptorFacts(
+        id: resourceId,
+        appKey: 'vector-a',
+        contentHash: 'sha256:vector-a',
+        byteLength: 42,
+        resourceRevision: 12,
+        metadata: const CanvasMetadata.empty(),
+      ),
+    ],
+    background: const CanvasBackground(),
+    selection: SelectionFacts(
+      selectedElementIds: const {},
+      selectionRevision: 0,
+    ),
+    inputs: _inputs(),
+    spatialPaintResult: const SpatialCandidatesResult(orderedCandidates: []),
+    spatialPaintCandidates: const [],
+  );
+}
+
+RenderElementRecord _vectorRecord(CanvasResourceId resourceId) {
+  return RenderElementRecord(
+    id: CanvasElementId('vector-a'),
+    family: RenderElementFamily.vector,
+    generation: 1,
+    orderToken: 1,
+    transform: CanvasTransform.identity,
+    opacity: 1,
+    primitiveAlpha: 255,
+    paintBoundsLocal: const Rect.fromLTWH(0, 0, 30, 40),
+    paintBoundsWorld: const Rect.fromLTWH(0, 0, 30, 40),
+    hitBoundsWorld: const Rect.fromLTWH(0, 0, 30, 40),
+    resourceId: resourceId,
+    row: VectorRenderRow(
+      resourceId: resourceId,
+      size: const Size(30, 40),
+      naturalSize: null,
+    ),
+  );
 }
 
 void _testFrameBindingContinuesAfterResolverException() {
@@ -53,9 +203,12 @@ void _testFrameBindingContinuesAfterResolverException() {
 
     expect(
       bindings.assets[throwingId],
-      isA<ResolverExceptionResourceAssetPlaceholder>(),
+      isA<FrameAssetPlaceholderBinding>(),
     );
-    expect(resolvedImage(bindings.assets[healthyId]!), same(image));
+    expect(
+      (bindings.assets[healthyId] as FrameImageAssetBinding).image,
+      same(image),
+    );
     expect(bindings.assets.keys, containsAll([throwingId, healthyId]));
     expect(resolver.callCount, 2);
 
@@ -242,11 +395,11 @@ SurfaceResourceSession _warmedSession(RecordingResourceResolver resolver) {
 void _expectResolvedBindings(FrameAssetBindings bindings) {
   expect(
     bindings.assets[CanvasResourceId('image-a')],
-    isA<ResolvedResourceAsset>(),
+    isA<FrameImageAssetBinding>(),
   );
   expect(
     bindings.assets[CanvasResourceId('missing')],
-    isA<MissingDescriptorResourceAssetPlaceholder>(),
+    isA<FrameAssetPlaceholderBinding>(),
   );
 }
 

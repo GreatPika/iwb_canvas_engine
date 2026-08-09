@@ -9,7 +9,7 @@ import '../public/canvas_metadata.dart';
 
 abstract interface class SchemaV1ImportSink {
   void beginDocument(SchemaV1DocumentImportEvent event);
-  void imageResource(SchemaV1ImageResourceImportEvent event);
+  void resource(SchemaV1ResourceImportEvent event);
   void backgroundElement(SchemaV1ElementImportEvent event);
   void layer(SchemaV1LayerImportEvent event);
   void layerElement(CanvasLayerId layerId, SchemaV1ElementImportEvent event);
@@ -36,11 +36,10 @@ final class SchemaV1DocumentImportEvent {
   final CanvasMetadata metadata;
 }
 
-final class SchemaV1ImageResourceImportEvent {
-  const SchemaV1ImageResourceImportEvent({
+sealed class SchemaV1ResourceImportEvent {
+  const SchemaV1ResourceImportEvent({
     required this.id,
     required this.appKey,
-    required this.mimeType,
     required this.contentHash,
     required this.byteLength,
     required this.metadata,
@@ -48,10 +47,34 @@ final class SchemaV1ImageResourceImportEvent {
 
   final CanvasResourceId id;
   final String appKey;
-  final String? mimeType;
   final String? contentHash;
   final int? byteLength;
   final CanvasMetadata metadata;
+}
+
+final class SchemaV1ImageResourceImportEvent
+    extends SchemaV1ResourceImportEvent {
+  const SchemaV1ImageResourceImportEvent({
+    required super.id,
+    required super.appKey,
+    required this.mimeType,
+    required super.contentHash,
+    required super.byteLength,
+    required super.metadata,
+  });
+
+  final String? mimeType;
+}
+
+final class SchemaV1VectorResourceImportEvent
+    extends SchemaV1ResourceImportEvent {
+  const SchemaV1VectorResourceImportEvent({
+    required super.id,
+    required super.appKey,
+    required super.contentHash,
+    required super.byteLength,
+    required super.metadata,
+  });
 }
 
 final class SchemaV1LayerImportEvent {
@@ -69,6 +92,20 @@ sealed class SchemaV1ElementImportEvent {
 
 final class SchemaV1ImageElementImportEvent extends SchemaV1ElementImportEvent {
   const SchemaV1ImageElementImportEvent({
+    required super.common,
+    required this.resourceId,
+    required this.size,
+    required this.naturalSize,
+  });
+
+  final CanvasResourceId resourceId;
+  final Size size;
+  final Size? naturalSize;
+}
+
+final class SchemaV1VectorElementImportEvent
+    extends SchemaV1ElementImportEvent {
+  const SchemaV1VectorElementImportEvent({
     required super.common,
     required this.resourceId,
     required this.size,

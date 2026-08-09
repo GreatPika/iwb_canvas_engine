@@ -47,7 +47,7 @@ sequenceDiagram
         Geometry-->>IE: top visible content element or no content target
       alt current content target found
         IE->>ReadPort: read immutable current content target facts
-        ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, family, documentRevision, and controllerEpoch
+        ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, CanvasElementKind, documentRevision, and controllerEpoch
         Store-->>ReadPort: current target facts
         ReadPort-->>IE: current target facts
         IE->>Registry: issue request id with content target kind and guard facts
@@ -103,10 +103,10 @@ sequenceDiagram
 
   alt first tap has content target
     IE->>ReadPort: read immutable content target facts
-    ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, family, and controllerEpoch
-    Store-->>ReadPort: elementSnapshot, boundsWorld, generation, elementRevision, family, and epoch
+    ReadPort->>Store: read element snapshot, boundsWorld, generation, elementRevision, CanvasElementKind, and controllerEpoch
+    Store-->>ReadPort: elementSnapshot, boundsWorld, generation, elementRevision, CanvasElementKind, and epoch
     ReadPort-->>IE: content target facts
-    IE->>IE: store pending content target, generation, elementRevision, family, controllerEpoch, timestamp, viewPosition, and worldPosition
+    IE->>IE: store pending content target, generation, elementRevision, CanvasElementKind, controllerEpoch, timestamp, viewPosition, and worldPosition
     Note over IE: Pending tap state is gesture detection only. It is not document, selection, or preview state.
     opt first tap also selects content in move mode
       IE->>IE: pair same finite terminal sample with zero-area marquee selection intent
@@ -151,10 +151,10 @@ sequenceDiagram
     Note over IE,Signals: No automatic select/deselect, preview update, repaint request, CanvasActionCommitted, or edit commit occurs.
   else content target still matches same current element
     IE->>ReadPort: read current content target facts
-    ReadPort->>Store: read current element snapshot, boundsWorld, generation, elementRevision, family, documentRevision, and controllerEpoch
+    ReadPort->>Store: read current element snapshot, boundsWorld, generation, elementRevision, CanvasElementKind, documentRevision, and controllerEpoch
     Store-->>ReadPort: current target facts
     ReadPort-->>IE: current target facts
-    IE->>IE: verify same id, generation, elementRevision, family, epoch, visibility, and top-hit status
+    IE->>IE: verify same id, generation, elementRevision, CanvasElementKind, epoch, visibility, and top-hit status
     IE->>Registry: issue request id with content target kind and guard facts
     Registry-->>IE: issued request id
     IE->>Requests: enqueue asynchronous pending request with timestamp hint
@@ -195,12 +195,12 @@ sequenceDiagram
     App->>Commands: commitTextEdit(requestId, newText)
     Commands->>Registry: read live issued request guard facts
     Registry-->>Commands: live request facts or absent
-    Commands->>ReadPort: read current element generation, elementRevision, family, and controllerEpoch
+    Commands->>ReadPort: read current element generation, elementRevision, CanvasElementKind, and controllerEpoch
     ReadPort-->>Commands: current guard facts
     alt request is unknown or already consumed
       Commands-->>App: false
       Note over Commands,Signals: Unknown or already-consumed request ids are pure no-ops with no private consumption, document, revision, repaint, or action effect.
-    else known live request is empty-canvas, non-text, stale, missing, or family-mismatched
+    else known live request is empty-canvas, vector/non-text, stale, missing, or kind-mismatched
       Commands->>Registry: consume and remove request facts
       Commands-->>App: false
       Note over Commands,Signals: Known rejected request consumption is private registry state only. Rejection has no public state, document, selection, preview, repaint, or action effect. documentRevision is observation-only and is not a stale guard.

@@ -131,6 +131,7 @@
   - test.api_contract.public_equality_policy
   - test.api.typed_action_payloads
   - test.api_contract.public_integration_compile_fixture
+  - test.api_contract.prepared_vector_public_api
   - test.interaction.context_action_request
   - test.interaction.text_edit_stale_commit_guard
   - test.runtime.text_editing_port
@@ -236,6 +237,8 @@
   - test.resources.resolver_frame_budget
   - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
+  - test.resources.application_vector_freshness_lifecycle
+  - test.resources.resource_image_cache_memory_accounting
   do_not_assume:
   - no engine IO
   - no asset-bundle loading
@@ -265,6 +268,7 @@
   - test.runtime.dispose_lifecycle
   - test.runtime.runtime_state_publication
   - test.runtime.load_document_state_publication
+  - test.resources.application_vector_freshness_lifecycle
   - test.api.tool_port_settings
   - test.store.read_document_projection
   - test.selection.runtime_owner_separation
@@ -369,6 +373,7 @@
   - test.interaction.runtime_created_timestamps_monotonic
   - test.interaction.context_action_request
   - test.interaction.text_edit_stale_commit_guard
+  - test.resources.application_vector_freshness_lifecycle
   do_not_assume:
   - no implicit mutation path outside EditKernel
 - id: section_14_interaction_engine
@@ -601,6 +606,7 @@
   - test.frame.paint_plan_excludes_selection_state
   - test.frame.camera_pan_preserves_ordinary_paint_plan
   - test.surface.surface_frame_output_cache
+  - test.resources.resource_image_cache_memory_accounting
   do_not_assume:
   - no unbounded cache owner sprawl
   - no cache keys tied to non-owned snapshot facts
@@ -625,6 +631,8 @@
   tests:
   - test.codec.decode_encode_no_runtime_side_effects
   - test.codec.schema_v1.canonical_encode_roundtrip
+  - test.codec.schema_v1.reject_unknown_element_kind
+  - test.codec.schema_v1.reject_unknown_resource_source_kind
   - test.codec.schema_v1.metadata_projection
   - test.guardrails.codec_no_runtime_imports
   do_not_assume:
@@ -747,6 +755,7 @@
   - surface.interactive_false_pending_line_preserved
   tests:
   - test.api_contract.public_integration_compile_fixture
+  - test.api_contract.prepared_vector_public_api
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.guardrails.text_surface_guardrail_checks
   - test.guardrails.blocking_suite
@@ -783,6 +792,7 @@
   - test.api_contract.dto_immutability
   - test.api_contract.public_equality_policy
   - test.api_contract.public_integration_compile_fixture
+  - test.api_contract.prepared_vector_public_api
   - test.guardrails.import_boundaries
   - test.guardrails.store_projection_checks
   - test.guardrails.selection_boundary_checks
@@ -807,6 +817,8 @@
   - test.resources.resolver_frame_budget
   - test.resources.resolver_exception_placeholder
   - test.resources.resolver_reentrancy_rejected
+  - test.resources.application_vector_freshness_lifecycle
+  - test.resources.resource_image_cache_memory_accounting
   - test.api.selection_port
   - test.api.selection_transform_commands
   - test.api.command_port_actions

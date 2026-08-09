@@ -2,9 +2,11 @@ import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 
+import '../../preparation/fixtures/vector_preparation_fixture.dart';
 import 'surface_resource_session_test_support.dart';
 
 void main() {
@@ -14,6 +16,7 @@ void main() {
   _testByteResetLeavesAppOwnedImagesAlive();
   _testByteDropLeavesAppOwnedImagesAlive();
   _testByteDisposeLeavesAppOwnedImagesAlive();
+  _testAppOwnedVectorsStayAlive();
 }
 
 // Keeping each lifecycle operation in one test makes the no-dispose invariant
@@ -126,6 +129,54 @@ void _testByteDisposeLeavesAppOwnedImagesAlive() {
     expect(fixture.disposedStates, everyElement(isFalse));
 
     fixture.disposeImages();
+  });
+}
+
+// This follows the same complete engine-retirement matrix as images, but the
+// observed native Picture proves vector wrappers remain application-owned.
+// ignore: halstead-volume, source-lines-of-code
+void _testAppOwnedVectorsStayAlive() {
+  test('surface session never disposes app-owned vectors', () async {
+    final prepared = await prepareVector(basicVectorBytes());
+    final exactPicture = liveCanvasPreparedVectorPicture(prepared);
+    final disposedPictures = <ui.Picture>[];
+    final previousOnDispose = ui.Picture.onDispose;
+    ui.Picture.onDispose = (picture) {
+      if (identical(picture, exactPicture)) {
+        disposedPictures.add(picture);
+      }
+    };
+    addTearDown(() {
+      ui.Picture.onDispose = previousOnDispose;
+    });
+    final resolver = RecordingResourceResolver(
+      (_) => null,
+      resolvePreparedVector: (_) => prepared,
+    );
+    final session = SurfaceResourceSession(
+      resolver: resolver,
+      mutationGuard: CountingResolverMutationGuard(),
+    );
+
+    for (var index = 0; index < 1025; index += 1) {
+      if (index % 128 == 0) {
+        session.beginFrameResourcePass();
+      }
+      session.resolveResource(vectorDescriptorRequest(id: 'vector-$index'));
+    }
+    session.releaseResource(CanvasResourceId('vector-1024'));
+    session.releaseAllResources();
+    session.resolveResource(vectorDescriptorRequest(id: 'vector-a'));
+    session.replaceResolver(resolver);
+    session.resolveResource(vectorDescriptorRequest(id: 'vector-b'));
+    session.resetForDocumentReplacement();
+    session.resolveResource(vectorDescriptorRequest(id: 'vector-c'));
+    session.drop();
+    session.dispose();
+
+    expect(disposedPictures, isEmpty);
+    prepared.dispose();
+    expect(disposedPictures, [exactPicture]);
   });
 }
 

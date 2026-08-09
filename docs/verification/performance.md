@@ -32,6 +32,11 @@ route is a release-blocking completion and artifact-production gate for the
 Flutter scenario group catalog. It does not define numeric performance
 pass/fail thresholds.
 
+Vector admission adds no benchmark id or custom performance schema. Its
+record-local Picture paint and shared resource-cache behavior are covered by
+owner-focused correctness probes; cache capacities and byte accounting remain
+solely in the cache-policy ledger.
+
 The route runs the example app as an external public consumer through
 `integration_test` and `flutter drive --profile --no-dds`. Route code must use
 `package:iwb_canvas_engine/iwb_canvas_engine.dart` and must not import

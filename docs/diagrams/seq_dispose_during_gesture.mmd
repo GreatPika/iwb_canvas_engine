@@ -75,8 +75,8 @@ sequenceDiagram
     end
 
     Runtime->>Session: drop session for active SurfaceResourceSession
-    Session->>Cache: drop resolved-image cache entries
-    Note over Session,Resolver: App-owned ui.Image instances and the app resolver are not disposed by the engine.
+    Session->>Cache: drop resource cache and suppression borrows
+    Note over Session,Resolver: App-owned resource assets and the app resolver are not disposed by the engine.
 
     Runtime->>Actions: close stream
     Runtime->>ContextRequests: close stream

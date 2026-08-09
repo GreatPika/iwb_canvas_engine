@@ -13,6 +13,7 @@ Related diagrams:
 - `none`
 Required tests:
 - `test.api_contract.public_integration_compile_fixture`
+- `test.api_contract.prepared_vector_public_api`
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.guardrails.text_surface_guardrail_checks`
 - `test.guardrails.blocking_suite`
@@ -167,14 +168,14 @@ Mandatory guardrails:
 
 | Guardrail id | Rule |
 |---|---|
-| `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `application adapter` responsibilities, while the adapter itself is not in package |
-| `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml` are exported by the root package public barrel |
-| `api.no_public_internal_load_types` | the public API registry and root barrel do not expose internal load, import, store, row, or prepared-load payload types |
+| `api.integration_surface_complete` | external app-adapter compile fixture imports only the public barrel and proves the public surface is enough for app-level `application adapter` responsibilities, including the image/vector resolver signatures, while the adapter itself is not in package; its prepared-vector companion permits only the admitted preparation use and rejects raw Picture, upstream vector types, codec-local decode helpers, internal helpers, construction/liveness, and diagnostic members |
+| `api.public_exports_complete` | all public names listed in `docs/_registry/public_api_v1.yaml`, including the admitted vector DTO/update/resource names, are exported by the root package public barrel |
+| `api.no_public_internal_load_types` | the public API registry and root barrel do not expose declarations resolved from internal load, import, store, row, or prepared-load implementation libraries |
 | `api.no_unapproved_document_load_inputs` | production runtime/edit/store/codec load and admission signatures do not accept `CanvasDocument`; allowed `CanvasDocument` parameters are limited to read/output projection, encode/tooling, explicit draft materialization paths, and named test hooks |
 | `api.facades_do_not_export_internal` | `lib/src/api/**` facade exports do not expose declarations marked `@internal` |
 | `api.public_types_complete` | all public signatures reference defined public types |
 | `api.public_api_compiles_as_written` | public API declarations compile in an empty consumer package, including `CanvasRuntime.state` and exported runtime state snapshot types while excluding extra document/preview listener getters |
-| `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from `CanvasImageResource.source` through the public barrel only |
+| `api.resource_source_app_key_publicly_readable` | external resolver code can read `CanvasAppKeyResourceSource.key` from image/vector resource `.source` through the public barrel only |
 | `api.preview_state_sealed_union_publicly_readable` | external preview consumers can type-test exported sealed CanvasPreviewState variants and read variant payloads through the public barrel only |
 | `api.exported_dartdoc_complete` | exported public declarations have non-empty Dart documentation summaries before API freeze |
 | `api.public_class_modifiers_explicit` | every exported public class chooses an explicit Dart 3 subtype/implementation policy |

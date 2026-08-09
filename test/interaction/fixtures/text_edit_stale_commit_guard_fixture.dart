@@ -16,6 +16,10 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/text_edit_guard_decision.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+// This complete registration list is the public behavior matrix for one text
+// request lifecycle; splitting it would obscure which stale/no-op cases belong
+// to the same guard owner solely to reduce a metric.
+// ignore: halstead-volume, source-lines-of-code
 void main() {
   test('unknown, invalid, and stale text requests are rejected', () {
     return expectLater(_verifyRejectedRequests(), completes);
@@ -24,6 +28,41 @@ void main() {
   test('generation mismatch consumes text requests', () {
     return expectLater(
       Future<void>.sync(_verifyGenerationMismatchConsumesRequest),
+      completes,
+    );
+  });
+
+  test('current vector guard facts reject and consume a stale text request', () {
+    final readPort = _TextGuardReadPort(
+      textGuardFacts: TextCommitGuardReadFacts.current(
+        targetElementId: _textId,
+        targetKind: CanvasElementKind.vector,
+        generation: 1,
+        elementRevision: 0,
+        family: InteractionElementFamily.vector,
+        controllerEpoch: 1,
+        documentRevision: 1,
+        currentText: 'not-text',
+      ),
+    );
+    final engine = _textGuardEngine(readPort);
+    final requestId = _issueTextRequest(engine);
+
+    expect(
+      engine.textEditGuardDecision(requestId).kind,
+      TextEditGuardDecisionKind.rejectedAndConsumed,
+    );
+    expect(engine.requestFactsFor(requestId), isNull);
+    expect(readPort.textGuardReads, 1);
+  });
+
+  test('vector context requests are no-op text commits', () {
+    return expectLater(_expectCommitFalse(_vectorRequestScenario()), completes);
+  });
+
+  test('vector replacement makes a text request stale and no-op', () {
+    return expectLater(
+      _expectCommitFalse(_vectorFamilyStaleScenario()),
       completes,
     );
   });
@@ -148,6 +187,17 @@ Future<_IssuedScenario> _rectRequestScenario() async {
   return scenario.issued(requestId);
 }
 
+Future<_IssuedScenario> _vectorRequestScenario() async {
+  final scenario = _Scenario();
+  final requestId = await scenario.issueRequestAt(const Offset(300, 0));
+  final guard = scenario.root.interactionEngine.requestFactsFor(requestId);
+
+  expect(guard?.contentElementKind, CanvasElementKind.vector);
+  expect(guard?.family, InteractionElementFamily.vector);
+
+  return scenario.issued(requestId);
+}
+
 Future<_IssuedScenario> _missingTextScenario() async {
   final scenario = _Scenario();
   final requestId = await scenario.issueTextRequest();
@@ -185,6 +235,25 @@ Future<_IssuedScenario> _familyStaleScenario() async {
     edit
       ..removeElement(_textId)
       ..addElement(CanvasRectElement(id: _textId, size: const Size(10, 10)));
+  });
+
+  return scenario.issued(requestId);
+}
+
+Future<_IssuedScenario> _vectorFamilyStaleScenario() async {
+  final scenario = _Scenario();
+  final requestId = await scenario.issueTextRequest();
+  scenario.root.edits.edit((edit) {
+    edit
+      ..removeElement(_textId)
+      ..addElement(
+        CanvasVectorElement(
+          id: _textId,
+          resourceId: _vectorResourceId,
+          size: const Size(10, 10),
+          transform: CanvasTransform.translation(const Offset(120, 0)),
+        ),
+      );
   });
 
   return scenario.issued(requestId);
@@ -518,6 +587,12 @@ final class _IssuedScenario {
 
 CanvasDocument _document() {
   return CanvasDocument(
+    resources: [
+      CanvasVectorResource(
+        id: _vectorResourceId,
+        source: CanvasResourceSource.appKey('vector-resource'),
+      ),
+    ],
     layers: [
       CanvasLayer(
         id: CanvasLayerId('layer-a'),
@@ -525,6 +600,12 @@ CanvasDocument _document() {
           CanvasRectElement(
             id: CanvasElementId('rect-a'),
             size: const Size(10, 10),
+          ),
+          CanvasVectorElement(
+            id: CanvasElementId('vector-a'),
+            resourceId: _vectorResourceId,
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(300, 0)),
           ),
           CanvasTextElement(
             id: _textId,
@@ -540,6 +621,7 @@ CanvasDocument _document() {
 }
 
 final CanvasElementId _textId = CanvasElementId('text-a');
+final CanvasResourceId _vectorResourceId = CanvasResourceId('vector-resource');
 
 InteractionEngine _textGuardEngine(_TextGuardReadPort readPort) {
   return InteractionEngine(

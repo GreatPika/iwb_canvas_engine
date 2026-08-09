@@ -9,7 +9,7 @@ import 'canvas_transform_admission.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasElementKind].
-enum CanvasElementKind { image, path, text, stroke, line, rect }
+enum CanvasElementKind { image, vector, path, text, stroke, line, rect }
 
 /// Public API v1 declaration for [CanvasPathFillRule].
 enum CanvasPathFillRule { nonZero, evenOdd }
@@ -83,6 +83,38 @@ final class CanvasImageElement extends CanvasElement {
   final Size? naturalSize;
   @override
   CanvasElementKind get kind => CanvasElementKind.image;
+}
+
+/// Public API v1 declaration for [CanvasVectorElement].
+final class CanvasVectorElement extends CanvasElement {
+  CanvasVectorElement({
+    required super.id,
+    required this.resourceId,
+    required this.size,
+    this.naturalSize,
+    super.revision,
+    super.transform,
+    super.opacity,
+    super.hitPadding,
+    super.isVisible,
+    super.isSelectable,
+    super.isLocked,
+    super.isDeletable,
+    super.isTransformable,
+    super.metadata,
+  }) {
+    validateSize(size, path: 'vector.size');
+    final naturalSize = this.naturalSize;
+    if (naturalSize != null) {
+      validateSize(naturalSize, path: 'vector.naturalSize');
+    }
+  }
+
+  final CanvasResourceId resourceId;
+  final Size size;
+  final Size? naturalSize;
+  @override
+  CanvasElementKind get kind => CanvasElementKind.vector;
 }
 
 /// Public API v1 declaration for [CanvasPathElement].

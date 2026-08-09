@@ -79,6 +79,8 @@ StoreRevisionDelta _familyElementDelta(
   return switch ((before, after)) {
     (final CanvasImageElement before, final CanvasImageElement after) =>
       _imageDelta(before, after),
+    (final CanvasVectorElement before, final CanvasVectorElement after) =>
+      _vectorDelta(before, after),
     (final CanvasPathElement before, final CanvasPathElement after) =>
       _pathDelta(before, after),
     (final CanvasTextElement before, final CanvasTextElement after) =>
@@ -96,6 +98,22 @@ StoreRevisionDelta _familyElementDelta(
 StoreRevisionDelta _imageDelta(
   CanvasImageElement before,
   CanvasImageElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.size != after.size) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.resourceId != after.resourceId ||
+      before.naturalSize != after.naturalSize) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _vectorDelta(
+  CanvasVectorElement before,
+  CanvasVectorElement after,
 ) {
   var delta = const StoreRevisionDelta();
   if (before.size != after.size) {

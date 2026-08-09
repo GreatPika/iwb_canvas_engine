@@ -70,6 +70,14 @@ Map<String, Object?> _writeResource(CanvasResource resource) {
       'byteLength': resource.byteLength,
       'metadata': _writeMetadata(resource.metadata),
     },
+    CanvasVectorResource() => {
+      'id': resource.id.value,
+      'kind': 'vector',
+      'source': _writeResourceSource(resource.source),
+      'contentHash': resource.contentHash,
+      'byteLength': resource.byteLength,
+      'metadata': _writeMetadata(resource.metadata),
+    },
   };
 }
 
@@ -92,6 +100,7 @@ Map<String, Object?> _writeElement(CanvasElement element) {
     ..._writeElementCommon(element),
     ...switch (element) {
       CanvasImageElement() => _writeImageElement(element),
+      CanvasVectorElement() => _writeVectorElement(element),
       CanvasPathElement() => _writePathElement(element),
       CanvasTextElement() => _writeTextElement(element),
       CanvasStrokeElement() => _writeStrokeElement(element),
@@ -119,6 +128,16 @@ Map<String, Object?> _writeElementCommon(CanvasElement element) {
 }
 
 Map<String, Object?> _writeImageElement(CanvasImageElement element) {
+  final naturalSize = element.naturalSize;
+
+  return {
+    'resourceId': element.resourceId.value,
+    'size': _writeSize(element.size),
+    if (naturalSize != null) 'naturalSize': _writeSize(naturalSize),
+  };
+}
+
+Map<String, Object?> _writeVectorElement(CanvasVectorElement element) {
   final naturalSize = element.naturalSize;
 
   return {
@@ -207,6 +226,7 @@ String? _writeNullableColor(Color? color) {
 String _writeElementKind(CanvasElementKind kind) {
   return switch (kind) {
     CanvasElementKind.image => 'image',
+    CanvasElementKind.vector => 'vector',
     CanvasElementKind.path => 'path',
     CanvasElementKind.text => 'text',
     CanvasElementKind.stroke => 'stroke',

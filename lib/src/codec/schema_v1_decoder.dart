@@ -52,20 +52,8 @@ final class _CanvasDocumentBuilderSink implements SchemaV1ImportSink {
   }
 
   @override
-  void imageResource(SchemaV1ImageResourceImportEvent event) {
-    _resources.add(
-      _materialize(
-        _diagnostics,
-        () => CanvasImageResource(
-          id: event.id,
-          source: CanvasResourceSource.appKey(event.appKey),
-          mimeType: event.mimeType,
-          contentHash: event.contentHash,
-          byteLength: event.byteLength,
-          metadata: event.metadata,
-        ),
-      ),
-    );
+  void resource(SchemaV1ResourceImportEvent event) {
+    _resources.add(_materializeResource(event, _diagnostics));
   }
 
   @override
@@ -135,6 +123,10 @@ CanvasElement _materializeElement(
       event,
       diagnostics,
     ),
+    SchemaV1VectorElementImportEvent() => _materializeVectorElement(
+      event,
+      diagnostics,
+    ),
     SchemaV1PathElementImportEvent() => _materializePathElement(
       event,
       diagnostics,
@@ -158,6 +150,35 @@ CanvasElement _materializeElement(
   };
 }
 
+CanvasResource _materializeResource(
+  SchemaV1ResourceImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  return switch (event) {
+    SchemaV1ImageResourceImportEvent() => _materialize(
+      diagnostics,
+      () => CanvasImageResource(
+        id: event.id,
+        source: CanvasResourceSource.appKey(event.appKey),
+        mimeType: event.mimeType,
+        contentHash: event.contentHash,
+        byteLength: event.byteLength,
+        metadata: event.metadata,
+      ),
+    ),
+    SchemaV1VectorResourceImportEvent() => _materialize(
+      diagnostics,
+      () => CanvasVectorResource(
+        id: event.id,
+        source: CanvasResourceSource.appKey(event.appKey),
+        contentHash: event.contentHash,
+        byteLength: event.byteLength,
+        metadata: event.metadata,
+      ),
+    ),
+  };
+}
+
 CanvasImageElement _materializeImageElement(
   SchemaV1ImageElementImportEvent event,
   DiagnosticsHub? diagnostics,
@@ -167,6 +188,33 @@ CanvasImageElement _materializeImageElement(
   return _materialize(
     diagnostics,
     () => CanvasImageElement(
+      id: common.id,
+      resourceId: event.resourceId,
+      size: event.size,
+      naturalSize: event.naturalSize,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
+    ),
+  );
+}
+
+CanvasVectorElement _materializeVectorElement(
+  SchemaV1VectorElementImportEvent event,
+  DiagnosticsHub? diagnostics,
+) {
+  final common = event.common;
+
+  return _materialize(
+    diagnostics,
+    () => CanvasVectorElement(
       id: common.id,
       resourceId: event.resourceId,
       size: event.size,
@@ -354,10 +402,8 @@ void _validateDocumentReferences(
   CanvasDocument document, {
   required DiagnosticsHub? diagnostics,
 }) {
-  final resourceIds = _uniqueIds(
-    document.resources.map((resource) => resource.id.value),
-    path: 'resources.id',
-    code: CanvasDataErrorCode.duplicateResourceId,
+  final resources = _resourcesById(
+    document.resources,
     diagnostics: diagnostics,
   );
   final elementIds = <String>{};
@@ -366,7 +412,7 @@ void _validateDocumentReferences(
     _validateElementReferences(
       element,
       elementIds,
-      resourceIds,
+      resources,
       diagnostics: diagnostics,
     );
   }
@@ -385,17 +431,39 @@ void _validateDocumentReferences(
       _validateElementReferences(
         element,
         elementIds,
-        resourceIds,
+        resources,
         diagnostics: diagnostics,
       );
     }
   }
 }
 
+Map<String, CanvasResource> _resourcesById(
+  Iterable<CanvasResource> resources, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  final byId = <String, CanvasResource>{};
+  for (final resource in resources) {
+    if (byId.containsKey(resource.id.value)) {
+      throw recordSchemaV1FailureDiagnostic(
+        diagnostics,
+        CanvasDataException(
+          code: CanvasDataErrorCode.duplicateResourceId,
+          message: 'duplicate id: ${resource.id.value}.',
+          path: 'resources.id',
+        ),
+      );
+    }
+    byId[resource.id.value] = resource;
+  }
+
+  return byId;
+}
+
 void _validateElementReferences(
   CanvasElement element,
   Set<String> elementIds,
-  Set<String> resourceIds, {
+  Map<String, CanvasResource> resources, {
   required DiagnosticsHub? diagnostics,
 }) {
   if (!elementIds.add(element.id.value)) {
@@ -408,40 +476,42 @@ void _validateElementReferences(
       ),
     );
   }
-  if (element is CanvasImageElement &&
-      !resourceIds.contains(element.resourceId.value)) {
-    throw recordSchemaV1FailureDiagnostic(
-      diagnostics,
-      CanvasDataException(
-        code: CanvasDataErrorCode.missingResourceReference,
-        message: 'image element references a missing resource.',
-        path: 'image.resourceId',
-      ),
-    );
+  final error = _resourceRelationshipError(element, resources);
+  if (error != null) {
+    throw recordSchemaV1FailureDiagnostic(diagnostics, error);
   }
 }
 
-Set<String> _uniqueIds(
-  Iterable<String> ids, {
-  required String path,
-  required CanvasDataErrorCode code,
-  required DiagnosticsHub? diagnostics,
-}) {
-  final seen = <String>{};
-  for (final id in ids) {
-    if (!seen.add(id)) {
-      throw recordSchemaV1FailureDiagnostic(
-        diagnostics,
-        CanvasDataException(
-          code: code,
-          message: 'duplicate id: $id.',
-          path: path,
-        ),
-      );
-    }
+CanvasDataException? _resourceRelationshipError(
+  CanvasElement element,
+  Map<String, CanvasResource> resources,
+) {
+  final relationship = switch (element) {
+    CanvasImageElement() => (element.resourceId, 'image.resourceId', true),
+    CanvasVectorElement() => (element.resourceId, 'vector.resourceId', false),
+    _ => null,
+  };
+  if (relationship == null) {
+    return null;
+  }
+  final resource = resources[relationship.$1.value];
+  if (resource == null) {
+    return CanvasDataException(
+      code: CanvasDataErrorCode.missingResourceReference,
+      message: 'resource element references a missing resource.',
+      path: relationship.$2,
+    );
+  }
+  final hasExpectedKind = (resource is CanvasImageResource) == relationship.$3;
+  if (hasExpectedKind) {
+    return null;
   }
 
-  return seen;
+  return CanvasDataException(
+    code: CanvasDataErrorCode.resourceKindMismatch,
+    message: 'resource kind does not match the referencing element.',
+    path: relationship.$2,
+  );
 }
 
 T _materialize<T>(DiagnosticsHub? diagnostics, T Function() materialize) {

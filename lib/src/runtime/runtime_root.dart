@@ -637,6 +637,15 @@ final class RuntimeRoot
         resourceRevision: facts.resourceRevision,
         metadata: facts.metadata,
       ),
+      StoreVectorResourceDescriptorFacts() =>
+        FrameVectorResourceDescriptorFacts(
+          id: facts.id,
+          appKey: facts.appKey,
+          contentHash: facts.contentHash,
+          byteLength: facts.byteLength,
+          resourceRevision: facts.resourceRevision,
+          metadata: facts.metadata,
+        ),
     };
   }
 
@@ -2882,6 +2891,10 @@ CanvasElementUpdate _transformUpdate(
 
   return switch (element.kind) {
     CanvasElementKind.image => CanvasImageElementUpdate(
+      id: element.id,
+      transform: update,
+    ),
+    CanvasElementKind.vector => CanvasVectorElementUpdate(
       id: element.id,
       transform: update,
     ),

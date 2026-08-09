@@ -6,6 +6,7 @@ import 'canvas_contract_limits.dart';
 import 'canvas_errors.dart';
 import 'canvas_ids.dart';
 import 'canvas_metadata.dart';
+import 'canvas_prepared_vector.dart';
 import 'canvas_value_validators.dart';
 
 /// Public API v1 declaration for [CanvasResource].
@@ -63,6 +64,17 @@ final class CanvasImageResource extends CanvasResource {
   final String? mimeType;
 }
 
+/// Public API v1 declaration for [CanvasVectorResource].
+final class CanvasVectorResource extends CanvasResource {
+  CanvasVectorResource({
+    required super.id,
+    required super.source,
+    super.contentHash,
+    super.byteLength,
+    super.metadata,
+  });
+}
+
 @immutable
 /// Public API v1 declaration for [CanvasResourceSource].
 sealed class CanvasResourceSource {
@@ -98,6 +110,7 @@ final class CanvasAppKeyResourceSource extends CanvasResourceSource {
 /// Public API v1 declaration for [CanvasResourceResolver].
 abstract interface class CanvasResourceResolver {
   ui.Image? resolveImage(CanvasImageResource resource);
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource);
 }
 
 /// Public API v1 declaration for [CanvasResourcePort].

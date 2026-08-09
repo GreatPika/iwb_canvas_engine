@@ -21,6 +21,7 @@ Required tests:
 - `test.interaction.runtime_created_timestamps_monotonic`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
+- `test.resources.application_vector_freshness_lifecycle`
 Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
@@ -153,7 +154,7 @@ Notes:
   projection, resource, or action effect.
 - `commitTextEdit` rejects stale request ids by request id, controller epoch,
   target kind, element generation, elementRevision, missing element,
-  empty-canvas target, non-text target, and current text-family mismatch.
+  empty-canvas target, vector/non-text target, and current text-kind mismatch.
   `documentRevision` is observation-only; unrelated document edits do not
   reject a still-current text edit.
 - For `commitTextEdit` stale rejection, known live rejected request ids are
@@ -222,7 +223,7 @@ listener notification. The active session removes matching cache/suppression
 borrows, then its identity-aware surface callback removes the matching retained
 main-output borrow; a stale session proves absence and does not mutate current
 output. Target release preserves unrelated bindings and overlay output, and
-release neither calls the resolver nor disposes application-owned images. A
+release neither calls the resolver nor disposes application-owned assets. A
 later notification failure is contained after removal: accepted state,
 revisions, repaint intent, operation return, and the no-borrow postcondition
 still publish. Rejected and successful no-op rows mutate neither retention

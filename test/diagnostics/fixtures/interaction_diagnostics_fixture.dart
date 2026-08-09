@@ -22,6 +22,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   _testRecordsEveryInteractionDiagnosticCode();
   _testInteractionGuardPathsRouteDiagnostics();
+  _testVectorInteractionReliabilityUsesExistingRoute();
   _testResolverReentrantMutationDiagnostic();
   _testCodecDiagnosticsRemainDataCodes();
   _testDiagnosticCodesStayInternal();
@@ -128,6 +129,55 @@ void _testInteractionGuardPathsRouteDiagnostics() {
       ),
     );
   });
+}
+
+// Enabled and disabled runs share the same vector action so route reuse and
+// allocation silence are observed against one concrete reliability outcome.
+// ignore: halstead-volume
+void _testVectorInteractionReliabilityUsesExistingRoute() {
+  test(
+    'non-movable selected vector records the existing interaction route once',
+    () {
+      final enabledRoot = runtimeRootWithCommittedDocumentSeed(
+        _nonMovableVectorDocument(),
+        config: const CanvasRuntimeConfig(
+          diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
+        ),
+      );
+      addTearDown(enabledRoot.dispose);
+      enabledRoot.selection.setSelection([CanvasElementId('vector-a')]);
+
+      enabledRoot.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+
+      expect(enabledRoot.diagnosticRecords, hasLength(1));
+      expect(
+        enabledRoot.diagnosticRecords.single.code,
+        const DiagnosticCode.interaction(
+          InteractionDiagnosticCode.selectedMoveStartDeniedNotMovable,
+        ),
+      );
+      expect(
+        enabledRoot.diagnosticRecords.single.source,
+        DiagnosticSource.interaction,
+      );
+
+      final disabledRoot = runtimeRootWithCommittedDocumentSeed(
+        _nonMovableVectorDocument(),
+        config: const CanvasRuntimeConfig(),
+      );
+      addTearDown(disabledRoot.dispose);
+      final before = DiagnosticRecord.allocations.count;
+      disabledRoot.selection.setSelection([CanvasElementId('vector-a')]);
+      disabledRoot.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+
+      expect(disabledRoot.diagnosticRecords, isEmpty);
+      expect(DiagnosticRecord.allocations.count, before);
+    },
+  );
 }
 
 int _diagnosticCount(DiagnosticsHub hub, InteractionDiagnosticCode code) {
@@ -464,6 +514,30 @@ CanvasDocument _document() {
         id: CanvasLayerId('layer-a'),
         elements: [
           CanvasRectElement(id: CanvasElementId('a'), size: const Size(10, 10)),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _nonMovableVectorDocument() {
+  return CanvasDocument(
+    resources: [
+      CanvasVectorResource(
+        id: CanvasResourceId('vector-resource'),
+        source: CanvasResourceSource.appKey('vector-resource'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('vector-layer'),
+        elements: [
+          CanvasVectorElement(
+            id: CanvasElementId('vector-a'),
+            resourceId: CanvasResourceId('vector-resource'),
+            size: const Size(10, 10),
+            isTransformable: false,
+          ),
         ],
       ),
     ],

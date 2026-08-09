@@ -6,18 +6,29 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard
 import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
 
 final class RecordingResourceResolver implements CanvasResourceResolver {
-  RecordingResourceResolver(this._resolve);
+  RecordingResourceResolver(this._resolve, {this.resolvePreparedVector});
 
   final ui.Image? Function(CanvasImageResource resource) _resolve;
+  final CanvasPreparedVector? Function(CanvasVectorResource resource)?
+  resolvePreparedVector;
   final List<CanvasImageResource> resources = [];
+  final List<CanvasVectorResource> vectorResources = [];
 
   int get callCount => resources.length;
+  int get vectorCallCount => vectorResources.length;
 
   @override
   ui.Image? resolveImage(CanvasImageResource resource) {
     resources.add(resource);
 
     return _resolve(resource);
+  }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) {
+    vectorResources.add(resource);
+
+    return resolvePreparedVector?.call(resource);
   }
 }
 
@@ -64,6 +75,24 @@ ResourceAssetResolveRequest descriptorRequest({
   );
 }
 
+ResourceAssetResolveRequest vectorDescriptorRequest({
+  required String id,
+  int resourceRevision = 0,
+  ui.Rect placeholderBounds = const ui.Rect.fromLTWH(1, 2, 3, 4),
+}) {
+  return ResourceAssetResolveRequest.descriptor(
+    resource: CanvasVectorResource(
+      id: CanvasResourceId(id),
+      source: CanvasResourceSource.appKey('vector-$id'),
+      contentHash: 'sha256:vector-resource',
+      byteLength: 2048,
+      metadata: CanvasMetadata.fromMap({'role': id}),
+    ),
+    resourceRevision: resourceRevision,
+    placeholderBounds: placeholderBounds,
+  );
+}
+
 ResourceAssetResolveRequest missingRequest({
   required String id,
   int resourceRevision = 0,
@@ -84,6 +113,16 @@ ui.Image resolvedImage(ResourceAssetResolveResult result) {
   }
 
   return asset.image;
+}
+
+CanvasPreparedVector resolvedVector(ResourceAssetResolveResult result) {
+  final resolved = result as ResolvedResourceAsset;
+  final asset = resolved.asset;
+  if (asset is! VectorResourceAsset) {
+    throw StateError('Expected the current vector resource asset.');
+  }
+
+  return asset.prepared;
 }
 
 Future<ui.Image> createResourceTestImage([int color = 0xff00aa00]) {

@@ -588,7 +588,7 @@ Map<String, Object?> _aggregateMetadataLimitDocument() {
 
 final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   final events = <String>[];
-  final resources = <SchemaV1ImageResourceImportEvent>[];
+  final resources = <SchemaV1ResourceImportEvent>[];
   final backgroundElements = <SchemaV1ElementImportEvent>[];
   final layers = <SchemaV1LayerImportEvent>[];
   final layerElements =
@@ -602,7 +602,7 @@ final class _CollectingImportSink implements IsolatedSchemaV1ImportSink {
   }
 
   @override
-  void imageResource(SchemaV1ImageResourceImportEvent event) {
+  void resource(SchemaV1ResourceImportEvent event) {
     resources.add(event);
     events.add('resource:${event.id.value}');
   }

@@ -242,6 +242,21 @@ FrameElementFacts imageFacts(
   );
 }
 
+FrameElementFacts vectorFacts(
+  String id, {
+  required int orderToken,
+  required CanvasResourceId resourceId,
+  Size size = const Size(10, 10),
+}) {
+  return _baseFacts(
+    id,
+    kind: CanvasElementKind.vector,
+    orderToken: orderToken,
+    resourceId: resourceId,
+    size: size,
+  );
+}
+
 FrameElementFacts strokeFacts(
   String id, {
   required int orderToken,

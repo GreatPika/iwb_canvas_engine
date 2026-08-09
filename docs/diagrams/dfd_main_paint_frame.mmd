@@ -3,7 +3,7 @@ flowchart LR
 
   Surface["CanvasSurface\nresource-free main paint host"]
   ExplicitSessionCaller["Frame/internal caller\nexplicit SurfaceResourceSession"]
-  AppResolver["Application resourceResolver\nsynchronous app-owned image read"]
+  AppResolver["Application resourceResolver\nsynchronous app-owned resource-asset read"]
 
   subgraph Store["DocumentStoreKernel"]
     Committed["Committed tables\ndocument revisions,\nresource descriptors"]
@@ -13,7 +13,7 @@ flowchart LR
   subgraph FrameFactsPort["contracts/internal FrameFactsPort"]
     CommittedFrameFacts["Committed frame facts\ndocument/structural/bounds/\nelementVisual/background/grid revisions"]
     RowSnapshots["Committed row snapshots\nstale structuralRevision/generation/orderToken rejected"]
-    DescriptorFacts["Descriptor facts\nresourceId + appKey descriptor + resourceRevision"]
+    DescriptorFacts["Descriptor facts\nresourceId + sealed image/vector appKey descriptor + resourceRevision"]
   end
 
   subgraph RuntimeState["Runtime view state"]
@@ -64,7 +64,7 @@ flowchart LR
     AssetBinding["PaintAssetBindingService\ndescriptor-to-asset binding\nthrough SurfaceResourceSession"]
     ResolvedAssets["Resolved paint assets\ntyped assets or placeholders"]
     PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
-    ExplicitLayerEffect["Future saveLayer effect\nexplicit RenderElementRecord field,\nbudgeted, metric-counted,\nand guarded by contract update"]
+    ExplicitLayerEffect["Vector opacity effect\nrecord-local zero-or-one target-bounded layer\npartial opacity only"]
     ProjectionBlocked["No CanvasDocument materialization\nin main paint"]
   end
 
@@ -124,14 +124,14 @@ flowchart LR
   CapturedFrame -->|"backgroundRevision, gridRevision, gridStrokeWidth,\nviewCameraBucket, viewportRect, devicePixelRatio"| StaticBackgroundCache
   Records -->|"ordinary opacity render input"| PaintAlphaPolicy
   PaintAlphaPolicy -->|"primitive paint alpha only"| MainPainter
-  ExplicitLayerEffect -.->|"required before any saveLayer-producing effect\nframe.paint_candidates offscreen-layer metric"| MainPainter
+  ExplicitLayerEffect -.->|"partial-opacity vector: one bounded layer\nzero/full: no layer"| MainPainter
   RenderCaches -->|"bounded cached paint primitives"| MainPainter
   StaticBackgroundCache -->|"bounded static background primitive"| MainPainter
 
   Records -->|"resource ids"| AssetBinding
   AssetBinding -->|"request descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"read committed descriptor facts\nby captured revision"| Committed
-  Committed -->|"sealed immutable current image descriptor facts"| DescriptorFacts
+  Committed -->|"sealed immutable image/vector descriptor facts"| DescriptorFacts
   ExplicitSessionCaller -->|"passes SurfaceResourceSession\nwith resolverGeneration"| AssetBinding
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| AssetBinding
   AssetBinding -->|"resolve via session only"| ResolvePaintAsset
@@ -141,7 +141,7 @@ flowchart LR
   ResolverFrameBudget -->|"budget available\nsync read request"| AppResolver
   ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| ResolvedAssets
-  AppResolver -->|"app-owned image reference\nno engine IO, no mutation"| ResolvePaintAsset
+  AppResolver -->|"app-owned resource-asset reference\nno engine IO, no mutation"| ResolvePaintAsset
   ResolvePaintAsset -->|"resolved asset"| ResolvedAssets
   ResolvePaintAsset -.->|"missing or unresolved"| MissingPlaceholder
   MissingPlaceholder -.->|"bounded placeholder asset"| ResolvedAssets

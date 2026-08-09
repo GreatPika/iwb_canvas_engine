@@ -68,14 +68,14 @@ stateDiagram-v2
     reject without pending tap or request.
   end note
 
-  TopTargetFirst --> PendingContentTarget: "top content target / store id, generation, elementRevision, family, positions, timestamp, epoch"
+  TopTargetFirst --> PendingContentTarget: "top content target / store id, generation, elementRevision, CanvasElementKind, positions, timestamp, epoch"
   TopTargetFirst --> PendingEmptyCanvas: "no qualifying content target / store empty-canvas candidate"
   TopTargetFirst --> Idle: "unreliable target read / no pending tap or request"
 
   state "Pending content target" as PendingContentTarget
   note right of PendingContentTarget
     Pending state is input history only:
-    element id, generation, elementRevision, family,
+    element id, generation, elementRevision, CanvasElementKind,
     view/world positions, timestamp, and controllerEpoch.
     It is not CanvasPreviewState and not Store state.
   end note
@@ -127,13 +127,13 @@ stateDiagram-v2
   state "Candidate match gate" as CandidateMatch
   note right of CandidateMatch
     Content targets match by current element id,
-    generation, elementRevision, family,
+    generation, elementRevision, CanvasElementKind,
     controllerEpoch, visibility, and top-hit status.
     Empty-canvas targets match by still having no
     qualifying content target.
   end note
 
-  CandidateMatch --> CleanupOnly: "different content target, stale generation, stale elementRevision, hidden, family mismatch, epoch mismatch, or new content target"
+  CandidateMatch --> CleanupOnly: "different content target, stale generation, stale elementRevision, hidden, kind mismatch, epoch mismatch, or new content target"
   CandidateMatch --> EmitContentRequest: "same current content target"
   CandidateMatch --> EmitEmptyCanvasRequest: "still empty canvas"
 
@@ -187,7 +187,7 @@ stateDiagram-v2
   end note
 
   IssuedRequestLive --> ConsumedRequest: "commitTextEdit accepted no-op or changed text content request / consume request"
-  IssuedRequestLive --> ConsumedRequest: "commitTextEdit rejects known live stale, empty-canvas, non-text, missing, or family-mismatched request / privately consume request"
+  IssuedRequestLive --> ConsumedRequest: "commitTextEdit rejects known live stale, empty-canvas, vector/non-text, missing, or kind-mismatched request / privately consume request"
   IssuedRequestLive --> ConsumedRequest: "loadDocumentFromJson success / clear live request facts"
   IssuedRequestLive --> Disposed: "runtime.dispose() / clear live request facts before later commitTextEdit throws StateError"
 

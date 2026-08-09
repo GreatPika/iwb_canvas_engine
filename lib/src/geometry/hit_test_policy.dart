@@ -102,6 +102,7 @@ final class HitTestPolicy {
 
     return switch (facts.kind) {
       CanvasElementKind.image ||
+      CanvasElementKind.vector ||
       CanvasElementKind.rect ||
       CanvasElementKind.text => _hitBox(point, facts, geometryPolicy),
       CanvasElementKind.line => _hitLine(point, facts),
@@ -133,6 +134,7 @@ final class HitTestPolicy {
       CanvasElementKind.image ||
       CanvasElementKind.rect ||
       CanvasElementKind.text => _hitBox(point, facts, geometryPolicy),
+      CanvasElementKind.vector => _hitBox(point, facts, geometryPolicy),
       CanvasElementKind.line => _hitLine(point, facts),
       CanvasElementKind.stroke => _hitStroke(point, facts),
       CanvasElementKind.path => _hitPath(point, facts),
@@ -147,6 +149,7 @@ final class HitTestPolicy {
 
     return switch (facts.kind) {
       CanvasElementKind.image ||
+      CanvasElementKind.vector ||
       CanvasElementKind.rect ||
       CanvasElementKind.text => _boxIntersectsRect(
         facts,
@@ -169,6 +172,7 @@ final class HitTestPolicy {
 
     return switch (facts.kind) {
       CanvasElementKind.image ||
+      CanvasElementKind.vector ||
       CanvasElementKind.rect ||
       CanvasElementKind.text => _eraserHitsBox(corridor, facts, geometryPolicy),
       CanvasElementKind.line => _eraserHitsLine(corridor, facts),

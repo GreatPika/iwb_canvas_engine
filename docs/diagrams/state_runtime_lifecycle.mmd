@@ -58,7 +58,7 @@ stateDiagram-v2
     NoGestureCleanup --> ResourceCacheCleanup
 
     ResourceCacheCleanup: clear mandatory v1 resource caches
-    ResourceCacheCleanup --> CloseStreams: drop resolved-image cache entries
+    ResourceCacheCleanup --> CloseStreams: drop resolved image/vector cache entries
     CloseStreams: close actions and contextActionRequests streams
     CloseStreams --> FinalizeStateListenable
     FinalizeStateListenable: keep CanvasRuntimeState state.value readable and block post-dispose notifications
@@ -67,7 +67,7 @@ stateDiagram-v2
 
   note right of Disposing
     Dispose never calls the move commit resolver.
-    Dispose does not dispose app-owned ui.Image instances
+    Dispose does not dispose app-owned image/vector assets
     or the app-owned resource resolver.
   end note
 

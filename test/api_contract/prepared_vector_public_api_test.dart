@@ -116,7 +116,24 @@ ui.Picture extractPreparedVectorPicture(CanvasPreparedVector value) =>
   '''
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasDocument useCodecLocalDecodeHelper(Map<String, Object?> json) =>
+    decodeSchemaV1Document(json);
+''',
+  '''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+VectorGraphic exposeUpstreamVectorType(VectorGraphic value) => value;
+''',
+  '''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
 Object inspectPreparedVectorDiagnostics(CanvasPreparedVector value) =>
+    value.diagnostics;
+''',
+  '''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+Object inspectVectorElementDiagnostics(CanvasVectorElement value) =>
     value.diagnostics;
 ''',
   '''

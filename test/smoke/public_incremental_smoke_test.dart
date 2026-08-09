@@ -1596,6 +1596,9 @@ final class _NoopResolver implements CanvasResourceResolver {
 
     return null;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
 
 final class _PublicRuntimeProbe {

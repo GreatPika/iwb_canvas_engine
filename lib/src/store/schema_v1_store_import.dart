@@ -37,7 +37,7 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   }
 
   @override
-  void imageResource(SchemaV1ImageResourceImportEvent event) {
+  void resource(SchemaV1ResourceImportEvent event) {
     _acceptEvent(() {
       _resources.addSchemaV1Import(event);
     });

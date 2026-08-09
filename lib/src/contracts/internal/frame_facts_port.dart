@@ -164,6 +164,18 @@ final class FrameImageResourceDescriptorFacts
   final String? mimeType;
 }
 
+final class FrameVectorResourceDescriptorFacts
+    extends FrameResourceDescriptorFacts {
+  const FrameVectorResourceDescriptorFacts({
+    required super.id,
+    required super.appKey,
+    required super.contentHash,
+    required super.byteLength,
+    required super.resourceRevision,
+    required super.metadata,
+  });
+}
+
 abstract interface class FrameFactsPort {
   FrameRevisionFacts get frameRevisions;
   CanvasBackground get background;

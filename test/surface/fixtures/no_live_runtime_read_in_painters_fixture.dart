@@ -183,4 +183,7 @@ final class _CountingResolver implements CanvasResourceResolver {
 
     return _image;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }

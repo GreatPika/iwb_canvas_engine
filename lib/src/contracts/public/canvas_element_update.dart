@@ -81,6 +81,36 @@ final class CanvasImageElementUpdate extends CanvasElementUpdate {
   final CanvasFieldUpdate<Size?> naturalSize;
 }
 
+/// Public API v1 declaration for [CanvasVectorElementUpdate].
+final class CanvasVectorElementUpdate extends CanvasElementUpdate {
+  CanvasVectorElementUpdate({
+    required super.id,
+    super.transform,
+    super.opacity,
+    super.hitPadding,
+    super.isVisible,
+    super.isSelectable,
+    super.isLocked,
+    super.isDeletable,
+    super.isTransformable,
+    super.metadata,
+    this.resourceId = const CanvasFieldUpdate.absent(),
+    this.size = const CanvasFieldUpdate.absent(),
+    this.naturalSize = const CanvasFieldUpdate.absent(),
+  }) {
+    _validateSet(size, (value) => validateSize(value, path: 'vector.size'));
+    _validateSet(naturalSize, (value) {
+      if (value != null) {
+        validateSize(value, path: 'vector.naturalSize');
+      }
+    });
+  }
+
+  final CanvasFieldUpdate<CanvasResourceId> resourceId;
+  final CanvasFieldUpdate<Size> size;
+  final CanvasFieldUpdate<Size?> naturalSize;
+}
+
 /// Public API v1 declaration for [CanvasPathElementUpdate].
 final class CanvasPathElementUpdate extends CanvasElementUpdate {
   CanvasPathElementUpdate({

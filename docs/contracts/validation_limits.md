@@ -89,6 +89,12 @@ Non-invertible element transforms are rejected with `fieldMustBeInvertible`
 before any draft mutation, runtime mutation, repaint, event, or public state
 publication.
 
+Image and vector target `size` and optional `naturalSize` use the ordinary
+positive-size boundary at public construction, sparse update materialization,
+schema v1 import, and final store preparation. Prepared vector
+`intrinsicSize` is independently validated by preparation and is never used to
+repair or overwrite committed target geometry.
+
 `CanvasInteractionRequestId` follows the public id validator contract:
 non-empty canonical string, no leading/trailing whitespace, length <= 256, and
 no control characters. It is

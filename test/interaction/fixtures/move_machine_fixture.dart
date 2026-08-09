@@ -70,6 +70,7 @@ void _registerSelectedMoveTerminalTests() {
   _testSelectedMoveEmptyMovableSetDoesNotResolve();
   _testSelectedMoveCommitWithResolver();
   _testGroupInteriorSelectedMoveCommitWithResolver();
+  _testSelectedVectorMoveCommitUpdatesDocument();
 }
 
 void _registerSelectedMoveCleanupTests() {
@@ -881,6 +882,57 @@ void _testGroupInteriorSelectedMoveCommitWithResolver() {
       expect(root.preview, isA<CanvasNoPreview>());
     },
   );
+}
+
+// The real selection start, resolver commit, and committed document result are
+// one move transaction; extracting setup would obscure that direct outcome.
+// ignore: halstead-volume
+void _testSelectedVectorMoveCommitUpdatesDocument() {
+  test(
+    'selected vector move commits its transformed document element',
+    () async {
+      final resourceId = CanvasResourceId('vector-resource');
+      final root = runtimeRootWithCommittedDocumentSeed(
+        CanvasDocument(
+          resources: [
+            CanvasVectorResource(
+              id: resourceId,
+              source: CanvasResourceSource.appKey('vector-resource'),
+            ),
+          ],
+          layers: [
+            CanvasLayer(
+              id: CanvasLayerId('layer-a'),
+              elements: [
+                CanvasVectorElement(
+                  id: CanvasElementId('vector-a'),
+                  resourceId: resourceId,
+                  size: const Size(10, 10),
+                ),
+              ],
+            ),
+          ],
+        ),
+        config: const CanvasRuntimeConfig(
+          moveCommitResolver: _commitVectorMove,
+        ),
+      );
+      addTearDown(root.dispose);
+      root.selection.setSelection([CanvasElementId('vector-a')]);
+
+      _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
+      await Future<void>.delayed(Duration.zero);
+
+      final vector =
+          root.readDocument().layers.single.elements.single
+              as CanvasVectorElement;
+      expect(vector.transform, CanvasTransform.translation(const Offset(7, 8)));
+    },
+  );
+}
+
+CanvasMoveCommit _commitVectorMove(CanvasMoveCommitRequest _) {
+  return const CanvasMoveCommit(delta: Offset(7, 8));
 }
 
 _CommitScenario _commitScenario() {

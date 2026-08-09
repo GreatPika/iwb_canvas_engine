@@ -172,4 +172,7 @@ final class _NoopResolver implements CanvasResourceResolver {
   ui.Image? resolveImage(CanvasImageResource resource) {
     return null;
   }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }

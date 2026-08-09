@@ -30,7 +30,7 @@ sequenceDiagram
     Codec->>Schema: schemaVersion gate(read exactly {1})
     Schema->>Schema: known v1 field validation and unknown non-metadata policy
     Schema->>Schema: primitive validation(colors, finite numbers, ids)
-    Schema->>Schema: resource validation(kind=image typed descriptor, appKey source only)
+    Schema->>Schema: resource validation(kind=image/vector sealed descriptor, appKey source only)
     Schema->>Schema: element validation(known kinds, enums, and transform admission)
     Schema->>Schema: layer and node count checks
     Schema->>Schema: metadata validation(JSON-only bounded extension area)
@@ -39,7 +39,7 @@ sequenceDiagram
       Schema-->>Codec: validated streamable import facts
       Codec->>Import: begin document and emit resource/layer/element events
       Import->>Store: prepareSchemaV1Import
-      Store->>Store: duplicate id and final-candidate descriptor relationship checks
+      Store->>Store: duplicate id and final-candidate absent/wrong-kind descriptor relationship checks
       alt store preparation accepts
         Store-->>Runtime: PreparedStoreDocumentImport consume-once rows
         Runtime->>Runtime: prepared interaction cleanup before install
@@ -64,12 +64,12 @@ sequenceDiagram
     end
   end
 
-  App->>API: decodeSchemaV1Document / decodeSchemaV1DocumentFromJson(input)
-  API->>Codec: explicit schema v1 decode request
+  Note over API,Codec: Explicit DTO decode helpers are codec-local and are not root-barrel API.
+  API->>Codec: codec-local explicit schema v1 decode request
   Codec->>Codec: canonical reader traverses schema v1 input
   Codec->>DecodeSink: emit dependency-neutral import events
   DecodeSink-->>Codec: materialized CanvasDocument DTO
-  Codec->>Codec: decoder-owned duplicate/reference validation
+  Codec->>Codec: decoder-owned duplicate/absent/wrong-kind relationship validation
   Codec-->>API: CanvasDocument
   API-->>App: decoded public DTO
 
@@ -83,7 +83,7 @@ sequenceDiagram
     Codec->>Codec: preserve layer/resource/element order
     Codec->>Codec: write uppercase color hex
     Codec->>Codec: write schemaVersion = 1 and all common element fields
-    Codec->>Codec: omit nullable optional family fields only where schema allows
+    Codec->>Codec: omit nullable optional sealed-kind fields only where schema allows
     Codec->>Codec: write appKey resource descriptors only
     Codec->>Codec: project CanvasMetadata as JSON-compatible values
     Codec->>Codec: omit unknown non-metadata fields from canonical encode

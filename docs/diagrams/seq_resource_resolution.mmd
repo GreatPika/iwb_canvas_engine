@@ -50,16 +50,16 @@ sequenceDiagram
     Supplement-->>Frame: merged ordinary and supplement records
   end
   Note over Ordinary,Supplement: Row facts are resolved through FrameFactsPort for bounded candidate handles with structuralRevision/generation/orderToken stale rejection.
-  Note over Frame: Each image render record carries resourceId from a committed row fact.
+  Note over Frame: Each resource-backed render record carries resourceId from a committed row fact.
 
-  opt records contain image resource ids
-    loop for each image RenderElementRecord
+  opt records contain resource ids
+    loop for each resource-backed RenderElementRecord
       Frame->>Assets: bind descriptor to paint asset
       Assets->>Facts: read descriptor facts and resourceRevision by resourceId
       Facts->>Store: read descriptor facts from committed state
-      Store-->>Facts: sealed current image descriptor facts or missing descriptor
+      Store-->>Facts: sealed typed descriptor facts or missing descriptor
       Facts-->>Assets: immutable typed descriptor facts or missing descriptor
-      Assets->>Session: resolve paint image(descriptor snapshot, resourceRevision)
+      Assets->>Session: resolve paint asset(descriptor snapshot, resourceRevision)
 
       alt descriptor is missing
         Session-->>Assets: bounded missing resource placeholder
@@ -74,7 +74,7 @@ sequenceDiagram
         else per-frame resolver budget exceeded
           Session-->>Assets: bounded placeholder, session records at most one pending throttled follow-up repaint, no cache write
         else cache miss and resolver budget available
-          Session->>Resolver: resolveImage(CanvasImageResource with CanvasAppKeyResourceSource.key)
+          Session->>Resolver: resolve matching public method for sealed descriptor with CanvasAppKeyResourceSource.key
           Note over Resolver: Resolver reads resource.source as CanvasAppKeyResourceSource.key through public API.
           Note over Session,Resolver: Synchronous app-owned resolver boundary only. No async resolver, file, network, asset-bundle, or engine IO loading.
           opt resolver attempts public runtime mutation
@@ -83,16 +83,16 @@ sequenceDiagram
             Runtime--x Resolver: StateError, mutation rejected without runtime effects
             Note over Runtime,Session: Resolver reentrancy rejection does not mutate document, selection, preview, caches, repaint, or actions.
           end
-          Resolver-->>Session: app-owned ui.Image, null, or ordinary exception
+          Resolver-->>Session: app-owned resource asset, null, or ordinary exception
 
-          alt app returns ui.Image
-            Session->>Cache: admit key with current image cache weight
+          alt app returns resource asset
+            Session->>Cache: admit key under the cache policy
             alt within active-session entry and byte limits
               Cache-->>Session: retained app-owned asset reference after LRU eviction
             else current asset exceeds admission policy
               Cache-->>Session: not retained for later lookup
             end
-            Session-->>Assets: app-owned image asset
+            Session-->>Assets: app-owned resource asset
           else app returns null
             Session->>Session: suppress null result for current frame key(resolverGeneration, resourceId, resourceRevision)
             Session-->>Assets: bounded missing resource placeholder
@@ -110,7 +110,7 @@ sequenceDiagram
   Painter-->>Surface: draw main scene
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.
-  Note over Session,Resolver: Returned ui.Image objects are owned by the application. The engine never disposes app-owned images; cache eviction and release drop references only.
+  Note over Session,Resolver: Returned resource assets are owned by the application. The engine never disposes them; cache eviction and release drop references only.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: Resource resolution uses surface session state, frame inputs, and resource descriptors only.
@@ -139,6 +139,6 @@ sequenceDiagram
 
   opt surface detaches, disposes, or swaps runtime
     Surface->>Session: drop session
-    Session->>Cache: drop cache/suppression borrows without disposing app-owned ui.Image
+    Session->>Cache: drop cache/suppression borrows without disposing app-owned assets
     Session->>Surface: release matching retained main-output borrows before return
   end

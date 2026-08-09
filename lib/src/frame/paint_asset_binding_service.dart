@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_prepared_vector.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../resources/resource_resolver_adapter.dart';
 import '../resources/surface_resource_session.dart';
@@ -10,12 +11,12 @@ import 'render_element_record.dart';
 
 final class FrameAssetBindings {
   FrameAssetBindings({
-    required Map<CanvasResourceId, ResourceAssetResolveResult> assets,
+    required Map<CanvasResourceId, FrameAssetBinding> assets,
   }) : assets = Map.unmodifiable(assets);
 
   static final empty = FrameAssetBindings(assets: const {});
 
-  final Map<CanvasResourceId, ResourceAssetResolveResult> assets;
+  final Map<CanvasResourceId, FrameAssetBinding> assets;
 
   FrameAssetBindings withoutResource(CanvasResourceId id) {
     if (!assets.containsKey(id)) {
@@ -39,6 +40,28 @@ final class FrameAssetBindings {
   }
 }
 
+// Frame bindings retain only paint inputs. Resolver/cache result categories stay
+// in resources, so painters have no dependency on the resource-session owner.
+sealed class FrameAssetBinding {
+  const FrameAssetBinding();
+}
+
+final class FrameImageAssetBinding extends FrameAssetBinding {
+  const FrameImageAssetBinding(this.image);
+
+  final Image image;
+}
+
+final class FrameVectorAssetBinding extends FrameAssetBinding {
+  const FrameVectorAssetBinding(this.prepared);
+
+  final CanvasPreparedVector prepared;
+}
+
+final class FrameAssetPlaceholderBinding extends FrameAssetBinding {
+  const FrameAssetPlaceholderBinding();
+}
+
 // This frame boundary deliberately joins captured descriptor facts with the
 // session-owned typed asset result. Keeping that translation here prevents
 // resolver/cache details from leaking into capture, planners, or painters.
@@ -56,13 +79,13 @@ final class PaintAssetBindingService {
       for (final descriptor in frame.resourceDescriptors)
         descriptor.id: descriptor,
     };
-    final assets = <CanvasResourceId, ResourceAssetResolveResult>{};
+    final assets = <CanvasResourceId, FrameAssetBinding>{};
     for (final record in records) {
       final resourceId = record.resourceId;
       if (resourceId == null || assets.containsKey(resourceId)) {
         continue;
       }
-      assets[resourceId] = session.resolveResource(
+      final result = session.resolveResource(
         _requestFor(
           resourceId: resourceId,
           descriptor: descriptors[resourceId],
@@ -70,9 +93,22 @@ final class PaintAssetBindingService {
           placeholderBounds: record.paintBoundsWorld,
         ),
       );
+      assets[resourceId] = _bindingFor(result);
     }
 
     return FrameAssetBindings(assets: assets);
+  }
+
+  FrameAssetBinding _bindingFor(ResourceAssetResolveResult result) {
+    return switch (result) {
+      ResolvedResourceAsset(:final asset) => switch (asset) {
+        ImageResourceAsset(:final image) => FrameImageAssetBinding(image),
+        VectorResourceAsset(:final prepared) => FrameVectorAssetBinding(
+          prepared,
+        ),
+      },
+      ResourceAssetPlaceholderResult() => const FrameAssetPlaceholderBinding(),
+    };
   }
 
   ResourceAssetResolveRequest _requestFor({
@@ -96,6 +132,18 @@ final class PaintAssetBindingService {
             id: descriptor.id,
             source: CanvasResourceSource.appKey(descriptor.appKey),
             mimeType: descriptor.mimeType,
+            contentHash: descriptor.contentHash,
+            byteLength: descriptor.byteLength,
+            metadata: descriptor.metadata,
+          ),
+          resourceRevision: descriptor.resourceRevision,
+          placeholderBounds: placeholderBounds,
+        ),
+      FrameVectorResourceDescriptorFacts() =>
+        ResourceAssetResolveRequest.descriptor(
+          resource: CanvasVectorResource(
+            id: descriptor.id,
+            source: CanvasResourceSource.appKey(descriptor.appKey),
             contentHash: descriptor.contentHash,
             byteLength: descriptor.byteLength,
             metadata: descriptor.metadata,

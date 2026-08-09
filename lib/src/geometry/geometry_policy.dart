@@ -154,6 +154,7 @@ _LocalGeometryMetrics _localGeometryMetricsFor(FrameElementFacts facts) {
 Rect _localBoundsFor(FrameElementFacts facts) {
   return switch (facts.kind) {
     CanvasElementKind.image => _sizedBounds(facts.size),
+    CanvasElementKind.vector => _sizedBounds(facts.size),
     CanvasElementKind.rect => _rectBounds(facts),
     CanvasElementKind.text => _textBounds(facts),
     CanvasElementKind.line => _lineBounds(facts),
@@ -171,6 +172,7 @@ bool _requiresInvertibleHitBounds(CanvasElementKind kind) {
     CanvasElementKind.image ||
     CanvasElementKind.rect ||
     CanvasElementKind.text => true,
+    CanvasElementKind.vector => true,
     CanvasElementKind.line ||
     CanvasElementKind.stroke ||
     CanvasElementKind.path => false,

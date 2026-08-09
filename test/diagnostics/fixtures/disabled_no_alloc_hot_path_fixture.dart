@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,16 @@ void main() {
   test('successful schema codec operations do not allocate records', () {
     expect(expectSuccessfulSchemaCodecDoesNotAllocateRecords, returnsNormally);
   });
+
+  test(
+    'failed vector preparation does not allocate diagnostic records',
+    () async {
+      await expectLater(
+        expectVectorPreparationFailureDoesNotAllocateRecords(),
+        completes,
+      );
+    },
+  );
 }
 
 void expectDisabledDiagnosticsDoNotAllocate() {
@@ -89,4 +100,23 @@ void expectSuccessfulSchemaCodecDoesNotAllocateRecords() {
   expect(decodeSchemaV1DocumentFromJson(encodedJson), isA<CanvasDocument>());
 
   expect(DiagnosticRecord.allocations.count, before);
+}
+
+Future<void> expectVectorPreparationFailureDoesNotAllocateRecords() async {
+  DiagnosticRecord.allocations.reset();
+
+  await expectLater(
+    prepareVector(ByteData(0)),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.invalidVectorData,
+          )
+          .having((error) => error.path, 'path', 'vector.bytes'),
+    ),
+  );
+
+  expect(DiagnosticRecord.allocations.count, 0);
 }

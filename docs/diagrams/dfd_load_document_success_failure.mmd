@@ -17,9 +17,9 @@ flowchart LR
 
   subgraph Store["DocumentStoreKernel"]
     ExistingStore["Existing committed rows,\nrevisions, id admission"]
-    PrepareRows["Store-owned preparation\nfamily rows, layer order,\nsealed descriptor rows,\nfinal-candidate relationships, ids, revisions,\ncamera facts"]
+    PrepareRows["Store-owned preparation\nseven-kind rows, layer order,\nsealed image/vector descriptor rows,\nfinal-candidate relationships, ids, revisions,\ncamera facts"]
     Prepared["PreparedStoreDocumentImport\nconsume-once payload"]
-    StoreFailure["CanvasDataException or StateError\nfrom duplicate ids, admission,\ndescriptor relationships, or row preparation"]
+    StoreFailure["CanvasDataException or StateError\nfrom duplicate ids, admission,\nmissing/wrong-kind descriptor relationships, or row preparation"]
     AtomicInstall["Atomic prepared-row install"]
     ReplacementStore["Replacement committed rows\nand id admission"]
   end

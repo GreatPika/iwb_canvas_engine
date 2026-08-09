@@ -277,16 +277,16 @@ void _deliverDocumentEvent(
 
 void _deliverResourceEvent(
   SchemaV1ImportSink sink,
-  SchemaV1ImageResourceImportEvent event,
+  SchemaV1ResourceImportEvent event,
   DiagnosticsHub? diagnostics,
 ) {
   if (diagnostics == null) {
-    sink.imageResource(event);
+    sink.resource(event);
 
     return;
   }
   try {
-    sink.imageResource(event);
+    sink.resource(event);
   } on CanvasDataException catch (exception, stackTrace) {
     Error.throwWithStackTrace(
       recordSchemaV1FailureDiagnostic(diagnostics, exception),
@@ -548,8 +548,8 @@ CanvasPalette _readPalette(
 
 // Resource import keeps source, descriptor, and metadata validation together so
 // diagnostics point at one schema resource boundary instead of split helpers.
-// ignore: halstead-volume, source-lines-of-code
-SchemaV1ImageResourceImportEvent _readResource(
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+SchemaV1ResourceImportEvent _readResource(
   Object? value, {
   required DiagnosticsHub? diagnostics,
 }) {
@@ -563,15 +563,6 @@ SchemaV1ImageResourceImportEvent _readResource(
     path: 'resource.kind',
     diagnostics: diagnostics,
   );
-  if (kind != 'image') {
-    _fail(
-      diagnostics,
-      CanvasDataErrorCode.invalidFieldType,
-      'unknown resource kind.',
-      'resource.kind',
-      details: {'kind': kind},
-    );
-  }
   final source = _readRequiredMap(
     map['source'],
     path: 'resource.source',
@@ -598,41 +589,63 @@ SchemaV1ImageResourceImportEvent _readResource(
     diagnostics: diagnostics,
   );
 
-  return _materialize(
-    diagnostics,
-    () => SchemaV1ImageResourceImportEvent(
-      id: CanvasResourceId(
-        _readString(map['id'], path: 'resource.id', diagnostics: diagnostics),
-      ),
-      appKey: validateCanvasAppKeyValue(
-        appKey,
-        path: 'resource.source.key',
-        maxLength: canvasMaxResourceAppKeyLength,
-      ),
-      mimeType: _validatedOptionalString(
-        map['mimeType'],
-        path: 'resource.mimeType',
-        maxLength: canvasMaxResourceMimeTypeLength,
-        diagnostics: diagnostics,
-      ),
-      contentHash: _validatedOptionalString(
-        map['contentHash'],
-        path: 'resource.contentHash',
-        maxLength: canvasMaxResourceContentHashLength,
-        diagnostics: diagnostics,
-      ),
-      byteLength: _validatedOptionalByteLength(
-        map['byteLength'],
-        diagnostics: diagnostics,
-      ),
-      metadata: _readMetadata(
-        map,
-        key: 'metadata',
-        path: 'resource.metadata',
-        diagnostics: diagnostics,
-      ),
-    ),
+  final contentHash = _validatedOptionalString(
+    map['contentHash'],
+    path: 'resource.contentHash',
+    maxLength: canvasMaxResourceContentHashLength,
+    diagnostics: diagnostics,
   );
+  final byteLength = _validatedOptionalByteLength(
+    map['byteLength'],
+    diagnostics: diagnostics,
+  );
+  final metadata = _readMetadata(
+    map,
+    key: 'metadata',
+    path: 'resource.metadata',
+    diagnostics: diagnostics,
+  );
+
+  return _materialize(diagnostics, () {
+    final id = CanvasResourceId(
+      _readString(map['id'], path: 'resource.id', diagnostics: diagnostics),
+    );
+    final admittedAppKey = validateCanvasAppKeyValue(
+      appKey,
+      path: 'resource.source.key',
+      maxLength: canvasMaxResourceAppKeyLength,
+    );
+
+    return switch (kind) {
+      'image' => SchemaV1ImageResourceImportEvent(
+        id: id,
+        appKey: admittedAppKey,
+        mimeType: _validatedOptionalString(
+          map['mimeType'],
+          path: 'resource.mimeType',
+          maxLength: canvasMaxResourceMimeTypeLength,
+          diagnostics: diagnostics,
+        ),
+        contentHash: contentHash,
+        byteLength: byteLength,
+        metadata: metadata,
+      ),
+      'vector' => SchemaV1VectorResourceImportEvent(
+        id: id,
+        appKey: admittedAppKey,
+        contentHash: contentHash,
+        byteLength: byteLength,
+        metadata: metadata,
+      ),
+      _ => _fail(
+        diagnostics,
+        CanvasDataErrorCode.invalidFieldType,
+        'unknown resource kind.',
+        'resource.kind',
+        details: {'kind': kind},
+      ),
+    };
+  });
 }
 
 _LayerImportRead _readLayer(
@@ -703,38 +716,46 @@ SchemaV1ElementImportEvent _readElement(
   final kind = _readElementKind(map['kind'], diagnostics: diagnostics);
   final common = _readElementCommon(map, kind: kind, diagnostics: diagnostics);
 
-  return switch (kind) {
-    CanvasElementKind.image => _readImageElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
-    CanvasElementKind.path => _readPathElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
-    CanvasElementKind.text => _readTextElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
-    CanvasElementKind.stroke => _readStrokeElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
-    CanvasElementKind.line => _readLineElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
-    CanvasElementKind.rect => _readRectElement(
-      map,
-      common,
-      diagnostics: diagnostics,
-    ),
+  final elementReader = switch (kind) {
+    CanvasElementKind.image => _readImageElement,
+    CanvasElementKind.vector => _readVectorElement,
+    CanvasElementKind.path => _readPathElement,
+    CanvasElementKind.text => _readTextElement,
+    CanvasElementKind.stroke => _readStrokeElement,
+    CanvasElementKind.line => _readLineElement,
+    CanvasElementKind.rect => _readRectElement,
   };
+
+  return elementReader(map, common, diagnostics: diagnostics);
+}
+
+SchemaV1VectorElementImportEvent _readVectorElement(
+  Map<String, Object?> map,
+  SchemaV1ElementCommonImport common, {
+  required DiagnosticsHub? diagnostics,
+}) {
+  return _materialize(diagnostics, () {
+    return SchemaV1VectorElementImportEvent(
+      common: common,
+      resourceId: CanvasResourceId(
+        _readString(
+          map['resourceId'],
+          path: 'vector.resourceId',
+          diagnostics: diagnostics,
+        ),
+      ),
+      size: _readSize(
+        map['size'],
+        path: 'vector.size',
+        diagnostics: diagnostics,
+      ),
+      naturalSize: _readNullableSize(
+        map['naturalSize'],
+        path: 'vector.naturalSize',
+        diagnostics: diagnostics,
+      ),
+    );
+  });
 }
 
 // Common element fields are validated as one schema record so every element
@@ -1518,6 +1539,7 @@ CanvasElementKind _readElementKind(
 }) {
   return switch (value) {
     'image' => CanvasElementKind.image,
+    'vector' => CanvasElementKind.vector,
     'path' => CanvasElementKind.path,
     'text' => CanvasElementKind.text,
     'stroke' => CanvasElementKind.stroke,

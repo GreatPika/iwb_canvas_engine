@@ -79,7 +79,7 @@ Point hit:
 - background elements are not pointer-selectable in v1.
 ```
 
-Box/image/text/rect hit:
+Box/image/vector/text/rect hit:
 
 ```text
 - coarse bounds = transformed local bounds inflated by hitPadding + 4.0;
@@ -96,7 +96,7 @@ Box/image/text/rect hit:
   the deferred corrupted-row route as policy-gated `spatial` diagnostics;
   until that future route is implemented, the hit path returns miss and
   continues the candidate scan without state mutation;
-- coarse candidate bounds may never accept a non-invertible box/image/text/rect
+- coarse candidate bounds may never accept a non-invertible box/image/vector/text/rect
   hit.
 ```
 
@@ -153,6 +153,9 @@ Marquee selection:
 - exact family inclusion test runs after coarse overlap;
 - only visible && selectable elements can be selected;
 - locked elements can be selected but cannot be moved/transformed.
+- vector bounds are the transformed `size` box, not the prepared intrinsic
+  size; vectors therefore participate in the same marquee and selected-move
+  geometry as image and rect boxes.
 ```
 
 Eraser:
@@ -163,6 +166,8 @@ Eraser:
 - exact deletion uses segment-to-family geometry checks;
 - deletes only isDeletable=true elements;
 - background elements are not erased in v1.
+- vector content elements use their transformed sized box for exact eraser
+  admission; background vectors remain excluded with other backgrounds.
 ```
 
 Eraser exact-check budget:

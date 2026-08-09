@@ -248,7 +248,7 @@ or public projection internals to capture frames, resolve render-row snapshots,
 or read descriptor snapshots.
 The descriptor facts crossing this port remain sealed internal variants, so
 frame binding uses descriptor type rather than nullable MIME data to select the
-current image path.
+current image or vector path.
 
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only

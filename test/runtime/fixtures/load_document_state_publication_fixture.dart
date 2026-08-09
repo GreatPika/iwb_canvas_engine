@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 void main() {
   _registerSuccessfulLoadPublicationTests();
   _registerFailedLoadFactPreservationTests();
+  _registerResourceRelationshipFactPreservationTests();
   _registerFailedLoadSessionTests();
 }
 
@@ -81,6 +82,24 @@ void _registerFailedLoadFactPreservationTests() {
     _jsonWithDuplicateElements,
     CanvasDataErrorCode.duplicateElementId,
   );
+}
+
+void _registerResourceRelationshipFactPreservationTests() {
+  test(
+    'wrong vector resource kind leaves runtime output and facts unchanged',
+    () {
+      expect(_expectWrongVectorResourceKindHasNoSideEffects, returnsNormally);
+    },
+  );
+  test('missing vector resource leaves runtime output and facts unchanged', () {
+    expect(
+      _expectMissingVectorResourceReferenceHasNoSideEffects,
+      returnsNormally,
+    );
+  });
+  test('wrong image resource kind leaves runtime output and facts unchanged', () {
+    expect(_expectWrongImageResourceKindHasNoSideEffects, returnsNormally);
+  });
 }
 
 void _registerFailedLoadCase(
@@ -267,6 +286,62 @@ void _expectFailedLoadHasNoSideEffects(
   expect(effectBatches, isEmpty);
   before.expectStillCurrent(root);
   expect(root.generateElementId(), CanvasElementId('e0'));
+}
+
+void _expectWrongVectorResourceKindHasNoSideEffects() {
+  _expectResourceRelationshipLoadHasNoSideEffects(
+    _jsonWithWrongVectorResourceKind(),
+    CanvasDataErrorCode.resourceKindMismatch,
+    'vector.resourceId',
+  );
+}
+
+void _expectMissingVectorResourceReferenceHasNoSideEffects() {
+  _expectResourceRelationshipLoadHasNoSideEffects(
+    _jsonWithMissingVectorResourceReference(),
+    CanvasDataErrorCode.missingResourceReference,
+    'vector.resourceId',
+  );
+}
+
+void _expectWrongImageResourceKindHasNoSideEffects() {
+  _expectResourceRelationshipLoadHasNoSideEffects(
+    _jsonWithWrongImageResourceKind(),
+    CanvasDataErrorCode.resourceKindMismatch,
+    'image.resourceId',
+  );
+}
+
+void _expectResourceRelationshipLoadHasNoSideEffects(
+  String json,
+  CanvasDataErrorCode expectedCode,
+  String expectedPath,
+) {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  root.attachSurface(Object());
+  root.selection.setSelection([CanvasElementId('old-element')]);
+  root.publishUnclassifiedRuntimeStateForTesting();
+  final before = _RuntimeFactsSnapshot.capture(root);
+  final beforeOutput = root.surfaceFrameSignal.value;
+  effectBatches.clear();
+
+  expect(
+    () => root.edits.loadDocumentFromJson(json),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            expectedCode,
+          )
+          .having((error) => error.path, 'path', expectedPath),
+    ),
+  );
+  before.expectStillCurrent(root);
+  expect(root.surfaceFrameSignal.value, same(beforeOutput));
+  expect(effectBatches, isEmpty);
+  root.dispose();
 }
 
 void _expectFailedLoadDoesNotReleaseActiveResourceSession() {
@@ -558,6 +633,78 @@ String _jsonWithMissingResourceReference() {
             'id': 'image',
             'kind': 'image',
             'resourceId': 'missing-resource',
+            'size': {'w': 1, 'h': 1},
+          },
+        ],
+      },
+    ],
+  });
+}
+
+String _jsonWithWrongVectorResourceKind() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'resources': [
+      {
+        'id': 'image-resource',
+        'kind': 'image',
+        'source': {'kind': 'appKey', 'key': 'image-resource'},
+      },
+    ],
+    'layers': [
+      {
+        'id': 'layer',
+        'elements': [
+          {
+            'id': 'vector-element',
+            'kind': 'vector',
+            'resourceId': 'image-resource',
+            'size': {'w': 1, 'h': 1},
+          },
+        ],
+      },
+    ],
+  });
+}
+
+String _jsonWithMissingVectorResourceReference() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'resources': <Object?>[],
+    'layers': [
+      {
+        'id': 'layer',
+        'elements': [
+          {
+            'id': 'vector-element',
+            'kind': 'vector',
+            'resourceId': 'missing-resource',
+            'size': {'w': 1, 'h': 1},
+          },
+        ],
+      },
+    ],
+  });
+}
+
+String _jsonWithWrongImageResourceKind() {
+  return jsonEncode({
+    'schemaVersion': 1,
+    'resources': [
+      {
+        'id': 'vector-resource',
+        'kind': 'vector',
+        'source': {'kind': 'appKey', 'key': 'vector-resource'},
+      },
+    ],
+    'layers': [
+      {
+        'id': 'layer',
+        'elements': [
+          {
+            'id': 'image-element',
+            'kind': 'image',
+            'resourceId': 'vector-resource',
             'size': {'w': 1, 'h': 1},
           },
         ],

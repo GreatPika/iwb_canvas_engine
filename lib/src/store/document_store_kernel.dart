@@ -1311,6 +1311,8 @@ StoreRevisionDelta _committedElementFamilyDelta(
   return switch ((before, after)) {
     (final CanvasImageElement before, final CanvasImageElement after) =>
       _committedImageDelta(before, after),
+    (final CanvasVectorElement before, final CanvasVectorElement after) =>
+      _committedVectorDelta(before, after),
     (final CanvasPathElement before, final CanvasPathElement after) =>
       _committedPathDelta(before, after),
     (final CanvasTextElement before, final CanvasTextElement after) =>
@@ -1328,6 +1330,22 @@ StoreRevisionDelta _committedElementFamilyDelta(
 StoreRevisionDelta _committedImageDelta(
   CanvasImageElement before,
   CanvasImageElement after,
+) {
+  var delta = const StoreRevisionDelta();
+  if (before.size != after.size) {
+    delta = delta.merge(const StoreRevisionDelta.elementBounds());
+  }
+  if (before.resourceId != after.resourceId ||
+      before.naturalSize != after.naturalSize) {
+    delta = delta.merge(const StoreRevisionDelta.elementVisual());
+  }
+
+  return delta;
+}
+
+StoreRevisionDelta _committedVectorDelta(
+  CanvasVectorElement before,
+  CanvasVectorElement after,
 ) {
   var delta = const StoreRevisionDelta();
   if (before.size != after.size) {
@@ -1859,18 +1877,19 @@ void _validateFinalCandidateResourceRelationships(CommittedDocument document) {
     }
     switch (element) {
       case CanvasImageElement(:final resourceId):
-        final descriptor = document.resourceDescriptor(resourceId);
-        if (descriptor == null) {
-          throw CanvasDataException(
-            code: CanvasDataErrorCode.missingResourceReference,
-            message: 'image element references a missing resource.',
-            path: 'image.resourceId',
-          );
-        }
-        switch (descriptor) {
-          case StoreImageResourceDescriptorFacts():
-            break;
-        }
+        _validateResourceRelationship(
+          document: document,
+          resourceId: resourceId,
+          path: 'image.resourceId',
+          expectsImage: true,
+        );
+      case CanvasVectorElement(:final resourceId):
+        _validateResourceRelationship(
+          document: document,
+          resourceId: resourceId,
+          path: 'vector.resourceId',
+          expectsImage: false,
+        );
       case CanvasPathElement() ||
           CanvasTextElement() ||
           CanvasStrokeElement() ||
@@ -1878,6 +1897,33 @@ void _validateFinalCandidateResourceRelationships(CommittedDocument document) {
           CanvasRectElement():
         break;
     }
+  }
+}
+
+void _validateResourceRelationship({
+  required CommittedDocument document,
+  required CanvasResourceId resourceId,
+  required String path,
+  required bool expectsImage,
+}) {
+  final descriptor = document.resourceDescriptor(resourceId);
+  if (descriptor == null) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.missingResourceReference,
+      message: 'resource element references a missing resource.',
+      path: path,
+    );
+  }
+  final matches = switch (descriptor) {
+    StoreImageResourceDescriptorFacts() => expectsImage,
+    StoreVectorResourceDescriptorFacts() => !expectsImage,
+  };
+  if (!matches) {
+    throw CanvasDataException(
+      code: CanvasDataErrorCode.resourceKindMismatch,
+      message: 'resource kind does not match the referencing element.',
+      path: path,
+    );
   }
 }
 

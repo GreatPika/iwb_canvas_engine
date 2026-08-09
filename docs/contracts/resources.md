@@ -27,6 +27,8 @@ Required tests:
 - `test.resources.resolver_frame_budget`
 - `test.resources.resolver_exception_placeholder`
 - `test.resources.resolver_reentrancy_rejected`
+- `test.resources.application_vector_freshness_lifecycle`
+- `test.resources.resource_image_cache_memory_accounting`
 Guardrails:
 - `api.resource_source_app_key_publicly_readable`
 - `resources.mutation_inside_edit_only`
@@ -96,19 +98,19 @@ CanvasSurface retained output:
 Paint/resource resolution receives immutable descriptor snapshots and
 `resourceRevision` through the `contracts/internal/**` `FrameFactsPort`, which
 is backed by the committed document owner for frame paint. Store and frame facts
-preserve the descriptor's sealed current image subtype; nullable `mimeType` is
-only image metadata and never chooses the descriptor kind. The resource module
+preserve the descriptor's sealed image/vector subtype; nullable `mimeType` is
+image metadata only and never chooses the descriptor kind. The resource module
 must not import, read, or mutate `DocumentStoreKernel` or `RuntimeRoot`; it owns
 session policy, resolver-safe placeholder results, and generic release
 boundaries through narrow contract inputs only.
 Schema v1 runtime load imports resource declarations as store-owned descriptor
 rows during `DocumentStoreKernel` preparation. Load must not construct public
-`CanvasImageResource` instances or call app resolvers. Public
-`CanvasImageResource` appears only when an explicit read/resource/resolver-facing
-projection asks for a public resource view. Store relationship admission runs
-once against the final candidate's sealed descriptor rows, so resource and
-image-element edits may be assembled in either callback order without using an
-id-membership or MIME heuristic.
+public resource DTOs or call app resolvers. A public image/vector resource
+appears only when an explicit read/resource/resolver-facing projection asks for
+a public resource view. Store relationship admission runs once against the
+final candidate's sealed descriptor rows, so resource and referencing
+image/vector-element edits may be assembled in either callback order without
+using an id-membership or MIME heuristic.
 Ordinary frame planning receives immutable row facts and resource ids needed to
 build records, but it does not receive descriptor snapshots or resolver/session
 APIs. In the target frame split, `PaintAssetBindingService` is the only frame
@@ -117,9 +119,9 @@ supplement records are known, it reads descriptor facts through
 `FrameFactsPort`, creates a `ResourceAssetResolveRequest`, and produces a
 `ResourceAssetResolveResult` for each immutable `FrameAssetBindings` entry.
 The painter receives only those immutable resource-asset results and selects the
-current image asset for image records. This keeps descriptor binding and resolver
+matching image/vector asset for sealed records. This keeps descriptor binding and resolver
 access out of capture, ordinary planning, painters, and app resolver ownership.
-The binding service calls `beginFrameResourcePass()` before resolving any image
+The binding service calls `beginFrameResourcePass()` before resolving any resource
 for a main paint frame. That call resets the session-owned per-frame resolver
 budget, clears same-frame null-result suppression for the new frame, and clears
 the pending budget follow-up repaint flag before resolver work begins.
@@ -129,7 +131,7 @@ single-active-surface attachment. Rejected attachment creates no session and
 performs no resolver side effects. The runtime-surface bridge installs the
 session through `SurfaceResourceSessionLifecycle`; detach, dispose, runtime
 swap, and runtime disposal remove matching session and retained-output borrows
-before return, without disposing app-owned `ui.Image` instances. If an active
+before return, without disposing application-owned resolved assets. If an active
 surface receives a different `resourceResolver`, the session increments
 `resolverGeneration` and releases stale session/output borrows before the next
 resolve.
@@ -147,15 +149,16 @@ lifecycle to `CanvasSurface`.
 The public dirty-resource revision is a repaint observation signal only.
 Dirty-resource calls release matching target entries or all entries in the
 active session explicitly. If no surface is attached, there is no session cache
-or retained output to release and the next attach starts empty. The current
-image asset reports decoded image byte weight; descriptor
+or retained output to release and the next attach starts empty. Only the current
+image asset reports decoded image byte weight; a prepared vector has zero byte
+weight; descriptor
 `CanvasResource.byteLength` remains descriptor/source metadata and is not cache
 memory truth. An asset refused by cache admission remains valid for its current
 resolve result but is not retained for a later cache hit. Eviction removes cache
 references only. Target/all release, resolver replacement, document replacement,
 drop, and dispose synchronously remove matching cache/suppression borrows and
 the matching retained main-output borrow; they never call the resolver or
-dispose app-owned `ui.Image` instances. Target release preserves unrelated
+dispose application-owned image or prepared-vector wrappers. Target release preserves unrelated
 bindings and overlay output. A stale session callback proves no matching active
 output and never mutates the current surface output.
 
@@ -167,7 +170,7 @@ result; accepted state, revisions, repaint intent, operation return, and the
 no-borrow postcondition remain observable. Rejected and no-op operations mutate
 neither retention owner. Runtime clears a failed sink; when the failed target is
 the active surface session, runtime drops and detaches that session before
-continuing publication so stale resolved images cannot be reused.
+continuing publication so stale resolved assets cannot be reused.
 
 ### 7.2 Atomic operations
 
@@ -177,6 +180,8 @@ Resource mutation is inside `CanvasEdit`:
 runtime.edits.edit((edit) {
   edit.upsertResource(CanvasImageResource(...));
   edit.addElement(CanvasImageElement(resourceId: ...));
+  edit.upsertResource(CanvasVectorResource(...));
+  edit.addElement(CanvasVectorElement(resourceId: ...));
 });
 ```
 
@@ -261,11 +266,11 @@ publication still completes and there is no release work to perform.
 
 ### 7.6 Missing resource placeholder
 
-If an image element references a missing or unresolved resource, FrameEngine
+If an image or vector element references a missing or unresolved resource, FrameEngine
 paints a bounded placeholder rectangle.
 
 ```text
-image size determines placeholder bounds;
+element `size` determines placeholder bounds;
 no full-document repaint loop;
 no repeated resolver retry in same frame;
 normal placeholder painting does not write `DiagnosticsHub`;
@@ -286,7 +291,7 @@ resolver-exception placeholders are not added to same-frame null-result
 suppression;
 resolver-exception attempts consume the per-frame resolver-call budget;
 later frames may retry the throwing resource through the app resolver;
-other image resources in the same frame continue resolving and binding;
+other image/vector resources in the same frame continue resolving and binding;
 resolver-exception placeholders do not write DiagnosticsHub.
 ```
 

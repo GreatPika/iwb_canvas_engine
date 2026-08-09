@@ -19,6 +19,7 @@ Required tests:
 - `test.frame.paint_plan_excludes_selection_state`
 - `test.frame.camera_pan_preserves_ordinary_paint_plan`
 - `test.surface.surface_frame_output_cache`
+- `test.resources.resource_image_cache_memory_accounting`
 Guardrails:
 - `cache.keys_use_next_revisions_only`
 - `cache.hot_caches_have_capacity_eviction`
@@ -52,16 +53,19 @@ Cache miss in hot path must be bounded by candidate count, not total scene size.
 Hot caches must declare capacity, eviction, key components, invalidation owner,
 and a metric/probe before implementation.
 
-`ResourceAssetCache` admits typed ready assets under one aggregate entry limit.
-The current image asset reports decoded retention as
+`ResourceAssetCache` admits image and vector ready assets under one aggregate
+entry limit shared across both families, so a vector can evict an older image
+and vice versa. The current image asset reports decoded retention as
 `ui.Image.width * ui.Image.height * 4` after the synchronous app resolver
-returns; `CanvasResource.byteLength` remains descriptor/source metadata and is
-not a cache weight. Oversized current image assets are returned to the current
-resolve without being retained, and all resource-cache eviction/release paths
-drop references only; the application remains responsible for disposing
-app-owned `ui.Image` objects. Resource cache byte accounting is proven by
-focused resource tests and is not covered by the frame-cache guardrail, whose
-scope is `lib/src/frame/**`.
+returns; a prepared vector has zero byte weight. `CanvasResource.byteLength`
+remains descriptor/source metadata and is not a cache weight. Oversized current
+image assets are returned to the current resolve without being retained, and all
+resource-cache eviction/release paths drop references only; the application
+remains responsible for disposing app-owned resolved values. Cache keys are
+engine-internal identities, do not imply wrapper uniqueness, are not visible to
+the application, and do not form a reverse wrapper-alias registry. Resource
+cache byte accounting is proven by focused resource tests and is not covered by
+the frame-cache guardrail, whose scope is `lib/src/frame/**`.
 
 Accepted sparse edits invalidate `projectionRevision` through store revision
 state when the operation changes public document projection. They must not call

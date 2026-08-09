@@ -176,6 +176,13 @@ final class PublicIntegrationResourceResolver
 
     return _compileOnly();
   }
+
+  @override
+  Never resolveVector(CanvasVectorResource resource) {
+    _use(resource);
+
+    return _compileOnly();
+  }
 }
 
 CanvasRuntimeConfig _runtimeConfig() {

@@ -312,7 +312,7 @@ final class RejectedContextTargetRead extends ContextTargetReadOutcome {
 
 enum ContextActionReadTargetKind { contentElement, emptyCanvas }
 
-enum InteractionElementFamily { image, path, text, stroke, line, rect }
+enum InteractionElementFamily { image, vector, path, text, stroke, line, rect }
 
 final class ContextTargetReadFacts {
   const ContextTargetReadFacts.emptyCanvas({

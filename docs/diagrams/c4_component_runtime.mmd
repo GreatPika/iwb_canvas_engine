@@ -11,7 +11,7 @@ Container_Boundary(runtime_components, "RuntimeRoot internals") {
   Component(SelectionFactsPort, "SelectionFactsPort", "query boundary", "Intent-specific immutable selection facts for interaction and frame capture.")
   Component(EditKernel, "EditKernel", "lib/src/edit/", "Synchronous edit sessions with draft, touched-set, commit, and rollback ownership.")
   Component(InteractionEngine, "InteractionEngine", "lib/src/interaction/", "Pointer sessions, tool state, previews, and terminal edit requests.")
-  Component(InteractionReadPort, "InteractionReadPort", "query boundary", "Read-only interaction facts: hit/order facts, element snapshots, bounds, generation, revision, family, epoch, visibility, and top-hit status.")
+  Component(InteractionReadPort, "InteractionReadPort", "query boundary", "Read-only interaction facts: hit/order facts, element snapshots, bounds, generation, revision, CanvasElementKind, epoch, visibility, and top-hit status.")
   Component(PointerToolCleanupCoordinator, "PointerToolCleanupCoordinator", "lib/src/interaction/", "Target internal InteractionEngine collaborator for shared pointer cleanup policy and effect-only outcomes.")
   Component(FrameEngine, "FrameEngine", "lib/src/frame/", "Frame-internal facade for orchestration, painter input assembly, and repaint buses.")
   Component(FrameCaptureService, "FrameCaptureService", "lib/src/frame/", "Frame-private capture owner for CapturedMainFrame and CapturedOverlayFrame.")

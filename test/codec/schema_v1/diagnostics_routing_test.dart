@@ -103,6 +103,47 @@ void main() {
     );
   });
 
+  test('vector relationship rejection uses the codec route once', () {
+    final enabledHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.summary(),
+    );
+    final disabledHub = DiagnosticsHub(
+      policy: const CanvasDiagnosticPolicy.disabled(),
+    );
+
+    expect(
+      () => decodeSchemaV1Document(
+        _vectorAgainstImageResourceDocument(),
+        diagnostics: enabledHub,
+      ),
+      throwsA(
+        isA<CanvasDataException>()
+            .having(
+              (error) => error.code,
+              'code',
+              CanvasDataErrorCode.resourceKindMismatch,
+            )
+            .having((error) => error.path, 'path', 'vector.resourceId'),
+      ),
+    );
+    expect(enabledHub.recordCount, 1);
+    expect(
+      enabledHub.records.single.code,
+      const DiagnosticCode.data(CanvasDataErrorCode.resourceKindMismatch),
+    );
+    expect(enabledHub.records.single.source, DiagnosticSource.codec);
+    expect(enabledHub.records.single.path, 'vector.resourceId');
+
+    expect(
+      () => decodeSchemaV1Document(
+        _vectorAgainstImageResourceDocument(),
+        diagnostics: disabledHub,
+      ),
+      throwsA(isA<CanvasDataException>()),
+    );
+    expect(disabledHub.recordCount, 0);
+  });
+
   test('internal decode records constructor materialization failures', () {
     final hub = DiagnosticsHub(policy: const CanvasDiagnosticPolicy.summary());
 
@@ -419,6 +460,29 @@ Map<String, Object?> _invalidResourceKindDocument() {
   };
 }
 
+Map<String, Object?> _vectorAgainstImageResourceDocument() {
+  return {
+    'schemaVersion': 1,
+    'resources': [
+      {
+        'kind': 'image',
+        'id': 'image-resource',
+        'source': {'kind': 'appKey', 'key': 'image-resource'},
+      },
+    ],
+    'backgroundLayer': {
+      'elements': [
+        {
+          'id': 'vector-element',
+          'kind': 'vector',
+          'resourceId': 'image-resource',
+          'size': {'w': 1, 'h': 1},
+        },
+      ],
+    },
+  };
+}
+
 Map<String, Object?> _resourceAppKeyDocument(String key) {
   return {
     'schemaVersion': 1,
@@ -463,7 +527,7 @@ final class _NoopImportSink implements SchemaV1ImportSink {
   void beginDocument(SchemaV1DocumentImportEvent event) {}
 
   @override
-  void imageResource(SchemaV1ImageResourceImportEvent event) {}
+  void resource(SchemaV1ResourceImportEvent event) {}
 
   @override
   void backgroundElement(SchemaV1ElementImportEvent event) {}

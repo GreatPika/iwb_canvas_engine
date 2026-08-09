@@ -45,7 +45,10 @@ final class RenderFamilyCaches {
           }
         case final StrokeRenderRow row:
           strokes[row.strokeCacheKey] = _bindStrokePathCache(row);
-        case ImageRenderRow() || LineRenderRow() || RectRenderRow():
+        case ImageRenderRow() ||
+            VectorRenderRow() ||
+            LineRenderRow() ||
+            RectRenderRow():
           continue;
       }
     }

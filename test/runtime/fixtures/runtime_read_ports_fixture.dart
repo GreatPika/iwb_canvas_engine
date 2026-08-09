@@ -36,6 +36,41 @@ void main() {
 
     root.dispose();
   });
+
+  _testVectorFrameDescriptor();
+}
+
+void _testVectorFrameDescriptor() {
+  test('frame facts expose vector descriptors without MIME inference', () {
+    final root = runtimeRootWithCommittedDocumentSeed(
+      CanvasDocument(
+        resources: [
+          CanvasVectorResource(
+            id: CanvasResourceId('vector-a'),
+            source: CanvasResourceSource.appKey('vector-a'),
+            contentHash: 'sha256:vector-a',
+            byteLength: 42,
+            metadata: CanvasMetadata.fromMap({'role': 'vector'}),
+          ),
+        ],
+      ),
+      config: const CanvasRuntimeConfig(),
+    );
+    final descriptor = root.frameFactsPort.resourceDescriptor(
+      CanvasResourceId('vector-a'),
+    );
+
+    switch (descriptor) {
+      case final FrameVectorResourceDescriptorFacts vector:
+        expect(vector.appKey, 'vector-a');
+        expect(vector.contentHash, 'sha256:vector-a');
+        expect(vector.byteLength, 42);
+        expect(vector.metadata, CanvasMetadata.fromMap({'role': 'vector'}));
+      case _:
+        fail('Expected a vector descriptor, got $descriptor.');
+    }
+    root.dispose();
+  });
 }
 
 void _verifyDocumentFacts(RuntimeRoot root) {

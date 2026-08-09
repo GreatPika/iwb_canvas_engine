@@ -16,6 +16,7 @@ Required tests:
 - `test.runtime.dispose_lifecycle`
 - `test.runtime.runtime_state_publication`
 - `test.runtime.load_document_state_publication`
+- `test.resources.application_vector_freshness_lifecycle`
 - `test.api.tool_port_settings`
 - `test.store.read_document_projection`
 - `test.selection.runtime_owner_separation`
@@ -68,7 +69,7 @@ facts, and projection invalidation facts before runtime install.
 Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
 build the accepted `CommittedDocument` snapshot before the irreversible
 swap.
-The store validates id admission, layer/resource membership, sealed image
+The store validates id admission, layer/resource membership, sealed image/vector
 descriptor relationships against the completed candidate, row placement,
 revision-family alignment, and projection invalidation in that prepare step.
 The descriptor subtype, never nullable MIME data, is the current relationship
@@ -118,6 +119,7 @@ rejected before those facts are returned.
 
 ```text
 ImageRows
+VectorRows
 PathRows
 TextRows
 StrokeRows
@@ -127,10 +129,12 @@ RectRows
 
 Each row table stores only family-specific fields plus common packed fields needed by render/hit/update. Public DTOs are projections.
 
-`ResourceTable` stores sealed descriptor facts. The sole current image fact
-variant carries its optional MIME field; a resource reference is checked once by
-`DocumentStoreKernel` against the final `CommittedDocument` candidate, rather
-than against a resource-id set while family rows are being assembled.
+`ResourceTable` stores sealed descriptor facts. The image fact variant carries
+its optional MIME field; the vector variant contains no MIME kind inference. A
+resource reference is checked once by `DocumentStoreKernel` against the final
+`CommittedDocument` candidate, rather than against a resource-id set while
+family rows are being assembled. Missing ids and existing wrong descriptor kinds
+remain distinct typed relationship failures.
 
 Runtime view camera is not stored in `CommittedDocument`. It is runtime state
 owned by `RuntimeRoot` through the camera boundary. Runtime construction creates
@@ -247,7 +251,7 @@ Schema v1 JSON load preserves this lazy projection policy. Valid load installs
 prepared store-owned committed tables and invalidates projection facts, but it
 must not build `DocumentProjectionCache` or retain a public `CanvasDocument` as
 the loaded state. Resource JSON is imported as committed descriptor rows; public
-`CanvasImageResource` is materialized only by explicit read/resource projection
-or resolver-facing surfaces.
+image/vector public resources are materialized only by explicit read/resource
+projection or resolver-facing surfaces.
 
 ---

@@ -177,6 +177,7 @@ int _reportViolations(String id, Iterable<GuardrailViolation> violations) {
 const _testProofPaths = {
   'api.integration_surface_complete': [
     'test/api_contract/public_integration_compile_fixture_test.dart',
+    'test/api_contract/prepared_vector_public_api_test.dart',
   ],
   'api.public_api_compiles_as_written': [
     'test/api_contract/public_api_v1_compiles_as_written_test.dart',

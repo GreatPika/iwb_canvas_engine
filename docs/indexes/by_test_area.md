@@ -59,6 +59,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_04_public_api_v1`, `section_23_tests`
 
+## test.api_contract.prepared_vector_public_api
+
+- Sections: `section_04_public_api_v1`, `section_22_guardrails_machine_checks`, `section_23_tests`
+
 ## test.api_contract.preview_state_sealed_union
 
 - Sections: `section_04_public_api_v1`, `section_14_interaction_engine`, `section_15_frame_render_contract`, `section_23_tests`
@@ -109,11 +113,11 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.codec.schema_v1.reject_unknown_element_kind
 
-- Sections: `section_05_schema_v1_contract`, `section_23_tests`
+- Sections: `section_05_schema_v1_contract`, `section_19_codec_boundary`, `section_23_tests`
 
 ## test.codec.schema_v1.reject_unknown_resource_source_kind
 
-- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_23_tests`
+- Sections: `section_05_schema_v1_contract`, `section_07_resource_lifecycle`, `section_19_codec_boundary`, `section_23_tests`
 
 ## test.codec.schema_v1.resources_appkey_only
 
@@ -375,6 +379,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
 
+## test.resources.application_vector_freshness_lifecycle
+
+- Sections: `section_07_resource_lifecycle`, `section_10_runtime_data_model`, `section_13_operation_matrix`, `section_23_tests`
+
 ## test.resources.mark_all_resources_dirty
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
@@ -402,6 +410,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 ## test.resources.resource_dirty
 
 - Sections: `section_07_resource_lifecycle`, `section_23_tests`
+
+## test.resources.resource_image_cache_memory_accounting
+
+- Sections: `section_07_resource_lifecycle`, `section_18_cache_policy`, `section_23_tests`
 
 ## test.resources.surface_session_cache_lifecycle
 

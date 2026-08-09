@@ -50,6 +50,54 @@ void main() {
       SelectionDecorationStrokePlacement.boundsOutline,
     ),
   );
+
+  test(
+    'vector is outside-box alone and keeps mixed selection group chrome',
+    () {
+      expect(_expectVectorSelectionPlacement, returnsNormally);
+    },
+  );
+}
+
+void _expectVectorSelectionPlacement() {
+  final vector = _singlePrimitiveFor(
+    SelectionDecorationPlanner(),
+    _singleSelectionFrame(
+      id: 'vector',
+      revision: 1,
+      facts: vectorFacts(
+        'vector',
+        orderToken: 1,
+        resourceId: CanvasResourceId('vector-resource'),
+      ),
+    ),
+  );
+  expect(vector.strokePlacement, SelectionDecorationStrokePlacement.outsideBox);
+
+  final mixed = SelectionDecorationPlanner().build(
+    capturedMainFrame(
+      frameFacts: frameFactsPort(
+        elements: [
+          vectorFacts(
+            'vector',
+            orderToken: 1,
+            resourceId: CanvasResourceId('vector-resource'),
+          ),
+          translatedRectFacts(
+            'rect',
+            orderToken: 2,
+            translation: const Offset(20, 0),
+          ),
+        ],
+      ),
+      selectionFacts: _selection(['vector', 'rect'], revision: 2),
+    ),
+  );
+  _expectGroupPrimitive(
+    mixed.primitives.single,
+    bounds: const Rect.fromLTRB(-5, -5, 25, 5),
+    selectedElementCount: 2,
+  );
 }
 
 int _expectSelectionDecorationKeyIncludesInputs() {

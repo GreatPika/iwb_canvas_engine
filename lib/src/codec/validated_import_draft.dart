@@ -12,7 +12,7 @@ final class ValidatedImportDraft {
     CanvasDocument document, {
     DiagnosticsHub? diagnostics,
   }) {
-    final resourceIds = _validatedResourceIds(
+    final resources = _validatedResources(
       document.resources,
       diagnostics: diagnostics,
     );
@@ -22,13 +22,13 @@ final class ValidatedImportDraft {
     );
     final elementIds = _validatedElementIds(
       _allElements(document.backgroundElements, document.layers),
-      resourceIds: resourceIds,
+      resources: resources,
       diagnostics: diagnostics,
     );
 
     return ValidatedImportDraft._(
       document: document,
-      resourceIds: resourceIds,
+      resourceIds: resources.keys.toSet(),
       layerIds: layerIds,
       elementIds: elementIds,
     );
@@ -38,7 +38,7 @@ final class ValidatedImportDraft {
     CanvasDocument document, {
     DiagnosticsHub? diagnostics,
   }) {
-    final resourceIds = _validatedResourceIds(
+    final resources = _validatedResources(
       document.resources,
       diagnostics: diagnostics,
     );
@@ -48,13 +48,13 @@ final class ValidatedImportDraft {
     );
     final elementIds = _validatedElementIds(
       _allElements(document.backgroundElements, document.layers),
-      resourceIds: resourceIds,
+      resources: resources,
       diagnostics: diagnostics,
     );
 
     return ValidatedImportDraft._(
       document: document,
-      resourceIds: resourceIds,
+      resourceIds: resources.keys.toSet(),
       layerIds: layerIds,
       elementIds: elementIds,
     );
@@ -73,13 +73,13 @@ final class ValidatedImportDraft {
   final Set<CanvasElementId> elementIds;
 }
 
-Set<CanvasResourceId> _validatedResourceIds(
+Map<CanvasResourceId, CanvasResource> _validatedResources(
   List<CanvasResource> resources, {
   required DiagnosticsHub? diagnostics,
 }) {
-  final ids = <CanvasResourceId>{};
+  final byId = <CanvasResourceId, CanvasResource>{};
   for (final resource in resources) {
-    if (!ids.add(resource.id)) {
+    if (byId.containsKey(resource.id)) {
       throw recordSchemaV1FailureDiagnostic(
         diagnostics,
         CanvasDataException(
@@ -89,9 +89,10 @@ Set<CanvasResourceId> _validatedResourceIds(
         ),
       );
     }
+    byId[resource.id] = resource;
   }
 
-  return Set.unmodifiable(ids);
+  return Map.unmodifiable(byId);
 }
 
 Set<CanvasLayerId> _validatedLayerIds(
@@ -117,7 +118,7 @@ Set<CanvasLayerId> _validatedLayerIds(
 
 Set<CanvasElementId> _validatedElementIds(
   Iterable<CanvasElement> elements, {
-  required Set<CanvasResourceId> resourceIds,
+  required Map<CanvasResourceId, CanvasResource> resources,
   required DiagnosticsHub? diagnostics,
 }) {
   final ids = <CanvasElementId>{};
@@ -143,20 +144,47 @@ Set<CanvasElementId> _validatedElementIds(
         ),
       );
     }
-    if (element is CanvasImageElement &&
-        !resourceIds.contains(element.resourceId)) {
-      throw recordSchemaV1FailureDiagnostic(
-        diagnostics,
-        CanvasDataException(
-          code: CanvasDataErrorCode.missingResourceReference,
-          message: 'image element references a missing resource.',
-          path: 'image.resourceId',
-        ),
-      );
-    }
+    _validateResourceRelationship(element, resources, diagnostics);
   }
 
   return Set.unmodifiable(ids);
+}
+
+void _validateResourceRelationship(
+  CanvasElement element,
+  Map<CanvasResourceId, CanvasResource> resources,
+  DiagnosticsHub? diagnostics,
+) {
+  final relationship = switch (element) {
+    CanvasImageElement() => (element.resourceId, 'image.resourceId', true),
+    CanvasVectorElement() => (element.resourceId, 'vector.resourceId', false),
+    _ => null,
+  };
+  if (relationship == null) {
+    return;
+  }
+  final descriptor = resources[relationship.$1];
+  final error = switch (descriptor) {
+    null => CanvasDataException(
+      code: CanvasDataErrorCode.missingResourceReference,
+      message: 'resource element references a missing resource.',
+      path: relationship.$2,
+    ),
+    CanvasImageResource() when !relationship.$3 => CanvasDataException(
+      code: CanvasDataErrorCode.resourceKindMismatch,
+      message: 'resource kind does not match the referencing element.',
+      path: relationship.$2,
+    ),
+    CanvasVectorResource() when relationship.$3 => CanvasDataException(
+      code: CanvasDataErrorCode.resourceKindMismatch,
+      message: 'resource kind does not match the referencing element.',
+      path: relationship.$2,
+    ),
+    _ => null,
+  };
+  if (error != null) {
+    throw recordSchemaV1FailureDiagnostic(diagnostics, error);
+  }
 }
 
 Iterable<CanvasElement> _allElements(

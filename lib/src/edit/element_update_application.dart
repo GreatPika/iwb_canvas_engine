@@ -11,6 +11,7 @@ bool elementUpdateMatchesKind(
 ) {
   return switch ((element, update)) {
     (CanvasImageElement(), CanvasImageElementUpdate()) => true,
+    (CanvasVectorElement(), CanvasVectorElementUpdate()) => true,
     (CanvasPathElement(), CanvasPathElementUpdate()) => true,
     (CanvasTextElement(), CanvasTextElementUpdate()) => true,
     (CanvasStrokeElement(), CanvasStrokeElementUpdate()) => true,
@@ -28,6 +29,11 @@ CanvasElement? updatedElementFor(
   final updated = switch ((element, update)) {
     (final CanvasImageElement element, final CanvasImageElementUpdate update) =>
       _updatedImageElement(element, update, common),
+    (
+      final CanvasVectorElement element,
+      final CanvasVectorElementUpdate update,
+    ) =>
+      _updatedVectorElement(element, update, common),
     (final CanvasPathElement element, final CanvasPathElementUpdate update) =>
       _updatedPathElement(element, update, common),
     (final CanvasTextElement element, final CanvasTextElementUpdate update) =>
@@ -51,8 +57,9 @@ CanvasElement? updatedElementFor(
 
 // Equality for no-op detection intentionally mirrors all public element
 // families in one audited place so sparse and materialized edit paths cannot
-// silently disagree on a missed field.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+// silently disagree on a missed field. Keeping the exhaustive dispatcher
+// intact is clearer than splitting family equality solely for a metric.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
 bool sameCanvasElement(CanvasElement left, CanvasElement right) {
   if (!_sameCommonElementFields(left, right)) {
     return false;
@@ -60,6 +67,10 @@ bool sameCanvasElement(CanvasElement left, CanvasElement right) {
 
   return switch ((left, right)) {
     (final CanvasImageElement left, final CanvasImageElement right) =>
+      left.resourceId == right.resourceId &&
+          left.size == right.size &&
+          left.naturalSize == right.naturalSize,
+    (final CanvasVectorElement left, final CanvasVectorElement right) =>
       left.resourceId == right.resourceId &&
           left.size == right.size &&
           left.naturalSize == right.naturalSize,
@@ -105,6 +116,29 @@ CanvasImageElement _updatedImageElement(
   _CommonUpdate common,
 ) {
   return CanvasImageElement(
+    id: element.id,
+    resourceId: _requiredField(update.resourceId, element.resourceId),
+    size: _requiredField(update.size, element.size),
+    naturalSize: _nullableField(update.naturalSize, element.naturalSize),
+    revision: element.revision + 1,
+    transform: common.transform,
+    opacity: common.opacity,
+    hitPadding: common.hitPadding,
+    isVisible: common.isVisible,
+    isSelectable: common.isSelectable,
+    isLocked: common.isLocked,
+    isDeletable: common.isDeletable,
+    isTransformable: common.isTransformable,
+    metadata: common.metadata,
+  );
+}
+
+CanvasVectorElement _updatedVectorElement(
+  CanvasVectorElement element,
+  CanvasVectorElementUpdate update,
+  _CommonUpdate common,
+) {
+  return CanvasVectorElement(
     id: element.id,
     resourceId: _requiredField(update.resourceId, element.resourceId),
     size: _requiredField(update.size, element.size),

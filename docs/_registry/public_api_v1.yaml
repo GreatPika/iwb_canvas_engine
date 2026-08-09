@@ -19,6 +19,7 @@ public_exports:
   - CanvasPathFillRule
   - CanvasElement
   - CanvasImageElement
+  - CanvasVectorElement
   - CanvasPathElement
   - CanvasTextElement
   - CanvasStrokeElement
@@ -27,6 +28,7 @@ public_exports:
   - CanvasElementRead
   - CanvasElementUpdate
   - CanvasImageElementUpdate
+  - CanvasVectorElementUpdate
   - CanvasPathElementUpdate
   - CanvasTextElementUpdate
   - CanvasStrokeElementUpdate
@@ -46,6 +48,7 @@ public_exports:
   - CanvasResourcePort
   - CanvasResource
   - CanvasImageResource
+  - CanvasVectorResource
   - CanvasResourceSource
   - CanvasAppKeyResourceSource
   - CanvasResourceResolver

@@ -13,6 +13,7 @@ import 'interaction_read_port_bounded_read_fixture.dart';
 void main() {
   _testRuntimeInjectsReadPortIntoInteractionEngine();
   _testSelectedMoveStartFacts();
+  _testVectorSelectedMoveFacts();
   _testSelectedMoveStartGroupUnionFacts();
   _testSelectedMoveStartOccludedGroupUnionFacts();
   _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts();
@@ -25,6 +26,7 @@ void main() {
   _testMarqueeQueryBudgetFacts();
   _testEraserReadFacts();
   _testContextTargetReadFacts();
+  _testVectorContextTargetReadFacts();
   _testRejectedContextTargetReadOutcomes();
   _testTextCommitGuardFacts();
 }
@@ -70,6 +72,41 @@ void _testSelectedMoveStartFacts() {
       () => facts.selectedIds.add(CanvasElementId('x')),
       throwsUnsupportedError,
     );
+  });
+}
+
+// Start and terminal facts form one move transaction; keeping their assertions
+// together makes a broken cross-phase vector admission immediately legible.
+// ignore: halstead-volume
+void _testVectorSelectedMoveFacts() {
+  test('selected vector move keeps its hit and commit facts', () {
+    final root = _runtimeRoot()
+      ..selection.setSelection([CanvasElementId('vector-a')]);
+    addTearDown(root.dispose);
+
+    final start = root.interactionReadPort.selectedMoveStartFacts(
+      const SelectedMoveStartReadRequest(worldPosition: Offset(65, 5)),
+    );
+
+    expect(start.selectedIds, [CanvasElementId('vector-a')]);
+    expect(start.movableSelectedIds, [CanvasElementId('vector-a')]);
+    expect(start.hitSelectedMovable, isTrue);
+    expect(start.topmostMovableHitId, CanvasElementId('vector-a'));
+    expect(start.topmostHitId, CanvasElementId('vector-a'));
+
+    final commit = root.interactionReadPort.selectedMoveCommitFacts(
+      SelectedMoveCommitReadRequest(
+        sessionSelectedIds: start.selectedIds,
+        sessionMovableIds: start.movableSelectedIds,
+        selectionRevision: start.selectionRevision,
+      ),
+    );
+
+    expect(commit.movableIds, [CanvasElementId('vector-a')]);
+    expect(commit.movedElements, hasLength(1));
+    expect(commit.selectionBoundsWorld, const Rect.fromLTRB(55, -5, 65, 5));
+    expect(commit.hasDocumentChangesAvailable, isTrue);
+    expect(commit.skippedSessionIds, isEmpty);
   });
 }
 
@@ -414,6 +451,35 @@ void _testContextTargetReadFacts() {
   );
 }
 
+void _testVectorContextTargetReadFacts() {
+  test(
+    'context target reads capture content vectors and exclude background',
+    () {
+      final root = _runtimeRoot();
+      addTearDown(root.dispose);
+
+      final content =
+          root.interactionReadPort.directContextTargetFacts(
+                const ContextTargetReadRequest(worldPosition: Offset(65, 5)),
+              )
+              as AdmittedContextTargetRead;
+
+      expect(content.facts.kind, ContextActionReadTargetKind.contentElement);
+      expect(content.facts.elementId, CanvasElementId('vector-a'));
+      expect(content.facts.elementKind, CanvasElementKind.vector);
+      expect(content.facts.elementSnapshot, isA<CanvasVectorElement>());
+      expect(content.facts.family, InteractionElementFamily.vector);
+
+      final background =
+          root.interactionReadPort.directContextTargetFacts(
+                const ContextTargetReadRequest(worldPosition: Offset(105, 25)),
+              )
+              as AdmittedContextTargetRead;
+      expect(background.facts.kind, ContextActionReadTargetKind.emptyCanvas);
+    },
+  );
+}
+
 void _testRejectedContextTargetReadOutcomes() {
   _testInvalidIndexContextTargetReadOutcome();
   _testStaleIndexContextTargetReadOutcome();
@@ -580,9 +646,17 @@ CanvasDocument _singleSelectedLineDocument() {
 
 // The fixture document keeps all read-port target families in one place so
 // ordering, background coverage, selectable state, and text facts do not drift.
-// ignore: halstead-volume
+// Keeping that complete committed document together is clearer than scattering
+// the target-family setup merely to reduce the fixture's line count.
+// ignore: halstead-volume, source-lines-of-code
 CanvasDocument _document() {
   return CanvasDocument(
+    resources: [
+      CanvasVectorResource(
+        id: CanvasResourceId('vector-resource'),
+        source: CanvasResourceSource.appKey('vector-resource'),
+      ),
+    ],
     backgroundElements: [
       CanvasRectElement(
         id: CanvasElementId('background-a'),
@@ -592,6 +666,12 @@ CanvasDocument _document() {
         id: CanvasElementId('background-b'),
         size: const Size(10, 10),
         transform: CanvasTransform.translation(const Offset(80, 0)),
+      ),
+      CanvasVectorElement(
+        id: CanvasElementId('background-vector-a'),
+        resourceId: CanvasResourceId('vector-resource'),
+        size: const Size(10, 10),
+        transform: CanvasTransform.translation(const Offset(100, 20)),
       ),
     ],
     layers: [
@@ -610,6 +690,12 @@ CanvasDocument _document() {
           ),
           _nonselectableRect('nonselectable-a', const Offset(0, 20)),
           _hiddenRect('hidden-a', const Offset(20, 20)),
+          CanvasVectorElement(
+            id: CanvasElementId('vector-a'),
+            resourceId: CanvasResourceId('vector-resource'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(60, 0)),
+          ),
         ],
       ),
     ],

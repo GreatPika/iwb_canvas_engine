@@ -20,6 +20,7 @@ final class FamilyTables {
   const FamilyTables.empty()
     : this._fromTables(
         imageRows: const {},
+        vectorRows: const {},
         pathRows: const {},
         textRows: const {},
         strokeRows: const {},
@@ -36,6 +37,7 @@ final class FamilyTables {
   FamilyTables._(_AdmittedRows admitted)
     : this._fromTables(
         imageRows: Map.unmodifiable(admitted.imageRows),
+        vectorRows: Map.unmodifiable(admitted.vectorRows),
         pathRows: Map.unmodifiable(admitted.pathRows),
         textRows: Map.unmodifiable(admitted.textRows),
         strokeRows: Map.unmodifiable(admitted.strokeRows),
@@ -46,6 +48,7 @@ final class FamilyTables {
   FamilyTables._owned(_AdmittedRows admitted)
     : this._fromTables(
         imageRows: UnmodifiableMapView(admitted.imageRows),
+        vectorRows: UnmodifiableMapView(admitted.vectorRows),
         pathRows: UnmodifiableMapView(admitted.pathRows),
         textRows: UnmodifiableMapView(admitted.textRows),
         strokeRows: UnmodifiableMapView(admitted.strokeRows),
@@ -55,6 +58,7 @@ final class FamilyTables {
 
   const FamilyTables._fromTables({
     required this.imageRows,
+    required this.vectorRows,
     required this.pathRows,
     required this.textRows,
     required this.strokeRows,
@@ -63,6 +67,7 @@ final class FamilyTables {
   });
 
   final Map<String, ImageRow> imageRows;
+  final Map<String, VectorRow> vectorRows;
   final Map<String, PathRow> pathRows;
   final Map<String, TextRow> textRows;
   final Map<String, StrokeRow> strokeRows;
@@ -72,7 +77,8 @@ final class FamilyTables {
   bool contains(CanvasElementId id) => admittedElementIds.contains(id.value);
 
   bool referencesResource(CanvasResourceId id) {
-    return imageRows.values.any((row) => row.resourceId == id);
+    return imageRows.values.any((row) => row.resourceId == id) ||
+        vectorRows.values.any((row) => row.resourceId == id);
   }
 
   // Family lookup stays explicit so projection, sparse updates, and frame facts
@@ -82,6 +88,7 @@ final class FamilyTables {
     final value = id.value;
 
     return imageRows[value]?.toElement() ??
+        vectorRows[value]?.toElement() ??
         pathRows[value]?.toElement() ??
         textRows[value]?.toElement() ??
         strokeRows[value]?.toElement() ??
@@ -125,6 +132,7 @@ final class FamilyTables {
   // ignore: cyclomatic-complexity
   CanvasElement elementById(String id) {
     return imageRows[id]?.toElement() ??
+        vectorRows[id]?.toElement() ??
         pathRows[id]?.toElement() ??
         textRows[id]?.toElement() ??
         strokeRows[id]?.toElement() ??
@@ -135,6 +143,7 @@ final class FamilyTables {
   Set<String> get admittedElementIds {
     return {
       ...imageRows.keys,
+      ...vectorRows.keys,
       ...pathRows.keys,
       ...textRows.keys,
       ...strokeRows.keys,
@@ -156,6 +165,7 @@ final class FamilyTables {
     final value = id.value;
 
     return _imageFrameFacts(value) ??
+        _vectorFrameFacts(value) ??
         _commonFrameFacts(pathRows[value]?.common, CanvasElementKind.path) ??
         _commonFrameFacts(textRows[value]?.common, CanvasElementKind.text) ??
         _commonFrameFacts(
@@ -175,6 +185,19 @@ final class FamilyTables {
     return _commonFrameFacts(
       row.common,
       CanvasElementKind.image,
+      resourceId: row.resourceId,
+    );
+  }
+
+  FamilyElementFacts? _vectorFrameFacts(String id) {
+    final row = vectorRows[id];
+    if (row == null) {
+      return null;
+    }
+
+    return _commonFrameFacts(
+      row.common,
+      CanvasElementKind.vector,
       resourceId: row.resourceId,
     );
   }
@@ -208,10 +231,13 @@ final class FamilyTables {
       resourceId: resourceId,
       size: switch (kind) {
         CanvasElementKind.image => imageRows[common.id.value]?.size,
+        CanvasElementKind.vector => vectorRows[common.id.value]?.size,
         CanvasElementKind.rect => rectRows[common.id.value]?.size,
         _ => null,
       },
-      naturalSize: imageRows[common.id.value]?.naturalSize,
+      naturalSize:
+          imageRows[common.id.value]?.naturalSize ??
+          vectorRows[common.id.value]?.naturalSize,
       svgPathData: pathRows[common.id.value]?.svgPathData,
       fillColor:
           pathRows[common.id.value]?.fillColor ??
@@ -250,6 +276,7 @@ final class FamilyTables {
   // ignore: cyclomatic-complexity
   ElementCommonRow? _commonById(String id) {
     return imageRows[id]?.common ??
+        vectorRows[id]?.common ??
         pathRows[id]?.common ??
         textRows[id]?.common ??
         strokeRows[id]?.common ??
@@ -260,6 +287,7 @@ final class FamilyTables {
   _AdmittedRows _copyRows() {
     return _AdmittedRows()
       ..imageRows.addAll(imageRows)
+      ..vectorRows.addAll(vectorRows)
       ..pathRows.addAll(pathRows)
       ..textRows.addAll(textRows)
       ..strokeRows.addAll(strokeRows)
@@ -279,6 +307,18 @@ final class FamilyTables {
         imageRows: Map.unmodifiable(
           Map.of(imageRows)..[id] = ImageRow(element),
         ),
+        vectorRows: vectorRows,
+        pathRows: pathRows,
+        textRows: textRows,
+        strokeRows: strokeRows,
+        lineRows: lineRows,
+        rectRows: rectRows,
+      ),
+      CanvasVectorElement() => FamilyTables._fromTables(
+        imageRows: imageRows,
+        vectorRows: Map.unmodifiable(
+          Map.of(vectorRows)..[id] = VectorRow(element),
+        ),
         pathRows: pathRows,
         textRows: textRows,
         strokeRows: strokeRows,
@@ -287,6 +327,7 @@ final class FamilyTables {
       ),
       CanvasPathElement() => FamilyTables._fromTables(
         imageRows: imageRows,
+        vectorRows: vectorRows,
         pathRows: Map.unmodifiable(Map.of(pathRows)..[id] = PathRow(element)),
         textRows: textRows,
         strokeRows: strokeRows,
@@ -295,6 +336,7 @@ final class FamilyTables {
       ),
       CanvasTextElement() => FamilyTables._fromTables(
         imageRows: imageRows,
+        vectorRows: vectorRows,
         pathRows: pathRows,
         textRows: Map.unmodifiable(Map.of(textRows)..[id] = TextRow(element)),
         strokeRows: strokeRows,
@@ -303,6 +345,7 @@ final class FamilyTables {
       ),
       CanvasStrokeElement() => FamilyTables._fromTables(
         imageRows: imageRows,
+        vectorRows: vectorRows,
         pathRows: pathRows,
         textRows: textRows,
         strokeRows: Map.unmodifiable(
@@ -313,6 +356,7 @@ final class FamilyTables {
       ),
       CanvasLineElement() => FamilyTables._fromTables(
         imageRows: imageRows,
+        vectorRows: vectorRows,
         pathRows: pathRows,
         textRows: textRows,
         strokeRows: strokeRows,
@@ -321,6 +365,7 @@ final class FamilyTables {
       ),
       CanvasRectElement() => FamilyTables._fromTables(
         imageRows: imageRows,
+        vectorRows: vectorRows,
         pathRows: pathRows,
         textRows: textRows,
         strokeRows: strokeRows,
@@ -338,6 +383,7 @@ final class FamilyTables {
 final class _MutableFamilyRows {
   _MutableFamilyRows.fromTables(FamilyTables tables)
     : imageRows = Map<String, ImageRow>.of(tables.imageRows),
+      vectorRows = Map<String, VectorRow>.of(tables.vectorRows),
       pathRows = Map<String, PathRow>.of(tables.pathRows),
       textRows = Map<String, TextRow>.of(tables.textRows),
       strokeRows = Map<String, StrokeRow>.of(tables.strokeRows),
@@ -345,6 +391,7 @@ final class _MutableFamilyRows {
       rectRows = Map<String, RectRow>.of(tables.rectRows);
 
   final Map<String, ImageRow> imageRows;
+  final Map<String, VectorRow> vectorRows;
   final Map<String, PathRow> pathRows;
   final Map<String, TextRow> textRows;
   final Map<String, StrokeRow> strokeRows;
@@ -356,6 +403,8 @@ final class _MutableFamilyRows {
     switch (element) {
       case CanvasImageElement():
         imageRows[id] = ImageRow(element);
+      case CanvasVectorElement():
+        vectorRows[id] = VectorRow(element);
       case CanvasPathElement():
         pathRows[id] = PathRow(element);
       case CanvasTextElement():
@@ -372,6 +421,7 @@ final class _MutableFamilyRows {
   FamilyTables toFamilyTables() {
     return FamilyTables._fromTables(
       imageRows: Map.unmodifiable(imageRows),
+      vectorRows: Map.unmodifiable(vectorRows),
       pathRows: Map.unmodifiable(pathRows),
       textRows: Map.unmodifiable(textRows),
       strokeRows: Map.unmodifiable(strokeRows),
@@ -490,6 +540,7 @@ final class FamilyElementFacts {
 // ignore: coupling-between-object-classes
 final class _AdmittedRows {
   final Map<String, ImageRow> imageRows = {};
+  final Map<String, VectorRow> vectorRows = {};
   final Map<String, PathRow> pathRows = {};
   final Map<String, TextRow> textRows = {};
   final Map<String, StrokeRow> strokeRows = {};
@@ -510,6 +561,8 @@ final class _AdmittedRows {
     switch (element) {
       case CanvasImageElement():
         imageRows[id] = ImageRow(element);
+      case CanvasVectorElement():
+        vectorRows[id] = VectorRow(element);
       case CanvasPathElement():
         pathRows[id] = PathRow(element);
       case CanvasTextElement():
@@ -536,6 +589,8 @@ final class _AdmittedRows {
     switch (event) {
       case SchemaV1ImageElementImportEvent():
         imageRows[id] = ImageRow.fromSchemaV1Import(event);
+      case SchemaV1VectorElementImportEvent():
+        vectorRows[id] = VectorRow.fromSchemaV1Import(event);
       case SchemaV1PathElementImportEvent():
         pathRows[id] = PathRow.fromSchemaV1Import(event);
       case SchemaV1TextElementImportEvent():
@@ -554,6 +609,7 @@ final class _AdmittedRows {
       return;
     }
     imageRows.remove(id);
+    vectorRows.remove(id);
     pathRows.remove(id);
     textRows.remove(id);
     strokeRows.remove(id);
@@ -642,6 +698,44 @@ final class ImageRow {
 
   CanvasImageElement toElement() {
     return CanvasImageElement(
+      id: common.id,
+      resourceId: resourceId,
+      size: size,
+      naturalSize: naturalSize,
+      revision: common.revision,
+      transform: common.transform,
+      opacity: common.opacity,
+      hitPadding: common.hitPadding,
+      isVisible: common.isVisible,
+      isSelectable: common.isSelectable,
+      isLocked: common.isLocked,
+      isDeletable: common.isDeletable,
+      isTransformable: common.isTransformable,
+      metadata: common.metadata,
+    );
+  }
+}
+
+final class VectorRow {
+  VectorRow(CanvasVectorElement element)
+    : common = ElementCommonRow(element),
+      resourceId = element.resourceId,
+      size = element.size,
+      naturalSize = element.naturalSize;
+
+  VectorRow.fromSchemaV1Import(SchemaV1VectorElementImportEvent event)
+    : common = ElementCommonRow.fromSchemaV1Import(event.common),
+      resourceId = event.resourceId,
+      size = event.size,
+      naturalSize = event.naturalSize;
+
+  final ElementCommonRow common;
+  final CanvasResourceId resourceId;
+  final Size size;
+  final Size? naturalSize;
+
+  CanvasVectorElement toElement() {
+    return CanvasVectorElement(
       id: common.id,
       resourceId: resourceId,
       size: size,

@@ -63,7 +63,7 @@ Success ordering:
    schema v1 reader;
 3. stream codec-owned field, metadata, enum, resource, element, and invertible
    transform validation through dependency-neutral schema import events into an
-   isolated sink without constructing CanvasDocument, CanvasImageResource, store
+   isolated sink without constructing CanvasDocument, public image/vector resource DTOs, store
    rows from public DTOs, or a retained validated fact graph;
 4. let DocumentStoreKernel-owned preparation consume the isolated import sink
    into store-owned rows/tables, sealed resource descriptor rows, id admission
@@ -119,11 +119,19 @@ Failure ordering:
 ```
 
 Failed load must not materialize a public `CanvasDocument`, build
-`DocumentProjectionCache`, create public `CanvasImageResource`, install partial
+`DocumentProjectionCache`, create public resource DTOs, install partial
 store rows, clear selection, change runtime view camera, increment revisions,
 publish effects/actions, or notify state listeners. Successful load may
 invalidate public projection, but the first `CanvasDocument` projection is built
 only when an explicit read/projection path asks for it.
+
+For resource relationships, the dependency-neutral reader remains shape and
+metadata-only. The isolated store preparation validates the completed candidate:
+an absent `image.resourceId` or `vector.resourceId` is
+`missingResourceReference`, while an existing descriptor of the wrong sealed
+kind is `resourceKindMismatch`. Both classifications abort the isolated pending
+state before install, so document, revisions, selection, output, and active
+gesture state remain unchanged.
 
 `CanvasEdit.replaceDraftDocument(document)` is different:
 

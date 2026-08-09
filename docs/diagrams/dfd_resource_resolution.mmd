@@ -1,9 +1,9 @@
 %% Resource resolution data flow
 flowchart LR
 
-  App["Application\nowns images and app keys"]
+  App["Application\nowns image/vector assets and app keys"]
   Surface["CanvasSurface\npaint host with resourceResolver"]
-  AppResolver["CanvasResourceResolver.resolveImage\nsynchronous app boundary"]
+  AppResolver["CanvasResourceResolver.resolveImage / resolveVector\nsynchronous app boundary"]
 
   subgraph PublicAPI["Public API facade"]
     EditCall["CanvasEdit mutation\nupsert/remove resource descriptors"]
@@ -26,8 +26,8 @@ flowchart LR
   end
 
   subgraph Store["DocumentStoreKernel"]
-    ResourceTable["Committed sealed descriptor facts\ncurrent image variant"]
-    AppKeyDescriptor["Current image descriptor\nCanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nmimeType, CanvasMetadata"]
+    ResourceTable["Committed sealed descriptor facts\nimage/vector variants"]
+    AppKeyDescriptor["Image/vector descriptor\nCanvasResourceSource.appKey only\nCanvasAppKeyResourceSource.key\nid, contentHash, byteLength,\nimage mimeType only, CanvasMetadata"]
     DocumentRevision["documentRevision\nchanges only on committed descriptor mutation"]
     ResourceRevision["resourceRevision\ndescriptor version"]
     ProjectionRevision["projectionRevision\npublic document projection version"]
@@ -42,7 +42,7 @@ flowchart LR
     MainPaint["Main paint frame\ncaptured once"]
     RenderRecords["Immutable RenderElementRecord list\nresource ids"]
     AssetRequest["Typed resource-asset request\nresourceId -> descriptor"]
-    PaintAsset["Typed paint asset\ncurrent image asset or bounded placeholder"]
+    PaintAsset["Typed paint asset\nimage/vector asset or bounded placeholder"]
     MainRepaint["Main repaint request"]
   end
 
@@ -53,7 +53,7 @@ flowchart LR
 
   subgraph Session["SurfaceResourceSession"]
     ResolvePaintAsset["Resolve paint asset\nsession resolver boundary"]
-    ResourceAssetCache["ResourceAssetCache\nresolverGeneration + resourceId + resourceRevision\naggregate entry and image-byte policy"]
+    ResourceAssetCache["ResourceAssetCache\nresolverGeneration + resourceId + resourceRevision\naggregate cross-family entry; image-byte/vector-zero policy"]
     ResolverFrameBudget["Resolver frame budget\nfixed per-frame guard"]
     MissingResult["Null resolver result\nsuppressed for same frame key:\nresolverGeneration + resourceId + resourceRevision\nmissing/no resolver placeholders do not call resolver"]
     BudgetPlaceholder["Budget-exceeded placeholder\nnot cached as null/missing"]
@@ -71,7 +71,7 @@ flowchart LR
 
   subgraph Forbidden["Forbidden paths"]
     EngineIO["No engine IO\nno asset bundle, file, or network loading"]
-    EngineDisposal["Engine never disposes\napp-owned ui.Image"]
+    EngineDisposal["Engine never disposes\napplication-owned image/vector assets"]
     DirtyDocRevision["markResourceDirty does not increment\ndocumentRevision"]
     ResourcePortMutation["ResourcePort cannot mutate\nresource descriptors"]
     ResolverReentry["Resolver reentrant public mutation\nStateError, no runtime effects"]
@@ -93,7 +93,7 @@ flowchart LR
   RenderRecords -->|"resourceId"| AssetRequest
   AssetRequest -->|"request descriptor facts through FrameFactsPort"| DescriptorFacts
   DescriptorFacts -->|"resourceId lookup"| ResourceTable
-  ResourceTable -->|"sealed current image descriptor facts"| DescriptorFacts
+  ResourceTable -->|"sealed image/vector descriptor facts"| DescriptorFacts
   DescriptorFacts -->|"descriptor snapshot + resourceRevision"| ResolvePaintAsset
   Surface -->|"owns active SurfaceResourceSession\nwith resolverGeneration"| ResolvePaintAsset
 
@@ -104,8 +104,8 @@ flowchart LR
   ResolverFrameBudget -.->|"budget exceeded\nnon-hub session probe + at most one pending\nthrottled follow-up repaint"| BudgetPlaceholder
   BudgetPlaceholder -.->|"bounded placeholder\nno cache write"| PaintAsset
   AppResolver -->|"passes descriptor; app reads CanvasAppKeyResourceSource.key"| App
-  AppResolver -->|"returns app-owned ui.Image, null,\nor ordinary exception\nno runtime mutation"| ResolvePaintAsset
-  ResolvePaintAsset -->|"admit resolved asset by key\ncurrent image weight is policy-owned\nskip oversized retention"| ResourceAssetCache
+  AppResolver -->|"returns app-owned image/vector asset, null,\nor ordinary exception\nno runtime mutation"| ResolvePaintAsset
+  ResolvePaintAsset -->|"admit resolved asset by key\nimage weight/vector zero weight is policy-owned\nskip oversized retention"| ResourceAssetCache
   ResolvePaintAsset -->|"resolved asset"| PaintAsset
   ResolvePaintAsset -.->|"ordinary app resolver exception\nbudget was consumed"| ResolverExceptionPlaceholder
   ResolverExceptionPlaceholder -.->|"bounded placeholder result"| Placeholder
@@ -114,7 +114,7 @@ flowchart LR
   Placeholder -.->|"placeholder paint asset"| PaintAsset
   PaintAsset -->|"assets only; no live resource mutation"| MainPaint
 
-  App -->|"external image contents changed"| DirtyCall
+  App -->|"external resource-asset contents changed"| DirtyCall
   DirtyCall -->|"delegate dirty signal"| ResourceDirtyDispatch
   DirtyCall -->|"declared by"| PublicResourceContracts
   ResourceDirtyDispatch -->|"ResourceDirtyOutcome"| InternalResourceContracts

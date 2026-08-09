@@ -230,6 +230,7 @@ SelectionDecorationStrokePlacement _strokePlacementFor(
 ) {
   return switch (family) {
     RenderElementFamily.image ||
+    RenderElementFamily.vector ||
     RenderElementFamily.rect => SelectionDecorationStrokePlacement.outsideBox,
     RenderElementFamily.line ||
     RenderElementFamily.path ||

@@ -100,6 +100,7 @@ FrameElementFacts? interactionFactsForId(
 InteractionElementFamily interactionElementFamily(FrameElementFacts facts) {
   return switch (facts.kind) {
     CanvasElementKind.image => InteractionElementFamily.image,
+    CanvasElementKind.vector => InteractionElementFamily.vector,
     CanvasElementKind.path => InteractionElementFamily.path,
     CanvasElementKind.text => InteractionElementFamily.text,
     CanvasElementKind.stroke => InteractionElementFamily.stroke,
@@ -120,6 +121,22 @@ String? interactionTextValue(FrameElementFacts facts) {
 CanvasElement interactionElementSnapshot(FrameElementFacts facts) {
   return switch (facts.kind) {
     CanvasElementKind.image => CanvasImageElement(
+      id: facts.id,
+      resourceId: _requiredFact(facts.resourceId, facts, 'resourceId'),
+      size: _requiredFact(facts.size, facts, 'size'),
+      naturalSize: facts.naturalSize,
+      revision: facts.revision,
+      transform: facts.transform,
+      opacity: facts.opacity,
+      hitPadding: facts.hitPadding,
+      isVisible: facts.isVisible,
+      isSelectable: facts.isSelectable,
+      isLocked: facts.isLocked,
+      isDeletable: facts.isDeletable,
+      isTransformable: facts.isTransformable,
+      metadata: facts.metadata,
+    ),
+    CanvasElementKind.vector => CanvasVectorElement(
       id: facts.id,
       resourceId: _requiredFact(facts.resourceId, facts, 'resourceId'),
       size: _requiredFact(facts.size, facts, 'size'),

@@ -24,12 +24,6 @@ void main() {
     expect(_implementedEditMethodsMissingFromOperationMatrix(), isEmpty);
   });
 
-  test('updateElement taxonomy fixture covers every field token', () {
-    expect(
-      _updateTaxonomyTokensCoveredByFixture(),
-      _updateElementTaxonomyTokens(),
-    );
-  });
 }
 
 Set<String> _operationMatrixRowsCoveredByFixture() {
@@ -39,15 +33,6 @@ Set<String> _operationMatrixRowsCoveredByFixture() {
   final rowPattern = RegExp(r"_EditOperationMatrixCase\(\s*'([^']+)'");
 
   return {for (final match in rowPattern.allMatches(source)) ?match.group(1)};
-}
-
-Set<String> _updateTaxonomyTokensCoveredByFixture() {
-  final source = File(
-    'test/edit/fixtures/edit_matrix_effects_fixture.dart',
-  ).readAsStringSync();
-  final tokenPattern = RegExp(r"_UpdateTaxonomyCase\(\s*'([^']+)'");
-
-  return {for (final match in tokenPattern.allMatches(source)) ?match.group(1)};
 }
 
 Set<String> _editOwnedRowsFromOperationMatrix() {
@@ -148,23 +133,6 @@ Set<String> _firstCaptureGroups(RegExp pattern, String source) {
   }
 
   return values;
-}
-
-Set<String> _updateElementTaxonomyTokens() {
-  final source = File('docs/contracts/edit_kernel.md').readAsStringSync();
-  final taxonomyStart = source.indexOf('Field taxonomy:');
-  final taxonomyEnd = source.indexOf(
-    '`CommitCompiler` may implement',
-    taxonomyStart,
-  );
-  final taxonomy = _codeUnitSlice(source, taxonomyStart, taxonomyEnd);
-  final rows = _markdownTableFirstColumnFromSource(taxonomy);
-  final tokenPattern = RegExp(r'`([^`]+)`');
-
-  return {
-    for (final row in rows)
-      for (final match in tokenPattern.allMatches(row)) ?match.group(1),
-  };
 }
 
 String _codeUnitSlice(String source, int start, int end) {

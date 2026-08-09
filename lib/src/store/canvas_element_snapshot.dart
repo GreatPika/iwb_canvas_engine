@@ -8,6 +8,8 @@ bool sameCanvasElementSnapshot(CanvasElement left, CanvasElement right) {
   return switch ((left, right)) {
     (final CanvasImageElement left, final CanvasImageElement right) =>
       _sameImageElement(left, right),
+    (final CanvasVectorElement left, final CanvasVectorElement right) =>
+      _sameVectorElement(left, right),
     (final CanvasPathElement left, final CanvasPathElement right) =>
       _samePathElement(left, right),
     (final CanvasTextElement left, final CanvasTextElement right) =>
@@ -40,6 +42,12 @@ bool _sameCanvasElementCommon(CanvasElement left, CanvasElement right) {
 }
 
 bool _sameImageElement(CanvasImageElement left, CanvasImageElement right) {
+  return left.resourceId == right.resourceId &&
+      left.size == right.size &&
+      left.naturalSize == right.naturalSize;
+}
+
+bool _sameVectorElement(CanvasVectorElement left, CanvasVectorElement right) {
   return left.resourceId == right.resourceId &&
       left.size == right.size &&
       left.naturalSize == right.naturalSize;

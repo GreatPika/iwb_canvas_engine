@@ -13,11 +13,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
-import 'package:iwb_canvas_engine/src/resources/resource_resolver_adapter.dart';
+import 'package:iwb_canvas_engine/src/contracts/public/canvas_prepared_vector.dart';
+import 'package:iwb_canvas_engine/src/frame/paint_asset_binding_service.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
+
+import '../../preparation/fixtures/vector_preparation_fixture.dart';
 
 // The registration block keeps the full CanvasSurface repaint matrix visible in
 // one fixture instead of scattering the proof across unrelated test files.
@@ -61,6 +64,22 @@ void main() {
     (tester) async {
       await _expectAllRetainedReleasePaths(tester);
       expect(_paintHosts(), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'CanvasSurface releases vector output borrows before detach and ignores stale releases',
+    (tester) async {
+      await _expectVectorRetainedOutputReleaseAndStaleIsolation(tester);
+      expect(_paintHosts(), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'same vector wrapper remains application-owned across two attached runtimes',
+    (tester) async {
+      await _expectSameWrapperAliasesAcrossAttachedRuntimes(tester);
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -207,7 +226,7 @@ Future<void> _expectImageResourcePaintAndDirtyRepaint(
     _mainPainter(tester).output.assetBindings.assets[CanvasResourceId(
       'resource-a',
     )],
-    isA<ResolvedResourceAsset>(),
+    isA<FrameImageAssetBinding>(),
   );
 
   runtime.resources.markResourceDirty(CanvasResourceId('resource-a'));
@@ -339,6 +358,181 @@ Future<void> _expectAllRetainedReleasePaths(WidgetTester tester) async {
   secondImage.dispose();
 }
 
+// Target/all release, drop/detach, and stale-session isolation must observe
+// the actual retained output, not only the session callback counts.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectVectorRetainedOutputReleaseAndStaleIsolation(
+  WidgetTester tester,
+) async {
+  final prepared = await prepareVector(basicVectorBytes());
+  final exactPicture = liveCanvasPreparedVectorPicture(prepared);
+  final disposedPictures = <ui.Picture>[];
+  final previousOnDispose = ui.Picture.onDispose;
+  ui.Picture.onDispose = (picture) {
+    if (identical(picture, exactPicture)) {
+      disposedPictures.add(picture);
+    }
+  };
+  addTearDown(() {
+    ui.Picture.onDispose = previousOnDispose;
+  });
+  final runtime = runtimeWithDocument(_twoVectorDocument());
+  final resolver = _RecordingResolver(
+    (_) => null,
+    resolvePreparedVector: (_) => prepared,
+  );
+  addTearDown(runtime.dispose);
+
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final session = _activeSurfaceSession(runtime);
+  _expectRetainedVectors(tester, {'vector-a', 'vector-b'}, prepared);
+
+  runtime.resources.markResourceDirty(CanvasResourceId('vector-a'));
+  _expectRetainedVectors(tester, {'vector-b'}, prepared);
+
+  runtime.resources.markAllResourcesDirty();
+  _expectRetainedVectors(tester, <String>{}, prepared);
+  await tester.pump();
+  _expectRetainedVectors(tester, {'vector-a', 'vector-b'}, prepared);
+
+  session.replaceResolver(resolver);
+  _expectRetainedVectors(tester, <String>{}, prepared);
+  runtime.resources.markAllResourcesDirty();
+  await tester.pump();
+  _expectRetainedVectors(tester, {'vector-a', 'vector-b'}, prepared);
+
+  runtime.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_twoVectorDocument()),
+  );
+  _expectRetainedVectors(tester, <String>{}, prepared);
+  await tester.pump();
+  _expectRetainedVectors(tester, {'vector-a', 'vector-b'}, prepared);
+
+  await tester.pumpWidget(const SizedBox.shrink());
+  expect(_paintHosts(), findsNothing);
+  expect(disposedPictures, isEmpty);
+  await tester.pumpWidget(_SurfaceHost(runtime: runtime, resolver: resolver));
+  final droppedSession = _activeSurfaceSession(runtime);
+  _expectRetainedVectors(tester, {'vector-a', 'vector-b'}, prepared);
+
+  droppedSession.drop();
+  _expectRetainedVectors(tester, <String>{}, prepared);
+  expect(disposedPictures, isEmpty);
+
+  await _expectStaleVectorSessionCannotClearCurrentOutput(tester, prepared);
+  await tester.pumpWidget(const SizedBox.shrink());
+  expect(_paintHosts(), findsNothing);
+  expect(disposedPictures, isEmpty);
+
+  prepared.dispose();
+  expect(disposedPictures, [exactPicture]);
+}
+
+Future<void> _expectStaleVectorSessionCannotClearCurrentOutput(
+  WidgetTester tester,
+  CanvasPreparedVector prepared,
+) async {
+  final oldRuntime = runtimeWithDocument(_vectorDocument('stale-vector'));
+  final currentRuntime = runtimeWithDocument(_vectorDocument('current-vector'));
+  final oldResolver = _RecordingResolver(
+    (_) => null,
+    resolvePreparedVector: (_) => prepared,
+  );
+  final currentResolver = _RecordingResolver(
+    (_) => null,
+    resolvePreparedVector: (_) => prepared,
+  );
+  addTearDown(oldRuntime.dispose);
+  addTearDown(currentRuntime.dispose);
+
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: oldRuntime, resolver: oldResolver),
+  );
+  final staleSession = _activeSurfaceSession(oldRuntime);
+  await tester.pumpWidget(
+    _SurfaceHost(runtime: currentRuntime, resolver: currentResolver),
+  );
+  final currentOutput = _mainPainter(tester).output;
+
+  staleSession.releaseResource(CanvasResourceId('stale-vector'));
+  staleSession.releaseAllResources();
+  staleSession.resetForDocumentReplacement();
+  staleSession.drop();
+
+  expect(_mainPainter(tester).output, same(currentOutput));
+  _expectRetainedVectors(tester, {'current-vector'}, prepared);
+}
+
+// This two-runtime witness keeps the same wrapper borrowed by two real active
+// surfaces so one detach cannot authorize application disposal or later paint.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectSameWrapperAliasesAcrossAttachedRuntimes(
+  WidgetTester tester,
+) async {
+  final prepared = await prepareVector(basicVectorBytes());
+  final exactPicture = liveCanvasPreparedVectorPicture(prepared);
+  final disposedPictures = <ui.Picture>[];
+  final previousOnDispose = ui.Picture.onDispose;
+  ui.Picture.onDispose = (picture) {
+    if (identical(picture, exactPicture)) {
+      disposedPictures.add(picture);
+    }
+  };
+  addTearDown(() {
+    ui.Picture.onDispose = previousOnDispose;
+  });
+  final firstRuntime = runtimeWithDocument(_vectorDocument('alias-a'));
+  final secondRuntime = runtimeWithDocument(_vectorDocument('alias-b'));
+  final resolver = _RecordingResolver(
+    (_) => null,
+    resolvePreparedVector: (_) => prepared,
+  );
+  addTearDown(firstRuntime.dispose);
+  addTearDown(secondRuntime.dispose);
+
+  await tester.pumpWidget(
+    _TwoRuntimeSurfaceHost(
+      firstRuntime: firstRuntime,
+      secondRuntime: secondRuntime,
+      firstResolver: resolver,
+      secondResolver: resolver,
+      includeFirst: true,
+    ),
+  );
+  final painters = _mainPainters(tester);
+  expect(painters, hasLength(2));
+  expect(
+    _boundVectorFor(painters[0], CanvasResourceId('alias-a')),
+    same(prepared),
+  );
+  expect(
+    _boundVectorFor(painters[1], CanvasResourceId('alias-b')),
+    same(prepared),
+  );
+
+  await tester.pumpWidget(
+    _TwoRuntimeSurfaceHost(
+      firstRuntime: firstRuntime,
+      secondRuntime: secondRuntime,
+      firstResolver: resolver,
+      secondResolver: resolver,
+      includeFirst: false,
+    ),
+  );
+  expect(_mainPainters(tester), hasLength(1));
+  expect(
+    _boundVectorFor(_mainPainters(tester).single, CanvasResourceId('alias-b')),
+    same(prepared),
+  );
+  expect(disposedPictures, isEmpty);
+
+  await tester.pumpWidget(const SizedBox.shrink());
+  expect(_mainPainters(tester), isEmpty);
+  expect(disposedPictures, isEmpty);
+  prepared.dispose();
+  expect(disposedPictures, [exactPicture]);
+}
+
 Future<void> _expectStaleSessionDoesNotReleaseCurrentOutput(
   WidgetTester tester, {
   required ui.Image oldImage,
@@ -378,6 +572,33 @@ void _expectRetainedImages(WidgetTester tester, Set<String> expectedIds) {
     _mainPainter(tester).output.assetBindings.assets.keys.map((id) => id.value),
     expectedIds,
   );
+}
+
+void _expectRetainedVectors(
+  WidgetTester tester,
+  Set<String> expectedIds,
+  CanvasPreparedVector prepared,
+) {
+  final painter = _mainPainter(tester);
+  expect(
+    painter.output.assetBindings.assets.keys.map((id) => id.value),
+    expectedIds,
+  );
+  for (final id in expectedIds) {
+    expect(_boundVectorFor(painter, CanvasResourceId(id)), same(prepared));
+  }
+}
+
+CanvasPreparedVector _boundVectorFor(
+  MainFramePainter painter,
+  CanvasResourceId id,
+) {
+  final binding = painter.output.assetBindings.assets[id];
+  if (binding is! FrameVectorAssetBinding) {
+    throw StateError('Expected a resolved vector asset for $id.');
+  }
+
+  return binding.prepared;
 }
 
 // Budget follow-up behavior depends on resolver calls, layer dispatch, and
@@ -1114,6 +1335,51 @@ final class _SurfaceHost extends StatelessWidget {
   }
 }
 
+final class _TwoRuntimeSurfaceHost extends StatelessWidget {
+  const _TwoRuntimeSurfaceHost({
+    required this.firstRuntime,
+    required this.secondRuntime,
+    required this.firstResolver,
+    required this.secondResolver,
+    required this.includeFirst,
+  });
+
+  final CanvasRuntime firstRuntime;
+  final CanvasRuntime secondRuntime;
+  final CanvasResourceResolver firstResolver;
+  final CanvasResourceResolver secondResolver;
+  final bool includeFirst;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(
+        children: [
+          Expanded(
+            child: includeFirst
+                ? CanvasSurface(
+                    key: const ValueKey<String>('first-runtime-surface'),
+                    runtime: firstRuntime,
+                    resourceResolver: firstResolver,
+                    interactive: false,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          Expanded(
+            child: CanvasSurface(
+              key: const ValueKey<String>('second-runtime-surface'),
+              runtime: secondRuntime,
+              resourceResolver: secondResolver,
+              interactive: false,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 final class _TwoSurfaceHost extends StatelessWidget {
   const _TwoSurfaceHost({
     required this.runtime,
@@ -1177,6 +1443,13 @@ MainFramePainter _mainPainter(WidgetTester tester) {
   return painter as MainFramePainter;
 }
 
+List<MainFramePainter> _mainPainters(WidgetTester tester) {
+  return [
+    for (final paintHost in tester.widgetList<CustomPaint>(_mainPaintHosts()))
+      if (paintHost.painter case final MainFramePainter painter) painter,
+  ];
+}
+
 OverlayFramePainter _overlayPainter(WidgetTester tester) {
   final paintHost = tester.widget<CustomPaint>(_overlayPaintHosts());
   final painter = paintHost.painter;
@@ -1229,7 +1502,7 @@ Finder _overlayPaintHosts() {
 
 int _budgetPlaceholders(WidgetTester tester) {
   return _mainPainter(tester).output.assetBindings.assets.values
-      .whereType<BudgetExceededResourceAssetPlaceholder>()
+      .whereType<FrameAssetPlaceholderBinding>()
       .length;
 }
 
@@ -1433,6 +1706,48 @@ CanvasDocument _twoImageDocument() {
   );
 }
 
+CanvasDocument _twoVectorDocument() {
+  return CanvasDocument(
+    resources: [_vectorResource('vector-a'), _vectorResource('vector-b')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasVectorElement(
+            id: CanvasElementId('vector-a'),
+            resourceId: CanvasResourceId('vector-a'),
+            size: const Size(10, 10),
+          ),
+          CanvasVectorElement(
+            id: CanvasElementId('vector-b'),
+            resourceId: CanvasResourceId('vector-b'),
+            size: const Size(10, 10),
+            transform: CanvasTransform.translation(const Offset(20, 0)),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _vectorDocument(String resourceId) {
+  return CanvasDocument(
+    resources: [_vectorResource(resourceId)],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasVectorElement(
+            id: CanvasElementId('$resourceId-element'),
+            resourceId: CanvasResourceId(resourceId),
+            size: const Size(10, 10),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 CanvasDocument _manyImageDocument(int count) {
   return CanvasDocument(
     resources: [
@@ -1472,6 +1787,14 @@ CanvasImageResource _imageResource() {
   );
 }
 
+CanvasVectorResource _vectorResource(String id) {
+  return CanvasVectorResource(
+    id: CanvasResourceId(id),
+    source: CanvasResourceSource.appKey('vector-$id'),
+    byteLength: 42,
+  );
+}
+
 Future<ui.Image> _createImage() async {
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
@@ -1487,9 +1810,11 @@ Future<ui.Image> _createImage() async {
 }
 
 final class _RecordingResolver implements CanvasResourceResolver {
-  _RecordingResolver(this._resolve);
+  _RecordingResolver(this._resolve, {this.resolvePreparedVector});
 
   final ui.Image? Function(CanvasImageResource resource) _resolve;
+  final CanvasPreparedVector? Function(CanvasVectorResource resource)?
+  resolvePreparedVector;
   int calls = 0;
 
   @override
@@ -1497,6 +1822,11 @@ final class _RecordingResolver implements CanvasResourceResolver {
     calls += 1;
 
     return _resolve(resource);
+  }
+
+  @override
+  CanvasPreparedVector? resolveVector(CanvasVectorResource resource) {
+    return resolvePreparedVector?.call(resource);
   }
 }
 

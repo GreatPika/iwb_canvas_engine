@@ -19,6 +19,7 @@ void main() {
   _testMarqueeExactInclusion();
   _testCorruptedRowsMissWithoutMutation();
   _testCorruptedLineStrokeRowsMiss();
+  _testVectorSizedBoundsAndBoxHit();
 }
 
 void _testConstants() {
@@ -42,6 +43,48 @@ void _testBounds() {
     expect(bounds.hitBoundsWorld, const Rect.fromLTRB(-16, -11, 16, 11));
     expect(bounds.paintBoundsWorld, const Rect.fromLTRB(-10, -5, 10, 5));
     expect(stroked.localBounds, const Rect.fromLTRB(-12, -12, 12, 12));
+  });
+}
+
+// Sized bounds and the three owner-observable vector admissions form one
+// geometry scenario; separating them would obscure their shared immutable row.
+// ignore: halstead-volume
+void _testVectorSizedBoundsAndBoxHit() {
+  test('vector size owns bounds and box hit testing', () {
+    final vector = _facts(
+      const _FactSpec(
+        id: 'vector',
+        kind: CanvasElementKind.vector,
+        size: Size(20, 10),
+        hitPadding: 2,
+      ),
+    );
+    final bounds = const GeometryPolicy().boundsFor(vector);
+
+    expect(bounds.localBounds, const Rect.fromLTRB(-10, -5, 10, 5));
+    expect(bounds.hitBoundsWorld, const Rect.fromLTRB(-16, -11, 16, 11));
+    expect(
+      const HitTestPolicy().exactHit(point: Offset.zero, facts: vector),
+      isTrue,
+    );
+    expect(
+      const HitTestPolicy().exactMarquee(
+        marquee: const Rect.fromLTRB(-2, -2, 2, 2),
+        facts: vector,
+      ),
+      isTrue,
+    );
+    expect(
+      const HitTestPolicy().exactEraserHit(
+        corridor: const GeometryPolicy().corridorEnvelope(
+          points: [Offset.zero],
+          eraserThickness: 2,
+          hitPadding: 0,
+        ),
+        facts: vector,
+      ),
+      isTrue,
+    );
   });
 }
 

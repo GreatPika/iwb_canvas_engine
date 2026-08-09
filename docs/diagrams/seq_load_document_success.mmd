@@ -24,7 +24,7 @@ sequenceDiagram
   Runtime->>Codec: parse and validate schema-v1 JSON
   Codec->>Codec: check raw length, JSON shape, schemaVersion 1, known fields, metadata, enums, and transforms
   Codec->>Import: emit dependency-neutral document, resource, layer, and element events
-  Note over Codec,Import: Codec does not construct CanvasDocument, CanvasImageResource, store rows, or a retained validated graph.
+  Note over Codec,Import: Codec does not construct CanvasDocument, public image/vector resource DTOs, store rows, or a retained validated graph.
 
   Import-->>Store: event stream
   Runtime->>Store: prepare schema-v1 store import from current revisions

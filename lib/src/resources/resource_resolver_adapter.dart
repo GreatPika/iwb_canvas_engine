@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_prepared_vector.dart';
 import '../contracts/public/canvas_resource.dart';
 
 const int kMaxSyncResourceResolverCallsPerFrame = 128;
@@ -41,6 +42,15 @@ final class ImageResourceAsset extends ResourceAsset {
 
   @override
   int get cacheWeightBytes => image.width * image.height * 4;
+}
+
+final class VectorResourceAsset extends ResourceAsset {
+  const VectorResourceAsset(this.prepared);
+
+  final CanvasPreparedVector prepared;
+
+  @override
+  int get cacheWeightBytes => 0;
 }
 
 sealed class ResourceAssetResolveResult {

@@ -9,7 +9,7 @@ import '../geometry/geometry_policy.dart';
 import 'frame_cache.dart';
 import 'frame_text_layout_measurer.dart';
 
-enum RenderElementFamily { image, path, text, stroke, line, rect }
+enum RenderElementFamily { image, vector, path, text, stroke, line, rect }
 
 sealed class RenderElementRow {
   const RenderElementRow();
@@ -17,6 +17,18 @@ sealed class RenderElementRow {
 
 final class ImageRenderRow extends RenderElementRow {
   const ImageRenderRow({
+    required this.resourceId,
+    required this.size,
+    required this.naturalSize,
+  });
+
+  final CanvasResourceId resourceId;
+  final Size size;
+  final Size? naturalSize;
+}
+
+final class VectorRenderRow extends RenderElementRow {
+  const VectorRenderRow({
     required this.resourceId,
     required this.size,
     required this.naturalSize,
@@ -152,7 +164,10 @@ final class RenderElementRecord {
   final CanvasResourceId? resourceId;
   final RenderElementRow row;
 
-  bool get requiresSaveLayer => false;
+  bool get requiresSaveLayer =>
+      family == RenderElementFamily.vector &&
+      primitiveAlpha > 0 &&
+      primitiveAlpha < 255;
 
   factory RenderElementRecord.fromFacts(
     FrameElementFacts facts, {
@@ -180,6 +195,7 @@ final class RenderElementRecord {
 RenderElementFamily _familyFor(CanvasElementKind kind) {
   return switch (kind) {
     CanvasElementKind.image => RenderElementFamily.image,
+    CanvasElementKind.vector => RenderElementFamily.vector,
     CanvasElementKind.path => RenderElementFamily.path,
     CanvasElementKind.text => RenderElementFamily.text,
     CanvasElementKind.stroke => RenderElementFamily.stroke,
@@ -191,6 +207,7 @@ RenderElementFamily _familyFor(CanvasElementKind kind) {
 RenderElementRow _rowFor(FrameElementFacts facts) {
   return switch (facts.kind) {
     CanvasElementKind.image => _imageRow(facts),
+    CanvasElementKind.vector => _vectorRow(facts),
     CanvasElementKind.path => _pathRow(facts),
     CanvasElementKind.text => _textRow(facts),
     CanvasElementKind.stroke => _strokeRow(facts),
@@ -207,6 +224,20 @@ ImageRenderRow _imageRow(FrameElementFacts facts) {
   }
 
   return ImageRenderRow(
+    resourceId: resourceId,
+    size: size,
+    naturalSize: facts.naturalSize,
+  );
+}
+
+VectorRenderRow _vectorRow(FrameElementFacts facts) {
+  final resourceId = facts.resourceId;
+  final size = facts.size;
+  if (resourceId == null || size == null) {
+    throw StateError('Vector render rows require resourceId and size.');
+  }
+
+  return VectorRenderRow(
     resourceId: resourceId,
     size: size,
     naturalSize: facts.naturalSize,

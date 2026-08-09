@@ -47,13 +47,13 @@ stateDiagram-v2
   state "Descriptor snapshot" as DescriptorSnapshot
   note right of DescriptorSnapshot
     FrameFactsPort reads committed resource descriptors from the
-    committed-state owner and passes sealed immutable current image descriptor facts
+    committed-state owner and passes sealed immutable image/vector descriptor facts
     to the session boundary.
     The resolver cannot create, remove, or update descriptors.
   end note
 
   DescriptorSnapshot --> MissingDescriptor: descriptor missing
-  DescriptorSnapshot --> AppKeyDescriptor: current image descriptor source is appKey
+  DescriptorSnapshot --> AppKeyDescriptor: image/vector descriptor source is appKey
 
   state "Missing descriptor" as MissingDescriptor
   MissingDescriptor --> PlaceholderResult: return bounded placeholder
@@ -71,7 +71,7 @@ stateDiagram-v2
   note right of CacheLookup
     ResourceAssetCache identity is keyed strictly by
     resolverGeneration + resourceId + resourceRevision.
-    Current image byte admission is policy-owned; descriptor byteLength
+    Image byte and vector-zero-byte admission are policy-owned; descriptor byteLength
     remains descriptor metadata, not cache pressure truth.
     Dirty-resource operations explicitly invalidate affected
     entries or clear all entries in the active session.
@@ -117,7 +117,7 @@ stateDiagram-v2
   SyncResolverCall --> ReentrantMutationRejected: app attempts public runtime mutation
   SyncResolverCall --> ResolverExceptionResult: app throws ordinary exception
   SyncResolverCall --> NullResult: app returns null
-  SyncResolverCall --> ResolvedResult: app returns ui.Image
+  SyncResolverCall --> ResolvedResult: app returns image/vector asset
 
   state "Reentrant mutation rejected" as ReentrantMutationRejected
   note right of ReentrantMutationRejected
@@ -152,7 +152,7 @@ stateDiagram-v2
   state "Resolved visual" as ResolvedVisual
   note right of ResolvedVisual
     The engine may cache and paint the reference, but the
-    application still owns the ui.Image and its disposal.
+    application still owns the resolved asset and its disposal.
   end note
   ResolvedVisual --> ActiveSession: paint completes
 
@@ -188,7 +188,7 @@ stateDiagram-v2
   state "Disposed runtime" as Disposed
   note right of Disposed
     Dispose drops any active SurfaceResourceSession and cache entries
-    without disposing app-owned ui.Image instances. Later resource
+    without disposing app-owned image/vector assets. Later resource
     resolution cannot revive session state, call the app resolver,
     or mutate Store.
   end note

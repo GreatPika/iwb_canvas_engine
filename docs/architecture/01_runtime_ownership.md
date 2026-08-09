@@ -58,7 +58,7 @@ Runtime responsibilities are split as follows:
 | InteractionEngine | pointer sessions, tools, preview state, terminal commit requests, interaction request guard facts, target pointer cleanup coordinator composition | read or mutate DocumentStoreKernel directly; store Flutter text editor session state |
 | CanvasTextEditingPort | single runtime-owned active text edit session, read-only admission, live text geometry/style projection, guarded commit/dismiss lifecycle | own Flutter IME/editor widgets, mutate document visibility to hide text, or replace context-action ownership |
 | FrameEngine | frame-internal facade for capture, planning, painter input assembly, and repaint buses; target composition owner for frame-private collaborators | read concrete DocumentStoreKernel internals, export public document, own selection, or expose frame collaborators outside `lib/src/frame/**` |
-| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image references, or committed descriptors |
+| ResourceKernel | resource API, committed catalog reads through `ResourceCatalogPort`, dirty resource ids, resource visual state publication, dirty outcomes for runtime target/all release | own app domain assets, resolved image/vector references, or committed descriptors |
 | SurfaceResourceSession | surface-scoped resolver reference, resolverGeneration, ResourceAssetCache, typed resource-asset resolution, resolver budget, same-frame null-result suppression, bounded placeholders, and cache/suppression retirement before narrow retained-output release callback | own committed descriptors, public runtime state, or Flutter widget lifecycle |
 | CanvasSurface | Flutter lifecycle, active-surface listener attachment, transient layer output cache, identity-aware retained main-output target/all release, local surface invalidation keys, and main/overlay paint hosts | decide interaction repaint policy, own frame planning, own resource descriptors, or read runtime/store/session state from painters |
 | SpatialKernel | coarse candidate lookup, outlier policy | be the document source of truth |
@@ -77,7 +77,11 @@ or resource-session route. It captures the invocation context while preparing
 caller bytes and returns an application-owned prepared value; only the
 application disposes that value. `RuntimeRoot`, `ResourceKernel`,
 `SurfaceResourceSession`, and `CanvasSurface` neither retain nor dispose its
-private Picture.
+private Picture. The application owns wrapper publication and freshness across
+resource ids and attached runtime/surface aliases: it publishes a current value
+before attaching it, synchronously releases every old alias before disposal,
+and discards an out-of-order completion without publication. Engine generation
+or revision keys are not application-visible lifecycle state.
 
 Runtime-to-surface repaint routing has a separate internal surface-frame seam.
 `RuntimeRoot` aggregates operation, interaction, camera, resource, load, and
@@ -130,7 +134,7 @@ by the runtime/selection boundary and may be batched into `InteractionReadPort`
 responses when the interaction intent needs document order plus selected ids.
 The port returns only immutable, batched, intent-specific facts: hit/order
 facts, immutable element snapshots, `boundsWorld`, element generation,
-`elementRevision`, element family, `controllerEpoch`, visibility, and top-hit
+`elementRevision`, `CanvasElementKind`, `controllerEpoch`, visibility, and top-hit
 status. It must not expose mutation APIs, draft access, `CanvasDocument`
 projection, store internals, resource/session internals, selection internals, or
 per-property concrete owner probes. Committed mutations requested by interaction
@@ -190,7 +194,7 @@ frame descriptor lookup stays on `FrameFactsPort`.
 request guard facts, such as the `CanvasInteractionRequestId`, context request
 target kind, controllerEpoch, and live request status. For content-element
 targets, it also stores target element id, element generation, elementRevision,
-and element family. `RuntimeRoot` owns the registry instance lifetime,
+and element kind. `RuntimeRoot` owns the registry instance lifetime,
 `InteractionEngine` records issued request facts, and guarded command-port
 operations consume and remove those facts through a narrow boundary before
 delegating accepted mutations to `EditKernel`. The registry is not an active

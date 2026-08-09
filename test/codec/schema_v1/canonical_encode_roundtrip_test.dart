@@ -256,8 +256,146 @@ void main() {
     expect(jsonDecode(encodeCanvasDocumentToJson(document)), isA<Map<String, Object?>>());
   });
 
-  test('encode rejects document facts that schema decode would reject', () {
-    expect(
+  test('canonical schema v1 roundtrips descriptor-only vector resources', () {
+    final document = CanvasDocument(
+      resources: [
+        CanvasVectorResource(
+          id: CanvasResourceId('vector-a'),
+          source: CanvasResourceSource.appKey('vector-a'),
+          contentHash: 'hash-vector-a',
+          byteLength: 42,
+          metadata: CanvasMetadata.fromMap({'owner': 'vectorResource'}),
+        ),
+      ],
+      backgroundElements: [
+        CanvasVectorElement(
+          id: CanvasElementId('vector-background-a'),
+          resourceId: CanvasResourceId('vector-a'),
+          size: const Size(20, 10),
+          naturalSize: const Size(40, 20),
+        ),
+      ],
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('vector-layer-a'),
+          elements: [
+            CanvasVectorElement(
+              id: CanvasElementId('vector-content-a'),
+              resourceId: CanvasResourceId('vector-a'),
+              size: const Size(30, 15),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final encoded = encodeCanvasDocument(document);
+    final resource = (encoded['resources'] as List<Object?>).single
+        as Map<String, Object?>;
+    expect(resource, {
+      'id': 'vector-a',
+      'kind': 'vector',
+      'source': {'kind': 'appKey', 'key': 'vector-a'},
+      'contentHash': 'hash-vector-a',
+      'byteLength': 42,
+      'metadata': {'owner': 'vectorResource'},
+    });
+    expect(resource.containsKey('mimeType'), isFalse);
+    final decoded = decodeSchemaV1Document(encoded);
+    expect(decoded.resources.single, isA<CanvasVectorResource>());
+    expect(decoded.backgroundElements.single, isA<CanvasVectorElement>());
+    expect(decoded.layers.single.elements.single, isA<CanvasVectorElement>());
+    expect(encodeCanvasDocument(decoded), encoded);
+  });
+
+  test('codec distinguishes an existing wrong resource kind by element path', () {
+    final imageResource = CanvasImageResource(
+      id: CanvasResourceId('image-a'),
+      source: CanvasResourceSource.appKey('image-a'),
+    );
+    final vectorResource = CanvasVectorResource(
+      id: CanvasResourceId('vector-a'),
+      source: CanvasResourceSource.appKey('vector-a'),
+    );
+    final wrongVector = CanvasDocument(
+      resources: [imageResource],
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('vector-layer'),
+          elements: [
+            CanvasVectorElement(
+              id: CanvasElementId('vector-a'),
+              resourceId: imageResource.id,
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      ],
+    );
+    final wrongImage = CanvasDocument(
+      resources: [vectorResource],
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('image-layer'),
+          elements: [
+            CanvasImageElement(
+              id: CanvasElementId('image-a'),
+              resourceId: vectorResource.id,
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    _expectRelationshipFailure(
+      () => encodeCanvasDocument(wrongVector),
+      path: 'vector.resourceId',
+    );
+    _expectRelationshipFailure(
+      () => encodeCanvasDocument(wrongImage),
+      path: 'image.resourceId',
+    );
+  });
+
+  test('codec-local DTO decode classifies both wrong resource directions', () {
+    final vectorAgainstImage = _encodedRelationshipDocument(
+      resource: CanvasImageResource(
+        id: CanvasResourceId('image-a'),
+        source: CanvasResourceSource.appKey('image-a'),
+      ),
+      element: CanvasImageElement(
+        id: CanvasElementId('vector-a'),
+        resourceId: CanvasResourceId('image-a'),
+        size: const Size(1, 1),
+      ),
+      encodedElementKind: 'vector',
+    );
+    final imageAgainstVector = _encodedRelationshipDocument(
+      resource: CanvasVectorResource(
+        id: CanvasResourceId('vector-a'),
+        source: CanvasResourceSource.appKey('vector-a'),
+      ),
+      element: CanvasVectorElement(
+        id: CanvasElementId('image-a'),
+        resourceId: CanvasResourceId('vector-a'),
+        size: const Size(1, 1),
+      ),
+      encodedElementKind: 'image',
+    );
+
+    _expectRelationshipFailure(
+      () => decodeSchemaV1Document(vectorAgainstImage),
+      path: 'vector.resourceId',
+    );
+    _expectRelationshipFailure(
+      () => decodeSchemaV1Document(imageAgainstVector),
+      path: 'image.resourceId',
+    );
+  });
+
+  test('public encode classifies absent resource relationships by element path', () {
+    _expectRelationshipFailure(
       () => encodeCanvasDocument(
         CanvasDocument(
           backgroundElements: [
@@ -269,19 +407,64 @@ void main() {
           ],
         ),
       ),
-      throwsA(
-        isA<CanvasDataException>().having(
-          (error) => error.code,
-          'code',
-          CanvasDataErrorCode.missingResourceReference,
+      code: CanvasDataErrorCode.missingResourceReference,
+      path: 'image.resourceId',
+    );
+    _expectRelationshipFailure(
+      () => encodeCanvasDocument(
+        CanvasDocument(
+          backgroundElements: [
+            CanvasVectorElement(
+              id: CanvasElementId('missing-vector'),
+              resourceId: CanvasResourceId('missing-resource'),
+              size: const Size(1, 1),
+            ),
+          ],
         ),
       ),
+      code: CanvasDataErrorCode.missingResourceReference,
+      path: 'vector.resourceId',
     );
   });
 }
 
+Map<String, Object?> _encodedRelationshipDocument({
+  required CanvasResource resource,
+  required CanvasElement element,
+  required String encodedElementKind,
+}) {
+  final encoded = encodeCanvasDocument(
+    CanvasDocument(resources: [resource], backgroundElements: [element]),
+  );
+  final background = encoded['backgroundLayer']! as Map<String, Object?>;
+  final encodedElement = (background['elements']! as List<Object?>).single
+      as Map<String, Object?>;
+  encodedElement['kind'] = encodedElementKind;
+
+  return encoded;
+}
+
 void _expectKeys(Map<String, Object?> value, Set<String> expected) {
   expect(value.keys.toSet(), expected);
+}
+
+void _expectRelationshipFailure(
+  Object? Function() action, {
+  CanvasDataErrorCode code = CanvasDataErrorCode.resourceKindMismatch,
+  required String path,
+}) {
+  expect(
+    action,
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            code,
+          )
+          .having((error) => error.path, 'path', path),
+    ),
+  );
 }
 
 void _expectDocumentEquivalent(CanvasDocument actual, CanvasDocument expected) {

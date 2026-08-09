@@ -23,6 +23,10 @@ void main() {
     expect(_expectFailedPreparationLeavesStoreUnchanged, returnsNormally);
   });
 
+  test('runtime load rejects a wrong vector resource kind before install', () {
+    expect(_expectWrongVectorResourceKindLeavesStoreUnchanged, returnsNormally);
+  });
+
   test('diagnostics route failures only when recording is enabled', () {
     expect(_expectDiagnosticsRouting, returnsNormally);
   });
@@ -118,6 +122,50 @@ void _expectFailedPreparationLeavesStoreUnchanged() {
     expect(store.structuralRevision, 1);
     expect(store.resourceRevision, 1);
   }
+}
+
+// One encoded candidate, its precise mutation, and the original store must
+// stay together to prove rejection occurs before any staged installation.
+// ignore: halstead-volume
+void _expectWrongVectorResourceKindLeavesStoreUnchanged() {
+  final store = documentStoreWithDocument(_initialDocument());
+  final pipeline = LoadDocumentPipeline(store: store);
+  final encoded = encodeCanvasDocument(
+    CanvasDocument(
+      resources: [
+        CanvasImageResource(
+          id: CanvasResourceId('image-resource'),
+          source: CanvasResourceSource.appKey('image-resource'),
+        ),
+      ],
+      backgroundElements: [
+        CanvasImageElement(
+          id: CanvasElementId('vector-element'),
+          resourceId: CanvasResourceId('image-resource'),
+          size: const Size(1, 1),
+        ),
+      ],
+    ),
+  );
+  final backgroundLayer = encoded['backgroundLayer']! as Map<String, Object?>;
+  final element =
+      (backgroundLayer['elements']! as List<Object?>).single
+          as Map<String, Object?>;
+  element['kind'] = 'vector';
+
+  expect(
+    () => pipeline.prepareFromJson(jsonEncode(encoded)),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.resourceKindMismatch,
+          )
+          .having((error) => error.path, 'path', 'vector.resourceId'),
+    ),
+  );
+  _expectInitialStore(store);
 }
 
 void _expectDiagnosticsRouting() {

@@ -207,7 +207,7 @@ void _testStoreImportBuilderIsOneShot() {
       final appendBuilder = StoreSchemaV1ImportBuilder();
       importSchemaV1Document(_validDocument(), appendBuilder);
       expect(
-        () => appendBuilder.imageResource(_resourceEvent('late-resource')),
+        () => appendBuilder.resource(_resourceEvent('late-resource')),
         throwsA(isA<StateError>()),
       );
 
@@ -220,7 +220,7 @@ void _expectMissingRelationshipRejectedDuringStorePreparation() {
   final builder = StoreSchemaV1ImportBuilder();
   importSchemaV1Document(_documentWithMissingResourceReference(), builder);
   expect(
-    () => builder.imageResource(_resourceEvent('late-resource')),
+    () => builder.resource(_resourceEvent('late-resource')),
     throwsA(isA<StateError>()),
   );
   final store = DocumentStoreKernel();

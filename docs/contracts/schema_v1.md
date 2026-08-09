@@ -106,11 +106,26 @@ Image resource:
 }
 ```
 
+Vector resource:
+
+```json
+{
+  "id": "logo-vec",
+  "kind": "vector",
+  "source": { "kind": "appKey", "key": "logo-vec" },
+  "contentHash": null,
+  "byteLength": null,
+  "metadata": {}
+}
+```
+
 Rules:
 
 ```text
 kind=image           -> admits the typed image descriptor; mimeType does not
                          determine descriptor kind;
+kind=vector          -> admits the typed vector descriptor; it has no mimeType
+                         and carries no `.vec`, SVG, or base64 payload;
 source.kind=appKey    -> requires key;
 appKey                -> non-empty string, no leading/trailing whitespace,
                          raw length <= 1024, no control characters;
@@ -157,6 +172,20 @@ Image element:
 ```
 
 `naturalSize` may be omitted or null.
+
+Vector element:
+
+```json
+{
+  "kind": "vector",
+  "resourceId": "logo-vec",
+  "size": { "w": 120.0, "h": 180.0 },
+  "naturalSize": { "w": 600.0, "h": 900.0 }
+}
+```
+
+`naturalSize` may be omitted or null. `size` remains target geometry; prepared
+vector intrinsic size is paint-only and is not synchronized into this field.
 
 Path element:
 
@@ -224,6 +253,15 @@ Rect element:
   "strokeWidth": 2.0
 }
 ```
+
+Relationship admission is independent at codec-local public DTO decode,
+exported encode, and store final-candidate install. An absent `resourceId`
+returns `missingResourceReference`; a present descriptor of the wrong sealed
+kind returns the single `resourceKindMismatch`. Both use the referencing
+`image.resourceId` or `vector.resourceId` path. Codec DTO decode and exported
+encode return no partial document/map on rejection; runtime load installs no
+partial rows. Known `image` output remains canonical, and unknown element and
+resource kinds continue to reject independently under Schema v1.
 
 ### 5.6 Layer JSON
 

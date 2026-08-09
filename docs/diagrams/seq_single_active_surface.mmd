@@ -30,7 +30,7 @@ sequenceDiagram
 
   App->>SurfaceA: unmount
   SurfaceA->>RuntimeA: detach surface token
-  SurfaceA->>SessionA: drop session without disposing app-owned ui.Image
+  SurfaceA->>SessionA: drop session without disposing app-owned image/vector assets
   RuntimeA-->>SurfaceA: detach accepted
   App->>SurfaceC: mount with CanvasRuntime A
   SurfaceC->>RuntimeA: attach surface token

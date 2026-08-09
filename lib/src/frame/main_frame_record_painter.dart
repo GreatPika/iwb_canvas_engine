@@ -1,8 +1,9 @@
 import 'package:flutter/painting.dart';
 
+import '../contracts/public/canvas_prepared_vector.dart';
 import '../contracts/public/canvas_ids.dart';
-import '../resources/resource_resolver_adapter.dart';
 import 'frame_drawable_policy.dart';
+import 'paint_asset_binding_service.dart';
 import 'render_element_record.dart';
 import 'render_primitive_cache_snapshot.dart';
 
@@ -11,7 +12,7 @@ const _drawablePolicy = FrameDrawablePolicy();
 void paintMainFrameRecord(
   Canvas canvas,
   RenderElementRecord record,
-  Map<CanvasResourceId, ResourceAsset> assetBindings,
+  Map<CanvasResourceId, FrameAssetBinding> assetBindings,
   RenderPrimitiveCacheSnapshot renderPrimitives,
 ) {
   switch (record.row) {
@@ -27,6 +28,8 @@ void paintMainFrameRecord(
       _paintStrokeRecord(canvas, record, row, renderPrimitives);
     case final LineRenderRow row:
       _paintLineRecord(canvas, record, row);
+    case final VectorRenderRow row:
+      _paintVectorRecord(canvas, record, row, assetBindings);
   }
 }
 
@@ -34,13 +37,13 @@ void _paintImageRecord(
   Canvas canvas,
   RenderElementRecord record,
   ImageRenderRow row,
-  Map<CanvasResourceId, ResourceAsset> assetBindings,
+  Map<CanvasResourceId, FrameAssetBinding> assetBindings,
 ) {
   final resourceId = record.resourceId;
   final asset = resourceId == null ? null : assetBindings[resourceId];
   _withRecordTransform(canvas, record, () {
     final localBounds = _localRectForSize(row.size);
-    if (asset case final ImageResourceAsset imageAsset) {
+    if (asset case final FrameImageAssetBinding imageAsset) {
       final image = imageAsset.image;
       canvas.drawImageRect(
         image,
@@ -52,6 +55,50 @@ void _paintImageRecord(
       return;
     }
     _paintFallbackBounds(canvas, localBounds, record.primitiveAlpha);
+  });
+}
+
+// Zero/partial/full alpha, clipping, transform, direct Picture draw, and
+// restore form one ordered canvas transaction; splitting them would obscure
+// the record-local layer and no-op guarantees.
+// ignore: halstead-volume
+void _paintVectorRecord(
+  Canvas canvas,
+  RenderElementRecord record,
+  VectorRenderRow row,
+  Map<CanvasResourceId, FrameAssetBinding> assetBindings,
+) {
+  if (record.primitiveAlpha == 0) {
+    return;
+  }
+  final asset = assetBindings[row.resourceId];
+  _withRecordTransform(canvas, record, () {
+    final localBounds = _localRectForSize(row.size);
+    if (asset is! FrameVectorAssetBinding) {
+      _paintFallbackBounds(canvas, localBounds, record.primitiveAlpha);
+
+      return;
+    }
+    final picture = liveCanvasPreparedVectorPicture(asset.prepared);
+    final intrinsicSize = asset.prepared.intrinsicSize;
+    canvas.save();
+    canvas.clipRect(localBounds);
+    if (record.requiresSaveLayer) {
+      canvas.saveLayer(
+        localBounds,
+        Paint()..color = Color.fromARGB(record.primitiveAlpha, 255, 255, 255),
+      );
+    }
+    canvas.translate(localBounds.left, localBounds.top);
+    canvas.scale(
+      localBounds.width / intrinsicSize.width,
+      localBounds.height / intrinsicSize.height,
+    );
+    canvas.drawPicture(picture);
+    if (record.requiresSaveLayer) {
+      canvas.restore();
+    }
+    canvas.restore();
   });
 }
 

@@ -1,6 +1,7 @@
 import '../contracts/internal/resolver_mutation_guard.dart';
 import '../contracts/internal/surface_resource_session_lifecycle.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/public/canvas_prepared_vector.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'resource_cache.dart';
 import 'resource_resolver_adapter.dart';
@@ -113,6 +114,13 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
       resourceRevision: request.resourceRevision,
     );
     if (cachedAsset == null) {
+      return null;
+    }
+    if (cachedAsset case VectorResourceAsset(
+      :final prepared,
+    ) when !_isLivePreparedVector(prepared)) {
+      _cache.invalidateResource(request.id);
+
       return null;
     }
 
@@ -263,6 +271,10 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
   ) {
     return switch (resource) {
       final CanvasImageResource image => _resolveImageAsset(image, resolver),
+      final CanvasVectorResource vector => _resolveVectorAsset(
+        vector,
+        resolver,
+      ),
     };
   }
 
@@ -273,6 +285,32 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
     final image = resolver.resolveImage(resource);
 
     return image == null ? null : ImageResourceAsset(image);
+  }
+
+  ResourceAsset? _resolveVectorAsset(
+    CanvasVectorResource resource,
+    CanvasResourceResolver resolver,
+  ) {
+    final prepared = resolver.resolveVector(resource);
+
+    if (prepared == null || !_isLivePreparedVector(prepared)) {
+      return null;
+    }
+
+    return VectorResourceAsset(prepared);
+  }
+
+  bool _isLivePreparedVector(CanvasPreparedVector prepared) {
+    try {
+      liveCanvasPreparedVectorPicture(prepared);
+      // The wrapper's internal liveness boundary intentionally signals stale
+      // application-owned Pictures with StateError.
+      // ignore: avoid_catching_errors
+    } on StateError {
+      return false;
+    }
+
+    return true;
   }
 
   _SuppressedResolveKey _suppressionKey(ResourceAssetResolveRequest request) {

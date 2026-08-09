@@ -32,21 +32,16 @@ final class ResourceTable {
   }
 
   factory ResourceTable.fromSchemaV1Import(
-    Iterable<SchemaV1ImageResourceImportEvent> resources, {
+    Iterable<SchemaV1ResourceImportEvent> resources, {
     required int resourceRevision,
   }) {
     final descriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
     for (final resource in resources) {
       _admitDescriptor(
         descriptors,
-        StoreImageResourceDescriptorFacts(
-          id: resource.id,
-          appKey: resource.appKey,
-          mimeType: resource.mimeType,
-          contentHash: resource.contentHash,
-          byteLength: resource.byteLength,
+        _descriptorForSchemaV1Import(
+          resource,
           resourceRevision: resourceRevision,
-          metadata: resource.metadata,
         ),
       );
     }
@@ -145,6 +140,13 @@ final class ResourceTable {
         byteLength: resource.byteLength,
         metadata: resource.metadata,
       ),
+      CanvasVectorResource() => CanvasVectorResource(
+        id: resource.id,
+        source: resource.source,
+        contentHash: resource.contentHash,
+        byteLength: resource.byteLength,
+        metadata: resource.metadata,
+      ),
     };
   }
 
@@ -152,21 +154,56 @@ final class ResourceTable {
     CanvasResource resource, {
     required int resourceRevision,
   }) {
-    if (resource is! CanvasImageResource ||
-        resource.source is! CanvasAppKeyResourceSource) {
+    if (resource.source is! CanvasAppKeyResourceSource) {
       return null;
     }
 
-    return StoreImageResourceDescriptorFacts(
+    final appKey = (resource.source as CanvasAppKeyResourceSource).key;
+    return switch (resource) {
+      CanvasImageResource() => StoreImageResourceDescriptorFacts(
+        id: resource.id,
+        appKey: appKey,
+        mimeType: resource.mimeType,
+        contentHash: resource.contentHash,
+        byteLength: resource.byteLength,
+        resourceRevision: resourceRevision,
+        metadata: resource.metadata,
+      ),
+      CanvasVectorResource() => StoreVectorResourceDescriptorFacts(
+        id: resource.id,
+        appKey: appKey,
+        contentHash: resource.contentHash,
+        byteLength: resource.byteLength,
+        resourceRevision: resourceRevision,
+        metadata: resource.metadata,
+      ),
+    };
+  }
+}
+
+StoreResourceDescriptorFacts _descriptorForSchemaV1Import(
+  SchemaV1ResourceImportEvent resource, {
+  required int resourceRevision,
+}) {
+  return switch (resource) {
+    SchemaV1ImageResourceImportEvent() => StoreImageResourceDescriptorFacts(
       id: resource.id,
-      appKey: (resource.source as CanvasAppKeyResourceSource).key,
+      appKey: resource.appKey,
       mimeType: resource.mimeType,
       contentHash: resource.contentHash,
       byteLength: resource.byteLength,
       resourceRevision: resourceRevision,
       metadata: resource.metadata,
-    );
-  }
+    ),
+    SchemaV1VectorResourceImportEvent() => StoreVectorResourceDescriptorFacts(
+      id: resource.id,
+      appKey: resource.appKey,
+      contentHash: resource.contentHash,
+      byteLength: resource.byteLength,
+      resourceRevision: resourceRevision,
+      metadata: resource.metadata,
+    ),
+  };
 }
 
 int _acceptedResourceRevisionFor(
@@ -184,21 +221,13 @@ int _acceptedResourceRevisionFor(
 }
 
 final class StoreResourceDescriptorImportBuilder {
-  Map<CanvasResourceId, _PendingStoreImageResourceDescriptor>? _descriptors =
-      {};
+  Map<CanvasResourceId, SchemaV1ResourceImportEvent>? _descriptors = {};
 
-  void addSchemaV1Import(SchemaV1ImageResourceImportEvent event) {
+  void addSchemaV1Import(SchemaV1ResourceImportEvent event) {
     final descriptors = _liveDescriptors;
     _admitPendingDescriptor(
       descriptors,
-      _PendingStoreImageResourceDescriptor(
-        id: event.id,
-        appKey: event.appKey,
-        mimeType: event.mimeType,
-        contentHash: event.contentHash,
-        byteLength: event.byteLength,
-        metadata: event.metadata,
-      ),
+      event,
     );
   }
 
@@ -207,7 +236,8 @@ final class StoreResourceDescriptorImportBuilder {
     _descriptors = null;
     final descriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
     for (final descriptor in pending.values) {
-      descriptors[descriptor.id] = descriptor.toFacts(
+      descriptors[descriptor.id] = _descriptorForSchemaV1Import(
+        descriptor,
         resourceRevision: resourceRevision,
       );
     }
@@ -215,44 +245,13 @@ final class StoreResourceDescriptorImportBuilder {
     return ResourceTable._owned(descriptors);
   }
 
-  Map<CanvasResourceId, _PendingStoreImageResourceDescriptor>
-  get _liveDescriptors {
+  Map<CanvasResourceId, SchemaV1ResourceImportEvent> get _liveDescriptors {
     final descriptors = _descriptors;
     if (descriptors == null) {
       throw StateError('StoreResourceDescriptorImportBuilder was consumed.');
     }
 
     return descriptors;
-  }
-}
-
-final class _PendingStoreImageResourceDescriptor {
-  const _PendingStoreImageResourceDescriptor({
-    required this.id,
-    required this.appKey,
-    required this.mimeType,
-    required this.contentHash,
-    required this.byteLength,
-    required this.metadata,
-  });
-
-  final CanvasResourceId id;
-  final String appKey;
-  final String? mimeType;
-  final String? contentHash;
-  final int? byteLength;
-  final CanvasMetadata metadata;
-
-  StoreResourceDescriptorFacts toFacts({required int resourceRevision}) {
-    return StoreImageResourceDescriptorFacts(
-      id: id,
-      appKey: appKey,
-      mimeType: mimeType,
-      contentHash: contentHash,
-      byteLength: byteLength,
-      resourceRevision: resourceRevision,
-      metadata: metadata,
-    );
   }
 }
 
@@ -271,8 +270,8 @@ void _admitDescriptor(
 }
 
 void _admitPendingDescriptor(
-  Map<CanvasResourceId, _PendingStoreImageResourceDescriptor> descriptors,
-  _PendingStoreImageResourceDescriptor descriptor,
+  Map<CanvasResourceId, SchemaV1ResourceImportEvent> descriptors,
+  SchemaV1ResourceImportEvent descriptor,
 ) {
   if (descriptors.containsKey(descriptor.id)) {
     throw CanvasDataException(
@@ -290,6 +289,13 @@ CanvasResource _resourceForDescriptor(StoreResourceDescriptorFacts facts) {
       id: facts.id,
       source: CanvasResourceSource.appKey(facts.appKey),
       mimeType: facts.mimeType,
+      contentHash: facts.contentHash,
+      byteLength: facts.byteLength,
+      metadata: facts.metadata,
+    ),
+    StoreVectorResourceDescriptorFacts() => CanvasVectorResource(
+      id: facts.id,
+      source: CanvasResourceSource.appKey(facts.appKey),
       contentHash: facts.contentHash,
       byteLength: facts.byteLength,
       metadata: facts.metadata,
@@ -356,6 +362,44 @@ final class StoreImageResourceDescriptorFacts
         id == other.id &&
         appKey == other.appKey &&
         mimeType == other.mimeType &&
+        contentHash == other.contentHash &&
+        byteLength == other.byteLength &&
+        metadata == other.metadata;
+  }
+}
+
+final class StoreVectorResourceDescriptorFacts
+    extends StoreResourceDescriptorFacts {
+  const StoreVectorResourceDescriptorFacts({
+    required super.id,
+    required super.appKey,
+    required super.contentHash,
+    required super.byteLength,
+    required super.resourceRevision,
+    required super.metadata,
+  });
+
+  @override
+  StoreVectorResourceDescriptorFacts withResourceRevision(int revision) {
+    if (resourceRevision == revision) {
+      return this;
+    }
+
+    return StoreVectorResourceDescriptorFacts(
+      id: id,
+      appKey: appKey,
+      contentHash: contentHash,
+      byteLength: byteLength,
+      resourceRevision: revision,
+      metadata: metadata,
+    );
+  }
+
+  @override
+  bool hasSameResourceFacts(StoreResourceDescriptorFacts other) {
+    return other is StoreVectorResourceDescriptorFacts &&
+        id == other.id &&
+        appKey == other.appKey &&
         contentHash == other.contentHash &&
         byteLength == other.byteLength &&
         metadata == other.metadata;

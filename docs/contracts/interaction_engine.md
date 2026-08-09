@@ -146,7 +146,7 @@ that contains the selected ids plus the document facts needed for that intent,
 such as content membership, visibility, lock state, transformability,
 deletability, bounds, and document order. Context-action and hit-test reads use
 the same read-only boundary for hit/order facts, immutable element snapshots,
-`boundsWorld`, generation, `elementRevision`, family, `controllerEpoch`,
+`boundsWorld`, generation, `elementRevision`, `CanvasElementKind`, `controllerEpoch`,
 visibility, and top-hit facts. Interaction must not loop over concrete owner
 methods such as per-property `exists`, `isVisible`, or `isLocked` reads, and the
 port must not expose mutation, draft access, `CanvasDocument` projection, store
@@ -382,14 +382,14 @@ Context request emission records a live issued request in
 `InteractionRequestRegistry` with a generated `CanvasInteractionRequestId`,
 request target kind and controllerEpoch. For content-element targets, the
 registry also stores target element id, element generation, elementRevision, and
-element family. Request facts are consumed and removed once; already-consumed
+element kind. Request facts are consumed and removed once; already-consumed
 ids are absent rather than stored as durable registry state.
 
 `documentRevision` is an observation and diagnostics fact only, not a
 DiagnosticsHub write and not a stale commit guard. Unrelated document edits
 after request emission do not reject a later text commit while the request id
 is current and live, the request target is a text content element, and
-controllerEpoch, element generation, elementRevision, and element family remain
+controllerEpoch, element generation, elementRevision, and element kind remain
 current.
 
 The registry is not itself an active text-input session and not
@@ -408,12 +408,18 @@ The command accepts only current live context request ids whose target is a
 text content element. It consumes accepted no-op requests, consumes changed
 requests only after successful edit preparation and before public delivery,
 consumes known live rejected request ids, treats unknown and already-consumed
-ids as no-ops, rejects empty-canvas, non-text, stale, missing, or
-family-mismatched request ids with no public state, document, selection,
+ids as no-ops, rejects empty-canvas, vector or other non-text, stale, missing,
+or kind-mismatched request ids with no public state, document, selection,
 preview, repaint, or action effect, validates `newText` before consumption or
 draft mutation, and delegates changed text to EditKernel before emitting
 `CanvasActionType.editText`. Direct
 `CanvasEdit.updateElement(CanvasTextElementUpdate)` remains the programmatic
 non-request synchronization API.
+
+`CanvasElementKind` is the semantic interaction discriminator. During Unit 5,
+the internal `InteractionElementFamily` mirror remains complete for all seven
+committed kinds so existing reads bridge safely; it carries no additional
+meaning and Unit 6 retires it. No interaction behavior may branch on MIME data
+or a resource descriptor subtype instead of immutable element kind.
 
 ---
