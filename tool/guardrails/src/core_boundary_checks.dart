@@ -804,7 +804,15 @@ bool _importsAnotherPackageSrc(String uri) {
 
 String? _targetPath(String sourcePath, String uri) {
   if (uri.startsWith('package:iwb_canvas_engine/')) {
-    return 'lib/${uri.replaceFirst('package:iwb_canvas_engine/', '')}';
+    final packagePath = uri.replaceFirst('package:iwb_canvas_engine/', '');
+    final resolved = File(
+      '$repositoryRoot/lib/$packagePath',
+    ).absolute.uri.normalizePath().toFilePath();
+    final packageRoot = '$repositoryRoot/lib/';
+
+    return resolved.startsWith(packageRoot)
+        ? 'lib/${resolved.replaceFirst(packageRoot, '')}'
+        : null;
   }
   if (uri.startsWith('package:')) {
     return null;

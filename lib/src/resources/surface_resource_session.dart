@@ -120,8 +120,11 @@ final class SurfaceResourceSession implements SurfaceResourceSessionLifecycle {
       :final prepared,
     ) when !_isLivePreparedVector(prepared)) {
       _cache.invalidateResource(request.id);
+      _currentFrameNullResults.add(_suppressionKey(request));
 
-      return null;
+      return NullResourceAssetPlaceholder(
+        placeholderBounds: request.placeholderBounds,
+      );
     }
 
     return ResolvedResourceAsset(

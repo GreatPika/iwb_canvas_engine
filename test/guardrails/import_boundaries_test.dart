@@ -399,7 +399,35 @@ void _testVectorPreparationDependencyRuntimeRejectsForbiddenImports() {
           reason: helper.key,
         );
       }
+      _expectPackageUriDotSegmentsStayInDependencyClosure();
     },
+  );
+}
+
+void _expectPackageUriDotSegmentsStayInDependencyClosure() {
+  expect(
+    checkVectorPreparationDependencyBoundaryFiles({
+      'lib/src/api/relocated_vector_preparation.dart':
+          "import 'package:vector_graphics/vector_graphics.dart' "
+          "as vg show BytesLoader, PictureInfo, vg;\n"
+          "import 'package:iwb_canvas_engine/src/api/../api/"
+          "vector_preparation_network_helper.dart';\n",
+      'lib/src/api/vector_preparation_network_helper.dart':
+          "import 'package:http/http.dart';\n",
+    }),
+    contains(
+      isA<GuardrailViolation>()
+          .having(
+            (violation) => violation.guardrailId,
+            'guardrailId',
+            'core.import_boundaries',
+          )
+          .having(
+            (violation) => violation.path,
+            'path',
+            'lib/src/api/vector_preparation_network_helper.dart',
+          ),
+    ),
   );
 }
 

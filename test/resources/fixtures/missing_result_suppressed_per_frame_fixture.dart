@@ -155,18 +155,19 @@ void _testDisposedCachedPreparedVectorIsEvictedThenRetried() {
         session.resolveResource(request),
         isA<NullResourceAssetPlaceholder>(),
       );
+      expect(resolver.callCount, 1);
       expect(
         session.resolveResource(request),
         isA<NullResourceAssetPlaceholder>(),
       );
-      expect(resolver.callCount, 2);
+      expect(resolver.callCount, 1);
 
       session.beginFrameResourcePass();
       expect(
         session.resolveResource(request),
         isA<NullResourceAssetPlaceholder>(),
       );
-      expect(resolver.callCount, 3);
+      expect(resolver.callCount, 2);
     },
   );
 }

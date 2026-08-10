@@ -24,6 +24,10 @@ void main() {
     }
   });
 
+  _testResolvedPreparedVectorSurface();
+}
+
+void _testResolvedPreparedVectorSurface() {
   test('resolved root surface keeps prepared vector opaque', () async {
     final surface = await resolvePublicApiSurface();
     final preparedVector = surface.exportedElements['CanvasPreparedVector'];
@@ -42,7 +46,60 @@ void main() {
       vectorClass,
       prepareVector,
     );
+    expect(
+      await _resolvedFixtureSurfaceViolations(vectorClass, prepareVector),
+      containsAll({
+        'PublicInheritedVectorFacade.picture exposes dart:ui Picture',
+        'PublicStaticVectorFacade.picture exposes dart:ui Picture',
+      }),
+    );
   });
+}
+
+Future<Set<String>> _resolvedFixtureSurfaceViolations(
+  ClassElement vectorClass,
+  TopLevelFunctionElement prepareVector,
+) async {
+  final fixtureDirectory = await Directory(
+    '$repositoryRoot/.dart_tool',
+  ).createTemp('iwb_canvas_engine_public_surface_');
+  final fixture = File('${fixtureDirectory.path}/public_surface.dart');
+  await fixture.writeAsString('''
+import 'dart:ui' as ui;
+
+class _PrivatePreparedVectorSurface {
+  ui.Picture get picture => throw UnimplementedError();
+}
+
+final class PublicInheritedVectorFacade extends _PrivatePreparedVectorSurface {}
+
+final class PublicStaticVectorFacade {
+  static ui.Picture get picture => throw UnimplementedError();
+}
+''');
+
+  try {
+    final surface = await resolvePublicApiSurface(libraryPath: fixture.path);
+    final violations = <String>{};
+    for (final name in {
+      'PublicInheritedVectorFacade',
+      'PublicStaticVectorFacade',
+    }) {
+      final facade = surface.exportedElements[name];
+      if (facade is! ClassElement) {
+        throw StateError('Could not resolve $name.');
+      }
+      final visitor = _PreparedVectorSurfaceTypeVisitor(
+        vectorClass: vectorClass,
+        prepareVector: prepareVector,
+      )..visitRootExport(name, facade);
+      violations.addAll(visitor.violations);
+    }
+
+    return violations;
+  } finally {
+    await fixtureDirectory.delete(recursive: true);
+  }
 }
 
 void _expectNoForbiddenPreparedVectorSurfaceTypes(
@@ -199,8 +256,8 @@ final class _PreparedVectorSurfaceTypeVisitor {
     }
   }
 
-  // Fields and members need one traversal so the two explicit return
-  // allowances cannot accidentally leak into every exported interface member.
+  // Effective interface members need one traversal so inherited fields and
+  // overrides receive the same two narrow return allowances as declarations.
   // ignore: halstead-volume
   void _visitInterfaceElement(String owner, InterfaceElement element) {
     _visitNullableType(owner, element.supertype, permitsPreparedVector: false);
@@ -210,7 +267,7 @@ final class _PreparedVectorSurfaceTypeVisitor {
     for (final parameter in element.typeParameters) {
       _visitNullableType(owner, parameter.bound, permitsPreparedVector: false);
     }
-    for (final field in _publicFields(element)) {
+    for (final field in _publicStaticFields(element)) {
       _visitType(
         '$owner.${field.name}',
         field.type,
@@ -218,9 +275,8 @@ final class _PreparedVectorSurfaceTypeVisitor {
       );
     }
     for (final executable in [
-      ...element.getters.where(_isPublicExecutable),
-      ...element.setters.where(_isPublicExecutable),
-      ...element.methods.where(_isPublicExecutable),
+      ...element.interfaceMembers.values.where(_isEffectivePublicExecutable),
+      ..._declaredPublicStaticExecutables(element),
       ...element.constructors.where(_isPublicExecutable),
     ]) {
       _visitExecutable(
@@ -231,6 +287,7 @@ final class _PreparedVectorSurfaceTypeVisitor {
             element.library.uri.toString() ==
                 'package:iwb_canvas_engine/src/contracts/public/canvas_resource.dart' &&
             executable is MethodElement &&
+            !executable.isStatic &&
             executable.name == 'resolveVector',
       );
     }
@@ -373,6 +430,37 @@ final class _PreparedVectorSurfaceTypeVisitor {
 
 bool _isPublicExecutable(ExecutableElement executable) {
   return executable.isPublic && executable.nonSynthetic == executable;
+}
+
+Iterable<FieldElement> _publicStaticFields(InterfaceElement element) {
+  return _publicFields(element).where((field) => field.isStatic);
+}
+
+Iterable<ExecutableElement> _declaredPublicStaticExecutables(
+  InterfaceElement element,
+) {
+  return [
+    ...element.getters,
+    ...element.setters,
+    ...element.methods,
+  ].where(_isDeclaredPublicStaticExecutable);
+}
+
+bool _isEffectivePublicExecutable(ExecutableElement executable) {
+  if (!executable.isPublic) {
+    return false;
+  }
+  final enclosing = executable.enclosingElement;
+
+  return enclosing is! InterfaceElement ||
+      enclosing.name != 'Object' ||
+      enclosing.library.uri.toString() != 'dart:core';
+}
+
+bool _isDeclaredPublicStaticExecutable(ExecutableElement executable) {
+  // Static fields are visited through their FieldElement, so their synthetic
+  // accessors stay out of this executable traversal.
+  return executable.isStatic && _isPublicExecutable(executable);
 }
 
 void _expectPrepareVectorSignature(
