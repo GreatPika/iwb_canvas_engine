@@ -207,8 +207,9 @@ color, and pointer policy increment the public `state.revisions.interaction`
 without changing document revision. Preview-producing pointer changes increment
 `state.revisions.preview`. Resource dirty operations increment
 `state.revisions.resourceVisual`. That public dirty-resource domain is a repaint
-observation signal; per-surface image resolution uses explicit target/all
-resource release instead of deriving cache identity from the public revision.
+observation signal; per-surface resource-asset resolution uses explicit
+target/all resource release instead of deriving cache identity from the public
+revision.
 Active release clears matching session cache/suppression and retained main-output
 borrows before publication, while stale identities leave current output intact.
 `resourceVisualRevision` is runtime resource state coordinated by

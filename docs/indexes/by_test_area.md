@@ -9,7 +9,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api.canvas_prepared_vector_lifecycle
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api.canvas_transform
 
@@ -45,23 +45,23 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.api.vector_preparation_cleanup
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api.vector_preparation_context
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api.vector_preparation_input_failure
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api.vector_preparation_private_adapter
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api.vector_preparation_retention
 
-- Sections: `section_23_tests`
+- Sections: `section_04_public_api_v1`, `section_23_tests`
 
 ## test.api_contract.api_facades_do_not_export_internal
 

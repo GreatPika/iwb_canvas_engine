@@ -117,10 +117,12 @@ APIs. In the target frame split, `PaintAssetBindingService` is the only frame
 collaborator that receives `SurfaceResourceSession`; after ordinary and
 supplement records are known, it reads descriptor facts through
 `FrameFactsPort`, creates a `ResourceAssetResolveRequest`, and produces a
-`ResourceAssetResolveResult` for each immutable `FrameAssetBindings` entry.
-The painter receives only those immutable resource-asset results and selects the
-matching image/vector asset for sealed records. This keeps descriptor binding and resolver
-access out of capture, ordinary planning, painters, and app resolver ownership.
+`ResourceAssetResolveResult`, immediately maps that resources-owned result into
+a sealed frame-owned `FrameAssetBinding`, and stores the binding in immutable
+`FrameAssetBindings`. The painter receives only those frame-owned bindings and
+selects the matching image/vector asset for sealed records. This keeps descriptor
+binding and resolver access out of capture, ordinary planning, painters, and app
+resolver ownership.
 The binding service calls `beginFrameResourcePass()` before resolving any resource
 for a main paint frame. That call resets the session-owned per-frame resolver
 budget, clears same-frame null-result suppression for the new frame, and clears

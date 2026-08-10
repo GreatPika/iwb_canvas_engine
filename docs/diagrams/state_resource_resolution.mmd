@@ -43,7 +43,7 @@ stateDiagram-v2
   ActiveSession --> DroppingSession: detach or runtime swap / lifecycle drop
   ActiveSession --> Disposed: dispose() / lifecycle drop
 
-  ResolverReplaced --> ActiveSession: release cache/suppression, then identity-aware retained output; increment resolverGeneration
+  ResolverReplaced --> ActiveSession: install resolver and increment resolverGeneration; clear cache/suppression/pending budget follow-up; then release identity-aware retained output
 
   state "Document replacement reset" as DocumentReset
   DocumentReset --> ActiveSession: RuntimeRoot calls lifecycle reset; session and retained-output borrows release before publication

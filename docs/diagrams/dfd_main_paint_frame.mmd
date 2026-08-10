@@ -65,6 +65,7 @@ flowchart LR
     ResolvedAssets["Resolved paint assets\ntyped assets or placeholders"]
     PaintAlphaPolicy["Ordinary opacity policy\nelement/stroke opacity -> primitive paint alpha\nno implicit saveLayer"]
     ExplicitLayerEffect["Vector opacity effect\nrecord-local zero-or-one target-bounded layer\npartial opacity only"]
+    CrossRecordLayerBlocked["Cross-record or frame-wide\nopacity layer forbidden"]
     ProjectionBlocked["No CanvasDocument materialization\nin main paint"]
   end
 
@@ -152,7 +153,7 @@ flowchart LR
   PaintedScene --> Surface
 
   MainPainter -.->|"forbidden"| LiveReadBlocked
-  MainPainter -.->|"forbidden ordinary opacity path"| ExplicitLayerEffect
+  MainPainter -.->|"forbidden cross-record/global opacity path"| CrossRecordLayerBlocked
   LiveReadBlocked -.->|"no DocumentStore, SpatialKernel,\nInteractionEngine, or Public API facade reads"| MainPainter
   Capture -.->|"forbidden in paint hot path"| ProjectionBlocked
   ProjectionCache -.->|"not read by main paint"| ProjectionBlocked

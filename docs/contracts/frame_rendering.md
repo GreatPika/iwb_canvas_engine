@@ -182,9 +182,10 @@ It starts the frame resource pass before resource-asset resolution so resolver b
 same-frame null suppression, and budget follow-up throttles belong to the
 current main paint frame. Its typed resource-asset request is selected by the
 captured descriptor subtype, not by nullable MIME data. `FrameAssetBindings`
-retains typed resolve results by resource id; painters consume that immutable
-output and select the matching image or vector asset only for its sealed record
-row.
+retains sealed frame-owned `FrameAssetBinding` values by resource id; the
+resources-owned `ResourceAssetResolveResult` taxonomy stops at the binding
+service. Painters consume only that immutable frame output and select the
+matching image or vector asset for its sealed record row.
 
 Surface repaint routing is split before frame output construction. `RuntimeRoot`
 aggregates runtime-owned repaint intent into the internal

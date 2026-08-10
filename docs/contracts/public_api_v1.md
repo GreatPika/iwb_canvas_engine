@@ -31,6 +31,12 @@ Required tests:
 - `test.api.typed_action_payloads`
 - `test.api_contract.public_integration_compile_fixture`
 - `test.api_contract.prepared_vector_public_api`
+- `test.api.canvas_prepared_vector_lifecycle`
+- `test.api.vector_preparation_cleanup`
+- `test.api.vector_preparation_context`
+- `test.api.vector_preparation_input_failure`
+- `test.api.vector_preparation_private_adapter`
+- `test.api.vector_preparation_retention`
 - `test.interaction.context_action_request`
 - `test.interaction.text_edit_stale_commit_guard`
 - `test.runtime.text_editing_port`
