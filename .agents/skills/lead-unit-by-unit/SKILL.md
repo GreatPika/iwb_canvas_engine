@@ -73,7 +73,11 @@ undated plan as active work. For every unchecked unit, resolve its
 `Acceptance Outcomes` through the covering `Verification Matrix` rows to their
 evidence and `Permanent Artifact Admissions` entries. Supply the witness,
 evidence surface, pass signal, constraints, durable impact, artifact target, and
-admission references as that unit's evidence obligations.
+admission references as that unit's evidence obligations. For every evidence
+key, also resolve the independent failure family, concrete forbidden green state
+or false-positive case, required owner-seam falsification signal, and applicable
+work-budget closure. Do not dispatch implementation when that evidence cannot
+necessarily make its forbidden green state red at the real owner seam.
 
 If the contract contradicts current code or repository enforcement, stop with
 file-level evidence. Before a structural unit, resolve production structure
@@ -158,19 +162,23 @@ Implement unit N from PLAN_FILE.
 
 Write scope: WRITE_SCOPE
 Evidence obligations: RESOLVED_PROFILE_OUTCOMES_MATRIX_AND_ADMISSIONS
+Forbidden green state: CONCRETE_FALSE_POSITIVE_CASES_BY_EVIDENCE_KEY
+Required falsification signal: OWNER_SEAM_KILL_SIGNALS_BY_EVIDENCE_KEY
 Implementation direction: OWNER_LEVEL_PATH_AND_FIRST_STEPS
 
 Use the contract as the source of truth. Do not commit. Report changed files,
 verification commands and results, and residual risks or blockers.
 ```
 
-3. Intake only for coordination: compare the report, files, verification, and
-   evidence with the unit boundary. Return wrong scope, missing evidence,
-   unreported blockers, or incomplete work to the same worker. Do not perform a
-   full code review during intake; preserve independent review. If a new failure
-   family appears, use `Bounded Contract Amendment`. Run local verification here
-   only when the worker's evidence is missing, stale, or needed for a trustworthy
-   tree.
+3. Intake only for coordination: compare the actual diff and reported evidence
+   with each assigned forbidden green state and required falsification signal;
+   a worker's green report alone is insufficient. Then compare the report,
+   files, and verification with the unit boundary. Return wrong scope, missing
+   evidence, unreported blockers, or incomplete work to the same worker. Do not
+   perform a full code review during intake; preserve independent review. If a
+   new failure family appears, use `Bounded Contract Amendment`. Run local
+   verification here only when the worker's evidence is missing, stale, or
+   needed for a trustworthy tree.
 4. Spawn a fresh `code_reviewer` with only the absolute plan path substituted:
    `review unit N against PLAN_FILE`
 5. Apply `Review Finding Protocol`. Send every accepted blocker to the same unit

@@ -10,6 +10,12 @@ Implement exactly one bounded execution unit assigned by the lead. Treat the
 accepted plan or Change Contract, write scope, and resolved evidence obligations
 as the source of truth. Do not broaden them.
 
+Green tests and verification are necessary but insufficient. Before code
+changes, stop and report underpowered evidence when it cannot make every
+assigned forbidden green state red through its required falsification signal at
+the real owner seam. Reject test-controlled counters and counters outside that
+owner seam as invalid evidence; do not implement against them.
+
 Treat the lead's implementation direction as the approved working path, not as
 an unquestionable instruction. If repository evidence reveals a simpler,
 cleaner, safer, or more correct owner-level path, or a conflict with an invariant,
@@ -44,5 +50,6 @@ subagents, and do not commit.
 Before completing the unit, run every check required by `AGENTS.md` for the
 unit's changed owners and every check required by the unit's resolved
 Verification Matrix obligations. Resolve every failure until verification
-passes. The lead owns cross-unit and lifecycle `Verification Gate` checks.
+passes. Report the required falsification signal and its result for every
+evidence key. The lead owns cross-unit and lifecycle `Verification Gate` checks.
 """
