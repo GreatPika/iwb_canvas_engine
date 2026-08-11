@@ -5,24 +5,40 @@ Use this procedure for `create-or-update` and, after its complete audit, for
 
 ## Closed authoring sequence
 
-1. Read every explicit source and repository instruction route. Represent each
-   source once in `Source Inputs` using its category, stable ID, and location or
+1. Read every explicit source and repository instruction route. Reconstruct
+   `Source Inputs` from those sources rather than trusting an inherited table;
+   represent each source once using its category, stable ID, and location or
    authority.
-2. Confirm that the sources permit authoring, reconstruct the private obligation
-   ledger, and run the source-conflict gate. Stop on an incompatible or missing
-   material decision.
-3. Select exactly one profile and all material obligations. Write a one-paragraph
+2. Before forming units, confirm that the sources permit authoring and
+   reconstruct a private source-decision ledger. For every design input,
+   reconstruct its `Outcome-Proof Fit` rows before relying on the design's
+   summary or handoff. Derive each independently falsifiable failure family
+   from the source decisions and fit rows, then reserve one
+   decision/family/outcome/evidence route for it. Run the source-conflict gate
+   and stop on an incompatible or missing material decision or family.
+3. Select exactly one profile and all material obligations. Select
+   `WORK_BUDGET_CLOSURE` whenever the reconstructed families constrain scans,
+   copies, rebuilds, materialization, publication, allocation, amortized work,
+   or cost displacement. Write a one-paragraph
    `Goal` that describes only the final intended repository state after all
    units, never planning, linting, reviewing, or intermediate work.
 4. Stabilize boundaries and publish the obligation ledger as Decision Trace.
-   Verify every named owner, package, path, document, registry, schema,
-   generated output, public API, and consumer exists now or is explicitly a
-   future artifact.
+   For `WORK_BUDGET_CLOSURE`, close every applicable construction/import/reset,
+   mutation/update/replay, freeze/publication/install, query/read, and
+   cleanup/rollback phase with its bound, allowed full pass, and forbidden cost
+   transfer. Verify every named owner, package, path, document, registry,
+   schema, generated output, public API, and consumer exists now or is
+   explicitly a future artifact.
 5. Build independently committable units, combining all sides of an atomic
    public-seam migration when separation would not compile. Assign semantic
    outcome keys and complete every direct Matrix mapping.
-6. Add one complete admission per independent new permanent failure family and
-   only cross-unit and repository closure to the Verification Gate.
+6. Before lint or review, write one concrete false-positive implementation or
+   state and its direct kill signal for every Matrix row. Simulate the declared
+   evidence against that wrong implementation: if it can stay green, strengthen
+   the owner-level evidence or restore the omitted source-derived family; do not
+   defer the gap to implementation. Add one complete admission per independent
+   new permanent failure family and only cross-unit and repository closure to
+   the Verification Gate.
 7. Render from the template, lint, and complete the semantic self-audit in
    `contract-rules.md`. Source/conflict closure precedes units; unit closure
    precedes outcomes, evidence, admissions, and gate; lint and review closure

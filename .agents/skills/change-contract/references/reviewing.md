@@ -21,25 +21,49 @@ a narrower scope.
 
    A deterministic lint failure returns only `INVALID_CONTRACT_ARTIFACT`
    findings and stops semantic review.
-2. Read the complete artifact, every source explicitly named by the user, every
-   declared source, governing repository instructions, and current surfaces
-   needed to verify its claims.
-3. Compare the user-named sources with `Source Inputs`; block omission,
-   substitution, narrowing, or an unreadable location. Reconstruct the
-   accepted-source obligation ledger, recheck cited Repository Evidence, and
-   verify every named owner, package, path, document, registry, schema,
-   generated output, public API, and consumer exists or is explicitly future.
-4. Apply the source-conflict gate. Do not convert ambiguity into a preferred
-   repair. For a full contract, verify classification, obligations, Decision
-   Trace, all boundaries, source authority, and that every material decision
-   reaches a boundary, outcome, evidence constraint, admission, or gate.
+2. Read `Source Inputs` first, then independently reconstruct that table from
+   every source explicitly named by the user, every declared source, governing
+   repository instructions, and current surfaces needed to verify its claims.
+   Do not treat the contract's table, trace, or Matrix as authority for this
+   reconstruction. For every design input, reconstruct its `Outcome-Proof Fit`
+   rows before relying on the contract's rendering of the design.
+3. Before treating the remainder of the contract as evidence, build an
+   independent review ledger from the reconstructed sources: source decision,
+   independently falsifiable failure family, required outcome, and the evidence
+   that would kill a concrete wrong implementation. Compare it with Decision
+   Trace, outcomes, and Matrix. An omitted source-derived family is a separate
+   `SOURCE_DECISION_DROPPED` finding, even when a neighboring broad outcome,
+   source citation, or green suite remains.
+4. Compare the user-named sources with `Source Inputs`; block omission,
+   substitution, narrowing, or an unreadable location. Recheck cited Repository
+   Evidence, verify every named owner, package, path, document, registry,
+   schema, generated output, public API, and consumer exists or is explicitly
+   future, and apply the source-conflict gate. Do not convert ambiguity into a
+   preferred repair. For a full contract, verify classification, obligations,
+   Decision Trace, all boundaries, source authority, and that every material
+   decision reaches a boundary, outcome, evidence constraint, admission, or
+   gate.
 5. Apply the Design Proportionality Backstop to every material obligation added
    or strengthened by the contract.
 6. For a full contract, simulate the repository state after every unit; audit
    commit-safe unit closure, real produced/consumed DAG surfaces, all outcome
    parts, direct evidence, witnesses, rejected proxies, impacts, targets,
    admissions, profile obligations, cross-unit closure, repository checks,
-   finding disposition, and the pre-implementation evidence boundary.
+   finding disposition, and the pre-implementation evidence boundary. For each
+   Matrix row, independently simulate the simplest concrete wrong
+   implementation or state that could satisfy its visible result, then apply
+   only that row's evidence surface and pass signal. Report
+   `INCOMPLETE_VERIFICATION` when the declared evidence and kill signal can stay
+   green under the wrong implementation; parity/query evidence does not kill a
+   full rebuild-on-mutation unless it directly observes that mutation work.
+   For `WORK_BUDGET_CLOSURE`, check every
+   applicable construction/import/reset, mutation/update/replay,
+   freeze/publication/install, query/read, and cleanup/rollback phase for its
+   bound, allowed full pass, forbidden cost displacement, and family-level
+   evidence. Report a missing mutation/rebuild/update-amplification family, or
+   any other unrepresented source-derived phase family, as
+   `SOURCE_DECISION_DROPPED`; report represented but non-killing evidence as
+   `INCOMPLETE_VERIFICATION`.
 7. For a Contract Blocker instead, verify every request-supplied source is
    represented; each independent unresolved decision has one unique key; each
    missing authority or contradiction is evidence-backed; requested authority
@@ -51,9 +75,11 @@ a narrower scope.
    author a full contract.
 
 `PASS` means the inspected latest bytes passed lint and either a full contract
-can execute without inventing a material decision and has direct admissible
-evidence for every claimed outcome, or a Contract Blocker correctly exposes all
-unresolved decisions. Any material defect is `BLOCKED`.
+can execute without inventing a material decision, has direct admissible
+evidence that kills every source-derived family, and closes every applicable
+work-budget phase, or a Contract Blocker correctly exposes all unresolved
+decisions. Structural lint is a stop gate, not semantic closure. Any material
+defect is `BLOCKED`.
 
 ## Routes and output
 
