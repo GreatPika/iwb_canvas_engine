@@ -134,8 +134,8 @@ def load_contract_schema(path: Path) -> ContractSchema:
     data = json.loads(path.read_text())
     if not isinstance(data, dict) or set(data) != SCHEMA_KEYS:
         raise ValueError("contract artifact schema has unexpected keys")
-    if data["version"] != 1:
-        raise ValueError("contract artifact schema version must be 1")
+    if data["version"] != 2:
+        raise ValueError("contract artifact schema version must be 2")
     vocabulary_path = data["vocabulary"]
     if not isinstance(vocabulary_path, str) or vocabulary_path != "contract-vocabulary.json":
         raise ValueError("contract artifact schema has an unknown vocabulary route")
@@ -516,6 +516,8 @@ def _valid_source_authority(value: str, schema: ContractSchema) -> bool:
 
 def _check_sources(content: str, schema: ContractSchema, *, template: bool = False) -> list[Finding]:
     findings, rows = _parse_table_section(content, schema.table_columns["Source Inputs"], "Source Inputs")
+    if findings:
+        return findings
     categories: dict[str, list[list[str]]] = defaultdict(list)
     source_keys: list[str] = []
     for row_number, row in enumerate(rows, start=1):
@@ -638,6 +640,7 @@ def _parse_classification(
 class _Unit:
     number: int
     outcomes: tuple[str, ...]
+    outcome_table_is_structurally_valid: bool
 
 
 def _parse_units(
@@ -691,15 +694,23 @@ def _parse_units(
         )
         findings.extend(table_findings)
         outcome_keys: list[str] = []
-        for row in rows:
-            key_findings, key = _single_key(
-                row[0], schema, f"Unit {number} outcome key", template=template
+        outcome_table_is_structurally_valid = not table_findings
+        if outcome_table_is_structurally_valid:
+            for row in rows:
+                key_findings, key = _single_key(
+                    row[0], schema, f"Unit {number} outcome key", template=template
+                )
+                findings.extend(key_findings)
+                if key is not None:
+                    outcome_keys.append(key)
+                    all_outcomes.append(key)
+        units.append(
+            _Unit(
+                number=number,
+                outcomes=tuple(outcome_keys),
+                outcome_table_is_structurally_valid=outcome_table_is_structurally_valid,
             )
-            findings.extend(key_findings)
-            if key is not None:
-                outcome_keys.append(key)
-                all_outcomes.append(key)
-        units.append(_Unit(number=number, outcomes=tuple(outcome_keys)))
+        )
 
         depends = values.get("Depends On", "")
         if depends == schema.form_none_literal:
@@ -742,28 +753,32 @@ def _parse_matrix(
     schema: ContractSchema,
     *,
     template: bool = False,
-) -> tuple[list[Finding], list[_MatrixRow]]:
-    findings, rows = _parse_table_section(content, schema.table_columns["Verification Matrix"], "Verification Matrix")
+) -> tuple[list[Finding], list[_MatrixRow], bool]:
+    columns = schema.table_columns["Verification Matrix"]
+    findings, rows = _parse_table_section(content, columns, "Verification Matrix")
+    if findings:
+        return findings, [], False
     parsed_rows: list[_MatrixRow] = []
     evidence_keys: list[str] = []
     for row_number, row in enumerate(rows, start=1):
+        cells = dict(zip(columns, row))
         key_findings, key = _single_key(
-            row[0], schema, f"Verification Matrix row {row_number} Evidence key", template=template
+            cells["Evidence key"], schema, f"Verification Matrix row {row_number} Evidence key", template=template
         )
         cover_findings, covers = _key_list(
-            row[1], schema, f"Verification Matrix row {row_number} Covers", template=template
+            cells["Covers"], schema, f"Verification Matrix row {row_number} Covers", template=template
         )
         class_findings, _ = _enum_token(
-            row[2], schema.evidence_classes, f"Verification Matrix row {row_number} Evidence class",
+            cells["Evidence class"], schema.evidence_classes, f"Verification Matrix row {row_number} Evidence class",
             template=template, schema=schema,
         )
         impact_findings, impact = _enum_token(
-            row[7], schema.durable_impacts, f"Verification Matrix row {row_number} Durable impact",
+            cells["Durable impact"], schema.durable_impacts, f"Verification Matrix row {row_number} Durable impact",
             template=template, schema=schema,
         )
         findings.extend(key_findings + cover_findings + class_findings + impact_findings)
-        artifact = row[8]
-        admission_value = row[9]
+        artifact = cells["Artifact target"]
+        admission_value = cells["Admission"]
         admission_keys: tuple[str, ...] = ()
         if impact == "NONE":
             if artifact != schema.form_none_literal:
@@ -790,7 +805,7 @@ def _parse_matrix(
             evidence_keys.append(key)
             parsed_rows.append(_MatrixRow(key, covers, impact, artifact, admission_keys))
     findings.extend(_duplicates(evidence_keys, "evidence key"))
-    return findings, parsed_rows
+    return findings, parsed_rows, True
 
 
 @dataclass(frozen=True)
@@ -854,6 +869,8 @@ def _parse_admissions(
 
 def _check_gate(content: str, schema: ContractSchema, obligations: frozenset[str]) -> list[Finding]:
     findings, rows = _parse_table_section(content, schema.table_columns["Verification Gate"], "Verification Gate")
+    if findings:
+        return findings
     checks = [row[0] for row in rows]
     required = list(schema.required_gate_checks)
     for obligation in obligations:
@@ -892,28 +909,34 @@ def _check_contract(
     )
     findings.extend(unit_findings)
     outcome_keys = {key for unit in units for key in unit.outcomes}
+    outcome_tables_are_structurally_valid = bool(units) and all(
+        unit.outcome_table_is_structurally_valid for unit in units
+    )
 
+    decision_columns = schema.table_columns["Decision Trace"]
     decision_findings, decision_rows = _parse_table_section(
-        sections.get("Decision Trace", ""), schema.table_columns["Decision Trace"], "Decision Trace"
+        sections.get("Decision Trace", ""), decision_columns, "Decision Trace"
     )
     findings.extend(decision_findings)
     decision_keys: list[str] = []
     decision_targets: list[str] = []
-    for row_number, row in enumerate(decision_rows, start=1):
-        key_findings, key = _single_key(
-            row[0], schema, f"Decision Trace row {row_number} Decision ID", template=template
-        )
-        target_findings, target = _single_key(
-            row[3], schema, f"Decision Trace row {row_number} target", template=template
-        )
-        findings.extend(key_findings + target_findings)
-        if key is not None:
-            decision_keys.append(key)
-        if target is not None:
-            decision_targets.append(target)
+    if not decision_findings:
+        for row_number, row in enumerate(decision_rows, start=1):
+            cells = dict(zip(decision_columns, row))
+            key_findings, key = _single_key(
+                cells["Decision ID"], schema, f"Decision Trace row {row_number} Decision ID", template=template
+            )
+            target_findings, target = _single_key(
+                cells["Acceptance or evidence target"], schema, f"Decision Trace row {row_number} target", template=template
+            )
+            findings.extend(key_findings + target_findings)
+            if key is not None:
+                decision_keys.append(key)
+            if target is not None:
+                decision_targets.append(target)
     findings.extend(_duplicates(decision_keys, "decision key"))
 
-    matrix_findings, matrix_rows = _parse_matrix(
+    matrix_findings, matrix_rows, matrix_is_structurally_valid = _parse_matrix(
         sections.get("Verification Matrix", ""), schema, template=template
     )
     admission_findings, admissions = _parse_admissions(
@@ -923,68 +946,69 @@ def _check_contract(
     evidence_keys = {row.key for row in matrix_rows}
     admission_by_key = {admission.key: admission for admission in admissions}
 
-    for target in decision_targets:
-        if target not in outcome_keys and target not in evidence_keys:
-            findings.append(Finding(f"Decision Trace references unknown acceptance or evidence target `{target}`"))
+    if matrix_is_structurally_valid and outcome_tables_are_structurally_valid:
+        for target in decision_targets:
+            if target not in outcome_keys and target not in evidence_keys:
+                findings.append(Finding(f"Decision Trace references unknown acceptance or evidence target `{target}`"))
 
-    outcome_rows: dict[str, list[_MatrixRow]] = defaultdict(list)
-    for row in matrix_rows:
-        for outcome in row.covers:
-            if outcome not in outcome_keys:
-                findings.append(Finding(f"evidence `{row.key}` covers unknown outcome `{outcome}`"))
-            else:
-                outcome_rows[outcome].append(row)
-        for admission_key in row.admissions:
-            if admission_key not in admission_by_key:
-                findings.append(Finding(f"evidence `{row.key}` references unknown admission `{admission_key}`"))
-
-    for outcome in sorted(outcome_keys):
-        rows = outcome_rows.get(outcome, [])
-        if not rows:
-            findings.append(Finding(f"outcome `{outcome}` has no Verification Matrix evidence"))
-        impacts = {row.impact for row in rows}
-        if "NONE" in impacts and any(impact != "NONE" for impact in impacts):
-            findings.append(Finding(f"outcome `{outcome}` mixes NONE and non-NONE durable impacts"))
-
-    referenced_admissions: set[str] = set()
-    for row in matrix_rows:
-        if row.impact not in {"ADD", "EXTEND_COVERAGE"}:
-            continue
-        referenced_admissions.update(row.admissions)
-        known = [admission_by_key[key] for key in row.admissions if key in admission_by_key]
-        for admission in known:
-            if admission.impact != row.impact:
-                findings.append(Finding(f"admission `{admission.key}` Impact does not match evidence `{row.key}`"))
-            if admission.artifact != row.artifact:
-                findings.append(Finding(f"admission `{admission.key}` Artifact target does not match evidence `{row.key}`"))
-        for admission in known:
+        outcome_rows: dict[str, list[_MatrixRow]] = defaultdict(list)
+        for row in matrix_rows:
             for outcome in row.covers:
-                if outcome not in admission.covers:
-                    findings.append(
-                        Finding(
-                            f"admission `{admission.key}` does not cover evidence `{row.key}` outcome `{outcome}`"
-                        )
-                    )
+                if outcome not in outcome_keys:
+                    findings.append(Finding(f"evidence `{row.key}` covers unknown outcome `{outcome}`"))
+                else:
+                    outcome_rows[outcome].append(row)
+            for admission_key in row.admissions:
+                if admission_key not in admission_by_key:
+                    findings.append(Finding(f"evidence `{row.key}` references unknown admission `{admission_key}`"))
 
-    for admission in admissions:
-        if admission.key not in referenced_admissions:
-            findings.append(Finding(f"admission `{admission.key}` is not referenced by ADD or EXTEND_COVERAGE evidence"))
-        for outcome in admission.covers:
-            if outcome not in outcome_keys:
-                findings.append(Finding(f"admission `{admission.key}` covers unknown outcome `{outcome}`"))
+        for outcome in sorted(outcome_keys):
+            rows = outcome_rows.get(outcome, [])
+            if not rows:
+                findings.append(Finding(f"outcome `{outcome}` has no Verification Matrix evidence"))
+            impacts = {row.impact for row in rows}
+            if "NONE" in impacts and any(impact != "NONE" for impact in impacts):
+                findings.append(Finding(f"outcome `{outcome}` mixes NONE and non-NONE durable impacts"))
+
+        referenced_admissions: set[str] = set()
+        for row in matrix_rows:
+            if row.impact not in {"ADD", "EXTEND_COVERAGE"}:
                 continue
-            matching_rows = [
-                row
-                for row in matrix_rows
-                if row.impact in {"ADD", "EXTEND_COVERAGE"}
-                and admission.key in row.admissions
-                and outcome in row.covers
-            ]
-            if not matching_rows:
-                findings.append(Finding(f"admission `{admission.key}` outcome `{outcome}` has no matching matrix row"))
+            referenced_admissions.update(row.admissions)
+            known = [admission_by_key[key] for key in row.admissions if key in admission_by_key]
+            for admission in known:
+                if admission.impact != row.impact:
+                    findings.append(Finding(f"admission `{admission.key}` Impact does not match evidence `{row.key}`"))
+                if admission.artifact != row.artifact:
+                    findings.append(Finding(f"admission `{admission.key}` Artifact target does not match evidence `{row.key}`"))
+            for admission in known:
+                for outcome in row.covers:
+                    if outcome not in admission.covers:
+                        findings.append(
+                            Finding(
+                                f"admission `{admission.key}` does not cover evidence `{row.key}` outcome `{outcome}`"
+                            )
+                        )
 
-    if not admissions and any(row.impact in {"ADD", "EXTEND_COVERAGE"} for row in matrix_rows):
-        findings.append(Finding("Permanent Artifact Admissions cannot be None when durable coverage is added or extended"))
+        for admission in admissions:
+            if admission.key not in referenced_admissions:
+                findings.append(Finding(f"admission `{admission.key}` is not referenced by ADD or EXTEND_COVERAGE evidence"))
+            for outcome in admission.covers:
+                if outcome not in outcome_keys:
+                    findings.append(Finding(f"admission `{admission.key}` covers unknown outcome `{outcome}`"))
+                    continue
+                matching_rows = [
+                    row
+                    for row in matrix_rows
+                    if row.impact in {"ADD", "EXTEND_COVERAGE"}
+                    and admission.key in row.admissions
+                    and outcome in row.covers
+                ]
+                if not matching_rows:
+                    findings.append(Finding(f"admission `{admission.key}` outcome `{outcome}` has no matching matrix row"))
+
+        if not admissions and any(row.impact in {"ADD", "EXTEND_COVERAGE"} for row in matrix_rows):
+            findings.append(Finding("Permanent Artifact Admissions cannot be None when durable coverage is added or extended"))
 
     findings.extend(_check_gate(sections.get("Verification Gate", ""), schema, obligations))
     return findings

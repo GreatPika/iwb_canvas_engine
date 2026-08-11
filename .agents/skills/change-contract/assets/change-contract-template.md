@@ -20,9 +20,9 @@ Obligations: {{obligations}}
 
 ## Decision Trace
 
-| Decision ID | Source decision | Contract location | Acceptance or evidence target |
-| --- | --- | --- | --- |
-| `{{decision_key}}` | {{source_decision}} | {{contract_location}} | `{{decision_target_key}}` |
+| Decision ID | Independent failure family | Source decision | Contract location | Acceptance or evidence target |
+| --- | --- | --- | --- | --- |
+| `{{decision_key}}` | {{independent_failure_family}} | {{source_decision}} | {{contract_location}} | `{{decision_target_key}}` |
 
 ## Repository Evidence
 
@@ -40,6 +40,7 @@ Temporal Surface Closure: {{temporal_surface_closure}}
 All-Or-Nothing Failure Boundary: {{all_or_nothing_failure_boundary}}
 Negative Proof And Fixture Quarantine: {{negative_proof_and_fixture_quarantine}}
 Bounded Recognition Scope: {{bounded_recognition_scope}}
+Work Budget And Cost Displacement: {{work_budget_and_cost_displacement}}
 
 ## Execution Units
 
@@ -60,9 +61,9 @@ Depends On: None
 
 ## Verification Matrix
 
-| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | Pass signal | Evidence constraints and rejected proxy | Durable impact | Artifact target | Admission |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `{{verification_key}}` | `{{outcome_key}}` | `{{evidence_class}}` | {{verification_surface}} | {{preimplementation_witness}} | {{pass_signal}} | {{evidence_constraints_and_rejected_proxy}} | `{{durable_impact}}` | {{artifact_target}} | {{admission_reference}} |
+| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | Pass signal | Evidence constraints and rejected proxy | Adversarial false-positive case and kill signal | Durable impact | Artifact target | Admission |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `{{verification_key}}` | `{{outcome_key}}` | `{{evidence_class}}` | {{verification_surface}} | {{preimplementation_witness}} | {{pass_signal}} | {{evidence_constraints_and_rejected_proxy}} | {{adversarial_false_positive_case_and_kill_signal}} | `{{durable_impact}}` | {{artifact_target}} | {{admission_reference}} |
 
 ## Permanent Artifact Admissions
 

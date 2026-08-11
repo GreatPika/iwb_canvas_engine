@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "vocabulary": "contract-vocabulary.json",
   "artifact_headings": {
     "contract": "Change Contract",
@@ -35,7 +35,8 @@
     "Temporal Surface Closure",
     "All-Or-Nothing Failure Boundary",
     "Negative Proof And Fixture Quarantine",
-    "Bounded Recognition Scope"
+    "Bounded Recognition Scope",
+    "Work Budget And Cost Displacement"
   ],
   "unit_fields": [
     "Owner",
@@ -62,9 +63,9 @@
   "source_absolute_path_pattern": "^/(?!(?:[^/]+/)*\\.{1,2}(?:/|$))[^/\\r\\n\\\\]+(?:/[^/\\r\\n\\\\]+)*$",
   "form_none_literal": "None",
   "table_columns": {
-    "Decision Trace": ["Decision ID", "Source decision", "Contract location", "Acceptance or evidence target"],
+    "Decision Trace": ["Decision ID", "Independent failure family", "Source decision", "Contract location", "Acceptance or evidence target"],
     "Acceptance Outcomes": ["Outcome key", "Starting state", "System action", "Observable result", "Required side conditions"],
-    "Verification Matrix": ["Evidence key", "Covers", "Evidence class", "Evidence surface", "Pre-implementation witness", "Pass signal", "Evidence constraints and rejected proxy", "Durable impact", "Artifact target", "Admission"],
+    "Verification Matrix": ["Evidence key", "Covers", "Evidence class", "Evidence surface", "Pre-implementation witness", "Pass signal", "Evidence constraints and rejected proxy", "Adversarial false-positive case and kill signal", "Durable impact", "Artifact target", "Admission"],
     "Verification Gate": ["Check", "Scope", "Future command or evidence", "Pass signal"],
     "Source Inputs": ["Category", "Source ID", "Location or authority"],
     "Blocking Decisions": ["Decision ID", "Blocking decision", "Blocks because", "Needed evidence or authority"]
@@ -85,6 +86,7 @@
     "{{admission_entries_or_none}}",
     "{{admission_reference}}",
     "{{all_or_nothing_failure_boundary}}",
+    "{{adversarial_false_positive_case_and_kill_signal}}",
     "{{artifact_target}}",
     "{{bounded_recognition_scope}}",
     "{{compatibility}}",
@@ -105,6 +107,7 @@
     "{{goal}}",
     "{{imperative_unit_title}}",
     "{{in_scope}}",
+    "{{independent_failure_family}}",
     "{{lifecycle_evidence}}",
     "{{lifecycle_pass_signal}}",
     "{{negative_proof_and_fixture_quarantine}}",
@@ -135,7 +138,8 @@
     "{{unit_owner}}",
     "{{unit_profile}}",
     "{{verification_key}}",
-    "{{verification_surface}}"
+    "{{verification_surface}}",
+    "{{work_budget_and_cost_displacement}}"
   ],
   "legacy_placeholder_tokens": ["TODO", "TBD"]
 }

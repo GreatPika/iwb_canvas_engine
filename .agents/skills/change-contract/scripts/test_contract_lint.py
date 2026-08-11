@@ -30,13 +30,13 @@ Consolidate one workflow without changing accepted behavioral guarantees.
 ## Classification
 
 Profile: `BEHAVIOR_CHANGE`
-Obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `COMMAND_REFERENCE_MIGRATION`
+Obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `COMMAND_REFERENCE_MIGRATION`, `WORK_BUDGET_CLOSURE`
 
 ## Decision Trace
 
-| Decision ID | Source decision | Contract location | Acceptance or evidence target |
-| --- | --- | --- | --- |
-| `one-canonical-route` | Retire duplicate routes atomically | Boundaries / Order Constraints | `legacy-route-is-retired` |
+| Decision ID | Independent failure family | Source decision | Contract location | Acceptance or evidence target |
+| --- | --- | --- | --- | --- |
+| `one-canonical-route` | retired workflow routes remain discoverable | Retire duplicate routes atomically | Boundaries / Order Constraints | `legacy-route-is-retired` |
 
 ## Repository Evidence
 
@@ -54,6 +54,7 @@ Temporal Surface Closure: Not applicable: no runtime callback surface changes
 All-Or-Nothing Failure Boundary: Route migration and legacy deletion land together
 Negative Proof And Fixture Quarantine: Current-source absence queries exclude history
 Bounded Recognition Scope: Exact current skill names and normalized field labels only
+Work Budget And Cost Displacement: Construction and migration may inspect current routes once; route lookup never shifts a whole-route scan into another query or publication phase.
 
 ## Execution Units
 
@@ -74,9 +75,9 @@ Depends On: None
 
 ## Verification Matrix
 
-| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | Pass signal | Evidence constraints and rejected proxy | Durable impact | Artifact target | Admission |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |
+| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | Pass signal | Evidence constraints and rejected proxy | Adversarial false-positive case and kill signal | Durable impact | Artifact target | Admission |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |
 
 ## Permanent Artifact Admissions
 
@@ -148,11 +149,11 @@ Depends On:
 {dependency}
 
 """
-    matrix_row = "| `canonical-route-doc-evidence` | `canonical-route-is-documented` | `SOURCE_QUERY` | Current documentation | Old route names are present | Only the canonical route is present | History is excluded from the query | `UPDATE_EXISTING` | `AGENTS.md` | None |"
+    matrix_row = "| `canonical-route-doc-evidence` | `canonical-route-is-documented` | `SOURCE_QUERY` | Current documentation | Old route names are present | Only the canonical route is present | History is excluded from the query | A retired route remains in current documentation; the bounded query must report it. | `UPDATE_EXISTING` | `AGENTS.md` | None |"
     text = VALID_CONTRACT.replace("## Verification Matrix", unit + "## Verification Matrix")
     return text.replace(
-        "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |",
-        "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |\n"
+        "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |",
+        "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |\n"
         + matrix_row,
     )
 
@@ -197,9 +198,24 @@ class ContractSchemaTest(unittest.TestCase):
 
     def test_loader_reads_schema_and_vocabulary_route(self) -> None:
         schema = contract_lint.load_contract_schema(contract_lint.SCHEMA_PATH)
-        self.assertEqual(schema.version, 1)
+        self.assertEqual(schema.version, 2)
         self.assertEqual(schema.vocabulary_path, "contract-vocabulary.json")
         self.assertIn("Verification Matrix", schema.table_columns)
+        self.assertEqual(
+            schema.table_columns["Decision Trace"],
+            (
+                "Decision ID",
+                "Independent failure family",
+                "Source decision",
+                "Contract location",
+                "Acceptance or evidence target",
+            ),
+        )
+        self.assertIn(
+            "Adversarial false-positive case and kill signal",
+            schema.table_columns["Verification Matrix"],
+        )
+        self.assertIn("Work Budget And Cost Displacement", schema.boundary_fields)
 
     def test_loader_rejects_unknown_schema_key(self) -> None:
         data = json.loads(contract_lint.SCHEMA_PATH.read_text())
@@ -234,6 +250,128 @@ class ContractSchemaTest(unittest.TestCase):
             vocabulary = contract_lint.load_contract_vocabulary(path)
         self.assertEqual(vocabulary.profiles, frozenset({"CUSTOM_PROFILE"}))
         self.assertEqual(vocabulary.obligations, frozenset({"CUSTOM_OBLIGATION"}))
+
+    def test_vocabulary_declares_work_budget_closure(self) -> None:
+        self.assertIn("WORK_BUDGET_CLOSURE", contract_lint.CONTRACT_VOCABULARY.obligations)
+
+
+class SchemaV2RequiredSlotsTest(unittest.TestCase):
+    def test_v2_required_slots_reject_missing_reordered_or_empty_values(self) -> None:
+        decision_header = (
+            "| Decision ID | Independent failure family | Source decision | Contract location | "
+            "Acceptance or evidence target |"
+        )
+        matrix_header = (
+            "| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | "
+            "Pass signal | Evidence constraints and rejected proxy | "
+            "Adversarial false-positive case and kill signal | Durable impact | Artifact target | Admission |"
+        )
+        work_budget = (
+            "Work Budget And Cost Displacement: Construction and migration may inspect current routes once; "
+            "route lookup never shifts a whole-route scan into another query or publication phase."
+        )
+        mutations = (
+            VALID_CONTRACT.replace(" | Independent failure family", "", 1),
+            VALID_CONTRACT.replace(
+                decision_header,
+                "| Independent failure family | Decision ID | Source decision | Contract location | "
+                "Acceptance or evidence target |",
+                1,
+            ),
+            VALID_CONTRACT.replace("| `one-canonical-route` | retired workflow routes remain discoverable |", "| `one-canonical-route` |  |", 1),
+            VALID_CONTRACT.replace(" | Adversarial false-positive case and kill signal", "", 1),
+            VALID_CONTRACT.replace(
+                matrix_header,
+                "| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | "
+                "Pass signal | Adversarial false-positive case and kill signal | "
+                "Evidence constraints and rejected proxy | Durable impact | Artifact target | Admission |",
+                1,
+            ),
+            VALID_CONTRACT.replace(
+                "| A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` |",
+                "|  | `UPDATE_EXISTING` |",
+                1,
+            ),
+            VALID_CONTRACT.replace(work_budget + "\n", "", 1),
+            VALID_CONTRACT.replace(
+                "Bounded Recognition Scope: Exact current skill names and normalized field labels only\n" + work_budget,
+                work_budget + "\nBounded Recognition Scope: Exact current skill names and normalized field labels only",
+                1,
+            ),
+            VALID_CONTRACT.replace(work_budget, "Work Budget And Cost Displacement:", 1),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                assert_invalid(self, mutation)
+
+    def test_v1_form_rejection_suppresses_dependent_semantic_findings(self) -> None:
+        v1_contract = (
+            VALID_CONTRACT.replace(
+                ", `WORK_BUDGET_CLOSURE`",
+                "",
+                1,
+            )
+            .replace(
+                "| Decision ID | Independent failure family | Source decision | Contract location | "
+                "Acceptance or evidence target |",
+                "| Decision ID | Source decision | Contract location | Acceptance or evidence target |",
+                1,
+            )
+            .replace("| --- | --- | --- | --- | --- |", "| --- | --- | --- | --- |", 1)
+            .replace(
+                "| `one-canonical-route` | retired workflow routes remain discoverable | "
+                "Retire duplicate routes atomically | Boundaries / Order Constraints | "
+                "`legacy-route-is-retired` |",
+                "| `one-canonical-route` | Retire duplicate routes atomically | "
+                "Boundaries / Order Constraints | `legacy-route-is-retired` |",
+                1,
+            )
+            .replace(
+                "Work Budget And Cost Displacement: Construction and migration may inspect current routes once; "
+                "route lookup never shifts a whole-route scan into another query or publication phase.\n",
+                "",
+                1,
+            )
+            .replace(
+                "| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | "
+                "Pass signal | Evidence constraints and rejected proxy | "
+                "Adversarial false-positive case and kill signal | Durable impact | Artifact target | Admission |",
+                "| Evidence key | Covers | Evidence class | Evidence surface | Pre-implementation witness | "
+                "Pass signal | Evidence constraints and rejected proxy | Durable impact | Artifact target | Admission |",
+                1,
+            )
+            .replace("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |", 1)
+            .replace(
+                "| Query excludes history; a green linter alone is insufficient | "
+                "A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | "
+                "`UPDATE_EXISTING` |",
+                "| Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` |",
+                1,
+            )
+        )
+
+        findings = messages(v1_contract)
+
+        self.assertTrue(findings)
+        self.assertFalse(any("outcome `" in finding for finding in findings))
+        self.assertFalse(any("admission `" in finding for finding in findings))
+
+    def test_malformed_outcome_table_suppresses_matrix_coverage_findings(self) -> None:
+        row = (
+            "| `legacy-route-is-retired` | Duplicate skill routes exist | The route migration completes | "
+            "Current discovery exposes only `$change-contract` | Historical evidence remains unchanged |"
+        )
+        malformed = VALID_CONTRACT.replace(
+            row,
+            "| `legacy-route-is-retired` | Duplicate skill routes exist | The route migration completes | "
+            "Current discovery exposes only `$change-contract` |",
+            1,
+        )
+
+        findings = messages(malformed)
+
+        self.assertTrue(findings)
+        self.assertFalse(any("covers unknown outcome" in finding for finding in findings))
 
 
 class ValidArtifactTest(unittest.TestCase):
@@ -367,7 +505,14 @@ Owner: captured field
                 assert_invalid(self, mutation)
 
     def test_table_columns_are_exact(self) -> None:
-        assert_invalid(self, VALID_CONTRACT.replace("| Decision ID | Source decision |", "| Source decision | Decision ID |", 1))
+        assert_invalid(
+            self,
+            VALID_CONTRACT.replace(
+                "| Decision ID | Independent failure family | Source decision |",
+                "| Source decision | Independent failure family | Decision ID |",
+                1,
+            ),
+        )
         assert_invalid(self, VALID_CONTRACT.replace("| Outcome key | Starting state |", "| Outcome key | Unknown |", 1))
         for replacement in (
             "| Category | Source name | Location or authority |",
@@ -392,7 +537,7 @@ Owner: captured field
         self.assertEqual(contract_lint.lint_text(mutation), [])
 
     def test_disconnected_pipe_row_does_not_complete_a_table(self) -> None:
-        row = "| `one-canonical-route` | Retire duplicate routes atomically | Boundaries / Order Constraints | `legacy-route-is-retired` |"
+        row = "| `one-canonical-route` | retired workflow routes remain discoverable | Retire duplicate routes atomically | Boundaries / Order Constraints | `legacy-route-is-retired` |"
         mutation = VALID_CONTRACT.replace(
             row,
             "Captured output follows.\n\n" + row,
@@ -449,7 +594,7 @@ class UnitAndReferenceMutationTest(unittest.TestCase):
         outcome_row = "| `legacy-route-is-retired` | Duplicate skill routes exist | The route migration completes | Current discovery exposes only `$change-contract` | Historical evidence remains unchanged |"
         duplicate_outcome = VALID_CONTRACT.replace(outcome_row, f"{outcome_row}\n{outcome_row}", 1)
         self.assertIn("duplicate outcome key `legacy-route-is-retired`", messages(duplicate_outcome))
-        evidence_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |"
+        evidence_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |"
         duplicate_evidence = VALID_CONTRACT.replace(evidence_row, f"{evidence_row}\n{evidence_row}", 1)
         self.assertIn("duplicate evidence key `canonical-route-evidence`", messages(duplicate_evidence))
         admitted = with_admission()
@@ -460,7 +605,7 @@ class UnitAndReferenceMutationTest(unittest.TestCase):
         assert_invalid(self, VALID_CONTRACT.replace("| `canonical-route-evidence` | `legacy-route-is-retired` |", "| `canonical-route-evidence` | `unknown-outcome` |", 1))
         assert_invalid(self, VALID_CONTRACT.replace("`legacy-route-is-retired` | Duplicate skill routes exist", "`uncovered-outcome` | Duplicate skill routes exist", 1))
         assert_invalid(self, with_admission(admission_covers="unknown-outcome"))
-        assert_invalid(self, with_admission().replace("| `canonical-route-evidence`", "| `orphan-evidence` | `unknown-outcome` | `SOURCE_QUERY` | Current routes | Old | New | Direct | `UPDATE_EXISTING` | `AGENTS.md` | None |\n| `canonical-route-evidence`", 1))
+        assert_invalid(self, with_admission().replace("| `canonical-route-evidence`", "| `orphan-evidence` | `unknown-outcome` | `SOURCE_QUERY` | Current routes | Old | New | Direct | A stale alias remains discoverable; the route query must report it. | `UPDATE_EXISTING` | `AGENTS.md` | None |\n| `canonical-route-evidence`", 1))
 
 
 class AdmissionAndImpactMutationTest(unittest.TestCase):
@@ -510,8 +655,8 @@ Artifact target: test/change_contract_route_test.dart
             1,
         )
 
-        matrix_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `ADD` | test/change_contract_route_test.dart | `canonical-route-admission` |\n"
-        update_row = "| `alias-evidence` | `route-alias-is-absent` | `SOURCE_QUERY` | Current routes | Alias exists | Alias absent | History excluded | `UPDATE_EXISTING` | `AGENTS.md` | None |\n"
+        matrix_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `ADD` | test/change_contract_route_test.dart | `canonical-route-admission` |\n"
+        update_row = "| `alias-evidence` | `route-alias-is-absent` | `SOURCE_QUERY` | Current routes | Alias exists | Alias absent | History excluded | A retired alias remains discoverable; the route query must report it. | `UPDATE_EXISTING` | `AGENTS.md` | None |\n"
         admission_covers_extra_outcome = base.replace(
             matrix_row,
             matrix_row + update_row,
@@ -530,7 +675,7 @@ Artifact target: test/change_contract_route_test.dart
 
         two_rows = base.replace(
             matrix_row,
-            matrix_row + "| `alias-evidence` | `route-alias-is-absent` | `SOURCE_QUERY` | Current routes | Alias exists | Alias absent | History excluded | `ADD` | test/change_contract_route_test.dart | `canonical-route-admission` |\n",
+            matrix_row + "| `alias-evidence` | `route-alias-is-absent` | `SOURCE_QUERY` | Current routes | Alias exists | Alias absent | History excluded | A retired alias remains discoverable; the route query must report it. | `ADD` | test/change_contract_route_test.dart | `canonical-route-admission` |\n",
             1,
         )
         self.assertEqual(
@@ -565,8 +710,8 @@ Artifact target: test/change_contract_route_test.dart
         )
 
     def test_one_outcome_cannot_mix_none_and_non_none_rows(self) -> None:
-        matrix_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |"
-        extra_row = "| `unchanged-route-evidence` | `legacy-route-is-retired` | `MANUAL_INSPECTION` | Current route | Old routes exist | Reviewer sees only canonical route | Inspection is direct | `NONE` | None | None |"
+        matrix_row = "| `canonical-route-evidence` | `legacy-route-is-retired` | `SOURCE_QUERY` | Current non-historical workflow routes | Current routes contain both retired names | No current route contains either retired name | Query excludes history; a green linter alone is insufficient | A retired route remains discoverable through a compatibility alias; the bounded route query must report the alias. | `UPDATE_EXISTING` | `AGENTS.md` and current skill consumers | None |"
+        extra_row = "| `unchanged-route-evidence` | `legacy-route-is-retired` | `MANUAL_INSPECTION` | Current route | Old routes exist | Reviewer sees only canonical route | Inspection is direct | A retired alias remains; bounded inspection must report it. | `NONE` | None | None |"
         mixed_impacts = VALID_CONTRACT.replace(matrix_row, f"{matrix_row}\n{extra_row}", 1)
         self.assertEqual(
             messages(mixed_impacts),
