@@ -53,6 +53,39 @@ When a coverage finding requires a permanent artifact, its conditional
 `Admission basis` must cite an exact existing semantic admission key or identify
 the exact missing or incorrect admission for a concrete new failure family.
 
+## Mandatory Green-Suite Escape Audit
+
+Run this audit for every unit contract review and final committed-range review,
+even when the reviewed diff does not touch tests, counters, fixtures, or another
+verification artifact. It is not satisfied by a green suite, a contract claim,
+or the false-positive case copied from the Matrix.
+
+For every applicable Matrix evidence row, independently construct the simplest
+wrong implementation or state that preserves the row's declared pass signal and
+the obvious functional results. Apply the row's declared evidence, constraints,
+and required owner-seam kill signal to that wrong state. The evidence is valid
+only when that signal necessarily makes the row red. Inspect the actual owner
+route and its instrumentation boundary; a test-controlled counter or a counter
+outside that owner seam is not a kill signal.
+
+For `WORK_BUDGET_CLOSURE`, repeat this construction for every applicable
+construction/import/reset, mutation/update/replay, freeze/publication/install,
+query/read, and cleanup/rollback phase. In particular, construct the escape in
+which counts and query outputs stay correct while each mutation fully rescans
+rows or rebuilds and publishes all summaries. Query-only row-visit evidence
+does not kill that escape. The row must directly observe the constrained
+mutation row visits, rebuilds, or publications at the owner seam.
+
+A surviving escape is a blocking contract defect. Classify represented but
+non-killing evidence as `INCOMPLETE_VERIFICATION`; classify a missing
+source-derived phase or independently falsifiable family as
+`SOURCE_DECISION_DROPPED`. Record it through the existing Proof Candidate
+Format, locating it at the offending production route when available or at the
+governing contract row otherwise. Do not convert the escape into an unadmitted
+local request to add a test, fixture, counter, scanner, or other permanent
+artifact. If it establishes a new independent failure family, require the
+bounded contract amendment and its Matrix/admission route instead.
+
 ## Review Algorithm
 
 `Concrete Failure Mode Standard`: a concern becomes a finding only when it identifies the concrete missed failure mode, affected consumer, scenario, or behavior. Slop signals are investigation prompts, not automatic findings.

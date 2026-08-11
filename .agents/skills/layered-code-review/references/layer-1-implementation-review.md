@@ -54,6 +54,40 @@ row, and the corresponding central admission entry for `ADD` or
 behavior, ownership, boundaries, compatibility, source of truth, or
 implementation scope.
 
+## Work-Budget And Lifecycle-Phase Audit
+
+For every contract-scoped unit or final review whose contract selects
+`WORK_BUDGET_CLOSURE` or otherwise constrains scans, copies, rebuilds,
+materialization, publication, allocation, amortized work, or cost displacement,
+audit actual owner behavior against every applicable phase. Do this even when
+the diff does not change tests or instrumentation.
+
+Trace the production owner and its invoked helpers, not only result assertions,
+test names, counters, or the declared implementation intent. For each phase,
+compare actual work with the accepted bound, allowed whole-owner pass, and
+forbidden cost displacement:
+
+- construction/import/reset;
+- mutation/update/replay;
+- freeze/publication/install;
+- query/read; and
+- cleanup/rollback.
+
+Treat a phase as non-applicable only when the contract supplies its specific
+source- and owner-grounded reason. An unchanged helper, an absent test change,
+or a green suite does not make an applicable phase non-applicable.
+
+Flag an owner route that moves a prohibited full scan, rebuild,
+materialization, allocation, or publication into another phase. Correct counts
+or query outputs do not close mutation work: a mutation that fully rescans rows
+or rebuilds and publishes all summaries remains a defect even when every
+existing test passes. When the contract's adversarial case requires observation
+of mutation row visits, complete rebuilds, or publications, a missing real
+owner-seam signal is a blocking candidate. Name the applicable outcome and
+Matrix evidence key, phase, actual route, and the required signal that stays
+green; do not infer closure from a test-controlled counter or a counter outside
+the owner seam. Layer 2 classifies any surviving escape at the contract level.
+
 ## Source-Of-Truth Singularity
 
 Flag source-of-truth drift, duplicated truth without a cache or performance
