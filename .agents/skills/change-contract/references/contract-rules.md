@@ -20,7 +20,7 @@ Every accepted-source or repository-derived decision that constrains the contrac
 source decision -> independent failure family -> acceptance outcome -> Matrix evidence -> adversarial false-positive case -> kill signal
 ```
 
-The `Decision Trace` names the failure family. A decision that entails independently falsifiable failures has separately keyed routes; do not collapse them into a general performance, parity, compatibility, or implementation label. Each family has one trace/outcome/evidence route. An authorized exclusion still names the distinct failure it prevents and reaches its authorized `Out of Scope` target. A source decision is not preserved merely because its prose, owner, or broad outcome appears elsewhere.
+Each `Decision Trace` row names one failure family. Independently falsifiable failures use separate routes; broad labels, citations, owners, or outcomes do not close them. Authorized exclusions still name the prevented failure and route to their authorized `Out of Scope` target.
 
 For an active design, read frontmatter `disposition` and `product_outcome`:
 
@@ -95,7 +95,7 @@ Durable meaning has one owning source of truth. Cache or performance duplication
 
 Preserve negative behavior, temporal and reentrancy order, all-or-nothing and no-mutation behavior, and fixture quarantine in applicable boundaries, acceptance side conditions, and direct evidence constraints. A negative proof targets invalid shape, stale mirrors, boundary violations, incoherent data, unauthorized consumers, no-mutation failure, or source-truth drift; it must not reject a different coherent policy value merely to prove the selected value.
 
-When an accepted decision constrains scans, copies, rebuilds, materialization, publication, allocation, amortized work, or any other work budget, select `WORK_BUDGET_CLOSURE`. Its `Work Budget And Cost Displacement` boundary closes every applicable phase: construction/import/reset; mutation/update/replay; freeze/publication/install; query/read; and cleanup/rollback. For each applicable phase, state the bound, any allowed whole-owner pass, and the work that may not be displaced into that phase. A phase is non-applicable only with a specific source- and owner-grounded reason. A bounded query does not close mutation work merely because the scan or rebuild moved before the query; a correct result does not close rebuild, allocation, or publication amplification.
+Select `WORK_BUDGET_CLOSURE` for any accepted work bound or cost-displacement constraint. For construction/import/reset, mutation/update/replay, freeze/publication/install, query/read, and cleanup/rollback, state the bound, any allowed whole-owner pass, and prohibited displacement; justify every non-applicable phase from its source and owner. Correct results or closure in one phase do not close excess or displaced work in another.
 
 Close every applicable order:
 
@@ -118,7 +118,7 @@ Every acceptance outcome has a semantic key and four complete parts equivalent t
 - `Observable result`: exact owner-observable value, route, issue, public API shape, unchanged state, rejection, absent forbidden surface, redacted/generated output, build/runtime result, or documentation result.
 - `Required side conditions`: all applicable compatibility, no-mutation, temporal, atomicity, quarantine, recognition, and source-truth constraints.
 
-Every outcome has at least one `Verification Matrix` row directly detecting the result and side conditions. One row may cover multiple outcomes only when one evidence surface observes one coherent failure family or invariant. Each row names a stable verification owner and observable, pass signal, and pre-implementation witness. The `Adversarial false-positive case and kill signal` cell states the simplest concrete wrong implementation or state that could preserve obvious checks, plus the direct observation that makes this row red. It is complete only when that row's declared evidence would necessarily observe the kill signal; a counterexample that leaves the evidence green makes the evidence inadmissible for that family.
+Every outcome has at least one `Verification Matrix` row directly detecting the result and side conditions. One row may cover multiple outcomes only when one evidence surface observes one coherent failure family or invariant. Each row names a stable verification owner, observable, pass signal, pre-implementation witness, simplest false-positive state, and direct kill signal. Evidence is inadmissible when it can stay green under that state.
 
 Name an exact repository-owned command when it exists; do not invent an exact future command for new coverage unless an upstream source fixes it.
 
@@ -204,19 +204,19 @@ Use `None` for no dependency. Documentation order, shared topic, future command 
 
 ## 10. Decision Trace
 
-`Decision Trace` is the public obligation ledger. Each row names exactly one independently falsifiable family and carries its accepted decision through the corresponding outcome and Matrix evidence route:
+`Decision Trace` is the public obligation ledger for the complete routes defined in `Source Authority And Contract Gate`:
 
 ```text
 accepted source or repository fact -> contract decision -> boundary/unit/outcome/Matrix/Gate target -> acceptance or evidence target
 ```
 
-Include every accepted-source and repository-derived decision that constrains the contract, including authorized exclusions. Each maps to a boundary, unit, acceptance outcome, Matrix row, or Gate constraint, then to an acceptance/evidence target. No decision or independent failure family survives only as unlinked prose. Use stable contract-local keys. Map every intentional exclusion to `Out of Scope` and its source/user authority.
+Include every contract-constraining source or repository decision, including authorized exclusions. Map each to a boundary, unit, outcome, Matrix row, or Gate constraint and then to its acceptance/evidence target; no decision or family survives only as prose. Use stable contract-local keys and map exclusions to `Out of Scope` with their authority.
 
 ## 11. Verification Ownership And Gate
 
 Tests may consume but never own or mirror product, model, schema, architecture, or documentation truth. Reject copied inventories as authority, prose parsing as product proof, feature-local general scanners, self-referential fixtures whose expected truth comes from the implementation under test, private-shape proof, and feature-local ownership when a stable central owner governs the failure family.
 
-`Verification Gate` contains only changed-owner, cross-unit, repository, finding-disposition, diff-hygiene, canonical-route, and lifecycle closure not already owned by a Matrix row. It includes every known changed-owner check selected from the repository verification policy in `AGENTS.md`, `Finding disposition`, and `git diff --check`; it also includes canonical-route integrity when routes change and active contract/source lifecycle closure when applicable. Never mechanically duplicate focused unit evidence. For `WORK_BUDGET_CLOSURE`, the Gate closes only residual cross-unit phase coordination; it does not replace the owner-level evidence for a phase or family.
+`Verification Gate` contains only changed-owner, cross-unit, repository, finding-disposition, diff-hygiene, canonical-route, and lifecycle closure not already owned by a Matrix row. It includes every known changed-owner check selected from the repository verification policy in `AGENTS.md`, `Finding disposition`, and `git diff --check`; it also includes canonical-route integrity when routes change and active contract/source lifecycle closure when applicable. Never mechanically duplicate focused unit evidence. For `WORK_BUDGET_CLOSURE`, it closes only residual cross-unit coordination, never owner-level phase evidence.
 
 Name each exact established command once in the Matrix or Gate, with working directory when material. New-coverage commands remain implementation-owned unless fixed upstream. Every Gate check names scope, admissible future evidence, and pass signal; vague/prose-only checks are not closure. There is no fixed command count.
 
@@ -232,4 +232,4 @@ When evidence cannot close a material decision or direct proof, return exactly:
 
 `Blocking Decisions` is one table with exactly `Decision ID`, `Blocking decision`, `Blocks because`, and `Needed evidence or authority`; each independent unresolved decision has one unique semantic-keyed row. The Goal describes the requested final repository state without choosing or implying an answer. Do not include provisional boundaries, units, outcomes, Matrix rows, order, classification, Verification Gate, or preferred repair. A blocker is invalid when repository or source evidence already settles every question; the result must be a full contract.
 
-A full contract is valid only when Goal, sources, repository facts, classification, decisions, evidence, boundaries, units, outcomes, Matrix, admissions, exclusions, dependencies, and Gate agree; every added/strengthened obligation has exact authority; every source-derived failure family has its complete adversarial route and every applicable work-budget phase is closed; every decision reaches an acceptance/evidence target; every outcome has direct evidence; every permanent impact is correctly classified/admitted; every unit is topologically ordered, independently committable, and unchecked; no future command/path/private mechanism/completion result was invented. Structural lint remains a stop gate for schema, references, and required slots only: it neither infers the natural-language quality of a family, counterexample, or kill signal nor duplicates semantic or schema validation through a new source scanner. Any contradiction or unclosed material decision, family, or applicable work-budget phase requires a Contract Blocker.
+A full contract is valid only when Goal, sources, repository facts, classification, decisions, evidence, boundaries, units, outcomes, Matrix, admissions, exclusions, dependencies, and Gate agree; every obligation has authority; every source-derived family has its adversarial route; every applicable work-budget phase closes; every decision reaches an acceptance/evidence target; every outcome has direct evidence; permanent impacts are correctly admitted; units are ordered, committable, and unchecked; and no future command, path, private mechanism, or result is invented. Structural lint proves only form, references, and required slots. Any contradiction or unclosed decision, family, or phase requires a Contract Blocker.

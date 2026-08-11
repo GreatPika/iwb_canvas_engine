@@ -55,39 +55,24 @@ the exact missing or incorrect admission for a concrete new failure family.
 
 ## Mandatory Green-Suite Escape Audit
 
-Run this audit for every unit contract review and final committed-range review,
-even when the reviewed diff does not touch tests, counters, fixtures, or another
-verification artifact. It is not satisfied by a green suite, a contract claim,
-or the false-positive case copied from the Matrix.
+For every unit contract review and final committed-range review, apply
+`Outcome-Proof Fit` to each Matrix row even when no proof artifact changed.
+Independently construct the simplest wrong state that preserves its result and
+pass signal, then apply only the row's evidence and constraints. It closes the
+row only when the contract-derived owner-seam signal necessarily turns red;
+merely copied cases, test-controlled signals, and signals outside that seam do
+not qualify.
 
-For every applicable Matrix evidence row, independently construct the simplest
-wrong implementation or state that preserves the row's declared pass signal and
-the obvious functional results. Apply the row's declared evidence, constraints,
-and required owner-seam kill signal to that wrong state. The evidence is valid
-only when that signal necessarily makes the row red. Inspect the actual owner
-route and its instrumentation boundary; a test-controlled counter or a counter
-outside that owner seam is not a kill signal.
+For `WORK_BUDGET_CLOSURE`, repeat this for every phase audited by Layer 1; a
+signal scoped to another phase cannot kill displaced, duplicated, amplified, or
+excess work. Derive cases only from the current contract's accepted sources.
 
-For `WORK_BUDGET_CLOSURE`, repeat this construction for every applicable
-construction/import/reset, mutation/update/replay, freeze/publication/install,
-query/read, and cleanup/rollback phase. For each phase, construct the simplest
-violating implementation or state in which the observable result remains
-correct while the accepted bound is exceeded or prohibited work is displaced,
-duplicated, or amplified. Evidence scoped to another phase or to a proxy that
-does not observe the constrained work cannot kill that escape. The row must
-directly observe the contract-named work at the owner seam. Derive every escape,
-failure family, and signal from the current contract's accepted sources; never
-reuse domain vocabulary or a counterexample from another contract.
-
-A surviving escape is a blocking contract defect. Classify represented but
-non-killing evidence as `INCOMPLETE_VERIFICATION`; classify a missing
-source-derived phase or independently falsifiable family as
-`SOURCE_DECISION_DROPPED`. Record it through the existing Proof Candidate
-Format, locating it at the offending production route when available or at the
-governing contract row otherwise. Do not convert the escape into an unadmitted
-local request to add a test, fixture, counter, scanner, or other permanent
-artifact. If it establishes a new independent failure family, require the
-bounded contract amendment and its Matrix/admission route instead.
+A surviving escape is a contract defect: use `INCOMPLETE_VERIFICATION` for
+represented but non-killing evidence and `SOURCE_DECISION_DROPPED` for a missing
+source-derived family or phase. Use the existing Proof Candidate Format and
+locate the defect at its production route or otherwise its contract row. For a
+new family, require the bounded Matrix/admission amendment rather than an
+unadmitted local artifact request.
 
 ## Review Algorithm
 
