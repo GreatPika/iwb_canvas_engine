@@ -78,15 +78,17 @@ source- and owner-grounded reason. An unchanged helper, an absent test change,
 or a green suite does not make an applicable phase non-applicable.
 
 Flag an owner route that moves a prohibited full scan, rebuild,
-materialization, allocation, or publication into another phase. Correct counts
-or query outputs do not close mutation work: a mutation that fully rescans rows
-or rebuilds and publishes all summaries remains a defect even when every
-existing test passes. When the contract's adversarial case requires observation
-of mutation row visits, complete rebuilds, or publications, a missing real
-owner-seam signal is a blocking candidate. Name the applicable outcome and
-Matrix evidence key, phase, actual route, and the required signal that stays
-green; do not infer closure from a test-controlled counter or a counter outside
-the owner seam. Layer 2 classifies any surviving escape at the contract level.
+materialization, allocation, or publication into another phase. A correct
+observable result does not close a work budget when prohibited work is
+displaced, duplicated, or amplified in another phase. When the current
+contract's adversarial case requires direct observation of constrained work, a
+missing real owner-seam signal is a blocking candidate. Derive that work and
+signal from the current contract and its accepted sources; never substitute a
+built-in domain example or a failure family from another contract. Name the
+applicable outcome and Matrix evidence key, phase, actual route, and the
+required signal that stays green; do not infer closure from a test-controlled
+counter or a counter outside the owner seam. Layer 2 classifies any surviving
+escape at the contract level.
 
 ## Source-Of-Truth Singularity
 

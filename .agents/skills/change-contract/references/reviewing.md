@@ -54,14 +54,18 @@ a narrower scope.
    implementation or state that could satisfy its visible result, then apply
    only that row's evidence surface and pass signal. Report
    `INCOMPLETE_VERIFICATION` when the declared evidence and kill signal can stay
-   green under the wrong implementation; parity/query evidence does not kill a
-   full rebuild-on-mutation unless it directly observes that mutation work.
-   For `WORK_BUDGET_CLOSURE`, check every
+   green under the wrong implementation. Derive the wrong implementation and
+   required signal only from the current contract's accepted sources; do not
+   import a failure family, counterexample, or domain vocabulary from another
+   contract. For `WORK_BUDGET_CLOSURE`, check every
    applicable construction/import/reset, mutation/update/replay,
    freeze/publication/install, query/read, and cleanup/rollback phase for its
    bound, allowed full pass, forbidden cost displacement, and family-level
-   evidence. Report a missing mutation/rebuild/update-amplification family, or
-   any other unrepresented source-derived phase family, as
+   evidence. For each phase, construct the simplest violation that preserves
+   the observable result while exceeding its accepted bound or displacing
+   prohibited work into another phase. Evidence scoped to one phase does not
+   close another unless its declared signal directly observes the constrained
+   work there. Report any unrepresented source-derived phase family as
    `SOURCE_DECISION_DROPPED`; report represented but non-killing evidence as
    `INCOMPLETE_VERIFICATION`.
 7. For a Contract Blocker instead, verify every request-supplied source is

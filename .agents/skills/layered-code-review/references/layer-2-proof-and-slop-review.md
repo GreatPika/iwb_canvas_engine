@@ -70,11 +70,14 @@ outside that owner seam is not a kill signal.
 
 For `WORK_BUDGET_CLOSURE`, repeat this construction for every applicable
 construction/import/reset, mutation/update/replay, freeze/publication/install,
-query/read, and cleanup/rollback phase. In particular, construct the escape in
-which counts and query outputs stay correct while each mutation fully rescans
-rows or rebuilds and publishes all summaries. Query-only row-visit evidence
-does not kill that escape. The row must directly observe the constrained
-mutation row visits, rebuilds, or publications at the owner seam.
+query/read, and cleanup/rollback phase. For each phase, construct the simplest
+violating implementation or state in which the observable result remains
+correct while the accepted bound is exceeded or prohibited work is displaced,
+duplicated, or amplified. Evidence scoped to another phase or to a proxy that
+does not observe the constrained work cannot kill that escape. The row must
+directly observe the contract-named work at the owner seam. Derive every escape,
+failure family, and signal from the current contract's accepted sources; never
+reuse domain vocabulary or a counterexample from another contract.
 
 A surviving escape is a blocking contract defect. Classify represented but
 non-killing evidence as `INCOMPLETE_VERIFICATION`; classify a missing
