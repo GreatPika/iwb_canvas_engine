@@ -178,11 +178,8 @@ Require exact new artifact paths only when fixed upstream or extending an existi
 
 ## 9. Execution Units And Dependency DAG
 
-Execution units package the acceptance outcomes defined above into independently implementable work.
-
-Each unit is independently implementable, checkable, and committable without a deliberately broken repository. It owns one stable responsibility and one bounded result; one owner means the responsibility that owns the result, not necessarily one file/class. An atomic public-seam migration combines the seam, all production implementations, bindings, fakes, and test doubles when partial migration cannot compile.
-
-Separate independently closable outcomes when stable owners, risks, or results differ. Do not create declaration-only, consumer-only, partial-migration, file-list, mixed-owner, or otherwise non-committable units. Do not split declaration-before-use inside one atomic migration or merge outcomes with independent owners, boundaries, profiles, risks, results, or recognition scopes.
+Apply the execution-unit decomposition and admission criteria in
+`engineering-change-unit-criteria.md`.
 
 Use contiguous unchecked headings in topological order:
 

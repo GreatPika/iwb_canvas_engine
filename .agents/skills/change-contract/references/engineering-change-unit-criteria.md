@@ -1,16 +1,5 @@
 # Engineering Change Unit Criteria
 
-Status: active repository policy for decomposing, reviewing, and grouping
-engineering changes.
-
-This document owns the repository's criteria for an engineering execution
-unit. It applies to Change Contracts, implementation units, migrations,
-refactors, verification work, retirement, and documentation closure.
-
-It does not replace the planning lifecycle in `docs/planning/README.md`, an
-accepted design or Change Contract, repository verification requirements, or
-the authority of current code, schemas, tests, and maintained documentation.
-
 ## Core definition
 
 An engineering change unit is the smallest dependency-closed change that:
@@ -341,35 +330,3 @@ the following:
 
 A unit is not admitted when any required answer is missing or relies only on a
 future test, future consumer, future cleanup, or unspecified migration state.
-
-## Prior-art grounding
-
-This policy is a repository synthesis, not a claim that one external standard
-defines engineering units. Its main precedents are:
-
-- D. L. Parnas, *On the Criteria To Be Used in Decomposing Systems into
-  Modules*: decomposition by hidden design decisions and responsibilities,
-  rather than execution phases.
-- Google Engineering Practices, *Small CLs*: one self-contained change,
-  related tests, a working post-change system, and no universal hard LOC rule.
-- Continuous Integration and small-batch delivery: frequent integration keeps
-  integration risk and feedback delay bounded.
-- Branch by Abstraction and Parallel Change: controlled coexistence can be
-  necessary for safe compatibility migrations, but requires an explicit
-  contract phase.
-- Architecture Decision Records: one concise decision and its consequences may
-  be a complete documentation result.
-
-Relevant references:
-
-- <https://john.cs.olemiss.edu/~hcc/csci555/notes/localcopy/Parnas_Criteria_Decomposing.pdf>
-- <https://google.github.io/eng-practices/review/developer/small-cls.html>
-- <https://research.google/pubs/modern-code-review-a-case-study-at-google/>
-- <https://martinfowler.com/articles/continuousIntegration.html>
-- <https://martinfowler.com/bliki/BranchByAbstraction.html>
-- <https://martinfowler.com/bliki/ParallelChange.html>
-- <https://martinfowler.com/bliki/ArchitectureDecisionRecord.html>
-- <https://static0.smartbear.co/support/media/resources/cc/book/code-review-cisco-case-study.pdf>
-
-The external review-size studies and guidance support small, self-contained
-changes, but do not establish universal numeric limits for this repository.
