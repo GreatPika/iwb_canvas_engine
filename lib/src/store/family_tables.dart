@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 // Family-specific row tables stay together so admission and projection cannot
 // drift across element kinds; splitting them would obscure the shared id owner.
@@ -17,6 +20,8 @@ import '../contracts/public/canvas_metadata.dart';
 // from duplicate-id and resource-reference validation.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
+  static final Object _membershipWorkZoneKey = Object();
+
   const FamilyTables.empty()
     : this._fromTables(
         imageRows: const {},
@@ -74,7 +79,50 @@ final class FamilyTables {
   final Map<String, LineRow> lineRows;
   final Map<String, RectRow> rectRows;
 
-  bool contains(CanvasElementId id) => admittedElementIds.contains(id.value);
+  // Membership is an owner-local read: a direct probe avoids constructing a
+  // document-sized key union for callers that only need one id.
+  // ignore: cyclomatic-complexity
+  bool contains(CanvasElementId id) {
+    final value = id.value;
+
+    _recordMembershipMapProbe();
+    if (imageRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+    if (vectorRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+    if (pathRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+    if (textRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+    if (strokeRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+    if (lineRows.containsKey(value)) {
+      return true;
+    }
+    _recordMembershipMapProbe();
+
+    return rectRows.containsKey(value);
+  }
+
+  // This test-only observation runs in an assert-gated Zone and owns no
+  // membership data, so it cannot become a second membership authority.
+  @visibleForTesting
+  static T observeMembershipWork<T>(
+    FamilyTablesMembershipWork work,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_membershipWorkZoneKey: work});
+  }
 
   bool referencesResource(CanvasResourceId id) {
     return imageRows.values.any((row) => row.resourceId == id) ||
@@ -141,6 +189,17 @@ final class FamilyTables {
   }
 
   Set<String> get admittedElementIds {
+    _recordMembershipSetAllocation();
+    _recordMembershipKeyCopies(
+      imageRows.length +
+          vectorRows.length +
+          pathRows.length +
+          textRows.length +
+          strokeRows.length +
+          lineRows.length +
+          rectRows.length,
+    );
+
     return {
       ...imageRows.keys,
       ...vectorRows.keys,
@@ -284,6 +343,36 @@ final class FamilyTables {
         rectRows[id]?.common;
   }
 
+  static void _recordMembershipMapProbe() {
+    assert(() {
+      final work = Zone.current[_membershipWorkZoneKey];
+      if (work is FamilyTablesMembershipWork) {
+        work._recordMapProbe();
+      }
+      return true;
+    }(), 'membership map-probe observation failed');
+  }
+
+  static void _recordMembershipSetAllocation() {
+    assert(() {
+      final work = Zone.current[_membershipWorkZoneKey];
+      if (work is FamilyTablesMembershipWork) {
+        work._recordMembershipSetAllocation();
+      }
+      return true;
+    }(), 'membership set-allocation observation failed');
+  }
+
+  static void _recordMembershipKeyCopies(int count) {
+    assert(() {
+      final work = Zone.current[_membershipWorkZoneKey];
+      if (work is FamilyTablesMembershipWork) {
+        work._recordMembershipKeyCopies(count);
+      }
+      return true;
+    }(), 'membership key-copy observation failed');
+  }
+
   _AdmittedRows _copyRows() {
     return _AdmittedRows()
       ..imageRows.addAll(imageRows)
@@ -373,6 +462,29 @@ final class FamilyTables {
         rectRows: Map.unmodifiable(Map.of(rectRows)..[id] = RectRow(element)),
       ),
     };
+  }
+}
+
+@visibleForTesting
+final class FamilyTablesMembershipWork {
+  int _mapProbeCount = 0;
+  int _membershipSetAllocationCount = 0;
+  int _membershipKeyCopyCount = 0;
+
+  int get mapProbeCount => _mapProbeCount;
+  int get membershipSetAllocationCount => _membershipSetAllocationCount;
+  int get membershipKeyCopyCount => _membershipKeyCopyCount;
+
+  void _recordMapProbe() {
+    _mapProbeCount += 1;
+  }
+
+  void _recordMembershipSetAllocation() {
+    _membershipSetAllocationCount += 1;
+  }
+
+  void _recordMembershipKeyCopies(int count) {
+    _membershipKeyCopyCount += count;
   }
 }
 
