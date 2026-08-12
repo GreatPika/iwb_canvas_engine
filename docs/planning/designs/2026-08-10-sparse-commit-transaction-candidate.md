@@ -550,7 +550,7 @@ Required profile: `BEHAVIOR_CHANGE`. Behavior-preserving internal migration scop
 
 Required obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `NEGATIVE_PROOF_AND_FIXTURE_QUARANTINE`, `TEMPORAL_SURFACE_CLOSURE`, `ALL_OR_NOTHING_FAILURE_BOUNDARY`, `SOURCE_OF_TRUTH_SINGULARITY`
 
-Required contract count: exactly four Change Contracts.
+Required contract partition: exactly four Change Contracts: (1) authoritative committed facts; (2) store transaction candidate; (3) indexed edit lifecycle and atomic install closure; and (4) runtime route and temporal delivery closure.
 
 Source inputs to preserve: this design and its research source; current code in `document_store_kernel.dart`, `family_tables.dart`, `layer_table.dart`, `element_registry.dart`, `resource_table.dart`, `committed_document.dart`, `sparse_store_commit.dart`, `edit_session.dart`, `draft_document.dart`, the private runtime facts adapter, and RuntimeRoot interaction commit routes; `edit_kernel.md`, `operation_matrix.md`, the other named contracts, ADRs, architecture sources, and existing relevant fixtures.
 
