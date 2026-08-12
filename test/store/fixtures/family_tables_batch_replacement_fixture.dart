@@ -13,7 +13,14 @@ void main() {
     final work = FamilyTablesWork();
     final replaced = FamilyTables.observeWork(
       work,
-      () => base.replaceElements(_replacements),
+      () => base.editSparse((editor) {
+        editor.recordUpdateBatch();
+        for (final element in _replacements) {
+          editor.replaceElement(element);
+        }
+
+        return editor.freeze();
+      }),
     );
 
     expect(work.batchReplacementCount, 1);
@@ -120,11 +127,17 @@ void _expectUntouchedFamilyWork(FamilyTablesWork work, CanvasElementKind kind) {
 }
 
 void _expectFamilyWork(FamilyTablesWork work, _ExpectedFamilyWork expected) {
-  expect(work.batchOpenCount(expected.kind), expected.openAndFreezeCount);
-  expect(work.batchBaseEntryCopyCount(expected.kind), expected.baseEntryCopies);
-  expect(work.batchFreezeCount(expected.kind), expected.openAndFreezeCount);
+  expect(work.transactionOpenCount(expected.kind), expected.openAndFreezeCount);
   expect(
-    work.batchFinalMapRetainsBaseIdentity(expected.kind),
+    work.transactionBaseEntryCopyCount(expected.kind),
+    expected.baseEntryCopies,
+  );
+  expect(
+    work.transactionFreezeCount(expected.kind),
+    expected.openAndFreezeCount,
+  );
+  expect(
+    work.transactionFinalMapRetainsBaseIdentity(expected.kind),
     expected.retainsBaseIdentity,
   );
 }

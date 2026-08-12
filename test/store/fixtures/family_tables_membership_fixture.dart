@@ -48,7 +48,12 @@ void _testAllFamilyAndMutationSnapshots() {
         CanvasElementKind.rect: {'rect', 'added'},
       });
 
-      final replaced = removed.replaceElements([_rect('rect', size: 2)]);
+      final replaced = removed.editSparse((editor) {
+        editor.recordUpdateBatch();
+        editor.replaceElement(_rect('rect', size: 2));
+
+        return editor.freeze();
+      });
       _expectMembershipSnapshot(replaced, {
         ..._allFamilyIds,
         CanvasElementKind.path: const {},

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
 
 // Family-specific row tables stay together so admission and projection cannot
 // drift across element kinds; splitting them would obscure the shared id owner.
@@ -21,6 +21,9 @@ import '../contracts/public/canvas_metadata.dart';
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
   static final Object _workZoneKey = Object();
+  static final Object _sparseEditorZoneKey = Object();
+  static final Object _sparseDecisionZoneKey = Object();
+  static final Object _sparseBaseReadZoneKey = Object();
 
   const FamilyTables.empty()
     : this._fromTables(
@@ -83,6 +86,7 @@ final class FamilyTables {
   // document-sized key union for callers that only need one id.
   // ignore: cyclomatic-complexity
   bool contains(CanvasElementId id) {
+    _recordImmutableSparseFamilyRead(this);
     final value = id.value;
 
     _recordMembershipMapProbe();
@@ -121,7 +125,89 @@ final class FamilyTables {
     return runZoned(operation, zoneValues: {_workZoneKey: work});
   }
 
+  // Sparse base/final comparisons intentionally read the immutable base while
+  // the editor is live. Marking that role prevents those explicit comparisons
+  // from masking a candidate read that bypasses the editor.
+  static T readSparseBase<T>(T Function() operation) {
+    return runZoned(operation, zoneValues: {_sparseBaseReadZoneKey: true});
+  }
+
+  T editSparse<T>(T Function(FamilyTablesEditor editor) operation) {
+    final editor = FamilyTablesEditor._(this);
+
+    return runZoned(() {
+      try {
+        final result = operation(editor);
+        editor.discard();
+
+        return result;
+      } catch (_) {
+        editor.discard();
+        rethrow;
+      }
+    }, zoneValues: {_sparseEditorZoneKey: editor});
+  }
+
+  static void _recordImmutableSparseFamilyRead(FamilyTables tables) {
+    assert(() {
+      final editor = Zone.current[_sparseEditorZoneKey];
+      if (editor is FamilyTablesEditor &&
+          identical(editor._base, tables) &&
+          Zone.current[_sparseBaseReadZoneKey] != true) {
+        final work = Zone.current[_workZoneKey];
+        if (work is FamilyTablesWork) {
+          final decision = Zone.current[_sparseDecisionZoneKey];
+          work._recordStaleDecisionRead(
+            decision is FamilyTablesDecision ? decision : null,
+          );
+        }
+      }
+      return true;
+    }(), 'stale sparse family read observation failed');
+  }
+
+  // Any immutable family operation while the transaction editor has already
+  // frozen is a second snapshot lifecycle. The normal editor adoption is
+  // allowed exactly once and is checked separately below.
+  static void recordSparseFamilySnapshotMutation() {
+    assert(() {
+      final editor = Zone.current[_sparseEditorZoneKey];
+      if (editor is FamilyTablesEditor) {
+        final work = Zone.current[_workZoneKey];
+        if (work is FamilyTablesWork) {
+          if (editor._isFrozen) {
+            work._recordPostFreezeWrite();
+            work._recordPostFreezeCopy();
+            work._recordPostFreezeImmutablePublication();
+          } else {
+            work._recordTransactionIntermediateImmutablePublication();
+          }
+        }
+      }
+      return true;
+    }(), 'post-freeze sparse family mutation observation failed');
+  }
+
+  static void recordSparseFamilyAdoption(FamilyTables tables) {
+    assert(() {
+      final editor = Zone.current[_sparseEditorZoneKey];
+      if (editor is FamilyTablesEditor &&
+          !editor._consumeFrozenAdoption(tables)) {
+        final work = Zone.current[_workZoneKey];
+        if (work is FamilyTablesWork) {
+          if (editor._isFrozen) {
+            work._recordPostFreezeImmutablePublication();
+          } else {
+            work._recordTransactionIntermediateImmutablePublication();
+          }
+        }
+      }
+      return true;
+    }(), 'sparse family adoption observation failed');
+  }
+
   bool referencesResource(CanvasResourceId id) {
+    _recordImmutableSparseFamilyRead(this);
     return imageRows.values.any((row) => row.resourceId == id) ||
         vectorRows.values.any((row) => row.resourceId == id);
   }
@@ -130,6 +216,7 @@ final class FamilyTables {
   // all preserve the same family precedence in one audited place.
   // ignore: cyclomatic-complexity
   CanvasElement? elementByCanvasId(CanvasElementId id) {
+    _recordImmutableSparseFamilyRead(this);
     final value = id.value;
 
     return imageRows[value]?.toElement() ??
@@ -142,6 +229,7 @@ final class FamilyTables {
   }
 
   FamilyTables addElement(CanvasElement element) {
+    recordSparseFamilySnapshotMutation();
     if (_commonById(element.id.value) != null) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
@@ -153,30 +241,22 @@ final class FamilyTables {
   }
 
   FamilyTables removeElement(CanvasElementId id) {
+    recordSparseFamilySnapshotMutation();
     final admitted = _copyRows()..remove(id.value);
 
     return FamilyTables._(admitted);
   }
 
   FamilyTables clearElements() {
+    recordSparseFamilySnapshotMutation();
     return FamilyTables._(_AdmittedRows());
-  }
-
-  FamilyTables replaceElements(Iterable<CanvasElement> elements) {
-    _recordBatchReplacementStart();
-    final batchRows = _MutableFamilyRows.fromTables(this);
-
-    for (final element in elements) {
-      batchRows.replace(element);
-    }
-
-    return batchRows.toFamilyTables();
   }
 
   // The lookup deliberately checks every family table in one place so missing
   // ids fail at the caller-owned admission boundary.
   // ignore: cyclomatic-complexity
   CanvasElement elementById(String id) {
+    _recordImmutableSparseFamilyRead(this);
     return imageRows[id]?.toElement() ??
         vectorRows[id]?.toElement() ??
         pathRows[id]?.toElement() ??
@@ -210,6 +290,7 @@ final class FamilyTables {
   }
 
   bool isSelectionEligible(CanvasElementId id) {
+    _recordImmutableSparseFamilyRead(this);
     final common = _commonById(id.value);
 
     return common != null && common.isVisible && common.isSelectable;
@@ -219,6 +300,7 @@ final class FamilyTables {
   // projection to avoid divergent element-kind behavior.
   // ignore: cyclomatic-complexity
   FamilyElementFacts? elementFrameFacts(CanvasElementId id) {
+    _recordImmutableSparseFamilyRead(this);
     final value = id.value;
 
     return _imageFrameFacts(value) ??
@@ -355,59 +437,89 @@ final class FamilyTables {
     assert(() {
       final work = Zone.current[_workZoneKey];
       if (work is FamilyTablesWork) {
-        work._recordReplacement();
+        work._recordBatchReplacement();
       }
       return true;
     }(), 'batch replacement observation failed');
   }
 
-  static void _recordBatchFamilyOpen(CanvasElementKind kind) {
+  static void _recordTransactionFamilyOpen(CanvasElementKind kind) {
     assert(() {
       final work = Zone.current[_workZoneKey];
       if (work is FamilyTablesWork) {
-        work._recordFamilyOpen(kind);
+        work._recordTransactionFamilyOpen(kind);
       }
       return true;
-    }(), 'batch family open observation failed');
+    }(), 'transaction family open observation failed');
   }
 
-  static void _recordBatchFamilyBaseEntryCopies(
+  static void _recordTransactionFamilyBaseEntryCopies(
     CanvasElementKind kind,
     int count,
   ) {
     assert(() {
       final work = Zone.current[_workZoneKey];
       if (work is FamilyTablesWork) {
-        work._recordFamilyBaseEntryCopies(kind, count);
+        work._recordTransactionFamilyBaseEntryCopies(kind, count);
       }
       return true;
-    }(), 'batch family copy observation failed');
+    }(), 'transaction family copy observation failed');
   }
 
-  static void _recordBatchFamilyFreeze(CanvasElementKind kind) {
+  static void _recordTransactionFamilyFreeze(CanvasElementKind kind) {
     assert(() {
       final work = Zone.current[_workZoneKey];
       if (work is FamilyTablesWork) {
-        work._recordFamilyFreeze(kind);
+        work._recordTransactionFamilyFreeze(kind);
       }
       return true;
-    }(), 'batch family freeze observation failed');
+    }(), 'transaction family freeze observation failed');
   }
 
-  static void _recordBatchFinalMapIdentity(
+  static void _recordTransactionFinalMapIdentity(
     CanvasElementKind kind, {
     required bool retainsBaseIdentity,
   }) {
     assert(() {
       final work = Zone.current[_workZoneKey];
       if (work is FamilyTablesWork) {
-        work._recordFinalMapIdentity(
+        work._recordTransactionFinalMapIdentity(
           kind,
           retainsBaseIdentity: retainsBaseIdentity,
         );
       }
       return true;
-    }(), 'batch final-map identity observation failed');
+    }(), 'transaction final-map identity observation failed');
+  }
+
+  static void _recordTransactionDiscard() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordTransactionDiscard();
+      }
+      return true;
+    }(), 'transaction discard observation failed');
+  }
+
+  static void _recordTransactionImmutablePublication() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordTransactionImmutablePublication();
+      }
+      return true;
+    }(), 'transaction immutable publication observation failed');
+  }
+
+  static void _recordTransactionNormalizationWrite(CanvasElementKind kind) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordTransactionNormalizationWrite(kind);
+      }
+      return true;
+    }(), 'transaction normalization observation failed');
   }
 
   static void _recordMembershipSetAllocation() {
@@ -522,40 +634,140 @@ final class FamilyTables {
   }
 }
 
+enum FamilyTablesDecision {
+  duplicateAdd,
+  updateCurrentRow,
+  updateMissingId,
+  updateSource,
+  updateKind,
+  updateNoOp,
+  removeMembership,
+  removeUnusedReference,
+  clear,
+  relationship,
+  acceptedDelta,
+  acceptedTouched,
+}
+
+enum FamilyTablesDecisionSubjectKind { element, resource, content }
+
+enum FamilyTablesDecisionResult {
+  present,
+  missing,
+  matches,
+  differs,
+  changed,
+  unchanged,
+  referenced,
+  unreferenced,
+  added,
+  removed,
+  valid,
+  invalid,
+}
+
+@visibleForTesting
+@immutable
+final class FamilyTablesDecisionRead {
+  const FamilyTablesDecisionRead({
+    required this.decision,
+    required this.subjectKind,
+    required this.subject,
+    required this.result,
+  });
+
+  final FamilyTablesDecision decision;
+  final FamilyTablesDecisionSubjectKind subjectKind;
+  final String subject;
+  final FamilyTablesDecisionResult result;
+
+  @override
+  bool operator ==(Object other) {
+    return other is FamilyTablesDecisionRead &&
+        other.decision == decision &&
+        other.subjectKind == subjectKind &&
+        other.subject == subject &&
+        other.result == result;
+  }
+
+  @override
+  int get hashCode => Object.hash(decision, subjectKind, subject, result);
+}
+
 @visibleForTesting
 // The seven explicit counters are one owner-semantic probe: splitting them
 // would fragment the single assert-gated observation surface by evidence type.
-// ignore: number-of-methods
+// ignore: number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTablesWork {
   int _mapProbeCount = 0;
   int _membershipSetAllocationCount = 0;
   int _membershipKeyCopyCount = 0;
-  final Map<CanvasElementKind, int> _batchOpenCountByFamily = {};
-  final Map<CanvasElementKind, int> _batchBaseEntryCopyCountByFamily = {};
-  final Map<CanvasElementKind, int> _batchFreezeCountByFamily = {};
-  final Map<CanvasElementKind, bool> _batchFinalMapRetainsBaseIdentityByFamily =
-      {};
   int _batchReplacementCount = 0;
+  final Map<CanvasElementKind, int> _transactionOpenCountByFamily = {};
+  final Map<CanvasElementKind, int> _transactionBaseEntryCopyCountByFamily = {};
+  final Map<CanvasElementKind, int> _transactionFreezeCountByFamily = {};
+  final Map<CanvasElementKind, int> _transactionNormalizationWriteCount = {};
+  final Map<CanvasElementKind, bool>
+  _transactionFinalMapRetainsBaseIdentityByFamily = {};
+  int _transactionDiscardCount = 0;
+  int _transactionImmutablePublicationCount = 0;
+  int _transactionIntermediateImmutablePublicationCount = 0;
+  int _staleDecisionReadCount = 0;
+  int _postFreezeWriteCount = 0;
+  int _postFreezeCopyCount = 0;
+  int _postFreezeNormalizationCount = 0;
+  int _postFreezeImmutablePublicationCount = 0;
+  final List<FamilyTablesDecision> _editorDecisionTrace = [];
+  final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
+  final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
+  final Map<FamilyTablesDecision, int> _staleDecisionReadCountByDecision = {};
 
   int get mapProbeCount => _mapProbeCount;
   int get membershipSetAllocationCount => _membershipSetAllocationCount;
   int get membershipKeyCopyCount => _membershipKeyCopyCount;
   int get batchReplacementCount => _batchReplacementCount;
+  int get transactionDiscardCount => _transactionDiscardCount;
+  int get transactionImmutablePublicationCount =>
+      _transactionImmutablePublicationCount;
+  int get transactionIntermediateImmutablePublicationCount =>
+      _transactionIntermediateImmutablePublicationCount;
+  int get staleDecisionReadCount => _staleDecisionReadCount;
+  int get postFreezeWriteCount => _postFreezeWriteCount;
+  int get postFreezeCopyCount => _postFreezeCopyCount;
+  int get postFreezeNormalizationCount => _postFreezeNormalizationCount;
+  int get postFreezeImmutablePublicationCount =>
+      _postFreezeImmutablePublicationCount;
+  List<FamilyTablesDecision> get editorDecisionTrace =>
+      List.unmodifiable(_editorDecisionTrace);
+  List<FamilyTablesDecisionRead> get editorDecisionReads =>
+      List.unmodifiable(_editorDecisionReads);
 
-  int batchOpenCount(CanvasElementKind kind) {
-    return _batchOpenCountByFamily[kind] ?? 0;
+  int transactionOpenCount(CanvasElementKind kind) {
+    return _transactionOpenCountByFamily[kind] ?? 0;
   }
 
-  int batchBaseEntryCopyCount(CanvasElementKind kind) {
-    return _batchBaseEntryCopyCountByFamily[kind] ?? 0;
+  int editorDecisionCount(FamilyTablesDecision decision) {
+    return _editorDecisionCount[decision] ?? 0;
   }
 
-  int batchFreezeCount(CanvasElementKind kind) {
-    return _batchFreezeCountByFamily[kind] ?? 0;
+  int staleDecisionReadCountFor(FamilyTablesDecision decision) {
+    return _staleDecisionReadCountByDecision[decision] ?? 0;
   }
 
-  bool batchFinalMapRetainsBaseIdentity(CanvasElementKind kind) {
-    return _batchFinalMapRetainsBaseIdentityByFamily[kind] ?? false;
+  int transactionBaseEntryCopyCount(CanvasElementKind kind) {
+    return _transactionBaseEntryCopyCountByFamily[kind] ?? 0;
+  }
+
+  int transactionFreezeCount(CanvasElementKind kind) {
+    return _transactionFreezeCountByFamily[kind] ?? 0;
+  }
+
+  int transactionNormalizationWriteCount(CanvasElementKind kind) {
+    return _transactionNormalizationWriteCount[kind] ?? 0;
+  }
+
+  bool transactionFinalMapRetainsBaseIdentity(CanvasElementKind kind) {
+    return _transactionFinalMapRetainsBaseIdentityByFamily[kind] ?? false;
   }
 
   void _recordMapProbe() {
@@ -570,105 +782,432 @@ final class FamilyTablesWork {
     _membershipKeyCopyCount += count;
   }
 
-  void _recordReplacement() {
+  void _recordEditorDecision(FamilyTablesDecision decision) {
+    _editorDecisionTrace.add(decision);
+    _editorDecisionCount.update(
+      decision,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+  }
+
+  void _recordEditorDecisionRead(FamilyTablesDecisionRead read) {
+    _editorDecisionReads.add(read);
+  }
+
+  void _recordStaleDecisionRead(FamilyTablesDecision? decision) {
+    _staleDecisionReadCount += 1;
+    if (decision != null) {
+      _staleDecisionReadCountByDecision.update(
+        decision,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
+  }
+
+  void _recordBatchReplacement() {
     _batchReplacementCount += 1;
   }
 
-  void _recordFamilyOpen(CanvasElementKind kind) {
-    _batchOpenCountByFamily.update(
+  void _recordTransactionFamilyOpen(CanvasElementKind kind) {
+    _transactionOpenCountByFamily.update(
       kind,
       (count) => count + 1,
       ifAbsent: () => 1,
     );
   }
 
-  void _recordFamilyBaseEntryCopies(CanvasElementKind kind, int count) {
-    _batchBaseEntryCopyCountByFamily.update(
+  void _recordTransactionFamilyBaseEntryCopies(
+    CanvasElementKind kind,
+    int count,
+  ) {
+    _transactionBaseEntryCopyCountByFamily.update(
       kind,
       (current) => current + count,
       ifAbsent: () => count,
     );
   }
 
-  void _recordFamilyFreeze(CanvasElementKind kind) {
-    _batchFreezeCountByFamily.update(
+  void _recordTransactionFamilyFreeze(CanvasElementKind kind) {
+    _transactionFreezeCountByFamily.update(
       kind,
       (count) => count + 1,
       ifAbsent: () => 1,
     );
   }
 
-  void _recordFinalMapIdentity(
+  void _recordTransactionNormalizationWrite(CanvasElementKind kind) {
+    _transactionNormalizationWriteCount.update(
+      kind,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+  }
+
+  void _recordTransactionFinalMapIdentity(
     CanvasElementKind kind, {
     required bool retainsBaseIdentity,
   }) {
-    _batchFinalMapRetainsBaseIdentityByFamily[kind] = retainsBaseIdentity;
+    _transactionFinalMapRetainsBaseIdentityByFamily[kind] = retainsBaseIdentity;
+  }
+
+  void _recordTransactionDiscard() {
+    _transactionDiscardCount += 1;
+  }
+
+  void _recordTransactionImmutablePublication() {
+    _transactionImmutablePublicationCount += 1;
+  }
+
+  void _recordTransactionIntermediateImmutablePublication() {
+    _transactionImmutablePublicationCount += 1;
+    _transactionIntermediateImmutablePublicationCount += 1;
+  }
+
+  void _recordPostFreezeWrite() {
+    _postFreezeWriteCount += 1;
+  }
+
+  void _recordPostFreezeCopy() {
+    _postFreezeCopyCount += 1;
+  }
+
+  void _recordPostFreezeNormalization() {
+    _postFreezeNormalizationCount += 1;
+  }
+
+  void _recordPostFreezeImmutablePublication() {
+    _postFreezeImmutablePublicationCount += 1;
   }
 }
 
-// Batch replacement remains one cohesive consumer while each typed family buffer
-// copies only when that family receives its first replacement in the batch.
-// ignore: coupling-between-object-classes
-final class _MutableFamilyRows {
-  _MutableFamilyRows.fromTables(FamilyTables tables)
-    : imageRows = _LazyFamilyMapBuffer(
-        tables.imageRows,
+// The sparse editor is the sole transaction-lifetime consumer of the generic
+// per-family buffer: rows stay current here until one accepted freeze.
+// Keeping all row-family operations here preserves that single source of truth.
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
+final class FamilyTablesEditor {
+  FamilyTablesEditor._(this._base)
+    : _imageRows = _LazyFamilyMapBuffer(
+        _base.imageRows,
         CanvasElementKind.image,
       ),
-      vectorRows = _LazyFamilyMapBuffer(
-        tables.vectorRows,
+      _vectorRows = _LazyFamilyMapBuffer(
+        _base.vectorRows,
         CanvasElementKind.vector,
       ),
-      pathRows = _LazyFamilyMapBuffer(tables.pathRows, CanvasElementKind.path),
-      textRows = _LazyFamilyMapBuffer(tables.textRows, CanvasElementKind.text),
-      strokeRows = _LazyFamilyMapBuffer(
-        tables.strokeRows,
+      _pathRows = _LazyFamilyMapBuffer(_base.pathRows, CanvasElementKind.path),
+      _textRows = _LazyFamilyMapBuffer(_base.textRows, CanvasElementKind.text),
+      _strokeRows = _LazyFamilyMapBuffer(
+        _base.strokeRows,
         CanvasElementKind.stroke,
       ),
-      lineRows = _LazyFamilyMapBuffer(tables.lineRows, CanvasElementKind.line),
-      rectRows = _LazyFamilyMapBuffer(tables.rectRows, CanvasElementKind.rect);
+      _lineRows = _LazyFamilyMapBuffer(_base.lineRows, CanvasElementKind.line),
+      _rectRows = _LazyFamilyMapBuffer(_base.rectRows, CanvasElementKind.rect);
 
-  final _LazyFamilyMapBuffer<ImageRow> imageRows;
-  final _LazyFamilyMapBuffer<VectorRow> vectorRows;
-  final _LazyFamilyMapBuffer<PathRow> pathRows;
-  final _LazyFamilyMapBuffer<TextRow> textRows;
-  final _LazyFamilyMapBuffer<StrokeRow> strokeRows;
-  final _LazyFamilyMapBuffer<LineRow> lineRows;
-  final _LazyFamilyMapBuffer<RectRow> rectRows;
+  final FamilyTables _base;
 
-  void replace(CanvasElement element) {
+  final _LazyFamilyMapBuffer<ImageRow> _imageRows;
+  final _LazyFamilyMapBuffer<VectorRow> _vectorRows;
+  final _LazyFamilyMapBuffer<PathRow> _pathRows;
+  final _LazyFamilyMapBuffer<TextRow> _textRows;
+  final _LazyFamilyMapBuffer<StrokeRow> _strokeRows;
+  final _LazyFamilyMapBuffer<LineRow> _lineRows;
+  final _LazyFamilyMapBuffer<RectRow> _rectRows;
+
+  bool _isOpen = true;
+  bool _wasCleared = false;
+  FamilyTables? _frozenTables;
+  bool _frozenTablesAdopted = false;
+
+  bool get hasChanges =>
+      _imageRows.hasChanges ||
+      _vectorRows.hasChanges ||
+      _pathRows.hasChanges ||
+      _textRows.hasChanges ||
+      _strokeRows.hasChanges ||
+      _lineRows.hasChanges ||
+      _rectRows.hasChanges;
+
+  void recordUpdateBatch() {
+    _checkOpen();
+    FamilyTables._recordBatchReplacementStart();
+  }
+
+  void recordDecision(FamilyTablesDecision decision) {
+    assert(() {
+      final work = Zone.current[FamilyTables._workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordEditorDecision(decision);
+      }
+      return true;
+    }(), 'sparse family decision observation failed');
+  }
+
+  void recordDecisionRead({
+    required FamilyTablesDecision decision,
+    required FamilyTablesDecisionSubjectKind subjectKind,
+    required String subject,
+    required FamilyTablesDecisionResult result,
+  }) {
+    assert(() {
+      final work = Zone.current[FamilyTables._workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordEditorDecisionRead(
+          FamilyTablesDecisionRead(
+            decision: decision,
+            subjectKind: subjectKind,
+            subject: subject,
+            result: result,
+          ),
+        );
+      }
+      return true;
+    }(), 'sparse family decision read observation failed');
+  }
+
+  T decide<T>(FamilyTablesDecision decision, T Function() operation) {
+    recordDecision(decision);
+
+    return runZoned(
+      operation,
+      zoneValues: {FamilyTables._sparseDecisionZoneKey: decision},
+    );
+  }
+
+  bool contains(CanvasElementId id) {
+    final value = id.value;
+
+    return _imageRows.contains(value) ||
+        _vectorRows.contains(value) ||
+        _pathRows.contains(value) ||
+        _textRows.contains(value) ||
+        _strokeRows.contains(value) ||
+        _lineRows.contains(value) ||
+        _rectRows.contains(value);
+  }
+
+  bool referencesResource(CanvasResourceId id) {
+    return _imageRows.values.any((row) => row.resourceId == id) ||
+        _vectorRows.values.any((row) => row.resourceId == id);
+  }
+
+  // The lookup preserves FamilyTables' existing explicit family precedence.
+  // ignore: cyclomatic-complexity
+  CanvasElement? elementByCanvasId(CanvasElementId id) {
+    final value = id.value;
+
+    return _imageRows[value]?.toElement() ??
+        _vectorRows[value]?.toElement() ??
+        _pathRows[value]?.toElement() ??
+        _textRows[value]?.toElement() ??
+        _strokeRows[value]?.toElement() ??
+        _lineRows[value]?.toElement() ??
+        _rectRows[value]?.toElement();
+  }
+
+  void addElement(CanvasElement element) {
+    _checkOpen();
+    final alreadyPresent = contains(element.id);
+    recordDecisionRead(
+      decision: FamilyTablesDecision.duplicateAdd,
+      subjectKind: FamilyTablesDecisionSubjectKind.element,
+      subject: element.id.value,
+      result: alreadyPresent
+          ? FamilyTablesDecisionResult.present
+          : FamilyTablesDecisionResult.missing,
+    );
+    if (alreadyPresent) {
+      throw CanvasDataException(
+        code: CanvasDataErrorCode.duplicateElementId,
+        message: 'duplicate element id.',
+        path: 'elements.id',
+      );
+    }
+    replaceElement(element);
+  }
+
+  void replaceElement(CanvasElement element) {
+    _checkOpen();
     final id = element.id.value;
     switch (element) {
       case CanvasImageElement():
-        imageRows.replace(id, ImageRow(element));
+        _imageRows.replace(id, ImageRow(element));
       case CanvasVectorElement():
-        vectorRows.replace(id, VectorRow(element));
+        _vectorRows.replace(id, VectorRow(element));
       case CanvasPathElement():
-        pathRows.replace(id, PathRow(element));
+        _pathRows.replace(id, PathRow(element));
       case CanvasTextElement():
-        textRows.replace(id, TextRow(element));
+        _textRows.replace(id, TextRow(element));
       case CanvasStrokeElement():
-        strokeRows.replace(id, StrokeRow(element));
+        _strokeRows.replace(id, StrokeRow(element));
       case CanvasLineElement():
-        lineRows.replace(id, LineRow(element));
+        _lineRows.replace(id, LineRow(element));
       case CanvasRectElement():
-        rectRows.replace(id, RectRow(element));
+        _rectRows.replace(id, RectRow(element));
     }
   }
 
-  FamilyTables toFamilyTables() {
-    return FamilyTables._fromTables(
-      imageRows: imageRows.freeze(),
-      vectorRows: vectorRows.freeze(),
-      pathRows: pathRows.freeze(),
-      textRows: textRows.freeze(),
-      strokeRows: strokeRows.freeze(),
-      lineRows: lineRows.freeze(),
-      rectRows: rectRows.freeze(),
+  void removeElement(CanvasElementId id) {
+    _checkOpen();
+    final value = id.value;
+    for (final rows in [
+      _imageRows,
+      _vectorRows,
+      _pathRows,
+      _textRows,
+      _strokeRows,
+      _lineRows,
+      _rectRows,
+    ]) {
+      rows.removeIfPresent(value);
+    }
+  }
+
+  void clearElements() {
+    _checkOpen();
+    _wasCleared = true;
+    for (final rows in [
+      _imageRows,
+      _vectorRows,
+      _pathRows,
+      _textRows,
+      _strokeRows,
+      _lineRows,
+      _rectRows,
+    ]) {
+      rows.clear();
+    }
+  }
+
+  void normalizeFinalEqualRows(
+    Iterable<CanvasElementId> ids,
+    bool Function(CanvasElement before, CanvasElement after) isFinalEqual,
+  ) {
+    _checkOpen(normalization: true);
+    for (final id in ids) {
+      final before = FamilyTables.readSparseBase(
+        () => _base.elementByCanvasId(id),
+      );
+      final after = elementByCanvasId(id);
+      if (before == null || after == null || !isFinalEqual(before, after)) {
+        continue;
+      }
+      _replaceBaseElement(before);
+    }
+    if (!_wasCleared) {
+      for (final rows in [
+        _imageRows,
+        _vectorRows,
+        _pathRows,
+        _textRows,
+        _strokeRows,
+        _lineRows,
+        _rectRows,
+      ]) {
+        rows.retainBaseIfExact();
+      }
+    }
+  }
+
+  FamilyTables freeze() {
+    _checkOpen();
+    _isOpen = false;
+    final tables = FamilyTables._fromTables(
+      imageRows: _imageRows.freeze(),
+      vectorRows: _vectorRows.freeze(),
+      pathRows: _pathRows.freeze(),
+      textRows: _textRows.freeze(),
+      strokeRows: _strokeRows.freeze(),
+      lineRows: _lineRows.freeze(),
+      rectRows: _rectRows.freeze(),
     );
+    FamilyTables._recordTransactionImmutablePublication();
+    _frozenTables = tables;
+
+    return tables;
+  }
+
+  void discard() {
+    if (!_isOpen) {
+      return;
+    }
+    _isOpen = false;
+    FamilyTables._recordTransactionDiscard();
+  }
+
+  void _replaceBaseElement(CanvasElement element) {
+    switch (element) {
+      case CanvasImageElement():
+        _imageRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.image,
+        );
+      case CanvasVectorElement():
+        _vectorRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.vector,
+        );
+      case CanvasPathElement():
+        _pathRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.path,
+        );
+      case CanvasTextElement():
+        _textRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.text,
+        );
+      case CanvasStrokeElement():
+        _strokeRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.stroke,
+        );
+      case CanvasLineElement():
+        _lineRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.line,
+        );
+      case CanvasRectElement():
+        _rectRows.restoreBase(element.id.value);
+        FamilyTables._recordTransactionNormalizationWrite(
+          CanvasElementKind.rect,
+        );
+    }
+  }
+
+  bool get _isFrozen => _frozenTables != null;
+
+  bool _consumeFrozenAdoption(FamilyTables tables) {
+    if (!identical(_frozenTables, tables) || _frozenTablesAdopted) {
+      return false;
+    }
+    _frozenTablesAdopted = true;
+
+    return true;
+  }
+
+  void _checkOpen({bool normalization = false}) {
+    if (!_isOpen) {
+      assert(() {
+        final work = Zone.current[FamilyTables._workZoneKey];
+        if (work is FamilyTablesWork) {
+          if (normalization) {
+            work._recordPostFreezeNormalization();
+          } else {
+            work._recordPostFreezeWrite();
+          }
+        }
+        return true;
+      }(), 'post-freeze sparse family editor mutation observation failed');
+      throw StateError('FamilyTablesEditor was already consumed.');
+    }
   }
 }
 
+// The generic buffer deliberately owns its complete COW lifecycle so no second
+// family mutation algorithm can drift from editor semantics.
+// ignore: number-of-methods
 final class _LazyFamilyMapBuffer<Row> {
   _LazyFamilyMapBuffer(this._baseRows, this._kind);
 
@@ -676,24 +1215,72 @@ final class _LazyFamilyMapBuffer<Row> {
   final CanvasElementKind _kind;
   Map<String, Row>? _mutableRows;
 
+  bool get hasChanges => _mutableRows != null;
+
+  Row? operator [](String id) {
+    final mutableRows = _mutableRows;
+    return mutableRows == null ? _baseRows[id] : mutableRows[id];
+  }
+
+  bool contains(String id) {
+    final mutableRows = _mutableRows;
+    return mutableRows == null
+        ? _baseRows.containsKey(id)
+        : mutableRows.containsKey(id);
+  }
+
+  Iterable<Row> get values => (_mutableRows ?? _baseRows).values;
+
   void replace(String id, Row row) {
     _openRows()[id] = row;
+  }
+
+  void restoreBase(String id) {
+    final row = _baseRows[id];
+    if (row != null) {
+      _openRows()[id] = row;
+    }
+  }
+
+  void removeIfPresent(String id) {
+    if (contains(id)) {
+      _openRows().remove(id);
+    }
+  }
+
+  void clear() {
+    final mutableRows = _mutableRows;
+    if (mutableRows != null) {
+      mutableRows.clear();
+      return;
+    }
+    _recordOpen(baseEntryCopies: 0);
+    _mutableRows = <String, Row>{};
+  }
+
+  void retainBaseIfExact() {
+    final mutableRows = _mutableRows;
+    if (mutableRows == null || mutableRows.length != _baseRows.length) {
+      return;
+    }
+    for (final MapEntry(key: key, value: value) in _baseRows.entries) {
+      if (!identical(mutableRows[key], value)) {
+        return;
+      }
+    }
+    _mutableRows = null;
   }
 
   Map<String, Row> freeze() {
     final mutableRows = _mutableRows;
     if (mutableRows == null) {
-      FamilyTables._recordBatchFinalMapIdentity(
-        _kind,
-        retainsBaseIdentity: true,
-      );
+      _recordFinalMapIdentity(retainsBaseIdentity: true);
       return _baseRows;
     }
 
     final frozenRows = Map<String, Row>.unmodifiable(mutableRows);
-    FamilyTables._recordBatchFamilyFreeze(_kind);
-    FamilyTables._recordBatchFinalMapIdentity(
-      _kind,
+    FamilyTables._recordTransactionFamilyFreeze(_kind);
+    _recordFinalMapIdentity(
       retainsBaseIdentity: identical(frozenRows, _baseRows),
     );
 
@@ -706,12 +1293,26 @@ final class _LazyFamilyMapBuffer<Row> {
       return mutableRows;
     }
 
-    FamilyTables._recordBatchFamilyOpen(_kind);
-    FamilyTables._recordBatchFamilyBaseEntryCopies(_kind, _baseRows.length);
+    _recordOpen(baseEntryCopies: _baseRows.length);
     final openedRows = Map<String, Row>.of(_baseRows);
     _mutableRows = openedRows;
 
     return openedRows;
+  }
+
+  void _recordOpen({required int baseEntryCopies}) {
+    FamilyTables._recordTransactionFamilyOpen(_kind);
+    FamilyTables._recordTransactionFamilyBaseEntryCopies(
+      _kind,
+      baseEntryCopies,
+    );
+  }
+
+  void _recordFinalMapIdentity({required bool retainsBaseIdentity}) {
+    FamilyTables._recordTransactionFinalMapIdentity(
+      _kind,
+      retainsBaseIdentity: retainsBaseIdentity,
+    );
   }
 }
 

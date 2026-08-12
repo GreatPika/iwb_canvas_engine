@@ -156,6 +156,23 @@ final class ElementRegistry {
     return familyTables.elementByCanvasId(id);
   }
 
+  // Sparse family rows are adopted once after their editor freezes; all other
+  // committed registry facts keep their existing immutable lifecycle.
+  ElementRegistry adoptFamilyTables(FamilyTables familyTables) {
+    FamilyTables.recordSparseFamilyAdoption(familyTables);
+    return ElementRegistry._withUpdatedFamilies(
+      familyTables: familyTables,
+      layerTable: layerTable,
+      backgroundElementIds: backgroundElementIds,
+      contentElementOrder: contentElementOrder,
+      frameElementOrder: frameElementOrder,
+      frameOrderTokensById: frameOrderTokensById,
+      elementLocationFacts: elementLocationFacts,
+      admittedElementIds: admittedElementIds,
+      admittedLayerIds: admittedLayerIds,
+    );
+  }
+
   ElementRegistry ensureLayer(CanvasLayerId id, {int? index}) {
     return ElementRegistry._(
       backgroundElementIds: backgroundElementIds,
@@ -207,23 +224,48 @@ final class ElementRegistry {
     );
   }
 
-  ElementRegistry? updateElements(Iterable<CanvasElement> elements) {
-    final updateList = List<CanvasElement>.unmodifiable(elements);
-    if (updateList.isEmpty) {
-      return null;
+  ElementRegistry addElementStructure(
+    CanvasElement element, {
+    CanvasLayerId? layerId,
+    int? index,
+  }) {
+    final appendLayerId = _contentAppendLayerId(layerId: layerId, index: index);
+    final nextLayerTable = layerTable.addElement(
+      element.id,
+      layerId: layerId,
+      index: index,
+    );
+    if (appendLayerId != null) {
+      return _withAppendedContentElement(
+        element.id,
+        layerId: appendLayerId,
+        familyTables: familyTables,
+        layerTable: nextLayerTable,
+        admitsNewLayer: !layerTable.contains(appendLayerId),
+      );
     }
-    final updatedFamilyTables = familyTables.replaceElements(updateList);
 
-    return ElementRegistry._withUpdatedFamilies(
-      familyTables: updatedFamilyTables,
-      layerTable: layerTable,
+    return ElementRegistry._(
       backgroundElementIds: backgroundElementIds,
-      contentElementOrder: contentElementOrder,
-      frameElementOrder: frameElementOrder,
-      frameOrderTokensById: frameOrderTokensById,
-      elementLocationFacts: elementLocationFacts,
-      admittedElementIds: admittedElementIds,
-      admittedLayerIds: admittedLayerIds,
+      familyTables: familyTables,
+      layerTable: nextLayerTable,
+    );
+  }
+
+  ElementRegistry addBackgroundElementStructure(
+    CanvasElement element, {
+    int? index,
+  }) {
+    final nextBackgroundIds = backgroundElementIds.toList();
+    nextBackgroundIds.insert(
+      _clampedInsertIndex(index, nextBackgroundIds.length),
+      element.id,
+    );
+
+    return ElementRegistry._(
+      backgroundElementIds: nextBackgroundIds,
+      familyTables: familyTables,
+      layerTable: layerTable,
     );
   }
 
@@ -238,10 +280,29 @@ final class ElementRegistry {
     );
   }
 
+  ElementRegistry removeElementStructure(CanvasElementId id) {
+    return ElementRegistry._(
+      backgroundElementIds: [
+        for (final elementId in backgroundElementIds)
+          if (elementId != id) elementId,
+      ],
+      familyTables: familyTables,
+      layerTable: layerTable.removeElement(id),
+    );
+  }
+
   ElementRegistry clearContent() {
     return ElementRegistry._(
       backgroundElementIds: const [],
       familyTables: familyTables.clearElements(),
+      layerTable: layerTable.clearElements(),
+    );
+  }
+
+  ElementRegistry clearContentStructure() {
+    return ElementRegistry._(
+      backgroundElementIds: const [],
+      familyTables: familyTables,
       layerTable: layerTable.clearElements(),
     );
   }
