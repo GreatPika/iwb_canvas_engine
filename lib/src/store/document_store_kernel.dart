@@ -100,17 +100,19 @@ final class DocumentStoreKernel {
   }
 
   Iterable<CanvasLayerId> get layerIds {
-    return _document.elements.layerTable.rows.map((row) => row.id);
+    return LayerTable.withReadScopeIterable<CanvasLayerId>(
+      LayerTableReadScope.intentionalIteration,
+      () => _document.elements.layerTable.rows.map((row) => row.id),
+    );
   }
 
   Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
-    for (final row in _document.elements.layerTable.rows) {
-      if (row.id == id) {
-        return row.elementIds;
-      }
-    }
-
-    return const <CanvasElementId>[];
+    return LayerTable.withReadScope<Iterable<CanvasElementId>>(
+      LayerTableReadScope.perLayerElements,
+      () =>
+          _document.elements.layerTable.locationFor(id)?.row.elementIds ??
+          const <CanvasElementId>[],
+    );
   }
 
   bool isResourceReferenced(CanvasResourceId id) {
@@ -1565,13 +1567,10 @@ Set<CanvasLayerId> _changedLayerIds(
 }
 
 LayerRow? _layerRowById(ElementRegistry registry, CanvasLayerId id) {
-  for (final row in registry.layerTable.rows) {
-    if (row.id == id) {
-      return row;
-    }
-  }
-
-  return null;
+  return LayerTable.withReadScope(
+    LayerTableReadScope.rowIndex,
+    () => registry.layerTable.locationFor(id)?.row,
+  );
 }
 
 bool _sameLayerFacts(LayerRow? before, LayerRow? after) {

@@ -276,7 +276,7 @@ final class ElementRegistry {
           if (elementId != id) elementId,
       ],
       familyTables: familyTables.removeElement(id),
-      layerTable: layerTable.removeElement(id),
+      layerTable: _layerTableWithoutContentElement(id),
     );
   }
 
@@ -287,7 +287,7 @@ final class ElementRegistry {
           if (elementId != id) elementId,
       ],
       familyTables: familyTables,
-      layerTable: layerTable.removeElement(id),
+      layerTable: _layerTableWithoutContentElement(id),
     );
   }
 
@@ -295,7 +295,9 @@ final class ElementRegistry {
     return ElementRegistry._(
       backgroundElementIds: const [],
       familyTables: familyTables.clearElements(),
-      layerTable: layerTable.clearElements(),
+      layerTable: layerTable.clearElements(
+        hasContent: contentElementOrder.isNotEmpty,
+      ),
     );
   }
 
@@ -303,7 +305,9 @@ final class ElementRegistry {
     return ElementRegistry._(
       backgroundElementIds: const [],
       familyTables: familyTables,
-      layerTable: layerTable.clearElements(),
+      layerTable: layerTable.clearElements(
+        hasContent: contentElementOrder.isNotEmpty,
+      ),
     );
   }
 
@@ -311,21 +315,34 @@ final class ElementRegistry {
     required CanvasLayerId? layerId,
     required int? index,
   }) {
-    if (index != null) {
+    return LayerTable.withReadScope(LayerTableReadScope.placement, () {
+      if (index != null) {
+        return null;
+      }
+      if (layerTable.rows.isEmpty) {
+        return layerId ?? CanvasLayerId('default-layer');
+      }
+      if (layerId == null) {
+        return layerTable.rows.last.id;
+      }
+      final targetIndex = layerTable.locationFor(layerId)?.index ?? -1;
+      if (targetIndex == -1 || targetIndex == layerTable.rows.length - 1) {
+        return layerId;
+      }
+
       return null;
-    }
-    if (layerTable.rows.isEmpty) {
-      return layerId ?? CanvasLayerId('default-layer');
-    }
-    if (layerId == null) {
-      return layerTable.rows.last.id;
-    }
-    final targetIndex = layerTable.rows.indexWhere((row) => row.id == layerId);
-    if (targetIndex == -1 || targetIndex == layerTable.rows.length - 1) {
-      return layerId;
+    });
+  }
+
+  LayerTable _layerTableWithoutContentElement(CanvasElementId id) {
+    if (elementLocationFacts[id] case ElementLocationFacts(
+      kind: ElementLocationKind.content,
+      layerId: final layerId?,
+    )) {
+      return layerTable.removeElement(id, layerId: layerId);
     }
 
-    return null;
+    return layerTable;
   }
 
   ElementRegistry _withAppendedContentElement(
