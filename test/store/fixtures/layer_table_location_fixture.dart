@@ -448,7 +448,6 @@ void main() {
       work.count(LayerTableWorkEvent.membershipLookup),
       greaterThanOrEqualTo(2),
     );
-    expect(work.count(LayerTableWorkEvent.membershipSetMaterialization), 0);
     expect(
       work.count(LayerTableWorkEvent.membershipLocationRead),
       greaterThanOrEqualTo(2),

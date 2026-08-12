@@ -8,8 +8,8 @@ import 'layer_table.dart';
 
 // ElementRegistry is the committed element table aggregate; keeping sparse row
 // operations with lookup/order facts prevents a second source of truth.
-// Sparse append overlays also belong here so order, location, and admission
-// facts stay one atomic registry snapshot instead of drifting across helpers.
+// Sparse append overlays belong here so order and location facts stay one
+// atomic registry snapshot instead of drifting across helpers.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class ElementRegistry {
   ElementRegistry.empty()
@@ -20,8 +20,8 @@ final class ElementRegistry {
       );
 
   // The constructor materializes one committed element registry snapshot:
-  // family rows, layer rows, content order, frame order, and admitted ids must
-  // stay aligned from the same input pass instead of drifting through
+  // family rows, layer rows, content order, and frame order must stay aligned
+  // from the same input pass instead of drifting through
   // metric-shaped builders.
   // ignore: halstead-volume
   ElementRegistry({
@@ -60,8 +60,6 @@ final class ElementRegistry {
     frameElementOrder = orderFacts.frameElementOrder;
     frameOrderTokensById = orderFacts.frameOrderTokensById;
     elementLocationFacts = orderFacts.elementLocationFacts;
-    admittedElementIds = orderFacts.admittedElementIds;
-    admittedLayerIds = Set.unmodifiable(layerTable.admittedIds);
   }
 
   ElementRegistry._withUpdatedFamilies({
@@ -72,8 +70,6 @@ final class ElementRegistry {
     required this.frameElementOrder,
     required this.frameOrderTokensById,
     required this.elementLocationFacts,
-    required this.admittedElementIds,
-    required this.admittedLayerIds,
   });
 
   factory ElementRegistry.fromTables({
@@ -101,8 +97,6 @@ final class ElementRegistry {
       frameElementOrder: orderFacts.frameElementOrder,
       frameOrderTokensById: orderFacts.frameOrderTokensById,
       elementLocationFacts: orderFacts.elementLocationFacts,
-      admittedElementIds: orderFacts.admittedElementIds,
-      admittedLayerIds: Set.unmodifiable(layerTable.admittedIds),
     );
   }
 
@@ -113,8 +107,6 @@ final class ElementRegistry {
   late final List<CanvasElementId> frameElementOrder;
   late final Map<CanvasElementId, int> frameOrderTokensById;
   late final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
-  late final Set<String> admittedElementIds;
-  late final Set<String> admittedLayerIds;
 
   int get elementCount {
     return frameElementOrder.length;
@@ -168,8 +160,6 @@ final class ElementRegistry {
       frameElementOrder: frameElementOrder,
       frameOrderTokensById: frameOrderTokensById,
       elementLocationFacts: elementLocationFacts,
-      admittedElementIds: admittedElementIds,
-      admittedLayerIds: admittedLayerIds,
     );
   }
 
@@ -199,7 +189,6 @@ final class ElementRegistry {
         layerId: appendLayerId,
         familyTables: nextFamilyTables,
         layerTable: nextLayerTable,
-        admitsNewLayer: !layerTable.contains(appendLayerId),
       );
     }
 
@@ -241,7 +230,6 @@ final class ElementRegistry {
         layerId: appendLayerId,
         familyTables: familyTables,
         layerTable: nextLayerTable,
-        admitsNewLayer: !layerTable.contains(appendLayerId),
       );
     }
 
@@ -350,7 +338,6 @@ final class ElementRegistry {
     required CanvasLayerId layerId,
     required FamilyTables familyTables,
     required LayerTable layerTable,
-    required bool admitsNewLayer,
   }) {
     return ElementRegistry._withUpdatedFamilies(
       familyTables: familyTables,
@@ -368,10 +355,6 @@ final class ElementRegistry {
         id,
         ElementLocationFacts.content(layerId),
       ),
-      admittedElementIds: _AppendedReadOnlySet(admittedElementIds, id.value),
-      admittedLayerIds: admitsNewLayer
-          ? _AppendedReadOnlySet(admittedLayerIds, layerId.value)
-          : admittedLayerIds,
     );
   }
 }
@@ -395,7 +378,6 @@ final class _ElementRegistryOrderFacts {
     required this.frameElementOrder,
     required this.frameOrderTokensById,
     required this.elementLocationFacts,
-    required this.admittedElementIds,
   });
 
   final List<CanvasElementId> backgroundElementIds;
@@ -403,7 +385,6 @@ final class _ElementRegistryOrderFacts {
   final List<CanvasElementId> frameElementOrder;
   final Map<CanvasElementId, int> frameOrderTokensById;
   final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
-  final Set<String> admittedElementIds;
 
   factory _ElementRegistryOrderFacts.build(
     Iterable<CanvasElementId> backgroundElementIds,
@@ -431,7 +412,6 @@ final class _ElementRegistryOrderAccumulator {
   final _frame = <CanvasElementId>[];
   final _tokens = <CanvasElementId, int>{};
   final _locations = <CanvasElementId, ElementLocationFacts>{};
-  final _admittedIds = <String>{};
 
   void addBackground(CanvasElementId id) {
     _background.add(id);
@@ -446,7 +426,6 @@ final class _ElementRegistryOrderAccumulator {
   void _admit(CanvasElementId id, ElementLocationFacts location) {
     _tokens[id] = _frame.length;
     _locations[id] = location;
-    _admittedIds.add(id.value);
     _frame.add(id);
   }
 
@@ -457,7 +436,6 @@ final class _ElementRegistryOrderAccumulator {
       frameElementOrder: List.unmodifiable(_frame),
       frameOrderTokensById: Map.unmodifiable(_tokens),
       elementLocationFacts: Map.unmodifiable(_locations),
-      admittedElementIds: Set.unmodifiable(_admittedIds),
     );
   }
 }
@@ -468,7 +446,6 @@ final class ElementRegistrySchemaV1OrderImportBuilder {
   List<CanvasElementId>? _frame = [];
   Map<CanvasElementId, int>? _tokens = {};
   Map<CanvasElementId, ElementLocationFacts>? _locations = {};
-  Set<String>? _admittedIds = {};
 
   void addBackground(CanvasElementId id) {
     _live(_background).add(id);
@@ -486,13 +463,11 @@ final class ElementRegistrySchemaV1OrderImportBuilder {
     final frame = _live(_frame);
     final tokens = _live(_tokens);
     final locations = _live(_locations);
-    final admittedIds = _live(_admittedIds);
     _background = null;
     _content = null;
     _frame = null;
     _tokens = null;
     _locations = null;
-    _admittedIds = null;
 
     return ElementRegistryOrderImportFacts._owned(
       backgroundElementIds: background,
@@ -500,7 +475,6 @@ final class ElementRegistrySchemaV1OrderImportBuilder {
       frameElementOrder: frame,
       frameOrderTokensById: tokens,
       elementLocationFacts: locations,
-      admittedElementIds: admittedIds,
     );
   }
 
@@ -512,7 +486,6 @@ final class ElementRegistrySchemaV1OrderImportBuilder {
     final frame = _live(_frame);
     _live(_tokens)[id] = frame.length;
     _live(_locations)[id] = location;
-    _live(_admittedIds).add(id.value);
     frame.add(id);
   }
 
@@ -534,20 +507,17 @@ final class ElementRegistryOrderImportFacts {
     required List<CanvasElementId> frameElementOrder,
     required Map<CanvasElementId, int> frameOrderTokensById,
     required Map<CanvasElementId, ElementLocationFacts> elementLocationFacts,
-    required Set<String> admittedElementIds,
   }) : backgroundElementIds = UnmodifiableListView(backgroundElementIds),
        contentElementOrder = UnmodifiableListView(contentElementOrder),
        frameElementOrder = UnmodifiableListView(frameElementOrder),
        frameOrderTokensById = UnmodifiableMapView(frameOrderTokensById),
-       elementLocationFacts = UnmodifiableMapView(elementLocationFacts),
-       admittedElementIds = UnmodifiableSetView(admittedElementIds);
+       elementLocationFacts = UnmodifiableMapView(elementLocationFacts);
 
   final List<CanvasElementId> backgroundElementIds;
   final List<CanvasElementId> contentElementOrder;
   final List<CanvasElementId> frameElementOrder;
   final Map<CanvasElementId, int> frameOrderTokensById;
   final Map<CanvasElementId, ElementLocationFacts> elementLocationFacts;
-  final Set<String> admittedElementIds;
 }
 
 enum ElementLocationKind { background, content }
@@ -592,51 +562,6 @@ final class _AppendedReadOnlyMap<K, V> extends MapBase<K, V> {
   V? remove(Object? key) {
     throw UnsupportedError('ElementRegistry maps are read-only.');
   }
-}
-
-final class _AppendedReadOnlySet<E> extends SetBase<E> {
-  _AppendedReadOnlySet(this._base, this._value);
-
-  final Set<E> _base;
-  final E _value;
-
-  @override
-  bool contains(Object? element) =>
-      element == _value || _base.contains(element);
-
-  @override
-  Iterator<E> get iterator {
-    if (_base.contains(_value)) {
-      return _base.iterator;
-    }
-
-    return _followedByOne(_base, _value).iterator;
-  }
-
-  @override
-  int get length => _base.contains(_value) ? _base.length : _base.length + 1;
-
-  @override
-  bool add(E value) {
-    throw UnsupportedError('ElementRegistry sets are read-only.');
-  }
-
-  @override
-  E? lookup(Object? element) {
-    if (element == _value) {
-      return _value;
-    }
-
-    return _base.lookup(element);
-  }
-
-  @override
-  bool remove(Object? value) {
-    throw UnsupportedError('ElementRegistry sets are read-only.');
-  }
-
-  @override
-  Set<E> toSet() => Set.of(this);
 }
 
 Iterable<T> _followedByOne<T>(Iterable<T> values, T value) sync* {

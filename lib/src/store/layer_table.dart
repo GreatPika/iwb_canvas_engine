@@ -49,7 +49,6 @@ enum LayerTableWorkEvent {
   discard,
   unchangedLocationFactIdentityRetain,
   membershipLookup,
-  membershipSetMaterialization,
   membershipLocationRead,
   membershipRowVisit,
   rowIndexRowVisit,
@@ -59,6 +58,9 @@ enum LayerTableWorkEvent {
   perLayerElementRowVisit,
   perLayerElementLocationRead,
   intentionalIterationRowVisit,
+  admissionEnumerationOpen,
+  admissionEnumerationEntry,
+  admissionEnumerationClose,
 }
 
 // Internal consumers use this only to classify owner work when an observer is
@@ -107,13 +109,22 @@ final class LayerTable {
   final List<LayerRow> rows;
   final Map<CanvasLayerId, LayerLocationFacts> layerLocationFacts;
 
-  static List<LayerRow> _publishedRows(List<LayerRow> rows) {
-    return rows is _LayerRowsView ? rows : _LayerRowsView(rows);
+  // Complete-id consumers receive each committed row id immediately; no
+  // membership collection is retained for admission.
+  void enumerateLayerIds(void Function(String) accept) {
+    _recordWork(LayerTableWorkEvent.admissionEnumerationOpen);
+    try {
+      for (final row in rows) {
+        _recordWork(LayerTableWorkEvent.admissionEnumerationEntry);
+        accept(row.id.value);
+      }
+    } finally {
+      _recordWork(LayerTableWorkEvent.admissionEnumerationClose);
+    }
   }
 
-  Set<String> get admittedIds {
-    _recordWork(LayerTableWorkEvent.membershipSetMaterialization);
-    return {for (final row in rows) row.id.value};
+  static List<LayerRow> _publishedRows(List<LayerRow> rows) {
+    return rows is _LayerRowsView ? rows : _LayerRowsView(rows);
   }
 
   bool contains(CanvasLayerId id) {

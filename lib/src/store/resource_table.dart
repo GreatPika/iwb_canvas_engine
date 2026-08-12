@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:collection';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_errors.dart';
@@ -6,10 +9,15 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 
+@visibleForTesting
+enum ResourceTableEnumerationEvent { open, entry, close }
+
 // ResourceTable owns descriptor admission, mutation, and public projection for
 // one table; splitting these methods would duplicate descriptor invariants.
 // ignore: number-of-methods
 final class ResourceTable {
+  static final Object _enumerationZoneKey = Object();
+
   const ResourceTable.empty() : descriptors = const {};
 
   factory ResourceTable(
@@ -56,8 +64,27 @@ final class ResourceTable {
   final Map<CanvasResourceId, StoreResourceDescriptorFacts> descriptors;
 
   int get count => descriptors.length;
-  Set<String> get admittedIds {
-    return {for (final id in descriptors.keys) id.value};
+
+  void enumerateResourceIds(void Function(String) accept) {
+    _recordEnumeration(ResourceTableEnumerationEvent.open);
+    try {
+      for (final id in descriptors.keys) {
+        _recordEnumeration(ResourceTableEnumerationEvent.entry);
+        accept(id.value);
+      }
+    } finally {
+      _recordEnumeration(ResourceTableEnumerationEvent.close);
+    }
+  }
+
+  // Enumeration work is test-only and assert-gated, retaining neither facts
+  // nor telemetry in production.
+  @visibleForTesting
+  static T observeEnumeration<T>(
+    void Function(ResourceTableEnumerationEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_enumerationZoneKey: sink});
   }
 
   List<CanvasResource> projectResources() {
@@ -74,6 +101,16 @@ final class ResourceTable {
   }
 
   bool contains(CanvasResourceId id) => descriptors.containsKey(id);
+
+  static void _recordEnumeration(ResourceTableEnumerationEvent event) {
+    assert(() {
+      final sink = Zone.current[_enumerationZoneKey];
+      if (sink is void Function(ResourceTableEnumerationEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'resource table enumeration observation failed');
+  }
 
   ResourceTable withAcceptedResourceRevisions(
     ResourceTable previous, {

@@ -97,10 +97,6 @@ final class CommittedDocument {
     );
   }
 
-  Set<String> get admittedElementIds => elements.admittedElementIds;
-  Set<String> get admittedLayerIds => elements.admittedLayerIds;
-  Set<String> get admittedResourceIds => resourceTable.admittedIds;
-
   StoreResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
     return resourceTable.descriptors[id];
   }

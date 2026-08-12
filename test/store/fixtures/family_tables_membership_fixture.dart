@@ -187,8 +187,6 @@ void _expectDirectMembership(
   final contains = FamilyTables.observeWork(work, () => tables.contains(id));
 
   expect(contains, expectedContains);
-  expect(work.membershipSetAllocationCount, 0);
-  expect(work.membershipKeyCopyCount, 0);
   expect(work.mapProbeCount, expectedProbes);
 }
 

@@ -1,3 +1,9 @@
+// ignore_for_file: number-of-imports
+
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
@@ -8,6 +14,15 @@ import 'layer_table.dart';
 import 'resource_table.dart';
 import 'revision_state.dart';
 import 'store_revision_delta.dart';
+
+/// The extra Zone and testing imports keep prepared-inventory observation
+/// scoped to this owner rather than introducing global mutable telemetry.
+@visibleForTesting
+enum PreparedStoreDocumentImportInventoryReadEvent {
+  resourceIds,
+  layerIds,
+  elementIds,
+}
 
 // The builder is the single handoff from schema-v1 import events to committed
 // store tables; splitting it would create another retained import graph.
@@ -158,25 +173,55 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
 }
 
 final class PreparedStoreDocumentImport {
+  static final Object _inventoryReadZoneKey = Object();
+
   PreparedStoreDocumentImport._({
     required this.baseRevisions,
     required this.document,
     required this.revisionDelta,
-    required this.resourceIds,
-    required this.layerIds,
+    required Set<CanvasResourceId> resourceIds,
+    required Set<CanvasLayerId> layerIds,
     required this.elementCount,
-  });
+  }) : _resourceIds = resourceIds,
+       _layerIds = layerIds;
 
   final RevisionState baseRevisions;
   final CommittedDocument document;
   final StoreRevisionDelta revisionDelta;
-  final Set<CanvasResourceId> resourceIds;
-  final Set<CanvasLayerId> layerIds;
+  final Set<CanvasResourceId> _resourceIds;
+  final Set<CanvasLayerId> _layerIds;
   final int elementCount;
   Set<CanvasElementId>? _elementIds;
   bool _isConsumed = false;
 
+  // Zone-scoped observation avoids global mutable telemetry; Unit 8 retires
+  // this assert-gated test seam with the retained prepared inventories.
+  @visibleForTesting
+  static T observeInventoryReads<T>(
+    void Function(PreparedStoreDocumentImportInventoryReadEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_inventoryReadZoneKey: sink});
+  }
+
+  Set<CanvasResourceId> get resourceIds {
+    _recordInventoryRead(
+      PreparedStoreDocumentImportInventoryReadEvent.resourceIds,
+    );
+    return _resourceIds;
+  }
+
+  Set<CanvasLayerId> get layerIds {
+    _recordInventoryRead(
+      PreparedStoreDocumentImportInventoryReadEvent.layerIds,
+    );
+    return _layerIds;
+  }
+
   Set<CanvasElementId> get elementIds {
+    _recordInventoryRead(
+      PreparedStoreDocumentImportInventoryReadEvent.elementIds,
+    );
     return _elementIds ??= Set.unmodifiable(
       document.elements.frameElementOrder,
     );
@@ -185,8 +230,8 @@ final class PreparedStoreDocumentImport {
   CanvasDocumentSummary get summary {
     return CanvasDocumentSummary(
       elementCount: elementCount,
-      layerCount: layerIds.length,
-      resourceCount: resourceIds.length,
+      layerCount: _layerIds.length,
+      resourceCount: _resourceIds.length,
     );
   }
 
@@ -202,5 +247,18 @@ final class PreparedStoreDocumentImport {
       throw StateError('Prepared schema v1 store import is stale.');
     }
     _isConsumed = true;
+  }
+
+  static void _recordInventoryRead(
+    PreparedStoreDocumentImportInventoryReadEvent event,
+  ) {
+    assert(() {
+      final sink = Zone.current[_inventoryReadZoneKey];
+      if (sink
+          is void Function(PreparedStoreDocumentImportInventoryReadEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'prepared store inventory read observation failed');
   }
 }

@@ -123,6 +123,7 @@ void _testAcceptedAdmissionNormalizesBeforeItsConsumer() {
       prefix: 'e',
       phase: IdAdmissionWorkPhase.acceptedAdmission,
       expected: const {
+        IdAdmissionWorkKind.sparseLedgerVisit: 1,
         IdAdmissionWorkKind.inputVisit: 1,
         IdAdmissionWorkKind.cursorProbe: 2,
         IdAdmissionWorkKind.collision: 1,
@@ -156,6 +157,7 @@ void _expectOneAcceptedAdmissionCross(_IdAdmissionWork work) {
     prefix: 'e',
     phase: IdAdmissionWorkPhase.acceptedAdmission,
     expected: const {
+      IdAdmissionWorkKind.sparseLedgerVisit: 1,
       IdAdmissionWorkKind.inputVisit: 1,
       IdAdmissionWorkKind.cursorProbe: 2,
       IdAdmissionWorkKind.collision: 1,
@@ -176,7 +178,10 @@ void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
       unrelatedWork,
       prefix: 'e',
       phase: IdAdmissionWorkPhase.acceptedAdmission,
-      expected: const {IdAdmissionWorkKind.inputVisit: 1},
+      expected: const {
+        IdAdmissionWorkKind.sparseLedgerVisit: 1,
+        IdAdmissionWorkKind.inputVisit: 1,
+      },
     );
 
     final contiguousStore = DocumentStoreKernel();
@@ -190,6 +195,7 @@ void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
       prefix: 'e',
       phase: IdAdmissionWorkPhase.acceptedAdmission,
       expected: const {
+        IdAdmissionWorkKind.sparseLedgerVisit: 2,
         IdAdmissionWorkKind.inputVisit: 2,
         IdAdmissionWorkKind.cursorProbe: 3,
         IdAdmissionWorkKind.collision: 2,

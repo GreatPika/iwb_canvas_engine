@@ -14,6 +14,19 @@ import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 
+@visibleForTesting
+enum FamilyTablesEnumerationEvent {
+  open,
+  imageEntry,
+  vectorEntry,
+  pathEntry,
+  textEntry,
+  strokeEntry,
+  lineEntry,
+  rectEntry,
+  close,
+}
+
 // The family tables are the single admission and projection owner for all
 // element kinds; splitting by kind would reintroduce cross-table drift.
 // Sparse row mutation belongs with family admission so updates cannot drift
@@ -21,6 +34,7 @@ import '../contracts/public/canvas_metadata.dart';
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
   static final Object _workZoneKey = Object();
+  static final Object _enumerationZoneKey = Object();
   static final Object _sparseEditorZoneKey = Object();
   static final Object _sparseDecisionZoneKey = Object();
   static final Object _sparseBaseReadZoneKey = Object();
@@ -99,6 +113,54 @@ final class FamilyTables {
   final Map<String, RectRow> rectRows;
   final Map<CanvasResourceId, int> imageResourceReferenceCounts;
   final Map<CanvasResourceId, int> vectorResourceReferenceCounts;
+
+  // Complete-id consumers receive each authoritative key immediately, keeping
+  // the seven family maps as the only committed element-id source.
+  void enumerateElementIds(void Function(String) accept) {
+    _recordEnumeration(FamilyTablesEnumerationEvent.open);
+    try {
+      for (final id in imageRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.imageEntry);
+        accept(id);
+      }
+      for (final id in vectorRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.vectorEntry);
+        accept(id);
+      }
+      for (final id in pathRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.pathEntry);
+        accept(id);
+      }
+      for (final id in textRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.textEntry);
+        accept(id);
+      }
+      for (final id in strokeRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.strokeEntry);
+        accept(id);
+      }
+      for (final id in lineRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.lineEntry);
+        accept(id);
+      }
+      for (final id in rectRows.keys) {
+        _recordEnumeration(FamilyTablesEnumerationEvent.rectEntry);
+        accept(id);
+      }
+    } finally {
+      _recordEnumeration(FamilyTablesEnumerationEvent.close);
+    }
+  }
+
+  // Enumeration work is asserted only in tests; production keeps no event
+  // history and the signal carries no owner facts.
+  @visibleForTesting
+  static T observeEnumeration<T>(
+    void Function(FamilyTablesEnumerationEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_enumerationZoneKey: sink});
+  }
 
   // Membership is an owner-local read: a direct probe avoids constructing a
   // document-sized key union for callers that only need one id.
@@ -297,29 +359,6 @@ final class FamilyTables {
         strokeRows[id]?.toElement() ??
         lineRows[id]?.toElement() ??
         rectRows[id]!.toElement();
-  }
-
-  Set<String> get admittedElementIds {
-    _recordMembershipSetAllocation();
-    _recordMembershipKeyCopies(
-      imageRows.length +
-          vectorRows.length +
-          pathRows.length +
-          textRows.length +
-          strokeRows.length +
-          lineRows.length +
-          rectRows.length,
-    );
-
-    return {
-      ...imageRows.keys,
-      ...vectorRows.keys,
-      ...pathRows.keys,
-      ...textRows.keys,
-      ...strokeRows.keys,
-      ...lineRows.keys,
-      ...rectRows.keys,
-    };
   }
 
   bool isSelectionEligible(CanvasElementId id) {
@@ -671,24 +710,14 @@ final class FamilyTables {
     }(), 'transaction normalization observation failed');
   }
 
-  static void _recordMembershipSetAllocation() {
+  static void _recordEnumeration(FamilyTablesEnumerationEvent event) {
     assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordMembershipSetAllocation();
+      final sink = Zone.current[_enumerationZoneKey];
+      if (sink is void Function(FamilyTablesEnumerationEvent)) {
+        sink(event);
       }
       return true;
-    }(), 'membership set-allocation observation failed');
-  }
-
-  static void _recordMembershipKeyCopies(int count) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordMembershipKeyCopies(count);
-      }
-      return true;
-    }(), 'membership key-copy observation failed');
+    }(), 'family table enumeration observation failed');
   }
 
   _AdmittedRows _copyRows() {
@@ -701,8 +730,7 @@ final class FamilyTables {
       ..lineRows.addAll(lineRows)
       ..rectRows.addAll(rectRows)
       ..imageResourceReferenceCounts.addAll(imageResourceReferenceCounts)
-      ..vectorResourceReferenceCounts.addAll(vectorResourceReferenceCounts)
-      ..ids.addAll(admittedElementIds);
+      ..vectorResourceReferenceCounts.addAll(vectorResourceReferenceCounts);
   }
 
   // This single switch is the family-table insertion owner; splitting per row
@@ -883,8 +911,6 @@ final class FamilyTablesDecisionRead {
 // ignore: number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTablesWork {
   int _mapProbeCount = 0;
-  int _membershipSetAllocationCount = 0;
-  int _membershipKeyCopyCount = 0;
   int _batchReplacementCount = 0;
   final Map<CanvasElementKind, int> _transactionOpenCountByFamily = {};
   final Map<CanvasElementKind, int> _transactionBaseEntryCopyCountByFamily = {};
@@ -924,8 +950,6 @@ final class FamilyTablesWork {
   final Map<FamilyTablesDecision, int> _staleDecisionReadCountByDecision = {};
 
   int get mapProbeCount => _mapProbeCount;
-  int get membershipSetAllocationCount => _membershipSetAllocationCount;
-  int get membershipKeyCopyCount => _membershipKeyCopyCount;
   int get batchReplacementCount => _batchReplacementCount;
   int get transactionDiscardCount => _transactionDiscardCount;
   int get transactionImmutablePublicationCount =>
@@ -1007,14 +1031,6 @@ final class FamilyTablesWork {
 
   void _recordMapProbe() {
     _mapProbeCount += 1;
-  }
-
-  void _recordMembershipSetAllocation() {
-    _membershipSetAllocationCount += 1;
-  }
-
-  void _recordMembershipKeyCopies(int count) {
-    _membershipKeyCopyCount += count;
   }
 
   void _recordEditorDecision(FamilyTablesDecision decision) {
@@ -1960,9 +1976,7 @@ final class _AdmittedRows {
   }
 
   void remove(String id) {
-    if (!ids.remove(id)) {
-      return;
-    }
+    ids.remove(id);
     final image = imageRows.remove(id);
     if (image != null) {
       _removeImageReference(image.resourceId);

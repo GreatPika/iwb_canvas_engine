@@ -34,6 +34,8 @@ enum IdAdmissionWorkPhase { reset, acceptedAdmission, generation }
 @visibleForTesting
 enum IdAdmissionWorkKind {
   inputVisit,
+  sparseLedgerVisit,
+  completeInputSetAllocation,
   cursorProbe,
   collision,
   advance,
@@ -66,28 +68,36 @@ final class DocumentStoreKernel {
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(_document);
-    _resetIdAdmission();
+    _resetIdAdmissionFromOwners();
   }
 
   @visibleForTesting
   DocumentStoreKernel.withCommittedDocumentForTesting(this._document) {
     _validateFinalCandidateResourceRelationships(_document);
-    _resetIdAdmission();
+    _resetIdAdmissionFromOwners();
   }
 
-  void _resetIdAdmission() {
+  void _resetIdAdmissionFromOwners() {
     _elementIds = _IdAdmission(
       prefix: 'e',
-      admittedIds: _document.admittedElementIds,
+      enumerate: _document.elements.familyTables.enumerateElementIds,
     );
     _layerIds = _IdAdmission(
       prefix: 'l',
-      admittedIds: _document.admittedLayerIds,
+      enumerate: _document.elements.layerTable.enumerateLayerIds,
     );
     _resourceIds = _IdAdmission(
       prefix: 'r',
-      admittedIds: _document.admittedResourceIds,
+      enumerate: _document.resourceTable.enumerateResourceIds,
     );
+  }
+
+  void _admitCompleteDocumentOwners() {
+    _elementIds.admitComplete(
+      _document.elements.familyTables.enumerateElementIds,
+    );
+    _layerIds.admitComplete(_document.elements.layerTable.enumerateLayerIds);
+    _resourceIds.admitComplete(_document.resourceTable.enumerateResourceIds);
   }
 
   CommittedDocument _document;
@@ -328,9 +338,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = _acceptFullDocument(document, delta);
-    _elementIds.admitAll(_document.admittedElementIds);
-    _layerIds.admitAll(_document.admittedLayerIds);
-    _resourceIds.admitAll(_document.admittedResourceIds);
+    _admitCompleteDocumentOwners();
   }
 
   void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
@@ -339,7 +347,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = _acceptFullDocument(document, delta);
-    _resetIdAdmission();
+    _resetIdAdmissionFromOwners();
   }
 
   void replacePreparedLoadDocument(
@@ -351,7 +359,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = _acceptFullDocument(document, delta);
-    _resetIdAdmission();
+    _resetIdAdmissionFromOwners();
   }
 
   PreparedStoreDocumentImport prepareSchemaV1Import(
@@ -413,9 +421,7 @@ final class DocumentStoreKernel {
       throw StateError('Prepared materialized store commit is stale.');
     }
     _document = commit.document;
-    _elementIds.admitAll(_document.admittedElementIds);
-    _layerIds.admitAll(_document.admittedLayerIds);
-    _resourceIds.admitAll(_document.admittedResourceIds);
+    _admitCompleteDocumentOwners();
   }
 
   void installPreparedSchemaV1Import(PreparedStoreDocumentImport prepared) {
@@ -424,7 +430,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = prepared.document;
-    _resetIdAdmission();
+    _resetIdAdmissionFromOwners();
   }
 
   // Sparse preparation validates, applies, and records admitted-id deltas in
@@ -656,9 +662,9 @@ final class DocumentStoreKernel {
       throw StateError('Prepared sparse store commit is stale.');
     }
     _document = commit.document;
-    _elementIds.admitAll(commit.admittedElementIds);
-    _layerIds.admitAll(commit.admittedLayerIds);
-    _resourceIds.admitAll(commit.admittedResourceIds);
+    _elementIds.admitLedger(commit.admittedElementIds);
+    _layerIds.admitLedger(commit.admittedLayerIds);
+    _resourceIds.admitLedger(commit.admittedResourceIds);
   }
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
@@ -2765,19 +2771,23 @@ final class StoreElementFacts {
 enum StoreElementLocationKind { background, content }
 
 final class _IdAdmission {
-  _IdAdmission({required this.prefix, required Iterable<String> admittedIds})
-    : _admittedIds = admittedIds is Set<String>
-          ? admittedIds
-          : Set.of(admittedIds) {
-    for (final _ in _admittedIds) {
+  _IdAdmission({
+    required this.prefix,
+    required void Function(void Function(String) accept) enumerate,
+  }) : _reserved = _allocateIdSet(
+         prefix,
+         phase: IdAdmissionWorkPhase.reset,
+         completeInputCopy: false,
+       ) {
+    enumerate((id) {
       _record(IdAdmissionWorkPhase.reset, IdAdmissionWorkKind.inputVisit);
-    }
+      _reserved.add(id);
+    });
     _normalize(IdAdmissionWorkPhase.reset);
   }
 
   final String prefix;
-  final Set<String> _admittedIds;
-  final Set<String> _reserved = {};
+  final Set<String> _reserved;
   int _next = 0;
 
   String observeCandidate() {
@@ -2807,20 +2817,42 @@ final class _IdAdmission {
     _normalize(IdAdmissionWorkPhase.generation);
   }
 
-  void admitAll(Iterable<String> ids) {
+  void admitComplete(void Function(void Function(String) accept) enumerate) {
+    _admit(
+      phase: IdAdmissionWorkPhase.acceptedAdmission,
+      values: (accept) => enumerate(accept),
+    );
+  }
+
+  void admitLedger(Iterable<String> ids) {
+    _admit(
+      phase: IdAdmissionWorkPhase.acceptedAdmission,
+      values: (accept) {
+        for (final id in ids) {
+          _record(
+            IdAdmissionWorkPhase.acceptedAdmission,
+            IdAdmissionWorkKind.sparseLedgerVisit,
+          );
+          accept(id);
+        }
+      },
+    );
+  }
+
+  void _admit({
+    required IdAdmissionWorkPhase phase,
+    required void Function(void Function(String) accept) values,
+  }) {
     final currentCandidate = '$prefix$_next';
     var shouldNormalize = false;
-    for (final id in ids) {
-      _record(
-        IdAdmissionWorkPhase.acceptedAdmission,
-        IdAdmissionWorkKind.inputVisit,
-      );
+    values((id) {
+      _record(phase, IdAdmissionWorkKind.inputVisit);
       if (_reserved.add(id) && id == currentCandidate) {
         shouldNormalize = true;
       }
-    }
+    });
     if (shouldNormalize) {
-      _normalize(IdAdmissionWorkPhase.acceptedAdmission);
+      _normalize(phase);
     }
   }
 
@@ -2828,7 +2860,7 @@ final class _IdAdmission {
     while (true) {
       final candidate = '$prefix$_next';
       _record(phase, IdAdmissionWorkKind.cursorProbe);
-      if (!_admittedIds.contains(candidate) && !_reserved.contains(candidate)) {
+      if (!_reserved.contains(candidate)) {
         return;
       }
       _record(phase, IdAdmissionWorkKind.collision);
@@ -2844,4 +2876,22 @@ final class _IdAdmission {
       kind: kind,
     );
   }
+}
+
+// Admission history allocates only here. A complete-input copy is forbidden,
+// but if one is introduced at the centralized seeding owner it must declare
+// that distinct allocation purpose for test-only semantic observation.
+Set<String> _allocateIdSet(
+  String prefix, {
+  required IdAdmissionWorkPhase phase,
+  required bool completeInputCopy,
+}) {
+  if (completeInputCopy) {
+    DocumentStoreKernel._recordIdAdmissionWork(
+      prefix: prefix,
+      phase: phase,
+      kind: IdAdmissionWorkKind.completeInputSetAllocation,
+    );
+  }
+  return <String>{};
 }
