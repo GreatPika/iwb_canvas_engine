@@ -34,6 +34,8 @@ final class FamilyTables {
         strokeRows: const {},
         lineRows: const {},
         rectRows: const {},
+        imageResourceReferenceCounts: const {},
+        vectorResourceReferenceCounts: const {},
       );
 
   FamilyTables(Iterable<CanvasElement> elements)
@@ -51,6 +53,12 @@ final class FamilyTables {
         strokeRows: Map.unmodifiable(admitted.strokeRows),
         lineRows: Map.unmodifiable(admitted.lineRows),
         rectRows: Map.unmodifiable(admitted.rectRows),
+        imageResourceReferenceCounts: Map.unmodifiable(
+          admitted.imageResourceReferenceCounts,
+        ),
+        vectorResourceReferenceCounts: Map.unmodifiable(
+          admitted.vectorResourceReferenceCounts,
+        ),
       );
 
   FamilyTables._owned(_AdmittedRows admitted)
@@ -62,6 +70,12 @@ final class FamilyTables {
         strokeRows: UnmodifiableMapView(admitted.strokeRows),
         lineRows: UnmodifiableMapView(admitted.lineRows),
         rectRows: UnmodifiableMapView(admitted.rectRows),
+        imageResourceReferenceCounts: UnmodifiableMapView(
+          admitted.imageResourceReferenceCounts,
+        ),
+        vectorResourceReferenceCounts: UnmodifiableMapView(
+          admitted.vectorResourceReferenceCounts,
+        ),
       );
 
   const FamilyTables._fromTables({
@@ -72,6 +86,8 @@ final class FamilyTables {
     required this.strokeRows,
     required this.lineRows,
     required this.rectRows,
+    required this.imageResourceReferenceCounts,
+    required this.vectorResourceReferenceCounts,
   });
 
   final Map<String, ImageRow> imageRows;
@@ -81,6 +97,8 @@ final class FamilyTables {
   final Map<String, StrokeRow> strokeRows;
   final Map<String, LineRow> lineRows;
   final Map<String, RectRow> rectRows;
+  final Map<CanvasResourceId, int> imageResourceReferenceCounts;
+  final Map<CanvasResourceId, int> vectorResourceReferenceCounts;
 
   // Membership is an owner-local read: a direct probe avoids constructing a
   // document-sized key union for callers that only need one id.
@@ -208,8 +226,23 @@ final class FamilyTables {
 
   bool referencesResource(CanvasResourceId id) {
     _recordImmutableSparseFamilyRead(this);
-    return imageRows.values.any((row) => row.resourceId == id) ||
-        vectorRows.values.any((row) => row.resourceId == id);
+    _recordReferenceQueryFamilyRowVisits(0);
+    return imageResourceReferenceCount(id) + vectorResourceReferenceCount(id) >
+        0;
+  }
+
+  @visibleForTesting
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    _recordReferenceCommittedSummaryRead();
+
+    return imageResourceReferenceCounts[id] ?? 0;
+  }
+
+  @visibleForTesting
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    _recordReferenceCommittedSummaryRead();
+
+    return vectorResourceReferenceCounts[id] ?? 0;
   }
 
   // Family lookup stays explicit so projection, sparse updates, and frame facts
@@ -433,6 +466,122 @@ final class FamilyTables {
     }(), 'membership map-probe observation failed');
   }
 
+  static void _recordReferenceConstructionRowVisit() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceConstructionRowVisit();
+      }
+      return true;
+    }(), 'resource-reference construction observation failed');
+  }
+
+  static void _recordReferenceCommittedSummaryRead() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceCommittedSummaryRead();
+      }
+      return true;
+    }(), 'committed resource-reference summary observation failed');
+  }
+
+  static void _recordReferenceQueryFamilyRowVisits(int count) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceQueryFamilyRowVisits(count);
+      }
+      return true;
+    }(), 'resource-reference family-row observation failed');
+  }
+
+  static void _recordReferenceEditorBaseSummaryRead() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceEditorBaseSummaryRead();
+      }
+      return true;
+    }(), 'working resource-reference base-summary observation failed');
+  }
+
+  static void _recordReferenceEditorDeltaRead({required int depth}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceEditorDeltaRead(depth: depth);
+      }
+      return true;
+    }(), 'working resource-reference delta observation failed');
+  }
+
+  static void _recordReferenceSummaryDeltaOpen({required bool image}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceSummaryDeltaOpen(image: image);
+      }
+      return true;
+    }(), 'resource-reference delta-open observation failed');
+  }
+
+  static void _recordReferenceAffectedIdUpdate({required bool image}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceAffectedIdUpdate(image: image);
+      }
+      return true;
+    }(), 'resource-reference affected-id observation failed');
+  }
+
+  static void _recordReferenceSummaryCompleteCopy({required bool image}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceSummaryCompleteCopy(image: image);
+      }
+      return true;
+    }(), 'resource-reference summary-copy observation failed');
+  }
+
+  static void _recordReferenceSummaryMaterialization({required bool image}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceSummaryMaterialization(image: image);
+      }
+      return true;
+    }(), 'resource-reference materialization observation failed');
+  }
+
+  static void _recordReferenceSummaryPublication({required bool image}) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceSummaryPublication(image: image);
+      }
+      return true;
+    }(), 'resource-reference publication observation failed');
+  }
+
+  static void _recordReferenceSummaryIdentity({
+    required bool image,
+    required bool retainsBaseIdentity,
+  }) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReferenceSummaryIdentity(
+          image: image,
+          retainsBaseIdentity: retainsBaseIdentity,
+        );
+      }
+      return true;
+    }(), 'resource-reference identity observation failed');
+  }
+
   static void _recordBatchReplacementStart() {
     assert(() {
       final work = Zone.current[_workZoneKey];
@@ -551,12 +700,16 @@ final class FamilyTables {
       ..strokeRows.addAll(strokeRows)
       ..lineRows.addAll(lineRows)
       ..rectRows.addAll(rectRows)
+      ..imageResourceReferenceCounts.addAll(imageResourceReferenceCounts)
+      ..vectorResourceReferenceCounts.addAll(vectorResourceReferenceCounts)
       ..ids.addAll(admittedElementIds);
   }
 
   // This single switch is the family-table insertion owner; splitting per row
   // kind would duplicate admission/projection rules and obscure sparse updates.
-  // ignore: halstead-volume, source-lines-of-code
+  // It stays cohesive despite the localized maintainability metric because the
+  // split count facts must publish with the same family choice.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index
   FamilyTables _withSameFamilyElement(CanvasElement element) {
     final id = element.id.value;
 
@@ -571,6 +724,11 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: lineRows,
         rectRows: rectRows,
+        imageResourceReferenceCounts: _incrementReferenceCount(
+          imageResourceReferenceCounts,
+          element.resourceId,
+        ),
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
       CanvasVectorElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -582,6 +740,11 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: lineRows,
         rectRows: rectRows,
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: _incrementReferenceCount(
+          vectorResourceReferenceCounts,
+          element.resourceId,
+        ),
       ),
       CanvasPathElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -591,6 +754,8 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: lineRows,
         rectRows: rectRows,
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
       CanvasTextElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -600,6 +765,8 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: lineRows,
         rectRows: rectRows,
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
       CanvasStrokeElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -611,6 +778,8 @@ final class FamilyTables {
         ),
         lineRows: lineRows,
         rectRows: rectRows,
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
       CanvasLineElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -620,6 +789,8 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: Map.unmodifiable(Map.of(lineRows)..[id] = LineRow(element)),
         rectRows: rectRows,
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
       CanvasRectElement() => FamilyTables._fromTables(
         imageRows: imageRows,
@@ -629,8 +800,20 @@ final class FamilyTables {
         strokeRows: strokeRows,
         lineRows: lineRows,
         rectRows: Map.unmodifiable(Map.of(rectRows)..[id] = RectRow(element)),
+        imageResourceReferenceCounts: imageResourceReferenceCounts,
+        vectorResourceReferenceCounts: vectorResourceReferenceCounts,
       ),
     };
+  }
+
+  static Map<CanvasResourceId, int> _incrementReferenceCount(
+    Map<CanvasResourceId, int> counts,
+    CanvasResourceId id,
+  ) {
+    final nextCounts = Map<CanvasResourceId, int>.of(counts)
+      ..update(id, (count) => count + 1, ifAbsent: () => 1);
+
+    return Map.unmodifiable(nextCounts);
   }
 }
 
@@ -717,6 +900,24 @@ final class FamilyTablesWork {
   int _postFreezeCopyCount = 0;
   int _postFreezeNormalizationCount = 0;
   int _postFreezeImmutablePublicationCount = 0;
+  int _referenceConstructionRowVisitCount = 0;
+  int _referenceCommittedSummaryReadCount = 0;
+  int _referenceEditorBaseSummaryReadCount = 0;
+  int _referenceEditorDeltaReadCount = 0;
+  int _referenceEditorMaximumDeltaDepth = 0;
+  int _referenceQueryFamilyRowVisitCount = 0;
+  int _imageReferenceSummaryDeltaOpenCount = 0;
+  int _vectorReferenceSummaryDeltaOpenCount = 0;
+  int _imageReferenceAffectedIdUpdateCount = 0;
+  int _vectorReferenceAffectedIdUpdateCount = 0;
+  int _imageReferenceSummaryCompleteCopyCount = 0;
+  int _vectorReferenceSummaryCompleteCopyCount = 0;
+  int _imageReferenceSummaryMaterializationCount = 0;
+  int _vectorReferenceSummaryMaterializationCount = 0;
+  int _imageReferenceSummaryPublicationCount = 0;
+  int _vectorReferenceSummaryPublicationCount = 0;
+  bool _imageReferenceSummaryRetainsBaseIdentity = false;
+  bool _vectorReferenceSummaryRetainsBaseIdentity = false;
   final List<FamilyTablesDecision> _editorDecisionTrace = [];
   final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
   final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
@@ -737,6 +938,40 @@ final class FamilyTablesWork {
   int get postFreezeNormalizationCount => _postFreezeNormalizationCount;
   int get postFreezeImmutablePublicationCount =>
       _postFreezeImmutablePublicationCount;
+  int get referenceQueryFamilyRowVisitCount =>
+      _referenceQueryFamilyRowVisitCount;
+  int get referenceConstructionRowVisitCount =>
+      _referenceConstructionRowVisitCount;
+  int get referenceCommittedSummaryReadCount =>
+      _referenceCommittedSummaryReadCount;
+  int get referenceEditorBaseSummaryReadCount =>
+      _referenceEditorBaseSummaryReadCount;
+  int get referenceEditorDeltaReadCount => _referenceEditorDeltaReadCount;
+  int get referenceEditorMaximumDeltaDepth => _referenceEditorMaximumDeltaDepth;
+  int get imageReferenceSummaryDeltaOpenCount =>
+      _imageReferenceSummaryDeltaOpenCount;
+  int get vectorReferenceSummaryDeltaOpenCount =>
+      _vectorReferenceSummaryDeltaOpenCount;
+  int get imageReferenceAffectedIdUpdateCount =>
+      _imageReferenceAffectedIdUpdateCount;
+  int get vectorReferenceAffectedIdUpdateCount =>
+      _vectorReferenceAffectedIdUpdateCount;
+  int get imageReferenceSummaryCompleteCopyCount =>
+      _imageReferenceSummaryCompleteCopyCount;
+  int get vectorReferenceSummaryCompleteCopyCount =>
+      _vectorReferenceSummaryCompleteCopyCount;
+  int get imageReferenceSummaryMaterializationCount =>
+      _imageReferenceSummaryMaterializationCount;
+  int get vectorReferenceSummaryMaterializationCount =>
+      _vectorReferenceSummaryMaterializationCount;
+  int get imageReferenceSummaryPublicationCount =>
+      _imageReferenceSummaryPublicationCount;
+  int get vectorReferenceSummaryPublicationCount =>
+      _vectorReferenceSummaryPublicationCount;
+  bool get imageReferenceSummaryRetainsBaseIdentity =>
+      _imageReferenceSummaryRetainsBaseIdentity;
+  bool get vectorReferenceSummaryRetainsBaseIdentity =>
+      _vectorReferenceSummaryRetainsBaseIdentity;
   List<FamilyTablesDecision> get editorDecisionTrace =>
       List.unmodifiable(_editorDecisionTrace);
   List<FamilyTablesDecisionRead> get editorDecisionReads =>
@@ -880,6 +1115,80 @@ final class FamilyTablesWork {
   void _recordPostFreezeImmutablePublication() {
     _postFreezeImmutablePublicationCount += 1;
   }
+
+  void _recordReferenceConstructionRowVisit() {
+    _referenceConstructionRowVisitCount += 1;
+  }
+
+  void _recordReferenceCommittedSummaryRead() {
+    _referenceCommittedSummaryReadCount += 1;
+  }
+
+  void _recordReferenceQueryFamilyRowVisits(int count) {
+    _referenceQueryFamilyRowVisitCount += count;
+  }
+
+  void _recordReferenceEditorBaseSummaryRead() {
+    _referenceEditorBaseSummaryReadCount += 1;
+  }
+
+  void _recordReferenceEditorDeltaRead({required int depth}) {
+    _referenceEditorDeltaReadCount += 1;
+    if (depth > _referenceEditorMaximumDeltaDepth) {
+      _referenceEditorMaximumDeltaDepth = depth;
+    }
+  }
+
+  void _recordReferenceSummaryDeltaOpen({required bool image}) {
+    if (image) {
+      _imageReferenceSummaryDeltaOpenCount += 1;
+    } else {
+      _vectorReferenceSummaryDeltaOpenCount += 1;
+    }
+  }
+
+  void _recordReferenceAffectedIdUpdate({required bool image}) {
+    if (image) {
+      _imageReferenceAffectedIdUpdateCount += 1;
+    } else {
+      _vectorReferenceAffectedIdUpdateCount += 1;
+    }
+  }
+
+  void _recordReferenceSummaryCompleteCopy({required bool image}) {
+    if (image) {
+      _imageReferenceSummaryCompleteCopyCount += 1;
+    } else {
+      _vectorReferenceSummaryCompleteCopyCount += 1;
+    }
+  }
+
+  void _recordReferenceSummaryMaterialization({required bool image}) {
+    if (image) {
+      _imageReferenceSummaryMaterializationCount += 1;
+    } else {
+      _vectorReferenceSummaryMaterializationCount += 1;
+    }
+  }
+
+  void _recordReferenceSummaryPublication({required bool image}) {
+    if (image) {
+      _imageReferenceSummaryPublicationCount += 1;
+    } else {
+      _vectorReferenceSummaryPublicationCount += 1;
+    }
+  }
+
+  void _recordReferenceSummaryIdentity({
+    required bool image,
+    required bool retainsBaseIdentity,
+  }) {
+    if (image) {
+      _imageReferenceSummaryRetainsBaseIdentity = retainsBaseIdentity;
+    } else {
+      _vectorReferenceSummaryRetainsBaseIdentity = retainsBaseIdentity;
+    }
+  }
 }
 
 // The sparse editor is the sole transaction-lifetime consumer of the generic
@@ -903,7 +1212,15 @@ final class FamilyTablesEditor {
         CanvasElementKind.stroke,
       ),
       _lineRows = _LazyFamilyMapBuffer(_base.lineRows, CanvasElementKind.line),
-      _rectRows = _LazyFamilyMapBuffer(_base.rectRows, CanvasElementKind.rect);
+      _rectRows = _LazyFamilyMapBuffer(_base.rectRows, CanvasElementKind.rect),
+      _imageResourceReferences = _ReferenceSummaryDelta(
+        _base.imageResourceReferenceCounts,
+        image: true,
+      ),
+      _vectorResourceReferences = _ReferenceSummaryDelta(
+        _base.vectorResourceReferenceCounts,
+        image: false,
+      );
 
   final FamilyTables _base;
 
@@ -914,6 +1231,8 @@ final class FamilyTablesEditor {
   final _LazyFamilyMapBuffer<StrokeRow> _strokeRows;
   final _LazyFamilyMapBuffer<LineRow> _lineRows;
   final _LazyFamilyMapBuffer<RectRow> _rectRows;
+  final _ReferenceSummaryDelta _imageResourceReferences;
+  final _ReferenceSummaryDelta _vectorResourceReferences;
 
   bool _isOpen = true;
   bool _wasCleared = false;
@@ -988,8 +1307,19 @@ final class FamilyTablesEditor {
   }
 
   bool referencesResource(CanvasResourceId id) {
-    return _imageRows.values.any((row) => row.resourceId == id) ||
-        _vectorRows.values.any((row) => row.resourceId == id);
+    FamilyTables._recordReferenceQueryFamilyRowVisits(0);
+    return imageResourceReferenceCount(id) + vectorResourceReferenceCount(id) >
+        0;
+  }
+
+  @visibleForTesting
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    return _imageResourceReferences.countFor(id);
+  }
+
+  @visibleForTesting
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    return _vectorResourceReferences.countFor(id);
   }
 
   // The lookup preserves FamilyTables' existing explicit family precedence.
@@ -1032,9 +1362,19 @@ final class FamilyTablesEditor {
     final id = element.id.value;
     switch (element) {
       case CanvasImageElement():
+        final before = _imageRows[id];
         _imageRows.replace(id, ImageRow(element));
+        _imageResourceReferences.transition(
+          before: before?.resourceId,
+          after: element.resourceId,
+        );
       case CanvasVectorElement():
+        final before = _vectorRows[id];
         _vectorRows.replace(id, VectorRow(element));
+        _vectorResourceReferences.transition(
+          before: before?.resourceId,
+          after: element.resourceId,
+        );
       case CanvasPathElement():
         _pathRows.replace(id, PathRow(element));
       case CanvasTextElement():
@@ -1051,6 +1391,14 @@ final class FamilyTablesEditor {
   void removeElement(CanvasElementId id) {
     _checkOpen();
     final value = id.value;
+    final image = _imageRows[value];
+    if (image != null) {
+      _imageResourceReferences.transition(before: image.resourceId);
+    }
+    final vector = _vectorRows[value];
+    if (vector != null) {
+      _vectorResourceReferences.transition(before: vector.resourceId);
+    }
     for (final rows in [
       _imageRows,
       _vectorRows,
@@ -1067,6 +1415,8 @@ final class FamilyTablesEditor {
   void clearElements() {
     _checkOpen();
     _wasCleared = true;
+    _imageResourceReferences.clear();
+    _vectorResourceReferences.clear();
     for (final rows in [
       _imageRows,
       _vectorRows,
@@ -1121,6 +1471,8 @@ final class FamilyTablesEditor {
       strokeRows: _strokeRows.freeze(),
       lineRows: _lineRows.freeze(),
       rectRows: _rectRows.freeze(),
+      imageResourceReferenceCounts: _imageResourceReferences.freeze(),
+      vectorResourceReferenceCounts: _vectorResourceReferences.freeze(),
     );
     FamilyTables._recordTransactionImmutablePublication();
     _frozenTables = tables;
@@ -1136,15 +1488,28 @@ final class FamilyTablesEditor {
     FamilyTables._recordTransactionDiscard();
   }
 
+  // Restoring a row and its matching derived reference fact is one atomic
+  // normalization transition; separate family helpers would hide that pairing.
+  // ignore: halstead-volume, source-lines-of-code
   void _replaceBaseElement(CanvasElement element) {
     switch (element) {
       case CanvasImageElement():
+        final after = _imageRows[element.id.value];
         _imageRows.restoreBase(element.id.value);
+        _imageResourceReferences.transition(
+          before: after?.resourceId,
+          after: element.resourceId,
+        );
         FamilyTables._recordTransactionNormalizationWrite(
           CanvasElementKind.image,
         );
       case CanvasVectorElement():
+        final after = _vectorRows[element.id.value];
         _vectorRows.restoreBase(element.id.value);
+        _vectorResourceReferences.transition(
+          before: after?.resourceId,
+          after: element.resourceId,
+        );
         FamilyTables._recordTransactionNormalizationWrite(
           CanvasElementKind.vector,
         );
@@ -1202,6 +1567,105 @@ final class FamilyTablesEditor {
       }(), 'post-freeze sparse family editor mutation observation failed');
       throw StateError('FamilyTablesEditor was already consumed.');
     }
+  }
+}
+
+// Reference summaries stay derived from image/vector rows, while this editor
+// records only affected ids until the one accepted family-table freeze.
+final class _ReferenceSummaryDelta {
+  _ReferenceSummaryDelta(this._base, {required this.image});
+
+  final Map<CanvasResourceId, int> _base;
+  final bool image;
+  Map<CanvasResourceId, int>? _deltas;
+  bool _cleared = false;
+  bool _hasDeltaChanges = false;
+
+  bool get hasChanges => _cleared || _hasDeltaChanges;
+
+  int countFor(CanvasResourceId id) {
+    FamilyTables._recordReferenceEditorBaseSummaryRead();
+    FamilyTables._recordReferenceEditorDeltaRead(depth: 1);
+
+    return (_cleared ? 0 : _base[id] ?? 0) + (_deltas?[id] ?? 0);
+  }
+
+  void transition({CanvasResourceId? before, CanvasResourceId? after}) {
+    if (before == after) {
+      return;
+    }
+    if (before != null) {
+      _adjust(before, -1);
+    }
+    if (after != null) {
+      _adjust(after, 1);
+    }
+  }
+
+  void clear() {
+    _deltas?.clear();
+    _hasDeltaChanges = false;
+    _cleared = _base.isNotEmpty;
+  }
+
+  Map<CanvasResourceId, int> freeze() {
+    if (!hasChanges) {
+      FamilyTables._recordReferenceSummaryIdentity(
+        image: image,
+        retainsBaseIdentity: true,
+      );
+      return _base;
+    }
+
+    final materialized = _cleared
+        ? <CanvasResourceId, int>{}
+        : Map<CanvasResourceId, int>.of(_base);
+    if (!_cleared && _base.isNotEmpty) {
+      FamilyTables._recordReferenceSummaryCompleteCopy(image: image);
+    }
+    for (final MapEntry(key: id, value: delta) in (_deltas ?? {}).entries) {
+      final next = (materialized[id] ?? 0) + delta;
+      if (next == 0) {
+        materialized.remove(id);
+      } else if (next > 0) {
+        materialized[id] = next;
+      } else {
+        throw StateError('resource-reference count underflow.');
+      }
+    }
+    final frozen = Map<CanvasResourceId, int>.unmodifiable(materialized);
+    FamilyTables._recordReferenceSummaryMaterialization(image: image);
+    FamilyTables._recordReferenceSummaryPublication(image: image);
+    FamilyTables._recordReferenceSummaryIdentity(
+      image: image,
+      retainsBaseIdentity: false,
+    );
+
+    return frozen;
+  }
+
+  void _adjust(CanvasResourceId id, int amount) {
+    final current = (_cleared ? 0 : _base[id] ?? 0) + (_deltas?[id] ?? 0);
+    final next = current + amount;
+    if (next < 0) {
+      throw StateError('resource-reference count underflow.');
+    }
+
+    final deltas = _deltas ??= _openDeltas();
+    final nextDelta = (deltas[id] ?? 0) + amount;
+    if (nextDelta == 0) {
+      deltas.remove(id);
+    } else {
+      deltas[id] = nextDelta;
+    }
+    _hasDeltaChanges = deltas.isNotEmpty;
+    FamilyTables._recordReferenceAffectedIdUpdate(image: image);
+  }
+
+  Map<CanvasResourceId, int> _openDeltas() {
+    FamilyTables._recordReferenceSummaryDeltaOpen(image: image);
+
+    return <CanvasResourceId, int>{};
   }
 }
 
@@ -1431,6 +1895,8 @@ final class _AdmittedRows {
   final Map<String, StrokeRow> strokeRows = {};
   final Map<String, LineRow> lineRows = {};
   final Map<String, RectRow> rectRows = {};
+  final Map<CanvasResourceId, int> imageResourceReferenceCounts = {};
+  final Map<CanvasResourceId, int> vectorResourceReferenceCounts = {};
   final Set<String> ids = {};
 
   void add(CanvasElement element) {
@@ -1446,8 +1912,10 @@ final class _AdmittedRows {
     switch (element) {
       case CanvasImageElement():
         imageRows[id] = ImageRow(element);
+        _addImageReference(element.resourceId);
       case CanvasVectorElement():
         vectorRows[id] = VectorRow(element);
+        _addVectorReference(element.resourceId);
       case CanvasPathElement():
         pathRows[id] = PathRow(element);
       case CanvasTextElement():
@@ -1474,8 +1942,10 @@ final class _AdmittedRows {
     switch (event) {
       case SchemaV1ImageElementImportEvent():
         imageRows[id] = ImageRow.fromSchemaV1Import(event);
+        _addImageReference(event.resourceId);
       case SchemaV1VectorElementImportEvent():
         vectorRows[id] = VectorRow.fromSchemaV1Import(event);
+        _addVectorReference(event.resourceId);
       case SchemaV1PathElementImportEvent():
         pathRows[id] = PathRow.fromSchemaV1Import(event);
       case SchemaV1TextElementImportEvent():
@@ -1493,13 +1963,59 @@ final class _AdmittedRows {
     if (!ids.remove(id)) {
       return;
     }
-    imageRows.remove(id);
-    vectorRows.remove(id);
+    final image = imageRows.remove(id);
+    if (image != null) {
+      _removeImageReference(image.resourceId);
+    }
+    final vector = vectorRows.remove(id);
+    if (vector != null) {
+      _removeVectorReference(vector.resourceId);
+    }
     pathRows.remove(id);
     textRows.remove(id);
     strokeRows.remove(id);
     lineRows.remove(id);
     rectRows.remove(id);
+  }
+
+  void _addImageReference(CanvasResourceId id) {
+    _increment(imageResourceReferenceCounts, id);
+    FamilyTables._recordReferenceConstructionRowVisit();
+  }
+
+  void _addVectorReference(CanvasResourceId id) {
+    _increment(vectorResourceReferenceCounts, id);
+    FamilyTables._recordReferenceConstructionRowVisit();
+  }
+
+  void _removeImageReference(CanvasResourceId id) {
+    _decrement(imageResourceReferenceCounts, id);
+  }
+
+  void _removeVectorReference(CanvasResourceId id) {
+    _decrement(vectorResourceReferenceCounts, id);
+  }
+
+  static void _increment(
+    Map<CanvasResourceId, int> counts,
+    CanvasResourceId id,
+  ) {
+    counts.update(id, (count) => count + 1, ifAbsent: () => 1);
+  }
+
+  static void _decrement(
+    Map<CanvasResourceId, int> counts,
+    CanvasResourceId id,
+  ) {
+    final count = counts[id];
+    if (count == null || count <= 0) {
+      throw StateError('resource-reference count underflow.');
+    }
+    if (count == 1) {
+      counts.remove(id);
+    } else {
+      counts[id] = count - 1;
+    }
   }
 }
 
