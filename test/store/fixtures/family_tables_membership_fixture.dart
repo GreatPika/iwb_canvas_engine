@@ -178,11 +178,8 @@ void _expectDirectMembership(
   required int expectedProbes,
   bool expectedContains = true,
 }) {
-  final work = FamilyTablesMembershipWork();
-  final contains = FamilyTables.observeMembershipWork(
-    work,
-    () => tables.contains(id),
-  );
+  final work = FamilyTablesWork();
+  final contains = FamilyTables.observeWork(work, () => tables.contains(id));
 
   expect(contains, expectedContains);
   expect(work.membershipSetAllocationCount, 0);

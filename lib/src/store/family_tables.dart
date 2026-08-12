@@ -20,7 +20,7 @@ import '../contracts/public/canvas_metadata.dart';
 // from duplicate-id and resource-reference validation.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
-  static final Object _membershipWorkZoneKey = Object();
+  static final Object _workZoneKey = Object();
 
   const FamilyTables.empty()
     : this._fromTables(
@@ -114,14 +114,11 @@ final class FamilyTables {
     return rectRows.containsKey(value);
   }
 
-  // This test-only observation runs in an assert-gated Zone and owns no
-  // membership data, so it cannot become a second membership authority.
+  // This test-only observation is assert-gated and owns no rows, ids, or
+  // membership data, so it cannot become another table authority.
   @visibleForTesting
-  static T observeMembershipWork<T>(
-    FamilyTablesMembershipWork work,
-    T Function() operation,
-  ) {
-    return runZoned(operation, zoneValues: {_membershipWorkZoneKey: work});
+  static T observeWork<T>(FamilyTablesWork work, T Function() operation) {
+    return runZoned(operation, zoneValues: {_workZoneKey: work});
   }
 
   bool referencesResource(CanvasResourceId id) {
@@ -166,6 +163,7 @@ final class FamilyTables {
   }
 
   FamilyTables replaceElements(Iterable<CanvasElement> elements) {
+    _recordBatchReplacementStart();
     final batchRows = _MutableFamilyRows.fromTables(this);
 
     for (final element in elements) {
@@ -345,18 +343,77 @@ final class FamilyTables {
 
   static void _recordMembershipMapProbe() {
     assert(() {
-      final work = Zone.current[_membershipWorkZoneKey];
-      if (work is FamilyTablesMembershipWork) {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
         work._recordMapProbe();
       }
       return true;
     }(), 'membership map-probe observation failed');
   }
 
+  static void _recordBatchReplacementStart() {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordReplacement();
+      }
+      return true;
+    }(), 'batch replacement observation failed');
+  }
+
+  static void _recordBatchFamilyOpen(CanvasElementKind kind) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordFamilyOpen(kind);
+      }
+      return true;
+    }(), 'batch family open observation failed');
+  }
+
+  static void _recordBatchFamilyBaseEntryCopies(
+    CanvasElementKind kind,
+    int count,
+  ) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordFamilyBaseEntryCopies(kind, count);
+      }
+      return true;
+    }(), 'batch family copy observation failed');
+  }
+
+  static void _recordBatchFamilyFreeze(CanvasElementKind kind) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordFamilyFreeze(kind);
+      }
+      return true;
+    }(), 'batch family freeze observation failed');
+  }
+
+  static void _recordBatchFinalMapIdentity(
+    CanvasElementKind kind, {
+    required bool retainsBaseIdentity,
+  }) {
+    assert(() {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
+        work._recordFinalMapIdentity(
+          kind,
+          retainsBaseIdentity: retainsBaseIdentity,
+        );
+      }
+      return true;
+    }(), 'batch final-map identity observation failed');
+  }
+
   static void _recordMembershipSetAllocation() {
     assert(() {
-      final work = Zone.current[_membershipWorkZoneKey];
-      if (work is FamilyTablesMembershipWork) {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
         work._recordMembershipSetAllocation();
       }
       return true;
@@ -365,8 +422,8 @@ final class FamilyTables {
 
   static void _recordMembershipKeyCopies(int count) {
     assert(() {
-      final work = Zone.current[_membershipWorkZoneKey];
-      if (work is FamilyTablesMembershipWork) {
+      final work = Zone.current[_workZoneKey];
+      if (work is FamilyTablesWork) {
         work._recordMembershipKeyCopies(count);
       }
       return true;
@@ -466,14 +523,40 @@ final class FamilyTables {
 }
 
 @visibleForTesting
-final class FamilyTablesMembershipWork {
+// The seven explicit counters are one owner-semantic probe: splitting them
+// would fragment the single assert-gated observation surface by evidence type.
+// ignore: number-of-methods
+final class FamilyTablesWork {
   int _mapProbeCount = 0;
   int _membershipSetAllocationCount = 0;
   int _membershipKeyCopyCount = 0;
+  final Map<CanvasElementKind, int> _batchOpenCountByFamily = {};
+  final Map<CanvasElementKind, int> _batchBaseEntryCopyCountByFamily = {};
+  final Map<CanvasElementKind, int> _batchFreezeCountByFamily = {};
+  final Map<CanvasElementKind, bool> _batchFinalMapRetainsBaseIdentityByFamily =
+      {};
+  int _batchReplacementCount = 0;
 
   int get mapProbeCount => _mapProbeCount;
   int get membershipSetAllocationCount => _membershipSetAllocationCount;
   int get membershipKeyCopyCount => _membershipKeyCopyCount;
+  int get batchReplacementCount => _batchReplacementCount;
+
+  int batchOpenCount(CanvasElementKind kind) {
+    return _batchOpenCountByFamily[kind] ?? 0;
+  }
+
+  int batchBaseEntryCopyCount(CanvasElementKind kind) {
+    return _batchBaseEntryCopyCountByFamily[kind] ?? 0;
+  }
+
+  int batchFreezeCount(CanvasElementKind kind) {
+    return _batchFreezeCountByFamily[kind] ?? 0;
+  }
+
+  bool batchFinalMapRetainsBaseIdentity(CanvasElementKind kind) {
+    return _batchFinalMapRetainsBaseIdentityByFamily[kind] ?? false;
+  }
 
   void _recordMapProbe() {
     _mapProbeCount += 1;
@@ -486,60 +569,149 @@ final class FamilyTablesMembershipWork {
   void _recordMembershipKeyCopies(int count) {
     _membershipKeyCopyCount += count;
   }
+
+  void _recordReplacement() {
+    _batchReplacementCount += 1;
+  }
+
+  void _recordFamilyOpen(CanvasElementKind kind) {
+    _batchOpenCountByFamily.update(
+      kind,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+  }
+
+  void _recordFamilyBaseEntryCopies(CanvasElementKind kind, int count) {
+    _batchBaseEntryCopyCountByFamily.update(
+      kind,
+      (current) => current + count,
+      ifAbsent: () => count,
+    );
+  }
+
+  void _recordFamilyFreeze(CanvasElementKind kind) {
+    _batchFreezeCountByFamily.update(
+      kind,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+  }
+
+  void _recordFinalMapIdentity(
+    CanvasElementKind kind, {
+    required bool retainsBaseIdentity,
+  }) {
+    _batchFinalMapRetainsBaseIdentityByFamily[kind] = retainsBaseIdentity;
+  }
 }
 
-// Batch replacement must keep every family row map in one mutable snapshot; a
-// per-family split would reintroduce synchronization across maps during sparse
-// update preparation.
+// Batch replacement remains one cohesive consumer while each typed family buffer
+// copies only when that family receives its first replacement in the batch.
 // ignore: coupling-between-object-classes
 final class _MutableFamilyRows {
   _MutableFamilyRows.fromTables(FamilyTables tables)
-    : imageRows = Map<String, ImageRow>.of(tables.imageRows),
-      vectorRows = Map<String, VectorRow>.of(tables.vectorRows),
-      pathRows = Map<String, PathRow>.of(tables.pathRows),
-      textRows = Map<String, TextRow>.of(tables.textRows),
-      strokeRows = Map<String, StrokeRow>.of(tables.strokeRows),
-      lineRows = Map<String, LineRow>.of(tables.lineRows),
-      rectRows = Map<String, RectRow>.of(tables.rectRows);
+    : imageRows = _LazyFamilyMapBuffer(
+        tables.imageRows,
+        CanvasElementKind.image,
+      ),
+      vectorRows = _LazyFamilyMapBuffer(
+        tables.vectorRows,
+        CanvasElementKind.vector,
+      ),
+      pathRows = _LazyFamilyMapBuffer(tables.pathRows, CanvasElementKind.path),
+      textRows = _LazyFamilyMapBuffer(tables.textRows, CanvasElementKind.text),
+      strokeRows = _LazyFamilyMapBuffer(
+        tables.strokeRows,
+        CanvasElementKind.stroke,
+      ),
+      lineRows = _LazyFamilyMapBuffer(tables.lineRows, CanvasElementKind.line),
+      rectRows = _LazyFamilyMapBuffer(tables.rectRows, CanvasElementKind.rect);
 
-  final Map<String, ImageRow> imageRows;
-  final Map<String, VectorRow> vectorRows;
-  final Map<String, PathRow> pathRows;
-  final Map<String, TextRow> textRows;
-  final Map<String, StrokeRow> strokeRows;
-  final Map<String, LineRow> lineRows;
-  final Map<String, RectRow> rectRows;
+  final _LazyFamilyMapBuffer<ImageRow> imageRows;
+  final _LazyFamilyMapBuffer<VectorRow> vectorRows;
+  final _LazyFamilyMapBuffer<PathRow> pathRows;
+  final _LazyFamilyMapBuffer<TextRow> textRows;
+  final _LazyFamilyMapBuffer<StrokeRow> strokeRows;
+  final _LazyFamilyMapBuffer<LineRow> lineRows;
+  final _LazyFamilyMapBuffer<RectRow> rectRows;
 
   void replace(CanvasElement element) {
     final id = element.id.value;
     switch (element) {
       case CanvasImageElement():
-        imageRows[id] = ImageRow(element);
+        imageRows.replace(id, ImageRow(element));
       case CanvasVectorElement():
-        vectorRows[id] = VectorRow(element);
+        vectorRows.replace(id, VectorRow(element));
       case CanvasPathElement():
-        pathRows[id] = PathRow(element);
+        pathRows.replace(id, PathRow(element));
       case CanvasTextElement():
-        textRows[id] = TextRow(element);
+        textRows.replace(id, TextRow(element));
       case CanvasStrokeElement():
-        strokeRows[id] = StrokeRow(element);
+        strokeRows.replace(id, StrokeRow(element));
       case CanvasLineElement():
-        lineRows[id] = LineRow(element);
+        lineRows.replace(id, LineRow(element));
       case CanvasRectElement():
-        rectRows[id] = RectRow(element);
+        rectRows.replace(id, RectRow(element));
     }
   }
 
   FamilyTables toFamilyTables() {
     return FamilyTables._fromTables(
-      imageRows: Map.unmodifiable(imageRows),
-      vectorRows: Map.unmodifiable(vectorRows),
-      pathRows: Map.unmodifiable(pathRows),
-      textRows: Map.unmodifiable(textRows),
-      strokeRows: Map.unmodifiable(strokeRows),
-      lineRows: Map.unmodifiable(lineRows),
-      rectRows: Map.unmodifiable(rectRows),
+      imageRows: imageRows.freeze(),
+      vectorRows: vectorRows.freeze(),
+      pathRows: pathRows.freeze(),
+      textRows: textRows.freeze(),
+      strokeRows: strokeRows.freeze(),
+      lineRows: lineRows.freeze(),
+      rectRows: rectRows.freeze(),
     );
+  }
+}
+
+final class _LazyFamilyMapBuffer<Row> {
+  _LazyFamilyMapBuffer(this._baseRows, this._kind);
+
+  final Map<String, Row> _baseRows;
+  final CanvasElementKind _kind;
+  Map<String, Row>? _mutableRows;
+
+  void replace(String id, Row row) {
+    _openRows()[id] = row;
+  }
+
+  Map<String, Row> freeze() {
+    final mutableRows = _mutableRows;
+    if (mutableRows == null) {
+      FamilyTables._recordBatchFinalMapIdentity(
+        _kind,
+        retainsBaseIdentity: true,
+      );
+      return _baseRows;
+    }
+
+    final frozenRows = Map<String, Row>.unmodifiable(mutableRows);
+    FamilyTables._recordBatchFamilyFreeze(_kind);
+    FamilyTables._recordBatchFinalMapIdentity(
+      _kind,
+      retainsBaseIdentity: identical(frozenRows, _baseRows),
+    );
+
+    return frozenRows;
+  }
+
+  Map<String, Row> _openRows() {
+    final mutableRows = _mutableRows;
+    if (mutableRows != null) {
+      return mutableRows;
+    }
+
+    FamilyTables._recordBatchFamilyOpen(_kind);
+    FamilyTables._recordBatchFamilyBaseEntryCopies(_kind, _baseRows.length);
+    final openedRows = Map<String, Row>.of(_baseRows);
+    _mutableRows = openedRows;
+
+    return openedRows;
   }
 }
 
