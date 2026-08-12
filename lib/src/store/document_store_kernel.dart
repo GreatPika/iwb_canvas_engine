@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -27,11 +28,42 @@ import 'sparse_store_commit.dart';
 import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
+@visibleForTesting
+enum IdAdmissionWorkPhase { reset, acceptedAdmission, generation }
+
+@visibleForTesting
+enum IdAdmissionWorkKind {
+  inputVisit,
+  cursorProbe,
+  collision,
+  advance,
+  candidateObservation,
+  reservation,
+}
+
+// Admission observations carry only semantic operation categories. Tests own
+// accumulation, so production retains neither IDs nor telemetry history.
+@immutable
+@visibleForTesting
+final class IdAdmissionWorkEvent {
+  const IdAdmissionWorkEvent({
+    required this.prefix,
+    required this.phase,
+    required this.kind,
+  });
+
+  final String prefix;
+  final IdAdmissionWorkPhase phase;
+  final IdAdmissionWorkKind kind;
+}
+
 // DocumentStoreKernel is the single owner for committed document facts, read
 // projection, id admission, and selection normalization inputs; splitting these
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
+  static final Object _idAdmissionWorkZoneKey = Object();
+
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(_document);
     _resetIdAdmission();
@@ -63,6 +95,30 @@ final class DocumentStoreKernel {
   late _IdAdmission _elementIds;
   late _IdAdmission _layerIds;
   late _IdAdmission _resourceIds;
+
+  // The Zone sink is test-only and assert-gated at the owner operation, so it
+  // cannot retain admission state or add production telemetry work.
+  @visibleForTesting
+  static T observeIdAdmissionWork<T>(
+    void Function(IdAdmissionWorkEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_idAdmissionWorkZoneKey: sink});
+  }
+
+  static void _recordIdAdmissionWork({
+    required String prefix,
+    required IdAdmissionWorkPhase phase,
+    required IdAdmissionWorkKind kind,
+  }) {
+    assert(() {
+      final sink = Zone.current[_idAdmissionWorkZoneKey];
+      if (sink is void Function(IdAdmissionWorkEvent)) {
+        sink(IdAdmissionWorkEvent(prefix: prefix, phase: phase, kind: kind));
+      }
+      return true;
+    }(), 'id admission work observation failed');
+  }
 
   CanvasDocument readDocument() => _projectionCache.projectionFor(_document);
 
@@ -248,7 +304,14 @@ final class DocumentStoreKernel {
   }
 
   CanvasElementId generateElementId() {
-    return CanvasElementId(_elementIds.nextValue());
+    final candidate = _elementIds.observeCandidate();
+    _elementIds.reserveCandidate(candidate);
+    return CanvasElementId(candidate);
+  }
+
+  @visibleForTesting
+  CanvasElementId observeElementIdCandidateForTesting() {
+    return CanvasElementId(_elementIds.observeCandidate());
   }
 
   CanvasLayerId generateLayerId() {
@@ -276,18 +339,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = _acceptFullDocument(document, delta);
-    _elementIds = _IdAdmission(
-      prefix: 'e',
-      admittedIds: _document.admittedElementIds,
-    );
-    _layerIds = _IdAdmission(
-      prefix: 'l',
-      admittedIds: _document.admittedLayerIds,
-    );
-    _resourceIds = _IdAdmission(
-      prefix: 'r',
-      admittedIds: _document.admittedResourceIds,
-    );
+    _resetIdAdmission();
   }
 
   void replacePreparedLoadDocument(
@@ -299,18 +351,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = _acceptFullDocument(document, delta);
-    _elementIds = _IdAdmission(
-      prefix: 'e',
-      admittedIds: _document.admittedElementIds,
-    );
-    _layerIds = _IdAdmission(
-      prefix: 'l',
-      admittedIds: _document.admittedLayerIds,
-    );
-    _resourceIds = _IdAdmission(
-      prefix: 'r',
-      admittedIds: _document.admittedResourceIds,
-    );
+    _resetIdAdmission();
   }
 
   PreparedStoreDocumentImport prepareSchemaV1Import(
@@ -383,18 +424,7 @@ final class DocumentStoreKernel {
       return;
     }
     _document = prepared.document;
-    _elementIds = _IdAdmission(
-      prefix: 'e',
-      admittedIds: _document.admittedElementIds,
-    );
-    _layerIds = _IdAdmission(
-      prefix: 'l',
-      admittedIds: _document.admittedLayerIds,
-    );
-    _resourceIds = _IdAdmission(
-      prefix: 'r',
-      admittedIds: _document.admittedResourceIds,
-    );
+    _resetIdAdmission();
   }
 
   // Sparse preparation validates, applies, and records admitted-id deltas in
@@ -2738,26 +2768,80 @@ final class _IdAdmission {
   _IdAdmission({required this.prefix, required Iterable<String> admittedIds})
     : _admittedIds = admittedIds is Set<String>
           ? admittedIds
-          : Set.of(admittedIds);
+          : Set.of(admittedIds) {
+    for (final _ in _admittedIds) {
+      _record(IdAdmissionWorkPhase.reset, IdAdmissionWorkKind.inputVisit);
+    }
+    _normalize(IdAdmissionWorkPhase.reset);
+  }
 
   final String prefix;
   final Set<String> _admittedIds;
   final Set<String> _reserved = {};
   int _next = 0;
 
-  String nextValue() {
-    while (true) {
-      final candidate = '$prefix$_next';
-      _next += 1;
-      if (_admittedIds.contains(candidate) || !_reserved.add(candidate)) {
-        continue;
-      }
+  String observeCandidate() {
+    _record(
+      IdAdmissionWorkPhase.generation,
+      IdAdmissionWorkKind.candidateObservation,
+    );
+    return '$prefix$_next';
+  }
 
-      return candidate;
+  String nextValue() {
+    final candidate = '$prefix$_next';
+    reserveCandidate(candidate);
+    return candidate;
+  }
+
+  void reserveCandidate(String candidate) {
+    if (candidate != '$prefix$_next') {
+      throw StateError('Id admission candidate is stale.');
     }
+    if (!_reserved.add(candidate)) {
+      throw StateError('Id admission candidate is already reserved.');
+    }
+    _record(IdAdmissionWorkPhase.generation, IdAdmissionWorkKind.reservation);
+    _next += 1;
+    _record(IdAdmissionWorkPhase.generation, IdAdmissionWorkKind.advance);
+    _normalize(IdAdmissionWorkPhase.generation);
   }
 
   void admitAll(Iterable<String> ids) {
-    _reserved.addAll(ids);
+    final currentCandidate = '$prefix$_next';
+    var shouldNormalize = false;
+    for (final id in ids) {
+      _record(
+        IdAdmissionWorkPhase.acceptedAdmission,
+        IdAdmissionWorkKind.inputVisit,
+      );
+      if (_reserved.add(id) && id == currentCandidate) {
+        shouldNormalize = true;
+      }
+    }
+    if (shouldNormalize) {
+      _normalize(IdAdmissionWorkPhase.acceptedAdmission);
+    }
+  }
+
+  void _normalize(IdAdmissionWorkPhase phase) {
+    while (true) {
+      final candidate = '$prefix$_next';
+      _record(phase, IdAdmissionWorkKind.cursorProbe);
+      if (!_admittedIds.contains(candidate) && !_reserved.contains(candidate)) {
+        return;
+      }
+      _record(phase, IdAdmissionWorkKind.collision);
+      _next += 1;
+      _record(phase, IdAdmissionWorkKind.advance);
+    }
+  }
+
+  void _record(IdAdmissionWorkPhase phase, IdAdmissionWorkKind kind) {
+    DocumentStoreKernel._recordIdAdmissionWork(
+      prefix: prefix,
+      phase: phase,
+      kind: kind,
+    );
   }
 }
