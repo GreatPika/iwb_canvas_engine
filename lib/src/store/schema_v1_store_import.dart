@@ -2,7 +2,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show internal, visibleForTesting;
 
 import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_document.dart';
@@ -15,13 +15,63 @@ import 'resource_table.dart';
 import 'revision_state.dart';
 import 'store_revision_delta.dart';
 
-/// The extra Zone and testing imports keep prepared-inventory observation
-/// scoped to this owner rather than introducing global mutable telemetry.
+/// Zone-scoped events keep scalar prepared-summary work observable without
+/// retaining document-sized counters or inventories in production state.
 @visibleForTesting
-enum PreparedStoreDocumentImportInventoryReadEvent {
-  resourceIds,
-  layerIds,
-  elementIds,
+enum PreparedSummaryWorkEvent { capture, storeSummaryRead, loadSummaryRead }
+
+final Object _preparedSummaryWorkZoneKey = Object();
+
+enum _PreparedSummaryReadKind { store, load }
+
+/// The common prepared-summary view retains only the scalar snapshot and the
+/// owner-specific read event; payload owners cannot reach rows or ids here.
+@internal
+base class PreparedSummaryView {
+  PreparedSummaryView.store(CanvasDocumentSummary summary)
+    : _summary = summary,
+      _readKind = _PreparedSummaryReadKind.store;
+
+  PreparedSummaryView.load(CanvasDocumentSummary summary)
+    : _summary = summary,
+      _readKind = _PreparedSummaryReadKind.load;
+
+  final CanvasDocumentSummary _summary;
+  final _PreparedSummaryReadKind _readKind;
+
+  CanvasDocumentSummary get summary {
+    _recordPreparedSummaryWork(switch (_readKind) {
+      _PreparedSummaryReadKind.store =>
+        PreparedSummaryWorkEvent.storeSummaryRead,
+      _PreparedSummaryReadKind.load => PreparedSummaryWorkEvent.loadSummaryRead,
+    });
+    return _summary;
+  }
+}
+
+/// Captures the exact scalar facts supplied by a complete prepared payload.
+@internal
+CanvasDocumentSummary capturePreparedSummary({
+  required int elementCount,
+  required int layerCount,
+  required int resourceCount,
+}) {
+  _recordPreparedSummaryWork(PreparedSummaryWorkEvent.capture);
+  return CanvasDocumentSummary(
+    elementCount: elementCount,
+    layerCount: layerCount,
+    resourceCount: resourceCount,
+  );
+}
+
+void _recordPreparedSummaryWork(PreparedSummaryWorkEvent event) {
+  assert(() {
+    final sink = Zone.current[_preparedSummaryWorkZoneKey];
+    if (sink is void Function(PreparedSummaryWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }(), 'prepared summary work observation failed');
 }
 
 // The builder is the single handoff from schema-v1 import events to committed
@@ -136,11 +186,11 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
       baseRevisions: baseRevisions,
       document: committed,
       revisionDelta: revisionDelta,
-      resourceIds: Set.unmodifiable(resourceTable.descriptors.keys),
-      layerIds: Set.unmodifiable([
-        for (final row in elements.layerTable.rows) row.id,
-      ]),
-      elementCount: elements.elementCount,
+      summary: capturePreparedSummary(
+        elementCount: committed.elements.elementCount,
+        layerCount: committed.elements.layerTable.rows.length,
+        resourceCount: committed.resourceTable.count,
+      ),
     );
   }
 
@@ -172,67 +222,25 @@ final class StoreSchemaV1ImportBuilder implements IsolatedSchemaV1ImportSink {
   }
 }
 
-final class PreparedStoreDocumentImport {
-  static final Object _inventoryReadZoneKey = Object();
-
+final class PreparedStoreDocumentImport extends PreparedSummaryView {
   PreparedStoreDocumentImport._({
     required this.baseRevisions,
     required this.document,
     required this.revisionDelta,
-    required Set<CanvasResourceId> resourceIds,
-    required Set<CanvasLayerId> layerIds,
-    required this.elementCount,
-  }) : _resourceIds = resourceIds,
-       _layerIds = layerIds;
+    required CanvasDocumentSummary summary,
+  }) : super.store(summary);
 
   final RevisionState baseRevisions;
   final CommittedDocument document;
   final StoreRevisionDelta revisionDelta;
-  final Set<CanvasResourceId> _resourceIds;
-  final Set<CanvasLayerId> _layerIds;
-  final int elementCount;
-  Set<CanvasElementId>? _elementIds;
   bool _isConsumed = false;
 
-  // Zone-scoped observation avoids global mutable telemetry; Unit 8 retires
-  // this assert-gated test seam with the retained prepared inventories.
   @visibleForTesting
-  static T observeInventoryReads<T>(
-    void Function(PreparedStoreDocumentImportInventoryReadEvent event) sink,
+  static T observeSummaryWork<T>(
+    void Function(PreparedSummaryWorkEvent event) sink,
     T Function() operation,
   ) {
-    return runZoned(operation, zoneValues: {_inventoryReadZoneKey: sink});
-  }
-
-  Set<CanvasResourceId> get resourceIds {
-    _recordInventoryRead(
-      PreparedStoreDocumentImportInventoryReadEvent.resourceIds,
-    );
-    return _resourceIds;
-  }
-
-  Set<CanvasLayerId> get layerIds {
-    _recordInventoryRead(
-      PreparedStoreDocumentImportInventoryReadEvent.layerIds,
-    );
-    return _layerIds;
-  }
-
-  Set<CanvasElementId> get elementIds {
-    _recordInventoryRead(
-      PreparedStoreDocumentImportInventoryReadEvent.elementIds,
-    );
-    return _elementIds ??= Set.unmodifiable(
-      document.elements.frameElementOrder,
-    );
-  }
-
-  CanvasDocumentSummary get summary {
-    return CanvasDocumentSummary(
-      elementCount: elementCount,
-      layerCount: _layerIds.length,
-      resourceCount: _resourceIds.length,
-    );
+    return runZoned(operation, zoneValues: {_preparedSummaryWorkZoneKey: sink});
   }
 
   bool get hasChanges => revisionDelta.hasChanges;
@@ -247,18 +255,5 @@ final class PreparedStoreDocumentImport {
       throw StateError('Prepared schema v1 store import is stale.');
     }
     _isConsumed = true;
-  }
-
-  static void _recordInventoryRead(
-    PreparedStoreDocumentImportInventoryReadEvent event,
-  ) {
-    assert(() {
-      final sink = Zone.current[_inventoryReadZoneKey];
-      if (sink
-          is void Function(PreparedStoreDocumentImportInventoryReadEvent)) {
-        sink(event);
-      }
-      return true;
-    }(), 'prepared store inventory read observation failed');
   }
 }

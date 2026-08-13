@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
+import 'package:iwb_canvas_engine/src/edit/staged_document_load.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/layer_table.dart';
@@ -17,10 +18,244 @@ import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   _testValidImportPreparesAndInstallsRows();
+  _testPreparedSummaryIsOneImmutableSnapshot();
+  _testPreparedSummaryCapturesBeforeItsFirstRead();
+  _testPreparedSummaryIsScalarAtSupportedSize();
+  _testDraftPreparedSummaryDoesNotEnumerateOwners();
   _testStorePreparationRejectsInvalidRows();
   _testPreparedImportsAreConsumeOnceAndStaleGuarded();
   _testImportBuildersAreConsumeOnce();
   _testStoreImportBuilderIsOneShot();
+}
+
+void _testPreparedSummaryIsOneImmutableSnapshot() {
+  test(
+    'prepared import retains one exact summary snapshot through consume',
+    () {
+      final store = DocumentStoreKernel();
+      final prepared = _prepare(store, _validDocument());
+
+      final first = prepared.summary;
+      final second = prepared.summary;
+
+      expect(
+        first,
+        const CanvasDocumentSummary(
+          elementCount: 2,
+          layerCount: 1,
+          resourceCount: 1,
+        ),
+      );
+      expect(second, same(first));
+
+      store.installPreparedSchemaV1Import(prepared);
+
+      expect(prepared.summary, same(first));
+    },
+  );
+}
+
+void _testPreparedSummaryCapturesBeforeItsFirstRead() {
+  test('prepared import captures summary before its first read', () {
+    final captureEvents = <PreparedSummaryWorkEvent>[];
+    late PreparedStoreDocumentImport prepared;
+
+    PreparedStoreDocumentImport.observeSummaryWork(captureEvents.add, () {
+      prepared = _prepare(DocumentStoreKernel(), _validDocument());
+    });
+
+    expect(captureEvents, [PreparedSummaryWorkEvent.capture]);
+
+    final readEvents = <PreparedSummaryWorkEvent>[];
+    PreparedStoreDocumentImport.observeSummaryWork(readEvents.add, () {
+      expect(prepared.summary.elementCount, 2);
+    });
+
+    expect(readEvents, [PreparedSummaryWorkEvent.storeSummaryRead]);
+  });
+}
+
+void _testPreparedSummaryIsScalarAtSupportedSize() {
+  test(
+    'supported-size prepared import captures and reads scalar summary only',
+    () {
+      final events = <PreparedSummaryWorkEvent>[];
+      final enumeration = _OwnerEnumerationTrace();
+      final store = DocumentStoreKernel();
+
+      final prepared = _prepareObservedSupportedImport(
+        store,
+        events: events,
+        enumeration: enumeration,
+        expectedSummary: _maximumSupportedPreparedSummary,
+      );
+      final first = _readObservedSummary(
+        events,
+        enumeration,
+        () => prepared.summary,
+      );
+
+      expect(first, _maximumSupportedPreparedSummary);
+      expect(
+        _readObservedSummary(events, enumeration, () => prepared.summary),
+        same(first),
+      );
+      expect(
+        _readObservedSummary(events, enumeration, () => prepared.summary),
+        same(first),
+      );
+
+      expect(events, [
+        PreparedSummaryWorkEvent.capture,
+        PreparedSummaryWorkEvent.storeSummaryRead,
+        PreparedSummaryWorkEvent.storeSummaryRead,
+        PreparedSummaryWorkEvent.storeSummaryRead,
+      ]);
+      enumeration.expectNoOwnerEnumeration();
+
+      _expectSummaryRemainsScalarAfterInstallAttempts(store, prepared, first);
+    },
+  );
+}
+
+void _expectSummaryRemainsScalarAfterInstallAttempts(
+  DocumentStoreKernel store,
+  PreparedStoreDocumentImport prepared,
+  CanvasDocumentSummary summary,
+) {
+  store.installPreparedSchemaV1Import(prepared);
+  _expectFreshScalarSummaryRead(prepared, summary);
+
+  expect(() => store.installPreparedSchemaV1Import(prepared), throwsStateError);
+  _expectFreshScalarSummaryRead(prepared, summary);
+}
+
+void _expectFreshScalarSummaryRead(
+  PreparedStoreDocumentImport prepared,
+  CanvasDocumentSummary summary,
+) {
+  final events = <PreparedSummaryWorkEvent>[];
+  final enumeration = _OwnerEnumerationTrace();
+
+  expect(
+    _readObservedSummary(events, enumeration, () => prepared.summary),
+    same(summary),
+  );
+  expect(events, [PreparedSummaryWorkEvent.storeSummaryRead]);
+  enumeration.expectNoOwnerEnumeration();
+}
+
+PreparedStoreDocumentImport _prepareObservedSupportedImport(
+  DocumentStoreKernel store, {
+  required List<PreparedSummaryWorkEvent> events,
+  required _OwnerEnumerationTrace enumeration,
+  required CanvasDocumentSummary expectedSummary,
+}) {
+  return enumeration.observe(
+    () => PreparedStoreDocumentImport.observeSummaryWork(
+      events.add,
+      () => _prepareMaximumSupportedImport(
+        store,
+        elementCount: expectedSummary.elementCount,
+        layerCount: expectedSummary.layerCount,
+        resourceCount: expectedSummary.resourceCount,
+      ),
+    ),
+  );
+}
+
+const _maximumSupportedPreparedSummary = CanvasDocumentSummary(
+  elementCount: 200000,
+  layerCount: 4096,
+  resourceCount: 4096,
+);
+
+CanvasDocumentSummary _readObservedSummary(
+  List<PreparedSummaryWorkEvent> events,
+  _OwnerEnumerationTrace enumeration,
+  CanvasDocumentSummary Function() read,
+) {
+  return enumeration.observe(
+    () => PreparedStoreDocumentImport.observeSummaryWork(events.add, read),
+  );
+}
+
+// This cross-owner witness belongs with the direct table observers that prove
+// summary capture and reads do not open an authoritative owner enumeration.
+void _testDraftPreparedSummaryDoesNotEnumerateOwners() {
+  test('supported-size draft prepared summary does not enumerate owners', () {
+    final events = <PreparedSummaryWorkEvent>[];
+    final enumeration = _OwnerEnumerationTrace();
+    final rejectingPipeline = LoadDocumentPipeline(
+      store: DocumentStoreKernel(),
+    );
+    final document = _draftDocumentForSummaryOwnerWitness(
+      _maximumSupportedPreparedSummary,
+    );
+    final prepared = enumeration.observe(
+      () => PreparedStoreDocumentImport.observeSummaryWork(
+        events.add,
+        () => prepareDraftReplacement(document),
+      ),
+    );
+    final first = _readObservedSummary(
+      events,
+      enumeration,
+      () => prepared.summary,
+    );
+
+    expect(first, _maximumSupportedPreparedSummary);
+    expect(
+      _readObservedSummary(events, enumeration, () => prepared.summary),
+      same(first),
+    );
+    expect(() => rejectingPipeline.consume(prepared), throwsStateError);
+    expect(
+      _readObservedSummary(events, enumeration, () => prepared.summary),
+      same(first),
+    );
+    expect(events, [
+      PreparedSummaryWorkEvent.capture,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+    ]);
+    enumeration.expectNoOwnerEnumeration();
+  });
+}
+
+final class _OwnerEnumerationTrace {
+  int familyOpenCount = 0;
+  int layerOpenCount = 0;
+  int resourceOpenCount = 0;
+
+  T observe<T>(T Function() operation) {
+    return FamilyTables.observeEnumeration(
+      (event) {
+        if (event == FamilyTablesEnumerationEvent.open) {
+          familyOpenCount += 1;
+        }
+      },
+      () => LayerTable.observeWork(
+        (event) {
+          if (event == LayerTableWorkEvent.admissionEnumerationOpen) {
+            layerOpenCount += 1;
+          }
+        },
+        () => ResourceTable.observeEnumeration((event) {
+          if (event == ResourceTableEnumerationEvent.open) {
+            resourceOpenCount += 1;
+          }
+        }, operation),
+      ),
+    );
+  }
+
+  void expectNoOwnerEnumeration() {
+    expect(familyOpenCount, 0);
+    expect(layerOpenCount, 0);
+    expect(resourceOpenCount, 0);
+  }
 }
 
 void _testValidImportPreparesAndInstallsRows() {
@@ -54,15 +289,11 @@ void _testStorePreparationRejectsInvalidRows() {
 }
 
 void _expectPreparedImportFacts(PreparedStoreDocumentImport prepared) {
-  expect(prepared.summary.elementCount, 2);
-  expect(prepared.summary.layerCount, 1);
-  expect(prepared.summary.resourceCount, 1);
-  expect(prepared.resourceIds, {CanvasResourceId('resource-a')});
-  expect(prepared.layerIds, {CanvasLayerId('layer-a')});
-  expect(prepared.elementIds, {
-    CanvasElementId('bg-rect'),
-    CanvasElementId('image-a'),
-  });
+  final summary = prepared.summary;
+  expect(summary.elementCount, 2);
+  expect(summary.layerCount, 1);
+  expect(summary.resourceCount, 1);
+  expect(prepared.summary, same(summary));
 }
 
 // Installed import facts stay in one assertion block so the fixture proves the
@@ -114,10 +345,16 @@ void _expectExplicitReadBuildsFirstProjection(
 }
 
 void _testPreparedImportsAreConsumeOnceAndStaleGuarded() {
+  _testStalePreparedSummaryRemainsSnapshot();
+  _testConsumedPreparedSummaryRemainsSnapshot();
+}
+
+void _testStalePreparedSummaryRemainsSnapshot() {
   test('prepared imports are consume-once and stale guarded', () {
     final store = DocumentStoreKernel();
     final stale = _prepare(store, _validDocument(resourceId: 'resource-a'));
     final fresh = _prepare(store, _validDocument(resourceId: 'resource-b'));
+    final staleSummary = stale.summary;
 
     store.installPreparedSchemaV1Import(fresh);
 
@@ -125,13 +362,21 @@ void _testPreparedImportsAreConsumeOnceAndStaleGuarded() {
       () => store.installPreparedSchemaV1Import(stale),
       throwsA(isA<StateError>()),
     );
+    expect(stale.summary, same(staleSummary));
+  });
+}
 
+void _testConsumedPreparedSummaryRemainsSnapshot() {
+  test('consumed prepared import retains its summary snapshot', () {
+    final store = DocumentStoreKernel();
     final next = _prepare(store, _validDocument(resourceId: 'resource-c'));
     store.installPreparedSchemaV1Import(next);
+    final nextSummary = next.summary;
     expect(
       () => store.installPreparedSchemaV1Import(next),
       throwsA(isA<StateError>()),
     );
+    expect(next.summary, same(nextSummary));
 
     final noOp = _prepare(
       store,
@@ -251,6 +496,35 @@ PreparedStoreDocumentImport _prepare(
   importSchemaV1Document(document, sink);
 
   return store.prepareSchemaV1Import(sink, delta);
+}
+
+PreparedStoreDocumentImport _prepareMaximumSupportedImport(
+  DocumentStoreKernel store, {
+  required int elementCount,
+  required int layerCount,
+  required int resourceCount,
+}) {
+  final sink = StoreSchemaV1ImportBuilder()
+    ..beginDocument(
+      const SchemaV1DocumentImportEvent(
+        camera: CanvasCamera.origin,
+        background: CanvasBackground(),
+        palette: CanvasPalette.defaults(),
+        metadata: CanvasMetadata.empty(),
+      ),
+    );
+  for (var index = 0; index < resourceCount; index += 1) {
+    sink.resource(_resourceEvent('r$index'));
+  }
+  for (var index = 0; index < elementCount; index += 1) {
+    sink.backgroundElement(_rectEvent('e$index'));
+  }
+  for (var index = 0; index < layerCount; index += 1) {
+    sink.layer(_layerEvent('l$index'));
+  }
+  sink.endDocument();
+
+  return store.prepareSchemaV1Import(sink, _replacementDelta);
 }
 
 void _expectPrepareFailure(
@@ -399,6 +673,31 @@ Map<String, Object?> _validDocument({String resourceId = 'resource-a'}) {
       },
     ],
   };
+}
+
+CanvasDocument _draftDocumentForSummaryOwnerWitness(
+  CanvasDocumentSummary expectedSummary,
+) {
+  return CanvasDocument(
+    resources: List.generate(expectedSummary.resourceCount, (index) {
+      final id = CanvasResourceId('draft-resource-$index');
+      return CanvasImageResource(
+        id: id,
+        source: CanvasResourceSource.appKey(id.value),
+      );
+    }),
+    backgroundElements: List.generate(
+      expectedSummary.elementCount,
+      (index) => CanvasRectElement(
+        id: CanvasElementId('draft-element-$index'),
+        size: const Size(1, 1),
+      ),
+    ),
+    layers: List.generate(
+      expectedSummary.layerCount,
+      (index) => CanvasLayer(id: CanvasLayerId('draft-layer-$index')),
+    ),
+  );
 }
 
 Map<String, Object?> _resource(String id) {

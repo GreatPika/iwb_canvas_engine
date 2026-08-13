@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/edit/staged_document_load.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 
 import '../../support/document_store_with_document.dart';
 
@@ -41,6 +42,55 @@ void main() {
   test('draft replacement freezes mutable source list ownership', () {
     expect(_expectPreparedDtoOwnershipFrozen, returnsNormally);
   });
+
+  _registerPreparedSummaryTests();
+}
+
+void _registerPreparedSummaryTests() {
+  _testJsonPreparedLoadSharesScalarSummary();
+}
+
+void _testJsonPreparedLoadSharesScalarSummary() {
+  test('JSON prepared load captures one shared scalar summary', () {
+    final firstStore = documentStoreWithDocument(_initialDocument());
+    final foreignStore = documentStoreWithDocument(_initialDocument());
+    final events = <PreparedSummaryWorkEvent>[];
+
+    PreparedStoreDocumentImport.observeSummaryWork(events.add, () {
+      final firstPipeline = LoadDocumentPipeline(store: firstStore);
+      final prepared = _prepareFromDocument(
+        firstPipeline,
+        _replacementDocument(),
+      );
+      final summary = prepared.summary;
+      final foreignPipeline = LoadDocumentPipeline(store: foreignStore);
+
+      _expectSameSummary(prepared, summary);
+      expect(() => foreignPipeline.consume(prepared), throwsStateError);
+      _expectSameSummary(prepared, summary);
+      firstPipeline.consume(prepared);
+      _expectSameSummary(prepared, summary);
+      expect(() => firstPipeline.consume(prepared), throwsStateError);
+      _expectSameSummary(prepared, summary);
+    });
+
+    expect(events, [
+      PreparedSummaryWorkEvent.capture,
+      PreparedSummaryWorkEvent.storeSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+      PreparedSummaryWorkEvent.loadSummaryRead,
+    ]);
+  });
+}
+
+void _expectSameSummary(
+  PreparedDocumentLoad prepared,
+  CanvasDocumentSummary summary,
+) {
+  expect(prepared.summary, same(summary));
 }
 
 void _expectSuccessfulPreparationAndConsume() {
@@ -59,28 +109,17 @@ void _expectSuccessfulPreparationAndConsume() {
   expect(() => pipeline.consume(prepared), throwsStateError);
 }
 
-// This assertion keeps one prepared replacement snapshot together so the
-// store-import handoff and immutable id views are checked in the same proof.
+// This assertion keeps one prepared replacement snapshot together so summary
+// identity and load payload facts stay in the same lifecycle proof.
 // ignore: halstead-volume
 void _expectPreparedReplacementFacts(PreparedDocumentLoad prepared) {
-  expect(prepared.summary.elementCount, 2);
-  expect(prepared.summary.layerCount, 1);
-  expect(prepared.summary.resourceCount, 1);
+  final summary = prepared.summary;
+  expect(summary.elementCount, 2);
+  expect(summary.layerCount, 1);
+  expect(summary.resourceCount, 1);
+  expect(prepared.summary, same(summary));
   expect(prepared.background.color, const Color(0xFF112233));
   expect(prepared.background.grid, CanvasGrid.disabled);
-  final storeImport = prepared.storeImportForTesting;
-  if (storeImport == null) {
-    fail('Expected JSON load preparation to expose a store import fixture.');
-  }
-  final storeElementIds = storeImport.elementIds;
-  final loadElementIds = prepared.elementIds;
-  expect(loadElementIds, same(storeElementIds));
-  expect(loadElementIds.map((id) => id.value), {'load-bg', 'load-img'});
-  expect(prepared.layerIds.map((id) => id.value), {'load-layer'});
-  expect(prepared.resourceIds.map((id) => id.value), {'load-resource'});
-  expect(() => loadElementIds.clear(), throwsUnsupportedError);
-  expect(() => prepared.layerIds.clear(), throwsUnsupportedError);
-  expect(() => prepared.resourceIds.clear(), throwsUnsupportedError);
 }
 
 void _expectConsumedReplacementStore(DocumentStoreKernel store) {
@@ -245,17 +284,30 @@ void _expectPublicDtoInvalidInputRejectedEarly() {
 
 void _expectPreparedDtoOwnershipFrozen() {
   final parts = _MutableDocumentParts.create();
+  final events = <PreparedSummaryWorkEvent>[];
+  final rejectingPipeline = LoadDocumentPipeline(store: DocumentStoreKernel());
+  late PreparedDocumentLoad prepared;
 
-  final prepared = prepareDraftReplacement(parts.document);
-  parts.clearSources();
+  PreparedStoreDocumentImport.observeSummaryWork(events.add, () {
+    prepared = prepareDraftReplacement(parts.document);
+    parts.clearSources();
 
-  expect(prepared.summary.resourceCount, 1);
-  expect(prepared.summary.elementCount, 1);
-  expect(prepared.summary.layerCount, 1);
-  expect(prepared.resourceIds.map((id) => id.value), {'load-resource'});
-  expect(prepared.elementIds.map((id) => id.value), {'load-bg'});
-  expect(prepared.layerIds.map((id) => id.value), {'load-layer'});
+    final summary = prepared.summary;
+    expect(summary.resourceCount, 1);
+    expect(summary.elementCount, 1);
+    expect(summary.layerCount, 1);
+    expect(prepared.summary, same(summary));
+    expect(() => rejectingPipeline.consume(prepared), throwsStateError);
+    expect(prepared.summary, same(summary));
+  });
+
   expect(() => prepared.document, throwsStateError);
+  expect(events, [
+    PreparedSummaryWorkEvent.capture,
+    PreparedSummaryWorkEvent.loadSummaryRead,
+    PreparedSummaryWorkEvent.loadSummaryRead,
+    PreparedSummaryWorkEvent.loadSummaryRead,
+  ]);
 }
 
 PreparedDocumentLoad _prepareFromDocument(

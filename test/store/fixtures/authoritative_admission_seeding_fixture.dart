@@ -464,22 +464,17 @@ final class _AdmissionTrace {
   final IdAdmissionWorkPhase phase;
   final events = <_TraceEvent>[];
   var _completeInputSetAllocationCount = 0;
-  final _preparedInventoryReadCounts =
-      <PreparedStoreDocumentImportInventoryReadEvent, int>{};
 
   T observe<T>(T Function() operation) {
-    return PreparedStoreDocumentImport.observeInventoryReads(
-      _recordPreparedInventoryRead,
-      () => FamilyTables.observeEnumeration(
-        _recordFamily,
-        () => LayerTable.observeWork(
-          _recordLayer,
-          () => ResourceTable.observeEnumeration(
-            _recordResource,
-            () => DocumentStoreKernel.observeIdAdmissionWork(
-              _recordAdmission,
-              operation,
-            ),
+    return FamilyTables.observeEnumeration(
+      _recordFamily,
+      () => LayerTable.observeWork(
+        _recordLayer,
+        () => ResourceTable.observeEnumeration(
+          _recordResource,
+          () => DocumentStoreKernel.observeIdAdmissionWork(
+            _recordAdmission,
+            operation,
           ),
         ),
       ),
@@ -540,21 +535,8 @@ final class _AdmissionTrace {
     }
   }
 
-  void _recordPreparedInventoryRead(
-    PreparedStoreDocumentImportInventoryReadEvent event,
-  ) {
-    _preparedInventoryReadCounts.update(
-      event,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-  }
-
   void expectNoForbiddenCompleteAdmissionWork() {
     expect(_completeInputSetAllocationCount, 0);
-    for (final event in PreparedStoreDocumentImportInventoryReadEvent.values) {
-      expect(_preparedInventoryReadCounts[event] ?? 0, 0);
-    }
   }
 }
 

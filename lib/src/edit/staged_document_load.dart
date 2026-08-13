@@ -5,7 +5,6 @@
 
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_errors.dart';
-import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../codec/schema_v1_diagnostics.dart';
 import '../codec/schema_v1_import_emitter.dart';
@@ -16,37 +15,26 @@ import '../store/document_store_kernel.dart';
 import '../store/schema_v1_store_import.dart';
 import '../store/store_revision_delta.dart';
 
-final class PreparedDocumentLoad {
+final class PreparedDocumentLoad extends PreparedSummaryView {
   PreparedDocumentLoad._({
     required this.camera,
     required this.background,
     required this.palette,
     required this.metadata,
-    required this.resourceIds,
-    required this.layerIds,
+    required CanvasDocumentSummary summary,
     required this.revisionDelta,
     required Object ownerToken,
-    Set<CanvasElementId>? elementIds,
-    int? elementCount,
-    Set<CanvasElementId> Function()? readElementIds,
     CommittedDocument? storeDocument,
     PreparedStoreDocumentImport? storeImport,
   }) : _storeDocument = storeDocument,
        _storeImport = storeImport,
-       _elementIds = elementIds,
-       _readElementIds = readElementIds,
-       _elementCount = _preparedElementCount(elementCount, elementIds),
-       _ownerToken = ownerToken;
+       _ownerToken = ownerToken,
+       super.load(summary);
 
   final CanvasCamera camera;
   final CanvasBackground background;
   final CanvasPalette palette;
   final CanvasMetadata metadata;
-  final Set<CanvasResourceId> resourceIds;
-  final Set<CanvasLayerId> layerIds;
-  Set<CanvasElementId>? _elementIds;
-  final Set<CanvasElementId> Function()? _readElementIds;
-  final int _elementCount;
   final StoreRevisionDelta revisionDelta;
   final CommittedDocument? _storeDocument;
   final PreparedStoreDocumentImport? _storeImport;
@@ -58,45 +46,6 @@ final class PreparedDocumentLoad {
       'Prepared document loads do not materialize a CanvasDocument projection.',
     );
   }
-
-  Set<CanvasElementId> get elementIds {
-    final cached = _elementIds;
-    if (cached != null) {
-      return cached;
-    }
-    final readElementIds = _readElementIds;
-    if (readElementIds == null) {
-      throw StateError('PreparedDocumentLoad has no element id reader.');
-    }
-
-    return _elementIds = readElementIds();
-  }
-
-  PreparedStoreDocumentImport? get storeImportForTesting => _storeImport;
-
-  CanvasDocumentSummary get summary {
-    return CanvasDocumentSummary(
-      elementCount: _elementCount,
-      layerCount: layerIds.length,
-      resourceCount: resourceIds.length,
-    );
-  }
-}
-
-int _preparedElementCount(
-  int? explicitCount,
-  Set<CanvasElementId>? elementIds,
-) {
-  if (explicitCount != null) {
-    return explicitCount;
-  }
-  if (elementIds == null) {
-    throw ArgumentError(
-      'PreparedDocumentLoad requires elementCount or elementIds.',
-    );
-  }
-
-  return elementIds.length;
 }
 
 // LoadDocumentPipeline is the composition boundary between codec validation,
@@ -146,10 +95,7 @@ final class LoadDocumentPipeline {
       background: committed.background,
       palette: committed.palette,
       metadata: committed.metadata,
-      resourceIds: preparedStoreImport.resourceIds,
-      layerIds: preparedStoreImport.layerIds,
-      elementCount: preparedStoreImport.elementCount,
-      readElementIds: () => preparedStoreImport.elementIds,
+      summary: preparedStoreImport.summary,
       revisionDelta: _replacementRevisionDelta,
       storeImport: preparedStoreImport,
       ownerToken: _ownerToken,
@@ -183,17 +129,20 @@ final class LoadDocumentPipeline {
 
 PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
   final draft = ValidatedImportDraft.fromDraftReplacement(document);
+  final storeDocument = CommittedDocument(draft.document);
 
   return PreparedDocumentLoad._(
-    camera: draft.document.camera,
-    background: draft.document.background,
-    palette: draft.document.palette,
-    metadata: draft.document.metadata,
-    resourceIds: draft.resourceIds,
-    layerIds: draft.layerIds,
-    elementIds: draft.elementIds,
+    camera: storeDocument.camera,
+    background: storeDocument.background,
+    palette: storeDocument.palette,
+    metadata: storeDocument.metadata,
+    summary: capturePreparedSummary(
+      elementCount: storeDocument.elements.elementCount,
+      layerCount: storeDocument.elements.layerTable.rows.length,
+      resourceCount: storeDocument.resourceTable.count,
+    ),
     revisionDelta: _replacementRevisionDelta,
-    storeDocument: CommittedDocument(draft.document),
+    storeDocument: storeDocument,
     ownerToken: _draftReplacementOwnerToken,
   );
 }
