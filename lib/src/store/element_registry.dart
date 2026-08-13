@@ -556,7 +556,7 @@ final class ElementRegistryStructuralEditor {
             baseRow.id == state.id &&
             baseRow.metadata == metadata;
         var baseElementIndex = 0;
-        var contentMatchesLayerBase = layerBaseRow != null;
+        var contentMatchesLayerBase = true;
         final elementIds = <CanvasElementId>[];
         final contentOrder = state.contentOrder;
         final contentIds =
@@ -577,9 +577,9 @@ final class ElementRegistryStructuralEditor {
                 id != baseRow.elementIds[baseElementIndex]) {
               rowMatchesBase = false;
             }
-            if (layerBaseRow == null ||
-                baseElementIndex >= layerBaseRow.elementIds.length ||
-                id != layerBaseRow.elementIds[baseElementIndex]) {
+            if (layerBaseRow != null &&
+                (baseElementIndex >= layerBaseRow.elementIds.length ||
+                    id != layerBaseRow.elementIds[baseElementIndex])) {
               contentMatchesLayerBase = false;
             }
             if (baseContentIndex >= baseContentIds.length ||
@@ -596,7 +596,7 @@ final class ElementRegistryStructuralEditor {
         if (baseRow == null || baseElementIndex != baseRow.elementIds.length) {
           rowMatchesBase = false;
         }
-        if (layerBaseRow == null ||
+        if (layerBaseRow != null &&
             baseElementIndex != layerBaseRow.elementIds.length) {
           contentMatchesLayerBase = false;
         }
