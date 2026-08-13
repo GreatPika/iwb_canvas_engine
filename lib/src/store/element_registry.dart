@@ -52,7 +52,10 @@ final class ElementRegistryStructuralComparisonFacts {
   const ElementRegistryStructuralComparisonFacts({
     required this.elementCountChanged,
     required this.backgroundOrderChanged,
-    required this.contentOrderChanged,
+    required this.flatContentOrderChanged,
+    required this.contentPlacementChanged,
+    required this.frameOrderChanged,
+    required this.elementLocationFactsChanged,
     required this.layerStructureChanged,
     required this.layerOrderChanged,
     required this.layerMetadataChanged,
@@ -61,14 +64,20 @@ final class ElementRegistryStructuralComparisonFacts {
   const ElementRegistryStructuralComparisonFacts.unchanged()
     : elementCountChanged = false,
       backgroundOrderChanged = false,
-      contentOrderChanged = false,
+      flatContentOrderChanged = false,
+      contentPlacementChanged = false,
+      frameOrderChanged = false,
+      elementLocationFactsChanged = false,
       layerStructureChanged = false,
       layerOrderChanged = false,
       layerMetadataChanged = false;
 
   final bool elementCountChanged;
   final bool backgroundOrderChanged;
-  final bool contentOrderChanged;
+  final bool flatContentOrderChanged;
+  final bool contentPlacementChanged;
+  final bool frameOrderChanged;
+  final bool elementLocationFactsChanged;
   final bool layerStructureChanged;
   final bool layerOrderChanged;
   final bool layerMetadataChanged;
@@ -314,9 +323,8 @@ final class ElementRegistryStructuralEditor {
   var _changed = false;
   var _finalized = false;
   var _closed = false;
-  var _finalLayerTableChanged = false;
-  ElementRegistry? _finalizedRegistry;
   ElementRegistryStructuralComparisonFacts? _finalizedComparisonFacts;
+  _PreparedElementRegistryStructuralFacts? _preparedStructuralFacts;
 
   bool get isClosed => _closed;
 
@@ -334,6 +342,18 @@ final class ElementRegistryStructuralEditor {
       );
     }
     return facts;
+  }
+
+  Iterable<CanvasElementId> get finalizedFrameElementIds {
+    final facts = _finalizedComparisonFacts;
+    if (!_finalized || _closed || facts == null) {
+      _record(ElementRegistryStructuralEditorWorkKind.postClosureAttempt);
+      throw StateError(
+        'ElementRegistryStructuralEditor has no live final frame facts.',
+      );
+    }
+    return _preparedStructuralFacts?.orderFacts.frameElementOrder ??
+        _base.frameElementOrder;
   }
 
   bool containsLayer(CanvasLayerId id) {
@@ -464,9 +484,19 @@ final class ElementRegistryStructuralEditor {
   }
 
   ElementRegistry freeze({required FamilyTables familyTables}) {
-    final result = finalize(familyTables: familyTables);
-    publishFinalization();
-    return result;
+    if (!_finalized) {
+      finalize();
+    }
+    if (_closed) {
+      _record(ElementRegistryStructuralEditorWorkKind.postClosureAttempt);
+      throw StateError('ElementRegistryStructuralEditor was already closed.');
+    }
+    final registry = _freezePrepared(familyTables);
+    _recordStructuralPublication(registry);
+    _preparedStructuralFacts = null;
+    _finalizedComparisonFacts = null;
+    _close();
+    return registry;
   }
 
   // Final traversal seals mutable order state but does not publish a committed
@@ -475,23 +505,26 @@ final class ElementRegistryStructuralEditor {
   // Keeping comparison and every derived fact in one traversal prevents a
   // second structural scan, which is safer than splitting it for metrics.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level
-  ElementRegistry finalize({required FamilyTables familyTables}) {
+  ElementRegistryStructuralComparisonFacts finalize() {
     _ensureOpen();
     if (!_changed) {
-      _finalizedRegistry = _base;
-      _finalizedComparisonFacts =
-          const ElementRegistryStructuralComparisonFacts.unchanged();
+      const facts = ElementRegistryStructuralComparisonFacts.unchanged();
+      _finalizedComparisonFacts = facts;
       _finalized = true;
       _sealMutableState();
-      return _base;
+      return facts;
     }
 
     final rows = <LayerRow>[];
     final locations = <CanvasLayerId, LayerLocationFacts>{};
     final orderFacts = _ElementRegistryOrderAccumulator();
     final baseBackgroundIds = _base.backgroundElementIds;
+    final baseFrameIds = _base.frameElementOrder;
     var backgroundMatchesBase = true;
     var backgroundIndex = 0;
+    var frameIndex = 0;
+    var frameOrderChanged = false;
+    var elementLocationFactsChanged = false;
 
     final backgroundOrder = _backgroundOrder;
     final backgroundIds =
@@ -507,7 +540,18 @@ final class ElementRegistryStructuralEditor {
             id != baseBackgroundIds[backgroundIndex]) {
           backgroundMatchesBase = false;
         }
+        if (frameIndex >= baseFrameIds.length ||
+            id != baseFrameIds[frameIndex]) {
+          frameOrderChanged = true;
+        }
+        final baseLocation = _base.elementLocationFacts[id];
+        if (baseLocation == null ||
+            baseLocation.kind != ElementLocationKind.background ||
+            baseLocation.layerId != null) {
+          elementLocationFactsChanged = true;
+        }
         backgroundIndex += 1;
+        frameIndex += 1;
       }
     } finally {
       _discardBackgroundOrder();
@@ -522,7 +566,8 @@ final class ElementRegistryStructuralEditor {
     final baseContentIds = _base.contentElementOrder;
     var baseContentIndex = 0;
     var contentElementCount = 0;
-    var contentOrderChanged = false;
+    var flatContentOrderChanged = false;
+    var contentPlacementChanged = false;
     var layerStructureChanged = false;
     var layerOrderChanged = false;
     var layerMetadataChanged = false;
@@ -571,24 +616,36 @@ final class ElementRegistryStructuralEditor {
               order: ElementRegistryStructuralOrderKind.content,
             );
             elementIds.add(id);
-            orderFacts.addContent(id, ElementLocationFacts.content(state.id));
+            final location = ElementLocationFacts.content(state.id);
+            orderFacts.addContent(id, location);
             if (baseRow == null ||
                 baseElementIndex >= baseRow.elementIds.length ||
                 id != baseRow.elementIds[baseElementIndex]) {
               rowMatchesBase = false;
             }
-            if (layerBaseRow != null &&
-                (baseElementIndex >= layerBaseRow.elementIds.length ||
-                    id != layerBaseRow.elementIds[baseElementIndex])) {
+            if (layerBaseRow == null ||
+                baseElementIndex >= layerBaseRow.elementIds.length ||
+                id != layerBaseRow.elementIds[baseElementIndex]) {
               contentMatchesLayerBase = false;
             }
             if (baseContentIndex >= baseContentIds.length ||
                 id != baseContentIds[baseContentIndex]) {
-              contentOrderChanged = true;
+              flatContentOrderChanged = true;
+            }
+            if (frameIndex >= baseFrameIds.length ||
+                id != baseFrameIds[frameIndex]) {
+              frameOrderChanged = true;
+            }
+            final baseLocation = _base.elementLocationFacts[id];
+            if (baseLocation == null ||
+                baseLocation.kind != ElementLocationKind.content ||
+                baseLocation.layerId != state.id) {
+              elementLocationFactsChanged = true;
             }
             baseElementIndex += 1;
             baseContentIndex += 1;
             contentElementCount += 1;
+            frameIndex += 1;
           }
         } finally {
           _discardContentOrder(state);
@@ -601,10 +658,10 @@ final class ElementRegistryStructuralEditor {
           contentMatchesLayerBase = false;
         }
         if (!contentMatchesLayerBase) {
-          contentOrderChanged = true;
+          contentPlacementChanged = true;
         }
-        final row = baseRow != null && rowMatchesBase
-            ? baseRow
+        final row = layerBaseRow != null && contentMatchesLayerBase
+            ? layerBaseRow
             : LayerRow.fromSparseTransactionFacts(
                 id: state.id,
                 elementIds: elementIds,
@@ -635,87 +692,129 @@ final class ElementRegistryStructuralEditor {
       layerOrderChanged = true;
     }
     if (baseContentIndex != baseContentIds.length) {
-      contentOrderChanged = true;
+      flatContentOrderChanged = true;
+    }
+    if (frameIndex != baseFrameIds.length) {
+      frameOrderChanged = true;
+      elementLocationFactsChanged = true;
     }
 
-    _finalizedComparisonFacts = ElementRegistryStructuralComparisonFacts(
+    final comparisonFacts = ElementRegistryStructuralComparisonFacts(
       elementCountChanged:
           backgroundIndex + contentElementCount != _base.elementCount,
       backgroundOrderChanged: !backgroundMatchesBase,
-      contentOrderChanged: contentOrderChanged,
+      flatContentOrderChanged: flatContentOrderChanged,
+      contentPlacementChanged: contentPlacementChanged,
+      frameOrderChanged: frameOrderChanged,
+      elementLocationFactsChanged: elementLocationFactsChanged,
       layerStructureChanged: layerStructureChanged,
       layerOrderChanged: layerOrderChanged,
       layerMetadataChanged: layerMetadataChanged,
     );
+    _finalizedComparisonFacts = comparisonFacts;
 
     if (matchesBase) {
-      _finalizedRegistry = _base;
       _finalized = true;
       _sealMutableState();
-      return _base;
+      return comparisonFacts;
     }
 
-    final facts = orderFacts.freeze();
-    final layerTable = layerTableMatchesBase
-        ? _base.layerTable
-        : LayerTable.fromSparseTransactionFacts(
-            rows: rows,
-            layerLocationFacts: locations,
-          );
-    _finalLayerTableChanged = !layerTableMatchesBase;
-    final registry = ElementRegistry._withUpdatedFamilies(
-      familyTables: familyTables,
-      layerTable: layerTable,
-      backgroundElementIds: backgroundMatchesBase
-          ? _base.backgroundElementIds
-          : facts.backgroundElementIds,
-      contentElementOrder: layerTableMatchesBase
-          ? _base.contentElementOrder
-          : facts.contentElementOrder,
-      frameElementOrder: facts.frameElementOrder,
-      frameOrderTokensById: facts.frameOrderTokensById,
-      elementLocationFacts: facts.elementLocationFacts,
+    _preparedStructuralFacts = _PreparedElementRegistryStructuralFacts(
+      rows: rows,
+      layerLocationFacts: locations,
+      orderFacts: orderFacts.freeze(),
+      layerTableMatchesBase: layerTableMatchesBase,
+      backgroundMatchesBase: backgroundMatchesBase,
+      contentOrderMatchesBase: !flatContentOrderChanged,
+      frameOrderMatchesBase: !frameOrderChanged,
+      elementLocationFactsMatchBase: !elementLocationFactsChanged,
     );
-    _finalizedRegistry = registry;
     _finalized = true;
     _sealMutableState();
-    return registry;
+    return comparisonFacts;
   }
 
-  void publishFinalization() {
-    if (!_finalized || _closed) {
-      _record(ElementRegistryStructuralEditorWorkKind.postClosureAttempt);
-      throw StateError(
-        'ElementRegistryStructuralEditor has no live finalization.',
-      );
+  // Each derived owner selects its base identity or prepared replacement as
+  // one atomic materialization decision. Splitting these branches would make
+  // their shared comparison facts drift and risk publishing mixed structure.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  ElementRegistry _freezePrepared(FamilyTables familyTables) {
+    final prepared = _preparedStructuralFacts;
+    if (prepared == null && identical(familyTables, _base.familyTables)) {
+      return _base;
     }
-    final registry = _finalizedRegistry;
-    if (registry == null) {
-      throw StateError(
-        'ElementRegistryStructuralEditor lost its final registry.',
-      );
+    if (!identical(familyTables, _base.familyTables)) {
+      FamilyTables.recordSparseFamilyAdoption(familyTables);
     }
+    final layerTable = prepared == null || prepared.layerTableMatchesBase
+        ? _base.layerTable
+        : LayerTable.fromSparseTransactionFacts(
+            rows: prepared.rows,
+            layerLocationFacts: prepared.layerLocationFacts,
+          );
+    final backgroundElementIds =
+        prepared == null || prepared.backgroundMatchesBase
+        ? _base.backgroundElementIds
+        : prepared.orderFacts.backgroundElementIds;
+    final contentElementOrder =
+        prepared == null || prepared.contentOrderMatchesBase
+        ? _base.contentElementOrder
+        : prepared.orderFacts.contentElementOrder;
+    final frameElementOrder = prepared == null || prepared.frameOrderMatchesBase
+        ? _base.frameElementOrder
+        : prepared.orderFacts.frameElementOrder;
+    final frameOrderTokensById =
+        prepared == null || prepared.frameOrderMatchesBase
+        ? _base.frameOrderTokensById
+        : prepared.orderFacts.frameOrderTokensById;
+    final elementLocationFacts =
+        prepared == null || prepared.elementLocationFactsMatchBase
+        ? _base.elementLocationFacts
+        : prepared.orderFacts.elementLocationFacts;
+    return ElementRegistry._withUpdatedFamilies(
+      familyTables: familyTables,
+      layerTable: layerTable,
+      backgroundElementIds: backgroundElementIds,
+      contentElementOrder: contentElementOrder,
+      frameElementOrder: frameElementOrder,
+      frameOrderTokensById: frameOrderTokensById,
+      elementLocationFacts: elementLocationFacts,
+    );
+  }
+
+  void _recordStructuralPublication(ElementRegistry registry) {
+    final prepared = _preparedStructuralFacts;
     if (identical(registry, _base)) {
       _record(ElementRegistryStructuralEditorWorkKind.finalIdentityRetain);
-    } else {
-      if (_finalLayerTableChanged) {
-        LayerTable.recordSparseTransactionPublication();
-        _record(ElementRegistryStructuralEditorWorkKind.layerRowsPublication);
-        _record(
-          ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
-        );
-      }
+      return;
+    }
+    if (prepared == null) {
+      return;
+    }
+    if (!prepared.layerTableMatchesBase) {
+      LayerTable.recordSparseTransactionPublication();
+      _record(ElementRegistryStructuralEditorWorkKind.layerRowsPublication);
+      _record(
+        ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
+      );
+    }
+    if (!prepared.backgroundMatchesBase) {
       _record(
         ElementRegistryStructuralEditorWorkKind.backgroundOrderPublication,
       );
+    }
+    if (!prepared.contentOrderMatchesBase) {
       _record(ElementRegistryStructuralEditorWorkKind.contentOrderPublication);
+    }
+    if (!prepared.frameOrderMatchesBase) {
       _record(ElementRegistryStructuralEditorWorkKind.frameOrderPublication);
       _record(ElementRegistryStructuralEditorWorkKind.frameTokenPublication);
+    }
+    if (!prepared.elementLocationFactsMatchBase) {
       _record(
         ElementRegistryStructuralEditorWorkKind.elementLocationPublication,
       );
     }
-    _close();
   }
 
   void discard() {
@@ -730,8 +829,8 @@ final class ElementRegistryStructuralEditor {
         _discardContentOrder(state);
       }
     }
-    _finalizedRegistry = null;
     _finalizedComparisonFacts = null;
+    _preparedStructuralFacts = null;
     _close();
     _record(ElementRegistryStructuralEditorWorkKind.discard);
   }
@@ -922,6 +1021,28 @@ final class _StructuralLayerState {
   final CanvasLayerId id;
   final LayerRow? baseRow;
   IndexedOrderSequence<CanvasElementId, CanvasElementId>? contentOrder;
+}
+
+final class _PreparedElementRegistryStructuralFacts {
+  const _PreparedElementRegistryStructuralFacts({
+    required this.rows,
+    required this.layerLocationFacts,
+    required this.orderFacts,
+    required this.layerTableMatchesBase,
+    required this.backgroundMatchesBase,
+    required this.contentOrderMatchesBase,
+    required this.frameOrderMatchesBase,
+    required this.elementLocationFactsMatchBase,
+  });
+
+  final List<LayerRow> rows;
+  final Map<CanvasLayerId, LayerLocationFacts> layerLocationFacts;
+  final _ElementRegistryOrderFacts orderFacts;
+  final bool layerTableMatchesBase;
+  final bool backgroundMatchesBase;
+  final bool contentOrderMatchesBase;
+  final bool frameOrderMatchesBase;
+  final bool elementLocationFactsMatchBase;
 }
 
 final class _ElementRegistryOrderFacts {

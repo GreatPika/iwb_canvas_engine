@@ -559,11 +559,7 @@ final class DocumentStoreKernel {
       );
       candidate.phase(StoreSparseCandidateEventKind.deferredValidation);
       accounting.validateDeferredValidations();
-      final finalElements = candidate.structure.finalize(
-        familyTables: _document.elements.familyTables,
-      );
-      final structuralComparisonFacts =
-          candidate.structure.finalizedComparisonFacts;
+      final structuralComparisonFacts = candidate.structure.finalize();
       final touched = accounting.readTouchedFacts();
       candidate.phase(StoreSparseCandidateEventKind.acceptedFacts);
       final requiredMutationDelta = accounting.readRequiredRevisionDelta();
@@ -602,19 +598,15 @@ final class DocumentStoreKernel {
       candidate.phase(StoreSparseCandidateEventKind.normalization);
       final familyTables = _normalizeSparseCandidateFamilyTables(
         candidate: candidate,
-        finalElements: finalElements,
         touched: touched,
       );
-      final elements = identical(familyTables, _document.elements.familyTables)
-          ? finalElements
-          : finalElements.adoptFamilyTables(familyTables);
       candidate.resources.normalizeFinalFacts(
         acceptedRevision: acceptedRevisions.resourceRevision,
       );
       candidate.phase(StoreSparseCandidateEventKind.resourceFreeze);
       final resourceTable = candidate.resources.freeze();
       candidate.phase(StoreSparseCandidateEventKind.structuralPublication);
-      candidate.structure.publishFinalization();
+      final elements = candidate.structure.freeze(familyTables: familyTables);
       final acceptedDocument = CommittedDocument.fromSparseStoreCandidate(
         camera: candidate.camera,
         background: candidate.background,
@@ -785,7 +777,6 @@ final class DocumentStoreKernel {
 
   FamilyTables _normalizeSparseCandidateFamilyTables({
     required _StoreTransactionCandidate candidate,
-    required ElementRegistry finalElements,
     required _SparseTouchedCommittedFacts touched,
   }) {
     if (!candidate.familyTables.hasChanges) {
@@ -794,7 +785,7 @@ final class DocumentStoreKernel {
     candidate.familyTables.normalizeFinalEqualRows(
       _sparseElementIdsForRevisionNormalization(
         _document.elements,
-        finalElements,
+        candidate.structure.finalizedFrameElementIds,
         touched,
       ),
       (before, after) => !_committedElementRevisionDelta(
@@ -1562,7 +1553,8 @@ StoreRevisionDelta _sparseTouchedElementStructureRevisionDelta(
   if (comparisonFacts.elementCountChanged ||
       (touched.backgroundElementOrder &&
           comparisonFacts.backgroundOrderChanged) ||
-      comparisonFacts.contentOrderChanged) {
+      comparisonFacts.flatContentOrderChanged ||
+      comparisonFacts.contentPlacementChanged) {
     delta = delta.merge(const StoreRevisionDelta.structural());
   }
   if (comparisonFacts.layerStructureChanged ||
@@ -1576,14 +1568,14 @@ StoreRevisionDelta _sparseTouchedElementStructureRevisionDelta(
 
 Iterable<CanvasElementId> _sparseElementIdsForRevisionNormalization(
   ElementRegistry base,
-  ElementRegistry candidate,
+  Iterable<CanvasElementId> finalFrameElementIds,
   _SparseTouchedCommittedFacts touched,
 ) {
   if (!touched.allElements) {
     return touched.elementIds;
   }
 
-  return {...base.frameElementOrder, ...candidate.frameElementOrder};
+  return {...base.frameElementOrder, ...finalFrameElementIds};
 }
 
 AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(

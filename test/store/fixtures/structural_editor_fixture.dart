@@ -110,18 +110,42 @@ void main() {
         ),
         hasLength(5),
       );
-      for (final kind in [
-        ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
-        ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
-        ElementRegistryStructuralEditorWorkKind.backgroundOrderPublication,
-        ElementRegistryStructuralEditorWorkKind.contentOrderPublication,
-        ElementRegistryStructuralEditorWorkKind.frameOrderPublication,
-        ElementRegistryStructuralEditorWorkKind.frameTokenPublication,
-        ElementRegistryStructuralEditorWorkKind.elementLocationPublication,
+      for (final expectation in [
+        (
+          kind: ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
+          count: 1,
+        ),
+        (
+          kind:
+              ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
+          count: 1,
+        ),
+        (
+          kind: ElementRegistryStructuralEditorWorkKind
+              .backgroundOrderPublication,
+          count: 0,
+        ),
+        (
+          kind: ElementRegistryStructuralEditorWorkKind.contentOrderPublication,
+          count: 1,
+        ),
+        (
+          kind: ElementRegistryStructuralEditorWorkKind.frameOrderPublication,
+          count: 1,
+        ),
+        (
+          kind: ElementRegistryStructuralEditorWorkKind.frameTokenPublication,
+          count: 1,
+        ),
+        (
+          kind: ElementRegistryStructuralEditorWorkKind
+              .elementLocationPublication,
+          count: 1,
+        ),
       ]) {
         expect(
-          structuralEvents.where((event) => event.kind == kind),
-          hasLength(1),
+          structuralEvents.where((event) => event.kind == expectation.kind),
+          hasLength(expectation.count),
         );
       }
     },
@@ -337,6 +361,41 @@ void main() {
           .elementById(CanvasElementId('base'))
           ?.revision,
       1,
+    );
+
+    final emptyLayer = store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.layerStructural(),
+        mutations: [StoreSparseEnsureLayer(CanvasLayerId('empty-layer'))],
+      ),
+    );
+    expect(
+      identical(
+        emptyLayer.document.elements.contentElementOrder,
+        base.elements.contentElementOrder,
+      ),
+      isTrue,
+    );
+    expect(
+      identical(
+        emptyLayer.document.elements.frameElementOrder,
+        base.elements.frameElementOrder,
+      ),
+      isTrue,
+    );
+    expect(
+      identical(
+        emptyLayer.document.elements.frameOrderTokensById,
+        base.elements.frameOrderTokensById,
+      ),
+      isTrue,
+    );
+    expect(
+      identical(
+        emptyLayer.document.elements.elementLocationFacts,
+        base.elements.elementLocationFacts,
+      ),
+      isTrue,
     );
 
     final structuralAndFamily = store.prepareSparseCommit(
@@ -666,7 +725,16 @@ void main() {
         layers: oracle.layerLength,
         content: oracle.finalLength,
       );
-      _expectOneStructuralPublicationPerKind(structuralEvents);
+      _expectStructuralPublications(
+        structuralEvents,
+        counts: (
+          background: 0,
+          content: 1,
+          frame: 1,
+          elementLocations: 1,
+          layerTable: 1,
+        ),
+      );
       expect(
         prepared.document.elements.contentElementOrder.map((id) => id.value),
         oracle.ids,
@@ -857,19 +925,51 @@ void _expectFinalTraversalVisits(
   }
 }
 
-void _expectOneStructuralPublicationPerKind(
-  Iterable<ElementRegistryStructuralEditorWorkEvent> events,
-) {
-  for (final kind in [
-    ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
-    ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
-    ElementRegistryStructuralEditorWorkKind.backgroundOrderPublication,
-    ElementRegistryStructuralEditorWorkKind.contentOrderPublication,
-    ElementRegistryStructuralEditorWorkKind.frameOrderPublication,
-    ElementRegistryStructuralEditorWorkKind.frameTokenPublication,
-    ElementRegistryStructuralEditorWorkKind.elementLocationPublication,
+void _expectStructuralPublications(
+  Iterable<ElementRegistryStructuralEditorWorkEvent> events, {
+  required ({
+    int background,
+    int content,
+    int frame,
+    int elementLocations,
+    int layerTable,
+  })
+  counts,
+}) {
+  for (final expectation in [
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
+      count: counts.layerTable,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
+      count: counts.layerTable,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.backgroundOrderPublication,
+      count: counts.background,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.contentOrderPublication,
+      count: counts.content,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.frameOrderPublication,
+      count: counts.frame,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.frameTokenPublication,
+      count: counts.frame,
+    ),
+    (
+      kind: ElementRegistryStructuralEditorWorkKind.elementLocationPublication,
+      count: counts.elementLocations,
+    ),
   ]) {
-    expect(events.where((event) => event.kind == kind), hasLength(1));
+    expect(
+      events.where((event) => event.kind == expectation.kind),
+      hasLength(expectation.count),
+    );
   }
 }
 
