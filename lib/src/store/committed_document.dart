@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
 
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import 'element_registry.dart';
+import 'family_tables.dart';
 import 'revision_state.dart';
 import 'resource_table.dart';
 
@@ -29,12 +31,19 @@ enum StoreSparseCandidateEventKind {
   discard,
 }
 
+enum StoreSparseCandidateReadSide { base, candidate }
+
 @immutable
 final class StoreSparseCandidateEvent {
-  const StoreSparseCandidateEvent({required this.kind, this.subject});
+  const StoreSparseCandidateEvent({
+    required this.kind,
+    this.subject,
+    this.side,
+  });
 
   final StoreSparseCandidateEventKind kind;
   final String? subject;
+  final StoreSparseCandidateReadSide? side;
 }
 
 // This immutable aggregate owns committed document facts and derived variants
@@ -179,6 +188,34 @@ final class CommittedDocument {
 
   StoreResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) {
     return resourceTable.descriptors[id];
+  }
+
+  CanvasElement? readSparseTouchedElement(
+    CanvasElementId id, {
+    required StoreSparseCandidateReadSide side,
+  }) {
+    recordSparseCandidateEvent(
+      StoreSparseCandidateEvent(
+        kind: StoreSparseCandidateEventKind.touchedElementRead,
+        subject: id.value,
+        side: side,
+      ),
+    );
+    return FamilyTables.readSparseBase(() => elements.elementById(id));
+  }
+
+  StoreResourceDescriptorFacts? readSparseTouchedResource(
+    CanvasResourceId id, {
+    required StoreSparseCandidateReadSide side,
+  }) {
+    recordSparseCandidateEvent(
+      StoreSparseCandidateEvent(
+        kind: StoreSparseCandidateEventKind.touchedResourceRead,
+        subject: id.value,
+        side: side,
+      ),
+    );
+    return resourceDescriptor(id);
   }
 
   CommittedDocument copyWith({

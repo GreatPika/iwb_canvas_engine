@@ -2010,9 +2010,27 @@ List<StoreSparseCandidateEvent> _candidatePublicationWork() {
           (event) =>
               event.kind == StoreSparseCandidateEventKind.touchedElementRead,
         )
-        .map((event) => event.subject),
-    ['rect-0', 'rect-1', 'image-added', 'vector-added'],
-    reason: 'accepted touched facts read exactly the changed element ledger',
+        .map(
+          (event) => switch (event) {
+            StoreSparseCandidateEvent(
+              side: final side?,
+              subject: final subject?,
+            ) =>
+              (side: side, subject: subject),
+            _ => throw StateError('touched element lookup omitted its owner.'),
+          },
+        ),
+    [
+      (side: StoreSparseCandidateReadSide.base, subject: 'rect-0'),
+      (side: StoreSparseCandidateReadSide.candidate, subject: 'rect-0'),
+      (side: StoreSparseCandidateReadSide.base, subject: 'rect-1'),
+      (side: StoreSparseCandidateReadSide.candidate, subject: 'rect-1'),
+      (side: StoreSparseCandidateReadSide.base, subject: 'image-added'),
+      (side: StoreSparseCandidateReadSide.candidate, subject: 'image-added'),
+      (side: StoreSparseCandidateReadSide.base, subject: 'vector-added'),
+      (side: StoreSparseCandidateReadSide.candidate, subject: 'vector-added'),
+    ],
+    reason: 'accepted touched facts perform each changed element owner lookup',
   );
   expect(
     candidateEvents
@@ -2020,9 +2038,21 @@ List<StoreSparseCandidateEvent> _candidatePublicationWork() {
           (event) =>
               event.kind == StoreSparseCandidateEventKind.touchedResourceRead,
         )
-        .map((event) => event.subject),
-    ['r-image'],
-    reason: 'accepted touched facts read exactly the changed resource ledger',
+        .map(
+          (event) => switch (event) {
+            StoreSparseCandidateEvent(
+              side: final side?,
+              subject: final subject?,
+            ) =>
+              (side: side, subject: subject),
+            _ => throw StateError('touched resource lookup omitted its owner.'),
+          },
+        ),
+    [
+      (side: StoreSparseCandidateReadSide.base, subject: 'r-image'),
+      (side: StoreSparseCandidateReadSide.candidate, subject: 'r-image'),
+    ],
+    reason: 'accepted touched facts perform each changed resource owner lookup',
   );
   expect(store.projectionBuildCount, 0);
   expect(

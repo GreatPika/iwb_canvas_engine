@@ -620,7 +620,6 @@ final class DocumentStoreKernel {
       final acceptedTouchedFacts = _sparseAcceptedTouchedFacts(
         base: _document,
         candidate: acceptedDocument,
-        transactionCandidate: candidate,
         touched: touched,
         layerCandidates: accounting.readAcceptedLayerCandidates(),
       );
@@ -1382,32 +1381,6 @@ final class _StoreTransactionCandidate {
     return _palette;
   }
 
-  Iterable<CanvasElementId> observedTouchedElementIds(
-    Iterable<CanvasElementId> ids,
-  ) sync* {
-    _ensureOpen();
-    for (final id in ids) {
-      _record(
-        StoreSparseCandidateEventKind.touchedElementRead,
-        subject: id.value,
-      );
-      yield id;
-    }
-  }
-
-  Iterable<CanvasResourceId> observedTouchedResourceIds(
-    Iterable<CanvasResourceId> ids,
-  ) sync* {
-    _ensureOpen();
-    for (final id in ids) {
-      _record(
-        StoreSparseCandidateEventKind.touchedResourceRead,
-        subject: id.value,
-      );
-      yield id;
-    }
-  }
-
   bool setCamera(CanvasCamera value) {
     _ensureOpen();
     if (_camera == value) {
@@ -1610,10 +1583,7 @@ AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
   CommittedDocument candidate,
 ) {
   final resourceTouches = _resourceTouchedFacts(base, candidate);
-  final elementTouches = _elementTouchedFacts(
-    base.elements,
-    candidate.elements,
-  );
+  final elementTouches = _elementTouchedFacts(base, candidate);
 
   return _acceptedStoreTouchedFacts(
     elementTouches: elementTouches,
@@ -1652,6 +1622,7 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   CommittedDocument base,
   CommittedDocument candidate, {
   Iterable<CanvasResourceId>? limitedToIds,
+  bool recordSparseReads = false,
 }) {
   final ids =
       limitedToIds ??
@@ -1662,8 +1633,18 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   final descriptorChangedIds = <CanvasResourceId>{};
   final visualChangedIds = <CanvasResourceId>{};
   for (final id in ids) {
-    final before = base.resourceDescriptor(id);
-    final after = candidate.resourceDescriptor(id);
+    final before = recordSparseReads
+        ? base.readSparseTouchedResource(
+            id,
+            side: StoreSparseCandidateReadSide.base,
+          )
+        : base.resourceDescriptor(id);
+    final after = recordSparseReads
+        ? candidate.readSparseTouchedResource(
+            id,
+            side: StoreSparseCandidateReadSide.candidate,
+          )
+        : candidate.resourceDescriptor(id);
     if (before == null && after == null) {
       continue;
     }
@@ -1763,22 +1744,36 @@ StoreRevisionDelta _layerRowsRevisionDelta(
 
 // Accepted element touches compare normalized immutable base/final rows only.
 _ElementTouchedFacts _elementTouchedFacts(
-  ElementRegistry base,
-  ElementRegistry candidate, {
+  CommittedDocument base,
+  CommittedDocument candidate, {
   Iterable<CanvasElementId>? limitedToIds,
+  bool recordSparseReads = false,
 }) {
   final ids =
       limitedToIds ??
-      {...base.frameElementOrder, ...candidate.frameElementOrder};
+      {
+        ...base.elements.frameElementOrder,
+        ...candidate.elements.frameElementOrder,
+      };
   final facts = _ElementTouchedFacts();
   for (final id in ids) {
     final rows = (
-      before: FamilyTables.readSparseBase(
-        () => base.familyTables.elementByCanvasId(id),
-      ),
-      after: FamilyTables.readSparseBase(
-        () => candidate.familyTables.elementByCanvasId(id),
-      ),
+      before: recordSparseReads
+          ? base.readSparseTouchedElement(
+              id,
+              side: StoreSparseCandidateReadSide.base,
+            )
+          : FamilyTables.readSparseBase(
+              () => base.elements.familyTables.elementByCanvasId(id),
+            ),
+      after: recordSparseReads
+          ? candidate.readSparseTouchedElement(
+              id,
+              side: StoreSparseCandidateReadSide.candidate,
+            )
+          : FamilyTables.readSparseBase(
+              () => candidate.elements.familyTables.elementByCanvasId(id),
+            ),
     );
     _recordElementTouch(facts, id: id, before: rows.before, after: rows.after);
   }
@@ -2116,25 +2111,20 @@ bool _isPaintedStroke(Color? color, double strokeWidth) {
 AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   required CommittedDocument base,
   required CommittedDocument candidate,
-  required _StoreTransactionCandidate transactionCandidate,
   required _SparseTouchedCommittedFacts touched,
   required _SparseAcceptedLayerCandidates layerCandidates,
 }) {
-  final resourceIds = touched.allResources
-      ? null
-      : transactionCandidate.observedTouchedResourceIds(touched.resourceIds);
   final resourceTouches = _resourceTouchedFacts(
     base,
     candidate,
-    limitedToIds: resourceIds,
+    limitedToIds: touched.allResources ? null : touched.resourceIds,
+    recordSparseReads: !touched.allResources,
   );
-  final elementIds = touched.allElements
-      ? null
-      : transactionCandidate.observedTouchedElementIds(touched.elementIds);
   final elementTouches = _elementTouchedFacts(
-    base.elements,
-    candidate.elements,
-    limitedToIds: elementIds,
+    base,
+    candidate,
+    limitedToIds: touched.allElements ? null : touched.elementIds,
+    recordSparseReads: !touched.allElements,
   );
 
   return _acceptedStoreTouchedFacts(
