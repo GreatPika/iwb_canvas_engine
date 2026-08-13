@@ -520,14 +520,18 @@ final class DocumentStoreKernel {
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
     final revisionDelta = commit.revisionDelta;
     final journal = _SparseTransactionJournal(commit.mutations);
-    return _document.elements.familyTables.editSparse(
-      (familyEditor) => ResourceTableEditor.editSparse(
-        _document.resourceTable,
-        (resourceEditor) => _prepareSparseCommitInFamilyEditor(
-          revisionDelta: revisionDelta,
-          journal: journal,
-          familyEditor: familyEditor,
-          resourceEditor: resourceEditor,
+    return ElementRegistry.editSparseStructure(
+      _document.elements,
+      (structuralEditor) => _document.elements.familyTables.editSparse(
+        (familyEditor) => ResourceTableEditor.editSparse(
+          _document.resourceTable,
+          (resourceEditor) => _prepareSparseCommitInFamilyEditor(
+            revisionDelta: revisionDelta,
+            journal: journal,
+            familyEditor: familyEditor,
+            resourceEditor: resourceEditor,
+            structuralEditor: structuralEditor,
+          ),
         ),
       ),
     );
@@ -537,13 +541,15 @@ final class DocumentStoreKernel {
   // one pass so commit acceptance cannot drift from generator admission.
   // Keeping validation, mutation application, final equality, and accepted
   // payload construction together is safer than splitting the transaction
-  // boundary into metric-shaped phases.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level
+  // boundary into metric-shaped phases. Its explicit parameters keep the
+  // three independently owned transaction editors visible at this handoff.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level, number-of-parameters
   PreparedSparseStoreCommit _prepareSparseCommitInFamilyEditor({
     required StoreRevisionDelta revisionDelta,
     required _SparseTransactionJournal journal,
     required FamilyTablesEditor familyEditor,
     required ResourceTableEditor resourceEditor,
+    required ElementRegistryStructuralEditor structuralEditor,
   }) {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
@@ -604,6 +610,7 @@ final class DocumentStoreKernel {
         mutation,
         familyEditor: familyEditor,
         resourceEditor: resourceEditor,
+        structuralEditor: structuralEditor,
       );
       nextDocument = applied.document;
       accounting.recordAppliedMutation(
@@ -641,6 +648,7 @@ final class DocumentStoreKernel {
           nextDocument,
           resourceDescriptorById: resourceEditor.descriptors.descriptor,
         ),
+        elementIds: structuralEditor.currentFrameElementIds,
         familyElementById: familyEditor.elementByCanvasId,
         familyEditor: familyEditor,
       );
@@ -657,6 +665,12 @@ final class DocumentStoreKernel {
     }
     final validatedRevisionDelta = _validatedSparseRevisionDelta(revisionDelta);
     accounting.validateDeferredValidations();
+    final finalElements = structuralEditor.finalize(
+      familyTables: _document.elements.familyTables,
+    );
+    if (!identical(finalElements, _document.elements)) {
+      nextDocument = nextDocument.copyWith(elements: finalElements);
+    }
     final touched = accounting.readTouchedFacts();
     final requiredMutationDelta = accounting.readRequiredRevisionDelta();
     final acceptedDelta = requiredMutationDelta.hasChanges
@@ -724,6 +738,11 @@ final class DocumentStoreKernel {
       }
     }
 
+    if (accepted) {
+      structuralEditor.publishFinalization();
+    } else {
+      structuralEditor.discard();
+    }
     final acceptedDocument = accepted
         ? _acceptSparseDocument(nextDocument, acceptedDelta)
         : _document;
@@ -782,25 +801,29 @@ final class DocumentStoreKernel {
   }
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
-  // the single live family editor cannot diverge through metric-only helpers.
-  // ignore: source-lines-of-code
+  // its separately owned family, resource, and structural editors cannot
+  // diverge through a metric-only context wrapper.
+  // ignore: source-lines-of-code, number-of-parameters
   _SparseMutationResult _applySparseMutation(
     CommittedDocument document,
     StoreSparseMutation mutation, {
     required FamilyTablesEditor familyEditor,
     required ResourceTableEditor resourceEditor,
+    required ElementRegistryStructuralEditor structuralEditor,
   }) {
     return switch (mutation) {
       StoreSparseEnsureLayer(:final id, :final index) => _ensureLayer(
         document,
         id,
         index: index,
+        structuralEditor: structuralEditor,
       ),
       final StoreSparseAddElement mutation => _addElement(
         document,
         mutation,
         familyEditor: familyEditor,
         resourceEditor: resourceEditor,
+        structuralEditor: structuralEditor,
       ),
       final StoreSparseUpdateElement mutation => _updateElement(
         document,
@@ -813,6 +836,7 @@ final class DocumentStoreKernel {
         id,
         familyEditor: familyEditor,
         resourceEditor: resourceEditor,
+        structuralEditor: structuralEditor,
       ),
       StoreSparseUpsertResource(:final resource) => _upsertResource(
         document,
@@ -830,6 +854,7 @@ final class DocumentStoreKernel {
         removeUnusedResources: removeUnusedResources,
         familyEditor: familyEditor,
         resourceEditor: resourceEditor,
+        structuralEditor: structuralEditor,
       ),
       StoreSparseSetBackground(:final background) => _setBackground(
         document,
@@ -843,25 +868,28 @@ final class DocumentStoreKernel {
   _SparseMutationResult _ensureLayer(
     CommittedDocument document,
     CanvasLayerId id, {
+    required ElementRegistryStructuralEditor structuralEditor,
     int? index,
   }) {
-    if (document.elements.containsLayer(id)) {
+    if (!structuralEditor.ensureLayer(id, index: index)) {
       return _SparseMutationResult.unchanged(document);
     }
 
     return _SparseMutationResult.changed(
-      document.copyWith(
-        elements: document.elements.ensureLayer(id, index: index),
-      ),
+      document,
       requiredRevisionDelta: const StoreRevisionDelta.layerStructural(),
     );
   }
 
+  // The add boundary must make its three distinct owners explicit: duplicate
+  // policy, resource references, and current structural placement.
+  // ignore: number-of-parameters
   _SparseMutationResult _addElement(
     CommittedDocument document,
     StoreSparseAddElement mutation, {
     required FamilyTablesEditor familyEditor,
     required ResourceTableEditor resourceEditor,
+    required ElementRegistryStructuralEditor structuralEditor,
   }) {
     familyEditor.decide(
       FamilyTablesDecision.duplicateAdd,
@@ -870,19 +898,21 @@ final class DocumentStoreKernel {
     resourceEditor.descriptors.recordResourceReferenceTransition(
       _resourceIdForElement(mutation.element),
     );
-    final elements = mutation.background
-        ? document.elements.addBackgroundElementStructure(
-            mutation.element,
-            index: mutation.index,
-          )
-        : document.elements.addElementStructure(
-            mutation.element,
-            layerId: mutation.layerId,
-            index: mutation.index,
-          );
+    if (mutation.background) {
+      structuralEditor.addBackgroundElement(
+        mutation.element.id,
+        index: mutation.index,
+      );
+    } else {
+      structuralEditor.addContentElement(
+        mutation.element.id,
+        layerId: mutation.layerId,
+        index: mutation.index,
+      );
+    }
 
     return _SparseMutationResult.changed(
-      document.copyWith(elements: elements),
+      document,
       requiredRevisionDelta: const StoreRevisionDelta.structural(),
     );
   }
@@ -1059,11 +1089,15 @@ final class DocumentStoreKernel {
     );
   }
 
+  // Removal keeps membership, resource references, and current placement at
+  // the same ordered boundary instead of hiding them in a context object.
+  // ignore: number-of-parameters
   _SparseMutationResult _removeElement(
     CommittedDocument document,
     CanvasElementId id, {
     required FamilyTablesEditor familyEditor,
     required ResourceTableEditor resourceEditor,
+    required ElementRegistryStructuralEditor structuralEditor,
   }) {
     final isPresent = familyEditor.decide(
       FamilyTablesDecision.removeMembership,
@@ -1086,8 +1120,9 @@ final class DocumentStoreKernel {
       removed == null ? null : _resourceIdForElement(removed),
     );
 
+    structuralEditor.removeElement(id);
     return _SparseMutationResult.changed(
-      document.copyWith(elements: document.elements.removeElementStructure(id)),
+      document,
       requiredRevisionDelta: const StoreRevisionDelta.structural(),
     );
   }
@@ -1141,15 +1176,17 @@ final class DocumentStoreKernel {
 
   // Clear records its sequential barrier before applying content-row removal,
   // resource filtering, and structure changes against the same live editor.
-  // ignore: halstead-volume, source-lines-of-code
+  // The explicit editor parameters preserve their separate mutation ownership.
+  // ignore: halstead-volume, source-lines-of-code, number-of-parameters
   _SparseMutationResult _clearContent(
     CommittedDocument document, {
     required bool removeUnusedResources,
     required FamilyTablesEditor familyEditor,
     required ResourceTableEditor resourceEditor,
+    required ElementRegistryStructuralEditor structuralEditor,
   }) {
     familyEditor.recordDecision(FamilyTablesDecision.clear);
-    final contentElementIds = document.elements.contentElementOrder;
+    final contentElementIds = structuralEditor.clearContent();
     final didClearElements = contentElementIds.isNotEmpty;
     familyEditor.recordDecisionRead(
       decision: FamilyTablesDecision.clear,
@@ -1160,11 +1197,13 @@ final class DocumentStoreKernel {
           : FamilyTablesDecisionResult.unchanged,
     );
     if (didClearElements) {
-      _clearContentFamilyRows(document.elements, familyEditor, resourceEditor);
+      _clearContentFamilyRows(
+        contentElementIds,
+        hasBackgroundElements: structuralEditor.hasBackgroundElements,
+        familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
+      );
     }
-    final clearedElements = didClearElements
-        ? document.elements.clearContentStructure()
-        : document.elements;
     final didClearResources =
         removeUnusedResources &&
         resourceEditor.descriptors.removeUnreferenced(
@@ -1187,30 +1226,31 @@ final class DocumentStoreKernel {
     }
 
     return _SparseMutationResult.changed(
-      document.copyWith(elements: clearedElements),
+      document,
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
 
   void _clearContentFamilyRows(
-    ElementRegistry elements,
-    FamilyTablesEditor familyEditor,
-    ResourceTableEditor resourceEditor,
-  ) {
+    Iterable<CanvasElementId> contentElementIds, {
+    required bool hasBackgroundElements,
+    required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
+  }) {
     // With no background rows, the all-family clear is exactly content removal
     // and keeps the editor's family-buffer lifecycle normalized. Background
     // rows instead require selective preservation by content ID.
-    for (final id in elements.contentElementOrder) {
+    for (final id in contentElementIds) {
       final element = familyEditor.elementByCanvasId(id);
       resourceEditor.descriptors.recordResourceReferenceTransition(
         element == null ? null : _resourceIdForElement(element),
       );
     }
-    if (elements.backgroundElementIds.isEmpty) {
+    if (!hasBackgroundElements) {
       familyEditor.clearElements();
       return;
     }
-    for (final id in elements.contentElementOrder) {
+    for (final id in contentElementIds) {
       familyEditor.removeElement(id);
     }
   }

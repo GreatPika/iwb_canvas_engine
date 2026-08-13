@@ -11,7 +11,6 @@ import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/element_registry.dart';
-import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
@@ -80,49 +79,9 @@ void main() {
     expect(work.count(LayerTableWorkEvent.locationPublication), 1);
   });
 
-  test('first default-layer mutation observes empty location facts', () {
-    const empty = LayerTable.empty();
-    final impossibleId = CanvasLayerId('impossible-empty-layer');
-    final impossibleRow = LayerRow(
-      id: impossibleId,
-      elementIds: const [],
-      metadata: const CanvasMetadata.empty(),
-    );
-    final impossibleFact = LayerLocationFacts(row: impossibleRow, index: 0);
-
-    expect(empty.rows, isEmpty);
-    expect(empty.layerLocationFacts, isEmpty);
-    _expectLocationParity(empty, const []);
-    expect(empty.locationFor(CanvasLayerId('absent')), isNull);
-    expect(
-      () => empty.layerLocationFacts[impossibleId] = impossibleFact,
-      throwsUnsupportedError,
-    );
-    expect(() => empty.layerLocationFacts.clear(), throwsUnsupportedError);
-    expect(
-      () => empty.layerLocationFacts.remove(impossibleId),
-      throwsUnsupportedError,
-    );
-
-    final work = _LayerWork();
-    final table = LayerTable.observeWork(
-      work.record,
-      () => empty.addElement(CanvasElementId('e0')),
-    );
-
-    _expectLocationParity(table, const [
-      _ExpectedLayer('default-layer', ['e0']),
-    ]);
-    expect(work.count(LayerTableWorkEvent.mutationRowVisit), 0);
-    expect(work.count(LayerTableWorkEvent.locationUpdate), 1);
-    expect(work.count(LayerTableWorkEvent.locationFactEntryVisit), 0);
-    expect(work.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
-    expect(work.count(LayerTableWorkEvent.locationPublication), 1);
-  });
-
   test('supported-size owner lifecycles stay single-pass and direct', () {
     final constructionWork = _LayerWork();
-    final constructed = LayerTable.observeWork(
+    LayerTable.observeWork(
       constructionWork.record,
       () => LayerTable(_supportedRows()),
     );
@@ -139,7 +98,6 @@ void main() {
       constructionWork.count(LayerTableWorkEvent.constructionPublishedRowVisit),
       0,
     );
-    expect(constructionWork.count(LayerTableWorkEvent.mutationRowVisit), 0);
     expect(
       constructionWork.count(LayerTableWorkEvent.locationFactEntryVisit),
       0,
@@ -160,26 +118,6 @@ void main() {
       iterationWork.count(LayerTableWorkEvent.intentionalIterationRowVisit),
       canvasMaxContentLayers,
     );
-
-    final mutationWork = _LayerWork();
-    final changed = LayerTable.observeWork(
-      mutationWork.record,
-      () => constructed.addElement(
-        CanvasElementId('supported-element'),
-        layerId: CanvasLayerId('supported-0'),
-      ),
-    );
-    expect(
-      mutationWork.count(LayerTableWorkEvent.mutationRowVisit),
-      _supportedLayerCount,
-    );
-    expect(mutationWork.count(LayerTableWorkEvent.locationFactEntryVisit), 0);
-    expect(mutationWork.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
-    expect(mutationWork.count(LayerTableWorkEvent.locationRebuildRowVisit), 0);
-    expect(mutationWork.count(LayerTableWorkEvent.locationPublication), 1);
-    expect(changed.locationFor(CanvasLayerId('supported-0'))?.row.elementIds, [
-      CanvasElementId('supported-element'),
-    ]);
 
     final importWork = _LayerWork();
     final imported = LayerTable.observeWork(importWork.record, () {
@@ -203,7 +141,6 @@ void main() {
       importWork.count(LayerTableWorkEvent.schemaImportPublishedRowVisit),
       0,
     );
-    expect(importWork.count(LayerTableWorkEvent.mutationRowVisit), 0);
     expect(importWork.count(LayerTableWorkEvent.locationFactEntryVisit), 0);
     expect(importWork.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
     expect(importWork.count(LayerTableWorkEvent.locationRebuildRowVisit), 0);
@@ -257,133 +194,6 @@ void main() {
       expect(importWork.count(LayerTableWorkEvent.locationPublication), 0);
       expect(importWork.count(LayerTableWorkEvent.discard), 0);
       expect(importWork.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
-    },
-  );
-
-  test('owner mutations publish exact locations without full map copies', () {
-    final work = _LayerWork();
-    late LayerTable defaultLayer;
-    late LayerTable explicitLayer;
-    late LayerTable appended;
-    late LayerTable removed;
-    late LayerTable cleared;
-    LayerTable.observeWork(work.record, () {
-      defaultLayer = const LayerTable.empty().addElement(CanvasElementId('e0'));
-      explicitLayer = defaultLayer.ensureLayer(
-        CanvasLayerId('first'),
-        index: 0,
-      );
-      appended = explicitLayer.addElement(
-        CanvasElementId('e1'),
-        layerId: CanvasLayerId('default-layer'),
-      );
-      removed = appended.removeElement(
-        CanvasElementId('e0'),
-        layerId: CanvasLayerId('default-layer'),
-      );
-      cleared = removed.clearElements(hasContent: true);
-      expect(
-        identical(cleared.ensureLayer(CanvasLayerId('first')), cleared),
-        isTrue,
-      );
-      expect(
-        identical(
-          cleared.removeElement(
-            CanvasElementId('missing'),
-            layerId: CanvasLayerId('first'),
-          ),
-          cleared,
-        ),
-        isTrue,
-      );
-      expect(
-        identical(cleared.clearElements(hasContent: false), cleared),
-        isTrue,
-      );
-    });
-
-    _expectLocationParity(defaultLayer, const [
-      _ExpectedLayer('default-layer', ['e0']),
-    ]);
-    _expectLocationParity(explicitLayer, const [
-      _ExpectedLayer('first', []),
-      _ExpectedLayer('default-layer', ['e0']),
-    ]);
-    _expectLocationParity(appended, const [
-      _ExpectedLayer('first', []),
-      _ExpectedLayer('default-layer', ['e0', 'e1']),
-    ]);
-    expect(
-      identical(
-        explicitLayer.layerLocationFacts[CanvasLayerId('first')],
-        appended.layerLocationFacts[CanvasLayerId('first')],
-      ),
-      isTrue,
-    );
-    _expectLocationParity(removed, const [
-      _ExpectedLayer('first', []),
-      _ExpectedLayer('default-layer', ['e1']),
-    ]);
-    _expectLocationParity(cleared, const [
-      _ExpectedLayer('first', []),
-      _ExpectedLayer('default-layer', []),
-    ]);
-    expect(
-      identical(
-        removed.layerLocationFacts[CanvasLayerId('first')],
-        cleared.layerLocationFacts[CanvasLayerId('first')],
-      ),
-      isTrue,
-    );
-
-    expect(work.count(LayerTableWorkEvent.mutationRowVisit), 7);
-    expect(work.count(LayerTableWorkEvent.locationPublication), 5);
-    expect(work.count(LayerTableWorkEvent.locationFactEntryVisit), 0);
-    expect(work.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
-    expect(work.count(LayerTableWorkEvent.discard), 0);
-    expect(
-      work.count(LayerTableWorkEvent.unchangedLocationFactIdentityRetain),
-      greaterThan(0),
-    );
-  });
-
-  test(
-    'rank mutations use one transitional indexed-order build and flatten',
-    () {
-      final base = LayerTable(_literalRows());
-      expect(base.rows, hasLength(3));
-
-      _expectSequenceWork(
-        () => base.ensureLayer(CanvasLayerId('inserted'), index: 1),
-        buildOpen: 1,
-        inputVisits: 3,
-        finalFlattenVisits: 4,
-      );
-      _expectSequenceWork(
-        () => base.addElement(
-          CanvasElementId('added'),
-          layerId: CanvasLayerId('l1'),
-          index: 0,
-        ),
-        buildOpen: 2,
-        inputVisits: 4,
-        finalFlattenVisits: 5,
-      );
-      _expectSequenceWork(
-        () => base.removeElement(
-          CanvasElementId('e1'),
-          layerId: CanvasLayerId('l1'),
-        ),
-        buildOpen: 2,
-        inputVisits: 4,
-        finalFlattenVisits: 3,
-      );
-      _expectSequenceWork(
-        () => base.clearElements(hasContent: true),
-        buildOpen: 3,
-        inputVisits: 3,
-        finalFlattenVisits: 0,
-      );
     },
   );
 
@@ -448,7 +258,12 @@ void main() {
         backgroundRemoved = removed.removeElement(
           CanvasElementId('background'),
         );
-        cleared = backgroundRemoved.clearContentStructure();
+        cleared = ElementRegistry.editSparseStructure(backgroundRemoved, (
+          editor,
+        ) {
+          editor.clearContent();
+          return editor.freeze(familyTables: backgroundRemoved.familyTables);
+        });
       });
 
       _expectLocationParity(removed.layerTable, const [
@@ -474,7 +289,10 @@ void main() {
         _ExpectedLayer('l2', []),
         _ExpectedLayer('l3', []),
       ]);
-      expect(work.count(LayerTableWorkEvent.mutationRowVisit), 8);
+      // Unit 4 retires the one-call LayerTable rank lifecycle from sparse
+      // structure. Transaction-scoped sequence/final-traversal work now has
+      // its owner proof in structural_editor_fixture.dart; this compatibility
+      // case retains only row/location parity and direct fact guarantees.
       expect(work.count(LayerTableWorkEvent.locationPublication), 2);
       expect(work.count(LayerTableWorkEvent.locationFactEntryVisit), 0);
       expect(work.count(LayerTableWorkEvent.fullLocationMapCopy), 0);
@@ -693,33 +511,6 @@ final class _LayerWork {
   }
 
   int count(LayerTableWorkEvent event) => _counts[event] ?? 0;
-}
-
-void _expectSequenceWork(
-  void Function() operation, {
-  required int buildOpen,
-  required int inputVisits,
-  required int finalFlattenVisits,
-}) {
-  final counts = <IndexedOrderSequenceWorkEvent, int>{};
-  IndexedOrderSequence.observeWork(
-    (event) => counts.update(event, (count) => count + 1, ifAbsent: () => 1),
-    operation,
-  );
-  expect(counts[IndexedOrderSequenceWorkEvent.buildOpen] ?? 0, buildOpen);
-  expect(
-    counts[IndexedOrderSequenceWorkEvent.buildInputVisit] ?? 0,
-    inputVisits,
-  );
-  expect(counts[IndexedOrderSequenceWorkEvent.buildClose] ?? 0, buildOpen);
-  expect(
-    counts[IndexedOrderSequenceWorkEvent.finalFlattenVisit] ?? 0,
-    finalFlattenVisits,
-  );
-  expect(
-    counts[IndexedOrderSequenceWorkEvent.finalFlattenPublication] ?? 0,
-    buildOpen,
-  );
 }
 
 SchemaV1LayerImportEvent _layerEvent(String id) {

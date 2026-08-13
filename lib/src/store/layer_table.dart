@@ -7,7 +7,6 @@ import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
-import 'indexed_order_sequence.dart';
 
 final class LayerRow {
   LayerRow({
@@ -21,6 +20,15 @@ final class LayerRow {
     required List<CanvasElementId> elementIds,
     required this.metadata,
   }) : elementIds = UnmodifiableListView(elementIds);
+
+  // The structural editor transfers a list produced by its sole final visit.
+  // Wrapping that owned list avoids a second row-order copy after the editor
+  // has already derived every committed fact from the same traversal.
+  LayerRow.fromSparseTransactionFacts({
+    required CanvasLayerId id,
+    required List<CanvasElementId> elementIds,
+    required CanvasMetadata metadata,
+  }) : this._owned(id: id, elementIds: elementIds, metadata: metadata);
 
   final CanvasLayerId id;
   final List<CanvasElementId> elementIds;
@@ -41,7 +49,6 @@ enum LayerTableWorkEvent {
   schemaImportInputRowVisit,
   constructionPublishedRowVisit,
   schemaImportPublishedRowVisit,
-  mutationRowVisit,
   locationRebuildRowVisit,
   locationUpdate,
   locationPublication,
@@ -74,7 +81,7 @@ enum LayerTableReadScope {
   intentionalIteration,
 }
 
-enum _LayerTableTraversalScope { construction, schemaImport, mutation }
+enum _LayerTableTraversalScope { construction, schemaImport }
 
 // The table keeps row mutation and its atomically published derived location
 // together; splitting either solely for metrics would obscure that invariant.
@@ -106,6 +113,25 @@ final class LayerTable {
   LayerTable._fromFacts(_LayerTableFacts facts)
     : rows = _publishedRows(facts.rows),
       layerLocationFacts = _LayerLocationFactsView(facts.layerLocationFacts);
+
+  // The sparse structural editor has already traversed final rows once while
+  // deriving their locations. Rebuilding the same fact map here would create
+  // a second structural pass and a competing publication lifecycle.
+  factory LayerTable.fromSparseTransactionFacts({
+    required List<LayerRow> rows,
+    required Map<CanvasLayerId, LayerLocationFacts> layerLocationFacts,
+  }) {
+    return LayerTable._fromFacts(
+      _LayerTableFacts(rows: rows, layerLocationFacts: layerLocationFacts),
+    );
+  }
+
+  // Sparse finalization can prepare a private candidate before late commit
+  // gates run. Its immutable facts become observable only when that candidate
+  // is accepted, so the owner work event belongs to that later publication.
+  static void recordSparseTransactionPublication() {
+    _recordWork(LayerTableWorkEvent.locationPublication);
+  }
 
   final List<LayerRow> rows;
   final Map<CanvasLayerId, LayerLocationFacts> layerLocationFacts;
@@ -203,8 +229,6 @@ final class LayerTable {
 
   static void _recordPublishedRowVisit() {
     switch (Zone.current[_traversalScopeZoneKey]) {
-      case _LayerTableTraversalScope.mutation:
-        _recordWork(LayerTableWorkEvent.mutationRowVisit);
       case _LayerTableTraversalScope.construction:
         _recordWork(LayerTableWorkEvent.constructionPublishedRowVisit);
       case _LayerTableTraversalScope.schemaImport:
@@ -245,209 +269,6 @@ final class LayerTable {
       }
       return true;
     }(), 'layer table work observation failed');
-  }
-
-  LayerTable ensureLayer(CanvasLayerId id, {int? index}) {
-    if (contains(id)) {
-      _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
-      return this;
-    }
-    return _insertRow(
-      index,
-      LayerRow(
-        id: id,
-        elementIds: const [],
-        metadata: const CanvasMetadata.empty(),
-      ),
-    );
-  }
-
-  // Layer insertion stays in one method so default-layer creation and target
-  // row insertion remain one ordered table update.
-  // ignore: halstead-volume
-  LayerTable addElement(
-    CanvasElementId id, {
-    CanvasLayerId? layerId,
-    int? index,
-  }) {
-    final target = withReadScope(LayerTableReadScope.placement, () {
-      LayerRow? targetRow;
-      var targetIndex = rows.length - 1;
-      if (layerId != null) {
-        final location = locationFor(layerId);
-        targetIndex = location?.index ?? rows.length;
-        targetRow = location?.row;
-      } else if (targetIndex == -1) {
-        targetIndex = 0;
-        targetRow = LayerRow(
-          id: CanvasLayerId('default-layer'),
-          elementIds: const [],
-          metadata: const CanvasMetadata.empty(),
-        );
-      } else {
-        targetRow = rows[targetIndex];
-      }
-
-      return (row: targetRow, index: targetIndex);
-    });
-
-    final row =
-        target.row ??
-        LayerRow(
-          id: layerId ?? CanvasLayerId('default-layer'),
-          elementIds: const [],
-          metadata: const CanvasMetadata.empty(),
-        );
-    final nextRow = LayerRow._owned(
-      id: row.id,
-      elementIds: _insertElementId(row.elementIds, id, index: index),
-      metadata: row.metadata,
-    );
-
-    return target.index == rows.length
-        ? _insertRow(target.index, nextRow)
-        : _replaceRow(target.index, nextRow);
-  }
-
-  LayerTable removeElement(
-    CanvasElementId id, {
-    required CanvasLayerId layerId,
-  }) {
-    final location = locationFor(layerId);
-    if (location == null) {
-      _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
-      return this;
-    }
-    final elementIds = _removeElementId(location.row.elementIds, id);
-    if (elementIds == null) {
-      _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
-      return this;
-    }
-
-    return _replaceRow(
-      location.index,
-      LayerRow._owned(
-        id: location.row.id,
-        elementIds: elementIds,
-        metadata: location.row.metadata,
-      ),
-    );
-  }
-
-  LayerTable clearElements({required bool hasContent}) {
-    if (!hasContent) {
-      _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
-      return this;
-    }
-    return _withTraversalScope(_LayerTableTraversalScope.mutation, () {
-      final builder = _LayerTableBuilder();
-      for (final row in rows) {
-        if (row.elementIds.isEmpty) {
-          builder.append(row, previous: layerLocationFacts[row.id]);
-        } else {
-          builder.append(
-            LayerRow._owned(
-              id: row.id,
-              elementIds: _clearElementIds(row.elementIds),
-              metadata: row.metadata,
-            ),
-          );
-        }
-      }
-
-      return LayerTable._fromFacts(builder.build());
-    });
-  }
-
-  LayerTable _insertRow(int? index, LayerRow row) {
-    return _mutateRows((orderedRows) => orderedRows.insert(row, index: index));
-  }
-
-  LayerTable _replaceRow(int index, LayerRow row) {
-    return _mutateRows((orderedRows) {
-      orderedRows.remove(row.id);
-      orderedRows.insert(row, index: index);
-    });
-  }
-
-  LayerTable _mutateRows(
-    void Function(IndexedOrderSequence<LayerRow, CanvasLayerId> orderedRows)
-    mutation,
-  ) {
-    return _withTraversalScope(_LayerTableTraversalScope.mutation, () {
-      final orderedRows = IndexedOrderSequence<LayerRow, CanvasLayerId>(
-        rows,
-        idOf: (row) => row.id,
-      );
-      var consumed = false;
-      try {
-        mutation(orderedRows);
-        final nextRows = orderedRows.consume();
-        consumed = true;
-        return _publishMutatedRows(nextRows);
-      } catch (_) {
-        if (!consumed) {
-          orderedRows.discard();
-        }
-        rethrow;
-      }
-    });
-  }
-
-  LayerTable _publishMutatedRows(Iterable<LayerRow> nextRows) {
-    final builder = _LayerTableBuilder();
-    for (final row in nextRows) {
-      builder.append(row, previous: layerLocationFacts[row.id]);
-    }
-    return LayerTable._fromFacts(builder.build());
-  }
-
-  static List<CanvasElementId> _insertElementId(
-    Iterable<CanvasElementId> ids,
-    CanvasElementId id, {
-    required int? index,
-  }) {
-    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
-      ids,
-      idOf: (elementId) => elementId,
-    );
-    var consumed = false;
-    try {
-      orderedIds.insert(id, index: index);
-      final nextIds = orderedIds.consume();
-      consumed = true;
-      return nextIds;
-    } catch (_) {
-      if (!consumed) {
-        orderedIds.discard();
-      }
-      rethrow;
-    }
-  }
-
-  static List<CanvasElementId>? _removeElementId(
-    Iterable<CanvasElementId> ids,
-    CanvasElementId id,
-  ) {
-    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
-      ids,
-      idOf: (elementId) => elementId,
-    );
-    final removed = orderedIds.remove(id);
-    if (removed == null) {
-      orderedIds.discard();
-      return null;
-    }
-    return orderedIds.consume();
-  }
-
-  static List<CanvasElementId> _clearElementIds(Iterable<CanvasElementId> ids) {
-    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
-      ids,
-      idOf: (elementId) => elementId,
-    );
-    orderedIds.clear();
-    return orderedIds.consume();
   }
 }
 
