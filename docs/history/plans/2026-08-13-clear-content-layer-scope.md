@@ -133,7 +133,7 @@ Work Budget And Cost Displacement: This contract closes design D20's clear-speci
 
 ## Execution Units
 
-### [ ] Unit 1: Cut over clearContent to layer-only semantics
+### [x] Unit 1: Cut over clearContent to layer-only semantics
 
 Owner: The atomic `clearContent` seam across `DraftDocument`, sparse `EditSession`, `DocumentStoreKernel`, `RuntimeCommandFactsAdapter`, and `RuntimeRoot`, with existing `ElementRegistry`, `FamilyTables`, touched/revision, selection, spatial, result, and action consumers.
 
