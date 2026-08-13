@@ -115,6 +115,51 @@ void main() {
     expect(prepared.touchedFacts.addedElementIds, {CanvasElementId('new')});
   });
 
+  test(
+    'same batch image and vector transitions read every current editor row',
+    () {
+      final base = _repeatedResourceTransitionDocument();
+      final store = documentStoreWithDocument(base);
+      final work = FamilyTablesTelemetry();
+
+      final prepared = FamilyTables.observeTelemetry(
+        work.record,
+        () => store.prepareSparseCommit(_repeatedResourceTransitionCommit()),
+      );
+
+      final tables = prepared.document.elements.familyTables;
+      expect(
+        tables.imageRows['image']!.resourceId,
+        CanvasResourceId('image-c'),
+      );
+      expect(
+        tables.vectorRows['vector']!.resourceId,
+        CanvasResourceId('vector-c'),
+      );
+      expect(
+        [
+          tables.imageResourceReferenceCount(CanvasResourceId('image-a')),
+          tables.imageResourceReferenceCount(CanvasResourceId('image-b')),
+          tables.imageResourceReferenceCount(CanvasResourceId('image-c')),
+          tables.vectorResourceReferenceCount(CanvasResourceId('vector-a')),
+          tables.vectorResourceReferenceCount(CanvasResourceId('vector-b')),
+          tables.vectorResourceReferenceCount(CanvasResourceId('vector-c')),
+        ],
+        [0, 0, 1, 0, 0, 1],
+      );
+      expect(
+        [
+          work.editorDecisionCount(FamilyTablesDecision.updateCurrentRow),
+          work.editorCurrentRowReadCount,
+          work.imageReferenceAffectedIdUpdateCount,
+          work.vectorReferenceAffectedIdUpdateCount,
+        ],
+        [4, 4, 4, 4],
+      );
+      expect(work.staleDecisionReadCount, 0);
+    },
+  );
+
   // Each helper asserts one independent first-failure trace. Keeping them in
   // one diagnostic matrix makes their ordered editor ownership easy to audit.
   // ignore: missing-test-assertion
@@ -747,6 +792,93 @@ StoreSparseCommit _orderedTrace() {
         ),
       ),
     ],
+  );
+}
+
+CanvasDocument _repeatedResourceTransitionDocument() {
+  return CanvasDocument(
+    resources: [
+      for (final id in ['image-a', 'image-b', 'image-c'])
+        CanvasImageResource(
+          id: CanvasResourceId(id),
+          source: CanvasResourceSource.appKey(id),
+        ),
+      for (final id in ['vector-a', 'vector-b', 'vector-c'])
+        CanvasVectorResource(
+          id: CanvasResourceId(id),
+          source: CanvasResourceSource.appKey(id),
+        ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer'),
+        elements: [
+          _resourceImage('image', 'image-a'),
+          _resourceVector('vector', 'vector-a'),
+        ],
+      ),
+    ],
+  );
+}
+
+StoreSparseCommit _repeatedResourceTransitionCommit() {
+  final imageA = _resourceImage('image', 'image-a');
+  final imageB = _resourceImage('image', 'image-b', revision: 1);
+  final imageC = _resourceImage('image', 'image-c', revision: 2);
+  final vectorA = _resourceVector('vector', 'vector-a');
+  final vectorB = _resourceVector('vector', 'vector-b', revision: 1);
+  final vectorC = _resourceVector('vector', 'vector-c', revision: 2);
+
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.elementVisual(),
+    mutations: [
+      StoreSparseUpdateElement(
+        before: imageA,
+        element: imageB,
+        elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+      ),
+      StoreSparseUpdateElement(
+        before: imageB,
+        element: imageC,
+        elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+      ),
+      StoreSparseUpdateElement(
+        before: vectorA,
+        element: vectorB,
+        elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+      ),
+      StoreSparseUpdateElement(
+        before: vectorB,
+        element: vectorC,
+        elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+      ),
+    ],
+  );
+}
+
+CanvasImageElement _resourceImage(
+  String id,
+  String resourceId, {
+  int revision = 0,
+}) {
+  return CanvasImageElement(
+    id: CanvasElementId(id),
+    resourceId: CanvasResourceId(resourceId),
+    size: const Size(1, 1),
+    revision: revision,
+  );
+}
+
+CanvasVectorElement _resourceVector(
+  String id,
+  String resourceId, {
+  int revision = 0,
+}) {
+  return CanvasVectorElement(
+    id: CanvasElementId(id),
+    resourceId: CanvasResourceId(resourceId),
+    size: const Size(1, 1),
+    revision: revision,
   );
 }
 

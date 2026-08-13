@@ -50,6 +50,7 @@ final class FamilyTablesTelemetry {
   final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
   final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
   final Map<FamilyTablesDecision, int> _staleDecisionReadCountByDecision = {};
+  int _editorCurrentRowReadCount = 0;
 
   int get mapProbeCount => _mapProbeCount;
   int get membershipUnionAllocationCount => _membershipUnionAllocationCount;
@@ -108,6 +109,7 @@ final class FamilyTablesTelemetry {
       List.unmodifiable(_editorDecisionTrace);
   List<FamilyTablesDecisionRead> get editorDecisionReads =>
       List.unmodifiable(_editorDecisionReads);
+  int get editorCurrentRowReadCount => _editorCurrentRowReadCount;
 
   int transactionOpenCount(CanvasElementKind kind) {
     return _transactionOpenCountByFamily[kind] ?? 0;
@@ -238,6 +240,8 @@ final class FamilyTablesTelemetry {
             result: _requireResult(event),
           ),
         );
+      case FamilyTablesTelemetryKind.editorCurrentRowRead:
+        _editorCurrentRowReadCount += 1;
       case FamilyTablesTelemetryKind.enumerationOpen:
         _enumerationOpenCount += 1;
       case FamilyTablesTelemetryKind.enumerationEntry:

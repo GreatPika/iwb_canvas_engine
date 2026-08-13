@@ -794,9 +794,6 @@ final class DocumentStoreKernel {
     if (!batch.hasChanges) {
       return _SparseMutationResult.unchanged(document);
     }
-    for (final element in batch.elements) {
-      familyEditor.replaceElement(element);
-    }
 
     return _SparseMutationResult.changed(
       document,
@@ -811,17 +808,14 @@ final class DocumentStoreKernel {
     FamilyTablesEditor familyEditor,
     List<StoreSparseUpdateElement> updates,
   ) {
-    final changedById = <CanvasElementId, CanvasElement>{};
     final deferredValidation = <_DeferredSparseElementUpdateValidation>[];
     var requiredRevisionDelta = const StoreRevisionDelta();
     for (final update in updates) {
       final element = update.element;
-      final before =
-          changedById[element.id] ??
-          familyEditor.decide(
-            FamilyTablesDecision.updateCurrentRow,
-            () => familyEditor.elementByCanvasId(element.id),
-          );
+      final before = familyEditor.decide(
+        FamilyTablesDecision.updateCurrentRow,
+        () => familyEditor.elementByCanvasId(element.id),
+      );
       familyEditor.recordDecisionRead(
         decision: FamilyTablesDecision.updateCurrentRow,
         subjectKind: FamilyTablesDecisionSubjectKind.element,
@@ -911,11 +905,10 @@ final class DocumentStoreKernel {
       requiredRevisionDelta = requiredRevisionDelta.merge(
         update.elementRevisionDelta,
       );
-      changedById[element.id] = element;
+      familyEditor.replaceElement(element);
     }
 
     return _SparseElementUpdateBatch(
-      elements: changedById.values,
       requiredRevisionDelta: requiredRevisionDelta,
       deferredValidation: deferredValidation,
     );
@@ -2546,18 +2539,15 @@ final class _SparseAdmittedIds {
 
 final class _SparseElementUpdateBatch {
   _SparseElementUpdateBatch({
-    required Iterable<CanvasElement> elements,
     required this.requiredRevisionDelta,
     required Iterable<_DeferredSparseElementUpdateValidation>
     deferredValidation,
-  }) : elements = List.unmodifiable(elements),
-       deferredValidation = List.unmodifiable(deferredValidation);
+  }) : deferredValidation = List.unmodifiable(deferredValidation);
 
-  final List<CanvasElement> elements;
   final StoreRevisionDelta requiredRevisionDelta;
   final List<_DeferredSparseElementUpdateValidation> deferredValidation;
 
-  bool get hasChanges => elements.isNotEmpty;
+  bool get hasChanges => deferredValidation.isNotEmpty;
 }
 
 final class _DeferredSparseElementUpdateValidation {

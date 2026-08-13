@@ -47,6 +47,7 @@ enum FamilyTablesTelemetryKind {
   referenceSummaryIdentity,
   editorDecision,
   editorDecisionRead,
+  editorCurrentRowRead,
   enumerationOpen,
   enumerationEntry,
   enumerationClose,
@@ -1007,7 +1008,6 @@ final class FamilyTablesEditor {
   final _ReferenceSummaryDelta _vectorResourceReferences;
 
   bool _isOpen = true;
-  bool _wasCleared = false;
   FamilyTables? _frozenTables;
   bool _frozenTablesAdopted = false;
 
@@ -1091,6 +1091,14 @@ final class FamilyTablesEditor {
   // The lookup preserves FamilyTables' existing explicit family precedence.
   // ignore: cyclomatic-complexity
   CanvasElement? elementByCanvasId(CanvasElementId id) {
+    if (Zone.current[FamilyTables._sparseDecisionZoneKey] ==
+        FamilyTablesDecision.updateCurrentRow) {
+      FamilyTables._emitTelemetry(
+        const FamilyTablesTelemetryEvent(
+          FamilyTablesTelemetryKind.editorCurrentRowRead,
+        ),
+      );
+    }
     final value = id.value;
 
     return _imageRows[value]?.toElement() ??
@@ -1180,7 +1188,6 @@ final class FamilyTablesEditor {
 
   void clearElements() {
     _checkOpen();
-    _wasCleared = true;
     _imageResourceReferences.clear();
     _vectorResourceReferences.clear();
     for (final rows in [
@@ -1211,19 +1218,17 @@ final class FamilyTablesEditor {
       }
       _replaceBaseElement(before);
     }
-    if (!_wasCleared) {
-      for (final rows in [
-        _imageRows,
-        _vectorRows,
-        _pathRows,
-        _textRows,
-        _strokeRows,
-        _lineRows,
-        _rectRows,
-      ]) {
-        rows.retainBaseIfExact();
-      }
+    if (_imageRows.retainBaseIfExact()) {
+      _imageResourceReferences.retainBase();
     }
+    if (_vectorRows.retainBaseIfExact()) {
+      _vectorResourceReferences.retainBase();
+    }
+    _pathRows.retainBaseIfExact();
+    _textRows.retainBaseIfExact();
+    _strokeRows.retainBaseIfExact();
+    _lineRows.retainBaseIfExact();
+    _rectRows.retainBaseIfExact();
   }
 
   FamilyTables freeze() {
@@ -1373,6 +1378,12 @@ final class _ReferenceSummaryDelta {
     _cleared = _base.isNotEmpty;
   }
 
+  void retainBase() {
+    _deltas = null;
+    _cleared = false;
+    _hasDeltaChanges = false;
+  }
+
   Map<CanvasResourceId, int> freeze() {
     if (!hasChanges) {
       FamilyTables._recordReferenceSummaryIdentity(
@@ -1487,17 +1498,22 @@ final class _LazyFamilyMapBuffer<Row> {
     _mutableRows = <String, Row>{};
   }
 
-  void retainBaseIfExact() {
+  bool retainBaseIfExact() {
     final mutableRows = _mutableRows;
-    if (mutableRows == null || mutableRows.length != _baseRows.length) {
-      return;
+    if (mutableRows == null) {
+      return true;
+    }
+    if (mutableRows.length != _baseRows.length) {
+      return false;
     }
     for (final MapEntry(key: key, value: value) in _baseRows.entries) {
       if (!identical(mutableRows[key], value)) {
-        return;
+        return false;
       }
     }
     _mutableRows = null;
+
+    return true;
   }
 
   Map<String, Row> freeze() {
