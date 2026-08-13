@@ -19,6 +19,7 @@ void main() {
 void _registerSparseStoreCommitTests() {
   group('sparse store commit prepare/install', () {
     _registerSparseInstallTests();
+    _registerSparseResourceEditorTests();
     _registerSparseAccountingTests();
     _registerSparseValidationTests();
   });
@@ -68,6 +69,21 @@ void _registerSparseInstallTests() {
   test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
+  );
+}
+
+void _registerSparseResourceEditorTests() {
+  test(
+    'keeps sparse resource work bounded through normalized finalization',
+    () => expect(_keepsSparseResourceWorkBounded, returnsNormally),
+  );
+  test(
+    'bounds later resource clears to post-clear candidates',
+    () => expect(_boundsLaterResourceClears, returnsNormally),
+  );
+  test(
+    'seals sparse resource editor buffers after publication and discard',
+    () => expect(_sealsSparseResourceEditorBuffers, returnsNormally),
   );
 }
 
@@ -365,6 +381,7 @@ StoreSparseCommit _resourceCompensation() {
 
 void _validatesAddFailuresBeforeSwap() {
   _acceptsImageAndResourceAddedInEitherOrder();
+  _removedResourceBeforeElementAddFailsFinalRelationshipValidation();
 
   final store = documentStoreWithDocument(_baseDocument());
   final beforeSummary = store.documentSummary;
@@ -386,6 +403,57 @@ void _validatesAddFailuresBeforeSwap() {
   );
   expect(store.documentSummary, beforeSummary);
   expect(store.projectionBuildCount, 0);
+}
+
+void _removedResourceBeforeElementAddFailsFinalRelationshipValidation() {
+  final resourceId = CanvasResourceId('removed-before-add');
+  final store = documentStoreWithDocument(
+    CanvasDocument(
+      resources: [
+        CanvasImageResource(
+          id: resourceId,
+          source: CanvasResourceSource.appKey('removed-before-add'),
+        ),
+      ],
+    ),
+  );
+
+  expect(
+    () => store.prepareSparseCommit(
+      _removedResourceBeforeElementAddCommit(resourceId),
+    ),
+    throwsA(
+      isA<CanvasDataException>()
+          .having(
+            (error) => error.code,
+            'code',
+            CanvasDataErrorCode.missingResourceReference,
+          )
+          .having((error) => error.path, 'path', 'image.resourceId'),
+    ),
+  );
+  expect(store.resourceDescriptor(resourceId), isNotNull);
+  expect(store.projectionBuildCount, 0);
+}
+
+StoreSparseCommit _removedResourceBeforeElementAddCommit(
+  CanvasResourceId resourceId,
+) {
+  return StoreSparseCommit(
+    revisionDelta: const StoreRevisionDelta.structural().merge(
+      const StoreRevisionDelta.resource(),
+    ),
+    mutations: [
+      StoreSparseRemoveUnusedResource(resourceId),
+      StoreSparseAddElement(
+        element: CanvasImageElement(
+          id: CanvasElementId('added-after-removal'),
+          resourceId: resourceId,
+          size: const Size(1, 1),
+        ),
+      ),
+    ],
+  );
 }
 
 // Keeping both callback orders together makes their shared final-candidate
@@ -871,7 +939,7 @@ void _clearsManyResourcesInOneSelectivePass() {
   final resourceWork = _SelectiveResourceTableWork();
   final familyWork = FamilyTablesTelemetry();
 
-  final prepared = ResourceTable.observeSelectiveMutation(
+  final prepared = ResourceTableEditor.observeWork(
     resourceWork.record,
     () => FamilyTables.observeTelemetry(
       familyWork.record,
@@ -896,10 +964,11 @@ void _clearsManyResourcesInOneSelectivePass() {
   expect(prepared.hasChanges, isTrue);
   expect(resourceWork.openCount, 1);
   expect(resourceWork.entryVisitCount, resourceCount);
+  _expectClearResourceRemovals(resourceWork, resourceCount - 2);
   expect(resourceWork.baseEntryCopyCount, 2);
   expect(resourceWork.freezeCount, 1);
   expect(resourceWork.immutablePublicationCount, 1);
-  expect(resourceWork.singleImmutableRemoveCount, 0);
+  expect(resourceWork.discardCount, 0);
   expect(familyWork.referenceQueryFamilyRowVisitCount, 0);
   expect(familyWork.referenceEditorBaseSummaryReadCount, 28);
   expect(familyWork.referenceEditorDeltaReadCount, 28);
@@ -908,6 +977,389 @@ void _clearsManyResourcesInOneSelectivePass() {
   store.installSparseCommit(prepared);
   expect(store.resourceCount, 2);
   expect(store.projectionBuildCount, 0);
+}
+
+void _keepsSparseResourceWorkBounded() {
+  const baseCount = 64;
+  final store = documentStoreWithDocument(
+    CanvasDocument(
+      resources: List.generate(
+        baseCount,
+        (index) => CanvasImageResource(
+          id: CanvasResourceId('resource-$index'),
+          source: CanvasResourceSource.appKey('base-$index'),
+        ),
+      ),
+    ),
+  );
+  final resourceWork = _SelectiveResourceTableWork();
+
+  final prepared = ResourceTableEditor.observeWork(
+    resourceWork.record,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.resource(),
+        mutations: [
+          StoreSparseUpsertResource(
+            CanvasImageResource(
+              id: CanvasResourceId('resource-0'),
+              source: CanvasResourceSource.appKey('changed'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  _expectSingleResourceNormalization(
+    prepared,
+    resourceWork,
+    baseCount: baseCount,
+    store: store,
+  );
+}
+
+void _boundsLaterResourceClears() {
+  const baseCount = 64;
+  final store = _resourceOnlyStore(baseCount);
+  final resourceWork = _SelectiveResourceTableWork();
+
+  final prepared = ResourceTableEditor.observeWork(
+    resourceWork.record,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.resource(),
+        mutations: [
+          const StoreSparseClearContent(removeUnusedResources: true),
+          StoreSparseUpsertResource(
+            CanvasImageResource(
+              id: CanvasResourceId('new'),
+              source: CanvasResourceSource.appKey('new'),
+            ),
+          ),
+          const StoreSparseClearContent(removeUnusedResources: true),
+        ],
+      ),
+    ),
+  );
+
+  _expectBoundedRepeatedResourceClearWork(
+    prepared,
+    resourceWork,
+    baseCount: baseCount,
+    store: store,
+  );
+}
+
+void _expectBoundedRepeatedResourceClearWork(
+  PreparedSparseStoreCommit prepared,
+  _SelectiveResourceTableWork resourceWork, {
+  required int baseCount,
+  required DocumentStoreKernel store,
+}) {
+  expect(prepared.hasChanges, isTrue);
+  expect(prepared.document.resourceTable.descriptors, isEmpty);
+  expect(resourceWork.count(ResourceTableEditorWorkKind.clearEntryVisit), 65);
+  expect(resourceWork.count(ResourceTableEditorWorkKind.normalizationRead), 65);
+  expect(
+    resourceWork.count(
+      ResourceTableEditorWorkKind.materializationBaseEntryVisit,
+    ),
+    baseCount,
+  );
+  expect(resourceWork.count(ResourceTableEditorWorkKind.freeze), 1);
+  expect(
+    resourceWork.count(ResourceTableEditorWorkKind.immutablePublication),
+    1,
+  );
+  expect(store.projectionBuildCount, 0);
+}
+
+DocumentStoreKernel _resourceOnlyStore(int count) {
+  return documentStoreWithDocument(
+    CanvasDocument(
+      resources: List.generate(
+        count,
+        (index) => CanvasImageResource(
+          id: CanvasResourceId('resource-$index'),
+          source: CanvasResourceSource.appKey('base-$index'),
+        ),
+      ),
+    ),
+  );
+}
+
+void _expectSingleResourceNormalization(
+  PreparedSparseStoreCommit prepared,
+  _SelectiveResourceTableWork resourceWork, {
+  required int baseCount,
+  required DocumentStoreKernel store,
+}) {
+  expect(prepared.hasChanges, isTrue);
+  expect(
+    resourceWork.count(
+      ResourceTableEditorWorkKind.editorOpen,
+      phase: ResourceTableEditorWorkPhase.replay,
+    ),
+    1,
+  );
+  expect(resourceWork.count(ResourceTableEditorWorkKind.normalizationRead), 1);
+  expect(resourceWork.count(ResourceTableEditorWorkKind.normalizationWrite), 1);
+  _expectSingleResourceReplayWork(resourceWork);
+  expect(resourceWork.count(ResourceTableEditorWorkKind.clearEntryVisit), 0);
+  expect(
+    resourceWork.count(
+      ResourceTableEditorWorkKind.materializationBaseEntryVisit,
+    ),
+    baseCount,
+  );
+  expect(
+    resourceWork.count(
+      ResourceTableEditorWorkKind.materializationBaseEntryCopy,
+    ),
+    baseCount,
+  );
+  expect(resourceWork.count(ResourceTableEditorWorkKind.freeze), 1);
+  expect(
+    resourceWork.count(ResourceTableEditorWorkKind.immutablePublication),
+    1,
+  );
+  expect(resourceWork.discardCount, 0);
+  expect(resourceWork.finalRetainsBaseIdentity, isFalse);
+  expect(
+    prepared
+        .document
+        .resourceTable
+        .descriptors[CanvasResourceId('resource-0')]
+        ?.resourceRevision,
+    2,
+  );
+  expect(store.projectionBuildCount, 0);
+}
+
+void _expectSingleResourceReplayWork(_SelectiveResourceTableWork resourceWork) {
+  expect(
+    resourceWork.count(
+      ResourceTableEditorWorkKind.currentWrite,
+      phase: ResourceTableEditorWorkPhase.replay,
+    ),
+    1,
+  );
+  expect(
+    resourceWork.count(ResourceTableEditorWorkKind.currentRead),
+    greaterThanOrEqualTo(2),
+  );
+}
+
+void _expectClearResourceRemovals(
+  _SelectiveResourceTableWork resourceWork,
+  int expectedRemovals,
+) {
+  expect(
+    resourceWork.count(ResourceTableEditorWorkKind.currentRemove),
+    expectedRemovals,
+  );
+}
+
+void _sealsSparseResourceEditorBuffers() {
+  _expectFrozenResourceEditorIsSealed();
+  _expectDiscardedResourceEditorIsSealed();
+  _expectFinalEqualResourceEditorKeepsBaseIdentity();
+  _expectResourceNoOpKeepsBaseIdentity();
+}
+
+void _expectFrozenResourceEditorIsSealed() {
+  final fixture = _freezeResourceEditorForIsolation();
+  _expectFrozenResourceTable(fixture.frozen);
+  _expectPublishedEditorIsClosed(fixture.editor, fixture.frozen, fixture.work);
+}
+
+({
+  ResourceTable frozen,
+  ResourceTableEditor editor,
+  _SelectiveResourceTableWork work,
+})
+_freezeResourceEditorForIsolation() {
+  final base = _resourceEditorIsolationBase();
+  final work = _SelectiveResourceTableWork();
+  late ResourceTableEditor publishedEditor;
+  final frozen = ResourceTableEditor.observeWork(
+    work.record,
+    () => ResourceTableEditor.editSparse(base, (editor) {
+      publishedEditor = editor;
+      editor.descriptors.upsert(
+        CanvasImageResource(
+          id: CanvasResourceId('added'),
+          source: CanvasResourceSource.appKey('added'),
+        ),
+        resourceRevision: 1,
+      );
+      editor.normalizeFinalFacts(acceptedRevision: 2);
+      return editor.freeze();
+    }),
+  );
+
+  return (frozen: frozen, editor: publishedEditor, work: work);
+}
+
+void _expectFrozenResourceTable(ResourceTable frozen) {
+  expect(frozen.descriptors.keys, [
+    CanvasResourceId('base'),
+    CanvasResourceId('added'),
+  ]);
+  expect(frozen.descriptors[CanvasResourceId('added')]?.resourceRevision, 2);
+}
+
+void _expectPublishedEditorIsClosed(
+  ResourceTableEditor editor,
+  ResourceTable frozen,
+  _SelectiveResourceTableWork work,
+) {
+  ResourceTableEditor.observeWork(work.record, () {
+    expect(
+      () => editor.descriptors.remove(CanvasResourceId('added')),
+      throwsStateError,
+    );
+    expect(
+      () => editor.normalizeFinalFacts(acceptedRevision: 3),
+      throwsStateError,
+    );
+    expect(editor.freeze, throwsStateError);
+  });
+  expect(
+    () => frozen.descriptors[CanvasResourceId('added')] =
+        frozen.descriptors[CanvasResourceId('base')]!,
+    throwsUnsupportedError,
+  );
+  expect(work.count(ResourceTableEditorWorkKind.postClosureAccess), 3);
+}
+
+void _expectDiscardedResourceEditorIsSealed() {
+  final base = _resourceEditorIsolationBase();
+  final work = _SelectiveResourceTableWork();
+  final discardedEditor = _discardResourceEditorWithFailure(base, work);
+  expect(base.descriptors.keys, [CanvasResourceId('base')]);
+  ResourceTableEditor.observeWork(
+    work.record,
+    () => expect(
+      () =>
+          discardedEditor.descriptors.descriptor(CanvasResourceId('discarded')),
+      throwsStateError,
+    ),
+  );
+  expect(work.discardCount, 1);
+  expect(work.finalRetainsBaseIdentity, isTrue);
+  expect(work.count(ResourceTableEditorWorkKind.immutablePublication), 0);
+  expect(work.count(ResourceTableEditorWorkKind.freeze), 0);
+}
+
+ResourceTableEditor _discardResourceEditorWithFailure(
+  ResourceTable base,
+  _SelectiveResourceTableWork work,
+) {
+  late ResourceTableEditor editor;
+  expect(
+    () => ResourceTableEditor.observeWork(
+      work.record,
+      () => ResourceTableEditor.editSparse(base, (current) {
+        editor = current;
+        current.descriptors.upsert(
+          CanvasImageResource(
+            id: CanvasResourceId('discarded'),
+            source: CanvasResourceSource.appKey('discarded'),
+          ),
+          resourceRevision: 1,
+        );
+        throw ArgumentError('failure');
+      }),
+    ),
+    throwsArgumentError,
+  );
+  return editor;
+}
+
+ResourceTable _resourceEditorIsolationBase() {
+  return ResourceTable([
+    CanvasImageResource(
+      id: CanvasResourceId('base'),
+      source: CanvasResourceSource.appKey('base'),
+    ),
+  ], resourceRevision: 1);
+}
+
+void _expectFinalEqualResourceEditorKeepsBaseIdentity() {
+  final base = _resourceEditorIsolationBase();
+  final work = _SelectiveResourceTableWork();
+  final frozen = ResourceTableEditor.observeWork(
+    work.record,
+    () => ResourceTableEditor.editSparse(base, (editor) {
+      editor.descriptors.upsert(
+        CanvasImageResource(
+          id: CanvasResourceId('base'),
+          source: CanvasResourceSource.appKey('base'),
+        ),
+        resourceRevision: 1,
+      );
+      editor.normalizeFinalFacts(acceptedRevision: 2);
+      return editor.freeze();
+    }),
+  );
+
+  expect(identical(frozen, base), isTrue);
+  expect(work.count(ResourceTableEditorWorkKind.normalizationRead), 1);
+  expect(work.count(ResourceTableEditorWorkKind.freeze), 0);
+  expect(work.count(ResourceTableEditorWorkKind.immutablePublication), 0);
+  expect(work.finalRetainsBaseIdentity, isTrue);
+}
+
+void _expectResourceNoOpKeepsBaseIdentity() {
+  final base = _resourceEditorNoOpBase();
+  final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
+  final work = _SelectiveResourceTableWork();
+  final prepared = _prepareResourceNoOp(store, work);
+
+  expect(prepared.hasChanges, isFalse);
+  expect(
+    identical(prepared.document.resourceTable, base.resourceTable),
+    isTrue,
+  );
+  expect(work.count(ResourceTableEditorWorkKind.immutablePublication), 0);
+  expect(work.count(ResourceTableEditorWorkKind.freeze), 0);
+  expect(work.discardCount, 1);
+  expect(work.finalRetainsBaseIdentity, isTrue);
+}
+
+CommittedDocument _resourceEditorNoOpBase() => CommittedDocument(
+  CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('base'),
+        source: CanvasResourceSource.appKey('base'),
+      ),
+    ],
+  ),
+);
+
+PreparedSparseStoreCommit _prepareResourceNoOp(
+  DocumentStoreKernel store,
+  _SelectiveResourceTableWork work,
+) {
+  return ResourceTableEditor.observeWork(
+    work.record,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.resource(),
+        mutations: [
+          StoreSparseUpsertResource(
+            CanvasImageResource(
+              id: CanvasResourceId('base'),
+              source: CanvasResourceSource.appKey('base'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 void _backgroundOnlyClearIsNoOp() {
@@ -2038,36 +2490,32 @@ CanvasDocument _paintedStrokeDocument() {
 }
 
 final class _SelectiveResourceTableWork {
-  int _openCount = 0;
-  int _entryVisitCount = 0;
-  int _baseEntryCopyCount = 0;
-  int _freezeCount = 0;
-  int _immutablePublicationCount = 0;
-  int _singleImmutableRemoveCount = 0;
+  final List<ResourceTableSelectiveMutationEvent> _events = [];
 
-  int get openCount => _openCount;
-  int get entryVisitCount => _entryVisitCount;
-  int get baseEntryCopyCount => _baseEntryCopyCount;
-  int get freezeCount => _freezeCount;
-  int get immutablePublicationCount => _immutablePublicationCount;
-  int get singleImmutableRemoveCount => _singleImmutableRemoveCount;
+  int get openCount => count(ResourceTableEditorWorkKind.editorOpen);
+  int get entryVisitCount => count(ResourceTableEditorWorkKind.clearEntryVisit);
+  int get baseEntryCopyCount =>
+      count(ResourceTableEditorWorkKind.materializationBaseEntryCopy);
+  int get freezeCount => count(ResourceTableEditorWorkKind.freeze);
+  int get immutablePublicationCount =>
+      count(ResourceTableEditorWorkKind.immutablePublication);
+  int get discardCount => count(ResourceTableEditorWorkKind.discard);
+  bool? get finalRetainsBaseIdentity => _events
+      .where((event) => event.kind == ResourceTableEditorWorkKind.finalIdentity)
+      .lastOrNull
+      ?.retainsBaseIdentity;
 
-  void record(ResourceTableSelectiveMutationEvent event) {
-    switch (event) {
-      case ResourceTableSelectiveMutationEvent.open:
-        _openCount += 1;
-      case ResourceTableSelectiveMutationEvent.entryVisit:
-        _entryVisitCount += 1;
-      case ResourceTableSelectiveMutationEvent.baseEntryCopy:
-        _baseEntryCopyCount += 1;
-      case ResourceTableSelectiveMutationEvent.freeze:
-        _freezeCount += 1;
-      case ResourceTableSelectiveMutationEvent.immutablePublication:
-        _immutablePublicationCount += 1;
-      case ResourceTableSelectiveMutationEvent.singleImmutableRemove:
-        _singleImmutableRemoveCount += 1;
-    }
-  }
+  int count(
+    ResourceTableEditorWorkKind kind, {
+    ResourceTableEditorWorkPhase? phase,
+  }) => _events
+      .where(
+        (event) =>
+            event.kind == kind && (phase == null || event.phase == phase),
+      )
+      .length;
+
+  void record(ResourceTableSelectiveMutationEvent event) => _events.add(event);
 }
 
 sealed class _StoreClearTraceAction {

@@ -22,7 +22,6 @@ import 'element_registry.dart';
 import 'family_tables.dart';
 import 'layer_table.dart';
 import 'resource_table.dart';
-import 'revision_state.dart';
 import 'schema_v1_store_import.dart';
 import 'sparse_store_commit.dart';
 import 'store_commit_finalization.dart';
@@ -107,13 +106,17 @@ final class DocumentStoreKernel {
   static final Object _sparseTransactionWorkZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
-    _validateFinalCandidateResourceRelationships(_document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(_document),
+    );
     _resetIdAdmissionFromOwners();
   }
 
   @visibleForTesting
   DocumentStoreKernel.withCommittedDocumentForTesting(this._document) {
-    _validateFinalCandidateResourceRelationships(_document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(_document),
+    );
     _resetIdAdmissionFromOwners();
   }
 
@@ -404,7 +407,9 @@ final class DocumentStoreKernel {
   }
 
   void installDocument(CommittedDocument document, StoreRevisionDelta delta) {
-    _validateFinalCandidateResourceRelationships(document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(document),
+    );
     if (!delta.hasChanges) {
       return;
     }
@@ -413,7 +418,9 @@ final class DocumentStoreKernel {
   }
 
   void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
-    _validateFinalCandidateResourceRelationships(document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(document),
+    );
     if (!delta.hasChanges) {
       return;
     }
@@ -425,7 +432,9 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreRevisionDelta delta,
   ) {
-    _validateFinalCandidateResourceRelationships(document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(document),
+    );
     if (!delta.hasChanges) {
       return;
     }
@@ -441,7 +450,9 @@ final class DocumentStoreKernel {
       baseRevisions: _document.revisions,
       revisionDelta: delta,
     );
-    _validateFinalCandidateResourceRelationships(prepared.document);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(prepared.document),
+    );
 
     return prepared;
   }
@@ -451,7 +462,9 @@ final class DocumentStoreKernel {
     StoreRevisionDelta revisionDelta,
   ) {
     final candidate = CommittedDocument(document);
-    _validateFinalCandidateResourceRelationships(candidate);
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(candidate),
+    );
     final providedDelta = _validatedSparseRevisionDelta(revisionDelta);
     final acceptedDelta = _committedDocumentRevisionDelta(_document, candidate);
     if (!acceptedDelta.hasChanges) {
@@ -508,10 +521,14 @@ final class DocumentStoreKernel {
     final revisionDelta = commit.revisionDelta;
     final journal = _SparseTransactionJournal(commit.mutations);
     return _document.elements.familyTables.editSparse(
-      (familyEditor) => _prepareSparseCommitInFamilyEditor(
-        revisionDelta: revisionDelta,
-        journal: journal,
-        familyEditor: familyEditor,
+      (familyEditor) => ResourceTableEditor.editSparse(
+        _document.resourceTable,
+        (resourceEditor) => _prepareSparseCommitInFamilyEditor(
+          revisionDelta: revisionDelta,
+          journal: journal,
+          familyEditor: familyEditor,
+          resourceEditor: resourceEditor,
+        ),
       ),
     );
   }
@@ -526,6 +543,7 @@ final class DocumentStoreKernel {
     required StoreRevisionDelta revisionDelta,
     required _SparseTransactionJournal journal,
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
     var nextDocument = _document;
@@ -563,6 +581,12 @@ final class DocumentStoreKernel {
           },
         );
         nextDocument = applied.document;
+        if (applied.didMutateFacts) {
+          _recordUpdateResourceReferenceTransitions(
+            updates,
+            resourceEditor.descriptors,
+          );
+        }
         accounting.recordAppliedUpdateBatch(applied, updates: updates);
         continue;
       }
@@ -572,24 +596,29 @@ final class DocumentStoreKernel {
       );
       final resourceDescriptorBeforeMutation = switch (mutation) {
         StoreSparseUpsertResource(:final resource) =>
-          nextDocument.resourceDescriptor(resource.id),
+          resourceEditor.descriptors.descriptor(resource.id),
         _ => null,
       };
       final applied = _applySparseMutation(
         nextDocument,
         mutation,
         familyEditor: familyEditor,
-        acceptedRevisions: acceptedRevisions,
+        resourceEditor: resourceEditor,
       );
       nextDocument = applied.document;
       accounting.recordAppliedMutation(
         mutation,
         applied: applied,
-        candidate: nextDocument,
         resourceDescriptorBeforeMutation: resourceDescriptorBeforeMutation,
+        resourceDescriptorAfterMutation: switch (mutation) {
+          StoreSparseUpsertResource(:final resource) =>
+            resourceEditor.descriptors.descriptor(resource.id),
+          _ => null,
+        },
       );
     }
     journal.finishReplay();
+    resourceEditor.enterFinalization();
     accounting.removeMissingRelationshipElementIds((id) {
       final isMissing = familyEditor.decide(
         FamilyTablesDecision.removeMembership,
@@ -608,13 +637,19 @@ final class DocumentStoreKernel {
     });
     if (accounting.needsFullResourceRelationshipValidation) {
       _validateFinalCandidateResourceRelationships(
-        nextDocument,
+        _ResourceRelationshipCandidate(
+          nextDocument,
+          resourceDescriptorById: resourceEditor.descriptors.descriptor,
+        ),
         familyElementById: familyEditor.elementByCanvasId,
         familyEditor: familyEditor,
       );
     } else if (accounting.hasResourceRelationshipElementIds) {
       _validateFinalCandidateResourceRelationships(
-        nextDocument,
+        _ResourceRelationshipCandidate(
+          nextDocument,
+          resourceDescriptorById: resourceEditor.descriptors.descriptor,
+        ),
         elementIds: accounting.readResourceRelationshipElementIds(),
         familyElementById: familyEditor.elementByCanvasId,
         familyEditor: familyEditor,
@@ -629,6 +664,7 @@ final class DocumentStoreKernel {
             base: _document,
             candidate: nextDocument,
             candidateFamilyTables: familyEditor,
+            resourceEditor: resourceEditor,
             touched: touched,
           )
         : const StoreRevisionDelta();
@@ -669,6 +705,25 @@ final class DocumentStoreKernel {
       }
     }
 
+    var acceptedTouchedFacts = AcceptedStoreTouchedFacts.empty();
+    if (accepted) {
+      resourceEditor.normalizeFinalFacts(
+        acceptedRevision: acceptedRevisions.resourceRevision,
+      );
+      acceptedTouchedFacts = _sparseAcceptedTouchedFacts(
+        base: _document,
+        candidate: nextDocument,
+        familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
+        touched: touched,
+        layerCandidates: accounting.readAcceptedLayerCandidates(),
+      );
+      final resourceTable = resourceEditor.freeze();
+      if (!identical(resourceTable, _document.resourceTable)) {
+        nextDocument = nextDocument.copyWith(resourceTable: resourceTable);
+      }
+    }
+
     final acceptedDocument = accepted
         ? _acceptSparseDocument(nextDocument, acceptedDelta)
         : _document;
@@ -677,13 +732,7 @@ final class DocumentStoreKernel {
       document: acceptedDocument,
       revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
       touchedFacts: accepted
-          ? _sparseAcceptedTouchedFacts(
-              base: _document,
-              candidate: acceptedDocument,
-              familyEditor: familyEditor,
-              touched: touched,
-              layerCandidates: accounting.readAcceptedLayerCandidates(),
-            )
+          ? acceptedTouchedFacts
           : AcceptedStoreTouchedFacts.empty(),
       admittedElementIds: accepted
           ? accounting.readAdmittedElementIds()
@@ -716,13 +765,7 @@ final class DocumentStoreKernel {
   ) {
     final acceptedRevisions = delta.advance(_document.revisions);
 
-    return document.copyWith(
-      revisions: acceptedRevisions,
-      resourceTable: document.resourceTable.withAcceptedResourceRevisions(
-        _document.resourceTable,
-        acceptedRevision: acceptedRevisions.resourceRevision,
-      ),
-    );
+    return document.copyWith(revisions: acceptedRevisions);
   }
 
   void installSparseCommit(PreparedSparseStoreCommit commit) {
@@ -745,7 +788,7 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreSparseMutation mutation, {
     required FamilyTablesEditor familyEditor,
-    required RevisionState acceptedRevisions,
+    required ResourceTableEditor resourceEditor,
   }) {
     return switch (mutation) {
       StoreSparseEnsureLayer(:final id, :final index) => _ensureLayer(
@@ -757,31 +800,36 @@ final class DocumentStoreKernel {
         document,
         mutation,
         familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
       ),
       final StoreSparseUpdateElement mutation => _updateElement(
         document,
         mutation,
         familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
       ),
       StoreSparseRemoveElement(:final id) => _removeElement(
         document,
         id,
         familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
       ),
       StoreSparseUpsertResource(:final resource) => _upsertResource(
         document,
         resource,
-        acceptedRevisions: acceptedRevisions,
+        resourceEditor: resourceEditor,
       ),
       StoreSparseRemoveUnusedResource(:final id) => _removeUnusedResource(
         document,
         id,
         familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
       ),
       StoreSparseClearContent(:final removeUnusedResources) => _clearContent(
         document,
         removeUnusedResources: removeUnusedResources,
         familyEditor: familyEditor,
+        resourceEditor: resourceEditor,
       ),
       StoreSparseSetBackground(:final background) => _setBackground(
         document,
@@ -813,10 +861,14 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreSparseAddElement mutation, {
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
     familyEditor.decide(
       FamilyTablesDecision.duplicateAdd,
       () => familyEditor.addElement(mutation.element),
+    );
+    resourceEditor.descriptors.recordResourceReferenceTransition(
+      _resourceIdForElement(mutation.element),
     );
     final elements = mutation.background
         ? document.elements.addBackgroundElementStructure(
@@ -839,6 +891,7 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     StoreSparseUpdateElement mutation, {
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
     final deferredValidation = <_DeferredSparseElementUpdateValidation>[];
     final result = _updateElements(
@@ -849,6 +902,11 @@ final class DocumentStoreKernel {
     );
     for (final validation in deferredValidation) {
       validation.validate();
+    }
+    if (result.didMutateFacts) {
+      _recordUpdateResourceReferenceTransitions([
+        mutation,
+      ], resourceEditor.descriptors);
     }
 
     return result;
@@ -868,11 +926,24 @@ final class DocumentStoreKernel {
     if (!batch.hasChanges) {
       return _SparseMutationResult.unchanged(document);
     }
-
     return _SparseMutationResult.changed(
       document,
       requiredRevisionDelta: batch.requiredRevisionDelta,
     );
+  }
+
+  void _recordUpdateResourceReferenceTransitions(
+    Iterable<StoreSparseUpdateElement> updates,
+    ResourceTableWorkingDescriptors resourceDescriptors,
+  ) {
+    for (final update in updates) {
+      resourceDescriptors.recordResourceReferenceTransition(
+        _resourceIdForElement(update.before),
+      );
+      resourceDescriptors.recordResourceReferenceTransition(
+        _resourceIdForElement(update.element),
+      );
+    }
   }
 
   // Source, no-op, kind, and deferred validation are intentionally ordered at
@@ -992,6 +1063,7 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     CanvasElementId id, {
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
     final isPresent = familyEditor.decide(
       FamilyTablesDecision.removeMembership,
@@ -1008,7 +1080,11 @@ final class DocumentStoreKernel {
     if (!isPresent) {
       return _SparseMutationResult.unchanged(document);
     }
+    final removed = familyEditor.elementByCanvasId(id);
     familyEditor.removeElement(id);
+    resourceEditor.descriptors.recordResourceReferenceTransition(
+      removed == null ? null : _resourceIdForElement(removed),
+    );
 
     return _SparseMutationResult.changed(
       document.copyWith(elements: document.elements.removeElementStructure(id)),
@@ -1019,15 +1095,14 @@ final class DocumentStoreKernel {
   _SparseMutationResult _upsertResource(
     CommittedDocument document,
     CanvasResource resource, {
-    required RevisionState acceptedRevisions,
+    required ResourceTableEditor resourceEditor,
   }) {
+    resourceEditor.descriptors.upsert(
+      resource,
+      resourceRevision: document.revisions.resourceRevision,
+    );
     return _SparseMutationResult.changed(
-      document.copyWith(
-        resourceTable: document.resourceTable.upsert(
-          resource,
-          revision: acceptedRevisions.resourceRevision,
-        ),
-      ),
+      document,
       requiredRevisionDelta: const StoreRevisionDelta.resource(),
     );
   }
@@ -1036,8 +1111,9 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     CanvasResourceId id, {
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
-    if (!document.resourceTable.contains(id)) {
+    if (!resourceEditor.descriptors.contains(id)) {
       return _SparseMutationResult.unchanged(document);
     }
     final isReferenced = familyEditor.decide(
@@ -1055,9 +1131,10 @@ final class DocumentStoreKernel {
     if (isReferenced) {
       return _SparseMutationResult.unchanged(document);
     }
+    resourceEditor.descriptors.remove(id);
 
     return _SparseMutationResult.changed(
-      document.copyWith(resourceTable: document.resourceTable.remove(id)),
+      document,
       requiredRevisionDelta: const StoreRevisionDelta.resource(),
     );
   }
@@ -1069,6 +1146,7 @@ final class DocumentStoreKernel {
     CommittedDocument document, {
     required bool removeUnusedResources,
     required FamilyTablesEditor familyEditor,
+    required ResourceTableEditor resourceEditor,
   }) {
     familyEditor.recordDecision(FamilyTablesDecision.clear);
     final contentElementIds = document.elements.contentElementOrder;
@@ -1082,20 +1160,16 @@ final class DocumentStoreKernel {
           : FamilyTablesDecisionResult.unchanged,
     );
     if (didClearElements) {
-      _clearContentFamilyRows(document.elements, familyEditor);
+      _clearContentFamilyRows(document.elements, familyEditor, resourceEditor);
     }
     final clearedElements = didClearElements
         ? document.elements.clearContentStructure()
         : document.elements;
-    final clearedResources = removeUnusedResources
-        ? document.resourceTable.retainWhere(
-            (id, _) => familyEditor.referencesResource(id),
-          )
-        : document.resourceTable;
-    final didClearResources = !identical(
-      clearedResources,
-      document.resourceTable,
-    );
+    final didClearResources =
+        removeUnusedResources &&
+        resourceEditor.descriptors.removeUnreferenced(
+          familyEditor.referencesResource,
+        );
     if (!didClearElements && !didClearResources) {
       return _SparseMutationResult.unchanged(document);
     }
@@ -1113,10 +1187,7 @@ final class DocumentStoreKernel {
     }
 
     return _SparseMutationResult.changed(
-      document.copyWith(
-        elements: clearedElements,
-        resourceTable: clearedResources,
-      ),
+      document.copyWith(elements: clearedElements),
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
@@ -1124,10 +1195,17 @@ final class DocumentStoreKernel {
   void _clearContentFamilyRows(
     ElementRegistry elements,
     FamilyTablesEditor familyEditor,
+    ResourceTableEditor resourceEditor,
   ) {
     // With no background rows, the all-family clear is exactly content removal
     // and keeps the editor's family-buffer lifecycle normalized. Background
     // rows instead require selective preservation by content ID.
+    for (final id in elements.contentElementOrder) {
+      final element = familyEditor.elementByCanvasId(id);
+      resourceEditor.descriptors.recordResourceReferenceTransition(
+        element == null ? null : _resourceIdForElement(element),
+      );
+    }
     if (elements.backgroundElementIds.isEmpty) {
       familyEditor.clearElements();
       return;
@@ -1223,6 +1301,7 @@ StoreRevisionDelta _sparseAcceptedRevisionDelta({
   required CommittedDocument base,
   required CommittedDocument candidate,
   required FamilyTablesEditor candidateFamilyTables,
+  required ResourceTableEditor resourceEditor,
   required _SparseTouchedCommittedFacts touched,
 }) {
   var delta = const StoreRevisionDelta();
@@ -1240,7 +1319,7 @@ StoreRevisionDelta _sparseAcceptedRevisionDelta({
       delta = delta.merge(const StoreRevisionDelta.grid());
     }
   }
-  if (!_sameTouchedResources(base, candidate, touched)) {
+  if (!_sameTouchedResources(resourceEditor, touched)) {
     delta = delta.merge(const StoreRevisionDelta.resource());
   }
 
@@ -1401,34 +1480,15 @@ AcceptedStoreTouchedFacts _committedDocumentTouchedFacts(
 }
 
 bool _sameTouchedResources(
-  CommittedDocument base,
-  CommittedDocument candidate,
+  ResourceTableEditor resourceEditor,
   _SparseTouchedCommittedFacts touched,
 ) {
   if (touched.resourceIds.isEmpty && !touched.allResources) {
     return true;
   }
-  if (base.resourceTable.count != candidate.resourceTable.count) {
-    return false;
-  }
-  if (touched.allResources) {
-    return _sameResourceTables(base.resourceTable, candidate.resourceTable);
-  }
-  for (final id in touched.resourceIds) {
-    final before = base.resourceDescriptor(id);
-    final after = candidate.resourceDescriptor(id);
-    if (before == null || after == null) {
-      if (before != after) {
-        return false;
-      }
-      continue;
-    }
-    if (!after.hasSameResourceFacts(before)) {
-      return false;
-    }
-  }
-
-  return true;
+  return resourceEditor.descriptors.hasSameFactsAsBase(
+    touched.allResources ? null : touched.resourceIds,
+  );
 }
 
 // Optional sparse family sources let the existing touched-facts owner serve
@@ -1438,12 +1498,14 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   CommittedDocument base,
   CommittedDocument candidate, {
   Iterable<CanvasResourceId>? limitedToIds,
+  ResourceTableEditor? resourceEditor,
   FamilyTables? baseFamilyTables,
   FamilyTables? candidateFamilyTables,
   FamilyTablesEditor? familyEditor,
 }) {
   final ids =
       limitedToIds ??
+      resourceEditor?.descriptors.changedIds ??
       {
         ...base.resourceTable.descriptors.keys,
         ...candidate.resourceTable.descriptors.keys,
@@ -1452,7 +1514,9 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   final visualChangedIds = <CanvasResourceId>{};
   for (final id in ids) {
     final before = base.resourceDescriptor(id);
-    final after = candidate.resourceDescriptor(id);
+    final after = resourceEditor == null
+        ? candidate.resourceDescriptor(id)
+        : resourceEditor.descriptors.descriptor(id);
     if (before == null && after == null) {
       continue;
     }
@@ -1940,6 +2004,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   required CommittedDocument base,
   required CommittedDocument candidate,
   required FamilyTablesEditor familyEditor,
+  required ResourceTableEditor resourceEditor,
   required _SparseTouchedCommittedFacts touched,
   required _SparseAcceptedLayerCandidates layerCandidates,
 }) {
@@ -1948,6 +2013,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
     base,
     candidate,
     limitedToIds: resourceIds,
+    resourceEditor: resourceEditor,
     baseFamilyTables: base.elements.familyTables,
     candidateFamilyTables: candidate.elements.familyTables,
     familyEditor: familyEditor,
@@ -2342,15 +2408,48 @@ bool _resourceDescriptorKindChanged({
   };
 }
 
-// The exhaustive family validation switch stays alongside the optional live
-// lookup so final relationship failure precedence remains explicit.
+CanvasResourceId? _resourceIdForElement(CanvasElement element) {
+  return switch (element) {
+    CanvasImageElement(:final resourceId) ||
+    CanvasVectorElement(:final resourceId) => resourceId,
+    CanvasPathElement() ||
+    CanvasTextElement() ||
+    CanvasStrokeElement() ||
+    CanvasLineElement() ||
+    CanvasRectElement() => null,
+  };
+}
+
+// This candidate groups the immutable aggregate with its optional live
+// descriptor authority, so relationship validation cannot read a stale table.
+final class _ResourceRelationshipCandidate {
+  const _ResourceRelationshipCandidate(
+    this.document, {
+    this.resourceDescriptorById,
+  });
+
+  final CommittedDocument document;
+  final StoreResourceDescriptorFacts? Function(CanvasResourceId id)?
+  resourceDescriptorById;
+
+  StoreResourceDescriptorFacts? descriptor(CanvasResourceId id) {
+    final liveLookup = resourceDescriptorById;
+    return liveLookup == null
+        ? document.resourceDescriptor(id)
+        : liveLookup(id);
+  }
+}
+
+// The exhaustive family validation switch stays alongside the candidate lookup
+// so final relationship failure precedence remains explicit.
 // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 void _validateFinalCandidateResourceRelationships(
-  CommittedDocument document, {
+  _ResourceRelationshipCandidate candidate, {
   Iterable<CanvasElementId>? elementIds,
   CanvasElement? Function(CanvasElementId id)? familyElementById,
   FamilyTablesEditor? familyEditor,
 }) {
+  final document = candidate.document;
   final ids = elementIds ?? document.elements.frameElementOrder;
   for (final elementId in ids) {
     final element = familyEditor == null
@@ -2375,14 +2474,14 @@ void _validateFinalCandidateResourceRelationships(
       switch (element) {
         case CanvasImageElement(:final resourceId):
           _validateResourceRelationship(
-            document: document,
+            candidate,
             resourceId: resourceId,
             path: 'image.resourceId',
             expectsImage: true,
           );
         case CanvasVectorElement(:final resourceId):
           _validateResourceRelationship(
-            document: document,
+            candidate,
             resourceId: resourceId,
             path: 'vector.resourceId',
             expectsImage: false,
@@ -2412,13 +2511,13 @@ void _validateFinalCandidateResourceRelationships(
   }
 }
 
-void _validateResourceRelationship({
-  required CommittedDocument document,
+void _validateResourceRelationship(
+  _ResourceRelationshipCandidate candidate, {
   required CanvasResourceId resourceId,
   required String path,
   required bool expectsImage,
 }) {
-  final descriptor = document.resourceDescriptor(resourceId);
+  final descriptor = candidate.descriptor(resourceId);
   if (descriptor == null) {
     throw CanvasDataException(
       code: CanvasDataErrorCode.missingResourceReference,
@@ -2620,8 +2719,8 @@ final class _SparseTransactionAccounting {
   void recordAppliedMutation(
     StoreSparseMutation mutation, {
     required _SparseMutationResult applied,
-    required CommittedDocument candidate,
     required StoreResourceDescriptorFacts? resourceDescriptorBeforeMutation,
+    required StoreResourceDescriptorFacts? resourceDescriptorAfterMutation,
   }) {
     if (!applied.didMutateFacts) {
       return;
@@ -2634,12 +2733,12 @@ final class _SparseTransactionAccounting {
             _resourceRelationshipElementIds.add(element.id)) {
           _append(SparseTransactionWorkLedger.relationship);
         }
-      case StoreSparseUpsertResource(:final resource):
+      case StoreSparseUpsertResource():
         _needsFullResourceRelationshipValidation =
             _needsFullResourceRelationshipValidation ||
             _resourceDescriptorKindChanged(
               before: resourceDescriptorBeforeMutation,
-              after: candidate.resourceDescriptor(resource.id),
+              after: resourceDescriptorAfterMutation,
             );
       case StoreSparseEnsureLayer() ||
           StoreSparseUpdateElement() ||
