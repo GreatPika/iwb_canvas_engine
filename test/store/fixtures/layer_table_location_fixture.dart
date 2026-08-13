@@ -11,6 +11,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/element_registry.dart';
+import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 import 'package:iwb_canvas_engine/src/store/layer_table.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
@@ -346,6 +347,46 @@ void main() {
     );
   });
 
+  test(
+    'rank mutations use one transitional indexed-order build and flatten',
+    () {
+      final base = LayerTable(_literalRows());
+      expect(base.rows, hasLength(3));
+
+      _expectSequenceWork(
+        () => base.ensureLayer(CanvasLayerId('inserted'), index: 1),
+        buildOpen: 1,
+        inputVisits: 3,
+        finalFlattenVisits: 4,
+      );
+      _expectSequenceWork(
+        () => base.addElement(
+          CanvasElementId('added'),
+          layerId: CanvasLayerId('l1'),
+          index: 0,
+        ),
+        buildOpen: 2,
+        inputVisits: 4,
+        finalFlattenVisits: 5,
+      );
+      _expectSequenceWork(
+        () => base.removeElement(
+          CanvasElementId('e1'),
+          layerId: CanvasLayerId('l1'),
+        ),
+        buildOpen: 2,
+        inputVisits: 4,
+        finalFlattenVisits: 3,
+      );
+      _expectSequenceWork(
+        () => base.clearElements(hasContent: true),
+        buildOpen: 3,
+        inputVisits: 3,
+        finalFlattenVisits: 0,
+      );
+    },
+  );
+
   test('element updates share the unchanged layer location fact', () {
     final base = CommittedDocument(_documentWithLiteralLayers());
     final baseLocationFact =
@@ -652,6 +693,33 @@ final class _LayerWork {
   }
 
   int count(LayerTableWorkEvent event) => _counts[event] ?? 0;
+}
+
+void _expectSequenceWork(
+  void Function() operation, {
+  required int buildOpen,
+  required int inputVisits,
+  required int finalFlattenVisits,
+}) {
+  final counts = <IndexedOrderSequenceWorkEvent, int>{};
+  IndexedOrderSequence.observeWork(
+    (event) => counts.update(event, (count) => count + 1, ifAbsent: () => 1),
+    operation,
+  );
+  expect(counts[IndexedOrderSequenceWorkEvent.buildOpen] ?? 0, buildOpen);
+  expect(
+    counts[IndexedOrderSequenceWorkEvent.buildInputVisit] ?? 0,
+    inputVisits,
+  );
+  expect(counts[IndexedOrderSequenceWorkEvent.buildClose] ?? 0, buildOpen);
+  expect(
+    counts[IndexedOrderSequenceWorkEvent.finalFlattenVisit] ?? 0,
+    finalFlattenVisits,
+  );
+  expect(
+    counts[IndexedOrderSequenceWorkEvent.finalFlattenPublication] ?? 0,
+    buildOpen,
+  );
 }
 
 SchemaV1LayerImportEvent _layerEvent(String id) {

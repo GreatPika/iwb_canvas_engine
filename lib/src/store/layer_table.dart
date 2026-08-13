@@ -7,6 +7,7 @@ import '../contracts/internal/schema_v1_import_events.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
+import 'indexed_order_sequence.dart';
 
 final class LayerRow {
   LayerRow({
@@ -251,10 +252,8 @@ final class LayerTable {
       _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
       return this;
     }
-    final targetIndex = _clampedInsertIndex(index, rows.length);
-
     return _insertRow(
-      targetIndex,
+      index,
       LayerRow(
         id: id,
         elementIds: const [],
@@ -299,11 +298,9 @@ final class LayerTable {
           elementIds: const [],
           metadata: const CanvasMetadata.empty(),
         );
-    final elementIds = row.elementIds.toList();
-    elementIds.insert(_clampedInsertIndex(index, elementIds.length), id);
-    final nextRow = LayerRow(
+    final nextRow = LayerRow._owned(
       id: row.id,
-      elementIds: elementIds,
+      elementIds: _insertElementId(row.elementIds, id, index: index),
       metadata: row.metadata,
     );
 
@@ -317,18 +314,21 @@ final class LayerTable {
     required CanvasLayerId layerId,
   }) {
     final location = locationFor(layerId);
-    if (location == null || !location.row.elementIds.contains(id)) {
+    if (location == null) {
+      _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
+      return this;
+    }
+    final elementIds = _removeElementId(location.row.elementIds, id);
+    if (elementIds == null) {
       _recordWork(LayerTableWorkEvent.unchangedLocationFactIdentityRetain);
       return this;
     }
 
     return _replaceRow(
       location.index,
-      LayerRow(
+      LayerRow._owned(
         id: location.row.id,
-        elementIds: location.row.elementIds.where(
-          (elementId) => elementId != id,
-        ),
+        elementIds: elementIds,
         metadata: location.row.metadata,
       ),
     );
@@ -346,7 +346,11 @@ final class LayerTable {
           builder.append(row, previous: layerLocationFacts[row.id]);
         } else {
           builder.append(
-            LayerRow(id: row.id, elementIds: const [], metadata: row.metadata),
+            LayerRow._owned(
+              id: row.id,
+              elementIds: _clearElementIds(row.elementIds),
+              metadata: row.metadata,
+            ),
           );
         }
       }
@@ -355,42 +359,95 @@ final class LayerTable {
     });
   }
 
-  LayerTable _insertRow(int index, LayerRow row) {
-    return _withTraversalScope(_LayerTableTraversalScope.mutation, () {
-      final builder = _LayerTableBuilder();
-      var sourceIndex = 0;
-      for (final sourceRow in rows) {
-        if (sourceIndex == index) {
-          builder.append(row);
-        }
-        builder.append(sourceRow, previous: layerLocationFacts[sourceRow.id]);
-        sourceIndex += 1;
-      }
-      if (index == rows.length) {
-        builder.append(row);
-      }
-
-      return LayerTable._fromFacts(builder.build());
-    });
+  LayerTable _insertRow(int? index, LayerRow row) {
+    return _mutateRows((orderedRows) => orderedRows.insert(row, index: index));
   }
 
   LayerTable _replaceRow(int index, LayerRow row) {
-    return _withTraversalScope(_LayerTableTraversalScope.mutation, () {
-      final builder = _LayerTableBuilder();
-      var sourceIndex = 0;
-      for (final sourceRow in rows) {
-        final nextRow = sourceIndex == index ? row : sourceRow;
-        builder.append(
-          nextRow,
-          previous: sourceIndex == index
-              ? null
-              : layerLocationFacts[sourceRow.id],
-        );
-        sourceIndex += 1;
-      }
-
-      return LayerTable._fromFacts(builder.build());
+    return _mutateRows((orderedRows) {
+      orderedRows.remove(row.id);
+      orderedRows.insert(row, index: index);
     });
+  }
+
+  LayerTable _mutateRows(
+    void Function(IndexedOrderSequence<LayerRow, CanvasLayerId> orderedRows)
+    mutation,
+  ) {
+    return _withTraversalScope(_LayerTableTraversalScope.mutation, () {
+      final orderedRows = IndexedOrderSequence<LayerRow, CanvasLayerId>(
+        rows,
+        idOf: (row) => row.id,
+      );
+      var consumed = false;
+      try {
+        mutation(orderedRows);
+        final nextRows = orderedRows.consume();
+        consumed = true;
+        return _publishMutatedRows(nextRows);
+      } catch (_) {
+        if (!consumed) {
+          orderedRows.discard();
+        }
+        rethrow;
+      }
+    });
+  }
+
+  LayerTable _publishMutatedRows(Iterable<LayerRow> nextRows) {
+    final builder = _LayerTableBuilder();
+    for (final row in nextRows) {
+      builder.append(row, previous: layerLocationFacts[row.id]);
+    }
+    return LayerTable._fromFacts(builder.build());
+  }
+
+  static List<CanvasElementId> _insertElementId(
+    Iterable<CanvasElementId> ids,
+    CanvasElementId id, {
+    required int? index,
+  }) {
+    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
+      ids,
+      idOf: (elementId) => elementId,
+    );
+    var consumed = false;
+    try {
+      orderedIds.insert(id, index: index);
+      final nextIds = orderedIds.consume();
+      consumed = true;
+      return nextIds;
+    } catch (_) {
+      if (!consumed) {
+        orderedIds.discard();
+      }
+      rethrow;
+    }
+  }
+
+  static List<CanvasElementId>? _removeElementId(
+    Iterable<CanvasElementId> ids,
+    CanvasElementId id,
+  ) {
+    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
+      ids,
+      idOf: (elementId) => elementId,
+    );
+    final removed = orderedIds.remove(id);
+    if (removed == null) {
+      orderedIds.discard();
+      return null;
+    }
+    return orderedIds.consume();
+  }
+
+  static List<CanvasElementId> _clearElementIds(Iterable<CanvasElementId> ids) {
+    final orderedIds = IndexedOrderSequence<CanvasElementId, CanvasElementId>(
+      ids,
+      idOf: (elementId) => elementId,
+    );
+    orderedIds.clear();
+    return orderedIds.consume();
   }
 }
 
@@ -825,16 +882,4 @@ final class _ScopedIterator<T> implements Iterator<T> {
 
   @override
   bool moveNext() => _zone.run(_iterator.moveNext);
-}
-
-int _clampedInsertIndex(int? requestedIndex, int length) {
-  final index = requestedIndex ?? length;
-  if (index < 0) {
-    return 0;
-  }
-  if (index > length) {
-    return length;
-  }
-
-  return index;
 }
