@@ -952,7 +952,66 @@ int _draftClearWorkEventCount(
   return work.where((item) => item == event).length;
 }
 
+// Regression: evaluating removeUnusedResource against a final clear state
+// rather than its journal position would make one of these paired traces
+// retain or release the ordinary-content descriptor incorrectly.
+void _expectRemoveUnusedResourceBarrierThroughSparseSession() {
+  final resourceId = CanvasResourceId('content-image-resource');
+  final removeBeforeClear = _runSparseClearTrace([
+    _ClearTraceAction.removeUnusedResource(resourceId),
+    const _ClearTraceAction.clearContent(removeUnusedResources: false),
+  ]);
+  final clearBeforeRemove = _runSparseClearTrace([
+    const _ClearTraceAction.clearContent(removeUnusedResources: false),
+    _ClearTraceAction.removeUnusedResource(resourceId),
+  ]);
+
+  _expectSparseClearTraceMatchesOracle(removeBeforeClear);
+  _expectSparseClearTraceMatchesOracle(clearBeforeRemove);
+
+  expect(removeBeforeClear.actualResults[0].changed, isFalse);
+  final retainedClear = removeBeforeClear.actualResults[1].clearResult;
+  expect(retainedClear?.didClearContent, isTrue);
+  expect(retainedClear?.removedElementIds, [CanvasElementId('content-image')]);
+  expect(retainedClear?.removedResourceIds, isEmpty);
+  expect(removeBeforeClear.document.resources.map((resource) => resource.id), [
+    CanvasResourceId('background-image-resource'),
+    CanvasResourceId('background-vector-resource'),
+    resourceId,
+  ]);
+  expect(removeBeforeClear.session.touchedSet.removedElementIds, {
+    CanvasElementId('content-image'),
+  });
+  expect(
+    removeBeforeClear.session.touchedSet.resourceDescriptorChangedIds,
+    isEmpty,
+  );
+  expect(removeBeforeClear.session.revisionDelta.structural, isTrue);
+  expect(removeBeforeClear.session.revisionDelta.resource, isFalse);
+
+  final removedClear = clearBeforeRemove.actualResults[0].clearResult;
+  expect(removedClear?.didClearContent, isTrue);
+  expect(removedClear?.removedElementIds, [CanvasElementId('content-image')]);
+  expect(removedClear?.removedResourceIds, isEmpty);
+  expect(clearBeforeRemove.actualResults[1].changed, isTrue);
+  expect(clearBeforeRemove.document.resources.map((resource) => resource.id), [
+    CanvasResourceId('background-image-resource'),
+    CanvasResourceId('background-vector-resource'),
+  ]);
+  expect(clearBeforeRemove.session.touchedSet.removedElementIds, {
+    CanvasElementId('content-image'),
+  });
+  expect(
+    clearBeforeRemove.session.touchedSet.resourceDescriptorChangedIds,
+    {resourceId},
+  );
+  expect(clearBeforeRemove.session.revisionDelta.structural, isTrue);
+  expect(clearBeforeRemove.session.revisionDelta.resource, isTrue);
+}
+
 void _sparseClearRemainsAnOrderedJournalBarrier() {
+  _expectRemoveUnusedResourceBarrierThroughSparseSession();
+
   final beforeClearTrace = [
     _ClearTraceAction.upsertResource(_resource('resource-before-clear')),
     _ClearTraceAction.addElement(

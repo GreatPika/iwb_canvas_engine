@@ -943,7 +943,78 @@ void _backgroundOnlyClearIsNoOp() {
   expect(store.projectionBuildCount, 0);
 }
 
+// Regression: evaluating remove-unused mutations against the final clear state
+// would erase this ordinary-content descriptor before clear or retain it after.
+void _expectRemoveUnusedResourceBarrierThroughDirectStore() {
+  final resourceId = CanvasResourceId('content-image-resource');
+  final retainedStore = documentStoreWithDocument(_clearRetentionDocument());
+  final retained = retainedStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta(
+        document: true,
+        projection: true,
+        structural: true,
+        bounds: true,
+        elementVisual: true,
+        resource: true,
+      ),
+      mutations: [
+        StoreSparseRemoveUnusedResource(resourceId),
+        const StoreSparseClearContent(removeUnusedResources: false),
+      ],
+    ),
+  );
+
+  expect(retained.touchedFacts.removedElementIds, {
+    CanvasElementId('content-image'),
+    CanvasElementId('content-vector'),
+  });
+  expect(retained.touchedFacts.resourceDescriptorChangedIds, isEmpty);
+  expect(retained.touchedFacts.resourceVisualChangedIds, isEmpty);
+  expect(retained.touchedFacts.layerIds, {CanvasLayerId('content-layer')});
+  expect(retained.touchedFacts.backgroundLayerChanged, isFalse);
+  expect(retained.revisionDelta.structural, isTrue);
+  expect(retained.revisionDelta.resource, isFalse);
+  retainedStore.installSparseCommit(retained);
+  expect(retainedStore.resourceDescriptor(resourceId), isNotNull);
+  expect(retainedStore.resourceRevision, 1);
+
+  final removedStore = documentStoreWithDocument(_clearRetentionDocument());
+  final removed = removedStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta(
+        document: true,
+        projection: true,
+        structural: true,
+        bounds: true,
+        elementVisual: true,
+        resource: true,
+      ),
+      mutations: [
+        const StoreSparseClearContent(removeUnusedResources: false),
+        StoreSparseRemoveUnusedResource(resourceId),
+      ],
+    ),
+  );
+
+  expect(removed.touchedFacts.removedElementIds, {
+    CanvasElementId('content-image'),
+    CanvasElementId('content-vector'),
+  });
+  expect(removed.touchedFacts.resourceDescriptorChangedIds, {resourceId});
+  expect(removed.touchedFacts.resourceVisualChangedIds, {resourceId});
+  expect(removed.touchedFacts.layerIds, {CanvasLayerId('content-layer')});
+  expect(removed.touchedFacts.backgroundLayerChanged, isFalse);
+  expect(removed.revisionDelta.structural, isTrue);
+  expect(removed.revisionDelta.resource, isTrue);
+  removedStore.installSparseCommit(removed);
+  expect(removedStore.resourceDescriptor(resourceId), isNull);
+  expect(removedStore.resourceRevision, 2);
+}
+
 void _clearBarrierKeepsJournalOrder() {
+  _expectRemoveUnusedResourceBarrierThroughDirectStore();
+
   final addedResource = CanvasImageResource(
     id: CanvasResourceId('trace-resource'),
     source: CanvasResourceSource.appKey('trace-source'),
