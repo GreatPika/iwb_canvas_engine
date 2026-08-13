@@ -240,14 +240,17 @@ void main() {
       expect(work.referenceEditorDeltaReadCount, 2);
       expect(work.imageReferenceAffectedIdUpdateCount, 0);
       expect(work.vectorReferenceAffectedIdUpdateCount, 0);
-      expect(
-        work.editorDecisionTrace,
-        contains(FamilyTablesDecision.removeUnusedReference),
-      );
-      expect(
-        work.editorDecisionTrace,
-        contains(FamilyTablesDecision.acceptedTouched),
-      );
+      expect(work.editorDecisionTrace, [
+        FamilyTablesDecision.removeUnusedReference,
+      ]);
+      // Accepted touched classification now uses the normalized immutable
+      // candidate after publication, so this owner trace ends at the current
+      // remove-unused read rather than retaining a post-freeze editor read.
+      expect(work.staleDecisionReadCount, 0);
+      expect(work.postFreezeWriteCount, 0);
+      expect(work.postFreezeCopyCount, 0);
+      expect(work.postFreezeNormalizationCount, 0);
+      expect(work.postFreezeImmutablePublicationCount, 0);
       _expectNoSummaryMaterialization(work);
     },
   );

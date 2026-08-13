@@ -21,7 +21,7 @@ change under those owners.
 - Keep the filename stable after acceptance, including after supersession or
   retirement.
 - Reserve an identifier only when its ADR file and catalog row are added in the
-  same change. The next identifier is `ADR-0017`.
+  same change. The next identifier is `ADR-0018`.
 
 ### Required header
 
@@ -200,6 +200,7 @@ remain authoritative for present behavior.
 | ADR-0014 | [ADR-0014-custom-numeric-benchmark-route.md](ADR-0014-custom-numeric-benchmark-route.md) | Use a custom benchmark registry with numeric release gates |
 | ADR-0015 | [ADR-0015-flutter-profile-performance-route.md](ADR-0015-flutter-profile-performance-route.md) | Gate releases on the official Flutter profile route and artifact integrity |
 | ADR-0016 | [ADR-0016-vector-resources-raster-free-rendering.md](ADR-0016-vector-resources-raster-free-rendering.md) | Keep vector resources application-prepared and raster-free |
+| ADR-0017 | [ADR-0017-store-transaction-candidate-and-derived-facts.md](ADR-0017-store-transaction-candidate-and-derived-facts.md) | Coordinate sparse Store work through one candidate and owner-derived published facts |
 
 Add each ADR file, its catalog row, and its concern lookup entry atomically; do
 not reserve an identifier for a record that does not exist.
@@ -228,6 +229,7 @@ relationships; the catalog does not mirror those facts.
 | Historical custom numeric benchmark route | [ADR-0014](ADR-0014-custom-numeric-benchmark-route.md) |
 | Flutter profile performance evidence and release admission | [ADR-0015](ADR-0015-flutter-profile-performance-route.md) |
 | Vector resources, preparation, borrowed resolution, and direct Picture rendering | [ADR-0016](ADR-0016-vector-resources-raster-free-rendering.md) |
+| Sparse Store candidates, indexed order, derived facts, and rollback-safe generated IDs | [ADR-0017](ADR-0017-store-transaction-candidate-and-derived-facts.md) |
 
 Add each concern entry in the same change as its ADR file and catalog row.
 

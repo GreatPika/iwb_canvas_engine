@@ -3,13 +3,16 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/revision_state.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../support/document_store_with_document.dart';
+import 'family_tables_telemetry.dart';
 
 void main() {
   _registerStoreCommitFinalizationTests();
@@ -62,6 +65,14 @@ void _registerMaterializedFinalizationTests() {
 
 void _registerSparseFinalizationTests() {
   test(
+    'sparse candidate reports owner lifecycle for accepted, no-op, and failed preparation',
+    () => expect(_sparseCandidateReportsOwnerLifecycle, returnsNormally),
+  );
+  test(
+    'sparse candidate reads each current owner across an interleaved direct trace',
+    () => expect(_sparseCandidateReadsCurrentOwners, returnsNormally),
+  );
+  test(
     'sparse changed facts prepare exact accepted delta',
     () => expect(_sparseChangedFactsPrepareAcceptedDelta, returnsNormally),
   );
@@ -93,6 +104,321 @@ void _registerSparseFinalizationTests() {
       returnsNormally,
     ),
   );
+}
+
+// The candidate must report its own semantic lifecycle at the direct Store
+// seam. These are owner events, not fixture counters: changing callback-owned
+// data cannot create an event or hide a Store publication.
+// The competing-gate witnesses stay together so their phase precedence is
+// inspectable without a test-only scenario transport.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _sparseCandidateReportsOwnerLifecycle() {
+  final acceptedStore = documentStoreWithDocument(_baseDocument());
+  final acceptedEvents = <StoreSparseCandidateEvent>[];
+  final accepted = CommittedDocument.observeSparseCandidateEvents(
+    acceptedEvents.add,
+    () => acceptedStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta.background(),
+        mutations: const [
+          StoreSparseSetBackground(CanvasBackground(color: Color(0xFF112233))),
+        ],
+      ),
+    ),
+  );
+  expect(accepted.hasChanges, isTrue);
+  _expectCandidateFinalization(acceptedEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.deferredValidation,
+    StoreSparseCandidateEventKind.acceptedFacts,
+    StoreSparseCandidateEventKind.coverageValidation,
+    StoreSparseCandidateEventKind.normalization,
+    StoreSparseCandidateEventKind.resourceFreeze,
+    StoreSparseCandidateEventKind.structuralPublication,
+    StoreSparseCandidateEventKind.aggregatePublication,
+    StoreSparseCandidateEventKind.touchedFacts,
+    StoreSparseCandidateEventKind.consume,
+  ]);
+  expect(
+    acceptedEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(1),
+  );
+
+  final noOpStore = documentStoreWithDocument(_baseDocument());
+  final noOpEvents = <StoreSparseCandidateEvent>[];
+  final noOp = CommittedDocument.observeSparseCandidateEvents(
+    noOpEvents.add,
+    () => noOpStore.prepareSparseCommit(
+      StoreSparseCommit(
+        revisionDelta: const StoreRevisionDelta(),
+        mutations: [],
+      ),
+    ),
+  );
+  expect(noOp.hasChanges, isFalse);
+  _expectCandidateFinalization(noOpEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.deferredValidation,
+    StoreSparseCandidateEventKind.acceptedFacts,
+    StoreSparseCandidateEventKind.discard,
+  ]);
+  expect(
+    noOpEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    isEmpty,
+  );
+
+  final failedStore = documentStoreWithDocument(_baseDocument());
+  final failedEvents = <StoreSparseCandidateEvent>[];
+  expect(
+    () => CommittedDocument.observeSparseCandidateEvents(
+      failedEvents.add,
+      () => failedStore.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta(),
+          mutations: const [
+            StoreSparseSetBackground(
+              CanvasBackground(color: Color(0xFF112233)),
+            ),
+          ],
+        ),
+      ),
+    ),
+    throwsArgumentError,
+  );
+  _expectCandidateFinalization(failedEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.deferredValidation,
+    StoreSparseCandidateEventKind.acceptedFacts,
+    StoreSparseCandidateEventKind.discard,
+  ]);
+  expect(
+    failedEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    isEmpty,
+  );
+
+  final relationshipFirstStore = documentStoreWithDocument(_baseDocument());
+  final relationshipFirstEvents = <StoreSparseCandidateEvent>[];
+  expect(
+    () => CommittedDocument.observeSparseCandidateEvents(
+      relationshipFirstEvents.add,
+      () => relationshipFirstStore.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta(document: true),
+          mutations: [
+            StoreSparseAddElement(
+              element: CanvasImageElement(
+                id: CanvasElementId('missing-before-delta'),
+                resourceId: CanvasResourceId('missing'),
+                size: const Size(1, 1),
+              ),
+              layerId: CanvasLayerId('layer-1'),
+            ),
+          ],
+        ),
+      ),
+    ),
+    throwsA(
+      isA<CanvasDataException>().having(
+        (error) => error.code,
+        'code',
+        CanvasDataErrorCode.missingResourceReference,
+      ),
+    ),
+  );
+  _expectCandidateFinalization(relationshipFirstEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.discard,
+  ]);
+
+  final providedFirstStore = documentStoreWithDocument(_baseDocument());
+  final providedFirstEvents = <StoreSparseCandidateEvent>[];
+  expect(
+    () => CommittedDocument.observeSparseCandidateEvents(
+      providedFirstEvents.add,
+      () => providedFirstStore.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta(document: true),
+          mutations: const [
+            StoreSparseSetBackground(
+              CanvasBackground(color: Color(0xFF112233)),
+            ),
+          ],
+        ),
+      ),
+    ),
+    throwsArgumentError,
+  );
+  _expectCandidateFinalization(providedFirstEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.discard,
+  ]);
+
+  final coverageStore = documentStoreWithDocument(_baseDocument());
+  final coverageEvents = <StoreSparseCandidateEvent>[];
+  expect(
+    () => CommittedDocument.observeSparseCandidateEvents(
+      coverageEvents.add,
+      () => coverageStore.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta.projectionOnly(),
+          mutations: const [
+            StoreSparseSetBackground(
+              CanvasBackground(color: Color(0xFF112233)),
+            ),
+          ],
+        ),
+      ),
+    ),
+    throwsArgumentError,
+  );
+  _expectCandidateFinalization(coverageEvents, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.deferredValidation,
+    StoreSparseCandidateEventKind.acceptedFacts,
+    StoreSparseCandidateEventKind.coverageValidation,
+    StoreSparseCandidateEventKind.discard,
+  ]);
+}
+
+// This exhaustive event filter is the direct candidate phase vocabulary; a
+// split switch would separate the ordered assertion from its stable owner set.
+// ignore: cyclomatic-complexity
+void _expectCandidateFinalization(
+  Iterable<StoreSparseCandidateEvent> events,
+  List<StoreSparseCandidateEventKind> expected,
+) {
+  final actual = [
+    for (final event in events)
+      if (switch (event.kind) {
+        StoreSparseCandidateEventKind.relationshipValidation ||
+        StoreSparseCandidateEventKind.providedDeltaValidation ||
+        StoreSparseCandidateEventKind.deferredValidation ||
+        StoreSparseCandidateEventKind.acceptedFacts ||
+        StoreSparseCandidateEventKind.coverageValidation ||
+        StoreSparseCandidateEventKind.normalization ||
+        StoreSparseCandidateEventKind.familyFreeze ||
+        StoreSparseCandidateEventKind.resourceFreeze ||
+        StoreSparseCandidateEventKind.structuralPublication ||
+        StoreSparseCandidateEventKind.aggregatePublication ||
+        StoreSparseCandidateEventKind.touchedFacts ||
+        StoreSparseCandidateEventKind.consume ||
+        StoreSparseCandidateEventKind.discard => true,
+        StoreSparseCandidateEventKind.open ||
+        StoreSparseCandidateEventKind.currentScalarRead => false,
+      })
+        event.kind,
+  ];
+  expect(actual, expected);
+}
+
+// The interleaved trace keeps the independent final-fact and no-stale-read
+// observations beside the mutations that make each one meaningful.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _sparseCandidateReadsCurrentOwners() {
+  final store = documentStoreWithDocument(_baseDocument());
+  final events = <StoreSparseCandidateEvent>[];
+  final familyWork = FamilyTablesTelemetry();
+  final prepared = FamilyTables.observeTelemetry(
+    familyWork.record,
+    () => CommittedDocument.observeSparseCandidateEvents(
+      events.add,
+      () => store.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta.structural()
+              .merge(const StoreRevisionDelta.resource())
+              .merge(const StoreRevisionDelta.background()),
+          mutations: [
+            StoreSparseUpsertResource(_resource('resource-2')),
+            StoreSparseAddElement(
+              element: CanvasImageElement(
+                id: CanvasElementId('candidate-image'),
+                resourceId: CanvasResourceId('resource-2'),
+                size: const Size(2, 3),
+              ),
+              layerId: CanvasLayerId('layer-1'),
+            ),
+            StoreSparseRemoveUnusedResource(CanvasResourceId('resource-2')),
+            const StoreSparseSetBackground(
+              CanvasBackground(color: Color(0xFF223344)),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  expect(prepared.hasChanges, isTrue);
+  expect(
+    prepared.document.resourceDescriptor(CanvasResourceId('resource-2')),
+    isNotNull,
+  );
+  expect(
+    prepared.document.elements.elementById(CanvasElementId('candidate-image')),
+    isNotNull,
+  );
+  expect(prepared.document.background.color, const Color(0xFF223344));
+  expect(prepared.touchedFacts.resourceDescriptorChangedIds, {
+    CanvasResourceId('resource-2'),
+  });
+  expect(prepared.touchedFacts.resourceVisualChangedIds, {
+    CanvasResourceId('resource-2'),
+  });
+  expect(familyWork.editorDecisionTrace, [
+    FamilyTablesDecision.duplicateAdd,
+    FamilyTablesDecision.removeUnusedReference,
+    FamilyTablesDecision.removeMembership,
+    FamilyTablesDecision.relationship,
+    FamilyTablesDecision.acceptedDelta,
+  ]);
+  expect(familyWork.staleDecisionReadCount, 0);
+  expect(familyWork.postFreezeWriteCount, 0);
+  expect(familyWork.postFreezeCopyCount, 0);
+  expect(familyWork.postFreezeNormalizationCount, 0);
+  expect(familyWork.postFreezeImmutablePublicationCount, 0);
+  expect(familyWork.referenceQueryFamilyRowVisitCount, 0);
+  _expectCandidateFinalization(events, const [
+    StoreSparseCandidateEventKind.relationshipValidation,
+    StoreSparseCandidateEventKind.providedDeltaValidation,
+    StoreSparseCandidateEventKind.deferredValidation,
+    StoreSparseCandidateEventKind.acceptedFacts,
+    StoreSparseCandidateEventKind.coverageValidation,
+    StoreSparseCandidateEventKind.normalization,
+    StoreSparseCandidateEventKind.familyFreeze,
+    StoreSparseCandidateEventKind.resourceFreeze,
+    StoreSparseCandidateEventKind.structuralPublication,
+    StoreSparseCandidateEventKind.aggregatePublication,
+    StoreSparseCandidateEventKind.touchedFacts,
+    StoreSparseCandidateEventKind.consume,
+  ]);
+  expect(
+    events.map((event) => event.kind),
+    containsAll(const [
+      StoreSparseCandidateEventKind.open,
+      StoreSparseCandidateEventKind.currentScalarRead,
+    ]),
+  );
+  final aggregatePublication = events.indexWhere(
+    (event) => event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+  );
+  final touchedFacts = events.indexWhere(
+    (event) => event.kind == StoreSparseCandidateEventKind.touchedFacts,
+  );
+  expect(aggregatePublication, greaterThanOrEqualTo(0));
+  expect(touchedFacts, greaterThan(aggregatePublication));
 }
 
 void _materializedFinalEqualityPreparesAsNoOp() {
@@ -445,13 +771,17 @@ void _sparseDeferredUpdatesRetainJournalOrderAfterOverwriteOrRemoval() {
   for (final trace in traces.indexed) {
     final store = documentStoreWithDocument(_baseDocument());
     final work = <SparseTransactionWorkEvent>[];
+    final phaseEvents = <StoreSparseCandidateEvent>[];
     expect(
-      () => DocumentStoreKernel.observeSparseTransactionWork(
-        work.add,
-        () => store.prepareSparseCommit(
-          StoreSparseCommit(
-            mutations: trace.$2,
-            revisionDelta: const StoreRevisionDelta.background(),
+      () => CommittedDocument.observeSparseCandidateEvents(
+        phaseEvents.add,
+        () => DocumentStoreKernel.observeSparseTransactionWork(
+          work.add,
+          () => store.prepareSparseCommit(
+            StoreSparseCommit(
+              mutations: trace.$2,
+              revisionDelta: const StoreRevisionDelta.background(),
+            ),
           ),
         ),
       ),
@@ -466,6 +796,12 @@ void _sparseDeferredUpdatesRetainJournalOrderAfterOverwriteOrRemoval() {
             .having((error) => error.invalidValue, 'invalidValue', 3),
       ),
     );
+    _expectCandidateFinalization(phaseEvents, const [
+      StoreSparseCandidateEventKind.relationshipValidation,
+      StoreSparseCandidateEventKind.providedDeltaValidation,
+      StoreSparseCandidateEventKind.deferredValidation,
+      StoreSparseCandidateEventKind.discard,
+    ]);
     expect(
       work
           .where(

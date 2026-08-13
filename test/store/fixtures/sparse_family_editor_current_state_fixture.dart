@@ -25,7 +25,8 @@ void main() {
     // This is a hand-written sequential oracle for the live editor state: the
     // first resource removal sees its image row, the later one sees its
     // removal; the newly added image is then validated against the final
-    // descriptor before accepted delta and touched computation.
+    // descriptor before accepted delta. Touched facts are classified after
+    // aggregate publication from normalized immutable base/final facts.
     expect(work.editorDecisionTrace, [
       FamilyTablesDecision.removeUnusedReference,
       FamilyTablesDecision.removeMembership,
@@ -35,9 +36,6 @@ void main() {
       FamilyTablesDecision.relationship,
       FamilyTablesDecision.acceptedDelta,
       FamilyTablesDecision.acceptedDelta,
-      FamilyTablesDecision.acceptedTouched,
-      FamilyTablesDecision.acceptedTouched,
-      FamilyTablesDecision.acceptedTouched,
     ]);
     expect(work.editorDecisionReads, [
       _read(
@@ -88,29 +86,12 @@ void main() {
         'new',
         FamilyTablesDecisionResult.added,
       ),
-      _read(
-        FamilyTablesDecision.acceptedTouched,
-        FamilyTablesDecisionSubjectKind.resource,
-        'resource',
-        FamilyTablesDecisionResult.referenced,
-      ),
-      _read(
-        FamilyTablesDecision.acceptedTouched,
-        FamilyTablesDecisionSubjectKind.element,
-        'old',
-        FamilyTablesDecisionResult.removed,
-      ),
-      _read(
-        FamilyTablesDecision.acceptedTouched,
-        FamilyTablesDecisionSubjectKind.element,
-        'new',
-        FamilyTablesDecisionResult.added,
-      ),
     ]);
     expect(work.staleDecisionReadCount, 0);
     for (final decision in FamilyTablesDecision.values) {
       expect(work.staleDecisionReadCountFor(decision), 0);
     }
+    _expectNoPostFreezeFamilyWork(work);
     expect(prepared.touchedFacts.removedElementIds, {CanvasElementId('old')});
     expect(prepared.touchedFacts.addedElementIds, {CanvasElementId('new')});
   });
@@ -157,6 +138,7 @@ void main() {
         [4, 4, 4, 4],
       );
       expect(work.staleDecisionReadCount, 0);
+      _expectNoPostFreezeFamilyWork(work);
     },
   );
 
@@ -221,6 +203,7 @@ void _expectDuplicateAddDecision() {
   ]);
   expect(work.transactionImmutablePublicationCount, 0);
   expect(work.staleDecisionReadCount, 0);
+  _expectNoPostFreezeFamilyWork(work);
 }
 
 // This full journal is one ordered oracle; extracting values merely for metrics
@@ -267,7 +250,6 @@ void _expectAddUpdateDecision() {
     FamilyTablesDecision.removeMembership,
     FamilyTablesDecision.relationship,
     FamilyTablesDecision.acceptedDelta,
-    FamilyTablesDecision.acceptedTouched,
   ]);
   expect(work.editorDecisionReads, [
     _read(
@@ -318,14 +300,9 @@ void _expectAddUpdateDecision() {
       'added',
       FamilyTablesDecisionResult.added,
     ),
-    _read(
-      FamilyTablesDecision.acceptedTouched,
-      FamilyTablesDecisionSubjectKind.element,
-      'added',
-      FamilyTablesDecisionResult.added,
-    ),
   ]);
   expect(work.staleDecisionReadCount, 0);
+  _expectNoPostFreezeFamilyWork(work);
 }
 
 // The missing update outcome and both literal decision reads are one semantic
@@ -679,6 +656,18 @@ void _expectNoFreezeOrPublication(FamilyTablesTelemetry work) {
   }
   expect(work.transactionImmutablePublicationCount, 0);
   expect(work.transactionDiscardCount, 1);
+  _expectNoPostFreezeFamilyWork(work);
+}
+
+void _expectNoPostFreezeFamilyWork(FamilyTablesTelemetry work) {
+  expect(work.staleDecisionReadCount, 0);
+  for (final decision in FamilyTablesDecision.values) {
+    expect(work.staleDecisionReadCountFor(decision), 0);
+  }
+  expect(work.postFreezeWriteCount, 0);
+  expect(work.postFreezeCopyCount, 0);
+  expect(work.postFreezeNormalizationCount, 0);
+  expect(work.postFreezeImmutablePublicationCount, 0);
 }
 
 void _expectClearBarrierDecision() {
@@ -694,10 +683,7 @@ void _expectClearBarrierDecision() {
       ),
     ),
   );
-  expect(work.editorDecisionTrace, [
-    FamilyTablesDecision.clear,
-    FamilyTablesDecision.acceptedTouched,
-  ]);
+  expect(work.editorDecisionTrace, [FamilyTablesDecision.clear]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.clear,
@@ -705,14 +691,9 @@ void _expectClearBarrierDecision() {
       'content',
       FamilyTablesDecisionResult.changed,
     ),
-    _read(
-      FamilyTablesDecision.acceptedTouched,
-      FamilyTablesDecisionSubjectKind.element,
-      'old',
-      FamilyTablesDecisionResult.removed,
-    ),
   ]);
   expect(work.staleDecisionReadCount, 0);
+  _expectNoPostFreezeFamilyWork(work);
 }
 
 FamilyTablesDecisionRead _read(

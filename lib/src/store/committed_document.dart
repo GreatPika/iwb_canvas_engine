@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show immutable, visibleForTesting;
+
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
@@ -5,10 +9,37 @@ import 'element_registry.dart';
 import 'revision_state.dart';
 import 'resource_table.dart';
 
+enum StoreSparseCandidateEventKind {
+  open,
+  currentScalarRead,
+  relationshipValidation,
+  providedDeltaValidation,
+  deferredValidation,
+  acceptedFacts,
+  coverageValidation,
+  normalization,
+  familyFreeze,
+  resourceFreeze,
+  structuralPublication,
+  aggregatePublication,
+  touchedFacts,
+  consume,
+  discard,
+}
+
+@immutable
+final class StoreSparseCandidateEvent {
+  const StoreSparseCandidateEvent({required this.kind});
+
+  final StoreSparseCandidateEventKind kind;
+}
+
 // This immutable aggregate owns committed document facts and derived variants
 // together so row snapshots cannot become competing sources of truth.
 // ignore: number-of-methods
 final class CommittedDocument {
+  static final Object _sparseCandidateEventZoneKey = Object();
+
   factory CommittedDocument.empty() {
     return CommittedDocument.fromStoreTables(
       camera: CanvasCamera.origin,
@@ -51,7 +82,7 @@ final class CommittedDocument {
     );
   }
 
-  const CommittedDocument._({
+  CommittedDocument._({
     required this.camera,
     required this.background,
     required this.palette,
@@ -59,7 +90,15 @@ final class CommittedDocument {
     required this.metadata,
     required this.resourceTable,
     required this.revisions,
-  });
+  }) {
+    // This is the one immutable aggregate construction seam. Reporting here
+    // lets candidate evidence also expose any accidental intermediate copy.
+    recordSparseCandidateEvent(
+      const StoreSparseCandidateEvent(
+        kind: StoreSparseCandidateEventKind.aggregatePublication,
+      ),
+    );
+  }
 
   factory CommittedDocument.fromStoreTables({
     required CanvasCamera camera,
@@ -79,6 +118,44 @@ final class CommittedDocument {
       resourceTable: resourceTable,
       revisions: revisions,
     );
+  }
+
+  // Sparse preparation reaches this factory only after the candidate has
+  // normalized and frozen every changed subordinate owner.
+  factory CommittedDocument.fromSparseStoreCandidate({
+    required CanvasCamera camera,
+    required CanvasBackground background,
+    required CanvasPalette palette,
+    required ElementRegistry elements,
+    required CanvasMetadata metadata,
+    required ResourceTable resourceTable,
+    required RevisionState revisions,
+  }) {
+    return CommittedDocument._(
+      camera: camera,
+      background: background,
+      palette: palette,
+      elements: elements,
+      metadata: metadata,
+      resourceTable: resourceTable,
+      revisions: revisions,
+    );
+  }
+
+  @visibleForTesting
+  static T observeSparseCandidateEvents<T>(
+    void Function(StoreSparseCandidateEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_sparseCandidateEventZoneKey: sink});
+
+  static void recordSparseCandidateEvent(StoreSparseCandidateEvent event) {
+    assert(() {
+      final sink = Zone.current[_sparseCandidateEventZoneKey];
+      if (sink is void Function(StoreSparseCandidateEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'sparse candidate event observation failed');
   }
 
   final CanvasCamera camera;

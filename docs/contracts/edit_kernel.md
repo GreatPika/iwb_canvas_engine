@@ -123,6 +123,16 @@ before the swap from accepted committed document facts. After the swap,
 `SelectionKernel` installs only the prepared selected ids; it does not re-read
 public document membership from the current store.
 
+For direct sparse preparation, the Store keeps one private candidate over the
+existing family, descriptor, and structural working owners plus scalar working
+facts. It finalizes in this order: final relationships, provided revision-delta
+shape, deferred update validations in journal order, accepted base-final facts,
+coverage, normalization, owner freeze/publication, one immutable prepared
+document, then accepted touched facts. It publishes no immutable document on a
+failure or a final no-op. This is a Store-internal boundary: edit sessions,
+drafts, `CommitApplier`, and runtime consumers receive only the finished
+prepared payload and do not obtain candidate access.
+
 `CommitApplier` returns the contract-owned immutable commit delivery payloads
 after document and selection effects have both installed. The runtime/applier
 seam lives in `lib/src/contracts/internal/commit_delivery.dart`: it carries the

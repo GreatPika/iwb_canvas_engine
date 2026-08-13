@@ -274,6 +274,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/store/no_projection_hot_path_test.dart`
 - `test/store/public_document_is_projection_only_test.dart`
 - `test/store/store_commit_finalization_test.dart`
+- `test/store/store_transaction_candidate_test.dart`
 - `test/edit/sync_non_nested_async_stale_test.dart`
 - `test/edit/rollback_test.dart`
 - `test/edit/field_update_admission_effects_test.dart`
@@ -378,6 +379,15 @@ compilation, interaction augmentation, store install, public state publication,
 typed effect delivery, action emission, observer notification, and public
 projection reads, while explicit `replaceDraftDocument` remains the forced
 replacement path.
+
+Direct Store proof remains with `test/store/store_commit_finalization_test.dart`,
+`test/store/store_transaction_candidate_test.dart`, and
+`test/store/sparse_store_commit_test.dart`: they own candidate phase order,
+current-owner reads, normalized accepted facts, zero/one aggregate publication,
+and direct sparse compatibility. `test/store/no_projection_hot_path_test.dart`
+owns projection exclusion. The accepted-finalization guardrail retains only the
+stable edit-to-prepared-DTO boundary; it no longer treats private Store helper
+names or bodies as proof.
 
 `test.api.runtime_timestamp_order` covers the public runtime timestamp
 contract for committed action events: nullable or backwards `timestampMs` hints

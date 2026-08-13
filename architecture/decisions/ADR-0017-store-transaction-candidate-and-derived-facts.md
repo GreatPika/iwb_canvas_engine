@@ -1,0 +1,82 @@
+# ADR-0017: Coordinate sparse Store work through one candidate and owner-derived published facts
+
+- Status: accepted
+- Date: 2026-08-10
+- Implementation state: partially implemented
+- Source designs:
+  - `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md`
+- Current owners:
+  - `docs/architecture/03_data_model.md`
+  - `docs/contracts/edit_kernel.md`
+- Supersedes: none
+- Superseded by: none
+- Retirement design: none
+- Retired on: none
+
+## Context
+
+Sparse Store preparation previously coordinated independently published
+snapshots. That made current cross-owner facts, finalization work, and
+publication count harder to preserve as transactions grew. List-based order
+also retained rank-shift cost, while route-generated IDs needed a rollback-safe
+candidate without moving runtime delivery policy into the Store.
+
+## Decision
+
+1. Store sparse preparation uses one private transaction candidate that composes
+   the existing family, resource, and structural owners and scalar facts.
+2. The shared implicit AVL order algorithm is reused through separate mutable
+   instances; no transaction gains a second order authority.
+3. Final acceptance and touched facts derive from normalized owner facts, and
+   Store publishes at most one immutable aggregate after owner finalization.
+4. Route-generated IDs use a non-mutating, rollback-safe admission candidate;
+   route and runtime delivery adoption remain separate work.
+
+## Rationale
+
+One coordination lifecycle makes live-owner reads and exact finalization order
+observable without recreating family rows, descriptors, or order state. Shared
+algorithm code preserves rank semantics while independent instances prevent
+cross-transaction mutation. Owner-derived final facts avoid mutation-history
+truth and prevent repeated aggregate publication. A non-mutating ID candidate
+preserves failed-route rollback without making the Store own interaction timing.
+
+### Alternatives rejected
+
+- Rebuild a `CommittedDocument` after each sparse mutation or each frozen
+  owner: it creates intermediate aggregate publication and stale cross-owner
+  decision risk.
+- Mirror family rows, descriptors, or order in an aggregate coordinator: it
+  would introduce a second mutable truth and synchronization burden.
+- Share one mutable indexed-order instance between transactions: it violates
+  transaction isolation even when the AVL algorithm itself is shared.
+- Derive accepted facts from mutation history or reserve route IDs eagerly:
+  both lose final-fact authority or make failed routes irreversible.
+
+## Consequences
+
+- Accepted sparse preparation has zero or one aggregate publication and remains
+  projection-free.
+- Owner normalization, freeze, and derived-fact publication stay at their
+  existing owner seams.
+- Store candidate and indexed/derived infrastructure are implemented now.
+- EditSession/DraftDocument adoption and route-generated-ID/runtime delivery
+  remain pending; this ADR does not claim those routes are delivered.
+- This complements ADR-0003's store-finalized accepted facts rather than
+  superseding its edit-lifecycle decision.
+
+## Current owners and enforcement
+
+`docs/architecture/03_data_model.md` owns current Store candidate and compact
+fact ownership. `docs/contracts/edit_kernel.md` owns Store finalization at the
+edit boundary. Direct Store behavioral and owner-event fixtures enforce the
+candidate lifecycle; their current inventory remains owned by
+`docs/verification/tests.md`.
+
+## Source evidence
+
+The source design records the selected transaction candidate, implicit AVL,
+owner-derived publication, and rollback-safe generated-ID decisions with an
+ADR creation impact. The active Store data-model and edit-kernel contract own
+the changing implementation facts; ADR-0003 provides the retained rationale
+for store-finalized accepted edit transactions.

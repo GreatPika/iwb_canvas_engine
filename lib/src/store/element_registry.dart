@@ -45,6 +45,35 @@ final class ElementRegistryStructuralEditorWorkEvent {
   final ElementRegistryStructuralOrderKind? order;
 }
 
+// These are immutable comparisons from the structural editor's one final
+// traversal. Store consumes them for revision classification without reading
+// the materialized registry a second time.
+final class ElementRegistryStructuralComparisonFacts {
+  const ElementRegistryStructuralComparisonFacts({
+    required this.elementCountChanged,
+    required this.backgroundOrderChanged,
+    required this.contentOrderChanged,
+    required this.layerStructureChanged,
+    required this.layerOrderChanged,
+    required this.layerMetadataChanged,
+  });
+
+  const ElementRegistryStructuralComparisonFacts.unchanged()
+    : elementCountChanged = false,
+      backgroundOrderChanged = false,
+      contentOrderChanged = false,
+      layerStructureChanged = false,
+      layerOrderChanged = false,
+      layerMetadataChanged = false;
+
+  final bool elementCountChanged;
+  final bool backgroundOrderChanged;
+  final bool contentOrderChanged;
+  final bool layerStructureChanged;
+  final bool layerOrderChanged;
+  final bool layerMetadataChanged;
+}
+
 // ElementRegistry is the committed element table aggregate; keeping sparse row
 // operations with lookup/order facts prevents a second source of truth.
 // Sparse append overlays belong here so order and location facts stay one
@@ -287,8 +316,25 @@ final class ElementRegistryStructuralEditor {
   var _closed = false;
   var _finalLayerTableChanged = false;
   ElementRegistry? _finalizedRegistry;
+  ElementRegistryStructuralComparisonFacts? _finalizedComparisonFacts;
 
   bool get isClosed => _closed;
+
+  ElementRegistryStructuralComparisonFacts get finalizedComparisonFacts {
+    if (!_finalized || _closed) {
+      _record(ElementRegistryStructuralEditorWorkKind.postClosureAttempt);
+      throw StateError(
+        'ElementRegistryStructuralEditor has no live final comparison facts.',
+      );
+    }
+    final facts = _finalizedComparisonFacts;
+    if (facts == null) {
+      throw StateError(
+        'ElementRegistryStructuralEditor lost its final comparison facts.',
+      );
+    }
+    return facts;
+  }
 
   bool containsLayer(CanvasLayerId id) {
     _ensureOpen();
@@ -433,6 +479,8 @@ final class ElementRegistryStructuralEditor {
     _ensureOpen();
     if (!_changed) {
       _finalizedRegistry = _base;
+      _finalizedComparisonFacts =
+          const ElementRegistryStructuralComparisonFacts.unchanged();
       _finalized = true;
       _sealMutableState();
       return _base;
@@ -471,6 +519,13 @@ final class ElementRegistryStructuralEditor {
     var matchesBase = backgroundMatchesBase;
     var layerTableMatchesBase = true;
     var baseIndex = 0;
+    final baseContentIds = _base.contentElementOrder;
+    var baseContentIndex = 0;
+    var contentElementCount = 0;
+    var contentOrderChanged = false;
+    var layerStructureChanged = false;
+    var layerOrderChanged = false;
+    var layerMetadataChanged = false;
 
     final layerOrder = _layerOrder;
     final layerIds =
@@ -487,11 +542,21 @@ final class ElementRegistryStructuralEditor {
             : null;
         final metadata =
             state.baseRow?.metadata ?? const CanvasMetadata.empty();
+        final layerBaseRow = state.baseRow;
+        if (layerBaseRow == null) {
+          layerStructureChanged = true;
+        } else if (layerBaseRow.metadata != metadata) {
+          layerMetadataChanged = true;
+        }
+        if (baseRow == null || baseRow.id != state.id) {
+          layerOrderChanged = true;
+        }
         var rowMatchesBase =
             baseRow != null &&
             baseRow.id == state.id &&
             baseRow.metadata == metadata;
         var baseElementIndex = 0;
+        var contentMatchesLayerBase = layerBaseRow != null;
         final elementIds = <CanvasElementId>[];
         final contentOrder = state.contentOrder;
         final contentIds =
@@ -512,13 +577,31 @@ final class ElementRegistryStructuralEditor {
                 id != baseRow.elementIds[baseElementIndex]) {
               rowMatchesBase = false;
             }
+            if (layerBaseRow == null ||
+                baseElementIndex >= layerBaseRow.elementIds.length ||
+                id != layerBaseRow.elementIds[baseElementIndex]) {
+              contentMatchesLayerBase = false;
+            }
+            if (baseContentIndex >= baseContentIds.length ||
+                id != baseContentIds[baseContentIndex]) {
+              contentOrderChanged = true;
+            }
             baseElementIndex += 1;
+            baseContentIndex += 1;
+            contentElementCount += 1;
           }
         } finally {
           _discardContentOrder(state);
         }
         if (baseRow == null || baseElementIndex != baseRow.elementIds.length) {
           rowMatchesBase = false;
+        }
+        if (layerBaseRow == null ||
+            baseElementIndex != layerBaseRow.elementIds.length) {
+          contentMatchesLayerBase = false;
+        }
+        if (!contentMatchesLayerBase) {
+          contentOrderChanged = true;
         }
         final row = baseRow != null && rowMatchesBase
             ? baseRow
@@ -548,7 +631,22 @@ final class ElementRegistryStructuralEditor {
     if (baseIndex != _base.layerTable.rows.length) {
       matchesBase = false;
       layerTableMatchesBase = false;
+      layerStructureChanged = true;
+      layerOrderChanged = true;
     }
+    if (baseContentIndex != baseContentIds.length) {
+      contentOrderChanged = true;
+    }
+
+    _finalizedComparisonFacts = ElementRegistryStructuralComparisonFacts(
+      elementCountChanged:
+          backgroundIndex + contentElementCount != _base.elementCount,
+      backgroundOrderChanged: !backgroundMatchesBase,
+      contentOrderChanged: contentOrderChanged,
+      layerStructureChanged: layerStructureChanged,
+      layerOrderChanged: layerOrderChanged,
+      layerMetadataChanged: layerMetadataChanged,
+    );
 
     if (matchesBase) {
       _finalizedRegistry = _base;
@@ -633,6 +731,7 @@ final class ElementRegistryStructuralEditor {
       }
     }
     _finalizedRegistry = null;
+    _finalizedComparisonFacts = null;
     _close();
     _record(ElementRegistryStructuralEditorWorkKind.discard);
   }

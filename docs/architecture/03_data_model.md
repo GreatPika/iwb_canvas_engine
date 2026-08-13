@@ -69,6 +69,18 @@ facts, and projection invalidation facts before runtime install.
 Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
 build the accepted `CommittedDocument` snapshot before the irreversible
 swap.
+One Store-private transaction candidate opens the existing family, resource,
+and structural working owners once and holds only current scalar facts
+(`camera`, `background`, and `palette`). It does not mirror rows, descriptors,
+or order. Replay and every subsequent decision read those live owners. Its
+finalization order is relationship handling, provided-delta validation,
+deferred validation in journal order, base-versus-final acceptance, coverage,
+normalization, owner freeze/publication, one immutable aggregate construction,
+and accepted touched facts. A rejected or final-no-op candidate constructs no
+aggregate; an accepted candidate constructs exactly one. Sparse preparation is
+projection-free and has bounded aggregate work `O(S + K log M + R)` for opened
+owners `S`, mutations `K`, maximum order `M`, and changed descriptors `R`.
+Intermediate aggregate snapshots are retired.
 The store validates id admission, layer/resource membership, sealed image/vector
 descriptor relationships against the completed candidate, row placement,
 revision-family alignment, and projection invalidation in that prepare step.
@@ -153,9 +165,9 @@ location facts and frame-order tokens; the layer fact does not replace them.
 `ResourceTable` stores sealed descriptor facts. The image fact variant carries
 its optional MIME field; the vector variant contains no MIME kind inference. A
 resource reference is checked once by `DocumentStoreKernel` against the final
-`CommittedDocument` candidate, rather than against a resource-id set while
-family rows are being assembled. Missing ids and existing wrong descriptor kinds
-remain distinct typed relationship failures.
+live sparse candidate or materialized candidate, rather than against a
+resource-id set while family rows are being assembled. Missing ids and existing
+wrong descriptor kinds remain distinct typed relationship failures.
 
 For a complete committed document, `DocumentStoreKernel` seeds generated-ID
 admission by immediately enumerating the authoritative `FamilyTables`,

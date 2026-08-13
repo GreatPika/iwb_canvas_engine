@@ -520,19 +520,12 @@ final class DocumentStoreKernel {
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
     final revisionDelta = commit.revisionDelta;
     final journal = _SparseTransactionJournal(commit.mutations);
-    return ElementRegistry.editSparseStructure(
-      _document.elements,
-      (structuralEditor) => _document.elements.familyTables.editSparse(
-        (familyEditor) => ResourceTableEditor.editSparse(
-          _document.resourceTable,
-          (resourceEditor) => _prepareSparseCommitInFamilyEditor(
-            revisionDelta: revisionDelta,
-            journal: journal,
-            familyEditor: familyEditor,
-            resourceEditor: resourceEditor,
-            structuralEditor: structuralEditor,
-          ),
-        ),
+    return _StoreTransactionCandidate.edit(
+      _document,
+      (candidate) => _prepareSparseCommitInCandidate(
+        revisionDelta: revisionDelta,
+        journal: journal,
+        candidate: candidate,
       ),
     );
   }
@@ -541,19 +534,127 @@ final class DocumentStoreKernel {
   // one pass so commit acceptance cannot drift from generator admission.
   // Keeping validation, mutation application, final equality, and accepted
   // payload construction together is safer than splitting the transaction
-  // boundary into metric-shaped phases. Its explicit parameters keep the
-  // three independently owned transaction editors visible at this handoff.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level, number-of-parameters
-  PreparedSparseStoreCommit _prepareSparseCommitInFamilyEditor({
+  // boundary into metric-shaped phases. The candidate keeps those owners
+  // together without creating an aggregate snapshot during replay.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level
+  PreparedSparseStoreCommit _prepareSparseCommitInCandidate({
     required StoreRevisionDelta revisionDelta,
     required _SparseTransactionJournal journal,
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-    required ElementRegistryStructuralEditor structuralEditor,
+    required _StoreTransactionCandidate candidate,
   }) {
     final acceptedRevisions = revisionDelta.advance(_document.revisions);
-    var nextDocument = _document;
     final accounting = _SparseTransactionAccounting();
+    try {
+      _replaySparseJournal(
+        candidate: candidate,
+        journal: journal,
+        accounting: accounting,
+      );
+      candidate.resources.enterFinalization();
+      candidate.phase(StoreSparseCandidateEventKind.relationshipValidation);
+      _validateSparseCandidateRelationships(candidate, accounting);
+      candidate.phase(StoreSparseCandidateEventKind.providedDeltaValidation);
+      final validatedRevisionDelta = _validatedSparseRevisionDelta(
+        revisionDelta,
+      );
+      candidate.phase(StoreSparseCandidateEventKind.deferredValidation);
+      accounting.validateDeferredValidations();
+      final finalElements = candidate.structure.finalize(
+        familyTables: _document.elements.familyTables,
+      );
+      final structuralComparisonFacts =
+          candidate.structure.finalizedComparisonFacts;
+      final touched = accounting.readTouchedFacts();
+      candidate.phase(StoreSparseCandidateEventKind.acceptedFacts);
+      final requiredMutationDelta = accounting.readRequiredRevisionDelta();
+      final acceptedDelta = requiredMutationDelta.hasChanges
+          ? _sparseAcceptedRevisionDelta(
+              base: _document,
+              candidate: candidate,
+              structuralComparisonFacts: structuralComparisonFacts,
+              touched: touched,
+            )
+          : const StoreRevisionDelta();
+      final accepted =
+          requiredMutationDelta.hasChanges && acceptedDelta.hasChanges;
+      if (accepted && !validatedRevisionDelta.hasChanges) {
+        throw ArgumentError.value(
+          revisionDelta,
+          'revisionDelta',
+          'sparse store commits that change facts must advance revisions.',
+        );
+      }
+      if (!accepted) {
+        candidate.phase(StoreSparseCandidateEventKind.discard);
+        candidate.structure.discard();
+        return PreparedSparseStoreCommit(
+          baseRevisions: _document.revisions,
+          document: _document,
+          revisionDelta: const StoreRevisionDelta(),
+          touchedFacts: AcceptedStoreTouchedFacts.empty(),
+        );
+      }
+      candidate.phase(StoreSparseCandidateEventKind.coverageValidation);
+      _validateSparseRevisionCoverage(
+        provided: validatedRevisionDelta,
+        required: acceptedDelta,
+      );
+      candidate.phase(StoreSparseCandidateEventKind.normalization);
+      final familyTables = _normalizeSparseCandidateFamilyTables(
+        candidate: candidate,
+        finalElements: finalElements,
+        touched: touched,
+      );
+      final elements = identical(familyTables, _document.elements.familyTables)
+          ? finalElements
+          : finalElements.adoptFamilyTables(familyTables);
+      candidate.resources.normalizeFinalFacts(
+        acceptedRevision: acceptedRevisions.resourceRevision,
+      );
+      candidate.phase(StoreSparseCandidateEventKind.resourceFreeze);
+      final resourceTable = candidate.resources.freeze();
+      candidate.phase(StoreSparseCandidateEventKind.structuralPublication);
+      candidate.structure.publishFinalization();
+      final acceptedDocument = CommittedDocument.fromSparseStoreCandidate(
+        camera: candidate.camera,
+        background: candidate.background,
+        palette: candidate.palette,
+        elements: elements,
+        metadata: _document.metadata,
+        resourceTable: resourceTable,
+        revisions: acceptedDelta.advance(_document.revisions),
+      );
+      candidate.phase(StoreSparseCandidateEventKind.touchedFacts);
+      final acceptedTouchedFacts = _sparseAcceptedTouchedFacts(
+        base: _document,
+        candidate: acceptedDocument,
+        touched: touched,
+        layerCandidates: accounting.readAcceptedLayerCandidates(),
+      );
+      candidate.phase(StoreSparseCandidateEventKind.consume);
+      return PreparedSparseStoreCommit(
+        baseRevisions: _document.revisions,
+        document: acceptedDocument,
+        revisionDelta: acceptedDelta,
+        touchedFacts: acceptedTouchedFacts,
+        admittedElementIds: accounting.readAdmittedElementIds(),
+        admittedLayerIds: accounting.readAdmittedLayerIds(),
+        admittedResourceIds: accounting.readAdmittedResourceIds(),
+      );
+    } catch (_) {
+      candidate.phase(StoreSparseCandidateEventKind.discard);
+      rethrow;
+    }
+  }
+
+  // A single routine preserves journal barriers and ledger attribution at the
+  // transaction boundary, where the current-owner reads remain visible.
+  // ignore: halstead-volume, source-lines-of-code
+  void _replaySparseJournal({
+    required _StoreTransactionCandidate candidate,
+    required _SparseTransactionJournal journal,
+    required _SparseTransactionAccounting accounting,
+  }) {
     while (journal.hasNext) {
       final entry = journal.readNext();
       final mutation = entry.mutation;
@@ -574,11 +675,10 @@ final class DocumentStoreKernel {
             journalIndex: updateEntry.journalIndex,
           );
         }
-        familyEditor.recordUpdateBatch();
+        candidate.familyTables.recordUpdateBatch();
         final applied = _updateElements(
-          nextDocument,
           updates,
-          familyEditor: familyEditor,
+          familyEditor: candidate.familyTables,
           onDeferredValidation: (validation) {
             accounting.recordDeferredValidation(
               validation,
@@ -586,11 +686,10 @@ final class DocumentStoreKernel {
             );
           },
         );
-        nextDocument = applied.document;
         if (applied.didMutateFacts) {
           _recordUpdateResourceReferenceTransitions(
             updates,
-            resourceEditor.descriptors,
+            candidate.resources.descriptors,
           );
         }
         accounting.recordAppliedUpdateBatch(applied, updates: updates);
@@ -602,36 +701,37 @@ final class DocumentStoreKernel {
       );
       final resourceDescriptorBeforeMutation = switch (mutation) {
         StoreSparseUpsertResource(:final resource) =>
-          resourceEditor.descriptors.descriptor(resource.id),
+          candidate.resources.descriptors.descriptor(resource.id),
         _ => null,
       };
-      final applied = _applySparseMutation(
-        nextDocument,
-        mutation,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
-        structuralEditor: structuralEditor,
-      );
-      nextDocument = applied.document;
+      final applied = _applySparseMutation(candidate, mutation);
       accounting.recordAppliedMutation(
         mutation,
         applied: applied,
         resourceDescriptorBeforeMutation: resourceDescriptorBeforeMutation,
         resourceDescriptorAfterMutation: switch (mutation) {
           StoreSparseUpsertResource(:final resource) =>
-            resourceEditor.descriptors.descriptor(resource.id),
+            candidate.resources.descriptors.descriptor(resource.id),
           _ => null,
         },
       );
     }
     journal.finishReplay();
-    resourceEditor.enterFinalization();
+  }
+
+  // Relationship traversal keeps final frame order, live family facts, and
+  // shared descriptor policy at one precedence gate.
+  // ignore: halstead-volume, source-lines-of-code
+  void _validateSparseCandidateRelationships(
+    _StoreTransactionCandidate candidate,
+    _SparseTransactionAccounting accounting,
+  ) {
     accounting.removeMissingRelationshipElementIds((id) {
-      final isMissing = familyEditor.decide(
+      final isMissing = candidate.familyTables.decide(
         FamilyTablesDecision.removeMembership,
-        () => !familyEditor.contains(id),
+        () => !candidate.familyTables.contains(id),
       );
-      familyEditor.recordDecisionRead(
+      candidate.familyTables.recordDecisionRead(
         decision: FamilyTablesDecision.removeMembership,
         subjectKind: FamilyTablesDecisionSubjectKind.element,
         subject: id.value,
@@ -639,128 +739,74 @@ final class DocumentStoreKernel {
             ? FamilyTablesDecisionResult.missing
             : FamilyTablesDecisionResult.present,
       );
-
       return isMissing;
     });
-    if (accounting.needsFullResourceRelationshipValidation) {
-      _validateFinalCandidateResourceRelationships(
-        _ResourceRelationshipCandidate(
-          nextDocument,
-          resourceDescriptorById: resourceEditor.descriptors.descriptor,
-        ),
-        elementIds: structuralEditor.currentFrameElementIds,
-        familyElementById: familyEditor.elementByCanvasId,
-        familyEditor: familyEditor,
+    final ids = accounting.needsFullResourceRelationshipValidation
+        ? candidate.structure.currentFrameElementIds
+        : accounting.hasResourceRelationshipElementIds
+        ? accounting.readResourceRelationshipElementIds()
+        : const <CanvasElementId>[];
+    for (final id in ids) {
+      final element = candidate.familyTables.decide(
+        FamilyTablesDecision.relationship,
+        () => candidate.familyTables.elementByCanvasId(id),
       );
-    } else if (accounting.hasResourceRelationshipElementIds) {
-      _validateFinalCandidateResourceRelationships(
-        _ResourceRelationshipCandidate(
-          nextDocument,
-          resourceDescriptorById: resourceEditor.descriptors.descriptor,
-        ),
-        elementIds: accounting.readResourceRelationshipElementIds(),
-        familyElementById: familyEditor.elementByCanvasId,
-        familyEditor: familyEditor,
-      );
-    }
-    final validatedRevisionDelta = _validatedSparseRevisionDelta(revisionDelta);
-    accounting.validateDeferredValidations();
-    final finalElements = structuralEditor.finalize(
-      familyTables: _document.elements.familyTables,
-    );
-    if (!identical(finalElements, _document.elements)) {
-      nextDocument = nextDocument.copyWith(elements: finalElements);
-    }
-    final touched = accounting.readTouchedFacts();
-    final requiredMutationDelta = accounting.readRequiredRevisionDelta();
-    final acceptedDelta = requiredMutationDelta.hasChanges
-        ? _sparseAcceptedRevisionDelta(
-            base: _document,
-            candidate: nextDocument,
-            candidateFamilyTables: familyEditor,
-            resourceEditor: resourceEditor,
-            touched: touched,
-          )
-        : const StoreRevisionDelta();
-    final accepted =
-        requiredMutationDelta.hasChanges && acceptedDelta.hasChanges;
-    if (accepted && !validatedRevisionDelta.hasChanges) {
-      throw ArgumentError.value(
-        revisionDelta,
-        'revisionDelta',
-        'sparse store commits that change facts must advance revisions.',
-      );
-    }
-    if (accepted) {
-      _validateSparseRevisionCoverage(
-        provided: validatedRevisionDelta,
-        required: acceptedDelta,
-      );
-    }
-
-    if (accepted && familyEditor.hasChanges) {
-      familyEditor.normalizeFinalEqualRows(
-        _sparseElementIdsForRevisionNormalization(
-          _document.elements,
-          nextDocument.elements,
-          touched,
-        ),
-        (before, after) => !_committedElementRevisionDelta(
-          before: before,
-          after: after,
-        ).hasChanges,
-      );
-      if (familyEditor.hasChanges) {
-        nextDocument = nextDocument.copyWith(
-          elements: nextDocument.elements.adoptFamilyTables(
-            familyEditor.freeze(),
-          ),
+      if (element == null) {
+        candidate.familyTables.recordDecisionRead(
+          decision: FamilyTablesDecision.relationship,
+          subjectKind: FamilyTablesDecisionSubjectKind.element,
+          subject: id.value,
+          result: FamilyTablesDecisionResult.missing,
         );
+        throw StateError('committed element order references a missing row.');
+      }
+      try {
+        _validateResourceBackedElementRelationship(
+          element,
+          candidate.resources.descriptors.descriptor,
+        );
+        candidate.familyTables.recordDecisionRead(
+          decision: FamilyTablesDecision.relationship,
+          subjectKind: FamilyTablesDecisionSubjectKind.element,
+          subject: id.value,
+          result: FamilyTablesDecisionResult.valid,
+        );
+      } on CanvasDataException {
+        candidate.familyTables.recordDecisionRead(
+          decision: FamilyTablesDecision.relationship,
+          subjectKind: FamilyTablesDecisionSubjectKind.element,
+          subject: id.value,
+          result: FamilyTablesDecisionResult.invalid,
+        );
+        rethrow;
       }
     }
+  }
 
-    var acceptedTouchedFacts = AcceptedStoreTouchedFacts.empty();
-    if (accepted) {
-      resourceEditor.normalizeFinalFacts(
-        acceptedRevision: acceptedRevisions.resourceRevision,
-      );
-      acceptedTouchedFacts = _sparseAcceptedTouchedFacts(
-        base: _document,
-        candidate: nextDocument,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
-        touched: touched,
-        layerCandidates: accounting.readAcceptedLayerCandidates(),
-      );
-      final resourceTable = resourceEditor.freeze();
-      if (!identical(resourceTable, _document.resourceTable)) {
-        nextDocument = nextDocument.copyWith(resourceTable: resourceTable);
-      }
+  FamilyTables _normalizeSparseCandidateFamilyTables({
+    required _StoreTransactionCandidate candidate,
+    required ElementRegistry finalElements,
+    required _SparseTouchedCommittedFacts touched,
+  }) {
+    if (!candidate.familyTables.hasChanges) {
+      return _document.elements.familyTables;
     }
-
-    if (accepted) {
-      structuralEditor.publishFinalization();
-    } else {
-      structuralEditor.discard();
-    }
-    final acceptedDocument = accepted
-        ? _acceptSparseDocument(nextDocument, acceptedDelta)
-        : _document;
-    return PreparedSparseStoreCommit(
-      baseRevisions: _document.revisions,
-      document: acceptedDocument,
-      revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
-      touchedFacts: accepted
-          ? acceptedTouchedFacts
-          : AcceptedStoreTouchedFacts.empty(),
-      admittedElementIds: accepted
-          ? accounting.readAdmittedElementIds()
-          : const [],
-      admittedLayerIds: accepted ? accounting.readAdmittedLayerIds() : const [],
-      admittedResourceIds: accepted
-          ? accounting.readAdmittedResourceIds()
-          : const [],
+    candidate.familyTables.normalizeFinalEqualRows(
+      _sparseElementIdsForRevisionNormalization(
+        _document.elements,
+        finalElements,
+        touched,
+      ),
+      (before, after) => !_committedElementRevisionDelta(
+        before: before,
+        after: after,
+      ).hasChanges,
     );
+    if (!candidate.familyTables.hasChanges) {
+      return _document.elements.familyTables;
+    }
+    candidate.phase(StoreSparseCandidateEventKind.familyFreeze);
+    return candidate.familyTables.freeze();
   }
 
   CommittedDocument _acceptFullDocument(
@@ -778,15 +824,6 @@ final class DocumentStoreKernel {
     );
   }
 
-  CommittedDocument _acceptSparseDocument(
-    CommittedDocument document,
-    StoreRevisionDelta delta,
-  ) {
-    final acceptedRevisions = delta.advance(_document.revisions);
-
-    return document.copyWith(revisions: acceptedRevisions);
-  }
-
   void installSparseCommit(PreparedSparseStoreCommit commit) {
     if (!commit.hasChanges) {
       return;
@@ -801,110 +838,79 @@ final class DocumentStoreKernel {
   }
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
-  // its separately owned family, resource, and structural editors cannot
-  // diverge through a metric-only context wrapper.
-  // ignore: source-lines-of-code, number-of-parameters
+  // the one current candidate cannot diverge through a metric-only wrapper.
+  // ignore: source-lines-of-code
   _SparseMutationResult _applySparseMutation(
-    CommittedDocument document,
-    StoreSparseMutation mutation, {
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-    required ElementRegistryStructuralEditor structuralEditor,
-  }) {
+    _StoreTransactionCandidate candidate,
+    StoreSparseMutation mutation,
+  ) {
     return switch (mutation) {
       StoreSparseEnsureLayer(:final id, :final index) => _ensureLayer(
-        document,
+        candidate,
         id,
         index: index,
-        structuralEditor: structuralEditor,
       ),
-      final StoreSparseAddElement mutation => _addElement(
-        document,
-        mutation,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
-        structuralEditor: structuralEditor,
-      ),
+      final StoreSparseAddElement mutation => _addElement(candidate, mutation),
       final StoreSparseUpdateElement mutation => _updateElement(
-        document,
+        candidate,
         mutation,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
       ),
-      StoreSparseRemoveElement(:final id) => _removeElement(
-        document,
-        id,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
-        structuralEditor: structuralEditor,
-      ),
+      StoreSparseRemoveElement(:final id) => _removeElement(candidate, id),
       StoreSparseUpsertResource(:final resource) => _upsertResource(
-        document,
+        candidate,
         resource,
-        resourceEditor: resourceEditor,
       ),
       StoreSparseRemoveUnusedResource(:final id) => _removeUnusedResource(
-        document,
+        candidate,
         id,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
       ),
       StoreSparseClearContent(:final removeUnusedResources) => _clearContent(
-        document,
+        candidate,
         removeUnusedResources: removeUnusedResources,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
-        structuralEditor: structuralEditor,
       ),
       StoreSparseSetBackground(:final background) => _setBackground(
-        document,
+        candidate,
         background,
       ),
-      StoreSparseSetCamera(:final camera) => _setCamera(document, camera),
-      StoreSparseSetPalette(:final palette) => _setPalette(document, palette),
+      StoreSparseSetCamera(:final camera) => _setCamera(candidate, camera),
+      StoreSparseSetPalette(:final palette) => _setPalette(candidate, palette),
     };
   }
 
   _SparseMutationResult _ensureLayer(
-    CommittedDocument document,
+    _StoreTransactionCandidate candidate,
     CanvasLayerId id, {
-    required ElementRegistryStructuralEditor structuralEditor,
     int? index,
   }) {
-    if (!structuralEditor.ensureLayer(id, index: index)) {
-      return _SparseMutationResult.unchanged(document);
+    if (!candidate.structure.ensureLayer(id, index: index)) {
+      return _SparseMutationResult.unchanged();
     }
 
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: const StoreRevisionDelta.layerStructural(),
     );
   }
 
   // The add boundary must make its three distinct owners explicit: duplicate
   // policy, resource references, and current structural placement.
-  // ignore: number-of-parameters
   _SparseMutationResult _addElement(
-    CommittedDocument document,
-    StoreSparseAddElement mutation, {
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-    required ElementRegistryStructuralEditor structuralEditor,
-  }) {
-    familyEditor.decide(
+    _StoreTransactionCandidate candidate,
+    StoreSparseAddElement mutation,
+  ) {
+    candidate.familyTables.decide(
       FamilyTablesDecision.duplicateAdd,
-      () => familyEditor.addElement(mutation.element),
+      () => candidate.familyTables.addElement(mutation.element),
     );
-    resourceEditor.descriptors.recordResourceReferenceTransition(
+    candidate.resources.descriptors.recordResourceReferenceTransition(
       _resourceIdForElement(mutation.element),
     );
     if (mutation.background) {
-      structuralEditor.addBackgroundElement(
+      candidate.structure.addBackgroundElement(
         mutation.element.id,
         index: mutation.index,
       );
     } else {
-      structuralEditor.addContentElement(
+      candidate.structure.addContentElement(
         mutation.element.id,
         layerId: mutation.layerId,
         index: mutation.index,
@@ -912,22 +918,18 @@ final class DocumentStoreKernel {
     }
 
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: const StoreRevisionDelta.structural(),
     );
   }
 
   _SparseMutationResult _updateElement(
-    CommittedDocument document,
-    StoreSparseUpdateElement mutation, {
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-  }) {
+    _StoreTransactionCandidate candidate,
+    StoreSparseUpdateElement mutation,
+  ) {
     final deferredValidation = <_DeferredSparseElementUpdateValidation>[];
     final result = _updateElements(
-      document,
       [mutation],
-      familyEditor: familyEditor,
+      familyEditor: candidate.familyTables,
       onDeferredValidation: deferredValidation.add,
     );
     for (final validation in deferredValidation) {
@@ -936,14 +938,13 @@ final class DocumentStoreKernel {
     if (result.didMutateFacts) {
       _recordUpdateResourceReferenceTransitions([
         mutation,
-      ], resourceEditor.descriptors);
+      ], candidate.resources.descriptors);
     }
 
     return result;
   }
 
   _SparseMutationResult _updateElements(
-    CommittedDocument document,
     List<StoreSparseUpdateElement> updates, {
     required FamilyTablesEditor familyEditor,
     required void Function(_DeferredSparseElementUpdateValidation validation)
@@ -954,10 +955,9 @@ final class DocumentStoreKernel {
       onDeferredValidation(validation);
     }
     if (!batch.hasChanges) {
-      return _SparseMutationResult.unchanged(document);
+      return _SparseMutationResult.unchanged();
     }
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: batch.requiredRevisionDelta,
     );
   }
@@ -1093,17 +1093,14 @@ final class DocumentStoreKernel {
   // the same ordered boundary instead of hiding them in a context object.
   // ignore: number-of-parameters
   _SparseMutationResult _removeElement(
-    CommittedDocument document,
-    CanvasElementId id, {
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-    required ElementRegistryStructuralEditor structuralEditor,
-  }) {
-    final isPresent = familyEditor.decide(
+    _StoreTransactionCandidate candidate,
+    CanvasElementId id,
+  ) {
+    final isPresent = candidate.familyTables.decide(
       FamilyTablesDecision.removeMembership,
-      () => familyEditor.contains(id),
+      () => candidate.familyTables.contains(id),
     );
-    familyEditor.recordDecisionRead(
+    candidate.familyTables.recordDecisionRead(
       decision: FamilyTablesDecision.removeMembership,
       subjectKind: FamilyTablesDecisionSubjectKind.element,
       subject: id.value,
@@ -1112,50 +1109,45 @@ final class DocumentStoreKernel {
           : FamilyTablesDecisionResult.missing,
     );
     if (!isPresent) {
-      return _SparseMutationResult.unchanged(document);
+      return _SparseMutationResult.unchanged();
     }
-    final removed = familyEditor.elementByCanvasId(id);
-    familyEditor.removeElement(id);
-    resourceEditor.descriptors.recordResourceReferenceTransition(
+    final removed = candidate.familyTables.elementByCanvasId(id);
+    candidate.familyTables.removeElement(id);
+    candidate.resources.descriptors.recordResourceReferenceTransition(
       removed == null ? null : _resourceIdForElement(removed),
     );
 
-    structuralEditor.removeElement(id);
+    candidate.structure.removeElement(id);
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: const StoreRevisionDelta.structural(),
     );
   }
 
   _SparseMutationResult _upsertResource(
-    CommittedDocument document,
-    CanvasResource resource, {
-    required ResourceTableEditor resourceEditor,
-  }) {
-    resourceEditor.descriptors.upsert(
+    _StoreTransactionCandidate candidate,
+    CanvasResource resource,
+  ) {
+    candidate.resources.descriptors.upsert(
       resource,
-      resourceRevision: document.revisions.resourceRevision,
+      resourceRevision: candidate.base.revisions.resourceRevision,
     );
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: const StoreRevisionDelta.resource(),
     );
   }
 
   _SparseMutationResult _removeUnusedResource(
-    CommittedDocument document,
-    CanvasResourceId id, {
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-  }) {
-    if (!resourceEditor.descriptors.contains(id)) {
-      return _SparseMutationResult.unchanged(document);
+    _StoreTransactionCandidate candidate,
+    CanvasResourceId id,
+  ) {
+    if (!candidate.resources.descriptors.contains(id)) {
+      return _SparseMutationResult.unchanged();
     }
-    final isReferenced = familyEditor.decide(
+    final isReferenced = candidate.familyTables.decide(
       FamilyTablesDecision.removeUnusedReference,
-      () => familyEditor.referencesResource(id),
+      () => candidate.familyTables.referencesResource(id),
     );
-    familyEditor.recordDecisionRead(
+    candidate.familyTables.recordDecisionRead(
       decision: FamilyTablesDecision.removeUnusedReference,
       subjectKind: FamilyTablesDecisionSubjectKind.resource,
       subject: id.value,
@@ -1164,31 +1156,27 @@ final class DocumentStoreKernel {
           : FamilyTablesDecisionResult.unreferenced,
     );
     if (isReferenced) {
-      return _SparseMutationResult.unchanged(document);
+      return _SparseMutationResult.unchanged();
     }
-    resourceEditor.descriptors.remove(id);
+    candidate.resources.descriptors.remove(id);
 
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: const StoreRevisionDelta.resource(),
     );
   }
 
   // Clear records its sequential barrier before applying content-row removal,
   // resource filtering, and structure changes against the same live editor.
-  // The explicit editor parameters preserve their separate mutation ownership.
-  // ignore: halstead-volume, source-lines-of-code, number-of-parameters
+  // The candidate exposes the three owners without retaining their facts.
+  // ignore: halstead-volume, source-lines-of-code
   _SparseMutationResult _clearContent(
-    CommittedDocument document, {
+    _StoreTransactionCandidate candidate, {
     required bool removeUnusedResources,
-    required FamilyTablesEditor familyEditor,
-    required ResourceTableEditor resourceEditor,
-    required ElementRegistryStructuralEditor structuralEditor,
   }) {
-    familyEditor.recordDecision(FamilyTablesDecision.clear);
-    final contentElementIds = structuralEditor.clearContent();
+    candidate.familyTables.recordDecision(FamilyTablesDecision.clear);
+    final contentElementIds = candidate.structure.clearContent();
     final didClearElements = contentElementIds.isNotEmpty;
-    familyEditor.recordDecisionRead(
+    candidate.familyTables.recordDecisionRead(
       decision: FamilyTablesDecision.clear,
       subjectKind: FamilyTablesDecisionSubjectKind.content,
       subject: 'content',
@@ -1199,18 +1187,18 @@ final class DocumentStoreKernel {
     if (didClearElements) {
       _clearContentFamilyRows(
         contentElementIds,
-        hasBackgroundElements: structuralEditor.hasBackgroundElements,
-        familyEditor: familyEditor,
-        resourceEditor: resourceEditor,
+        hasBackgroundElements: candidate.structure.hasBackgroundElements,
+        familyEditor: candidate.familyTables,
+        resourceEditor: candidate.resources,
       );
     }
     final didClearResources =
         removeUnusedResources &&
-        resourceEditor.descriptors.removeUnreferenced(
-          familyEditor.referencesResource,
+        candidate.resources.descriptors.removeUnreferenced(
+          candidate.familyTables.referencesResource,
         );
     if (!didClearElements && !didClearResources) {
-      return _SparseMutationResult.unchanged(document);
+      return _SparseMutationResult.unchanged();
     }
 
     var requiredRevisionDelta = const StoreRevisionDelta();
@@ -1226,7 +1214,6 @@ final class DocumentStoreKernel {
     }
 
     return _SparseMutationResult.changed(
-      document,
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
@@ -1256,58 +1243,205 @@ final class DocumentStoreKernel {
   }
 
   _SparseMutationResult _setBackground(
-    CommittedDocument document,
+    _StoreTransactionCandidate candidate,
     CanvasBackground background,
   ) {
-    if (document.background == background) {
-      return _SparseMutationResult.unchanged(document);
+    final current = candidate.background;
+    if (current == background) {
+      return _SparseMutationResult.unchanged();
     }
 
     var requiredRevisionDelta = const StoreRevisionDelta();
-    if (document.background.color != background.color) {
+    if (current.color != background.color) {
       requiredRevisionDelta = requiredRevisionDelta.merge(
         const StoreRevisionDelta.background(),
       );
     }
-    if (document.background.grid != background.grid) {
+    if (current.grid != background.grid) {
       requiredRevisionDelta = requiredRevisionDelta.merge(
         const StoreRevisionDelta.grid(),
       );
     }
 
+    candidate.setBackground(background);
     return _SparseMutationResult.changed(
-      document.copyWith(background: background),
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
 
   _SparseMutationResult _setCamera(
-    CommittedDocument document,
+    _StoreTransactionCandidate candidate,
     CanvasCamera camera,
   ) {
-    if (document.camera == camera) {
-      return _SparseMutationResult.unchanged(document);
+    if (candidate.camera == camera) {
+      return _SparseMutationResult.unchanged();
     }
+    candidate.setCamera(camera);
 
     return _SparseMutationResult.changed(
-      document.copyWith(camera: camera),
       requiredRevisionDelta: const StoreRevisionDelta.projectionOnly(),
     );
   }
 
   _SparseMutationResult _setPalette(
-    CommittedDocument document,
+    _StoreTransactionCandidate candidate,
     CanvasPalette palette,
   ) {
-    if (_samePalette(document.palette, palette)) {
-      return _SparseMutationResult.unchanged(document);
+    if (_samePalette(candidate.palette, palette)) {
+      return _SparseMutationResult.unchanged();
     }
+    candidate.setPalette(palette);
 
     return _SparseMutationResult.changed(
-      document.copyWith(palette: palette),
       requiredRevisionDelta: const StoreRevisionDelta.projectionOnly(),
     );
   }
+}
+
+// This library-private aggregate coordinates the independently owned sparse
+// editors. It retains no row, descriptor, or order mirror; each decision stays
+// with its owner until final publication. edit closes it on every callback
+// exit, so no retained scalar or owner access can outlive that transaction.
+// ignore: number-of-methods
+final class _StoreTransactionCandidate {
+  _StoreTransactionCandidate._({
+    required CommittedDocument base,
+    required FamilyTablesEditor familyTables,
+    required ResourceTableEditor resources,
+    required ElementRegistryStructuralEditor structure,
+  }) : _camera = base.camera,
+       _background = base.background,
+       _palette = base.palette,
+       _base = base,
+       _familyTables = familyTables,
+       _resources = resources,
+       _structure = structure {
+    _record(StoreSparseCandidateEventKind.open);
+  }
+
+  static T edit<T>(
+    CommittedDocument base,
+    T Function(_StoreTransactionCandidate candidate) operation,
+  ) {
+    return ElementRegistry.editSparseStructure(base.elements, (structure) {
+      return base.elements.familyTables.editSparse((familyTables) {
+        return ResourceTableEditor.editSparse(base.resourceTable, (resources) {
+          final candidate = _StoreTransactionCandidate._(
+            base: base,
+            familyTables: familyTables,
+            resources: resources,
+            structure: structure,
+          );
+          try {
+            return operation(candidate);
+          } finally {
+            candidate._close();
+          }
+        });
+      });
+    });
+  }
+
+  final CommittedDocument _base;
+  final FamilyTablesEditor _familyTables;
+  final ResourceTableEditor _resources;
+  final ElementRegistryStructuralEditor _structure;
+
+  CanvasCamera _camera;
+  CanvasBackground _background;
+  CanvasPalette _palette;
+  bool _isOpen = true;
+
+  CommittedDocument get base {
+    _ensureOpen();
+    return _base;
+  }
+
+  FamilyTablesEditor get familyTables {
+    _ensureOpen();
+    return _familyTables;
+  }
+
+  ResourceTableEditor get resources {
+    _ensureOpen();
+    return _resources;
+  }
+
+  ElementRegistryStructuralEditor get structure {
+    _ensureOpen();
+    return _structure;
+  }
+
+  CanvasCamera get camera {
+    _ensureOpen();
+    _record(StoreSparseCandidateEventKind.currentScalarRead);
+    return _camera;
+  }
+
+  CanvasBackground get background {
+    _ensureOpen();
+    _record(StoreSparseCandidateEventKind.currentScalarRead);
+    return _background;
+  }
+
+  CanvasPalette get palette {
+    _ensureOpen();
+    _record(StoreSparseCandidateEventKind.currentScalarRead);
+    return _palette;
+  }
+
+  bool setCamera(CanvasCamera value) {
+    _ensureOpen();
+    if (_camera == value) {
+      return false;
+    }
+    _camera = value;
+    return true;
+  }
+
+  bool setBackground(CanvasBackground value) {
+    _ensureOpen();
+    if (_background == value) {
+      return false;
+    }
+    _background = value;
+    return true;
+  }
+
+  bool setPalette(CanvasPalette value) {
+    _ensureOpen();
+    if (_samePalette(_palette, value)) {
+      return false;
+    }
+    _palette = value;
+    return true;
+  }
+
+  void phase(StoreSparseCandidateEventKind kind) => _record(kind);
+
+  void _record(StoreSparseCandidateEventKind kind) {
+    _ensureOpen();
+    CommittedDocument.recordSparseCandidateEvent(
+      StoreSparseCandidateEvent(kind: kind),
+    );
+  }
+
+  void _close() {
+    _ensureOpen();
+    _isOpen = false;
+  }
+
+  void _ensureOpen() {
+    if (!_isOpen) {
+      throw StateError('Store transaction candidate is closed.');
+    }
+  }
+}
+
+bool _samePalette(CanvasPalette left, CanvasPalette right) {
+  return _sameList(left.penColors, right.penColors) &&
+      _sameList(left.backgroundColors, right.backgroundColors) &&
+      _sameList(left.gridSizes, right.gridSizes);
 }
 
 StoreRevisionDelta _committedDocumentRevisionDelta(
@@ -1339,9 +1473,8 @@ StoreRevisionDelta _committedDocumentRevisionDelta(
 // ignore: halstead-volume, number-of-parameters
 StoreRevisionDelta _sparseAcceptedRevisionDelta({
   required CommittedDocument base,
-  required CommittedDocument candidate,
-  required FamilyTablesEditor candidateFamilyTables,
-  required ResourceTableEditor resourceEditor,
+  required _StoreTransactionCandidate candidate,
+  required ElementRegistryStructuralComparisonFacts structuralComparisonFacts,
   required _SparseTouchedCommittedFacts touched,
 }) {
   var delta = const StoreRevisionDelta();
@@ -1359,16 +1492,15 @@ StoreRevisionDelta _sparseAcceptedRevisionDelta({
       delta = delta.merge(const StoreRevisionDelta.grid());
     }
   }
-  if (!_sameTouchedResources(resourceEditor, touched)) {
+  if (!_sameTouchedResources(candidate.resources, touched)) {
     delta = delta.merge(const StoreRevisionDelta.resource());
   }
 
   return delta.merge(
     _sparseTouchedElementRevisionDelta(
-      base.elements,
-      candidate.elements,
       baseFamilyTables: base.elements.familyTables,
-      candidateFamilyTables: candidateFamilyTables,
+      candidateFamilyTables: candidate.familyTables,
+      structuralComparisonFacts: structuralComparisonFacts,
       touched: touched,
     ),
   );
@@ -1377,16 +1509,14 @@ StoreRevisionDelta _sparseAcceptedRevisionDelta({
 // This comparison keeps base rows, live editor rows, and the decision trace at
 // one gate, preserving sparse acceptance ordering over metric-shaped params.
 // ignore: number-of-parameters
-StoreRevisionDelta _sparseTouchedElementRevisionDelta(
-  ElementRegistry base,
-  ElementRegistry candidate, {
+StoreRevisionDelta _sparseTouchedElementRevisionDelta({
   required FamilyTables baseFamilyTables,
   required FamilyTablesEditor candidateFamilyTables,
+  required ElementRegistryStructuralComparisonFacts structuralComparisonFacts,
   required _SparseTouchedCommittedFacts touched,
 }) {
   var delta = _sparseTouchedElementStructureRevisionDelta(
-    base,
-    candidate,
+    structuralComparisonFacts,
     touched,
   );
   for (final id in touched.elementIds) {
@@ -1422,62 +1552,26 @@ StoreRevisionDelta _sparseTouchedElementRevisionDelta(
 }
 
 StoreRevisionDelta _sparseTouchedElementStructureRevisionDelta(
-  ElementRegistry base,
-  ElementRegistry candidate,
+  ElementRegistryStructuralComparisonFacts comparisonFacts,
   _SparseTouchedCommittedFacts touched,
 ) {
   if (!touched.touchedElementStructure) {
     return const StoreRevisionDelta();
   }
   var delta = const StoreRevisionDelta();
-  if (base.elementCount != candidate.elementCount ||
-      !_sameTouchedBackgroundOrderForRegistries(base, candidate, touched) ||
-      !_sameList(base.contentElementOrder, candidate.contentElementOrder)) {
+  if (comparisonFacts.elementCountChanged ||
+      (touched.backgroundElementOrder &&
+          comparisonFacts.backgroundOrderChanged) ||
+      comparisonFacts.contentOrderChanged) {
     delta = delta.merge(const StoreRevisionDelta.structural());
   }
-  if (base.layerTable.rows.length != candidate.layerTable.rows.length) {
+  if (comparisonFacts.layerStructureChanged ||
+      comparisonFacts.layerOrderChanged ||
+      comparisonFacts.layerMetadataChanged) {
     delta = delta.merge(const StoreRevisionDelta.layerStructural());
   }
-  delta = delta.merge(
-    _sparseTouchedLayerRevisionDelta(base, candidate, touched),
-  );
 
   return delta;
-}
-
-StoreRevisionDelta _sparseTouchedLayerRevisionDelta(
-  ElementRegistry base,
-  ElementRegistry candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  var delta = const StoreRevisionDelta();
-  for (final id in touched.layerIds) {
-    final before = _layerRowById(base, id);
-    final after = _layerRowById(candidate, id);
-    if (before == null || after == null) {
-      if (before != after) {
-        delta = delta.merge(const StoreRevisionDelta.layerStructural());
-      }
-      continue;
-    }
-    if (before.id != after.id || before.metadata != after.metadata) {
-      delta = delta.merge(const StoreRevisionDelta.layerStructural());
-    }
-    if (!_sameList(before.elementIds, after.elementIds)) {
-      delta = delta.merge(const StoreRevisionDelta.structural());
-    }
-  }
-
-  return delta;
-}
-
-bool _sameTouchedBackgroundOrderForRegistries(
-  ElementRegistry base,
-  ElementRegistry candidate,
-  _SparseTouchedCommittedFacts touched,
-) {
-  return !touched.backgroundElementOrder ||
-      _sameList(base.backgroundElementIds, candidate.backgroundElementIds);
 }
 
 Iterable<CanvasElementId> _sparseElementIdsForRevisionNormalization(
@@ -1531,21 +1625,17 @@ bool _sameTouchedResources(
   );
 }
 
-// Optional sparse family sources let the existing touched-facts owner serve
-// normal and editor-backed paths without duplicating the resource scan.
-// ignore: cyclomatic-complexity, number-of-parameters, halstead-volume, source-lines-of-code
+// Accepted resource touches compare normalized immutable base/final summaries.
+// This runs after aggregate publication, so no consumed editor can become a
+// second final-facts authority.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
 _ResourceTouchedFacts _resourceTouchedFacts(
   CommittedDocument base,
   CommittedDocument candidate, {
   Iterable<CanvasResourceId>? limitedToIds,
-  ResourceTableEditor? resourceEditor,
-  FamilyTables? baseFamilyTables,
-  FamilyTables? candidateFamilyTables,
-  FamilyTablesEditor? familyEditor,
 }) {
   final ids =
       limitedToIds ??
-      resourceEditor?.descriptors.changedIds ??
       {
         ...base.resourceTable.descriptors.keys,
         ...candidate.resourceTable.descriptors.keys,
@@ -1554,9 +1644,7 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   final visualChangedIds = <CanvasResourceId>{};
   for (final id in ids) {
     final before = base.resourceDescriptor(id);
-    final after = resourceEditor == null
-        ? candidate.resourceDescriptor(id)
-        : resourceEditor.descriptors.descriptor(id);
+    final after = candidate.resourceDescriptor(id);
     if (before == null && after == null) {
       continue;
     }
@@ -1566,28 +1654,13 @@ _ResourceTouchedFacts _resourceTouchedFacts(
       continue;
     }
     descriptorChangedIds.add(id);
-    final baseTables = baseFamilyTables ?? base.elements.familyTables;
-    final candidateTables =
-        candidateFamilyTables ?? candidate.elements.familyTables;
-    final isReferenced = familyEditor == null
-        ? baseTables.referencesResource(id) ||
-              candidateTables.referencesResource(id)
-        : familyEditor.decide(
-            FamilyTablesDecision.acceptedTouched,
-            () =>
-                FamilyTables.readSparseBase(
-                  () => baseTables.referencesResource(id),
-                ) ||
-                candidateTables.referencesResource(id),
-          );
-    familyEditor?.recordDecisionRead(
-      decision: FamilyTablesDecision.acceptedTouched,
-      subjectKind: FamilyTablesDecisionSubjectKind.resource,
-      subject: id.value,
-      result: isReferenced
-          ? FamilyTablesDecisionResult.referenced
-          : FamilyTablesDecisionResult.unreferenced,
-    );
+    final isReferenced =
+        FamilyTables.readSparseBase(
+          () => base.elements.familyTables.referencesResource(id),
+        ) ||
+        FamilyTables.readSparseBase(
+          () => candidate.elements.familyTables.referencesResource(id),
+        );
     if (isReferenced) {
       visualChangedIds.add(id);
     }
@@ -1669,43 +1742,24 @@ StoreRevisionDelta _layerRowsRevisionDelta(
   return delta;
 }
 
-// Optional sparse family sources keep normal and accepted-editor comparisons
-// in the same touched-facts owner rather than creating duplicate classifiers.
-// ignore: number-of-parameters
+// Accepted element touches compare normalized immutable base/final rows only.
 _ElementTouchedFacts _elementTouchedFacts(
   ElementRegistry base,
   ElementRegistry candidate, {
   Iterable<CanvasElementId>? limitedToIds,
-  FamilyTables? baseFamilyTables,
-  FamilyTables? candidateFamilyTables,
-  FamilyTablesEditor? familyEditor,
 }) {
   final ids =
       limitedToIds ??
       {...base.frameElementOrder, ...candidate.frameElementOrder};
   final facts = _ElementTouchedFacts();
   for (final id in ids) {
-    final baseTables = baseFamilyTables ?? base.familyTables;
-    final candidateTables = candidateFamilyTables ?? candidate.familyTables;
-    final rows = familyEditor == null
-        ? (
-            before: baseTables.elementByCanvasId(id),
-            after: candidateTables.elementByCanvasId(id),
-          )
-        : familyEditor.decide(
-            FamilyTablesDecision.acceptedTouched,
-            () => (
-              before: FamilyTables.readSparseBase(
-                () => baseTables.elementByCanvasId(id),
-              ),
-              after: candidateTables.elementByCanvasId(id),
-            ),
-          );
-    familyEditor?.recordDecisionRead(
-      decision: FamilyTablesDecision.acceptedTouched,
-      subjectKind: FamilyTablesDecisionSubjectKind.element,
-      subject: id.value,
-      result: _elementComparisonResult(before: rows.before, after: rows.after),
+    final rows = (
+      before: FamilyTables.readSparseBase(
+        () => base.familyTables.elementByCanvasId(id),
+      ),
+      after: FamilyTables.readSparseBase(
+        () => candidate.familyTables.elementByCanvasId(id),
+      ),
     );
     _recordElementTouch(facts, id: id, before: rows.before, after: rows.after);
   }
@@ -2043,8 +2097,6 @@ bool _isPaintedStroke(Color? color, double strokeWidth) {
 AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   required CommittedDocument base,
   required CommittedDocument candidate,
-  required FamilyTablesEditor familyEditor,
-  required ResourceTableEditor resourceEditor,
   required _SparseTouchedCommittedFacts touched,
   required _SparseAcceptedLayerCandidates layerCandidates,
 }) {
@@ -2053,18 +2105,11 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
     base,
     candidate,
     limitedToIds: resourceIds,
-    resourceEditor: resourceEditor,
-    baseFamilyTables: base.elements.familyTables,
-    candidateFamilyTables: candidate.elements.familyTables,
-    familyEditor: familyEditor,
   );
   final elementTouches = _elementTouchedFacts(
     base.elements,
     candidate.elements,
     limitedToIds: touched.allElements ? null : touched.elementIds,
-    baseFamilyTables: base.elements.familyTables,
-    candidateFamilyTables: candidate.elements.familyTables,
-    familyEditor: familyEditor,
   );
 
   return _acceptedStoreTouchedFacts(
@@ -2463,21 +2508,12 @@ CanvasResourceId? _resourceIdForElement(CanvasElement element) {
 // This candidate groups the immutable aggregate with its optional live
 // descriptor authority, so relationship validation cannot read a stale table.
 final class _ResourceRelationshipCandidate {
-  const _ResourceRelationshipCandidate(
-    this.document, {
-    this.resourceDescriptorById,
-  });
+  const _ResourceRelationshipCandidate(this.document);
 
   final CommittedDocument document;
-  final StoreResourceDescriptorFacts? Function(CanvasResourceId id)?
-  resourceDescriptorById;
 
-  StoreResourceDescriptorFacts? descriptor(CanvasResourceId id) {
-    final liveLookup = resourceDescriptorById;
-    return liveLookup == null
-        ? document.resourceDescriptor(id)
-        : liveLookup(id);
-  }
+  StoreResourceDescriptorFacts? descriptor(CanvasResourceId id) =>
+      document.resourceDescriptor(id);
 }
 
 // The exhaustive family validation switch stays alongside the candidate lookup
@@ -2512,19 +2548,15 @@ void _validateFinalCandidateResourceRelationships(
     }
     try {
       switch (element) {
-        case CanvasImageElement(:final resourceId):
-          _validateResourceRelationship(
-            candidate,
-            resourceId: resourceId,
-            path: 'image.resourceId',
-            expectsImage: true,
+        case CanvasImageElement():
+          _validateResourceBackedElementRelationship(
+            element,
+            candidate.descriptor,
           );
-        case CanvasVectorElement(:final resourceId):
-          _validateResourceRelationship(
-            candidate,
-            resourceId: resourceId,
-            path: 'vector.resourceId',
-            expectsImage: false,
+        case CanvasVectorElement():
+          _validateResourceBackedElementRelationship(
+            element,
+            candidate.descriptor,
           );
         case CanvasPathElement() ||
             CanvasTextElement() ||
@@ -2551,13 +2583,11 @@ void _validateFinalCandidateResourceRelationships(
   }
 }
 
-void _validateResourceRelationship(
-  _ResourceRelationshipCandidate candidate, {
-  required CanvasResourceId resourceId,
+void _validateResourceDescriptorRelationship(
+  StoreResourceDescriptorFacts? descriptor, {
   required String path,
   required bool expectsImage,
 }) {
-  final descriptor = candidate.descriptor(resourceId);
   if (descriptor == null) {
     throw CanvasDataException(
       code: CanvasDataErrorCode.missingResourceReference,
@@ -2578,10 +2608,30 @@ void _validateResourceRelationship(
   }
 }
 
-bool _samePalette(CanvasPalette left, CanvasPalette right) {
-  return _sameList(left.penColors, right.penColors) &&
-      _sameList(left.backgroundColors, right.backgroundColors) &&
-      _sameList(left.gridSizes, right.gridSizes);
+void _validateResourceBackedElementRelationship(
+  CanvasElement element,
+  StoreResourceDescriptorFacts? Function(CanvasResourceId id) descriptorById,
+) {
+  switch (element) {
+    case CanvasImageElement(:final resourceId):
+      _validateResourceDescriptorRelationship(
+        descriptorById(resourceId),
+        path: 'image.resourceId',
+        expectsImage: true,
+      );
+    case CanvasVectorElement(:final resourceId):
+      _validateResourceDescriptorRelationship(
+        descriptorById(resourceId),
+        path: 'vector.resourceId',
+        expectsImage: false,
+      );
+    case CanvasPathElement() ||
+        CanvasTextElement() ||
+        CanvasStrokeElement() ||
+        CanvasLineElement() ||
+        CanvasRectElement():
+      break;
+  }
 }
 
 bool _sameList<T>(List<T> left, List<T> right) {
@@ -3094,31 +3144,26 @@ final class _DeferredSparseElementUpdateValidation {
 
 final class _SparseMutationResult {
   const _SparseMutationResult({
-    required this.document,
     required this.didMutateFacts,
     required this.requiredRevisionDelta,
   });
 
-  factory _SparseMutationResult.changed(
-    CommittedDocument document, {
+  factory _SparseMutationResult.changed({
     required StoreRevisionDelta requiredRevisionDelta,
   }) {
     return _SparseMutationResult(
-      document: document,
       didMutateFacts: true,
       requiredRevisionDelta: requiredRevisionDelta,
     );
   }
 
-  factory _SparseMutationResult.unchanged(CommittedDocument document) {
-    return _SparseMutationResult(
-      document: document,
+  factory _SparseMutationResult.unchanged() {
+    return const _SparseMutationResult(
       didMutateFacts: false,
-      requiredRevisionDelta: const StoreRevisionDelta(),
+      requiredRevisionDelta: StoreRevisionDelta(),
     );
   }
 
-  final CommittedDocument document;
   final bool didMutateFacts;
   final StoreRevisionDelta requiredRevisionDelta;
 }
