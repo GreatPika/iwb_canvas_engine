@@ -1076,11 +1076,11 @@ final class _ElementRegistryOrderAccumulator {
 
   _ElementRegistryOrderFacts freeze() {
     return _ElementRegistryOrderFacts(
-      backgroundElementIds: List.unmodifiable(_background),
-      contentElementOrder: List.unmodifiable(_content),
-      frameElementOrder: List.unmodifiable(_frame),
-      frameOrderTokensById: Map.unmodifiable(_tokens),
-      elementLocationFacts: Map.unmodifiable(_locations),
+      backgroundElementIds: UnmodifiableListView(_background),
+      contentElementOrder: UnmodifiableListView(_content),
+      frameElementOrder: UnmodifiableListView(_frame),
+      frameOrderTokensById: UnmodifiableMapView(_tokens),
+      elementLocationFacts: UnmodifiableMapView(_locations),
     );
   }
 }
