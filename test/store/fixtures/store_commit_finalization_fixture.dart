@@ -318,7 +318,9 @@ void _expectCandidateFinalization(
         StoreSparseCandidateEventKind.consume ||
         StoreSparseCandidateEventKind.discard => true,
         StoreSparseCandidateEventKind.open ||
-        StoreSparseCandidateEventKind.currentScalarRead => false,
+        StoreSparseCandidateEventKind.currentScalarRead ||
+        StoreSparseCandidateEventKind.touchedElementRead ||
+        StoreSparseCandidateEventKind.touchedResourceRead => false,
       })
         event.kind,
   ];

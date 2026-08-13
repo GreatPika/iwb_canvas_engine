@@ -620,6 +620,7 @@ final class DocumentStoreKernel {
       final acceptedTouchedFacts = _sparseAcceptedTouchedFacts(
         base: _document,
         candidate: acceptedDocument,
+        transactionCandidate: candidate,
         touched: touched,
         layerCandidates: accounting.readAcceptedLayerCandidates(),
       );
@@ -1381,6 +1382,32 @@ final class _StoreTransactionCandidate {
     return _palette;
   }
 
+  Iterable<CanvasElementId> observedTouchedElementIds(
+    Iterable<CanvasElementId> ids,
+  ) sync* {
+    _ensureOpen();
+    for (final id in ids) {
+      _record(
+        StoreSparseCandidateEventKind.touchedElementRead,
+        subject: id.value,
+      );
+      yield id;
+    }
+  }
+
+  Iterable<CanvasResourceId> observedTouchedResourceIds(
+    Iterable<CanvasResourceId> ids,
+  ) sync* {
+    _ensureOpen();
+    for (final id in ids) {
+      _record(
+        StoreSparseCandidateEventKind.touchedResourceRead,
+        subject: id.value,
+      );
+      yield id;
+    }
+  }
+
   bool setCamera(CanvasCamera value) {
     _ensureOpen();
     if (_camera == value) {
@@ -1410,10 +1437,10 @@ final class _StoreTransactionCandidate {
 
   void phase(StoreSparseCandidateEventKind kind) => _record(kind);
 
-  void _record(StoreSparseCandidateEventKind kind) {
+  void _record(StoreSparseCandidateEventKind kind, {String? subject}) {
     _ensureOpen();
     CommittedDocument.recordSparseCandidateEvent(
-      StoreSparseCandidateEvent(kind: kind),
+      StoreSparseCandidateEvent(kind: kind, subject: subject),
     );
   }
 
@@ -2089,19 +2116,25 @@ bool _isPaintedStroke(Color? color, double strokeWidth) {
 AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   required CommittedDocument base,
   required CommittedDocument candidate,
+  required _StoreTransactionCandidate transactionCandidate,
   required _SparseTouchedCommittedFacts touched,
   required _SparseAcceptedLayerCandidates layerCandidates,
 }) {
-  final resourceIds = touched.allResources ? null : touched.resourceIds;
+  final resourceIds = touched.allResources
+      ? null
+      : transactionCandidate.observedTouchedResourceIds(touched.resourceIds);
   final resourceTouches = _resourceTouchedFacts(
     base,
     candidate,
     limitedToIds: resourceIds,
   );
+  final elementIds = touched.allElements
+      ? null
+      : transactionCandidate.observedTouchedElementIds(touched.elementIds);
   final elementTouches = _elementTouchedFacts(
     base.elements,
     candidate.elements,
-    limitedToIds: touched.allElements ? null : touched.elementIds,
+    limitedToIds: elementIds,
   );
 
   return _acceptedStoreTouchedFacts(

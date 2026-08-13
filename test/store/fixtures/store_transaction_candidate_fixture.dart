@@ -1676,6 +1676,8 @@ void _recordCandidateWorkBoundary(
     StoreSparseCandidateEventKind.consume => _CandidateWorkBoundary.consume,
     StoreSparseCandidateEventKind.open ||
     StoreSparseCandidateEventKind.currentScalarRead ||
+    StoreSparseCandidateEventKind.touchedElementRead ||
+    StoreSparseCandidateEventKind.touchedResourceRead ||
     StoreSparseCandidateEventKind.discard => null,
   };
   if (boundary != null) {
@@ -2002,6 +2004,26 @@ List<StoreSparseCandidateEvent> _candidatePublicationWork() {
   expect(familyWork.postFreezeImmutablePublicationCount, 0);
   expect(familyWork.referenceQueryFamilyRowVisitCount, 0);
   _expectCandidateWorkTimeline(timeline);
+  expect(
+    candidateEvents
+        .where(
+          (event) =>
+              event.kind == StoreSparseCandidateEventKind.touchedElementRead,
+        )
+        .map((event) => event.subject),
+    ['rect-0', 'rect-1', 'image-added', 'vector-added'],
+    reason: 'accepted touched facts read exactly the changed element ledger',
+  );
+  expect(
+    candidateEvents
+        .where(
+          (event) =>
+              event.kind == StoreSparseCandidateEventKind.touchedResourceRead,
+        )
+        .map((event) => event.subject),
+    ['r-image'],
+    reason: 'accepted touched facts read exactly the changed resource ledger',
+  );
   expect(store.projectionBuildCount, 0);
   expect(
     admissionEvents

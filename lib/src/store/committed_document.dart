@@ -23,15 +23,18 @@ enum StoreSparseCandidateEventKind {
   structuralPublication,
   aggregatePublication,
   touchedFacts,
+  touchedElementRead,
+  touchedResourceRead,
   consume,
   discard,
 }
 
 @immutable
 final class StoreSparseCandidateEvent {
-  const StoreSparseCandidateEvent({required this.kind});
+  const StoreSparseCandidateEvent({required this.kind, this.subject});
 
   final StoreSparseCandidateEventKind kind;
+  final String? subject;
 }
 
 // This immutable aggregate owns committed document facts and derived variants
