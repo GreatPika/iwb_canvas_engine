@@ -988,8 +988,8 @@ final class DocumentStoreKernel {
     );
   }
 
-  // Clear's one all-family barrier records its semantic outcome before the
-  // existing resource and structure transition, which is clearer kept whole.
+  // Clear records its sequential barrier before applying content-row removal,
+  // resource filtering, and structure changes against the same live editor.
   // ignore: halstead-volume, source-lines-of-code
   _SparseMutationResult _clearContent(
     CommittedDocument document, {
@@ -997,9 +997,8 @@ final class DocumentStoreKernel {
     required FamilyTablesEditor familyEditor,
   }) {
     familyEditor.recordDecision(FamilyTablesDecision.clear);
-    final didClearElements = document.elements.elementCount != 0;
-    final didClearResources =
-        removeUnusedResources && document.resourceTable.count != 0;
+    final contentElementIds = document.elements.contentElementOrder;
+    final didClearElements = contentElementIds.isNotEmpty;
     familyEditor.recordDecisionRead(
       decision: FamilyTablesDecision.clear,
       subjectKind: FamilyTablesDecisionSubjectKind.content,
@@ -1008,18 +1007,26 @@ final class DocumentStoreKernel {
           ? FamilyTablesDecisionResult.changed
           : FamilyTablesDecisionResult.unchanged,
     );
-    if (!didClearElements && !didClearResources) {
-      return _SparseMutationResult.unchanged(document);
-    }
     if (didClearElements) {
-      familyEditor.clearElements();
+      for (final id in contentElementIds) {
+        familyEditor.removeElement(id);
+      }
     }
     final clearedElements = didClearElements
         ? document.elements.clearContentStructure()
         : document.elements;
     final clearedResources = removeUnusedResources
-        ? document.resourceTable.clear()
+        ? document.resourceTable.retainWhere(
+            (id, _) => familyEditor.referencesResource(id),
+          )
         : document.resourceTable;
+    final didClearResources = !identical(
+      clearedResources,
+      document.resourceTable,
+    );
+    if (!didClearElements && !didClearResources) {
+      return _SparseMutationResult.unchanged(document);
+    }
 
     var requiredRevisionDelta = const StoreRevisionDelta();
     if (didClearElements) {

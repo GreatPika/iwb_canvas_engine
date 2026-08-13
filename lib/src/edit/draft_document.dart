@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../codec/validated_import_draft.dart';
 import '../contracts/internal/touched_set.dart';
@@ -19,6 +22,15 @@ import 'resource_edit_policy.dart';
 import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
 
+@visibleForTesting
+enum DraftClearContentWorkEvent {
+  backgroundReferencePass,
+  backgroundElementVisit,
+  resourcePass,
+  resourceVisit,
+  acceptedElementScan,
+}
+
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
 // glue. Element update application is shared with sparse sessions so DTO patch
@@ -30,6 +42,8 @@ import 'touched_set_builder.dart';
 // revision buffers during rollback.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DraftDocument {
+  static final Object _clearContentWorkZoneKey = Object();
+
   DraftDocument(
     CanvasDocument document, {
     Iterable<CanvasElementId> selectedElementIds = const [],
@@ -72,6 +86,15 @@ final class DraftDocument {
       revisionDelta: _revisionDelta,
       touchedSet: touchedSet,
     );
+  }
+
+  /// Records semantic clear phases in a zone-local observer only under asserts.
+  @visibleForTesting
+  static T observeClearContentWork<T>(
+    void Function(DraftClearContentWorkEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_clearContentWorkZoneKey: sink});
   }
 
   CanvasDocument readDocument() => _materialize();
@@ -259,19 +282,19 @@ final class DraftDocument {
   }
 
   CanvasClearResult clearContent({required bool removeUnusedResources}) {
-    final clearedElements = _clearElements();
+    final removedElementIds = _clearElements();
     final removedResourceIds = _clearResources(
       removeUnusedResources: removeUnusedResources,
     );
 
-    _markRemovedElements(clearedElements);
+    _markRemovedElements(removedElementIds);
     _markRemovedResources(removedResourceIds);
 
     return CanvasClearResult(
-      removedElementIds: clearedElements.allIds,
+      removedElementIds: removedElementIds,
       removedResourceIds: removedResourceIds,
       didClearContent:
-          clearedElements.allIds.isNotEmpty || removedResourceIds.isNotEmpty,
+          removedElementIds.isNotEmpty || removedResourceIds.isNotEmpty,
     );
   }
 
@@ -343,51 +366,62 @@ final class DraftDocument {
     }
   }
 
-  _ClearedElements _clearElements() {
-    final removedBackgroundElementIds = [
-      for (final element in backgroundElements) element.id,
-    ];
+  List<CanvasElementId> _clearElements() {
     final removedContentElementIds = [
       for (final layer in _layers)
         for (final element in layer.elements) element.id,
     ];
-    final removedElementIds = [
-      ...removedBackgroundElementIds,
-      ...removedContentElementIds,
-    ];
-    backgroundElements.clear();
     for (final layer in _layers) {
       layer.elements.clear();
     }
 
-    return _ClearedElements(
-      backgroundIds: removedBackgroundElementIds,
-      allIds: removedElementIds,
-    );
+    return removedContentElementIds;
   }
 
   List<CanvasResourceId> _clearResources({
     required bool removeUnusedResources,
   }) {
-    if (removeUnusedResources) {
-      final removedResourceIds = [
-        for (final resource in resources) resource.id,
-      ];
-      resources.clear();
-
-      return removedResourceIds;
+    if (!removeUnusedResources) {
+      return const [];
     }
 
-    return const [];
+    final retainedBackgroundResourceIds = <CanvasResourceId>{};
+    _recordClearContentWork(DraftClearContentWorkEvent.backgroundReferencePass);
+    for (final element in backgroundElements) {
+      _recordClearContentWork(
+        DraftClearContentWorkEvent.backgroundElementVisit,
+      );
+      switch (element) {
+        case CanvasImageElement(:final resourceId):
+          retainedBackgroundResourceIds.add(resourceId);
+        case CanvasVectorElement(:final resourceId):
+          retainedBackgroundResourceIds.add(resourceId);
+        default:
+      }
+    }
+
+    final retainedResources = <CanvasResource>[];
+    final removedResourceIds = <CanvasResourceId>[];
+    _recordClearContentWork(DraftClearContentWorkEvent.resourcePass);
+    for (final resource in resources) {
+      _recordClearContentWork(DraftClearContentWorkEvent.resourceVisit);
+      if (retainedBackgroundResourceIds.contains(resource.id)) {
+        retainedResources.add(resource);
+      } else {
+        removedResourceIds.add(resource.id);
+      }
+    }
+    resources
+      ..clear()
+      ..addAll(retainedResources);
+
+    return removedResourceIds;
   }
 
-  void _markRemovedElements(_ClearedElements clearedElements) {
-    if (clearedElements.allIds.isNotEmpty) {
-      _touchedSet.touchRemovedElements(clearedElements.allIds);
-      if (clearedElements.backgroundIds.isNotEmpty) {
-        _touchedSet.touchBackgroundLayer();
-      }
-      if (_intersectsSelection(clearedElements.allIds)) {
+  void _markRemovedElements(List<CanvasElementId> removedElementIds) {
+    if (removedElementIds.isNotEmpty) {
+      _touchedSet.touchRemovedElements(removedElementIds);
+      if (_intersectsSelection(removedElementIds)) {
         _touchedSet.touchSelection();
       }
       _markStructural();
@@ -467,9 +501,20 @@ final class DraftDocument {
   }
 
   bool _isResourceReferenced(CanvasResourceId id) {
+    _recordClearContentWork(DraftClearContentWorkEvent.acceptedElementScan);
     return _allElements().any(
       (element) => elementReferencesResource(element, id),
     );
+  }
+
+  static void _recordClearContentWork(DraftClearContentWorkEvent event) {
+    assert(() {
+      final sink = Zone.current[_clearContentWorkZoneKey];
+      if (sink is void Function(DraftClearContentWorkEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'draft clear work observation failed');
   }
 
   Iterable<CanvasElement> _allElements() sync* {
@@ -545,13 +590,6 @@ final class _DraftLayer {
   final CanvasLayerId id;
   final List<CanvasElement> elements;
   final CanvasMetadata metadata;
-}
-
-final class _ClearedElements {
-  const _ClearedElements({required this.backgroundIds, required this.allIds});
-
-  final List<CanvasElementId> backgroundIds;
-  final List<CanvasElementId> allIds;
 }
 
 final class _ElementTarget {

@@ -3,6 +3,7 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
@@ -108,6 +109,10 @@ void _registerBasicEditRows() {
       );
     },
   );
+
+  test('materialized clear retains background image and vector resources', () {
+    expect(_expectMaterializedClearResourceWork, returnsNormally);
+  });
 }
 
 void _registerOperationMatrixRows() {
@@ -190,7 +195,7 @@ final _editOperationMatrixCases = [
   const _EditOperationMatrixCase(
     'CanvasEdit.clearContent',
     _expectClearContentRow,
-    _documentWithReferencedResource,
+    _documentWithClearContentReferences,
     _draftClearContent,
     _editClearContent,
     _ExpectedPlanEffects.clearContent(),
@@ -1102,19 +1107,112 @@ void _expectRemoveElementRow() {
 
 void _expectClearContentRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithReferencedResource(),
+    _documentWithClearContentReferences(),
     config: const CanvasRuntimeConfig(),
   );
 
   final result = root.edits.edit((edit) {
+    edit.readDraftDocument();
+
     return edit.clearContent(removeUnusedResources: true);
   });
 
   expect(result.didClearContent, isTrue);
-  expect(result.removedElementIds, {CanvasElementId('image-1')});
-  expect(result.removedResourceIds, {CanvasResourceId('resource-1')});
-  expect(root.readDocument().layers.single.elements, isEmpty);
-  expect(root.readDocument().resources, isEmpty);
+  expect(result.removedElementIds, [CanvasElementId('image-1')]);
+  expect(result.removedResourceIds, [
+    CanvasResourceId('content-image-resource'),
+    CanvasResourceId('unused-resource'),
+  ]);
+  final document = root.readDocument();
+  expect(document.layers.single.elements, isEmpty);
+  expect(document.backgroundElements.map((element) => element.id), [
+    CanvasElementId('background-image'),
+    CanvasElementId('background-vector'),
+  ]);
+  expect(document.backgroundElements.first, isA<CanvasImageElement>());
+  expect(document.backgroundElements.last, isA<CanvasVectorElement>());
+  final backgroundImage =
+      document.backgroundElements.first as CanvasImageElement;
+  final backgroundVector =
+      document.backgroundElements.last as CanvasVectorElement;
+  expect(
+    backgroundImage.resourceId,
+    CanvasResourceId('background-image-resource'),
+  );
+  expect(backgroundImage.revision, 7);
+  expect(backgroundImage.size, const Size(2, 3));
+  expect(backgroundImage.naturalSize, const Size(20, 30));
+  expect(
+    backgroundImage.transform,
+    CanvasTransform.translation(const Offset(8, 9)),
+  );
+  expect(backgroundImage.opacity, 0.75);
+  expect(backgroundImage.hitPadding, 3);
+  expect(backgroundImage.isVisible, isFalse);
+  expect(backgroundImage.isSelectable, isFalse);
+  expect(backgroundImage.isLocked, isTrue);
+  expect(backgroundImage.isDeletable, isFalse);
+  expect(backgroundImage.isTransformable, isFalse);
+  expect(
+    backgroundImage.metadata,
+    CanvasMetadata.fromMap({'role': 'background-image', 'rank': 1}),
+  );
+  expect(
+    backgroundVector.resourceId,
+    CanvasResourceId('background-vector-resource'),
+  );
+  expect(backgroundVector.revision, 8);
+  expect(backgroundVector.size, const Size(4, 5));
+  expect(backgroundVector.naturalSize, const Size(40, 50));
+  expect(
+    backgroundVector.transform,
+    CanvasTransform.translation(const Offset(10, 11)),
+  );
+  expect(backgroundVector.opacity, 0.5);
+  expect(backgroundVector.hitPadding, 4);
+  expect(backgroundVector.isVisible, isFalse);
+  expect(backgroundVector.isSelectable, isFalse);
+  expect(backgroundVector.isLocked, isTrue);
+  expect(backgroundVector.isDeletable, isFalse);
+  expect(backgroundVector.isTransformable, isFalse);
+  expect(
+    backgroundVector.metadata,
+    CanvasMetadata.fromMap({'role': 'background-vector', 'rank': 2}),
+  );
+  expect(document.resources.map((resource) => resource.id), [
+    CanvasResourceId('background-image-resource'),
+    CanvasResourceId('background-vector-resource'),
+  ]);
+  expect(document.resources.first, isA<CanvasImageResource>());
+  expect(document.resources.last, isA<CanvasVectorResource>());
+  final imageDescriptor = root.resourceDescriptor(
+    CanvasResourceId('background-image-resource'),
+  );
+  expect(imageDescriptor, isA<FrameImageResourceDescriptorFacts>());
+  expect(imageDescriptor?.appKey, 'background-image-source');
+  expect(imageDescriptor?.contentHash, 'sha256:background-image');
+  expect(imageDescriptor?.byteLength, 101);
+  expect(
+    imageDescriptor?.metadata,
+    CanvasMetadata.fromMap({'asset': 'image', 'scale': 2}),
+  );
+  expect(
+    (imageDescriptor as FrameImageResourceDescriptorFacts).mimeType,
+    'image/png',
+  );
+  final vectorDescriptor = root.resourceDescriptor(
+    CanvasResourceId('background-vector-resource'),
+  );
+  expect(vectorDescriptor, isA<FrameVectorResourceDescriptorFacts>());
+  expect(vectorDescriptor?.appKey, 'background-vector-source');
+  expect(vectorDescriptor?.contentHash, 'sha256:background-vector');
+  expect(vectorDescriptor?.byteLength, 202);
+  expect(
+    vectorDescriptor?.metadata,
+    CanvasMetadata.fromMap({'asset': 'vector', 'scale': 3}),
+  );
+  expect(imageDescriptor.resourceRevision, 0);
+  expect(vectorDescriptor?.resourceRevision, 0);
   _expectFrameRevisions(
     root,
     structural: 1,
@@ -1349,6 +1447,7 @@ void _draftClearContent(DraftDocument draft) {
 }
 
 void _editClearContent(CanvasEdit edit) {
+  edit.readDraftDocument();
   edit.clearContent(removeUnusedResources: true);
 }
 
@@ -1515,6 +1614,181 @@ CanvasDocument _documentWithReferencedResource() {
             size: const Size(1, 1),
             isVisible: false,
             isLocked: true,
+            isDeletable: false,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithClearContentReferences() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('background-image-resource'),
+        source: CanvasResourceSource.appKey('background-image-source'),
+        mimeType: 'image/png',
+        contentHash: 'sha256:background-image',
+        byteLength: 101,
+        metadata: CanvasMetadata.fromMap({'asset': 'image', 'scale': 2}),
+      ),
+      CanvasVectorResource(
+        id: CanvasResourceId('background-vector-resource'),
+        source: CanvasResourceSource.appKey('background-vector-source'),
+        contentHash: 'sha256:background-vector',
+        byteLength: 202,
+        metadata: CanvasMetadata.fromMap({'asset': 'vector', 'scale': 3}),
+      ),
+      CanvasImageResource(
+        id: CanvasResourceId('content-image-resource'),
+        source: CanvasResourceSource.appKey('content-image-resource'),
+      ),
+      CanvasImageResource(
+        id: CanvasResourceId('unused-resource'),
+        source: CanvasResourceSource.appKey('unused-resource'),
+      ),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('background-image'),
+        resourceId: CanvasResourceId('background-image-resource'),
+        size: const Size(2, 3),
+        naturalSize: const Size(20, 30),
+        revision: 7,
+        transform: CanvasTransform.translation(const Offset(8, 9)),
+        opacity: 0.75,
+        hitPadding: 3,
+        isVisible: false,
+        isSelectable: false,
+        isLocked: true,
+        isDeletable: false,
+        isTransformable: false,
+        metadata: CanvasMetadata.fromMap({
+          'role': 'background-image',
+          'rank': 1,
+        }),
+      ),
+      CanvasVectorElement(
+        id: CanvasElementId('background-vector'),
+        resourceId: CanvasResourceId('background-vector-resource'),
+        size: const Size(4, 5),
+        naturalSize: const Size(40, 50),
+        revision: 8,
+        transform: CanvasTransform.translation(const Offset(10, 11)),
+        opacity: 0.5,
+        hitPadding: 4,
+        isVisible: false,
+        isSelectable: false,
+        isLocked: true,
+        isDeletable: false,
+        isTransformable: false,
+        metadata: CanvasMetadata.fromMap({
+          'role': 'background-vector',
+          'rank': 2,
+        }),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('image-1'),
+            resourceId: CanvasResourceId('content-image-resource'),
+            size: const Size(1, 1),
+            isVisible: false,
+            isLocked: true,
+            isDeletable: false,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+void _expectMaterializedClearResourceWork() {
+  final draft = DraftDocument(_documentWithManyClearResources());
+  final work = <DraftClearContentWorkEvent>[];
+
+  final result = DraftDocument.observeClearContentWork(
+    work.add,
+    () => draft.clearContent(removeUnusedResources: true),
+  );
+
+  expect(result.removedElementIds, [CanvasElementId('content-image')]);
+  expect(result.removedResourceIds, [
+    CanvasResourceId('content-resource'),
+    CanvasResourceId('unused-resource-a'),
+    CanvasResourceId('unused-resource-b'),
+  ]);
+  expect(
+    _workEventCount(work, DraftClearContentWorkEvent.backgroundReferencePass),
+    1,
+  );
+  expect(
+    _workEventCount(work, DraftClearContentWorkEvent.backgroundElementVisit),
+    2,
+  );
+  expect(_workEventCount(work, DraftClearContentWorkEvent.resourcePass), 1);
+  expect(_workEventCount(work, DraftClearContentWorkEvent.resourceVisit), 5);
+  expect(
+    _workEventCount(work, DraftClearContentWorkEvent.acceptedElementScan),
+    0,
+  );
+}
+
+int _workEventCount(
+  Iterable<DraftClearContentWorkEvent> work,
+  DraftClearContentWorkEvent event,
+) {
+  return work.where((item) => item == event).length;
+}
+
+CanvasDocument _documentWithManyClearResources() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('background-image-resource'),
+        source: CanvasResourceSource.appKey('background-image-resource'),
+      ),
+      CanvasVectorResource(
+        id: CanvasResourceId('background-vector-resource'),
+        source: CanvasResourceSource.appKey('background-vector-resource'),
+      ),
+      CanvasImageResource(
+        id: CanvasResourceId('content-resource'),
+        source: CanvasResourceSource.appKey('content-resource'),
+      ),
+      CanvasImageResource(
+        id: CanvasResourceId('unused-resource-a'),
+        source: CanvasResourceSource.appKey('unused-resource-a'),
+      ),
+      CanvasVectorResource(
+        id: CanvasResourceId('unused-resource-b'),
+        source: CanvasResourceSource.appKey('unused-resource-b'),
+      ),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('background-image'),
+        resourceId: CanvasResourceId('background-image-resource'),
+        size: const Size(2, 3),
+      ),
+      CanvasVectorElement(
+        id: CanvasElementId('background-vector'),
+        resourceId: CanvasResourceId('background-vector-resource'),
+        size: const Size(4, 5),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('content-image'),
+            resourceId: CanvasResourceId('content-resource'),
+            size: const Size(6, 7),
             isDeletable: false,
           ),
         ],

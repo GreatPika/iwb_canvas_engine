@@ -17,7 +17,7 @@ void main() {
     expect(_expectImplicitLayerAndBackgroundTouches, returnsNormally);
   });
 
-  test('background layer removals and clears record their owner', () {
+  test('background removals touch their owner while clear preserves it', () {
     expect(_expectBackgroundLayerRemovalTouches, returnsNormally);
   });
 
@@ -86,14 +86,27 @@ void _expectBackgroundLayerRemovalTouches() {
     CanvasElementId('background-1'),
   });
 
-  final clearDraft = DraftDocument(_documentWithBackgroundElement());
+  final clearDraft = DraftDocument(_documentWithBackgroundAndContent());
+  final backgroundBefore = clearDraft.background;
 
-  clearDraft.clearContent(removeUnusedResources: false);
+  final clear = clearDraft.clearContent(removeUnusedResources: false);
 
-  expect(clearDraft.touchedSet.backgroundLayerChanged, isTrue);
+  expect(clear.removedElementIds, [CanvasElementId('content-1')]);
+  expect(
+    clearDraft.readDocument().backgroundElements.map((element) => element.id),
+    [CanvasElementId('background-1')],
+  );
+  expect(clearDraft.readDocument().layers.single.elements, isEmpty);
+  expect(clearDraft.readDocument().background, backgroundBefore);
+  expect(clearDraft.touchedSet.backgroundLayerChanged, isFalse);
   expect(clearDraft.touchedSet.removedElementIds, {
-    CanvasElementId('background-1'),
+    CanvasElementId('content-1'),
   });
+  expect(clearDraft.touchedSet.background, isFalse);
+  expect(clearDraft.touchedSet.grid, isFalse);
+  expect(clearDraft.revisionDelta.background, isFalse);
+  expect(clearDraft.revisionDelta.grid, isFalse);
+  expect(clearDraft.revisionDelta.structural, isTrue);
 }
 
 void _expectDocumentFlagTouches() {
@@ -144,6 +157,19 @@ CanvasDocument _document() {
 
 CanvasDocument _documentWithBackgroundElement() {
   return CanvasDocument(backgroundElements: [_rect('background-1')]);
+}
+
+CanvasDocument _documentWithBackgroundAndContent() {
+  return CanvasDocument(
+    background: CanvasBackground(
+      color: const Color(0xFF112233),
+      grid: CanvasGrid(enabled: true, cellSize: 24),
+    ),
+    backgroundElements: [_rect('background-1')],
+    layers: [
+      CanvasLayer(id: CanvasLayerId('layer-1'), elements: [_rect('content-1')]),
+    ],
+  );
 }
 
 CanvasRectElement _rect(String id) {

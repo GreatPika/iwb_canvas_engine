@@ -407,7 +407,7 @@ void main() {
         backgroundRemoved = removed.removeElement(
           CanvasElementId('background'),
         );
-        cleared = backgroundRemoved.clearContent();
+        cleared = backgroundRemoved.clearContentStructure();
       });
 
       _expectLocationParity(removed.layerTable, const [

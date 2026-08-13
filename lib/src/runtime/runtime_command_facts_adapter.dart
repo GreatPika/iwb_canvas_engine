@@ -85,17 +85,33 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
 
   @override
   ClearContentFacts clearContentFacts({required bool removeUnusedResources}) {
-    final context = _context();
-    final contentIds = [
-      for (final handle in context.handles)
-        if (_frame.resolveElement(handle) != null) handle.id,
-    ];
+    final structuralRevision = _frame.frameRevisions.structuralRevision;
+    final handles = _frame.elementHandles(structuralRevision);
+    final contentIds = <CanvasElementId>[];
+    final backgroundResourceIds = <CanvasResourceId>{};
+    for (final handle in handles) {
+      final facts = _frame.resolveElement(handle);
+      if (facts == null) {
+        continue;
+      }
+      if (facts.locationKind == FrameElementLocationKind.content) {
+        contentIds.add(handle.id);
+        continue;
+      }
+      final resourceId = facts.resourceId;
+      if (resourceId != null) {
+        backgroundResourceIds.add(resourceId);
+      }
+    }
 
     return ClearContentFacts(
       summary: _documentSummary(),
       removableElementIds: contentIds,
       removableResourceIds: removeUnusedResources
-          ? _resources.resources.map((resource) => resource.id)
+          ? [
+              for (final resource in _resources.resources)
+                if (!backgroundResourceIds.contains(resource.id)) resource.id,
+            ]
           : const [],
     );
   }

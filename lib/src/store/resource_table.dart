@@ -12,11 +12,22 @@ import '../contracts/public/canvas_resource.dart';
 @visibleForTesting
 enum ResourceTableEnumerationEvent { open, entry, close }
 
+@visibleForTesting
+enum ResourceTableSelectiveMutationEvent {
+  open,
+  entryVisit,
+  baseEntryCopy,
+  freeze,
+  immutablePublication,
+  singleImmutableRemove,
+}
+
 // ResourceTable owns descriptor admission, mutation, and public projection for
 // one table; splitting these methods would duplicate descriptor invariants.
 // ignore: number-of-methods
 final class ResourceTable {
   static final Object _enumerationZoneKey = Object();
+  static final Object _selectiveMutationZoneKey = Object();
 
   const ResourceTable.empty() : descriptors = const {};
 
@@ -87,6 +98,16 @@ final class ResourceTable {
     return runZoned(operation, zoneValues: {_enumerationZoneKey: sink});
   }
 
+  // Selective cleanup remains observable as one owner-local immutable-table
+  // lifecycle without retaining any telemetry outside assert-enabled tests.
+  @visibleForTesting
+  static T observeSelectiveMutation<T>(
+    void Function(ResourceTableSelectiveMutationEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_selectiveMutationZoneKey: sink});
+  }
+
   List<CanvasResource> projectResources() {
     return List.unmodifiable(descriptors.values.map(_resourceForDescriptor));
   }
@@ -110,6 +131,18 @@ final class ResourceTable {
       }
       return true;
     }(), 'resource table enumeration observation failed');
+  }
+
+  static void _recordSelectiveMutation(
+    ResourceTableSelectiveMutationEvent event,
+  ) {
+    assert(() {
+      final sink = Zone.current[_selectiveMutationZoneKey];
+      if (sink is void Function(ResourceTableSelectiveMutationEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'resource table selective mutation observation failed');
   }
 
   ResourceTable withAcceptedResourceRevisions(
@@ -156,6 +189,9 @@ final class ResourceTable {
   }
 
   ResourceTable remove(CanvasResourceId id) {
+    _recordSelectiveMutation(
+      ResourceTableSelectiveMutationEvent.singleImmutableRemove,
+    );
     final nextDescriptors =
         Map<CanvasResourceId, StoreResourceDescriptorFacts>.of(descriptors)
           ..remove(id);
@@ -165,6 +201,35 @@ final class ResourceTable {
 
   ResourceTable clear() {
     return const ResourceTable._(descriptors: {});
+  }
+
+  ResourceTable retainWhere(
+    bool Function(CanvasResourceId id, StoreResourceDescriptorFacts descriptor)
+    retain,
+  ) {
+    _recordSelectiveMutation(ResourceTableSelectiveMutationEvent.open);
+    var removed = false;
+    final nextDescriptors = <CanvasResourceId, StoreResourceDescriptorFacts>{};
+    for (final entry in descriptors.entries) {
+      _recordSelectiveMutation(ResourceTableSelectiveMutationEvent.entryVisit);
+      if (!retain(entry.key, entry.value)) {
+        removed = true;
+        continue;
+      }
+      _recordSelectiveMutation(
+        ResourceTableSelectiveMutationEvent.baseEntryCopy,
+      );
+      nextDescriptors[entry.key] = entry.value;
+    }
+    if (!removed) {
+      return this;
+    }
+    _recordSelectiveMutation(ResourceTableSelectiveMutationEvent.freeze);
+    _recordSelectiveMutation(
+      ResourceTableSelectiveMutationEvent.immutablePublication,
+    );
+
+    return ResourceTable._(descriptors: Map.unmodifiable(nextDescriptors));
   }
 
   static CanvasResource copy(CanvasResource resource) {

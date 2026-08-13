@@ -354,8 +354,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
   final Map<CanvasResourceId, CanvasResource> _resourceOverrides = {};
   final Set<CanvasResourceId> _addedResourceIds = {};
   final Set<CanvasResourceId> _removedCommittedResourceIds = {};
-  bool _elementsCleared = false;
-  bool _resourcesCleared = false;
   CanvasBackground? _backgroundOverride;
   CanvasCamera? _cameraOverride;
   CanvasPalette? _paletteOverride;
@@ -594,9 +592,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     } else {
       _removeSparseBackgroundElement(id);
     }
-    if (!_addedElementIds.remove(id) &&
-        !_elementsCleared &&
-        _facts.elementById(id) != null) {
+    if (!_addedElementIds.remove(id) && _facts.elementById(id) != null) {
       _removedCommittedElementIds.add(id);
     }
     _journal.add((draft) => draft.removeElement(id));
@@ -644,9 +640,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return false;
     }
     _resourceOverrides.remove(id);
-    if (!_addedResourceIds.remove(id) &&
-        !_resourcesCleared &&
-        _facts.resourceById(id) != null) {
+    if (!_addedResourceIds.remove(id) && _facts.resourceById(id) != null) {
       _removedCommittedResourceIds.add(id);
     }
     _journal.add((draft) => draft.removeUnusedResource(id));
@@ -773,24 +767,40 @@ final class _SparseEditBacking implements _EditSessionBacking {
     required bool removeUnusedResources,
   }) {
     final removedElementIds = List<CanvasElementId>.unmodifiable(
-      _currentDocumentOrderElementIds(),
+      _currentContentElementIds(),
     );
     return _SparseClearCandidate(
       removedElementIds: removedElementIds,
-      removedBackgroundElementIds: List.unmodifiable(
-        removedElementIds.where(_isBackgroundElementId),
-      ),
       removedResourceIds: removeUnusedResources
-          ? List.unmodifiable(_currentResourceIds())
+          ? _sparseClearRemovedResourceIds()
           : const <CanvasResourceId>[],
     );
+  }
+
+  List<CanvasResourceId> _sparseClearRemovedResourceIds() {
+    final retainedBackgroundResourceIds = <CanvasResourceId>{};
+    for (final id in _mutableBackgroundElementOrder()) {
+      final element = _elementById(id);
+      switch (element) {
+        case CanvasImageElement(:final resourceId):
+          retainedBackgroundResourceIds.add(resourceId);
+        case CanvasVectorElement(:final resourceId):
+          retainedBackgroundResourceIds.add(resourceId);
+        default:
+      }
+    }
+
+    return List<CanvasResourceId>.unmodifiable([
+      for (final id in _currentResourceIds())
+        if (!retainedBackgroundResourceIds.contains(id)) id,
+    ]);
   }
 
   void _installSparseClear(
     _SparseClearCandidate candidate, {
     required bool removeUnusedResources,
   }) {
-    _applySparseClearOverlay(removeUnusedResources: removeUnusedResources);
+    _applySparseClearOverlay(candidate);
     _journal.add(
       (draft) =>
           draft.clearContent(removeUnusedResources: removeUnusedResources),
@@ -800,7 +810,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
     );
     _recordSparseClear(
       removedElementIds: candidate.removedElementIds,
-      removedBackgroundElementIds: candidate.removedBackgroundElementIds,
       removedResourceIds: candidate.removedResourceIds,
     );
   }
@@ -832,14 +841,10 @@ final class _SparseEditBacking implements _EditSessionBacking {
 
   void _recordSparseClear({
     required List<CanvasElementId> removedElementIds,
-    required List<CanvasElementId> removedBackgroundElementIds,
     required List<CanvasResourceId> removedResourceIds,
   }) {
     if (removedElementIds.isNotEmpty) {
       _touchedSet.touchRemovedElements(removedElementIds);
-      if (removedBackgroundElementIds.isNotEmpty) {
-        _touchedSet.touchBackgroundLayer();
-      }
       if (_intersectsSelection(removedElementIds)) {
         _touchedSet.touchSelection();
       }
@@ -851,22 +856,23 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
   }
 
-  void _applySparseClearOverlay({required bool removeUnusedResources}) {
-    _elementsCleared = true;
-    _addedElementIds.clear();
-    _removedCommittedElementIds.clear();
-    _elementOverrides.clear();
-    _elementBackgroundLocationOverrides.clear();
-    _elementContentLayerOverrides.clear();
-    _mutableBackgroundElementOrder().clear();
+  void _applySparseClearOverlay(_SparseClearCandidate candidate) {
+    for (final id in candidate.removedElementIds) {
+      _elementOverrides.remove(id);
+      _elementBackgroundLocationOverrides.remove(id);
+      _elementContentLayerOverrides.remove(id);
+      if (!_addedElementIds.remove(id)) {
+        _removedCommittedElementIds.add(id);
+      }
+    }
     for (final layerId in _mutableLayerOrder()) {
       _contentElementOrderByLayer[layerId] = <CanvasElementId>[];
     }
-    if (removeUnusedResources) {
-      _resourcesCleared = true;
-      _addedResourceIds.clear();
-      _removedCommittedResourceIds.clear();
-      _resourceOverrides.clear();
+    for (final id in candidate.removedResourceIds) {
+      _resourceOverrides.remove(id);
+      if (!_addedResourceIds.remove(id)) {
+        _removedCommittedResourceIds.add(id);
+      }
     }
   }
 
@@ -902,27 +908,18 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   int get _sparseElementCount {
-    return _elementsCleared
-        ? _addedElementIds.length
-        : _committedSummary.elementCount +
-              _addedElementIds.length -
-              _removedCommittedElementIds.length;
+    return _committedSummary.elementCount +
+        _addedElementIds.length -
+        _removedCommittedElementIds.length;
   }
 
   int get _sparseResourceCount {
-    return _resourcesCleared
-        ? _addedResourceIds.length
-        : _committedSummary.resourceCount +
-              _addedResourceIds.length -
-              _removedCommittedResourceIds.length;
+    return _committedSummary.resourceCount +
+        _addedResourceIds.length -
+        _removedCommittedResourceIds.length;
   }
 
   void _trackSparseElementAdd(CanvasElementId id) {
-    if (_elementsCleared) {
-      _addedElementIds.add(id);
-
-      return;
-    }
     if (_facts.elementById(id) != null) {
       _removedCommittedElementIds.remove(id);
 
@@ -978,20 +975,11 @@ final class _SparseEditBacking implements _EditSessionBacking {
 
   List<CanvasElementId> _mutableContentElementOrder(CanvasLayerId layerId) {
     return _contentElementOrderByLayer.putIfAbsent(layerId, () {
-      if (_elementsCleared) {
-        return <CanvasElementId>[];
-      }
-
       return List.of(_facts.elementIdsInLayer(layerId));
     });
   }
 
   void _trackSparseResourceUpsert(CanvasResourceId id) {
-    if (_resourcesCleared) {
-      _addedResourceIds.add(id);
-
-      return;
-    }
     if (_facts.resourceById(id) != null) {
       _removedCommittedResourceIds.remove(id);
 
@@ -1005,7 +993,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (override != null) {
       return override;
     }
-    if (_elementsCleared || _removedCommittedElementIds.contains(id)) {
+    if (_removedCommittedElementIds.contains(id)) {
       return null;
     }
     return _facts.elementById(id);
@@ -1016,7 +1004,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (override != null) {
       return override;
     }
-    if (_resourcesCleared || _removedCommittedResourceIds.contains(id)) {
+    if (_removedCommittedResourceIds.contains(id)) {
       return null;
     }
     return _facts.resourceById(id);
@@ -1029,7 +1017,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (localReference) {
       return true;
     }
-    if (_elementsCleared || _removedCommittedResourceIds.contains(id)) {
+    if (_removedCommittedResourceIds.contains(id)) {
       return false;
     }
     if (_canUseCommittedResourceReferenceFact) {
@@ -1051,23 +1039,15 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   Iterable<CanvasElementId> _currentElementIds() sync* {
-    if (!_elementsCleared) {
-      for (final id in _facts.elementIds) {
-        if (!_removedCommittedElementIds.contains(id)) {
-          yield id;
-        }
+    for (final id in _facts.elementIds) {
+      if (!_removedCommittedElementIds.contains(id)) {
+        yield id;
       }
     }
     yield* _addedElementIds;
   }
 
-  Iterable<CanvasElementId> _currentDocumentOrderElementIds() sync* {
-    for (final id in _mutableBackgroundElementOrder()) {
-      if (_elementById(id) != null) {
-        yield id;
-      }
-    }
-
+  Iterable<CanvasElementId> _currentContentElementIds() sync* {
     for (final layerId in _mutableLayerOrder()) {
       for (final id in _mutableContentElementOrder(layerId)) {
         if (_elementById(id) != null) {
@@ -1087,11 +1067,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   Iterable<CanvasResourceId> _currentResourceIds() sync* {
-    if (!_resourcesCleared) {
-      for (final id in _facts.resourceIds) {
-        if (!_removedCommittedResourceIds.contains(id)) {
-          yield id;
-        }
+    for (final id in _facts.resourceIds) {
+      if (!_removedCommittedResourceIds.contains(id)) {
+        yield id;
       }
     }
     yield* _addedResourceIds;
@@ -1110,12 +1088,10 @@ final class _SparseEditBacking implements _EditSessionBacking {
 final class _SparseClearCandidate {
   const _SparseClearCandidate({
     required this.removedElementIds,
-    required this.removedBackgroundElementIds,
     required this.removedResourceIds,
   });
 
   final List<CanvasElementId> removedElementIds;
-  final List<CanvasElementId> removedBackgroundElementIds;
   final List<CanvasResourceId> removedResourceIds;
 }
 

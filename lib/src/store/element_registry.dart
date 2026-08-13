@@ -279,19 +279,9 @@ final class ElementRegistry {
     );
   }
 
-  ElementRegistry clearContent() {
-    return ElementRegistry._(
-      backgroundElementIds: const [],
-      familyTables: familyTables.clearElements(),
-      layerTable: layerTable.clearElements(
-        hasContent: contentElementOrder.isNotEmpty,
-      ),
-    );
-  }
-
   ElementRegistry clearContentStructure() {
     return ElementRegistry._(
-      backgroundElementIds: const [],
+      backgroundElementIds: backgroundElementIds,
       familyTables: familyTables,
       layerTable: layerTable.clearElements(
         hasContent: contentElementOrder.isNotEmpty,

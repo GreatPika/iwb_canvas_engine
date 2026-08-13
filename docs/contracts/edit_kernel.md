@@ -98,6 +98,18 @@ to finalize accepted committed facts before `CommitCompiler` builds a plan.
 The compiler consumes only the store-accepted revision delta and touched facts,
 not provisional session or draft revision journals.
 
+`clearContent` has one layer-only semantic across materialized
+`DraftDocument`, sparse session replay, sparse-session promotion, and direct
+sparse-store preparation. It removes every ordinary-layer element without using
+individual deletion eligibility, preserves background/grid values and ordered
+background elements, and prunes selection only for the removed content. When
+unused-resource cleanup is requested, retained image/vector descriptors are
+derived from preserved background references and accepted resource facts report
+only actual releases. Clear remains an ordered journal barrier: later element
+or resource mutations observe the current post-clear candidate, and the same
+atomic preparation, acceptance, rollback, and publication boundary applies to
+every backing.
+
 `DocumentStoreKernel` prepares accepted sparse and ordinary materialized commits
 before the irreversible store swap. Duplicate ids, sealed descriptor
 relationships against the final candidate, update-kind validation,

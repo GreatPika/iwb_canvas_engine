@@ -61,8 +61,8 @@ Resource and interaction owners own their resource and interaction rows.
 | selected move commit | transforms | state.revisions.document, state.revisions.preview if active preview cleared; internal bounds, elementVisual, projection | touched update | evict | main + preview cleanup | moveSelection; `runtime_created_timestamps_monotonic` |
 | rotate/flip selection | transforms | state.revisions.document; internal bounds, elementVisual, projection | touched update | evict | main | transformSelection; `runtime_created_timestamps_monotonic` |
 | deleteSelection | elements/layers plus selection-owner prune | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection | remove ids | evict | main | deleteElements; `runtime_created_timestamps_monotonic` |
-| CanvasEdit.clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | none |
-| command clearContent | elements, selection-owner clear, resources when removeUnusedResources removes descriptors | state.revisions.document, state.revisions.selection; internal structural, bounds, elementVisual, projection, resource | rebuild empty | evict | main | clearContent if removed; `runtime_created_timestamps_monotonic` |
+| CanvasEdit.clearContent | every ordinary-layer element; selection-owner prunes removed content; only actually unused descriptors when requested; layers, background/grid, and ordered background elements remain | actual element/resource/selection changes only: state.revisions.document and selection when changed; internal structural, bounds, elementVisual, projection, resource only for their actual domains; background/grid unchanged | zero post-clear frame -> empty reset; otherwise normal committed-frame touched rebuild/update retains background paint entries | evict when accepted state changes | actual accepted clear repaint | none |
+| command clearContent | same layer-only clear scope and actual selection/resource effects as CanvasEdit.clearContent | same actual revision domains as CanvasEdit.clearContent | zero post-clear frame -> empty reset; otherwise normal committed-frame touched rebuild/update retains background paint entries | evict when accepted state changes | actual accepted clear repaint | clearContent only for actual removed elements, with accepted removal ids; resource-only cleanup and background-only no-op emit none; `runtime_created_timestamps_monotonic` |
 | CanvasEdit.setCameraOffset | persisted document camera | state.revisions.document; internal projection | no | evict | no immediate view-camera repaint unless current view is explicitly reinitialized by load | none |
 | CanvasCameraPort.setOffset/panBy | runtime view camera | state.revisions.viewCamera | no | no | main + overlay | none |
 | setBackgroundColor | persisted background metadata | state.revisions.document; internal backgroundRevision, projection | no | evict | main | none |
@@ -281,6 +281,48 @@ still referenced.
 
 Rollback behavior: descriptor table, document revision, projection, resource
 cache, repaint, and notifications remain unchanged.
+
+#### clearContent
+
+Touched state: only actual ordinary-layer element removals, selection pruning
+for removed content ids, and descriptors actually released by requested unused
+resource cleanup. Background/grid values, their revision/touched domains,
+ordered background elements, layer rows, and descriptors still referenced by
+preserved background image/vector elements remain unchanged.
+
+Public state revisions: `state.revisions.document` for an accepted element or
+descriptor removal; `state.revisions.selection` only when selection loses a
+removed content id.
+
+Internal revisions: structural, bounds, elementVisual, projection, and resource
+advance only for their accepted element/resource differences. Background and
+grid revisions do not advance for clear.
+
+Spatial effect: a genuinely zero-element committed post-clear frame may reset
+the spatial index. A frame retaining background elements follows normal touched
+rebuild/update from committed frame facts and keeps those elements available to
+paint queries; this does not change hit or context eligibility.
+
+Projection effect: evict public document projection when the accepted candidate
+changes persisted elements or descriptors.
+
+Resource effect: release only descriptors actually removed by requested unused
+resource cleanup.
+
+Repaint target: main for accepted clear effects.
+
+User-action notification: low-level clear emits none. Command clear emits one
+`clearContent` action only when its accepted result removes elements, and its
+payload uses those accepted element/resource removal ids. A resource-only clear
+emits no action.
+
+No-op behavior: a background-only retained frame with no unused descriptors is
+a no-op; it advances no revisions and emits no repaint, spatial, resource, or
+action effect.
+
+Rollback behavior: all candidate element/resource/selection decisions remain
+atomic; no partial removal, revision, touched, repaint, or action effect is
+published.
 
 #### replaceDraftDocument
 

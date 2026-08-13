@@ -1468,6 +1468,11 @@ Edit contract:
   publishes any partial document, so a resource plus all replacement references
   may be supplied in either callback order;
 - removeUnusedResource fails with false if resource is referenced by any background/content element, including invisible or locked elements.
+- clearContent removes every ordinary-layer element regardless of
+  `isDeletable`, while preserving persisted background/grid metadata and the
+  ordered background-element layer; when `removeUnusedResources` is true, it
+  retains image and vector descriptors still referenced by those preserved
+  background elements and removes only descriptors that are actually unused;
 - CanvasEdit.removeElement is a low-level document edit and emits no user action event;
 - CanvasEdit.clearContent is a low-level document edit and emits no user action event.
 ```
@@ -1507,6 +1512,11 @@ final class CanvasClearResult {
   final bool didClearContent;
 }
 ```
+
+`CanvasClearResult` lists only elements and descriptors actually removed by the
+accepted clear. A retained-background-only clear is a no-op; a clear that only
+releases unused descriptors returns those descriptor ids without claiming an
+element removal.
 
 ### 4.13 High-level commands
 
@@ -1614,7 +1624,13 @@ Rules:
 - CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;
 - if only unused resources are removed and no elements are removed, no user
   action event is emitted;
+- command clear has the same layer-only scope as `CanvasEdit.clearContent`:
+  it does not remove background/grid state, ordered background elements, or
+  descriptors referenced by preserved background image/vector elements; a
+  background-only retained state therefore no-ops without an action;
 - command action payloads are emitted after atomic install;
+- a clear action payload uses exactly the accepted `CanvasClearResult` removal
+  ids, rather than preflight candidates;
 - if command mutation rolls back or no-ops, no action event is emitted.
 ```
 

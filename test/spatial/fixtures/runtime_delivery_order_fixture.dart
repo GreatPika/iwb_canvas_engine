@@ -15,6 +15,7 @@ void main() {
   _testSelectableDeliveryOrder();
   _testLayerDeliveryOrder();
   _testLoadDeliveryOrder();
+  _testClearContentRetainsBackgroundSpatialDelivery();
   _testSpatialFailureContainment();
 }
 
@@ -80,6 +81,79 @@ void _testLoadDeliveryOrder() {
     expect(outcome.guardedMutationAttempts, 2);
     expect(outcome.nestedMutationRan, isFalse);
   });
+}
+
+// State and observer callbacks must share one temporal scenario so the direct
+// paint-query proof cannot lose its ordering or mutation-guard relationship.
+// ignore: halstead-volume, source-lines-of-code
+void _testClearContentRetainsBackgroundSpatialDelivery() {
+  test(
+    'command clear delivers retained background candidates before publication',
+    () {
+      final events = <String>[];
+      final stateSnapshots = <List<List<CanvasElementId>>>[];
+      final observerSnapshots = <List<List<CanvasElementId>>>[];
+      late RuntimeRoot root;
+      var guardedMutationAttempts = 0;
+      var nestedMutationRan = false;
+
+      void expectMutationGuard() {
+        guardedMutationAttempts += 1;
+        expect(() {
+          root.edits.edit((_) {
+            nestedMutationRan = true;
+          });
+        }, throwsStateError);
+      }
+
+      root = runtimeRootWithCommittedDocumentSeed(
+        _clearDocument(),
+        config: const CanvasRuntimeConfig(),
+        commitEffectObserver: (effects) {
+          events.add('observer');
+          observerSnapshots.add(_clearPaintSnapshot(root));
+          expect(effects.whereType<SpatialDeliveryEffect>(), hasLength(1));
+          expectMutationGuard();
+        },
+      );
+      addTearDown(root.dispose);
+      expect(_clearPaintSnapshot(root), [
+        [CanvasElementId('clear-background')],
+        [CanvasElementId('clear-content')],
+      ]);
+      root.state.addListener(() {
+        events.add('state');
+        stateSnapshots.add(_clearPaintSnapshot(root));
+        expectMutationGuard();
+      });
+
+      final result = root.clearContentByCommand(removeUnusedResources: true);
+      final afterDelivery = _clearPaintSnapshot(root);
+
+      expect(result.didClearContent, isTrue);
+      expect(result.removedElementIds, [CanvasElementId('clear-content')]);
+      expect(result.removedResourceIds, isEmpty);
+      expect(events, ['state', 'observer']);
+      expect(stateSnapshots, [
+        [
+          [CanvasElementId('clear-background')],
+          <CanvasElementId>[],
+        ],
+      ]);
+      expect(observerSnapshots, [
+        [
+          [CanvasElementId('clear-background')],
+          <CanvasElementId>[],
+        ],
+      ]);
+      expect(afterDelivery, [
+        [CanvasElementId('clear-background')],
+        <CanvasElementId>[],
+      ]);
+      expect(guardedMutationAttempts, 2);
+      expect(nestedMutationRan, isFalse);
+    },
+  );
 }
 
 void _testSpatialFailureContainment() {
@@ -258,6 +332,18 @@ CanvasDocument _document(List<CanvasElement> elements) {
   );
 }
 
+CanvasDocument _clearDocument() {
+  return CanvasDocument(
+    backgroundElements: [_rect('clear-background')],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('clear-layer'),
+        elements: [_rect('clear-content', translation: const Offset(1000, 0))],
+      ),
+    ],
+  );
+}
+
 CanvasRectElement _rect(String id, {Offset translation = Offset.zero}) {
   return CanvasRectElement(
     id: CanvasElementId(id),
@@ -269,6 +355,28 @@ CanvasRectElement _rect(String id, {Offset translation = Offset.zero}) {
 List<CanvasElementId> _spatialIds(RuntimeRoot root, SpatialQueryWindow window) {
   return _spatialIdsFromResult(
     root.spatialKernel.queryHit(
+      SpatialQueryWindow(
+        boundsWorld: window.boundsWorld,
+        structuralRevision:
+            root.frameFactsPort.frameRevisions.structuralRevision,
+      ),
+    ),
+  );
+}
+
+List<List<CanvasElementId>> _clearPaintSnapshot(RuntimeRoot root) {
+  return [
+    _paintSpatialIds(root, _nearOrigin()),
+    _paintSpatialIds(root, _nearMoved()),
+  ];
+}
+
+List<CanvasElementId> _paintSpatialIds(
+  RuntimeRoot root,
+  SpatialQueryWindow window,
+) {
+  return _spatialIdsFromResult(
+    root.spatialKernel.queryPaint(
       SpatialQueryWindow(
         boundsWorld: window.boundsWorld,
         structuralRevision:

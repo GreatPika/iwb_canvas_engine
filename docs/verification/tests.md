@@ -346,6 +346,30 @@ touched state, public state revisions, internal revisions, spatial,
 projection, resource effects, repaint, user-action events, no-op behavior, and
 rollback behavior.
 
+Layer-only `clearContent` coverage is split by owner rather than duplicated as
+a document projection oracle. `test/edit/edit_matrix_effects_test.dart` and
+`test/edit/exact_touched_invalidation_test.dart` cover materialized
+ordinary-layer removal, retained background image/vector state, and unchanged
+background/grid facts; their semantic observations also bound the materialized
+background and resource passes. `test/edit/sparse_edit_session_test.dart`
+covers sparse no-projection classification, promotion parity, ordered clear
+barriers, and bounded committed background/resource fact reads.
+`test/store/sparse_store_commit_test.dart` covers the direct sparse-store
+result, retained committed rows/descriptors and descriptor revisions,
+sequential clear barriers, and one bounded selective descriptor-table lifecycle
+using owner observations. These suites assert actual result, revision, touched,
+and resource effects rather than preflight candidates.
+
+`test/runtime/command_facts_port_test.dart` covers immutable layer-only command
+facts and the deterministic one-handle/one-catalog-pass budget.
+`test/api/command_port_actions_test.dart` covers public retained-background
+state, accepted result/action equality, background-only no-action, and
+resource-only no-action behavior. `test/spatial/runtime_delivery_order_test.dart`
+directly queries retained background paint membership before, during, and after
+clear delivery, while `test/spatial/touched_update_test.dart` remains the
+genuinely zero-frame empty-reset proof. Background hit/context exclusion is
+owned by geometry policy and is not redefined by these clear suites.
+
 `test.edit.net_no_op_edit_commit`, `test.store.store_commit_finalization`, and
 `test.guardrails.edit_accepted_finalization_guardrail` cover store-owned
 accepted finalization for ordinary sparse and materialized edit candidates.
@@ -662,6 +686,9 @@ the release route for that evidence.
 #### `test/spatial/runtime_delivery_order_test.dart`
 - proves `RuntimeRoot` applies spatial update/rebuild delivery before public
   runtime state publication and before observer callbacks can run.
+- proves retained-background layer-only clear remains visible through direct
+  paint queries at state-listener, commit-effect-observer, and post-delivery
+  boundaries, without changing background hit/context eligibility.
 
 #### geometry/spatial guardrail proof tests
 - `test/guardrails/geometry_committed_handle_order_guardrail_test.dart`,
@@ -686,7 +713,9 @@ the release route for that evidence.
   document-order ids, no-op behavior, selection pruning, validation errors,
   and typed action emission.
 - `test/api/command_port_actions_test.dart` proves command-port remove, clear,
-  and unknown text-edit behavior plus their action payloads.
+  and unknown text-edit behavior plus their action payloads, including
+  layer-only clear results/actions and the background-only/resource-only
+  no-action branches.
 - `test/api/tool_port_settings_test.dart` proves public tool-port behavior:
   initial settings are visible, effective changes advance interaction
   revision, no-ops stay silent, active sessions clean up on setting changes,
@@ -696,8 +725,8 @@ the release route for that evidence.
 - `test/api/runtime_timestamp_order_test.dart` proves runtime-created action
   timestamps are resolved through one runtime-local monotonic cursor.
 - `test/runtime/command_facts_port_test.dart` proves immutable command fact
-  bundles, document order, center pivot, removed-resource facts, and no
-  interaction dependency.
+  bundles, document order, center pivot, layer-only clear facts, bounded typed
+  frame/resource reads, and no interaction dependency.
 - `test/runtime/load_interaction_cleanup_test.dart` proves load and dispose
   use interaction-owned cleanup without post-install interaction calls.
 

@@ -60,7 +60,10 @@ ordinary edit updates only touched ids;
 document replacement or staged load invalidates the current index and schedules
 the next spatial query to rebuild against committed frame facts before returning
 candidates;
-operation-matrix `clearContent` may reset to an empty index without a generic full-scene clone.
+operation-matrix `clearContent` may reset to an empty index only when the
+accepted post-clear committed frame has zero elements; when preserved background
+elements remain, normal touched/rebuild delivery reads committed frame facts and
+keeps their paint membership.
 ```
 
 Staged update algorithm:
@@ -81,7 +84,10 @@ Staged update algorithm:
 Full clone of spatial index for ordinary edit is forbidden. Page-level copy is
 allowed only for touched pages. Full rebuild/reset is allowed only for
 replacement/load query recovery paths or the operation-matrix `clearContent`
-empty reset.
+empty reset of a genuinely zero-element post-clear frame. A clear that retains
+background elements uses normal committed-frame touched/rebuild delivery; those
+elements remain available to paint queries, while the existing hit and context
+policies continue to exclude background elements.
 
 Fallback budget behavior:
 

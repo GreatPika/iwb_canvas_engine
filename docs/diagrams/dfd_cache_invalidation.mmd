@@ -15,6 +15,8 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
+    RuntimeLoadSpatialEffect["Runtime-built post-install load effect\nSpatialDeliveryEffect(documentReplaced)"]
+    RuntimeSpatialDelivery["SpatialDeliveryEffect delivery\nbefore public state, action, and observer"]
     ResourceDirtyDispatch["Resource dirty orchestration\nrevision increment + target/all release"]
     ViewCameraDispatch["Runtime view camera orchestration\nstate.revisions.viewCamera + repaint"]
     InteractionConfigDispatch["Interaction config orchestration\nstate.revisions.interaction + affected cleanup"]
@@ -25,10 +27,14 @@ flowchart LR
 
   subgraph Compiler["Commit compiler"]
     ExactPlan["CommitPlan\nexact revisions and invalidation scopes"]
+    SpatialEffectPlan["Conditional SpatialEffect in CommitPlan\ndocument replacement or spatially relevant\nbounds/geometry/layer/background-layer facts\nresource-only clear has no spatial effect or delivery"]
     OrdinaryScope["Ordinary edit scope\ntouched ids and typed state only"]
     ReplacementScope["Edit documentReplaced scope\nonly CommitPlan full rebuild"]
-    EmptySpatialReset["Operation-matrix clearContent\nempty spatial reset only"]
     ForbiddenGlobal["Forbidden generic global invalidation\nunless documentReplaced"]
+  end
+
+  subgraph Applier["CommitApplier"]
+    PostInstallEditEffects["Post-install edit effect conversion\nCommitPlan SpatialEffect to CommitDeliveryResult"]
   end
 
   subgraph Store["DocumentStoreKernel"]
@@ -71,7 +77,12 @@ flowchart LR
     SpatialIndex["SpatialIndex\nentries by touched id"]
     SpatialDelta["SpatialDelta\nadd, remove, touched update"]
     TouchedSpatialUpdate["Ordinary spatial update\nonly touched ids"]
-    SpatialRebuild["Spatial rebuild/reset\nreplacement/load or clearContent empty reset only"]
+    SpatialApplyBranch{"applyTouched accepted\nSpatialDeliveryEffect path"}
+    RemovalOnlySpatialBranch{"removal-only fast-reset predicate\naccepted frame has zero elements?"}
+    PreparedSpatialBranch{"rebuild-required layer/background facts,\nno touches, or invalid index?"}
+    NoSpatialUpdate["Return without spatial update\nno touches"]
+    EmptySpatialReset["Empty spatial reset\nzero accepted frame only"]
+    SpatialRebuild["Spatial rebuild or scheduled replacement\nreplacement/load/recovery or rebuild-required facts\nfrom committed facts"]
     SpatialFallback["Invalid index fallback\nbudgeted query/candidates,\nnon-hub budget counter,\ndeferred rebuild"]
     SpatialBudgetExceeded["Fallback budget exceeded\ntyped result, no partial candidates"]
   end
@@ -124,19 +135,25 @@ flowchart LR
   Touched -->|"non-empty exact facts"| ExactPlan
 
   ExactPlan -->|"ordinary edit, no documentReplaced"| OrdinaryScope
+  ExactPlan -->|"conditional spatial effect"| SpatialEffectPlan
   ExactPlan -->|"typed repaint effects"| RuntimeRepaintEffects
   ExactPlan -->|"documentReplaced"| ReplacementScope
   ExactPlan -.->|"not allowed"| ForbiddenGlobal
   ForbiddenGlobal -.->|"blocked unless replacement scope"| ExactPlan
 
   OrdinaryScope -->|"preflight and commit payload"| CommittedInstall
-  OrdinaryScope -->|"operation-matrix clearContent"| EmptySpatialReset
   ReplacementScope -->|"prepared document replacement"| CommittedInstall
   LoadSuccess -->|"prepared staged replacement\noutside edit CommitPlan"| CommittedInstall
   OrdinaryScope -->|"selection effect if operation changes selection"| SelectionEffect
   ReplacementScope -->|"selection clear effect"| SelectionEffect
   LoadSuccess -->|"selection clear effect"| SelectionEffect
   CommittedInstall -->|"publish typed committed revision changes"| TypedRevisionScope
+  SpatialEffectPlan -->|"planned relevant edit effect"| PostInstallEditEffects
+  CommittedInstall -->|"accepted edit install barrier complete"| PostInstallEditEffects
+  PostInstallEditEffects -->|"CommitDeliveryResult SpatialDeliveryEffect"| RuntimeSpatialDelivery
+  CommittedInstall -->|"accepted staged load install barrier complete"| RuntimeLoadSpatialEffect
+  RuntimeLoadSpatialEffect -->|"SpatialDeliveryEffect(documentReplaced)"| RuntimeSpatialDelivery
+  RuntimeSpatialDelivery -->|"committed FrameFactsPort + structural revision"| SpatialApplyBranch
   TypedRevisionScope -->|"update only counters touched by operation"| RevisionState
 
   RevisionState -.->|"document state changes"| DocumentRevision
@@ -153,15 +170,18 @@ flowchart LR
   RevisionState -.->|"public projection invalidated"| ProjectionRevision
   RevisionState -.->|"resource descriptor changes"| ResourceRevision
 
-  OrdinaryScope -->|"added or removed ids"| SpatialDelta
-  OrdinaryScope -->|"geometry or transform changed ids"| SpatialDelta
+  SpatialApplyBranch -->|"documentReplaced: schedule replacement rebuild"| SpatialRebuild
+  SpatialApplyBranch -->|"otherwise evaluate removal-only fast-reset predicate"| RemovalOnlySpatialBranch
+  RemovalOnlySpatialBranch -->|"zero accepted frame"| EmptySpatialReset
+  RemovalOnlySpatialBranch -->|"false: continue with accepted touched state"| PreparedSpatialBranch
+  PreparedSpatialBranch -->|"rebuild-required layer/background facts\nor invalid index recovery"| SpatialRebuild
+  PreparedSpatialBranch -->|"no touches"| NoSpatialUpdate
+  PreparedSpatialBranch -->|"valid prepared delta, including retained-background clear:\nremove actual content ids and preserve untouched background paint membership"| SpatialDelta
   SpatialDelta -->|"apply removals and additions"| TouchedSpatialUpdate
   TouchedSpatialUpdate -->|"bounded candidate updates"| SpatialIndex
   TouchedSpatialUpdate -.->|"forbidden ordinary path"| SpatialFullClone
-  ReplacementScope -->|"whole document changed"| SpatialRebuild
-  EmptySpatialReset -->|"all elements removed"| SpatialRebuild
-  LoadSuccess -->|"staged whole document replacement"| SpatialRebuild
-  SpatialRebuild -->|"rebuild from committed tables"| SpatialIndex
+  EmptySpatialReset -->|"clear index at accepted revision"| SpatialIndex
+  SpatialRebuild -->|"rebuild from committed tables\nimmediately, or at next query when replacement is scheduled"| SpatialIndex
   SpatialDelta -.->|"stale generation or invalid delta"| SpatialFallback
   SpatialFallback -.->|"candidate union > maxFallbackCandidates"| SpatialBudgetExceeded
   SpatialBudgetExceeded -.->|"schedule rebuild or retry outside hot path"| DeferredSpatialRepair
