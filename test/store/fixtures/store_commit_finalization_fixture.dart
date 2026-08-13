@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/revision_state.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
@@ -84,6 +85,13 @@ void _registerSparseFinalizationTests() {
   test(
     'sparse no-op ensure layer does not prepare accepted layer touch',
     () => expect(_sparseNoOpEnsureLayerDoesNotTouchLayer, returnsNormally),
+  );
+  test(
+    'sparse deferred updates retain journal order after overwrite or removal',
+    () => expect(
+      _sparseDeferredUpdatesRetainJournalOrderAfterOverwriteOrRemoval,
+      returnsNormally,
+    ),
   );
 }
 
@@ -387,6 +395,164 @@ void _sparseNoOpEnsureLayerDoesNotTouchLayer() {
     CanvasElementId('rect-1'),
   });
   expect(store.projectionBuildCount, 0);
+}
+
+// Both variants also omit the later element-visual revision coverage. The
+// deferred gate must therefore surface the first effective update diagnostic.
+// Keeping overwrite, removal, and ignored-update variants together makes the
+// journal-order guarantee visible without coupling the assertions to helpers.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _sparseDeferredUpdatesRetainJournalOrderAfterOverwriteOrRemoval() {
+  final traces = <List<StoreSparseMutation>>[];
+  for (final overwrite in [true, false]) {
+    final store = documentStoreWithDocument(_baseDocument());
+    final before = store.elementById(CanvasElementId('rect-1'));
+    if (before is! CanvasRectElement) {
+      throw StateError('Expected rect-1 to be a committed rect.');
+    }
+    final invalidAfter = CanvasRectElement(
+      id: before.id,
+      revision: 3,
+      size: before.size,
+      fillColor: const Color(0xFF112233),
+    );
+    final first = StoreSparseUpdateElement(
+      before: before,
+      element: invalidAfter,
+      elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+    );
+    final later = overwrite
+        ? StoreSparseUpdateElement(
+            before: invalidAfter,
+            element: CanvasRectElement(
+              id: before.id,
+              revision: 4,
+              size: before.size,
+              fillColor: const Color(0xFF445566),
+            ),
+            elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+          )
+        : StoreSparseRemoveElement(before.id);
+    traces.add([
+      first,
+      later,
+      const StoreSparseSetBackground(
+        CanvasBackground(color: Color(0xFF778899)),
+      ),
+    ]);
+  }
+
+  for (final trace in traces.indexed) {
+    final store = documentStoreWithDocument(_baseDocument());
+    final work = <SparseTransactionWorkEvent>[];
+    expect(
+      () => DocumentStoreKernel.observeSparseTransactionWork(
+        work.add,
+        () => store.prepareSparseCommit(
+          StoreSparseCommit(
+            mutations: trace.$2,
+            revisionDelta: const StoreRevisionDelta.background(),
+          ),
+        ),
+      ),
+      throwsA(
+        isA<ArgumentError>()
+            .having((error) => error.name, 'name', 'element.revision')
+            .having(
+              (error) => error.message,
+              'message',
+              'sparse element updates must carry the next committed element revision.',
+            )
+            .having((error) => error.invalidValue, 'invalidValue', 3),
+      ),
+    );
+    expect(
+      work
+          .where(
+            (event) =>
+                event.kind == SparseTransactionWorkKind.ledgerAppend &&
+                event.ledger == SparseTransactionWorkLedger.deferredValidation,
+          )
+          .map((event) => event.journalIndex),
+      trace.$1 == 0 ? [0, 1] : [0],
+    );
+    expect(
+      work
+          .where(
+            (event) =>
+                event.phase == SparseTransactionWorkPhase.replay &&
+                event.kind == SparseTransactionWorkKind.journalVisit,
+          )
+          .map((event) => event.journalIndex),
+      List.generate(trace.$2.length, (index) => index),
+    );
+    expect(
+      work
+          .where(
+            (event) =>
+                event.kind == SparseTransactionWorkKind.ledgerRead &&
+                event.ledger == SparseTransactionWorkLedger.deferredValidation,
+          )
+          .map((event) => event.journalIndex),
+      [0],
+    );
+  }
+
+  for (final update in [_noOpDeferredUpdate(), _missingDeferredUpdate()]) {
+    final store = documentStoreWithDocument(_baseDocument());
+    final work = <SparseTransactionWorkEvent>[];
+    final prepared = DocumentStoreKernel.observeSparseTransactionWork(
+      work.add,
+      () => store.prepareSparseCommit(
+        StoreSparseCommit(
+          mutations: [
+            update,
+            const StoreSparseSetBackground(
+              CanvasBackground(color: Color(0xFF778899)),
+            ),
+          ],
+          revisionDelta: const StoreRevisionDelta.background(),
+        ),
+      ),
+    );
+    expect(prepared.hasChanges, isTrue);
+    expect(
+      work.where(
+        (event) =>
+            event.ledger == SparseTransactionWorkLedger.deferredValidation,
+      ),
+      isEmpty,
+    );
+  }
+}
+
+StoreSparseUpdateElement _noOpDeferredUpdate() {
+  final before = CanvasRectElement(
+    id: CanvasElementId('rect-1'),
+    size: const Size(1, 1),
+  );
+  return StoreSparseUpdateElement(
+    before: before,
+    element: before,
+    elementRevisionDelta: const StoreRevisionDelta(),
+  );
+}
+
+StoreSparseUpdateElement _missingDeferredUpdate() {
+  final before = CanvasRectElement(
+    id: CanvasElementId('missing'),
+    size: const Size(1, 1),
+  );
+  return StoreSparseUpdateElement(
+    before: before,
+    element: CanvasRectElement(
+      id: before.id,
+      revision: 1,
+      size: before.size,
+      fillColor: const Color(0xFF112233),
+    ),
+    elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
+  );
 }
 
 void _expectSparseSpatialOnlyTouches(AcceptedStoreTouchedFacts facts) {

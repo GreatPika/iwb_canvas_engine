@@ -43,8 +43,9 @@ enum IdAdmissionWorkKind {
   reservation,
 }
 
-// Admission observations carry only semantic operation categories. Tests own
-// accumulation, so production retains neither IDs nor telemetry history.
+// Admission observations carry a semantic operation and, when it is a sparse
+// ledger visit, the visited ID. Tests own accumulation, so production retains
+// neither IDs nor telemetry history.
 @immutable
 @visibleForTesting
 final class IdAdmissionWorkEvent {
@@ -52,11 +53,49 @@ final class IdAdmissionWorkEvent {
     required this.prefix,
     required this.phase,
     required this.kind,
+    this.subject,
   });
 
   final String prefix;
   final IdAdmissionWorkPhase phase;
   final IdAdmissionWorkKind kind;
+  final String? subject;
+}
+
+@visibleForTesting
+enum SparseTransactionWorkPhase { replay, finalization }
+
+@visibleForTesting
+enum SparseTransactionWorkKind { journalVisit, ledgerAppend, ledgerRead }
+
+@visibleForTesting
+enum SparseTransactionWorkLedger {
+  touched,
+  admission,
+  relationship,
+  layer,
+  requiredDelta,
+  deferredValidation,
+}
+
+// Sparse preparation exposes only phase-attributed semantic work. The fixture
+// owns the trace, so the transaction keeps no telemetry history in production.
+@immutable
+@visibleForTesting
+final class SparseTransactionWorkEvent {
+  const SparseTransactionWorkEvent({
+    required this.phase,
+    required this.kind,
+    this.ledger,
+    this.journalIndex,
+    this.subject,
+  });
+
+  final SparseTransactionWorkPhase phase;
+  final SparseTransactionWorkKind kind;
+  final SparseTransactionWorkLedger? ledger;
+  final int? journalIndex;
+  final String? subject;
 }
 
 // DocumentStoreKernel is the single owner for committed document facts, read
@@ -65,6 +104,7 @@ final class IdAdmissionWorkEvent {
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DocumentStoreKernel {
   static final Object _idAdmissionWorkZoneKey = Object();
+  static final Object _sparseTransactionWorkZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(_document);
@@ -120,14 +160,45 @@ final class DocumentStoreKernel {
     required String prefix,
     required IdAdmissionWorkPhase phase,
     required IdAdmissionWorkKind kind,
+    String? subject,
   }) {
     assert(() {
       final sink = Zone.current[_idAdmissionWorkZoneKey];
       if (sink is void Function(IdAdmissionWorkEvent)) {
-        sink(IdAdmissionWorkEvent(prefix: prefix, phase: phase, kind: kind));
+        sink(
+          IdAdmissionWorkEvent(
+            prefix: prefix,
+            phase: phase,
+            kind: kind,
+            subject: subject,
+          ),
+        );
       }
       return true;
     }(), 'id admission work observation failed');
+  }
+
+  // The direct Store owner emits these observations at the journal/ledger
+  // boundary, which lets tests distinguish replay work from finalization work.
+  @visibleForTesting
+  static T observeSparseTransactionWork<T>(
+    void Function(SparseTransactionWorkEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(
+      operation,
+      zoneValues: {_sparseTransactionWorkZoneKey: sink},
+    );
+  }
+
+  static void _recordSparseTransactionWork(SparseTransactionWorkEvent event) {
+    assert(() {
+      final sink = Zone.current[_sparseTransactionWorkZoneKey];
+      if (sink is void Function(SparseTransactionWorkEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'sparse transaction work observation failed');
   }
 
   CanvasDocument readDocument() => _projectionCache.projectionFor(_document);
@@ -433,195 +504,195 @@ final class DocumentStoreKernel {
     _resetIdAdmissionFromOwners();
   }
 
+  PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
+    final revisionDelta = commit.revisionDelta;
+    final journal = _SparseTransactionJournal(commit.mutations);
+    return _document.elements.familyTables.editSparse(
+      (familyEditor) => _prepareSparseCommitInFamilyEditor(
+        revisionDelta: revisionDelta,
+        journal: journal,
+        familyEditor: familyEditor,
+      ),
+    );
+  }
+
   // Sparse preparation validates, applies, and records admitted-id deltas in
   // one pass so commit acceptance cannot drift from generator admission.
   // Keeping validation, mutation application, final equality, and accepted
   // payload construction together is safer than splitting the transaction
   // boundary into metric-shaped phases.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, maximum-nesting-level
-  PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
-    return _document.elements.familyTables.editSparse((familyEditor) {
-      final revisionDelta = commit.revisionDelta;
-      final acceptedRevisions = revisionDelta.advance(_document.revisions);
-      var nextDocument = _document;
-      var didMutateFacts = false;
-      var needsFullResourceRelationshipValidation = false;
-      final resourceRelationshipElementIds = <CanvasElementId>{};
-      final admittedIds = _SparseAdmittedIds();
-      final deferredElementUpdateValidation =
-          <_DeferredSparseElementUpdateValidation>[];
-      for (var index = 0; index < commit.mutations.length;) {
-        final mutation = commit.mutations[index];
-        if (mutation is StoreSparseUpdateElement) {
-          final updates = <StoreSparseUpdateElement>[];
-          while (index < commit.mutations.length) {
-            final current = commit.mutations[index];
-            if (current is! StoreSparseUpdateElement) {
-              break;
-            }
-            updates.add(current);
-            index += 1;
-          }
-          familyEditor.recordUpdateBatch();
-          final applied = _updateElements(
-            nextDocument,
-            updates,
-            familyEditor: familyEditor,
-            deferredValidation: deferredElementUpdateValidation,
-          );
-          nextDocument = applied.document;
-          didMutateFacts = didMutateFacts || applied.didMutateFacts;
-          if (applied.didMutateFacts) {
-            _addSparseResourceRelationshipElementIds(
-              resourceRelationshipElementIds,
-              updates,
-            );
-          }
-          continue;
-        }
-        final resourceDescriptorBeforeMutation = switch (mutation) {
-          StoreSparseUpsertResource(:final resource) =>
-            nextDocument.resourceDescriptor(resource.id),
-          _ => null,
+  PreparedSparseStoreCommit _prepareSparseCommitInFamilyEditor({
+    required StoreRevisionDelta revisionDelta,
+    required _SparseTransactionJournal journal,
+    required FamilyTablesEditor familyEditor,
+  }) {
+    final acceptedRevisions = revisionDelta.advance(_document.revisions);
+    var nextDocument = _document;
+    final accounting = _SparseTransactionAccounting();
+    while (journal.hasNext) {
+      final entry = journal.readNext();
+      final mutation = entry.mutation;
+      if (mutation is StoreSparseUpdateElement) {
+        final updateEntries = journal.readContiguousUpdateBatch(entry);
+        final updates = <StoreSparseUpdateElement>[
+          for (final updateEntry in updateEntries)
+            updateEntry.mutation as StoreSparseUpdateElement,
+        ];
+        final updateJournalIndexes = <StoreSparseUpdateElement, int>{
+          for (final updateEntry in updateEntries)
+            updateEntry.mutation as StoreSparseUpdateElement:
+                updateEntry.journalIndex,
         };
-        final applied = _applySparseMutation(
+        for (final updateEntry in updateEntries) {
+          accounting.recordReplayMutation(
+            updateEntry.mutation,
+            journalIndex: updateEntry.journalIndex,
+          );
+        }
+        familyEditor.recordUpdateBatch();
+        final applied = _updateElements(
           nextDocument,
-          mutation,
+          updates,
           familyEditor: familyEditor,
-          acceptedRevisions: acceptedRevisions,
+          onDeferredValidation: (validation) {
+            accounting.recordDeferredValidation(
+              validation,
+              journalIndex: updateJournalIndexes[validation.update]!,
+            );
+          },
         );
         nextDocument = applied.document;
-        didMutateFacts = didMutateFacts || applied.didMutateFacts;
-        if (applied.didMutateFacts) {
-          admittedIds.addMutation(mutation);
-          switch (mutation) {
-            case StoreSparseAddElement(:final element):
-              if (_isResourceBackedElement(element)) {
-                resourceRelationshipElementIds.add(element.id);
-              }
-            case StoreSparseUpsertResource(:final resource):
-              needsFullResourceRelationshipValidation =
-                  needsFullResourceRelationshipValidation ||
-                  _resourceDescriptorKindChanged(
-                    before: resourceDescriptorBeforeMutation,
-                    after: nextDocument.resourceDescriptor(resource.id),
-                  );
-            case StoreSparseEnsureLayer() ||
-                StoreSparseUpdateElement() ||
-                StoreSparseRemoveElement() ||
-                StoreSparseRemoveUnusedResource() ||
-                StoreSparseClearContent() ||
-                StoreSparseSetBackground() ||
-                StoreSparseSetCamera() ||
-                StoreSparseSetPalette():
-              break;
-          }
-        }
-        index += 1;
+        accounting.recordAppliedUpdateBatch(applied, updates: updates);
+        continue;
       }
-      resourceRelationshipElementIds.removeWhere((id) {
-        final isMissing = familyEditor.decide(
-          FamilyTablesDecision.removeMembership,
-          () => !familyEditor.contains(id),
-        );
-        familyEditor.recordDecisionRead(
-          decision: FamilyTablesDecision.removeMembership,
-          subjectKind: FamilyTablesDecisionSubjectKind.element,
-          subject: id.value,
-          result: isMissing
-              ? FamilyTablesDecisionResult.missing
-              : FamilyTablesDecisionResult.present,
-        );
-
-        return isMissing;
-      });
-      if (needsFullResourceRelationshipValidation) {
-        _validateFinalCandidateResourceRelationships(
-          nextDocument,
-          familyElementById: familyEditor.elementByCanvasId,
-          familyEditor: familyEditor,
-        );
-      } else if (resourceRelationshipElementIds.isNotEmpty) {
-        _validateFinalCandidateResourceRelationships(
-          nextDocument,
-          elementIds: resourceRelationshipElementIds,
-          familyElementById: familyEditor.elementByCanvasId,
-          familyEditor: familyEditor,
-        );
-      }
-      final validatedRevisionDelta = _validatedSparseRevisionDelta(
-        revisionDelta,
+      accounting.recordReplayMutation(
+        mutation,
+        journalIndex: entry.journalIndex,
       );
-      for (final validation in deferredElementUpdateValidation) {
-        validation.validate();
-      }
-      final touched = _SparseTouchedCommittedFacts.fromMutations(
-        commit.mutations,
+      final resourceDescriptorBeforeMutation = switch (mutation) {
+        StoreSparseUpsertResource(:final resource) =>
+          nextDocument.resourceDescriptor(resource.id),
+        _ => null,
+      };
+      final applied = _applySparseMutation(
+        nextDocument,
+        mutation,
+        familyEditor: familyEditor,
+        acceptedRevisions: acceptedRevisions,
       );
-      final acceptedDelta = didMutateFacts
-          ? _sparseAcceptedRevisionDelta(
-              base: _document,
-              candidate: nextDocument,
-              candidateFamilyTables: familyEditor,
-              touched: touched,
-            )
-          : const StoreRevisionDelta();
-      final accepted = didMutateFacts && acceptedDelta.hasChanges;
-      if (accepted && !validatedRevisionDelta.hasChanges) {
-        throw ArgumentError.value(
-          commit.revisionDelta,
-          'revisionDelta',
-          'sparse store commits that change facts must advance revisions.',
-        );
-      }
-      if (accepted) {
-        _validateSparseRevisionCoverage(
-          provided: validatedRevisionDelta,
-          required: acceptedDelta,
-        );
-      }
-
-      if (accepted && familyEditor.hasChanges) {
-        familyEditor.normalizeFinalEqualRows(
-          _sparseElementIdsForRevisionNormalization(
-            _document.elements,
-            nextDocument.elements,
-            touched,
-          ),
-          (before, after) => !_committedElementRevisionDelta(
-            before: before,
-            after: after,
-          ).hasChanges,
-        );
-        if (familyEditor.hasChanges) {
-          nextDocument = nextDocument.copyWith(
-            elements: nextDocument.elements.adoptFamilyTables(
-              familyEditor.freeze(),
-            ),
-          );
-        }
-      }
-
-      final acceptedDocument = accepted
-          ? _acceptSparseDocument(nextDocument, acceptedDelta)
-          : _document;
-      return PreparedSparseStoreCommit(
-        baseRevisions: _document.revisions,
-        document: acceptedDocument,
-        revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
-        touchedFacts: accepted
-            ? _sparseAcceptedTouchedFacts(
-                base: _document,
-                candidate: acceptedDocument,
-                mutations: commit.mutations,
-                familyEditor: familyEditor,
-              )
-            : AcceptedStoreTouchedFacts.empty(),
-        admittedElementIds: accepted ? admittedIds.elementIds : const [],
-        admittedLayerIds: accepted ? admittedIds.layerIds : const [],
-        admittedResourceIds: accepted ? admittedIds.resourceIds : const [],
+      nextDocument = applied.document;
+      accounting.recordAppliedMutation(
+        mutation,
+        applied: applied,
+        candidate: nextDocument,
+        resourceDescriptorBeforeMutation: resourceDescriptorBeforeMutation,
       );
+    }
+    journal.finishReplay();
+    accounting.removeMissingRelationshipElementIds((id) {
+      final isMissing = familyEditor.decide(
+        FamilyTablesDecision.removeMembership,
+        () => !familyEditor.contains(id),
+      );
+      familyEditor.recordDecisionRead(
+        decision: FamilyTablesDecision.removeMembership,
+        subjectKind: FamilyTablesDecisionSubjectKind.element,
+        subject: id.value,
+        result: isMissing
+            ? FamilyTablesDecisionResult.missing
+            : FamilyTablesDecisionResult.present,
+      );
+
+      return isMissing;
     });
+    if (accounting.needsFullResourceRelationshipValidation) {
+      _validateFinalCandidateResourceRelationships(
+        nextDocument,
+        familyElementById: familyEditor.elementByCanvasId,
+        familyEditor: familyEditor,
+      );
+    } else if (accounting.hasResourceRelationshipElementIds) {
+      _validateFinalCandidateResourceRelationships(
+        nextDocument,
+        elementIds: accounting.readResourceRelationshipElementIds(),
+        familyElementById: familyEditor.elementByCanvasId,
+        familyEditor: familyEditor,
+      );
+    }
+    final validatedRevisionDelta = _validatedSparseRevisionDelta(revisionDelta);
+    accounting.validateDeferredValidations();
+    final touched = accounting.readTouchedFacts();
+    final requiredMutationDelta = accounting.readRequiredRevisionDelta();
+    final acceptedDelta = requiredMutationDelta.hasChanges
+        ? _sparseAcceptedRevisionDelta(
+            base: _document,
+            candidate: nextDocument,
+            candidateFamilyTables: familyEditor,
+            touched: touched,
+          )
+        : const StoreRevisionDelta();
+    final accepted =
+        requiredMutationDelta.hasChanges && acceptedDelta.hasChanges;
+    if (accepted && !validatedRevisionDelta.hasChanges) {
+      throw ArgumentError.value(
+        revisionDelta,
+        'revisionDelta',
+        'sparse store commits that change facts must advance revisions.',
+      );
+    }
+    if (accepted) {
+      _validateSparseRevisionCoverage(
+        provided: validatedRevisionDelta,
+        required: acceptedDelta,
+      );
+    }
+
+    if (accepted && familyEditor.hasChanges) {
+      familyEditor.normalizeFinalEqualRows(
+        _sparseElementIdsForRevisionNormalization(
+          _document.elements,
+          nextDocument.elements,
+          touched,
+        ),
+        (before, after) => !_committedElementRevisionDelta(
+          before: before,
+          after: after,
+        ).hasChanges,
+      );
+      if (familyEditor.hasChanges) {
+        nextDocument = nextDocument.copyWith(
+          elements: nextDocument.elements.adoptFamilyTables(
+            familyEditor.freeze(),
+          ),
+        );
+      }
+    }
+
+    final acceptedDocument = accepted
+        ? _acceptSparseDocument(nextDocument, acceptedDelta)
+        : _document;
+    return PreparedSparseStoreCommit(
+      baseRevisions: _document.revisions,
+      document: acceptedDocument,
+      revisionDelta: accepted ? acceptedDelta : const StoreRevisionDelta(),
+      touchedFacts: accepted
+          ? _sparseAcceptedTouchedFacts(
+              base: _document,
+              candidate: acceptedDocument,
+              familyEditor: familyEditor,
+              touched: touched,
+              layerCandidates: accounting.readAcceptedLayerCandidates(),
+            )
+          : AcceptedStoreTouchedFacts.empty(),
+      admittedElementIds: accepted
+          ? accounting.readAdmittedElementIds()
+          : const [],
+      admittedLayerIds: accepted ? accounting.readAdmittedLayerIds() : const [],
+      admittedResourceIds: accepted
+          ? accounting.readAdmittedResourceIds()
+          : const [],
+    );
   }
 
   CommittedDocument _acceptFullDocument(
@@ -774,7 +845,7 @@ final class DocumentStoreKernel {
       document,
       [mutation],
       familyEditor: familyEditor,
-      deferredValidation: deferredValidation,
+      onDeferredValidation: deferredValidation.add,
     );
     for (final validation in deferredValidation) {
       validation.validate();
@@ -787,10 +858,13 @@ final class DocumentStoreKernel {
     CommittedDocument document,
     List<StoreSparseUpdateElement> updates, {
     required FamilyTablesEditor familyEditor,
-    required List<_DeferredSparseElementUpdateValidation> deferredValidation,
+    required void Function(_DeferredSparseElementUpdateValidation validation)
+    onDeferredValidation,
   }) {
     final batch = _prepareSparseElementUpdateBatch(familyEditor, updates);
-    deferredValidation.addAll(batch.deferredValidation);
+    for (final validation in batch.deferredValidation) {
+      onDeferredValidation(validation);
+    }
     if (!batch.hasChanges) {
       return _SparseMutationResult.unchanged(document);
     }
@@ -1365,6 +1439,9 @@ _ResourceTouchedFacts _resourceTouchedFacts(
   for (final id in ids) {
     final before = base.resourceDescriptor(id);
     final after = candidate.resourceDescriptor(id);
+    if (before == null && after == null) {
+      continue;
+    }
     final changed =
         before == null || after == null || !after.hasSameResourceFacts(before);
     if (!changed) {
@@ -1843,13 +1920,15 @@ bool _isPaintedStroke(Color? color, double strokeWidth) {
   return color != null && strokeWidth > 0;
 }
 
+// The finalizer needs all four committed owner inputs at one semantic gate.
+// ignore: number-of-parameters
 AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
   required CommittedDocument base,
   required CommittedDocument candidate,
-  required List<StoreSparseMutation> mutations,
   required FamilyTablesEditor familyEditor,
+  required _SparseTouchedCommittedFacts touched,
+  required _SparseAcceptedLayerCandidates layerCandidates,
 }) {
-  final touched = _SparseTouchedCommittedFacts.fromMutations(mutations);
   final resourceIds = touched.allResources ? null : touched.resourceIds;
   final resourceTouches = _resourceTouchedFacts(
     base,
@@ -1876,7 +1955,7 @@ AcceptedStoreTouchedFacts _sparseAcceptedTouchedFacts({
         : _sparseAcceptedLayerIds(
             base: base.elements,
             candidate: candidate.elements,
-            mutations: mutations,
+            candidates: layerCandidates,
           ),
     aggregateTouches: _sparseAggregateTouchedFacts(
       base: base,
@@ -1914,49 +1993,28 @@ AcceptedStoreTouchedFacts _acceptedStoreTouchedFacts({
 Set<CanvasLayerId> _sparseAcceptedLayerIds({
   required ElementRegistry base,
   required ElementRegistry candidate,
-  required List<StoreSparseMutation> mutations,
+  required _SparseAcceptedLayerCandidates candidates,
 }) {
   final layerIds = <CanvasLayerId>{};
-  for (final mutation in mutations) {
-    _addSparseAcceptedLayerIdsForMutation(
+  for (final id in candidates.ensuredLayerIds) {
+    _addAcceptedEnsuredLayerId(layerIds, base, candidate, id);
+  }
+  for (final elementId in candidates.indexedAddedElementIds) {
+    _addAcceptedAddedElementLayerId(
       layerIds,
       base: base,
       candidate: candidate,
-      mutation: mutation,
+      elementId: elementId,
     );
+  }
+  for (final elementId in candidates.removedElementIds) {
+    _addAcceptedRemovedElementLayerId(layerIds, base, candidate, elementId);
+  }
+  if (candidates.clearedContent) {
+    layerIds.addAll(_nonEmptyContentLayerIds(base));
   }
 
   return layerIds;
-}
-
-void _addSparseAcceptedLayerIdsForMutation(
-  Set<CanvasLayerId> layerIds, {
-  required ElementRegistry base,
-  required ElementRegistry candidate,
-  required StoreSparseMutation mutation,
-}) {
-  switch (mutation) {
-    case StoreSparseEnsureLayer(:final id):
-      _addAcceptedEnsuredLayerId(layerIds, base, candidate, id);
-    case final StoreSparseAddElement mutation:
-      _addAcceptedAddedElementLayerId(
-        layerIds,
-        base: base,
-        candidate: candidate,
-        mutation: mutation,
-      );
-    case StoreSparseRemoveElement(:final id):
-      _addAcceptedRemovedElementLayerId(layerIds, base, candidate, id);
-    case StoreSparseClearContent():
-      layerIds.addAll(_nonEmptyContentLayerIds(base));
-    case StoreSparseUpdateElement() ||
-        StoreSparseUpsertResource() ||
-        StoreSparseRemoveUnusedResource() ||
-        StoreSparseSetBackground() ||
-        StoreSparseSetCamera() ||
-        StoreSparseSetPalette():
-      break;
-  }
 }
 
 void _addAcceptedEnsuredLayerId(
@@ -1974,12 +2032,9 @@ void _addAcceptedAddedElementLayerId(
   Set<CanvasLayerId> layerIds, {
   required ElementRegistry base,
   required ElementRegistry candidate,
-  required StoreSparseAddElement mutation,
+  required CanvasElementId elementId,
 }) {
-  final elementId = mutation.element.id;
-  if (mutation.index != null &&
-      !mutation.background &&
-      FamilyTables.readSparseBase(
+  if (FamilyTables.readSparseBase(
             () => base.familyTables.elementByCanvasId(elementId),
           ) ==
           null &&
@@ -2238,17 +2293,6 @@ void _validateSparseElementUpdateKind({
   }
 }
 
-void _addSparseResourceRelationshipElementIds(
-  Set<CanvasElementId> elementIds,
-  Iterable<StoreSparseUpdateElement> updates,
-) {
-  for (final update in updates) {
-    if (_sparseElementUpdateChangesResourceRelationships(update)) {
-      elementIds.add(update.element.id);
-    }
-  }
-}
-
 bool _sparseElementUpdateChangesResourceRelationships(
   StoreSparseUpdateElement update,
 ) {
@@ -2437,18 +2481,373 @@ final class _AggregateTouchedFacts {
   final bool palette;
 }
 
+// This phase-aware boundary is the only sparse journal traversal owner. Replay
+// consumes each entry once; later phases receive accounting ledgers instead of
+// raw mutations, so any future journal access must return through this owner.
+final class _SparseTransactionJournal {
+  _SparseTransactionJournal(this._mutations);
+
+  final List<StoreSparseMutation> _mutations;
+  var _nextIndex = 0;
+  var _phase = SparseTransactionWorkPhase.replay;
+  _SparseTransactionJournalEntry? _pendingEntry;
+
+  bool get hasNext => _pendingEntry != null || _nextIndex < _mutations.length;
+
+  _SparseTransactionJournalEntry readNext() {
+    final pendingEntry = _pendingEntry;
+    if (pendingEntry != null) {
+      _pendingEntry = null;
+      return pendingEntry;
+    }
+    return _readSourceEntry();
+  }
+
+  List<_SparseTransactionJournalEntry> readContiguousUpdateBatch(
+    _SparseTransactionJournalEntry first,
+  ) {
+    final entries = <_SparseTransactionJournalEntry>[first];
+    while (_nextIndex < _mutations.length) {
+      final entry = _readSourceEntry();
+      if (entry.mutation is StoreSparseUpdateElement) {
+        entries.add(entry);
+      } else {
+        _pendingEntry = entry;
+        break;
+      }
+    }
+    return entries;
+  }
+
+  void finishReplay() {
+    if (hasNext) {
+      throw StateError('Sparse transaction journal replay is incomplete.');
+    }
+    _phase = SparseTransactionWorkPhase.finalization;
+  }
+
+  _SparseTransactionJournalEntry _readSourceEntry() {
+    if (_nextIndex >= _mutations.length) {
+      throw StateError('Sparse transaction journal is exhausted.');
+    }
+    final entry = _readSourceEntryAt(_nextIndex);
+    _nextIndex += 1;
+    return entry;
+  }
+
+  _SparseTransactionJournalEntry _readSourceEntryAt(int journalIndex) {
+    final entry = _SparseTransactionJournalEntry(
+      mutation: _mutations[journalIndex],
+      journalIndex: journalIndex,
+    );
+    _recordVisit(journalIndex);
+    return entry;
+  }
+
+  void _recordVisit(int journalIndex) {
+    DocumentStoreKernel._recordSparseTransactionWork(
+      SparseTransactionWorkEvent(
+        phase: _phase,
+        kind: SparseTransactionWorkKind.journalVisit,
+        journalIndex: journalIndex,
+      ),
+    );
+  }
+}
+
+final class _SparseTransactionJournalEntry {
+  const _SparseTransactionJournalEntry({
+    required this.mutation,
+    required this.journalIndex,
+  });
+
+  final StoreSparseMutation mutation;
+  final int journalIndex;
+}
+
+// This one transaction-local owner distinguishes journal-derived candidates
+// from base-final facts. Later phases receive its bounded ledgers rather than
+// the mutation journal, while committed owner comparisons remain authoritative.
+// Keeping the ledger lifecycle together prevents a finalizer from receiving a
+// parallel journal-derived classification path.
+// ignore: coupling-between-object-classes, number-of-methods, weighted-methods-per-class
+final class _SparseTransactionAccounting {
+  final _SparseTouchedCommittedFacts _touched = _SparseTouchedCommittedFacts();
+  final _SparseAcceptedLayerCandidates _acceptedLayerCandidates =
+      _SparseAcceptedLayerCandidates();
+  final Set<String> _admittedElementIds = {};
+  final Set<String> _admittedLayerIds = {};
+  final Set<String> _admittedResourceIds = {};
+  final Set<CanvasElementId> _resourceRelationshipElementIds = {};
+  final Map<_DeferredSparseElementUpdateValidation, int>
+  _deferredElementUpdateValidations = {};
+  var _requiredMutationDelta = const StoreRevisionDelta();
+  var _needsFullResourceRelationshipValidation = false;
+
+  bool get needsFullResourceRelationshipValidation =>
+      _needsFullResourceRelationshipValidation;
+  bool get hasResourceRelationshipElementIds =>
+      _resourceRelationshipElementIds.isNotEmpty;
+
+  void recordReplayMutation(
+    StoreSparseMutation mutation, {
+    required int journalIndex,
+  }) {
+    _touched.addMutation(mutation);
+    _append(SparseTransactionWorkLedger.touched, journalIndex: journalIndex);
+    if (_acceptedLayerCandidates.addMutation(mutation)) {
+      _append(SparseTransactionWorkLedger.layer, journalIndex: journalIndex);
+    }
+  }
+
+  // This exhaustive mutation boundary keeps first admission and relationship
+  // candidates at their existing ordered decision point.
+  // ignore: cyclomatic-complexity
+  void recordAppliedMutation(
+    StoreSparseMutation mutation, {
+    required _SparseMutationResult applied,
+    required CommittedDocument candidate,
+    required StoreResourceDescriptorFacts? resourceDescriptorBeforeMutation,
+  }) {
+    if (!applied.didMutateFacts) {
+      return;
+    }
+    _recordRequiredMutationDelta(applied.requiredRevisionDelta);
+    _recordAdmission(mutation);
+    switch (mutation) {
+      case StoreSparseAddElement(:final element):
+        if (_isResourceBackedElement(element) &&
+            _resourceRelationshipElementIds.add(element.id)) {
+          _append(SparseTransactionWorkLedger.relationship);
+        }
+      case StoreSparseUpsertResource(:final resource):
+        _needsFullResourceRelationshipValidation =
+            _needsFullResourceRelationshipValidation ||
+            _resourceDescriptorKindChanged(
+              before: resourceDescriptorBeforeMutation,
+              after: candidate.resourceDescriptor(resource.id),
+            );
+      case StoreSparseEnsureLayer() ||
+          StoreSparseUpdateElement() ||
+          StoreSparseRemoveElement() ||
+          StoreSparseRemoveUnusedResource() ||
+          StoreSparseClearContent() ||
+          StoreSparseSetBackground() ||
+          StoreSparseSetCamera() ||
+          StoreSparseSetPalette():
+        break;
+    }
+  }
+
+  void recordAppliedUpdateBatch(
+    _SparseMutationResult applied, {
+    required Iterable<StoreSparseUpdateElement> updates,
+  }) {
+    if (!applied.didMutateFacts) {
+      return;
+    }
+    _recordRequiredMutationDelta(applied.requiredRevisionDelta);
+    for (final update in updates) {
+      if (_sparseElementUpdateChangesResourceRelationships(update) &&
+          _resourceRelationshipElementIds.add(update.element.id)) {
+        _append(SparseTransactionWorkLedger.relationship);
+      }
+    }
+  }
+
+  void recordDeferredValidation(
+    _DeferredSparseElementUpdateValidation validation, {
+    required int journalIndex,
+  }) {
+    _deferredElementUpdateValidations[validation] = journalIndex;
+    _append(
+      SparseTransactionWorkLedger.deferredValidation,
+      journalIndex: journalIndex,
+      subject: validation.update.element.id.value,
+    );
+  }
+
+  void removeMissingRelationshipElementIds(
+    bool Function(CanvasElementId id) isMissing,
+  ) {
+    _read(SparseTransactionWorkLedger.relationship);
+    _resourceRelationshipElementIds.removeWhere(isMissing);
+  }
+
+  Iterable<CanvasElementId> readResourceRelationshipElementIds() {
+    _read(SparseTransactionWorkLedger.relationship);
+    return _resourceRelationshipElementIds;
+  }
+
+  void validateDeferredValidations() {
+    for (final entry in _deferredElementUpdateValidations.entries) {
+      final validation = entry.key;
+      _read(
+        SparseTransactionWorkLedger.deferredValidation,
+        journalIndex: entry.value,
+        subject: validation.update.element.id.value,
+      );
+      validation.validate();
+    }
+  }
+
+  _SparseTouchedCommittedFacts readTouchedFacts() {
+    _read(SparseTransactionWorkLedger.touched);
+    return _touched;
+  }
+
+  _SparseAcceptedLayerCandidates readAcceptedLayerCandidates() {
+    _read(SparseTransactionWorkLedger.layer);
+    return _acceptedLayerCandidates;
+  }
+
+  StoreRevisionDelta readRequiredRevisionDelta() {
+    _read(SparseTransactionWorkLedger.requiredDelta);
+    return _requiredMutationDelta;
+  }
+
+  List<String> readAdmittedElementIds() =>
+      _readAdmissionIds(_admittedElementIds);
+
+  List<String> readAdmittedLayerIds() => _readAdmissionIds(_admittedLayerIds);
+
+  List<String> readAdmittedResourceIds() =>
+      _readAdmissionIds(_admittedResourceIds);
+
+  // Sparse admission must remain exhaustive over the sealed mutation taxonomy.
+  // ignore: cyclomatic-complexity
+  void _recordAdmission(StoreSparseMutation mutation) {
+    switch (mutation) {
+      case StoreSparseEnsureLayer(:final id):
+        _addAdmission(_admittedLayerIds, id.value);
+      case StoreSparseAddElement(:final element, :final layerId):
+        _addAdmission(_admittedElementIds, element.id.value);
+        if (layerId != null) {
+          _addAdmission(_admittedLayerIds, layerId.value);
+        }
+      case StoreSparseUpsertResource(:final resource):
+        _addAdmission(_admittedResourceIds, resource.id.value);
+      case StoreSparseUpdateElement() ||
+          StoreSparseRemoveElement() ||
+          StoreSparseRemoveUnusedResource() ||
+          StoreSparseClearContent() ||
+          StoreSparseSetBackground() ||
+          StoreSparseSetCamera() ||
+          StoreSparseSetPalette():
+        break;
+    }
+  }
+
+  void _addAdmission(Set<String> ids, String id) {
+    if (ids.add(id)) {
+      _append(SparseTransactionWorkLedger.admission, subject: id);
+    }
+  }
+
+  void _recordRequiredMutationDelta(StoreRevisionDelta delta) {
+    _requiredMutationDelta = _requiredMutationDelta.merge(delta);
+    _append(SparseTransactionWorkLedger.requiredDelta);
+  }
+
+  List<String> _readAdmissionIds(Set<String> ids) {
+    _read(SparseTransactionWorkLedger.admission);
+    return List.unmodifiable(ids);
+  }
+
+  void _append(
+    SparseTransactionWorkLedger ledger, {
+    int? journalIndex,
+    String? subject,
+  }) {
+    _record(
+      phase: SparseTransactionWorkPhase.replay,
+      kind: SparseTransactionWorkKind.ledgerAppend,
+      ledger: ledger,
+      journalIndex: journalIndex,
+      subject: subject,
+    );
+  }
+
+  void _read(
+    SparseTransactionWorkLedger ledger, {
+    int? journalIndex,
+    String? subject,
+  }) {
+    _record(
+      phase: SparseTransactionWorkPhase.finalization,
+      kind: SparseTransactionWorkKind.ledgerRead,
+      ledger: ledger,
+      journalIndex: journalIndex,
+      subject: subject,
+    );
+  }
+
+  // Work events keep their optional attribution together so tests do not infer
+  // phase or ledger facts from a private counter layout.
+  // ignore: number-of-parameters
+  void _record({
+    required SparseTransactionWorkPhase phase,
+    required SparseTransactionWorkKind kind,
+    SparseTransactionWorkLedger? ledger,
+    int? journalIndex,
+    String? subject,
+  }) {
+    DocumentStoreKernel._recordSparseTransactionWork(
+      SparseTransactionWorkEvent(
+        phase: phase,
+        kind: kind,
+        ledger: ledger,
+        journalIndex: journalIndex,
+        subject: subject,
+      ),
+    );
+  }
+}
+
+// Layer candidates intentionally mirror the sealed sparse taxonomy so no
+// mutation family can bypass final base/candidate layer classification.
+// ignore: coupling-between-object-classes
+final class _SparseAcceptedLayerCandidates {
+  final Set<CanvasLayerId> ensuredLayerIds = {};
+  final Set<CanvasElementId> indexedAddedElementIds = {};
+  final Set<CanvasElementId> removedElementIds = {};
+  bool clearedContent = false;
+
+  // The exhaustive switch keeps every layer-relevant journal mutation visible.
+  // ignore: cyclomatic-complexity
+  bool addMutation(StoreSparseMutation mutation) {
+    switch (mutation) {
+      case StoreSparseEnsureLayer(:final id):
+        return ensuredLayerIds.add(id);
+      case StoreSparseAddElement(
+        :final element,
+        :final index,
+        :final background,
+      ):
+        return index != null &&
+            !background &&
+            indexedAddedElementIds.add(element.id);
+      case StoreSparseRemoveElement(:final id):
+        return removedElementIds.add(id);
+      case StoreSparseClearContent():
+        final wasCleared = clearedContent;
+        clearedContent = true;
+        return !wasCleared;
+      case StoreSparseUpdateElement() ||
+          StoreSparseUpsertResource() ||
+          StoreSparseRemoveUnusedResource() ||
+          StoreSparseSetBackground() ||
+          StoreSparseSetCamera() ||
+          StoreSparseSetPalette():
+        return false;
+    }
+  }
+}
+
 // Sparse finalization records only candidate-touched rows and aggregate
 // families so net no-op detection stays bounded to the sparse mutation input.
 // ignore: coupling-between-object-classes
 final class _SparseTouchedCommittedFacts {
-  _SparseTouchedCommittedFacts.fromMutations(
-    Iterable<StoreSparseMutation> mutations,
-  ) {
-    for (final mutation in mutations) {
-      addMutation(mutation);
-    }
-  }
-
   final Set<CanvasElementId> elementIds = {};
   final Set<CanvasLayerId> layerIds = {};
   final Set<CanvasResourceId> resourceIds = {};
@@ -2502,44 +2901,6 @@ final class _SparseTouchedCommittedFacts {
         camera = true;
       case StoreSparseSetPalette():
         palette = true;
-    }
-  }
-}
-
-// Sparse admission names every mutation family that can create ids; splitting
-// the switch would hide the admission contract behind indirect helpers.
-// ignore: coupling-between-object-classes
-final class _SparseAdmittedIds {
-  final Set<String> _elementIds = {};
-  final Set<String> _layerIds = {};
-  final Set<String> _resourceIds = {};
-
-  List<String> get elementIds => List.unmodifiable(_elementIds);
-  List<String> get layerIds => List.unmodifiable(_layerIds);
-  List<String> get resourceIds => List.unmodifiable(_resourceIds);
-
-  // Keeping all id-producing sparse mutations together makes missed admission
-  // cases visible next to the sealed mutation taxonomy.
-  // ignore: cyclomatic-complexity
-  void addMutation(StoreSparseMutation mutation) {
-    switch (mutation) {
-      case StoreSparseEnsureLayer(:final id):
-        _layerIds.add(id.value);
-      case StoreSparseAddElement(:final element, :final layerId):
-        _elementIds.add(element.id.value);
-        if (layerId != null) {
-          _layerIds.add(layerId.value);
-        }
-      case StoreSparseUpsertResource(:final resource):
-        _resourceIds.add(resource.id.value);
-      case StoreSparseUpdateElement() ||
-          StoreSparseRemoveElement() ||
-          StoreSparseRemoveUnusedResource() ||
-          StoreSparseClearContent() ||
-          StoreSparseSetBackground() ||
-          StoreSparseSetCamera() ||
-          StoreSparseSetPalette():
-        break;
     }
   }
 }
@@ -2829,6 +3190,7 @@ final class _IdAdmission {
           _record(
             IdAdmissionWorkPhase.acceptedAdmission,
             IdAdmissionWorkKind.sparseLedgerVisit,
+            subject: id,
           );
           accept(id);
         }
@@ -2866,11 +3228,16 @@ final class _IdAdmission {
     }
   }
 
-  void _record(IdAdmissionWorkPhase phase, IdAdmissionWorkKind kind) {
+  void _record(
+    IdAdmissionWorkPhase phase,
+    IdAdmissionWorkKind kind, {
+    String? subject,
+  }) {
     DocumentStoreKernel._recordIdAdmissionWork(
       prefix: prefix,
       phase: phase,
       kind: kind,
+      subject: subject,
     );
   }
 }

@@ -19,6 +19,7 @@ void main() {
 void _registerSparseStoreCommitTests() {
   group('sparse store commit prepare/install', () {
     _registerSparseInstallTests();
+    _registerSparseAccountingTests();
     _registerSparseValidationTests();
   });
 }
@@ -67,6 +68,16 @@ void _registerSparseInstallTests() {
   test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
+  );
+}
+
+void _registerSparseAccountingTests() {
+  test(
+    'uses one sparse replay and admits compensated transient ids',
+    () => expect(
+      _usesOneSparseReplayAndAdmitsCompensatedTransientIds,
+      returnsNormally,
+    ),
   );
 }
 
@@ -1310,6 +1321,178 @@ void _admitsSparseIdsWithoutDocumentScan() {
   expect(store.generateLayerId(), CanvasLayerId('l1'));
   expect(store.generateResourceId(), CanvasResourceId('r1'));
   expect(store.projectionBuildCount, 0);
+}
+
+// This direct trace ties replay work to the prepared ledger and installed
+// cursor, so a final-fact rebuild cannot hide compensated sparse IDs.
+// Keeping the full prepared/install/cursor witness together makes its causal
+// order explicit; splitting it would only distribute one invariant across
+// helpers without simplifying the direct Store evidence.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
+void _usesOneSparseReplayAndAdmitsCompensatedTransientIds() {
+  final store = DocumentStoreKernel();
+  final sparseWork = <SparseTransactionWorkEvent>[];
+  final admissionWork = <IdAdmissionWorkEvent>[];
+  final mutations = <StoreSparseMutation>[
+    StoreSparseAddElement(
+      element: CanvasRectElement(
+        id: CanvasElementId('e2'),
+        size: const Size(1, 1),
+      ),
+      background: true,
+    ),
+    StoreSparseUpsertResource(_transientResource('r2')),
+    StoreSparseAddElement(
+      element: CanvasRectElement(
+        id: CanvasElementId('e0'),
+        size: const Size(1, 1),
+      ),
+      background: true,
+    ),
+    StoreSparseUpsertResource(_transientResource('r0')),
+    StoreSparseRemoveElement(CanvasElementId('e2')),
+    StoreSparseAddElement(
+      element: CanvasRectElement(
+        id: CanvasElementId('e2'),
+        size: const Size(1, 1),
+      ),
+      background: true,
+    ),
+    StoreSparseRemoveElement(CanvasElementId('e0')),
+    StoreSparseRemoveElement(CanvasElementId('e2')),
+    StoreSparseRemoveUnusedResource(CanvasResourceId('r2')),
+    StoreSparseUpsertResource(_transientResource('r2')),
+    StoreSparseRemoveUnusedResource(CanvasResourceId('r0')),
+    StoreSparseRemoveUnusedResource(CanvasResourceId('r2')),
+    const StoreSparseSetBackground(CanvasBackground(color: Color(0xFF112233))),
+  ];
+  late PreparedSparseStoreCommit prepared;
+
+  DocumentStoreKernel.observeSparseTransactionWork(
+    sparseWork.add,
+    () => DocumentStoreKernel.observeIdAdmissionWork(admissionWork.add, () {
+      prepared = store.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta.structural()
+              .merge(const StoreRevisionDelta.resource())
+              .merge(const StoreRevisionDelta.background()),
+          mutations: mutations,
+        ),
+      );
+      store.installSparseCommit(prepared);
+    }),
+  );
+
+  expect(prepared.admittedElementIds, ['e2', 'e0']);
+  expect(prepared.admittedResourceIds, ['r2', 'r0']);
+  expect(prepared.admittedLayerIds, isEmpty);
+  expect(prepared.touchedFacts.addedElementIds, isEmpty);
+  expect(prepared.touchedFacts.removedElementIds, isEmpty);
+  expect(prepared.touchedFacts.resourceDescriptorChangedIds, isEmpty);
+  expect(store.elementById(CanvasElementId('e0')), isNull);
+  expect(store.elementById(CanvasElementId('e2')), isNull);
+  expect(store.resourceById(CanvasResourceId('r0')), isNull);
+  expect(store.resourceById(CanvasResourceId('r2')), isNull);
+  expect(store.generateElementId(), CanvasElementId('e1'));
+  expect(store.generateElementId(), CanvasElementId('e3'));
+  expect(store.generateResourceId(), CanvasResourceId('r1'));
+  expect(store.generateResourceId(), CanvasResourceId('r3'));
+  expect(
+    admissionWork
+        .where(
+          (event) =>
+              event.phase == IdAdmissionWorkPhase.acceptedAdmission &&
+              event.kind == IdAdmissionWorkKind.sparseLedgerVisit,
+        )
+        .map((event) => (event.prefix, event.subject)),
+    [('e', 'e2'), ('e', 'e0'), ('r', 'r2'), ('r', 'r0')],
+  );
+  expect(
+    sparseWork
+        .where(
+          (event) =>
+              event.phase == SparseTransactionWorkPhase.replay &&
+              event.kind == SparseTransactionWorkKind.journalVisit,
+        )
+        .map((event) => event.journalIndex),
+    List.generate(mutations.length, (index) => index),
+  );
+  expect(
+    sparseWork.where(
+      (event) =>
+          event.phase == SparseTransactionWorkPhase.replay &&
+          event.kind == SparseTransactionWorkKind.ledgerAppend &&
+          event.ledger == SparseTransactionWorkLedger.touched,
+    ),
+    hasLength(mutations.length),
+  );
+  expect(
+    sparseWork.where(
+      (event) =>
+          event.phase == SparseTransactionWorkPhase.replay &&
+          event.kind == SparseTransactionWorkKind.ledgerAppend &&
+          event.ledger == SparseTransactionWorkLedger.requiredDelta,
+    ),
+    hasLength(mutations.length),
+  );
+  expect(
+    sparseWork.where(
+      (event) =>
+          event.kind == SparseTransactionWorkKind.journalVisit &&
+          event.phase == SparseTransactionWorkPhase.finalization,
+    ),
+    isEmpty,
+  );
+  expect(
+    sparseWork.where(
+      (event) =>
+          event.phase == SparseTransactionWorkPhase.finalization &&
+          event.kind == SparseTransactionWorkKind.ledgerRead,
+    ),
+    isNotEmpty,
+  );
+  expect(
+    sparseWork.where(
+      (event) =>
+          event.phase == SparseTransactionWorkPhase.finalization &&
+          event.kind == SparseTransactionWorkKind.ledgerRead &&
+          event.ledger == SparseTransactionWorkLedger.requiredDelta,
+    ),
+    hasLength(1),
+  );
+
+  final noOpStore = DocumentStoreKernel();
+  final noOp = noOpStore.prepareSparseCommit(
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.structural().merge(
+        const StoreRevisionDelta.resource(),
+      ),
+      mutations: [
+        StoreSparseAddElement(
+          element: CanvasRectElement(
+            id: CanvasElementId('e0'),
+            size: const Size(1, 1),
+          ),
+          background: true,
+        ),
+        StoreSparseRemoveElement(CanvasElementId('e0')),
+        StoreSparseUpsertResource(_transientResource('r0')),
+        StoreSparseRemoveUnusedResource(CanvasResourceId('r0')),
+      ],
+    ),
+  );
+  expect(noOp.hasChanges, isFalse);
+  expect(noOp.admittedElementIds, isEmpty);
+  expect(noOp.admittedResourceIds, isEmpty);
+  expect(noOpStore.generateElementId(), CanvasElementId('e0'));
+  expect(noOpStore.generateResourceId(), CanvasResourceId('r0'));
+}
+
+CanvasImageResource _transientResource(String id) {
+  return CanvasImageResource(
+    id: CanvasResourceId(id),
+    source: CanvasResourceSource.appKey(id),
+  );
 }
 
 void _validatesSparseUpdateRevisionCoverage() {
