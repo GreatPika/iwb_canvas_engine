@@ -252,7 +252,6 @@ List<StoreSparseMutation> _seededTrace(int seed) {
         id: CanvasElementId('after-clear-$suffix'),
         size: const Size(4, 5),
       ),
-      layerId: CanvasLayerId('layer-a'),
     ),
     const StoreSparseClearContent(removeUnusedResources: true),
     StoreSparseSetBackground(
@@ -617,7 +616,7 @@ final class _CandidateStateOracle {
             element.id.value,
           );
         } else {
-          final targetLayer = layerId?.value ?? layerIds.first;
+          final targetLayer = layerId?.value ?? layerIds.last;
           final ids = contentByLayer[targetLayer]!;
           ids.insert(_clampedIndex(index, ids.length), element.id.value);
         }
