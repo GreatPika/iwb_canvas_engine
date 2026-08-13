@@ -427,12 +427,39 @@ void main() {
           expect(events.skip(afterFirstClear), isEmpty);
 
           editor.addContentElement(
-            CanvasElementId('after-clear'),
+            CanvasElementId('after-first-a'),
+            layerId: CanvasLayerId('layer-a'),
+          );
+          editor.addContentElement(
+            CanvasElementId('after-first-b'),
             layerId: CanvasLayerId('layer-b'),
           );
-          final afterAdd = events.length;
-          expect(editor.clearContent().map((id) => id.value), ['after-clear']);
-          final finalClearEvents = events.skip(afterAdd);
+          final afterFirstBarrierAdds = events.length;
+          expect(editor.clearContent().map((id) => id.value), [
+            'after-first-a',
+            'after-first-b',
+          ]);
+          final firstPostBarrierClearEvents = events.skip(
+            afterFirstBarrierAdds,
+          );
+          expect(
+            firstPostBarrierClearEvents.where(
+              (event) =>
+                  event.kind ==
+                      ElementRegistryStructuralEditorWorkKind
+                          .clearContentTraversalVisit &&
+                  event.order == ElementRegistryStructuralOrderKind.content,
+            ),
+            hasLength(2),
+          );
+
+          editor.addContentElement(
+            CanvasElementId('after-second'),
+            layerId: CanvasLayerId('layer-a'),
+          );
+          final afterSecondBarrierAdd = events.length;
+          expect(editor.clearContent().map((id) => id.value), ['after-second']);
+          final finalClearEvents = events.skip(afterSecondBarrierAdd);
           expect(
             finalClearEvents.where(
               (event) =>

@@ -269,8 +269,13 @@ final class ElementRegistryStructuralEditor {
   final ElementRegistry _base;
   final Map<CanvasLayerId, _StructuralLayerState> _layerStates = {};
   final Map<CanvasElementId, ElementLocationFacts?> _locationChanges = {};
+  final SplayTreeSet<_StructuralLayerState> _contentOrderStatesSinceClear =
+      SplayTreeSet(
+        (left, right) => left.insertionOrder.compareTo(right.insertionOrder),
+      );
   IndexedOrderSequence<CanvasLayerId, CanvasLayerId>? _layerOrder;
   IndexedOrderSequence<CanvasElementId, CanvasElementId>? _backgroundOrder;
+  var _nextLayerStateInsertionOrder = 0;
   int? _contentElementCount;
   var _contentCleared = false;
   var _changed = false;
@@ -355,7 +360,10 @@ final class ElementRegistryStructuralEditor {
       return false;
     }
     _openLayerOrder().insert(id, index: index);
-    _layerStates[id] = _StructuralLayerState.added(id);
+    _layerStates[id] = _StructuralLayerState.added(
+      id,
+      _nextLayerStateInsertionOrder++,
+    );
     _changed = true;
     return true;
   }
@@ -426,9 +434,10 @@ final class ElementRegistryStructuralEditor {
       return ids;
     }
     _contentCleared = true;
-    for (final state in _layerStates.values) {
+    for (final state in _contentOrderStatesSinceClear) {
       state.contentOrder?.clear();
     }
+    _contentOrderStatesSinceClear.clear();
     for (final id in ids) {
       _locationChanges[id] = null;
     }
@@ -830,7 +839,10 @@ final class ElementRegistryStructuralEditor {
     if (baseLocation == null) {
       return null;
     }
-    return _layerStates[id] = _StructuralLayerState.existing(baseLocation.row);
+    return _layerStates[id] = _StructuralLayerState.existing(
+      baseLocation.row,
+      _nextLayerStateInsertionOrder++,
+    );
   }
 
   _StructuralLayerState _requiredStateForLayer(CanvasLayerId id) {
@@ -859,10 +871,12 @@ final class ElementRegistryStructuralEditor {
   IndexedOrderSequence<CanvasElementId, CanvasElementId> _openContentOrder(
     _StructuralLayerState state,
   ) {
-    return state.contentOrder ??= _openOrder(
+    final order = state.contentOrder ??= _openOrder(
       ElementRegistryStructuralOrderKind.content,
       _contentIdsFor(state),
     );
+    _contentOrderStatesSinceClear.add(state);
+    return order;
   }
 
   IndexedOrderSequence<T, T> _openOrder<T>(
@@ -885,7 +899,7 @@ final class ElementRegistryStructuralEditor {
   }
 
   Iterable<CanvasElementId> _contentElementIdsSinceClear() sync* {
-    for (final state in _layerStates.values) {
+    for (final state in _contentOrderStatesSinceClear) {
       final order = state.contentOrder;
       if (order != null) {
         _record(
@@ -940,6 +954,7 @@ final class ElementRegistryStructuralEditor {
   void _sealMutableState() {
     _layerStates.clear();
     _locationChanges.clear();
+    _contentOrderStatesSinceClear.clear();
   }
 
   void _ensureOpen() {
@@ -967,12 +982,15 @@ final class ElementRegistryStructuralEditor {
 }
 
 final class _StructuralLayerState {
-  _StructuralLayerState.existing(LayerRow row) : id = row.id, baseRow = row;
+  _StructuralLayerState.existing(LayerRow row, this.insertionOrder)
+    : id = row.id,
+      baseRow = row;
 
-  _StructuralLayerState.added(this.id) : baseRow = null;
+  _StructuralLayerState.added(this.id, this.insertionOrder) : baseRow = null;
 
   final CanvasLayerId id;
   final LayerRow? baseRow;
+  final int insertionOrder;
   IndexedOrderSequence<CanvasElementId, CanvasElementId>? contentOrder;
 }
 
