@@ -319,7 +319,11 @@ final class ResourceTableWorkingDescriptors {
 
   bool removeUnreferenced(bool Function(CanvasResourceId id) isReferenced) {
     _checkOpen();
-    final ids = _clearInvalidation.candidates(_overlay, _record);
+    // Clear is the one authorized descriptor traversal. Snapshot its ordered
+    // candidates before removals so tail tombstones cannot invalidate the pass.
+    final ids = _clearInvalidation
+        .candidates(_overlay, _record)
+        .toList(growable: false);
     var removed = false;
     for (final id in ids) {
       if (contains(id) && !isReferenced(id)) {

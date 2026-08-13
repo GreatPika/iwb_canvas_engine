@@ -82,6 +82,10 @@ void _registerSparseResourceEditorTests() {
     () => expect(_boundsLaterResourceClears, returnsNormally),
   );
   test(
+    'clears mixed base and transaction-local tail descriptors in order',
+    () => expect(_clearsMixedBaseAndResourceTailDescriptors, returnsNormally),
+  );
+  test(
     'seals sparse resource editor buffers after publication and discard',
     () => expect(_sealsSparseResourceEditorBuffers, returnsNormally),
   );
@@ -1073,6 +1077,79 @@ void _expectBoundedRepeatedResourceClearWork(
     1,
   );
   expect(store.projectionBuildCount, 0);
+}
+
+void _clearsMixedBaseAndResourceTailDescriptors() {
+  final scenario = _MixedResourceClearScenario();
+  final work = _SelectiveResourceTableWork();
+
+  final frozen = scenario.run(work);
+  scenario.expectResult(frozen, work);
+}
+
+final class _MixedResourceClearScenario {
+  final baseRetained = CanvasResourceId('base-retained');
+  final baseRemoved = CanvasResourceId('base-removed');
+  final tailRemoved = CanvasResourceId('tail-removed');
+  final tailRetained = CanvasResourceId('tail-retained');
+
+  ResourceTable run(_SelectiveResourceTableWork work) =>
+      ResourceTableEditor.observeWork(
+        work.record,
+        () => ResourceTableEditor.editSparse(_base, (editor) {
+          _upsertTail(editor);
+          expect(editor.descriptors.removeUnreferenced(_isReferenced), isTrue);
+          editor.normalizeFinalFacts(acceptedRevision: 2);
+          return editor.freeze();
+        }),
+      );
+
+  void expectResult(ResourceTable frozen, _SelectiveResourceTableWork work) {
+    expect(frozen.descriptors.keys, [baseRetained, tailRetained]);
+    expect(work.idsFor(ResourceTableEditorWorkKind.clearEntryVisit), [
+      baseRetained,
+      baseRemoved,
+      tailRemoved,
+      tailRetained,
+    ]);
+    expect(work.idsFor(ResourceTableEditorWorkKind.currentRemove), [
+      baseRemoved,
+      tailRemoved,
+    ]);
+    expect(work.count(ResourceTableEditorWorkKind.freeze), 1);
+    expect(work.count(ResourceTableEditorWorkKind.immutablePublication), 1);
+  }
+
+  ResourceTable get _base => ResourceTable([
+    CanvasImageResource(
+      id: baseRetained,
+      source: CanvasResourceSource.appKey('base-retained'),
+    ),
+    CanvasVectorResource(
+      id: baseRemoved,
+      source: CanvasResourceSource.appKey('base-removed'),
+    ),
+  ], resourceRevision: 1);
+
+  void _upsertTail(ResourceTableEditor editor) {
+    editor.descriptors.upsert(
+      CanvasImageResource(
+        id: tailRemoved,
+        source: CanvasResourceSource.appKey('tail-removed'),
+      ),
+      resourceRevision: 1,
+    );
+    editor.descriptors.upsert(
+      CanvasVectorResource(
+        id: tailRetained,
+        source: CanvasResourceSource.appKey('tail-retained'),
+      ),
+      resourceRevision: 1,
+    );
+  }
+
+  bool _isReferenced(CanvasResourceId id) =>
+      id == baseRetained || id == tailRetained;
 }
 
 DocumentStoreKernel _resourceOnlyStore(int count) {
@@ -2514,6 +2591,12 @@ final class _SelectiveResourceTableWork {
             event.kind == kind && (phase == null || event.phase == phase),
       )
       .length;
+
+  List<CanvasResourceId> idsFor(ResourceTableEditorWorkKind kind) => _events
+      .where((event) => event.kind == kind)
+      .map((event) => event.id)
+      .whereType<CanvasResourceId>()
+      .toList(growable: false);
 
   void record(ResourceTableSelectiveMutationEvent event) => _events.add(event);
 }
