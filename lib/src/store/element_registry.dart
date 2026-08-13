@@ -252,53 +252,6 @@ final class ElementRegistry {
       zoneValues: {ElementRegistryStructuralEditor._workZoneKey: sink},
     );
   }
-
-  // Sparse family rows are adopted once after their editor freezes; all other
-  // committed registry facts keep their existing immutable lifecycle.
-  ElementRegistry adoptFamilyTables(FamilyTables familyTables) {
-    FamilyTables.recordSparseFamilyAdoption(familyTables);
-    return ElementRegistry._withUpdatedFamilies(
-      familyTables: familyTables,
-      layerTable: layerTable,
-      backgroundElementIds: backgroundElementIds,
-      contentElementOrder: contentElementOrder,
-      frameElementOrder: frameElementOrder,
-      frameOrderTokensById: frameOrderTokensById,
-      elementLocationFacts: elementLocationFacts,
-    );
-  }
-
-  ElementRegistry ensureLayer(CanvasLayerId id, {int? index}) {
-    return editSparseStructure(this, (editor) {
-      editor.ensureLayer(id, index: index);
-      return editor.freeze(familyTables: familyTables);
-    });
-  }
-
-  ElementRegistry addElement(
-    CanvasElement element, {
-    CanvasLayerId? layerId,
-    int? index,
-  }) {
-    return editSparseStructure(this, (editor) {
-      editor.addContentElement(element.id, layerId: layerId, index: index);
-      return editor.freeze(familyTables: familyTables.addElement(element));
-    });
-  }
-
-  ElementRegistry addBackgroundElement(CanvasElement element, {int? index}) {
-    return editSparseStructure(this, (editor) {
-      editor.addBackgroundElement(element.id, index: index);
-      return editor.freeze(familyTables: familyTables.addElement(element));
-    });
-  }
-
-  ElementRegistry removeElement(CanvasElementId id) {
-    return editSparseStructure(this, (editor) {
-      editor.removeElement(id);
-      return editor.freeze(familyTables: familyTables.removeElement(id));
-    });
-  }
 }
 
 // The editor keeps current layer and element placement facts together with the

@@ -254,10 +254,24 @@ void main() {
       late ElementRegistry backgroundRemoved;
       late ElementRegistry cleared;
       LayerTable.observeWork(work.record, () {
-        removed = registry.removeElement(CanvasElementId('e0'));
-        backgroundRemoved = removed.removeElement(
-          CanvasElementId('background'),
-        );
+        removed = ElementRegistry.editSparseStructure(registry, (editor) {
+          editor.removeElement(CanvasElementId('e0'));
+          return editor.freeze(
+            familyTables: registry.familyTables.removeElement(
+              CanvasElementId('e0'),
+            ),
+          );
+        });
+        backgroundRemoved = ElementRegistry.editSparseStructure(removed, (
+          editor,
+        ) {
+          editor.removeElement(CanvasElementId('background'));
+          return editor.freeze(
+            familyTables: removed.familyTables.removeElement(
+              CanvasElementId('background'),
+            ),
+          );
+        });
         cleared = ElementRegistry.editSparseStructure(backgroundRemoved, (
           editor,
         ) {
@@ -383,7 +397,15 @@ _LayerWork _observePlacementConsumer() {
   final work = _LayerWork();
 
   LayerTable.observeWork(work.record, () {
-    registry.addElement(_rect('placement'), layerId: CanvasLayerId('l3'));
+    ElementRegistry.editSparseStructure(registry, (editor) {
+      editor.addContentElement(
+        CanvasElementId('placement'),
+        layerId: CanvasLayerId('l3'),
+      );
+      return editor.freeze(
+        familyTables: registry.familyTables.addElement(_rect('placement')),
+      );
+    });
   });
 
   return work;
