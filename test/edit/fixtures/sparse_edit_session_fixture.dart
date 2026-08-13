@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/store/resource_table.dart';
+import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
+
+import '../../support/document_store_with_document.dart';
 
 void main() {
   group('sparse edit session seam', () {
@@ -968,8 +972,15 @@ void _expectRemoveUnusedResourceBarrierThroughSparseSession() {
 
   _expectSparseClearTraceMatchesOracle(removeBeforeClear);
   _expectSparseClearTraceMatchesOracle(clearBeforeRemove);
+  _expectSparseCommitInstallsTrace(removeBeforeClear);
+  _expectSparseCommitInstallsTrace(clearBeforeRemove);
 
   expect(removeBeforeClear.actualResults[0].changed, isFalse);
+  expect(removeBeforeClear.sparseCommit.mutations, hasLength(1));
+  expect(
+    removeBeforeClear.sparseCommit.mutations.single,
+    isA<StoreSparseClearContent>(),
+  );
   final retainedClear = removeBeforeClear.actualResults[1].clearResult;
   expect(retainedClear?.didClearContent, isTrue);
   expect(retainedClear?.removedElementIds, [CanvasElementId('content-image')]);
@@ -994,6 +1005,19 @@ void _expectRemoveUnusedResourceBarrierThroughSparseSession() {
   expect(removedClear?.removedElementIds, [CanvasElementId('content-image')]);
   expect(removedClear?.removedResourceIds, isEmpty);
   expect(clearBeforeRemove.actualResults[1].changed, isTrue);
+  expect(clearBeforeRemove.sparseCommit.mutations, hasLength(2));
+  expect(
+    clearBeforeRemove.sparseCommit.mutations.first,
+    isA<StoreSparseClearContent>(),
+  );
+  expect(
+    clearBeforeRemove.sparseCommit.mutations.last,
+    isA<StoreSparseRemoveUnusedResource>().having(
+      (mutation) => mutation.id,
+      'resource id',
+      resourceId,
+    ),
+  );
   expect(clearBeforeRemove.document.resources.map((resource) => resource.id), [
     CanvasResourceId('background-image-resource'),
     CanvasResourceId('background-vector-resource'),
@@ -1001,12 +1025,131 @@ void _expectRemoveUnusedResourceBarrierThroughSparseSession() {
   expect(clearBeforeRemove.session.touchedSet.removedElementIds, {
     CanvasElementId('content-image'),
   });
-  expect(
-    clearBeforeRemove.session.touchedSet.resourceDescriptorChangedIds,
-    {resourceId},
-  );
+  expect(clearBeforeRemove.session.touchedSet.resourceDescriptorChangedIds, {
+    resourceId,
+  });
   expect(clearBeforeRemove.session.revisionDelta.structural, isTrue);
   expect(clearBeforeRemove.session.revisionDelta.resource, isTrue);
+}
+
+void _expectSparseCommitInstallsTrace(_SparseClearTraceOutcome outcome) {
+  final store = documentStoreWithDocument(
+    _documentWithClearBackgroundResources(includeUnusedResource: false),
+  );
+  final prepared = store.prepareSparseCommit(outcome.sparseCommit);
+
+  expect(
+    prepared.hasChanges,
+    outcome.expectedEffects.structural || outcome.expectedEffects.resource,
+  );
+  expect(
+    prepared.touchedFacts.addedElementIds,
+    outcome.expectedEffects.addedElementIds,
+  );
+  expect(
+    prepared.touchedFacts.removedElementIds,
+    outcome.expectedEffects.removedElementIds,
+  );
+  expect(
+    prepared.touchedFacts.resourceDescriptorChangedIds,
+    outcome.expectedEffects.resourceDescriptorChangedIds,
+  );
+  expect(
+    prepared.touchedFacts.resourceVisualChangedIds,
+    outcome.expectedEffects.resourceDescriptorChangedIds,
+  );
+  expect(
+    prepared.touchedFacts.layerIds,
+    outcome.expectedEffects.structural
+        ? {CanvasLayerId('layer-a')}
+        : <CanvasLayerId>{},
+  );
+  expect(prepared.touchedFacts.backgroundLayerChanged, isFalse);
+  expect(prepared.touchedFacts.background, isFalse);
+  expect(prepared.touchedFacts.grid, isFalse);
+  expect(prepared.revisionDelta.structural, outcome.expectedEffects.structural);
+  expect(prepared.revisionDelta.resource, outcome.expectedEffects.resource);
+
+  store.installSparseCommit(prepared);
+
+  expect(
+    store.backgroundElementIds,
+    outcome.expectedDocument.backgroundElements.map((element) => element.id),
+  );
+  _expectTraceElements([
+    for (final id in store.backgroundElementIds)
+      _requireInstalledTraceElement(store.elementById(id), id),
+  ], outcome.expectedDocument.backgroundElements);
+  expect(
+    store.elementIdsInLayer(CanvasLayerId('layer-a')),
+    outcome.expectedDocument.layers.single.elements.map(
+      (element) => element.id,
+    ),
+  );
+  _expectTraceElements([
+    for (final id in store.elementIdsInLayer(CanvasLayerId('layer-a')))
+      _requireInstalledTraceElement(store.elementById(id), id),
+  ], outcome.expectedDocument.layers.single.elements);
+  expect(
+    store.resourceIds,
+    outcome.expectedDocument.resources.map((resource) => resource.id),
+  );
+  for (final resource in outcome.expectedDocument.resources) {
+    _expectInstalledTraceDescriptor(
+      store.resourceDescriptor(resource.id),
+      resource,
+    );
+  }
+}
+
+void _expectInstalledTraceDescriptor(
+  StoreResourceDescriptorFacts? actual,
+  CanvasResource expected,
+) {
+  if (actual == null) {
+    fail('installed trace descriptor is absent for ${expected.id}.');
+  }
+  final descriptor = actual;
+  expect(descriptor.id, expected.id);
+  expect(descriptor.resourceRevision, 1);
+  switch (expected) {
+    case CanvasImageResource(
+      :final source,
+      :final mimeType,
+      :final contentHash,
+      :final byteLength,
+      :final metadata,
+    ):
+      expect(descriptor, isA<StoreImageResourceDescriptorFacts>());
+      final image = descriptor as StoreImageResourceDescriptorFacts;
+      expect(image.appKey, (source as CanvasAppKeyResourceSource).key);
+      expect(image.mimeType, mimeType);
+      expect(image.contentHash, contentHash);
+      expect(image.byteLength, byteLength);
+      expect(image.metadata, metadata);
+    case CanvasVectorResource(
+      :final source,
+      :final contentHash,
+      :final byteLength,
+      :final metadata,
+    ):
+      expect(descriptor, isA<StoreVectorResourceDescriptorFacts>());
+      final vector = descriptor as StoreVectorResourceDescriptorFacts;
+      expect(vector.appKey, (source as CanvasAppKeyResourceSource).key);
+      expect(vector.contentHash, contentHash);
+      expect(vector.byteLength, byteLength);
+      expect(vector.metadata, metadata);
+  }
+}
+
+CanvasElement _requireInstalledTraceElement(
+  CanvasElement? element,
+  CanvasElementId id,
+) {
+  if (element == null) {
+    fail('installed trace element is absent for $id.');
+  }
+  return element;
 }
 
 void _sparseClearRemainsAnOrderedJournalBarrier() {
@@ -1098,10 +1241,12 @@ _SparseClearTraceOutcome _runSparseClearTrace(List<_ClearTraceAction> trace) {
     actualResults.add(action.applyToSession(session));
     expectedResults.add(action.applyToOracle(oracle));
   }
+  final sparseCommit = session.sparseCommit;
 
   return _SparseClearTraceOutcome(
     actualResults: actualResults,
     expectedResults: expectedResults,
+    sparseCommit: sparseCommit,
     document: session.readDraftDocument(),
     expectedDocument: oracle.toDocument(),
     session: session,
@@ -1798,6 +1943,7 @@ final class _SparseClearTraceOutcome {
   const _SparseClearTraceOutcome({
     required this.actualResults,
     required this.expectedResults,
+    required this.sparseCommit,
     required this.document,
     required this.expectedDocument,
     required this.session,
@@ -1806,6 +1952,7 @@ final class _SparseClearTraceOutcome {
 
   final List<_ClearTraceResult> actualResults;
   final List<_ClearTraceResult> expectedResults;
+  final StoreSparseCommit sparseCommit;
   final CanvasDocument document;
   final CanvasDocument expectedDocument;
   final EditSession session;
