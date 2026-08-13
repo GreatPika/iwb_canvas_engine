@@ -1082,9 +1082,7 @@ final class DocumentStoreKernel {
           : FamilyTablesDecisionResult.unchanged,
     );
     if (didClearElements) {
-      for (final id in contentElementIds) {
-        familyEditor.removeElement(id);
-      }
+      _clearContentFamilyRows(document.elements, familyEditor);
     }
     final clearedElements = didClearElements
         ? document.elements.clearContentStructure()
@@ -1121,6 +1119,22 @@ final class DocumentStoreKernel {
       ),
       requiredRevisionDelta: requiredRevisionDelta,
     );
+  }
+
+  void _clearContentFamilyRows(
+    ElementRegistry elements,
+    FamilyTablesEditor familyEditor,
+  ) {
+    // With no background rows, the all-family clear is exactly content removal
+    // and keeps the editor's family-buffer lifecycle normalized. Background
+    // rows instead require selective preservation by content ID.
+    if (elements.backgroundElementIds.isEmpty) {
+      familyEditor.clearElements();
+      return;
+    }
+    for (final id in elements.contentElementOrder) {
+      familyEditor.removeElement(id);
+    }
   }
 
   _SparseMutationResult _setBackground(
