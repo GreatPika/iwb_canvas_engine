@@ -349,6 +349,7 @@ final class _ResourceDescriptorOverlay {
   int _count;
 
   int get count => _count;
+  bool get hasBaseOrder => _tailIds.isEmpty;
   Set<CanvasResourceId> get changedIds => Set.unmodifiable(_overrides.keys);
 
   StoreResourceDescriptorFacts? descriptor(CanvasResourceId id) =>
@@ -431,7 +432,6 @@ void _normalizeResourceDescriptorOverlay(
     final after = overlay.descriptor(id);
     if (before != null && after != null && after.hasSameResourceFacts(before)) {
       overlay._overrides.remove(id);
-      overlay._tailIds.remove(id);
       record(ResourceTableEditorWorkKind.normalizationWrite, id: id);
     } else if (after != null && after.resourceRevision != acceptedRevision) {
       overlay._overrides[id] = after.withResourceRevision(acceptedRevision);
@@ -482,7 +482,7 @@ ResourceTable _freezeResourceTable(
   _ResourceDescriptorOverlay overlay,
   _ResourceEditorEventRecorder record,
 ) {
-  if (overlay.hasSameFactsAsBase(null)) {
+  if (overlay.hasSameFactsAsBase(null) && overlay.hasBaseOrder) {
     record(
       ResourceTableEditorWorkKind.finalIdentity,
       retainsBaseIdentity: true,

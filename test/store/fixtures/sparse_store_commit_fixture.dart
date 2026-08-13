@@ -82,6 +82,10 @@ void _registerSparseResourceEditorTests() {
     () => expect(_boundsLaterResourceClears, returnsNormally),
   );
   test(
+    'preserves a reinserted resource position under scalar acceptance',
+    () => expect(_preservesReinsertedResourcePosition, returnsNormally),
+  );
+  test(
     'clears mixed base and transaction-local tail descriptors in order',
     () => expect(_clearsMixedBaseAndResourceTailDescriptors, returnsNormally),
   );
@@ -1077,6 +1081,79 @@ void _expectBoundedRepeatedResourceClearWork(
     1,
   );
   expect(store.projectionBuildCount, 0);
+}
+
+void _preservesReinsertedResourcePosition() {
+  final first = CanvasResourceId('first');
+  final second = CanvasResourceId('second');
+  final store = documentStoreWithDocument(
+    _reinsertedResourceBase(first, second),
+  );
+
+  final prepared = store.prepareSparseCommit(_reinsertedResourceCommit(first));
+  _expectPreparedReinsertedResourcePosition(prepared, first, second);
+
+  store.installSparseCommit(prepared);
+  _expectInstalledReinsertedResourcePosition(store, first, second);
+}
+
+CanvasDocument _reinsertedResourceBase(
+  CanvasResourceId first,
+  CanvasResourceId second,
+) => CanvasDocument(
+  resources: [_reinsertedResource(first), _reinsertedResource(second)],
+);
+
+StoreSparseCommit _reinsertedResourceCommit(CanvasResourceId first) =>
+    StoreSparseCommit(
+      revisionDelta: const StoreRevisionDelta.background(),
+      mutations: [
+        StoreSparseRemoveUnusedResource(first),
+        StoreSparseUpsertResource(_reinsertedResource(first)),
+        const StoreSparseSetBackground(
+          CanvasBackground(color: Color(0xFF112233)),
+        ),
+      ],
+    );
+
+CanvasImageResource _reinsertedResource(CanvasResourceId id) =>
+    CanvasImageResource(id: id, source: CanvasResourceSource.appKey(id.value));
+
+void _expectPreparedReinsertedResourcePosition(
+  PreparedSparseStoreCommit prepared,
+  CanvasResourceId first,
+  CanvasResourceId second,
+) {
+  expect(prepared.hasChanges, isTrue);
+  expect(prepared.revisionDelta.background, isTrue);
+  expect(prepared.revisionDelta.resource, isFalse);
+  expect(prepared.touchedFacts.resourceDescriptorChangedIds, isEmpty);
+  expect(prepared.document.resourceTable.descriptors.keys, [second, first]);
+  _expectReinsertedResourceFacts(prepared, first, second);
+}
+
+void _expectInstalledReinsertedResourcePosition(
+  DocumentStoreKernel store,
+  CanvasResourceId first,
+  CanvasResourceId second,
+) {
+  expect(store.resourceIds, [second, first]);
+  expect(store.resourceRevision, 1);
+}
+
+void _expectReinsertedResourceFacts(
+  PreparedSparseStoreCommit prepared,
+  CanvasResourceId first,
+  CanvasResourceId second,
+) {
+  final firstDescriptor = prepared.document.resourceTable.descriptors[first];
+  final secondDescriptor = prepared.document.resourceTable.descriptors[second];
+  expect(firstDescriptor, isA<StoreImageResourceDescriptorFacts>());
+  expect(secondDescriptor, isA<StoreImageResourceDescriptorFacts>());
+  expect(firstDescriptor?.appKey, 'first');
+  expect(secondDescriptor?.appKey, 'second');
+  expect(firstDescriptor?.resourceRevision, 1);
+  expect(secondDescriptor?.resourceRevision, 1);
 }
 
 void _clearsMixedBaseAndResourceTailDescriptors() {
