@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:meta/meta.dart' show visibleForTesting;
+
 import '../codec/validated_import_draft.dart';
 import '../contracts/internal/touched_set.dart';
 import '../contracts/public/canvas_document.dart';
@@ -20,6 +22,7 @@ import 'resource_edit_policy.dart';
 import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
 
+@visibleForTesting
 enum DraftClearContentWorkEvent {
   backgroundReferencePass,
   backgroundElementVisit,
@@ -86,6 +89,7 @@ final class DraftDocument {
   }
 
   /// Records semantic clear phases in a zone-local observer only under asserts.
+  @visibleForTesting
   static T observeClearContentWork<T>(
     void Function(DraftClearContentWorkEvent event) sink,
     T Function() operation,
