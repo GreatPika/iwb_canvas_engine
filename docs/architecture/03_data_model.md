@@ -129,12 +129,51 @@ RectRows
 
 Each row table stores only family-specific fields plus common packed fields needed by render/hit/update. Public DTOs are projections.
 
+`FamilyTables` keeps element membership directly in those seven maps: a
+membership lookup probes the maps and does not construct a document-wide ID
+union. Its sparse working owner is the consume-once `FamilyTablesEditor`.
+Each affected family opens one lazy copy-on-write buffer; all current-row
+decisions and final-equality normalization read that editor rather than a
+successive immutable table. After accepted normalization it freezes one
+`FamilyTables` value. Untouched family maps retain their base identity.
+
+The same owner keeps the two derived resource-reference summaries: image
+`resourceId -> count` and vector `resourceId -> count`. The editor records
+only affected-ID deltas while it changes rows, then materializes a changed
+summary once at its accepted freeze. Untouched summaries retain their base
+identity. These counts are row-derived facts, not descriptor ownership or a
+general element index.
+
+`LayerTable` keeps ordered layer rows as the ordering truth and publishes an
+immutable `layerId -> {row, index}` fact in the same construction or update.
+Targeted layer membership, row/index, placement, and per-layer element reads
+use that fact. `ElementRegistry` continues to own its distinct element
+location facts and frame-order tokens; the layer fact does not replace them.
+
 `ResourceTable` stores sealed descriptor facts. The image fact variant carries
 its optional MIME field; the vector variant contains no MIME kind inference. A
 resource reference is checked once by `DocumentStoreKernel` against the final
 `CommittedDocument` candidate, rather than against a resource-id set while
 family rows are being assembled. Missing ids and existing wrong descriptor kinds
 remain distinct typed relationship failures.
+
+For a complete committed document, `DocumentStoreKernel` seeds generated-ID
+admission by immediately enumerating the authoritative `FamilyTables`,
+`LayerTable`, and `ResourceTable` owners. Construction, reset, replacement,
+prepared load, and Schema v1 import use this owner enumeration; sparse accepted
+work instead admits its existing ordered ledger. Committed membership mirrors
+and their append overlays are retired.
+
+The admission owner maintains each generated prefix cursor at its first free
+ID. Its private element candidate read is non-mutating; current explicit
+element generation reads that candidate and synchronously reserves it, then
+advances the same cursor as needed. No candidate, ticket, or separate
+reservation history is retained outside admission.
+
+Prepared Schema v1 import and staged document load retain one immutable
+`CanvasDocumentSummary` captured from the completed payload's element, layer,
+and resource scalar counts. Its read view retains no membership inventory and
+does not enumerate committed owners when the summary is read.
 
 Runtime view camera is not stored in `CommittedDocument`. It is runtime state
 owned by `RuntimeRoot` through the camera boundary. Runtime construction creates
