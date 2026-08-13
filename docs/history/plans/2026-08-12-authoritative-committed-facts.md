@@ -175,7 +175,7 @@ Work Budget And Cost Displacement: Construction/import/reset may enumerate each 
 
 ## Execution Units
 
-### [ ] Unit 1: Replace computed family membership with direct owner lookup
+### [x] Unit 1: Replace computed family membership with direct owner lookup
 
 Owner: `FamilyTables`
 Boundary: Allowed production file: `lib/src/store/family_tables.dart`. Existing production consumers through `ElementRegistry.containsElement` and `DocumentStoreKernel` relationship/removal checks adopt the changed owner seam without new interfaces or consumer files. Construction-local duplicate detectors remain unchanged.
@@ -190,7 +190,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Make current batch family replacement lazy per family
+### [x] Unit 2: Make current batch family replacement lazy per family
 
 Owner: `FamilyTables` batch replacement buffer with `ElementRegistry.updateElements` as its existing production consumer
 Boundary: Allowed production file: `lib/src/store/family_tables.dart`. Current `replaceElements` remains the complete batch replacement seam and must consume one owner-local lazy buffer algorithm. This unit may change only replacement of existing same-family rows and one resulting immutable `FamilyTables` freeze; it must not change add/remove/clear, sparse transaction lifetime, current policy reads, base-final/touched computation, normalization, reference summaries, other committed owners, or `DocumentStoreKernel` routing. No second editor abstraction or future-only method may be introduced.
@@ -205,7 +205,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 3: Cut over sparse family state to one transaction editor
+### [x] Unit 3: Cut over sparse family state to one transaction editor
 
 Owner: `FamilyTables` consume-once sparse family editor with `DocumentStoreKernel` as its current production decision consumer
 Boundary: Allowed production files: `lib/src/store/family_tables.dart`, `lib/src/store/element_registry.dart`, `lib/src/store/committed_document.dart`, and `lib/src/store/document_store_kernel.dart`. The editor must reuse and promote Unit 2's per-family lazy-buffer algorithm from per-batch to transaction lifetime rather than adding a parallel implementation. It owns only current family row maps, direct family queries, family base-final/touched comparison, family-row normalization, and one freeze/discard lifecycle. It must not own split reference summaries/deltas yet, layer/resource/order/revision/admission candidate state, edit/draft/runtime state, or the general `StoreTransactionCandidate`. Existing scan-based working reference semantics remain complete until Unit 4. Per-mutation immutable family publication and every obsolete `replaceElements`/`updateElements` wrapper retire in this unit when their final production consumer moves.
@@ -225,7 +225,7 @@ Depends On:
 - Unit 1 — produces: direct family membership semantics; consumed as: committed-base and current-editor membership behavior during the sparse family cutover
 - Unit 2 — produces: owner-local lazy per-family replacement buffers with untouched-map sharing; consumed as: the row mutation/freeze algorithm promoted from call lifetime to one sparse transaction
 
-### [ ] Unit 4: Publish exact split reference facts through the family editor
+### [x] Unit 4: Publish exact split reference facts through the family editor
 
 Owner: `FamilyTables` committed summaries and its authoritative sparse family editor count-delta lifecycle
 Boundary: Allowed production files: `lib/src/store/family_tables.dart`, `lib/src/store/element_registry.dart`, `lib/src/store/committed_document.dart`, and `lib/src/store/document_store_kernel.dart`; Schema v1 family construction may adopt the owner builder through `lib/src/store/schema_v1_store_import.dart`. This unit may add only image/vector committed summaries, flat affected-id count deltas and clear state inside the existing editor, current logical reference reads, and one summary freeze/discard lifecycle. It may not reopen/copy family rows, add a kernel-owned count mirror, or introduce any other general candidate state.
@@ -244,7 +244,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 3 — produces: exclusive current family editor view, per-family transaction buffers, and single normalized freeze; consumed as: the sole row lifecycle that owns split count deltas and summary publication
 
-### [ ] Unit 5: Publish direct layer identity and location with ordered rows
+### [x] Unit 5: Publish direct layer identity and location with ordered rows
 
 Owner: `LayerTable`
 Boundary: Allowed production files: `lib/src/store/layer_table.dart`, `lib/src/store/element_registry.dart`, `lib/src/store/committed_document.dart`, and `lib/src/store/document_store_kernel.dart`; Schema v1 layer construction may adopt the owner builder through `lib/src/store/schema_v1_store_import.dart`. Existing `ElementRegistry.elementLocationFacts` remains untouched as the element-location owner.
@@ -261,7 +261,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 6: Normalize admission cursors and consume a non-mutating element candidate
+### [x] Unit 6: Normalize admission cursors and consume a non-mutating element candidate
 
 Owner: `_IdAdmission` and its `DocumentStoreKernel` generation consumer
 Boundary: Allowed production file: `lib/src/store/document_store_kernel.dart`. The private read-only capability is element-only for current explicit generation; its semantic owner event is stable, while method/type/helper decomposition remains open. Draw/line call sites, public APIs, runtime routes, and ticket/lease/rollback abstractions are forbidden.
@@ -278,7 +278,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 7: Seed admission from owners and retire committed membership mirrors
+### [x] Unit 7: Seed admission from owners and retire committed membership mirrors
 
 Owner: `DocumentStoreKernel` complete-admission lifecycle with `FamilyTables`, `LayerTable`, and `ResourceTable` as identity owners
 Boundary: Allowed production files: `lib/src/store/family_tables.dart`, `lib/src/store/layer_table.dart`, `lib/src/store/resource_table.dart`, `lib/src/store/element_registry.dart`, `lib/src/store/committed_document.dart`, `lib/src/store/document_store_kernel.dart`, and `lib/src/store/schema_v1_store_import.dart`. Immediate enumeration is introduced only with its complete-admission consumer in this unit. Local construction duplicate sets, prepared payload and private prepared id views, token/location/order maps, existing element locations, and admission reservation history are explicitly preserved for Unit 8 or their distinct lifecycles.
@@ -297,7 +297,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 6 — produces: normalized admission lifecycle; consumed as: the destination invariant for complete owner seeding
 
-### [ ] Unit 8: Retire prepared-load membership inventories
+### [x] Unit 8: Retire prepared-load membership inventories
 
 Owner: Prepared Schema v1 store import and staged document load
 Boundary: Allowed production files: `lib/src/store/schema_v1_store_import.dart` and `lib/src/edit/staged_document_load.dart`. Allowed verification retirement surfaces are the existing prepared import/load owner fixtures. Complete admission, committed owner facts, codec/schema behavior, interaction cleanup, runtime install, and public publication routes are consumers to preserve, not implementation scope.
@@ -314,7 +314,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 9: Record the delivered committed-fact ownership
+### [x] Unit 9: Record the delivered committed-fact ownership
 
 Owner: Runtime data-model documentation
 Boundary: Allowed file: `docs/architecture/03_data_model.md`. No other architecture/contract/ADR/design/plan artifact, generated view, or later-contract behavior is authored here.
