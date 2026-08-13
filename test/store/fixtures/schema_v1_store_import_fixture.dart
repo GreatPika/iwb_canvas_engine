@@ -16,6 +16,8 @@ import 'package:iwb_canvas_engine/src/store/resource_table.dart';
 import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import 'family_tables_telemetry.dart';
+
 void main() {
   _testValidImportPreparesAndInstallsRows();
   _testPreparedSummaryIsOneImmutableSnapshot();
@@ -225,14 +227,16 @@ void _testDraftPreparedSummaryDoesNotEnumerateOwners() {
 }
 
 final class _OwnerEnumerationTrace {
+  final familyTelemetry = FamilyTablesTelemetry();
   int familyOpenCount = 0;
   int layerOpenCount = 0;
   int resourceOpenCount = 0;
 
   T observe<T>(T Function() operation) {
-    return FamilyTables.observeEnumeration(
+    return FamilyTables.observeTelemetry(
       (event) {
-        if (event == FamilyTablesEnumerationEvent.open) {
+        familyTelemetry.record(event);
+        if (event.kind == FamilyTablesTelemetryKind.enumerationOpen) {
           familyOpenCount += 1;
         }
       },

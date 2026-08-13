@@ -8,6 +8,8 @@ import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import 'family_tables_telemetry.dart';
+
 // This fixture keeps the accepted, no-op, failure, and clear lifecycle matrix
 // together, so the all-family freeze invariant remains reviewable in one view.
 // ignore: halstead-volume, source-lines-of-code
@@ -15,10 +17,10 @@ void main() {
   test('normalizes a final-equal row before one freeze', () {
     final base = CommittedDocument(_baseDocument());
     final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-    final work = FamilyTablesWork();
+    final work = FamilyTablesTelemetry();
 
-    final prepared = FamilyTables.observeWork(
-      work,
+    final prepared = FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(_changedAndFinalEqualRows()),
     );
     final frozen = prepared.document.elements.familyTables;
@@ -59,10 +61,10 @@ void main() {
   test('clear changes all families without copying base entries', () {
     final base = CommittedDocument(_baseDocument());
     final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-    final work = FamilyTablesWork();
+    final work = FamilyTablesTelemetry();
 
-    FamilyTables.observeWork(
-      work,
+    FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(
         StoreSparseCommit(
           revisionDelta: const StoreRevisionDelta.structural(),
@@ -83,10 +85,10 @@ void main() {
 void _expectZeroFreeze(StoreSparseCommit commit) {
   final base = CommittedDocument(_baseDocument());
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
-  final prepared = FamilyTables.observeWork(
-    work,
+  final prepared = FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(commit),
   );
 
@@ -103,11 +105,11 @@ void _expectZeroFreeze(StoreSparseCommit commit) {
 void _expectCoverageFailureDiscards() {
   final base = CommittedDocument(_baseDocument());
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
   expect(
-    () => FamilyTables.observeWork(
-      work,
+    () => FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(
         StoreSparseCommit(
           revisionDelta: const StoreRevisionDelta.elementBoundsOnly(),

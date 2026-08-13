@@ -9,6 +9,8 @@ import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import 'family_tables_telemetry.dart';
+
 const _supportedReferringRowCount = 200000;
 
 // These independent owner lifecycle witnesses share literal rows and one
@@ -19,9 +21,9 @@ void main() {
   test(
     'construction and schema import keep exact split row multiplicities',
     () {
-      final constructionWork = FamilyTablesWork();
-      final constructed = FamilyTables.observeWork(
-        constructionWork,
+      final constructionWork = FamilyTablesTelemetry();
+      final constructed = FamilyTables.observeTelemetry(
+        constructionWork.record,
         () => FamilyTables(_referenceRows()),
       );
       _expectReferenceCounts(
@@ -51,8 +53,8 @@ void main() {
         vector: const {},
       );
 
-      final importWork = FamilyTablesWork();
-      final imported = FamilyTables.observeWork(importWork, () {
+      final importWork = FamilyTablesTelemetry();
+      final imported = FamilyTables.observeTelemetry(importWork.record, () {
         final builder = FamilyTablesSchemaV1ImportBuilder();
         builder.add(_imageImportEvent('import-image', 'missing-image'));
         builder.add(_vectorImportEvent('import-vector', 'missing-vector'));
@@ -70,9 +72,9 @@ void main() {
 
   test('editor count deltas match every sequential row transition', () {
     final base = FamilyTables(_referenceRows());
-    final work = FamilyTablesWork();
-    final frozen = FamilyTables.observeWork(
-      work,
+    final work = FamilyTablesTelemetry();
+    final frozen = FamilyTables.observeTelemetry(
+      work.record,
       () => base.editSparse((editor) {
         _expectReferenceCounts(
           editor,
@@ -157,10 +159,10 @@ void main() {
 
   test('committed and working reference queries stay bounded', () {
     final tables = FamilyTables(_largeImageRows());
-    final committedWork = FamilyTablesWork();
+    final committedWork = FamilyTablesTelemetry();
 
-    final committed = FamilyTables.observeWork(
-      committedWork,
+    final committed = FamilyTables.observeTelemetry(
+      committedWork.record,
       () => tables.referencesResource(CanvasResourceId('absent')),
     );
 
@@ -168,9 +170,9 @@ void main() {
     expect(committedWork.referenceQueryFamilyRowVisitCount, 0);
     expect(committedWork.referenceCommittedSummaryReadCount, 2);
 
-    final workingWork = FamilyTablesWork();
-    final working = FamilyTables.observeWork(
-      workingWork,
+    final workingWork = FamilyTablesTelemetry();
+    final working = FamilyTables.observeTelemetry(
+      workingWork.record,
       () => tables.editSparse((editor) {
         for (var index = 0; index < 64; index += 1) {
           editor.replaceElement(_image('image-0', 'replacement-$index'));
@@ -210,10 +212,10 @@ void main() {
           ),
         ),
       );
-      final work = FamilyTablesWork();
+      final work = FamilyTablesTelemetry();
 
-      final prepared = FamilyTables.observeWork(
-        work,
+      final prepared = FamilyTables.observeTelemetry(
+        work.record,
         () => store.prepareSparseCommit(
           StoreSparseCommit(
             revisionDelta: const StoreRevisionDelta.resource(),
@@ -257,11 +259,11 @@ void main() {
     'summary maintenance defers materialization through failure and no-op',
     () {
       final tables = FamilyTables(_largeImageRows());
-      final failureWork = FamilyTablesWork();
+      final failureWork = FamilyTablesTelemetry();
 
       expect(
-        () => FamilyTables.observeWork(
-          failureWork,
+        () => FamilyTables.observeTelemetry(
+          failureWork.record,
           () => tables.editSparse((editor) {
             editor.replaceElement(_image('image-0', 'failure-replacement'));
             _expectReferenceCounts(
@@ -280,12 +282,12 @@ void main() {
       );
       _expectNoSummaryMaterialization(failureWork);
 
-      final noOpWork = FamilyTablesWork();
+      final noOpWork = FamilyTablesTelemetry();
       final store = DocumentStoreKernel.withCommittedDocumentForTesting(
         CommittedDocument(_largeImageDocument()),
       );
-      final prepared = FamilyTables.observeWork(
-        noOpWork,
+      final prepared = FamilyTables.observeTelemetry(
+        noOpWork.record,
         () => store.prepareSparseCommit(_largeCompensatingImageCommit()),
       );
 
@@ -303,10 +305,10 @@ void main() {
     'accepted freeze materializes changed summaries once and shares others',
     () {
       final tables = FamilyTables(_largeImageRows());
-      final work = FamilyTablesWork();
+      final work = FamilyTablesTelemetry();
 
-      final frozen = FamilyTables.observeWork(
-        work,
+      final frozen = FamilyTables.observeTelemetry(
+        work.record,
         () => tables.editSparse((editor) {
           editor.replaceElement(_image('image-0', 'replacement'));
           expect(work.imageReferenceSummaryCompleteCopyCount, 0);
@@ -364,7 +366,7 @@ void _expectReferenceCounts(
   }
 }
 
-void _expectNoSummaryMaterialization(FamilyTablesWork work) {
+void _expectNoSummaryMaterialization(FamilyTablesTelemetry work) {
   expect(work.imageReferenceSummaryCompleteCopyCount, 0);
   expect(work.vectorReferenceSummaryCompleteCopyCount, 0);
   expect(work.imageReferenceSummaryMaterializationCount, 0);

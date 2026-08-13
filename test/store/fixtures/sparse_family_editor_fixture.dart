@@ -8,6 +8,8 @@ import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import 'family_tables_telemetry.dart';
+
 const _supportedElementCount = 200000;
 const _largeUntouchedRectCount = _supportedElementCount - 1;
 
@@ -20,10 +22,10 @@ void main() {
     () {
       final base = CommittedDocument(_mixedBaseDocument());
       final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-      final work = FamilyTablesWork();
+      final work = FamilyTablesTelemetry();
 
-      final prepared = FamilyTables.observeWork(
-        work,
+      final prepared = FamilyTables.observeTelemetry(
+        work.record,
         () => store.prepareSparseCommit(_twoMixedFamilyUpdateBatches()),
       );
 
@@ -59,10 +61,10 @@ void main() {
     // this supported-size ownership scenario before the sparse editor is used.
     final base = CommittedDocument(_largeUntouchedBaseDocument());
     final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
-    final work = FamilyTablesWork();
+    final work = FamilyTablesTelemetry();
 
-    FamilyTables.observeWork(
-      work,
+    FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(_twoBatchPathUpdate()),
     );
 

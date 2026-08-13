@@ -5,6 +5,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/schema_v1_import_events.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 
+import 'family_tables_telemetry.dart';
+
 void main() {
   _testEmptyAndSingleFamilySnapshots();
   _testAllFamilyAndMutationSnapshots();
@@ -16,51 +18,66 @@ void _testEmptyAndSingleFamilySnapshots() {
   test(
     'empty and single-family membership matches map keys without unions',
     () {
-      _expectMembershipSnapshot(const FamilyTables.empty(), const {});
-      expect(
-        const FamilyTables.empty().contains(CanvasElementId('absent')),
-        isFalse,
+      final empty = _observeMembershipOperation(
+        () => const FamilyTables.empty(),
       );
-      _expectMembershipSnapshot(FamilyTables([_rect('single')]), const {
+      _expectMembershipSnapshot(empty, const {});
+      expect(empty.contains(CanvasElementId('absent')), isFalse);
+      final single = _observeMembershipOperation(
+        () => FamilyTables([_rect('single')]),
+      );
+      _expectMembershipSnapshot(single, const {
         CanvasElementKind.rect: {'single'},
       });
     },
   );
 }
 
+// The one ordered witness keeps each immutable mutation and its exact
+// seven-family membership oracle visible without hidden fixture state.
+// ignore: halstead-volume
 void _testAllFamilyAndMutationSnapshots() {
   test(
     'construction and mutation membership matches authoritative map keys',
     () {
-      final all = FamilyTables(_allFamilyElements());
+      final all = _observeMembershipOperation(
+        () => FamilyTables(_allFamilyElements()),
+      );
       _expectMembershipSnapshot(all, _allFamilyIds);
 
-      final added = all.addElement(_rect('added'));
+      final added = _observeMembershipOperation(
+        () => all.addElement(_rect('added')),
+      );
       _expectMembershipSnapshot(added, {
         ..._allFamilyIds,
         CanvasElementKind.rect: {'rect', 'added'},
       });
 
-      final removed = added.removeElement(CanvasElementId('path'));
+      final removed = _observeMembershipOperation(
+        () => added.removeElement(CanvasElementId('path')),
+      );
       _expectMembershipSnapshot(removed, {
         ..._allFamilyIds,
         CanvasElementKind.path: const {},
         CanvasElementKind.rect: {'rect', 'added'},
       });
 
-      final replaced = removed.editSparse((editor) {
-        editor.recordUpdateBatch();
-        editor.replaceElement(_rect('rect', size: 2));
+      final replaced = _observeMembershipOperation(
+        () => removed.editSparse((editor) {
+          editor.recordUpdateBatch();
+          editor.replaceElement(_rect('rect', size: 2));
 
-        return editor.freeze();
-      });
+          return editor.freeze();
+        }),
+      );
       _expectMembershipSnapshot(replaced, {
         ..._allFamilyIds,
         CanvasElementKind.path: const {},
         CanvasElementKind.rect: {'rect', 'added'},
       });
 
-      _expectMembershipSnapshot(replaced.clearElements(), const {});
+      final cleared = _observeMembershipOperation(replaced.clearElements);
+      _expectMembershipSnapshot(cleared, const {});
       expect(replaced.contains(CanvasElementId('added')), isTrue);
     },
   );
@@ -68,12 +85,14 @@ void _testAllFamilyAndMutationSnapshots() {
 
 void _testSchemaV1ImportSnapshot() {
   test('Schema V1 import membership matches authoritative map keys', () {
-    final builder = FamilyTablesSchemaV1ImportBuilder();
-    for (final event in _allFamilyImportEvents()) {
-      builder.add(event);
-    }
+    final imported = _observeMembershipOperation(() {
+      final builder = FamilyTablesSchemaV1ImportBuilder();
+      for (final event in _allFamilyImportEvents()) {
+        builder.add(event);
+      }
 
-    final imported = builder.consume();
+      return builder.consume();
+    });
     _expectMembershipSnapshot(imported, _allFamilyIds);
     expect(imported.contains(CanvasElementId('image')), isTrue);
   });
@@ -85,7 +104,9 @@ void _testSchemaV1ImportSnapshot() {
 void _testSupportedSizeSnapshot() {
   test('supported-size membership stays direct and exact', () {
     const supportedElementCount = 200000;
-    final tables = FamilyTables(_supportedSizeElements(supportedElementCount));
+    final tables = _observeMembershipOperation(
+      () => FamilyTables(_supportedSizeElements(supportedElementCount)),
+    );
 
     expect(tables.imageRows.keys, {'image'});
     expect(tables.vectorRows.keys, {'vector'});
@@ -183,11 +204,29 @@ void _expectDirectMembership(
   required int expectedProbes,
   bool expectedContains = true,
 }) {
-  final work = FamilyTablesWork();
-  final contains = FamilyTables.observeWork(work, () => tables.contains(id));
+  final work = FamilyTablesTelemetry();
+  final contains = FamilyTables.observeTelemetry(
+    work.record,
+    () => tables.contains(id),
+  );
 
   expect(contains, expectedContains);
   expect(work.mapProbeCount, expectedProbes);
+  _expectNoForbiddenMembershipWork(work);
+}
+
+T _observeMembershipOperation<T>(T Function() operation) {
+  final work = FamilyTablesTelemetry();
+  final result = FamilyTables.observeTelemetry(work.record, operation);
+
+  _expectNoForbiddenMembershipWork(work);
+  return result;
+}
+
+void _expectNoForbiddenMembershipWork(FamilyTablesTelemetry work) {
+  expect(work.membershipUnionAllocationCount, 0);
+  expect(work.retainedMembershipCopyAllocationCount, 0);
+  expect(work.membershipKeyCopyCount, 0);
 }
 
 List<CanvasElement> _allFamilyElements() {

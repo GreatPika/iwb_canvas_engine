@@ -16,6 +16,8 @@ import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+import 'family_tables_telemetry.dart';
+
 void main() {
   _registerCompleteRouteTests();
   _registerSupportedSizeWitness();
@@ -400,16 +402,7 @@ final class _AdmissionSnapshot {
   }
 
   Map<String, Object?> get schemaDocument {
-    return {
-      'schemaVersion': 1,
-      'resources': [for (final id in resourceIds) _schemaResource(id)],
-      'backgroundLayer': {
-        'elements': [for (final element in elements) _schemaElement(element)],
-      },
-      'layers': [
-        for (final id in layerIds) {'id': id, 'elements': <Object?>[]},
-      ],
-    };
+    return encodeCanvasDocument(document);
   }
 }
 
@@ -442,7 +435,6 @@ enum _TraceEvent {
   familyStrokeEntry,
   familyLineEntry,
   familyRectEntry,
-  familyUnexpectedEntry,
   familyClose,
   layerOpen,
   layerEntry,
@@ -458,6 +450,34 @@ enum _TraceEvent {
   resourceLedger,
 }
 
+FamilyTablesTelemetrySink _familyTraceSink(List<_TraceEvent> events) {
+  final telemetry = FamilyTablesTelemetry();
+  return (event) {
+    telemetry.record(event);
+    _recordFamilyTrace(event, events);
+  };
+}
+
+void _recordFamilyTrace(
+  FamilyTablesTelemetryEvent event,
+  List<_TraceEvent> events,
+) {
+  switch (event.kind) {
+    case FamilyTablesTelemetryKind.enumerationOpen:
+      events.add(_TraceEvent.familyOpen);
+    case FamilyTablesTelemetryKind.enumerationEntry:
+      final family = event.family;
+      if (family == null) {
+        throw StateError('Family enumeration telemetry requires a family.');
+      }
+      events.add(_familyEntryEvent(family));
+    case FamilyTablesTelemetryKind.enumerationClose:
+      events.add(_TraceEvent.familyClose);
+    default:
+      break;
+  }
+}
+
 final class _AdmissionTrace {
   _AdmissionTrace(this.phase);
 
@@ -466,8 +486,8 @@ final class _AdmissionTrace {
   var _completeInputSetAllocationCount = 0;
 
   T observe<T>(T Function() operation) {
-    return FamilyTables.observeEnumeration(
-      _recordFamily,
+    return FamilyTables.observeTelemetry(
+      _familyTraceSink(events),
       () => LayerTable.observeWork(
         _recordLayer,
         () => ResourceTable.observeEnumeration(
@@ -479,21 +499,6 @@ final class _AdmissionTrace {
         ),
       ),
     );
-  }
-
-  void _recordFamily(FamilyTablesEnumerationEvent event) {
-    events.add(switch (event.name) {
-      'open' => _TraceEvent.familyOpen,
-      'imageEntry' => _TraceEvent.familyImageEntry,
-      'vectorEntry' => _TraceEvent.familyVectorEntry,
-      'pathEntry' => _TraceEvent.familyPathEntry,
-      'textEntry' => _TraceEvent.familyTextEntry,
-      'strokeEntry' => _TraceEvent.familyStrokeEntry,
-      'lineEntry' => _TraceEvent.familyLineEntry,
-      'rectEntry' => _TraceEvent.familyRectEntry,
-      'close' => _TraceEvent.familyClose,
-      _ => _TraceEvent.familyUnexpectedEntry,
-    });
   }
 
   void _recordLayer(LayerTableWorkEvent event) {
@@ -658,14 +663,6 @@ CanvasResource _resource(String id) {
   };
 }
 
-Map<String, Object?> _schemaResource(String id) {
-  return {
-    'kind': id == 'r2' ? 'vector' : 'image',
-    'id': id,
-    'source': {'kind': 'appKey', 'key': 'asset-$id'},
-  };
-}
-
 CanvasElementKind _kindFor(CanvasElement element) {
   return switch (element) {
     CanvasImageElement() => CanvasElementKind.image,
@@ -675,60 +672,5 @@ CanvasElementKind _kindFor(CanvasElement element) {
     CanvasStrokeElement() => CanvasElementKind.stroke,
     CanvasLineElement() => CanvasElementKind.line,
     CanvasRectElement() => CanvasElementKind.rect,
-  };
-}
-
-Map<String, Object?> _schemaElement(CanvasElement element) {
-  return switch (element) {
-    CanvasImageElement() => {
-      'id': element.id.value,
-      'kind': 'image',
-      'resourceId': element.resourceId.value,
-      'size': {'w': 1, 'h': 1},
-    },
-    CanvasVectorElement() => {
-      'id': element.id.value,
-      'kind': 'vector',
-      'resourceId': element.resourceId.value,
-      'size': {'w': 1, 'h': 1},
-    },
-    CanvasPathElement() => {
-      'id': element.id.value,
-      'kind': 'path',
-      'svgPathData': 'M0 0',
-      'strokeWidth': 0,
-    },
-    CanvasTextElement() => {
-      'id': element.id.value,
-      'kind': 'text',
-      'text': 'text',
-      'fontSize': 24,
-      'color': '#FF000000',
-      'textDirection': 'ltr',
-    },
-    CanvasStrokeElement() => {
-      'id': element.id.value,
-      'kind': 'stroke',
-      'points': [
-        {'x': 0, 'y': 0},
-      ],
-      'thickness': 1,
-      'color': '#FF000000',
-    },
-    CanvasLineElement() => {
-      'id': element.id.value,
-      'kind': 'line',
-      'start': {'x': 0, 'y': 0},
-      'end': {'x': 1, 'y': 1},
-      'thickness': 1,
-      'color': '#FF000000',
-    },
-    CanvasRectElement() => {
-      'id': element.id.value,
-      'kind': 'rect',
-      'size': {'w': 1, 'h': 1},
-      'fillColor': '#FF000000',
-      'strokeWidth': 0,
-    },
   };
 }

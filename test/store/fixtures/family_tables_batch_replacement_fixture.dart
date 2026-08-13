@@ -4,15 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 
+import 'family_tables_telemetry.dart';
+
 const _supportedElementCount = 200000;
 const _largeUntouchedRectCount = _supportedElementCount - 12;
 
 void main() {
   test('batch replacement opens only its changed family maps', () {
     final base = FamilyTables(_supportedBaseElements());
-    final work = FamilyTablesWork();
-    final replaced = FamilyTables.observeWork(
-      work,
+    final work = FamilyTablesTelemetry();
+    final replaced = FamilyTables.observeTelemetry(
+      work.record,
       () => base.editSparse((editor) {
         editor.recordUpdateBatch();
         for (final element in _replacements) {
@@ -80,7 +82,7 @@ void _expectBasePlusReplacementRows(FamilyTables tables) {
   );
 }
 
-void _expectPerFamilyReplacementWork(FamilyTablesWork work) {
+void _expectPerFamilyReplacementWork(FamilyTablesTelemetry work) {
   _expectFamilyWork(
     work,
     const _ExpectedFamilyWork(
@@ -114,7 +116,10 @@ void _expectPerFamilyReplacementWork(FamilyTablesWork work) {
   _expectUntouchedFamilyWork(work, CanvasElementKind.line);
 }
 
-void _expectUntouchedFamilyWork(FamilyTablesWork work, CanvasElementKind kind) {
+void _expectUntouchedFamilyWork(
+  FamilyTablesTelemetry work,
+  CanvasElementKind kind,
+) {
   _expectFamilyWork(
     work,
     _ExpectedFamilyWork(
@@ -126,7 +131,10 @@ void _expectUntouchedFamilyWork(FamilyTablesWork work, CanvasElementKind kind) {
   );
 }
 
-void _expectFamilyWork(FamilyTablesWork work, _ExpectedFamilyWork expected) {
+void _expectFamilyWork(
+  FamilyTablesTelemetry work,
+  _ExpectedFamilyWork expected,
+) {
   expect(work.transactionOpenCount(expected.kind), expected.openAndFreezeCount);
   expect(
     work.transactionBaseEntryCopyCount(expected.kind),

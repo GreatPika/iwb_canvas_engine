@@ -15,17 +15,75 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 
 @visibleForTesting
-enum FamilyTablesEnumerationEvent {
-  open,
-  imageEntry,
-  vectorEntry,
-  pathEntry,
-  textEntry,
-  strokeEntry,
-  lineEntry,
-  rectEntry,
-  close,
+enum FamilyTablesTelemetryKind {
+  membershipMapProbe,
+  membershipUnionAllocation,
+  membershipKeyCopy,
+  retainedMembershipCopyAllocation,
+  batchReplacement,
+  transactionFamilyOpen,
+  transactionFamilyBaseEntryCopies,
+  transactionFamilyFreeze,
+  transactionNormalizationWrite,
+  transactionFinalMapIdentity,
+  transactionDiscard,
+  transactionImmutablePublication,
+  transactionIntermediateImmutablePublication,
+  staleDecisionRead,
+  postFreezeWrite,
+  postFreezeCopy,
+  postFreezeNormalization,
+  postFreezeImmutablePublication,
+  referenceConstructionRowVisit,
+  referenceCommittedSummaryRead,
+  referenceQueryFamilyRowVisits,
+  referenceEditorBaseSummaryRead,
+  referenceEditorDeltaRead,
+  referenceSummaryDeltaOpen,
+  referenceAffectedIdUpdate,
+  referenceSummaryCompleteCopy,
+  referenceSummaryMaterialization,
+  referenceSummaryPublication,
+  referenceSummaryIdentity,
+  editorDecision,
+  editorDecisionRead,
+  enumerationOpen,
+  enumerationEntry,
+  enumerationClose,
 }
+
+@visibleForTesting
+enum FamilyTablesResourceSplit { image, vector }
+
+@visibleForTesting
+@immutable
+final class FamilyTablesTelemetryEvent {
+  const FamilyTablesTelemetryEvent(
+    this.kind, {
+    this.family,
+    this.decision,
+    this.subjectKind,
+    this.subject,
+    this.result,
+    this.resourceSplit,
+    this.count,
+    this.identityRetained,
+  });
+
+  final FamilyTablesTelemetryKind kind;
+  final CanvasElementKind? family;
+  final FamilyTablesDecision? decision;
+  final FamilyTablesDecisionSubjectKind? subjectKind;
+  final String? subject;
+  final FamilyTablesDecisionResult? result;
+  final FamilyTablesResourceSplit? resourceSplit;
+  final int? count;
+  final bool? identityRetained;
+}
+
+@visibleForTesting
+typedef FamilyTablesTelemetrySink =
+    void Function(FamilyTablesTelemetryEvent event);
 
 // The family tables are the single admission and projection owner for all
 // element kinds; splitting by kind would reintroduce cross-table drift.
@@ -33,11 +91,12 @@ enum FamilyTablesEnumerationEvent {
 // from duplicate-id and resource-reference validation.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTables {
-  static final Object _workZoneKey = Object();
-  static final Object _enumerationZoneKey = Object();
+  static final Object _telemetryZoneKey = Object();
   static final Object _sparseEditorZoneKey = Object();
   static final Object _sparseDecisionZoneKey = Object();
   static final Object _sparseBaseReadZoneKey = Object();
+  static const _MembershipSetGateway _membershipSetGateway =
+      _MembershipSetGateway();
 
   const FamilyTables.empty()
     : this._fromTables(
@@ -116,50 +175,61 @@ final class FamilyTables {
 
   // Complete-id consumers receive each authoritative key immediately, keeping
   // the seven family maps as the only committed element-id source.
+  // Keeping ordered family traversal and its exact events together prevents
+  // an admission route from drifting from the owner sequence.
+  // ignore: source-lines-of-code
   void enumerateElementIds(void Function(String) accept) {
-    _recordEnumeration(FamilyTablesEnumerationEvent.open);
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.enumerationOpen,
+      ),
+    );
     try {
       for (final id in imageRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.imageEntry);
+        _recordEnumerationEntry(CanvasElementKind.image);
         accept(id);
       }
       for (final id in vectorRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.vectorEntry);
+        _recordEnumerationEntry(CanvasElementKind.vector);
         accept(id);
       }
       for (final id in pathRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.pathEntry);
+        _recordEnumerationEntry(CanvasElementKind.path);
         accept(id);
       }
       for (final id in textRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.textEntry);
+        _recordEnumerationEntry(CanvasElementKind.text);
         accept(id);
       }
       for (final id in strokeRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.strokeEntry);
+        _recordEnumerationEntry(CanvasElementKind.stroke);
         accept(id);
       }
       for (final id in lineRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.lineEntry);
+        _recordEnumerationEntry(CanvasElementKind.line);
         accept(id);
       }
       for (final id in rectRows.keys) {
-        _recordEnumeration(FamilyTablesEnumerationEvent.rectEntry);
+        _recordEnumerationEntry(CanvasElementKind.rect);
         accept(id);
       }
     } finally {
-      _recordEnumeration(FamilyTablesEnumerationEvent.close);
+      _emitTelemetry(
+        const FamilyTablesTelemetryEvent(
+          FamilyTablesTelemetryKind.enumerationClose,
+        ),
+      );
     }
   }
 
-  // Enumeration work is asserted only in tests; production keeps no event
-  // history and the signal carries no owner facts.
+  // Tests own all accumulation. Production only relays local semantic events
+  // through this one assert-gated sink and retains no history or counters.
   @visibleForTesting
-  static T observeEnumeration<T>(
-    void Function(FamilyTablesEnumerationEvent event) sink,
+  static T observeTelemetry<T>(
+    FamilyTablesTelemetrySink sink,
     T Function() operation,
   ) {
-    return runZoned(operation, zoneValues: {_enumerationZoneKey: sink});
+    return runZoned(operation, zoneValues: {_telemetryZoneKey: sink});
   }
 
   // Membership is an owner-local read: a direct probe avoids constructing a
@@ -168,7 +238,6 @@ final class FamilyTables {
   bool contains(CanvasElementId id) {
     _recordImmutableSparseFamilyRead(this);
     final value = id.value;
-
     _recordMembershipMapProbe();
     if (imageRows.containsKey(value)) {
       return true;
@@ -196,13 +265,6 @@ final class FamilyTables {
     _recordMembershipMapProbe();
 
     return rectRows.containsKey(value);
-  }
-
-  // This test-only observation is assert-gated and owns no rows, ids, or
-  // membership data, so it cannot become another table authority.
-  @visibleForTesting
-  static T observeWork<T>(FamilyTablesWork work, T Function() operation) {
-    return runZoned(operation, zoneValues: {_workZoneKey: work});
   }
 
   // Sparse base/final comparisons intentionally read the immutable base while
@@ -234,13 +296,13 @@ final class FamilyTables {
       if (editor is FamilyTablesEditor &&
           identical(editor._base, tables) &&
           Zone.current[_sparseBaseReadZoneKey] != true) {
-        final work = Zone.current[_workZoneKey];
-        if (work is FamilyTablesWork) {
-          final decision = Zone.current[_sparseDecisionZoneKey];
-          work._recordStaleDecisionRead(
-            decision is FamilyTablesDecision ? decision : null,
-          );
-        }
+        final decision = Zone.current[_sparseDecisionZoneKey];
+        _emitTelemetry(
+          FamilyTablesTelemetryEvent(
+            FamilyTablesTelemetryKind.staleDecisionRead,
+            decision: decision is FamilyTablesDecision ? decision : null,
+          ),
+        );
       }
       return true;
     }(), 'stale sparse family read observation failed');
@@ -253,15 +315,29 @@ final class FamilyTables {
     assert(() {
       final editor = Zone.current[_sparseEditorZoneKey];
       if (editor is FamilyTablesEditor) {
-        final work = Zone.current[_workZoneKey];
-        if (work is FamilyTablesWork) {
-          if (editor._isFrozen) {
-            work._recordPostFreezeWrite();
-            work._recordPostFreezeCopy();
-            work._recordPostFreezeImmutablePublication();
-          } else {
-            work._recordTransactionIntermediateImmutablePublication();
-          }
+        if (editor._isFrozen) {
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind.postFreezeWrite,
+            ),
+          );
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind.postFreezeCopy,
+            ),
+          );
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind.postFreezeImmutablePublication,
+            ),
+          );
+        } else {
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind
+                  .transactionIntermediateImmutablePublication,
+            ),
+          );
         }
       }
       return true;
@@ -273,13 +349,19 @@ final class FamilyTables {
       final editor = Zone.current[_sparseEditorZoneKey];
       if (editor is FamilyTablesEditor &&
           !editor._consumeFrozenAdoption(tables)) {
-        final work = Zone.current[_workZoneKey];
-        if (work is FamilyTablesWork) {
-          if (editor._isFrozen) {
-            work._recordPostFreezeImmutablePublication();
-          } else {
-            work._recordTransactionIntermediateImmutablePublication();
-          }
+        if (editor._isFrozen) {
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind.postFreezeImmutablePublication,
+            ),
+          );
+        } else {
+          _emitTelemetry(
+            const FamilyTablesTelemetryEvent(
+              FamilyTablesTelemetryKind
+                  .transactionIntermediateImmutablePublication,
+            ),
+          );
         }
       }
       return true;
@@ -496,228 +578,204 @@ final class FamilyTables {
   }
 
   static void _recordMembershipMapProbe() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordMapProbe();
-      }
-      return true;
-    }(), 'membership map-probe observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.membershipMapProbe,
+      ),
+    );
   }
 
   static void _recordReferenceConstructionRowVisit() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceConstructionRowVisit();
-      }
-      return true;
-    }(), 'resource-reference construction observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.referenceConstructionRowVisit,
+      ),
+    );
   }
 
   static void _recordReferenceCommittedSummaryRead() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceCommittedSummaryRead();
-      }
-      return true;
-    }(), 'committed resource-reference summary observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.referenceCommittedSummaryRead,
+      ),
+    );
   }
 
   static void _recordReferenceQueryFamilyRowVisits(int count) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceQueryFamilyRowVisits(count);
-      }
-      return true;
-    }(), 'resource-reference family-row observation failed');
+    _emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.referenceQueryFamilyRowVisits,
+        count: count,
+      ),
+    );
   }
 
   static void _recordReferenceEditorBaseSummaryRead() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceEditorBaseSummaryRead();
-      }
-      return true;
-    }(), 'working resource-reference base-summary observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.referenceEditorBaseSummaryRead,
+      ),
+    );
   }
 
   static void _recordReferenceEditorDeltaRead({required int depth}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceEditorDeltaRead(depth: depth);
-      }
-      return true;
-    }(), 'working resource-reference delta observation failed');
+    _emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.referenceEditorDeltaRead,
+        count: depth,
+      ),
+    );
   }
 
   static void _recordReferenceSummaryDeltaOpen({required bool image}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceSummaryDeltaOpen(image: image);
-      }
-      return true;
-    }(), 'resource-reference delta-open observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceSummaryDeltaOpen,
+      image: image,
+    );
   }
 
   static void _recordReferenceAffectedIdUpdate({required bool image}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceAffectedIdUpdate(image: image);
-      }
-      return true;
-    }(), 'resource-reference affected-id observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceAffectedIdUpdate,
+      image: image,
+    );
   }
 
   static void _recordReferenceSummaryCompleteCopy({required bool image}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceSummaryCompleteCopy(image: image);
-      }
-      return true;
-    }(), 'resource-reference summary-copy observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceSummaryCompleteCopy,
+      image: image,
+    );
   }
 
   static void _recordReferenceSummaryMaterialization({required bool image}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceSummaryMaterialization(image: image);
-      }
-      return true;
-    }(), 'resource-reference materialization observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceSummaryMaterialization,
+      image: image,
+    );
   }
 
   static void _recordReferenceSummaryPublication({required bool image}) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceSummaryPublication(image: image);
-      }
-      return true;
-    }(), 'resource-reference publication observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceSummaryPublication,
+      image: image,
+    );
   }
 
   static void _recordReferenceSummaryIdentity({
     required bool image,
     required bool retainsBaseIdentity,
   }) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordReferenceSummaryIdentity(
-          image: image,
-          retainsBaseIdentity: retainsBaseIdentity,
-        );
-      }
-      return true;
-    }(), 'resource-reference identity observation failed');
+    _emitReferenceTelemetry(
+      FamilyTablesTelemetryKind.referenceSummaryIdentity,
+      image: image,
+      identityRetained: retainsBaseIdentity,
+    );
   }
 
   static void _recordBatchReplacementStart() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordBatchReplacement();
-      }
-      return true;
-    }(), 'batch replacement observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.batchReplacement,
+      ),
+    );
   }
 
   static void _recordTransactionFamilyOpen(CanvasElementKind kind) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionFamilyOpen(kind);
-      }
-      return true;
-    }(), 'transaction family open observation failed');
+    _emitFamilyTelemetry(FamilyTablesTelemetryKind.transactionFamilyOpen, kind);
   }
 
   static void _recordTransactionFamilyBaseEntryCopies(
     CanvasElementKind kind,
     int count,
   ) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionFamilyBaseEntryCopies(kind, count);
-      }
-      return true;
-    }(), 'transaction family copy observation failed');
+    _emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.transactionFamilyBaseEntryCopies,
+        family: kind,
+        count: count,
+      ),
+    );
   }
 
   static void _recordTransactionFamilyFreeze(CanvasElementKind kind) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionFamilyFreeze(kind);
-      }
-      return true;
-    }(), 'transaction family freeze observation failed');
+    _emitFamilyTelemetry(
+      FamilyTablesTelemetryKind.transactionFamilyFreeze,
+      kind,
+    );
   }
 
   static void _recordTransactionFinalMapIdentity(
     CanvasElementKind kind, {
     required bool retainsBaseIdentity,
   }) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionFinalMapIdentity(
-          kind,
-          retainsBaseIdentity: retainsBaseIdentity,
-        );
-      }
-      return true;
-    }(), 'transaction final-map identity observation failed');
+    _emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.transactionFinalMapIdentity,
+        family: kind,
+        identityRetained: retainsBaseIdentity,
+      ),
+    );
   }
 
   static void _recordTransactionDiscard() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionDiscard();
-      }
-      return true;
-    }(), 'transaction discard observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.transactionDiscard,
+      ),
+    );
   }
 
   static void _recordTransactionImmutablePublication() {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionImmutablePublication();
-      }
-      return true;
-    }(), 'transaction immutable publication observation failed');
+    _emitTelemetry(
+      const FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.transactionImmutablePublication,
+      ),
+    );
   }
 
   static void _recordTransactionNormalizationWrite(CanvasElementKind kind) {
-    assert(() {
-      final work = Zone.current[_workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordTransactionNormalizationWrite(kind);
-      }
-      return true;
-    }(), 'transaction normalization observation failed');
+    _emitFamilyTelemetry(
+      FamilyTablesTelemetryKind.transactionNormalizationWrite,
+      kind,
+    );
   }
 
-  static void _recordEnumeration(FamilyTablesEnumerationEvent event) {
+  static void _recordEnumerationEntry(CanvasElementKind family) {
+    _emitFamilyTelemetry(FamilyTablesTelemetryKind.enumerationEntry, family);
+  }
+
+  static void _emitFamilyTelemetry(
+    FamilyTablesTelemetryKind kind,
+    CanvasElementKind family,
+  ) {
+    _emitTelemetry(FamilyTablesTelemetryEvent(kind, family: family));
+  }
+
+  static void _emitReferenceTelemetry(
+    FamilyTablesTelemetryKind kind, {
+    required bool image,
+    bool? identityRetained,
+  }) {
+    _emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        kind,
+        resourceSplit: image
+            ? FamilyTablesResourceSplit.image
+            : FamilyTablesResourceSplit.vector,
+        identityRetained: identityRetained,
+      ),
+    );
+  }
+
+  static void _emitTelemetry(FamilyTablesTelemetryEvent event) {
     assert(() {
-      final sink = Zone.current[_enumerationZoneKey];
-      if (sink is void Function(FamilyTablesEnumerationEvent)) {
+      final sink = Zone.current[_telemetryZoneKey];
+      if (sink is FamilyTablesTelemetrySink) {
         sink(event);
       }
       return true;
-    }(), 'family table enumeration observation failed');
+    }(), 'family table telemetry observation failed');
   }
 
   _AdmittedRows _copyRows() {
@@ -905,308 +963,6 @@ final class FamilyTablesDecisionRead {
   int get hashCode => Object.hash(decision, subjectKind, subject, result);
 }
 
-@visibleForTesting
-// The seven explicit counters are one owner-semantic probe: splitting them
-// would fragment the single assert-gated observation surface by evidence type.
-// ignore: number-of-methods, response-for-class, weighted-methods-per-class
-final class FamilyTablesWork {
-  int _mapProbeCount = 0;
-  int _batchReplacementCount = 0;
-  final Map<CanvasElementKind, int> _transactionOpenCountByFamily = {};
-  final Map<CanvasElementKind, int> _transactionBaseEntryCopyCountByFamily = {};
-  final Map<CanvasElementKind, int> _transactionFreezeCountByFamily = {};
-  final Map<CanvasElementKind, int> _transactionNormalizationWriteCount = {};
-  final Map<CanvasElementKind, bool>
-  _transactionFinalMapRetainsBaseIdentityByFamily = {};
-  int _transactionDiscardCount = 0;
-  int _transactionImmutablePublicationCount = 0;
-  int _transactionIntermediateImmutablePublicationCount = 0;
-  int _staleDecisionReadCount = 0;
-  int _postFreezeWriteCount = 0;
-  int _postFreezeCopyCount = 0;
-  int _postFreezeNormalizationCount = 0;
-  int _postFreezeImmutablePublicationCount = 0;
-  int _referenceConstructionRowVisitCount = 0;
-  int _referenceCommittedSummaryReadCount = 0;
-  int _referenceEditorBaseSummaryReadCount = 0;
-  int _referenceEditorDeltaReadCount = 0;
-  int _referenceEditorMaximumDeltaDepth = 0;
-  int _referenceQueryFamilyRowVisitCount = 0;
-  int _imageReferenceSummaryDeltaOpenCount = 0;
-  int _vectorReferenceSummaryDeltaOpenCount = 0;
-  int _imageReferenceAffectedIdUpdateCount = 0;
-  int _vectorReferenceAffectedIdUpdateCount = 0;
-  int _imageReferenceSummaryCompleteCopyCount = 0;
-  int _vectorReferenceSummaryCompleteCopyCount = 0;
-  int _imageReferenceSummaryMaterializationCount = 0;
-  int _vectorReferenceSummaryMaterializationCount = 0;
-  int _imageReferenceSummaryPublicationCount = 0;
-  int _vectorReferenceSummaryPublicationCount = 0;
-  bool _imageReferenceSummaryRetainsBaseIdentity = false;
-  bool _vectorReferenceSummaryRetainsBaseIdentity = false;
-  final List<FamilyTablesDecision> _editorDecisionTrace = [];
-  final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
-  final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
-  final Map<FamilyTablesDecision, int> _staleDecisionReadCountByDecision = {};
-
-  int get mapProbeCount => _mapProbeCount;
-  int get batchReplacementCount => _batchReplacementCount;
-  int get transactionDiscardCount => _transactionDiscardCount;
-  int get transactionImmutablePublicationCount =>
-      _transactionImmutablePublicationCount;
-  int get transactionIntermediateImmutablePublicationCount =>
-      _transactionIntermediateImmutablePublicationCount;
-  int get staleDecisionReadCount => _staleDecisionReadCount;
-  int get postFreezeWriteCount => _postFreezeWriteCount;
-  int get postFreezeCopyCount => _postFreezeCopyCount;
-  int get postFreezeNormalizationCount => _postFreezeNormalizationCount;
-  int get postFreezeImmutablePublicationCount =>
-      _postFreezeImmutablePublicationCount;
-  int get referenceQueryFamilyRowVisitCount =>
-      _referenceQueryFamilyRowVisitCount;
-  int get referenceConstructionRowVisitCount =>
-      _referenceConstructionRowVisitCount;
-  int get referenceCommittedSummaryReadCount =>
-      _referenceCommittedSummaryReadCount;
-  int get referenceEditorBaseSummaryReadCount =>
-      _referenceEditorBaseSummaryReadCount;
-  int get referenceEditorDeltaReadCount => _referenceEditorDeltaReadCount;
-  int get referenceEditorMaximumDeltaDepth => _referenceEditorMaximumDeltaDepth;
-  int get imageReferenceSummaryDeltaOpenCount =>
-      _imageReferenceSummaryDeltaOpenCount;
-  int get vectorReferenceSummaryDeltaOpenCount =>
-      _vectorReferenceSummaryDeltaOpenCount;
-  int get imageReferenceAffectedIdUpdateCount =>
-      _imageReferenceAffectedIdUpdateCount;
-  int get vectorReferenceAffectedIdUpdateCount =>
-      _vectorReferenceAffectedIdUpdateCount;
-  int get imageReferenceSummaryCompleteCopyCount =>
-      _imageReferenceSummaryCompleteCopyCount;
-  int get vectorReferenceSummaryCompleteCopyCount =>
-      _vectorReferenceSummaryCompleteCopyCount;
-  int get imageReferenceSummaryMaterializationCount =>
-      _imageReferenceSummaryMaterializationCount;
-  int get vectorReferenceSummaryMaterializationCount =>
-      _vectorReferenceSummaryMaterializationCount;
-  int get imageReferenceSummaryPublicationCount =>
-      _imageReferenceSummaryPublicationCount;
-  int get vectorReferenceSummaryPublicationCount =>
-      _vectorReferenceSummaryPublicationCount;
-  bool get imageReferenceSummaryRetainsBaseIdentity =>
-      _imageReferenceSummaryRetainsBaseIdentity;
-  bool get vectorReferenceSummaryRetainsBaseIdentity =>
-      _vectorReferenceSummaryRetainsBaseIdentity;
-  List<FamilyTablesDecision> get editorDecisionTrace =>
-      List.unmodifiable(_editorDecisionTrace);
-  List<FamilyTablesDecisionRead> get editorDecisionReads =>
-      List.unmodifiable(_editorDecisionReads);
-
-  int transactionOpenCount(CanvasElementKind kind) {
-    return _transactionOpenCountByFamily[kind] ?? 0;
-  }
-
-  int editorDecisionCount(FamilyTablesDecision decision) {
-    return _editorDecisionCount[decision] ?? 0;
-  }
-
-  int staleDecisionReadCountFor(FamilyTablesDecision decision) {
-    return _staleDecisionReadCountByDecision[decision] ?? 0;
-  }
-
-  int transactionBaseEntryCopyCount(CanvasElementKind kind) {
-    return _transactionBaseEntryCopyCountByFamily[kind] ?? 0;
-  }
-
-  int transactionFreezeCount(CanvasElementKind kind) {
-    return _transactionFreezeCountByFamily[kind] ?? 0;
-  }
-
-  int transactionNormalizationWriteCount(CanvasElementKind kind) {
-    return _transactionNormalizationWriteCount[kind] ?? 0;
-  }
-
-  bool transactionFinalMapRetainsBaseIdentity(CanvasElementKind kind) {
-    return _transactionFinalMapRetainsBaseIdentityByFamily[kind] ?? false;
-  }
-
-  void _recordMapProbe() {
-    _mapProbeCount += 1;
-  }
-
-  void _recordEditorDecision(FamilyTablesDecision decision) {
-    _editorDecisionTrace.add(decision);
-    _editorDecisionCount.update(
-      decision,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-  }
-
-  void _recordEditorDecisionRead(FamilyTablesDecisionRead read) {
-    _editorDecisionReads.add(read);
-  }
-
-  void _recordStaleDecisionRead(FamilyTablesDecision? decision) {
-    _staleDecisionReadCount += 1;
-    if (decision != null) {
-      _staleDecisionReadCountByDecision.update(
-        decision,
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
-  }
-
-  void _recordBatchReplacement() {
-    _batchReplacementCount += 1;
-  }
-
-  void _recordTransactionFamilyOpen(CanvasElementKind kind) {
-    _transactionOpenCountByFamily.update(
-      kind,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-  }
-
-  void _recordTransactionFamilyBaseEntryCopies(
-    CanvasElementKind kind,
-    int count,
-  ) {
-    _transactionBaseEntryCopyCountByFamily.update(
-      kind,
-      (current) => current + count,
-      ifAbsent: () => count,
-    );
-  }
-
-  void _recordTransactionFamilyFreeze(CanvasElementKind kind) {
-    _transactionFreezeCountByFamily.update(
-      kind,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-  }
-
-  void _recordTransactionNormalizationWrite(CanvasElementKind kind) {
-    _transactionNormalizationWriteCount.update(
-      kind,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-  }
-
-  void _recordTransactionFinalMapIdentity(
-    CanvasElementKind kind, {
-    required bool retainsBaseIdentity,
-  }) {
-    _transactionFinalMapRetainsBaseIdentityByFamily[kind] = retainsBaseIdentity;
-  }
-
-  void _recordTransactionDiscard() {
-    _transactionDiscardCount += 1;
-  }
-
-  void _recordTransactionImmutablePublication() {
-    _transactionImmutablePublicationCount += 1;
-  }
-
-  void _recordTransactionIntermediateImmutablePublication() {
-    _transactionImmutablePublicationCount += 1;
-    _transactionIntermediateImmutablePublicationCount += 1;
-  }
-
-  void _recordPostFreezeWrite() {
-    _postFreezeWriteCount += 1;
-  }
-
-  void _recordPostFreezeCopy() {
-    _postFreezeCopyCount += 1;
-  }
-
-  void _recordPostFreezeNormalization() {
-    _postFreezeNormalizationCount += 1;
-  }
-
-  void _recordPostFreezeImmutablePublication() {
-    _postFreezeImmutablePublicationCount += 1;
-  }
-
-  void _recordReferenceConstructionRowVisit() {
-    _referenceConstructionRowVisitCount += 1;
-  }
-
-  void _recordReferenceCommittedSummaryRead() {
-    _referenceCommittedSummaryReadCount += 1;
-  }
-
-  void _recordReferenceQueryFamilyRowVisits(int count) {
-    _referenceQueryFamilyRowVisitCount += count;
-  }
-
-  void _recordReferenceEditorBaseSummaryRead() {
-    _referenceEditorBaseSummaryReadCount += 1;
-  }
-
-  void _recordReferenceEditorDeltaRead({required int depth}) {
-    _referenceEditorDeltaReadCount += 1;
-    if (depth > _referenceEditorMaximumDeltaDepth) {
-      _referenceEditorMaximumDeltaDepth = depth;
-    }
-  }
-
-  void _recordReferenceSummaryDeltaOpen({required bool image}) {
-    if (image) {
-      _imageReferenceSummaryDeltaOpenCount += 1;
-    } else {
-      _vectorReferenceSummaryDeltaOpenCount += 1;
-    }
-  }
-
-  void _recordReferenceAffectedIdUpdate({required bool image}) {
-    if (image) {
-      _imageReferenceAffectedIdUpdateCount += 1;
-    } else {
-      _vectorReferenceAffectedIdUpdateCount += 1;
-    }
-  }
-
-  void _recordReferenceSummaryCompleteCopy({required bool image}) {
-    if (image) {
-      _imageReferenceSummaryCompleteCopyCount += 1;
-    } else {
-      _vectorReferenceSummaryCompleteCopyCount += 1;
-    }
-  }
-
-  void _recordReferenceSummaryMaterialization({required bool image}) {
-    if (image) {
-      _imageReferenceSummaryMaterializationCount += 1;
-    } else {
-      _vectorReferenceSummaryMaterializationCount += 1;
-    }
-  }
-
-  void _recordReferenceSummaryPublication({required bool image}) {
-    if (image) {
-      _imageReferenceSummaryPublicationCount += 1;
-    } else {
-      _vectorReferenceSummaryPublicationCount += 1;
-    }
-  }
-
-  void _recordReferenceSummaryIdentity({
-    required bool image,
-    required bool retainsBaseIdentity,
-  }) {
-    if (image) {
-      _imageReferenceSummaryRetainsBaseIdentity = retainsBaseIdentity;
-    } else {
-      _vectorReferenceSummaryRetainsBaseIdentity = retainsBaseIdentity;
-    }
-  }
-}
-
 // The sparse editor is the sole transaction-lifetime consumer of the generic
 // per-family buffer: rows stay current here until one accepted freeze.
 // Keeping all row-family operations here preserves that single source of truth.
@@ -1270,13 +1026,12 @@ final class FamilyTablesEditor {
   }
 
   void recordDecision(FamilyTablesDecision decision) {
-    assert(() {
-      final work = Zone.current[FamilyTables._workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordEditorDecision(decision);
-      }
-      return true;
-    }(), 'sparse family decision observation failed');
+    FamilyTables._emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.editorDecision,
+        decision: decision,
+      ),
+    );
   }
 
   void recordDecisionRead({
@@ -1285,20 +1040,15 @@ final class FamilyTablesEditor {
     required String subject,
     required FamilyTablesDecisionResult result,
   }) {
-    assert(() {
-      final work = Zone.current[FamilyTables._workZoneKey];
-      if (work is FamilyTablesWork) {
-        work._recordEditorDecisionRead(
-          FamilyTablesDecisionRead(
-            decision: decision,
-            subjectKind: subjectKind,
-            subject: subject,
-            result: result,
-          ),
-        );
-      }
-      return true;
-    }(), 'sparse family decision read observation failed');
+    FamilyTables._emitTelemetry(
+      FamilyTablesTelemetryEvent(
+        FamilyTablesTelemetryKind.editorDecisionRead,
+        decision: decision,
+        subjectKind: subjectKind,
+        subject: subject,
+        result: result,
+      ),
+    );
   }
 
   T decide<T>(FamilyTablesDecision decision, T Function() operation) {
@@ -1571,14 +1321,13 @@ final class FamilyTablesEditor {
   void _checkOpen({bool normalization = false}) {
     if (!_isOpen) {
       assert(() {
-        final work = Zone.current[FamilyTables._workZoneKey];
-        if (work is FamilyTablesWork) {
-          if (normalization) {
-            work._recordPostFreezeNormalization();
-          } else {
-            work._recordPostFreezeWrite();
-          }
-        }
+        FamilyTables._emitTelemetry(
+          FamilyTablesTelemetryEvent(
+            normalization
+                ? FamilyTablesTelemetryKind.postFreezeNormalization
+                : FamilyTablesTelemetryKind.postFreezeWrite,
+          ),
+        );
         return true;
       }(), 'post-freeze sparse family editor mutation observation failed');
       throw StateError('FamilyTablesEditor was already consumed.');
@@ -1900,6 +1649,56 @@ final class FamilyElementFacts {
   final double? thickness;
 }
 
+enum _MembershipSetPurpose {
+  admissionDuplicateDetection,
+  queryUnion,
+  retainedMembershipCopy,
+}
+
+// This gateway classifies every owner-created membership set. Admission uses a
+// temporary duplicate detector; query or retained copies are forbidden truth
+// sources and therefore emit distinct semantic events for owning tests.
+final class _MembershipSetGateway {
+  const _MembershipSetGateway();
+
+  Set<String> allocate(_MembershipSetPurpose purpose) {
+    switch (purpose) {
+      case _MembershipSetPurpose.admissionDuplicateDetection:
+        break;
+      case _MembershipSetPurpose.queryUnion:
+        FamilyTables._emitTelemetry(
+          const FamilyTablesTelemetryEvent(
+            FamilyTablesTelemetryKind.membershipUnionAllocation,
+          ),
+        );
+      case _MembershipSetPurpose.retainedMembershipCopy:
+        FamilyTables._emitTelemetry(
+          const FamilyTablesTelemetryEvent(
+            FamilyTablesTelemetryKind.retainedMembershipCopyAllocation,
+          ),
+        );
+    }
+
+    return <String>{};
+  }
+
+  bool addKey(Set<String> ids, String id, _MembershipSetPurpose purpose) {
+    switch (purpose) {
+      case _MembershipSetPurpose.admissionDuplicateDetection:
+        break;
+      case _MembershipSetPurpose.queryUnion:
+      case _MembershipSetPurpose.retainedMembershipCopy:
+        FamilyTables._emitTelemetry(
+          const FamilyTablesTelemetryEvent(
+            FamilyTablesTelemetryKind.membershipKeyCopy,
+          ),
+        );
+    }
+
+    return ids.add(id);
+  }
+}
+
 // Admission stores every family table together so duplicate id detection and
 // row insertion remain one atomic step.
 // ignore: coupling-between-object-classes
@@ -1913,11 +1712,17 @@ final class _AdmittedRows {
   final Map<String, RectRow> rectRows = {};
   final Map<CanvasResourceId, int> imageResourceReferenceCounts = {};
   final Map<CanvasResourceId, int> vectorResourceReferenceCounts = {};
-  final Set<String> ids = {};
+  final Set<String> ids = FamilyTables._membershipSetGateway.allocate(
+    _MembershipSetPurpose.admissionDuplicateDetection,
+  );
 
   void add(CanvasElement element) {
     final id = element.id.value;
-    if (!ids.add(id)) {
+    if (!FamilyTables._membershipSetGateway.addKey(
+      ids,
+      id,
+      _MembershipSetPurpose.admissionDuplicateDetection,
+    )) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
         message: 'duplicate element id.',
@@ -1947,7 +1752,11 @@ final class _AdmittedRows {
 
   void addSchemaV1Import(SchemaV1ElementImportEvent event) {
     final id = event.common.id.value;
-    if (!ids.add(id)) {
+    if (!FamilyTables._membershipSetGateway.addKey(
+      ids,
+      id,
+      _MembershipSetPurpose.admissionDuplicateDetection,
+    )) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
         message: 'duplicate element id.',

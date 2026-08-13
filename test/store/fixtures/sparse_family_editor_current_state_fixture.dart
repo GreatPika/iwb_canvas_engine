@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../support/document_store_with_document.dart';
+import 'family_tables_telemetry.dart';
 
 // This fixture retains the decision matrix in one readable sequence; splitting
 // the calls only to lower a metric would hide the shared stale-read oracle.
@@ -14,10 +15,10 @@ import '../../support/document_store_with_document.dart';
 void main() {
   test('ordered current-family decisions use only the editor view', () {
     final store = documentStoreWithDocument(_baseDocument());
-    final work = FamilyTablesWork();
+    final work = FamilyTablesTelemetry();
 
-    final prepared = FamilyTables.observeWork(
-      work,
+    final prepared = FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(_orderedTrace()),
     );
 
@@ -133,11 +134,11 @@ void main() {
 // ignore: halstead-volume, source-lines-of-code
 void _expectDuplicateAddDecision() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
   expect(
-    () => FamilyTables.observeWork(
-      work,
+    () => FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(
         StoreSparseCommit(
           revisionDelta: const StoreRevisionDelta.structural(),
@@ -182,15 +183,15 @@ void _expectDuplicateAddDecision() {
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _expectAddUpdateDecision() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
   final added = CanvasImageElement(
     id: CanvasElementId('added'),
     resourceId: CanvasResourceId('resource'),
     size: const Size(1, 1),
   );
 
-  FamilyTables.observeWork(
-    work,
+  FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.structural().merge(
@@ -287,10 +288,10 @@ void _expectAddUpdateDecision() {
 // ignore: halstead-volume, source-lines-of-code
 void _expectMissingUpdateDecision() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
-  final prepared = FamilyTables.observeWork(
-    work,
+  final prepared = FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -341,11 +342,11 @@ void _expectMissingUpdateDecision() {
 // ignore: halstead-volume, source-lines-of-code
 void _expectRemoveUpdateReaddDecision() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
   final old = _oldImage();
 
-  FamilyTables.observeWork(
-    work,
+  FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.structural(),
@@ -480,10 +481,10 @@ void _expectSourceKindAndNoOpDecisions() {
   );
 
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
   final old = _oldImage();
-  final prepared = FamilyTables.observeWork(
-    work,
+  final prepared = FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -532,11 +533,11 @@ void _expectSourceKindAndNoOpDecisions() {
 // ignore: halstead-volume, source-lines-of-code
 void _expectRelationshipFailureDiscards() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
   expect(
-    () => FamilyTables.observeWork(
-      work,
+    () => FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(
         StoreSparseCommit(
           revisionDelta: const StoreRevisionDelta.structural(),
@@ -603,11 +604,11 @@ void _expectUpdateFailure(
   List<FamilyTablesDecisionRead> expectedReads,
 ) {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
   expect(
-    () => FamilyTables.observeWork(
-      work,
+    () => FamilyTables.observeTelemetry(
+      work.record,
       () => store.prepareSparseCommit(
         StoreSparseCommit(
           revisionDelta: const StoreRevisionDelta.elementVisual(),
@@ -627,7 +628,7 @@ void _expectUpdateFailure(
   expect(work.staleDecisionReadCount, 0);
 }
 
-void _expectNoFreezeOrPublication(FamilyTablesWork work) {
+void _expectNoFreezeOrPublication(FamilyTablesTelemetry work) {
   for (final kind in CanvasElementKind.values) {
     expect(work.transactionFreezeCount(kind), 0);
   }
@@ -637,10 +638,10 @@ void _expectNoFreezeOrPublication(FamilyTablesWork work) {
 
 void _expectClearBarrierDecision() {
   final store = documentStoreWithDocument(_baseDocument());
-  final work = FamilyTablesWork();
+  final work = FamilyTablesTelemetry();
 
-  FamilyTables.observeWork(
-    work,
+  FamilyTables.observeTelemetry(
+    work.record,
     () => store.prepareSparseCommit(
       StoreSparseCommit(
         revisionDelta: const StoreRevisionDelta.structural(),
