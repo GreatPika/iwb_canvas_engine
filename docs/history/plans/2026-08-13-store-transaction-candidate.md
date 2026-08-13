@@ -171,7 +171,7 @@ Work Budget And Cost Displacement: Journal handling performs exactly one ordered
 
 ## Execution Units
 
-### [ ] Unit 1: Consolidate sparse journal accounting into one replay
+### [x] Unit 1: Consolidate sparse journal accounting into one replay
 
 Owner: `DocumentStoreKernel` transaction-local sparse ledger lifecycle
 Boundary: Allowed production file: `lib/src/store/document_store_kernel.dart`. `lib/src/store/sparse_store_commit.dart`, `FamilyTables`, resource/structural owners, edit/runtime consumers, and public behavior are read-only compatibility surfaces. Nearest evidence stays in the existing direct sparse-store/finalization fixtures; no new general scanner is allowed.
@@ -189,7 +189,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Cut sparse resource mutation over to one owner editor
+### [x] Unit 2: Cut sparse resource mutation over to one owner editor
 
 Owner: `ResourceTable` consume-once editor and its direct `DocumentStoreKernel` sparse consumer
 Boundary: Allowed production files: `lib/src/store/resource_table.dart` and `lib/src/store/document_store_kernel.dart`. The existing full/materialized `ResourceTable` acceptance lifecycle remains a distinct immutable-snapshot path; `FamilyTables` reference counts are consumed unchanged and may not be reopened or mirrored. Nearest evidence is the existing sparse-store resource/clear/finalization owner coverage.
@@ -209,7 +209,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 1 — produces: one current touched/resource/admission/deferred accounting lifecycle; consumed as: the bounded ID/finalization inputs for resource acceptance, touched classification, and discard
 
-### [ ] Unit 3: Establish one indexed rank implementation in the current layer owner
+### [x] Unit 3: Establish one indexed rank implementation in the current layer owner
 
 Owner: One internal deterministic implicit AVL/order-statistics sequence implementation under the Store dependency path, with current `LayerTable` rank mutation as its production consumer
 Boundary: Allowed production surface: `lib/src/store/layer_table.dart` plus new cohesive implementation files under `lib/src/store/**` whose sole concern is the indexed-sequence owner selected by Design D3. File count, filenames, private classes, helpers, and node/rotation decomposition remain open; adding any unrelated Store concern or another rank implementation is forbidden. No edit/draft consumer, Store transaction lifetime, public order type, gap/anchor/generation protocol, or committed representation change is allowed. Owner evidence may add focused Store-side sequence artifact families and extend existing layer coverage.
@@ -229,7 +229,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 4: Promote indexed order into one structural transaction editor
+### [x] Unit 4: Promote indexed order into one structural transaction editor
 
 Owner: `ElementRegistry`/`LayerTable` transaction-local structural editor and its direct `DocumentStoreKernel` sparse structural consumer
 Boundary: Allowed production files: `lib/src/store/element_registry.dart`, `lib/src/store/layer_table.dart`, and `lib/src/store/document_store_kernel.dart`, plus new cohesive files under `lib/src/store/**` whose sole concern is the structural transaction editor. File count, filenames, private classes, and helper decomposition remain open; files for unrelated owners or a second sequence implementation are forbidden. The Unit-3 sequence owner is consumed but not duplicated; `FamilyTables` and `ResourceTable` editors are read-only dependencies. Full construction/Schema import keep their distinct one-shot builders. Nearest evidence stays with layer-location and direct sparse-store owners.
@@ -252,7 +252,7 @@ Depends On:
 - Unit 2 — produces: exclusive current resource editor and one normalized freeze; consumed as: the descriptor view used while structural/resource interleavings and final relationships are evaluated
 - Unit 3 — produces: one complete indexed rank implementation with exact semantics and current ownership proof; consumed as: the sole mutable sequence implementation whose lifetime is promoted across the structural transaction
 
-### [ ] Unit 5: Cut preparation over to one final Store candidate
+### [x] Unit 5: Cut preparation over to one final Store candidate
 
 Owner: `DocumentStoreKernel` sparse transaction candidate and finalization boundary, with `CommittedDocument` as the immutable publication owner
 Boundary: Allowed production files: `lib/src/store/document_store_kernel.dart` and `lib/src/store/committed_document.dart`, plus new cohesive files under `lib/src/store/**` whose sole concern is aggregate Store-candidate coordination/finalization. File count, filenames, private classes, and helper decomposition remain open; unrelated owner logic and duplicate subordinate algorithms are forbidden. `family_tables.dart`, `resource_table.dart`, `layer_table.dart`, `element_registry.dart`, and the Unit-3 sequence are completed dependencies and may not be reopened for duplicate algorithms or proof repair. `lib/src/store/sparse_store_commit.dart`, all `lib/src/edit/**`, `lib/src/runtime/**`, public/codec/schema/validation/operation owners, and architecture graph are forbidden production changes. Allowed knowledge/verification surfaces are `docs/architecture/03_data_model.md`, the Store-finalization portion of `docs/contracts/edit_kernel.md`, `docs/verification/tests.md` when required to register changed proof ownership, `architecture/decisions/README.md`, the next ADR-0017 file, direct Store/finalization/no-projection/admission fixtures, and `test/guardrails/edit_accepted_finalization_guardrail_test.dart` only for guarantee transfer/reduction.
