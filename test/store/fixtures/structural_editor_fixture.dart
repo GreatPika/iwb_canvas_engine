@@ -83,71 +83,22 @@ void main() {
         ),
         isEmpty,
       );
-      expect(
-        structuralEvents.where(
-          (event) =>
-              event.kind ==
-                  ElementRegistryStructuralEditorWorkKind.finalTraversalVisit &&
-              event.order == ElementRegistryStructuralOrderKind.background,
-        ),
-        isEmpty,
+      _expectFinalTraversalVisits(
+        structuralEvents,
+        background: 0,
+        layers: 2,
+        content: 5,
       );
-      expect(
-        structuralEvents.where(
-          (event) =>
-              event.kind ==
-                  ElementRegistryStructuralEditorWorkKind.finalTraversalVisit &&
-              event.order == ElementRegistryStructuralOrderKind.layer,
+      _expectStructuralPublications(
+        structuralEvents,
+        counts: (
+          background: 0,
+          content: 1,
+          frame: 1,
+          elementLocations: 1,
+          layerTable: 1,
         ),
-        hasLength(2),
       );
-      expect(
-        structuralEvents.where(
-          (event) =>
-              event.kind ==
-                  ElementRegistryStructuralEditorWorkKind.finalTraversalVisit &&
-              event.order == ElementRegistryStructuralOrderKind.content,
-        ),
-        hasLength(5),
-      );
-      for (final expectation in [
-        (
-          kind: ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
-          count: 1,
-        ),
-        (
-          kind:
-              ElementRegistryStructuralEditorWorkKind.layerLocationsPublication,
-          count: 1,
-        ),
-        (
-          kind: ElementRegistryStructuralEditorWorkKind
-              .backgroundOrderPublication,
-          count: 0,
-        ),
-        (
-          kind: ElementRegistryStructuralEditorWorkKind.contentOrderPublication,
-          count: 1,
-        ),
-        (
-          kind: ElementRegistryStructuralEditorWorkKind.frameOrderPublication,
-          count: 1,
-        ),
-        (
-          kind: ElementRegistryStructuralEditorWorkKind.frameTokenPublication,
-          count: 1,
-        ),
-        (
-          kind: ElementRegistryStructuralEditorWorkKind
-              .elementLocationPublication,
-          count: 1,
-        ),
-      ]) {
-        expect(
-          structuralEvents.where((event) => event.kind == expectation.kind),
-          hasLength(expectation.count),
-        );
-      }
     },
   );
   test('frozen and discarded structural editors seal mutable order state', () {
@@ -492,98 +443,63 @@ void main() {
       hasLength(1),
     );
   });
-  test('direct sparse preparation preserves mixed structural policy', () {
-    final store = DocumentStoreKernel.withCommittedDocumentForTesting(
-      CommittedDocument(
-        CanvasDocument(
-          backgroundElements: [_rect('background-base')],
-          layers: [
-            CanvasLayer(
-              id: CanvasLayerId('layer-a'),
-              elements: [_rect('base-a')],
-            ),
-            CanvasLayer(
-              id: CanvasLayerId('layer-b'),
-              elements: [_rect('base-b')],
-            ),
+  test(
+    'mixed structural trace preserves direct admission and touched facts',
+    () {
+      final prepared = _currentStateStore().prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: const StoreRevisionDelta.structural(),
+          mutations: [
+            for (final action in _mixedStructuralActions()) action.toMutation(),
           ],
         ),
-      ),
-    );
+      );
 
-    final prepared = store.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: const StoreRevisionDelta.structural(),
-        mutations: [
-          StoreSparseEnsureLayer(CanvasLayerId('inserted'), index: 0),
-          StoreSparseAddElement(
-            element: _rect('background-first'),
-            background: true,
-            index: -1,
-          ),
-          _add('front', index: -9),
-          _add('middle', index: 2),
-          StoreSparseRemoveElement(CanvasElementId('base-a')),
-          StoreSparseRemoveElement(CanvasElementId('middle')),
-          StoreSparseAddElement(
-            element: _rect('middle'),
-            background: true,
-            index: 1,
-          ),
-          StoreSparseRemoveElement(CanvasElementId('middle')),
-          StoreSparseAddElement(
-            element: _rect('middle'),
-            layerId: CanvasLayerId('layer-b'),
-            index: 99,
-          ),
-          const StoreSparseClearContent(removeUnusedResources: false),
-          _add('after-clear', index: -1),
-        ],
-      ),
-    );
-
-    expect(prepared.hasChanges, isTrue);
-    expect(prepared.revisionDelta.structural, isTrue);
-    expect(
-      prepared.document.elements.backgroundElementIds.map((id) => id.value),
-      ['background-first', 'background-base'],
-    );
-    expect(
-      prepared.document.elements.contentElementOrder.map((id) => id.value),
-      ['after-clear'],
-    );
-    expect(
-      prepared.document.elements.layerTable.rows.map((row) => row.id.value),
-      ['inserted', 'layer-a', 'layer-b'],
-    );
-    expect(
-      prepared.document.elements.layerTable
-          .locationFor(CanvasLayerId('layer-a'))
-          ?.row
-          .elementIds
-          .map((id) => id.value),
-      ['after-clear'],
-    );
-    expect(prepared.admittedLayerIds, ['inserted', 'layer-a', 'layer-b']);
-    expect(prepared.admittedElementIds, [
-      'background-first',
-      'front',
-      'middle',
-      'after-clear',
-    ]);
-    expect(prepared.touchedFacts.addedElementIds.map((id) => id.value), {
-      'background-first',
-      'after-clear',
-    });
-    expect(prepared.touchedFacts.removedElementIds.map((id) => id.value), {
-      'base-a',
-      'base-b',
-    });
-    expect(
-      prepared.document.elements.elementById(CanvasElementId('after-clear')),
-      isNotNull,
-    );
-  });
+      expect(prepared.hasChanges, isTrue);
+      expect(prepared.revisionDelta.structural, isTrue);
+      expect(
+        prepared.document.elements.backgroundElementIds.map((id) => id.value),
+        ['background-first', 'background-base'],
+      );
+      expect(
+        prepared.document.elements.contentElementOrder.map((id) => id.value),
+        ['after-clear'],
+      );
+      expect(
+        prepared.document.elements.layerTable.rows.map((row) => row.id.value),
+        ['inserted', 'layer-a', 'layer-b'],
+      );
+      expect(
+        prepared.document.elements.layerTable
+            .locationFor(CanvasLayerId('layer-a'))
+            ?.row
+            .elementIds
+            .map((id) => id.value),
+        ['after-clear'],
+      );
+      expect(prepared.admittedLayerIds, ['inserted', 'layer-a', 'layer-b']);
+      expect(prepared.admittedElementIds, [
+        'background-first',
+        'front',
+        'middle',
+        'end',
+        'base-a',
+        'after-clear',
+      ]);
+      expect(prepared.touchedFacts.addedElementIds.map((id) => id.value), {
+        'background-first',
+        'after-clear',
+      });
+      expect(prepared.touchedFacts.removedElementIds.map((id) => id.value), {
+        'base-a',
+        'base-b',
+      });
+      expect(
+        prepared.document.elements.elementById(CanvasElementId('after-clear')),
+        isNotNull,
+      );
+    },
+  );
   test(
     'supported-size Store transaction opens and traverses one affected order once',
     () {
@@ -673,21 +589,7 @@ void main() {
     },
   );
   test('Store prefixes retain exact mixed current structural state', () {
-    final actions = <_StructuralAction>[
-      const _EnsureLayer('inserted', index: -5),
-      const _AddBackground('background-first', index: -4),
-      const _AddContent('front', layerId: 'layer-a', index: -9),
-      const _AddContent('middle', layerId: 'layer-a', index: 2),
-      const _AddContent('end', layerId: 'layer-a', index: 999),
-      const _Remove('base-a'),
-      const _AddContent('base-a', layerId: 'layer-b', index: 0),
-      const _Remove('middle'),
-      const _AddBackground('middle', index: 1),
-      const _Remove('middle'),
-      const _AddContent('middle', layerId: 'layer-b', index: 999),
-      const _Clear(),
-      const _AddContent('after-clear', layerId: 'layer-a', index: -1),
-    ];
+    final actions = _mixedStructuralActions();
     final oracle = _StructuralOracle.fromBase();
     for (
       var prefixLength = 1;
@@ -950,6 +852,22 @@ DocumentStoreKernel _currentStateStore() =>
     DocumentStoreKernel.withCommittedDocumentForTesting(
       CommittedDocument(_currentStateBaseDocument()),
     );
+
+List<_StructuralAction> _mixedStructuralActions() => const [
+  _EnsureLayer('inserted', index: -5),
+  _AddBackground('background-first', index: -4),
+  _AddContent('front', layerId: 'layer-a', index: -9),
+  _AddContent('middle', layerId: 'layer-a', index: 2),
+  _AddContent('end', layerId: 'layer-a', index: 999),
+  _Remove('base-a'),
+  _AddContent('base-a', layerId: 'layer-b', index: 0),
+  _Remove('middle'),
+  _AddBackground('middle', index: 1),
+  _Remove('middle'),
+  _AddContent('middle', layerId: 'layer-b', index: 999),
+  _Clear(),
+  _AddContent('after-clear', layerId: 'layer-a', index: -1),
+];
 
 CanvasDocument _currentStateBaseDocument() => CanvasDocument(
   backgroundElements: [_rect('background-base')],
