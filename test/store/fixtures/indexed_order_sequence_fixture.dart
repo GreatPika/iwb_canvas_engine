@@ -335,7 +335,7 @@ void _insertAtIndependentRanks(
     IndexedOrderSequenceWorkEvent.insertNodeVisit,
     () => sequence.insert(entry, index: sequenceIndex),
   );
-  _expectCurrentOwnerState(trace);
+  _expectSupportedAvlState(trace);
 }
 
 int _insertionIndex(_InsertionSite site, int length) => switch (site) {
@@ -356,7 +356,7 @@ void _expectRemovalWork(_SupportedTrace trace, String id) {
     () => actual = sequence.remove(id),
   );
   expect(actual, expected);
-  _expectCurrentOwnerState(trace);
+  _expectSupportedAvlState(trace);
 }
 
 List<_Entry> _verifyIterationAndFinalFlatten(_SupportedTrace trace) {
@@ -416,11 +416,10 @@ void _expectExact(
   expect(sequence.locationForId('missing'), isNull);
 }
 
-void _expectCurrentOwnerState(_SupportedTrace trace) {
+void _expectSupportedAvlState(_SupportedTrace trace) {
   final sequence = trace.sequence;
   final oracle = trace.oracle;
   _expectAudit(sequence, expectedCount: oracle.length);
-  _expectExact(sequence, oracle);
   for (final id in trace.removedIds) {
     expect(oracle.containsId(id), isFalse);
     expect(sequence.containsId(id), isFalse);

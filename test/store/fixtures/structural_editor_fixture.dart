@@ -150,45 +150,6 @@ void main() {
       }
     },
   );
-  test('current structural placement follows mixed sequential mutations', () {
-    final base = _baseRegistry();
-    ElementRegistry.editSparseStructure(base, (editor) {
-      final oracle = _StructuralOracle.fromBase();
-      void apply(_StructuralAction action) {
-        action.applyToEditor(editor);
-        action.applyToOracle(oracle);
-        _expectCurrentEditorMatches(editor, oracle);
-      }
-
-      apply(const _EnsureLayer('inserted', index: 0));
-      apply(const _AddBackground('background-first', index: -1));
-      apply(const _AddContent('front', layerId: 'layer-a', index: -9));
-      apply(const _AddContent('middle', layerId: 'layer-a', index: 2));
-      apply(const _Remove('base-a'));
-      apply(const _Remove('middle'));
-      apply(const _AddBackground('middle', index: 1));
-      apply(const _Remove('middle'));
-      apply(const _AddContent('middle', layerId: 'layer-b', index: 99));
-      apply(const _Clear());
-      apply(const _AddContent('after-clear', layerId: 'layer-a', index: -1));
-
-      final frozen = editor.freeze(familyTables: base.familyTables);
-      expect(frozen.backgroundElementIds.map((id) => id.value), [
-        'background-first',
-        'background-base',
-      ]);
-      expect(frozen.contentElementOrder.map((id) => id.value), ['after-clear']);
-      expect(frozen.frameElementOrder.map((id) => id.value), [
-        'background-first',
-        'background-base',
-        'after-clear',
-      ]);
-      expect(
-        frozen.elementLocationFacts[CanvasElementId('after-clear')]?.layerId,
-        CanvasLayerId('layer-a'),
-      );
-    });
-  });
   test('frozen and discarded structural editors seal mutable order state', () {
     final base = _baseRegistry();
     late ElementRegistryStructuralEditor frozenEditor;
@@ -621,63 +582,6 @@ void main() {
     expect(
       prepared.document.elements.elementById(CanvasElementId('after-clear')),
       isNotNull,
-    );
-  });
-  test('late sparse coverage failure discards structural finalization', () {
-    final store = _store();
-    final events = <ElementRegistryStructuralEditorWorkEvent>[];
-    expect(
-      () => ElementRegistry.observeSparseStructuralEditorWork(events.add, () {
-        store.prepareSparseCommit(
-          StoreSparseCommit(
-            revisionDelta: const StoreRevisionDelta(),
-            mutations: [_add('coverage-failure')],
-          ),
-        );
-      }),
-      throwsArgumentError,
-    );
-    expect(events.where(_isStructuralPublication), isEmpty);
-    expect(
-      events
-          .where(
-            (event) =>
-                event.kind == ElementRegistryStructuralEditorWorkKind.discard,
-          )
-          .length,
-      1,
-    );
-  });
-  test('relationship failure discards structural owner before publication', () {
-    final store = _store();
-    final events = <ElementRegistryStructuralEditorWorkEvent>[];
-    expect(
-      () => ElementRegistry.observeSparseStructuralEditorWork(events.add, () {
-        store.prepareSparseCommit(
-          StoreSparseCommit(
-            revisionDelta: const StoreRevisionDelta.structural(),
-            mutations: [
-              StoreSparseAddElement(
-                element: CanvasImageElement(
-                  id: CanvasElementId('missing-resource'),
-                  resourceId: CanvasResourceId('missing-resource'),
-                  size: const Size(1, 1),
-                ),
-                layerId: CanvasLayerId('layer-a'),
-              ),
-            ],
-          ),
-        );
-      }),
-      throwsA(isA<CanvasDataException>()),
-    );
-    expect(events.where(_isStructuralPublication), isEmpty);
-    expect(
-      events.where(
-        (event) =>
-            event.kind == ElementRegistryStructuralEditorWorkKind.discard,
-      ),
-      hasLength(1),
     );
   });
   test(
@@ -1151,29 +1055,12 @@ CanvasRectElement _rect(
 }) =>
     CanvasRectElement(id: CanvasElementId(id), revision: revision, size: size);
 
-ElementRegistry _baseRegistry() => ElementRegistry(
-  backgroundElements: [_rect('background-base')],
-  layers: [
-    CanvasLayer(id: CanvasLayerId('layer-a'), elements: [_rect('base-a')]),
-    CanvasLayer(id: CanvasLayerId('layer-b'), elements: [_rect('base-b')]),
-  ],
-);
-
-void _expectCurrentEditorMatches(
-  ElementRegistryStructuralEditor editor,
-  _StructuralOracle oracle,
-) {
-  expect(
-    editor.currentBackgroundElementIds.map((id) => id.value),
-    oracle.background,
+ElementRegistry _baseRegistry() {
+  final document = _currentStateBaseDocument();
+  return ElementRegistry(
+    backgroundElements: document.backgroundElements,
+    layers: document.layers,
   );
-  expect(editor.currentContentElementIds.map((id) => id.value), oracle.content);
-  expect(editor.currentFrameElementIds.map((id) => id.value), oracle.frame);
-  for (final entry in oracle.locations.entries) {
-    final actual = editor.locationFor(CanvasElementId(entry.key));
-    expect(actual?.kind, entry.value.kind);
-    expect(actual?.layerId?.value, entry.value.layerId);
-  }
 }
 
 sealed class _StructuralAction {

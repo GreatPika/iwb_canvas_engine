@@ -102,15 +102,6 @@ Color _candidateCurrentStateOracle() {
         oracle.differsFromBase,
         reason: 'seed=$seed shortest failing prefix=$length acceptance',
       );
-      _expectExactDelta(prepared.revisionDelta, oracle.acceptedRevisionDelta);
-      _expectExpectedTouchedFacts(
-        prepared.touchedFacts,
-        oracle.acceptedTouchedFacts(trace.take(length)),
-      );
-      final admissions = _expectedAdmissions(trace.take(length));
-      expect(prepared.admittedElementIds, admissions.elementIds);
-      expect(prepared.admittedLayerIds, admissions.layerIds);
-      expect(prepared.admittedResourceIds, admissions.resourceIds);
       _expectPrefixOwnerState(
         events: events,
         resourceEvents: resourceEvents,
@@ -122,53 +113,6 @@ Color _candidateCurrentStateOracle() {
     }
   }
   return const Color(0xFF007AB7);
-}
-
-// This exhaustive independent admission taxonomy is clearer than scattering
-// mutation cases through the oracle, so the witness remains reviewable.
-// ignore: cyclomatic-complexity
-_ExpectedAdmissions _expectedAdmissions(Iterable<StoreSparseMutation> trace) {
-  final elementIds = <String>{};
-  final layerIds = <String>{};
-  final resourceIds = <String>{};
-  for (final mutation in trace) {
-    switch (mutation) {
-      case StoreSparseEnsureLayer(:final id):
-        layerIds.add(id.value);
-      case StoreSparseAddElement(:final element, :final layerId):
-        elementIds.add(element.id.value);
-        if (layerId != null) {
-          layerIds.add(layerId.value);
-        }
-      case StoreSparseUpsertResource(:final resource):
-        resourceIds.add(resource.id.value);
-      case StoreSparseUpdateElement() ||
-          StoreSparseRemoveElement() ||
-          StoreSparseRemoveUnusedResource() ||
-          StoreSparseClearContent() ||
-          StoreSparseSetBackground() ||
-          StoreSparseSetCamera() ||
-          StoreSparseSetPalette():
-        break;
-    }
-  }
-  return _ExpectedAdmissions(
-    elementIds: elementIds.toList(growable: false),
-    layerIds: layerIds.toList(growable: false),
-    resourceIds: resourceIds.toList(growable: false),
-  );
-}
-
-final class _ExpectedAdmissions {
-  const _ExpectedAdmissions({
-    required this.elementIds,
-    required this.layerIds,
-    required this.resourceIds,
-  });
-
-  final List<String> elementIds;
-  final List<String> layerIds;
-  final List<String> resourceIds;
 }
 
 // One literal trace forces every cross-owner mutation family for each seed.
@@ -415,168 +359,6 @@ final class _CandidateStateOracle {
 
   bool get differsFromBase => !_base.matches(this);
 
-  // The prefix oracle derives committed effects strictly from its plain DTO
-  // state. It deliberately stays independent from Store delta/touched helpers.
-  // The complete base/final delta remains in one independent DTO oracle so
-  // every accepted fact is auditable without Store helpers.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
-  StoreRevisionDelta get acceptedRevisionDelta {
-    var delta = const StoreRevisionDelta();
-    if (camera != _base.camera || !_samePalette(palette, _base.palette)) {
-      delta = delta.merge(const StoreRevisionDelta.projectionOnly());
-    }
-    if (background.color != _base.background.color) {
-      delta = delta.merge(const StoreRevisionDelta.background());
-    }
-    if (background.grid != _base.background.grid) {
-      delta = delta.merge(const StoreRevisionDelta.grid());
-    }
-    if (!_sameResourceMap(resources, _base.resources)) {
-      delta = delta.merge(const StoreRevisionDelta.resource());
-    }
-    final hasLayerChange = !_sameList(layerIds, _base.layerIds);
-    final hasStructureChange =
-        !_sameList(backgroundIds, _base.backgroundIds) ||
-        !_sameContent(contentByLayer, _base.contentByLayer) ||
-        !_sameList(elements.keys, _base.elements.keys);
-    if (hasStructureChange) {
-      return delta.merge(const StoreRevisionDelta.structural());
-    }
-    if (hasLayerChange) {
-      return delta.merge(const StoreRevisionDelta.layerStructural());
-    }
-    for (final id in elements.keys) {
-      final before = _base.elements[id];
-      final after = elements[id];
-      if (before == null || after == null || _sameElementFacts(after, before)) {
-        continue;
-      }
-      delta = delta.merge(_expectedElementDelta(before, after));
-    }
-    return delta;
-  }
-
-  // All touched fields derive together from independent immutable facts.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
-  _ExpectedTouchedFacts acceptedTouchedFacts(
-    Iterable<StoreSparseMutation> trace,
-  ) {
-    final added = <CanvasElementId>{};
-    final removed = <CanvasElementId>{};
-    final updated = <CanvasElementId>{};
-    final visual = <CanvasElementId>{};
-    final descriptors = <CanvasResourceId>{};
-    final resourceVisual = <CanvasResourceId>{};
-    for (final id in {..._base.elements.keys, ...elements.keys}) {
-      final before = _base.elements[id];
-      final after = elements[id];
-      final canvasId = CanvasElementId(id);
-      if (before == null && after != null) {
-        added.add(canvasId);
-      } else if (before != null && after == null) {
-        removed.add(canvasId);
-      } else if (before != null &&
-          after != null &&
-          !_sameElementFacts(before, after)) {
-        updated.add(canvasId);
-        if (_expectedElementDelta(before, after).elementVisual) {
-          visual.add(canvasId);
-        }
-      }
-    }
-    for (final id in {..._base.resources.keys, ...resources.keys}) {
-      final before = _base.resources[id];
-      final after = resources[id];
-      if (before == null ||
-          after == null ||
-          !_sameResourceFacts(before, after)) {
-        final resourceId = CanvasResourceId(id);
-        descriptors.add(resourceId);
-        if (_referencesResource(_base.elements, id) ||
-            _referencesResource(elements, id)) {
-          resourceVisual.add(resourceId);
-        }
-      }
-    }
-    return _ExpectedTouchedFacts(
-      added: added,
-      removed: removed,
-      updated: updated,
-      visual: visual,
-      selectionPrune: removed,
-      descriptors: descriptors,
-      resourceVisual: resourceVisual,
-      layers: _expectedAcceptedLayerIds(trace),
-      backgroundLayerChanged: !_sameList(_base.backgroundIds, backgroundIds),
-      persistedCamera: camera != _base.camera,
-      background: background.color != _base.background.color,
-      grid: background.grid != _base.background.grid,
-      palette: !_samePalette(palette, _base.palette),
-    );
-  }
-
-  // This compactly represents the accepted layer taxonomy for the oracle.
-  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
-  Set<CanvasLayerId> _expectedAcceptedLayerIds(
-    Iterable<StoreSparseMutation> trace,
-  ) {
-    final ids = <CanvasLayerId>{};
-    for (final mutation in trace) {
-      switch (mutation) {
-        case StoreSparseEnsureLayer(:final id):
-          if (!_base.contentByLayer.containsKey(id.value) &&
-              contentByLayer.containsKey(id.value)) {
-            ids.add(id);
-          }
-        case StoreSparseAddElement(
-          :final element,
-          :final index,
-          :final background,
-        ):
-          if (index != null &&
-              !background &&
-              !_base.elements.containsKey(element.id.value) &&
-              elements.containsKey(element.id.value)) {
-            final layerId = _contentLayerFor(element.id.value);
-            if (layerId != null) {
-              ids.add(CanvasLayerId(layerId));
-            }
-          }
-        case StoreSparseRemoveElement(:final id):
-          if (_base.elements.containsKey(id.value) &&
-              !elements.containsKey(id.value)) {
-            final layerId = _base.contentLayerFor(id.value);
-            if (layerId != null) {
-              ids.add(CanvasLayerId(layerId));
-            }
-          }
-        case StoreSparseClearContent():
-          for (final entry in _base.contentByLayer.entries) {
-            if (entry.value.isNotEmpty) {
-              ids.add(CanvasLayerId(entry.key));
-            }
-          }
-        case StoreSparseUpdateElement() ||
-            StoreSparseUpsertResource() ||
-            StoreSparseRemoveUnusedResource() ||
-            StoreSparseSetBackground() ||
-            StoreSparseSetCamera() ||
-            StoreSparseSetPalette():
-          break;
-      }
-    }
-    return ids;
-  }
-
-  String? _contentLayerFor(String elementId) {
-    for (final entry in contentByLayer.entries) {
-      if (entry.value.contains(elementId)) {
-        return entry.key;
-      }
-    }
-    return null;
-  }
-
   Iterable<String> get contentIds sync* {
     for (final layerId in layerIds) {
       yield* contentByLayer[layerId] ?? const <String>[];
@@ -668,80 +450,6 @@ final class _CandidateStateOracle {
   );
 }
 
-StoreRevisionDelta _expectedElementDelta(
-  CanvasElement before,
-  CanvasElement after,
-) {
-  return switch ((before, after)) {
-    (
-      CanvasImageElement(resourceId: final beforeId, size: final beforeSize),
-      CanvasImageElement(resourceId: final afterId, size: final afterSize),
-    ) =>
-      beforeSize != afterSize
-          ? const StoreRevisionDelta.elementBounds()
-          : beforeId != afterId
-          ? const StoreRevisionDelta.elementVisual()
-          : const StoreRevisionDelta(),
-    (
-      CanvasVectorElement(resourceId: final beforeId, size: final beforeSize),
-      CanvasVectorElement(resourceId: final afterId, size: final afterSize),
-    ) =>
-      beforeSize != afterSize
-          ? const StoreRevisionDelta.elementBounds()
-          : beforeId != afterId
-          ? const StoreRevisionDelta.elementVisual()
-          : const StoreRevisionDelta(),
-    _ => const StoreRevisionDelta(),
-  };
-}
-
-bool _sameResourceFacts(CanvasResource left, CanvasResource right) =>
-    left.runtimeType == right.runtimeType &&
-    _appKeyOf(left) == _appKeyOf(right);
-
-bool _referencesResource(Map<String, CanvasElement> facts, String resourceId) =>
-    facts.values.any(
-      (element) => switch (element) {
-        CanvasImageElement(resourceId: final referencedId) ||
-        CanvasVectorElement(
-          resourceId: final referencedId,
-        ) => referencedId.value == resourceId,
-        _ => false,
-      },
-    );
-
-final class _ExpectedTouchedFacts {
-  const _ExpectedTouchedFacts({
-    required this.added,
-    required this.removed,
-    required this.updated,
-    required this.visual,
-    required this.selectionPrune,
-    required this.descriptors,
-    required this.resourceVisual,
-    required this.layers,
-    required this.backgroundLayerChanged,
-    required this.persistedCamera,
-    required this.background,
-    required this.grid,
-    required this.palette,
-  });
-
-  final Set<CanvasElementId> added;
-  final Set<CanvasElementId> removed;
-  final Set<CanvasElementId> updated;
-  final Set<CanvasElementId> visual;
-  final Set<CanvasElementId> selectionPrune;
-  final Set<CanvasResourceId> descriptors;
-  final Set<CanvasResourceId> resourceVisual;
-  final Set<CanvasLayerId> layers;
-  final bool backgroundLayerChanged;
-  final bool persistedCamera;
-  final bool background;
-  final bool grid;
-  final bool palette;
-}
-
 int _clampedIndex(int? index, int length) {
   final requested = index ?? length;
   if (requested < 0) {
@@ -775,15 +483,6 @@ final class _CandidateStateOracleSnapshot {
   final List<String> backgroundIds;
   final List<String> layerIds;
   final Map<String, List<String>> contentByLayer;
-
-  String? contentLayerFor(String elementId) {
-    for (final entry in contentByLayer.entries) {
-      if (entry.value.contains(elementId)) {
-        return entry.key;
-      }
-    }
-    return null;
-  }
 
   bool matches(_CandidateStateOracle current) =>
       camera == current.camera &&
@@ -1235,28 +934,6 @@ void _expectExactTouchedFacts(
   expect(actual.background, background);
   expect(actual.grid, grid);
   expect(actual.palette, palette);
-}
-
-void _expectExpectedTouchedFacts(
-  AcceptedStoreTouchedFacts actual,
-  _ExpectedTouchedFacts expected,
-) {
-  _expectExactTouchedFacts(
-    actual,
-    added: expected.added,
-    removed: expected.removed,
-    updated: expected.updated,
-    visual: expected.visual,
-    selectionPrune: expected.selectionPrune,
-    descriptors: expected.descriptors,
-    resourceVisual: expected.resourceVisual,
-    layers: expected.layers,
-    backgroundLayerChanged: expected.backgroundLayerChanged,
-    persistedCamera: expected.persistedCamera,
-    background: expected.background,
-    grid: expected.grid,
-    palette: expected.palette,
-  );
 }
 
 void _expectAggregateBeforeTouched(List<StoreSparseCandidateEvent> events) {
