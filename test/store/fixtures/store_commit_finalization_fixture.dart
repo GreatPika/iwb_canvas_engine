@@ -681,54 +681,48 @@ CanvasDocument _baseDocument({
 }
 
 CanvasDocument _documentWithMissingImageResource() {
-  return CanvasDocument(
-    resources: [_resource('resource-1')],
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-1'),
-        elements: [
-          CanvasImageElement(
-            id: CanvasElementId('missing-image-resource'),
-            resourceId: CanvasResourceId('missing-resource'),
-            size: const Size(1, 1),
-          ),
-        ],
-      ),
-    ],
+  return _singleLayerDocument(
+    resource: _resource('resource-1'),
+    element: CanvasImageElement(
+      id: CanvasElementId('missing-image-resource'),
+      resourceId: CanvasResourceId('missing-resource'),
+      size: const Size(1, 1),
+    ),
   );
 }
 
 CanvasDocument _documentWithImageUsingVectorResource() {
-  return CanvasDocument(
-    resources: [_vectorResource('resource-1')],
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-1'),
-        elements: [
-          CanvasImageElement(
-            id: CanvasElementId('image-with-vector-resource'),
-            resourceId: CanvasResourceId('resource-1'),
-            size: const Size(1, 1),
-          ),
-        ],
-      ),
-    ],
+  return _singleLayerDocument(
+    resource: _vectorResource('resource-1'),
+    element: CanvasImageElement(
+      id: CanvasElementId('image-with-vector-resource'),
+      resourceId: CanvasResourceId('resource-1'),
+      size: const Size(1, 1),
+    ),
   );
 }
 
 CanvasDocument _documentWithVectorUsingImageResource() {
+  return _singleLayerDocument(
+    resource: _resource('resource-1'),
+    element: CanvasVectorElement(
+      id: CanvasElementId('vector-with-image-resource'),
+      resourceId: CanvasResourceId('resource-1'),
+      size: const Size(1, 1),
+    ),
+  );
+}
+
+CanvasDocument _singleLayerDocument({
+  required CanvasResource resource,
+  required CanvasElement element,
+}) {
   return CanvasDocument(
-    resources: [_resource('resource-1')],
+    resources: [resource],
     layers: [
       CanvasLayer(
         id: CanvasLayerId('layer-1'),
-        elements: [
-          CanvasVectorElement(
-            id: CanvasElementId('vector-with-image-resource'),
-            resourceId: CanvasResourceId('resource-1'),
-            size: const Size(1, 1),
-          ),
-        ],
+        elements: [element],
       ),
     ],
   );
