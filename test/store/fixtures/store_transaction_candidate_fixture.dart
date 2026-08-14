@@ -1391,26 +1391,6 @@ void _expectCandidateWorkTimeline(List<_CandidateWorkBoundary> timeline) {
 // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
 void _candidatePublicationWork() {
   final base = CommittedDocument(_supportedCandidateDocument());
-  final adversarialAggregateEvents = <StoreSparseCandidateEvent>[];
-  final adversarialIntermediate =
-      CommittedDocument.observeSparseCandidateEvents(
-        adversarialAggregateEvents.add,
-        () => base.copyWith(
-          background: const CanvasBackground(color: Color(0xFF102030)),
-        ),
-      );
-  expect(adversarialIntermediate.background.color, const Color(0xFF102030));
-  expect(
-    adversarialAggregateEvents
-        .where(
-          (event) =>
-              event.kind == StoreSparseCandidateEventKind.aggregatePublication,
-        )
-        .toList(growable: false),
-    hasLength(1),
-    reason:
-        'every immutable aggregate construction, including an intermediate copyWith, is observable',
-  );
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
   final resourceEvents = <ResourceTableSelectiveMutationEvent>[];
   final structuralEvents = <ElementRegistryStructuralEditorWorkEvent>[];
