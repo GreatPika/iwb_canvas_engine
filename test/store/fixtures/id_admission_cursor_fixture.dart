@@ -262,56 +262,41 @@ String _candidateAfterConstruction(CanvasDocument document) {
 
 String _candidateAfterInstall() {
   final store = DocumentStoreKernel();
-  final work = _observe(() {
-    store.installDocument(
+  return _candidateAfterRoute(
+    store,
+    () => store.installDocument(
       CommittedDocument(_singleElementDocument()),
       const StoreRevisionDelta.structural(),
-    );
-  });
-
-  final candidate = store.observeElementIdCandidateForTesting().value;
-  _expectOneOccupiedPrefixNormalization(
-    work,
+    ),
     phase: IdAdmissionWorkPhase.acceptedAdmission,
     inputVisits: 1,
   );
-  return candidate;
 }
 
 String _candidateAfterReplacement() {
   final store = DocumentStoreKernel();
-  final work = _observe(() {
-    store.replaceDocument(
+  return _candidateAfterRoute(
+    store,
+    () => store.replaceDocument(
       CommittedDocument(_singleElementDocument()),
       const StoreRevisionDelta.structural(),
-    );
-  });
-
-  final candidate = store.observeElementIdCandidateForTesting().value;
-  _expectOneOccupiedPrefixNormalization(
-    work,
+    ),
     phase: IdAdmissionWorkPhase.reset,
     inputVisits: 1,
   );
-  return candidate;
 }
 
 String _candidateAfterPreparedLoad() {
   final store = DocumentStoreKernel();
-  final work = _observe(() {
-    store.replacePreparedLoadDocument(
+  return _candidateAfterRoute(
+    store,
+    () => store.replacePreparedLoadDocument(
       CommittedDocument(_singleElementDocument()),
       const StoreRevisionDelta.structural(),
-    );
-  });
-
-  final candidate = store.observeElementIdCandidateForTesting().value;
-  _expectOneOccupiedPrefixNormalization(
-    work,
+    ),
     phase: IdAdmissionWorkPhase.reset,
     inputVisits: 1,
   );
-  return candidate;
 }
 
 String _candidateAfterMaterializedInstall() {
@@ -320,17 +305,12 @@ String _candidateAfterMaterializedInstall() {
     _singleElementDocument(),
     const StoreRevisionDelta.structural(),
   );
-  final work = _observe(() {
-    store.installPreparedMaterializedCommit(prepared);
-  });
-
-  final candidate = store.observeElementIdCandidateForTesting().value;
-  _expectOneOccupiedPrefixNormalization(
-    work,
+  return _candidateAfterRoute(
+    store,
+    () => store.installPreparedMaterializedCommit(prepared),
     phase: IdAdmissionWorkPhase.acceptedAdmission,
     inputVisits: 1,
   );
-  return candidate;
 }
 
 String _candidateAfterSchemaV1Import() {
@@ -341,15 +321,26 @@ String _candidateAfterSchemaV1Import() {
     builder,
     const StoreRevisionDelta.structural(),
   );
-  final work = _observe(() {
-    store.installPreparedSchemaV1Import(prepared);
-  });
+  return _candidateAfterRoute(
+    store,
+    () => store.installPreparedSchemaV1Import(prepared),
+    phase: IdAdmissionWorkPhase.reset,
+    inputVisits: 1,
+  );
+}
 
+String _candidateAfterRoute(
+  DocumentStoreKernel store,
+  void Function() install, {
+  required IdAdmissionWorkPhase phase,
+  required int inputVisits,
+}) {
+  final work = _observe(install);
   final candidate = store.observeElementIdCandidateForTesting().value;
   _expectOneOccupiedPrefixNormalization(
     work,
-    phase: IdAdmissionWorkPhase.reset,
-    inputVisits: 1,
+    phase: phase,
+    inputVisits: inputVisits,
   );
   return candidate;
 }
