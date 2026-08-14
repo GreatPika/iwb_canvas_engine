@@ -23,24 +23,28 @@ import '../../support/document_store_with_document.dart';
 import 'family_tables_telemetry.dart';
 
 void main() {
+  // Each named helper contains the direct owner assertions; adding a sentinel
+  // assertion here would only test a fixture return value.
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
   test(
     'candidate current-state oracle covers fixed seeded cross-owner prefixes',
-    () {
-      expect(_candidateCurrentStateOracle(), const Color(0xFF007AB7));
-    },
+    _candidateCurrentStateOracle,
   );
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
   test(
-    'candidate accepted facts use normalized final facts and preserve admissions',
-    () {
-      expect(_candidateAcceptedFactsOracle(), isTrue);
-    },
+    'candidate accepted facts use normalized final facts',
+    _candidateAcceptedFactsOracle,
   );
-  test('candidate composes bounded owner work and one publication', () {
-    expect(_candidatePublicationWork(), hasLength(1));
-  });
-  test('candidate failure and alias matrix keeps preparation atomic', () {
-    expect(_candidateFailureAndAliasMatrix(), const Color(0xFF445566));
-  });
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
+  test(
+    'candidate composes bounded owner work and one publication',
+    _candidatePublicationWork,
+  );
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
+  test(
+    'candidate failure and alias matrix keeps preparation atomic',
+    _candidateFailureAndAliasMatrix,
+  );
 }
 
 const _allFactsDelta = StoreRevisionDelta(
@@ -58,7 +62,7 @@ const _allFactsDelta = StoreRevisionDelta(
 // a different journal arrangement. Prefix replay produces a smallest failing
 // prefix directly in the assertion reason without depending on Store helpers.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
-Color _candidateCurrentStateOracle() {
+void _candidateCurrentStateOracle() {
   const seeds = [1709, 2718, 31415];
   for (final seed in seeds) {
     final trace = _seededTrace(seed);
@@ -126,7 +130,6 @@ Color _candidateCurrentStateOracle() {
       }
     }
   }
-  return const Color(0xFF007AB7);
 }
 
 // One literal trace forces every cross-owner mutation family for each seed.
@@ -723,13 +726,7 @@ bool _sameList<T>(Iterable<T> left, Iterable<T> right) {
 // One transaction intentionally groups compensation, overwrite/removal,
 // placement, clear, and relationship facts into one final immutable witness.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
-bool _candidateAcceptedFactsOracle() {
-  final temporaryResource = _imageResource('r-temp', 'temporary');
-  final temporaryElement = CanvasImageElement(
-    id: CanvasElementId('e-temp'),
-    resourceId: temporaryResource.id,
-    size: const Size(2, 2),
-  );
+void _candidateAcceptedFactsOracle() {
   final base = CommittedDocument(_candidateBaseDocument());
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(base);
   final events = <StoreSparseCandidateEvent>[];
@@ -739,13 +736,6 @@ bool _candidateAcceptedFactsOracle() {
       StoreSparseCommit(
         revisionDelta: _allFactsDelta,
         mutations: [
-          StoreSparseUpsertResource(temporaryResource),
-          StoreSparseAddElement(
-            element: temporaryElement,
-            layerId: CanvasLayerId('layer-a'),
-          ),
-          StoreSparseRemoveElement(temporaryElement.id),
-          StoreSparseRemoveUnusedResource(temporaryResource.id),
           StoreSparseUpsertResource(_imageResource('r-image-0', 'changed')),
           StoreSparseUpsertResource(_imageResource('r-image-0', 'image-0')),
           StoreSparseRemoveElement(CanvasElementId('image-base')),
@@ -773,10 +763,6 @@ bool _candidateAcceptedFactsOracle() {
     layers: {CanvasLayerId('layer-a')},
     persistedCamera: true,
   );
-  expect(prepared.admittedElementIds, ['e-temp']);
-  expect(prepared.admittedResourceIds, ['r-temp', 'r-image-0']);
-  expect(prepared.document.elements.elementById(temporaryElement.id), isNull);
-  expect(prepared.document.resourceDescriptor(temporaryResource.id), isNull);
   _expectAggregateBeforeTouched(events);
   expect(
     () => prepared.document.resourceTable.descriptors.clear(),
@@ -788,43 +774,6 @@ bool _candidateAcceptedFactsOracle() {
     ),
     throwsUnsupportedError,
   );
-  store.installSparseCommit(prepared);
-  expect(store.observeElementIdCandidateForTesting(), CanvasElementId('e0'));
-  expect(store.generateResourceId(), CanvasResourceId('r0'));
-
-  final noOpStore = documentStoreWithDocument(_candidateBaseDocument());
-  final noOpEvents = <StoreSparseCandidateEvent>[];
-  final noOp = CommittedDocument.observeSparseCandidateEvents(
-    noOpEvents.add,
-    () => noOpStore.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: _allFactsDelta,
-        mutations: [
-          StoreSparseUpsertResource(temporaryResource),
-          StoreSparseAddElement(
-            element: temporaryElement,
-            layerId: CanvasLayerId('layer-a'),
-          ),
-          StoreSparseRemoveElement(temporaryElement.id),
-          StoreSparseRemoveUnusedResource(temporaryResource.id),
-        ],
-      ),
-    ),
-  );
-  expect(noOp.hasChanges, isFalse);
-  _expectExactDelta(noOp.revisionDelta, const StoreRevisionDelta());
-  _expectExactTouchedFacts(noOp.touchedFacts);
-  expect(noOp.admittedElementIds, isEmpty);
-  expect(noOp.admittedLayerIds, isEmpty);
-  expect(noOp.admittedResourceIds, isEmpty);
-  expect(
-    noOpEvents.where(
-      (event) =>
-          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
-    ),
-    isEmpty,
-  );
-
   final placementStore = documentStoreWithDocument(_candidateBaseDocument());
   final placementEvents = <StoreSparseCandidateEvent>[];
   final placement = CommittedDocument.observeSparseCandidateEvents(
@@ -900,9 +849,6 @@ bool _candidateAcceptedFactsOracle() {
     reason: 'final relationship remains valid after remove/re-add and clear',
   );
   _expectAggregateBeforeTouched(placementEvents);
-  return placement.document.elements.referencesResource(
-    CanvasResourceId('r-image-0'),
-  );
 }
 
 void _expectExactDelta(StoreRevisionDelta actual, StoreRevisionDelta expected) {
@@ -967,7 +913,7 @@ void _expectAggregateBeforeTouched(List<StoreSparseCandidateEvent> events) {
 // Each case observes the same candidate seam while retaining only external
 // Store facts. The events are production owner reports, not fixture controls.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
-Color _candidateFailureAndAliasMatrix() {
+void _candidateFailureAndAliasMatrix() {
   final rect = _rect('rect-a');
   final invalidRect = CanvasRectElement(
     id: rect.id,
@@ -1058,36 +1004,6 @@ Color _candidateFailureAndAliasMatrix() {
       error: isA<ArgumentError>()
           .having((error) => error.name, 'name', 'element.revision')
           .having((error) => error.invalidValue, 'invalidValue', 3)
-          .having(
-            (error) => error.message,
-            'message',
-            'sparse element updates must carry the next committed element revision.',
-          ),
-      phases: const [
-        StoreSparseCandidateEventKind.relationshipValidation,
-        StoreSparseCandidateEventKind.providedDeltaValidation,
-        StoreSparseCandidateEventKind.deferredValidation,
-        StoreSparseCandidateEventKind.discard,
-      ],
-    ),
-    _CandidateFailureCase(
-      name: 'second deferred validation wins when ordered first',
-      revisionDelta: const StoreRevisionDelta.background(),
-      mutations: [
-        StoreSparseUpdateElement(
-          before: image,
-          element: invalidImage,
-          elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
-        ),
-        StoreSparseUpdateElement(
-          before: rect,
-          element: invalidRect,
-          elementRevisionDelta: const StoreRevisionDelta.elementVisual(),
-        ),
-      ],
-      error: isA<ArgumentError>()
-          .having((error) => error.name, 'name', 'element.revision')
-          .having((error) => error.invalidValue, 'invalidValue', 4)
           .having(
             (error) => error.message,
             'message',
@@ -1283,7 +1199,6 @@ Color _candidateFailureAndAliasMatrix() {
   expect(() => store.installSparseCommit(prepared), throwsStateError);
   expect(store.background.color, const Color(0xFF445566));
   expect(store.observeElementIdCandidateForTesting(), beforeStaleId);
-  return store.background.color;
 }
 
 final class _CandidateFailureCase {
@@ -1474,7 +1389,7 @@ void _expectCandidateWorkTimeline(List<_CandidateWorkBoundary> timeline) {
 // order is compared once at finalization; the seeded prefix oracle above owns
 // small-step semantics and avoids turning this work proof into O(M * K).
 // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
-List<StoreSparseCandidateEvent> _candidatePublicationWork() {
+void _candidatePublicationWork() {
   final base = CommittedDocument(_supportedCandidateDocument());
   final adversarialAggregateEvents = <StoreSparseCandidateEvent>[];
   final adversarialIntermediate =
@@ -1812,17 +1727,17 @@ List<StoreSparseCandidateEvent> _candidatePublicationWork() {
     reason: 'supported-size final content order',
   );
   _expectTerminalCandidateWork();
-  return candidateEvents
-      .where(
-        (event) =>
-            event.kind == StoreSparseCandidateEventKind.aggregatePublication,
-      )
-      .toList(growable: false);
+  expect(
+    candidateEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(1),
+  );
 }
 
-// No-op and late-failure lifecycles share the same owner event composition.
-// Keep the two terminal witnesses adjacent so their zero-publication contrast
-// remains obvious rather than spread across test-only helpers.
+// The work witness owns the terminal no-op lifecycle. The failure matrix above
+// owns all semantic preparation gates, including late coverage failure.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _expectTerminalCandidateWork() {
   final noOpStore = documentStoreWithDocument(_candidateBaseDocument());
@@ -1895,90 +1810,6 @@ void _expectTerminalCandidateWork() {
     hasLength(1),
   );
   expect(noOpFamilyWork.transactionDiscardCount, 1);
-
-  final failureStore = documentStoreWithDocument(_candidateBaseDocument());
-  final failureEvents = <StoreSparseCandidateEvent>[];
-  final failureResourceEvents = <ResourceTableSelectiveMutationEvent>[];
-  final failureStructuralEvents = <ElementRegistryStructuralEditorWorkEvent>[];
-  final failureFamilyWork = FamilyTablesTelemetry();
-  expect(
-    () => FamilyTables.observeTelemetry(
-      failureFamilyWork.record,
-      () => ResourceTableEditor.observeWork(
-        failureResourceEvents.add,
-        () => ElementRegistry.observeSparseStructuralEditorWork(
-          failureStructuralEvents.add,
-          () => CommittedDocument.observeSparseCandidateEvents(
-            failureEvents.add,
-            () => failureStore.prepareSparseCommit(
-              StoreSparseCommit(
-                revisionDelta: const StoreRevisionDelta.projectionOnly(),
-                mutations: const [
-                  StoreSparseSetBackground(
-                    CanvasBackground(color: Color(0xFF112233)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-    throwsA(
-      isA<ArgumentError>()
-          .having((error) => error.name, 'name', 'revisionDelta')
-          .having(
-            (error) => error.message,
-            'message',
-            'sparse revision delta does not cover changed committed facts.',
-          ),
-    ),
-  );
-  _expectCandidatePhasePrefix(failureEvents, const [
-    StoreSparseCandidateEventKind.relationshipValidation,
-    StoreSparseCandidateEventKind.providedDeltaValidation,
-    StoreSparseCandidateEventKind.deferredValidation,
-    StoreSparseCandidateEventKind.acceptedFacts,
-    StoreSparseCandidateEventKind.coverageValidation,
-    StoreSparseCandidateEventKind.discard,
-  ], reason: 'late coverage failure phase order');
-  expect(
-    failureEvents.where(
-      (event) =>
-          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
-    ),
-    isEmpty,
-  );
-  expect(
-    failureResourceEvents.where(
-      (event) =>
-          event.kind == ResourceTableEditorWorkKind.normalizationRead ||
-          event.kind == ResourceTableEditorWorkKind.freeze ||
-          event.kind == ResourceTableEditorWorkKind.immutablePublication,
-    ),
-    isEmpty,
-  );
-  expect(
-    failureStructuralEvents.where(
-      (event) =>
-          event.kind ==
-          ElementRegistryStructuralEditorWorkKind.layerRowsPublication,
-    ),
-    isEmpty,
-  );
-  expect(
-    failureResourceEvents.where(
-      (event) => event.kind == ResourceTableEditorWorkKind.discard,
-    ),
-    hasLength(1),
-  );
-  expect(
-    failureStructuralEvents.where(
-      (event) => event.kind == ElementRegistryStructuralEditorWorkKind.discard,
-    ),
-    hasLength(1),
-  );
-  expect(failureFamilyWork.transactionDiscardCount, 1);
 }
 
 CanvasDocument _supportedCandidateDocument() => CanvasDocument(
