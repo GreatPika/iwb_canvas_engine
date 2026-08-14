@@ -5,14 +5,12 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
-import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 import 'package:iwb_canvas_engine/src/store/revision_state.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../support/document_store_with_document.dart';
-import 'family_tables_telemetry.dart';
 
 void main() {
   _registerStoreCommitFinalizationTests();
@@ -64,10 +62,6 @@ void _registerMaterializedFinalizationTests() {
 }
 
 void _registerSparseFinalizationTests() {
-  test(
-    'sparse candidate reads each current owner across an interleaved direct trace',
-    () => expect(_sparseCandidateReadsCurrentOwners, returnsNormally),
-  );
   test(
     'sparse changed facts prepare exact accepted delta',
     () => expect(_sparseChangedFactsPrepareAcceptedDelta, returnsNormally),
@@ -133,94 +127,6 @@ void _expectCandidateFinalization(
         event.kind,
   ];
   expect(actual, expected);
-}
-
-// The interleaved trace keeps the independent final-fact and no-stale-read
-// observations beside the mutations that make each one meaningful.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index
-void _sparseCandidateReadsCurrentOwners() {
-  final store = documentStoreWithDocument(_baseDocument());
-  final events = <StoreSparseCandidateEvent>[];
-  final familyWork = FamilyTablesTelemetry();
-  final prepared = FamilyTables.observeTelemetry(
-    familyWork.record,
-    () => CommittedDocument.observeSparseCandidateEvents(
-      events.add,
-      () => store.prepareSparseCommit(
-        StoreSparseCommit(
-          revisionDelta: const StoreRevisionDelta.structural()
-              .merge(const StoreRevisionDelta.resource())
-              .merge(const StoreRevisionDelta.background()),
-          mutations: [
-            StoreSparseUpsertResource(_resource('resource-2')),
-            StoreSparseAddElement(
-              element: CanvasImageElement(
-                id: CanvasElementId('candidate-image'),
-                resourceId: CanvasResourceId('resource-2'),
-                size: const Size(2, 3),
-              ),
-              layerId: CanvasLayerId('layer-1'),
-            ),
-            StoreSparseRemoveUnusedResource(CanvasResourceId('resource-2')),
-            const StoreSparseSetBackground(
-              CanvasBackground(color: Color(0xFF223344)),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  expect(prepared.hasChanges, isTrue);
-  expect(
-    prepared.document.resourceDescriptor(CanvasResourceId('resource-2')),
-    isNotNull,
-  );
-  expect(
-    prepared.document.elements.elementById(CanvasElementId('candidate-image')),
-    isNotNull,
-  );
-  expect(prepared.document.background.color, const Color(0xFF223344));
-  expect(prepared.touchedFacts.resourceDescriptorChangedIds, {
-    CanvasResourceId('resource-2'),
-  });
-  expect(prepared.touchedFacts.resourceVisualChangedIds, {
-    CanvasResourceId('resource-2'),
-  });
-  expect(familyWork.editorDecisionTrace, [
-    FamilyTablesDecision.duplicateAdd,
-    FamilyTablesDecision.removeUnusedReference,
-    FamilyTablesDecision.removeMembership,
-    FamilyTablesDecision.relationship,
-    FamilyTablesDecision.acceptedDelta,
-  ]);
-  expect(familyWork.staleDecisionReadCount, 0);
-  expect(familyWork.postFreezeWriteCount, 0);
-  expect(familyWork.postFreezeCopyCount, 0);
-  expect(familyWork.postFreezeNormalizationCount, 0);
-  expect(familyWork.postFreezeImmutablePublicationCount, 0);
-  expect(familyWork.referenceQueryFamilyRowVisitCount, 0);
-  _expectCandidateFinalization(events, const [
-    StoreSparseCandidateEventKind.relationshipValidation,
-    StoreSparseCandidateEventKind.providedDeltaValidation,
-    StoreSparseCandidateEventKind.deferredValidation,
-    StoreSparseCandidateEventKind.acceptedFacts,
-    StoreSparseCandidateEventKind.coverageValidation,
-    StoreSparseCandidateEventKind.normalization,
-    StoreSparseCandidateEventKind.familyFreeze,
-    StoreSparseCandidateEventKind.resourceFreeze,
-    StoreSparseCandidateEventKind.structuralPublication,
-    StoreSparseCandidateEventKind.aggregatePublication,
-    StoreSparseCandidateEventKind.touchedFacts,
-    StoreSparseCandidateEventKind.consume,
-  ]);
-  expect(
-    events.map((event) => event.kind),
-    containsAll(const [
-      StoreSparseCandidateEventKind.open,
-      StoreSparseCandidateEventKind.currentScalarRead,
-    ]),
-  );
 }
 
 void _materializedFinalEqualityPreparesAsNoOp() {

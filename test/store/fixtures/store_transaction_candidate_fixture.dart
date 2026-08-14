@@ -110,6 +110,17 @@ Color _candidateCurrentStateOracle() {
         prefix: trace.take(length),
         reason: 'seed=$seed shortest failing prefix=$length',
       );
+      if (seed == 1709 && length == 3) {
+        // This prefix is the admitted resource-add/remove interleaving. Keep
+        // the family decision ordering here with the cross-owner oracle.
+        expect(familyWork.editorDecisionTrace, const [
+          FamilyTablesDecision.duplicateAdd,
+          FamilyTablesDecision.removeUnusedReference,
+          FamilyTablesDecision.removeMembership,
+          FamilyTablesDecision.relationship,
+          FamilyTablesDecision.acceptedDelta,
+        ]);
+      }
     }
   }
   return const Color(0xFF007AB7);
