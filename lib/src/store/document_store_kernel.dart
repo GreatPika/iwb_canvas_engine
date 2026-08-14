@@ -34,7 +34,6 @@ enum IdAdmissionWorkPhase { reset, acceptedAdmission, generation }
 enum IdAdmissionWorkKind {
   inputVisit,
   sparseLedgerVisit,
-  completeInputSetAllocation,
   cursorProbe,
   collision,
   advance,
@@ -3345,11 +3344,7 @@ final class _IdAdmission {
   _IdAdmission({
     required this.prefix,
     required void Function(void Function(String) accept) enumerate,
-  }) : _reserved = _allocateIdSet(
-         prefix,
-         phase: IdAdmissionWorkPhase.reset,
-         completeInputCopy: false,
-       ) {
+  }) : _reserved = <String>{} {
     enumerate((id) {
       _record(IdAdmissionWorkPhase.reset, IdAdmissionWorkKind.inputVisit);
       _reserved.add(id);
@@ -3453,22 +3448,4 @@ final class _IdAdmission {
       subject: subject,
     );
   }
-}
-
-// Admission history allocates only here. A complete-input copy is forbidden,
-// but if one is introduced at the centralized seeding owner it must declare
-// that distinct allocation purpose for test-only semantic observation.
-Set<String> _allocateIdSet(
-  String prefix, {
-  required IdAdmissionWorkPhase phase,
-  required bool completeInputCopy,
-}) {
-  if (completeInputCopy) {
-    DocumentStoreKernel._recordIdAdmissionWork(
-      prefix: prefix,
-      phase: phase,
-      kind: IdAdmissionWorkKind.completeInputSetAllocation,
-    );
-  }
-  return <String>{};
 }

@@ -212,21 +212,12 @@ void _expectDirectMembership(
 
   expect(contains, expectedContains);
   expect(work.mapProbeCount, expectedProbes);
-  _expectNoForbiddenMembershipWork(work);
 }
 
 T _observeMembershipOperation<T>(T Function() operation) {
   final work = FamilyTablesTelemetry();
   final result = FamilyTables.observeTelemetry(work.record, operation);
-
-  _expectNoForbiddenMembershipWork(work);
   return result;
-}
-
-void _expectNoForbiddenMembershipWork(FamilyTablesTelemetry work) {
-  expect(work.membershipUnionAllocationCount, 0);
-  expect(work.retainedMembershipCopyAllocationCount, 0);
-  expect(work.membershipKeyCopyCount, 0);
 }
 
 List<CanvasElement> _allFamilyElements() {

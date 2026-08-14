@@ -17,9 +17,6 @@ import '../contracts/public/canvas_metadata.dart';
 @visibleForTesting
 enum FamilyTablesTelemetryKind {
   membershipMapProbe,
-  membershipUnionAllocation,
-  membershipKeyCopy,
-  retainedMembershipCopyAllocation,
   batchReplacement,
   transactionFamilyOpen,
   transactionFamilyBaseEntryCopies,
@@ -96,8 +93,6 @@ final class FamilyTables {
   static final Object _sparseEditorZoneKey = Object();
   static final Object _sparseDecisionZoneKey = Object();
   static final Object _sparseBaseReadZoneKey = Object();
-  static const _MembershipSetGateway _membershipSetGateway =
-      _MembershipSetGateway();
 
   const FamilyTables.empty()
     : this._fromTables(
@@ -916,7 +911,6 @@ enum FamilyTablesDecision {
   clear,
   relationship,
   acceptedDelta,
-  acceptedTouched,
 }
 
 enum FamilyTablesDecisionSubjectKind { element, resource, content }
@@ -1665,56 +1659,6 @@ final class FamilyElementFacts {
   final double? thickness;
 }
 
-enum _MembershipSetPurpose {
-  admissionDuplicateDetection,
-  queryUnion,
-  retainedMembershipCopy,
-}
-
-// This gateway classifies every owner-created membership set. Admission uses a
-// temporary duplicate detector; query or retained copies are forbidden truth
-// sources and therefore emit distinct semantic events for owning tests.
-final class _MembershipSetGateway {
-  const _MembershipSetGateway();
-
-  Set<String> allocate(_MembershipSetPurpose purpose) {
-    switch (purpose) {
-      case _MembershipSetPurpose.admissionDuplicateDetection:
-        break;
-      case _MembershipSetPurpose.queryUnion:
-        FamilyTables._emitTelemetry(
-          const FamilyTablesTelemetryEvent(
-            FamilyTablesTelemetryKind.membershipUnionAllocation,
-          ),
-        );
-      case _MembershipSetPurpose.retainedMembershipCopy:
-        FamilyTables._emitTelemetry(
-          const FamilyTablesTelemetryEvent(
-            FamilyTablesTelemetryKind.retainedMembershipCopyAllocation,
-          ),
-        );
-    }
-
-    return <String>{};
-  }
-
-  bool addKey(Set<String> ids, String id, _MembershipSetPurpose purpose) {
-    switch (purpose) {
-      case _MembershipSetPurpose.admissionDuplicateDetection:
-        break;
-      case _MembershipSetPurpose.queryUnion:
-      case _MembershipSetPurpose.retainedMembershipCopy:
-        FamilyTables._emitTelemetry(
-          const FamilyTablesTelemetryEvent(
-            FamilyTablesTelemetryKind.membershipKeyCopy,
-          ),
-        );
-    }
-
-    return ids.add(id);
-  }
-}
-
 // Admission stores every family table together so duplicate id detection and
 // row insertion remain one atomic step.
 // ignore: coupling-between-object-classes
@@ -1728,17 +1672,11 @@ final class _AdmittedRows {
   final Map<String, RectRow> rectRows = {};
   final Map<CanvasResourceId, int> imageResourceReferenceCounts = {};
   final Map<CanvasResourceId, int> vectorResourceReferenceCounts = {};
-  final Set<String> ids = FamilyTables._membershipSetGateway.allocate(
-    _MembershipSetPurpose.admissionDuplicateDetection,
-  );
+  final Set<String> ids = {};
 
   void add(CanvasElement element) {
     final id = element.id.value;
-    if (!FamilyTables._membershipSetGateway.addKey(
-      ids,
-      id,
-      _MembershipSetPurpose.admissionDuplicateDetection,
-    )) {
+    if (!ids.add(id)) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
         message: 'duplicate element id.',
@@ -1768,11 +1706,7 @@ final class _AdmittedRows {
 
   void addSchemaV1Import(SchemaV1ElementImportEvent event) {
     final id = event.common.id.value;
-    if (!FamilyTables._membershipSetGateway.addKey(
-      ids,
-      id,
-      _MembershipSetPurpose.admissionDuplicateDetection,
-    )) {
+    if (!ids.add(id)) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
         message: 'duplicate element id.',

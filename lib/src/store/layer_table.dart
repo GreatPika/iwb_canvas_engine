@@ -55,7 +55,6 @@ enum LayerTableWorkEvent {
   locationFactEntryVisit,
   fullLocationMapCopy,
   discard,
-  unchangedLocationFactIdentityRetain,
   membershipLookup,
   membershipLocationRead,
   membershipRowVisit,
@@ -503,9 +502,6 @@ final class _LayerTableBuilder {
         identical(previous.row, row) &&
         previous.index == index) {
       _layerLocationFacts[row.id] = previous;
-      LayerTable._recordWork(
-        LayerTableWorkEvent.unchangedLocationFactIdentityRetain,
-      );
       return;
     }
     _layerLocationFacts[row.id] = LayerLocationFacts(row: row, index: index);

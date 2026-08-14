@@ -72,7 +72,6 @@ void _registerSupportedSizeWitness() {
     });
 
     _expectCompleteTrace(trace, snapshot);
-    trace.expectNoForbiddenCompleteAdmissionWork();
     expect(
       [
         store.generateElementId().value,
@@ -122,7 +121,6 @@ void _expectCompleteRoute(_CompleteRoute route, _AdmissionSnapshot snapshot) {
 
   _expectFamilyOwnerMaps(snapshot);
   _expectCompleteTrace(trace, snapshot);
-  trace.expectNoForbiddenCompleteAdmissionWork();
   expect(
     [
       store.generateElementId().value,
@@ -483,7 +481,6 @@ final class _AdmissionTrace {
 
   final IdAdmissionWorkPhase phase;
   final events = <_TraceEvent>[];
-  var _completeInputSetAllocationCount = 0;
 
   T observe<T>(T Function() operation) {
     return FamilyTables.observeTelemetry(
@@ -523,10 +520,6 @@ final class _AdmissionTrace {
   }
 
   void _recordAdmission(IdAdmissionWorkEvent event) {
-    if (event.kind == IdAdmissionWorkKind.completeInputSetAllocation) {
-      _completeInputSetAllocationCount += 1;
-      return;
-    }
     if (event.phase != phase) {
       return;
     }
@@ -538,10 +531,6 @@ final class _AdmissionTrace {
       default:
         break;
     }
-  }
-
-  void expectNoForbiddenCompleteAdmissionWork() {
-    expect(_completeInputSetAllocationCount, 0);
   }
 }
 

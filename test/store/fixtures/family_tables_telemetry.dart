@@ -7,9 +7,6 @@ import 'package:iwb_canvas_engine/src/store/family_tables.dart';
 // ignore: number-of-methods, response-for-class, weighted-methods-per-class
 final class FamilyTablesTelemetry {
   int _mapProbeCount = 0;
-  int _membershipUnionAllocationCount = 0;
-  int _membershipKeyCopyCount = 0;
-  int _retainedMembershipCopyAllocationCount = 0;
   int _batchReplacementCount = 0;
   final Map<CanvasElementKind, int> _transactionOpenCountByFamily = {};
   final Map<CanvasElementKind, int> _transactionBaseEntryCopyCountByFamily = {};
@@ -43,9 +40,6 @@ final class FamilyTablesTelemetry {
   int _vectorReferenceSummaryPublicationCount = 0;
   bool _imageReferenceSummaryRetainsBaseIdentity = false;
   bool _vectorReferenceSummaryRetainsBaseIdentity = false;
-  int _enumerationOpenCount = 0;
-  int _enumerationCloseCount = 0;
-  final Map<CanvasElementKind, int> _enumerationEntryCountByFamily = {};
   final List<FamilyTablesDecision> _editorDecisionTrace = [];
   final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
   final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
@@ -53,10 +47,6 @@ final class FamilyTablesTelemetry {
   int _editorCurrentRowReadCount = 0;
 
   int get mapProbeCount => _mapProbeCount;
-  int get membershipUnionAllocationCount => _membershipUnionAllocationCount;
-  int get membershipKeyCopyCount => _membershipKeyCopyCount;
-  int get retainedMembershipCopyAllocationCount =>
-      _retainedMembershipCopyAllocationCount;
   int get batchReplacementCount => _batchReplacementCount;
   int get transactionDiscardCount => _transactionDiscardCount;
   int get transactionImmutablePublicationCount =>
@@ -103,8 +93,6 @@ final class FamilyTablesTelemetry {
       _imageReferenceSummaryRetainsBaseIdentity;
   bool get vectorReferenceSummaryRetainsBaseIdentity =>
       _vectorReferenceSummaryRetainsBaseIdentity;
-  int get enumerationOpenCount => _enumerationOpenCount;
-  int get enumerationCloseCount => _enumerationCloseCount;
   List<FamilyTablesDecision> get editorDecisionTrace =>
       List.unmodifiable(_editorDecisionTrace);
   List<FamilyTablesDecisionRead> get editorDecisionReads =>
@@ -139,10 +127,6 @@ final class FamilyTablesTelemetry {
     return _staleDecisionReadCountByDecision[decision] ?? 0;
   }
 
-  int enumerationEntryCount(CanvasElementKind kind) {
-    return _enumerationEntryCountByFamily[kind] ?? 0;
-  }
-
   // One explicit fold preserves the admitted telemetry query surface; splitting
   // event kinds would duplicate counter ownership across test helpers.
   // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
@@ -150,12 +134,6 @@ final class FamilyTablesTelemetry {
     switch (event.kind) {
       case FamilyTablesTelemetryKind.membershipMapProbe:
         _mapProbeCount += 1;
-      case FamilyTablesTelemetryKind.membershipUnionAllocation:
-        _membershipUnionAllocationCount += 1;
-      case FamilyTablesTelemetryKind.membershipKeyCopy:
-        _membershipKeyCopyCount += 1;
-      case FamilyTablesTelemetryKind.retainedMembershipCopyAllocation:
-        _retainedMembershipCopyAllocationCount += 1;
       case FamilyTablesTelemetryKind.batchReplacement:
         _batchReplacementCount += 1;
       case FamilyTablesTelemetryKind.transactionFamilyOpen:
@@ -171,8 +149,13 @@ final class FamilyTablesTelemetry {
       case FamilyTablesTelemetryKind.transactionNormalizationWrite:
         _incrementFamily(_transactionNormalizationWriteCount, event.family);
       case FamilyTablesTelemetryKind.transactionFinalMapIdentity:
-        _transactionFinalMapRetainsBaseIdentityByFamily[_requireFamily(event)] =
-            _requireIdentityRetained(event);
+        _transactionFinalMapRetainsBaseIdentityByFamily[_require(
+          event.family,
+          'family',
+        )] = _require(
+          event.identityRetained,
+          'identity fact',
+        );
       case FamilyTablesTelemetryKind.transactionDiscard:
         _transactionDiscardCount += 1;
       case FamilyTablesTelemetryKind.transactionImmutablePublication:
@@ -200,12 +183,12 @@ final class FamilyTablesTelemetry {
       case FamilyTablesTelemetryKind.referenceCommittedSummaryRead:
         _referenceCommittedSummaryReadCount += 1;
       case FamilyTablesTelemetryKind.referenceQueryFamilyRowVisits:
-        _referenceQueryFamilyRowVisitCount += _requireCount(event);
+        _referenceQueryFamilyRowVisitCount += _require(event.count, 'count');
       case FamilyTablesTelemetryKind.referenceEditorBaseSummaryRead:
         _referenceEditorBaseSummaryReadCount += 1;
       case FamilyTablesTelemetryKind.referenceEditorDeltaRead:
         _referenceEditorDeltaReadCount += 1;
-        final depth = _requireCount(event);
+        final depth = _require(event.count, 'count');
         _referenceEditorMaximumDeltaDepth =
             _referenceEditorMaximumDeltaDepth > depth
             ? _referenceEditorMaximumDeltaDepth
@@ -221,33 +204,34 @@ final class FamilyTablesTelemetry {
       case FamilyTablesTelemetryKind.referenceSummaryPublication:
         _incrementSplitPublication(event.resourceSplit);
       case FamilyTablesTelemetryKind.referenceSummaryIdentity:
-        final identityRetained = _requireIdentityRetained(event);
+        final identityRetained = _require(
+          event.identityRetained,
+          'identity fact',
+        );
         if (event.resourceSplit == FamilyTablesResourceSplit.image) {
           _imageReferenceSummaryRetainsBaseIdentity = identityRetained;
         } else {
           _vectorReferenceSummaryRetainsBaseIdentity = identityRetained;
         }
       case FamilyTablesTelemetryKind.editorDecision:
-        final decision = _requireDecision(event);
+        final decision = _require(event.decision, 'decision');
         _editorDecisionTrace.add(decision);
         _editorDecisionCountBy(_editorDecisionCount, decision);
       case FamilyTablesTelemetryKind.editorDecisionRead:
         _editorDecisionReads.add(
           FamilyTablesDecisionRead(
-            decision: _requireDecision(event),
-            subjectKind: _requireSubjectKind(event),
-            subject: _requireSubject(event),
-            result: _requireResult(event),
+            decision: _require(event.decision, 'decision'),
+            subjectKind: _require(event.subjectKind, 'subject kind'),
+            subject: _require(event.subject, 'subject'),
+            result: _require(event.result, 'result'),
           ),
         );
       case FamilyTablesTelemetryKind.editorCurrentRowRead:
         _editorCurrentRowReadCount += 1;
       case FamilyTablesTelemetryKind.enumerationOpen:
-        _enumerationOpenCount += 1;
       case FamilyTablesTelemetryKind.enumerationEntry:
-        _incrementFamily(_enumerationEntryCountByFamily, event.family);
       case FamilyTablesTelemetryKind.enumerationClose:
-        _enumerationCloseCount += 1;
+        break;
     }
   }
 
@@ -274,7 +258,7 @@ final class FamilyTablesTelemetry {
   }
 
   void _incrementSplitDeltaOpen(FamilyTablesResourceSplit? split) {
-    if (_requireResourceSplit(split) == FamilyTablesResourceSplit.image) {
+    if (_require(split, 'resource split') == FamilyTablesResourceSplit.image) {
       _imageReferenceSummaryDeltaOpenCount += 1;
     } else {
       _vectorReferenceSummaryDeltaOpenCount += 1;
@@ -282,7 +266,7 @@ final class FamilyTablesTelemetry {
   }
 
   void _incrementSplitAffectedId(FamilyTablesResourceSplit? split) {
-    if (_requireResourceSplit(split) == FamilyTablesResourceSplit.image) {
+    if (_require(split, 'resource split') == FamilyTablesResourceSplit.image) {
       _imageReferenceAffectedIdUpdateCount += 1;
     } else {
       _vectorReferenceAffectedIdUpdateCount += 1;
@@ -290,7 +274,7 @@ final class FamilyTablesTelemetry {
   }
 
   void _incrementSplitCompleteCopy(FamilyTablesResourceSplit? split) {
-    if (_requireResourceSplit(split) == FamilyTablesResourceSplit.image) {
+    if (_require(split, 'resource split') == FamilyTablesResourceSplit.image) {
       _imageReferenceSummaryCompleteCopyCount += 1;
     } else {
       _vectorReferenceSummaryCompleteCopyCount += 1;
@@ -298,7 +282,7 @@ final class FamilyTablesTelemetry {
   }
 
   void _incrementSplitMaterialization(FamilyTablesResourceSplit? split) {
-    if (_requireResourceSplit(split) == FamilyTablesResourceSplit.image) {
+    if (_require(split, 'resource split') == FamilyTablesResourceSplit.image) {
       _imageReferenceSummaryMaterializationCount += 1;
     } else {
       _vectorReferenceSummaryMaterializationCount += 1;
@@ -306,54 +290,15 @@ final class FamilyTablesTelemetry {
   }
 
   void _incrementSplitPublication(FamilyTablesResourceSplit? split) {
-    if (_requireResourceSplit(split) == FamilyTablesResourceSplit.image) {
+    if (_require(split, 'resource split') == FamilyTablesResourceSplit.image) {
       _imageReferenceSummaryPublicationCount += 1;
     } else {
       _vectorReferenceSummaryPublicationCount += 1;
     }
   }
 
-  CanvasElementKind _requireFamily(FamilyTablesTelemetryEvent event) {
-    return event.family ??
-        (throw StateError('Family telemetry event requires a family.'));
-  }
-
-  int _requireCount(FamilyTablesTelemetryEvent event) {
-    return event.count ??
-        (throw StateError('Family telemetry event requires a count.'));
-  }
-
-  bool _requireIdentityRetained(FamilyTablesTelemetryEvent event) {
-    return event.identityRetained ??
-        (throw StateError('Family telemetry event requires an identity fact.'));
-  }
-
-  FamilyTablesDecision _requireDecision(FamilyTablesTelemetryEvent event) {
-    return event.decision ??
-        (throw StateError('Family telemetry event requires a decision.'));
-  }
-
-  FamilyTablesDecisionSubjectKind _requireSubjectKind(
-    FamilyTablesTelemetryEvent event,
-  ) {
-    return event.subjectKind ??
-        (throw StateError('Family telemetry event requires a subject kind.'));
-  }
-
-  String _requireSubject(FamilyTablesTelemetryEvent event) {
-    return event.subject ??
-        (throw StateError('Family telemetry event requires a subject.'));
-  }
-
-  FamilyTablesDecisionResult _requireResult(FamilyTablesTelemetryEvent event) {
-    return event.result ??
-        (throw StateError('Family telemetry event requires a result.'));
-  }
-
-  FamilyTablesResourceSplit _requireResourceSplit(
-    FamilyTablesResourceSplit? split,
-  ) {
-    return split ??
-        (throw StateError('Family telemetry event requires a resource split.'));
+  T _require<T>(T? value, String name) {
+    return value ??
+        (throw StateError('Family telemetry event requires $name.'));
   }
 }
