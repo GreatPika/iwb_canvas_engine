@@ -1,3 +1,8 @@
+// This direct Store fixture needs the finalization and immutable-owner types
+// side by side. The file-level metric is suppressed rather than adding a test
+// barrel that would hide those dependencies.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';

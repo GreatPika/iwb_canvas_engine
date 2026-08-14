@@ -1,3 +1,8 @@
+// This direct Store fixture observes independent family, resource, admission,
+// and preparation owners. Suppress the file-only import metric instead of
+// hiding those dependencies behind a test barrel.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';

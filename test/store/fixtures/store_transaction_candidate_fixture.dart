@@ -1,5 +1,9 @@
 // This direct Store witness composes the existing owner-owned test seams.
 // Keeping their typed imports explicit prevents a test-only mirror/barrel.
+// This metric is file-scoped; the three direct Store owner fixtures use the
+// same explicit-import policy rather than hiding dependencies behind a barrel.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
