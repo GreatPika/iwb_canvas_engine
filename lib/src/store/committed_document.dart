@@ -47,8 +47,9 @@ final class StoreSparseCandidateEvent {
 }
 
 // This immutable aggregate owns committed document facts and derived variants
-// together so row snapshots cannot become competing sources of truth.
-// ignore: number-of-methods
+// together so row snapshots cannot become competing sources of truth. Its
+// direct fact dependencies are the aggregate's payload, not separate concerns.
+// ignore: coupling-between-object-classes, number-of-methods
 final class CommittedDocument {
   static final Object _sparseCandidateEventZoneKey = Object();
 

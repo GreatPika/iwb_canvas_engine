@@ -1,6 +1,5 @@
 // This direct Store witness composes the existing owner-owned test seams.
 // Keeping their typed imports explicit prevents a test-only mirror/barrel.
-// ignore: number-of-imports
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -230,6 +229,9 @@ List<StoreSparseMutation> _seededTrace(int seed) {
   };
 }
 
+// The four live owner observations remain separately typed so this direct
+// oracle cannot hide a stale-owner read behind a test-only context mirror.
+// ignore: number-of-parameters
 void _expectPrefixOwnerState({
   required List<StoreSparseCandidateEvent> events,
   required List<ResourceTableSelectiveMutationEvent> resourceEvents,
@@ -1334,6 +1336,9 @@ enum _CandidateWorkBoundary {
   consume,
 }
 
+// This exhaustive mapping is one candidate protocol. Keeping it together
+// makes a newly added lifecycle event compile-visible to the work witness.
+// ignore: cyclomatic-complexity
 void _recordCandidateWorkBoundary(
   List<_CandidateWorkBoundary> timeline,
   StoreSparseCandidateEvent event,

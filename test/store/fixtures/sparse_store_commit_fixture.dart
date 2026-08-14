@@ -25,6 +25,9 @@ void _registerSparseStoreCommitTests() {
   });
 }
 
+// Install coverage is deliberately registered in journal-facing order so the
+// direct Store scenarios remain an auditable group rather than metric shards.
+// ignore: source-lines-of-code
 void _registerSparseInstallTests() {
   test(
     'adds elements and layers without building public projection',
@@ -757,6 +760,9 @@ void _clearsContentAndResources() {
   _clearsResourceOnlyDocument();
 }
 
+// The clear's content removal, retained-background resources, and no-op retry
+// are one causal Store scenario; splitting would obscure its barrier policy.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _clearsContentWithRetainedBackgroundResources() {
   final store = documentStoreWithDocument(_clearRetentionDocument());
   final beforeBackgroundImage = store.resourceDescriptor(
@@ -899,6 +905,9 @@ void _expectBackgroundVectorFacts(DocumentStoreKernel store) {
   expect(vector.metadata, CanvasMetadata.fromMap({'slot': 'vector'}));
 }
 
+// Descriptor fields are the public facts being compared; a parameter object
+// would mirror the owner merely to reduce this test helper's signature.
+// ignore: number-of-parameters
 void _expectImageDescriptor(
   DocumentStoreKernel store, {
   required String id,
@@ -921,6 +930,9 @@ void _expectImageDescriptor(
   expect(image.resourceRevision, resourceRevision);
 }
 
+// Descriptor fields are the public facts being compared; a parameter object
+// would mirror the owner merely to reduce this test helper's signature.
+// ignore: number-of-parameters
 void _expectVectorDescriptor(
   DocumentStoreKernel store, {
   required String id,
@@ -941,6 +953,9 @@ void _expectVectorDescriptor(
   expect(vector.resourceRevision, resourceRevision);
 }
 
+// This is one resource-lifecycle trace: changing its literal setup would no
+// longer prove the authorized clear pass independently from normalization.
+// ignore: halstead-volume
 void _clearsManyResourcesInOneSelectivePass() {
   const resourceCount = 14;
   final store = documentStoreWithDocument(_manyResourceClearDocument());
@@ -1516,6 +1531,9 @@ PreparedSparseStoreCommit _prepareResourceNoOp(
   );
 }
 
+// The facts stay together to distinguish this no-op policy from ordinary
+// content clearing; extracting them would create a setup mirror.
+// ignore: halstead-volume
 void _backgroundOnlyClearIsNoOp() {
   final store = documentStoreWithDocument(
     CanvasDocument(
@@ -1562,6 +1580,8 @@ void _backgroundOnlyClearIsNoOp() {
 
 // Regression: evaluating remove-unused mutations against the final clear state
 // would erase this ordinary-content descriptor before clear or retain it after.
+// Both orders and their exact accepted facts are one barrier-policy witness.
+// ignore: halstead-volume, source-lines-of-code
 void _expectRemoveUnusedResourceBarrierThroughDirectStore() {
   final resourceId = CanvasResourceId('content-image-resource');
   final retainedStore = documentStoreWithDocument(_clearRetentionDocument());
@@ -1629,6 +1649,9 @@ void _expectRemoveUnusedResourceBarrierThroughDirectStore() {
   expect(removedStore.resourceRevision, 2);
 }
 
+// This direct clear trace needs each mutation and its expected state together
+// to preserve the journal-order regression it falsifies.
+// ignore: halstead-volume, source-lines-of-code
 void _clearBarrierKeepsJournalOrder() {
   _expectRemoveUnusedResourceBarrierThroughDirectStore();
 
@@ -1717,6 +1740,9 @@ _StoreClearTraceResult _runStoreClearTrace(
   return _StoreClearTraceResult(oracle: oracle, prepared: prepared);
 }
 
+// The complete prepared payload is the asserted boundary; a context object
+// would duplicate Store's result model without clarifying the trace.
+// ignore: halstead-volume
 void _expectStoreClearTracePrepared(
   PreparedSparseStoreCommit prepared,
   _StoreClearTraceOracle oracle,
@@ -1774,6 +1800,9 @@ void _expectStoreClearTraceCommitted(
   }
 }
 
+// Element comparison remains explicit because this oracle must not reuse the
+// production equality path it is independently checking.
+// ignore: halstead-volume
 void _expectSameTraceElement(CanvasElement? actual, CanvasElement expected) {
   expect(actual, isNotNull);
   if (actual == null) {
@@ -1808,6 +1837,9 @@ void _expectSameTraceElement(CanvasElement? actual, CanvasElement expected) {
   }
 }
 
+// Resource facts remain explicit because this oracle must not reuse the
+// production descriptor comparison it is independently checking.
+// ignore: halstead-volume
 void _expectSameTraceDescriptor(
   StoreResourceDescriptorFacts? actual,
   CanvasResource expected, {
@@ -1840,6 +1872,9 @@ void _expectSameTraceDescriptor(
   }
 }
 
+// The resource-only setup and post-clear facts make this distinct from the
+// content-clear traces; extracting them would conceal that distinction.
+// ignore: halstead-volume
 void _clearsResourceOnlyDocument() {
   final resourceOnlyStore = documentStoreWithDocument(_resourceOnlyDocument());
   final prepared = resourceOnlyStore.prepareSparseCommit(
@@ -2355,6 +2390,9 @@ CanvasRectElement _contentRect({
   );
 }
 
+// Both retained and removable rows stay in one fixture so the policy remains
+// legible as a single state rather than a setup abstraction.
+// ignore: halstead-volume, source-lines-of-code
 CanvasDocument _clearRetentionDocument() {
   return CanvasDocument(
     background: CanvasBackground(
@@ -2436,6 +2474,9 @@ CanvasDocument _clearRetentionDocument() {
   );
 }
 
+// Explicit resource roles keep the work distribution visible; generation would
+// hide which rows must survive the transition.
+// ignore: halstead-volume, source-lines-of-code
 CanvasDocument _manyResourceClearDocument() {
   return CanvasDocument(
     resources: [
@@ -2486,6 +2527,9 @@ CanvasDocument _manyResourceClearDocument() {
   );
 }
 
+// This literal combines the resource and placement facts needed to falsify a
+// clear-barrier reorder, so it remains one cohesive fixture state.
+// ignore: halstead-volume, source-lines-of-code
 CanvasDocument _clearBarrierDocument() {
   return CanvasDocument(
     resources: [
@@ -2763,8 +2807,9 @@ final class _StoreClearTraceResult {
   final PreparedSparseStoreCommit prepared;
 }
 
-// This deliberately small List/map oracle consumes the same ordered actions
-// as the store; it models only the public layer-only clear transition.
+// This type deliberately groups one trace's independent state.
+// Splitting it would duplicate the scenario model.
+// ignore: number-of-methods, weighted-methods-per-class
 final class _StoreClearTraceOracle {
   _StoreClearTraceOracle(CanvasDocument document)
     : _initialContentElementIds = {
