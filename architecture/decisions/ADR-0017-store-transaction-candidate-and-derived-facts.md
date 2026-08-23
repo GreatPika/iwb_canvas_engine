@@ -75,10 +75,12 @@ preserves failed-route rollback without making the Store own interaction timing.
   owner of committed summaries and final relationship policy. Draft structural
   state now uses direct layer/element maps, one current placement view, and
   separate owner-local indexed orders; public Draft projection materializes
-  those orders only on explicit reads. Draft keyed resource/count work remains
-  pending for Unit 5, and atomic construction plus whole-backing replacement
-  swap remain pending for Unit 6. Route-generated-ID/runtime delivery also
-  remains pending; this ADR does not claim those routes are delivered.
+  those orders only on explicit reads. Its one insertion-ordered keyed descriptor
+  owner also maintains exact image/vector counts from current rows, so resource
+  decisions avoid descriptor `indexWhere` and all-element reference scans. Atomic
+  construction and whole-backing replacement are outside this decision.
+  Route-generated-ID/runtime delivery is also outside this decision; this ADR
+  does not claim those routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 

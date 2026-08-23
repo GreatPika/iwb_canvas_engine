@@ -1,15 +1,13 @@
 import 'dart:ui';
+
 import "../../support/runtime_root_with_committed_document_seed.dart";
+import 'edit_matrix_compile_expectations.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
-import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_compiler.dart';
-import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   _registerBasicEditRows();
@@ -150,7 +148,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftAddElement,
     _editAddElement,
-    _ExpectedPlanEffects.structural(),
+    editMatrixStructuralPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'addBackgroundElement',
@@ -158,7 +156,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftAddBackgroundElement,
     _editAddBackgroundElement,
-    _ExpectedPlanEffects.structural(),
+    editMatrixStructuralPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.updateElement',
@@ -166,7 +164,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftUpdateElementVisual,
     _editUpdateElementVisual,
-    _ExpectedPlanEffects.elementVisual(),
+    editMatrixElementVisualPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.removeElement',
@@ -174,7 +172,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftRemoveElement,
     _editRemoveElement,
-    _ExpectedPlanEffects.structural(),
+    editMatrixStructuralPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'ensureLayer no-op',
@@ -182,7 +180,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftEnsureLayerNoOp,
     _editEnsureLayerNoOp,
-    _ExpectedPlanEffects.empty(),
+    editMatrixEmptyPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'ensureLayer changed',
@@ -190,7 +188,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftEnsureLayerChanged,
     _editEnsureLayerChanged,
-    _ExpectedPlanEffects.layerStructural(),
+    editMatrixLayerStructuralPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.clearContent',
@@ -198,7 +196,7 @@ final _editOperationMatrixCases = [
     _documentWithClearContentReferences,
     _draftClearContent,
     _editClearContent,
-    _ExpectedPlanEffects.clearContent(),
+    editMatrixClearContentPlanEffects,
     selectedElementIds: {'image-1'},
   ),
   const _EditOperationMatrixCase(
@@ -207,7 +205,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetCameraOffset,
     _editSetCameraOffset,
-    _ExpectedPlanEffects.projectionOnly(),
+    editMatrixProjectionOnlyPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'setBackgroundColor',
@@ -215,7 +213,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetBackgroundColor,
     _editSetBackgroundColor,
-    _ExpectedPlanEffects.background(),
+    editMatrixBackgroundPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'setGrid',
@@ -223,7 +221,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetGrid,
     _editSetGrid,
-    _ExpectedPlanEffects.grid(),
+    editMatrixGridPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'setPalette',
@@ -231,7 +229,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetPalette,
     _editSetPalette,
-    _ExpectedPlanEffects.projectionOnly(),
+    editMatrixProjectionOnlyPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'upsertResource new/changed',
@@ -239,7 +237,7 @@ final _editOperationMatrixCases = [
     _documentWithReferencedResource,
     _draftUpsertReferencedResource,
     _editUpsertReferencedResource,
-    _ExpectedPlanEffects.referencedResource(),
+    editMatrixReferencedResourcePlanEffects,
   ),
   const _EditOperationMatrixCase(
     'removeUnusedResource removed',
@@ -247,7 +245,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftRemoveUnusedResource,
     _editRemoveUnusedResource,
-    _ExpectedPlanEffects.unusedResourceRemoval(),
+    editMatrixUnusedResourceRemovalPlanEffects,
   ),
   const _EditOperationMatrixCase(
     'CanvasEdit.replaceDraftDocument',
@@ -255,7 +253,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftReplaceDocument,
     _editReplaceDocument,
-    _ExpectedPlanEffects.documentReplacement(selectionEffect: true),
+    editMatrixDocumentReplacementPlanEffectsWithSelection,
     selectedElementIds: {'rect-1'},
   ),
   const _EditOperationMatrixCase(
@@ -264,7 +262,7 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftNoOp,
     _editNoOp,
-    _ExpectedPlanEffects.empty(),
+    editMatrixEmptyPlanEffects,
   ),
 ];
 
@@ -876,7 +874,7 @@ void _expectEditOperationRowsCompileEffects() {
       ],
     );
     operationCase.mutateDraft(draft);
-    _expectPlanEffects(
+    expectEditMatrixPlanEffects(
       operationCase.row,
       draft.commitPlan,
       operationCase.expectedPlanEffects,
@@ -931,129 +929,16 @@ Future<void> _expectEditOperationRowsEmitNoActions() async {
 
 void _expectUpdateTaxonomyEffects() {
   for (final taxonomyCase in _updateTaxonomyCases) {
-    final result = const CommitCompiler().compileElementUpdate(
+    expectEditMatrixTaxonomyEffects((
+      token: taxonomyCase.token,
       before: taxonomyCase.before,
       after: taxonomyCase.after,
-    );
-    _expectTaxonomyCompileResult(taxonomyCase, result);
-    _expectTaxonomyPlanEffects(taxonomyCase, result);
+      expectedDelta: taxonomyCase.expectedDelta,
+      transformsElement: taxonomyCase.transformsElement,
+      prunesSelection: taxonomyCase.prunesSelection,
+      touchesSpatial: taxonomyCase.touchesSpatial,
+    ));
   }
-}
-
-void _expectTaxonomyCompileResult(
-  _UpdateTaxonomyCase taxonomyCase,
-  ElementUpdateCompileResult result,
-) {
-  expect(
-    result.revisionDelta,
-    _matchesRevisionDelta(taxonomyCase.expectedDelta),
-    reason: taxonomyCase.token,
-  );
-  expect(
-    result.touchesGeometry,
-    taxonomyCase.expectedDelta.bounds,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    result.touchesSpatial,
-    taxonomyCase.touchesSpatial || taxonomyCase.expectedDelta.bounds,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    result.touchesVisual,
-    taxonomyCase.expectedDelta.elementVisual,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    result.transformsElement,
-    taxonomyCase.transformsElement,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    result.prunesSelection,
-    taxonomyCase.prunesSelection,
-    reason: taxonomyCase.token,
-  );
-}
-
-void _expectTaxonomyPlanEffects(
-  _UpdateTaxonomyCase taxonomyCase,
-  ElementUpdateCompileResult result,
-) {
-  final plan = const CommitCompiler().compile(
-    revisionDelta: result.revisionDelta,
-    touchedSet: TouchedSet(
-      geometryElementIds: result.touchesSpatial
-          ? [taxonomyCase.after.id]
-          : const [],
-      selection: result.prunesSelection,
-    ),
-  );
-  expect(
-    plan.effects.whereType<ProjectionEffect>(),
-    hasLength(1),
-    reason: taxonomyCase.token,
-  );
-  expect(
-    plan.effects.whereType<SpatialEffect>(),
-    result.touchesSpatial ? hasLength(1) : isEmpty,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    plan.effects.whereType<RepaintEffect>(),
-    taxonomyCase.expectedDelta.elementVisual || result.prunesSelection
-        ? hasLength(1)
-        : isEmpty,
-    reason: taxonomyCase.token,
-  );
-  expect(
-    plan.effects.whereType<SelectionEffect>(),
-    result.prunesSelection ? hasLength(1) : isEmpty,
-    reason: taxonomyCase.token,
-  );
-}
-
-void _expectPlanEffects(
-  String row,
-  CommitPlan plan,
-  _ExpectedPlanEffects expected,
-) {
-  expect(
-    plan.revisionDelta,
-    _matchesRevisionDelta(expected.delta),
-    reason: row,
-  );
-  expect(plan.documentReplaced, expected.documentReplaced, reason: row);
-  expect(
-    plan.effects.whereType<ProjectionEffect>(),
-    expected.projectionEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
-  expect(
-    plan.effects.whereType<SpatialEffect>(),
-    expected.spatialEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
-  expect(
-    plan.effects.whereType<ResourceEffect>(),
-    expected.resourceEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
-  expect(
-    plan.effects.whereType<RepaintEffect>(),
-    expected.repaintEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
-  expect(
-    plan.effects.whereType<SelectionEffect>(),
-    expected.selectionEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
-  expect(
-    plan.effects.whereType<PublicStateEffect>(),
-    expected.publicStateEffect ? hasLength(1) : isEmpty,
-    reason: row,
-  );
 }
 
 void _expectBackgroundElementRow() {
@@ -1117,13 +1002,30 @@ void _expectClearContentRow() {
     return edit.clearContent(removeUnusedResources: true);
   });
 
+  final document = root.readDocument();
+  _expectClearContentResultAndRetainedOrder(result, document);
+  _expectPreservedBackgroundImage(document.backgroundElements.first);
+  _expectPreservedBackgroundVector(document.backgroundElements.last);
+  _expectClearContentStoreDescriptors(root);
+  _expectFrameRevisions(
+    root,
+    structural: 1,
+    bounds: 1,
+    elementVisual: 1,
+    resource: 1,
+  );
+}
+
+void _expectClearContentResultAndRetainedOrder(
+  CanvasClearResult result,
+  CanvasDocument document,
+) {
   expect(result.didClearContent, isTrue);
   expect(result.removedElementIds, [CanvasElementId('image-1')]);
   expect(result.removedResourceIds, [
     CanvasResourceId('content-image-resource'),
     CanvasResourceId('unused-resource'),
   ]);
-  final document = root.readDocument();
   expect(document.layers.single.elements, isEmpty);
   expect(document.backgroundElements.map((element) => element.id), [
     CanvasElementId('background-image'),
@@ -1131,10 +1033,16 @@ void _expectClearContentRow() {
   ]);
   expect(document.backgroundElements.first, isA<CanvasImageElement>());
   expect(document.backgroundElements.last, isA<CanvasVectorElement>());
-  final backgroundImage =
-      document.backgroundElements.first as CanvasImageElement;
-  final backgroundVector =
-      document.backgroundElements.last as CanvasVectorElement;
+  expect(document.resources.map((resource) => resource.id), [
+    CanvasResourceId('background-image-resource'),
+    CanvasResourceId('background-vector-resource'),
+  ]);
+  expect(document.resources.first, isA<CanvasImageResource>());
+  expect(document.resources.last, isA<CanvasVectorResource>());
+}
+
+void _expectPreservedBackgroundImage(CanvasElement element) {
+  final backgroundImage = element as CanvasImageElement;
   expect(
     backgroundImage.resourceId,
     CanvasResourceId('background-image-resource'),
@@ -1157,6 +1065,10 @@ void _expectClearContentRow() {
     backgroundImage.metadata,
     CanvasMetadata.fromMap({'role': 'background-image', 'rank': 1}),
   );
+}
+
+void _expectPreservedBackgroundVector(CanvasElement element) {
+  final backgroundVector = element as CanvasVectorElement;
   expect(
     backgroundVector.resourceId,
     CanvasResourceId('background-vector-resource'),
@@ -1179,12 +1091,9 @@ void _expectClearContentRow() {
     backgroundVector.metadata,
     CanvasMetadata.fromMap({'role': 'background-vector', 'rank': 2}),
   );
-  expect(document.resources.map((resource) => resource.id), [
-    CanvasResourceId('background-image-resource'),
-    CanvasResourceId('background-vector-resource'),
-  ]);
-  expect(document.resources.first, isA<CanvasImageResource>());
-  expect(document.resources.last, isA<CanvasVectorResource>());
+}
+
+void _expectClearContentStoreDescriptors(RuntimeRoot root) {
   final imageDescriptor = root.resourceDescriptor(
     CanvasResourceId('background-image-resource'),
   );
@@ -1213,13 +1122,6 @@ void _expectClearContentRow() {
   );
   expect(imageDescriptor.resourceRevision, 0);
   expect(vectorDescriptor?.resourceRevision, 0);
-  _expectFrameRevisions(
-    root,
-    structural: 1,
-    bounds: 1,
-    elementVisual: 1,
-    resource: 1,
-  );
 }
 
 void _expectPersistedCameraRow() {
@@ -1560,22 +1462,6 @@ void _expectFrameRevisions(
   expect(root.frameRevisions.resourceRevision, resource);
 }
 
-Matcher _matchesRevisionDelta(_ExpectedRevisionDelta expected) {
-  return isA<StoreRevisionDelta>()
-      .having((delta) => delta.document, 'document', expected.document)
-      .having((delta) => delta.projection, 'projection', expected.projection)
-      .having((delta) => delta.structural, 'structural', expected.structural)
-      .having((delta) => delta.bounds, 'bounds', expected.bounds)
-      .having(
-        (delta) => delta.elementVisual,
-        'elementVisual',
-        expected.elementVisual,
-      )
-      .having((delta) => delta.background, 'background', expected.background)
-      .having((delta) => delta.grid, 'grid', expected.grid)
-      .having((delta) => delta.resource, 'resource', expected.resource);
-}
-
 Matcher _throwsCanvasDataCode(CanvasDataErrorCode code) {
   return throwsA(
     isA<CanvasDataException>().having((error) => error.code, 'code', code),
@@ -1624,84 +1510,93 @@ CanvasDocument _documentWithReferencedResource() {
 
 CanvasDocument _documentWithClearContentReferences() {
   return CanvasDocument(
-    resources: [
-      CanvasImageResource(
-        id: CanvasResourceId('background-image-resource'),
-        source: CanvasResourceSource.appKey('background-image-source'),
-        mimeType: 'image/png',
-        contentHash: 'sha256:background-image',
-        byteLength: 101,
-        metadata: CanvasMetadata.fromMap({'asset': 'image', 'scale': 2}),
-      ),
-      CanvasVectorResource(
-        id: CanvasResourceId('background-vector-resource'),
-        source: CanvasResourceSource.appKey('background-vector-source'),
-        contentHash: 'sha256:background-vector',
-        byteLength: 202,
-        metadata: CanvasMetadata.fromMap({'asset': 'vector', 'scale': 3}),
-      ),
-      CanvasImageResource(
-        id: CanvasResourceId('content-image-resource'),
-        source: CanvasResourceSource.appKey('content-image-resource'),
-      ),
-      CanvasImageResource(
-        id: CanvasResourceId('unused-resource'),
-        source: CanvasResourceSource.appKey('unused-resource'),
-      ),
-    ],
-    backgroundElements: [
+    resources: _clearContentResources(),
+    backgroundElements: _clearContentBackgroundElements(),
+    layers: [_clearContentLayer()],
+  );
+}
+
+List<CanvasResource> _clearContentResources() {
+  return [
+    CanvasImageResource(
+      id: CanvasResourceId('background-image-resource'),
+      source: CanvasResourceSource.appKey('background-image-source'),
+      mimeType: 'image/png',
+      contentHash: 'sha256:background-image',
+      byteLength: 101,
+      metadata: CanvasMetadata.fromMap({'asset': 'image', 'scale': 2}),
+    ),
+    CanvasVectorResource(
+      id: CanvasResourceId('background-vector-resource'),
+      source: CanvasResourceSource.appKey('background-vector-source'),
+      contentHash: 'sha256:background-vector',
+      byteLength: 202,
+      metadata: CanvasMetadata.fromMap({'asset': 'vector', 'scale': 3}),
+    ),
+    CanvasImageResource(
+      id: CanvasResourceId('content-image-resource'),
+      source: CanvasResourceSource.appKey('content-image-resource'),
+    ),
+    CanvasImageResource(
+      id: CanvasResourceId('unused-resource'),
+      source: CanvasResourceSource.appKey('unused-resource'),
+    ),
+  ];
+}
+
+List<CanvasElement> _clearContentBackgroundElements() {
+  return [_clearContentBackgroundImage(), _clearContentBackgroundVector()];
+}
+
+CanvasImageElement _clearContentBackgroundImage() {
+  return CanvasImageElement(
+    id: CanvasElementId('background-image'),
+    resourceId: CanvasResourceId('background-image-resource'),
+    size: const Size(2, 3),
+    naturalSize: const Size(20, 30),
+    revision: 7,
+    transform: CanvasTransform.translation(const Offset(8, 9)),
+    opacity: 0.75,
+    hitPadding: 3,
+    isVisible: false,
+    isSelectable: false,
+    isLocked: true,
+    isDeletable: false,
+    isTransformable: false,
+    metadata: CanvasMetadata.fromMap({'role': 'background-image', 'rank': 1}),
+  );
+}
+
+CanvasVectorElement _clearContentBackgroundVector() {
+  return CanvasVectorElement(
+    id: CanvasElementId('background-vector'),
+    resourceId: CanvasResourceId('background-vector-resource'),
+    size: const Size(4, 5),
+    naturalSize: const Size(40, 50),
+    revision: 8,
+    transform: CanvasTransform.translation(const Offset(10, 11)),
+    opacity: 0.5,
+    hitPadding: 4,
+    isVisible: false,
+    isSelectable: false,
+    isLocked: true,
+    isDeletable: false,
+    isTransformable: false,
+    metadata: CanvasMetadata.fromMap({'role': 'background-vector', 'rank': 2}),
+  );
+}
+
+CanvasLayer _clearContentLayer() {
+  return CanvasLayer(
+    id: CanvasLayerId('layer-1'),
+    elements: [
       CanvasImageElement(
-        id: CanvasElementId('background-image'),
-        resourceId: CanvasResourceId('background-image-resource'),
-        size: const Size(2, 3),
-        naturalSize: const Size(20, 30),
-        revision: 7,
-        transform: CanvasTransform.translation(const Offset(8, 9)),
-        opacity: 0.75,
-        hitPadding: 3,
+        id: CanvasElementId('image-1'),
+        resourceId: CanvasResourceId('content-image-resource'),
+        size: const Size(1, 1),
         isVisible: false,
-        isSelectable: false,
         isLocked: true,
         isDeletable: false,
-        isTransformable: false,
-        metadata: CanvasMetadata.fromMap({
-          'role': 'background-image',
-          'rank': 1,
-        }),
-      ),
-      CanvasVectorElement(
-        id: CanvasElementId('background-vector'),
-        resourceId: CanvasResourceId('background-vector-resource'),
-        size: const Size(4, 5),
-        naturalSize: const Size(40, 50),
-        revision: 8,
-        transform: CanvasTransform.translation(const Offset(10, 11)),
-        opacity: 0.5,
-        hitPadding: 4,
-        isVisible: false,
-        isSelectable: false,
-        isLocked: true,
-        isDeletable: false,
-        isTransformable: false,
-        metadata: CanvasMetadata.fromMap({
-          'role': 'background-vector',
-          'rank': 2,
-        }),
-      ),
-    ],
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-1'),
-        elements: [
-          CanvasImageElement(
-            id: CanvasElementId('image-1'),
-            resourceId: CanvasResourceId('content-image-resource'),
-            size: const Size(1, 1),
-            isVisible: false,
-            isLocked: true,
-            isDeletable: false,
-          ),
-        ],
       ),
     ],
   );
@@ -1709,9 +1604,9 @@ CanvasDocument _documentWithClearContentReferences() {
 
 void _expectMaterializedClearResourceWork() {
   final draft = DraftDocument(_documentWithManyClearResources());
-  final work = <DraftClearContentWorkEvent>[];
+  final work = <DraftResourceWorkEvent>[];
 
-  final result = DraftDocument.observeClearContentWork(
+  final result = observeDraftResourceWork(
     work.add,
     () => draft.clearContent(removeUnusedResources: true),
   );
@@ -1723,75 +1618,313 @@ void _expectMaterializedClearResourceWork() {
     CanvasResourceId('unused-resource-b'),
   ]);
   expect(
-    _workEventCount(work, DraftClearContentWorkEvent.backgroundReferencePass),
+    _resourceWorkEventCount(work, DraftResourceWorkKind.imageCountTransition),
     1,
   );
   expect(
-    _workEventCount(work, DraftClearContentWorkEvent.backgroundElementVisit),
+    _resourceWorkEventCount(work, DraftResourceWorkKind.vectorCountTransition),
+    0,
+  );
+  expect(
+    _resourceWorkEventCount(work, DraftResourceWorkKind.referenceQuery),
+    5,
+  );
+  expect(
+    _resourceWorkEventCount(work, DraftResourceWorkKind.descriptorRemove),
+    3,
+  );
+  _expectManyResourceDraftOperationsStayDirect();
+}
+
+// One supported-size resource trace exercises descriptor lookup/reinsert,
+// split-family transitions, clear, and one ordered publication together.
+// Keeping those transitions in one trace preserves their current-state order.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _expectManyResourceDraftOperationsStayDirect() {
+  const resourceCount = 4096;
+  final source = CanvasDocument(
+    resources: [
+      for (var index = 0; index < resourceCount; index += 1)
+        if (index == 3 || index == 4)
+          CanvasVectorResource(
+            id: CanvasResourceId('many-resource-$index'),
+            source: CanvasResourceSource.appKey('many-resource-$index'),
+          )
+        else
+          CanvasImageResource(
+            id: CanvasResourceId('many-resource-$index'),
+            source: CanvasResourceSource.appKey('many-resource-$index'),
+          ),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('many-background'),
+        resourceId: CanvasResourceId('many-resource-0'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('many-layer'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('many-content'),
+            resourceId: CanvasResourceId('many-resource-1'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+  final events = <DraftResourceWorkEvent>[];
+  final reinsertedId = CanvasResourceId('many-reinserted');
+  late DraftDocument draft;
+  late CanvasDocument document;
+
+  final clear = observeDraftResourceWork(events.add, () {
+    draft = DraftDocument(source);
+    expect(
+      draft.upsertResource(
+        CanvasImageResource(
+          id: reinsertedId,
+          source: CanvasResourceSource.appKey('many-reinserted'),
+        ),
+      ),
+      isTrue,
+    );
+    expect(draft.removeUnusedResource(reinsertedId), isTrue);
+    expect(
+      draft.upsertResource(
+        CanvasImageResource(
+          id: reinsertedId,
+          source: CanvasResourceSource.appKey('many-reinserted'),
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      draft.updateElement(
+        CanvasImageElementUpdate(
+          id: CanvasElementId('many-content'),
+          resourceId: CanvasFieldSet(CanvasResourceId('many-resource-2')),
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      draft.removeUnusedResource(CanvasResourceId('many-resource-1')),
+      isTrue,
+    );
+    final vector = CanvasVectorElement(
+      id: CanvasElementId('many-vector'),
+      resourceId: CanvasResourceId('many-resource-3'),
+      size: const Size(1, 1),
+    );
+    draft.addElement(vector, layerId: CanvasLayerId('many-layer'));
+    expect(
+      draft.updateElement(
+        CanvasVectorElementUpdate(
+          id: vector.id,
+          resourceId: CanvasFieldSet(CanvasResourceId('many-resource-4')),
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      draft.removeUnusedResource(CanvasResourceId('many-resource-3')),
+      isTrue,
+    );
+    expect(draft.removeElement(vector.id), isTrue);
+    expect(
+      draft.removeUnusedResource(CanvasResourceId('many-resource-4')),
+      isTrue,
+    );
+    final clear = draft.clearContent(removeUnusedResources: true);
+    document = draft.readDocument();
+    return clear;
+  });
+
+  expect(clear.removedElementIds, [CanvasElementId('many-content')]);
+  expect(clear.removedResourceIds, hasLength(resourceCount - 3));
+  expect(document.resources.map((resource) => resource.id), [
+    CanvasResourceId('many-resource-0'),
+  ]);
+  expect(
+    _resourceWorkEventCount(events, DraftResourceWorkKind.descriptorRead),
+    6,
+  );
+  expect(
+    _resourceWorkEventCount(events, DraftResourceWorkKind.descriptorWrite),
     2,
   );
-  expect(_workEventCount(work, DraftClearContentWorkEvent.resourcePass), 1);
-  expect(_workEventCount(work, DraftClearContentWorkEvent.resourceVisit), 5);
   expect(
-    _workEventCount(work, DraftClearContentWorkEvent.acceptedElementScan),
+    _resourceWorkEventCount(events, DraftResourceWorkKind.imageCountTransition),
+    5,
+  );
+  expect(
+    _resourceWorkEventCount(
+      events,
+      DraftResourceWorkKind.vectorCountTransition,
+    ),
+    4,
+  );
+  expect(
+    _resourceWorkEventCount(events, DraftResourceWorkKind.referenceQuery),
+    resourceCount + 4,
+  );
+  expect(
+    _resourceWorkEventCount(events, DraftResourceWorkKind.descriptorRemove),
+    resourceCount + 1,
+  );
+  expect(
+    _resourceWorkEventCount(
+      events,
+      DraftResourceWorkKind.descriptorMaterialization,
+    ),
+    1,
+  );
+  expect(
+    _resourceWorkEventCount(events, DraftResourceWorkKind.countEntryVisit),
     0,
+  );
+  _expectResourceQueryCounts(
+    events,
+    CanvasResourceId('many-resource-1'),
+    const [(image: 0, vector: 0)],
+  );
+  _expectResourceQueryCounts(
+    events,
+    CanvasResourceId('many-resource-3'),
+    const [(image: 0, vector: 0)],
+  );
+  _expectResourceQueryCounts(
+    events,
+    CanvasResourceId('many-resource-0'),
+    const [(image: 1, vector: 0)],
+  );
+  _expectResourceTransitionCounts(
+    events,
+    CanvasResourceId('many-resource-1'),
+    const [(image: 1, vector: 0), (image: 0, vector: 0)],
+  );
+  _expectResourceTransitionCounts(
+    events,
+    CanvasResourceId('many-resource-2'),
+    const [(image: 1, vector: 0), (image: 0, vector: 0)],
+  );
+  _expectResourceTransitionCounts(
+    events,
+    CanvasResourceId('many-resource-3'),
+    const [(image: 0, vector: 1), (image: 0, vector: 0)],
+  );
+  _expectResourceTransitionCounts(
+    events,
+    CanvasResourceId('many-resource-4'),
+    const [(image: 0, vector: 1), (image: 0, vector: 0)],
   );
 }
 
-int _workEventCount(
-  Iterable<DraftClearContentWorkEvent> work,
-  DraftClearContentWorkEvent event,
+void _expectResourceQueryCounts(
+  Iterable<DraftResourceWorkEvent> events,
+  CanvasResourceId id,
+  List<({int image, int vector})> expected,
 ) {
-  return work.where((item) => item == event).length;
+  final actual = [
+    for (final event in events)
+      if (event.kind == DraftResourceWorkKind.referenceQuery &&
+          event.resourceId == id)
+        (image: event.imageCount, vector: event.vectorCount),
+  ];
+  expect(actual, expected);
+}
+
+void _expectResourceTransitionCounts(
+  Iterable<DraftResourceWorkEvent> events,
+  CanvasResourceId id,
+  List<({int image, int vector})> expected,
+) {
+  final actual = [
+    for (final event in events)
+      if ((event.kind == DraftResourceWorkKind.imageCountTransition ||
+              event.kind == DraftResourceWorkKind.vectorCountTransition) &&
+          event.resourceId == id)
+        (image: event.imageCount, vector: event.vectorCount),
+  ];
+  expect(actual, expected);
+}
+
+int _resourceWorkEventCount(
+  Iterable<DraftResourceWorkEvent> work,
+  DraftResourceWorkKind kind,
+) {
+  return work.where((item) => item.kind == kind).length;
 }
 
 CanvasDocument _documentWithManyClearResources() {
   return CanvasDocument(
     resources: [
-      CanvasImageResource(
-        id: CanvasResourceId('background-image-resource'),
-        source: CanvasResourceSource.appKey('background-image-resource'),
-      ),
-      CanvasVectorResource(
-        id: CanvasResourceId('background-vector-resource'),
-        source: CanvasResourceSource.appKey('background-vector-resource'),
-      ),
-      CanvasImageResource(
-        id: CanvasResourceId('content-resource'),
-        source: CanvasResourceSource.appKey('content-resource'),
-      ),
-      CanvasImageResource(
-        id: CanvasResourceId('unused-resource-a'),
-        source: CanvasResourceSource.appKey('unused-resource-a'),
-      ),
-      CanvasVectorResource(
-        id: CanvasResourceId('unused-resource-b'),
-        source: CanvasResourceSource.appKey('unused-resource-b'),
-      ),
+      ..._manyClearRetainedResources(),
+      ..._manyClearRemovableResources(),
     ],
-    backgroundElements: [
+    backgroundElements: _manyClearBackgroundElements(),
+    layers: [_manyClearContentLayer()],
+  );
+}
+
+List<CanvasResource> _manyClearRetainedResources() {
+  return [
+    CanvasImageResource(
+      id: CanvasResourceId('background-image-resource'),
+      source: CanvasResourceSource.appKey('background-image-resource'),
+    ),
+    CanvasVectorResource(
+      id: CanvasResourceId('background-vector-resource'),
+      source: CanvasResourceSource.appKey('background-vector-resource'),
+    ),
+  ];
+}
+
+List<CanvasResource> _manyClearRemovableResources() {
+  return [
+    CanvasImageResource(
+      id: CanvasResourceId('content-resource'),
+      source: CanvasResourceSource.appKey('content-resource'),
+    ),
+    CanvasImageResource(
+      id: CanvasResourceId('unused-resource-a'),
+      source: CanvasResourceSource.appKey('unused-resource-a'),
+    ),
+    CanvasVectorResource(
+      id: CanvasResourceId('unused-resource-b'),
+      source: CanvasResourceSource.appKey('unused-resource-b'),
+    ),
+  ];
+}
+
+List<CanvasElement> _manyClearBackgroundElements() {
+  return [
+    CanvasImageElement(
+      id: CanvasElementId('background-image'),
+      resourceId: CanvasResourceId('background-image-resource'),
+      size: const Size(2, 3),
+    ),
+    CanvasVectorElement(
+      id: CanvasElementId('background-vector'),
+      resourceId: CanvasResourceId('background-vector-resource'),
+      size: const Size(4, 5),
+    ),
+  ];
+}
+
+CanvasLayer _manyClearContentLayer() {
+  return CanvasLayer(
+    id: CanvasLayerId('layer-1'),
+    elements: [
       CanvasImageElement(
-        id: CanvasElementId('background-image'),
-        resourceId: CanvasResourceId('background-image-resource'),
-        size: const Size(2, 3),
-      ),
-      CanvasVectorElement(
-        id: CanvasElementId('background-vector'),
-        resourceId: CanvasResourceId('background-vector-resource'),
-        size: const Size(4, 5),
-      ),
-    ],
-    layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-1'),
-        elements: [
-          CanvasImageElement(
-            id: CanvasElementId('content-image'),
-            resourceId: CanvasResourceId('content-resource'),
-            size: const Size(6, 7),
-            isDeletable: false,
-          ),
-        ],
+        id: CanvasElementId('content-image'),
+        resourceId: CanvasResourceId('content-resource'),
+        size: const Size(6, 7),
+        isDeletable: false,
       ),
     ],
   );
@@ -2046,7 +2179,7 @@ final class _EditOperationMatrixCase {
   final CanvasDocument Function() document;
   final void Function(DraftDocument draft) mutateDraft;
   final void Function(CanvasEdit edit) mutateEdit;
-  final _ExpectedPlanEffects expectedPlanEffects;
+  final EditMatrixExpectedPlanEffects expectedPlanEffects;
   final Set<String> selectedElementIds;
 }
 
@@ -2070,231 +2203,4 @@ final class _UpdateTaxonomyCase {
   final bool touchesSpatial;
 }
 
-// Named constructors mirror operation-matrix effect families; keeping the
-// expected effect vocabulary together makes each row assertion auditable.
-// ignore: number-of-methods
-final class _ExpectedPlanEffects {
-  const _ExpectedPlanEffects({
-    required this.delta,
-    required this.projectionEffect,
-    required this.spatialEffect,
-    required this.resourceEffect,
-    required this.repaintEffect,
-    required this.selectionEffect,
-    required this.publicStateEffect,
-    this.documentReplaced = false,
-  });
-
-  const _ExpectedPlanEffects.empty()
-    : this(
-        delta: const _ExpectedRevisionDelta(),
-        documentReplaced: false,
-        projectionEffect: false,
-        spatialEffect: false,
-        resourceEffect: false,
-        repaintEffect: false,
-        selectionEffect: false,
-        publicStateEffect: false,
-      );
-
-  const _ExpectedPlanEffects.documentReplacement({
-    required bool selectionEffect,
-  }) : this(
-         delta: const _ExpectedRevisionDelta(
-           document: true,
-           projection: true,
-           structural: true,
-           bounds: true,
-           elementVisual: true,
-           background: true,
-           grid: true,
-           resource: true,
-         ),
-         documentReplaced: true,
-         projectionEffect: true,
-         spatialEffect: true,
-         resourceEffect: true,
-         repaintEffect: true,
-         selectionEffect: selectionEffect,
-         publicStateEffect: true,
-       );
-
-  const _ExpectedPlanEffects.structural()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          structural: true,
-          bounds: true,
-          elementVisual: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: true,
-        resourceEffect: false,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.layerStructural()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          structural: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: true,
-        resourceEffect: false,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.elementVisual()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          elementVisual: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: false,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.projectionOnly()
-    : this(
-        delta: const _ExpectedRevisionDelta(document: true, projection: true),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: false,
-        repaintEffect: false,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.background()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          background: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: false,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.grid()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          grid: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: false,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.clearContent()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          structural: true,
-          bounds: true,
-          elementVisual: true,
-          resource: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: true,
-        resourceEffect: true,
-        repaintEffect: true,
-        selectionEffect: true,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.referencedResource()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          resource: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: true,
-        repaintEffect: true,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  const _ExpectedPlanEffects.unusedResourceRemoval()
-    : this(
-        delta: const _ExpectedRevisionDelta(
-          document: true,
-          projection: true,
-          resource: true,
-        ),
-        projectionEffect: true,
-        spatialEffect: false,
-        resourceEffect: true,
-        repaintEffect: false,
-        selectionEffect: false,
-        publicStateEffect: true,
-      );
-
-  final _ExpectedRevisionDelta delta;
-  final bool documentReplaced;
-  final bool projectionEffect;
-  final bool spatialEffect;
-  final bool resourceEffect;
-  final bool repaintEffect;
-  final bool selectionEffect;
-  final bool publicStateEffect;
-}
-
-final class _ExpectedRevisionDelta {
-  const _ExpectedRevisionDelta({
-    this.document = false,
-    this.projection = false,
-    this.structural = false,
-    this.bounds = false,
-    this.elementVisual = false,
-    this.background = false,
-    this.grid = false,
-    this.resource = false,
-  });
-
-  const _ExpectedRevisionDelta.projectionOnly()
-    : this(document: true, projection: true);
-
-  const _ExpectedRevisionDelta.elementVisual()
-    : this(document: true, projection: true, elementVisual: true);
-
-  const _ExpectedRevisionDelta.elementBoundsOnly()
-    : this(document: true, projection: true, bounds: true);
-
-  const _ExpectedRevisionDelta.elementBounds()
-    : this(document: true, projection: true, bounds: true, elementVisual: true);
-
-  final bool document;
-  final bool projection;
-  final bool structural;
-  final bool bounds;
-  final bool elementVisual;
-  final bool background;
-  final bool grid;
-  final bool resource;
-}
+typedef _ExpectedRevisionDelta = EditMatrixExpectedRevisionDelta;

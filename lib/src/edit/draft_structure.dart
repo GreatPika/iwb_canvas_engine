@@ -280,6 +280,13 @@ final class DraftStructure {
     yield* orderedContentElements();
   }
 
+  /// Visits current rows once while Draft's resource owner is constructed.
+  /// Row order is irrelevant to reference counts and no general map iterator
+  /// or snapshot leaves the structural owner.
+  void visitCurrentRows(void Function(CanvasElement) visitor) {
+    _elementsById.forEachValue(visitor);
+  }
+
   List<CanvasElement> _materializeElements(
     IndexedOrderSequence<CanvasElementId, CanvasElementId> order,
     DraftStructureOrderKind kind, {
@@ -436,6 +443,12 @@ final class _DraftDirectMap<K, V> {
   V? remove(K key) {
     DraftStructure._recordMap(_kind, DraftStructureMapOperation.remove);
     return _values.remove(key);
+  }
+
+  void forEachValue(void Function(V value) visitor) {
+    for (final value in _values.values) {
+      visitor(value);
+    }
   }
 }
 

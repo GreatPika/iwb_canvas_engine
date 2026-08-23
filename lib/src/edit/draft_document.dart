@@ -13,14 +13,13 @@ import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
-import '../store/resource_table.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
 import 'draft_structure.dart';
+import 'draft_resources.dart';
 import 'element_update_application.dart';
-import 'resource_edit_policy.dart';
 import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
 
@@ -32,16 +31,11 @@ export 'draft_structure.dart'
         DraftStructureWorkEvent,
         DraftStructureWorkKind,
         observeDraftStructureWork;
-
-@visibleForTesting
-enum DraftClearContentWorkEvent {
-  contentElementVisit,
-  backgroundReferencePass,
-  backgroundElementVisit,
-  resourcePass,
-  resourceVisit,
-  acceptedElementScan,
-}
+export 'draft_resources.dart'
+    show
+        DraftResourceWorkEvent,
+        DraftResourceWorkKind,
+        observeDraftResourceWork;
 
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
@@ -54,7 +48,6 @@ enum DraftClearContentWorkEvent {
 // revision buffers during rollback.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DraftDocument {
-  static final Object _clearContentWorkZoneKey = Object();
   static final Object _sparseMutationApplicationZoneKey = Object();
 
   DraftDocument(
@@ -65,16 +58,18 @@ final class DraftDocument {
        background = document.background,
        palette = _copyPalette(document.palette),
        metadata = document.metadata,
-       resources = document.resources
-           .map<CanvasResource>(ResourceTable.copy)
-           .toList(),
-       _structure = DraftStructure(document);
+       _structure = DraftStructure(document) {
+    _resources = DraftResources(
+      descriptors: document.resources,
+      visitRows: _structure.visitCurrentRows,
+    );
+  }
 
   CanvasCamera camera;
   CanvasBackground background;
   CanvasPalette palette;
   CanvasMetadata metadata;
-  final List<CanvasResource> resources;
+  late DraftResources _resources;
   DraftStructure _structure;
   final Set<CanvasElementId> _selectedElementIds;
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
@@ -90,15 +85,6 @@ final class DraftDocument {
       revisionDelta: _revisionDelta,
       touchedSet: touchedSet,
     );
-  }
-
-  /// Records semantic clear phases in a zone-local observer only under asserts.
-  @visibleForTesting
-  static T observeClearContentWork<T>(
-    void Function(DraftClearContentWorkEvent event) sink,
-    T Function() operation,
-  ) {
-    return runZoned(operation, zoneValues: {_clearContentWorkZoneKey: sink});
   }
 
   /// Records completed sparse DTO applications in a zone-local observer only
@@ -121,7 +107,7 @@ final class DraftDocument {
       elementCount:
           _structure.backgroundElementCount + _structure.contentElementCount,
       layerCount: _structure.layerCount,
-      resourceCount: resources.length,
+      resourceCount: _resources.length,
     );
   }
 
@@ -143,6 +129,7 @@ final class DraftDocument {
     _admitElement(element);
     final targetLayerId = _layerForElementAdd(layerId);
     _structure.addContent(element, layerId: targetLayerId, index: index);
+    _resources.addElement(element);
     _touchedSet.touchAddedElement(element.id);
     _markStructural();
 
@@ -152,6 +139,7 @@ final class DraftDocument {
   CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) {
     _admitElement(element);
     _structure.addBackground(element, index: index);
+    _resources.addElement(element);
     _touchedSet.touchAddedElement(element.id);
     _touchedSet.touchBackgroundLayer();
     _markStructural();
@@ -230,6 +218,7 @@ final class DraftDocument {
       after: updated,
     );
     return _replaceElement(
+      before: before,
       after: updated,
       compiledUpdate: compiledUpdate,
       revisionDelta: compiledUpdate.revisionDelta,
@@ -250,6 +239,7 @@ final class DraftDocument {
       after: after,
     );
     _replaceElement(
+      before: before,
       after: after,
       compiledUpdate: compiledUpdate,
       revisionDelta: revisionDelta,
@@ -257,11 +247,13 @@ final class DraftDocument {
   }
 
   bool _replaceElement({
+    required CanvasElement before,
     required CanvasElement after,
     required ElementUpdateCompileResult compiledUpdate,
     required StoreRevisionDelta revisionDelta,
   }) {
     _structure.replaceElement(after);
+    _resources.replaceElement(before: before, after: after);
     _touchedSet.touchUpdatedElement(after.id);
     if (compiledUpdate.touchesSpatial) {
       _touchedSet.touchGeometryElement(after.id);
@@ -295,6 +287,7 @@ final class DraftDocument {
     if (target == null) {
       return false;
     }
+    _resources.removeElement(target.element);
     _touchedSet.touchRemovedElement(id);
     if (target.isBackground) {
       _touchedSet.touchBackgroundLayer();
@@ -308,23 +301,11 @@ final class DraftDocument {
   }
 
   bool upsertResource(CanvasResource resource) {
-    final index = resources.indexWhere((row) => row.id == resource.id);
-    if (index == -1) {
-      resources.add(ResourceTable.copy(resource));
-      _touchedSet.touchResourceDescriptor(resource.id);
-      if (_isResourceReferenced(resource.id)) {
-        _touchedSet.touchResourceVisual(resource.id);
-      }
-      _markResource();
-
-      return true;
-    }
-    if (hasSameResourceFacts(resources[index], resource)) {
+    if (!_resources.upsert(resource)) {
       return false;
     }
-    resources[index] = ResourceTable.copy(resource);
     _touchedSet.touchResourceDescriptor(resource.id);
-    if (_isResourceReferenced(resource.id)) {
+    if (_resources.isReferenced(resource.id)) {
       _touchedSet.touchResourceVisual(resource.id);
     }
     _markResource();
@@ -333,11 +314,9 @@ final class DraftDocument {
   }
 
   bool removeUnusedResource(CanvasResourceId id) {
-    final index = resources.indexWhere((resource) => resource.id == id);
-    if (index == -1 || _isResourceReferenced(id)) {
+    if (!_resources.removeUnused(id)) {
       return false;
     }
-    resources.removeAt(index);
     _touchedSet.touchResourceDescriptor(id);
     _markResource();
 
@@ -406,10 +385,11 @@ final class DraftDocument {
     background = replacement.background;
     palette = _copyPalette(replacement.palette);
     metadata = replacement.metadata;
-    resources
-      ..clear()
-      ..addAll(replacement.resources.map(ResourceTable.copy));
     _structure = DraftStructure(replacement);
+    _resources = DraftResources(
+      descriptors: replacement.resources,
+      visitRows: _structure.visitCurrentRows,
+    );
     _documentReplaced = true;
     _touchedSet.touchDocumentReplacement();
     if (!_selectionValidForReplacement()) {
@@ -424,7 +404,7 @@ final class DraftDocument {
       camera: camera,
       background: background,
       palette: _copyPalette(palette),
-      resources: resources.map(ResourceTable.copy),
+      resources: _resources.materialize(),
       backgroundElements: structure.backgroundElements,
       layers: structure.layers,
       metadata: metadata,
@@ -443,8 +423,12 @@ final class DraftDocument {
 
   List<CanvasElementId> _clearElements() {
     return _structure.clearContent(
-      onElementRemoved: (_) {
-        _recordClearContentWork(DraftClearContentWorkEvent.contentElementVisit);
+      onElementRemoved: (id) {
+        final target = _findElement(id);
+        if (target == null) {
+          throw StateError('Draft clear is missing its current element row.');
+        }
+        _resources.removeElement(target.element);
       },
     );
   }
@@ -456,37 +440,7 @@ final class DraftDocument {
       return const [];
     }
 
-    final retainedBackgroundResourceIds = <CanvasResourceId>{};
-    _recordClearContentWork(DraftClearContentWorkEvent.backgroundReferencePass);
-    for (final element in _structure.orderedBackgroundElements()) {
-      _recordClearContentWork(
-        DraftClearContentWorkEvent.backgroundElementVisit,
-      );
-      switch (element) {
-        case CanvasImageElement(:final resourceId):
-          retainedBackgroundResourceIds.add(resourceId);
-        case CanvasVectorElement(:final resourceId):
-          retainedBackgroundResourceIds.add(resourceId);
-        default:
-      }
-    }
-
-    final retainedResources = <CanvasResource>[];
-    final removedResourceIds = <CanvasResourceId>[];
-    _recordClearContentWork(DraftClearContentWorkEvent.resourcePass);
-    for (final resource in resources) {
-      _recordClearContentWork(DraftClearContentWorkEvent.resourceVisit);
-      if (retainedBackgroundResourceIds.contains(resource.id)) {
-        retainedResources.add(resource);
-      } else {
-        removedResourceIds.add(resource.id);
-      }
-    }
-    resources
-      ..clear()
-      ..addAll(retainedResources);
-
-    return removedResourceIds;
+    return _resources.removeAllUnused();
   }
 
   void _markRemovedElements(List<CanvasElementId> removedElementIds) {
@@ -531,23 +485,6 @@ final class DraftDocument {
   DraftStructureElement? _findElement(CanvasElementId id) =>
       _structure.elementForId(id);
 
-  bool _isResourceReferenced(CanvasResourceId id) {
-    _recordClearContentWork(DraftClearContentWorkEvent.acceptedElementScan);
-    return _allElements().any(
-      (element) => elementReferencesResource(element, id),
-    );
-  }
-
-  static void _recordClearContentWork(DraftClearContentWorkEvent event) {
-    assert(() {
-      final sink = Zone.current[_clearContentWorkZoneKey];
-      if (sink is void Function(DraftClearContentWorkEvent)) {
-        sink(event);
-      }
-      return true;
-    }(), 'draft clear work observation failed');
-  }
-
   static void _recordSparseMutationApplication(StoreSparseMutation mutation) {
     assert(() {
       final sink = Zone.current[_sparseMutationApplicationZoneKey];
@@ -556,10 +493,6 @@ final class DraftDocument {
       }
       return true;
     }(), 'draft sparse mutation application observation failed');
-  }
-
-  Iterable<CanvasElement> _allElements() sync* {
-    yield* _structure.orderedElements();
   }
 
   bool _intersectsSelection(Iterable<CanvasElementId> ids) {

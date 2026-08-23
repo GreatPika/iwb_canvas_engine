@@ -77,6 +77,11 @@ void _expectImplicitLayerAndBackgroundTouches() {
 }
 
 void _expectBackgroundLayerRemovalTouches() {
+  _expectExplicitBackgroundRemovalTouches();
+  _expectClearContentPreservesBackgroundTouches();
+}
+
+void _expectExplicitBackgroundRemovalTouches() {
   final removeDraft = DraftDocument(_documentWithBackgroundElement());
 
   removeDraft.removeElement(CanvasElementId('background-1'));
@@ -85,7 +90,9 @@ void _expectBackgroundLayerRemovalTouches() {
   expect(removeDraft.touchedSet.removedElementIds, {
     CanvasElementId('background-1'),
   });
+}
 
+void _expectClearContentPreservesBackgroundTouches() {
   final clearDraft = DraftDocument(_documentWithBackgroundAndContent());
   final backgroundBefore = clearDraft.background;
 

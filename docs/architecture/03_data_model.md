@@ -87,10 +87,14 @@ and element maps, one current placement view, and separate owner-local indexed
 orders for layers, background elements, and every content layer. Materialized
 Draft operations read and mutate those facts directly; an explicit Draft
 document projection traverses each current order once and creates only public
-output lists. Draft keyed resource descriptors and split image/vector counts
-remain pending for Unit 5. Atomic whole-backing construction and replacement
-swap remain pending for Unit 6; this structural backing is not yet a completed
-replacement boundary. The journal receives only Draft's write-only DTO consumer
+output lists. Draft owns one insertion-ordered keyed descriptor state and exact
+image/vector reference counts derived from its current structural rows. Every
+successful row transition updates only its affected split count; descriptor
+upsert, removal, and explicit document materialization use direct keyed reads
+or one ordered descriptor traversal, never an all-element reference scan.
+Atomic whole-backing construction and replacement swap remain pending for Unit
+6; this backing is not yet a completed replacement boundary. The journal
+receives only Draft's write-only DTO consumer
 during promotion, not a readable Draft state; Draft's promotion target opens
 and releases the document around that replay.
 One Store-private transaction candidate opens the existing family, resource,
