@@ -27,6 +27,28 @@ Apply the same owner-level judgment to review findings. Never forward findings
 mechanically or patch downstream symptoms when the cause belongs to a shared
 boundary, invariant, source of truth, or owning module.
 
+Spawn every `unit_worker`, `code_reviewer`, and `lead_code_reviewer` with
+`fork_turns="none"`. They must start with a clean context and must not inherit
+this chat's history; this includes a recovery `unit_worker`. Do not print
+handoffs or assignments in the lead chat. Send them directly to the target
+`unit_worker`, `code_reviewer`, or `lead_code_reviewer`.
+
+Analyze every review finding through $superpowers:receiving-code-review before
+making a decision or instructing a worker. For every accepted blocking finding,
+give the worker a concrete owner-level resolution rather than raw review text:
+the problem class, owning boundary or module, required fix level, constraints,
+first inspection targets, and verification to rerun.
+
+Do not expand the contract or spend effort on speculative or practically
+unreachable edge cases. Size the work to the demonstrated risk, expected
+frequency, impact, and maintenance cost; do not pursue formal perfection.
+
+Continuously account for performance in confirmed interactive canvas workloads.
+Avoid unnecessary repeated full scans, quadratic or worse work, and expensive
+operations on hot paths. Choose the asymptotically and practically appropriate
+complexity for the expected data size; an O(n) pass is acceptable when
+processing all n items is necessary.
+
 Complete only after every unit is separately committed with current
 verification, the full committed range passes fresh final review, every finding
 is dispositioned, terminal repository verification passes, and the plan is
@@ -113,6 +135,10 @@ Before any implementation, worker instruction, or integration fix for a review
 finding, use **REQUIRED SUB-SKILL:** superpowers:receiving-code-review and apply
 its read-understand-verify-evaluate sequence. If it is unavailable, stop at this
 gate.
+
+Do not promote a speculative or practically unreachable edge case into contract
+scope or permanent evidence. Evaluate the demonstrated risk, expected
+frequency, impact, and maintenance cost first.
 
 Give every reviewer report exactly one disposition:
 
@@ -218,9 +244,9 @@ After all units are committed:
    from `docs/planning/plans/` to `docs/history/plans/`. For every linked active
    design, verify that completed plans cover every in-scope Decision Trace and
    Change Contract Handoff target. Search every remaining direct-child active
-   plan's `Source Inputs` `Design` rows for the design path. Move the design
-   with the same filename to `docs/history/designs/` only when coverage is
-   complete and no such row declares it; otherwise leave it active. Do not edit
+   plan for a reference to the design path. Move the design with the same filename
+   to `docs/history/designs/` only when coverage is complete and no active plan
+   still references it; otherwise leave it active. Do not edit
    `docs/planning/README.md` during closure. Run the documentation and lifecycle
    checks triggered by these moves. Repair closure artifacts and commit the
    verified lifecycle closure. If a required repair changes implementation,
