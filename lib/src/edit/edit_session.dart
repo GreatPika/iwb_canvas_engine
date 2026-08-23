@@ -24,6 +24,7 @@ import 'commit_plan.dart';
 import 'draft_document.dart';
 import 'element_update_application.dart';
 import 'resource_edit_policy.dart';
+import 'sparse_edit_resource_references.dart';
 import 'sparse_edit_structure.dart';
 import 'touched_set_builder.dart';
 
@@ -33,6 +34,12 @@ export 'sparse_edit_structure.dart'
         SparseEditStructureWorkEvent,
         SparseEditStructureWorkKind,
         observeSparseEditStructureWork;
+export 'sparse_edit_resource_references.dart'
+    show
+        SparseEditReferenceFamily,
+        SparseEditReferenceWorkEvent,
+        SparseEditReferenceWorkKind,
+        observeSparseEditReferenceWork;
 
 @visibleForTesting
 enum SparsePromotionWorkPhase {
@@ -207,7 +214,7 @@ final class EditSession implements CanvasEdit {
 // between facts that must be read from one store snapshot.
 // ignore: number-of-methods
 abstract interface class SparseEditSessionFacts
-    implements SparseEditStructureFacts {
+    implements SparseEditStructureFacts, SparseEditReferenceFacts {
   CanvasDocumentSummary get summary;
   CanvasBackground get background;
   CanvasCamera get camera;
@@ -224,7 +231,6 @@ abstract interface class SparseEditSessionFacts
   Iterable<CanvasResourceId> get resourceIds;
   CanvasElement? elementById(CanvasElementId id);
   CanvasResource? resourceById(CanvasResourceId id);
-  bool isResourceReferenced(CanvasResourceId id);
 }
 
 // Backing implementations deliberately mirror the full CanvasEdit surface so
@@ -387,12 +393,14 @@ final class _SparseEditBacking implements _EditSessionBacking {
        _promoteDraft = promoteDraft,
        _committedSummary = facts.summary,
        _structure = SparseEditStructure(facts),
+       _resourceReferences = SparseEditResourceReferences(facts),
        _selectedElementIds = Set.unmodifiable(selectedElementIds);
 
   final SparseEditSessionFacts _facts;
   final DraftDocument Function() _promoteDraft;
   final CanvasDocumentSummary _committedSummary;
   final SparseEditStructure _structure;
+  final SparseEditResourceReferences _resourceReferences;
   final _SparseMutationJournal _mutationJournal = _SparseMutationJournal();
   final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
@@ -417,6 +425,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _mutationJournal.promoteInto(target);
     final promoted = target.finish();
     _structure.dispose();
+    _resourceReferences.dispose();
     _draft = promoted;
 
     return promoted;
@@ -525,6 +534,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _trackSparseElementAdd(element.id);
     _elementOverrides[element.id] = element;
     _structure.addContent(element.id, layerId: targetLayerId, index: index);
+    _resourceReferences.recordTransition(after: element);
     _mutationJournal.append(
       StoreSparseAddElement(element: element, layerId: layerId, index: index),
     );
@@ -563,6 +573,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _trackSparseElementAdd(element.id);
     _elementOverrides[element.id] = element;
     _structure.addBackground(element.id, index: index);
+    _resourceReferences.recordTransition(after: element);
     _mutationJournal.append(
       StoreSparseAddElement(element: element, index: index, background: true),
     );
@@ -603,6 +614,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       elementRevisionDelta: compiledUpdate.revisionDelta,
     );
     _elementOverrides[after.id] = after;
+    _resourceReferences.recordTransition(before: before, after: after);
     _mutationJournal.append(mutation);
     _recordSparseElementUpdate(after: after, compiledUpdate: compiledUpdate);
 
@@ -622,10 +634,12 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return false;
     }
     final removesBackgroundElement = removedLocation.layerId == null;
+    final removedElement = _elementById(id);
     _elementOverrides.remove(id);
     if (!_addedElementIds.remove(id) && _facts.elementById(id) != null) {
       _removedCommittedElementIds.add(id);
     }
+    _resourceReferences.recordTransition(before: removedElement);
     _mutationJournal.append(StoreSparseRemoveElement(id));
     _touchedSet.touchRemovedElement(id);
     if (removesBackgroundElement) {
@@ -652,7 +666,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _resourceOverrides[resource.id] = resource;
     _mutationJournal.append(StoreSparseUpsertResource(resource));
     _touchedSet.touchResourceDescriptor(resource.id);
-    if (_isResourceReferenced(resource.id)) {
+    if (_resourceReferences.isReferenced(resource.id)) {
       _touchedSet.touchResourceVisual(resource.id);
     }
     _mergeRevisionDelta(const StoreRevisionDelta.resource());
@@ -665,7 +679,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (_isMaterialized) {
       return _materializedDraft.removeUnusedResource(id);
     }
-    if (_resourceById(id) == null || _isResourceReferenced(id)) {
+    if (_resourceById(id) == null || _resourceReferences.isReferenced(id)) {
       return false;
     }
     _resourceOverrides.remove(id);
@@ -791,6 +805,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
     required bool removeUnusedResources,
   }) {
     final removedElementIds = _structure.clearContent();
+    for (final id in removedElementIds) {
+      _resourceReferences.recordTransition(before: _elementById(id));
+    }
     return _SparseClearCandidate(
       removedElementIds: removedElementIds,
       removedResourceIds: removeUnusedResources
@@ -800,21 +817,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   List<CanvasResourceId> _sparseClearRemovedResourceIds() {
-    final retainedBackgroundResourceIds = <CanvasResourceId>{};
-    for (final id in _structure.backgroundElementIds()) {
-      final element = _elementById(id);
-      switch (element) {
-        case CanvasImageElement(:final resourceId):
-          retainedBackgroundResourceIds.add(resourceId);
-        case CanvasVectorElement(:final resourceId):
-          retainedBackgroundResourceIds.add(resourceId);
-        default:
-      }
-    }
-
     return List<CanvasResourceId>.unmodifiable([
       for (final id in _currentResourceIds())
-        if (!retainedBackgroundResourceIds.contains(id)) id,
+        if (!_resourceReferences.isReferenced(id)) id,
     ]);
   }
 
@@ -978,43 +983,6 @@ final class _SparseEditBacking implements _EditSessionBacking {
     return _facts.resourceById(id);
   }
 
-  bool _isResourceReferenced(CanvasResourceId id) {
-    final localReference = _elementOverrides.values.any(
-      (element) => elementReferencesResource(element, id),
-    );
-    if (localReference) {
-      return true;
-    }
-    if (_removedCommittedResourceIds.contains(id)) {
-      return false;
-    }
-    if (_canUseCommittedResourceReferenceFact) {
-      return _facts.isResourceReferenced(id);
-    }
-
-    return _acceptedElements().any(
-      (element) => elementReferencesResource(element, id),
-    );
-  }
-
-  bool get _canUseCommittedResourceReferenceFact {
-    return _removedCommittedElementIds.isEmpty &&
-        !_elementOverrides.keys.any(_isCommittedElementId);
-  }
-
-  bool _isCommittedElementId(CanvasElementId id) {
-    return _facts.elementById(id) != null;
-  }
-
-  Iterable<CanvasElementId> _currentElementIds() sync* {
-    for (final id in _facts.elementIds) {
-      if (!_removedCommittedElementIds.contains(id)) {
-        yield id;
-      }
-    }
-    yield* _addedElementIds;
-  }
-
   Iterable<CanvasResourceId> _currentResourceIds() sync* {
     for (final id in _facts.resourceIds) {
       if (!_removedCommittedResourceIds.contains(id)) {
@@ -1024,18 +992,10 @@ final class _SparseEditBacking implements _EditSessionBacking {
     yield* _addedResourceIds;
   }
 
-  Iterable<CanvasElement> _acceptedElements() sync* {
-    for (final id in _currentElementIds()) {
-      final element = _elementById(id);
-      if (element != null) {
-        yield element;
-      }
-    }
-  }
-
   @override
   void close() {
     _structure.dispose();
+    _resourceReferences.dispose();
   }
 }
 

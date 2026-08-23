@@ -2610,8 +2610,13 @@ final class _StoreSparseEditFacts implements SparseEditSessionFacts {
   CanvasResource? resourceById(CanvasResourceId id) => store.resourceById(id);
 
   @override
-  bool isResourceReferenced(CanvasResourceId id) {
-    return store.isResourceReferenced(id);
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    return store.imageResourceReferenceCount(id);
+  }
+
+  @override
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    return store.vectorResourceReferenceCount(id);
   }
 }
 

@@ -101,9 +101,13 @@ structure now has one owner-local current placement view plus separate lazy
 indexed orders for layers, background elements, and each content layer. Its
 first location read comes from Store's committed `ElementLocationFacts`; local
 add, remove, and clear transitions become authoritative immediately, and opened
-orders are discarded on promotion or session close. Draft structure and sparse
-reference-count migration remain pending; this journal cutover adds no
-projection, copy, scan, or secondary replay work.
+orders are discarded on promotion or session close. Sparse resource decisions
+combine Store's direct committed image/vector counts with session-local
+affected-id deltas. Add, update, remove, remove/re-add, and clear transitions
+update the split deltas immediately; descriptor changes do not. Thus an unused
+resource decision is a direct current-count read, not an element scan or a
+copied count inventory. Draft structure and resource-count migration remain
+pending; this cutover adds no projection, copy, scan, or secondary replay work.
 Draft's promotion target opens and owns the materialized document around replay;
 the promotion owner receives only its write-only sparse-mutation consumer, so it
 cannot inspect Draft collections or build a Draft projection while replaying.
@@ -118,8 +122,9 @@ sparse-store preparation. It removes every ordinary-layer element without using
 individual deletion eligibility, preserves background/grid values and ordered
 background elements, and prunes selection only for the removed content. When
 unused-resource cleanup is requested, retained image/vector descriptors are
-derived from preserved background references and accepted resource facts report
-only actual releases. Clear remains an ordered journal barrier: later element
+determined from current split reference counts after ordinary rows are removed;
+preserved background rows retain their descriptors and accepted resource facts
+report only actual releases. Clear remains an ordered journal barrier: later element
 or resource mutations observe the current post-clear candidate, and the same
 atomic preparation, acceptance, rollback, and publication boundary applies to
 every backing.

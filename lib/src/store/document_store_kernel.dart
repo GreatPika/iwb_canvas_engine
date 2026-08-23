@@ -262,6 +262,18 @@ final class DocumentStoreKernel {
     return _document.elements.referencesResource(id);
   }
 
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    // The sparse facts port reads the existing committed split summary directly.
+    // ignore: invalid_use_of_visible_for_testing_member
+    return _document.elements.familyTables.imageResourceReferenceCount(id);
+  }
+
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    // The sparse facts port reads the existing committed split summary directly.
+    // ignore: invalid_use_of_visible_for_testing_member
+    return _document.elements.familyTables.vectorResourceReferenceCount(id);
+  }
+
   Iterable<CanvasElementId> get elementIds {
     return _document.elements.frameElementOrder;
   }

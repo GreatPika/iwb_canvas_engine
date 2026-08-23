@@ -35,6 +35,13 @@ void _registerSparseMutationTests() {
     () => expect(_sparseResourceReferencesUseAcceptedOverlay, returnsNormally),
   );
   test(
+    'sparse resource decisions use bounded split-count work',
+    () => expect(
+      _sparseResourceDecisionsUseBoundedSplitCountWork,
+      returnsNormally,
+    ),
+  );
+  test(
     'sparse remove touches background layer only for background removals',
     () => expect(
       _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals,
@@ -561,6 +568,33 @@ void _expectClearNoOpKeepsSparseSessionClean(CanvasDocument document) {
 void _sparseResourceReferencesUseAcceptedOverlay() {
   _expectRemoveThenResourceRemoval();
   _expectImageUpdateThenResourceRemoval();
+  _expectVectorRemovalThenResourceRemoval();
+  _expectSparseReferencesMatchCurrentRowOracle();
+  _expectSparseResourceQueryUsesSplitCommittedCounts();
+  _expectSparseSplitCountsIgnoreDescriptorAndNoOpChanges();
+}
+
+void _expectSparseResourceQueryUsesSplitCommittedCounts() {
+  final facts = _SparseFixtureFacts(_documentWithTwoResources());
+  final session = EditSession.sparse(
+    facts: facts,
+    promoteDraft: () => DraftDocument(facts.document),
+    selectedElementIds: const [],
+  );
+
+  expect(
+    session.updateElement(
+      CanvasImageElementUpdate(
+        id: CanvasElementId('image-a'),
+        resourceId: CanvasFieldSet(CanvasResourceId('resource-b')),
+      ),
+    ),
+    isTrue,
+  );
+  expect(session.removeUnusedResource(CanvasResourceId('resource-a')), isTrue);
+  expect(facts.elementIdsReadCount, 0);
+  expect(facts.imageResourceReferenceCountReadCount, greaterThan(0));
+  expect(facts.vectorResourceReferenceCountReadCount, greaterThan(0));
 }
 
 void _expectRemoveThenResourceRemoval() {
@@ -599,6 +633,521 @@ void _expectImageUpdateThenResourceRemoval() {
       resourceCount: 1,
     ),
   );
+}
+
+void _expectVectorRemovalThenResourceRemoval() {
+  final resourceId = CanvasResourceId('vector-resource');
+  final session = _sparseSessionForDocument(
+    CanvasDocument(
+      resources: [
+        CanvasVectorResource(
+          id: resourceId,
+          source: CanvasResourceSource.appKey('vector-source'),
+        ),
+      ],
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [
+            CanvasVectorElement(
+              id: CanvasElementId('vector-a'),
+              resourceId: resourceId,
+              size: const Size(1, 1),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  expect(session.removeElement(CanvasElementId('vector-a')), isTrue);
+  expect(session.removeUnusedResource(resourceId), isTrue);
+}
+
+// Keep this sequence together: each public result becomes the next oracle state.
+// ignore: halstead-volume, source-lines-of-code
+void _expectSparseReferencesMatchCurrentRowOracle() {
+  final events = <SparseEditReferenceWorkEvent>[];
+  observeSparseEditReferenceWork(
+    events.add,
+    () => _runSparseReferencesMatchCurrentRowOracle(events),
+  );
+}
+
+// The trace must remain linear because each observed count is the next state.
+// ignore: halstead-volume, source-lines-of-code
+void _runSparseReferencesMatchCurrentRowOracle(
+  List<SparseEditReferenceWorkEvent> events,
+) {
+  final seed = _documentWithReferenceOracleRows();
+  final oracle = _SparseReferenceOracle(seed);
+  final session = _sparseSessionForDocument(seed);
+  final sharedResourceId = CanvasResourceId('shared-resource');
+  final imageResourceId = CanvasResourceId('image-resource');
+  final replacementImageResourceId = CanvasResourceId('replacement-image');
+  final vectorResourceId = CanvasResourceId('vector-resource');
+
+  final addedImage = CanvasImageElement(
+    id: CanvasElementId('added-image'),
+    resourceId: imageResourceId,
+    size: const Size(1, 1),
+  );
+  session.addElement(addedImage);
+  oracle.addContent(addedImage);
+  _expectCurrentResourceDecision(session, oracle, imageResourceId, events);
+
+  expect(
+    session.updateElement(
+      CanvasImageElementUpdate(
+        id: addedImage.id,
+        resourceId: CanvasFieldSet(replacementImageResourceId),
+      ),
+    ),
+    isTrue,
+  );
+  oracle.replace(
+    CanvasImageElement(
+      id: addedImage.id,
+      resourceId: replacementImageResourceId,
+      size: const Size(1, 1),
+    ),
+  );
+  _expectCurrentResourceDecision(session, oracle, imageResourceId, events);
+  _expectCurrentResourceDecision(
+    session,
+    oracle,
+    replacementImageResourceId,
+    events,
+  );
+
+  expect(session.removeElement(CanvasElementId('cross-family')), isTrue);
+  oracle.remove(CanvasElementId('cross-family'));
+  _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+
+  final replacementVector = CanvasVectorElement(
+    id: CanvasElementId('cross-family'),
+    resourceId: sharedResourceId,
+    size: const Size(1, 1),
+  );
+  session.addElement(replacementVector);
+  oracle.addContent(replacementVector);
+  _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+
+  final addedVector = CanvasVectorElement(
+    id: CanvasElementId('added-vector'),
+    resourceId: vectorResourceId,
+    size: const Size(1, 1),
+  );
+  session.addElement(addedVector);
+  oracle.addContent(addedVector);
+  _expectCurrentResourceDecision(session, oracle, vectorResourceId, events);
+
+  expect(session.removeElement(addedVector.id), isTrue);
+  oracle.remove(addedVector.id);
+  _expectCurrentResourceDecision(session, oracle, vectorResourceId, events);
+
+  final clear = session.clearContent(removeUnusedResources: true);
+  final expectedClear = oracle.clearContent(removeUnusedResources: true);
+  expect(clear.removedElementIds, expectedClear.removedElementIds);
+  expect(clear.removedResourceIds, expectedClear.removedResourceIds);
+  expect(clear.didClearContent, expectedClear.didClearContent);
+  _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+  _expectCurrentResourceDecision(
+    session,
+    oracle,
+    CanvasResourceId('background-vector-resource'),
+    events,
+  );
+}
+
+void _expectCurrentResourceDecision(
+  EditSession session,
+  _SparseReferenceOracle oracle,
+  CanvasResourceId id,
+  List<SparseEditReferenceWorkEvent> events,
+) {
+  final start = events.length;
+  final imageCount = oracle.imageCount(id);
+  final vectorCount = oracle.vectorCount(id);
+  expect(session.removeUnusedResource(id), oracle.removeUnusedResource(id));
+  final observations = events
+      .skip(start)
+      .where(
+        (event) =>
+            event.kind == SparseEditReferenceWorkKind.currentSplitCount &&
+            event.resourceId == id,
+      )
+      .toList();
+  expect(
+    observations,
+    hasLength(1),
+    reason: 'split observation for ${id.value}',
+  );
+  expect(observations.single.imageCount, imageCount);
+  expect(observations.single.vectorCount, vectorCount);
+}
+
+// The descriptor/no-op sequence must retain one current-row oracle so every
+// decision is checked against the state produced by its immediate predecessor.
+// ignore: halstead-volume, source-lines-of-code
+void _expectSparseSplitCountsIgnoreDescriptorAndNoOpChanges() {
+  final seed = _documentWithReferenceOracleRows();
+  final oracle = _SparseReferenceOracle(seed);
+  final session = _sparseSessionForDocument(seed);
+  final events = <SparseEditReferenceWorkEvent>[];
+  final sharedResourceId = CanvasResourceId('shared-resource');
+  final missingResourceId = CanvasResourceId('missing-resource');
+
+  observeSparseEditReferenceWork(events.add, () {
+    expect(session.upsertResource(_resource('shared-resource')), isFalse);
+    _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+
+    final replacement = CanvasImageResource(
+      id: sharedResourceId,
+      source: CanvasResourceSource.appKey('replacement-shared-resource'),
+    );
+    expect(session.upsertResource(replacement), isTrue);
+    oracle.upsertResource(replacement);
+    _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+
+    final missingImage = CanvasImageElement(
+      id: CanvasElementId('missing-resource-image'),
+      resourceId: missingResourceId,
+      size: const Size(1, 1),
+    );
+    session.addElement(missingImage);
+    oracle.addContent(missingImage);
+    expect(session.removeUnusedResource(missingResourceId), isFalse);
+
+    final missingDescriptor = _resource('missing-resource');
+    expect(session.upsertResource(missingDescriptor), isTrue);
+    oracle.upsertResource(missingDescriptor);
+    _expectCurrentResourceDecision(session, oracle, missingResourceId, events);
+
+    expect(
+      session.updateElement(
+        CanvasImageElementUpdate(
+          id: CanvasElementId('absent-image'),
+          resourceId: CanvasFieldSet(sharedResourceId),
+        ),
+      ),
+      isFalse,
+    );
+    _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+
+    expect(
+      session.updateElement(
+        CanvasImageElementUpdate(
+          id: missingImage.id,
+          resourceId: CanvasFieldSet(missingResourceId),
+        ),
+      ),
+      isFalse,
+    );
+    _expectCurrentResourceDecision(session, oracle, missingResourceId, events);
+
+    final compensation = CanvasVectorElement(
+      id: CanvasElementId('compensation-vector'),
+      resourceId: sharedResourceId,
+      size: const Size(1, 1),
+    );
+    session.addElement(compensation);
+    oracle.addContent(compensation);
+    _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+    expect(session.removeElement(compensation.id), isTrue);
+    oracle.remove(compensation.id);
+    _expectCurrentResourceDecision(session, oracle, sharedResourceId, events);
+  });
+}
+
+void _sparseResourceDecisionsUseBoundedSplitCountWork() {
+  final queryReadCosts = <int>[];
+  for (final mutationCount in [1, 65, 257]) {
+    queryReadCosts.add(
+      _expectSparseResourceQueryWorkAtSupportedSize(mutationCount),
+    );
+  }
+  expect(queryReadCosts.toSet(), hasLength(1));
+  _expectSparseResourceClearWorkAtSupportedSize(priorImageMutationCount: 0);
+  _expectSparseResourceClearWorkAtSupportedSize(priorImageMutationCount: 257);
+  _expectSparseResourceReferenceLifecycleWork();
+}
+
+// One trace intentionally couples K mutations with both split-family queries.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+int _expectSparseResourceQueryWorkAtSupportedSize(int imageMutationCount) {
+  const elementCount = 200000;
+  const resourceCount = 4096;
+  final missingResourceId = CanvasResourceId('missing-resource');
+  final facts = _SupportedSizeSparseFacts(
+    elementCount: elementCount,
+    layerCount: 1,
+    committedResourceCount: resourceCount,
+  );
+  final session = EditSession.sparse(
+    facts: facts,
+    promoteDraft: () => throw StateError('resource query must stay sparse'),
+    selectedElementIds: const [],
+  );
+  final work = _SparseReferenceWorkCounts();
+  var entryReadsBeforeQueries = 0;
+
+  observeSparseEditReferenceWork(work.record, () {
+    for (var index = 0; index < imageMutationCount; index += 1) {
+      expect(
+        session.updateElement(
+          CanvasImageElementUpdate(
+            id: CanvasElementId('element-0'),
+            resourceId: CanvasFieldSet(
+              CanvasResourceId(index.isEven ? 'resource-1' : 'resource-0'),
+            ),
+          ),
+        ),
+        isTrue,
+      );
+    }
+    expect(
+      session.updateElement(
+        CanvasVectorElementUpdate(
+          id: CanvasElementId('element-1'),
+          resourceId: CanvasFieldSet(CanvasResourceId('resource-3')),
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      session.updateElement(
+        CanvasImageElementUpdate(
+          id: CanvasElementId('element-0'),
+          resourceId: CanvasFieldSet(missingResourceId),
+        ),
+      ),
+      isTrue,
+    );
+    entryReadsBeforeQueries = work.count(
+      SparseEditReferenceWorkKind.deltaEntryRead,
+    );
+    expect(session.upsertResource(_resource('missing-resource')), isTrue);
+    expect(
+      session.removeUnusedResource(CanvasResourceId('resource-0')),
+      isTrue,
+    );
+    expect(
+      session.removeUnusedResource(CanvasResourceId('resource-2')),
+      isTrue,
+    );
+  });
+
+  expect(facts.elementIdsReadCount, 0);
+  expect(facts.resourceIdsReadCount, 0);
+  expect(facts.imageResourceReferenceCountReadCount, 3);
+  expect(facts.vectorResourceReferenceCountReadCount, 3);
+  final transitionCount = imageMutationCount + 2;
+  final queryEntryReads =
+      work.count(SparseEditReferenceWorkKind.deltaEntryRead) -
+      entryReadsBeforeQueries;
+  _expectSparseReferenceWork(work, (
+    transitions: transitionCount,
+    resourceQueries: 3,
+    maxDeltaEntryReads: transitionCount * 2 + 6,
+    maxDeltaEntryMutations: transitionCount * 2,
+  ));
+  expect(queryEntryReads, lessThanOrEqualTo(6));
+  expect(
+    work.countFamilyResourceMutations(
+      SparseEditReferenceFamily.image,
+      missingResourceId,
+    ),
+    greaterThanOrEqualTo(1),
+  );
+  expect(
+    work.countFamilyResourceMutations(
+      SparseEditReferenceFamily.vector,
+      CanvasResourceId('resource-2'),
+    ),
+    greaterThanOrEqualTo(1),
+  );
+  expect(
+    work.countFamilyResourceMutations(
+      SparseEditReferenceFamily.vector,
+      CanvasResourceId('resource-3'),
+    ),
+    greaterThanOrEqualTo(1),
+  );
+  return queryEntryReads;
+}
+
+// Early and post-transition clear share one owner-attributed work witness.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _expectSparseResourceClearWorkAtSupportedSize({
+  required int priorImageMutationCount,
+}) {
+  const elementCount = 200000;
+  const resourceCount = 4096;
+  final facts = _SupportedSizeSparseFacts(
+    elementCount: elementCount,
+    layerCount: 1,
+    committedResourceCount: resourceCount,
+  );
+  final session = EditSession.sparse(
+    facts: facts,
+    promoteDraft: () => throw StateError('clear must stay sparse'),
+    selectedElementIds: const [],
+  );
+  if (priorImageMutationCount > 0) {
+    for (var index = 0; index < priorImageMutationCount; index += 1) {
+      session.updateElement(
+        CanvasImageElementUpdate(
+          id: CanvasElementId('element-0'),
+          resourceId: CanvasFieldSet(
+            CanvasResourceId(index.isEven ? 'resource-1' : 'resource-0'),
+          ),
+        ),
+      );
+    }
+    session.updateElement(
+      CanvasVectorElementUpdate(
+        id: CanvasElementId('element-1'),
+        resourceId: CanvasFieldSet(CanvasResourceId('resource-3')),
+      ),
+    );
+  }
+  final work = _SparseReferenceWorkCounts();
+  final clear = observeSparseEditReferenceWork(
+    work.record,
+    () => session.clearContent(removeUnusedResources: true),
+  );
+
+  expect(clear.removedElementIds, hasLength(elementCount));
+  expect(clear.removedResourceIds, hasLength(resourceCount));
+  expect(facts.elementIdsReadCount, 0);
+  expect(facts.resourceIdsReadCount, 1);
+  _expectSparseReferenceWork(work, (
+    transitions: elementCount,
+    resourceQueries: resourceCount,
+    maxDeltaEntryReads: resourceCount * 2 + 2,
+    maxDeltaEntryMutations: 2,
+  ));
+  final imageId = CanvasResourceId(
+    priorImageMutationCount == 0 ? 'resource-0' : 'resource-1',
+  );
+  final vectorId = CanvasResourceId(
+    priorImageMutationCount == 0 ? 'resource-2' : 'resource-3',
+  );
+  expect(
+    work.countFamilyResourceMutations(SparseEditReferenceFamily.image, imageId),
+    greaterThanOrEqualTo(1),
+  );
+  expect(
+    work.countFamilyResourceMutations(
+      SparseEditReferenceFamily.vector,
+      vectorId,
+    ),
+    greaterThanOrEqualTo(1),
+  );
+}
+
+void _expectSparseReferenceWork(
+  _SparseReferenceWorkCounts work,
+  ({
+    int transitions,
+    int resourceQueries,
+    int maxDeltaEntryReads,
+    int maxDeltaEntryMutations,
+  })
+  bounds,
+) {
+  expect(
+    work.count(SparseEditReferenceWorkKind.transition),
+    bounds.transitions,
+  );
+  expect(
+    work.count(SparseEditReferenceWorkKind.deltaEntryRead),
+    lessThanOrEqualTo(bounds.maxDeltaEntryReads),
+  );
+  expect(
+    work.deltaEntryMutations,
+    lessThanOrEqualTo(bounds.maxDeltaEntryMutations),
+  );
+  expect(work.count(SparseEditReferenceWorkKind.deltaEntryVisit), 0);
+  expect(
+    work.count(SparseEditReferenceWorkKind.resourceQuery),
+    bounds.resourceQueries,
+  );
+  expect(
+    work.count(SparseEditReferenceWorkKind.imageCommittedCountRead),
+    bounds.resourceQueries,
+  );
+  expect(
+    work.count(SparseEditReferenceWorkKind.vectorCommittedCountRead),
+    bounds.resourceQueries,
+  );
+}
+
+void _expectSparseResourceReferenceLifecycleWork() {
+  final closeWork = _SparseReferenceWorkCounts();
+  final closingSession = _sparseSessionWithPopulatedReferenceDeltas();
+  observeSparseEditReferenceWork(closeWork.record, closingSession.close);
+  _expectSparseReferenceDeltaExitWork(closeWork);
+
+  final promotionWork = _SparseReferenceWorkCounts();
+  final promotingSession = _sparseSessionWithPopulatedReferenceDeltas();
+  final promoted = observeSparseEditReferenceWork(
+    promotionWork.record,
+    promotingSession.readDraftDocument,
+  );
+  final promotedElements = promoted.layers.single.elements;
+  expect(
+    (promotedElements[0] as CanvasImageElement).resourceId,
+    CanvasResourceId('lifecycle-image-next'),
+  );
+  expect(
+    (promotedElements[1] as CanvasVectorElement).resourceId,
+    CanvasResourceId('lifecycle-vector-next'),
+  );
+  _expectSparseReferenceDeltaExitWork(promotionWork);
+}
+
+void _expectSparseReferenceDeltaExitWork(_SparseReferenceWorkCounts work) {
+  expect(work.count(SparseEditReferenceWorkKind.deltaEntryClear), 2);
+  expect(
+    work.countFamily(
+      SparseEditReferenceWorkKind.deltaEntryClear,
+      SparseEditReferenceFamily.image,
+    ),
+    1,
+  );
+  expect(
+    work.countFamily(
+      SparseEditReferenceWorkKind.deltaEntryClear,
+      SparseEditReferenceFamily.vector,
+    ),
+    1,
+  );
+  expect(work.count(SparseEditReferenceWorkKind.deltaEntryVisit), 0);
+}
+
+EditSession _sparseSessionWithPopulatedReferenceDeltas() {
+  final session = _sparseSessionForDocument(_documentWithLifecycleReferences());
+  expect(
+    session.updateElement(
+      CanvasImageElementUpdate(
+        id: CanvasElementId('lifecycle-image-element'),
+        resourceId: CanvasFieldSet(CanvasResourceId('lifecycle-image-next')),
+      ),
+    ),
+    isTrue,
+  );
+  expect(
+    session.updateElement(
+      CanvasVectorElementUpdate(
+        id: CanvasElementId('lifecycle-vector-element'),
+        resourceId: CanvasFieldSet(CanvasResourceId('lifecycle-vector-next')),
+      ),
+    ),
+    isTrue,
+  );
+  return session;
 }
 
 void _expectReferencedResourceRemovalNoOp() {
@@ -689,12 +1238,8 @@ void _sparseClearRetainsBackgroundImageAndVectorResources() {
   expect(session.revisionDelta.resource, isTrue);
   expect(session.revisionDelta.background, isFalse);
   expect(session.revisionDelta.grid, isFalse);
-  expect(facts.backgroundElementIdsReadCount, 1);
   expect(facts.resourceIdsReadCount, 1);
-  expect(facts.elementByIdReadCount(CanvasElementId('background-image')), 1);
-  expect(facts.elementByIdReadCount(CanvasElementId('background-vector')), 1);
   expect(facts.elementIdsReadCount, 0);
-  expect(facts.isResourceReferencedReadCount, 0);
 
   final document = session.readDraftDocument();
 
@@ -883,20 +1428,7 @@ void _sparseClearRetainsCommittedAndLocalBackgroundResources() {
 
   final backgroundReadsBeforeClear = facts.backgroundElementIdsReadCount;
   final resourceReadsBeforeClear = facts.resourceIdsReadCount;
-  final committedImageReadsBeforeClear = facts.elementByIdReadCount(
-    CanvasElementId('committed-background-image'),
-  );
-  final committedVectorReadsBeforeClear = facts.elementByIdReadCount(
-    CanvasElementId('committed-background-vector'),
-  );
-  final localImageReadsBeforeClear = facts.elementByIdReadCount(
-    CanvasElementId('local-background-image'),
-  );
-  final localVectorReadsBeforeClear = facts.elementByIdReadCount(
-    CanvasElementId('local-background-vector'),
-  );
   final elementIdsReadsBeforeClear = facts.elementIdsReadCount;
-  final referenceReadsBeforeClear = facts.isResourceReferencedReadCount;
 
   final clear = session.clearContent(removeUnusedResources: true);
 
@@ -915,32 +1447,9 @@ void _sparseClearRetainsCommittedAndLocalBackgroundResources() {
   expect(session.hasMaterializedDraft, isFalse);
   expect(facts.backgroundElementIdsReadCount, backgroundReadsBeforeClear);
   expect(facts.resourceIdsReadCount - resourceReadsBeforeClear, 1);
-  expect(
-    facts.elementByIdReadCount(CanvasElementId('committed-background-image')) -
-        committedImageReadsBeforeClear,
-    1,
-  );
-  expect(
-    facts.elementByIdReadCount(CanvasElementId('committed-background-vector')) -
-        committedVectorReadsBeforeClear,
-    1,
-  );
-  expect(
-    facts.elementByIdReadCount(CanvasElementId('local-background-image')) -
-        localImageReadsBeforeClear,
-    0,
-  );
-  expect(
-    facts.elementByIdReadCount(CanvasElementId('local-background-vector')) -
-        localVectorReadsBeforeClear,
-    0,
-  );
   expect(facts.elementIdsReadCount - elementIdsReadsBeforeClear, 0);
-  expect(facts.isResourceReferencedReadCount - referenceReadsBeforeClear, 0);
-  expect(facts.backgroundElementIdsReadCount, 1);
   expect(facts.resourceIdsReadCount, 1);
   expect(facts.elementIdsReadCount, 0);
-  expect(facts.isResourceReferencedReadCount, 0);
 
   final document = session.readDraftDocument();
 
@@ -1355,6 +1864,13 @@ void _sparseClearRemainsAnOrderedJournalBarrier() {
   _expectRemoveUnusedResourceBarrierThroughSparseSession();
 
   final beforeClearTrace = [
+    _ClearTraceAction.upsertResource(_resource('content-image-resource')),
+    _ClearTraceAction.upsertResource(
+      CanvasImageResource(
+        id: CanvasResourceId('content-image-resource'),
+        source: CanvasResourceSource.appKey('replacement-content-image'),
+      ),
+    ),
     _ClearTraceAction.upsertResource(_resource('resource-before-clear')),
     _ClearTraceAction.addElement(
       CanvasImageElement(
@@ -1363,6 +1879,24 @@ void _sparseClearRemainsAnOrderedJournalBarrier() {
         size: const Size(8, 9),
         isDeletable: false,
       ),
+    ),
+    _ClearTraceAction.addElement(
+      CanvasImageElement(
+        id: CanvasElementId('missing-before-clear'),
+        resourceId: CanvasResourceId('missing-resource-before-clear'),
+        size: const Size(3, 4),
+      ),
+    ),
+    _ClearTraceAction.removeElement(CanvasElementId('missing-before-clear')),
+    _ClearTraceAction.addElement(
+      CanvasImageElement(
+        id: CanvasElementId('missing-before-clear'),
+        resourceId: CanvasResourceId('missing-resource-before-clear'),
+        size: const Size(3, 4),
+      ),
+    ),
+    _ClearTraceAction.upsertResource(
+      _resource('missing-resource-before-clear'),
     ),
     const _ClearTraceAction.clearContent(removeUnusedResources: false),
     _ClearTraceAction.removeUnusedResource(
@@ -1395,6 +1929,8 @@ void _sparseClearRemainsAnOrderedJournalBarrier() {
 
   _expectSparseClearTraceMatchesOracle(beforeClear);
   _expectSparseClearTraceMatchesOracle(afterClear);
+  _expectSparseClearTracePrefixes(beforeClearTrace);
+  _expectSparseClearTracePrefixes(afterClearTrace);
   expect(beforeClear.document.layers.single.elements, isEmpty);
   expect(
     afterClear.document.layers.single.elements.map((element) => element.id),
@@ -1417,6 +1953,17 @@ void _sparseClearRemainsAnOrderedJournalBarrier() {
   }
 }
 
+void _expectSparseClearTracePrefixes(List<_ClearTraceAction> trace) {
+  for (var length = 1; length <= trace.length; length += 1) {
+    _expectSparseClearTraceMatchesOracle(
+      _runSparseClearTrace(trace.take(length).toList()),
+    );
+  }
+}
+
+// Capturing immediate sparse facts next to promotion keeps both phases tied to
+// the same sequential trace; splitting it would hide their order relationship.
+// ignore: halstead-volume, source-lines-of-code
 _SparseClearTraceOutcome _runSparseClearTrace(List<_ClearTraceAction> trace) {
   final seed = _documentWithClearBackgroundResources(
     includeUnusedResource: false,
@@ -1441,6 +1988,22 @@ _SparseClearTraceOutcome _runSparseClearTrace(List<_ClearTraceAction> trace) {
     expectedResults.add(action.applyToOracle(oracle));
   }
   final sparseCommit = session.sparseCommit;
+  final sparseTouchedSet = (
+    addedElementIds: session.touchedSet.addedElementIds,
+    removedElementIds: session.touchedSet.removedElementIds,
+    resourceDescriptorChangedIds:
+        session.touchedSet.resourceDescriptorChangedIds,
+    selection: session.touchedSet.selection,
+    backgroundLayerChanged: session.touchedSet.backgroundLayerChanged,
+    background: session.touchedSet.background,
+    grid: session.touchedSet.grid,
+  );
+  final sparseRevisionDelta = (
+    structural: session.revisionDelta.structural,
+    resource: session.revisionDelta.resource,
+    background: session.revisionDelta.background,
+    grid: session.revisionDelta.grid,
+  );
 
   return _SparseClearTraceOutcome(
     actualResults: actualResults,
@@ -1449,6 +2012,8 @@ _SparseClearTraceOutcome _runSparseClearTrace(List<_ClearTraceAction> trace) {
     document: session.readDraftDocument(),
     expectedDocument: oracle.toDocument(),
     session: session,
+    sparseTouchedSet: sparseTouchedSet,
+    sparseRevisionDelta: sparseRevisionDelta,
     expectedEffects: oracle.effects,
   );
 }
@@ -1481,34 +2046,33 @@ void _expectSparseClearTraceMatchesOracle(_SparseClearTraceOutcome outcome) {
     outcome.expectedDocument.resources,
   );
   expect(
-    outcome.session.touchedSet.addedElementIds,
+    outcome.sparseTouchedSet.addedElementIds,
     outcome.expectedEffects.addedElementIds,
+    reason: 'trace added touched ids',
   );
   expect(
-    outcome.session.touchedSet.removedElementIds,
+    outcome.sparseTouchedSet.removedElementIds,
     outcome.expectedEffects.removedElementIds,
+    reason: 'trace removed touched ids',
   );
   expect(
-    outcome.session.touchedSet.resourceDescriptorChangedIds,
+    outcome.sparseTouchedSet.resourceDescriptorChangedIds,
     outcome.expectedEffects.resourceDescriptorChangedIds,
   );
+  expect(outcome.sparseTouchedSet.selection, outcome.expectedEffects.selection);
+  expect(outcome.sparseTouchedSet.backgroundLayerChanged, isFalse);
+  expect(outcome.sparseTouchedSet.background, isFalse);
+  expect(outcome.sparseTouchedSet.grid, isFalse);
   expect(
-    outcome.session.touchedSet.selection,
-    outcome.expectedEffects.selection,
-  );
-  expect(outcome.session.touchedSet.backgroundLayerChanged, isFalse);
-  expect(outcome.session.touchedSet.background, isFalse);
-  expect(outcome.session.touchedSet.grid, isFalse);
-  expect(
-    outcome.session.revisionDelta.structural,
+    outcome.sparseRevisionDelta.structural,
     outcome.expectedEffects.structural,
   );
   expect(
-    outcome.session.revisionDelta.resource,
+    outcome.sparseRevisionDelta.resource,
     outcome.expectedEffects.resource,
   );
-  expect(outcome.session.revisionDelta.background, isFalse);
-  expect(outcome.session.revisionDelta.grid, isFalse);
+  expect(outcome.sparseRevisionDelta.background, isFalse);
+  expect(outcome.sparseRevisionDelta.grid, isFalse);
 }
 
 void _expectClearTraceResult(
@@ -1529,7 +2093,7 @@ void _expectTraceElements(
   List<CanvasElement> actual,
   List<CanvasElement> expected,
 ) {
-  expect(actual.length, expected.length);
+  expect(actual.length, expected.length, reason: 'trace element count');
   for (var index = 0; index < actual.length; index += 1) {
     final actualElement = actual[index];
     final expectedElement = expected[index];
@@ -1570,7 +2134,7 @@ void _expectTraceResources(
   List<CanvasResource> actual,
   List<CanvasResource> expected,
 ) {
-  expect(actual.length, expected.length);
+  expect(actual.length, expected.length, reason: 'trace resource count');
   for (var index = 0; index < actual.length; index += 1) {
     final actualResource = actual[index];
     final expectedResource = expected[index];
@@ -2198,6 +2762,79 @@ CanvasDocument _documentWithTwoResources() {
   );
 }
 
+CanvasDocument _documentWithReferenceOracleRows() {
+  return CanvasDocument(
+    resources: [
+      _resource('shared-resource'),
+      _resource('image-resource'),
+      _resource('replacement-image'),
+      CanvasVectorResource(
+        id: CanvasResourceId('vector-resource'),
+        source: CanvasResourceSource.appKey('vector-source'),
+      ),
+      _resource('background-vector-resource'),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('background-shared'),
+        resourceId: CanvasResourceId('shared-resource'),
+        size: const Size(1, 1),
+      ),
+      CanvasVectorElement(
+        id: CanvasElementId('background-vector'),
+        resourceId: CanvasResourceId('background-vector-resource'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('cross-family'),
+            resourceId: CanvasResourceId('shared-resource'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _documentWithLifecycleReferences() {
+  return CanvasDocument(
+    resources: [
+      _resource('lifecycle-image'),
+      _resource('lifecycle-image-next'),
+      CanvasVectorResource(
+        id: CanvasResourceId('lifecycle-vector'),
+        source: CanvasResourceSource.appKey('lifecycle-vector'),
+      ),
+      CanvasVectorResource(
+        id: CanvasResourceId('lifecycle-vector-next'),
+        source: CanvasResourceSource.appKey('lifecycle-vector-next'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasImageElement(
+            id: CanvasElementId('lifecycle-image-element'),
+            resourceId: CanvasResourceId('lifecycle-image'),
+            size: const Size(1, 1),
+          ),
+          CanvasVectorElement(
+            id: CanvasElementId('lifecycle-vector-element'),
+            resourceId: CanvasResourceId('lifecycle-vector'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
 CanvasDocument _documentWithClearBackgroundResources({
   bool includeUnusedResource = true,
 }) {
@@ -2308,6 +2945,7 @@ CanvasDocument _documentWithClearBackgroundResources({
 
 enum _ClearTraceActionKind {
   addElement,
+  removeElement,
   upsertResource,
   removeUnusedResource,
   clearContent,
@@ -2318,6 +2956,10 @@ final class _ClearTraceAction {
 
   factory _ClearTraceAction.addElement(CanvasElement element) {
     return _ClearTraceAction._(_ClearTraceActionKind.addElement, element);
+  }
+
+  factory _ClearTraceAction.removeElement(CanvasElementId id) {
+    return _ClearTraceAction._(_ClearTraceActionKind.removeElement, id);
   }
 
   factory _ClearTraceAction.upsertResource(CanvasResource resource) {
@@ -2338,6 +2980,10 @@ final class _ClearTraceAction {
     return switch (kind) {
       _ClearTraceActionKind.addElement => _ClearTraceResult.added(
         session.addElement(value as CanvasElement),
+      ),
+      _ClearTraceActionKind.removeElement => _ClearTraceResult.changed(
+        kind,
+        changed: session.removeElement(value as CanvasElementId),
       ),
       _ClearTraceActionKind.upsertResource => _ClearTraceResult.changed(
         kind,
@@ -2418,6 +3064,9 @@ final class _ClearSequentialOracle {
       _ClearTraceActionKind.addElement => _addElement(
         action.value as CanvasElement,
       ),
+      _ClearTraceActionKind.removeElement => _removeElement(
+        action.value as CanvasElementId,
+      ),
       _ClearTraceActionKind.upsertResource => _upsertResource(
         action.value as CanvasResource,
       ),
@@ -2432,15 +3081,42 @@ final class _ClearSequentialOracle {
 
   _ClearTraceResult _addElement(CanvasElement element) {
     _layers.last.elements.add(element);
-    effects.addedElementIds.add(element.id);
+    _recordElementAddition(element.id);
     effects.structural = true;
 
     return _ClearTraceResult.added(element.id);
   }
 
+  _ClearTraceResult _removeElement(CanvasElementId id) {
+    for (final layer in _layers) {
+      final index = layer.elements.indexWhere((element) => element.id == id);
+      if (index < 0) {
+        continue;
+      }
+      layer.elements.removeAt(index);
+      _recordElementRemoval(id);
+      effects.selection = effects.selection || _selectedElementIds.contains(id);
+      effects.structural = true;
+      return _ClearTraceResult.changed(
+        _ClearTraceActionKind.removeElement,
+        changed: true,
+      );
+    }
+    return _ClearTraceResult.changed(
+      _ClearTraceActionKind.removeElement,
+      changed: false,
+    );
+  }
+
   _ClearTraceResult _upsertResource(CanvasResource resource) {
     final index = _resources.indexWhere((item) => item.id == resource.id);
     if (index >= 0) {
+      if (_resources[index] == resource) {
+        return _ClearTraceResult.changed(
+          _ClearTraceActionKind.upsertResource,
+          changed: false,
+        );
+      }
       _resources[index] = resource;
     } else {
       _resources.add(resource);
@@ -2484,7 +3160,9 @@ final class _ClearSequentialOracle {
       layer.elements.clear();
     }
     if (removedElementIds.isNotEmpty) {
-      effects.removedElementIds.addAll(removedElementIds);
+      for (final id in removedElementIds) {
+        _recordElementRemoval(id);
+      }
       effects.selection =
           effects.selection ||
           removedElementIds.any(_selectedElementIds.contains);
@@ -2506,6 +3184,14 @@ final class _ClearSequentialOracle {
             removedElementIds.isNotEmpty || removedResourceIds.isNotEmpty,
       ),
     );
+  }
+
+  void _recordElementAddition(CanvasElementId id) {
+    effects.addedElementIds.add(id);
+  }
+
+  void _recordElementRemoval(CanvasElementId id) {
+    effects.removedElementIds.add(id);
   }
 
   List<CanvasResourceId> _removeResourcesNotReferencedByBackground() {
@@ -2562,6 +3248,146 @@ final class _ClearOracleLayer {
   final List<CanvasElement> elements;
 }
 
+/// Independent current-row oracle for sparse reference decisions.
+final class _SparseReferenceOracle {
+  _SparseReferenceOracle(CanvasDocument seed) {
+    for (final resource in seed.resources) {
+      _resources[resource.id] = resource;
+    }
+    for (final element in seed.backgroundElements) {
+      _rows[element.id] = element;
+      _backgroundIds.add(element.id);
+    }
+    for (final layer in seed.layers) {
+      for (final element in layer.elements) {
+        _rows[element.id] = element;
+      }
+    }
+  }
+
+  final Map<CanvasResourceId, CanvasResource> _resources = {};
+  final Map<CanvasElementId, CanvasElement> _rows = {};
+  final Set<CanvasElementId> _backgroundIds = {};
+
+  void addContent(CanvasElement element) {
+    _rows[element.id] = element;
+  }
+
+  void replace(CanvasElement element) {
+    _rows[element.id] = element;
+  }
+
+  void upsertResource(CanvasResource resource) {
+    _resources[resource.id] = resource;
+  }
+
+  void remove(CanvasElementId id) {
+    _rows.remove(id);
+  }
+
+  bool removeUnusedResource(CanvasResourceId id) {
+    if (!_resources.containsKey(id) || imageCount(id) + vectorCount(id) > 0) {
+      return false;
+    }
+    _resources.remove(id);
+    return true;
+  }
+
+  CanvasClearResult clearContent({required bool removeUnusedResources}) {
+    final removedElementIds = [
+      for (final id in _rows.keys)
+        if (!_backgroundIds.contains(id)) id,
+    ];
+    for (final id in removedElementIds) {
+      _rows.remove(id);
+    }
+    final removedResourceIds = removeUnusedResources
+        ? [
+            for (final id in _resources.keys.toList())
+              if (removeUnusedResource(id)) id,
+          ]
+        : const <CanvasResourceId>[];
+    return CanvasClearResult(
+      removedElementIds: removedElementIds,
+      removedResourceIds: removedResourceIds,
+      didClearContent:
+          removedElementIds.isNotEmpty || removedResourceIds.isNotEmpty,
+    );
+  }
+
+  int imageCount(CanvasResourceId id) => _referenceCount(id, image: true);
+
+  int vectorCount(CanvasResourceId id) => _referenceCount(id, image: false);
+
+  int _referenceCount(CanvasResourceId id, {required bool image}) {
+    return _rows.values.where((element) {
+      return switch (element) {
+        CanvasImageElement(:final resourceId) => image && resourceId == id,
+        CanvasVectorElement(:final resourceId) => !image && resourceId == id,
+        _ => false,
+      };
+    }).length;
+  }
+}
+
+final class _SparseReferenceWorkCounts {
+  final Map<SparseEditReferenceWorkKind, int> _counts = {};
+  final Map<
+    ({SparseEditReferenceWorkKind kind, SparseEditReferenceFamily family}),
+    int
+  >
+  _familyCounts = {};
+  final Map<
+    ({SparseEditReferenceFamily family, CanvasResourceId resourceId}),
+    int
+  >
+  _familyResourceMutationCounts = {};
+
+  void record(SparseEditReferenceWorkEvent event) {
+    _counts.update(event.kind, (count) => count + 1, ifAbsent: () => 1);
+    final family = event.family;
+    if (family != null) {
+      final key = (kind: event.kind, family: family);
+      _familyCounts.update(key, (count) => count + 1, ifAbsent: () => 1);
+      final resourceId = event.resourceId;
+      if (resourceId != null &&
+          (event.kind == SparseEditReferenceWorkKind.deltaEntryWrite ||
+              event.kind == SparseEditReferenceWorkKind.deltaEntryRemove)) {
+        final mutationKey = (family: family, resourceId: resourceId);
+        _familyResourceMutationCounts.update(
+          mutationKey,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+      }
+    }
+  }
+
+  int count(SparseEditReferenceWorkKind kind) => _counts[kind] ?? 0;
+
+  int countFamily(
+    SparseEditReferenceWorkKind kind,
+    SparseEditReferenceFamily family,
+  ) {
+    return _familyCounts[(kind: kind, family: family)] ?? 0;
+  }
+
+  int get deltaEntryMutations =>
+      count(SparseEditReferenceWorkKind.deltaEntryWrite) +
+      count(SparseEditReferenceWorkKind.deltaEntryRemove);
+
+  int countFamilyResourceMutations(
+    SparseEditReferenceFamily family,
+    CanvasResourceId resourceId,
+  ) {
+    return _familyResourceMutationCounts[(
+          family: family,
+          resourceId: resourceId,
+        )] ??
+        0;
+  }
+}
+
 final class _ClearTraceEffects {
   final Set<CanvasElementId> addedElementIds = {};
   final Set<CanvasElementId> removedElementIds = {};
@@ -2579,6 +3405,8 @@ final class _SparseClearTraceOutcome {
     required this.document,
     required this.expectedDocument,
     required this.session,
+    required this.sparseTouchedSet,
+    required this.sparseRevisionDelta,
     required this.expectedEffects,
   });
 
@@ -2588,6 +3416,18 @@ final class _SparseClearTraceOutcome {
   final CanvasDocument document;
   final CanvasDocument expectedDocument;
   final EditSession session;
+  final ({
+    Set<CanvasElementId> addedElementIds,
+    Set<CanvasElementId> removedElementIds,
+    Set<CanvasResourceId> resourceDescriptorChangedIds,
+    bool selection,
+    bool backgroundLayerChanged,
+    bool background,
+    bool grid,
+  })
+  sparseTouchedSet;
+  final ({bool structural, bool resource, bool background, bool grid})
+  sparseRevisionDelta;
   final _ClearTraceEffects expectedEffects;
 }
 
@@ -2694,22 +3534,30 @@ int _clampOracleIndex(int? requested, int length) {
 
 // The complete facts port is intentionally implemented here so the large trace
 // stays projection-free and lazy instead of constructing an unrelated DTO.
-// ignore: number-of-methods
+// This complete sparse facts fixture needs both resource families for the
+// supported-size public seam; splitting it would create a second test port.
+// ignore: number-of-methods, coupling-between-object-classes
 final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
   _SupportedSizeSparseFacts({
     required this.elementCount,
     required this.layerCount,
+    this.committedResourceCount = 0,
   });
 
   final int elementCount;
   final int layerCount;
+  final int committedResourceCount;
   int locationReadCount = 0;
+  int elementIdsReadCount = 0;
+  int resourceIdsReadCount = 0;
+  int imageResourceReferenceCountReadCount = 0;
+  int vectorResourceReferenceCountReadCount = 0;
 
   @override
   CanvasDocumentSummary get summary => CanvasDocumentSummary(
     elementCount: elementCount,
     layerCount: layerCount,
-    resourceCount: 0,
+    resourceCount: committedResourceCount,
   );
 
   @override
@@ -2725,10 +3573,13 @@ final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
   Iterable<CanvasElementId> get backgroundElementIds => const [];
 
   @override
-  Iterable<CanvasElementId> get elementIds => Iterable.generate(
-    elementCount,
-    (index) => CanvasElementId('element-$index'),
-  );
+  Iterable<CanvasElementId> get elementIds {
+    elementIdsReadCount += 1;
+    return Iterable.generate(
+      elementCount,
+      (index) => CanvasElementId('element-$index'),
+    );
+  }
 
   @override
   Iterable<CanvasLayerId> get layerIds =>
@@ -2746,7 +3597,13 @@ final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
   }
 
   @override
-  Iterable<CanvasResourceId> get resourceIds => const [];
+  Iterable<CanvasResourceId> get resourceIds {
+    resourceIdsReadCount += 1;
+    return Iterable.generate(
+      committedResourceCount,
+      (index) => CanvasResourceId('resource-$index'),
+    );
+  }
 
   @override
   bool hasLayer(CanvasLayerId id) {
@@ -2768,6 +3625,20 @@ final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
     if (index == null || index < 0 || index >= elementCount) {
       return null;
     }
+    if (index == 0 && committedResourceCount > 0) {
+      return CanvasImageElement(
+        id: id,
+        resourceId: CanvasResourceId('resource-0'),
+        size: const Size(1, 1),
+      );
+    }
+    if (index == 1 && committedResourceCount > 3) {
+      return CanvasVectorElement(
+        id: id,
+        resourceId: CanvasResourceId('resource-2'),
+        size: const Size(1, 1),
+      );
+    }
     return CanvasRectElement(id: id, size: const Size(1, 1));
   }
 
@@ -2780,10 +3651,32 @@ final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
   }
 
   @override
-  CanvasResource? resourceById(CanvasResourceId id) => null;
+  CanvasResource? resourceById(CanvasResourceId id) {
+    final value = id.value;
+    if (!value.startsWith('resource-')) {
+      return null;
+    }
+    final index = int.tryParse(value.replaceFirst('resource-', ''));
+    if (index == null || index < 0 || index >= committedResourceCount) {
+      return null;
+    }
+    return CanvasImageResource(
+      id: id,
+      source: CanvasResourceSource.appKey(value),
+    );
+  }
 
   @override
-  bool isResourceReferenced(CanvasResourceId id) => false;
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    imageResourceReferenceCountReadCount += 1;
+    return id == CanvasResourceId('resource-0') ? 1 : 0;
+  }
+
+  @override
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    vectorResourceReferenceCountReadCount += 1;
+    return id == CanvasResourceId('resource-2') ? 1 : 0;
+  }
 }
 
 // The fixture implements the complete sparse facts port so sparse-session tests
@@ -2796,14 +3689,16 @@ final class _SparseFixtureFacts implements SparseEditSessionFacts {
   int elementIdsReadCount = 0;
   int resourceIdsReadCount = 0;
   int backgroundElementIdsReadCount = 0;
-  int isResourceReferencedReadCount = 0;
+  int imageResourceReferenceCountReadCount = 0;
+  int vectorResourceReferenceCountReadCount = 0;
   final Map<CanvasElementId, int> _elementByIdReadCounts = {};
 
   void resetReadCounters() {
     elementIdsReadCount = 0;
     resourceIdsReadCount = 0;
     backgroundElementIdsReadCount = 0;
-    isResourceReferencedReadCount = 0;
+    imageResourceReferenceCountReadCount = 0;
+    vectorResourceReferenceCountReadCount = 0;
     _elementByIdReadCounts.clear();
   }
 
@@ -2927,14 +3822,40 @@ final class _SparseFixtureFacts implements SparseEditSessionFacts {
   }
 
   @override
-  bool isResourceReferenced(CanvasResourceId id) {
-    isResourceReferencedReadCount += 1;
+  int imageResourceReferenceCount(CanvasResourceId id) {
+    imageResourceReferenceCountReadCount += 1;
+    return _referenceCount(id, image: true);
+  }
 
-    return elementIds.any((elementId) {
-      final element = elementById(elementId);
+  @override
+  int vectorResourceReferenceCount(CanvasResourceId id) {
+    vectorResourceReferenceCountReadCount += 1;
+    return _referenceCount(id, image: false);
+  }
 
-      return element is CanvasImageElement && element.resourceId == id;
-    });
+  int _referenceCount(CanvasResourceId id, {required bool image}) {
+    var count = 0;
+    for (final element in document.backgroundElements) {
+      count += _matchesResourceReference(element, id, image: image) ? 1 : 0;
+    }
+    for (final layer in document.layers) {
+      for (final element in layer.elements) {
+        count += _matchesResourceReference(element, id, image: image) ? 1 : 0;
+      }
+    }
+    return count;
+  }
+
+  bool _matchesResourceReference(
+    CanvasElement element,
+    CanvasResourceId id, {
+    required bool image,
+  }) {
+    return switch (element) {
+      CanvasImageElement(:final resourceId) => image && resourceId == id,
+      CanvasVectorElement(:final resourceId) => !image && resourceId == id,
+      _ => false,
+    };
   }
 }
 

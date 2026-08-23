@@ -68,9 +68,13 @@ preserves failed-route rollback without making the Store own interaction timing.
   Closure/listener replay is retired. Sparse structural ordering now uses
   owner-local lazy indexed sequences and one current location view seeded from
   the existing committed element-location facts; list orders and placement
-  overrides are retired. Sparse reference-count and Draft indexed-order work,
-  plus route-generated-ID/runtime delivery, remain pending; this ADR does not
-  claim those routes are delivered.
+  overrides are retired. Sparse resource decisions now combine Store's direct
+  committed image/vector count summaries with session-local affected-id deltas,
+  updated for every accepted row transition and clear barrier. This retires
+  sparse accepted-element scans and copied count inventories; Store remains the
+  owner of committed summaries and final relationship policy. Draft
+  indexed-order/resource work plus route-generated-ID/runtime delivery remain
+  pending; this ADR does not claim those routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 

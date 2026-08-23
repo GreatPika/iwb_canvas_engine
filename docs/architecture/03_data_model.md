@@ -76,11 +76,16 @@ retain a closure/listener replay mirror. Sparse sessions now own separate lazy
 indexed orders for layers, background elements, and each content layer, plus
 one current `ElementLocationFacts` view seeded directly from the committed
 store on first lookup. Local structural transitions replace that seed, so no
-order list or placement override mirror remains. Draft indexed-order and sparse
-reference-count owner adoption remain pending; this early journal cutover is
-work-neutral and does not claim those later bounds. The journal receives only
-Draft's write-only DTO consumer during promotion, not a readable Draft state;
-Draft's promotion target opens and releases the document around that replay.
+order list or placement override mirror remains. Sparse resource decisions read
+the Store-owned committed image/vector summaries directly and combine each with
+only the session's affected-id delta. Every accepted image/vector row
+transition, including clear removal, updates that delta before the next
+resource decision; descriptor edits do not. `removeUnusedResource` and clear
+cleanup therefore query the current logical count without an accepted-element
+scan, count-map clone, or mutation-history walk. Draft indexed-order and Draft
+resource-count owner adoption remain pending. The journal receives only Draft's
+write-only DTO consumer during promotion, not a readable Draft state; Draft's
+promotion target opens and releases the document around that replay.
 One Store-private transaction candidate opens the existing family, resource,
 and structural working owners once and holds only current scalar facts
 (`camera`, `background`, and `palette`). It does not mirror rows, descriptors,
