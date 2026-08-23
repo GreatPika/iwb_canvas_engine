@@ -76,12 +76,16 @@ invented decision.
 
 ## Contract Blocker output
 
-On an authoring source conflict or missing material decision, do not store a
-partial active contract. Return exactly the five sections in
-`contract-rules.md`: `Goal`, `Source Inputs`, `Blocking Decisions`, and
-`Repository Evidence` under `# Contract Blocker`. `Blocking Decisions` is one
-table with the exact columns `Decision ID`, `Blocking decision`, `Blocks
-because`, and `Needed evidence or authority`. Each independent unresolved
-decision occupies one unique keyed row. The blocker contains no provisional
-boundary, unit, outcome, Matrix row, verification gate, preferred repair, or
-implementation choice; its final-state Goal does not choose an answer.
+On an authoring source conflict or missing material decision, return a Contract
+Blocker as the user-visible artifact. Preserve every already-written draft,
+whether it predates the run or was written during it. A blocker never
+authorizes deleting the draft; delete it only when the user explicitly requests
+that deletion. Do not present the preserved draft as a complete implementable
+contract. Return exactly the five sections in `contract-rules.md`: `Goal`,
+`Source Inputs`, `Blocking Decisions`, and `Repository Evidence` under
+`# Contract Blocker`. `Blocking Decisions` is one table with the exact columns
+`Decision ID`, `Blocking decision`, `Blocks because`, and `Needed evidence or
+authority`. Each independent unresolved decision occupies one unique keyed row.
+The blocker contains no provisional boundary, unit, outcome, Matrix row,
+verification gate, preferred repair, or implementation choice; its final-state
+Goal does not choose an answer.

@@ -6,7 +6,7 @@ This is the single semantic rulebook for authoring and review. It is ordered by 
 
 `Goal` is exactly one paragraph describing the intended repository state after all execution units complete. It never describes authoring, lint, review activity, or intermediate implementation steps.
 
-Return either a full contract or a Contract Blocker, never a partial contract. Contracts define future work and future evidence. Keep every unit unchecked. Do not include completed status, implementation results, command outputs, commit hashes, implementation reports, reviewer approvals, roadmap closure, or claims that future evidence passed. Read-only authoring facts belong only in `Repository Evidence`.
+Return either a full contract or a Contract Blocker as the user-visible artifact, never a partial contract. Preserve every already-written draft, whether it predates the run or was written during it. A blocker never authorizes deleting the draft; delete it only when the user explicitly requests that deletion. Do not present the preserved draft as a complete implementable contract. Contracts define future work and future evidence. Keep every unit unchecked. Do not include completed status, implementation results, command outputs, commit hashes, implementation reports, reviewer approvals, roadmap closure, or claims that future evidence passed. Read-only authoring facts belong only in `Repository Evidence`.
 
 ## 2. Source Authority And Contract Gate
 
@@ -22,11 +22,35 @@ source decision -> independent failure family -> acceptance outcome -> Matrix ev
 
 Each `Decision Trace` row names one failure family. Independently falsifiable failures use separate routes; broad labels, citations, owners, or outcomes do not close them. Authorized exclusions still name the prevented failure and route to their authorized `Out of Scope` target.
 
-For an active design, read frontmatter `disposition` and `product_outcome`:
+For an active design, require frontmatter `schema: architecture-design/v4`, read
+`disposition`, and resolve frontmatter `outcome` to the document's single `R`
+record of kind `outcome`.
 
-- `NEEDS_RESEARCH` and `ARCHITECTURE_GATE` block contract authoring.
-- `product_outcome` preserves intent without requiring same-named body sections.
-- Historical, resolved, deferred, and out-of-scope mentions do not themselves block.
+- `BLOCKED` immediately blocks the dependent contract. Carry every `B` reason
+  into the Contract Blocker; no Contract Interface is required.
+- `READY_FOR_CONTRACT` requires the complete Contract Interface. Treat its
+  `Profile` and `Obligations` as values from the canonical Change Contract
+  vocabulary; its `Sources`, `Requirements`, `Commitments`, `Assurance`,
+  `Impacts`, and `Stops` as typed indexes to canonical `S`, `R`, `D`, `A`, `I`,
+  and `H` records; and its `ADR Impact` as the exact applicable `I` transitions.
+  Resolve every indexed ID to its canonical record. The Interface is an index,
+  not a prose owner: preserve the records' meaning and never infer an omitted
+  architecture commitment. Each indexed `A` supplies one independently
+  falsifiable architecture failure family. Map it without merging to a complete
+  Decision Trace route; its claim, failure, direct-oracle boundary, proxy risk,
+  evidence constraints, and architecture seam constrain the Matrix evidence,
+  adversarial false-positive case, and kill signal rather than proving that
+  evidence passed.
+  Applicable impacts and ADR transitions are mandatory future contract work; each
+  indexed `H` is a future invalidation and architecture re-entry condition, not a
+  current blocker. If projected `R` or `D` records establish a work bound or
+  cost-displacement constraint, `Obligations` must contain
+  `WORK_BUDGET_CLOSURE`; otherwise the handoff is not consumable. Preserve each
+  such constraint in the contract boundary and its failure-family evidence route.
+- `DESIGN_NOT_REQUIRED` consumes the outcome and evidence-backed reason that no
+  architecture handoff is required, without requiring a Contract Interface. If
+  contract authoring discovers a material architecture choice, it blocks and
+  requires a new architecture-design decision instead of inventing one.
 
 Return a Contract Blocker whenever implementation would still have to choose or reconcile a material owner, owning layer, boundary, source of truth, compatibility rule, API behavior, public error mapping or taxonomy, order, temporal behavior, atomicity or all-or-nothing behavior, migration or retirement strategy, recognition scope, handoff, acceptance oracle, or evidence constraint. Also block when accepted sources disagree on any such matter, a mandatory source update is optional, or evidence depends on an unauthorized verification mechanism.
 

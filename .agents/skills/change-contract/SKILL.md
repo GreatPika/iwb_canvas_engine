@@ -60,7 +60,11 @@ Terminal and output boundaries:
   agent receives exactly the closed prompt owned by `authoring.md` and returns
   a complete `PASS` verdict against the artifact and its declared sources.
 - A source conflict or missing material decision returns one Contract Blocker
-  and no stored partial active plan.
+  as the user-visible artifact. Preserve every already-written draft, whether
+  it predates the run or was written during it. A blocker never authorizes
+  deleting the draft; delete it only when the user explicitly requests that
+  deletion. Do not present the preserved draft as a complete implementable
+  contract.
 - `review-only` returns exactly one validation artifact and stops.
 - `review-and-repair` returns exactly one repaired full contract only after its
   lint and one new fresh review; unresolved authority returns the byte-stable
