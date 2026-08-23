@@ -72,7 +72,11 @@ the accepted `CommittedDocument` snapshot before the irreversible swap. The
 same ordered DTO list is the sole promotion input: explicit Draft
 materialization traverses it once through Draft's exhaustive mutation consumer,
 then discards it. Promotion does not build a committed public projection or
-retain a closure/listener replay mirror. Sparse and Draft indexed-order and
+retain a closure/listener replay mirror. Sparse sessions now own separate lazy
+indexed orders for layers, background elements, and each content layer, plus
+one current `ElementLocationFacts` view seeded directly from the committed
+store on first lookup. Local structural transitions replace that seed, so no
+order list or placement override mirror remains. Draft indexed-order and sparse
 reference-count owner adoption remain pending; this early journal cutover is
 work-neutral and does not claim those later bounds. The journal receives only
 Draft's write-only DTO consumer during promotion, not a readable Draft state;

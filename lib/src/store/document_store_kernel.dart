@@ -230,6 +230,10 @@ final class DocumentStoreKernel {
     return _document.elements.elementById(id);
   }
 
+  ElementLocationFacts? elementLocationFor(CanvasElementId id) {
+    return _document.elements.elementLocationFacts[id];
+  }
+
   Iterable<CanvasElementId> get backgroundElementIds {
     return _document.elements.backgroundElementIds;
   }

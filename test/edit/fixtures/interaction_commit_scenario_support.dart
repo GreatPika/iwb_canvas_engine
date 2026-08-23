@@ -8,6 +8,7 @@ import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_kernel.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/element_registry.dart';
 
 CanvasDocument interactionCommitBaseDocument({
   List<String> backgroundElementIds = const [],
@@ -220,6 +221,11 @@ final class StoreSparseFactsForTest implements SparseEditSessionFacts {
 
   @override
   CanvasElement? elementById(CanvasElementId id) => store.elementById(id);
+
+  @override
+  ElementLocationFacts? elementLocationFor(CanvasElementId id) {
+    return store.elementLocationFor(id);
+  }
 
   @override
   CanvasResource? resourceById(CanvasResourceId id) => store.resourceById(id);

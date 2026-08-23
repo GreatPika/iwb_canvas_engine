@@ -96,9 +96,14 @@ facts without building a public `CanvasDocument` projection, and `draftSummary`
 uses the committed summary plus sparse deltas. `readDraftDocument` and
 `replaceDraftDocument` are explicit materialization fallbacks: they materialize
 a rollback-safe `DraftDocument` and make one ordered traversal of the DTO
-journal through Draft's exhaustive mutation application boundary. The list-backed
-Draft and sparse order/reference-count implementations remain pending migration;
-this journal cutover adds no projection, copy, scan, or secondary replay work.
+journal through Draft's exhaustive mutation application boundary. Sparse
+structure now has one owner-local current placement view plus separate lazy
+indexed orders for layers, background elements, and each content layer. Its
+first location read comes from Store's committed `ElementLocationFacts`; local
+add, remove, and clear transitions become authoritative immediately, and opened
+orders are discarded on promotion or session close. Draft structure and sparse
+reference-count migration remain pending; this journal cutover adds no
+projection, copy, scan, or secondary replay work.
 Draft's promotion target opens and owns the materialized document around replay;
 the promotion owner receives only its write-only sparse-mutation consumer, so it
 cannot inspect Draft collections or build a Draft projection while replaying.

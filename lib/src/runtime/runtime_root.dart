@@ -63,6 +63,7 @@ import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
 import '../store/committed_document.dart';
 import '../store/document_store_kernel.dart';
+import '../store/element_registry.dart';
 import '../store/resource_table.dart';
 import 'runtime_command_facts_adapter.dart';
 import 'runtime_config.dart';
@@ -2599,6 +2600,11 @@ final class _StoreSparseEditFacts implements SparseEditSessionFacts {
 
   @override
   CanvasElement? elementById(CanvasElementId id) => store.elementById(id);
+
+  @override
+  ElementLocationFacts? elementLocationFor(CanvasElementId id) {
+    return store.elementLocationFor(id);
+  }
 
   @override
   CanvasResource? resourceById(CanvasResourceId id) => store.resourceById(id);

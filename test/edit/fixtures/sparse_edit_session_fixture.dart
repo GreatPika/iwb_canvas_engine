@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/store/element_registry.dart';
+import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 import 'package:iwb_canvas_engine/src/store/resource_table.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 
@@ -13,66 +15,81 @@ void main() {
   group('sparse edit session seam', () {
     _registerSparseSummaryTests();
     _registerSparsePromotionTests();
-    test(
-      'stale sparse handles reject every public entry point',
-      () => expect(_staleSparseHandleRejected, returnsNormally),
-    );
-    test(
-      'sparse mutations preserve no-op and validation semantics',
-      () => expect(_sparseMutationsPreserveNoOpAndValidation, returnsNormally),
-    );
-    test(
-      'sparse resource references follow accepted element overlay',
-      () =>
-          expect(_sparseResourceReferencesUseAcceptedOverlay, returnsNormally),
-    );
-    test(
-      'sparse clear touches background layer only for background removals',
-      () => expect(
-        _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals,
-        returnsNormally,
-      ),
-    );
-    test(
-      'sparse clear retains background image and vector resources',
-      () => expect(
-        _sparseClearRetainsBackgroundImageAndVectorResources,
-        returnsNormally,
-      ),
-    );
-    test(
-      'sparse clear retains committed and local background resources',
-      () => expect(
-        _sparseClearRetainsCommittedAndLocalBackgroundResources,
-        returnsNormally,
-      ),
-    );
-    test(
-      'promoted sparse clear keeps DraftDocument resource work bounded',
-      () => expect(
-        _promotedSparseClearKeepsDraftResourceWorkBounded,
-        returnsNormally,
-      ),
-    );
-    test(
-      'sparse clear remains an ordered journal barrier',
-      () => expect(_sparseClearRemainsAnOrderedJournalBarrier, returnsNormally),
-    );
-    test(
-      'sparse clear reports indexed insertions in draft order',
-      () => expect(
-        _sparseClearReportsIndexedInsertionsInDraftOrder,
-        returnsNormally,
-      ),
-    );
-    test(
-      'sparse remove touches background layer only for background removals',
-      () => expect(
-        _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals,
-        returnsNormally,
-      ),
-    );
+    _registerSparseStructureTests();
+    _registerSparseMutationTests();
+    _registerSparseClearTests();
   });
+}
+
+void _registerSparseMutationTests() {
+  test(
+    'stale sparse handles reject every public entry point',
+    () => expect(_staleSparseHandleRejected, returnsNormally),
+  );
+  test(
+    'sparse mutations preserve no-op and validation semantics',
+    () => expect(_sparseMutationsPreserveNoOpAndValidation, returnsNormally),
+  );
+  test(
+    'sparse resource references follow accepted element overlay',
+    () => expect(_sparseResourceReferencesUseAcceptedOverlay, returnsNormally),
+  );
+  test(
+    'sparse remove touches background layer only for background removals',
+    () => expect(
+      _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse remove and re-add uses the current placement before clear',
+    () => expect(
+      _sparseRemoveAndReaddUsesCurrentPlacementBeforeClear,
+      returnsNormally,
+    ),
+  );
+}
+
+void _registerSparseClearTests() {
+  test(
+    'sparse clear touches background layer only for background removals',
+    () => expect(
+      _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse clear retains background image and vector resources',
+    () => expect(
+      _sparseClearRetainsBackgroundImageAndVectorResources,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse clear retains committed and local background resources',
+    () => expect(
+      _sparseClearRetainsCommittedAndLocalBackgroundResources,
+      returnsNormally,
+    ),
+  );
+  test(
+    'promoted sparse clear keeps DraftDocument resource work bounded',
+    () => expect(
+      _promotedSparseClearKeepsDraftResourceWorkBounded,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse clear remains an ordered journal barrier',
+    () => expect(_sparseClearRemainsAnOrderedJournalBarrier, returnsNormally),
+  );
+  test(
+    'sparse clear reports indexed insertions in draft order',
+    () => expect(
+      _sparseClearReportsIndexedInsertionsInDraftOrder,
+      returnsNormally,
+    ),
+  );
 }
 
 void _registerSparseSummaryTests() {
@@ -112,6 +129,37 @@ void _registerSparsePromotionTests() {
   test(
     'replaceDraftDocument promotes to materialized replacement fallback',
     () => expect(_replaceDraftDocumentPromotes, returnsNormally),
+  );
+}
+
+void _registerSparseStructureTests() {
+  test(
+    'sparse indexed orders match a sequential placement oracle',
+    () => expect(
+      _sparseIndexedOrdersMatchSequentialPlacementOracle,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse indexed orders have bounded owner-attributed work',
+    () => expect(
+      _sparseIndexedOrdersHaveBoundedOwnerAttributedWork,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse promotion discards opened structural orders once',
+    () => expect(
+      _sparsePromotionDiscardsOpenedStructuralOrdersOnce,
+      returnsNormally,
+    ),
+  );
+  test(
+    'sparse background to content move releases its resource during clear',
+    () => expect(
+      _sparseBackgroundToContentMoveReleasesResourceDuringClear,
+      returnsNormally,
+    ),
   );
 }
 
@@ -1559,6 +1607,420 @@ void _sparseRemoveTouchesBackgroundLayerOnlyForBackgroundRemovals() {
   expect(backgroundRemove.commitPlan.touchedSet.backgroundLayerChanged, isTrue);
 }
 
+void _sparseRemoveAndReaddUsesCurrentPlacementBeforeClear() {
+  final session = _sparseSessionForDocument(_baseDocument());
+  final contentId = CanvasElementId('content-a');
+
+  expect(session.removeElement(contentId), isTrue);
+  session.addBackgroundElement(_rect('content-a'), index: 0);
+
+  final clear = session.clearContent();
+
+  expect(clear.removedElementIds, isEmpty);
+  expect(
+    session.readDraftDocument().backgroundElements.map((element) => element.id),
+    [contentId, CanvasElementId('background-a')],
+  );
+}
+
+// The expected result is a literal sequential oracle: after the moved row is
+// cleared, neither it nor its only descriptor can remain in current state.
+void _sparseBackgroundToContentMoveReleasesResourceDuringClear() {
+  final elementId = CanvasElementId('background-image');
+  final resourceId = CanvasResourceId('background-image-resource');
+  final session = _sparseSessionForDocument(
+    _documentWithSingleBackgroundImageResource(),
+  );
+
+  expect(session.removeElement(elementId), isTrue);
+  session.addElement(
+    CanvasImageElement(
+      id: elementId,
+      resourceId: resourceId,
+      size: const Size(4, 6),
+    ),
+    layerId: CanvasLayerId('layer-a'),
+  );
+
+  final clear = session.clearContent(removeUnusedResources: true);
+
+  expect(clear.removedElementIds, [elementId]);
+  expect(clear.removedResourceIds, [resourceId]);
+  final document = session.readDraftDocument();
+  expect(document.backgroundElements, isEmpty);
+  expect(document.layers.single.elements, isEmpty);
+  expect(document.resources, isEmpty);
+}
+
+// This literal list/map oracle is deliberately independent from indexed orders:
+// it applies the raw public indices sequentially and exposes clear order before
+// the later promoted document observes the same current placement.
+// One trace keeps every transition and its intermediate clear witness adjacent.
+// ignore: halstead-volume, source-lines-of-code
+void _sparseIndexedOrdersMatchSequentialPlacementOracle() {
+  final seed = _baseDocument();
+  final session = _sparseSessionForDocument(seed);
+  final oracle = _SparseOrderOracle(seed);
+  final layerFirst = CanvasLayerId('layer-first');
+  final layerLast = CanvasLayerId('layer-last');
+  final contentLayer = CanvasLayerId('layer-a');
+
+  expect(
+    session.ensureLayer(layerFirst, index: -9),
+    oracle.ensureLayer(layerFirst, -9),
+  );
+  expect(
+    session.ensureLayer(layerLast, index: 999),
+    oracle.ensureLayer(layerLast, 999),
+  );
+  expect(
+    session.ensureLayer(layerFirst, index: 0),
+    oracle.ensureLayer(layerFirst, 0),
+  );
+  _addContentAt(session, oracle, 'content-end', contentLayer, null);
+  _addContentAt(session, oracle, 'content-front', contentLayer, -4);
+  _addContentAt(session, oracle, 'content-middle-a', contentLayer, 1);
+  _addContentAt(session, oracle, 'content-middle-b', contentLayer, 1);
+  _addContentAt(session, oracle, 'content-last', contentLayer, 999);
+  _addBackgroundAt(session, oracle, 'background-end', null);
+  _addBackgroundAt(session, oracle, 'background-front', -1);
+  _addBackgroundAt(session, oracle, 'background-middle-a', 1);
+  _addBackgroundAt(session, oracle, 'background-middle-b', 1);
+  _addBackgroundAt(session, oracle, 'background-last', 999);
+
+  final movedId = CanvasElementId('content-a');
+  expect(session.removeElement(movedId), oracle.remove(movedId));
+  session.addBackgroundElement(_rect('content-a'), index: 0);
+  oracle.addBackground(movedId, 0);
+  final movedBackgroundId = CanvasElementId('background-a');
+  expect(
+    session.removeElement(movedBackgroundId),
+    oracle.remove(movedBackgroundId),
+  );
+  _addContentAt(session, oracle, 'background-a', contentLayer, 0);
+
+  final clear = session.clearContent();
+  expect(clear.removedElementIds, oracle.clearContent());
+  _addContentAt(session, oracle, 'content-after-clear', contentLayer, 0);
+
+  final document = session.readDraftDocument();
+  expect(
+    document.backgroundElements.map((element) => element.id),
+    oracle.backgroundIds,
+  );
+  expect(document.layers.map((layer) => layer.id), oracle.layerIds);
+  for (final layer in document.layers) {
+    expect(
+      layer.elements.map((element) => element.id),
+      oracle.contentIds(layer.id),
+    );
+  }
+}
+
+// The helper keeps the public call and independent oracle transition paired.
+// ignore: number-of-parameters
+void _addContentAt(
+  EditSession session,
+  _SparseOrderOracle oracle,
+  String id,
+  CanvasLayerId layerId,
+  int? index,
+) {
+  final element = _rect(id);
+  expect(
+    session.addElement(element, layerId: layerId, index: index),
+    element.id,
+  );
+  oracle.addContent(element.id, layerId, index);
+}
+
+void _addBackgroundAt(
+  EditSession session,
+  _SparseOrderOracle oracle,
+  String id,
+  int? index,
+) {
+  final element = _rect(id);
+  expect(session.addBackgroundElement(element, index: index), element.id);
+  oracle.addBackground(element.id, index);
+}
+
+// The supported-size trace keeps setup, observed owner events, and bounds in
+// one place so no aggregate-only proxy can hide a repeated order open or scan.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _sparseIndexedOrdersHaveBoundedOwnerAttributedWork() {
+  const elementCount = 200000;
+  const layerCount = 4096;
+  const indexedMutationCount = 7;
+  final maxNodeVisitsPerMutation = 2 * _binaryLogCeiling(elementCount + 4);
+  final facts = _SupportedSizeSparseFacts(
+    elementCount: elementCount,
+    layerCount: layerCount,
+  );
+  final session = EditSession.sparse(
+    facts: facts,
+    promoteDraft: _baseDraft,
+    selectedElementIds: const [],
+  );
+  final structureEvents = <SparseEditStructureWorkEvent>[];
+  final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+
+  observeSparseEditStructureWork(
+    structureEvents.add,
+    () => IndexedOrderSequence.observeWork(sequenceEvents.add, () {
+      expect(session.ensureLayer(CanvasLayerId('layer-new'), index: 0), isTrue);
+      session.addBackgroundElement(_rect('background-front'), index: -1);
+      session.addBackgroundElement(_rect('background-middle'), index: 0);
+      session.addBackgroundElement(_rect('background-last'), index: 999999);
+      session.addElement(
+        _rect('content-front'),
+        layerId: CanvasLayerId('layer-0'),
+        index: -1,
+      );
+      session.addElement(
+        _rect('content-middle'),
+        layerId: CanvasLayerId('layer-0'),
+        index: elementCount ~/ 2,
+      );
+      session.addElement(
+        _rect('content-last'),
+        layerId: CanvasLayerId('layer-0'),
+        index: 999999,
+      );
+      expect(session.removeElement(CanvasElementId('element-100000')), isTrue);
+      expect(
+        session.clearContent().removedElementIds,
+        hasLength(elementCount + 2),
+      );
+      session.close();
+    }),
+  );
+
+  final opens = _structureEventCounts(
+    structureEvents,
+    SparseEditStructureWorkKind.orderOpen,
+  );
+  final cleanup = _structureEventCounts(
+    structureEvents,
+    SparseEditStructureWorkKind.cleanup,
+  );
+  expect(opens[SparseEditStructureOrderKind.layer], 1);
+  expect(opens[SparseEditStructureOrderKind.background], 1);
+  expect(opens[SparseEditStructureOrderKind.content], layerCount + 1);
+  expect(cleanup, opens);
+  expect(
+    _structureEventCount(
+      structureEvents,
+      SparseEditStructureWorkKind.committedLocationRead,
+    ),
+    1,
+  );
+  expect(
+    _structureEventCount(
+      structureEvents,
+      SparseEditStructureWorkKind.currentLocationRead,
+    ),
+    1,
+  );
+  expect(facts.locationReadCount, 1);
+  expect(
+    _indexedEventCount(sequenceEvents, IndexedOrderSequenceWorkEvent.buildOpen),
+    layerCount + 3,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.buildInputVisit,
+    ),
+    elementCount + layerCount,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.insertNodeVisit,
+    ),
+    lessThanOrEqualTo(indexedMutationCount * maxNodeVisitsPerMutation),
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.removeNodeVisit,
+    ),
+    lessThanOrEqualTo(maxNodeVisitsPerMutation),
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.finalFlattenVisit,
+    ),
+    0,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.orderedIterationVisit,
+    ),
+    elementCount + layerCount + 3,
+  );
+  expect(
+    _indexedEventCount(sequenceEvents, IndexedOrderSequenceWorkEvent.discard),
+    layerCount + 3,
+  );
+
+  final earlyFacts = _SupportedSizeSparseFacts(
+    elementCount: elementCount,
+    layerCount: layerCount,
+  );
+  final earlySession = EditSession.sparse(
+    facts: earlyFacts,
+    promoteDraft: _baseDraft,
+    selectedElementIds: const [],
+  );
+  final earlyStructureEvents = <SparseEditStructureWorkEvent>[];
+  final earlySequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  observeSparseEditStructureWork(
+    earlyStructureEvents.add,
+    () => IndexedOrderSequence.observeWork(earlySequenceEvents.add, () {
+      expect(
+        earlySession.clearContent().removedElementIds,
+        hasLength(elementCount),
+      );
+      earlySession.close();
+    }),
+  );
+  final earlyOpens = _structureEventCounts(
+    earlyStructureEvents,
+    SparseEditStructureWorkKind.orderOpen,
+  );
+  expect(earlyOpens[SparseEditStructureOrderKind.layer], 1);
+  expect(earlyOpens[SparseEditStructureOrderKind.background], 0);
+  expect(earlyOpens[SparseEditStructureOrderKind.content], layerCount);
+  expect(
+    _structureEventCounts(
+      earlyStructureEvents,
+      SparseEditStructureWorkKind.cleanup,
+    ),
+    earlyOpens,
+  );
+  expect(
+    _indexedEventCount(
+      earlySequenceEvents,
+      IndexedOrderSequenceWorkEvent.buildOpen,
+    ),
+    layerCount + 1,
+  );
+  expect(
+    _indexedEventCount(
+      earlySequenceEvents,
+      IndexedOrderSequenceWorkEvent.buildInputVisit,
+    ),
+    elementCount + layerCount,
+  );
+  expect(
+    _indexedEventCount(
+      earlySequenceEvents,
+      IndexedOrderSequenceWorkEvent.orderedIterationVisit,
+    ),
+    elementCount + layerCount,
+  );
+  expect(
+    _indexedEventCount(
+      earlySequenceEvents,
+      IndexedOrderSequenceWorkEvent.discard,
+    ),
+    layerCount + 1,
+  );
+}
+
+// The promotion seam, opened owners, and cleanup observations stay adjacent so
+// a close-path cleanup cannot accidentally satisfy this independent witness.
+// ignore: halstead-volume, source-lines-of-code
+void _sparsePromotionDiscardsOpenedStructuralOrdersOnce() {
+  final session = _sparseSessionForDocument(_baseDocument());
+  final structureEvents = <SparseEditStructureWorkEvent>[];
+  final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+
+  observeSparseEditStructureWork(
+    structureEvents.add,
+    () => IndexedOrderSequence.observeWork(sequenceEvents.add, () {
+      expect(session.ensureLayer(CanvasLayerId('opened-layer')), isTrue);
+      session.addBackgroundElement(_rect('opened-background'));
+      session.addElement(
+        _rect('opened-content'),
+        layerId: CanvasLayerId('layer-a'),
+      );
+
+      final document = session.readDraftDocument();
+
+      expect(document.backgroundElements.map((element) => element.id), [
+        CanvasElementId('background-a'),
+        CanvasElementId('opened-background'),
+      ]);
+      expect(document.layers.first.elements.map((element) => element.id), [
+        CanvasElementId('content-a'),
+        CanvasElementId('opened-content'),
+      ]);
+    }),
+  );
+
+  final opens = _structureEventCounts(
+    structureEvents,
+    SparseEditStructureWorkKind.orderOpen,
+  );
+  expect(opens, {
+    SparseEditStructureOrderKind.layer: 1,
+    SparseEditStructureOrderKind.background: 1,
+    SparseEditStructureOrderKind.content: 1,
+  });
+  expect(
+    _structureEventCounts(structureEvents, SparseEditStructureWorkKind.cleanup),
+    opens,
+  );
+  expect(
+    _indexedEventCount(sequenceEvents, IndexedOrderSequenceWorkEvent.discard),
+    3,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.finalFlattenVisit,
+    ),
+    0,
+  );
+}
+
+Map<SparseEditStructureOrderKind, int> _structureEventCounts(
+  Iterable<SparseEditStructureWorkEvent> events,
+  SparseEditStructureWorkKind kind,
+) {
+  return {
+    for (final order in SparseEditStructureOrderKind.values)
+      order: events
+          .where((event) => event.kind == kind && event.order == order)
+          .length,
+  };
+}
+
+int _structureEventCount(
+  Iterable<SparseEditStructureWorkEvent> events,
+  SparseEditStructureWorkKind kind,
+) => events.where((event) => event.kind == kind).length;
+
+int _indexedEventCount(
+  Iterable<IndexedOrderSequenceWorkEvent> events,
+  IndexedOrderSequenceWorkEvent kind,
+) => events.where((event) => event == kind).length;
+
+int _binaryLogCeiling(int value) {
+  var power = 1;
+  var exponent = 0;
+  while (power < value) {
+    power <<= 1;
+    exponent += 1;
+  }
+  return exponent;
+}
+
 void _expectSparseValidationFailures() {
   final session = _sparseSession(_baseDraft);
 
@@ -1696,6 +2158,25 @@ CanvasDocument _documentWithReferencedResource() {
         ],
       ),
     ],
+  );
+}
+
+CanvasDocument _documentWithSingleBackgroundImageResource() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('background-image-resource'),
+        source: CanvasResourceSource.appKey('background-image-source'),
+      ),
+    ],
+    backgroundElements: [
+      CanvasImageElement(
+        id: CanvasElementId('background-image'),
+        resourceId: CanvasResourceId('background-image-resource'),
+        size: const Size(4, 6),
+      ),
+    ],
+    layers: [CanvasLayer(id: CanvasLayerId('layer-a'))],
   );
 }
 
@@ -2110,6 +2591,201 @@ final class _SparseClearTraceOutcome {
   final _ClearTraceEffects expectedEffects;
 }
 
+final class _SparseOrderOracle {
+  _SparseOrderOracle(CanvasDocument seed)
+    : _backgroundIds = [
+        for (final element in seed.backgroundElements) element.id,
+      ],
+      _contentIdsByLayer = {} {
+    for (final layer in seed.layers) {
+      _contentIdsByLayer[layer.id] = [
+        for (final element in layer.elements) element.id,
+      ];
+    }
+    for (final id in _backgroundIds) {
+      _locations[id] = null;
+    }
+    for (final entry in _contentIdsByLayer.entries) {
+      for (final id in entry.value) {
+        _locations[id] = entry.key;
+      }
+    }
+  }
+
+  final List<CanvasElementId> _backgroundIds;
+  final Map<CanvasLayerId, List<CanvasElementId>> _contentIdsByLayer;
+  final Map<CanvasElementId, CanvasLayerId?> _locations = {};
+
+  Iterable<CanvasElementId> get backgroundIds => _backgroundIds;
+  Iterable<CanvasLayerId> get layerIds => _contentIdsByLayer.keys;
+
+  Iterable<CanvasElementId> contentIds(CanvasLayerId id) {
+    return _contentIdsByLayer[id] ?? const <CanvasElementId>[];
+  }
+
+  bool ensureLayer(CanvasLayerId id, int? index) {
+    if (_contentIdsByLayer.containsKey(id)) {
+      return false;
+    }
+    final entries = _contentIdsByLayer.entries.toList(growable: false);
+    _contentIdsByLayer.clear();
+    final clamped = _clampOracleIndex(index, entries.length);
+    for (var position = 0; position <= entries.length; position += 1) {
+      if (position == clamped) {
+        _contentIdsByLayer[id] = [];
+      }
+      if (position < entries.length) {
+        final entry = entries[position];
+        _contentIdsByLayer[entry.key] = entry.value;
+      }
+    }
+    return true;
+  }
+
+  void addBackground(CanvasElementId id, int? index) {
+    _backgroundIds.insert(_clampOracleIndex(index, _backgroundIds.length), id);
+    _locations[id] = null;
+  }
+
+  void addContent(CanvasElementId id, CanvasLayerId layerId, int? index) {
+    if (!_contentIdsByLayer.containsKey(layerId)) {
+      ensureLayer(layerId, null);
+    }
+    final ids = _contentIdsByLayer[layerId]!;
+    ids.insert(_clampOracleIndex(index, ids.length), id);
+    _locations[id] = layerId;
+  }
+
+  bool remove(CanvasElementId id) {
+    if (!_locations.containsKey(id)) {
+      return false;
+    }
+    final layerId = _locations.remove(id);
+    if (layerId == null) {
+      _backgroundIds.remove(id);
+    } else {
+      _contentIdsByLayer[layerId]!.remove(id);
+    }
+    return true;
+  }
+
+  List<CanvasElementId> clearContent() {
+    final removed = <CanvasElementId>[];
+    for (final ids in _contentIdsByLayer.values) {
+      removed.addAll(ids);
+      for (final id in ids) {
+        _locations.remove(id);
+      }
+      ids.clear();
+    }
+    return removed;
+  }
+}
+
+int _clampOracleIndex(int? requested, int length) {
+  if (requested == null || requested > length) {
+    return length;
+  }
+  if (requested < 0) {
+    return 0;
+  }
+  return requested;
+}
+
+// The complete facts port is intentionally implemented here so the large trace
+// stays projection-free and lazy instead of constructing an unrelated DTO.
+// ignore: number-of-methods
+final class _SupportedSizeSparseFacts implements SparseEditSessionFacts {
+  _SupportedSizeSparseFacts({
+    required this.elementCount,
+    required this.layerCount,
+  });
+
+  final int elementCount;
+  final int layerCount;
+  int locationReadCount = 0;
+
+  @override
+  CanvasDocumentSummary get summary => CanvasDocumentSummary(
+    elementCount: elementCount,
+    layerCount: layerCount,
+    resourceCount: 0,
+  );
+
+  @override
+  CanvasBackground get background => const CanvasBackground();
+
+  @override
+  CanvasCamera get camera => CanvasCamera();
+
+  @override
+  CanvasPalette get palette => const CanvasPalette.defaults();
+
+  @override
+  Iterable<CanvasElementId> get backgroundElementIds => const [];
+
+  @override
+  Iterable<CanvasElementId> get elementIds => Iterable.generate(
+    elementCount,
+    (index) => CanvasElementId('element-$index'),
+  );
+
+  @override
+  Iterable<CanvasLayerId> get layerIds =>
+      Iterable.generate(layerCount, (index) => CanvasLayerId('layer-$index'));
+
+  @override
+  Iterable<CanvasElementId> elementIdsInLayer(CanvasLayerId id) {
+    if (id != CanvasLayerId('layer-0')) {
+      return const [];
+    }
+    return Iterable.generate(
+      elementCount,
+      (index) => CanvasElementId('element-$index'),
+    );
+  }
+
+  @override
+  Iterable<CanvasResourceId> get resourceIds => const [];
+
+  @override
+  bool hasLayer(CanvasLayerId id) {
+    final value = id.value;
+    if (!value.startsWith('layer-')) {
+      return false;
+    }
+    final index = int.tryParse(value.replaceFirst('layer-', ''));
+    return index != null && index >= 0 && index < layerCount;
+  }
+
+  @override
+  CanvasElement? elementById(CanvasElementId id) {
+    final value = id.value;
+    if (!value.startsWith('element-')) {
+      return null;
+    }
+    final index = int.tryParse(value.replaceFirst('element-', ''));
+    if (index == null || index < 0 || index >= elementCount) {
+      return null;
+    }
+    return CanvasRectElement(id: id, size: const Size(1, 1));
+  }
+
+  @override
+  ElementLocationFacts? elementLocationFor(CanvasElementId id) {
+    locationReadCount += 1;
+    return elementById(id) == null
+        ? null
+        : ElementLocationFacts.content(CanvasLayerId('layer-0'));
+  }
+
+  @override
+  CanvasResource? resourceById(CanvasResourceId id) => null;
+
+  @override
+  bool isResourceReferenced(CanvasResourceId id) => false;
+}
+
 // The fixture implements the complete sparse facts port so sparse-session tests
 // exercise the same boundary shape as production store facts.
 // ignore: number-of-methods
@@ -2219,6 +2895,20 @@ final class _SparseFixtureFacts implements SparseEditSessionFacts {
         if (element.id == id) {
           return element;
         }
+      }
+    }
+
+    return null;
+  }
+
+  @override
+  ElementLocationFacts? elementLocationFor(CanvasElementId id) {
+    if (document.backgroundElements.any((element) => element.id == id)) {
+      return const ElementLocationFacts.background();
+    }
+    for (final layer in document.layers) {
+      if (layer.elements.any((element) => element.id == id)) {
+        return ElementLocationFacts.content(layer.id);
       }
     }
 

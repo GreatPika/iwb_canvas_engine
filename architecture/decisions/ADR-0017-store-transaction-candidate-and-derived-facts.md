@@ -65,9 +65,12 @@ preserves failed-route rollback without making the Store own interaction timing.
   promotion consumes that list directly through exhaustive Draft application
   before discarding it through a write-only Draft mutation capability. Draft's
   promotion target opens and releases the materialized document around replay.
-  Closure/listener replay is retired. Sparse and Draft
-  indexed-order and reference-count adoption, plus route-generated-ID/runtime
-  delivery, remain pending; this ADR does not claim those routes are delivered.
+  Closure/listener replay is retired. Sparse structural ordering now uses
+  owner-local lazy indexed sequences and one current location view seeded from
+  the existing committed element-location facts; list orders and placement
+  overrides are retired. Sparse reference-count and Draft indexed-order work,
+  plus route-generated-ID/runtime delivery, remain pending; this ADR does not
+  claim those routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 
