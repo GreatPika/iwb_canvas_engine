@@ -18,10 +18,20 @@ import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
+import 'draft_structure.dart';
 import 'element_update_application.dart';
 import 'resource_edit_policy.dart';
 import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
+
+export 'draft_structure.dart'
+    show
+        DraftStructureOrderKind,
+        DraftStructureMapKind,
+        DraftStructureMapOperation,
+        DraftStructureWorkEvent,
+        DraftStructureWorkKind,
+        observeDraftStructureWork;
 
 @visibleForTesting
 enum DraftClearContentWorkEvent {
@@ -58,23 +68,14 @@ final class DraftDocument {
        resources = document.resources
            .map<CanvasResource>(ResourceTable.copy)
            .toList(),
-       backgroundElements = List.of(document.backgroundElements),
-       _layers = [
-         for (final layer in document.layers)
-           _DraftLayer(
-             id: layer.id,
-             elements: List.of(layer.elements),
-             metadata: layer.metadata,
-           ),
-       ];
+       _structure = DraftStructure(document);
 
   CanvasCamera camera;
   CanvasBackground background;
   CanvasPalette palette;
   CanvasMetadata metadata;
   final List<CanvasResource> resources;
-  final List<CanvasElement> backgroundElements;
-  final List<_DraftLayer> _layers;
+  DraftStructure _structure;
   final Set<CanvasElementId> _selectedElementIds;
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
   final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
@@ -117,18 +118,17 @@ final class DraftDocument {
 
   CanvasDocumentSummary get summary {
     return CanvasDocumentSummary(
-      elementCount: backgroundElements.length + _contentElementCount(),
-      layerCount: _layers.length,
+      elementCount:
+          _structure.backgroundElementCount + _structure.contentElementCount,
+      layerCount: _structure.layerCount,
       resourceCount: resources.length,
     );
   }
 
   bool ensureLayer(CanvasLayerId id, {int? index}) {
-    if (_layerIndex(id) != -1) {
+    if (!_structure.ensureLayer(id, index: index)) {
       return false;
     }
-    final targetIndex = _clampedInsertIndex(index, _layers.length);
-    _layers.insert(targetIndex, _DraftLayer(id: id));
     _touchedSet.touchLayer(id);
     _markLayerStructural();
 
@@ -141,9 +141,8 @@ final class DraftDocument {
     int? index,
   }) {
     _admitElement(element);
-    final layer = _layerForElementAdd(layerId);
-    final targetIndex = _clampedInsertIndex(index, layer.elements.length);
-    layer.elements.insert(targetIndex, element);
+    final targetLayerId = _layerForElementAdd(layerId);
+    _structure.addContent(element, layerId: targetLayerId, index: index);
     _touchedSet.touchAddedElement(element.id);
     _markStructural();
 
@@ -152,8 +151,7 @@ final class DraftDocument {
 
   CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) {
     _admitElement(element);
-    final targetIndex = _clampedInsertIndex(index, backgroundElements.length);
-    backgroundElements.insert(targetIndex, element);
+    _structure.addBackground(element, index: index);
     _touchedSet.touchAddedElement(element.id);
     _touchedSet.touchBackgroundLayer();
     _markStructural();
@@ -232,7 +230,6 @@ final class DraftDocument {
       after: updated,
     );
     return _replaceElement(
-      target: target,
       after: updated,
       compiledUpdate: compiledUpdate,
       revisionDelta: compiledUpdate.revisionDelta,
@@ -253,7 +250,6 @@ final class DraftDocument {
       after: after,
     );
     _replaceElement(
-      target: target,
       after: after,
       compiledUpdate: compiledUpdate,
       revisionDelta: revisionDelta,
@@ -261,12 +257,11 @@ final class DraftDocument {
   }
 
   bool _replaceElement({
-    required _ElementTarget target,
     required CanvasElement after,
     required ElementUpdateCompileResult compiledUpdate,
     required StoreRevisionDelta revisionDelta,
   }) {
-    target.replace(after);
+    _structure.replaceElement(after);
     _touchedSet.touchUpdatedElement(after.id);
     if (compiledUpdate.touchesSpatial) {
       _touchedSet.touchGeometryElement(after.id);
@@ -296,13 +291,12 @@ final class DraftDocument {
   }
 
   bool removeElement(CanvasElementId id) {
-    final target = _findElement(id);
+    final target = _structure.remove(id);
     if (target == null) {
       return false;
     }
-    target.remove();
     _touchedSet.touchRemovedElement(id);
-    if (target.isBackgroundLayer) {
+    if (target.isBackground) {
       _touchedSet.touchBackgroundLayer();
     }
     if (_selectedElementIds.contains(id)) {
@@ -415,19 +409,7 @@ final class DraftDocument {
     resources
       ..clear()
       ..addAll(replacement.resources.map(ResourceTable.copy));
-    backgroundElements
-      ..clear()
-      ..addAll(replacement.backgroundElements);
-    _layers
-      ..clear()
-      ..addAll([
-        for (final layer in replacement.layers)
-          _DraftLayer(
-            id: layer.id,
-            elements: List.of(layer.elements),
-            metadata: layer.metadata,
-          ),
-      ]);
+    _structure = DraftStructure(replacement);
     _documentReplaced = true;
     _touchedSet.touchDocumentReplacement();
     if (!_selectionValidForReplacement()) {
@@ -437,33 +419,20 @@ final class DraftDocument {
   }
 
   CanvasDocument _materialize() {
+    final structure = _structure.materialize();
     return CanvasDocument(
       camera: camera,
       background: background,
       palette: _copyPalette(palette),
       resources: resources.map(ResourceTable.copy),
-      backgroundElements: backgroundElements,
-      layers: [
-        for (final layer in _layers)
-          CanvasLayer(
-            id: layer.id,
-            elements: layer.elements,
-            metadata: layer.metadata,
-          ),
-      ],
+      backgroundElements: structure.backgroundElements,
+      layers: structure.layers,
       metadata: metadata,
     );
   }
 
-  int _contentElementCount() {
-    return _layers.fold<int>(
-      0,
-      (count, layer) => count + layer.elements.length,
-    );
-  }
-
   void _admitElement(CanvasElement element) {
-    if (_hasElementId(element.id)) {
+    if (_structure.hasElement(element.id)) {
       throw CanvasDataException(
         code: CanvasDataErrorCode.duplicateElementId,
         message: 'duplicate element id.',
@@ -473,18 +442,11 @@ final class DraftDocument {
   }
 
   List<CanvasElementId> _clearElements() {
-    final removedContentElementIds = <CanvasElementId>[];
-    for (final layer in _layers) {
-      for (final element in layer.elements) {
+    return _structure.clearContent(
+      onElementRemoved: (_) {
         _recordClearContentWork(DraftClearContentWorkEvent.contentElementVisit);
-        removedContentElementIds.add(element.id);
-      }
-    }
-    for (final layer in _layers) {
-      layer.elements.clear();
-    }
-
-    return removedContentElementIds;
+      },
+    );
   }
 
   List<CanvasResourceId> _clearResources({
@@ -496,7 +458,7 @@ final class DraftDocument {
 
     final retainedBackgroundResourceIds = <CanvasResourceId>{};
     _recordClearContentWork(DraftClearContentWorkEvent.backgroundReferencePass);
-    for (final element in backgroundElements) {
+    for (final element in _structure.orderedBackgroundElements()) {
       _recordClearContentWork(
         DraftClearContentWorkEvent.backgroundElementVisit,
       );
@@ -544,70 +506,30 @@ final class DraftDocument {
     }
   }
 
-  bool _hasElementId(CanvasElementId id) {
-    return backgroundElements.any((element) => element.id == id) ||
-        _layers.any(
-          (layer) => layer.elements.any((element) => element.id == id),
-        );
-  }
-
-  int _layerIndex(CanvasLayerId id) {
-    return _layers.indexWhere((layer) => layer.id == id);
-  }
-
-  _DraftLayer _layerForElementAdd(CanvasLayerId? layerId) {
+  CanvasLayerId _layerForElementAdd(CanvasLayerId? layerId) {
     if (layerId == null) {
-      if (_layers.isEmpty) {
-        final layer = _DraftLayer(id: CanvasLayerId('default-layer'));
-        _layers.add(layer);
-        _touchedSet.touchLayer(layer.id);
+      final lastLayerId = _structure.lastLayerId;
+      if (lastLayerId == null) {
+        final defaultLayerId = CanvasLayerId('default-layer');
+        _structure.ensureLayer(defaultLayerId);
+        _touchedSet.touchLayer(defaultLayerId);
         _markStructural();
-
-        return layer;
+        return defaultLayerId;
       }
-
-      return _layers.last;
+      return lastLayerId;
     }
 
-    final index = _layerIndex(layerId);
-    if (index != -1) {
-      return _layers[index];
+    if (_structure.hasLayer(layerId)) {
+      return layerId;
     }
-    final layer = _DraftLayer(id: layerId);
-    _layers.add(layer);
-    _touchedSet.touchLayer(layer.id);
+    _structure.ensureLayer(layerId);
+    _touchedSet.touchLayer(layerId);
     _markStructural();
-
-    return layer;
+    return layerId;
   }
 
-  _ElementTarget? _findElement(CanvasElementId id) {
-    final backgroundIndex = backgroundElements.indexWhere(
-      (element) => element.id == id,
-    );
-    if (backgroundIndex != -1) {
-      return _ElementTarget(
-        read: () => backgroundElements[backgroundIndex],
-        write: (element) => backgroundElements[backgroundIndex] = element,
-        removeAt: () => backgroundElements.removeAt(backgroundIndex),
-        isBackgroundLayer: true,
-      );
-    }
-
-    for (final layer in _layers) {
-      final index = layer.elements.indexWhere((element) => element.id == id);
-      if (index != -1) {
-        return _ElementTarget(
-          read: () => layer.elements[index],
-          write: (element) => layer.elements[index] = element,
-          removeAt: () => layer.elements.removeAt(index),
-          isBackgroundLayer: false,
-        );
-      }
-    }
-
-    return null;
-  }
+  DraftStructureElement? _findElement(CanvasElementId id) =>
+      _structure.elementForId(id);
 
   bool _isResourceReferenced(CanvasResourceId id) {
     _recordClearContentWork(DraftClearContentWorkEvent.acceptedElementScan);
@@ -637,10 +559,7 @@ final class DraftDocument {
   }
 
   Iterable<CanvasElement> _allElements() sync* {
-    yield* backgroundElements;
-    for (final layer in _layers) {
-      yield* layer.elements;
-    }
+    yield* _structure.orderedElements();
   }
 
   bool _intersectsSelection(Iterable<CanvasElementId> ids) {
@@ -657,9 +576,7 @@ final class DraftDocument {
   }
 
   Iterable<CanvasElement> _contentElements() sync* {
-    for (final layer in _layers) {
-      yield* layer.elements;
-    }
+    yield* _structure.orderedContentElements();
   }
 
   void _markStructural() {
@@ -729,56 +646,6 @@ final class DraftSparsePromotionTarget implements DraftSparseMutationConsumer {
     _draft = null;
     return draft;
   }
-}
-
-final class _DraftLayer {
-  _DraftLayer({
-    required this.id,
-    List<CanvasElement>? elements,
-    this.metadata = const CanvasMetadata.empty(),
-  }) : elements = elements ?? <CanvasElement>[];
-
-  final CanvasLayerId id;
-  final List<CanvasElement> elements;
-  final CanvasMetadata metadata;
-}
-
-final class _ElementTarget {
-  const _ElementTarget({
-    required CanvasElement Function() read,
-    required void Function(CanvasElement element) write,
-    required void Function() removeAt,
-    required this.isBackgroundLayer,
-  }) : _read = read,
-       _write = write,
-       _removeAt = removeAt;
-
-  final CanvasElement Function() _read;
-  final void Function(CanvasElement element) _write;
-  final void Function() _removeAt;
-  final bool isBackgroundLayer;
-
-  CanvasElement get element => _read();
-
-  void replace(CanvasElement element) {
-    _write(element);
-  }
-
-  void remove() {
-    _removeAt();
-  }
-}
-
-int _clampedInsertIndex(int? requestedIndex, int length) {
-  final index = requestedIndex ?? length;
-  if (index < 0) {
-    return 0;
-  }
-  if (index > length) {
-    return length;
-  }
-
-  return index;
 }
 
 bool _samePalette(CanvasPalette left, CanvasPalette right) {

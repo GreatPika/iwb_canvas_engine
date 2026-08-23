@@ -106,10 +106,17 @@ combine Store's direct committed image/vector counts with session-local
 affected-id deltas. Add, update, remove, remove/re-add, and clear transitions
 update the split deltas immediately; descriptor changes do not. Thus an unused
 resource decision is a direct current-count read, not an element scan or a
-copied count inventory. Draft structure and resource-count migration remain
-pending; this cutover adds no projection, copy, scan, or secondary replay work.
-Draft's promotion target opens and owns the materialized document around replay;
-the promotion owner receives only its write-only sparse-mutation consumer, so it
+copied count inventory. A materialized Draft has one direct structural backing:
+layer and element maps, a current element-placement view, and independent
+indexed orders for layers, background elements, and content in each layer.
+Ensure, add, update, remove, clear, summary, and explicit document projection
+use that backing. Projection traverses each current order once to construct
+public output lists; it does not retain a mutable list or nested-search mirror.
+Draft resource descriptors and image/vector reference counts remain pending for
+Unit 5. Atomic construction and one whole-backing replacement swap remain
+pending for Unit 6; this does not change replacement atomicity yet. Draft's
+promotion target opens and owns the materialized document around replay; the
+promotion owner receives only its write-only sparse-mutation consumer, so it
 cannot inspect Draft collections or build a Draft projection while replaying.
 Ordinary sparse and materialized candidates then ask the store to finalize
 accepted committed facts before `CommitCompiler` builds a plan. The compiler

@@ -82,10 +82,17 @@ only the session's affected-id delta. Every accepted image/vector row
 transition, including clear removal, updates that delta before the next
 resource decision; descriptor edits do not. `removeUnusedResource` and clear
 cleanup therefore query the current logical count without an accepted-element
-scan, count-map clone, or mutation-history walk. Draft indexed-order and Draft
-resource-count owner adoption remain pending. The journal receives only Draft's
-write-only DTO consumer during promotion, not a readable Draft state; Draft's
-promotion target opens and releases the document around that replay.
+scan, count-map clone, or mutation-history walk. Draft now owns direct layer
+and element maps, one current placement view, and separate owner-local indexed
+orders for layers, background elements, and every content layer. Materialized
+Draft operations read and mutate those facts directly; an explicit Draft
+document projection traverses each current order once and creates only public
+output lists. Draft keyed resource descriptors and split image/vector counts
+remain pending for Unit 5. Atomic whole-backing construction and replacement
+swap remain pending for Unit 6; this structural backing is not yet a completed
+replacement boundary. The journal receives only Draft's write-only DTO consumer
+during promotion, not a readable Draft state; Draft's promotion target opens
+and releases the document around that replay.
 One Store-private transaction candidate opens the existing family, resource,
 and structural working owners once and holds only current scalar facts
 (`camera`, `background`, and `palette`). It does not mirror rows, descriptors,

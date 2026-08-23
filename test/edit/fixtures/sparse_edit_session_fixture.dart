@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
 import 'package:iwb_canvas_engine/src/store/element_registry.dart';
@@ -141,6 +142,25 @@ void _registerSparsePromotionTests() {
 
 void _registerSparseStructureTests() {
   test(
+    'materialized Draft indexed structure matches the sequential placement oracle',
+    () => expect(
+      _materializedDraftIndexedStructureMatchesSequentialPlacementOracle,
+      returnsNormally,
+    ),
+  );
+  test(
+    'promoted Draft structural prefixes match the sequential oracle',
+    () => expect(
+      _promotedDraftStructuralPrefixesMatchSequentialOracle,
+      returnsNormally,
+    ),
+  );
+  test(
+    'materialized Draft structural work remains owner-bounded',
+    () =>
+        expect(_materializedDraftStructuralWorkRemainsBounded, returnsNormally),
+  );
+  test(
     'sparse indexed orders match a sequential placement oracle',
     () => expect(
       _sparseIndexedOrdersMatchSequentialPlacementOracle,
@@ -167,6 +187,719 @@ void _registerSparseStructureTests() {
       _sparseBackgroundToContentMoveReleasesResourceDuringClear,
       returnsNormally,
     ),
+  );
+}
+
+// The list/map oracle is independent from the Draft backing and is checked
+// after each state transition that can invalidate current placement or rank.
+// One sequential oracle trace keeps rank, placement, clear, and touched facts
+// adjacent; splitting would make its intermediate-state witness less legible.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _materializedDraftIndexedStructureMatchesSequentialPlacementOracle() {
+  final seed = _baseDocument();
+  final draft = DraftDocument(
+    seed,
+    selectedElementIds: [
+      CanvasElementId('content-a'),
+      CanvasElementId('background-a'),
+    ],
+  );
+  final oracle = _SparseOrderOracle(seed);
+  final touches = _DraftStructuralTouchOracle(
+    selectedElementIds: {
+      CanvasElementId('content-a'),
+      CanvasElementId('background-a'),
+    },
+  );
+  final layerFirst = CanvasLayerId('draft-layer-first');
+  final layerLast = CanvasLayerId('draft-layer-last');
+  final contentLayer = CanvasLayerId('layer-a');
+
+  final addedFirstLayer = draft.ensureLayer(layerFirst, index: -9);
+  expect(addedFirstLayer, oracle.ensureLayer(layerFirst, -9));
+  touches.ensureLayer(layerFirst, didChange: addedFirstLayer);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+  final addedLastLayer = draft.ensureLayer(layerLast, index: 999);
+  expect(addedLastLayer, oracle.ensureLayer(layerLast, 999));
+  touches.ensureLayer(layerLast, didChange: addedLastLayer);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+  final addedExistingLayer = draft.ensureLayer(layerFirst, index: 0);
+  expect(addedExistingLayer, oracle.ensureLayer(layerFirst, 0));
+  touches.ensureLayer(layerFirst, didChange: addedExistingLayer);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-end',
+    contentLayer,
+    null,
+  );
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-front',
+    contentLayer,
+    -4,
+  );
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-middle-a',
+    contentLayer,
+    1,
+  );
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-middle-b',
+    contentLayer,
+    1,
+  );
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-last',
+    contentLayer,
+    999,
+  );
+  _addDraftBackgroundAt(draft, oracle, touches, 'draft-background-end', null);
+  _addDraftBackgroundAt(draft, oracle, touches, 'draft-background-front', -1);
+  _addDraftBackgroundAt(draft, oracle, touches, 'draft-background-middle-a', 1);
+  _addDraftBackgroundAt(draft, oracle, touches, 'draft-background-middle-b', 1);
+  _addDraftBackgroundAt(draft, oracle, touches, 'draft-background-last', 999);
+
+  final updated = draft.updateElement(
+    CanvasRectElementUpdate(
+      id: CanvasElementId('content-a'),
+      fillColor: const CanvasFieldSet(Color(0xFF335577)),
+    ),
+  );
+  expect(updated, isTrue);
+  touches.update(CanvasElementId('content-a'), didChange: updated);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+
+  final movedContentId = CanvasElementId('content-a');
+  final removedContent = draft.removeElement(movedContentId);
+  expect(removedContent, oracle.remove(movedContentId));
+  touches.remove(movedContentId, didChange: removedContent);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+  draft.addBackgroundElement(_rect('content-a'), index: 0);
+  oracle.addBackground(movedContentId, 0);
+  touches.addBackground(movedContentId);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+
+  final movedBackgroundId = CanvasElementId('background-a');
+  final removedBackground = draft.removeElement(movedBackgroundId);
+  expect(removedBackground, oracle.remove(movedBackgroundId));
+  touches.remove(movedBackgroundId, didChange: removedBackground);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+  draft.addElement(_rect('background-a'), layerId: contentLayer, index: 0);
+  oracle.addContent(movedBackgroundId, contentLayer, 0);
+  touches.addContent(movedBackgroundId);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+
+  final clear = draft.clearContent(removeUnusedResources: false);
+  final expectedRemoved = oracle.clearContent();
+  expect(clear.removedElementIds, expectedRemoved);
+  expect(clear.didClearContent, isTrue);
+  touches.clear(expectedRemoved);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+
+  _addDraftContentAt(
+    draft,
+    oracle,
+    touches,
+    'draft-content-after-clear',
+    contentLayer,
+    0,
+  );
+}
+
+// The five values are one public insertion paired with its oracle transition.
+// ignore: number-of-parameters
+void _addDraftContentAt(
+  DraftDocument draft,
+  _SparseOrderOracle oracle,
+  _DraftStructuralTouchOracle touches,
+  String id,
+  CanvasLayerId layerId,
+  int? index,
+) {
+  final element = _rect(id);
+  expect(draft.addElement(element, layerId: layerId, index: index), element.id);
+  oracle.addContent(element.id, layerId, index);
+  touches.addContent(element.id);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+}
+
+void _addDraftBackgroundAt(
+  DraftDocument draft,
+  _SparseOrderOracle oracle,
+  _DraftStructuralTouchOracle touches,
+  String id,
+  int? index,
+) {
+  final element = _rect(id);
+  expect(draft.addBackgroundElement(element, index: index), element.id);
+  oracle.addBackground(element.id, index);
+  touches.addBackground(element.id);
+  _expectDraftStructureMatchesOracle(draft, oracle, touches);
+}
+
+void _expectDraftStructureMatchesOracle(
+  DraftDocument draft,
+  _SparseOrderOracle oracle,
+  _DraftStructuralTouchOracle touches,
+) {
+  final document = draft.readDocument();
+  _expectDocumentStructureMatchesOracle(document, oracle);
+  expect(draft.summary.elementCount, _oracleElementCount(oracle));
+  expect(draft.summary.layerCount, oracle.layerIds.length);
+  touches.expectMatches(draft.touchedSet);
+}
+
+/// This tracks only public touched facts alongside the independent placement
+/// oracle; it does not model any Draft backing or order implementation.
+final class _DraftStructuralTouchOracle {
+  _DraftStructuralTouchOracle({
+    required Set<CanvasElementId> selectedElementIds,
+  }) : _selectedElementIds = selectedElementIds;
+
+  final Set<CanvasElementId> _selectedElementIds;
+  final Set<CanvasLayerId> _layerIds = {};
+  final Set<CanvasElementId> _addedElementIds = {};
+  final Set<CanvasElementId> _updatedElementIds = {};
+  final Set<CanvasElementId> _removedElementIds = {};
+  var _backgroundLayerChanged = false;
+  var _selectionChanged = false;
+
+  void ensureLayer(CanvasLayerId id, {required bool didChange}) {
+    if (didChange) {
+      _layerIds.add(id);
+    }
+  }
+
+  void addContent(CanvasElementId id) {
+    _addedElementIds.add(id);
+  }
+
+  void addBackground(CanvasElementId id) {
+    _addedElementIds.add(id);
+    _backgroundLayerChanged = true;
+  }
+
+  void update(CanvasElementId id, {required bool didChange}) {
+    if (didChange) {
+      _updatedElementIds.add(id);
+    }
+  }
+
+  void remove(CanvasElementId id, {required bool didChange}) {
+    if (!didChange) {
+      return;
+    }
+    _removedElementIds.add(id);
+    _selectionChanged |= _selectedElementIds.contains(id);
+  }
+
+  void clear(Iterable<CanvasElementId> ids) {
+    for (final id in ids) {
+      remove(id, didChange: true);
+    }
+  }
+
+  void expectMatches(TouchedSet touched) {
+    expect(touched.layerIds, _layerIds);
+    expect(touched.addedElementIds, _addedElementIds);
+    expect(touched.updatedElementIds, _updatedElementIds);
+    expect(touched.removedElementIds, _removedElementIds);
+    expect(
+      touched.backgroundLayerChanged,
+      _backgroundLayerChanged,
+      reason: 'background-layer touched fact',
+    );
+    expect(
+      touched.selection,
+      _selectionChanged,
+      reason: 'selection touched fact',
+    );
+  }
+}
+
+// Each prefix promotes an independently created sparse session. The trace is
+// declarative and applies public operations to the independent list/map oracle.
+void _promotedDraftStructuralPrefixesMatchSequentialOracle() {
+  const actions = _PromotedStructureAction.values;
+  final selectedIds = {
+    CanvasElementId('content-a'),
+    CanvasElementId('background-a'),
+  };
+
+  for (var length = 1; length <= actions.length; length += 1) {
+    final seed = _baseDocument();
+    final session = _sparseSessionForDocument(
+      seed,
+      selectedElementIds: selectedIds,
+    );
+    final oracle = _SparseOrderOracle(seed);
+    final touches = _DraftStructuralTouchOracle(
+      selectedElementIds: selectedIds,
+    );
+
+    for (final action in actions.take(length)) {
+      _applyPromotedStructureAction(action, session, oracle, touches);
+    }
+
+    final document = session.readDraftDocument();
+    _expectDocumentStructureMatchesOracle(document, oracle);
+    expect(session.draftSummary.elementCount, _oracleElementCount(oracle));
+    expect(session.draftSummary.layerCount, oracle.layerIds.length);
+    touches.expectMatches(session.touchedSet);
+  }
+}
+
+enum _PromotedStructureAction {
+  ensureLayer,
+  addContentEnd,
+  addContentFront,
+  addBackground,
+  updateContent,
+  removeContent,
+  readdContentAsBackground,
+  removeBackground,
+  readdBackgroundAsContent,
+  clearContent,
+}
+
+// The one switch is the public-operation trace consumed by every prefix; split
+// action forwarding would duplicate its oracle transition and obscure the trace.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _applyPromotedStructureAction(
+  _PromotedStructureAction action,
+  EditSession session,
+  _SparseOrderOracle oracle,
+  _DraftStructuralTouchOracle touches,
+) {
+  final layerId = CanvasLayerId('layer-a');
+  final contentId = CanvasElementId('content-a');
+  final backgroundId = CanvasElementId('background-a');
+  switch (action) {
+    case _PromotedStructureAction.ensureLayer:
+      final id = CanvasLayerId('prefix-layer');
+      final didChange = session.ensureLayer(id, index: -3);
+      expect(didChange, oracle.ensureLayer(id, -3));
+      touches.ensureLayer(id, didChange: didChange);
+    case _PromotedStructureAction.addContentEnd:
+      final element = _rect('prefix-content-end');
+      expect(session.addElement(element, layerId: layerId), element.id);
+      oracle.addContent(element.id, layerId, null);
+      touches.addContent(element.id);
+    case _PromotedStructureAction.addContentFront:
+      final element = _rect('prefix-content-front');
+      expect(
+        session.addElement(element, layerId: layerId, index: -8),
+        element.id,
+      );
+      oracle.addContent(element.id, layerId, -8);
+      touches.addContent(element.id);
+    case _PromotedStructureAction.addBackground:
+      final element = _rect('prefix-background');
+      expect(session.addBackgroundElement(element, index: 0), element.id);
+      oracle.addBackground(element.id, 0);
+      touches.addBackground(element.id);
+    case _PromotedStructureAction.updateContent:
+      expect(
+        session.updateElement(
+          CanvasRectElementUpdate(
+            id: contentId,
+            fillColor: const CanvasFieldSet(Color(0xFF123456)),
+          ),
+        ),
+        isTrue,
+      );
+      touches.update(contentId, didChange: true);
+    case _PromotedStructureAction.removeContent:
+      final didChange = session.removeElement(contentId);
+      expect(didChange, oracle.remove(contentId));
+      touches.remove(contentId, didChange: didChange);
+    case _PromotedStructureAction.readdContentAsBackground:
+      expect(
+        session.addBackgroundElement(_rect('content-a'), index: 0),
+        contentId,
+      );
+      oracle.addBackground(contentId, 0);
+      touches.addBackground(contentId);
+    case _PromotedStructureAction.removeBackground:
+      final didChange = session.removeElement(backgroundId);
+      expect(didChange, oracle.remove(backgroundId));
+      touches.remove(backgroundId, didChange: didChange);
+    case _PromotedStructureAction.readdBackgroundAsContent:
+      expect(
+        session.addElement(_rect('background-a'), layerId: layerId, index: 0),
+        backgroundId,
+      );
+      oracle.addContent(backgroundId, layerId, 0);
+      touches.addContent(backgroundId);
+    case _PromotedStructureAction.clearContent:
+      final result = session.clearContent(removeUnusedResources: false);
+      final removedIds = oracle.clearContent();
+      expect(result.removedElementIds, removedIds);
+      expect(result.removedResourceIds, isEmpty);
+      touches.clear(removedIds);
+  }
+}
+
+void _expectDocumentStructureMatchesOracle(
+  CanvasDocument document,
+  _SparseOrderOracle oracle,
+) {
+  expect(
+    document.backgroundElements.map((element) => element.id),
+    oracle.backgroundIds,
+  );
+  expect(document.layers.map((layer) => layer.id), oracle.layerIds);
+  for (final layer in document.layers) {
+    expect(
+      layer.elements.map((element) => element.id),
+      oracle.contentIds(layer.id),
+    );
+  }
+}
+
+int _oracleElementCount(_SparseOrderOracle oracle) {
+  return oracle.backgroundIds.length +
+      oracle.layerIds.fold<int>(
+        0,
+        (count, layerId) => count + oracle.contentIds(layerId).length,
+      );
+}
+
+// One supported-size trace exercises direct map reads, both order families,
+// rank mutations, clear, compensation, and repeated public materialization.
+// It counts owner phases and sequence work; it intentionally makes no timing
+// or private-node-shape claim.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _materializedDraftStructuralWorkRemainsBounded() {
+  const elementCount = 200000;
+  const initialLayerCount = 4095;
+  const orderCountAfterMutation = 4098;
+  const indexedMutationCount = 9;
+  final maxNodeVisitsPerMutation = 2 * _binaryLogCeiling(elementCount + 4);
+  final constructionEvents = <DraftStructureWorkEvent>[];
+  final directLookupEvents = <DraftStructureWorkEvent>[];
+  final clearEvents = <DraftStructureWorkEvent>[];
+  final materializationEvents = <DraftStructureWorkEvent>[];
+  final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
+  var phase = _DraftStructureWorkPhase.construction;
+
+  observeDraftStructureWork(
+    (event) {
+      switch (phase) {
+        case _DraftStructureWorkPhase.construction:
+          constructionEvents.add(event);
+        case _DraftStructureWorkPhase.directLookup:
+          directLookupEvents.add(event);
+        case _DraftStructureWorkPhase.clear:
+          clearEvents.add(event);
+        case _DraftStructureWorkPhase.materialization:
+          materializationEvents.add(event);
+      }
+    },
+    () => IndexedOrderSequence.observeWork(sequenceEvents.add, () {
+      final draft = DraftDocument(
+        _supportedSizeDraftDocument(
+          elementCount: elementCount,
+          layerCount: initialLayerCount,
+        ),
+      );
+      phase = _DraftStructureWorkPhase.directLookup;
+
+      expect(
+        draft.ensureLayer(CanvasLayerId('draft-new-layer'), index: 0),
+        isTrue,
+      );
+      expect(draft.ensureLayer(CanvasLayerId('layer-4094')), isFalse);
+      draft.addBackgroundElement(_rect('draft-background-front'), index: -1);
+      draft.addBackgroundElement(_rect('draft-background-middle'), index: 0);
+      draft.addBackgroundElement(_rect('draft-background-last'), index: 999999);
+      draft.addElement(
+        _rect('draft-content-front'),
+        layerId: CanvasLayerId('layer-0'),
+        index: -1,
+      );
+      draft.addElement(
+        _rect('draft-content-middle'),
+        layerId: CanvasLayerId('layer-0'),
+        index: elementCount ~/ 2,
+      );
+      draft.addElement(
+        _rect('draft-content-last'),
+        layerId: CanvasLayerId('layer-0'),
+        index: 999999,
+      );
+      draft.addElement(_rect('draft-content-implicit'), index: 0);
+      expect(
+        draft.updateElement(
+          CanvasRectElementUpdate(
+            id: CanvasElementId('element-100000'),
+            fillColor: const CanvasFieldSet(Color(0xFF113355)),
+          ),
+        ),
+        isTrue,
+      );
+      expect(draft.removeElement(CanvasElementId('element-100000')), isTrue);
+      expect(draft.removeElement(CanvasElementId('missing-element')), isFalse);
+      draft.addElement(
+        _rect('element-100000'),
+        layerId: CanvasLayerId('layer-0'),
+        index: elementCount ~/ 2,
+      );
+      phase = _DraftStructureWorkPhase.clear;
+      expect(
+        draft.clearContent(removeUnusedResources: false).removedElementIds,
+        hasLength(elementCount + 4),
+      );
+      phase = _DraftStructureWorkPhase.materialization;
+      expect(draft.readDocument().backgroundElements, hasLength(3));
+      expect(draft.readDocument().layers, hasLength(4096));
+    }),
+  );
+
+  expect(
+    _draftStructureEventCounts(
+      constructionEvents,
+      DraftStructureWorkKind.orderOpen,
+    ),
+    {
+      DraftStructureOrderKind.layer: 1,
+      DraftStructureOrderKind.background: 1,
+      DraftStructureOrderKind.content: initialLayerCount,
+    },
+  );
+  expect(
+    _draftStructureEventCounts(
+      directLookupEvents,
+      DraftStructureWorkKind.orderOpen,
+    ),
+    {
+      DraftStructureOrderKind.layer: 0,
+      DraftStructureOrderKind.background: 0,
+      DraftStructureOrderKind.content: 1,
+    },
+  );
+  expect(
+    _draftStructureEventCount(
+      constructionEvents,
+      DraftStructureWorkKind.constructionLayerVisit,
+    ),
+    initialLayerCount,
+  );
+  expect(
+    _draftStructureEventCount(
+      constructionEvents,
+      DraftStructureWorkKind.constructionElementVisit,
+    ),
+    elementCount,
+  );
+  expect(
+    _draftMapEventCount(
+      directLookupEvents,
+      DraftStructureMapKind.elementRows,
+      DraftStructureMapOperation.contains,
+    ),
+    inInclusiveRange(1, 10),
+  );
+  expect(
+    _draftMapEventCount(
+      directLookupEvents,
+      DraftStructureMapKind.layerRows,
+      DraftStructureMapOperation.contains,
+    ),
+    inInclusiveRange(1, 8),
+  );
+  expect(
+    _draftMapEventCount(
+      directLookupEvents,
+      DraftStructureMapKind.elementRows,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 4),
+  );
+  expect(
+    _draftMapEventCount(
+      directLookupEvents,
+      DraftStructureMapKind.placements,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 3),
+  );
+  expect(
+    _draftMapEventCount(
+      directLookupEvents,
+      DraftStructureMapKind.contentOrders,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 8),
+  );
+  expect(
+    _draftMapEventCount(
+      clearEvents,
+      DraftStructureMapKind.contentOrders,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 4096),
+  );
+  expect(
+    _draftMapEventCount(
+      clearEvents,
+      DraftStructureMapKind.elementRows,
+      DraftStructureMapOperation.remove,
+    ),
+    inInclusiveRange(1, elementCount + 4),
+  );
+  expect(
+    _draftMapEventCount(
+      clearEvents,
+      DraftStructureMapKind.placements,
+      DraftStructureMapOperation.remove,
+    ),
+    inInclusiveRange(1, elementCount + 4),
+  );
+  expect(
+    _draftMapEventCount(
+      materializationEvents,
+      DraftStructureMapKind.layerRows,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 2 * 4096),
+  );
+  expect(
+    _draftMapEventCount(
+      materializationEvents,
+      DraftStructureMapKind.contentOrders,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 2 * 4096),
+  );
+  expect(
+    _draftMapEventCount(
+      materializationEvents,
+      DraftStructureMapKind.elementRows,
+      DraftStructureMapOperation.read,
+    ),
+    inInclusiveRange(1, 6),
+  );
+  expect(
+    _draftStructureEventCount(
+      materializationEvents,
+      DraftStructureWorkKind.materialization,
+    ),
+    2 * orderCountAfterMutation,
+  );
+  expect(
+    _indexedEventCount(sequenceEvents, IndexedOrderSequenceWorkEvent.buildOpen),
+    orderCountAfterMutation,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.buildInputVisit,
+    ),
+    elementCount + initialLayerCount,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.insertNodeVisit,
+    ),
+    lessThanOrEqualTo(indexedMutationCount * maxNodeVisitsPerMutation),
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.removeNodeVisit,
+    ),
+    lessThanOrEqualTo(maxNodeVisitsPerMutation),
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.finalFlattenVisit,
+    ),
+    0,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.finalFlattenPublication,
+    ),
+    0,
+  );
+  expect(
+    _indexedEventCount(
+      sequenceEvents,
+      IndexedOrderSequenceWorkEvent.orderedIterationVisit,
+    ),
+    elementCount + 4 + (3 * 4096) + 6,
+  );
+}
+
+Map<DraftStructureOrderKind, int> _draftStructureEventCounts(
+  Iterable<DraftStructureWorkEvent> events,
+  DraftStructureWorkKind kind,
+) {
+  return {
+    for (final order in DraftStructureOrderKind.values)
+      order: events
+          .where((event) => event.kind == kind && event.order == order)
+          .length,
+  };
+}
+
+int _draftStructureEventCount(
+  Iterable<DraftStructureWorkEvent> events,
+  DraftStructureWorkKind kind,
+) => events.where((event) => event.kind == kind).length;
+
+int _draftMapEventCount(
+  Iterable<DraftStructureWorkEvent> events,
+  DraftStructureMapKind mapKind,
+  DraftStructureMapOperation mapOperation,
+) => events
+    .where(
+      (event) => event.mapKind == mapKind && event.mapOperation == mapOperation,
+    )
+    .length;
+
+enum _DraftStructureWorkPhase {
+  construction,
+  directLookup,
+  clear,
+  materialization,
+}
+
+CanvasDocument _supportedSizeDraftDocument({
+  required int elementCount,
+  required int layerCount,
+}) {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-0'),
+        elements: [
+          for (var index = 0; index < elementCount; index += 1)
+            _rect('element-$index'),
+        ],
+      ),
+      for (var index = 1; index < layerCount; index += 1)
+        CanvasLayer(id: CanvasLayerId('layer-$index')),
+    ],
   );
 }
 
@@ -2685,11 +3418,14 @@ EditSession _sparseSession(DraftDocument Function() promoteDraft) {
 EditSession _sparseSessionForDocument(
   CanvasDocument document, {
   DraftDocument Function()? promoteDraft,
+  Iterable<CanvasElementId> selectedElementIds = const [],
 }) {
   return EditSession.sparse(
     facts: _SparseFixtureFacts(document),
-    promoteDraft: promoteDraft ?? () => DraftDocument(document),
-    selectedElementIds: const [],
+    promoteDraft:
+        promoteDraft ??
+        () => DraftDocument(document, selectedElementIds: selectedElementIds),
+    selectedElementIds: selectedElementIds,
   );
 }
 

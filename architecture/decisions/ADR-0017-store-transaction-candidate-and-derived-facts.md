@@ -72,9 +72,13 @@ preserves failed-route rollback without making the Store own interaction timing.
   committed image/vector count summaries with session-local affected-id deltas,
   updated for every accepted row transition and clear barrier. This retires
   sparse accepted-element scans and copied count inventories; Store remains the
-  owner of committed summaries and final relationship policy. Draft
-  indexed-order/resource work plus route-generated-ID/runtime delivery remain
-  pending; this ADR does not claim those routes are delivered.
+  owner of committed summaries and final relationship policy. Draft structural
+  state now uses direct layer/element maps, one current placement view, and
+  separate owner-local indexed orders; public Draft projection materializes
+  those orders only on explicit reads. Draft keyed resource/count work remains
+  pending for Unit 5, and atomic construction plus whole-backing replacement
+  swap remain pending for Unit 6. Route-generated-ID/runtime delivery also
+  remains pending; this ADR does not claim those routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 
