@@ -42,7 +42,9 @@ skill's responsibility. Give the thread the parent goal and any source artifact
 required by the selected thread type, but do not override the skill workflow,
 report-back instruction, or rules for when it must stop and report a problem.
 
-Use `model: "gpt-5.6-sol"` and `thinking: "xhigh"` for Research, Plan and Design threads:
+Use `model: "gpt-5.6-terra"` and `thinking: "high"` for Research threads.
+Use `model: "gpt-5.6-sol"` and `thinking: "high"` for Design and Plan
+contract threads:
 
 - Research: title starts with `research`; prompt says to use
   `$research-codebase`. Research threads provide facts only. Do not ask them
