@@ -66,9 +66,17 @@ The codec reader validates JSON/map wire format and emits import events;
 descriptor rows, admitted-id facts, reference facts, revision facts, camera
 facts, and projection invalidation facts before runtime install.
 
-Sparse edit sessions record sparse mutations and ask `DocumentStoreKernel` to
-build the accepted `CommittedDocument` snapshot before the irreversible
-swap.
+Sparse edit sessions record every successful pre-materialization operation once
+as an unchanged `StoreSparseMutation` and ask `DocumentStoreKernel` to build
+the accepted `CommittedDocument` snapshot before the irreversible swap. The
+same ordered DTO list is the sole promotion input: explicit Draft
+materialization traverses it once through Draft's exhaustive mutation consumer,
+then discards it. Promotion does not build a committed public projection or
+retain a closure/listener replay mirror. Sparse and Draft indexed-order and
+reference-count owner adoption remain pending; this early journal cutover is
+work-neutral and does not claim those later bounds. The journal receives only
+Draft's write-only DTO consumer during promotion, not a readable Draft state;
+Draft's promotion target opens and releases the document around that replay.
 One Store-private transaction candidate opens the existing family, resource,
 and structural working owners once and holds only current scalar facts
 (`camera`, `background`, and `palette`). It does not mirror rows, descriptors,

@@ -60,8 +60,14 @@ preserves failed-route rollback without making the Store own interaction timing.
 - Owner normalization, freeze, and derived-fact publication stay at their
   existing owner seams.
 - Store candidate and indexed/derived infrastructure are implemented now.
-- EditSession/DraftDocument adoption and route-generated-ID/runtime delivery
-  remain pending; this ADR does not claim those routes are delivered.
+- EditSession/DraftDocument now share one sole `StoreSparseMutation` journal:
+  every successful sparse operation appends the unchanged DTO once, and explicit
+  promotion consumes that list directly through exhaustive Draft application
+  before discarding it through a write-only Draft mutation capability. Draft's
+  promotion target opens and releases the materialized document around replay.
+  Closure/listener replay is retired. Sparse and Draft
+  indexed-order and reference-count adoption, plus route-generated-ID/runtime
+  delivery, remain pending; this ADR does not claim those routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 

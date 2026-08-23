@@ -371,10 +371,9 @@ clear delivery, while `test/spatial/touched_update_test.dart` remains the
 genuinely zero-frame empty-reset proof. Background hit/context exclusion is
 owned by geometry policy and is not redefined by these clear suites.
 
-`test.edit.net_no_op_edit_commit`, `test.store.store_commit_finalization`, and
-`test.guardrails.edit_accepted_finalization_guardrail` cover store-owned
-accepted finalization for ordinary sparse and materialized edit candidates.
-They prove compensating final fact no-ops collapse before edit plan
+`test.edit.net_no_op_edit_commit` and `test.store.store_commit_finalization`
+cover store-owned accepted finalization for ordinary sparse and materialized
+edit candidates. They prove compensating final fact no-ops collapse before edit plan
 compilation, interaction augmentation, store install, public state publication,
 typed effect delivery, action emission, observer notification, and public
 projection reads, while explicit `replaceDraftDocument` remains the forced
@@ -386,8 +385,9 @@ Direct Store proof remains with `test/store/store_commit_finalization_test.dart`
 current-owner reads, normalized accepted facts, zero/one aggregate publication,
 and direct sparse compatibility. `test/store/no_projection_hot_path_test.dart`
 owns projection exclusion. The accepted-finalization guardrail retains only the
-stable edit-to-prepared-DTO boundary; it no longer treats private Store helper
-names or bodies as proof.
+stable `SparseCommitPreparer` declaration boundary returning
+`PreparedSparseStoreCommit`; it does not cover Store finalization, projection,
+operation-matrix, or invalidation behavior.
 
 `test.api.runtime_timestamp_order` covers the public runtime timestamp
 contract for committed action events: nullable or backwards `timestampMs` hints

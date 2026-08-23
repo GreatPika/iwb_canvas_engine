@@ -91,6 +91,14 @@ void _registerSparseSummaryTests() {
 
 void _registerSparsePromotionTests() {
   test(
+    'promotion applies the sole sparse DTO journal in order without extra work phases',
+    () => expect(_promotionAppliesTheSoleDtoJournal, returnsNormally),
+  );
+  test(
+    'promotion applies sparse clear content and unused resource removal',
+    () => expect(_promotionAppliesSparseClearContent, returnsNormally),
+  );
+  test(
     'readDraftDocument promotes and replays prior sparse mutations',
     () => expect(_readDraftDocumentPromotesAndReplays, returnsNormally),
   );
@@ -105,6 +113,149 @@ void _registerSparsePromotionTests() {
     'replaceDraftDocument promotes to materialized replacement fallback',
     () => expect(_replaceDraftDocumentPromotes, returnsNormally),
   );
+}
+
+// The mixed trace stays with its independent Store snapshot so the witness
+// directly connects each input mutation to the single promotion traversal.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _promotionAppliesTheSoleDtoJournal() {
+  final session = _sparseSession(_baseDraft);
+
+  expect(session.ensureLayer(CanvasLayerId('layer-added'), index: 0), isTrue);
+  expect(session.ensureLayer(CanvasLayerId('layer-empty'), index: 1), isTrue);
+  expect(session.ensureLayer(CanvasLayerId('layer-added'), index: 0), isFalse);
+  expect(session.upsertResource(_resource('resource-a')), isFalse);
+  session.setBackgroundColor(const Color(0xFFFFFFFF));
+  session.addBackgroundElement(_rect('background-first'), index: 0);
+  session.addBackgroundElement(_rect('background-second'), index: 0);
+  session.addElement(
+    _rect('content-first'),
+    layerId: CanvasLayerId('layer-added'),
+    index: 0,
+  );
+  session.addElement(
+    _rect('content-second'),
+    layerId: CanvasLayerId('layer-added'),
+    index: 0,
+  );
+  expect(
+    session.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('background-first'),
+        fillColor: const CanvasFieldSet(Color(0xFF00FF00)),
+      ),
+    ),
+    isTrue,
+  );
+  expect(session.removeElement(CanvasElementId('background-a')), isTrue);
+  expect(session.upsertResource(_resource('resource-retained')), isTrue);
+  expect(session.removeUnusedResource(CanvasResourceId('resource-a')), isTrue);
+  session.setBackgroundColor(const Color(0xFF111111));
+  session.setGrid(CanvasGrid(enabled: true, cellSize: 8));
+  session.setCameraOffset(const Offset(2, 3));
+  session.setPalette(
+    CanvasPalette(
+      penColors: const [Color(0xFF111111)],
+      backgroundColors: const [Color(0xFF222222)],
+      gridSizes: const [8],
+    ),
+  );
+
+  final storeCommit = session.sparseCommit;
+  final mutations = storeCommit.mutations;
+  final events = <SparsePromotionWorkEvent>[];
+  final appliedMutations = <StoreSparseMutation>[];
+  final document = DraftDocument.observeSparseMutationApplications(
+    appliedMutations.add,
+    () => observeSparsePromotionWork(events.add, session.readDraftDocument),
+  );
+
+  expect(mutations, hasLength(14));
+  expect(appliedMutations, hasLength(mutations.length));
+  expect(events.map((event) => event.phase), [
+    SparsePromotionWorkPhase.open,
+    for (final _ in mutations) ...[
+      SparsePromotionWorkPhase.journalElementRead,
+      SparsePromotionWorkPhase.draftApplication,
+    ],
+    SparsePromotionWorkPhase.complete,
+  ]);
+  for (var index = 0; index < mutations.length; index += 1) {
+    expect(
+      identical(events[(index * 2) + 1].mutation, mutations[index]),
+      isTrue,
+    );
+    expect(
+      identical(events[(index * 2) + 2].mutation, mutations[index]),
+      isTrue,
+    );
+    expect(identical(appliedMutations[index], mutations[index]), isTrue);
+  }
+  expect(document.backgroundElements.map((element) => element.id), [
+    CanvasElementId('background-second'),
+    CanvasElementId('background-first'),
+  ]);
+  expect(
+    (document.backgroundElements.last as CanvasRectElement).fillColor,
+    const Color(0xFF00FF00),
+  );
+  expect(
+    document.backgroundElements.map((element) => element.id),
+    isNot(contains(CanvasElementId('background-a'))),
+  );
+  expect(document.resources.map((resource) => resource.id), [
+    CanvasResourceId('resource-retained'),
+  ]);
+  expect(document.layers.map((layer) => layer.id), [
+    CanvasLayerId('layer-added'),
+    CanvasLayerId('layer-empty'),
+    CanvasLayerId('layer-a'),
+  ]);
+  expect(document.layers.first.elements.map((element) => element.id), [
+    CanvasElementId('content-second'),
+    CanvasElementId('content-first'),
+  ]);
+  expect(document.layers[1].elements, isEmpty);
+  expect(document.layers.last.elements.map((element) => element.id), [
+    CanvasElementId('content-a'),
+  ]);
+  expect(document.background.color, const Color(0xFF111111));
+  expect(document.background.grid, CanvasGrid(enabled: true, cellSize: 8));
+  expect(document.camera.offset, const Offset(2, 3));
+  expect(document.palette.penColors, const [Color(0xFF111111)]);
+}
+
+// The direct Draft baseline and promotion work comparison remain together so
+// a second clear traversal cannot be hidden behind separately derived facts.
+// ignore: halstead-volume
+void _promotionAppliesSparseClearContent() {
+  final directDraft = _baseDraft();
+  final directWork = <DraftClearContentWorkEvent>[];
+  final directClear = DraftDocument.observeClearContentWork(
+    directWork.add,
+    () => directDraft.clearContent(removeUnusedResources: true),
+  );
+  final session = _sparseSession(_baseDraft);
+
+  final clear = session.clearContent(removeUnusedResources: true);
+  expect(clear.didClearContent, isTrue);
+  expect(clear.removedElementIds, [CanvasElementId('content-a')]);
+  expect(clear.removedResourceIds, [CanvasResourceId('resource-a')]);
+
+  final promotionWork = <DraftClearContentWorkEvent>[];
+  final document = DraftDocument.observeClearContentWork(
+    promotionWork.add,
+    session.readDraftDocument,
+  );
+
+  expect(clear.removedElementIds, directClear.removedElementIds);
+  expect(clear.removedResourceIds, directClear.removedResourceIds);
+  expect(promotionWork, directWork);
+  expect(document.backgroundElements.map((element) => element.id), [
+    CanvasElementId('background-a'),
+  ]);
+  expect(document.layers.single.elements, isEmpty);
+  expect(document.resources, isEmpty);
 }
 
 void _draftSummaryOpensWithoutCommittedIdEnumeration() {

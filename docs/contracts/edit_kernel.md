@@ -88,18 +88,27 @@ sequenceDiagram
 ```
 
 Ordinary public edit, command, and interaction commit routes open a sparse edit
-session. The session records a callback-local sparse journal and reads committed
-facts from `DocumentStoreKernel` without building a public `CanvasDocument`
-projection. `draftSummary` uses the committed summary plus sparse deltas.
-`readDraftDocument` and `replaceDraftDocument` are explicit materialization
-fallbacks: they materialize a rollback-safe `DraftDocument` and replay prior
-sparse mutations. Ordinary sparse and materialized candidates then ask the store
-to finalize accepted committed facts before `CommitCompiler` builds a plan.
-The compiler consumes only the store-accepted revision delta and touched facts,
-not provisional session or draft revision journals.
+session. Every successful pre-materialization operation records exactly one
+unchanged `StoreSparseMutation` in its callback-local journal. That one ordered
+DTO list is consumed both by `DocumentStoreKernel` and by explicit promotion;
+there is no closure or listener replay history. The session reads committed
+facts without building a public `CanvasDocument` projection, and `draftSummary`
+uses the committed summary plus sparse deltas. `readDraftDocument` and
+`replaceDraftDocument` are explicit materialization fallbacks: they materialize
+a rollback-safe `DraftDocument` and make one ordered traversal of the DTO
+journal through Draft's exhaustive mutation application boundary. The list-backed
+Draft and sparse order/reference-count implementations remain pending migration;
+this journal cutover adds no projection, copy, scan, or secondary replay work.
+Draft's promotion target opens and owns the materialized document around replay;
+the promotion owner receives only its write-only sparse-mutation consumer, so it
+cannot inspect Draft collections or build a Draft projection while replaying.
+Ordinary sparse and materialized candidates then ask the store to finalize
+accepted committed facts before `CommitCompiler` builds a plan. The compiler
+consumes only the store-accepted revision delta and touched facts, not
+provisional session or draft revision journals.
 
 `clearContent` has one layer-only semantic across materialized
-`DraftDocument`, sparse session replay, sparse-session promotion, and direct
+`DraftDocument`, sparse-session DTO promotion, and direct
 sparse-store preparation. It removes every ordinary-layer element without using
 individual deletion eligibility, preserves background/grid values and ordered
 background elements, and prunes selection only for the removed content. When

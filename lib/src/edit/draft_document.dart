@@ -14,6 +14,7 @@ import '../contracts/public/canvas_metadata.dart';
 import '../contracts/public/canvas_resource.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../store/resource_table.dart';
+import '../store/sparse_store_commit.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_compiler.dart';
 import 'commit_plan.dart';
@@ -24,6 +25,7 @@ import 'touched_set_builder.dart';
 
 @visibleForTesting
 enum DraftClearContentWorkEvent {
+  contentElementVisit,
   backgroundReferencePass,
   backgroundElementVisit,
   resourcePass,
@@ -43,6 +45,7 @@ enum DraftClearContentWorkEvent {
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DraftDocument {
   static final Object _clearContentWorkZoneKey = Object();
+  static final Object _sparseMutationApplicationZoneKey = Object();
 
   DraftDocument(
     CanvasDocument document, {
@@ -97,6 +100,19 @@ final class DraftDocument {
     return runZoned(operation, zoneValues: {_clearContentWorkZoneKey: sink});
   }
 
+  /// Records completed sparse DTO applications in a zone-local observer only
+  /// under asserts.
+  @visibleForTesting
+  static T observeSparseMutationApplications<T>(
+    void Function(StoreSparseMutation mutation) sink,
+    T Function() operation,
+  ) {
+    return runZoned(
+      operation,
+      zoneValues: {_sparseMutationApplicationZoneKey: sink},
+    );
+  }
+
   CanvasDocument readDocument() => _materialize();
 
   CanvasDocumentSummary get summary {
@@ -145,6 +161,52 @@ final class DraftDocument {
     return element.id;
   }
 
+  // The sealed DTO dispatcher stays whole so adding a mutation subtype fails at
+  // this owner instead of leaving a second synchronized application route.
+  // ignore: cyclomatic-complexity, source-lines-of-code
+  void applyStoreSparseMutation(StoreSparseMutation mutation) {
+    switch (mutation) {
+      case StoreSparseEnsureLayer(:final id, :final index):
+        ensureLayer(id, index: index);
+      case StoreSparseAddElement(
+        :final element,
+        :final layerId,
+        :final index,
+        :final background,
+      ):
+        if (background) {
+          addBackgroundElement(element, index: index);
+        } else {
+          addElement(element, layerId: layerId, index: index);
+        }
+      case StoreSparseUpdateElement(
+        :final before,
+        :final element,
+        :final elementRevisionDelta,
+      ):
+        _applyStoreSparseUpdate(
+          before: before,
+          after: element,
+          revisionDelta: elementRevisionDelta,
+        );
+      case StoreSparseRemoveElement(:final id):
+        removeElement(id);
+      case StoreSparseUpsertResource(:final resource):
+        upsertResource(resource);
+      case StoreSparseRemoveUnusedResource(:final id):
+        removeUnusedResource(id);
+      case StoreSparseClearContent(:final removeUnusedResources):
+        clearContent(removeUnusedResources: removeUnusedResources);
+      case StoreSparseSetBackground(:final background):
+        _applyStoreSparseBackground(background);
+      case StoreSparseSetCamera(:final camera):
+        setCameraOffset(camera.offset);
+      case StoreSparseSetPalette(:final palette):
+        setPalette(palette);
+    }
+    _recordSparseMutationApplication(mutation);
+  }
+
   // Update admission, draft replacement, touched taxonomy, and revision delta
   // are kept together so preflight cannot diverge from rollback-visible state.
   // ignore: halstead-volume
@@ -165,28 +227,72 @@ final class DraftDocument {
     if (updated == null) {
       return false;
     }
-    target.replace(updated);
     final compiledUpdate = const CommitCompiler().compileElementUpdate(
       before: before,
       after: updated,
     );
-    _touchedSet.touchUpdatedElement(updated.id);
+    return _replaceElement(
+      target: target,
+      after: updated,
+      compiledUpdate: compiledUpdate,
+      revisionDelta: compiledUpdate.revisionDelta,
+    );
+  }
+
+  void _applyStoreSparseUpdate({
+    required CanvasElement before,
+    required CanvasElement after,
+    required StoreRevisionDelta revisionDelta,
+  }) {
+    final target = _findElement(before.id);
+    if (target == null) {
+      return;
+    }
+    final compiledUpdate = const CommitCompiler().compileElementUpdate(
+      before: before,
+      after: after,
+    );
+    _replaceElement(
+      target: target,
+      after: after,
+      compiledUpdate: compiledUpdate,
+      revisionDelta: revisionDelta,
+    );
+  }
+
+  bool _replaceElement({
+    required _ElementTarget target,
+    required CanvasElement after,
+    required ElementUpdateCompileResult compiledUpdate,
+    required StoreRevisionDelta revisionDelta,
+  }) {
+    target.replace(after);
+    _touchedSet.touchUpdatedElement(after.id);
     if (compiledUpdate.touchesSpatial) {
-      _touchedSet.touchGeometryElement(updated.id);
+      _touchedSet.touchGeometryElement(after.id);
     }
     if (compiledUpdate.transformsElement) {
-      _touchedSet.touchTransformedElement(updated.id);
+      _touchedSet.touchTransformedElement(after.id);
     }
     if (compiledUpdate.touchesVisual) {
-      _touchedSet.touchVisualElement(updated.id);
+      _touchedSet.touchVisualElement(after.id);
     }
     if (compiledUpdate.prunesSelection &&
-        _selectedElementIds.contains(updated.id)) {
+        _selectedElementIds.contains(after.id)) {
       _touchedSet.touchSelection();
     }
-    _markElementUpdate(compiledUpdate.revisionDelta);
+    _markElementUpdate(revisionDelta);
 
     return true;
+  }
+
+  void _applyStoreSparseBackground(CanvasBackground nextBackground) {
+    if (background.color != nextBackground.color) {
+      setBackgroundColor(nextBackground.color);
+    }
+    if (background.grid != nextBackground.grid) {
+      setGrid(nextBackground.grid);
+    }
   }
 
   bool removeElement(CanvasElementId id) {
@@ -367,10 +473,13 @@ final class DraftDocument {
   }
 
   List<CanvasElementId> _clearElements() {
-    final removedContentElementIds = [
-      for (final layer in _layers)
-        for (final element in layer.elements) element.id,
-    ];
+    final removedContentElementIds = <CanvasElementId>[];
+    for (final layer in _layers) {
+      for (final element in layer.elements) {
+        _recordClearContentWork(DraftClearContentWorkEvent.contentElementVisit);
+        removedContentElementIds.add(element.id);
+      }
+    }
     for (final layer in _layers) {
       layer.elements.clear();
     }
@@ -517,6 +626,16 @@ final class DraftDocument {
     }(), 'draft clear work observation failed');
   }
 
+  static void _recordSparseMutationApplication(StoreSparseMutation mutation) {
+    assert(() {
+      final sink = Zone.current[_sparseMutationApplicationZoneKey];
+      if (sink is void Function(StoreSparseMutation)) {
+        sink(mutation);
+      }
+      return true;
+    }(), 'draft sparse mutation application observation failed');
+  }
+
   Iterable<CanvasElement> _allElements() sync* {
     yield* backgroundElements;
     for (final layer in _layers) {
@@ -577,6 +696,38 @@ final class DraftDocument {
     _revisionDelta = _revisionDelta.merge(
       const StoreRevisionDelta.projectionOnly(),
     );
+  }
+}
+
+// Sparse replay can apply a DTO but cannot inspect Draft state before finish.
+abstract interface class DraftSparseMutationConsumer {
+  void apply(StoreSparseMutation mutation);
+}
+
+// This target owns the Draft between factory creation and finish, so callers
+// hold only a write capability while promotion is in progress.
+final class DraftSparsePromotionTarget implements DraftSparseMutationConsumer {
+  DraftSparsePromotionTarget.open(DraftDocument Function() draftFactory)
+    : _draft = draftFactory();
+
+  DraftDocument? _draft;
+
+  @override
+  void apply(StoreSparseMutation mutation) {
+    final draft = _draft;
+    if (draft == null) {
+      throw StateError('Sparse promotion target has been released.');
+    }
+    draft.applyStoreSparseMutation(mutation);
+  }
+
+  DraftDocument finish() {
+    final draft = _draft;
+    if (draft == null) {
+      throw StateError('Sparse promotion target has already finished.');
+    }
+    _draft = null;
+    return draft;
   }
 }
 

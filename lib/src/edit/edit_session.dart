@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:ui';
+
+import 'package:meta/meta.dart' show visibleForTesting;
 
 // EditSession is the CanvasEdit handle and must name every DTO accepted by that
 // public transaction surface; hiding those imports would make the mutation
@@ -21,6 +25,33 @@ import 'draft_document.dart';
 import 'element_update_application.dart';
 import 'resource_edit_policy.dart';
 import 'touched_set_builder.dart';
+
+@visibleForTesting
+enum SparsePromotionWorkPhase {
+  open,
+  journalElementRead,
+  draftApplication,
+  complete,
+}
+
+@visibleForTesting
+final class SparsePromotionWorkEvent {
+  const SparsePromotionWorkEvent({required this.phase, this.mutation});
+
+  final SparsePromotionWorkPhase phase;
+  final StoreSparseMutation? mutation;
+}
+
+final Object _sparsePromotionWorkZoneKey = Object();
+
+/// Records the sparse promotion boundary only under asserts.
+@visibleForTesting
+T observeSparsePromotionWork<T>(
+  void Function(SparsePromotionWorkEvent event) sink,
+  T Function() operation,
+) {
+  return runZoned(operation, zoneValues: {_sparsePromotionWorkZoneKey: sink});
+}
 
 // CanvasEdit is intentionally represented by one session handle: the stale
 // guard and draft reference must stay uniform across every public entry point.
@@ -335,8 +366,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
   final SparseEditSessionFacts _facts;
   final DraftDocument Function() _promoteDraft;
   final CanvasDocumentSummary _committedSummary;
-  final List<void Function(DraftDocument draft)> _journal = [];
-  final List<StoreSparseMutation> _mutations = [];
+  final _SparseMutationJournal _mutationJournal = _SparseMutationJournal();
   final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
   StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
   final Set<CanvasElementId> _selectedElementIds;
@@ -363,11 +393,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (existing != null) {
       return existing;
     }
-    final promoted = _promoteDraft();
-    for (final replay in _journal) {
-      replay(promoted);
-    }
-    _journal.clear();
+    final target = DraftSparsePromotionTarget.open(_promoteDraft);
+    _mutationJournal.promoteInto(target);
+    final promoted = target.finish();
     _draft = promoted;
 
     return promoted;
@@ -381,7 +409,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
   @override
   bool get didChange {
     return _draft?.didChange ??
-        _journal.isNotEmpty ||
+        _mutationJournal.isNotEmpty ||
             _backgroundOverride != null ||
             _cameraOverride != null ||
             _paletteOverride != null;
@@ -421,10 +449,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       );
     }
 
-    return StoreSparseCommit(
-      mutations: _mutations,
-      revisionDelta: _revisionDelta,
-    );
+    return _mutationJournal.storeSnapshot(revisionDelta: _revisionDelta);
   }
 
   @override
@@ -452,8 +477,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (!_admitSparseLayer(id, index: index)) {
       return false;
     }
-    _journal.add((draft) => draft.ensureLayer(id, index: index));
-    _mutations.add(StoreSparseEnsureLayer(id, index: index));
+    _mutationJournal.append(StoreSparseEnsureLayer(id, index: index));
     _touchedSet.touchLayer(id);
     _mergeRevisionDelta(const StoreRevisionDelta.layerStructural());
 
@@ -484,10 +508,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       layerId: targetLayerId,
       index: index,
     );
-    _journal.add(
-      (draft) => draft.addElement(element, layerId: layerId, index: index),
-    );
-    _mutations.add(
+    _mutationJournal.append(
       StoreSparseAddElement(element: element, layerId: layerId, index: index),
     );
     _touchedSet.touchAddedElement(element.id);
@@ -527,8 +548,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _elementContentLayerOverrides.remove(element.id);
     _elementOverrides[element.id] = element;
     _insertSparseBackgroundElement(element.id, index: index);
-    _journal.add((draft) => draft.addBackgroundElement(element, index: index));
-    _mutations.add(
+    _mutationJournal.append(
       StoreSparseAddElement(element: element, index: index, background: true),
     );
     _touchedSet.touchAddedElement(element.id);
@@ -568,8 +588,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       elementRevisionDelta: compiledUpdate.revisionDelta,
     );
     _elementOverrides[after.id] = after;
-    _journal.add((draft) => draft.updateElement(update));
-    _mutations.add(mutation);
+    _mutationJournal.append(mutation);
     _recordSparseElementUpdate(after: after, compiledUpdate: compiledUpdate);
 
     return true;
@@ -595,8 +614,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (!_addedElementIds.remove(id) && _facts.elementById(id) != null) {
       _removedCommittedElementIds.add(id);
     }
-    _journal.add((draft) => draft.removeElement(id));
-    _mutations.add(StoreSparseRemoveElement(id));
+    _mutationJournal.append(StoreSparseRemoveElement(id));
     _touchedSet.touchRemovedElement(id);
     if (removesBackgroundElement) {
       _touchedSet.touchBackgroundLayer();
@@ -620,8 +638,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     _trackSparseResourceUpsert(resource.id);
     _resourceOverrides[resource.id] = resource;
-    _journal.add((draft) => draft.upsertResource(resource));
-    _mutations.add(StoreSparseUpsertResource(resource));
+    _mutationJournal.append(StoreSparseUpsertResource(resource));
     _touchedSet.touchResourceDescriptor(resource.id);
     if (_isResourceReferenced(resource.id)) {
       _touchedSet.touchResourceVisual(resource.id);
@@ -643,8 +660,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (!_addedResourceIds.remove(id) && _facts.resourceById(id) != null) {
       _removedCommittedResourceIds.add(id);
     }
-    _journal.add((draft) => draft.removeUnusedResource(id));
-    _mutations.add(StoreSparseRemoveUnusedResource(id));
+    _mutationJournal.append(StoreSparseRemoveUnusedResource(id));
     _touchedSet.touchResourceDescriptor(id);
     _mergeRevisionDelta(const StoreRevisionDelta.resource());
 
@@ -664,8 +680,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     final nextBackground = CanvasBackground(color: color, grid: current.grid);
     _backgroundOverride = nextBackground;
-    _journal.add((draft) => draft.setBackgroundColor(color));
-    _mutations.add(StoreSparseSetBackground(nextBackground));
+    _mutationJournal.append(StoreSparseSetBackground(nextBackground));
     _touchedSet.touchBackground();
     _mergeRevisionDelta(const StoreRevisionDelta.background());
   }
@@ -683,8 +698,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     }
     final nextBackground = CanvasBackground(color: current.color, grid: grid);
     _backgroundOverride = nextBackground;
-    _journal.add((draft) => draft.setGrid(grid));
-    _mutations.add(StoreSparseSetBackground(nextBackground));
+    _mutationJournal.append(StoreSparseSetBackground(nextBackground));
     _touchedSet.touchGrid();
     _mergeRevisionDelta(const StoreRevisionDelta.grid());
   }
@@ -701,8 +715,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return;
     }
     _paletteOverride = palette;
-    _journal.add((draft) => draft.setPalette(palette));
-    _mutations.add(StoreSparseSetPalette(palette));
+    _mutationJournal.append(StoreSparseSetPalette(palette));
     _touchedSet.touchPalette();
     _mergeRevisionDelta(const StoreRevisionDelta.projectionOnly());
   }
@@ -720,8 +733,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
       return;
     }
     _cameraOverride = next;
-    _journal.add((draft) => draft.setCameraOffset(offset));
-    _mutations.add(StoreSparseSetCamera(next));
+    _mutationJournal.append(StoreSparseSetCamera(next));
     _touchedSet.touchPersistedCamera();
     _mergeRevisionDelta(const StoreRevisionDelta.projectionOnly());
   }
@@ -801,11 +813,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
     required bool removeUnusedResources,
   }) {
     _applySparseClearOverlay(candidate);
-    _journal.add(
-      (draft) =>
-          draft.clearContent(removeUnusedResources: removeUnusedResources),
-    );
-    _mutations.add(
+    _mutationJournal.append(
       StoreSparseClearContent(removeUnusedResources: removeUnusedResources),
     );
     _recordSparseClear(
@@ -1083,6 +1091,103 @@ final class _SparseEditBacking implements _EditSessionBacking {
       }
     }
   }
+}
+
+// The sole sparse-intent owner keeps Store export and direct promotion adjacent
+// so no second replay history or pre-application collection pass can emerge.
+final class _SparseMutationJournal {
+  final _SparseMutationStorage _storage = _SparseMutationStorage();
+
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  void append(StoreSparseMutation mutation) {
+    _storage.append(mutation);
+  }
+
+  StoreSparseCommit storeSnapshot({required StoreRevisionDelta revisionDelta}) {
+    return StoreSparseCommit(mutations: _storage, revisionDelta: revisionDelta);
+  }
+
+  void promoteInto(DraftSparseMutationConsumer target) {
+    _recordSparsePromotionWork(SparsePromotionWorkPhase.open);
+    for (final mutation in _storage) {
+      target.apply(mutation);
+      _recordSparsePromotionWork(
+        SparsePromotionWorkPhase.draftApplication,
+        mutation: mutation,
+      );
+    }
+    _storage.clear();
+    _recordSparsePromotionWork(SparsePromotionWorkPhase.complete);
+  }
+}
+
+// The storage owns the only mutable DTO list. Both Store export and promotion
+// obtain values through this iterator, which observes each actual source
+// advance before any consumer can apply that DTO.
+final class _SparseMutationStorage extends IterableBase<StoreSparseMutation> {
+  final List<StoreSparseMutation> _mutations = [];
+
+  void append(StoreSparseMutation mutation) {
+    _mutations.add(mutation);
+  }
+
+  @override
+  bool get isNotEmpty => _mutations.isNotEmpty;
+
+  void clear() {
+    _mutations.clear();
+  }
+
+  @override
+  Iterator<StoreSparseMutation> get iterator {
+    return _SparseMutationStorageIterator(_mutations.iterator);
+  }
+}
+
+final class _SparseMutationStorageIterator
+    implements Iterator<StoreSparseMutation> {
+  _SparseMutationStorageIterator(this._source);
+
+  final Iterator<StoreSparseMutation> _source;
+  StoreSparseMutation? _current;
+
+  @override
+  StoreSparseMutation get current {
+    final mutation = _current;
+    if (mutation == null) {
+      throw StateError('Sparse mutation iterator has no current value.');
+    }
+    return mutation;
+  }
+
+  @override
+  bool moveNext() {
+    if (!_source.moveNext()) {
+      _current = null;
+      return false;
+    }
+    final mutation = _source.current;
+    _current = mutation;
+    _recordSparsePromotionWork(
+      SparsePromotionWorkPhase.journalElementRead,
+      mutation: mutation,
+    );
+    return true;
+  }
+}
+
+void _recordSparsePromotionWork(
+  SparsePromotionWorkPhase phase, {
+  StoreSparseMutation? mutation,
+}) {
+  assert(() {
+    final sink = Zone.current[_sparsePromotionWorkZoneKey];
+    if (sink is void Function(SparsePromotionWorkEvent)) {
+      sink(SparsePromotionWorkEvent(phase: phase, mutation: mutation));
+    }
+    return true;
+  }(), 'sparse promotion work observation failed');
 }
 
 final class _SparseClearCandidate {

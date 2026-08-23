@@ -16,7 +16,6 @@ Required tests:
 - `test.edit.edit_matrix_effects`
 - `test.edit.net_no_op_edit_commit`
 - `test.store.store_commit_finalization`
-- `test.guardrails.edit_accepted_finalization_guardrail`
 - `test.api.runtime_timestamp_order`
 - `test.interaction.runtime_created_timestamps_monotonic`
 - `test.interaction.context_action_request`

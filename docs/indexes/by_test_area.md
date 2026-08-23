@@ -293,7 +293,7 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 ## test.guardrails.edit_accepted_finalization_guardrail
 
-- Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_23_tests`
+- Sections: `section_11_edit_kernel`, `section_23_tests`
 
 ## test.guardrails.frame_committed_facts_via_frame_facts_port
 
