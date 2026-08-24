@@ -27,16 +27,6 @@ void main() {
     // removal; the newly added image is then validated against the final
     // descriptor before accepted delta. Touched facts are classified after
     // aggregate publication from normalized immutable base/final facts.
-    expect(work.editorDecisionTrace, [
-      FamilyTablesDecision.removeUnusedReference,
-      FamilyTablesDecision.removeMembership,
-      FamilyTablesDecision.removeUnusedReference,
-      FamilyTablesDecision.duplicateAdd,
-      FamilyTablesDecision.removeMembership,
-      FamilyTablesDecision.relationship,
-      FamilyTablesDecision.acceptedDelta,
-      FamilyTablesDecision.acceptedDelta,
-    ]);
     expect(work.editorDecisionReads, [
       _read(
         FamilyTablesDecision.removeUnusedReference,
@@ -87,10 +77,6 @@ void main() {
         FamilyTablesDecisionResult.added,
       ),
     ]);
-    expect(work.staleDecisionReadCount, 0);
-    for (final decision in FamilyTablesDecision.values) {
-      expect(work.staleDecisionReadCountFor(decision), 0);
-    }
     _expectNoPostFreezeFamilyWork(work);
     expect(prepared.touchedFacts.removedElementIds, {CanvasElementId('old')});
     expect(prepared.touchedFacts.addedElementIds, {CanvasElementId('new')});
@@ -130,14 +116,18 @@ void main() {
       );
       expect(
         [
-          work.editorDecisionCount(FamilyTablesDecision.updateCurrentRow),
+          work.editorDecisionReads
+              .where(
+                (read) =>
+                    read.decision == FamilyTablesDecision.updateCurrentRow,
+              )
+              .length,
           work.editorCurrentRowReadCount,
           work.imageReferenceAffectedIdUpdateCount,
           work.vectorReferenceAffectedIdUpdateCount,
         ],
         [4, 4, 4, 4],
       );
-      expect(work.staleDecisionReadCount, 0);
       _expectNoPostFreezeFamilyWork(work);
     },
   );
@@ -192,7 +182,6 @@ void _expectDuplicateAddDecision() {
           .having((error) => error.path, 'path', 'elements.id'),
     ),
   );
-  expect(work.editorDecisionTrace, [FamilyTablesDecision.duplicateAdd]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.duplicateAdd,
@@ -202,7 +191,6 @@ void _expectDuplicateAddDecision() {
     ),
   ]);
   expect(work.transactionImmutablePublicationCount, 0);
-  expect(work.staleDecisionReadCount, 0);
   _expectNoPostFreezeFamilyWork(work);
 }
 
@@ -241,16 +229,6 @@ void _expectAddUpdateDecision() {
       ),
     ),
   );
-  expect(work.editorDecisionTrace, [
-    FamilyTablesDecision.duplicateAdd,
-    FamilyTablesDecision.updateCurrentRow,
-    FamilyTablesDecision.updateSource,
-    FamilyTablesDecision.updateNoOp,
-    FamilyTablesDecision.updateKind,
-    FamilyTablesDecision.removeMembership,
-    FamilyTablesDecision.relationship,
-    FamilyTablesDecision.acceptedDelta,
-  ]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.duplicateAdd,
@@ -301,7 +279,6 @@ void _expectAddUpdateDecision() {
       FamilyTablesDecisionResult.added,
     ),
   ]);
-  expect(work.staleDecisionReadCount, 0);
   _expectNoPostFreezeFamilyWork(work);
 }
 
@@ -338,10 +315,6 @@ void _expectMissingUpdateDecision() {
   );
 
   expect(prepared.hasChanges, isFalse);
-  expect(work.editorDecisionTrace, [
-    FamilyTablesDecision.updateCurrentRow,
-    FamilyTablesDecision.updateMissingId,
-  ]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.updateCurrentRow,
@@ -389,15 +362,6 @@ void _expectRemoveUpdateReaddDecision() {
       ),
     ),
   );
-  expect(work.editorDecisionTrace, [
-    FamilyTablesDecision.removeMembership,
-    FamilyTablesDecision.updateCurrentRow,
-    FamilyTablesDecision.updateMissingId,
-    FamilyTablesDecision.duplicateAdd,
-    FamilyTablesDecision.removeMembership,
-    FamilyTablesDecision.relationship,
-    FamilyTablesDecision.acceptedDelta,
-  ]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.removeMembership,
@@ -451,7 +415,6 @@ void _expectRemoveUpdateReaddDecision() {
 void _expectSourceKindAndNoOpDecisions() {
   _expectUpdateFailure(
     _sourceMismatch(),
-    FamilyTablesDecision.updateSource,
     'before',
     'sparse element update delta must be derived from the committed row.',
     [
@@ -471,7 +434,6 @@ void _expectSourceKindAndNoOpDecisions() {
   );
   _expectUpdateFailure(
     _kindMismatch(),
-    FamilyTablesDecision.updateKind,
     'element',
     'element update kind does not match the target element.',
     [
@@ -521,11 +483,6 @@ void _expectSourceKindAndNoOpDecisions() {
     ),
   );
   expect(prepared.hasChanges, isFalse);
-  expect(work.editorDecisionTrace, [
-    FamilyTablesDecision.updateCurrentRow,
-    FamilyTablesDecision.updateSource,
-    FamilyTablesDecision.updateNoOp,
-  ]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.updateCurrentRow,
@@ -590,7 +547,6 @@ void _expectRelationshipFailureDiscards() {
           .having((error) => error.path, 'path', 'image.resourceId'),
     ),
   );
-  expect(work.editorDecisionTrace, contains(FamilyTablesDecision.relationship));
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.duplicateAdd,
@@ -617,10 +573,8 @@ void _expectRelationshipFailureDiscards() {
 
 // A sparse update failure has one diagnostic plus its event list; the cohesive
 // assertion avoids a test-only transport object merely to lower parameters.
-// ignore: number-of-parameters
 void _expectUpdateFailure(
   StoreSparseUpdateElement update,
-  FamilyTablesDecision terminalDecision,
   String errorName,
   String errorMessage,
   List<FamilyTablesDecisionRead> expectedReads,
@@ -644,7 +598,6 @@ void _expectUpdateFailure(
           .having((error) => error.message, 'message', errorMessage),
     ),
   );
-  expect(work.editorDecisionTrace, contains(terminalDecision));
   expect(work.editorDecisionReads, expectedReads);
   expect(work.transactionImmutablePublicationCount, 0);
   expect(work.staleDecisionReadCount, 0);
@@ -661,9 +614,6 @@ void _expectNoFreezeOrPublication(FamilyTablesTelemetry work) {
 
 void _expectNoPostFreezeFamilyWork(FamilyTablesTelemetry work) {
   expect(work.staleDecisionReadCount, 0);
-  for (final decision in FamilyTablesDecision.values) {
-    expect(work.staleDecisionReadCountFor(decision), 0);
-  }
   expect(work.postFreezeWriteCount, 0);
   expect(work.postFreezeCopyCount, 0);
   expect(work.postFreezeNormalizationCount, 0);
@@ -683,7 +633,6 @@ void _expectClearBarrierDecision() {
       ),
     ),
   );
-  expect(work.editorDecisionTrace, [FamilyTablesDecision.clear]);
   expect(work.editorDecisionReads, [
     _read(
       FamilyTablesDecision.clear,
@@ -692,7 +641,6 @@ void _expectClearBarrierDecision() {
       FamilyTablesDecisionResult.changed,
     ),
   ]);
-  expect(work.staleDecisionReadCount, 0);
   _expectNoPostFreezeFamilyWork(work);
 }
 

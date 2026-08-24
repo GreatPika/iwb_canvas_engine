@@ -240,7 +240,7 @@ void main() {
       expect(work.referenceEditorDeltaReadCount, 2);
       expect(work.imageReferenceAffectedIdUpdateCount, 0);
       expect(work.vectorReferenceAffectedIdUpdateCount, 0);
-      expect(work.editorDecisionTrace, [
+      expect(work.editorDecisionReads.map((read) => read.decision), [
         FamilyTablesDecision.removeUnusedReference,
       ]);
       // Accepted touched classification now uses the normalized immutable

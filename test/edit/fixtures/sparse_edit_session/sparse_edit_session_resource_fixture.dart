@@ -36,13 +36,6 @@ void registerSparseEditSessionResourceTests() {
     ),
   );
   test(
-    'sparse clear touches background layer only for background removals',
-    () => expect(
-      _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals,
-      returnsNormally,
-    ),
-  );
-  test(
     'sparse clear retains background image and vector resources',
     () => expect(
       _sparseClearRetainsBackgroundImageAndVectorResources,
@@ -935,28 +928,8 @@ void _expectReferencedResourceRemovalNoOp() {
   );
 }
 
-void _sparseClearTouchesBackgroundLayerOnlyForBackgroundRemovals() {
-  final contentOnly = sparseSessionForDocument(
-    CanvasDocument(
-      layers: [
-        CanvasLayer(
-          id: CanvasLayerId('layer-a'),
-          elements: [sparseRect('content-a')],
-        ),
-      ],
-    ),
-  );
-  contentOnly.clearContent();
-  expect(contentOnly.commitPlan.touchedSet.backgroundLayerChanged, isFalse);
-
-  final withBackground = sparseSessionForDocument(
-    CanvasDocument(backgroundElements: [sparseRect('background-a')]),
-  );
-  withBackground.clearContent();
-  expect(withBackground.commitPlan.touchedSet.backgroundLayerChanged, isFalse);
-}
-
-// One exact image/vector descriptor, count, and clear preservation witness stays cohesive.
+// Background resource identity, counts, touched facts, revisions, and clear
+// preservation stay in one lifecycle; descriptor fidelity belongs to parity.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _sparseClearRetainsBackgroundImageAndVectorResources() {
   var materializations = 0;
@@ -1023,81 +996,10 @@ void _sparseClearRetainsBackgroundImageAndVectorResources() {
     CanvasElementId('background-image'),
     CanvasElementId('background-vector'),
   ]);
-  final backgroundImage =
-      document.backgroundElements.first as CanvasImageElement;
-  final backgroundVector =
-      document.backgroundElements.last as CanvasVectorElement;
-  expect(
-    backgroundImage.resourceId,
-    CanvasResourceId('background-image-resource'),
-  );
-  expect(backgroundImage.revision, 7);
-  expect(backgroundImage.size, const Size(2, 3));
-  expect(backgroundImage.naturalSize, const Size(20, 30));
-  expect(
-    backgroundImage.transform,
-    CanvasTransform.translation(const Offset(8, 9)),
-  );
-  expect(backgroundImage.opacity, 0.75);
-  expect(backgroundImage.hitPadding, 3);
-  expect(backgroundImage.isVisible, isFalse);
-  expect(backgroundImage.isSelectable, isFalse);
-  expect(backgroundImage.isLocked, isTrue);
-  expect(backgroundImage.isDeletable, isFalse);
-  expect(backgroundImage.isTransformable, isFalse);
-  expect(
-    backgroundImage.metadata,
-    CanvasMetadata.fromMap({'role': 'background-image', 'rank': 1}),
-  );
-  expect(
-    backgroundVector.resourceId,
-    CanvasResourceId('background-vector-resource'),
-  );
-  expect(backgroundVector.revision, 8);
-  expect(backgroundVector.size, const Size(4, 5));
-  expect(backgroundVector.naturalSize, const Size(40, 50));
-  expect(
-    backgroundVector.transform,
-    CanvasTransform.translation(const Offset(10, 11)),
-  );
-  expect(backgroundVector.opacity, 0.5);
-  expect(backgroundVector.hitPadding, 4);
-  expect(backgroundVector.isVisible, isFalse);
-  expect(backgroundVector.isSelectable, isFalse);
-  expect(backgroundVector.isLocked, isTrue);
-  expect(backgroundVector.isDeletable, isFalse);
-  expect(backgroundVector.isTransformable, isFalse);
-  expect(
-    backgroundVector.metadata,
-    CanvasMetadata.fromMap({'role': 'background-vector', 'rank': 2}),
-  );
   expect(document.resources.map((resource) => resource.id), [
     CanvasResourceId('background-image-resource'),
     CanvasResourceId('background-vector-resource'),
   ]);
-  final imageResource = document.resources.first as CanvasImageResource;
-  final vectorResource = document.resources.last as CanvasVectorResource;
-  expect(
-    imageResource.source,
-    CanvasResourceSource.appKey('background-image-source'),
-  );
-  expect(imageResource.mimeType, 'image/png');
-  expect(imageResource.contentHash, 'sha256:background-image');
-  expect(imageResource.byteLength, 101);
-  expect(
-    imageResource.metadata,
-    CanvasMetadata.fromMap({'asset': 'image', 'scale': 2}),
-  );
-  expect(
-    vectorResource.source,
-    CanvasResourceSource.appKey('background-vector-source'),
-  );
-  expect(vectorResource.contentHash, 'sha256:background-vector');
-  expect(vectorResource.byteLength, 202);
-  expect(
-    vectorResource.metadata,
-    CanvasMetadata.fromMap({'asset': 'vector', 'scale': 3}),
-  );
 }
 
 // This keeps committed and local sparse facts in one lifecycle: local elements

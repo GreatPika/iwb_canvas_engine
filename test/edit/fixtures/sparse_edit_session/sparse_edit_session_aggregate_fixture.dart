@@ -86,12 +86,7 @@ void _composedSparsePromotionDraftAndStoreWorkIsBounded() {
   expect(document.layers.first.elements, hasLength(elementCount));
   expect(store.elementById(CanvasElementId('lifecycle-element')), isNotNull);
   expect(store.projectionBuildCount, 1);
-  final promotionStart = promotion.indexWhere(
-    (event) => event.phase == SparsePromotionWorkPhase.open,
-  );
-  expect(promotionStart, 0);
-  expect(promotion.take(promotionStart).map((event) => event.phase), isEmpty);
-  expect(promotion.skip(promotionStart).map((event) => event.phase), [
+  expect(promotion.map((event) => event.phase), [
     SparsePromotionWorkPhase.open,
     for (final _ in List.filled(2, null)) ...[
       SparsePromotionWorkPhase.journalElementRead,

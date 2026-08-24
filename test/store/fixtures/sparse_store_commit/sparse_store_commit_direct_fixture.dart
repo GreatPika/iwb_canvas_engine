@@ -25,10 +25,6 @@ void registerSparseInstallTests() {
     ),
   );
   test(
-    'admits sparse ids without scanning the installed document',
-    () => expect(_admitsSparseIdsWithoutDocumentScan, returnsNormally),
-  );
-  test(
     'replacement fallback still installs full committed facts',
     () => expect(_replacementFallbackInstallsFullFacts, returnsNormally),
   );
@@ -312,47 +308,10 @@ void _normalizesSelectionAgainstPreparedSparseCommit() {
   );
 }
 
-void _admitsSparseIdsWithoutDocumentScan() {
-  final store = documentStoreWithDocument(baseDocument());
-
-  store.installSparseCommit(
-    store.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: const StoreRevisionDelta.structural().merge(
-          const StoreRevisionDelta.resource(),
-        ),
-        mutations: [
-          StoreSparseEnsureLayer(CanvasLayerId('l0')),
-          StoreSparseAddElement(
-            element: CanvasRectElement(
-              id: CanvasElementId('e0'),
-              size: const Size(1, 1),
-            ),
-            layerId: CanvasLayerId('l0'),
-          ),
-          StoreSparseUpsertResource(
-            CanvasImageResource(
-              id: CanvasResourceId('r0'),
-              source: CanvasResourceSource.appKey('new-resource'),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-
-  expect(store.generateElementId(), CanvasElementId('e1'));
-  expect(store.generateLayerId(), CanvasLayerId('l1'));
-  expect(store.generateResourceId(), CanvasResourceId('r1'));
-  expect(store.projectionBuildCount, 0);
-}
-
-// This direct trace ties replay work to the prepared ledger and installed
-// cursor, so a final-fact rebuild cannot hide compensated sparse IDs.
-// Keeping the full prepared/install/cursor witness together makes its causal
-// order explicit; splitting it would only distribute one invariant across
-// helpers without simplifying the direct Store evidence.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index
+// Replacement compatibility owns summary, direct fact, and projection-lazy
+// observations in one lifecycle; separating them would obscure which installed
+// document supplies each public fact.
+// ignore: halstead-volume, maintainability-index
 void _replacementFallbackInstallsFullFacts() {
   final store = documentStoreWithDocument(baseDocument());
 

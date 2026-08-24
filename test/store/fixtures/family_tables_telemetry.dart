@@ -40,10 +40,7 @@ final class FamilyTablesTelemetry {
   int _vectorReferenceSummaryPublicationCount = 0;
   bool _imageReferenceSummaryRetainsBaseIdentity = false;
   bool _vectorReferenceSummaryRetainsBaseIdentity = false;
-  final List<FamilyTablesDecision> _editorDecisionTrace = [];
   final List<FamilyTablesDecisionRead> _editorDecisionReads = [];
-  final Map<FamilyTablesDecision, int> _editorDecisionCount = {};
-  final Map<FamilyTablesDecision, int> _staleDecisionReadCountByDecision = {};
   int _editorCurrentRowReadCount = 0;
 
   int get mapProbeCount => _mapProbeCount;
@@ -93,8 +90,6 @@ final class FamilyTablesTelemetry {
       _imageReferenceSummaryRetainsBaseIdentity;
   bool get vectorReferenceSummaryRetainsBaseIdentity =>
       _vectorReferenceSummaryRetainsBaseIdentity;
-  List<FamilyTablesDecision> get editorDecisionTrace =>
-      List.unmodifiable(_editorDecisionTrace);
   List<FamilyTablesDecisionRead> get editorDecisionReads =>
       List.unmodifiable(_editorDecisionReads);
   int get editorCurrentRowReadCount => _editorCurrentRowReadCount;
@@ -117,14 +112,6 @@ final class FamilyTablesTelemetry {
 
   bool transactionFinalMapRetainsBaseIdentity(CanvasElementKind kind) {
     return _transactionFinalMapRetainsBaseIdentityByFamily[kind] ?? false;
-  }
-
-  int editorDecisionCount(FamilyTablesDecision decision) {
-    return _editorDecisionCount[decision] ?? 0;
-  }
-
-  int staleDecisionReadCountFor(FamilyTablesDecision decision) {
-    return _staleDecisionReadCountByDecision[decision] ?? 0;
   }
 
   // One explicit fold preserves the admitted telemetry query surface; splitting
@@ -166,10 +153,6 @@ final class FamilyTablesTelemetry {
         _transactionIntermediateImmutablePublicationCount += 1;
       case FamilyTablesTelemetryKind.staleDecisionRead:
         _staleDecisionReadCount += 1;
-        final decision = event.decision;
-        if (decision != null) {
-          _editorDecisionCountBy(_staleDecisionReadCountByDecision, decision);
-        }
       case FamilyTablesTelemetryKind.postFreezeWrite:
         _postFreezeWriteCount += 1;
       case FamilyTablesTelemetryKind.postFreezeCopy:
@@ -213,10 +196,6 @@ final class FamilyTablesTelemetry {
         } else {
           _vectorReferenceSummaryRetainsBaseIdentity = identityRetained;
         }
-      case FamilyTablesTelemetryKind.editorDecision:
-        final decision = _require(event.decision, 'decision');
-        _editorDecisionTrace.add(decision);
-        _editorDecisionCountBy(_editorDecisionCount, decision);
       case FamilyTablesTelemetryKind.editorDecisionRead:
         _editorDecisionReads.add(
           FamilyTablesDecisionRead(
@@ -248,13 +227,6 @@ final class FamilyTablesTelemetry {
       (current) => current + (amount ?? 1),
       ifAbsent: () => amount ?? 1,
     );
-  }
-
-  void _editorDecisionCountBy(
-    Map<FamilyTablesDecision, int> counts,
-    FamilyTablesDecision decision,
-  ) {
-    counts.update(decision, (count) => count + 1, ifAbsent: () => 1);
   }
 
   void _incrementSplitDeltaOpen(FamilyTablesResourceSplit? split) {

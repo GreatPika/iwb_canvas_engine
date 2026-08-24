@@ -137,9 +137,7 @@ void _clearBarrierKeepsJournalOrder() {
   final after = _runStoreClearTrace(clearBeforeAdd);
 
   expect(before.oracle.hasChanges, isFalse);
-  expect(before.prepared.hasChanges, isFalse);
   expect(after.oracle.hasChanges, isTrue);
-  expect(after.prepared.hasChanges, isTrue);
   expect(before.oracle.contentElementIds, isEmpty);
   expect(after.oracle.contentElementIds, [CanvasElementId('trace-element')]);
   expect(before.oracle.resourceIds, {

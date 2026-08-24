@@ -120,13 +120,16 @@ void _candidateCurrentStateOracle() {
       if (seed == 1709 && length == 3) {
         // This prefix is the admitted resource-add/remove interleaving. Keep
         // the family decision ordering here with the cross-owner oracle.
-        expect(familyWork.editorDecisionTrace, const [
-          FamilyTablesDecision.duplicateAdd,
-          FamilyTablesDecision.removeUnusedReference,
-          FamilyTablesDecision.removeMembership,
-          FamilyTablesDecision.relationship,
-          FamilyTablesDecision.acceptedDelta,
-        ]);
+        expect(
+          familyWork.editorDecisionReads.map((read) => read.decision),
+          const [
+            FamilyTablesDecision.duplicateAdd,
+            FamilyTablesDecision.removeUnusedReference,
+            FamilyTablesDecision.removeMembership,
+            FamilyTablesDecision.relationship,
+            FamilyTablesDecision.acceptedDelta,
+          ],
+        );
       }
     }
   }
@@ -1303,10 +1306,10 @@ void _recordFamilyWorkBoundary(
   FamilyTablesTelemetryEvent event,
 ) {
   final boundary = switch (event.kind) {
-    FamilyTablesTelemetryKind.editorDecision
+    FamilyTablesTelemetryKind.editorDecisionRead
         when event.decision == FamilyTablesDecision.relationship =>
       _CandidateWorkBoundary.familyRelationship,
-    FamilyTablesTelemetryKind.editorDecision
+    FamilyTablesTelemetryKind.editorDecisionRead
         when event.decision == FamilyTablesDecision.acceptedDelta =>
       _CandidateWorkBoundary.familyAcceptedDelta,
     FamilyTablesTelemetryKind.transactionFamilyFreeze =>

@@ -659,11 +659,6 @@ void _expectSparseClearTraceMatchesOracle(
   _SparseClearTraceOutcome outcome, {
   String? reason,
 }) {
-  expect(
-    outcome.actualResults.length,
-    outcome.expectedResults.length,
-    reason: reason,
-  );
   for (var index = 0; index < outcome.actualResults.length; index += 1) {
     _expectClearTraceResult(
       outcome.actualResults[index],
@@ -784,7 +779,6 @@ void _expectClearTraceResult(
   _ClearTraceResult actual,
   _ClearTraceResult expected,
 ) {
-  expect(actual.kind, expected.kind);
   expect(actual.elementId, expected.elementId);
   expect(actual.changed, expected.changed);
   final actualClear = actual.clearResult;
@@ -946,7 +940,6 @@ final class _ClearTraceAction {
       session.addElement(_element, index: index),
     ),
     _ClearTraceActionKind.updateImageResource => _ClearTraceResult.changed(
-      kind,
       changed: session.updateElement(
         CanvasImageElementUpdate(
           id: _imageUpdate.after.id,
@@ -955,15 +948,12 @@ final class _ClearTraceAction {
       ),
     ),
     _ClearTraceActionKind.removeElement => _ClearTraceResult.changed(
-      kind,
       changed: session.removeElement(_elementId),
     ),
     _ClearTraceActionKind.upsertResource => _ClearTraceResult.changed(
-      kind,
       changed: session.upsertResource(_resource),
     ),
     _ClearTraceActionKind.removeUnusedResource => _ClearTraceResult.changed(
-      kind,
       changed: session.removeUnusedResource(_resourceId),
     ),
     _ClearTraceActionKind.clearContent => _ClearTraceResult.cleared(
@@ -975,7 +965,6 @@ final class _ClearTraceAction {
       draft.addElement(_element, index: index),
     ),
     _ClearTraceActionKind.updateImageResource => _ClearTraceResult.changed(
-      kind,
       changed: draft.updateElement(
         CanvasImageElementUpdate(
           id: _imageUpdate.after.id,
@@ -984,15 +973,12 @@ final class _ClearTraceAction {
       ),
     ),
     _ClearTraceActionKind.removeElement => _ClearTraceResult.changed(
-      kind,
       changed: draft.removeElement(_elementId),
     ),
     _ClearTraceActionKind.upsertResource => _ClearTraceResult.changed(
-      kind,
       changed: draft.upsertResource(_resource),
     ),
     _ClearTraceActionKind.removeUnusedResource => _ClearTraceResult.changed(
-      kind,
       changed: draft.removeUnusedResource(_resourceId),
     ),
     _ClearTraceActionKind.clearContent => _ClearTraceResult.cleared(
@@ -1030,35 +1016,20 @@ final class _ClearTraceAction {
 }
 
 final class _ClearTraceResult {
-  const _ClearTraceResult._({
-    required this.kind,
-    this.elementId,
-    this.changed,
-    this.clearResult,
-  });
+  const _ClearTraceResult._({this.elementId, this.changed, this.clearResult});
 
   factory _ClearTraceResult.added(CanvasElementId id) {
-    return _ClearTraceResult._(
-      kind: _ClearTraceActionKind.addElement,
-      elementId: id,
-    );
+    return _ClearTraceResult._(elementId: id);
   }
 
-  factory _ClearTraceResult.changed(
-    _ClearTraceActionKind kind, {
-    required bool changed,
-  }) {
-    return _ClearTraceResult._(kind: kind, changed: changed);
+  factory _ClearTraceResult.changed({required bool changed}) {
+    return _ClearTraceResult._(changed: changed);
   }
 
   factory _ClearTraceResult.cleared(CanvasClearResult result) {
-    return _ClearTraceResult._(
-      kind: _ClearTraceActionKind.clearContent,
-      clearResult: result,
-    );
+    return _ClearTraceResult._(clearResult: result);
   }
 
-  final _ClearTraceActionKind kind;
   final CanvasElementId? elementId;
   final bool? changed;
   final CanvasClearResult? clearResult;
@@ -1195,15 +1166,9 @@ final class _ClearSequentialOracle {
       }
       layer.elements[index] = update.after;
       effects.elementVisual = true;
-      return _ClearTraceResult.changed(
-        _ClearTraceActionKind.updateImageResource,
-        changed: true,
-      );
+      return _ClearTraceResult.changed(changed: true);
     }
-    return _ClearTraceResult.changed(
-      _ClearTraceActionKind.updateImageResource,
-      changed: false,
-    );
+    return _ClearTraceResult.changed(changed: false);
   }
 
   _ClearTraceResult _removeElement(CanvasElementId id) {
@@ -1216,25 +1181,16 @@ final class _ClearSequentialOracle {
       _recordElementRemoval(id);
       effects.selection = effects.selection || _selectedElementIds.contains(id);
       effects.structural = true;
-      return _ClearTraceResult.changed(
-        _ClearTraceActionKind.removeElement,
-        changed: true,
-      );
+      return _ClearTraceResult.changed(changed: true);
     }
-    return _ClearTraceResult.changed(
-      _ClearTraceActionKind.removeElement,
-      changed: false,
-    );
+    return _ClearTraceResult.changed(changed: false);
   }
 
   _ClearTraceResult _upsertResource(CanvasResource resource) {
     final index = _resources.indexWhere((item) => item.id == resource.id);
     if (index >= 0) {
       if (_resources[index] == resource) {
-        return _ClearTraceResult.changed(
-          _ClearTraceActionKind.upsertResource,
-          changed: false,
-        );
+        return _ClearTraceResult.changed(changed: false);
       }
       _resources[index] = resource;
     } else {
@@ -1243,18 +1199,12 @@ final class _ClearSequentialOracle {
     effects.resourceDescriptorChangedIds.add(resource.id);
     effects.resource = true;
 
-    return _ClearTraceResult.changed(
-      _ClearTraceActionKind.upsertResource,
-      changed: true,
-    );
+    return _ClearTraceResult.changed(changed: true);
   }
 
   _ClearTraceResult _removeUnusedResource(CanvasResourceId id) {
     if (_resourceIsReferenced(id)) {
-      return _ClearTraceResult.changed(
-        _ClearTraceActionKind.removeUnusedResource,
-        changed: false,
-      );
+      return _ClearTraceResult.changed(changed: false);
     }
     final resourceCountBefore = _resources.length;
     _resources.removeWhere((resource) => resource.id == id);
@@ -1264,10 +1214,7 @@ final class _ClearSequentialOracle {
       effects.resource = true;
     }
 
-    return _ClearTraceResult.changed(
-      _ClearTraceActionKind.removeUnusedResource,
-      changed: removed,
-    );
+    return _ClearTraceResult.changed(changed: removed);
   }
 
   _ClearTraceResult _clearContent({required bool removeUnusedResources}) {

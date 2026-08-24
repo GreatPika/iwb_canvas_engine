@@ -8,8 +8,13 @@ import '../../tool/guardrails/src/repository_paths.dart';
 Future<void> _flutterTestQueue = Future<void>.value();
 
 Future<void> runFlutterInPackageTest(String path) {
+  return runFlutterInPackageTests([path]);
+}
+
+Future<void> runFlutterInPackageTests(Iterable<String> paths) {
+  final pathSnapshot = List<String>.unmodifiable(paths);
   final queued = _flutterTestQueue.then((_) {
-    return _withFlutterTestLock(() => _runFlutterTest(path));
+    return _withFlutterTestLock(() => _runFlutterTests(pathSnapshot));
   });
   _flutterTestQueue = queued.catchError(_ignoreFlutterTestError);
 
@@ -22,10 +27,10 @@ Future<void> _ignoreFlutterTestError(Object error) {
   return Future<void>.value();
 }
 
-Future<void> _runFlutterTest(String path) {
+Future<void> _runFlutterTests(Iterable<String> paths) {
   return Process.run('flutter', [
     'test',
-    path,
+    ...paths,
   ], workingDirectory: repositoryRoot).then((result) {
     expect(result.exitCode, 0, reason: _processOutput(result));
   });

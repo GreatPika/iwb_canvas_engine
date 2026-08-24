@@ -204,7 +204,6 @@ final class SparseFixtureFacts implements SparseEditSessionFacts {
   int backgroundElementIdsReadCount = 0;
   int imageResourceReferenceCountReadCount = 0;
   int vectorResourceReferenceCountReadCount = 0;
-  final Map<CanvasElementId, int> _elementByIdReadCounts = {};
 
   void resetReadCounters() {
     elementIdsReadCount = 0;
@@ -212,11 +211,6 @@ final class SparseFixtureFacts implements SparseEditSessionFacts {
     backgroundElementIdsReadCount = 0;
     imageResourceReferenceCountReadCount = 0;
     vectorResourceReferenceCountReadCount = 0;
-    _elementByIdReadCounts.clear();
-  }
-
-  int elementByIdReadCount(CanvasElementId id) {
-    return _elementByIdReadCounts[id] ?? 0;
   }
 
   @override
@@ -292,7 +286,6 @@ final class SparseFixtureFacts implements SparseEditSessionFacts {
 
   @override
   CanvasElement? elementById(CanvasElementId id) {
-    _elementByIdReadCounts.update(id, (count) => count + 1, ifAbsent: () => 1);
     for (final element in document.backgroundElements) {
       if (element.id == id) {
         return element;

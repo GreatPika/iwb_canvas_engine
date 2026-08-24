@@ -16,8 +16,6 @@ import 'package:iwb_canvas_engine/src/store/schema_v1_store_import.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
-import 'family_tables_telemetry.dart';
-
 void main() {
   _registerCompleteRouteTests();
   _registerSupportedSizeWitness();
@@ -449,11 +447,7 @@ enum _TraceEvent {
 }
 
 FamilyTablesTelemetrySink _familyTraceSink(List<_TraceEvent> events) {
-  final telemetry = FamilyTablesTelemetry();
-  return (event) {
-    telemetry.record(event);
-    _recordFamilyTrace(event, events);
-  };
+  return (event) => _recordFamilyTrace(event, events);
 }
 
 void _recordFamilyTrace(

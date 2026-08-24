@@ -1006,7 +1006,6 @@ final class DocumentStoreKernel {
             : FamilyTablesDecisionResult.present,
       );
       if (before == null) {
-        familyEditor.recordDecision(FamilyTablesDecision.updateMissingId);
         familyEditor.recordDecisionRead(
           decision: FamilyTablesDecision.updateMissingId,
           subjectKind: FamilyTablesDecisionSubjectKind.element,
@@ -1179,7 +1178,6 @@ final class DocumentStoreKernel {
     _StoreTransactionCandidate candidate, {
     required bool removeUnusedResources,
   }) {
-    candidate.familyTables.recordDecision(FamilyTablesDecision.clear);
     final contentElementIds = candidate.structure.clearContent();
     final didClearElements = contentElementIds.isNotEmpty;
     candidate.familyTables.recordDecisionRead(

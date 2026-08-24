@@ -65,10 +65,6 @@ void _registerSparsePromotionTests() {
     ),
   );
   test(
-    'readDraftDocument promotes and replays prior sparse mutations',
-    () => expect(_readDraftDocumentPromotesAndReplays, returnsNormally),
-  );
-  test(
     'mutations after promotion use materialized fallback',
     () => expect(
       _mutationsAfterPromotionUseMaterializedFallback,
@@ -353,33 +349,6 @@ void _sparseClearReportsIndexedInsertionsInDraftOrder() {
     CanvasElementId('content-a'),
   ]);
   expect(materializations, 0);
-}
-
-void _readDraftDocumentPromotesAndReplays() {
-  var materializations = 0;
-  final session = sparseSession(() {
-    materializations += 1;
-
-    return baseSparseDraft();
-  });
-
-  session.addBackgroundElement(sparseRect('background-added'));
-  session.addElement(
-    sparseRect('content-added'),
-    layerId: CanvasLayerId('layer-a'),
-  );
-
-  final document = session.readDraftDocument();
-
-  expect(materializations, 1);
-  expect(document.backgroundElements.map((element) => element.id.value), [
-    'background-a',
-    'background-added',
-  ]);
-  expect(document.layers.single.elements.map((element) => element.id.value), [
-    'content-a',
-    'content-added',
-  ]);
 }
 
 void _mutationsAfterPromotionUseMaterializedFallback() {

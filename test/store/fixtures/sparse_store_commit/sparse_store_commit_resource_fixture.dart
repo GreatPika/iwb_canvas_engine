@@ -907,10 +907,10 @@ void _backgroundOnlyClearIsNoOp() {
   expect(store.projectionBuildCount, 0);
 }
 
-// Regression: evaluating remove-unused mutations against the final clear state
-// would erase this ordinary-content descriptor before clear or retain it after.
-// Both orders and their exact accepted facts are one barrier-policy witness.
-// ignore: halstead-volume, source-lines-of-code
+// Resource-only clear owns its exact touched, revision, and installed-summary
+// facts in one lifecycle; splitting those observations would hide whether the
+// descriptor removal reached the committed Store.
+// ignore: halstead-volume
 void _clearsResourceOnlyDocument() {
   final resourceOnlyStore = documentStoreWithDocument(resourceOnlyDocument());
   final prepared = resourceOnlyStore.prepareSparseCommit(

@@ -42,7 +42,6 @@ enum FamilyTablesTelemetryKind {
   referenceSummaryMaterialization,
   referenceSummaryPublication,
   referenceSummaryIdentity,
-  editorDecision,
   editorDecisionRead,
   editorCurrentRowRead,
   enumerationOpen,
@@ -93,6 +92,16 @@ final class FamilyTables {
   static final Object _sparseEditorZoneKey = Object();
   static final Object _sparseDecisionZoneKey = Object();
   static final Object _sparseBaseReadZoneKey = Object();
+  static final bool _debugTelemetryEnabled = _assertionsEnabled();
+
+  static bool _assertionsEnabled() {
+    var enabled = false;
+    assert(() {
+      enabled = true;
+      return true;
+    }(), 'assertion-mode detection failed');
+    return enabled;
+  }
 
   const FamilyTables.empty()
     : this._fromTables(
@@ -267,13 +276,15 @@ final class FamilyTables {
   // the editor is live. Marking that role prevents those explicit comparisons
   // from masking a candidate read that bypasses the editor.
   static T readSparseBase<T>(T Function() operation) {
+    if (!_debugTelemetryEnabled) {
+      return operation();
+    }
     return runZoned(operation, zoneValues: {_sparseBaseReadZoneKey: true});
   }
 
   T editSparse<T>(T Function(FamilyTablesEditor editor) operation) {
     final editor = FamilyTablesEditor._(this);
-
-    return runZoned(() {
+    T execute() {
       try {
         final result = operation(editor);
         editor.discard();
@@ -283,7 +294,12 @@ final class FamilyTables {
         editor.discard();
         rethrow;
       }
-    }, zoneValues: {_sparseEditorZoneKey: editor});
+    }
+
+    if (!_debugTelemetryEnabled) {
+      return execute();
+    }
+    return runZoned(execute, zoneValues: {_sparseEditorZoneKey: editor});
   }
 
   static void _recordImmutableSparseFamilyRead(FamilyTables tables) {
@@ -292,11 +308,9 @@ final class FamilyTables {
       if (editor is FamilyTablesEditor &&
           identical(editor._base, tables) &&
           Zone.current[_sparseBaseReadZoneKey] != true) {
-        final decision = Zone.current[_sparseDecisionZoneKey];
         _emitTelemetry(
-          FamilyTablesTelemetryEvent(
+          const FamilyTablesTelemetryEvent(
             FamilyTablesTelemetryKind.staleDecisionRead,
-            decision: decision is FamilyTablesDecision ? decision : null,
           ),
         );
       }
@@ -1019,15 +1033,6 @@ final class FamilyTablesEditor {
     FamilyTables._recordBatchReplacementStart();
   }
 
-  void recordDecision(FamilyTablesDecision decision) {
-    FamilyTables._emitTelemetry(
-      FamilyTablesTelemetryEvent(
-        FamilyTablesTelemetryKind.editorDecision,
-        decision: decision,
-      ),
-    );
-  }
-
   void recordDecisionRead({
     required FamilyTablesDecision decision,
     required FamilyTablesDecisionSubjectKind subjectKind,
@@ -1046,8 +1051,9 @@ final class FamilyTablesEditor {
   }
 
   T decide<T>(FamilyTablesDecision decision, T Function() operation) {
-    recordDecision(decision);
-
+    if (!FamilyTables._debugTelemetryEnabled) {
+      return operation();
+    }
     return runZoned(
       operation,
       zoneValues: {FamilyTables._sparseDecisionZoneKey: decision},
