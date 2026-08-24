@@ -27,6 +27,10 @@ void main() {
     'selection deletion facts fail closed for unresolved and non-content IDs',
     _selectionDeletionFactsFailClosedForInvalidSelectionFacts,
   );
+  test(
+    'selection deletion resolves selected IDs through Store entries without a frame walk',
+    _selectionDeletionUsesProjectedEntriesWithoutFrameWalk,
+  );
 }
 
 void _commandFactsAreImmutableAndOrderedByDocumentHandles() {
@@ -43,6 +47,7 @@ RuntimeCommandFactsAdapter _adapter() {
     frame: _FrameFacts(),
     selection: _SelectionFacts(),
     resources: _Resources(),
+    deletionEntryProjection: _FixtureDeletionEntryProjection(),
     documentSummary: () => const CanvasDocumentSummary(
       elementCount: 6,
       layerCount: 1,
@@ -121,6 +126,32 @@ void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
   _expectInvalidSelectionFacts(nonContent);
 }
 
+void _selectionDeletionUsesProjectedEntriesWithoutFrameWalk() {
+  final frame = _FrameFacts();
+  final facts = RuntimeCommandFactsAdapter(
+    frame: frame,
+    selection: _SelectionFacts(),
+    resources: _Resources(),
+    deletionEntryProjection: _FixtureDeletionEntryProjection(),
+    documentSummary: () => const CanvasDocumentSummary(
+      elementCount: 6,
+      layerCount: 1,
+      resourceCount: 3,
+    ),
+  ).selectionDeleteFacts();
+
+  expect(frame.handleEnumerations, 0);
+  expect(facts.deletableIds, [
+    CanvasElementId('rect-a'),
+    CanvasElementId('rect-b'),
+    CanvasElementId('locked-a'),
+  ]);
+  expect(
+    facts.removalEntriesFor(CanvasSelectionDeletePolicy.partial)[0].element,
+    same(facts.deletableEntries[0].element),
+  );
+}
+
 RuntimeCommandFactsAdapter _adapterWithControlledSelection(
   RuntimeRoot root,
   Iterable<CanvasElementId> selectedIds,
@@ -129,6 +160,7 @@ RuntimeCommandFactsAdapter _adapterWithControlledSelection(
     frame: root,
     selection: _ControlledSelectionFacts(selectedIds),
     resources: root.resourceCatalogPort,
+    deletionEntryProjection: root.deletionEntryProjectionForTesting,
     documentSummary: () => const CanvasDocumentSummary(
       elementCount: 2,
       layerCount: 1,
@@ -232,6 +264,7 @@ void _clearFactsUseOneTypedFrameAndResourcePass() {
     frame: frame,
     selection: selection,
     resources: resources,
+    deletionEntryProjection: _FixtureDeletionEntryProjection(),
     documentSummary: _workSummary,
   );
 
@@ -261,6 +294,7 @@ void _clearFactsUseOneTypedFrameAndResourcePass() {
     frame: noCleanupFrame,
     selection: _CountingSelectionFacts(),
     resources: noCleanupResources,
+    deletionEntryProjection: _FixtureDeletionEntryProjection(),
     documentSummary: _workSummary,
   ).clearContentFacts(removeUnusedResources: false);
 
@@ -316,6 +350,47 @@ final class _Resources implements ResourceCatalogPort {
   }
 }
 
+final class _FixtureDeletionEntryProjection
+    implements DeletionEntryProjectionPort {
+  @override
+  List<DeletionEntryFacts> projectDeletionEntries(
+    Iterable<CanvasElementId> ids,
+  ) {
+    final entries = <DeletionEntryFacts>[];
+    for (final id in ids) {
+      final element = switch (id.value) {
+        'not-deletable-a' => CanvasRectElement(
+          id: id,
+          size: const Size(1, 1),
+          isDeletable: false,
+        ),
+        'background-a' || 'background-vector-a' || 'missing' => null,
+        _ => CanvasRectElement(id: id, size: const Size(1, 1)),
+      };
+      if (element != null) {
+        entries.add(
+          DeletionEntryFacts(
+            element: element,
+            layerId: CanvasLayerId('layer-a'),
+            elementIndex: _orderToken(id),
+            orderToken: _orderToken(id),
+          ),
+        );
+      }
+    }
+    entries.sort((left, right) => left.orderToken.compareTo(right.orderToken));
+    return List.unmodifiable(entries);
+  }
+
+  int _orderToken(CanvasElementId id) => switch (id.value) {
+    'rect-a' => 2,
+    'rect-b' => 3,
+    'locked-a' => 4,
+    'not-deletable-a' => 5,
+    _ => 0,
+  };
+}
+
 final class _FrameFacts implements FrameFactsPort {
   final _handles = [
     _handle('background-a', 0),
@@ -325,6 +400,7 @@ final class _FrameFacts implements FrameFactsPort {
     _handle('locked-a', 4),
     _handle('not-deletable-a', 5),
   ];
+  int handleEnumerations = 0;
 
   @override
   FrameRevisionFacts get frameRevisions => const FrameRevisionFacts(
@@ -344,7 +420,10 @@ final class _FrameFacts implements FrameFactsPort {
   int elementCount(int structuralRevision) => _handles.length;
 
   @override
-  List<FrameElementHandle> elementHandles(int structuralRevision) => _handles;
+  List<FrameElementHandle> elementHandles(int structuralRevision) {
+    handleEnumerations += 1;
+    return _handles;
+  }
 
   @override
   FrameElementHandle? elementHandleForId(

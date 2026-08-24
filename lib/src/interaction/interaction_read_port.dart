@@ -4,6 +4,9 @@ import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/internal/deletion_entry_projection_port.dart';
+
+export '../contracts/internal/deletion_entry_projection_port.dart';
 
 // The interaction read port is the single immutable fact boundary for pointer
 // decisions; splitting it by tool would let active gesture owners reassemble
@@ -260,7 +263,7 @@ final class EraserReadRequest {
 }
 
 final class EraserReadFacts {
-  EraserReadFacts({
+  EraserReadFacts.preview({
     required Iterable<Offset> corridorPoints,
     required Iterable<CanvasElementId> erasedElementIds,
     required this.eraserThickness,
@@ -270,10 +273,35 @@ final class EraserReadFacts {
     required this.exactBudgetExceeded,
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : corridorPoints = List.unmodifiable(corridorPoints),
-       erasedElementIds = List.unmodifiable(erasedElementIds);
+       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
+       _terminalErasedEntries = null;
+
+  EraserReadFacts.terminal({
+    required Iterable<Offset> corridorPoints,
+    required List<DeletionEntryFacts> erasedEntries,
+    required this.eraserThickness,
+    required this.controllerEpoch,
+    required this.documentRevision,
+    required this.exactCheckCount,
+    required this.exactBudgetExceeded,
+    this.query = const InteractionReadQueryFacts.notRun(),
+  }) : corridorPoints = List.unmodifiable(corridorPoints),
+       _previewErasedElementIds = null,
+       _terminalErasedEntries = erasedEntries;
 
   final List<Offset> corridorPoints;
-  final List<CanvasElementId> erasedElementIds;
+
+  final List<CanvasElementId>? _previewErasedElementIds;
+  final List<DeletionEntryFacts>? _terminalErasedEntries;
+
+  // Preview owns exact-hit IDs; terminal owns the immutable Store projection.
+  // The public internal view derives the other representation only where it
+  // exists, preventing independently supplied payloads from diverging.
+  List<DeletionEntryFacts> get erasedEntries =>
+      _terminalErasedEntries ?? const [];
+  List<CanvasElementId> get erasedElementIds =>
+      _previewErasedElementIds ??
+      List.unmodifiable(erasedEntries.map((entry) => entry.id));
   final double eraserThickness;
   final int controllerEpoch;
   final int documentRevision;

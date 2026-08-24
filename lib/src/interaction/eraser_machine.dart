@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'interaction_read_port.dart';
@@ -67,7 +66,7 @@ final class EraserMachine {
     required PointerEraserCapture eraser,
     required EraserReadFacts facts,
   }) {
-    if (facts.exactBudgetExceeded || facts.erasedElementIds.isEmpty) {
+    if (facts.exactBudgetExceeded || facts.erasedEntries.isEmpty) {
       return const EraserTerminalDecision.cleanupOnly();
     }
 
@@ -76,7 +75,7 @@ final class EraserMachine {
       pointerToken: pointerToken,
       eraser: eraser,
       corridorPointCount: facts.corridorPoints.length,
-      erasedElementIds: facts.erasedElementIds,
+      erasedEntries: facts.erasedEntries,
     );
   }
 }
@@ -138,13 +137,13 @@ final class EraserTerminalDecision {
     required PointerSessionToken pointerToken,
     required PointerEraserCapture eraser,
     required int corridorPointCount,
-    required Iterable<CanvasElementId> erasedElementIds,
+    required List<DeletionEntryFacts> erasedEntries,
   }) : intent = EraserCommitIntent(
          sessionId: sessionId,
          pointerToken: pointerToken,
          eraserThickness: eraser.thickness,
          corridorPointCount: corridorPointCount,
-         erasedElementIds: erasedElementIds,
+         erasedEntries: erasedEntries,
        );
 
   final EraserCommitIntent? intent;

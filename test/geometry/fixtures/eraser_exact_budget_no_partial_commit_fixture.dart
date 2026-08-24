@@ -126,9 +126,10 @@ EraserReadFacts _facts({
   required Iterable<CanvasElementId> erasedIds,
   required bool exactBudgetExceeded,
 }) {
-  return EraserReadFacts(
+  final ids = List<CanvasElementId>.unmodifiable(erasedIds);
+  return EraserReadFacts.preview(
     corridorPoints: corridor,
-    erasedElementIds: erasedIds,
+    erasedElementIds: ids,
     eraserThickness: 6,
     controllerEpoch: 1,
     documentRevision: 0,

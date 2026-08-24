@@ -5,16 +5,18 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test(
@@ -533,7 +535,17 @@ EraserCommitIntent _eraserCommitIntent() {
     pointerToken: const PointerSessionToken(1),
     eraserThickness: 8,
     corridorPointCount: 3,
-    erasedElementIds: [CanvasElementId('b')],
+    erasedEntries: [
+      DeletionEntryFacts(
+        element: CanvasRectElement(
+          id: CanvasElementId('b'),
+          size: const Size(1, 1),
+        ),
+        layerId: CanvasLayerId('fixture-layer'),
+        elementIndex: 0,
+        orderToken: 0,
+      ),
+    ],
   );
 }
 

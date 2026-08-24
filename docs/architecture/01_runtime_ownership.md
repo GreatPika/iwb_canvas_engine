@@ -151,6 +151,12 @@ before eraser candidate and exact-check budgets for both preview and terminal
 reads; it does not duplicate the element-kind truth or alter spatial-query
 failure semantics.
 
+For terminal eraser deletion, the final exact-hit IDs are passed directly to
+the Store-owned deletion-entry projection. The interaction read adapter carries
+the resulting immutable entry facts without a document-wide frame-handle walk
+or a `CanvasDocument` projection; Store remains the sole owner of canonical
+deletion order and original layer positions.
+
 Frame capture also uses a narrow intent-specific document boundary.
 `FrameFactsPort` is owned by `lib/src/contracts/internal/**` and is the
 accepted committed-state read seam between the frame-internal facade and

@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
+import 'package:iwb_canvas_engine/src/store/canvas_element_snapshot.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
@@ -10,6 +12,11 @@ import '../../support/document_store_with_document.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
+  _registerProjectionCacheTests();
+  _registerDeletionProjectionTests();
+}
+
+void _registerProjectionCacheTests() {
   test(
     'projection cache is touched only by explicit readDocument',
     () =>
@@ -34,6 +41,27 @@ void main() {
   test(
     'selection-only route does not build projection',
     () => expect(_selectionOnlyRouteDoesNotBuildProjection, returnsNormally),
+  );
+  test(
+    'selection deletion projects only selected entries without CanvasDocument',
+    () => expect(
+      _selectionDeletionDoesNotBuildDocumentProjection,
+      returnsNormally,
+    ),
+  );
+}
+
+void _registerDeletionProjectionTests() {
+  test(
+    'Store deletion projection preserves committed entry facts without a document projection',
+    () => expect(
+      _storeDeletionProjectionUsesCommittedEntryFacts,
+      returnsNormally,
+    ),
+  );
+  test(
+    'Store deletion projection has canonical and arbitrary order work bounds',
+    () => expect(_storeDeletionProjectionHasBoundedOrderWork, returnsNormally),
   );
 }
 
@@ -61,6 +89,7 @@ void _projectionCacheBuildsOnlyThroughExplicitRead() {
 void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
   final store = documentStoreWithDocument(
     CanvasDocument(
+      backgroundElements: [_rect('background')],
       layers: [
         CanvasLayer(
           id: CanvasLayerId('layer-a'),
@@ -181,6 +210,207 @@ void _selectionOnlyRouteDoesNotBuildProjection() {
 
   expect(root.selectedElementIds, {CanvasElementId('element-a')});
   expect(root.projectionBuildCount, 0);
+}
+
+void _selectionDeletionDoesNotBuildDocumentProjection() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('layer-a'),
+          elements: [_rect('before'), _rect('selected-a')],
+        ),
+        CanvasLayer(
+          id: CanvasLayerId('layer-b'),
+          elements: [_rect('selected-b'), _rect('after')],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+  );
+  addTearDown(root.dispose);
+
+  root.selection.setSelection([
+    CanvasElementId('selected-b'),
+    CanvasElementId('selected-a'),
+  ]);
+  root.selection.deleteSelection();
+
+  expect(root.projectionBuildCount, 0);
+}
+
+// One compact matrix keeps the same committed snapshot, background boundary,
+// and pre-mutation entry facts together; splitting it would obscure its oracle.
+// ignore: halstead-volume
+void _storeDeletionProjectionUsesCommittedEntryFacts() {
+  final background = _rect('background');
+  final first = _rect('first');
+  final selected = _rect('selected');
+  final later = _rect('later');
+  final last = _rect('last');
+  final store = documentStoreWithDocument(
+    CanvasDocument(
+      backgroundElements: [background],
+      layers: [
+        CanvasLayer(id: CanvasLayerId('layer-a'), elements: [first, selected]),
+        CanvasLayer(id: CanvasLayerId('layer-b'), elements: [later, last]),
+      ],
+    ),
+  );
+
+  final entries = store.projectDeletionEntries([
+    last.id,
+    selected.id,
+    selected.id,
+    later.id,
+    CanvasElementId('missing'),
+    CanvasElementId('background'),
+  ]);
+
+  _expectProjectedEntryFacts(entries, store, [
+    _ExpectedDeletionEntry(selected.id, CanvasLayerId('layer-a'), 1, 2),
+    _ExpectedDeletionEntry(later.id, CanvasLayerId('layer-b'), 0, 3),
+    _ExpectedDeletionEntry(last.id, CanvasLayerId('layer-b'), 1, 4),
+  ]);
+  expect(() => entries.clear(), throwsUnsupportedError);
+  expect(() => entries.add(entries.first), throwsUnsupportedError);
+  expect(store.backgroundElementIds, contains(background.id));
+  expect(store.elementById(background.id), isNotNull);
+  expect(entries.map((entry) => entry.id), isNot(contains(background.id)));
+  expect(
+    entries.map((entry) => entry.id),
+    isNot(contains(CanvasElementId('missing'))),
+  );
+  expect(store.projectionBuildCount, 0);
+}
+
+void _expectProjectedEntryFacts(
+  List<DeletionEntryFacts> entries,
+  DocumentStoreKernel store,
+  List<_ExpectedDeletionEntry> expectedEntries,
+) {
+  expect(
+    entries.map((entry) => entry.id),
+    expectedEntries.map((entry) => entry.id),
+  );
+  expect(entries[0].element, isA<CanvasRectElement>());
+  for (var index = 0; index < entries.length; index += 1) {
+    _expectEntry(entries[index], store, expectedEntries[index]);
+  }
+}
+
+void _expectEntry(
+  DeletionEntryFacts entry,
+  DocumentStoreKernel store,
+  _ExpectedDeletionEntry expected,
+) {
+  final committedElement = store.elementById(entry.id);
+  expect(committedElement, isNotNull);
+  if (committedElement == null) {
+    fail('Store did not retain projected entry ${entry.id}');
+  }
+  expect(sameCanvasElementSnapshot(entry.element, committedElement), isTrue);
+  expect(entry.layerId, expected.layerId);
+  expect(entry.elementIndex, expected.elementIndex);
+  expect(entry.orderToken, expected.orderToken);
+}
+
+final class _ExpectedDeletionEntry {
+  const _ExpectedDeletionEntry(
+    this.id,
+    this.layerId,
+    this.elementIndex,
+    this.orderToken,
+  );
+
+  final CanvasElementId id;
+  final CanvasLayerId layerId;
+  final int elementIndex;
+  final int orderToken;
+}
+
+void _storeDeletionProjectionHasBoundedOrderWork() {
+  final ids = [
+    CanvasElementId('target-a'),
+    CanvasElementId('target-b'),
+    CanvasElementId('target-c'),
+    CanvasElementId('target-d'),
+  ];
+  final canonicalWork = _deletionProjectionWork(
+    _deletionProjectionStore(unrelatedElementCount: 0),
+    ids,
+  );
+  expect(
+    canonicalWork[DeletionProjectionWorkEvent.arbitraryOrderComparison],
+    isNull,
+  );
+  expect(
+    canonicalWork[DeletionProjectionWorkEvent.canonicalOrderComparison],
+    3,
+  );
+
+  final arbitraryWork = _deletionProjectionWork(
+    _deletionProjectionStore(unrelatedElementCount: 0),
+    ids.reversed.toList(growable: false),
+  );
+  expect(
+    arbitraryWork[DeletionProjectionWorkEvent.arbitraryOrderComparison],
+    greaterThan(0),
+  );
+  expect(
+    arbitraryWork[DeletionProjectionWorkEvent.arbitraryOrderComparison]!,
+    lessThanOrEqualTo(16),
+  );
+
+  final fixedBase = _deletionProjectionWork(
+    _deletionProjectionStore(unrelatedElementCount: 0),
+    ids.take(2).toList(growable: false),
+  );
+  final fixedWithUnrelated = _deletionProjectionWork(
+    _deletionProjectionStore(unrelatedElementCount: 100),
+    ids.take(2).toList(growable: false),
+  );
+  expect(fixedWithUnrelated, fixedBase);
+}
+
+Map<DeletionProjectionWorkEvent, int> _deletionProjectionWork(
+  DocumentStoreKernel store,
+  List<CanvasElementId> ids,
+) {
+  final counts = <DeletionProjectionWorkEvent, int>{};
+  final entries = DocumentStoreKernel.observeDeletionProjectionWork(
+    (event) => counts.update(event, (count) => count + 1, ifAbsent: () => 1),
+    () => store.projectDeletionEntries(ids),
+  );
+  expect(entries, hasLength(ids.length));
+  return counts;
+}
+
+DocumentStoreKernel _deletionProjectionStore({
+  required int unrelatedElementCount,
+}) {
+  return documentStoreWithDocument(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('targets'),
+          elements: [
+            _rect('target-a'),
+            _rect('target-b'),
+            _rect('target-c'),
+            _rect('target-d'),
+          ],
+        ),
+        CanvasLayer(
+          id: CanvasLayerId('unrelated'),
+          elements: [
+            for (var index = 0; index < unrelatedElementCount; index += 1)
+              _rect('unrelated-$index'),
+          ],
+        ),
+      ],
+    ),
+  );
 }
 
 void _installSparseAdd(DocumentStoreKernel store) {

@@ -20,17 +20,20 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
     required FrameFactsPort frame,
     required SelectionFactsPort selection,
     required ResourceCatalogPort resources,
+    required DeletionEntryProjectionPort deletionEntryProjection,
     required CommandDocumentSummaryReader documentSummary,
     GeometryPolicy geometryPolicy = const GeometryPolicy(),
   }) : _frame = frame,
        _selection = selection,
        _resources = resources,
+       _deletionEntryProjection = deletionEntryProjection,
        _documentSummary = documentSummary,
        _geometryPolicy = geometryPolicy;
 
   final FrameFactsPort _frame;
   final SelectionFactsPort _selection;
   final ResourceCatalogPort _resources;
+  final DeletionEntryProjectionPort _deletionEntryProjection;
   final CommandDocumentSummaryReader _documentSummary;
   final GeometryPolicy _geometryPolicy;
 
@@ -58,20 +61,26 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
 
   @override
   SelectionDeleteFacts selectionDeleteFacts() {
-    final context = _context();
-    final selected = context.selection.selectedElementIds;
-    final deletableIds = <CanvasElementId>[
-      for (final handle in context.handles)
-        if (selected.contains(handle.id))
-          if (_frame.resolveElement(handle) case final facts?)
-            if (_isDeletable(facts)) handle.id,
-    ];
+    final selected = _selection.selectionFacts.selectedElementIds;
+    final projected = _deletionEntryProjection.projectDeletionEntries(selected);
+    final deletableEntries = <DeletionEntryFacts>[];
+    for (final entry in projected) {
+      if (entry.element.isDeletable) {
+        deletableEntries.add(entry);
+      }
+    }
+    final orderedDeletableEntries = deletableEntries.length == projected.length
+        ? projected
+        : List<DeletionEntryFacts>.unmodifiable(deletableEntries);
+    final distinctSelected = selected.toSet();
 
     return SelectionDeleteFacts(
       hasSelection: selected.isNotEmpty,
       allSelectedElementsDeletable:
-          selected.isNotEmpty && deletableIds.length == selected.length,
-      deletableIds: deletableIds,
+          selected.isNotEmpty &&
+          projected.length == distinctSelected.length &&
+          orderedDeletableEntries.length == distinctSelected.length,
+      deletableEntries: orderedDeletableEntries,
     );
   }
 
@@ -133,11 +142,6 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
     return facts.locationKind == FrameElementLocationKind.content &&
         !facts.isLocked &&
         facts.isTransformable;
-  }
-
-  bool _isDeletable(FrameElementFacts facts) {
-    return facts.locationKind == FrameElementLocationKind.content &&
-        facts.isDeletable;
   }
 
   CanvasElementRead _elementRead(FrameElementFacts facts) {

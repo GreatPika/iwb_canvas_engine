@@ -116,6 +116,32 @@ final class RuntimeRouteTemporalEvent {
   final RuntimeNonTextRoute? route;
 }
 
+@visibleForTesting
+enum RuntimeDeletionEntryRouteWorkKind {
+  selectionReadStarted,
+  selectionEntriesReady,
+  frameHandleEnumeration,
+}
+
+@immutable
+@visibleForTesting
+final class RuntimeDeletionEntryRouteWorkEvent {
+  const RuntimeDeletionEntryRouteWorkEvent({
+    required this.kind,
+    this.entries = const [],
+  });
+
+  final RuntimeDeletionEntryRouteWorkKind kind;
+  final List<DeletionEntryFacts> entries;
+}
+
+final class _DeletionEntryRouteWorkScope {
+  _DeletionEntryRouteWorkScope(this.sink);
+
+  final void Function(RuntimeDeletionEntryRouteWorkEvent event) sink;
+  bool readToEntryActive = false;
+}
+
 // Common delivery has public callback seams for resource, frame, state, action,
 // and observer facts. This assert-only event supplies only their semantic
 // ordering and guard boundaries; sealed-collection work is observed at its
@@ -229,6 +255,8 @@ final class RuntimeRoot
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   static final Object _routeTemporalEventZoneKey = Object();
+  static final Object _deletionEntryRouteWorkZoneKey = Object();
+  static final Object _frameHandleEnumerationZoneKey = Object();
   static final Object _commonDeliveryEventZoneKey = Object();
   final DiagnosticsHub? _diagnostics;
   final LoadInteractionBoundary? _loadInteractionBoundary;
@@ -283,6 +311,7 @@ final class RuntimeRoot
         spatial: _spatial,
         controllerEpoch: () => _epochRevision,
         eraserElementKinds: config.eraserElementKinds,
+        deletionEntryProjection: _store,
       );
   late final EditKernel _editKernel = EditKernel(
     mutationGuard: this,
@@ -313,6 +342,7 @@ final class RuntimeRoot
     frame: this,
     selection: _selection,
     resources: _resourceCatalogPort,
+    deletionEntryProjection: _store,
     documentSummary: _documentSummary,
   );
 
@@ -336,6 +366,9 @@ final class RuntimeRoot
     _surfaceFrameMirror = mirror;
     mirror(_surfaceFrameSignal.value);
   }
+
+  @visibleForTesting
+  DocumentStoreKernel get deletionEntryProjectionForTesting => _store;
 
   void removeSurfaceFrameMirror(RuntimeSurfaceFrameMirror mirror) {
     if (identical(_surfaceFrameMirror, mirror)) {
@@ -590,6 +623,18 @@ final class RuntimeRoot
 
   @override
   List<FrameElementHandle> elementHandles(int structuralRevision) {
+    assert(
+      _recordFrameHandleEnumeration(),
+      'frame handle enumeration observation failed',
+    );
+    assert(
+      _recordDeletionEntryRouteWork(
+        const RuntimeDeletionEntryRouteWorkEvent(
+          kind: RuntimeDeletionEntryRouteWorkKind.frameHandleEnumeration,
+        ),
+      ),
+      'deletion entry route work observation failed',
+    );
     return List.unmodifiable([
       for (final handle in _store.elementHandles(structuralRevision))
         FrameElementHandle(
@@ -935,11 +980,13 @@ final class RuntimeRoot
 
   void deleteSelection({int? timestampMs}) {
     ensureRuntimeMutationAllowed();
-    final facts = _commandFacts.selectionDeleteFacts();
-    final removalIds = facts.removalIdsFor(config.selectionDeletePolicy);
-    if (removalIds.isEmpty) {
+    final removalEntries = _selectionDeleteEntries();
+    if (removalEntries.isEmpty) {
       return;
     }
+    final removalIds = List<CanvasElementId>.unmodifiable(
+      removalEntries.map((entry) => entry.id),
+    );
     final applyResult = _editKernel.prepareInteractionCommit(
       (edit) {
         for (final id in removalIds) {
@@ -954,6 +1001,31 @@ final class RuntimeRoot
       ]),
     );
     _deliverEditCommitResult(applyResult);
+  }
+
+  List<DeletionEntryFacts> _selectionDeleteEntries() {
+    assert(
+      _recordDeletionEntryRouteWork(
+        const RuntimeDeletionEntryRouteWorkEvent(
+          kind: RuntimeDeletionEntryRouteWorkKind.selectionReadStarted,
+        ),
+      ),
+      'deletion entry route work observation failed',
+    );
+    final facts = _commandFacts.selectionDeleteFacts();
+    final removalEntries = facts.removalEntriesFor(
+      config.selectionDeletePolicy,
+    );
+    assert(
+      _recordDeletionEntryRouteWork(
+        RuntimeDeletionEntryRouteWorkEvent(
+          kind: RuntimeDeletionEntryRouteWorkKind.selectionEntriesReady,
+          entries: removalEntries,
+        ),
+      ),
+      'deletion entry route work observation failed',
+    );
+    return removalEntries;
   }
 
   CanvasSelectionDeleteAvailability get selectionDeleteAvailability {
@@ -1534,6 +1606,57 @@ final class RuntimeRoot
     void Function(RuntimeRouteTemporalEvent event) sink,
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_routeTemporalEventZoneKey: sink});
+
+  /// Observes only the public selection-delete read-to-entry boundary.
+  /// Assertion-gated events leave no production route state or telemetry.
+  @visibleForTesting
+  static T observeDeletionEntryRouteWork<T>(
+    void Function(RuntimeDeletionEntryRouteWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {
+      _deletionEntryRouteWorkZoneKey: _DeletionEntryRouteWorkScope(sink),
+    },
+  );
+
+  /// Test-only observation of real frame-wide reads. Assertion gating keeps
+  /// the production frame path free of counters, state, and extra passes.
+  @visibleForTesting
+  static T observeFrameHandleEnumerations<T>(
+    void Function() sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_frameHandleEnumerationZoneKey: sink});
+
+  static bool _recordFrameHandleEnumeration() {
+    final sink = Zone.current[_frameHandleEnumerationZoneKey];
+    if (sink is void Function()) {
+      sink();
+    }
+    return true;
+  }
+
+  static bool _recordDeletionEntryRouteWork(
+    RuntimeDeletionEntryRouteWorkEvent event,
+  ) {
+    final scope = Zone.current[_deletionEntryRouteWorkZoneKey];
+    if (scope is _DeletionEntryRouteWorkScope) {
+      if (event.kind ==
+          RuntimeDeletionEntryRouteWorkKind.selectionReadStarted) {
+        scope.readToEntryActive = true;
+      }
+      if (event.kind !=
+              RuntimeDeletionEntryRouteWorkKind.frameHandleEnumeration ||
+          scope.readToEntryActive) {
+        scope.sink(event);
+      }
+      if (event.kind ==
+          RuntimeDeletionEntryRouteWorkKind.selectionEntriesReady) {
+        scope.readToEntryActive = false;
+      }
+    }
+    return true;
+  }
 
   static bool _recordRouteTemporalEvent(
     RuntimeRouteTemporalEventKind kind, {

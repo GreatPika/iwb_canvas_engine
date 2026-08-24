@@ -165,6 +165,17 @@ ElementHandle:
   boundsRevision
 ```
 
+Deletion entry projection is a Store-owned one-snapshot read. Given final
+candidate IDs, `DocumentStoreKernel` deduplicates them, rejects unresolved and
+background inputs, and returns immutable element references with the source
+content-layer id, original in-layer index, and existing frame order token. The
+index is derived directly from the element token and the first token in its
+already located layer row; Store sorts only a non-canonical candidate set.
+The returned facts are carried unchanged by selection deletion and terminal
+eraser routing. They do not materialize `CanvasDocument`, create a persistent
+index/cache/schema field, or add an ordering authority beside the existing
+dense Store tokens.
+
 geometry/spatial committed spatial reads expose a narrower immutable
 `FrameElementHandle` across `FrameFactsPort`: id, structuralRevision,
 generation, and committed orderToken. `locationKind` and nullable `layerId`

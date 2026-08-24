@@ -3,6 +3,7 @@ import 'dart:ui';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'pointer_cleanup_protocol.dart';
 import 'pointer_session_identity.dart';
@@ -134,14 +135,18 @@ final class EraserCommitIntent {
     required this.pointerToken,
     required this.eraserThickness,
     required this.corridorPointCount,
-    required Iterable<CanvasElementId> erasedElementIds,
-  }) : erasedElementIds = List.unmodifiable(erasedElementIds);
+    required this.erasedEntries,
+  });
 
   final PointerSessionId sessionId;
   final PointerSessionToken pointerToken;
   final double eraserThickness;
   final int corridorPointCount;
-  final List<CanvasElementId> erasedElementIds;
+  // This is the same immutable Store projection accepted by the terminal
+  // decision. IDs remain a compatibility view, never an independent payload.
+  final List<DeletionEntryFacts> erasedEntries;
+  List<CanvasElementId> get erasedElementIds =>
+      List.unmodifiable(erasedEntries.map((entry) => entry.id));
 }
 
 final class InteractionSelectionReplacement {

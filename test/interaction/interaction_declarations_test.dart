@@ -203,7 +203,7 @@ void _verifyEraserCommitIntentFields() {
     'pointerToken',
     'eraserThickness',
     'corridorPointCount',
-    'erasedElementIds',
+    'erasedEntries',
   });
 }
 

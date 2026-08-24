@@ -1,5 +1,4 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -8,6 +7,7 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
+import '../../support/runtime_root_with_committed_document_seed.dart';
 import 'interaction_read_port_bounded_read_fixture.dart';
 
 void main() {
@@ -396,12 +396,18 @@ void _testEraserReadFacts() {
 
     expect(facts.corridorPoints, [const Offset(1, 1), const Offset(9, 9)]);
     expect(facts.erasedElementIds, [CanvasElementId('movable-a')]);
+    expect(facts.erasedEntries, hasLength(1));
+    expect(facts.erasedEntries.single.id, CanvasElementId('movable-a'));
+    expect(facts.erasedEntries.single.layerId, CanvasLayerId('layer-a'));
+    expect(facts.erasedEntries.single.elementIndex, 0);
+    expect(facts.erasedEntries.single.orderToken, 3);
     expect(facts.eraserThickness, 4);
     expect(facts.controllerEpoch, 0);
     expect(facts.documentRevision, 0);
     expect(facts.query.status, InteractionReadQueryStatus.candidates);
     expect(facts.exactCheckCount, greaterThanOrEqualTo(1));
     expect(facts.exactBudgetExceeded, isFalse);
+    expect(root.projectionBuildCount, 0);
     expect(() => facts.corridorPoints.clear(), throwsUnsupportedError);
     expect(() => facts.erasedElementIds.clear(), throwsUnsupportedError);
   });

@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 // ignore_for_file: number-of-imports
 
 import '../contracts/public/canvas_element.dart';
+import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/public/canvas_errors.dart';
 import '../contracts/public/canvas_geometry.dart';
 import '../contracts/public/canvas_document.dart';
@@ -76,6 +77,18 @@ enum SparseTransactionWorkLedger {
   deferredValidation,
 }
 
+@visibleForTesting
+enum DeletionProjectionWorkEvent {
+  snapshotRead,
+  inputIdRead,
+  duplicateId,
+  elementFactRead,
+  locationFactRead,
+  layerFactRead,
+  canonicalOrderComparison,
+  arbitraryOrderComparison,
+}
+
 // Sparse preparation exposes only phase-attributed semantic work. The fixture
 // owns the trace, so the transaction keeps no telemetry history in production.
 @immutable
@@ -100,9 +113,11 @@ final class SparseTransactionWorkEvent {
 // projection, id admission, and selection normalization inputs; splitting these
 // accessors would obscure the shared committed-state source of truth.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
-final class DocumentStoreKernel {
+final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   static final Object _idAdmissionWorkZoneKey = Object();
   static final Object _sparseTransactionWorkZoneKey = Object();
+  static final Object _deletionProjectionWorkZoneKey = Object();
+  static final Object _deletionEntryProjectionZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(
@@ -156,6 +171,36 @@ final class DocumentStoreKernel {
     T Function() operation,
   ) {
     return runZoned(operation, zoneValues: {_idAdmissionWorkZoneKey: sink});
+  }
+
+  @visibleForTesting
+  static T observeDeletionProjectionWork<T>(
+    void Function(DeletionProjectionWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_deletionProjectionWorkZoneKey: sink});
+
+  /// Exposes the immutable result only while assertions are enabled, so route
+  /// fixtures can prove consumers retain the Store-produced entry sequence.
+  @visibleForTesting
+  static T observeDeletionEntryProjection<T>(
+    void Function(List<DeletionEntryFacts> entries) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_deletionEntryProjectionZoneKey: sink});
+
+  static bool _recordDeletionProjectionWork(DeletionProjectionWorkEvent event) {
+    final sink = Zone.current[_deletionProjectionWorkZoneKey];
+    if (sink is void Function(DeletionProjectionWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
+  static bool _recordDeletionEntryProjection(List<DeletionEntryFacts> entries) {
+    final sink = Zone.current[_deletionEntryProjectionZoneKey];
+    if (sink is void Function(List<DeletionEntryFacts>)) {
+      sink(entries);
+    }
+    return true;
   }
 
   static void _recordIdAdmissionWork({
@@ -378,6 +423,136 @@ final class DocumentStoreKernel {
       orderToken: orderToken,
       location: location,
     );
+  }
+
+  @override
+  List<DeletionEntryFacts> projectDeletionEntries(
+    Iterable<CanvasElementId> ids,
+  ) {
+    final document = _document;
+    assert(
+      _recordDeletionProjectionWork(DeletionProjectionWorkEvent.snapshotRead),
+      'deletion projection work observation failed',
+    );
+    final seen = <CanvasElementId>{};
+    final entries = <DeletionEntryFacts>[];
+    for (final id in ids) {
+      assert(
+        _recordDeletionProjectionWork(DeletionProjectionWorkEvent.inputIdRead),
+        'deletion projection work observation failed',
+      );
+      if (!seen.add(id)) {
+        assert(
+          _recordDeletionProjectionWork(
+            DeletionProjectionWorkEvent.duplicateId,
+          ),
+          'deletion projection work observation failed',
+        );
+        continue;
+      }
+      final entry = _deletionEntryFor(document, id);
+      if (entry != null) {
+        entries.add(entry);
+      }
+    }
+    final result = _orderDeletionEntries(entries);
+    assert(
+      _recordDeletionEntryProjection(result),
+      'deletion entry projection observation failed',
+    );
+    return result;
+  }
+
+  // These validation and position reads share one committed snapshot. Keeping
+  // them together preserves the fail-closed boundary without a second lookup
+  // lifecycle merely to satisfy a metric.
+  // ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+  DeletionEntryFacts? _deletionEntryFor(
+    CommittedDocument document,
+    CanvasElementId id,
+  ) {
+    assert(
+      _recordDeletionProjectionWork(
+        DeletionProjectionWorkEvent.elementFactRead,
+      ),
+      'deletion projection work observation failed',
+    );
+    final element = document.elements.elementById(id);
+    assert(
+      _recordDeletionProjectionWork(
+        DeletionProjectionWorkEvent.locationFactRead,
+      ),
+      'deletion projection work observation failed',
+    );
+    final location = document.elements.elementLocationFacts[id];
+    if (element == null ||
+        location == null ||
+        location.kind != ElementLocationKind.content) {
+      return null;
+    }
+    final layerId = location.layerId;
+    if (layerId == null) {
+      return null;
+    }
+    assert(
+      _recordDeletionProjectionWork(DeletionProjectionWorkEvent.layerFactRead),
+      'deletion projection work observation failed',
+    );
+    final layer = document.elements.layerTable.locationFor(layerId)?.row;
+    final orderToken = document.elements.frameOrderTokensById[id];
+    if (layer == null || layer.elementIds.isEmpty || orderToken == null) {
+      return null;
+    }
+    final firstToken =
+        document.elements.frameOrderTokensById[layer.elementIds.first];
+    if (firstToken == null) {
+      return null;
+    }
+    final elementIndex = orderToken - firstToken;
+    if (elementIndex < 0 ||
+        elementIndex >= layer.elementIds.length ||
+        layer.elementIds[elementIndex] != id) {
+      return null;
+    }
+    return DeletionEntryFacts(
+      element: element,
+      layerId: layerId,
+      elementIndex: elementIndex,
+      orderToken: orderToken,
+    );
+  }
+
+  List<DeletionEntryFacts> _orderDeletionEntries(
+    List<DeletionEntryFacts> entries,
+  ) {
+    if (_entriesAreCanonical(entries)) {
+      return List.unmodifiable(entries);
+    }
+    entries.sort((left, right) {
+      assert(
+        _recordDeletionProjectionWork(
+          DeletionProjectionWorkEvent.arbitraryOrderComparison,
+        ),
+        'deletion projection work observation failed',
+      );
+      return left.orderToken.compareTo(right.orderToken);
+    });
+    return List.unmodifiable(entries);
+  }
+
+  bool _entriesAreCanonical(List<DeletionEntryFacts> entries) {
+    for (var index = 1; index < entries.length; index += 1) {
+      assert(
+        _recordDeletionProjectionWork(
+          DeletionProjectionWorkEvent.canonicalOrderComparison,
+        ),
+        'deletion projection work observation failed',
+      );
+      if (entries[index - 1].orderToken > entries[index].orderToken) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Set<CanvasElementId> normalizeSelection(Iterable<CanvasElementId> ids) {

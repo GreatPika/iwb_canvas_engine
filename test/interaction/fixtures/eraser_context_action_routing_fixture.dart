@@ -254,6 +254,7 @@ void _verifyEraserMachineDecisions() {
       erasedIds: const [],
     ),
   );
+  final projectedEntry = _projectedEntry();
   final terminal = machine.terminal(
     sessionId: const PointerSessionId(1),
     pointerToken: const PointerSessionToken(2),
@@ -261,6 +262,7 @@ void _verifyEraserMachineDecisions() {
     facts: _eraserFacts(
       corridor: const [Offset.zero, Offset(2, 3), Offset(4, 5)],
       erasedIds: [CanvasElementId('a')],
+      erasedEntries: [projectedEntry],
     ),
   );
 
@@ -271,9 +273,18 @@ void _verifyEraserMachineDecisions() {
   expect(eraserPreview.corridor, [Offset.zero, const Offset(2, 3)]);
   expect(() => eraserPreview.corridor.clear(), throwsUnsupportedError);
   expect(intent.erasedElementIds, [CanvasElementId('a')]);
+  expect(intent.erasedEntries, hasLength(1));
+  expect(intent.erasedEntries.single.element, same(projectedEntry.element));
   expect(intent.eraserThickness, eraser.thickness);
   expect(intent.corridorPointCount, 3);
 }
+
+DeletionEntryFacts _projectedEntry() => DeletionEntryFacts(
+  element: CanvasRectElement(id: CanvasElementId('a'), size: const Size(1, 1)),
+  layerId: CanvasLayerId('layer-a'),
+  elementIndex: 0,
+  orderToken: 0,
+);
 
 // The routing assertions stay together to prove session capture, preview reads,
 // terminal reads, and admission handoff for one public pointer sequence.
@@ -770,18 +781,32 @@ CanvasPointerSample _sample(
 EraserReadFacts _eraserFacts({
   required Iterable<Offset> corridor,
   required Iterable<CanvasElementId> erasedIds,
+  Iterable<DeletionEntryFacts> erasedEntries = const [],
   bool exactBudgetExceeded = false,
 }) {
-  return EraserReadFacts(
+  final ids = List<CanvasElementId>.unmodifiable(erasedIds);
+  final entries = erasedEntries.isEmpty
+      ? List<DeletionEntryFacts>.unmodifiable(
+          ids.map(
+            (id) => DeletionEntryFacts(
+              element: CanvasRectElement(id: id, size: const Size(1, 1)),
+              layerId: CanvasLayerId('fixture-layer'),
+              elementIndex: 0,
+              orderToken: 0,
+            ),
+          ),
+        )
+      : List<DeletionEntryFacts>.unmodifiable(erasedEntries);
+  return EraserReadFacts.terminal(
     corridorPoints: corridor,
-    erasedElementIds: erasedIds,
+    erasedEntries: entries,
     eraserThickness: 7,
     controllerEpoch: 1,
     documentRevision: 0,
-    exactCheckCount: erasedIds.length,
+    exactCheckCount: ids.length,
     exactBudgetExceeded: exactBudgetExceeded,
     query: InteractionReadQueryFacts.candidates(
-      candidateCount: erasedIds.length,
+      candidateCount: ids.length,
       skippedCandidateCount: 0,
     ),
   );

@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
@@ -385,10 +386,20 @@ _DirectContextTargetFixture _unresolvedTopCandidateFixture() {
       selection: const _EmptySelectionFactsPort(),
       spatial: spatial,
       controllerEpoch: () => 0,
+      deletionEntryProjection: const _NoDeletionEntryProjection(),
     ),
   );
 
   return _DirectContextTargetFixture(engine: engine, hub: hub);
+}
+
+final class _NoDeletionEntryProjection implements DeletionEntryProjectionPort {
+  const _NoDeletionEntryProjection();
+
+  @override
+  List<DeletionEntryFacts> projectDeletionEntries(
+    Iterable<CanvasElementId> ids,
+  ) => const [];
 }
 
 void _expectUnresolvedTargetRejected(

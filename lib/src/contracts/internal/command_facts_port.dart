@@ -4,6 +4,9 @@ import '../public/canvas_actions.dart';
 import '../public/canvas_document.dart';
 import '../public/canvas_ids.dart';
 import '../public/canvas_runtime.dart';
+import 'deletion_entry_projection_port.dart';
+
+export 'deletion_entry_projection_port.dart';
 
 abstract interface class CommandFactsPort {
   SelectionTransformFacts selectionTransformFacts();
@@ -29,12 +32,15 @@ final class SelectionDeleteFacts {
   SelectionDeleteFacts({
     required this.hasSelection,
     required this.allSelectedElementsDeletable,
-    required Iterable<CanvasElementId> deletableIds,
-  }) : deletableIds = List.unmodifiable(deletableIds);
+    required Iterable<DeletionEntryFacts> deletableEntries,
+  }) : deletableEntries = List.unmodifiable(deletableEntries);
 
   final bool hasSelection;
   final bool allSelectedElementsDeletable;
-  final List<CanvasElementId> deletableIds;
+  final List<DeletionEntryFacts> deletableEntries;
+
+  List<CanvasElementId> get deletableIds =>
+      List.unmodifiable(deletableEntries.map((entry) => entry.id));
 
   CanvasSelectionDeleteAvailability get availability {
     return CanvasSelectionDeleteAvailability(
@@ -44,10 +50,18 @@ final class SelectionDeleteFacts {
   }
 
   List<CanvasElementId> removalIdsFor(CanvasSelectionDeletePolicy policy) {
+    return List.unmodifiable(
+      removalEntriesFor(policy).map((entry) => entry.id),
+    );
+  }
+
+  List<DeletionEntryFacts> removalEntriesFor(
+    CanvasSelectionDeletePolicy policy,
+  ) {
     return switch (policy) {
-      CanvasSelectionDeletePolicy.partial => deletableIds,
+      CanvasSelectionDeletePolicy.partial => deletableEntries,
       CanvasSelectionDeletePolicy.allOrNone =>
-        allSelectedElementsDeletable ? deletableIds : const [],
+        allSelectedElementsDeletable ? deletableEntries : const [],
     };
   }
 }

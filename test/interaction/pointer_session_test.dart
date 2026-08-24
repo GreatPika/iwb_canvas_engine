@@ -471,7 +471,7 @@ final class _PointerSessionReadPort implements InteractionReadPort {
 
   @override
   EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    return EraserReadFacts(
+    return EraserReadFacts.preview(
       corridorPoints: request.corridorPoints,
       erasedElementIds: const [],
       eraserThickness: request.eraserThickness,

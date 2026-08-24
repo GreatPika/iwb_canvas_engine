@@ -44,6 +44,7 @@ void testSelectedMoveStartUsesSelectedHandleLookups() {
         ]),
         spatial: spatial,
         controllerEpoch: () => 0,
+        deletionEntryProjection: const _NoDeletionEntryProjection(),
       );
 
       final facts = adapter.selectedMoveStartFacts(
@@ -63,6 +64,15 @@ void testSelectedMoveStartUsesSelectedHandleLookups() {
       expect(frame.elementHandleForIdCalls, lessThan(frame.factCount));
     },
   );
+}
+
+final class _NoDeletionEntryProjection implements DeletionEntryProjectionPort {
+  const _NoDeletionEntryProjection();
+
+  @override
+  List<DeletionEntryFacts> projectDeletionEntries(
+    Iterable<CanvasElementId> ids,
+  ) => const [];
 }
 
 FrameElementFacts _frameRectFacts(String id, Offset offset, int orderToken) {
