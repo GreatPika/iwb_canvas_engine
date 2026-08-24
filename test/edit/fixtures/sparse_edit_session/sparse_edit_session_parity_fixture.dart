@@ -453,7 +453,7 @@ void _expectDeferredRelationshipDiagnostics() {
       ),
     ),
   ]);
-  _expectDirectTraceFailure(missing, (
+  _expectTraceFinalizationFailures(missing, (
     code: CanvasDataErrorCode.missingResourceReference,
     message: 'resource element references a missing resource.',
     path: 'image.resourceId',
@@ -473,28 +473,62 @@ void _expectDeferredRelationshipDiagnostics() {
       ),
     ),
   ]);
-  _expectDirectTraceFailure(wrongKind, (
+  _expectTraceFinalizationFailures(wrongKind, (
     code: CanvasDataErrorCode.resourceKindMismatch,
     message: 'resource kind does not match the referencing element.',
     path: 'image.resourceId',
   ));
 }
 
-void _expectDirectTraceFailure(
+void _expectTraceFinalizationFailures(
   _SparseClearTraceOutcome outcome,
   ({CanvasDataErrorCode code, String message, String path}) expected,
 ) {
-  final store = sparseTraceDocumentStore(
+  _expectTraceFinalizationFailure(
+    'direct Store sparse commit',
+    outcome.directCommit,
+    expected,
+  );
+  _expectTraceFinalizationFailure(
+    'callback sparse journal',
+    outcome.sparseCommit,
+    expected,
+  );
+  final materializedStore = sparseTraceDocumentStore(
     clearBackgroundResourcesDocument(includeUnusedResource: false),
   );
   expect(
-    () => store.prepareSparseCommit(outcome.directCommit),
+    () => materializedStore.prepareMaterializedCommit(
+      outcome.document,
+      outcome.session.revisionDelta,
+    ),
     throwsA(
       isA<CanvasDataException>()
           .having((error) => error.code, 'code', expected.code)
           .having((error) => error.message, 'message', expected.message)
           .having((error) => error.path, 'path', expected.path),
     ),
+    reason: 'promoted callback Draft materialized finalization',
+  );
+}
+
+void _expectTraceFinalizationFailure(
+  String label,
+  StoreSparseCommit commit,
+  ({CanvasDataErrorCode code, String message, String path}) expected,
+) {
+  final store = sparseTraceDocumentStore(
+    clearBackgroundResourcesDocument(includeUnusedResource: false),
+  );
+  expect(
+    () => store.prepareSparseCommit(commit),
+    throwsA(
+      isA<CanvasDataException>()
+          .having((error) => error.code, 'code', expected.code)
+          .having((error) => error.message, 'message', expected.message)
+          .having((error) => error.path, 'path', expected.path),
+    ),
+    reason: label,
   );
 }
 
