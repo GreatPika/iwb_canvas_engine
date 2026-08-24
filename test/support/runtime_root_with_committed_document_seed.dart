@@ -5,12 +5,6 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
-export 'package:iwb_canvas_engine/src/store/committed_document.dart'
-    show
-        CommittedDocument,
-        StoreSparseCandidateEvent,
-        StoreSparseCandidateEventKind;
-
 // The helper seeds RuntimeRoot.test from committed store state so call sites do
 // not confuse this setup seam with the public JSON load path.
 // ignore: number-of-parameters
