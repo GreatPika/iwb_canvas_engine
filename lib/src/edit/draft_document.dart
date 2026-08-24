@@ -22,20 +22,6 @@ import 'draft_resources.dart';
 import 'element_update_application.dart';
 import 'touched_set_builder.dart';
 
-export 'draft_structure.dart'
-    show
-        DraftStructureOrderKind,
-        DraftStructureMapKind,
-        DraftStructureMapOperation,
-        DraftStructureWorkEvent,
-        DraftStructureWorkKind,
-        observeDraftStructureWork;
-export 'draft_resources.dart'
-    show
-        DraftResourceWorkEvent,
-        DraftResourceWorkKind,
-        observeDraftResourceWork;
-
 @visibleForTesting
 enum DraftReplacementWorkPhase {
   validation,

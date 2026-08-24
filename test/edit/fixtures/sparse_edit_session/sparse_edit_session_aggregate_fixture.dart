@@ -1,9 +1,16 @@
 import 'dart:ui';
 
+// This cohesive fixture directly imports distinct observation owners; a test
+// barrel would hide those dependencies and recreate the forbidden re-export.
+// ignore_for_file: number-of-imports
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_resources.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_structure.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/edit/sparse_edit_resource_references.dart';
+import 'package:iwb_canvas_engine/src/edit/sparse_edit_structure.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_resources.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {

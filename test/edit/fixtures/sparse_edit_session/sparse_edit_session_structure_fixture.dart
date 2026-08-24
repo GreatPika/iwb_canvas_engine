@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_structure.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/edit/sparse_edit_structure.dart';
 import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 
 import 'sparse_edit_session_support.dart';

@@ -28,19 +28,6 @@ import 'sparse_edit_resource_references.dart';
 import 'sparse_edit_structure.dart';
 import 'touched_set_builder.dart';
 
-export 'sparse_edit_structure.dart'
-    show
-        SparseEditStructureOrderKind,
-        SparseEditStructureWorkEvent,
-        SparseEditStructureWorkKind,
-        observeSparseEditStructureWork;
-export 'sparse_edit_resource_references.dart'
-    show
-        SparseEditReferenceFamily,
-        SparseEditReferenceWorkEvent,
-        SparseEditReferenceWorkKind,
-        observeSparseEditReferenceWork;
-
 @visibleForTesting
 enum SparsePromotionWorkPhase {
   open,

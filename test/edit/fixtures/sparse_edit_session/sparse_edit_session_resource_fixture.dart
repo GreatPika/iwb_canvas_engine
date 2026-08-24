@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
+import 'package:iwb_canvas_engine/src/edit/draft_resources.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/edit/sparse_edit_resource_references.dart';
 
 import 'sparse_edit_session_support.dart';
 
