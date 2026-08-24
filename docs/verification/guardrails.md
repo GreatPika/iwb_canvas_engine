@@ -66,7 +66,6 @@ Guardrails:
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
-- `interaction.text_edit_stale_commit_guard`
 - `geometry.committed_handle_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`
@@ -217,7 +216,6 @@ Mandatory guardrails:
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create selected-move, draw, line, or eraser commit intents |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
-| `interaction.text_edit_stale_commit_guard` | request-originated text commits accept only current text content-target context requests, treat unknown/already-consumed ids as no-ops, consume known live rejected epoch-stale, generation-stale, revision-stale, missing, empty-canvas, non-text, or kind-mismatched targets without public effects, consume same-text accepted requests without document/action effects, and consume changed-text accepted requests only after successful prepare and before public delivery while allowing unrelated documentRevision changes |
 | `geometry.committed_handle_order` | geometry and hit-test policy use committed handle order tokens without bypassing committed frame facts |
 | `geometry.eraser_exact_budget_no_partial` | eraser primitive and exact-check budget inputs cannot produce partial-erasure paths, and terminal overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |

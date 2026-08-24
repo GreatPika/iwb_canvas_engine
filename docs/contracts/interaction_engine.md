@@ -75,7 +75,6 @@ Guardrails:
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
-- `interaction.text_edit_stale_commit_guard`
 - `tools.public_port_behavior`
 - `surface.pointer_samples_normalized_before_runtime`
 - `surface.interactive_false_pending_line_preserved`
@@ -424,7 +423,12 @@ request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private request-consumption effects.
 The command accepts only current live context request ids whose target is a
 text content element. It consumes accepted no-op requests, consumes changed
-requests only after successful edit preparation and before public delivery,
+requests only after successful edit preparation and EditKernel closure. For
+changed text, RuntimeRoot synchronously clears the public active-session value
+after consumption and before its interaction revision and common delivery. The
+listener may finish a separate accepted nested mutation first; notifier errors
+are reported by Flutter and outer accepted delivery continues. Rejected,
+failed, and equal-text branches do not enter this listener window,
 consumes known live rejected request ids, treats unknown and already-consumed
 ids as no-ops, rejects empty-canvas, vector or other non-text, stale, missing,
 or kind-mismatched request ids with no public state, document, selection,

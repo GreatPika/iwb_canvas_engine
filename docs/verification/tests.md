@@ -409,7 +409,9 @@ and those bounds stay stable across left, center, and right alignment changes.
 
 `test.runtime.text_editing_port` and `test.surface.text_editing_overlay` cover
 runtime-owned active text editing sessions, stale/read-only admission, guarded
-commit/dismiss behavior, public custom-overlay replacement, multiline growth
+commit/dismiss behavior, changed-text active-session listener order (including
+an accepted nested mutation before outer frame/state/action/observer delivery),
+Flutter notifier-error continuation and final guard release, public custom-overlay replacement, multiline growth
 from session geometry, live preservation of the resolved horizontal anchor and
 top edit edge, committed preservation of the same anchors after text size
 changes, and paint suppression without document visibility mutation.
@@ -825,10 +827,6 @@ the release route for that evidence.
   consumer coverage for eraser preview/commit, content and background-only
   context requests, issued text commit, consumed/unknown text no-ops, and no
   raw text leakage through observed action payloads.
-- `test/guardrails/interaction_guardrail_enforcement_test.dart` and
-  `test/guardrails/blocking_suite_test.dart` prove
-  `interaction.text_edit_stale_commit_guard` is runner-backed, selected by the
-  blocking suite, and rejects hardcoded or bypassed text guard facts.
 
 #### surface Flutter surface tests
 - `test/surface/single_active_surface_test.dart` proves exactly one active

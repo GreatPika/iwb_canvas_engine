@@ -210,8 +210,12 @@ sequenceDiagram
       Note over Commands,Signals: Accepted no-op consumes request without document revision, repaint, or action event.
     else changed text is valid
       Commands->>Edit: update text inside normal EditKernel transaction
-      Commands->>Registry: consume and remove request facts after successful prepare
-      Edit-->>Signals: publish document revision, invalidation, repaint, and editText action after atomic install
+      Edit-->>Commands: accepted install and closed edit handle
+      Commands->>Registry: consume and remove request facts
+      Commands->>AppUI: synchronously publish activeSession = null
+      Note over AppUI,Signals: The active-session listener sees accepted text and consumed request. It may complete a separate accepted nested mutation before every outer frame/state/action/observer callback; Flutter-reported listener errors do not stop the outer route.
+      Commands->>Commands: record outer text-edit interaction revision
+      Commands->>Signals: outer common delivery: frame, state, editText action, observer
       Commands-->>App: true
     end
   end

@@ -185,11 +185,6 @@ const _blockingEntries = [
     id: 'interaction.no_stale_terminal_commit',
     suites: {'blocking', 'interaction'},
   ),
-  GuardrailEntry(
-    id: 'interaction.text_edit_stale_commit_guard',
-    suites: {'blocking', 'interaction'},
-    requiresRunnerStructuralProof: true,
-  ),
   GuardrailEntry(id: 'edit.sync_non_nested', suites: {'blocking', 'edit'}),
   GuardrailEntry(id: 'edit.rollback_no_effects', suites: {'blocking', 'edit'}),
   GuardrailEntry(

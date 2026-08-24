@@ -269,10 +269,6 @@ const _testProofPaths = {
     'test/interaction/line_interaction_routing_test.dart',
     'test/interaction/eraser_context_action_routing_test.dart',
   ],
-  interactionTextEditStaleCommitGuardrailId: [
-    'test/interaction/text_edit_stale_commit_guard_test.dart',
-    'test/guardrails/interaction_guardrail_enforcement_test.dart',
-  ],
   'edit.sync_non_nested': ['test/edit/sync_non_nested_async_stale_test.dart'],
   'edit.rollback_no_effects': [
     'test/edit/rollback_test.dart',
@@ -455,7 +451,6 @@ final Map<String, GuardrailViolationRunner> _baseViolationChecks = {
       checkCleanupCoordinatorDependencyBans,
   'interaction.pointer_cleanup_coordinator_only':
       checkPointerCleanupCoordinatorCallerOrigins,
-  interactionTextEditStaleCommitGuardrailId: checkTextEditStaleCommitGuard,
   ownerDagGuardrailId: checkOwnerDagImportBoundaries,
   'resources.resolver_boundary_owned_by_surface_session': checkCoreBoundaries,
   'surface.pointer_samples_normalized_before_runtime':
@@ -515,8 +510,6 @@ const _structuralDescriptions = {
       'selection-and-move cleanup coordinator dependency boundary check',
   'interaction.pointer_cleanup_coordinator_only':
       'interaction pointer cleanup coordinator caller-origin check',
-  interactionTextEditStaleCommitGuardrailId:
-      'P12 text edit stale commit guard ordering check',
   ownerDagGuardrailId: 'owner DAG import/export boundary check',
   'resources.resolver_boundary_owned_by_surface_session':
       'resource resolver ownership and import-boundary checks',

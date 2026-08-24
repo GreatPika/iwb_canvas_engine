@@ -64,7 +64,6 @@ Guardrails:
 - `interaction.no_resolver_on_cancel_paths`
 - `interaction.no_stale_terminal_commit`
 - `interaction.pointer_cleanup_coordinator_only`
-- `interaction.text_edit_stale_commit_guard`
 - `geometry.committed_handle_order`
 - `geometry.eraser_exact_budget_no_partial`
 - `spatial.no_full_clone_ordinary_edit`

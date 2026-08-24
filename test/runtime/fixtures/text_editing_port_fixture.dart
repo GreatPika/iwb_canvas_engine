@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
@@ -17,6 +18,8 @@ void main() {
   _testLiveGeometryPreservesTextAlignmentAnchor();
   _testRuntimeUsesMeasuredLayoutBoundary();
   _testActiveSessionPublishesLiveUpdates();
+  _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery();
+  _testChangedTextListenerFailureReportsAndContinuesDelivery();
   _testSessionCommitDelegatesToCommandPath();
   _testCommitPreservesTextAlignmentAnchor();
   _testDirectCommandCommitClearsActiveSession();
@@ -155,6 +158,244 @@ void _testActiveSessionPublishesLiveUpdates() {
       } finally {
         scenario.root.textEditing.activeSession.removeListener(listener);
         await scenario.dispose();
+      }
+    },
+  );
+}
+
+// The complete listener/nested/outer trace stays in one test so its required
+// causal order remains auditable instead of being hidden across setup helpers.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
+  test(
+    'changed-text dismissal lets a listener complete its nested mutation before outer delivery',
+    () async {
+      final trace = <String>[];
+      final actions = <CanvasActionCommitted>[];
+      late final RuntimeRoot root;
+      late CanvasTextEditSession outerSession;
+      late CanvasInteractionRequestId requestId;
+      var committing = false;
+      var listenerIsRunning = false;
+      var interactionRevisionAtListener = -1;
+
+      root = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: const CanvasRuntimeConfig(),
+        commitEffectObserver: (_) {
+          if (!committing) {
+            return;
+          }
+          trace.add(listenerIsRunning ? 'nested-observer' : 'outer-observer');
+        },
+      );
+      final surface = Object();
+      root.attachSurface(surface);
+      final requests = <CanvasContextActionRequested>[];
+      final requestSubscription = root.contextActionRequests.listen(
+        requests.add,
+      );
+      root.surfaceFrameSignal.addListener(() {
+        if (!committing) {
+          return;
+        }
+        trace.add(listenerIsRunning ? 'nested-frame' : 'outer-frame');
+      });
+      root.state.addListener(() {
+        if (!committing) {
+          return;
+        }
+        trace.add(listenerIsRunning ? 'nested-state' : 'outer-state');
+      });
+      final actionSubscription = root.actions.listen((action) {
+        if (!committing) {
+          return;
+        }
+        actions.add(action);
+        trace.add('outer-action');
+      });
+      void listener() {
+        if (root.textEditing.activeSession.value != null) {
+          return;
+        }
+        trace.add('listener');
+        expect(_textValue(root), 'outer text');
+        expect(root.interactionEngine.requestFactsFor(requestId), isNull);
+        expect(root.activeTextEditSuppressionForTesting, isNull);
+        expect(outerSession.isActive, isFalse);
+        expect(trace, ['listener']);
+        interactionRevisionAtListener = root.state.value.revisions.interaction;
+
+        listenerIsRunning = true;
+        root.edits.edit((edit) {
+          edit.addElement(
+            CanvasRectElement(
+              id: _listenerNestedRectId,
+              size: const Size(8, 8),
+            ),
+          );
+        });
+        listenerIsRunning = false;
+        trace.add('listener-return');
+      }
+
+      root.textEditing.activeSession.addListener(listener);
+      try {
+        root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+        await Future<void>.delayed(Duration.zero);
+        final request = requests.single;
+        requestId = request.requestId;
+        final session = _expectSession(
+          root.textEditing.startFromContextAction(request),
+        );
+        outerSession = session;
+        session.updateText('outer text');
+
+        committing = true;
+        expect(session.commit(timestampMs: 77), isTrue);
+        committing = false;
+
+        expect(trace, [
+          'listener',
+          'nested-frame',
+          'nested-state',
+          'nested-observer',
+          'listener-return',
+          'outer-frame',
+          'outer-state',
+          'outer-action',
+          'outer-observer',
+        ]);
+        expect(session.isActive, isFalse);
+        expect(_textValue(root), 'outer text');
+        expect(_containsElement(root, _listenerNestedRectId), isTrue);
+        expect(root.textEditing.activeSession.value, isNull);
+        expect(
+          root.interactionEngine.requestFactsFor(request.requestId),
+          isNull,
+        );
+        expect(root.state.value.revisions.document, 2);
+        expect(
+          root.state.value.revisions.interaction,
+          interactionRevisionAtListener + 1,
+        );
+        expect(actions, hasLength(1));
+        final payload = actions.single.payload as CanvasTextEditActionPayload;
+        expect(payload.requestId, request.requestId);
+        expect(payload.nextTextLength, 'outer text'.length);
+      } finally {
+        root.textEditing.activeSession.removeListener(listener);
+        await actionSubscription.cancel();
+        await requestSubscription.cancel();
+        root.detachSurface(surface);
+        root.dispose();
+      }
+    },
+  );
+}
+
+// The notifier-error capture and later delivery/guard probe form one failure
+// containment proof; splitting them would obscure the required continuation.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
+  test(
+    'changed-text listener failure reports through Flutter and does not stop delivery',
+    () async {
+      final trace = <String>[];
+      final errors = <FlutterErrorDetails>[];
+      final previousErrorHandler = FlutterError.onError;
+      late final RuntimeRoot root;
+      var committing = false;
+      final sentinel = StateError('active-session listener failed');
+
+      FlutterError.onError = errors.add;
+      root = runtimeRootWithCommittedDocumentSeed(
+        _document(),
+        config: const CanvasRuntimeConfig(),
+        commitEffectObserver: (_) {
+          if (committing) {
+            trace.add('outer-observer');
+          }
+        },
+      );
+      final surface = Object();
+      root.attachSurface(surface);
+      final requests = <CanvasContextActionRequested>[];
+      final requestSubscription = root.contextActionRequests.listen(
+        requests.add,
+      );
+      root.surfaceFrameSignal.addListener(() {
+        if (committing) {
+          trace.add('outer-frame');
+        }
+      });
+      root.state.addListener(() {
+        if (committing) {
+          trace.add('outer-state');
+        }
+      });
+      final actions = <CanvasActionCommitted>[];
+      final actionSubscription = root.actions.listen((action) {
+        if (committing) {
+          actions.add(action);
+          trace.add('outer-action');
+        }
+      });
+      void listener() {
+        if (root.textEditing.activeSession.value == null) {
+          throw sentinel;
+        }
+      }
+
+      root.textEditing.activeSession.addListener(listener);
+      try {
+        root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+        await Future<void>.delayed(Duration.zero);
+        final request = requests.single;
+        final session = _expectSession(
+          root.textEditing.startFromContextAction(request),
+        );
+        session.updateText('failure retained');
+
+        committing = true;
+        expect(session.commit(timestampMs: 78), isTrue);
+        committing = false;
+
+        expect(errors, hasLength(1));
+        expect(errors.single.exception, same(sentinel));
+        expect(trace, [
+          'outer-frame',
+          'outer-state',
+          'outer-action',
+          'outer-observer',
+        ]);
+        expect(_textValue(root), 'failure retained');
+        expect(session.isActive, isFalse);
+        expect(root.textEditing.activeSession.value, isNull);
+        expect(
+          root.interactionEngine.requestFactsFor(request.requestId),
+          isNull,
+        );
+        expect(root.state.value.revisions.document, 1);
+        expect(root.state.value.revisions.interaction, 2);
+        expect(actions, hasLength(1));
+
+        root.edits.edit((edit) {
+          edit.addElement(
+            CanvasRectElement(
+              id: _listenerFailureRectId,
+              size: const Size(6, 6),
+            ),
+          );
+        });
+        expect(_containsElement(root, _listenerFailureRectId), isTrue);
+      } finally {
+        root.textEditing.activeSession.removeListener(listener);
+        await actionSubscription.cancel();
+        await requestSubscription.cancel();
+        root.detachSurface(surface);
+        root.dispose();
+        FlutterError.onError = previousErrorHandler;
       }
     },
   );
@@ -837,6 +1078,12 @@ String _textValue(RuntimeRoot root) {
   return text.text;
 }
 
+bool _containsElement(RuntimeRoot root, CanvasElementId id) {
+  return root.readDocument().layers.any(
+    (layer) => layer.elements.any((element) => element.id == id),
+  );
+}
+
 CanvasDocument _document({
   TextAlign align = TextAlign.left,
   double? maxWidth = 120,
@@ -892,3 +1139,5 @@ CanvasDocument _invalidReplacementDocument() {
 
 final _textId = CanvasElementId('text-a');
 final _rectId = CanvasElementId('rect-a');
+final _listenerNestedRectId = CanvasElementId('listener-nested-rect');
+final _listenerFailureRectId = CanvasElementId('listener-failure-rect');

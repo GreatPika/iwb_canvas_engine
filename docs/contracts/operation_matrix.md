@@ -28,7 +28,6 @@ Guardrails:
 - `edit.operation_matrix_complete`
 - `events.commands_emit_user_actions`
 - `events.runtime_created_timestamps_monotonic`
-- `interaction.text_edit_stale_commit_guard`
 Do not assume:
 - no implicit mutation path outside EditKernel
 <!-- CONTEXT:END -->
@@ -86,7 +85,7 @@ Resource and interaction owners own their resource and interaction rows.
 | context-action double-tap request | direct `handleDoubleTap` clears pending context tap history before current-target resolution; target admission requires a candidate spatial result with no unresolved/skipped handles; InteractionRequestRegistry stores live context request target kind and guard facts; pending delivery is suppressed by load/dispose cleanup | none for context-action request delivery | none | no | none | asynchronous CanvasContextActionRequested with `runtime_created_timestamps_monotonic` unless suppressed before scheduled delivery |
 | commitTextEdit stale rejection | consume/remove live request facts only when the request id is known and rejected; otherwise none | none | none | no | none | none |
 | commitTextEdit no-op accepted | consume/remove live request facts | none | none | no | none | none |
-| commitTextEdit changed accepted | text element content through EditKernel plus consume/remove live request facts after successful prepare | state.revisions.document; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | main | editText; `runtime_created_timestamps_monotonic` |
+| commitTextEdit changed accepted | text element content through EditKernel; after successful prepare and EditKernel closure RuntimeRoot consumes/removes the live request, synchronously dismisses the active session, records its interaction revision, then starts common delivery | state.revisions.document and state.revisions.interaction; internal bounds when layout bounds change, elementVisual, projection | touched update when text layout bounds change; none otherwise | evict | listener window before common delivery, then main | editText; `runtime_created_timestamps_monotonic` |
 | no-op edit, including compensating final fact no-op | none | none | none | none | none | none |
 | dispose with active preview | preview cleanup and terminal runtime state | state.revisions.preview before dispose returns | none | no | overlay cleanup | stream close only |
 | dispose without active preview | terminal runtime state only | none | none | no | none | stream close only |
@@ -164,7 +163,13 @@ Notes:
   projection, resource, repaint, or action effect.
 - `commitTextEdit` validates `newText` before request consumption and before
   draft mutation. Changed text commits consume the request only after successful
-  EditKernel prepare and before public delivery, then emit
+  EditKernel prepare and closure. RuntimeRoot then synchronously clears
+  `CanvasTextEditingPort.activeSession`; its public listener observes the
+  accepted document, consumed request, and null session before the outer
+  interaction revision and common delivery. A listener may complete a separate
+  accepted nested mutation first; listener errors follow Flutter notifier
+  reporting and do not roll back or stop the outer delivery. Rejected, failed,
+  and equal-text branches do not enter this listener window. The outer route then emits
   `CanvasActionType.editText` with
   `CanvasTextEditActionPayload`; the payload contains text lengths and never
   raw text.

@@ -195,9 +195,13 @@ carry the shared immutable `TouchedSet` from
 builder and store revision deltas private. Runtime route augmentation, cleanup,
 and delivery ordering remain Contract 4 work.
 
-`EditKernel` closes and stales the active edit handle, clears the active-session
-state, and only then asks `RuntimeRoot` to consume the accepted apply result.
-For non-text interaction routes, `RuntimeRoot` receives that closed result,
+`EditKernel` closes and stales the active edit handle before `RuntimeRoot`
+orchestrates the accepted result. For changed request-originated text,
+RuntimeRoot consumes the request, synchronously clears the public active text
+session, permits that listener's separate accepted nested mutation to finish,
+then records the outer interaction revision before outer common delivery.
+Flutter notifier failures are reported and do not roll back or suppress the
+accepted outer delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
 performs the route-owned `publish: false` InteractionEngine cleanup, merges its
 repaint effect, and only then enters common delivery. Common delivery applies
 spatial/resource effects, publishes the public state when required, emits the

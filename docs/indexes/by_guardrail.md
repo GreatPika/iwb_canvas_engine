@@ -223,10 +223,6 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## interaction.text_edit_stale_commit_guard
-
-- Sections: `section_04_public_api_v1`, `section_13_operation_matrix`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
 ## load.prepares_before_interrupt
 
 - Sections: `section_12_load_document`, `section_14_interaction_engine`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
