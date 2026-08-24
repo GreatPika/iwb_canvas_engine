@@ -1,3 +1,7 @@
+// This fixture keeps the resource/session/runtime delivery contract in one
+// executable scenario; splitting imports would duplicate its live setup.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 

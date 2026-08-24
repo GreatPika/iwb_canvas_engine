@@ -89,11 +89,9 @@ void _verifyEraserCleanupPrecedesDelivery() {
   root.attachSurface(surface);
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  root.handlePointer(_sample(1, Offset.zero, CanvasPointerLifecyclePhase.down));
   root.handlePointer(
-    _runtimeSample(CanvasPointerLifecyclePhase.down, Offset.zero),
-  );
-  root.handlePointer(
-    _runtimeSample(CanvasPointerLifecyclePhase.move, const Offset(2, 3)),
+    _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
   );
   root.surfaceFrameSignal.addListener(() {
     if (!terminalDelivery) return;
@@ -126,7 +124,7 @@ void _verifyEraserCleanupPrecedesDelivery() {
       _recordEraserRouteLifecycleTrace(event, trace);
     },
     () => root.handlePointer(
-      _runtimeSample(CanvasPointerLifecyclePhase.up, const Offset(4, 5)),
+      _sample(1, const Offset(4, 5), CanvasPointerLifecyclePhase.up),
     ),
   );
   expect(trace, [
@@ -178,18 +176,6 @@ void _expectEraserRouteLifecycle(List<RuntimeRouteTemporalEvent> events) {
 void _expectCleanEraserDelivery(RuntimeRoot root) {
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
-}
-
-CanvasPointerSample _runtimeSample(
-  CanvasPointerLifecyclePhase phase,
-  Offset position,
-) {
-  return CanvasPointerSample(
-    pointerId: 1,
-    position: position,
-    phase: phase,
-    kind: PointerDeviceKind.touch,
-  );
 }
 
 void _registerContextTapTests() {

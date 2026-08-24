@@ -308,7 +308,6 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
       var committing = false;
       final sentinel = StateError('active-session listener failed');
 
-      FlutterError.onError = errors.add;
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
         config: const CanvasRuntimeConfig(),
@@ -358,6 +357,7 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
         session.updateText('failure retained');
 
         committing = true;
+        FlutterError.onError = errors.add;
         expect(session.commit(timestampMs: 78), isTrue);
         committing = false;
 

@@ -952,7 +952,7 @@ void _testSelectedMoveResolverPrecedesPreparation() {
     () {
       final directTrace = <String>[];
       final directEvents = <RuntimeRouteTemporalEvent>[];
-      final direct = _observedMoveRuntime();
+      final direct = _runtimeRoot();
       addTearDown(direct.dispose);
       direct.selection.setSelection([CanvasElementId('a')]);
       _startSelectedMove(direct);
@@ -977,7 +977,7 @@ void _testSelectedMoveResolverPrecedesPreparation() {
 
       final acceptedTrace = <String>[];
       final acceptedEvents = <RuntimeRouteTemporalEvent>[];
-      final accepted = _observedMoveRuntime(
+      final accepted = _runtimeRoot(
         resolver: (_) {
           acceptedTrace.add('resolver-enter');
           try {
@@ -1026,7 +1026,7 @@ void _testSelectedMoveResolverPrecedesPreparation() {
       ]) {
         final trace = <String>[];
         final routeEvents = <RuntimeRouteTemporalEvent>[];
-        final rejected = _observedMoveRuntime(
+        final rejected = _runtimeRoot(
           resolver: (request) {
             trace.add('resolver-enter');
             try {
@@ -1966,18 +1966,6 @@ RuntimeRoot _runtimeRoot({
     config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
     commitEffectObserver: commitEffectObserver,
   );
-}
-
-RuntimeRoot _observedMoveRuntime({CanvasMoveCommitResolver? resolver}) {
-  final store = DocumentStoreKernel.withCommittedDocumentForTesting(
-    CommittedDocument(_document()),
-  );
-  final root = RuntimeRoot.test(
-    config: CanvasRuntimeConfig(moveCommitResolver: resolver),
-    store: store,
-  );
-
-  return root;
 }
 
 CanvasPointerSample _sample(

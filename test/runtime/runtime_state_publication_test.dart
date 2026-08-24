@@ -15,17 +15,14 @@ void main() {
     );
   });
 
-  test(
-    'RuntimeRoot delivers commit effects after public state publication',
-    () {
-      return expectLater(
-        runFlutterInPackageTest(
-          'test/runtime/fixtures/commit_effect_observer_fixture.dart',
-        ),
-        completes,
-      );
-    },
-  );
+  test('RuntimeRoot delivers complete guarded common commit delivery', () {
+    return expectLater(
+      runFlutterInPackageTest(
+        'test/runtime/fixtures/common_commit_delivery_fixture.dart',
+      ),
+      completes,
+    );
+  });
 }
 
 const _runtimeStateSource = '''

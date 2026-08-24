@@ -1,5 +1,7 @@
 import 'dart:ui' show Size;
 
+import '../../support/id_admission_work_recorder.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_import_emitter.dart';
@@ -23,7 +25,7 @@ void main() {
 void _testEmptyAdmissionStartsAtZero() {
   test('empty reset establishes e0 without admission mutation', () {
     late DocumentStoreKernel store;
-    final work = _observe(() {
+    final work = observeIdAdmissionWork(() {
       store = DocumentStoreKernel();
     });
 
@@ -41,7 +43,7 @@ void _testSupportedPrefixResetAndCandidatePurity() {
   test('reset normalizes the exact supported prefix once', () {
     final document = CommittedDocument(_contiguousPrefixDocument());
     late DocumentStoreKernel store;
-    final resetWork = _observe(() {
+    final resetWork = observeIdAdmissionWork(() {
       store = DocumentStoreKernel.withCommittedDocumentForTesting(document);
     });
 
@@ -62,7 +64,7 @@ void _testSupportedPrefixResetAndCandidatePurity() {
   test('repeated candidate observations are non-mutating', () {
     final document = CommittedDocument(_contiguousPrefixDocument());
     final store = DocumentStoreKernel.withCommittedDocumentForTesting(document);
-    final work = _observe(() {
+    final work = observeIdAdmissionWork(() {
       expect(store.readElementIdCandidate().value, 'e200000');
       expect(store.readElementIdCandidate().value, 'e200000');
     });
@@ -83,7 +85,7 @@ void _testGenerationConsumesCandidateAndReservesSynchronously() {
       final store = DocumentStoreKernel.withCommittedDocumentForTesting(
         CommittedDocument(_contiguousPrefixDocument()),
       );
-      final work = _observe(() {
+      final work = observeIdAdmissionWork(() {
         expect(store.generateElementId().value, 'e200000');
       });
 
@@ -105,7 +107,7 @@ void _testGenerationConsumesCandidateAndReservesSynchronously() {
 void _testAcceptedAdmissionNormalizesBeforeItsConsumer() {
   test('sparse admission advances the cursor before a candidate read', () {
     final store = DocumentStoreKernel();
-    final work = _observe(() {
+    final work = observeIdAdmissionWork(() {
       final prepared = store.prepareSparseCommit(
         StoreSparseCommit(
           mutations: [
@@ -137,13 +139,13 @@ void _testSequentialAcceptedAdmissionsDoNotRecrossOccupiedIds() {
   test('separate accepted admissions cross each occupied id only once', () {
     final store = DocumentStoreKernel();
 
-    final firstWork = _observe(() {
+    final firstWork = observeIdAdmissionWork(() {
       _installSparseElements(store, ['e0']);
     });
     expect(store.readElementIdCandidate().value, 'e1');
     _expectOneAcceptedAdmissionCross(firstWork);
 
-    final secondWork = _observe(() {
+    final secondWork = observeIdAdmissionWork(() {
       _installSparseElements(store, ['e1']);
     });
     expect(store.readElementIdCandidate().value, 'e2');
@@ -151,7 +153,7 @@ void _testSequentialAcceptedAdmissionsDoNotRecrossOccupiedIds() {
   });
 }
 
-void _expectOneAcceptedAdmissionCross(_IdAdmissionWork work) {
+void _expectOneAcceptedAdmissionCross(IdAdmissionWorkRecorder work) {
   _expectPhase(
     work,
     prefix: 'e',
@@ -169,7 +171,7 @@ void _expectOneAcceptedAdmissionCross(_IdAdmissionWork work) {
 void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
   test('admission defers unrelated ids and normalizes one occupied run', () {
     final unrelatedStore = DocumentStoreKernel();
-    final unrelatedWork = _observe(() {
+    final unrelatedWork = observeIdAdmissionWork(() {
       _installSparseElements(unrelatedStore, ['e2']);
     });
 
@@ -185,7 +187,7 @@ void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
     );
 
     final contiguousStore = DocumentStoreKernel();
-    final contiguousWork = _observe(() {
+    final contiguousWork = observeIdAdmissionWork(() {
       _installSparseElements(contiguousStore, ['e0', 'e1']);
     });
 
@@ -245,7 +247,7 @@ void _testOrdinaryLayerAndResourcePrefixesNormalizeOnReset() {
 
 String _candidateAfterConstruction(CanvasDocument document) {
   late DocumentStoreKernel store;
-  final work = _observe(() {
+  final work = observeIdAdmissionWork(() {
     store = DocumentStoreKernel.withCommittedDocumentForTesting(
       CommittedDocument(document),
     );
@@ -335,7 +337,7 @@ String _candidateAfterRoute(
   required IdAdmissionWorkPhase phase,
   required int inputVisits,
 }) {
-  final work = _observe(install);
+  final work = observeIdAdmissionWork(install);
   final candidate = store.readElementIdCandidate().value;
   _expectOneOccupiedPrefixNormalization(
     work,
@@ -347,7 +349,7 @@ String _candidateAfterRoute(
 
 List<String> _ordinaryPrefixIdsAfterReset() {
   late DocumentStoreKernel store;
-  final work = _observe(() {
+  final work = observeIdAdmissionWork(() {
     store = DocumentStoreKernel.withCommittedDocumentForTesting(
       CommittedDocument(
         CanvasDocument(
@@ -366,7 +368,7 @@ List<String> _ordinaryPrefixIdsAfterReset() {
   return [store.generateLayerId().value, store.generateResourceId().value];
 }
 
-void _expectOrdinaryPrefixReset(_IdAdmissionWork work, String prefix) {
+void _expectOrdinaryPrefixReset(IdAdmissionWorkRecorder work, String prefix) {
   _expectPhase(
     work,
     prefix: prefix,
@@ -381,7 +383,7 @@ void _expectOrdinaryPrefixReset(_IdAdmissionWork work, String prefix) {
 }
 
 void _expectOneOccupiedPrefixNormalization(
-  _IdAdmissionWork work, {
+  IdAdmissionWorkRecorder work, {
   required IdAdmissionWorkPhase phase,
   required int inputVisits,
 }) {
@@ -444,14 +446,8 @@ Map<String, Object?> _schemaV1ElementDocument() {
   };
 }
 
-_IdAdmissionWork _observe(void Function() operation) {
-  final work = _IdAdmissionWork();
-  DocumentStoreKernel.observeIdAdmissionWork(work.record, operation);
-  return work;
-}
-
 void _expectPhase(
-  _IdAdmissionWork work, {
+  IdAdmissionWorkRecorder work, {
   required String prefix,
   required IdAdmissionWorkPhase phase,
   required Map<IdAdmissionWorkKind, int> expected,
@@ -461,23 +457,5 @@ void _expectPhase(
       work.count(prefix: prefix, phase: phase, kind: kind),
       expected[kind] ?? 0,
     );
-  }
-}
-
-final class _IdAdmissionWork {
-  final Map<(String, IdAdmissionWorkPhase, IdAdmissionWorkKind), int> _counts =
-      {};
-
-  void record(IdAdmissionWorkEvent event) {
-    final key = (event.prefix, event.phase, event.kind);
-    _counts[key] = (_counts[key] ?? 0) + 1;
-  }
-
-  int count({
-    required String prefix,
-    required IdAdmissionWorkPhase phase,
-    required IdAdmissionWorkKind kind,
-  }) {
-    return _counts[(prefix, phase, kind)] ?? 0;
   }
 }

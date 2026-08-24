@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
+import '../../support/id_admission_work_recorder.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -553,10 +554,9 @@ Future<void> _verifyRuntimeRouteIdAdmissionWork() async {
 }
 
 _RouteWorkSetup _createSupportedPrefixRuntime() {
-  final resetWork = _IdAdmissionWork();
   final delivery = _DrawWorkDeliveryProbe();
   late RuntimeRoot root;
-  DocumentStoreKernel.observeIdAdmissionWork(resetWork.record, () {
+  final resetWork = observeIdAdmissionWork(() {
     root = runtimeRootWithCommittedDocumentSeed(
       _supportedPrefixDocument(),
       commitEffectObserver: (effects) => delivery.observeEffects(effects),
@@ -566,7 +566,7 @@ _RouteWorkSetup _createSupportedPrefixRuntime() {
   return (root: root, resetWork: resetWork, delivery: delivery);
 }
 
-void _expectSupportedPrefixReset(_IdAdmissionWork work) {
+void _expectSupportedPrefixReset(IdAdmissionWorkRecorder work) {
   _expectIdAdmissionPhase(
     work,
     phase: IdAdmissionWorkPhase.reset,
@@ -581,13 +581,13 @@ void _expectSupportedPrefixReset(_IdAdmissionWork work) {
 
 void _verifyRepeatedFailedRouteReads(RuntimeRoot root) {
   for (var attempt = 0; attempt < 2; attempt += 1) {
-    final strokeWork = _observeIdAdmissionWork(() {
+    final strokeWork = observeIdAdmissionWork(() {
       _expectInvalidStrokeCommitRejected(root);
     });
     _expectReadOnlyRouteCandidate(strokeWork);
 
     _startPendingLinePreview(root);
-    final lineWork = _observeIdAdmissionWork(() {
+    final lineWork = observeIdAdmissionWork(() {
       expect(
         () => root.deliverDrawLineCommitForTesting(
           _invalidLineCommitIntent(),
@@ -636,7 +636,7 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   }
 
   late CommitSealedDeliveryWork pencilDeliveryWork;
-  final pencilWork = _observeIdAdmissionWork(() {
+  final pencilWork = observeIdAdmissionWork(() {
     CommittedDocument.observeSparseCandidateEvents(candidateEvents.add, () {
       pencilDeliveryWork = observeDeliveryWork(() => _drawPencil(root));
     });
@@ -650,7 +650,7 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
     delivery: delivery,
   );
 
-  final explicitWork = _observeIdAdmissionWork(() {
+  final explicitWork = observeIdAdmissionWork(() {
     expect(root.generateElementId(), CanvasElementId('e200001'));
   });
   _expectIdAdmissionPhase(
@@ -664,7 +664,7 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
     },
   );
 
-  final lineWork = _observeIdAdmissionWork(() {
+  final lineWork = observeIdAdmissionWork(() {
     _drawLine(root);
   });
   _expectReadOnlyRouteCandidate(lineWork);
@@ -894,7 +894,7 @@ void _expectSealedDeliveryPhase(
   expect(phaseWork.actionElements, expected.actionElements);
 }
 
-void _expectReadOnlyRouteCandidate(_IdAdmissionWork work) {
+void _expectReadOnlyRouteCandidate(IdAdmissionWorkRecorder work) {
   _expectIdAdmissionPhase(
     work,
     phase: IdAdmissionWorkPhase.generation,
@@ -902,7 +902,7 @@ void _expectReadOnlyRouteCandidate(_IdAdmissionWork work) {
   );
 }
 
-void _expectAcceptedRouteAdmission(_IdAdmissionWork work) {
+void _expectAcceptedRouteAdmission(IdAdmissionWorkRecorder work) {
   _expectIdAdmissionPhase(
     work,
     phase: IdAdmissionWorkPhase.acceptedAdmission,
@@ -929,14 +929,8 @@ CanvasDocument _supportedPrefixDocument() {
   );
 }
 
-_IdAdmissionWork _observeIdAdmissionWork(void Function() operation) {
-  final work = _IdAdmissionWork();
-  DocumentStoreKernel.observeIdAdmissionWork(work.record, operation);
-  return work;
-}
-
 void _expectIdAdmissionPhase(
-  _IdAdmissionWork work, {
+  IdAdmissionWorkRecorder work, {
   required IdAdmissionWorkPhase phase,
   required Map<IdAdmissionWorkKind, int> expected,
 }) {
@@ -945,24 +939,6 @@ void _expectIdAdmissionPhase(
       work.count(prefix: 'e', phase: phase, kind: kind),
       expected[kind] ?? 0,
     );
-  }
-}
-
-final class _IdAdmissionWork {
-  final Map<(String, IdAdmissionWorkPhase, IdAdmissionWorkKind), int> _counts =
-      {};
-
-  void record(IdAdmissionWorkEvent event) {
-    final key = (event.prefix, event.phase, event.kind);
-    _counts[key] = (_counts[key] ?? 0) + 1;
-  }
-
-  int count({
-    required String prefix,
-    required IdAdmissionWorkPhase phase,
-    required IdAdmissionWorkKind kind,
-  }) {
-    return _counts[(prefix, phase, kind)] ?? 0;
   }
 }
 
@@ -1015,7 +991,7 @@ typedef _DrawScenario = ({
 
 typedef _RouteWorkSetup = ({
   RuntimeRoot root,
-  _IdAdmissionWork resetWork,
+  IdAdmissionWorkRecorder resetWork,
   _DrawWorkDeliveryProbe delivery,
 });
 
