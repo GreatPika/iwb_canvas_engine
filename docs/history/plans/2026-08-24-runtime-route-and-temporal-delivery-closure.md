@@ -8,7 +8,7 @@ Draw and line interaction commits obtain their generated element IDs without res
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `sparse-commit-transaction-candidate-design` | docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md |
+| Design | `sparse-commit-transaction-candidate-design` | docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md |
 | Research | `element-resource-lookup-facts` | docs/history/research/2026-08-10-element-resource-lookup-facts.md |
 | PLAN | `indexed-edit-lifecycle-and-atomic-install-closure` | docs/history/plans/2026-08-23-indexed-edit-lifecycle-and-atomic-install-closure.md |
 | Other | `contract-four-request` | user request |
@@ -115,7 +115,7 @@ Obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `NEGATIVE_P
 ## Repository Evidence
 
 - `user request` / legacy design authority: the active design's old document form is explicitly not a blocker -> this contract consumes its substantive accepted decisions without requiring an architecture-design/v4 migration or Contract Interface.
-- `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md:555` / required partition: the accepted work is exactly four performance contracts and names Contract 4 as runtime route and temporal delivery closure -> no fifth performance scope or Contract-3 reopening is admissible.
+- `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md:555` / required partition: the accepted work is exactly four performance contracts and names Contract 4 as runtime route and temporal delivery closure -> no fifth performance scope or Contract-3 reopening is admissible.
 - `docs/history/plans/2026-08-23-indexed-edit-lifecycle-and-atomic-install-closure.md:160` / predecessor boundary: Contract 3 excludes generated-ID routes, resolver, text-listener interleaving, cleanup/effect augmentation, delivery ordering, and callback failure routing while closing Edit/Draft/CommitApplier -> this contract consumes those completed results unchanged.
 - `architecture/decisions/ADR-0017-store-transaction-candidate-and-derived-facts.md:32` / durable ID decision: route IDs use a non-mutating rollback-safe admission candidate and route adoption is still pending -> Unit 1 is the remaining production seam migration.
 - `lib/src/store/document_store_kernel.dart:405` / explicit generation: public element generation observes then reserves the normalized candidate -> explicit generation remains immediate while the route needs the read-only observation path.
@@ -188,7 +188,7 @@ Work Budget And Cost Displacement: Construction/load/replacement/reset keep Cont
 
 ## Execution Units
 
-### [ ] Unit 1: Route draw and line through the rollback-safe ID candidate
+### [x] Unit 1: Route draw and line through the rollback-safe ID candidate
 
 Owner: `RuntimeRoot` draw/line terminal route boundary, consuming the Store admission owner's non-mutating element-candidate read.
 Boundary: The Store may expose its existing read-only element candidate as a narrow package-internal production seam while keeping cursor/reservation internals private. RuntimeRoot may use it only inside the two current synchronous one-element route preparations. Explicit public generation, layer/resource generation, Store admission/install, EditKernel/CommitApplier, action finalization, and interaction cleanup policy are unchanged. The existing Store admission and runtime draw owners receive direct behavior/work evidence. Data-model, interaction/operation contracts, ADR, verification truth, stroke/line sequences and state diagrams, and the pointer-preview DFD change with this seam; no new candidate protocol, registry, or general reservation abstraction is allowed.
@@ -209,7 +209,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Close resolver and non-text route transitions around accepted apply
+### [x] Unit 2: Close resolver and non-text route transitions around accepted apply
 
 Owner: `RuntimeRoot` selected-move resolver and non-text interaction post-install/pre-delivery orchestration, with `InteractionEngine` retaining cleanup state/policy.
 Boundary: Selected-move resolver configuration, public DTOs/errors, diagnostics mapping, EditKernel/CommitApplier, selection/store install, and cleanup coordinator policy are unchanged. RuntimeRoot route wiring and stable semantic test seams may expose only event/failure observations needed to falsify ordering and exact public error projection, never a second execution path. Existing selected-move, resolver-guard, draw, marquee, eraser, and cleanup owners are extended; affected selected-move preview/cancel, marquee, stroke, line, eraser, exact-budget eraser, and pointer-preview mirrors are reconciled with `interaction_engine.md` without changing diagram IDs or registry ownership.
@@ -231,7 +231,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 1 — produces: rollback-safe stroke/line candidate route; consumed as: the draw and line members of the complete non-text accepted/failure temporal matrix
 
-### [ ] Unit 3: Preserve the changed-text listener reentrancy window
+### [x] Unit 3: Preserve the changed-text listener reentrancy window
 
 Owner: `RuntimeRoot` changed-text route orchestration and runtime-owned `CanvasTextEditingPort` active-session listener lifecycle.
 Boundary: Text request admission/registry facts, text validation/measurement, EditKernel/CommitApplier, public `ValueListenable` shape, overlay/widget ownership, and ordinary start/dismiss/load behavior are unchanged. Stable listener, nested-mutation, error-reporting, stale-request, consumption, and final-state observations may be added only to the existing text/runtime/interaction behavior owners. The separate `interaction.text_edit_stale_commit_guard` ID is deleted atomically from its source checker/checker-specific helpers, central registry, executor proof/description map, copied enforcement fixtures, blocking-suite proof, guardrail contract/pattern rows, release gate, verification narrative, section registry, and generated guardrail index; `test.interaction.text_edit_stale_commit_guard` remains as the registered executable behavior owner and its generated test index stays current. Maintained edit/interaction/operation/public-API/verification truth and the context/text sequence mirror change with the temporal contract; no new listener, queue, microtask, delivery guard, reentrancy token, renamed guardrail, or replacement scanner is introduced.
@@ -251,7 +251,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 4: Close complete guarded runtime delivery and the design lifecycle
+### [x] Unit 4: Close complete guarded runtime delivery and the design lifecycle
 
 Owner: `RuntimeRoot` common accepted-edit delivery, consuming existing spatial, resource-session release, root/bridged surface-frame, runtime-state, action-finalizer/stream, and commit-effect observer seams.
 Boundary: Sealed delivery effect/action values, downstream owner algorithms, notifier/stream implementations, load/resource-dirty routes, public DTOs, and CommitApplier output remain unchanged. Existing runtime delivery, resource lifecycle, spatial, resource, and surface-frame verification owners may share semantic event support only when it has one cross-owner delivery purpose and does not duplicate product truth. `resources.md` remains authoritative for post-acceptance reference removal, failed sink/session drop, no-borrow state, and continuation; its registered resource-resolution sequence remains unchanged unless direct producer comparison requires a semantic correction. Current runtime/edit/interaction/operation/resource/frame/geometry/spatial/public-API/architecture/verification/ADR truth and all fourteen registered affected sequence/DFD/state mirrors are closed, diagram IDs remain stable, and final plan/design archival occurs only after all contract evidence; no new graph edge, diagnostics writer, temporal scanner, or release registry is added.

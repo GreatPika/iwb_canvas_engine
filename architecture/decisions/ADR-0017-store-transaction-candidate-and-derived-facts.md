@@ -4,7 +4,7 @@
 - Date: 2026-08-10
 - Implementation state: implemented
 - Source designs:
-  - `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md`
+  - `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md`
 - Current owners:
   - `docs/architecture/03_data_model.md`
   - `docs/contracts/edit_kernel.md`

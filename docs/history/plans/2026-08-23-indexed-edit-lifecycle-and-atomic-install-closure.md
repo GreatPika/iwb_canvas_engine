@@ -8,7 +8,7 @@ Sparse and materialized edits use the already-delivered indexed-order implementa
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `sparse-commit-transaction-candidate-design` | docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md |
+| Design | `sparse-commit-transaction-candidate-design` | docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md |
 | Research | `element-resource-lookup-facts` | docs/history/research/2026-08-10-element-resource-lookup-facts.md |
 | PLAN | `authoritative-committed-facts` | docs/history/plans/2026-08-12-authoritative-committed-facts.md |
 | PLAN | `clear-content-layer-scope` | docs/history/plans/2026-08-13-clear-content-layer-scope.md |
@@ -108,9 +108,9 @@ Obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `NEGATIVE_P
 
 - `user request` / architecture-consumption authority: Contract 3 must consume the active design's substantive accepted decisions as written and must not wait for, require, or create an `architecture-design/v4` migration or Contract Interface -> the current design remains architecture authority for this contract and v4 metadata is not an implementation prerequisite or later unit.
 - `user request` / accepted Contract-3 cutover and cost boundary: promotion already applies operations one-for-one to list-backed `DraftDocument` through closures, so U1 may replace closures with exhaustive DTO dispatch when it adds no copy, scan, projection, repeated replay, or other work multiplier -> U1 is work-neutral rather than the performance closure; Units 2-5 must still eliminate every pre-existing sparse/Draft list and scan cost, and the final owner-attributed gate rejects displacement into promotion, Draft, materialization, finalization, apply, RuntimeRoot augmentation, or Contract 4.
-- `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md:235` / migration order: sparse EditSession receives owner-local sequences, authoritative locations, count deltas, and the single DTO journal -> Units 1-3 must close every sparse owner path without a second replay/order/count truth.
-- `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md:236` / Draft migration: DraftDocument adopts the same implementation with separate state and promotion replays DTOs -> Units 1, 4, and 5 share code only, never mutable instances.
-- `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md:268` / atomicity authority: selection preparation precedes both irreversible branches, with document install first for document changes and selection install first for selection-only -> Unit 7 closes both branches together.
+- `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md:235` / migration order: sparse EditSession receives owner-local sequences, authoritative locations, count deltas, and the single DTO journal -> Units 1-3 must close every sparse owner path without a second replay/order/count truth.
+- `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md:236` / Draft migration: DraftDocument adopts the same implementation with separate state and promotion replays DTOs -> Units 1, 4, and 5 share code only, never mutable instances.
+- `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md:268` / atomicity authority: selection preparation precedes both irreversible branches, with document install first for document changes and selection install first for selection-only -> Unit 7 closes both branches together.
 - `docs/history/plans/2026-08-12-authoritative-committed-facts.md:576` / completed Contract-1 handoff: direct family membership/reference summaries, layer locations, and admission facts are already delivered -> this contract may expose narrow reads but cannot reopen, mirror, or recompute those owners.
 - `docs/history/plans/2026-08-13-store-transaction-candidate.md:132` / completed install boundary: stale validation, one document swap, and ledger-only admission already belong to Store -> Unit 7 consumes this unchanged installer rather than repairing Store.
 - `docs/history/plans/2026-08-13-store-transaction-candidate.md:140` / pending edit state: current sparse backing intentionally remained with replay closures and DTOs -> Unit 1 retires the exact deferred mirror.

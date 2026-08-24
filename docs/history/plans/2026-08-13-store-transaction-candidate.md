@@ -8,7 +8,7 @@ Direct sparse-store preparation uses one isolated transaction-local candidate th
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `sparse-commit-transaction-candidate-design` | docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md |
+| Design | `sparse-commit-transaction-candidate-design` | docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md |
 | Research | `element-resource-lookup-facts` | docs/history/research/2026-08-10-element-resource-lookup-facts.md |
 | PLAN | `authoritative-committed-facts` | docs/history/plans/2026-08-12-authoritative-committed-facts.md |
 | PLAN | `clear-content-layer-scope` | docs/history/plans/2026-08-13-clear-content-layer-scope.md |
@@ -114,7 +114,7 @@ Obligations: `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `NEGATIVE_P
 
 ## Repository Evidence
 
-- `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md:5` / design gate: disposition is `READY_FOR_CONTRACT` and open decisions are absent -> authoring may proceed without inventing an architecture decision.
+- `docs/history/designs/2026-08-10-sparse-commit-transaction-candidate.md:5` / design gate: disposition is `READY_FOR_CONTRACT` and open decisions are absent -> authoring may proceed without inventing an architecture decision.
 - `docs/history/plans/2026-08-12-authoritative-committed-facts.md:576` / completed handoff: Contract 2 receives exclusive `FamilyTablesEditor` current reads, normalization, one freeze, split reference counts, direct layer facts, owner enumeration, and admission cursor facts -> this contract composes those capabilities and may not wrap, copy, reopen, re-normalize, reimplement, or republish them.
 - `docs/history/plans/2026-08-12-authoritative-committed-facts.md:178` / archived unit record: the archive marks eight production transitions plus a ninth documentation closure, despite the inherited request's shorthand of eight units -> current code and the archive's delivered facts, not the historical count shorthand or former split estimate, constrain this contract.
 - `docs/history/plans/2026-08-13-clear-content-layer-scope.md:136` / completed clear baseline: ordinary-layer-only clear, background preservation, referenced image/vector descriptor retention, exact result/touched/action facts, and bounded cleanup are already current behavior -> Units 2, 4, and 5 preserve that baseline rather than reopen it.
