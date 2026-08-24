@@ -299,6 +299,8 @@ const _allowedCanvasDocumentInputDeclarations = {
   'lib/src/contracts/public/canvas_runtime.dart::CanvasEdit.replaceDraftDocument',
   'lib/src/edit/draft_document.dart::DraftDocument',
   'lib/src/edit/draft_document.dart::DraftDocument.replaceDocument',
+  'lib/src/edit/draft_document.dart::_DraftBacking.fromDocument',
+  'lib/src/edit/draft_structure.dart::DraftStructure',
   'lib/src/edit/edit_kernel.dart::EditKernel',
   'lib/src/edit/edit_kernel.dart::MaterializedCommitPreparer',
   'lib/src/edit/edit_session.dart::EditSession.replaceDraftDocument',
