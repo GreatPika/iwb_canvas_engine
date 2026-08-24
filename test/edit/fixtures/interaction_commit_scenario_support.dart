@@ -61,6 +61,8 @@ final class InteractionCommitScenario {
   int deliverCount = 0;
   int loadCount = 0;
   int prepareSelectionCount = 0;
+  int sparseInstallCount = 0;
+  int preparedMaterializedInstallCount = 0;
 
   CommitInstaller get _installCommit {
     return (document, plan) {
@@ -72,9 +74,14 @@ final class InteractionCommitScenario {
         documentInstallers: CommitDocumentInstallers(
           installDocument: store.installDocument,
           replaceDocument: store.replaceDocument,
-          installSparseCommit: store.installSparseCommit,
-          installPreparedMaterializedCommit:
-              store.installPreparedMaterializedCommit,
+          installSparseCommit: (commit) {
+            sparseInstallCount += 1;
+            store.installSparseCommit(commit);
+          },
+          installPreparedMaterializedCommit: (commit) {
+            preparedMaterializedInstallCount += 1;
+            store.installPreparedMaterializedCommit(commit);
+          },
         ),
         selectionInstallers: CommitSelectionInstallers(
           prepareSelectionEffect: (_, _) {

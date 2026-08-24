@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/edit_session.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/indexed_order_sequence.dart';
 
+import '../interaction_commit_scenario_support.dart';
 import 'sparse_edit_session_support.dart';
-import 'sparse_edit_session_resource_fixture.dart';
-import 'sparse_edit_session_store_support.dart';
-import 'sparse_edit_session_structure_fixture.dart';
 
 void registerSparseEditSessionAggregateTest() {
   test(
@@ -31,20 +31,17 @@ void _composedSparsePromotionDraftAndStoreWorkIsBounded() {
     elementCount: seedElementCount,
     layerCount: layerCount,
   );
-  final facts = SparseFixtureFacts(seed);
-  final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () => DraftDocument(seed),
-    selectedElementIds: const [],
+  final store = DocumentStoreKernel.withCommittedDocumentForTesting(
+    CommittedDocument(seed),
   );
+  final scenario = InteractionCommitScenario(store);
   final sparseStructure = <SparseEditStructureWorkEvent>[];
   final sparseReferences = <SparseEditReferenceWorkEvent>[];
   final promotion = <SparsePromotionWorkEvent>[];
   final draftStructure = <DraftStructureWorkEvent>[];
   final draftResources = <DraftResourceWorkEvent>[];
   final sequence = <IndexedOrderSequenceWorkEvent>[];
-  late SparseStoreAggregateObservation storeWork;
-  var mutationCount = 0;
+  final storeCandidateEvents = <StoreSparseCandidateEvent>[];
   late CanvasDocument document;
 
   observeSparseEditStructureWork(
@@ -57,31 +54,29 @@ void _composedSparsePromotionDraftAndStoreWorkIsBounded() {
           draftStructure.add,
           () => observeDraftResourceWork(
             draftResources.add,
-            () => IndexedOrderSequence.observeWork(sequence.add, () {
-              expect(
-                session.upsertResource(
-                  sparseImageResource('lifecycle-resource'),
-                ),
-                isTrue,
-              );
-              session.addElement(
-                CanvasImageElement(
-                  id: CanvasElementId('lifecycle-element'),
-                  resourceId: CanvasResourceId('lifecycle-resource'),
-                  size: const Size(1, 1),
-                ),
-                layerId: CanvasLayerId('layer-0'),
-                index: elementCount ~/ 2,
-              );
-              final commit = session.sparseCommit;
-              mutationCount = commit.mutations.length;
-              document = session.readDraftDocument();
-              storeWork = prepareAndInstallSparseCommitForTrace(
-                seed: seed,
-                commit: commit,
-                installedElementId: CanvasElementId('lifecycle-element'),
-              );
-            }),
+            () => CommittedDocument.observeSparseCandidateEvents(
+              storeCandidateEvents.add,
+              () => IndexedOrderSequence.observeWork(sequence.add, () {
+                scenario.kernel.prepareInteractionCommit((edit) {
+                  expect(
+                    edit.upsertResource(
+                      sparseImageResource('lifecycle-resource'),
+                    ),
+                    isTrue,
+                  );
+                  edit.addElement(
+                    CanvasImageElement(
+                      id: CanvasElementId('lifecycle-element'),
+                      resourceId: CanvasResourceId('lifecycle-resource'),
+                      size: const Size(1, 1),
+                    ),
+                    layerId: CanvasLayerId('layer-0'),
+                    index: elementCount ~/ 2,
+                  );
+                  document = edit.readDraftDocument();
+                });
+              }),
+            ),
           ),
         ),
       ),
@@ -89,69 +84,79 @@ void _composedSparsePromotionDraftAndStoreWorkIsBounded() {
   );
 
   expect(document.layers.first.elements, hasLength(elementCount));
-  expect(storeWork.installedElement, isNotNull);
+  expect(store.elementById(CanvasElementId('lifecycle-element')), isNotNull);
+  expect(store.projectionBuildCount, 1);
   final promotionStart = promotion.indexWhere(
     (event) => event.phase == SparsePromotionWorkPhase.open,
   );
-  expect(promotionStart, mutationCount);
-  expect(
-    promotion.take(promotionStart).map((event) => event.phase),
-    List.filled(mutationCount, SparsePromotionWorkPhase.journalElementRead),
-  );
+  expect(promotionStart, 0);
+  expect(promotion.take(promotionStart).map((event) => event.phase), isEmpty);
   expect(promotion.skip(promotionStart).map((event) => event.phase), [
     SparsePromotionWorkPhase.open,
-    for (final _ in List.filled(mutationCount, null)) ...[
+    for (final _ in List.filled(2, null)) ...[
       SparsePromotionWorkPhase.journalElementRead,
       SparsePromotionWorkPhase.draftApplication,
     ],
     SparsePromotionWorkPhase.complete,
   ]);
   expect(
-    draftStructureEventCount(
-      draftStructure,
-      DraftStructureWorkKind.constructionElementVisit,
-    ),
+    draftStructure
+        .where(
+          (event) =>
+              event.kind == DraftStructureWorkKind.constructionElementVisit,
+        )
+        .length,
     seedElementCount,
   );
   expect(
-    draftStructureEventCount(
-      draftStructure,
-      DraftStructureWorkKind.materialization,
-    ),
-    layerCount + 2,
+    draftStructure
+        .where((event) => event.kind == DraftStructureWorkKind.materialization)
+        .length,
+    2 * (layerCount + 2),
   );
   expect(
-    draftResourceWorkCount(
-      draftResources,
-      DraftResourceWorkKind.constructionElementVisit,
-    ),
+    draftResources
+        .where(
+          (event) =>
+              event.kind == DraftResourceWorkKind.constructionElementVisit,
+        )
+        .length,
     seedElementCount,
   );
   expect(
-    draftResourceWorkCount(
-      draftResources,
-      DraftResourceWorkKind.descriptorMaterialization,
-    ),
+    draftResources
+        .where(
+          (event) =>
+              event.kind == DraftResourceWorkKind.descriptorMaterialization,
+        )
+        .length,
+    2,
+  );
+  expect(
+    draftResources
+        .where(
+          (event) => event.kind == DraftResourceWorkKind.imageCountTransition,
+        )
+        .length,
     1,
   );
   expect(
-    draftResourceWorkCount(
-      draftResources,
-      DraftResourceWorkKind.imageCountTransition,
-    ),
-    1,
+    sequence
+        .where(
+          (event) => event == IndexedOrderSequenceWorkEvent.buildInputVisit,
+        )
+        .length,
+    // Promotion builds the Draft backing, then materialized Store preparation
+    // visits its candidate once. A further whole-owner pass is a rebuild.
+    2 * seedElementCount + layerCount,
   );
   expect(
-    indexedEventCount(sequence, IndexedOrderSequenceWorkEvent.buildInputVisit),
-    // Sparse and Store open only the affected content order; Draft builds its
-    // full structural backing once. A further whole-owner pass is a rebuild.
-    3 * seedElementCount + layerCount,
-  );
-  expect(
-    indexedEventCount(
-      sequence,
-      IndexedOrderSequenceWorkEvent.finalFlattenPublication,
-    ),
+    sequence
+        .where(
+          (event) =>
+              event == IndexedOrderSequenceWorkEvent.finalFlattenPublication,
+        )
+        .length,
     0,
   );
   expect(
@@ -172,11 +177,14 @@ void _composedSparsePromotionDraftAndStoreWorkIsBounded() {
     ),
     isEmpty,
   );
+  expect(scenario.installCount, 1);
+  expect(scenario.preparedMaterializedInstallCount, 1);
+  expect(scenario.sparseInstallCount, 0);
   expect(
-    storeWork.replayJournalIndexes,
-    List.generate(mutationCount, (index) => index),
+    storeCandidateEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(2),
   );
-  expect(storeWork.resourceFreezeCount, 1);
-  expect(storeWork.structuralPublicationCount, 1);
-  expect(storeWork.aggregatePublicationCount, 1);
 }
