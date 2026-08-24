@@ -116,11 +116,16 @@ Draft also owns one insertion-ordered keyed descriptor state and exact split
 image/vector counts from its current rows. Add, update, remove, remove/re-add,
 and clear update only the affected count before the next resource decision;
 upsert, remove-unused, and materialization read that descriptor owner directly.
-These direct owners do not by themselves make whole-document replacement
-atomic; replacement atomicity remains a separate guarantee. Draft's
-promotion target opens and owns the materialized document around replay; the
-promotion owner receives only its write-only sparse-mutation consumer, so it
-cannot inspect Draft collections or build a Draft projection while replaying.
+Draft replacement keeps those scalar, structural, descriptor, split-count,
+selection-validity, revision, and touched facts in one mutable backing.
+After existing replacement and staged-load validation succeeds, Draft prepares
+a complete fresh backing and swaps its single backing reference once. Every
+construction failure retains the prior backing unchanged; the new backing owns
+its mutable structures and descriptors without caller or retired-backing
+aliases. Draft's promotion target opens and owns the materialized document
+around replay; the promotion owner receives only its write-only
+sparse-mutation consumer, so it cannot inspect Draft collections or build a
+Draft projection while replaying.
 Ordinary sparse and materialized candidates then ask the store to finalize
 accepted committed facts before `CommitCompiler` builds a plan. The compiler
 consumes only the store-accepted revision delta and touched facts, not

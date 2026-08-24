@@ -77,10 +77,13 @@ preserves failed-route rollback without making the Store own interaction timing.
   separate owner-local indexed orders; public Draft projection materializes
   those orders only on explicit reads. Its one insertion-ordered keyed descriptor
   owner also maintains exact image/vector counts from current rows, so resource
-  decisions avoid descriptor `indexWhere` and all-element reference scans. Atomic
-  construction and whole-backing replacement are outside this decision.
-  Route-generated-ID/runtime delivery is also outside this decision; this ADR
-  does not claim those routes are delivered.
+  decisions avoid descriptor `indexWhere` and all-element reference scans. Draft
+  replacement now builds scalars, structure, descriptors/counts, selection
+  validity, revisions, and touches in one fresh backing after existing
+  validation, then atomically swaps that backing once; failed construction
+  retains the prior backing without mutable alias sharing. Route-generated-ID/
+  runtime delivery is still outside this decision; this ADR does not claim those
+  routes are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 

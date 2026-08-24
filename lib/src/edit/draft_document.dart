@@ -37,6 +37,32 @@ export 'draft_resources.dart'
         DraftResourceWorkKind,
         observeDraftResourceWork;
 
+@visibleForTesting
+enum DraftReplacementWorkPhase {
+  validation,
+  scalarState,
+  structure,
+  resources,
+  replacementFacts,
+  publication,
+}
+
+/// Assert-only observations of the complete replacement preparation boundary.
+/// The handles identify the active and prepared backing without exposing either
+/// backing's mutable collections to normal Draft consumers.
+@visibleForTesting
+final class DraftReplacementWorkEvent {
+  const DraftReplacementWorkEvent(
+    this.phase, {
+    required this.activeBacking,
+    this.replacementBacking,
+  });
+
+  final DraftReplacementWorkPhase phase;
+  final Object activeBacking;
+  final Object? replacementBacking;
+}
+
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
 // glue. Element update application is shared with sparse sessions so DTO patch
@@ -49,35 +75,36 @@ export 'draft_resources.dart'
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class DraftDocument {
   static final Object _sparseMutationApplicationZoneKey = Object();
+  static final Object _replacementWorkZoneKey = Object();
 
   DraftDocument(
     CanvasDocument document, {
     Iterable<CanvasElementId> selectedElementIds = const [],
-  }) : _selectedElementIds = Set.unmodifiable(selectedElementIds),
-       camera = document.camera,
-       background = document.background,
-       palette = _copyPalette(document.palette),
-       metadata = document.metadata,
-       _structure = DraftStructure(document) {
-    _resources = DraftResources(
-      descriptors: document.resources,
-      visitRows: _structure.visitCurrentRows,
-    );
-  }
+  }) : _backing = _DraftBacking.fromDocument(
+         document,
+         selectedElementIds: selectedElementIds,
+       );
 
-  CanvasCamera camera;
-  CanvasBackground background;
-  CanvasPalette palette;
-  CanvasMetadata metadata;
-  late DraftResources _resources;
-  DraftStructure _structure;
-  final Set<CanvasElementId> _selectedElementIds;
-  StoreRevisionDelta _revisionDelta = const StoreRevisionDelta();
-  final TouchedSetBuilder _touchedSet = TouchedSetBuilder();
-  bool _documentReplaced = false;
+  _DraftBacking _backing;
+
+  CanvasCamera get camera => _backing.camera;
+  set camera(CanvasCamera value) => _backing.camera = value;
+  CanvasBackground get background => _backing.background;
+  set background(CanvasBackground value) => _backing.background = value;
+  CanvasPalette get palette => _backing.palette;
+  set palette(CanvasPalette value) => _backing.palette = value;
+  CanvasMetadata get metadata => _backing.metadata;
+  set metadata(CanvasMetadata value) => _backing.metadata = value;
+  DraftResources get _resources => _backing.resources;
+  DraftStructure get _structure => _backing.structure;
+  StoreRevisionDelta get _revisionDelta => _backing.revisionDelta;
+  set _revisionDelta(StoreRevisionDelta value) =>
+      _backing.revisionDelta = value;
+  TouchedSetBuilder get _touchedSet => _backing.touchedSet;
+  Set<CanvasElementId> get _selectedElementIds => _backing.selectedElementIds;
 
   bool get didChange => _revisionDelta.hasChanges;
-  bool get documentReplaced => _documentReplaced;
+  bool get documentReplaced => _backing.documentReplaced;
   StoreRevisionDelta get revisionDelta => _revisionDelta;
   TouchedSet get touchedSet => _touchedSet.build();
   CommitPlan get commitPlan {
@@ -98,6 +125,43 @@ final class DraftDocument {
       operation,
       zoneValues: {_sparseMutationApplicationZoneKey: sink},
     );
+  }
+
+  /// Installs an assert-only observer for replacement preparation phases.
+  @visibleForTesting
+  static T observeDraftReplacementWork<T>(
+    void Function(DraftReplacementWorkEvent event) sink,
+    T Function() operation,
+  ) {
+    return runZoned(operation, zoneValues: {_replacementWorkZoneKey: sink});
+  }
+
+  /// An opaque identity token for the active replacement backing.
+  @visibleForTesting
+  Object get replacementBackingHandle => _backing;
+
+  /// Mutates an opaque backing under asserts for retired-backing isolation
+  /// witnesses. Normal Draft consumers cannot obtain or use this test-only seam.
+  @visibleForTesting
+  void mutateReplacementBackingForTesting(Object backingHandle) {
+    assert(() {
+      if (backingHandle is! _DraftBacking) {
+        throw ArgumentError.value(backingHandle, 'backingHandle');
+      }
+      final retiredLayerId = CanvasLayerId('retired-replacement-layer');
+      final retiredResource = CanvasImageResource(
+        id: CanvasResourceId('retired-replacement-resource'),
+        source: CanvasResourceSource.appKey('retired-replacement-resource'),
+      );
+      backingHandle.camera = CanvasCamera(offset: const Offset(97, 98));
+      backingHandle.structure.ensureLayer(retiredLayerId);
+      backingHandle.resources.upsert(retiredResource);
+      backingHandle.touchedSet
+        ..touchLayer(retiredLayerId)
+        ..touchResourceDescriptor(retiredResource.id);
+      backingHandle.revisionDelta = const StoreRevisionDelta();
+      return true;
+    }(), 'retired backing mutation must be test-only');
   }
 
   CanvasDocument readDocument() => _materialize();
@@ -377,25 +441,74 @@ final class DraftDocument {
     );
   }
 
+  // Whole preparation stays visible at its one publication boundary; splitting
+  // phases into forwarding helpers would obscure which work precedes the swap.
+  // ignore: halstead-volume, source-lines-of-code
   void replaceDocument(CanvasDocument document) {
+    final previous = _backing;
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.validation,
+      activeBacking: previous,
+    );
     final draft = ValidatedImportDraft.fromDraftReplacement(document);
     final preparedLoad = prepareDraftReplacement(draft.document);
     final replacement = draft.document;
-    camera = replacement.camera;
-    background = replacement.background;
-    palette = _copyPalette(replacement.palette);
-    metadata = replacement.metadata;
-    _structure = DraftStructure(replacement);
-    _resources = DraftResources(
-      descriptors: replacement.resources,
-      visitRows: _structure.visitCurrentRows,
+
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.scalarState,
+      activeBacking: previous,
     );
-    _documentReplaced = true;
-    _touchedSet.touchDocumentReplacement();
-    if (!_selectionValidForReplacement()) {
-      _touchedSet.touchSelection();
+    final camera = replacement.camera;
+    final background = replacement.background;
+    final palette = _copyPalette(replacement.palette);
+    final metadata = replacement.metadata;
+
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.structure,
+      activeBacking: previous,
+    );
+    final structure = DraftStructure(replacement);
+
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.resources,
+      activeBacking: previous,
+    );
+    final resources = DraftResources(
+      descriptors: replacement.resources,
+      visitRows: structure.visitCurrentRows,
+    );
+
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.replacementFacts,
+      activeBacking: previous,
+    );
+    final touchedSet = _copyTouchedSet(previous.touchedSet.build())
+      ..touchDocumentReplacement();
+    if (!_selectionValidForReplacement(
+      structure: structure,
+      selectedElementIds: previous.selectedElementIds,
+    )) {
+      touchedSet.touchSelection();
     }
-    _revisionDelta = _revisionDelta.merge(preparedLoad.revisionDelta);
+    final next = _DraftBacking(
+      camera: camera,
+      background: background,
+      palette: palette,
+      metadata: metadata,
+      structure: structure,
+      resources: resources,
+      selectedElementIds: previous.selectedElementIds,
+      revisionDelta: previous.revisionDelta.merge(preparedLoad.revisionDelta),
+      touchedSet: touchedSet,
+      documentReplaced: true,
+    );
+
+    _recordDraftReplacementWork(
+      DraftReplacementWorkPhase.publication,
+      activeBacking: previous,
+      replacementBacking: next,
+    );
+    _backing = next;
   }
 
   CanvasDocument _materialize() {
@@ -495,21 +608,44 @@ final class DraftDocument {
     }(), 'draft sparse mutation application observation failed');
   }
 
+  static void _recordDraftReplacementWork(
+    DraftReplacementWorkPhase phase, {
+    required _DraftBacking activeBacking,
+    _DraftBacking? replacementBacking,
+  }) {
+    assert(() {
+      final sink = Zone.current[_replacementWorkZoneKey];
+      if (sink is void Function(DraftReplacementWorkEvent)) {
+        sink(
+          DraftReplacementWorkEvent(
+            phase,
+            activeBacking: activeBacking,
+            replacementBacking: replacementBacking,
+          ),
+        );
+      }
+      return true;
+    }(), 'draft replacement work observation failed');
+  }
+
   bool _intersectsSelection(Iterable<CanvasElementId> ids) {
     return ids.any(_selectedElementIds.contains);
   }
 
-  bool _selectionValidForReplacement() {
-    final selectableIds = <CanvasElementId>{
-      for (final element in _contentElements())
-        if (element.isVisible && element.isSelectable) element.id,
-    };
-
-    return _selectedElementIds.every(selectableIds.contains);
-  }
-
-  Iterable<CanvasElement> _contentElements() sync* {
-    yield* _structure.orderedContentElements();
+  static bool _selectionValidForReplacement({
+    required DraftStructure structure,
+    required Set<CanvasElementId> selectedElementIds,
+  }) {
+    for (final id in selectedElementIds) {
+      final candidate = structure.elementForId(id);
+      if (candidate == null ||
+          candidate.isBackground ||
+          !candidate.element.isVisible ||
+          !candidate.element.isSelectable) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _markStructural() {
@@ -547,6 +683,58 @@ final class DraftDocument {
       const StoreRevisionDelta.projectionOnly(),
     );
   }
+}
+
+/// One mutable Draft lifetime. Replacement prepares a separate instance, then
+/// changes the outer Draft's single backing reference only after every fallible
+/// construction and derived-fact step completes.
+final class _DraftBacking {
+  _DraftBacking({
+    required this.camera,
+    required this.background,
+    required this.palette,
+    required this.metadata,
+    required this.structure,
+    required this.resources,
+    required Iterable<CanvasElementId> selectedElementIds,
+    required this.revisionDelta,
+    required this.touchedSet,
+    required this.documentReplaced,
+  }) : selectedElementIds = Set.unmodifiable(selectedElementIds);
+
+  factory _DraftBacking.fromDocument(
+    CanvasDocument document, {
+    required Iterable<CanvasElementId> selectedElementIds,
+  }) {
+    final structure = DraftStructure(document);
+
+    return _DraftBacking(
+      camera: document.camera,
+      background: document.background,
+      palette: _copyPalette(document.palette),
+      metadata: document.metadata,
+      structure: structure,
+      resources: DraftResources(
+        descriptors: document.resources,
+        visitRows: structure.visitCurrentRows,
+      ),
+      selectedElementIds: selectedElementIds,
+      revisionDelta: const StoreRevisionDelta(),
+      touchedSet: TouchedSetBuilder(),
+      documentReplaced: false,
+    );
+  }
+
+  CanvasCamera camera;
+  CanvasBackground background;
+  CanvasPalette palette;
+  CanvasMetadata metadata;
+  final DraftStructure structure;
+  final DraftResources resources;
+  final Set<CanvasElementId> selectedElementIds;
+  StoreRevisionDelta revisionDelta;
+  final TouchedSetBuilder touchedSet;
+  bool documentReplaced;
 }
 
 // Sparse replay can apply a DTO but cannot inspect Draft state before finish.
@@ -599,6 +787,62 @@ bool _sameList<T>(List<T> left, List<T> right) {
   }
 
   return true;
+}
+
+// Touch categories are the stable invalidation taxonomy. Keeping this explicit
+// avoids a lossy generic copy while replacement prepares a separate backing.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code
+TouchedSetBuilder _copyTouchedSet(TouchedSet source) {
+  final copy = TouchedSetBuilder();
+  for (final id in source.addedElementIds) {
+    copy.touchAddedElement(id);
+  }
+  for (final id in source.removedElementIds) {
+    copy.touchRemovedElement(id);
+  }
+  for (final id in source.updatedElementIds) {
+    copy.touchUpdatedElement(id);
+  }
+  for (final id in source.transformedElementIds) {
+    copy.touchTransformedElement(id);
+  }
+  for (final id in source.geometryElementIds) {
+    copy.touchGeometryElement(id);
+  }
+  for (final id in source.visualElementIds) {
+    copy.touchVisualElement(id);
+  }
+  for (final id in source.resourceDescriptorChangedIds) {
+    copy.touchResourceDescriptor(id);
+  }
+  for (final id in source.resourceVisualChangedIds) {
+    copy.touchResourceVisual(id);
+  }
+  for (final id in source.layerIds) {
+    copy.touchLayer(id);
+  }
+  if (source.backgroundLayerChanged) {
+    copy.touchBackgroundLayer();
+  }
+  if (source.selection) {
+    copy.touchSelection();
+  }
+  if (source.persistedCamera) {
+    copy.touchPersistedCamera();
+  }
+  if (source.background) {
+    copy.touchBackground();
+  }
+  if (source.grid) {
+    copy.touchGrid();
+  }
+  if (source.palette) {
+    copy.touchPalette();
+  }
+  if (source.documentReplaced) {
+    copy.touchDocumentReplacement();
+  }
+  return copy;
 }
 
 CanvasPalette _copyPalette(CanvasPalette palette) {

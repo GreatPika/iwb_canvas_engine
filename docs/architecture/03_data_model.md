@@ -92,9 +92,13 @@ image/vector reference counts derived from its current structural rows. Every
 successful row transition updates only its affected split count; descriptor
 upsert, removal, and explicit document materialization use direct keyed reads
 or one ordered descriptor traversal, never an all-element reference scan.
-Atomic whole-backing construction and replacement swap remain pending for Unit
-6; this backing is not yet a completed replacement boundary. The journal
-receives only Draft's write-only DTO consumer
+Draft replacement prepares one complete new backing containing its scalar,
+structural, descriptor/count, selection-validity, revision, and touched facts
+only after existing validation and staged-load preparation succeed. It then
+publishes that backing through one reference swap. A validation or construction
+failure retains the previous backing unchanged, and the fresh backing does not
+share mutable collections with caller or retired state. The journal receives
+only Draft's write-only DTO consumer
 during promotion, not a readable Draft state; Draft's promotion target opens
 and releases the document around that replay.
 One Store-private transaction candidate opens the existing family, resource,
