@@ -181,7 +181,7 @@ sequenceDiagram
         CC->>Events: attach staged moveSelection event to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: replace transform rows and revision state
+        Store->>Store: replace transform rows and revision state, invalidate projection revision; cache rebuilds lazily on read
         Note over Applier,Store: Atomic install is the commit boundary.
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle
@@ -194,7 +194,6 @@ sequenceDiagram
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>Spatial: apply touched-id spatial update
-        Runtime->>Projection: evict public projection cache by projectionRevision
         Runtime->>Frame: publish merged main repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
         Runtime->>Signals: publish move action notification

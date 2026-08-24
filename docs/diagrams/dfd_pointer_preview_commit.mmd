@@ -36,6 +36,7 @@ flowchart LR
   subgraph Runtime["RuntimeRoot"]
     Delivery["Interaction commit delivery\nnon-mutating Store candidate read and action descriptor staging"]
     EditResult["Terminal edit result\nruntime-owned delivery outcome"]
+    ClosedDeliveryCleanup["Closed-result cleanup\npublish false and effect augmentation"]
   end
 
   subgraph Spatial["SpatialKernel"]
@@ -62,7 +63,6 @@ flowchart LR
 
   subgraph Effects["Committed effects"]
     SpatialDelta["Spatial updates\nfor touched ids"]
-    ProjectionEvict["Projection/cache eviction"]
     MainRepaint["Main repaint bus"]
     OverlayRepaint["Overlay repaint bus\npreview cleanup"]
     Actions["Typed user action events\nonly when terminal commit changes state"]
@@ -119,22 +119,18 @@ flowchart LR
   Draft -->|"exact touched state"| Touched
   Touched -->|"compile exact effects"| Compiler
   Compiler -->|"preflighted commit payload"| AtomicInstall
-  AtomicInstall -->|"accepted ledger reserves route ID and replaces committed tables atomically"| Committed
+  AtomicInstall -->|"accepted ledger reserves route ID, replaces committed tables, and invalidates projection revision"| Committed
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
   SelectionEffect -->|"update selected ids/revision"| SelectionFacts
 
   AtomicInstall -->|"commit result"| EditResult
-  EditResult -->|"EditKernel closes handle, then RuntimeRoot requests publish-false cleanup"| TerminalCleanup
-  TerminalCleanup -->|"cleanup outcome augments repaint before guarded common delivery"| PublicSignals
-  EditResult -->|"RuntimeRoot guarded delivery first: spatial scope"| SpatialDelta
-  EditResult -->|"RuntimeRoot common delivery: projection eviction"| ProjectionEvict
-  EditResult -->|"then resource/release and root/bridge frame repaint"| MainRepaint
-  EditResult -->|"then state, changed action, non-empty observer"| Actions
+  EditResult -->|"EditKernel closes handle, then RuntimeRoot performs publish-false cleanup"| ClosedDeliveryCleanup
+  ClosedDeliveryCleanup -->|"cleanup outcome augments repaint, then guarded common delivery: spatial scope"| SpatialDelta
+  SpatialDelta -->|"then resource/release and root/bridge frame repaint"| MainRepaint
+  MainRepaint -->|"then state, changed action, non-empty observer"| Actions
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
   Rollback -.->|"candidate remains next; committed document, selection, revisions,\nand action events unchanged"| ErrorProjection
-  Rollback -.->|"terminal failure result"| EditResult
-  EditResult -.->|"edit-failure cleanup request\nthrough InteractionEngine"| TerminalCleanup
   ErrorProjection -.->|"projected runtime-safe error"| Surface
   PublicSignals --> Surface
   MainRepaint --> PublicSignals

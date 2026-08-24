@@ -107,6 +107,7 @@ sequenceDiagram
         CC->>Effects: prepare typed main repaint and invalidation effects
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: atomic install
+        Store->>Store: install revision state including projection invalidation; cache rebuilds lazily on read
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle
         EK-->>Runtime: closed edit result
@@ -118,7 +119,6 @@ sequenceDiagram
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>SpatialApply: apply touched removals only
-        Runtime->>Projection: evict by projectionRevision
         Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
         Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
         Runtime->>Signals: publish erase action notification

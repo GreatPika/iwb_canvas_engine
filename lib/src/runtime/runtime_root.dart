@@ -117,9 +117,9 @@ final class RuntimeRouteTemporalEvent {
 }
 
 // Common delivery has public callback seams for resource, frame, state, action,
-// and observer facts. This assert-only event is deliberately narrower: it
-// exposes only guard, post-spatial, and bounded traversal facts those callbacks
-// cannot observe without creating a second delivery path.
+// and observer facts. This assert-only event supplies only their semantic
+// ordering and guard boundaries; sealed-collection work is observed at its
+// CommitApplier owner rather than self-reported by these delivery loops.
 @visibleForTesting
 enum RuntimeCommonDeliveryEventKind {
   guardEntered,
@@ -134,15 +134,9 @@ enum RuntimeCommonDeliveryEventKind {
 @immutable
 @visibleForTesting
 final class RuntimeCommonDeliveryEvent {
-  const RuntimeCommonDeliveryEvent({required this.kind, this.visits = 0});
+  const RuntimeCommonDeliveryEvent({required this.kind});
 
   final RuntimeCommonDeliveryEventKind kind;
-
-  /// Bounded RuntimeRoot-owned work completed by this phase.
-  ///
-  /// Guard transitions report zero; traversal phases report sealed effects or
-  /// actions visited without retaining any observation state in production.
-  final int visits;
 }
 
 typedef _RuntimeSurfaceRepaintTarget = ({
@@ -1535,14 +1529,15 @@ final class RuntimeRoot
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_routeTemporalEventZoneKey: sink});
 
-  static void _recordRouteTemporalEvent(RuntimeRouteTemporalEvent event) {
-    assert(() {
-      final sink = Zone.current[_routeTemporalEventZoneKey];
-      if (sink is void Function(RuntimeRouteTemporalEvent)) {
-        sink(event);
-      }
-      return true;
-    }(), 'runtime route temporal event observation failed');
+  static bool _recordRouteTemporalEvent(
+    RuntimeRouteTemporalEventKind kind, {
+    RuntimeNonTextRoute? route,
+  }) {
+    final sink = Zone.current[_routeTemporalEventZoneKey];
+    if (sink is void Function(RuntimeRouteTemporalEvent)) {
+      sink(RuntimeRouteTemporalEvent(kind: kind, route: route));
+    }
+    return true;
   }
 
   @visibleForTesting
@@ -1551,17 +1546,18 @@ final class RuntimeRoot
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_commonDeliveryEventZoneKey: sink});
 
-  static void _recordCommonDeliveryEvent(
-    RuntimeCommonDeliveryEventKind kind, {
-    int visits = 0,
-  }) {
-    assert(() {
-      final sink = Zone.current[_commonDeliveryEventZoneKey];
-      if (sink is void Function(RuntimeCommonDeliveryEvent)) {
-        sink(RuntimeCommonDeliveryEvent(kind: kind, visits: visits));
-      }
-      return true;
-    }(), 'runtime common delivery event observation failed');
+  static bool _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind kind) {
+    final sink = Zone.current[_commonDeliveryEventZoneKey];
+    if (sink is void Function(RuntimeCommonDeliveryEvent)) {
+      sink(RuntimeCommonDeliveryEvent(kind: kind));
+    }
+    return true;
+  }
+
+  static bool _recordSealedDeliveryPhase(CommitSealedDeliveryPhase phase) {
+    // RuntimeRoot calls this only from assert evaluation around real owner work.
+    // ignore: invalid_use_of_visible_for_testing_member
+    return CommitApplier.recordSealedDeliveryPhase(phase);
   }
 
   @override
@@ -1573,19 +1569,21 @@ final class RuntimeRoot
       );
     }
     _isRunningResolverCallback = true;
-    _recordRouteTemporalEvent(
-      const RuntimeRouteTemporalEvent(
-        kind: RuntimeRouteTemporalEventKind.resolverGuardEntered,
+    assert(
+      _recordRouteTemporalEvent(
+        RuntimeRouteTemporalEventKind.resolverGuardEntered,
       ),
+      'runtime route temporal event observation failed',
     );
     try {
       return callback();
     } finally {
       _isRunningResolverCallback = false;
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.resolverGuardReleased,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.resolverGuardReleased,
         ),
+        'runtime route temporal event observation failed',
       );
     }
   }
@@ -1829,12 +1827,9 @@ final class RuntimeRoot
   }
 
   _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForEffects(
-    Iterable<CommitDeliveryEffect> effects, {
-    bool recordCommonDeliveryTraversal = false,
-  }) {
-    var visits = 0;
+    Iterable<CommitDeliveryEffect> effects,
+  ) {
     for (final effect in effects) {
-      visits += 1;
       if (effect case RepaintDeliveryEffect(
         :final mainCanvas,
         :final overlayCanvas,
@@ -1844,42 +1839,18 @@ final class RuntimeRoot
           overlayCanvas: overlayCanvas,
           reason: 'commit_repaint',
         );
-        _recordCommonRepaintTargetTraversal(
-          enabled: recordCommonDeliveryTraversal,
-          visits: visits,
-        );
-
         return target;
       }
     }
-    _recordCommonRepaintTargetTraversal(
-      enabled: recordCommonDeliveryTraversal,
-      visits: visits,
-    );
 
     return null;
   }
 
   _RuntimeSurfaceRepaintTarget _documentReplacementRepaintTarget() {
-    _recordCommonRepaintTargetTraversal(enabled: true, visits: 0);
-
     return _surfaceRepaintTarget(
       mainCanvas: true,
       overlayCanvas: true,
       reason: 'document_replaced',
-    );
-  }
-
-  void _recordCommonRepaintTargetTraversal({
-    required bool enabled,
-    required int visits,
-  }) {
-    if (!enabled) {
-      return;
-    }
-    _recordCommonDeliveryEvent(
-      RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
-      visits: visits,
     );
   }
 
@@ -2039,48 +2010,92 @@ final class RuntimeRoot
     return _applySelectionReplacement(outcome.selectionReplacement);
   }
 
+  // The ordered guard, callbacks, and assert-only real-list wrapper share one
+  // owner boundary; splitting them would make release and delivery order less clear.
+  // ignore: halstead-volume, source-lines-of-code
   void _deliverEditCommitResult(
     CommitDeliveryResult applyResult, {
     RuntimeNonTextRoute? route,
   }) {
     if (route != null) {
-      _recordRouteTemporalEvent(
-        RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.commonDeliveryEntered,
           route: route,
         ),
+        'runtime route temporal event observation failed',
       );
     }
+    var deliveryResult = applyResult;
+    assert(() {
+      // The test-only wrapper must see RuntimeRoot's real sealed collections.
+      // ignore: invalid_use_of_visible_for_testing_member
+      deliveryResult = CommitApplier.observeSealedDeliveryCollections(
+        applyResult,
+      );
+      return true;
+    }(), 'sealed delivery work observation failed');
     _isDeliveringCommitEffects = true;
     try {
-      _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind.guardEntered);
-      final spatialVisits = _deliverSpatialEffects(applyResult.effects);
-      _recordCommonDeliveryEvent(
-        RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
-        visits: spatialVisits,
+      assert(
+        _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind.guardEntered),
+        'runtime common delivery event observation failed',
       );
-      final resourceVisits = _deliverResourceEffects(applyResult.effects);
-      _recordCommonDeliveryEvent(
-        RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
-        visits: resourceVisits,
+      assert(
+        _recordSealedDeliveryPhase(CommitSealedDeliveryPhase.spatial),
+        'sealed delivery work observation failed',
       );
-      if (applyResult.shouldPublishState) {
-        if (applyResult.replacedDocument) {
+      _deliverSpatialEffects(deliveryResult.effects);
+      assert(
+        _recordCommonDeliveryEvent(
+          RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
+        ),
+        'runtime common delivery event observation failed',
+      );
+      assert(
+        _recordSealedDeliveryPhase(CommitSealedDeliveryPhase.resource),
+        'sealed delivery work observation failed',
+      );
+      _deliverResourceEffects(deliveryResult.effects);
+      assert(
+        _recordCommonDeliveryEvent(
+          RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
+        ),
+        'runtime common delivery event observation failed',
+      );
+      if (deliveryResult.shouldPublishState) {
+        if (deliveryResult.replacedDocument) {
           _epochRevision += 1;
         }
-        final surfaceRepaintTarget = applyResult.replacedDocument
+        assert(
+          _recordSealedDeliveryPhase(CommitSealedDeliveryPhase.repaint),
+          'sealed delivery work observation failed',
+        );
+        final surfaceRepaintTarget = deliveryResult.replacedDocument
             ? _documentReplacementRepaintTarget()
-            : _surfaceRepaintTargetForEffects(
-                applyResult.effects,
-                recordCommonDeliveryTraversal: true,
-              );
+            : _surfaceRepaintTargetForEffects(deliveryResult.effects);
+        assert(
+          _recordCommonDeliveryEvent(
+            RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
+          ),
+          'runtime common delivery event observation failed',
+        );
         _publishRuntimeState(surfaceRepaintTarget: surfaceRepaintTarget);
-        _emitActions(applyResult.actionIntents);
+        _emitActions(deliveryResult.actionIntents);
       }
-      _deliverCommitEffectObserver(applyResult.effects);
+      assert(
+        _recordSealedDeliveryPhase(CommitSealedDeliveryPhase.observer),
+        'sealed delivery work observation failed',
+      );
+      _deliverCommitEffectObserver(deliveryResult.effects);
     } finally {
       _isDeliveringCommitEffects = false;
-      _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind.guardReleased);
+      assert(
+        _recordCommonDeliveryEvent(
+          RuntimeCommonDeliveryEventKind.guardReleased,
+        ),
+        'runtime common delivery event observation failed',
+      );
     }
   }
 
@@ -2170,29 +2185,24 @@ final class RuntimeRoot
   }
 
   // Delivery shared helpers.
-  int _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
-    var visits = 0;
+  void _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
     for (final effect in effects) {
-      visits += 1;
       if (effect case SpatialDeliveryEffect(:final touchedSet)) {
         _spatial.applyTouched(this, touchedSet);
       }
     }
-    return visits;
   }
 
   // Resource invalidation and failed-session retirement share one owner so a
   // partial release cannot escape its matching ownership drop.
   // ignore: cyclomatic-complexity
-  int _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
+  void _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
     final sink = _activeResourceSessionReleaseSink;
     if (sink == null && _activeSurfaceResourceSession == null) {
-      return 0;
+      return;
     }
-    var visits = 0;
     try {
       for (final effect in effects) {
-        visits += 1;
         if (effect is! ResourceDeliveryEffect) {
           continue;
         }
@@ -2212,8 +2222,6 @@ final class RuntimeRoot
     } on Object {
       _dropFailedResourceReleaseTarget(sink);
     }
-
-    return visits;
   }
 
   void _resetActiveResourceSessionForDocumentReplacement() {
@@ -2261,19 +2269,25 @@ final class RuntimeRoot
   }
 
   void _emitActions(List<CommitActionIntent> intents) {
-    final actions = _actionFinalizer.finalize(intents);
-    _recordCommonDeliveryEvent(
-      RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
-      visits: intents.length,
+    assert(
+      _recordSealedDeliveryPhase(CommitSealedDeliveryPhase.action),
+      'sealed delivery work observation failed',
     );
-    var visits = 0;
+    final actions = _actionFinalizer.finalize(intents);
+    assert(
+      _recordCommonDeliveryEvent(
+        RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+      ),
+      'runtime common delivery event observation failed',
+    );
     for (final action in actions) {
-      visits += 1;
       _actions.add(action);
     }
-    _recordCommonDeliveryEvent(
-      RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
-      visits: visits,
+    assert(
+      _recordCommonDeliveryEvent(
+        RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+      ),
+      'runtime common delivery event observation failed',
     );
   }
 
@@ -2350,21 +2364,23 @@ final class RuntimeRoot
         delta: resolvedDelta,
         timestampHintMs: timestampHintMs,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.preparedApplyReturned,
           route: RuntimeNonTextRoute.selectedMove,
         ),
+        'runtime route temporal event observation failed',
       );
       final cleanup = _cleanupSelectedMove(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.routeCleanupCompleted,
           route: RuntimeNonTextRoute.selectedMove,
         ),
+        'runtime route temporal event observation failed',
       );
       _deliverEditCommitResult(
         _withPointerCleanupEffects(
@@ -2471,22 +2487,24 @@ final class RuntimeRoot
           ],
         ),
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.preparedApplyReturned,
           route: RuntimeNonTextRoute.marquee,
         ),
+        'runtime route temporal event observation failed',
       );
       final cleanup = _cleanupMarquee(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
         preservePendingContextTap: intent.preservePendingContextTap,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.routeCleanupCompleted,
           route: RuntimeNonTextRoute.marquee,
         ),
+        'runtime route temporal event observation failed',
       );
       _deliverEditCommitResult(
         _withPointerCleanupEffects(
@@ -2532,21 +2550,23 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.preparedApplyReturned,
           route: RuntimeNonTextRoute.drawStroke,
         ),
+        'runtime route temporal event observation failed',
       );
       final cleanup = _cleanupDrawStroke(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.routeCleanupCompleted,
           route: RuntimeNonTextRoute.drawStroke,
         ),
+        'runtime route temporal event observation failed',
       );
       _deliverEditCommitResult(
         _withPointerCleanupEffects(
@@ -2619,21 +2639,23 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.preparedApplyReturned,
           route: RuntimeNonTextRoute.drawLine,
         ),
+        'runtime route temporal event observation failed',
       );
       final cleanup = _cleanupLineEndpoint(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.routeCleanupCompleted,
           route: RuntimeNonTextRoute.drawLine,
         ),
+        'runtime route temporal event observation failed',
       );
       _deliverEditCommitResult(
         _withPointerCleanupEffects(
@@ -2708,21 +2730,23 @@ final class RuntimeRoot
             intent: intent,
             timestampHintMs: timestampHintMs,
           );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.preparedApplyReturned,
           route: RuntimeNonTextRoute.eraser,
         ),
+        'runtime route temporal event observation failed',
       );
       final cleanup = _cleanupEraser(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _recordRouteTemporalEvent(
-        const RuntimeRouteTemporalEvent(
-          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      assert(
+        _recordRouteTemporalEvent(
+          RuntimeRouteTemporalEventKind.routeCleanupCompleted,
           route: RuntimeNonTextRoute.eraser,
         ),
+        'runtime route temporal event observation failed',
       );
       _deliverEditCommitResult(
         _withPointerCleanupEffects(
@@ -2788,11 +2812,12 @@ final class RuntimeRoot
       ]),
       actionIntents: result.actionIntents,
     );
-    _recordRouteTemporalEvent(
-      RuntimeRouteTemporalEvent(
-        kind: RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+    assert(
+      _recordRouteTemporalEvent(
+        RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
         route: route,
       ),
+      'runtime route temporal event observation failed',
     );
     return augmented;
   }

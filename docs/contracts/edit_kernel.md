@@ -200,11 +200,13 @@ and delivery ordering are RuntimeRoot-owned and consume no prepared state again.
 
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
 orchestrates the accepted result. For changed request-originated text,
-RuntimeRoot consumes the request, synchronously clears the public active text
-session, permits that listener's separate accepted nested mutation to finish,
-then records the outer interaction revision before outer common delivery.
-Flutter notifier failures are reported and do not roll back or suppress the
-accepted outer delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
+RuntimeRoot consumes the request and always enters outer common delivery. Only
+when that request matches an active text session does it synchronously clear
+the public session, permit that listener's separate accepted nested mutation to
+finish, and record the outer interaction revision before delivery. A direct
+live-request commit without an active session skips that dismissal/listener
+window and interaction revision. Flutter notifier failures are reported and do
+not roll back or suppress the accepted outer delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
 performs the route-owned `publish: false` InteractionEngine cleanup, merges its
 repaint effect, and only then enters one guarded common delivery. Its exact
 order is spatial -> resource/session release -> root frame -> bridged frame ->
@@ -348,7 +350,8 @@ Field taxonomy:
 field-effect subroutine, but `CommitCompiler` remains the source-of-truth owner
 for typed invalidation. Resource reference validation is preflighted before
 draft mutation is accepted. Selection normalization effects are installed by
-the selection owner and published atomically with document effects.
+the selection owner after any document install. `RuntimeRoot` publishes the
+combined public state only after both owner installs succeed.
 
 The store checks descriptor relationships once against the final sparse or
 materialized candidate, rather than when either resource or element mutation is
@@ -361,9 +364,11 @@ the committed document, revisions, selection, and frame output untouched.
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a
 marquee selection compile explicit selection-owner effects. `CommitApplier`
-installs document and selection effects atomically; `RuntimeRoot` publishes the
-resulting combined `CanvasRuntimeState` only after any route-owned cleanup. If
-preflight or rollback happens before that boundary, both owners remain
+prepares both owners before mutation, then installs document effects before
+selection effects; a selection-install failure does not roll back an already
+accepted Store install. `RuntimeRoot` publishes the resulting combined
+`CanvasRuntimeState` only after both installs succeed and any route-owned
+cleanup completes. A failure during shared preparation leaves both owners
 unchanged.
 
 After an accepted edit commit, `RuntimeRoot` publishes exactly one public state

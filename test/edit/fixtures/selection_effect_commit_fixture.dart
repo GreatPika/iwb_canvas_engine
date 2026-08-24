@@ -620,8 +620,8 @@ void _expectMaterializedConstructionFailurePreservesOwners() {
   expect(aggregateEvents, [StoreSparseCandidateEventKind.aggregatePublication]);
 }
 
-// The actual sealing traversal and unchanged-owner snapshot stay together so
-// moving effect preparation after document installation makes this witness red.
+// The cumulative work observer reports sealing before any installer, so this
+// direct CommitApplier witness keeps the independent pre-install boundary.
 // ignore: halstead-volume
 void _expectDeliveryPreparationFailurePreservesOwners() {
   final store = DocumentStoreKernel();
@@ -631,9 +631,9 @@ void _expectDeliveryPreparationFailurePreservesOwners() {
   var preparationCalls = 0;
 
   expect(
-    () => CommitApplier.observeDeliveryEffectPreparation(
-      () {
-        preparationCalls += 1;
+    () => CommitApplier.observeSealedDeliveryWork(
+      (work) {
+        preparationCalls = work.preparations;
         throw StateError('delivery preparation failed');
       },
       () {

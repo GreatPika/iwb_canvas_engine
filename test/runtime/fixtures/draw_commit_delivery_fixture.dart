@@ -1,15 +1,24 @@
+// This integrated runtime fixture names every cross-owner dependency needed to
+// falsify delivery work; a helper split would duplicate its public setup.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   test('pencil marker and line commits add elements and emit draw actions', () {
@@ -594,36 +603,42 @@ void _verifyRepeatedFailedRouteReads(RuntimeRoot root) {
 
 // One accepted draw trace keeps all real owner seams together; splitting it
 // would make callback-multiplied work indistinguishable from fixture plumbing.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   final root = setup.root;
   final delivery = setup.delivery;
   final candidateEvents = <StoreSparseCandidateEvent>[];
   final deliveryEvents = <RuntimeCommonDeliveryEvent>[];
   final beforeProjectionBuilds = root.projectionBuildCount;
-  var effectPreparations = 0;
-  root.attachSurface(Object());
+  final surfaceToken = Object();
+  final releasedResourceIds = <Set<CanvasResourceId>>[];
+  root.attachSurface(surfaceToken);
+  root.installSurfaceResourceSession(
+    surfaceToken,
+    SurfaceResourceSession(
+      resolver: null,
+      mutationGuard: root,
+      releaseRetainedResources: (ids) => releasedResourceIds.add(ids),
+    ),
+  );
   root.surfaceFrameSignal.addListener(delivery.observeRootFrame);
   root.state.addListener(delivery.observeState);
   final actionSubscription = root.actions.listen(delivery.observeAction);
+  CommitSealedDeliveryWork observeDeliveryWork(void Function() operation) {
+    late CommitSealedDeliveryWork work;
+    CommitApplier.observeSealedDeliveryWork((observed) => work = observed, () {
+      RuntimeRoot.observeCommonDeliveryEvents((event) {
+        deliveryEvents.add(event);
+        delivery.observeCommonDeliveryEvent(event);
+      }, operation);
+    });
+    return work;
+  }
+
+  late CommitSealedDeliveryWork pencilDeliveryWork;
   final pencilWork = _observeIdAdmissionWork(() {
     CommittedDocument.observeSparseCandidateEvents(candidateEvents.add, () {
-      CommitApplier.observeDeliveryEffectPreparation(
-        () {
-          effectPreparations += 1;
-        },
-        () {
-          RuntimeRoot.observeCommonDeliveryEvents(
-            (event) {
-              deliveryEvents.add(event);
-              delivery.observeCommonDeliveryEvent(event);
-            },
-            () {
-              _drawPencil(root);
-            },
-          );
-        },
-      );
+      pencilDeliveryWork = observeDeliveryWork(() => _drawPencil(root));
     });
   });
   _expectReadOnlyRouteCandidate(pencilWork);
@@ -631,11 +646,9 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   _expectAcceptedDrawWorkComposition(
     candidateEvents,
     deliveryEvents,
-    effectPreparations: effectPreparations,
     projectionBuilds: root.projectionBuildCount - beforeProjectionBuilds,
     delivery: delivery,
   );
-  await actionSubscription.cancel();
 
   final explicitWork = _observeIdAdmissionWork(() {
     expect(root.generateElementId(), CanvasElementId('e200001'));
@@ -657,6 +670,103 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
   _expectReadOnlyRouteCandidate(lineWork);
   _expectAcceptedRouteAdmission(lineWork);
   expect(root.generateElementId(), CanvasElementId('e200003'));
+
+  // Three receivers per public notification prove collection work is owned by
+  // delivery phases, not multiplied by callback cardinality.
+  var extraRootFrameCallbacks = 0;
+  var extraStateCallbacks = 0;
+  var extraActionCallbacks = 0;
+  void recordRootFrame() => extraRootFrameCallbacks += 1;
+  void recordState() => extraStateCallbacks += 1;
+  root.surfaceFrameSignal.addListener(recordRootFrame);
+  root.surfaceFrameSignal.addListener(recordRootFrame);
+  root.state.addListener(recordState);
+  root.state.addListener(recordState);
+  final extraActionSubscriptions = [
+    root.actions.listen((_) => extraActionCallbacks += 1),
+    root.actions.listen((_) => extraActionCallbacks += 1),
+  ];
+  final fourEffectBatch = _knownWorkBatch(effectCount: 4, actionCount: 1);
+  final sixEffectBatch = _knownWorkBatch(effectCount: 6, actionCount: 2);
+  final fourEffectDeliveryWork = observeDeliveryWork(
+    () => root.deliverCommitPlanForTesting(
+      fourEffectBatch,
+      document: CanvasDocument(),
+    ),
+  );
+  final sixEffectDeliveryWork = observeDeliveryWork(
+    () => root.deliverCommitPlanForTesting(
+      sixEffectBatch,
+      document: CanvasDocument(),
+    ),
+  );
+  _expectSealedDeliveryWork(pencilDeliveryWork, effectCount: 4, actionCount: 1);
+  _expectSealedDeliveryWork(
+    fourEffectDeliveryWork,
+    effectCount: fourEffectBatch.effects.length,
+    actionCount: fourEffectBatch.actionIntents.length,
+  );
+  _expectSealedDeliveryWork(
+    sixEffectDeliveryWork,
+    effectCount: sixEffectBatch.effects.length,
+    actionCount: sixEffectBatch.actionIntents.length,
+  );
+  expect(
+    fourEffectDeliveryWork.effectElements,
+    pencilDeliveryWork.effectElements,
+  );
+  expect(
+    fourEffectDeliveryWork.actionElements,
+    pencilDeliveryWork.actionElements,
+  );
+  expect(root.projectionBuildCount - beforeProjectionBuilds, 0);
+  expect(extraRootFrameCallbacks, 4);
+  expect(extraStateCallbacks, 4);
+  expect(extraActionCallbacks, 6);
+  expect(releasedResourceIds, [
+    {CanvasResourceId('work-resource')},
+    {CanvasResourceId('work-resource')},
+  ]);
+  for (final subscription in extraActionSubscriptions) {
+    await subscription.cancel();
+  }
+  root.surfaceFrameSignal.removeListener(recordRootFrame);
+  root.surfaceFrameSignal.removeListener(recordRootFrame);
+  root.state.removeListener(recordState);
+  root.state.removeListener(recordState);
+  await actionSubscription.cancel();
+}
+
+// Both batches place repaint last, making the known two RuntimeRoot effect
+// traversals linear in the actual sealed batch rather than callback count.
+CommitPlan _knownWorkBatch({
+  required int effectCount,
+  required int actionCount,
+}) {
+  final nonRepaintEffects = <CommitEffect>[
+    SpatialEffect(touchedSet: TouchedSet()),
+    ResourceEffect(
+      touchedSet: TouchedSet(
+        resourceDescriptorChangedIds: [CanvasResourceId('work-resource')],
+      ),
+    ),
+    const ProjectionEffect(),
+    const SelectionEffect(),
+    const PublicStateEffect(),
+  ];
+  final actions = <CommitActionIntent>[
+    DeleteSelectionActionIntent(removedElementIds: [CanvasElementId('work-a')]),
+    DeleteSelectionActionIntent(removedElementIds: [CanvasElementId('work-b')]),
+  ];
+  return CommitPlan(
+    revisionDelta: const StoreRevisionDelta(document: true),
+    touchedSet: TouchedSet(),
+    effects: [
+      ...nonRepaintEffects.take(effectCount - 1),
+      const RepaintEffect(mainCanvas: true),
+    ],
+    actionIntents: actions.take(actionCount).toList(),
+  );
 }
 
 // The exact cross-owner counts form one falsification proof and are clearer
@@ -665,7 +775,6 @@ Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
 void _expectAcceptedDrawWorkComposition(
   List<StoreSparseCandidateEvent> candidateEvents,
   List<RuntimeCommonDeliveryEvent> deliveryEvents, {
-  required int effectPreparations,
   required int projectionBuilds,
   required _DrawWorkDeliveryProbe delivery,
 }) {
@@ -682,7 +791,6 @@ void _expectAcceptedDrawWorkComposition(
     ),
     hasLength(1),
   );
-  expect(effectPreparations, 1);
   expect(projectionBuilds, 0);
   expect(delivery.callbackEvents, [
     'root-frame',
@@ -691,13 +799,7 @@ void _expectAcceptedDrawWorkComposition(
     'observer',
   ]);
   expect(delivery.effectBatches, hasLength(1));
-  final sealedEffects = delivery.effectBatches.single.length;
-  expect(sealedEffects, 4);
-  final repaintVisits =
-      sealedEffects -
-      delivery.effectBatches.single.reversed
-          .takeWhile((effect) => effect is! RepaintDeliveryEffect)
-          .length;
+  expect(delivery.effectBatches.single, hasLength(4));
   expect(deliveryEvents.map((event) => event.kind), [
     RuntimeCommonDeliveryEventKind.guardEntered,
     RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
@@ -707,70 +809,89 @@ void _expectAcceptedDrawWorkComposition(
     RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
     RuntimeCommonDeliveryEventKind.guardReleased,
   ]);
-  _expectDeliveryPhaseVisits(
-    deliveryEvents,
-    sealedEffects: sealedEffects,
-    repaintVisits: repaintVisits,
-  );
 }
 
-// All current phase counts must be compared as one sealed-delivery witness.
-// ignore: source-lines-of-code
-void _expectDeliveryPhaseVisits(
-  List<RuntimeCommonDeliveryEvent> events, {
-  required int sealedEffects,
-  required int repaintVisits,
+// This keeps one literal phase matrix, so a changed owner/read attribution
+// cannot hide in fragmented helpers solely to satisfy metrics thresholds.
+// ignore: halstead-volume, source-lines-of-code
+void _expectSealedDeliveryWork(
+  CommitSealedDeliveryWork work, {
+  required int effectCount,
+  required int actionCount,
 }) {
-  expect(
-    events
-        .firstWhere(
-          (event) =>
-              event.kind ==
-              RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
-        )
-        .visits,
-    sealedEffects,
-  );
-  expect(
-    events
-        .firstWhere(
-          (event) =>
-              event.kind ==
-              RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
-        )
-        .visits,
-    0,
-  );
-  expect(
-    events
-        .firstWhere(
-          (event) =>
-              event.kind ==
-              RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
-        )
-        .visits,
-    repaintVisits,
-  );
-  expect(
-    events
-        .firstWhere(
-          (event) =>
-              event.kind ==
-              RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
-        )
-        .visits,
-    1,
-  );
-  expect(
-    events
-        .firstWhere(
-          (event) =>
-              event.kind ==
-              RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
-        )
-        .visits,
-    1,
-  );
+  expect(work.preparations, 1);
+  expect(work.effectLengthReads, 1);
+  expect(work.effectIterations, 3);
+  expect(work.effectElements, effectCount * 3);
+  expect(work.actionLengthReads, actionCount + 2);
+  expect(work.actionIterations, 0);
+  expect(work.actionElements, actionCount);
+  _expectSealedDeliveryPhase(work, CommitSealedDeliveryPhase.spatial, (
+    effectLengthReads: 0,
+    effectIterations: 1,
+    effectElements: effectCount,
+    actionLengthReads: 0,
+    actionIterations: 0,
+    actionElements: 0,
+  ));
+  _expectSealedDeliveryPhase(work, CommitSealedDeliveryPhase.resource, (
+    effectLengthReads: 0,
+    effectIterations: 1,
+    effectElements: effectCount,
+    actionLengthReads: 0,
+    actionIterations: 0,
+    actionElements: 0,
+  ));
+  _expectSealedDeliveryPhase(work, CommitSealedDeliveryPhase.repaint, (
+    effectLengthReads: 0,
+    effectIterations: 1,
+    effectElements: effectCount,
+    actionLengthReads: 0,
+    actionIterations: 0,
+    actionElements: 0,
+  ));
+  _expectSealedDeliveryPhase(work, CommitSealedDeliveryPhase.observer, (
+    effectLengthReads: 1,
+    effectIterations: 0,
+    effectElements: 0,
+    actionLengthReads: 0,
+    actionIterations: 0,
+    actionElements: 0,
+  ));
+  _expectSealedDeliveryPhase(work, CommitSealedDeliveryPhase.action, (
+    effectLengthReads: 0,
+    effectIterations: 0,
+    effectElements: 0,
+    actionLengthReads: actionCount + 2,
+    actionIterations: 0,
+    actionElements: actionCount,
+  ));
+}
+
+typedef _SealedDeliveryPhaseExpectation = ({
+  int effectLengthReads,
+  int effectIterations,
+  int effectElements,
+  int actionLengthReads,
+  int actionIterations,
+  int actionElements,
+});
+
+void _expectSealedDeliveryPhase(
+  CommitSealedDeliveryWork work,
+  CommitSealedDeliveryPhase phase,
+  _SealedDeliveryPhaseExpectation expected,
+) {
+  final phaseWork = work.phaseWork[phase];
+  if (phaseWork == null) {
+    fail('missing $phase work attribution');
+  }
+  expect(phaseWork.effectLengthReads, expected.effectLengthReads);
+  expect(phaseWork.effectIterations, expected.effectIterations);
+  expect(phaseWork.effectElements, expected.effectElements);
+  expect(phaseWork.actionLengthReads, expected.actionLengthReads);
+  expect(phaseWork.actionIterations, expected.actionIterations);
+  expect(phaseWork.actionElements, expected.actionElements);
 }
 
 void _expectReadOnlyRouteCandidate(_IdAdmissionWork work) {

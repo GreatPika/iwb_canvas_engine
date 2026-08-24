@@ -429,12 +429,15 @@ request id is unknown and returns false without document, selection, preview,
 interaction, action, timestamp, repaint, or private request-consumption effects.
 The command accepts only current live context request ids whose target is a
 text content element. It consumes accepted no-op requests, consumes changed
-requests only after successful edit preparation and EditKernel closure. For
-changed text, RuntimeRoot synchronously clears the public active-session value
-after consumption and before its interaction revision and common delivery. The
-listener may finish a separate accepted nested mutation first; notifier errors
-are reported by Flutter and outer accepted delivery continues. Rejected,
-failed, and equal-text branches do not enter this listener window,
+requests only after successful edit preparation and EditKernel closure. Changed
+text always enters common delivery after consumption. Only when the request
+matches an active text session does RuntimeRoot synchronously clear the public
+active-session value, record its interaction revision, and open the listener
+window before that delivery. The listener may finish a separate accepted nested
+mutation first; notifier errors are reported by Flutter and outer accepted
+delivery continues. A direct live-request commit without an active session has
+no dismissal/listener window or interaction revision. Rejected, failed, and
+equal-text branches do not enter this listener window,
 consumes known live rejected request ids, treats unknown and already-consumed
 ids as no-ops, rejects empty-canvas, vector or other non-text, stale, missing,
 or kind-mismatched request ids with no public state, document, selection,

@@ -107,21 +107,13 @@ stateDiagram-v2
       Low-level CanvasEdit emits no user action event.
     end note
     CloseCommitted --> PostCommitEffects: handle closed
-    PostCommitEffects --> NotifyPublic: guarded delivery and publication complete
+    PostCommitEffects --> ReturnResult: guarded delivery complete and guard released
 
     state "Close stale handle after rollback" as CloseRollback
     state "Close stale handle after no-op" as CloseNoOp
 
     CloseNoOp --> ReturnResult: handle closed
     CloseRollback --> RethrowFailure: handle closed
-
-    state "Publish public notifications" as NotifyPublic
-    note right of NotifyPublic
-      Reachable only after atomic install.
-      Every callback observes committed state and a closed handle;
-      RuntimeRoot releases the delivery guard after observer work.
-    end note
-    NotifyPublic --> ReturnResult: return callback result
 
     state "Return callback result" as ReturnResult
     state "Rethrow failure" as RethrowFailure

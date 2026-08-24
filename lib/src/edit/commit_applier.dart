@@ -1,4 +1,11 @@
+// The atomic applier keeps its contract, store, and test-observation types
+// together; splitting those owner boundaries would obscure the install order.
+// ignore_for_file: number-of-imports
+
 import 'dart:async';
+import 'dart:collection';
+
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/commit_action_intent.dart';
@@ -119,17 +126,53 @@ final class PreparedUnchangedStoreDocument extends PreparedCommitDocument {
 final class CommitApplier {
   const CommitApplier();
 
-  static final Object _deliveryEffectPreparationZoneKey = Object();
+  static final Object _sealedDeliveryWorkZoneKey = Object();
 
-  // This test-only observer is assert-gated at the real effect sealing pass,
-  // so release commits neither read Zone state nor retain preparation traces.
-  static T observeDeliveryEffectPreparation<T>(
-    void Function() sink,
+  // This assert-only observer reports preparation and real sealed-collection
+  // reads, so tests count owner work rather than self-reported loops.
+  @visibleForTesting
+  static T observeSealedDeliveryWork<T>(
+    void Function(CommitSealedDeliveryWork work) sink,
     T Function() operation,
-  ) => runZoned(
-    operation,
-    zoneValues: {_deliveryEffectPreparationZoneKey: sink},
-  );
+  ) {
+    final scope = _SealedDeliveryWorkScope(sink);
+
+    return runZoned(operation, zoneValues: {_sealedDeliveryWorkZoneKey: scope});
+  }
+
+  /// Wraps the immutable collections that RuntimeRoot is about to consume.
+  ///
+  /// This remains a no-op outside asserts; the wrapper lets the one work seam
+  /// observe real RuntimeRoot reads even when a route augments a prepared
+  /// result with its cleanup effects.
+  @visibleForTesting
+  static CommitDeliveryResult observeSealedDeliveryCollections(
+    CommitDeliveryResult result,
+  ) {
+    var observed = result;
+    assert(() {
+      final scope = Zone.current[_sealedDeliveryWorkZoneKey];
+      if (scope is _SealedDeliveryWorkScope) {
+        observed = CommitDeliveryResult.sealed(
+          shouldPublishState: result.shouldPublishState,
+          replacedDocument: result.replacedDocument,
+          effects: scope.observeEffects(result.effects),
+          actionIntents: scope.observeActions(result.actionIntents),
+        );
+      }
+      return true;
+    }(), 'sealed delivery work observation failed');
+    return observed;
+  }
+
+  @visibleForTesting
+  static bool recordSealedDeliveryPhase(CommitSealedDeliveryPhase phase) {
+    final scope = Zone.current[_sealedDeliveryWorkZoneKey];
+    if (scope is _SealedDeliveryWorkScope) {
+      scope.currentPhase = phase;
+    }
+    return true;
+  }
 
   CommitDeliveryResult apply({
     required AcceptedCommitDocument document,
@@ -241,6 +284,210 @@ final class _PreparedApplyState {
   }
 }
 
+enum CommitSealedDeliveryPhase { spatial, resource, repaint, action, observer }
+
+@visibleForTesting
+final class CommitSealedDeliveryPhaseWork {
+  const CommitSealedDeliveryPhaseWork({
+    required this.effectLengthReads,
+    required this.effectIterations,
+    required this.effectElements,
+    required this.actionLengthReads,
+    required this.actionIterations,
+    required this.actionElements,
+  });
+
+  final int effectLengthReads;
+  final int effectIterations;
+  final int effectElements;
+  final int actionLengthReads;
+  final int actionIterations;
+  final int actionElements;
+}
+
+@visibleForTesting
+final class CommitSealedDeliveryWork {
+  const CommitSealedDeliveryWork({
+    required this.preparations,
+    required this.effectLengthReads,
+    required this.effectIterations,
+    required this.effectElements,
+    required this.actionLengthReads,
+    required this.actionIterations,
+    required this.actionElements,
+    required this.phaseWork,
+  });
+
+  final int preparations;
+  final int effectLengthReads;
+  final int effectIterations;
+  final int effectElements;
+  final int actionLengthReads;
+  final int actionIterations;
+  final int actionElements;
+  final Map<CommitSealedDeliveryPhase, CommitSealedDeliveryPhaseWork> phaseWork;
+}
+
+final class _SealedDeliveryWorkScope {
+  _SealedDeliveryWorkScope(this._sink);
+
+  final void Function(CommitSealedDeliveryWork work) _sink;
+  int preparations = 0;
+  int effectLengthReads = 0;
+  int effectIterations = 0;
+  int effectElements = 0;
+  int actionLengthReads = 0;
+  int actionIterations = 0;
+  int actionElements = 0;
+  CommitSealedDeliveryPhase? currentPhase;
+  final Map<CommitSealedDeliveryPhase, _SealedDeliveryReadCounts> _phaseWork =
+      {};
+
+  void recordPreparation() {
+    preparations += 1;
+    _report();
+  }
+
+  List<CommitDeliveryEffect> observeEffects(
+    List<CommitDeliveryEffect> effects,
+  ) => _ObservedSealedList(
+    effects,
+    onLengthRead: () {
+      effectLengthReads += 1;
+      _currentPhaseWork.effectLengthReads += 1;
+      _report();
+    },
+    onIteration: () {
+      effectIterations += 1;
+      _currentPhaseWork.effectIterations += 1;
+      _report();
+    },
+    onElement: () {
+      effectElements += 1;
+      _currentPhaseWork.effectElements += 1;
+      _report();
+    },
+  );
+
+  List<CommitActionIntent> observeActions(List<CommitActionIntent> actions) =>
+      _ObservedSealedList(
+        actions,
+        onLengthRead: () {
+          actionLengthReads += 1;
+          _currentPhaseWork.actionLengthReads += 1;
+          _report();
+        },
+        onIteration: () {
+          actionIterations += 1;
+          _currentPhaseWork.actionIterations += 1;
+          _report();
+        },
+        onElement: () {
+          actionElements += 1;
+          _currentPhaseWork.actionElements += 1;
+          _report();
+        },
+      );
+
+  void _report() => _sink(snapshot());
+
+  _SealedDeliveryReadCounts get _currentPhaseWork {
+    final phase = currentPhase;
+    if (phase == null) {
+      throw StateError('Sealed delivery read occurred without an owner phase.');
+    }
+    return _phaseWork.putIfAbsent(phase, _SealedDeliveryReadCounts.new);
+  }
+
+  CommitSealedDeliveryWork snapshot() => CommitSealedDeliveryWork(
+    preparations: preparations,
+    effectLengthReads: effectLengthReads,
+    effectIterations: effectIterations,
+    effectElements: effectElements,
+    actionIterations: actionIterations,
+    actionElements: actionElements,
+    actionLengthReads: actionLengthReads,
+    phaseWork: Map.unmodifiable({
+      for (final entry in _phaseWork.entries)
+        entry.key: CommitSealedDeliveryPhaseWork(
+          effectLengthReads: entry.value.effectLengthReads,
+          effectIterations: entry.value.effectIterations,
+          effectElements: entry.value.effectElements,
+          actionLengthReads: entry.value.actionLengthReads,
+          actionIterations: entry.value.actionIterations,
+          actionElements: entry.value.actionElements,
+        ),
+    }),
+  );
+}
+
+final class _SealedDeliveryReadCounts {
+  int effectLengthReads = 0;
+  int effectIterations = 0;
+  int effectElements = 0;
+  int actionLengthReads = 0;
+  int actionIterations = 0;
+  int actionElements = 0;
+}
+
+final class _ObservedSealedList<T> extends ListBase<T> {
+  _ObservedSealedList(
+    this._values, {
+    required this.onLengthRead,
+    required this.onIteration,
+    required this.onElement,
+  });
+
+  final List<T> _values;
+  final void Function() onLengthRead;
+  final void Function() onIteration;
+  final void Function() onElement;
+
+  @override
+  int get length {
+    onLengthRead();
+    return _values.length;
+  }
+
+  @override
+  T operator [](int index) {
+    onElement();
+    return _values[index];
+  }
+
+  @override
+  set length(int value) => throw UnsupportedError('sealed list is immutable');
+
+  @override
+  void operator []=(int index, T value) =>
+      throw UnsupportedError('sealed list is immutable');
+
+  @override
+  Iterator<T> get iterator {
+    onIteration();
+    return _ObservedSealedIterator(_values.iterator, onElement);
+  }
+}
+
+final class _ObservedSealedIterator<T> implements Iterator<T> {
+  _ObservedSealedIterator(this._delegate, this._onElement);
+
+  final Iterator<T> _delegate;
+  final void Function() _onElement;
+
+  @override
+  T get current => _delegate.current;
+
+  @override
+  bool moveNext() {
+    final hasElement = _delegate.moveNext();
+    if (hasElement) {
+      _onElement();
+    }
+    return hasElement;
+  }
+}
+
 PreparedCommitDocument _prepareDocument(AcceptedCommitDocument document) {
   return switch (document) {
     AcceptedMaterializedDocument(:final document, :final revisionDelta) =>
@@ -269,23 +516,18 @@ bool _installSelectionEffect(
 }
 
 List<CommitDeliveryEffect> _deliveryEffectsFor(List<CommitEffect> effects) {
-  _recordDeliveryEffectPreparation();
-
-  return List.unmodifiable(
-    effects.map((effect) {
-      return _deliveryEffectFor(effect);
-    }),
+  final sealed = List<CommitDeliveryEffect>.unmodifiable(
+    effects.map(_deliveryEffectFor),
   );
-}
-
-void _recordDeliveryEffectPreparation() {
   assert(() {
-    final sink = Zone.current[CommitApplier._deliveryEffectPreparationZoneKey];
-    if (sink is void Function()) {
-      sink();
+    final scope = Zone.current[CommitApplier._sealedDeliveryWorkZoneKey];
+    if (scope is _SealedDeliveryWorkScope) {
+      scope.recordPreparation();
     }
     return true;
-  }(), 'delivery effect preparation observation failed');
+  }(), 'sealed delivery work observation failed');
+
+  return sealed;
 }
 
 CommitDeliveryEffect _deliveryEffectFor(CommitEffect effect) {

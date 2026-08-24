@@ -116,7 +116,7 @@ sequenceDiagram
         CC->>Events: attach staged draw action to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: accepted ledger admits the stroke ID, then replaces layer membership, registry, stroke row, and revision state
+        Store->>Store: accepted ledger admits the stroke ID, replaces layer membership, registry, stroke row, and revision state, and invalidates projection revision; cache rebuilds lazily on read
         Note over Applier,Store: Atomic install is the commit boundary, InteractionEngine never mutates Store directly.
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle
@@ -130,7 +130,6 @@ sequenceDiagram
         Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>Spatial: apply touched-id spatial add for new stroke id
         Spatial-->>Runtime: spatial index updated for new paint and hit bounds
-        Runtime->>Projection: evict public document projection cache by projectionRevision
         Runtime->>Frame: publish merged main and overlay repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
         Runtime->>Signals: publish draw action notification

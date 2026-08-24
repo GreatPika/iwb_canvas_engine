@@ -19,6 +19,7 @@ flowchart LR
     RuntimeState["CanvasRuntimeState notifier"]
     RuntimeAction["Finalized synchronous action stream"]
     Observer["Non-empty CommitEffectObserver"]
+    DeliveryComplete["Guard released\ndelivery complete"]
   end
 
   subgraph Contracts["Contract declarations"]
@@ -50,7 +51,6 @@ flowchart LR
 
   subgraph Effects["Committed effects"]
     SpatialDelta["Spatial delta\nfor touched ids"]
-    ProjectionEvict["Projection cache eviction"]
     ResourceInvalidation["Resource cache invalidation"]
     RepaintBus["Main/overlay repaint buses"]
     ActionEvents["Typed user action events\ninteraction/command commits only"]
@@ -84,7 +84,7 @@ flowchart LR
   Compiler -->|"prepare sparse commit/materialized fallback before install"| Committed
   Plan -->|"commit payload for atomic install"| Install
   Install -->|"prepare accepted selection before store swap"| SelectionEffects
-  Install -->|"replace committed tables atomically"| Committed
+  Install -->|"replace committed tables and invalidate projection revision atomically"| Committed
   Install -->|"apply prepared selection effects atomically"| SelectionEffects
   SelectionEffects -->|"update selected ids/revision"| SelectionState
 
@@ -96,14 +96,13 @@ flowchart LR
   BridgedFrame --> RuntimeState
   RuntimeState --> RuntimeAction
   RuntimeAction --> Observer
-  Observer -->|"clear guard"| CommonDelivery
-  Install -->|"apply projection eviction scope"| ProjectionEvict
+  Observer -->|"release guard"| DeliveryComplete
+  DeliveryComplete -->|"return after guarded delivery"| EditResult
   Install -->|"publish typed effect scope"| PostInstallEffects
   RootFrame -->|"dispatch repaint intent"| RepaintBus
   RuntimeAction -->|"dispatch staged high-level action after state"| ActionEvents
   EditPort -.->|"low-level public edits stage no user action descriptor"| ActionEvents
   RuntimeState -->|"publish after atomic install"| PublicSignals
-  Install -->|"return after successful commit"| EditResult
   EditResult -->|"callback result"| App
 
   SessionGate -.->|"StateError before callback"| Rollback

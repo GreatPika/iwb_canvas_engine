@@ -156,12 +156,12 @@ sequenceDiagram
           CC->>Events: attach staged erase action to commit
           CC->>Applier: hand off compiled CommitPlan
           Applier->>Store: install document effects atomically
-          Applier->>Selection: install selection prune atomically
-          Store->>Store: remove registry rows, layer memberships, and family rows
-          Selection->>Selection: remove erased ids from selected ids when needed
-          Note over Applier,Selection: Atomic install is the commit boundary, no action is visible before this point.
+          Store->>Store: remove registry rows, layer memberships, and family rows, invalidate projection revision; cache rebuilds lazily on read
           Store-->>Applier: committed revision facts
+          Applier->>Selection: install selection prune atomically
+          Selection->>Selection: remove erased ids from selected ids when needed
           Selection-->>Applier: committed selection revision facts
+          Note over Applier,Selection: Owner installs are sequential and irreversible; no action is visible before both succeed.
           EK->>EK: close edit session and stale handle
           EK-->>Runtime: closed edit result
           Runtime->>IE: post-success eraser cleanup, publish: false
@@ -173,7 +173,6 @@ sequenceDiagram
           Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
           Runtime->>Spatial: apply touched-id spatial remove for erased ids
           Spatial-->>Runtime: deleted ids removed from hit and paint indexes
-          Runtime->>Projection: evict public document projection by projectionRevision
           Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
           Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
           Runtime->>Signals: publish erase action notification

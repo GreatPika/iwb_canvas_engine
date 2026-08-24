@@ -1617,12 +1617,16 @@ Rules:
 - commitTextEdit returns true, consumes the request id, and emits no document
   revision, repaint, or action event when newText equals the current text;
 - commitTextEdit changed-text commits run through EditKernel, consume the
-  request after successful prepare and EditKernel closure, synchronously set
-  `CanvasTextEditingPort.activeSession` to null, then record the outer
-  interaction revision and perform common delivery. Its listener may complete
-  a separate accepted nested mutation first; Flutter-reported listener errors
-  do not roll back or suppress the outer action/result. Rejected, failed, and
-  equal-text requests do not create this listener window. Common delivery is
+  request after successful prepare and EditKernel closure, and perform common
+  delivery. Only when a matching active text session exists does RuntimeRoot
+  synchronously set it to null, record the outer interaction revision, and open
+  its listener window before
+  that delivery. Its listener may complete a separate accepted nested mutation
+  first; Flutter-reported listener errors do not roll back or suppress the
+  outer action/result. A direct live-request commit without an active session
+  still receives common delivery but does not create that listener window or
+  interaction revision. Rejected, failed, and equal-text requests do not
+  create this listener window. Common delivery is
   RuntimeRoot's guarded sequence in exact spatial,
   resource/session release, root-frame, bridged-frame, public-state,
   synchronous-action, non-empty-observer order; public callbacks cannot mutate
@@ -2579,11 +2583,14 @@ Context-action and text editing model:
   geometry without committing document state; commit() delegates to the guarded
   text command path and dismiss() exits without document or action effects;
 - a changed accepted commit closes its EditKernel handle, consumes its request,
-  then synchronously publishes `activeSession == null` before the outer
-  interaction revision and common delivery. That listener may finish one
-  separate accepted nested mutation first; Flutter-reported listener errors do
-  not roll back or stop the accepted outer result. Rejected, failed, and
-  equal-text requests do not publish this changed-text dismissal window;
+  and enters common delivery. Only when that request matches the active text
+  session does it synchronously publish `activeSession == null`, record the
+  outer interaction revision, and open the changed-text dismissal window before
+  delivery. That listener may finish one separate accepted nested mutation
+  first; Flutter-reported listener errors do not roll back or stop the accepted
+  outer result. A direct live-request commit without an active session has no
+  dismissal window or interaction revision; rejected, failed, and equal-text
+  requests do not publish this window;
 - application commits request-originated text changes through
   CanvasCommandPort.commitTextEdit(requestId, newText) or the active session
   commit() helper;
