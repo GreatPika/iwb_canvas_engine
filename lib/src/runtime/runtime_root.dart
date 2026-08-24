@@ -61,7 +61,6 @@ import '../interaction/pointer_cleanup_protocol.dart';
 import '../interaction/text_edit_guard_decision.dart';
 import '../resources/resource_kernel.dart';
 import '../selection/selection_kernel.dart';
-import '../store/committed_document.dart';
 import '../store/document_store_kernel.dart';
 import '../store/element_registry.dart';
 import '../store/resource_table.dart';
@@ -1814,28 +1813,28 @@ final class RuntimeRoot
 
   PreparedSelectionEffect _prepareCommitSelectionEffect(
     CommitSelectionEffect effect,
-    AcceptedCommitDocument document,
+    PreparedCommitDocument document,
   ) {
     final elementIds = switch (effect) {
       PruneSelectionEffect() => _selection.selectedElementIds,
       ReplaceSelectionEffect(:final elementIds) => elementIds,
     };
     final acceptedIds = switch (document) {
-      AcceptedMaterializedDocument(:final document, :final revisionDelta) =>
+      PreparedMaterializedDocument(:final document, :final revisionDelta) =>
         revisionDelta.hasChanges
             ? _store.normalizeSelectionForCommittedDocument(
-                CommittedDocument(document),
+                document,
                 elementIds,
               )
             : _store.normalizeSelection(elementIds),
-      AcceptedMaterializedStoreDocument(:final commit) =>
+      PreparedMaterializedStoreDocument(:final commit) =>
         _store.normalizeSelectionForCommittedDocument(
           commit.document,
           elementIds,
         ),
-      AcceptedSparseStoreDocument(:final commit) =>
+      PreparedSparseStoreDocument(:final commit) =>
         _store.normalizeSelectionForSparseCommit(commit, elementIds),
-      AcceptedUnchangedStoreDocument() => _store.normalizeSelection(elementIds),
+      PreparedUnchangedStoreDocument() => _store.normalizeSelection(elementIds),
     };
 
     return PreparedSelectionEffect(acceptedIds);

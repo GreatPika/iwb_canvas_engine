@@ -10,6 +10,16 @@ final class CommitDeliveryResult {
   }) : effects = List.unmodifiable(effects),
        actionIntents = List.unmodifiable(actionIntents);
 
+  // CommitApplier seals these lists before the first install. Keeping that
+  // preparation separate means result assembly cannot traverse or rebuild
+  // delivery payloads after accepted state has changed.
+  const CommitDeliveryResult.sealed({
+    required this.shouldPublishState,
+    required this.effects,
+    required this.actionIntents,
+    this.replacedDocument = false,
+  });
+
   final bool shouldPublishState;
   final bool replacedDocument;
   final List<CommitDeliveryEffect> effects;

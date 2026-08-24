@@ -81,9 +81,15 @@ preserves failed-route rollback without making the Store own interaction timing.
   replacement now builds scalars, structure, descriptors/counts, selection
   validity, revisions, and touches in one fresh backing after existing
   validation, then atomically swaps that backing once; failed construction
-  retains the prior backing without mutable alias sharing. Route-generated-ID/
-  runtime delivery is still outside this decision; this ADR does not claim those
-  routes are delivered.
+  retains the prior backing without mutable alias sharing. `CommitApplier` now
+  creates one immutable apply state before its first install: materialized input
+  yields one shared `CommittedDocument` for selection and installation, Store
+  DTOs retain their prepared identity, and delivery/action inputs are sealed
+  before mutation. It performs Store/admission then optional prepared selection,
+  prepared selection only, or no-op; later selection failure does not roll back
+  accepted Store state. Route-generated-ID/runtime augmentation, cleanup, and
+  delivery are still outside this decision; this ADR does not claim those routes
+  are delivered.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 

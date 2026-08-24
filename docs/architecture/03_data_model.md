@@ -122,6 +122,20 @@ state directly; it does not create or retain a public `CanvasDocument`.
 Materialized fallback remains available only for explicit draft projection
 requests such as `CanvasEdit.readDraftDocument` and whole-draft replacement.
 
+`CommitApplier` owns the accepted apply lifetime after Store preparation. It
+converts a materialized accepted document to one `CommittedDocument` before any
+install and shares that exact immutable value with selection normalization and
+the Store installer. Prepared sparse and materialized Store commits retain their
+existing immutable DTO identity. Before mutation, the same apply state seals
+delivery effects/action inputs and prepares selection. It then takes exactly one
+branch: Store/admission installation followed by optional prepared selection,
+prepared selection alone, or a true no-op. No rollback follows a successful
+Store install; a later selection-install failure retains the accepted document,
+revisions, and admission state. Runtime route augmentation, cleanup, and
+delivery are separate Contract 4 owners. Sparse selection preparation consumes
+the existing Store stale boundary before installation, so a stale prepared
+payload does not reach either installer.
+
 `DocumentMetaRecord` stores persisted document facts:
 
 ```text

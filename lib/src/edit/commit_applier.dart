@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import '../contracts/internal/commit_delivery.dart';
+import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
 import '../store/committed_document.dart';
@@ -17,7 +20,7 @@ typedef PreparedMaterializedDocumentInstall =
 typedef SelectionEffectPrepare =
     PreparedSelectionEffect Function(
       CommitSelectionEffect effect,
-      AcceptedCommitDocument document,
+      PreparedCommitDocument document,
     );
 typedef SelectionEffectInstall = bool Function(PreparedSelectionEffect effect);
 
@@ -79,8 +82,54 @@ final class AcceptedUnchangedStoreDocument extends AcceptedCommitDocument {
     : super(revisionDelta: const StoreRevisionDelta());
 }
 
+sealed class PreparedCommitDocument {
+  const PreparedCommitDocument({required this.revisionDelta});
+
+  final StoreRevisionDelta revisionDelta;
+}
+
+final class PreparedMaterializedDocument extends PreparedCommitDocument {
+  const PreparedMaterializedDocument({
+    required this.document,
+    required super.revisionDelta,
+  });
+
+  final CommittedDocument document;
+}
+
+final class PreparedSparseStoreDocument extends PreparedCommitDocument {
+  PreparedSparseStoreDocument({required this.commit})
+    : super(revisionDelta: commit.revisionDelta);
+
+  final PreparedSparseStoreCommit commit;
+}
+
+final class PreparedMaterializedStoreDocument extends PreparedCommitDocument {
+  PreparedMaterializedStoreDocument({required this.commit})
+    : super(revisionDelta: commit.revisionDelta);
+
+  final PreparedMaterializedStoreCommit commit;
+}
+
+final class PreparedUnchangedStoreDocument extends PreparedCommitDocument {
+  const PreparedUnchangedStoreDocument()
+    : super(revisionDelta: const StoreRevisionDelta());
+}
+
 final class CommitApplier {
   const CommitApplier();
+
+  static final Object _deliveryEffectPreparationZoneKey = Object();
+
+  // This test-only observer is assert-gated at the real effect sealing pass,
+  // so release commits neither read Zone state nor retain preparation traces.
+  static T observeDeliveryEffectPreparation<T>(
+    void Function() sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_deliveryEffectPreparationZoneKey: sink},
+  );
 
   CommitDeliveryResult apply({
     required AcceptedCommitDocument document,
@@ -92,67 +141,120 @@ final class CommitApplier {
       return CommitDeliveryResult(shouldPublishState: false);
     }
 
-    final preparedSelectionEffect = _prepareSelectionEffect(
-      plan.selectionEffect,
-      document,
-      selectionInstallers.prepareSelectionEffect,
+    final state = _PreparedApplyState.prepare(
+      document: document,
+      plan: plan,
+      prepareSelectionEffect: selectionInstallers.prepareSelectionEffect,
     );
-    if (plan.revisionDelta.hasChanges) {
-      _installAcceptedDocument(
-        document,
-        plan: plan,
+    if (state.installsDocument) {
+      _installPreparedDocument(
+        state.document,
+        documentReplaced: state.documentReplaced,
         documentInstallers: documentInstallers,
       );
     }
     final didChangeSelection = _installSelectionEffect(
-      preparedSelectionEffect,
+      state.selectionEffect,
       selectionInstallers.installSelectionEffect,
     );
-    final didAcceptChange = plan.revisionDelta.hasChanges || didChangeSelection;
-    final shouldPublishState =
-        plan.revisionDelta.document || didChangeSelection;
-
-    return CommitDeliveryResult(
-      shouldPublishState: shouldPublishState,
-      replacedDocument: plan.documentReplaced,
-      effects: didAcceptChange ? _deliveryEffectsFor(plan.effects) : const [],
-      actionIntents: shouldPublishState ? plan.actionIntents : const [],
-    );
+    return state.resultFor(didChangeSelection: didChangeSelection);
   }
 }
 
-void _installAcceptedDocument(
-  AcceptedCommitDocument document, {
-  required CommitPlan plan,
+void _installPreparedDocument(
+  PreparedCommitDocument document, {
+  required bool documentReplaced,
   required CommitDocumentInstallers documentInstallers,
 }) {
   switch (document) {
-    case AcceptedMaterializedDocument(:final document, :final revisionDelta):
-      final storeDocument = CommittedDocument(document);
-      if (plan.documentReplaced) {
-        documentInstallers.replaceDocument(storeDocument, revisionDelta);
+    case PreparedMaterializedDocument(:final document, :final revisionDelta):
+      if (documentReplaced) {
+        documentInstallers.replaceDocument(document, revisionDelta);
       } else {
-        documentInstallers.installDocument(storeDocument, revisionDelta);
+        documentInstallers.installDocument(document, revisionDelta);
       }
-    case AcceptedSparseStoreDocument():
+    case PreparedSparseStoreDocument():
       documentInstallers.installSparseCommit(document.commit);
-    case AcceptedMaterializedStoreDocument(:final commit):
+    case PreparedMaterializedStoreDocument(:final commit):
       documentInstallers.installPreparedMaterializedCommit(commit);
-    case AcceptedUnchangedStoreDocument():
+    case PreparedUnchangedStoreDocument():
       break;
   }
 }
 
-PreparedSelectionEffect? _prepareSelectionEffect(
-  CommitSelectionEffect? effect,
-  AcceptedCommitDocument document,
-  SelectionEffectPrepare prepare,
-) {
-  if (effect == null) {
-    return null;
+final class _PreparedApplyState {
+  _PreparedApplyState({
+    required this.document,
+    required this.installsDocument,
+    required this.documentRevisionChanged,
+    required this.documentReplaced,
+    required this.deliveryEffects,
+    required this.actionIntents,
+    required this.selectionEffect,
+  });
+
+  factory _PreparedApplyState.prepare({
+    required AcceptedCommitDocument document,
+    required CommitPlan plan,
+    required SelectionEffectPrepare prepareSelectionEffect,
+  }) {
+    final preparedDocument = _prepareDocument(document);
+    final deliveryEffects = _deliveryEffectsFor(plan.effects);
+    final actionIntents = plan.actionIntents;
+    final selectionEffect = switch (plan.selectionEffect) {
+      null => null,
+      final effect => prepareSelectionEffect(effect, preparedDocument),
+    };
+
+    return _PreparedApplyState(
+      document: preparedDocument,
+      installsDocument: plan.revisionDelta.hasChanges,
+      documentRevisionChanged: plan.revisionDelta.document,
+      documentReplaced: plan.documentReplaced,
+      deliveryEffects: deliveryEffects,
+      actionIntents: actionIntents,
+      selectionEffect: selectionEffect,
+    );
   }
 
-  return prepare(effect, document);
+  final PreparedCommitDocument document;
+  final bool installsDocument;
+  final bool documentRevisionChanged;
+  final bool documentReplaced;
+  final List<CommitDeliveryEffect> deliveryEffects;
+  final List<CommitActionIntent> actionIntents;
+  final PreparedSelectionEffect? selectionEffect;
+
+  CommitDeliveryResult resultFor({required bool didChangeSelection}) {
+    final didAcceptChange = installsDocument || didChangeSelection;
+    final shouldPublishState = documentRevisionChanged || didChangeSelection;
+    if (!didAcceptChange) {
+      return CommitDeliveryResult(shouldPublishState: false);
+    }
+
+    return CommitDeliveryResult.sealed(
+      shouldPublishState: shouldPublishState,
+      replacedDocument: documentReplaced,
+      effects: deliveryEffects,
+      actionIntents: shouldPublishState ? actionIntents : const [],
+    );
+  }
+}
+
+PreparedCommitDocument _prepareDocument(AcceptedCommitDocument document) {
+  return switch (document) {
+    AcceptedMaterializedDocument(:final document, :final revisionDelta) =>
+      PreparedMaterializedDocument(
+        document: CommittedDocument(document),
+        revisionDelta: revisionDelta,
+      ),
+    AcceptedSparseStoreDocument(:final commit) => PreparedSparseStoreDocument(
+      commit: commit,
+    ),
+    AcceptedMaterializedStoreDocument(:final commit) =>
+      PreparedMaterializedStoreDocument(commit: commit),
+    AcceptedUnchangedStoreDocument() => const PreparedUnchangedStoreDocument(),
+  };
 }
 
 bool _installSelectionEffect(
@@ -167,7 +269,23 @@ bool _installSelectionEffect(
 }
 
 List<CommitDeliveryEffect> _deliveryEffectsFor(List<CommitEffect> effects) {
-  return List.unmodifiable(effects.map(_deliveryEffectFor));
+  _recordDeliveryEffectPreparation();
+
+  return List.unmodifiable(
+    effects.map((effect) {
+      return _deliveryEffectFor(effect);
+    }),
+  );
+}
+
+void _recordDeliveryEffectPreparation() {
+  assert(() {
+    final sink = Zone.current[CommitApplier._deliveryEffectPreparationZoneKey];
+    if (sink is void Function()) {
+      sink();
+    }
+    return true;
+  }(), 'delivery effect preparation observation failed');
 }
 
 CommitDeliveryEffect _deliveryEffectFor(CommitEffect effect) {

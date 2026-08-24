@@ -73,6 +73,7 @@ sequenceDiagram
   EK->>CC: compile accepted touched set + invalidation
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
+  Applier->>Applier: prepare one immutable apply state
   Applier->>Selection: prepare accepted selection effects before store install
   Applier->>Store: install sparse commit or materialized document
   Applier->>Selection: install prepared selection effects
@@ -152,10 +153,20 @@ equality are validated against the accepted committed tables. A candidate whose
 final committed facts match the base becomes an empty
 accepted document change: it advances no revisions, compiles no document plan,
 skips interaction plan augmentation, installs nothing, delivers no typed
-effects, and publishes no public state. Selection effects are also prepared
-before the swap from accepted committed document facts. After the swap,
-`SelectionKernel` installs only the prepared selected ids; it does not re-read
-public document membership from the current store.
+effects, and publishes no public state. `CommitApplier` prepares one immutable
+apply state before either irreversible branch. It materializes a full accepted
+document at most once and passes that same `CommittedDocument` to selection
+normalization and the Store installer; sparse and prepared-materialized Store
+payloads remain their existing immutable DTOs. It also seals typed delivery
+effects and action inputs, then prepares selection from accepted document facts
+before installation. The document branch installs Store/admission first and
+then the prepared selection; a later selection-install failure retains that
+accepted Store state and is not rolled back. A selection-only branch invokes
+only the prepared selection installer, and a true no-op invokes no installer or
+delivery preparation. `SelectionKernel` installs only the prepared selected ids;
+it does not re-read public document membership from the current store. Sparse
+selection preparation retains the Store-owned prepared-commit stale check; a
+stale payload fails before every installer and leaves accepted state unchanged.
 
 For direct sparse preparation, the Store keeps one private candidate over the
 existing family, descriptor, and structural working owners plus scalar working
@@ -167,14 +178,16 @@ failure or a final no-op. This is a Store-internal boundary: edit sessions,
 drafts, `CommitApplier`, and runtime consumers receive only the finished
 prepared payload and do not obtain candidate access.
 
-`CommitApplier` returns the contract-owned immutable commit delivery payloads
-after document and selection effects have both installed. The runtime/applier
-seam lives in `lib/src/contracts/internal/commit_delivery.dart`: it carries the
-accepted sparse/materialized document payload, public-state publication
-decision, and immutable typed post-install delivery effects selected by the
-accepted edit plan. Spatial and resource delivery effects carry the shared
-immutable `TouchedSet` from `lib/src/contracts/internal/touched_set.dart`; edit
-keeps only the mutable builder and store revision deltas private.
+After an accepted branch, `CommitApplier` assembles the contract-owned immutable
+commit delivery payload only from its already sealed inputs; it does not invoke
+callbacks, traverse effects, or rebuild selection or document values. The
+runtime/applier seam lives in `lib/src/contracts/internal/commit_delivery.dart`:
+it carries the public-state publication decision and typed post-install delivery
+effects selected by the accepted edit plan. Spatial and resource delivery effects
+carry the shared immutable `TouchedSet` from
+`lib/src/contracts/internal/touched_set.dart`; edit keeps only the mutable
+builder and store revision deltas private. Runtime route augmentation, cleanup,
+and delivery ordering remain Contract 4 work.
 
 `EditKernel` closes and stales the active edit handle, clears the active-session
 state, and only then asks `RuntimeRoot` to consume the accepted apply result.
