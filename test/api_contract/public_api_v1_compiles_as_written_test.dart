@@ -266,6 +266,17 @@ void _exerciseP2ContractSurface() {
       ),
     ),
   );
+  const defaultSelectionDeleteConfig = CanvasRuntimeConfig();
+  const explicitSelectionDeleteConfig = CanvasRuntimeConfig(
+    selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
+  );
+  const deleteAvailability = CanvasSelectionDeleteAvailability(
+    hasSelection: true,
+    allSelectedElementsDeletable: true,
+  );
+  _use(defaultSelectionDeleteConfig.selectionDeletePolicy);
+  _use(explicitSelectionDeleteConfig.selectionDeletePolicy);
+  _use(deleteAvailability);
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   final ValueListenable<CanvasRuntimeState> state = runtime.state;
@@ -621,6 +632,7 @@ void _exerciseP2ContractSurface() {
   _use(resourcePort.resourceById(resourceId));
   _use(editPort.edit((edit) => edit.draftSummary));
   _use(selectionPort.selectedElementIds);
+  _use(selectionPort.deleteAvailability);
   _use(toolPort.pointerPolicy);
   toolPort.handlePointer(finitePointerInput);
   toolPort.handlePointer(terminalPointerInput);
@@ -858,6 +870,13 @@ final class _ConsumerSelectionPort implements CanvasSelectionPort {
 
   @override
   Set<CanvasElementId> get selectedElementIds => {_id};
+
+  @override
+  CanvasSelectionDeleteAvailability get deleteAvailability =>
+      const CanvasSelectionDeleteAvailability(
+        hasSelection: true,
+        allSelectedElementsDeletable: true,
+      );
 
   @override
   void clearSelection() {}

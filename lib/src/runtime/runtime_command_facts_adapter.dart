@@ -60,14 +60,18 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
   SelectionDeleteFacts selectionDeleteFacts() {
     final context = _context();
     final selected = context.selection.selectedElementIds;
+    final deletableIds = <CanvasElementId>[
+      for (final handle in context.handles)
+        if (selected.contains(handle.id))
+          if (_frame.resolveElement(handle) case final facts?)
+            if (_isDeletable(facts)) handle.id,
+    ];
 
     return SelectionDeleteFacts(
-      deletableIds: [
-        for (final handle in context.handles)
-          if (selected.contains(handle.id))
-            if (_frame.resolveElement(handle) case final facts?)
-              if (_isDeletable(facts)) handle.id,
-      ],
+      hasSelection: selected.isNotEmpty,
+      allSelectedElementsDeletable:
+          selected.isNotEmpty && deletableIds.length == selected.length,
+      deletableIds: deletableIds,
     );
   }
 

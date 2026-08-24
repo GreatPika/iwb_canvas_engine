@@ -172,6 +172,9 @@ work.
     unclaimed until a later design and contract establish device, environment,
     repeat-count, artifact-retention, and baseline policy.
 38. application canvas port and application adapter names are not present in the engine package.
+39. Direct `CanvasSelectionPort` implementations expose `deleteAvailability`,
+    and `CanvasSelectionDeletePolicy.partial` remains the default runtime
+    configuration policy without a parallel availability state surface.
 ```
 
 ---

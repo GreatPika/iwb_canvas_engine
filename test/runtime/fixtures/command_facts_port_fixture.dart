@@ -12,6 +12,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_command_facts_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 void main() {
   test(
@@ -21,6 +22,10 @@ void main() {
   test(
     'clear facts use one typed frame and resource pass',
     _clearFactsUseOneTypedFrameAndResourcePass,
+  );
+  test(
+    'selection deletion facts fail closed for unresolved and non-content IDs',
+    _selectionDeletionFactsFailClosedForInvalidSelectionFacts,
   );
 }
 
@@ -71,7 +76,110 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
     CanvasElementId('rect-b'),
     CanvasElementId('locked-a'),
   ]);
+  expect(delete.hasSelection, isTrue);
+  expect(delete.allSelectedElementsDeletable, isFalse);
+  expect(
+    delete.availability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: false,
+    ),
+  );
+  expect(
+    delete.removalIdsFor(CanvasSelectionDeletePolicy.partial),
+    delete.deletableIds,
+  );
+  expect(delete.removalIdsFor(CanvasSelectionDeletePolicy.allOrNone), isEmpty);
   expect(() => delete.deletableIds.clear(), throwsUnsupportedError);
+}
+
+void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
+  final root = RuntimeRoot(config: const CanvasRuntimeConfig());
+  addTearDown(root.dispose);
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_invalidFactsDocument()),
+  );
+
+  final unresolved = _adapterWithControlledSelection(root, [
+    CanvasElementId('eligible-a'),
+    CanvasElementId('missing-a'),
+  ]).selectionDeleteFacts();
+  _expectInvalidSelectionFacts(unresolved);
+
+  final backgroundId = CanvasElementId('background-a');
+  final handle = root.elementHandleForId(
+    root.frameRevisions.structuralRevision,
+    backgroundId,
+  );
+  final backgroundFacts = handle == null ? null : root.resolveElement(handle);
+  expect(handle, isNotNull);
+  expect(backgroundFacts?.locationKind, FrameElementLocationKind.background);
+  final nonContent = _adapterWithControlledSelection(root, [
+    CanvasElementId('eligible-a'),
+    backgroundId,
+  ]).selectionDeleteFacts();
+  _expectInvalidSelectionFacts(nonContent);
+}
+
+RuntimeCommandFactsAdapter _adapterWithControlledSelection(
+  RuntimeRoot root,
+  Iterable<CanvasElementId> selectedIds,
+) {
+  return RuntimeCommandFactsAdapter(
+    frame: root,
+    selection: _ControlledSelectionFacts(selectedIds),
+    resources: root.resourceCatalogPort,
+    documentSummary: () => const CanvasDocumentSummary(
+      elementCount: 2,
+      layerCount: 1,
+      resourceCount: 0,
+    ),
+  );
+}
+
+void _expectInvalidSelectionFacts(SelectionDeleteFacts facts) {
+  expect(facts.hasSelection, isTrue);
+  expect(facts.allSelectedElementsDeletable, isFalse);
+  expect(facts.deletableIds, [CanvasElementId('eligible-a')]);
+  expect(facts.removalIdsFor(CanvasSelectionDeletePolicy.partial), [
+    CanvasElementId('eligible-a'),
+  ]);
+  expect(facts.removalIdsFor(CanvasSelectionDeletePolicy.allOrNone), isEmpty);
+}
+
+CanvasDocument _invalidFactsDocument() {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('background-a'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('eligible-a'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+final class _ControlledSelectionFacts implements SelectionFactsPort {
+  _ControlledSelectionFacts(Iterable<CanvasElementId> selectedIds)
+    : _facts = SelectionFacts(
+        selectedElementIds: selectedIds,
+        selectionRevision: 1,
+      );
+
+  final SelectionFacts _facts;
+
+  @override
+  SelectionFacts get selectionFacts => _facts;
 }
 
 void _expectRemoveFacts(RuntimeCommandFactsAdapter adapter) {

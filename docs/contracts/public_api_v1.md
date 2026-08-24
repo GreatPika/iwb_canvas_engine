@@ -198,6 +198,7 @@ CanvasPointerPolicy
 CanvasPointerSample
 CanvasPointerTerminalCleanup
 CanvasDrawStyle
+CanvasSelectionDeleteAvailability
 CanvasResourceSource and CanvasAppKeyResourceSource
 CanvasElementRead
 CanvasMoveResolution and its variants
@@ -491,6 +492,18 @@ revision domains.
 ### 4.5 Runtime config
 
 ```dart
+enum CanvasSelectionDeletePolicy { partial, allOrNone }
+
+final class CanvasSelectionDeleteAvailability {
+  const CanvasSelectionDeleteAvailability({
+    required this.hasSelection,
+    required this.allSelectedElementsDeletable,
+  });
+
+  final bool hasSelection;
+  final bool allSelectedElementsDeletable;
+}
+
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
@@ -498,6 +511,7 @@ final class CanvasRuntimeConfig {
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
+    this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -506,6 +520,7 @@ final class CanvasRuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 ```
@@ -1652,6 +1667,7 @@ Rules:
 ```dart
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
+  CanvasSelectionDeleteAvailability get deleteAvailability;
 
   void setSelection(Iterable<CanvasElementId> ids);
   void toggleSelection(CanvasElementId id);
@@ -1679,7 +1695,11 @@ Selection rules:
 - selection-only changes update selectionRevision, not documentRevision;
 - selection-only changes do not evict the public document projection;
 - move/rotate/flip operate only on selected elements with isTransformable=true && isLocked=false;
-- deleteSelection deletes only selected elements with isDeletable=true;
+- deleteAvailability is derived from current committed selection and document
+  facts; an empty selection reports both fields false;
+- deleteSelection uses CanvasSelectionDeletePolicy.partial by default and
+  deletes only selected content elements with isDeletable=true; allOrNone
+  deletes nothing unless every selected element is deletable;
 - rotateSelectionClockwise, rotateSelectionCounterClockwise,
   flipSelectionVertical, and flipSelectionHorizontal use the center of the
   union bounds of eligible selected elements as `pivotWorld`;

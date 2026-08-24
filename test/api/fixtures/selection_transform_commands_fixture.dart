@@ -26,6 +26,18 @@ void main() {
     'delete selection prunes removed ids and stays silent for no-op',
     _deleteSelectionPrunesRemovedIdsAndStaysSilentForNoop,
   );
+  test(
+    'all-or-none selection deletion rejects a mixed selection',
+    _allOrNoneSelectionDeletionRejectsMixedSelection,
+  );
+  test(
+    'locked content remains deletable under all-or-none selection deletion',
+    _lockedContentRemainsDeletableUnderAllOrNone,
+  );
+  test(
+    'selection deletion re-reads current deletion facts',
+    _selectionDeletionRereadsCurrentFacts,
+  );
 }
 
 // The scenario keeps eligibility, transform math, validation, and action shape
@@ -161,6 +173,106 @@ Future<void> _deleteSelectionPrunesRemovedIdsAndStaysSilentForNoop() async {
   runtime.selection.deleteSelection();
   await Future<void>.delayed(Duration.zero);
   expect(actions, hasLength(1));
+}
+
+Future<void> _allOrNoneSelectionDeletionRejectsMixedSelection() async {
+  final allOrNoneRuntime = runtimeWithDocument(
+    _document(),
+    config: const CanvasRuntimeConfig(
+      selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
+    ),
+  );
+  final allOrNoneActions = <CanvasActionCommitted>[];
+  final allOrNoneSubscription = allOrNoneRuntime.actions.listen(
+    allOrNoneActions.add,
+  );
+  addTearDown(() async {
+    await allOrNoneSubscription.cancel();
+    allOrNoneRuntime.dispose();
+  });
+
+  allOrNoneRuntime.selection.setSelection([
+    CanvasElementId('rect-a'),
+    CanvasElementId('not-deletable-a'),
+  ]);
+  expect(
+    allOrNoneRuntime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: false,
+    ),
+  );
+  allOrNoneRuntime.selection.deleteSelection();
+  await Future<void>.delayed(Duration.zero);
+  expect(allOrNoneActions, isEmpty);
+  expect(_element(allOrNoneRuntime, 'rect-a'), isNotNull);
+}
+
+// Availability, command delivery, and committed document outcome form one
+// public locked-element behavior, so keeping them together is clearer.
+// ignore: halstead-volume
+Future<void> _lockedContentRemainsDeletableUnderAllOrNone() async {
+  final lockedRuntime = runtimeWithDocument(
+    _document(),
+    config: const CanvasRuntimeConfig(
+      selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
+    ),
+  );
+  final lockedActions = <CanvasActionCommitted>[];
+  final lockedSubscription = lockedRuntime.actions.listen(lockedActions.add);
+  addTearDown(() async {
+    await lockedSubscription.cancel();
+    lockedRuntime.dispose();
+  });
+  lockedRuntime.selection.setSelection([CanvasElementId('locked-a')]);
+  expect(
+    lockedRuntime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: true,
+    ),
+  );
+  lockedRuntime.selection.deleteSelection();
+  await Future<void>.delayed(Duration.zero);
+  expect(lockedActions.single.elementIds, [CanvasElementId('locked-a')]);
+  expect(
+    lockedRuntime.readDocument().layers.single.elements.map(
+      (element) => element.id,
+    ),
+    isNot(contains(CanvasElementId('locked-a'))),
+  );
+}
+
+Future<void> _selectionDeletionRereadsCurrentFacts() async {
+  final freshFactsRuntime = runtimeWithDocument(_document());
+  final freshFactsActions = <CanvasActionCommitted>[];
+  final freshFactsSubscription = freshFactsRuntime.actions.listen(
+    freshFactsActions.add,
+  );
+  addTearDown(() async {
+    await freshFactsSubscription.cancel();
+    freshFactsRuntime.dispose();
+  });
+  freshFactsRuntime.selection.setSelection([CanvasElementId('locked-a')]);
+  expect(
+    freshFactsRuntime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: true,
+    ),
+  );
+  freshFactsRuntime.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('locked-a'),
+        isDeletable: const CanvasFieldSet(false),
+      ),
+    );
+  });
+  freshFactsRuntime.selection.deleteSelection();
+  await Future<void>.delayed(Duration.zero);
+  expect(freshFactsActions, isEmpty);
+  expect(_element(freshFactsRuntime, 'locked-a'), isNotNull);
 }
 
 CanvasDocument _document() {

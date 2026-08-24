@@ -43,6 +43,34 @@ void main() {
     disabledRoot.dispose();
     summaryRoot.dispose();
   });
+
+  // Assertions live in the named policy-materialization scenario.
+  // ignore: missing-test-assertion
+  test(
+    'RuntimeRoot materializes the selection delete policy',
+    _runtimeRootMaterializesSelectionDeletePolicy,
+  );
+}
+
+void _runtimeRootMaterializesSelectionDeletePolicy() {
+  final defaultRoot = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
+  final allOrNoneRoot = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(),
+    config: const CanvasRuntimeConfig(
+      selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
+    ),
+  );
+  addTearDown(defaultRoot.dispose);
+  addTearDown(allOrNoneRoot.dispose);
+
+  expect(
+    defaultRoot.config.selectionDeletePolicy,
+    CanvasSelectionDeletePolicy.partial,
+  );
+  expect(
+    allOrNoneRoot.config.selectionDeletePolicy,
+    CanvasSelectionDeletePolicy.allOrNone,
+  );
 }
 
 RuntimeRoot _runtimeRootWithDiagnostics(CanvasDiagnosticPolicy policy) {

@@ -11,6 +11,7 @@ final class RuntimeConfig {
       initialDrawStyle = config.initialDrawStyle,
       clearSelectionOnDrawModeEnter = config.clearSelectionOnDrawModeEnter,
       moveCommitResolver = config.moveCommitResolver,
+      selectionDeletePolicy = config.selectionDeletePolicy,
       diagnostics = RuntimeDiagnosticsConfig.from(config.diagnosticPolicy);
 
   final CanvasPointerPolicy pointerPolicy;
@@ -18,6 +19,7 @@ final class RuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final RuntimeDiagnosticsConfig diagnostics;
 }
 

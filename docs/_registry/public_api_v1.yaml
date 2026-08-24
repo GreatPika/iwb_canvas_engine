@@ -3,6 +3,8 @@
 public_exports:
   - CanvasRuntime
   - CanvasRuntimeConfig
+  - CanvasSelectionDeletePolicy
+  - CanvasSelectionDeleteAvailability
   - CanvasRuntimeState
   - CanvasRuntimeRevisions
   - CanvasRuntimeSummary

@@ -935,23 +935,28 @@ final class RuntimeRoot
   void deleteSelection({int? timestampMs}) {
     ensureRuntimeMutationAllowed();
     final facts = _commandFacts.selectionDeleteFacts();
-    if (facts.deletableIds.isEmpty) {
+    final removalIds = facts.removalIdsFor(config.selectionDeletePolicy);
+    if (removalIds.isEmpty) {
       return;
     }
     final applyResult = _editKernel.prepareInteractionCommit(
       (edit) {
-        for (final id in facts.deletableIds) {
+        for (final id in removalIds) {
           edit.removeElement(id);
         }
       },
       augmentPlan: (plan) => plan.withActionIntents([
         DeleteSelectionActionIntent(
-          removedElementIds: facts.deletableIds,
+          removedElementIds: removalIds,
           timestampHintMs: timestampMs,
         ),
       ]),
     );
     _deliverEditCommitResult(applyResult);
+  }
+
+  CanvasSelectionDeleteAvailability get selectionDeleteAvailability {
+    return _commandFacts.selectionDeleteFacts().availability;
   }
 
   void _deliverSelectionTransformAroundCenter({
@@ -3012,6 +3017,10 @@ final class _RuntimeSelectionPort implements CanvasSelectionPort {
 
   @override
   Set<CanvasElementId> get selectedElementIds => root.selectedElementIds;
+
+  @override
+  CanvasSelectionDeleteAvailability get deleteAvailability =>
+      root.selectionDeleteAvailability;
 
   @override
   void setSelection(Iterable<CanvasElementId> ids) {

@@ -14,6 +14,84 @@ void main() {
     'direct selection changes publish selection revisions and no actions',
     _directSelectionChangesPublishSelectionOnly,
   );
+  test(
+    'delete availability is derived from current selection and document facts',
+    _deleteAvailabilityIsDerivedFromCurrentSelectionAndDocumentFacts,
+  );
+}
+
+void _deleteAvailabilityIsDerivedFromCurrentSelectionAndDocumentFacts() {
+  final runtime = runtimeWithDocument(_document());
+  addTearDown(runtime.dispose);
+  final notifications = <CanvasRuntimeState>[];
+  final beforeSelectionRevision = runtime.state.value.revisions.selection;
+  final beforeDocumentRevision = runtime.state.value.revisions.document;
+  runtime.state.addListener(() => notifications.add(runtime.state.value));
+
+  _expectEmptyDeleteAvailability(runtime, notifications);
+  _selectDeletableContent(runtime, notifications, beforeSelectionRevision);
+  _makeSelectedContentNonDeletable(
+    runtime,
+    notifications,
+    beforeDocumentRevision,
+    beforeSelectionRevision,
+  );
+}
+
+void _expectEmptyDeleteAvailability(
+  CanvasRuntime runtime,
+  List<CanvasRuntimeState> notifications,
+) {
+  expect(
+    runtime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: false,
+      allSelectedElementsDeletable: false,
+    ),
+  );
+  expect(notifications, isEmpty);
+}
+
+void _selectDeletableContent(
+  CanvasRuntime runtime,
+  List<CanvasRuntimeState> notifications,
+  int beforeSelectionRevision,
+) {
+  runtime.selection.setSelection([CanvasElementId('content-a')]);
+  expect(
+    runtime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: true,
+    ),
+  );
+  expect(notifications.last.revisions.selection, beforeSelectionRevision + 1);
+}
+
+void _makeSelectedContentNonDeletable(
+  CanvasRuntime runtime,
+  List<CanvasRuntimeState> notifications,
+  int beforeDocumentRevision,
+  int beforeSelectionRevision,
+) {
+  runtime.edits.edit((edit) {
+    edit.updateElement(
+      CanvasRectElementUpdate(
+        id: CanvasElementId('content-a'),
+        isDeletable: const CanvasFieldSet(false),
+      ),
+    );
+  });
+
+  expect(
+    runtime.selection.deleteAvailability,
+    const CanvasSelectionDeleteAvailability(
+      hasSelection: true,
+      allSelectedElementsDeletable: false,
+    ),
+  );
+  expect(notifications.last.revisions.document, beforeDocumentRevision + 1);
+  expect(notifications.last.revisions.selection, beforeSelectionRevision + 1);
 }
 
 Future<void> _directSelectionChangesPublishSelectionOnly() async {

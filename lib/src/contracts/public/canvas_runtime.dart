@@ -18,6 +18,31 @@ import 'canvas_pointer.dart';
 import 'canvas_resource.dart';
 import 'canvas_tools.dart';
 
+/// Determines how selection deletion handles ineligible selected elements.
+enum CanvasSelectionDeletePolicy { partial, allOrNone }
+
+@immutable
+/// Describes whether the current selection can be deleted.
+final class CanvasSelectionDeleteAvailability {
+  const CanvasSelectionDeleteAvailability({
+    required this.hasSelection,
+    required this.allSelectedElementsDeletable,
+  });
+
+  final bool hasSelection;
+  final bool allSelectedElementsDeletable;
+
+  @override
+  bool operator ==(Object other) {
+    return other is CanvasSelectionDeleteAvailability &&
+        other.hasSelection == hasSelection &&
+        other.allSelectedElementsDeletable == allSelectedElementsDeletable;
+  }
+
+  @override
+  int get hashCode => Object.hash(hasSelection, allSelectedElementsDeletable);
+}
+
 /// Public API v1 declaration for [CanvasRuntimeConfig].
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
@@ -26,6 +51,7 @@ final class CanvasRuntimeConfig {
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
+    this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -34,6 +60,7 @@ final class CanvasRuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 
@@ -200,6 +227,7 @@ abstract interface class CanvasCommandPort {
 // ignore: number-of-methods
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
+  CanvasSelectionDeleteAvailability get deleteAvailability;
   void setSelection(Iterable<CanvasElementId> ids);
   void toggleSelection(CanvasElementId id);
   void clearSelection();

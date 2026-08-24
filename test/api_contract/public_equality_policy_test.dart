@@ -46,6 +46,43 @@ void main() {
         summary: _runtimeSummary(),
       ),
     );
+    _expectValueEquality(
+      CanvasSelectionDeleteAvailability(
+        hasSelection: true,
+        allSelectedElementsDeletable: true,
+      ),
+      CanvasSelectionDeleteAvailability(
+        hasSelection: true,
+        allSelectedElementsDeletable: true,
+      ),
+    );
+    expect(
+      const CanvasSelectionDeleteAvailability(
+        hasSelection: true,
+        allSelectedElementsDeletable: true,
+      ),
+      isNot(
+        const CanvasSelectionDeleteAvailability(
+          hasSelection: true,
+          allSelectedElementsDeletable: false,
+        ),
+      ),
+    );
+    final availabilitySet = {
+      CanvasSelectionDeleteAvailability(
+        hasSelection: true,
+        allSelectedElementsDeletable: true,
+      ),
+    };
+    expect(
+      availabilitySet,
+      contains(
+        CanvasSelectionDeleteAvailability(
+          hasSelection: true,
+          allSelectedElementsDeletable: true,
+        ),
+      ),
+    );
 
     _expectValueEquality(
       CanvasTransform(a: 1, b: 2, c: 3, d: 4, tx: 5, ty: 6),
