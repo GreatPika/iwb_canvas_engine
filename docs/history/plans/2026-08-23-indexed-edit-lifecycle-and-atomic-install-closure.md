@@ -169,7 +169,7 @@ Work Budget And Cost Displacement: U1 is work-neutral, not the final performance
 
 ## Execution Units
 
-### [ ] Unit 1: Make the DTO journal the only sparse promotion intent
+### [x] Unit 1: Make the DTO journal the only sparse promotion intent
 
 Owner: `EditSession` sparse intent/promotion boundary, with `DraftDocument` as the compile-atomic mutation consumer.
 Boundary: Allowed production files are `lib/src/edit/edit_session.dart` and `lib/src/edit/draft_document.dart`, plus one cohesive private edit module only if it owns exhaustive `StoreSparseMutation` application and is consumed by promotion in this unit. The existing central accepted-finalization guardrail is an allowed non-production mirror only to remove its private helper/body authority while retaining stable prepared-DTO ownership; it cannot gain a copied mutation inventory. `lib/src/store/sparse_store_commit.dart`, Store dispatch/finalization, public API, runtime routes, indexed-order implementation, and unrelated edit owners are forbidden. Existing sparse/promotion and matrix fixtures are the nearest evidence owners; no copied DTO inventory, general scanner, extra journal traversal, collection copy, element/resource scan, or second replay may be added.
@@ -190,7 +190,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Move sparse placement to owner-local indexed orders
+### [x] Unit 2: Move sparse placement to owner-local indexed orders
 
 Owner: `_SparseEditBacking` structural order and element-location working state.
 Boundary: Allowed production files are `lib/src/edit/edit_session.dart`, a cohesive sparse structural module under `lib/src/edit/**`, `lib/src/store/document_store_kernel.dart` only for a narrow direct read of existing committed element-location facts, and `lib/src/runtime/runtime_root.dart` only for the existing private facts adapter. `lib/src/store/indexed_order_sequence.dart` is consumed unchanged; `ElementRegistry`, `LayerTable`, Store candidate policy, resource-count work, DraftDocument backing, public API, and runtime routes are forbidden. Nearest sparse-session evidence lands in the existing owner fixture.
@@ -209,7 +209,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 3: Make sparse resource decisions count-based
+### [x] Unit 3: Make sparse resource decisions count-based
 
 Owner: `_SparseEditBacking` image/vector reference-count delta and current resource decision state.
 Boundary: Allowed production files are `lib/src/edit/edit_session.dart`, a cohesive sparse reference module under `lib/src/edit/**`, `lib/src/store/document_store_kernel.dart` only for narrow direct reads of the existing committed split summaries, and `lib/src/runtime/runtime_root.dart` only for the existing private facts adapter. Contract-1 family/count maintenance, Store candidate/reference policy, DraftDocument, public API, codec, and runtime routes are forbidden. Existing sparse, clear, matrix, and no-op fixtures are the nearest evidence owners.
@@ -231,7 +231,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 2 — produces: one authoritative sparse current placement/order view; consumed as: the sole classification source for image/vector transitions, remove-re-add, and clear barriers
 
-### [ ] Unit 4: Move Draft structure to direct indexed backing
+### [x] Unit 4: Move Draft structure to direct indexed backing
 
 Owner: `DraftDocument` structural membership, placement, and order backing.
 Boundary: Allowed production files are `lib/src/edit/draft_document.dart` and cohesive private Draft structural modules under `lib/src/edit/**`. `lib/src/store/indexed_order_sequence.dart` is consumed unchanged. Sparse backing, Store facts/candidate, descriptor/count migration, replacement swap, public API, codec/load owners, and runtime routes are forbidden. Existing materialized, promotion, clear, matrix, update, and no-op fixtures own nearest evidence.
@@ -250,7 +250,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 5: Make Draft resources keyed and count-owned
+### [x] Unit 5: Make Draft resources keyed and count-owned
 
 Owner: `DraftDocument` descriptor order/lookup and split image/vector reference counts.
 Boundary: Allowed production files are `lib/src/edit/draft_document.dart` and cohesive private Draft resource modules under `lib/src/edit/**`; Unit-4 structural lookup is consumed but not duplicated. Sparse backing, Store reference summaries/editor, replacement swap, public API, codec/load, CommitApplier, command/action production, spatial production, and runtime routes are forbidden. Existing edit-matrix, materialized, clear, no-op, update, projection, command/action, and direct-spatial fixtures are the nearest evidence owners.
@@ -277,7 +277,7 @@ Depends On:
 - Unit 3 — produces: sparse exact resource decisions over Unit-2 placement; consumed as: the completed sparse path compared with Draft and direct Store
 - Unit 4 — produces: one direct current Draft element/placement/structural view; consumed as: the sole row-transition and clear classification source for Draft split counts
 
-### [ ] Unit 6: Swap Draft replacements as one complete backing
+### [x] Unit 6: Swap Draft replacements as one complete backing
 
 Owner: `DraftDocument` replacement backing construction and publication boundary.
 Boundary: Allowed production files are `lib/src/edit/draft_document.dart` and the private Draft backing modules completed by Units 3-4, plus `lib/src/store/store_revision_delta.dart` only to centralize complete replacement revision policy in one internal named constructor and `lib/src/edit/staged_document_load.dart` only to consume that constructor without changing preparation or load behavior. Existing `ValidatedImportDraft` and staged-load preparation behavior are otherwise consumed unchanged. Sparse session state, Store candidate/import/load behavior, public API, codec/schema, CommitApplier, selection, and runtime routes are forbidden. Replacement, rollback, alias, materialized finalization, and promotion fixtures own nearest evidence.
@@ -297,7 +297,7 @@ Depends On:
 - Unit 4 — produces: complete direct structural backing construction; consumed as: the structural half of the fresh replacement backing
 - Unit 5 — produces: complete keyed descriptor and split-count backing construction; consumed as: the resource half of the fresh replacement backing
 
-### [ ] Unit 7: Prepare once and close both CommitApplier install branches
+### [x] Unit 7: Prepare once and close both CommitApplier install branches
 
 Owner: `CommitApplier` accepted apply lifetime and document/selection installation seam.
 Boundary: Allowed production files are `lib/src/edit/commit_applier.dart`, cohesive private apply-state code under `lib/src/edit/**`, and `lib/src/runtime/runtime_root.dart` only for compile-atomic accepted-document selection preparation/installer wiring. Internal `commit_delivery.dart` may change only to seal CommitApplier-owned base effect/action inputs or assemble the unchanged base result without changing consumers; RuntimeRoot route cleanup/effect augmentation remains forbidden. `EditKernel` accepted-document public-independent variants may be adjusted only when compile-atomic and without changing Store prepared DTOs. Store installers/candidate, SelectionKernel policy, public API, runtime routes/cleanup/delivery, generated IDs, resolver/listener/action/observer behavior, and architecture graph are forbidden. Existing selection-effect, rollback, no-op, accepted-interaction, and Store stale fixtures own nearest evidence.
