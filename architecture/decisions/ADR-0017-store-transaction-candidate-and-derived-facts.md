@@ -96,8 +96,9 @@ preserves failed-route rollback without making the Store own interaction timing.
   DTOs retain their prepared identity, and delivery/action inputs are sealed
   before mutation. It performs Store/admission then optional prepared selection,
   prepared selection only, or no-op; later selection failure does not roll back
-  accepted Store state. Runtime cleanup and delivery closure remains outside
-  this decision; this ADR does not claim that work is complete.
+  accepted Store state. RuntimeRoot owns and implements cleanup and guarded
+  delivery closure; CommitApplier remains limited to unchanged atomic apply and
+  does not own runtime orchestration.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 
