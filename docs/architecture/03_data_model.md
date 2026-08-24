@@ -94,7 +94,7 @@ upsert, removal, and explicit document materialization use direct keyed reads
 or one ordered descriptor traversal, never an all-element reference scan.
 Draft replacement prepares one complete new backing containing its scalar,
 structural, descriptor/count, selection-validity, revision, and touched facts
-only after existing validation and staged-load preparation succeed. It then
+only after existing replacement validation succeeds. It then
 publishes that backing through one reference swap. A validation or construction
 failure retains the previous backing unchanged, and the fresh backing does not
 share mutable collections with caller or retired state. The journal receives

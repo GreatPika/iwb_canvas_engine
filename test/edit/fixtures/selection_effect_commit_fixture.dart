@@ -18,7 +18,6 @@ import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
-import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';

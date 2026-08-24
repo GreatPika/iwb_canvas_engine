@@ -119,7 +119,7 @@ and clear update only the affected count before the next resource decision;
 upsert, remove-unused, and materialization read that descriptor owner directly.
 Draft replacement keeps those scalar, structural, descriptor, split-count,
 selection-validity, revision, and touched facts in one mutable backing.
-After existing replacement and staged-load validation succeeds, Draft prepares
+After existing replacement validation succeeds, Draft prepares
 a complete fresh backing and swaps its single backing reference once. Every
 construction failure retains the prior backing unchanged; the new backing owns
 its mutable structures and descriptors without caller or retired-backing

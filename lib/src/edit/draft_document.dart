@@ -451,7 +451,6 @@ final class DraftDocument {
       activeBacking: previous,
     );
     final draft = ValidatedImportDraft.fromDraftReplacement(document);
-    final preparedLoad = prepareDraftReplacement(draft.document);
     final replacement = draft.document;
 
     _recordDraftReplacementWork(
@@ -498,7 +497,9 @@ final class DraftDocument {
       structure: structure,
       resources: resources,
       selectedElementIds: previous.selectedElementIds,
-      revisionDelta: previous.revisionDelta.merge(preparedLoad.revisionDelta),
+      revisionDelta: previous.revisionDelta.merge(
+        documentReplacementRevisionDelta,
+      ),
       touchedSet: touchedSet,
       documentReplaced: true,
     );

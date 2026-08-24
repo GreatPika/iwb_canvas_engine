@@ -399,38 +399,42 @@ void _expectDraftReplacementAtSupportedSizeBuildsOnce() {
     layerCount: layerCount,
   );
   final replacementEvents = <DraftReplacementWorkEvent>[];
+  final aggregateEvents = <StoreSparseCandidateEvent>[];
   var constructionLayerVisits = 0;
   var constructionElementVisits = 0;
   var constructionDescriptorVisits = 0;
   var resourceConstructionElementVisits = 0;
   var structureMapReads = 0;
 
-  DraftDocument.observeDraftReplacementWork(
-    replacementEvents.add,
-    () => observeDraftStructureWork(
-      (event) {
-        if (event.mapOperation == DraftStructureMapOperation.read) {
-          structureMapReads += 1;
-        }
-        switch (event.kind) {
-          case DraftStructureWorkKind.constructionLayerVisit:
-            constructionLayerVisits += 1;
-          case DraftStructureWorkKind.constructionElementVisit:
-            constructionElementVisits += 1;
-          case _:
-            break;
-        }
-      },
-      () => observeDraftResourceWork((event) {
-        switch (event.kind) {
-          case DraftResourceWorkKind.constructionDescriptorVisit:
-            constructionDescriptorVisits += 1;
-          case DraftResourceWorkKind.constructionElementVisit:
-            resourceConstructionElementVisits += 1;
-          case _:
-            break;
-        }
-      }, () => draft.replaceDocument(replacement)),
+  CommittedDocument.observeSparseCandidateEvents(
+    aggregateEvents.add,
+    () => DraftDocument.observeDraftReplacementWork(
+      replacementEvents.add,
+      () => observeDraftStructureWork(
+        (event) {
+          if (event.mapOperation == DraftStructureMapOperation.read) {
+            structureMapReads += 1;
+          }
+          switch (event.kind) {
+            case DraftStructureWorkKind.constructionLayerVisit:
+              constructionLayerVisits += 1;
+            case DraftStructureWorkKind.constructionElementVisit:
+              constructionElementVisits += 1;
+            case _:
+              break;
+          }
+        },
+        () => observeDraftResourceWork((event) {
+          switch (event.kind) {
+            case DraftResourceWorkKind.constructionDescriptorVisit:
+              constructionDescriptorVisits += 1;
+            case DraftResourceWorkKind.constructionElementVisit:
+              resourceConstructionElementVisits += 1;
+            case _:
+              break;
+          }
+        }, () => draft.replaceDocument(replacement)),
+      ),
     ),
   );
 
@@ -449,6 +453,13 @@ void _expectDraftReplacementAtSupportedSizeBuildsOnce() {
   expect(constructionDescriptorVisits, 0);
   expect(resourceConstructionElementVisits, elementCount);
   expect(structureMapReads, 0);
+  expect(
+    aggregateEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    isEmpty,
+  );
   expect(
     draft.summary,
     const CanvasDocumentSummary(
