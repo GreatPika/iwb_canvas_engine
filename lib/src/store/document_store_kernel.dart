@@ -408,8 +408,7 @@ final class DocumentStoreKernel {
     return CanvasElementId(candidate);
   }
 
-  @visibleForTesting
-  CanvasElementId observeElementIdCandidateForTesting() {
+  CanvasElementId readElementIdCandidate() {
     return CanvasElementId(_elementIds.observeCandidate());
   }
 

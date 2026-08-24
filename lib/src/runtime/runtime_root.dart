@@ -1552,6 +1552,15 @@ final class RuntimeRoot
   }
 
   @visibleForTesting
+  void deliverDrawLineCommitForTesting(
+    DrawLineCommitIntent intent, {
+    required int? timestampHintMs,
+  }) {
+    ensureRuntimeMutationAllowed();
+    _deliverDrawLineCommit(intent, timestampHintMs: timestampHintMs);
+  }
+
+  @visibleForTesting
   void failEraserCommitPrepareForTesting(
     EraserCommitIntent intent, {
     required int? timestampHintMs,
@@ -2267,7 +2276,7 @@ final class RuntimeRoot
     required int? timestampHintMs,
   }) {
     try {
-      final elementId = generateElementId();
+      final elementId = _store.readElementIdCandidate();
       final applyResult = _prepareDrawStrokeCommit(
         intent: intent,
         elementId: elementId,
@@ -2337,7 +2346,7 @@ final class RuntimeRoot
     required int? timestampHintMs,
   }) {
     try {
-      final elementId = generateElementId();
+      final elementId = _store.readElementIdCandidate();
       final applyResult = _prepareDrawLineCommit(
         intent: intent,
         elementId: elementId,

@@ -81,8 +81,10 @@ stateDiagram-v2
       Intent contains tool, final normalized points,
       color, thickness, and pencil opacity 1.0 or
       marker opacity. InteractionEngine returns this
-      intent to RuntimeRoot; RuntimeRoot allocates the
-      element id and prepares the EditKernel commit.
+      intent to RuntimeRoot; RuntimeRoot reads the current
+      non-mutating Store candidate immediately before it
+      prepares the EditKernel commit. Accepted Store-ledger
+      admission reserves the ID; failure/no-op leaves it next.
       InteractionEngine never mutates DocumentStoreKernel
       directly.
     end note

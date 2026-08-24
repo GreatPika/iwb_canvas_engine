@@ -75,9 +75,11 @@ stateDiagram-v2
   state "Line commit intent" as CommitIntent
   note right of CommitIntent
     InteractionEngine returns a line commit intent to
-    RuntimeRoot. RuntimeRoot allocates the element id,
-    constructs the CanvasLineElement, and prepares the
-    synchronous EditKernel request. InteractionEngine does
+    RuntimeRoot. RuntimeRoot reads the current non-mutating
+    Store candidate immediately before it constructs the
+    CanvasLineElement and prepares the synchronous EditKernel
+    request. Accepted Store-ledger admission reserves the ID;
+    failure/no-op leaves it next. InteractionEngine does
     not mutate DocumentStoreKernel directly and does not
     publish drawLine before commit success.
   end note

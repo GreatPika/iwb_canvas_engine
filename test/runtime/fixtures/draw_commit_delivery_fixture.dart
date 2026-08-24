@@ -7,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
 void main() {
   test('pencil marker and line commits add elements and emit draw actions', () {
@@ -16,6 +17,20 @@ void main() {
   test('draw delivery failure cleans interaction and emits no action', () {
     return expectLater(_verifyDrawDeliveryFailureRollback(), completes);
   });
+
+  test(
+    'line delivery failure cleans pending interaction and preserves its id',
+    () {
+      return expectLater(_verifyLineDeliveryFailureRollback(), completes);
+    },
+  );
+
+  test(
+    'runtime draw and line routes observe one unreserved candidate each',
+    () {
+      return expectLater(_verifyRuntimeRouteIdAdmissionWork(), completes);
+    },
+  );
 
   test('programmatic addElement remains action silent', () {
     return expectLater(_verifyProgrammaticAddElementActionSilence(), completes);
@@ -45,6 +60,16 @@ Future<void> _verifyDrawCommitDelivery() async {
   _expectPencil(scenario.root.readDocument(), scenario.actions[0]);
   _expectMarker(scenario.root.readDocument(), scenario.actions[1]);
   _expectLine(scenario.root.readDocument(), scenario.actions[2]);
+  _expectAcceptedDrawRouteIdOrder(scenario);
+}
+
+void _expectAcceptedDrawRouteIdOrder(_DrawScenario scenario) {
+  expect(scenario.actions.map((action) => action.elementIds.single), [
+    CanvasElementId('e0'),
+    CanvasElementId('e1'),
+    CanvasElementId('e2'),
+  ]);
+  expect(scenario.root.generateElementId(), CanvasElementId('e3'));
 }
 
 Future<void> _expectDeliveredActionCount(
@@ -189,6 +214,7 @@ Future<void> _verifyDrawDeliveryFailureRollback() async {
   await Future<void>.delayed(Duration.zero);
 
   _expectFailedDrawDeliveryRollback(scenario, before);
+  expect(scenario.root.generateElementId(), CanvasElementId('e0'));
   await _expectFailureDoesNotAdvanceActionTimestamp(scenario);
 }
 
@@ -231,6 +257,66 @@ Future<void> _expectFailureDoesNotAdvanceActionTimestamp(
   _drawPencil(scenario.root, timestampMs: null);
   await Future<void>.delayed(Duration.zero);
   expect(scenario.actions.single.timestampMs, 0);
+  expect(scenario.actions.single.elementIds, [CanvasElementId('e1')]);
+}
+
+Future<void> _verifyLineDeliveryFailureRollback() async {
+  final scenario = _scenario();
+  final before = _startPendingLinePreview(scenario.root);
+
+  expect(
+    () => scenario.root.deliverDrawLineCommitForTesting(
+      _invalidLineCommitIntent(),
+      timestampHintMs: 20,
+    ),
+    throwsA(isA<CanvasDataException>()),
+  );
+  await Future<void>.delayed(Duration.zero);
+
+  _expectFailedLineDeliveryRollback(scenario, before);
+  await _expectFailedLineLeavesTimestampUnadvanced(scenario);
+}
+
+void _expectFailedLineDeliveryRollback(
+  _DrawScenario scenario,
+  CanvasRuntimeState before,
+) {
+  expect(scenario.actions, isEmpty);
+  expect(
+    scenario.root.state.value.revisions.document,
+    before.revisions.document,
+  );
+  expect(scenario.root.preview, isA<CanvasNoPreview>());
+  expect(scenario.root.generateElementId(), CanvasElementId('e0'));
+}
+
+Future<void> _expectFailedLineLeavesTimestampUnadvanced(
+  _DrawScenario scenario,
+) async {
+  scenario.root.deliverDrawLineCommitForTesting(
+    _validLineCommitIntent(),
+    timestampHintMs: null,
+  );
+  await Future<void>.delayed(Duration.zero);
+  // The pending-line preview has already accepted baseline timestamp zero.
+  expect(scenario.actions.single.timestampMs, 1);
+  expect(scenario.actions.single.elementIds, [CanvasElementId('e1')]);
+}
+
+CanvasRuntimeState _startPendingLinePreview(RuntimeRoot root) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(
+    CanvasDrawStyle(tool: CanvasDrawTool.line, lineThickness: 4),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 2)),
+  );
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(1, 2)),
+  );
+  expect(root.preview, isA<CanvasPendingLineStartPreview>());
+
+  return root.state.value;
 }
 
 DrawStrokeCommitIntent _emptyStrokeCommitIntent() {
@@ -243,6 +329,185 @@ DrawStrokeCommitIntent _emptyStrokeCommitIntent() {
     thickness: 3,
     opacity: 1,
   );
+}
+
+DrawLineCommitIntent _invalidLineCommitIntent() {
+  return const DrawLineCommitIntent(
+    sessionId: PointerSessionId(100),
+    pointerToken: PointerSessionToken(100),
+    startWorld: Offset.zero,
+    endWorld: Offset(1, 1),
+    color: Color(0xFF112233),
+    thickness: 0,
+    opacity: 1,
+  );
+}
+
+DrawLineCommitIntent _validLineCommitIntent() {
+  return const DrawLineCommitIntent(
+    sessionId: PointerSessionId(101),
+    pointerToken: PointerSessionToken(101),
+    startWorld: Offset.zero,
+    endWorld: Offset(1, 1),
+    color: Color(0xFF112233),
+    thickness: 4,
+    opacity: 1,
+  );
+}
+
+Future<void> _verifyRuntimeRouteIdAdmissionWork() async {
+  final setup = _createSupportedPrefixRuntime();
+  addTearDown(setup.root.dispose);
+  _expectSupportedPrefixReset(setup.resetWork);
+  _verifyRepeatedFailedRouteReads(setup.root);
+  _verifyAcceptedRouteReads(setup.root);
+  await Future<void>.delayed(Duration.zero);
+}
+
+_RouteWorkSetup _createSupportedPrefixRuntime() {
+  final resetWork = _IdAdmissionWork();
+  late RuntimeRoot root;
+  DocumentStoreKernel.observeIdAdmissionWork(resetWork.record, () {
+    root = runtimeRootWithCommittedDocumentSeed(_supportedPrefixDocument());
+  });
+
+  return (root: root, resetWork: resetWork);
+}
+
+void _expectSupportedPrefixReset(_IdAdmissionWork work) {
+  _expectIdAdmissionPhase(
+    work,
+    phase: IdAdmissionWorkPhase.reset,
+    expected: const {
+      IdAdmissionWorkKind.inputVisit: 200000,
+      IdAdmissionWorkKind.cursorProbe: 200001,
+      IdAdmissionWorkKind.collision: 200000,
+      IdAdmissionWorkKind.advance: 200000,
+    },
+  );
+}
+
+void _verifyRepeatedFailedRouteReads(RuntimeRoot root) {
+  for (var attempt = 0; attempt < 2; attempt += 1) {
+    final strokeWork = _observeIdAdmissionWork(() {
+      _expectInvalidStrokeCommitRejected(root);
+    });
+    _expectReadOnlyRouteCandidate(strokeWork);
+
+    _startPendingLinePreview(root);
+    final lineWork = _observeIdAdmissionWork(() {
+      expect(
+        () => root.deliverDrawLineCommitForTesting(
+          _invalidLineCommitIntent(),
+          timestampHintMs: 20,
+        ),
+        throwsA(isA<CanvasDataException>()),
+      );
+    });
+    _expectReadOnlyRouteCandidate(lineWork);
+    expect(root.preview, isA<CanvasNoPreview>());
+  }
+}
+
+void _verifyAcceptedRouteReads(RuntimeRoot root) {
+  final pencilWork = _observeIdAdmissionWork(() {
+    _drawPencil(root);
+  });
+  _expectReadOnlyRouteCandidate(pencilWork);
+  _expectAcceptedRouteAdmission(pencilWork);
+
+  final explicitWork = _observeIdAdmissionWork(() {
+    expect(root.generateElementId(), CanvasElementId('e200001'));
+  });
+  _expectIdAdmissionPhase(
+    explicitWork,
+    phase: IdAdmissionWorkPhase.generation,
+    expected: const {
+      IdAdmissionWorkKind.cursorProbe: 1,
+      IdAdmissionWorkKind.advance: 1,
+      IdAdmissionWorkKind.candidateObservation: 1,
+      IdAdmissionWorkKind.reservation: 1,
+    },
+  );
+
+  final lineWork = _observeIdAdmissionWork(() {
+    _drawLine(root);
+  });
+  _expectReadOnlyRouteCandidate(lineWork);
+  _expectAcceptedRouteAdmission(lineWork);
+  expect(root.generateElementId(), CanvasElementId('e200003'));
+}
+
+void _expectReadOnlyRouteCandidate(_IdAdmissionWork work) {
+  _expectIdAdmissionPhase(
+    work,
+    phase: IdAdmissionWorkPhase.generation,
+    expected: const {IdAdmissionWorkKind.candidateObservation: 1},
+  );
+}
+
+void _expectAcceptedRouteAdmission(_IdAdmissionWork work) {
+  _expectIdAdmissionPhase(
+    work,
+    phase: IdAdmissionWorkPhase.acceptedAdmission,
+    expected: const {
+      IdAdmissionWorkKind.sparseLedgerVisit: 1,
+      IdAdmissionWorkKind.inputVisit: 1,
+      IdAdmissionWorkKind.cursorProbe: 2,
+      IdAdmissionWorkKind.collision: 1,
+      IdAdmissionWorkKind.advance: 1,
+    },
+  );
+}
+
+CanvasDocument _supportedPrefixDocument() {
+  return CanvasDocument(
+    backgroundElements: List<CanvasElement>.generate(
+      200000,
+      (index) => CanvasRectElement(
+        id: CanvasElementId('e$index'),
+        size: const Size(1, 1),
+      ),
+      growable: false,
+    ),
+  );
+}
+
+_IdAdmissionWork _observeIdAdmissionWork(void Function() operation) {
+  final work = _IdAdmissionWork();
+  DocumentStoreKernel.observeIdAdmissionWork(work.record, operation);
+  return work;
+}
+
+void _expectIdAdmissionPhase(
+  _IdAdmissionWork work, {
+  required IdAdmissionWorkPhase phase,
+  required Map<IdAdmissionWorkKind, int> expected,
+}) {
+  for (final kind in IdAdmissionWorkKind.values) {
+    expect(
+      work.count(prefix: 'e', phase: phase, kind: kind),
+      expected[kind] ?? 0,
+    );
+  }
+}
+
+final class _IdAdmissionWork {
+  final Map<(String, IdAdmissionWorkPhase, IdAdmissionWorkKind), int> _counts =
+      {};
+
+  void record(IdAdmissionWorkEvent event) {
+    final key = (event.prefix, event.phase, event.kind);
+    _counts[key] = (_counts[key] ?? 0) + 1;
+  }
+
+  int count({
+    required String prefix,
+    required IdAdmissionWorkPhase phase,
+    required IdAdmissionWorkKind kind,
+  }) {
+    return _counts[(prefix, phase, kind)] ?? 0;
+  }
 }
 
 Future<void> _verifyProgrammaticAddElementActionSilence() async {
@@ -291,6 +556,8 @@ typedef _DrawScenario = ({
   List<CanvasRuntimeState> actionStates,
   List<List<CommitDeliveryEffect>> effectBatches,
 });
+
+typedef _RouteWorkSetup = ({RuntimeRoot root, _IdAdmissionWork resetWork});
 
 CanvasPointerSample _pointer(
   CanvasPointerLifecyclePhase phase,

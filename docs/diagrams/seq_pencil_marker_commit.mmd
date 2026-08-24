@@ -91,7 +91,9 @@ sequenceDiagram
       Note over Touched,Signals: No touched set, commit plan, committed document revision change, spatial change, projection eviction, main repaint, or draw action is published.
     else final stroke is accepted
       IE-->>Runtime: DrawStrokeCommitIntent with final points and style facts
-      Runtime->>Runtime: allocate element id and construct CanvasStrokeElement
+      Runtime->>Store: read current non-mutating element ID candidate
+      Store-->>Runtime: current candidate; no reservation or cursor advance
+      Runtime->>Runtime: construct CanvasStrokeElement with local candidate
       Runtime->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
       EK->>Store: read committed revision snapshot
@@ -114,7 +116,7 @@ sequenceDiagram
         CC->>Events: attach staged draw action to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: replace layer membership, registry, stroke row, and revision state
+        Store->>Store: accepted ledger admits the stroke ID, then replaces layer membership, registry, stroke row, and revision state
         Note over Applier,Store: Atomic install is the commit boundary, InteractionEngine never mutates Store directly.
         Store-->>Applier: committed revision facts
         Applier->>Spatial: apply touched-id spatial add for new stroke id
@@ -151,7 +153,7 @@ sequenceDiagram
         Preview->>Frame: request overlay repaint cleanup
         Frame->>Signals: publish overlay cleanup repaint request
         Signals-->>Surface: repaint overlay without stroke preview
-        Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, and draw actions unchanged.
+        Note over Store,Signals: Rollback keeps the candidate available and leaves committed document revisions, spatial index, projection cache, main repaint, and draw actions unchanged.
         Note over Runtime,Signals: Active preview cleanup publishes only preview state.
       end
     end

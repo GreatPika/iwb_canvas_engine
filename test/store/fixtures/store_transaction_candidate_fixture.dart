@@ -1049,7 +1049,7 @@ void _candidateFailureAndAliasMatrix() {
     final resourceEvents = <ResourceTableSelectiveMutationEvent>[];
     final structuralEvents = <ElementRegistryStructuralEditorWorkEvent>[];
     final familyWork = FamilyTablesTelemetry();
-    final beforeId = store.observeElementIdCandidateForTesting();
+    final beforeId = store.readElementIdCandidate();
     final beforeDocument = base;
     final beforeElements = base.elements;
     final beforeFamilies = base.elements.familyTables;
@@ -1122,11 +1122,7 @@ void _candidateFailureAndAliasMatrix() {
       beforeResources.descriptors.keys.map((id) => id.value),
       reason: '${entry.name} base descriptors',
     );
-    expect(
-      store.observeElementIdCandidateForTesting(),
-      beforeId,
-      reason: entry.name,
-    );
+    expect(store.readElementIdCandidate(), beforeId, reason: entry.name);
     expect(
       store.generateElementId(),
       CanvasElementId('e0'),
@@ -1198,10 +1194,10 @@ void _candidateFailureAndAliasMatrix() {
     ),
   );
   store.installSparseCommit(later);
-  final beforeStaleId = store.observeElementIdCandidateForTesting();
+  final beforeStaleId = store.readElementIdCandidate();
   expect(() => store.installSparseCommit(prepared), throwsStateError);
   expect(store.background.color, const Color(0xFF445566));
-  expect(store.observeElementIdCandidateForTesting(), beforeStaleId);
+  expect(store.readElementIdCandidate(), beforeStaleId);
 }
 
 final class _CandidateFailureCase {

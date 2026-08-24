@@ -223,10 +223,13 @@ work instead admits its existing ordered ledger. Committed membership mirrors
 and their append overlays are retired.
 
 The admission owner maintains each generated prefix cursor at its first free
-ID. Its private element candidate read is non-mutating; current explicit
+ID. Its package-internal element candidate read is non-mutating. Explicit
 element generation reads that candidate and synchronously reserves it, then
-advances the same cursor as needed. No candidate, ticket, or separate
-reservation history is retained outside admission.
+advances the same cursor as needed. `RuntimeRoot` reads the same candidate only
+immediately before its one-element stroke and line preparations; a rejected or
+final-no-op preparation drops that local value, while accepted Store-ledger
+admission reserves it. No candidate, ticket, or separate reservation history is
+retained outside admission.
 
 Prepared Schema v1 import and staged document load retain one immutable
 `CanvasDocumentSummary` captured from the completed payload's element, layer,

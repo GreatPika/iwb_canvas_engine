@@ -758,7 +758,11 @@ the release route for that evidence.
   and line commits create public stroke/line elements through the edit kernel,
   emit typed draw actions after public state publication, preserve
   programmatic `CanvasEdit.addElement` action silence, and roll back failed
-  draw delivery without action or timestamp advancement.
+  stroke and line delivery without action or timestamp advancement. It also
+  proves failed route preparation leaves the Store candidate for the next
+  explicit ID, accepted route successor order remains `e0`, `e1`, `e2`, and
+  runtime route reads record one non-mutating admission observation without
+  read-phase reservation, advance, collision, or prefix visits.
 - `test/runtime/draw_cleanup_integration_test.dart` proves draw cleanup paths,
   load success, load failure, `interactive=false`, settings changes, cancel,
   and no-op terminals do not reserve the next draw output timestamp.

@@ -27,7 +27,7 @@ void _testEmptyAdmissionStartsAtZero() {
       store = DocumentStoreKernel();
     });
 
-    expect(store.observeElementIdCandidateForTesting().value, 'e0');
+    expect(store.readElementIdCandidate().value, 'e0');
     _expectPhase(
       work,
       prefix: 'e',
@@ -45,7 +45,7 @@ void _testSupportedPrefixResetAndCandidatePurity() {
       store = DocumentStoreKernel.withCommittedDocumentForTesting(document);
     });
 
-    expect(store.observeElementIdCandidateForTesting().value, 'e200000');
+    expect(store.readElementIdCandidate().value, 'e200000');
     _expectPhase(
       resetWork,
       prefix: 'e',
@@ -63,8 +63,8 @@ void _testSupportedPrefixResetAndCandidatePurity() {
     final document = CommittedDocument(_contiguousPrefixDocument());
     final store = DocumentStoreKernel.withCommittedDocumentForTesting(document);
     final work = _observe(() {
-      expect(store.observeElementIdCandidateForTesting().value, 'e200000');
-      expect(store.observeElementIdCandidateForTesting().value, 'e200000');
+      expect(store.readElementIdCandidate().value, 'e200000');
+      expect(store.readElementIdCandidate().value, 'e200000');
     });
 
     _expectPhase(
@@ -117,7 +117,7 @@ void _testAcceptedAdmissionNormalizesBeforeItsConsumer() {
       store.installSparseCommit(prepared);
     });
 
-    expect(store.observeElementIdCandidateForTesting().value, 'e1');
+    expect(store.readElementIdCandidate().value, 'e1');
     _expectPhase(
       work,
       prefix: 'e',
@@ -140,13 +140,13 @@ void _testSequentialAcceptedAdmissionsDoNotRecrossOccupiedIds() {
     final firstWork = _observe(() {
       _installSparseElements(store, ['e0']);
     });
-    expect(store.observeElementIdCandidateForTesting().value, 'e1');
+    expect(store.readElementIdCandidate().value, 'e1');
     _expectOneAcceptedAdmissionCross(firstWork);
 
     final secondWork = _observe(() {
       _installSparseElements(store, ['e1']);
     });
-    expect(store.observeElementIdCandidateForTesting().value, 'e2');
+    expect(store.readElementIdCandidate().value, 'e2');
     _expectOneAcceptedAdmissionCross(secondWork);
   });
 }
@@ -173,7 +173,7 @@ void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
       _installSparseElements(unrelatedStore, ['e2']);
     });
 
-    expect(unrelatedStore.observeElementIdCandidateForTesting().value, 'e0');
+    expect(unrelatedStore.readElementIdCandidate().value, 'e0');
     _expectPhase(
       unrelatedWork,
       prefix: 'e',
@@ -189,7 +189,7 @@ void _testAcceptedAdmissionCrossesOnlyNewlyRelevantIds() {
       _installSparseElements(contiguousStore, ['e0', 'e1']);
     });
 
-    expect(contiguousStore.observeElementIdCandidateForTesting().value, 'e2');
+    expect(contiguousStore.readElementIdCandidate().value, 'e2');
     _expectPhase(
       contiguousWork,
       prefix: 'e',
@@ -251,7 +251,7 @@ String _candidateAfterConstruction(CanvasDocument document) {
     );
   });
 
-  final candidate = store.observeElementIdCandidateForTesting().value;
+  final candidate = store.readElementIdCandidate().value;
   _expectOneOccupiedPrefixNormalization(
     work,
     phase: IdAdmissionWorkPhase.reset,
@@ -336,7 +336,7 @@ String _candidateAfterRoute(
   required int inputVisits,
 }) {
   final work = _observe(install);
-  final candidate = store.observeElementIdCandidateForTesting().value;
+  final candidate = store.readElementIdCandidate().value;
   _expectOneOccupiedPrefixNormalization(
     work,
     phase: phase,

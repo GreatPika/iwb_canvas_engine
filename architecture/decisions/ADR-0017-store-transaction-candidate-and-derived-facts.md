@@ -29,8 +29,10 @@ candidate without moving runtime delivery policy into the Store.
    instances; no transaction gains a second order authority.
 3. Final acceptance and touched facts derive from normalized owner facts, and
    Store publishes at most one immutable aggregate after owner finalization.
-4. Route-generated IDs use a non-mutating, rollback-safe admission candidate;
-   route and runtime delivery adoption remain separate work.
+4. RuntimeRoot reads the Store's non-mutating, rollback-safe admission
+   candidate immediately before stroke and line preparation. Accepted Store-ledger
+   admission, not the route read, reserves it; ordinary explicit generation
+   remains immediately reserving.
 
 ## Rationale
 
@@ -60,6 +62,10 @@ preserves failed-route rollback without making the Store own interaction timing.
 - Owner normalization, freeze, and derived-fact publication stay at their
   existing owner seams.
 - Store candidate and indexed/derived infrastructure are implemented now.
+- RuntimeRoot stroke and line routes now consume the Store candidate directly:
+  failed or no-op preparation leaves it next, while successful installation
+  advances it through the existing accepted ledger. The remaining runtime
+  cleanup and delivery closure is outside this ADR implementation state.
 - EditSession/DraftDocument now share one sole `StoreSparseMutation` journal:
   every successful sparse operation appends the unchanged DTO once, and explicit
   promotion consumes that list directly through exhaustive Draft application
@@ -87,9 +93,8 @@ preserves failed-route rollback without making the Store own interaction timing.
   DTOs retain their prepared identity, and delivery/action inputs are sealed
   before mutation. It performs Store/admission then optional prepared selection,
   prepared selection only, or no-op; later selection failure does not roll back
-  accepted Store state. Route-generated-ID/runtime augmentation, cleanup, and
-  delivery are still outside this decision; this ADR does not claim those routes
-  are delivered.
+  accepted Store state. Runtime cleanup and delivery closure remains outside
+  this decision; this ADR does not claim that work is complete.
 - This complements ADR-0003's store-finalized accepted facts rather than
   superseding its edit-lifecycle decision.
 
@@ -97,9 +102,10 @@ preserves failed-route rollback without making the Store own interaction timing.
 
 `docs/architecture/03_data_model.md` owns current Store candidate and compact
 fact ownership. `docs/contracts/edit_kernel.md` owns Store finalization at the
-edit boundary. Direct Store behavioral and owner-event fixtures enforce the
-candidate lifecycle; their current inventory remains owned by
-`docs/verification/tests.md`.
+edit boundary. `RuntimeRoot` owns the immediate stroke/line route read. Direct
+Store owner-event and runtime draw/line fixtures enforce candidate lifecycle,
+failed reuse, accepted succession, and bounded route work; their current
+inventory remains owned by `docs/verification/tests.md`.
 
 ## Source evidence
 

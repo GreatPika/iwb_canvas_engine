@@ -167,6 +167,11 @@ delivery preparation. `SelectionKernel` installs only the prepared selected ids;
 it does not re-read public document membership from the current store. Sparse
 selection preparation retains the Store-owned prepared-commit stale check; a
 stale payload fails before every installer and leaves accepted state unchanged.
+For one-element stroke and line routes, RuntimeRoot supplies the Store's current
+non-mutating ID candidate to preparation. The accepted Store installer admits
+that element ID through its existing ledger; preparation rejection or a final
+no-op installs nothing and leaves the candidate available for the next explicit
+generation.
 
 For direct sparse preparation, the Store keeps one private candidate over the
 existing family, descriptor, and structural working owners plus scalar working

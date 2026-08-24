@@ -244,6 +244,13 @@ and no-op draw terminals use their specific stale, invalid, and no-op cleanup
 reasons instead of `cancel`; those rejected terminals never create
 `strokeCommit`, `lineCommit`, or draw output timestamps.
 
+For a returned stroke or line commit intent, `RuntimeRoot` reads one current,
+non-mutating element ID candidate from `DocumentStoreKernel` immediately before
+the synchronous one-element preparation. The interaction owner neither reserves
+that ID nor retains it: a failed or no-op preparation leaves it for the next
+explicit generation, and accepted Store-ledger admission performs the only
+route reservation.
+
 The coordinator owns cleanup policy and outcome calculation for cancel, dispose,
 prepared load success, mode/tool change, active-session `interactive=false`,
 stale terminal, invalid terminal, no-op terminal, resolver cancel/error after

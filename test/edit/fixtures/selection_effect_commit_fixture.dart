@@ -568,7 +568,7 @@ void _expectDocumentInstallSurvivesSelectionFailure() {
   expect(events, ['prepare-selection', 'document', 'selection']);
   expect(store.readDocument().layers.single.elements.single.id.value, 'e0');
   expect(store.documentRevision, 1);
-  expect(store.observeElementIdCandidateForTesting().value, 'e1');
+  expect(store.readElementIdCandidate().value, 'e1');
   expect(selection.selectedElementIds, {CanvasElementId('a')});
 }
 
@@ -1047,7 +1047,7 @@ final class _CommitApplyOwnerSnapshot {
       gridRevision: store.gridRevision,
       resourceRevision: store.resourceRevision,
       projectionBuildCount: store.projectionBuildCount,
-      nextElementId: store.observeElementIdCandidateForTesting(),
+      nextElementId: store.readElementIdCandidate(),
       selectedElementIds: selection.selectedElementIds,
       selectionRevision: selection.selectionFacts.selectionRevision,
       events: List.unmodifiable(events),
@@ -1083,7 +1083,7 @@ final class _CommitApplyOwnerSnapshot {
     expect(store.gridRevision, gridRevision);
     expect(store.resourceRevision, resourceRevision);
     expect(store.projectionBuildCount, projectionBuildCount);
-    expect(store.observeElementIdCandidateForTesting(), nextElementId);
+    expect(store.readElementIdCandidate(), nextElementId);
     expect(selection.selectedElementIds, selectedElementIds);
     expect(selection.selectionFacts.selectionRevision, selectionRevision);
     expect(currentEvents, [...events, ...eventSuffix]);

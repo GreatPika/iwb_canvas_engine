@@ -34,7 +34,7 @@ flowchart LR
   end
 
   subgraph Runtime["RuntimeRoot"]
-    Delivery["Interaction commit delivery\nid allocation and action descriptor staging"]
+    Delivery["Interaction commit delivery\nnon-mutating Store candidate read and action descriptor staging"]
     EditResult["Terminal edit result\nruntime-owned delivery outcome"]
   end
 
@@ -114,12 +114,12 @@ flowchart LR
   MoveResolver -->|"finite committed delta"| CommitIntent
 
   CommitIntent -->|"terminal commit intent\nno document mutation yet"| Delivery
-  Delivery -->|"generated id, public element,\nand action descriptor"| InteractionEdit
+  Delivery -->|"read-only candidate, public element,\nand action descriptor"| InteractionEdit
   InteractionEdit -->|"draft mutations for terminal result"| Draft
   Draft -->|"exact touched state"| Touched
   Touched -->|"compile exact effects"| Compiler
   Compiler -->|"preflighted commit payload"| AtomicInstall
-  AtomicInstall -->|"replace committed tables atomically"| Committed
+  AtomicInstall -->|"accepted ledger reserves route ID and replaces committed tables atomically"| Committed
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
   SelectionEffect -->|"update selected ids/revision"| SelectionFacts
 
@@ -131,7 +131,7 @@ flowchart LR
   EditResult -->|"post-success cleanup request\nthrough InteractionEngine"| TerminalCleanup
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
-  Rollback -.->|"committed document, selection, revisions,\nand action events unchanged"| ErrorProjection
+  Rollback -.->|"candidate remains next; committed document, selection, revisions,\nand action events unchanged"| ErrorProjection
   Rollback -.->|"terminal failure result"| EditResult
   EditResult -.->|"edit-failure cleanup request\nthrough InteractionEngine"| TerminalCleanup
   ErrorProjection -.->|"projected runtime-safe error"| Surface
