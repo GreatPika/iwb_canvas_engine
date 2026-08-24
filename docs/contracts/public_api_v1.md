@@ -1622,8 +1622,12 @@ Rules:
   interaction revision and perform common delivery. Its listener may complete
   a separate accepted nested mutation first; Flutter-reported listener errors
   do not roll back or suppress the outer action/result. Rejected, failed, and
-  equal-text requests do not create this listener window. The changed route may
-  compensate the target text element transform to preserve the resolved
+  equal-text requests do not create this listener window. Common delivery is
+  RuntimeRoot's guarded sequence in exact spatial,
+  resource/session release, root-frame, bridged-frame, public-state,
+  synchronous-action, non-empty-observer order; public callbacks cannot mutate
+  the runtime during that window; the changed route may compensate the target
+  text element transform to preserve the resolved
   horizontal text anchor and top edit edge when measured text bounds change,
   and emits editText after atomic install;
 - CanvasCommandPort.clearContent emits clearContent only when removedElementIds is not empty;

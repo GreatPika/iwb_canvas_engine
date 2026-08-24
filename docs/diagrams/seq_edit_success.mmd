@@ -65,15 +65,16 @@ sequenceDiagram
   Selection-->>Applier: committed selection revision facts
   Applier-->>Runtime: committed runtime facts
 
-  Applier->>Events: commit buffered internal effects
-  Applier->>Effects: publish typed post-install effects
-  Runtime->>Spatial: apply SpatialDeliveryEffect before public state publication
-  Note over Runtime,Spatial: Spatial updates or invalidation are failure-contained after the commit boundary and before state listeners or CommitEffectObserver callbacks.
-  Effects->>Frame: dispatch repaint intent through runtime/applier boundary
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any operation after callback throws StateError.
-  Runtime->>Signals: publish one CanvasRuntimeState after atomic install
-  Runtime->>Signals: forward CommitEffectObserver effects after spatial delivery
-  Frame->>Signals: publish repaint notifications
+  Runtime->>Runtime: enter one post-commit delivery guard
+  Runtime->>Spatial: apply sealed SpatialDeliveryEffect
+  Runtime->>Effects: release sealed resource/session targets
+  Runtime->>Frame: publish root repaint frame, then bridged surface frame
+  Runtime->>Signals: publish one CanvasRuntimeState
+  Runtime->>Events: emit finalized synchronous action intent
+  Runtime->>Effects: notify non-empty CommitEffectObserver
+  Runtime->>Runtime: clear delivery guard
+  Note over Runtime,Effects: Resource, frame, state, action, and observer callbacks see installed facts and the closed handle; their failures retain accepted state according to their owner boundary.
   EK-->>API: return callback result
   API-->>Caller: callback result

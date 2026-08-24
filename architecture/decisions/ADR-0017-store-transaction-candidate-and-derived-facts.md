@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-08-10
-- Implementation state: partially implemented
+- Implementation state: implemented
 - Source designs:
   - `docs/planning/designs/2026-08-10-sparse-commit-transaction-candidate.md`
 - Current owners:
@@ -64,8 +64,11 @@ preserves failed-route rollback without making the Store own interaction timing.
 - Store candidate and indexed/derived infrastructure are implemented now.
 - RuntimeRoot stroke and line routes now consume the Store candidate directly:
   failed or no-op preparation leaves it next, while successful installation
-  advances it through the existing accepted ledger. The remaining runtime
-  cleanup and delivery closure is outside this ADR implementation state.
+  advances it through the existing accepted ledger. RuntimeRoot also closes the
+  remaining route cleanup and guarded delivery composition: it consumes sealed
+  accepted values once and delivers spatial, resource/session release, root
+  frame, bridged frame, public state, synchronous action, and non-empty
+  observer in that order without reopening Store/Edit/CommitApplier work.
 - EditSession/DraftDocument now share one sole `StoreSparseMutation` journal:
   every successful sparse operation appends the unchanged DTO once, and explicit
   promotion consumes that list directly through exhaustive Draft application

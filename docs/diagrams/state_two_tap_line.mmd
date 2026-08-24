@@ -109,12 +109,12 @@ stateDiagram-v2
 
   CleanupAfterCommit --> CleanupCoordinator: typed cleanup request after successful commit
 
-  state "Publish successful commit signals" as PublishCommitSignals
-  note right of PublishCommitSignals
-    Publish one CanvasRuntimeState with document and preview
-    revisions, drawLine action, main repaint for the committed
-    line, and overlay cleanup repaint only after the successful
-    EditKernel outcome.
+    state "Publish successful commit signals" as PublishCommitSignals
+    note right of PublishCommitSignals
+    RuntimeRoot enters one guard after cleanup and delivers spatial,
+    resource/session release, root/bridged frame, one
+    CanvasRuntimeState with document and preview revisions,
+    drawLine, then a non-empty observer.
   end note
   PublishCommitSignals --> Idle: signals published
 

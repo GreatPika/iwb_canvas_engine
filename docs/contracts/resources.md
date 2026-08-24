@@ -241,6 +241,9 @@ borrows before its identity-aware CanvasSurface callback releases matching
 retained main-output bindings. If that release target fails, `RuntimeRoot`
 contains the failure by clearing the failed sink or dropping the failed surface
 session, then still publishes the accepted dirty state and repaint effect. The
+accepted edit route applies this same resource boundary after spatial work and
+before root-frame, bridged-frame, public-state, synchronous action, and a
+non-empty observer; a failed target is not retried by a later edit. The
 repaint intent is runtime-owned and does not require an attached CanvasSurface;
 an attached surface observes it if present.
 

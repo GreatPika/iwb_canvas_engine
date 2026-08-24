@@ -91,6 +91,9 @@ typedef RuntimeSurfaceFrameSignal = ({
   String reason,
 });
 
+typedef RuntimeSurfaceFrameMirror =
+    void Function(RuntimeSurfaceFrameSignal? frame);
+
 @visibleForTesting
 enum RuntimeRouteTemporalEventKind {
   resolverGuardEntered,
@@ -111,6 +114,35 @@ final class RuntimeRouteTemporalEvent {
 
   final RuntimeRouteTemporalEventKind kind;
   final RuntimeNonTextRoute? route;
+}
+
+// Common delivery has public callback seams for resource, frame, state, action,
+// and observer facts. This assert-only event is deliberately narrower: it
+// exposes only guard, post-spatial, and bounded traversal facts those callbacks
+// cannot observe without creating a second delivery path.
+@visibleForTesting
+enum RuntimeCommonDeliveryEventKind {
+  guardEntered,
+  spatialEffectsCompleted,
+  resourceEffectsCompleted,
+  repaintTargetEffectsCompleted,
+  actionFinalizationCompleted,
+  actionEmissionCompleted,
+  guardReleased,
+}
+
+@immutable
+@visibleForTesting
+final class RuntimeCommonDeliveryEvent {
+  const RuntimeCommonDeliveryEvent({required this.kind, this.visits = 0});
+
+  final RuntimeCommonDeliveryEventKind kind;
+
+  /// Bounded RuntimeRoot-owned work completed by this phase.
+  ///
+  /// Guard transitions report zero; traversal phases report sealed effects or
+  /// actions visited without retaining any observation state in production.
+  final int visits;
 }
 
 typedef _RuntimeSurfaceRepaintTarget = ({
@@ -203,6 +235,7 @@ final class RuntimeRoot
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
   static final Object _routeTemporalEventZoneKey = Object();
+  static final Object _commonDeliveryEventZoneKey = Object();
   final DiagnosticsHub? _diagnostics;
   final LoadInteractionBoundary? _loadInteractionBoundary;
   final TextEditPrepareOverride? _textEditPrepareOverride;
@@ -221,6 +254,7 @@ final class RuntimeRoot
   CanvasCamera _viewCamera;
   final ValueNotifier<CanvasRuntimeState> _state;
   final ValueNotifier<RuntimeSurfaceFrameSignal?> _surfaceFrameSignal;
+  RuntimeSurfaceFrameMirror? _surfaceFrameMirror;
   final StreamController<CanvasActionCommitted> _actions =
       StreamController<CanvasActionCommitted>.broadcast(sync: true);
   final StreamController<CanvasContextActionRequested> _contextActionRequests =
@@ -301,6 +335,19 @@ final class RuntimeRoot
   ValueListenable<CanvasRuntimeState> get state => _state;
   ValueListenable<RuntimeSurfaceFrameSignal?> get surfaceFrameSignal =>
       _surfaceFrameSignal;
+
+  void installSurfaceFrameMirror(RuntimeSurfaceFrameMirror mirror) {
+    _ensureNotDisposed();
+    _surfaceFrameMirror = mirror;
+    mirror(_surfaceFrameSignal.value);
+  }
+
+  void removeSurfaceFrameMirror(RuntimeSurfaceFrameMirror mirror) {
+    if (identical(_surfaceFrameMirror, mirror)) {
+      _surfaceFrameMirror = null;
+    }
+  }
+
   bool get isDisposed => _isDisposed;
   int get projectionBuildCount => _store.projectionBuildCount;
 
@@ -1467,6 +1514,7 @@ final class RuntimeRoot
     _dropActiveSurfaceResourceSession();
     _activeSurfaceToken = null;
     _clearSurfaceFrameSignal();
+    _surfaceFrameMirror = null;
     if (cleanupOutcome.publicStateNeeded) {
       _publishRuntimeState(
         surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(cleanupOutcome),
@@ -1495,6 +1543,25 @@ final class RuntimeRoot
       }
       return true;
     }(), 'runtime route temporal event observation failed');
+  }
+
+  @visibleForTesting
+  static T observeCommonDeliveryEvents<T>(
+    void Function(RuntimeCommonDeliveryEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_commonDeliveryEventZoneKey: sink});
+
+  static void _recordCommonDeliveryEvent(
+    RuntimeCommonDeliveryEventKind kind, {
+    int visits = 0,
+  }) {
+    assert(() {
+      final sink = Zone.current[_commonDeliveryEventZoneKey];
+      if (sink is void Function(RuntimeCommonDeliveryEvent)) {
+        sink(RuntimeCommonDeliveryEvent(kind: kind, visits: visits));
+      }
+      return true;
+    }(), 'runtime common delivery event observation failed');
   }
 
   @override
@@ -1671,17 +1738,26 @@ final class RuntimeRoot
       return;
     }
     _surfaceFrameGeneration += 1;
-    _surfaceFrameSignal.value = (
+    final frame = (
       state: state,
       generation: _surfaceFrameGeneration,
       mainCanvas: repaintTarget.mainCanvas,
       overlayCanvas: repaintTarget.overlayCanvas,
       reason: repaintTarget.reason,
     );
+    _surfaceFrameSignal.value = frame;
+    if (!identical(_surfaceFrameSignal.value, frame)) {
+      return;
+    }
+    _surfaceFrameMirror?.call(frame);
   }
 
   void _clearSurfaceFrameSignal() {
     _surfaceFrameSignal.value = null;
+    if (_surfaceFrameSignal.value != null) {
+      return;
+    }
+    _surfaceFrameMirror?.call(null);
   }
 
   @visibleForTesting
@@ -1753,22 +1829,58 @@ final class RuntimeRoot
   }
 
   _RuntimeSurfaceRepaintTarget? _surfaceRepaintTargetForEffects(
-    Iterable<CommitDeliveryEffect> effects,
-  ) {
+    Iterable<CommitDeliveryEffect> effects, {
+    bool recordCommonDeliveryTraversal = false,
+  }) {
+    var visits = 0;
     for (final effect in effects) {
+      visits += 1;
       if (effect case RepaintDeliveryEffect(
         :final mainCanvas,
         :final overlayCanvas,
       )) {
-        return _surfaceRepaintTarget(
+        final target = _surfaceRepaintTarget(
           mainCanvas: mainCanvas,
           overlayCanvas: overlayCanvas,
           reason: 'commit_repaint',
         );
+        _recordCommonRepaintTargetTraversal(
+          enabled: recordCommonDeliveryTraversal,
+          visits: visits,
+        );
+
+        return target;
       }
     }
+    _recordCommonRepaintTargetTraversal(
+      enabled: recordCommonDeliveryTraversal,
+      visits: visits,
+    );
 
     return null;
+  }
+
+  _RuntimeSurfaceRepaintTarget _documentReplacementRepaintTarget() {
+    _recordCommonRepaintTargetTraversal(enabled: true, visits: 0);
+
+    return _surfaceRepaintTarget(
+      mainCanvas: true,
+      overlayCanvas: true,
+      reason: 'document_replaced',
+    );
+  }
+
+  void _recordCommonRepaintTargetTraversal({
+    required bool enabled,
+    required int visits,
+  }) {
+    if (!enabled) {
+      return;
+    }
+    _recordCommonDeliveryEvent(
+      RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
+      visits: visits,
+    );
   }
 
   bool _targetsDifferentLayers(
@@ -1941,26 +2053,34 @@ final class RuntimeRoot
     }
     _isDeliveringCommitEffects = true;
     try {
-      _deliverSpatialEffects(applyResult.effects);
-      _deliverResourceEffects(applyResult.effects);
+      _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind.guardEntered);
+      final spatialVisits = _deliverSpatialEffects(applyResult.effects);
+      _recordCommonDeliveryEvent(
+        RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
+        visits: spatialVisits,
+      );
+      final resourceVisits = _deliverResourceEffects(applyResult.effects);
+      _recordCommonDeliveryEvent(
+        RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
+        visits: resourceVisits,
+      );
       if (applyResult.shouldPublishState) {
         if (applyResult.replacedDocument) {
           _epochRevision += 1;
         }
-        _publishRuntimeState(
-          surfaceRepaintTarget: applyResult.replacedDocument
-              ? _surfaceRepaintTarget(
-                  mainCanvas: true,
-                  overlayCanvas: true,
-                  reason: 'document_replaced',
-                )
-              : _surfaceRepaintTargetForEffects(applyResult.effects),
-        );
+        final surfaceRepaintTarget = applyResult.replacedDocument
+            ? _documentReplacementRepaintTarget()
+            : _surfaceRepaintTargetForEffects(
+                applyResult.effects,
+                recordCommonDeliveryTraversal: true,
+              );
+        _publishRuntimeState(surfaceRepaintTarget: surfaceRepaintTarget);
         _emitActions(applyResult.actionIntents);
       }
       _deliverCommitEffectObserver(applyResult.effects);
     } finally {
       _isDeliveringCommitEffects = false;
+      _recordCommonDeliveryEvent(RuntimeCommonDeliveryEventKind.guardReleased);
     }
   }
 
@@ -2050,19 +2170,32 @@ final class RuntimeRoot
   }
 
   // Delivery shared helpers.
-  void _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
-    for (final effect in effects.whereType<SpatialDeliveryEffect>()) {
-      _spatial.applyTouched(this, effect.touchedSet);
+  int _deliverSpatialEffects(List<CommitDeliveryEffect> effects) {
+    var visits = 0;
+    for (final effect in effects) {
+      visits += 1;
+      if (effect case SpatialDeliveryEffect(:final touchedSet)) {
+        _spatial.applyTouched(this, touchedSet);
+      }
     }
+    return visits;
   }
 
-  void _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
+  // Resource invalidation and failed-session retirement share one owner so a
+  // partial release cannot escape its matching ownership drop.
+  // ignore: cyclomatic-complexity
+  int _deliverResourceEffects(List<CommitDeliveryEffect> effects) {
     final sink = _activeResourceSessionReleaseSink;
     if (sink == null && _activeSurfaceResourceSession == null) {
-      return;
+      return 0;
     }
+    var visits = 0;
     try {
-      for (final effect in effects.whereType<ResourceDeliveryEffect>()) {
+      for (final effect in effects) {
+        visits += 1;
+        if (effect is! ResourceDeliveryEffect) {
+          continue;
+        }
         final touchedSet = effect.touchedSet;
         if (touchedSet.documentReplaced) {
           _resetActiveResourceSessionForDocumentReplacement();
@@ -2079,6 +2212,8 @@ final class RuntimeRoot
     } on Object {
       _dropFailedResourceReleaseTarget(sink);
     }
+
+    return visits;
   }
 
   void _resetActiveResourceSessionForDocumentReplacement() {
@@ -2126,9 +2261,20 @@ final class RuntimeRoot
   }
 
   void _emitActions(List<CommitActionIntent> intents) {
-    for (final action in _actionFinalizer.finalize(intents)) {
+    final actions = _actionFinalizer.finalize(intents);
+    _recordCommonDeliveryEvent(
+      RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+      visits: intents.length,
+    );
+    var visits = 0;
+    for (final action in actions) {
+      visits += 1;
       _actions.add(action);
     }
+    _recordCommonDeliveryEvent(
+      RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+      visits: visits,
+    );
   }
 
   void _emitContextRequest(ContextActionRequestIntent intent) {

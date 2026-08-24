@@ -170,7 +170,7 @@ sequenceDiagram
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
           IE->>Preview: bump previewRevision for cleared active preview
           Preview-->>Runtime: preview cleanup revision fact
-          Runtime->>Runtime: merge cleanup repaint before common delivery
+          Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
           Runtime->>Spatial: apply touched-id spatial remove for erased ids
           Spatial-->>Runtime: deleted ids removed from hit and paint indexes
           Runtime->>Projection: evict public document projection by projectionRevision

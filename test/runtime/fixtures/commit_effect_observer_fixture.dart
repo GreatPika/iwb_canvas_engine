@@ -1,10 +1,18 @@
+import 'dart:async';
 import 'dart:ui';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_runtime_surface_bridge.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_release_sink.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 void main() {
   test(
@@ -17,6 +25,25 @@ void main() {
   test('observer failures do not roll back accepted commits', () {
     expect(_expectObserverFailureIsContained, returnsNormally);
   });
+
+  test(
+    'common delivery keeps every synchronous owner in one guarded order',
+    () {
+      expect(_expectCompleteCommonDeliveryOrder, returnsNormally);
+    },
+  );
+
+  test('throwing action listener keeps common delivery and guard release', () {
+    expect(_expectActionListenerFailureIsContained, returnsNormally);
+  });
+
+  test('throwing common guard-enter observer cannot leak delivery guard', () {
+    expect(_expectGuardObserverFailureDoesNotLeak, returnsNormally);
+  });
+
+  test('real routes compose with common delivery owners', () {
+    return expectLater(_expectRealRouteComposition(), completes);
+  });
 }
 
 void _expectPostCommitObserverDelivery() {
@@ -25,6 +52,526 @@ void _expectPostCommitObserverDelivery() {
 
 void _expectObserverFailureIsContained() {
   _ObserverFailureScenario().run();
+}
+
+void _expectGuardObserverFailureDoesNotLeak() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _document(),
+    config: const CanvasRuntimeConfig(),
+  );
+  try {
+    expect(
+      () => RuntimeRoot.observeCommonDeliveryEvents(
+        (event) {
+          if (event.kind == RuntimeCommonDeliveryEventKind.guardEntered) {
+            throw StateError('guard event observer failed');
+          }
+        },
+        () {
+          root.edits.edit((edit) {
+            edit.addElement(
+              CanvasRectElement(
+                id: CanvasElementId('element-2'),
+                size: const Size(2, 2),
+              ),
+              layerId: CanvasLayerId('layer-1'),
+            );
+          });
+        },
+      ),
+      throwsStateError,
+    );
+    expect(root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    root.dispose();
+  }
+}
+
+Future<void> _expectRealRouteComposition() async {
+  await _expectMarqueeRealRoute();
+  await _expectCommandRealRoute();
+  await _expectChangedTextRealRoute();
+}
+
+// This one trace keeps route facts and delivery order together.
+// Separating assertions would obscure the behavioral contract.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectMarqueeRealRoute() async {
+  final scenario = _CommonDeliveryScenario(_document());
+  try {
+    scenario.root.handlePointer(
+      CanvasPointerSample(
+        pointerId: 1,
+        position: const Offset(-20, -20),
+        phase: CanvasPointerLifecyclePhase.down,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    scenario.root.handlePointer(
+      CanvasPointerSample(
+        pointerId: 1,
+        position: const Offset(55, 12),
+        phase: CanvasPointerLifecyclePhase.move,
+        kind: PointerDeviceKind.touch,
+      ),
+    );
+    scenario.beforeCallback = () {
+      expect(scenario.root.preview, isA<CanvasNoPreview>());
+      expect(scenario.root.interactionEngine.activeSession, isNull);
+      expect(scenario.root.selection.selectedElementIds, {
+        CanvasElementId('element-1'),
+      });
+    };
+
+    scenario.run(() {
+      scenario.root.handlePointer(
+        CanvasPointerSample(
+          pointerId: 1,
+          position: const Offset(55, 12),
+          phase: CanvasPointerLifecyclePhase.up,
+          kind: PointerDeviceKind.touch,
+          timestampMs: 17,
+        ),
+      );
+    });
+
+    scenario.expectTrace([
+      'guard-enter',
+      'spatial',
+      'frame',
+      'bridge-frame',
+      'state',
+      'action',
+      'observer',
+      'guard-release',
+    ]);
+    expect(scenario.preparations, 1);
+    expect(scenario.root.selection.selectedElementIds, {
+      CanvasElementId('element-1'),
+    });
+    expect(scenario.actions, hasLength(1));
+    final action = scenario.actions.single;
+    expect(action.type, CanvasActionType.selectMarquee);
+    expect(action.timestampMs, 17);
+    final payload = action.payload as CanvasSelectionActionPayload;
+    expect(payload.previousSelection, isEmpty);
+    expect(payload.nextSelection, [CanvasElementId('element-1')]);
+    scenario.expectCommonSemanticPhases(
+      spatialVisits: 3,
+      resourceVisits: 3,
+      actionVisits: 1,
+    );
+    expect(scenario.root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+// Keep the public result, resource release, and common callbacks in one trace
+// because the required order is the behavior under test, not helper structure.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectCommandRealRoute() async {
+  final scenario = _CommonDeliveryScenario(_documentWithResource());
+  try {
+    scenario.beforeCallback = () {
+      expect(scenario.root.readDocument().layers.single.elements, isEmpty);
+    };
+    final result = scenario.run(
+      () => scenario.root.commands.clearContent(
+        removeUnusedResources: true,
+        timestampMs: 87,
+      ),
+    );
+    expect(result.didClearContent, isTrue);
+    expect(result.removedElementIds, [CanvasElementId('element-1')]);
+    expect(result.removedResourceIds, [CanvasResourceId('resource-1')]);
+    scenario.expectTrace([
+      'guard-enter',
+      'spatial',
+      'resource',
+      'frame',
+      'bridge-frame',
+      'state',
+      'action',
+      'observer',
+      'guard-release',
+    ]);
+    expect(scenario.preparations, 1);
+    expect(scenario.releasedResourceIds, [
+      {CanvasResourceId('resource-1')},
+    ]);
+    expect(scenario.root.readDocument().layers.single.elements, isEmpty);
+    expect(scenario.actions, hasLength(1));
+    final action = scenario.actions.single;
+    expect(action.type, CanvasActionType.clearContent);
+    expect(action.timestampMs, 87);
+    final payload = action.payload as CanvasClearActionPayload;
+    expect(payload.removedElementIds, [CanvasElementId('element-1')]);
+    expect(payload.removedResourceIds, [CanvasResourceId('resource-1')]);
+    scenario.expectCommonSemanticPhases(
+      spatialVisits: 5,
+      resourceVisits: 5,
+      actionVisits: 1,
+    );
+    expect(scenario.root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    await scenario.dispose();
+  }
+}
+
+// The public context/session setup and the final commit must remain adjacent to
+// show that only the real changed-text route reaches common delivery.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectChangedTextRealRoute() async {
+  final scenario = _CommonDeliveryScenario(_textDocument());
+  final requests = <CanvasContextActionRequested>[];
+  final requestSubscription = scenario.root.contextActionRequests.listen(
+    requests.add,
+  );
+  try {
+    scenario.root.handleDoubleTap(position: Offset.zero, timestampMs: 3);
+    await Future<void>.delayed(Duration.zero);
+    final request = requests.single;
+    final session = scenario.root.textEditing.startFromContextAction(request);
+    expect(session, isA<CanvasTextEditSession>());
+    final textSession = session as CanvasTextEditSession;
+    textSession.updateText('updated text');
+
+    scenario.discardSetupNotifications();
+    scenario.beforeCallback = () {
+      expect(_textValue(scenario.root), 'updated text');
+      expect(
+        scenario.root.interactionEngine.requestFactsFor(request.requestId),
+        isNull,
+      );
+      expect(scenario.root.textEditing.activeSession.value, isNull);
+    };
+    final didCommit = scenario.run(() => textSession.commit(timestampMs: 91));
+
+    expect(didCommit, isTrue);
+    scenario.expectTrace([
+      'guard-enter',
+      'spatial',
+      'frame',
+      'bridge-frame',
+      'state',
+      'action',
+      'observer',
+      'guard-release',
+    ]);
+    expect(scenario.preparations, 1);
+    expect(_textValue(scenario.root), 'updated text');
+    expect(
+      scenario.root.interactionEngine.requestFactsFor(request.requestId),
+      isNull,
+    );
+    expect(scenario.root.textEditing.activeSession.value, isNull);
+    expect(textSession.isActive, isFalse);
+    expect(scenario.actions, hasLength(1));
+    final action = scenario.actions.single;
+    expect(action.type, CanvasActionType.editText);
+    expect(action.timestampMs, 91);
+    final payload = action.payload as CanvasTextEditActionPayload;
+    expect(payload.requestId, request.requestId);
+    expect(payload.previousTextLength, 'hello'.length);
+    expect(payload.nextTextLength, 'updated text'.length);
+    scenario.expectCommonSemanticPhases(
+      spatialVisits: 4,
+      resourceVisits: 4,
+      actionVisits: 1,
+    );
+    expect(scenario.root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    await requestSubscription.cancel();
+    await scenario.dispose();
+  }
+}
+
+// This recorder deliberately composes all delivery owners in one fixture-local
+// scenario; splitting it would duplicate the delivery setup and its policy.
+// ignore: coupling-between-object-classes
+final class _CommonDeliveryScenario {
+  // The constructor wires every synchronous callback once for all route traces.
+  // ignore: halstead-volume
+  _CommonDeliveryScenario(CanvasDocument document) {
+    root = runtimeRootWithCommittedDocumentSeed(
+      document,
+      config: const CanvasRuntimeConfig(),
+      commitEffectObserver: (effects) {
+        if (effects.isNotEmpty && _isDelivering) {
+          _recordCallback('observer');
+        }
+      },
+    );
+    root.attachSurface(_surfaceToken);
+    root.attachResourceSessionReleaseSink(_ScenarioReleaseSink(this));
+    root.surfaceFrameSignal.addListener(() {
+      if (_isDelivering && root.surfaceFrameSignal.value != null) {
+        _recordCallback('frame');
+      }
+    });
+    attachCanvasRuntimeSurfacePort(_surfaceRuntime, root);
+    final bridge = canvasRuntimeSurfacePortFor(_surfaceRuntime);
+    if (bridge == null) {
+      fail('Runtime surface bridge was not attached.');
+    }
+    bridge.surfaceFrame.addListener(() {
+      if (_isDelivering && bridge.surfaceFrame.value != null) {
+        _recordCallback('bridge-frame');
+      }
+    });
+    root.state.addListener(() {
+      if (_isDelivering) {
+        _recordCallback('state');
+      }
+    });
+    subscription = root.actions.listen((action) {
+      if (_isDelivering) {
+        actions.add(action);
+        _recordCallback('action');
+      }
+    });
+  }
+
+  late final RuntimeRoot root;
+  late final StreamSubscription<CanvasActionCommitted> subscription;
+  final Object _surfaceRuntime = Object();
+  final Object _surfaceToken = Object();
+  final List<String> events = <String>[];
+  final List<RuntimeCommonDeliveryEvent> semanticEvents =
+      <RuntimeCommonDeliveryEvent>[];
+  final List<CanvasActionCommitted> actions = <CanvasActionCommitted>[];
+  final List<Set<CanvasResourceId>> releasedResourceIds =
+      <Set<CanvasResourceId>>[];
+  int preparations = 0;
+  bool _isDelivering = false;
+  void Function()? beforeCallback;
+
+  T run<T>(T Function() operation) {
+    discardSetupNotifications();
+
+    return CommitApplier.observeDeliveryEffectPreparation(() {
+      preparations += 1;
+    }, () => RuntimeRoot.observeCommonDeliveryEvents(_record, operation));
+  }
+
+  void discardSetupNotifications() {
+    events.clear();
+    semanticEvents.clear();
+    actions.clear();
+    releasedResourceIds.clear();
+    preparations = 0;
+    _isDelivering = false;
+  }
+
+  void _record(RuntimeCommonDeliveryEvent event) {
+    semanticEvents.add(event);
+    switch (event.kind) {
+      case RuntimeCommonDeliveryEventKind.guardEntered:
+        _isDelivering = true;
+        events.add('guard-enter');
+      case RuntimeCommonDeliveryEventKind.spatialEffectsCompleted:
+        events.add('spatial');
+      case RuntimeCommonDeliveryEventKind.guardReleased:
+        events.add('guard-release');
+        _isDelivering = false;
+      default:
+        break;
+    }
+  }
+
+  void _recordCallback(String event) {
+    events.add(event);
+    beforeCallback?.call();
+    _expectAllPublicMutationsGuarded(root);
+  }
+
+  void recordResourceRelease(Set<CanvasResourceId> ids) {
+    if (_isDelivering) {
+      releasedResourceIds.add(ids);
+      _recordCallback('resource');
+    }
+  }
+
+  void expectTrace(List<String> expected) {
+    expect(events, expected);
+  }
+
+  void expectCommonSemanticPhases({
+    required int spatialVisits,
+    required int resourceVisits,
+    required int actionVisits,
+  }) {
+    expect(semanticEvents.map((event) => event.kind), [
+      RuntimeCommonDeliveryEventKind.guardEntered,
+      RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
+      RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
+      RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
+      RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+      RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+      RuntimeCommonDeliveryEventKind.guardReleased,
+    ]);
+    expect(semanticEvents[1].visits, spatialVisits);
+    expect(semanticEvents[2].visits, resourceVisits);
+    expect(semanticEvents[4].visits, actionVisits);
+    expect(semanticEvents[5].visits, actionVisits);
+  }
+
+  Future<void> dispose() async {
+    await subscription.cancel();
+    root.dispose();
+  }
+}
+
+final class _ScenarioReleaseSink implements ResourceSessionReleaseSink {
+  _ScenarioReleaseSink(this.scenario);
+
+  final _CommonDeliveryScenario scenario;
+
+  @override
+  void releaseResource(CanvasResourceId id) => releaseResources({id});
+
+  @override
+  void releaseResources(Set<CanvasResourceId> ids) {
+    scenario.recordResourceRelease(ids);
+  }
+
+  @override
+  void releaseAllResources() => scenario.recordResourceRelease(const {});
+}
+
+// The one integrated trace must keep cross-owner callback observations together
+// so a reordered delivery surface cannot be hidden behind local logs.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _expectCompleteCommonDeliveryOrder() {
+  final scenario = _CommonDeliveryScenario(_documentWithResource());
+  try {
+    scenario.run(() {
+      scenario.root.deliverCommitPlanForTesting(
+        CommitPlan(
+          revisionDelta: const StoreRevisionDelta.resource(),
+          touchedSet: TouchedSet(
+            resourceDescriptorChangedIds: [CanvasResourceId('resource-1')],
+          ),
+          effects: [
+            SpatialEffect(touchedSet: TouchedSet()),
+            ResourceEffect(
+              touchedSet: TouchedSet(
+                resourceDescriptorChangedIds: [CanvasResourceId('resource-1')],
+              ),
+            ),
+            const RepaintEffect(mainCanvas: true),
+            const PublicStateEffect(),
+          ],
+          actionIntents: [
+            DeleteSelectionActionIntent(
+              removedElementIds: [CanvasElementId('element-1')],
+            ),
+          ],
+        ),
+        document: scenario.root.readDocument(),
+      );
+    });
+
+    scenario.expectCommonSemanticPhases(
+      spatialVisits: 4,
+      resourceVisits: 4,
+      actionVisits: 1,
+    );
+    scenario.expectTrace([
+      'guard-enter',
+      'spatial',
+      'resource',
+      'frame',
+      'bridge-frame',
+      'state',
+      'action',
+      'observer',
+      'guard-release',
+    ]);
+    expect(scenario.releasedResourceIds, [
+      {CanvasResourceId('resource-1')},
+    ]);
+    expect(scenario.root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    unawaited(scenario.dispose());
+  }
+}
+
+// Error routing, peer delivery, observer continuation, and guard release form
+// one synchronous stream outcome rather than independent implementation tests.
+// ignore: halstead-volume, source-lines-of-code
+void _expectActionListenerFailureIsContained() {
+  final events = <String>[];
+  final errors = <Object>[];
+  final deliveryEvents = <RuntimeCommonDeliveryEvent>[];
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    _document(),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (_) => events.add('observer'),
+  );
+  root.state.addListener(() => events.add('state'));
+  late StreamSubscription<CanvasActionCommitted> throwingSubscription;
+  late StreamSubscription<CanvasActionCommitted> receivingSubscription;
+  try {
+    runZonedGuarded(() {
+      throwingSubscription = root.actions.listen((_) {
+        events.add('throwing-action');
+        throw StateError('action listener failed');
+      });
+      receivingSubscription = root.actions.listen((_) {
+        events.add('action');
+        _expectAllPublicMutationsGuarded(root);
+      });
+      RuntimeRoot.observeCommonDeliveryEvents(deliveryEvents.add, () {
+        final result = root.commands.clearContent(
+          removeUnusedResources: true,
+          timestampMs: 7,
+        );
+        expect(result.didClearContent, isTrue);
+        expect(result.removedElementIds, [CanvasElementId('element-1')]);
+        expect(result.removedResourceIds, isEmpty);
+      });
+    }, (error, _) => errors.add(error));
+
+    expect(errors.single, isA<StateError>());
+    expect(events, ['state', 'throwing-action', 'action', 'observer']);
+    expect(
+      deliveryEvents.where(
+        (event) =>
+            event.kind ==
+            RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+      ),
+      [
+        isA<RuntimeCommonDeliveryEvent>().having(
+          (event) => event.visits,
+          'visits',
+          1,
+        ),
+      ],
+    );
+    expect(
+      deliveryEvents.where(
+        (event) =>
+            event.kind ==
+            RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+      ),
+      [
+        isA<RuntimeCommonDeliveryEvent>().having(
+          (event) => event.visits,
+          'visits',
+          1,
+        ),
+      ],
+    );
+    expect(root.readDocument().layers.single.elements, isEmpty);
+    expect(root.generateElementId(), CanvasElementId('e0'));
+  } finally {
+    unawaited(throwingSubscription.cancel());
+    unawaited(receivingSubscription.cancel());
+    root.dispose();
+  }
 }
 
 // This scenario intentionally names every guarded public mutation entry point
@@ -217,6 +764,25 @@ void _expectDeliveryGuard(void Function() action) {
   );
 }
 
+void _expectAllPublicMutationsGuarded(RuntimeRoot root) {
+  _expectDeliveryGuard(() => root.edits.edit(_ignoreEdit));
+  _expectDeliveryGuard(
+    () => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(CanvasDocument()),
+    ),
+  );
+  _expectDeliveryGuard(() => root.selection.setSelection(const []));
+  _expectDeliveryGuard(() => root.cameraPort().setOffset(const Offset(1, 1)));
+  _expectDeliveryGuard(root.generateElementId);
+  _expectDeliveryGuard(root.generateLayerId);
+  _expectDeliveryGuard(root.generateResourceId);
+  _expectDeliveryGuard(root.dispose);
+}
+
+void _ignoreEdit(CanvasEdit edit) {
+  expect(edit, isA<CanvasEdit>());
+}
+
 CanvasDocument _document() {
   return CanvasDocument(
     layers: [
@@ -231,4 +797,55 @@ CanvasDocument _document() {
       ),
     ],
   );
+}
+
+CanvasDocument _documentWithResource() {
+  return CanvasDocument(
+    resources: [
+      CanvasImageResource(
+        id: CanvasResourceId('resource-1'),
+        source: CanvasResourceSource.appKey('resource-1'),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('element-1'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _textDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-1'),
+        elements: [
+          CanvasTextElement(
+            id: CanvasElementId('text-1'),
+            text: 'hello',
+            color: const Color(0xFF111111),
+            textDirection: TextDirection.ltr,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+String _textValue(RuntimeRoot root) {
+  return root
+      .readDocument()
+      .layers
+      .single
+      .elements
+      .whereType<CanvasTextElement>()
+      .single
+      .text;
 }

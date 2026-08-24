@@ -2,7 +2,9 @@
 
 import 'dart:io';
 import 'dart:ui';
+import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_surface_bridge.dart';
@@ -49,7 +51,85 @@ void main() {
     'runtime state publication requires explicit surface target classification',
     _runtimeStatePublicationRequiresExplicitSurfaceTargetClassification,
   );
+  test(
+    'common delivery reports notifier failures and continues later owners',
+    _commonDeliveryNotifierFailuresContinue,
+  );
 }
+
+// The three public notifier owners share one Flutter reporting and continuation
+// contract; keeping the loop together avoids three divergent failure fixtures.
+// ignore: halstead-volume, source-lines-of-code
+void _commonDeliveryNotifierFailuresContinue() {
+  for (final failingOwner in _NotifierOwner.values) {
+    final events = <String>[];
+    final reported = <Object>[];
+    final previousOnError = FlutterError.onError;
+    late RuntimeRoot root;
+    root = runtimeRootWithCommittedDocumentSeed(
+      _document(),
+      commitEffectObserver: (_) => events.add('observer'),
+    );
+    final surfaceRuntime = Object();
+    attachCanvasRuntimeSurfacePort(surfaceRuntime, root);
+    final bridge = canvasRuntimeSurfacePortFor(surfaceRuntime);
+    if (bridge == null) {
+      fail('Runtime surface bridge was not attached.');
+    }
+    bridge.attachSurface(Object());
+    root.surfaceFrameSignal.addListener(() {
+      if (root.surfaceFrameSignal.value == null) {
+        return;
+      }
+      events.add('root-frame');
+      if (failingOwner == _NotifierOwner.rootFrame) {
+        throw StateError('root frame listener failed');
+      }
+    });
+    bridge.surfaceFrame.addListener(() {
+      if (bridge.surfaceFrame.value == null) {
+        return;
+      }
+      events.add('bridge-frame');
+      if (failingOwner == _NotifierOwner.bridgeFrame) {
+        throw StateError('bridge frame listener failed');
+      }
+    });
+    root.state.addListener(() {
+      events.add('state');
+      if (failingOwner == _NotifierOwner.state) {
+        throw StateError('state listener failed');
+      }
+    });
+    final subscription = root.actions.listen((_) => events.add('action'));
+    FlutterError.onError = (details) => reported.add(details.exception);
+    try {
+      final result = root.commands.clearContent(
+        removeUnusedResources: true,
+        timestampMs: 31,
+      );
+      expect(reported.single, isA<StateError>());
+      expect(result.didClearContent, isTrue);
+      expect(result.removedElementIds, [CanvasElementId('rect-a')]);
+      expect(result.removedResourceIds, [CanvasResourceId('resource-a')]);
+      expect(events, [
+        'root-frame',
+        'bridge-frame',
+        'state',
+        'action',
+        'observer',
+      ]);
+      expect(root.state.value.summary.elementCount, 0);
+      expect(() => root.generateElementId(), returnsNormally);
+    } finally {
+      FlutterError.onError = previousOnError;
+      unawaited(subscription.cancel());
+      root.dispose();
+    }
+  }
+}
+
+enum _NotifierOwner { rootFrame, bridgeFrame, state }
 
 void _surfacePortPublishesStateMatchedTargets() {
   final runtime = runtimeWithDocument(_document());
@@ -94,6 +174,13 @@ void _expectDetachedSurfacePortClearsFrame(
   expect(surfacePort.surfaceFrame.value, isNull);
   surfacePort.attachSurface(Object());
   expect(surfacePort.surfaceFrame.value, isNull);
+  runtime.camera.setOffset(const Offset(12, 13));
+  final resumedFrame = surfacePort.surfaceFrame.value;
+  if (resumedFrame == null) {
+    fail('A reattached surface bridge did not receive the next frame.');
+  }
+  expect(resumedFrame.generation, 2);
+  expect(resumedFrame.state, runtime.state.value);
 }
 
 void _inactiveRuntimePublicationDoesNotUpdateSurfaceFrameSignal() {
@@ -271,11 +358,27 @@ void _surfaceFramePublicationRejectsReentrantStaleOverwrite() {
   root.dispose();
 }
 
+// Root and bridge observations stay together so this witness can distinguish a
+// stale outer forward from the nested publication that correctly replaces it.
+// ignore: halstead-volume
 void _publicStatePublicationRejectsReentrantStaleOverwrite() {
   final root = _runtimeRoot();
   final token = Object();
   root.attachSurface(token);
   final frames = _recordFrames(root);
+  final surfaceRuntime = Object();
+  attachCanvasRuntimeSurfacePort(surfaceRuntime, root);
+  final bridge = canvasRuntimeSurfacePortFor(surfaceRuntime);
+  if (bridge == null) {
+    fail('Runtime surface bridge was not attached.');
+  }
+  final bridgeFrames = <CanvasRuntimeSurfaceFrame>[];
+  bridge.surfaceFrame.addListener(() {
+    final frame = bridge.surfaceFrame.value;
+    if (frame != null) {
+      bridgeFrames.add(frame);
+    }
+  });
   var reentered = false;
   root.surfaceFrameSignal.addListener(() {
     if (reentered || root.surfaceFrameSignal.value == null) {
@@ -292,6 +395,9 @@ void _publicStatePublicationRejectsReentrantStaleOverwrite() {
   _expectTargetAt(frames, 1, main: true, overlay: true);
   expect(root.state.value, frames.last.state);
   expect(frames.last.generation, 2);
+  expect(bridgeFrames, hasLength(1));
+  expect(bridgeFrames.single.generation, 2);
+  expect(bridgeFrames.single.state, root.state.value);
   root.dispose();
 }
 

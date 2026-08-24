@@ -192,7 +192,7 @@ sequenceDiagram
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>Spatial: apply touched-id spatial update
         Runtime->>Projection: evict public projection cache by projectionRevision
         Runtime->>Frame: publish merged main repaint notification

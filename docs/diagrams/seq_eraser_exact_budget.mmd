@@ -116,7 +116,7 @@ sequenceDiagram
         IE->>Preview: apply outcome: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>SpatialApply: apply touched removals only
         Runtime->>Projection: evict by projectionRevision
         Runtime->>Frame: publish merged main repaint and overlay cleanup repaint

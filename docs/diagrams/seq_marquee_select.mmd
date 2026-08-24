@@ -125,7 +125,7 @@ sequenceDiagram
       IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
       Preview-->>Runtime: preview cleanup revision fact
-      Runtime->>Runtime: merge cleanup repaint before common delivery
+      Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
       Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
       Runtime->>Signals: publish one CanvasRuntimeState with selection and preview effects
       Runtime->>Signals: publish selectMarquee action notification

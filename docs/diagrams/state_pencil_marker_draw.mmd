@@ -114,9 +114,9 @@ stateDiagram-v2
     state "Public commit effects" as PublicCommitEffects
     note right of PublicCommitEffects
       After successful commit and session cleanup,
-      publish the main repaint, CanvasRuntimeState
-      publication, and drawPencil or drawMarker
-      action with CanvasDrawStrokeActionPayload.
+      RuntimeRoot enters one guard and delivers spatial, resource/
+      session release, root/bridged frame, CanvasRuntimeState,
+      drawPencil or drawMarker action, then a non-empty observer.
     end note
     PublicCommitEffects --> [*]
   }

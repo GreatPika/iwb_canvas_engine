@@ -13,6 +13,12 @@ flowchart LR
   subgraph Runtime["RuntimeRoot"]
     InteractionCommit["Runtime-prepared interaction commit\nselected move, pencil, marker, line"]
     ActionDescriptor["Optional high-level action descriptor\nnot available to CanvasEditPort.edit(fn)"]
+    CommonDelivery["One guarded common delivery\nsealed accepted values only"]
+    RootFrame["Root surface-frame notifier"]
+    BridgedFrame["Runtime-surface bridge notifier"]
+    RuntimeState["CanvasRuntimeState notifier"]
+    RuntimeAction["Finalized synchronous action stream"]
+    Observer["Non-empty CommitEffectObserver"]
   end
 
   subgraph Contracts["Contract declarations"]
@@ -82,14 +88,21 @@ flowchart LR
   Install -->|"apply prepared selection effects atomically"| SelectionEffects
   SelectionEffects -->|"update selected ids/revision"| SelectionState
 
-  Install -->|"apply spatial update scope"| SpatialDelta
+  Install -->|"return sealed accepted delivery values"| CommonDelivery
+  CommonDelivery -->|"apply first"| SpatialDelta
+  SpatialDelta -->|"then release affected targets"| ResourceInvalidation
+  ResourceInvalidation -->|"then publish"| RootFrame
+  RootFrame --> BridgedFrame
+  BridgedFrame --> RuntimeState
+  RuntimeState --> RuntimeAction
+  RuntimeAction --> Observer
+  Observer -->|"clear guard"| CommonDelivery
   Install -->|"apply projection eviction scope"| ProjectionEvict
-  Install -->|"apply resource descriptor/cache scope"| ResourceInvalidation
   Install -->|"publish typed effect scope"| PostInstallEffects
-  PostInstallEffects -->|"dispatch repaint intent"| RepaintBus
-  PostInstallEffects -->|"dispatch staged high-level action after state"| ActionEvents
+  RootFrame -->|"dispatch repaint intent"| RepaintBus
+  RuntimeAction -->|"dispatch staged high-level action after state"| ActionEvents
   EditPort -.->|"low-level public edits stage no user action descriptor"| ActionEvents
-  Install -->|"publish after atomic install"| PublicSignals
+  RuntimeState -->|"publish after atomic install"| PublicSignals
   Install -->|"return after successful commit"| EditResult
   EditResult -->|"callback result"| App
 

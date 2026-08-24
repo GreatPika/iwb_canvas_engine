@@ -231,6 +231,12 @@ final-no-op preparation drops that local value, while accepted Store-ledger
 admission reserves it. No candidate, ticket, or separate reservation history is
 retained outside admission.
 
+RuntimeRoot consumes sealed accepted delivery values without rebuilding a
+document, reopening preparation, or retaining a candidate. Its one guarded
+delivery sequence is spatial, resource/session release, root frame, bridged
+frame, public state, synchronous action, and non-empty observer; callbacks see
+the installed Store/Edit facts and closed handle before final guard release.
+
 Prepared Schema v1 import and staged document load retain one immutable
 `CanvasDocumentSummary` captured from the completed payload's element, layer,
 and resource scalar counts. Its read view retains no membership inventory and

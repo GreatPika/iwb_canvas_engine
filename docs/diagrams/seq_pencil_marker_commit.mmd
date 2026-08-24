@@ -127,7 +127,7 @@ sequenceDiagram
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear stroke session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
         Runtime->>Spatial: apply touched-id spatial add for new stroke id
         Spatial-->>Runtime: spatial index updated for new paint and hit bounds
         Runtime->>Projection: evict public document projection cache by projectionRevision

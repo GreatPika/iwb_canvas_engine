@@ -94,29 +94,32 @@ stateDiagram-v2
       This is the only commit boundary.
       Public notifications are not allowed before this state.
     end note
-    AtomicInstall --> PostCommitEffects: install prepared document, then prepared selection
+    AtomicInstall --> CloseCommitted: install prepared document, then prepared selection
+
+    state "Close and mark handle stale" as CloseCommitted
 
     state "Post-commit effects" as PostCommitEffects
     note right of PostCommitEffects
-      Apply exact spatial deltas, projection/resource cache
-      invalidation, repaint buses, and public state effects
-      after install. Low-level CanvasEdit emits no user action event.
+      RuntimeRoot enters one post-commit guard only after the
+      handle closes. It applies spatial, then resource/session
+      release, root frame, bridged frame, public state,
+      synchronous action, and non-empty observer delivery.
+      Low-level CanvasEdit emits no user action event.
     end note
-    PostCommitEffects --> CloseCommitted: effects staged after install
+    CloseCommitted --> PostCommitEffects: handle closed
+    PostCommitEffects --> NotifyPublic: guarded delivery and publication complete
 
-    state "Close and mark handle stale" as CloseCommitted
     state "Close stale handle after rollback" as CloseRollback
     state "Close stale handle after no-op" as CloseNoOp
 
-    CloseCommitted --> NotifyPublic: handle closed
     CloseNoOp --> ReturnResult: handle closed
     CloseRollback --> RethrowFailure: handle closed
 
     state "Publish public notifications" as NotifyPublic
     note right of NotifyPublic
       Reachable only after atomic install.
-      CanvasRuntimeState and repaint notifications observe
-      committed state, never draft state.
+      Every callback observes committed state and a closed handle;
+      RuntimeRoot releases the delivery guard after observer work.
     end note
     NotifyPublic --> ReturnResult: return callback result
 

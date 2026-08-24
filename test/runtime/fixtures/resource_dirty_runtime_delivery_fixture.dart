@@ -4,10 +4,14 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_session_release_sink.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_cache.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
 
@@ -72,6 +76,16 @@ void _registerSessionReleaseTests() {
 
   test('edit resource release failure drops sink after publication', () {
     expect(_expectEditResourceReleaseFailureIsContained, returnsNormally);
+  });
+
+  test('real session target failure drops after common command delivery', () {
+    return expectLater(_expectRealTargetFailure(), completes);
+  });
+  test('real session all-release failure drops after common delivery', () {
+    return expectLater(_expectRealAllFailure(), completes);
+  });
+  test('real session reset failure drops after replacement delivery', () {
+    return expectLater(_expectRealResetFailure(), completes);
   });
 
   test('cleared active session is not mutated by later dirty calls', () {
@@ -180,7 +194,9 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
     },
     releaseAllRetainedResources: retainedOutput.releaseAll,
   );
-  root.attachResourceSessionReleaseSink(session);
+  final token = Object();
+  root.attachSurface(token);
+  root.installSurfaceResourceSession(token, session);
   session.resolveResource(descriptorRequest(id: 'resource-a'));
   root.state.addListener(() {
     _expectNoBorrow(cache, retainedOutput);
@@ -203,7 +219,7 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
         .mainCanvas,
     isTrue,
   );
-  expect(root.activeSurfaceResourceSessionForTesting, isNull);
+  expect(root.activeSurfaceResourceSessionForTesting, same(session));
   image.dispose();
   root.dispose();
 }
@@ -333,9 +349,14 @@ void _expectEditRemoveResourceInvalidatesBeforePublish() {
   root.dispose();
 }
 
+// Release failure, ownership drop, frame/state continuation, and no retry are
+// one accepted-edit resource contract, so splitting would hide the ordering.
+// ignore: halstead-volume
 void _expectEditResourceReleaseFailureIsContained() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final snapshots = <CanvasRuntimeState>[];
+  final frames = <Object>[];
+  final sink = _ThrowingResourceSessionReleaseSink();
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
     config: const CanvasRuntimeConfig(),
@@ -344,15 +365,25 @@ void _expectEditResourceReleaseFailureIsContained() {
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
-  root.attachResourceSessionReleaseSink(_ThrowingResourceSessionReleaseSink());
+  root.attachSurface(Object());
+  root.surfaceFrameSignal.addListener(() {
+    final frame = root.surfaceFrameSignal.value;
+    if (frame == null) return;
+    expect(sink.releaseCalls, 1);
+    frames.add(frame);
+  });
+  root.attachResourceSessionReleaseSink(sink);
 
   final changed = _upsertResourceA(root);
 
   expect(changed, isTrue);
+  expect(sink.releaseCalls, 1);
+  expect(frames, hasLength(1));
   expect(snapshots, hasLength(1));
   expect(effectBatches, hasLength(1));
   _expectUpdatedResourceASource(root);
   _expectDirtyAfterFailedSinkIsDropped(root);
+  expect(sink.releaseCalls, 1);
   root.dispose();
 }
 
@@ -381,6 +412,204 @@ void _expectDirtyAfterFailedSinkIsDropped(RuntimeRoot root) {
     () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
     returnsNormally,
   );
+}
+
+// Each case is one ordered common-delivery failure witness.
+// ignore: halstead-volume
+Future<void> _expectRealTargetFailure() async {
+  final probe = await _RealSessionFailureProbe.create(throwTarget: true);
+  final actions = <CanvasActionCommitted>[];
+  final subscription = probe.root.actions.listen((action) {
+    probe.events.add('action');
+    actions.add(action);
+  });
+  try {
+    final result = probe.root.commands.clearContent(
+      removeUnusedResources: true,
+      timestampMs: 41,
+    );
+    expect(result.didClearContent, isTrue);
+    expect(result.removedElementIds, [CanvasElementId('image-a')]);
+    expect(result.removedResourceIds, [CanvasResourceId('resource-a')]);
+    _expectRealFailureDelivery(probe, actions, ['target', 'all']);
+    expect(probe.targetCalls, 1);
+    expect(probe.allCalls, 1);
+    probe.root.edits.edit((edit) {
+      edit.addElement(
+        CanvasRectElement(
+          id: CanvasElementId('later-a'),
+          size: const Size(1, 1),
+        ),
+        layerId: CanvasLayerId('layer-a'),
+      );
+    });
+    expect((probe.targetCalls, probe.allCalls), (1, 1));
+  } finally {
+    await subscription.cancel();
+    probe.dispose();
+  }
+}
+
+// The all-release and drop callbacks must stay in one lifecycle witness.
+// ignore: halstead-volume
+Future<void> _expectRealAllFailure() async {
+  final probe = await _RealSessionFailureProbe.create();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = probe.root.actions.listen((action) {
+    probe.events.add('action');
+    actions.add(action);
+  });
+  try {
+    probe.root.deliverCommitPlanForTesting(
+      CommitPlan(
+        revisionDelta: const StoreRevisionDelta.resource(),
+        touchedSet: TouchedSet(allResourceVisualsChanged: true),
+        effects: [
+          ResourceEffect(
+            touchedSet: TouchedSet(allResourceVisualsChanged: true),
+          ),
+          const RepaintEffect(mainCanvas: true),
+          const PublicStateEffect(),
+        ],
+        actionIntents: [
+          DeleteSelectionActionIntent(
+            removedElementIds: [CanvasElementId('image-a')],
+          ),
+        ],
+      ),
+      document: probe.root.readDocument(),
+    );
+    _expectRealFailureDelivery(probe, actions, ['all', 'all']);
+    expect(probe.allCalls, 2);
+    expect(probe.root.state.value.revisions.document, 1);
+    expect(_upsertResourceA(probe.root), isTrue);
+    expect(probe.allCalls, 2);
+    probe.root.generateElementId();
+    expect(probe.allCalls, 2);
+  } finally {
+    await subscription.cancel();
+    probe.dispose();
+  }
+}
+
+// Replacement reset and its failing drop are one accepted-delivery outcome.
+// ignore: halstead-volume
+Future<void> _expectRealResetFailure() async {
+  final probe = await _RealSessionFailureProbe.create();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = probe.root.actions.listen((action) {
+    probe.events.add('action');
+    actions.add(action);
+  });
+  final replacement = _documentWithUnusedResource();
+  try {
+    probe.root.deliverCommitPlanForTesting(
+      CommitPlan(
+        revisionDelta: const StoreRevisionDelta.documentReplacement(),
+        touchedSet: TouchedSet(documentReplaced: true),
+        effects: [
+          ResourceEffect(touchedSet: TouchedSet(documentReplaced: true)),
+          const RepaintEffect(mainCanvas: true, overlayCanvas: true),
+          const PublicStateEffect(),
+        ],
+        actionIntents: [
+          DeleteSelectionActionIntent(
+            removedElementIds: [CanvasElementId('image-a')],
+          ),
+        ],
+      ),
+      document: replacement,
+    );
+    _expectRealFailureDelivery(probe, actions, ['all', 'all']);
+    expect(probe.allCalls, 2);
+    expect(
+      probe.root.readDocument().resources.map((resource) => resource.id),
+      replacement.resources.map((resource) => resource.id),
+    );
+    expect(_upsertResourceA(probe.root), isTrue);
+    expect(probe.allCalls, 2);
+    probe.root.generateElementId();
+    expect(probe.allCalls, 2);
+  } finally {
+    await subscription.cancel();
+    probe.dispose();
+  }
+}
+
+void _expectRealFailureDelivery(
+  _RealSessionFailureProbe probe,
+  List<CanvasActionCommitted> actions,
+  List<String> releases,
+) {
+  expect(probe.events, [
+    ...releases.map((value) => 'resource-$value'),
+    'frame',
+    'state',
+    'action',
+    'observer',
+  ]);
+  expect(actions, hasLength(1));
+  _expectNoBorrow(probe.cache, probe.output);
+  expect(probe.root.activeSurfaceResourceSessionForTesting, isNull);
+  expect(probe.root.generateElementId(), CanvasElementId('e0'));
+}
+
+final class _RealSessionFailureProbe {
+  _RealSessionFailureProbe._(this.root, this.cache, this.output, this.image);
+
+  final RuntimeRoot root;
+  final ResourceAssetCache cache;
+  final _RetainedOutputProbe output;
+  final Image image;
+  final List<String> events = [];
+  int targetCalls = 0;
+  int allCalls = 0;
+
+  // This setup keeps the real cache/output and failed lifecycle drop together.
+  // ignore: halstead-volume
+  static Future<_RealSessionFailureProbe> create({
+    bool throwTarget = false,
+  }) async {
+    final image = await createResourceTestImage();
+    final cache = ResourceAssetCache();
+    final output = _RetainedOutputProbe()..retain('resource-a');
+    late _RealSessionFailureProbe probe;
+    final root = runtimeRootWithCommittedDocumentSeed(
+      _documentWithResource(),
+      config: const CanvasRuntimeConfig(),
+      commitEffectObserver: (_) => probe.events.add('observer'),
+    );
+    probe = _RealSessionFailureProbe._(root, cache, output, image);
+    final token = Object();
+    root.attachSurface(token);
+    root.surfaceFrameSignal.addListener(() => probe.events.add('frame'));
+    root.state.addListener(() => probe.events.add('state'));
+    final session = SurfaceResourceSession(
+      resolver: RecordingResourceResolver((_) => image),
+      mutationGuard: root,
+      cache: cache,
+      releaseRetainedResources: (_) {
+        probe.targetCalls += 1;
+        probe.events.add('resource-target');
+        output.release('resource-a');
+        if (throwTarget) throw StateError('target release failed');
+      },
+      releaseAllRetainedResources: () {
+        probe.allCalls += 1;
+        probe.events.add('resource-all');
+        output.releaseAll();
+        throw StateError('all release failed');
+      },
+    );
+    root.installSurfaceResourceSession(token, session);
+    session.resolveResource(descriptorRequest(id: 'resource-a'));
+    return probe;
+  }
+
+  void dispose() {
+    image.dispose();
+    root.dispose();
+  }
 }
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
@@ -549,18 +778,23 @@ final class _RecordingResourceSessionReleaseSink
 
 final class _ThrowingResourceSessionReleaseSink
     implements ResourceSessionReleaseSink {
+  int releaseCalls = 0;
+
   @override
   void releaseResource(CanvasResourceId id) {
+    releaseCalls += 1;
     throw StateError('resource release failed');
   }
 
   @override
   void releaseResources(Set<CanvasResourceId> ids) {
+    releaseCalls += 1;
     throw StateError('resource release failed');
   }
 
   @override
   void releaseAllResources() {
+    releaseCalls += 1;
     throw StateError('resource release failed');
   }
 }

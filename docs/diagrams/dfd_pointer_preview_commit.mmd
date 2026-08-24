@@ -125,11 +125,11 @@ flowchart LR
 
   AtomicInstall -->|"commit result"| EditResult
   EditResult -->|"EditKernel closes handle, then RuntimeRoot requests publish-false cleanup"| TerminalCleanup
-  TerminalCleanup -->|"cleanup outcome augments repaint before common delivery"| PublicSignals
-  EditResult -->|"RuntimeRoot common delivery: spatial scope"| SpatialDelta
+  TerminalCleanup -->|"cleanup outcome augments repaint before guarded common delivery"| PublicSignals
+  EditResult -->|"RuntimeRoot guarded delivery first: spatial scope"| SpatialDelta
   EditResult -->|"RuntimeRoot common delivery: projection eviction"| ProjectionEvict
-  EditResult -->|"RuntimeRoot common delivery: merged scene repaint"| MainRepaint
-  EditResult -->|"RuntimeRoot common delivery: changed action after state"| Actions
+  EditResult -->|"then resource/release and root/bridge frame repaint"| MainRepaint
+  EditResult -->|"then state, changed action, non-empty observer"| Actions
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
   Rollback -.->|"candidate remains next; committed document, selection, revisions,\nand action events unchanged"| ErrorProjection

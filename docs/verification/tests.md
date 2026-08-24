@@ -640,6 +640,12 @@ the release route for that evidence.
   state.revisions.document advanced and unrelated public domains unchanged;
 - proves no-op edits and no-op runtime operations do not publish a new
   CanvasRuntimeState.
+- proves one accepted common-delivery trace composes the assert-only guard and
+  spatial facts with real resource, root-frame, bridged-frame, state, action,
+  and observer callbacks in exact order; every callback rejects the public
+  edit/load/selection/camera/ID/dispose matrix before side effects;
+- proves a Zone-reported throwing synchronous action listener does not prevent
+  its peer listener, observer, accepted state, or final guard release.
 
 #### `test/smoke/public_incremental_smoke_test.dart`
 - proves an external Flutter consumer can import only the root public barrel,
@@ -769,6 +775,10 @@ the release route for that evidence.
   cleanup-effect augmentation, and common-delivery boundaries; their real
   callbacks observe cleared preview/session and the merged main-plus-overlay
   repaint before state, action, and observer delivery.
+- Its accepted pencil route also composes one Store sparse-candidate aggregate
+  observation with the fixed RuntimeRoot common-delivery phase events, so
+  callback count cannot introduce a second candidate, projection, preparation,
+  or sealed-list traversal phase.
 - `test/runtime/draw_cleanup_integration_test.dart` proves draw cleanup paths,
   load success, load failure, `interactive=false`, settings changes, cancel,
   and no-op terminals do not reserve the next draw output timestamp.
@@ -866,6 +876,9 @@ the release route for that evidence.
   maps preview, selection, resource, load, camera, and fallback paths to the
   expected main/overlay flags, preserves the public runtime state value, and
   does not expose or import `FrameRepaintSignal`.
+- proves root-frame, bridged-frame, and public-state listener failures are
+  reported by Flutter while the remaining common delivery, accepted state, and
+  post-route mutation continue.
 - `test/surface/surface_frame_output_cache_test.dart` proves
   `SurfaceFrameOutputCache` calls only the targeted main and/or overlay output
   builders, maps local surface inputs to layer invalidation, leaves untouched

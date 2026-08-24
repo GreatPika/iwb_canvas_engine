@@ -270,6 +270,12 @@ finite non-zero path, while a configured finite acceptance completes its guard
 before preparation; cancel, zero, invalid, thrown, and reentrant branches
 never open preparation.
 
+Common delivery remains RuntimeRoot composition, not an InteractionEngine
+route: under one post-commit guard it performs spatial, resource/session
+release, root-frame, bridged-frame, public-state, synchronous-action, and
+non-empty-observer delivery in that order. Route cleanup is already complete
+before the guard opens.
+
 `PointerCleanupOutcome` is pointer-only and effect-only. It records previous
 preview kind, whether preview changed, whether public state is needed, repaint
 target, active token/session release, pending line cleared or preserved,

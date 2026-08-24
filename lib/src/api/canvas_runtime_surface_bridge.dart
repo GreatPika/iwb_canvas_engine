@@ -15,10 +15,12 @@ final Expando<CanvasRuntimeSurfacePort> _canvasRuntimeSurfacePorts =
     Expando<CanvasRuntimeSurfacePort>('iwb_canvas_runtime_surface_ports');
 
 void attachCanvasRuntimeSurfacePort(Object runtime, RuntimeRoot root) {
+  _canvasRuntimeSurfacePorts[runtime]?._dispose();
   _canvasRuntimeSurfacePorts[runtime] = CanvasRuntimeSurfacePort._(root);
 }
 
 void detachCanvasRuntimeSurfacePort(Object runtime) {
+  _canvasRuntimeSurfacePorts[runtime]?._dispose();
   _canvasRuntimeSurfacePorts[runtime] = null;
 }
 
@@ -35,18 +37,25 @@ final class CanvasRuntimeSurfacePort {
     : _surfaceFrame = ValueNotifier<CanvasRuntimeSurfaceFrame?>(
         _surfaceFrameFromRoot(_root.surfaceFrameSignal.value),
       ) {
-    _root.surfaceFrameSignal.addListener(_publishSurfaceFrame);
+    _surfaceFrameMirror = _publishSurfaceFrame;
+    _root.installSurfaceFrameMirror(_surfaceFrameMirror);
   }
 
   final RuntimeRoot _root;
   final ValueNotifier<CanvasRuntimeSurfaceFrame?> _surfaceFrame;
+  late final RuntimeSurfaceFrameMirror _surfaceFrameMirror;
 
   ValueListenable<CanvasRuntimeSurfaceFrame?> get surfaceFrame => _surfaceFrame;
 
   ResolverMutationGuard get resolverMutationGuard => _root;
 
-  void _publishSurfaceFrame() {
-    _surfaceFrame.value = _surfaceFrameFromRoot(_root.surfaceFrameSignal.value);
+  void _publishSurfaceFrame(RuntimeSurfaceFrameSignal? frame) {
+    _surfaceFrame.value = _surfaceFrameFromRoot(frame);
+  }
+
+  void _dispose() {
+    _root.removeSurfaceFrameMirror(_surfaceFrameMirror);
+    _surfaceFrame.dispose();
   }
 
   void attachSurface(Object token) {

@@ -222,8 +222,9 @@ document resource descriptor mutation unless the row says `resource table` or
 owner and assert the resource effects enumerated there.
 
 For an accepted resource effect with an attached surface, RuntimeRoot invokes
-the generic target/all release before any public-state, commit-effect, or
-listener notification. The active session removes matching cache/suppression
+the generic target/all release after spatial delivery and before root-frame,
+bridged-frame, public-state, action, commit-effect, or listener notification.
+The active session removes matching cache/suppression
 borrows, then its identity-aware surface callback removes the matching retained
 main-output borrow; a stale session proves absence and does not mutate current
 output. Target release preserves unrelated bindings and overlay output, and

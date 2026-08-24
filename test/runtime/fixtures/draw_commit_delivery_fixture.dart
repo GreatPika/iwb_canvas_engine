@@ -4,9 +4,11 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
 void main() {
@@ -537,18 +539,22 @@ Future<void> _verifyRuntimeRouteIdAdmissionWork() async {
   addTearDown(setup.root.dispose);
   _expectSupportedPrefixReset(setup.resetWork);
   _verifyRepeatedFailedRouteReads(setup.root);
-  _verifyAcceptedRouteReads(setup.root);
+  await _verifyAcceptedRouteReads(setup);
   await Future<void>.delayed(Duration.zero);
 }
 
 _RouteWorkSetup _createSupportedPrefixRuntime() {
   final resetWork = _IdAdmissionWork();
+  final delivery = _DrawWorkDeliveryProbe();
   late RuntimeRoot root;
   DocumentStoreKernel.observeIdAdmissionWork(resetWork.record, () {
-    root = runtimeRootWithCommittedDocumentSeed(_supportedPrefixDocument());
+    root = runtimeRootWithCommittedDocumentSeed(
+      _supportedPrefixDocument(),
+      commitEffectObserver: (effects) => delivery.observeEffects(effects),
+    );
   });
 
-  return (root: root, resetWork: resetWork);
+  return (root: root, resetWork: resetWork, delivery: delivery);
 }
 
 void _expectSupportedPrefixReset(_IdAdmissionWork work) {
@@ -586,12 +592,50 @@ void _verifyRepeatedFailedRouteReads(RuntimeRoot root) {
   }
 }
 
-void _verifyAcceptedRouteReads(RuntimeRoot root) {
+// One accepted draw trace keeps all real owner seams together; splitting it
+// would make callback-multiplied work indistinguishable from fixture plumbing.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _verifyAcceptedRouteReads(_RouteWorkSetup setup) async {
+  final root = setup.root;
+  final delivery = setup.delivery;
+  final candidateEvents = <StoreSparseCandidateEvent>[];
+  final deliveryEvents = <RuntimeCommonDeliveryEvent>[];
+  final beforeProjectionBuilds = root.projectionBuildCount;
+  var effectPreparations = 0;
+  root.attachSurface(Object());
+  root.surfaceFrameSignal.addListener(delivery.observeRootFrame);
+  root.state.addListener(delivery.observeState);
+  final actionSubscription = root.actions.listen(delivery.observeAction);
   final pencilWork = _observeIdAdmissionWork(() {
-    _drawPencil(root);
+    CommittedDocument.observeSparseCandidateEvents(candidateEvents.add, () {
+      CommitApplier.observeDeliveryEffectPreparation(
+        () {
+          effectPreparations += 1;
+        },
+        () {
+          RuntimeRoot.observeCommonDeliveryEvents(
+            (event) {
+              deliveryEvents.add(event);
+              delivery.observeCommonDeliveryEvent(event);
+            },
+            () {
+              _drawPencil(root);
+            },
+          );
+        },
+      );
+    });
   });
   _expectReadOnlyRouteCandidate(pencilWork);
   _expectAcceptedRouteAdmission(pencilWork);
+  _expectAcceptedDrawWorkComposition(
+    candidateEvents,
+    deliveryEvents,
+    effectPreparations: effectPreparations,
+    projectionBuilds: root.projectionBuildCount - beforeProjectionBuilds,
+    delivery: delivery,
+  );
+  await actionSubscription.cancel();
 
   final explicitWork = _observeIdAdmissionWork(() {
     expect(root.generateElementId(), CanvasElementId('e200001'));
@@ -613,6 +657,120 @@ void _verifyAcceptedRouteReads(RuntimeRoot root) {
   _expectReadOnlyRouteCandidate(lineWork);
   _expectAcceptedRouteAdmission(lineWork);
   expect(root.generateElementId(), CanvasElementId('e200003'));
+}
+
+// The exact cross-owner counts form one falsification proof and are clearer
+// together than distributing a single delivery contract through helpers.
+// ignore: halstead-volume, number-of-parameters, source-lines-of-code
+void _expectAcceptedDrawWorkComposition(
+  List<StoreSparseCandidateEvent> candidateEvents,
+  List<RuntimeCommonDeliveryEvent> deliveryEvents, {
+  required int effectPreparations,
+  required int projectionBuilds,
+  required _DrawWorkDeliveryProbe delivery,
+}) {
+  expect(
+    candidateEvents.where(
+      (event) => event.kind == StoreSparseCandidateEventKind.open,
+    ),
+    hasLength(1),
+  );
+  expect(
+    candidateEvents.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(1),
+  );
+  expect(effectPreparations, 1);
+  expect(projectionBuilds, 0);
+  expect(delivery.callbackEvents, [
+    'root-frame',
+    'state',
+    'action',
+    'observer',
+  ]);
+  expect(delivery.effectBatches, hasLength(1));
+  final sealedEffects = delivery.effectBatches.single.length;
+  expect(sealedEffects, 4);
+  final repaintVisits =
+      sealedEffects -
+      delivery.effectBatches.single.reversed
+          .takeWhile((effect) => effect is! RepaintDeliveryEffect)
+          .length;
+  expect(deliveryEvents.map((event) => event.kind), [
+    RuntimeCommonDeliveryEventKind.guardEntered,
+    RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
+    RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
+    RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
+    RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+    RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+    RuntimeCommonDeliveryEventKind.guardReleased,
+  ]);
+  _expectDeliveryPhaseVisits(
+    deliveryEvents,
+    sealedEffects: sealedEffects,
+    repaintVisits: repaintVisits,
+  );
+}
+
+// All current phase counts must be compared as one sealed-delivery witness.
+// ignore: source-lines-of-code
+void _expectDeliveryPhaseVisits(
+  List<RuntimeCommonDeliveryEvent> events, {
+  required int sealedEffects,
+  required int repaintVisits,
+}) {
+  expect(
+    events
+        .firstWhere(
+          (event) =>
+              event.kind ==
+              RuntimeCommonDeliveryEventKind.spatialEffectsCompleted,
+        )
+        .visits,
+    sealedEffects,
+  );
+  expect(
+    events
+        .firstWhere(
+          (event) =>
+              event.kind ==
+              RuntimeCommonDeliveryEventKind.resourceEffectsCompleted,
+        )
+        .visits,
+    0,
+  );
+  expect(
+    events
+        .firstWhere(
+          (event) =>
+              event.kind ==
+              RuntimeCommonDeliveryEventKind.repaintTargetEffectsCompleted,
+        )
+        .visits,
+    repaintVisits,
+  );
+  expect(
+    events
+        .firstWhere(
+          (event) =>
+              event.kind ==
+              RuntimeCommonDeliveryEventKind.actionFinalizationCompleted,
+        )
+        .visits,
+    1,
+  );
+  expect(
+    events
+        .firstWhere(
+          (event) =>
+              event.kind ==
+              RuntimeCommonDeliveryEventKind.actionEmissionCompleted,
+        )
+        .visits,
+    1,
+  );
 }
 
 void _expectReadOnlyRouteCandidate(_IdAdmissionWork work) {
@@ -734,7 +892,53 @@ typedef _DrawScenario = ({
   List<List<CommitDeliveryEffect>> effectBatches,
 });
 
-typedef _RouteWorkSetup = ({RuntimeRoot root, _IdAdmissionWork resetWork});
+typedef _RouteWorkSetup = ({
+  RuntimeRoot root,
+  _IdAdmissionWork resetWork,
+  _DrawWorkDeliveryProbe delivery,
+});
+
+final class _DrawWorkDeliveryProbe {
+  final List<String> callbackEvents = [];
+  final List<List<CommitDeliveryEffect>> effectBatches = [];
+  var _isCommonDeliveryActive = false;
+
+  void observeCommonDeliveryEvent(RuntimeCommonDeliveryEvent event) {
+    switch (event.kind) {
+      case RuntimeCommonDeliveryEventKind.guardEntered:
+        _isCommonDeliveryActive = true;
+      case RuntimeCommonDeliveryEventKind.guardReleased:
+        _isCommonDeliveryActive = false;
+      default:
+        break;
+    }
+  }
+
+  void observeRootFrame() {
+    if (_isCommonDeliveryActive) {
+      callbackEvents.add('root-frame');
+    }
+  }
+
+  void observeState() {
+    if (_isCommonDeliveryActive) {
+      callbackEvents.add('state');
+    }
+  }
+
+  void observeAction(CanvasActionCommitted _) {
+    if (_isCommonDeliveryActive) {
+      callbackEvents.add('action');
+    }
+  }
+
+  void observeEffects(List<CommitDeliveryEffect> effects) {
+    if (_isCommonDeliveryActive) {
+      callbackEvents.add('observer');
+      effectBatches.add(effects);
+    }
+  }
+}
 
 CanvasPointerSample _pointer(
   CanvasPointerLifecyclePhase phase,

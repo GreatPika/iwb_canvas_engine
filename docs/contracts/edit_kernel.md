@@ -84,8 +84,11 @@ sequenceDiagram
   EK->>EK: close handle
   EK->>Runtime: deliver accepted apply result
   Runtime->>Runtime: route cleanup/effect augmentation before common delivery
-  Runtime->>Effects: begin common delivery with typed spatial/resource effects
-  Runtime->>Runtime: publish frame/state/action, then notify the effect observer
+  Runtime->>Runtime: enter post-commit guard
+  Runtime->>Effects: apply spatial effects, then resource/session release
+  Runtime->>Runtime: publish root frame, bridged frame, and public state
+  Runtime->>Runtime: emit finalized synchronous action, then notify non-empty observer
+  Runtime->>Runtime: clear post-commit guard
   EK-->>Caller: return callback result
 ```
 
@@ -193,7 +196,7 @@ effects selected by the accepted edit plan. Spatial and resource delivery effect
 carry the shared immutable `TouchedSet` from
 `lib/src/contracts/internal/touched_set.dart`; edit keeps only the mutable
 builder and store revision deltas private. Runtime route augmentation, cleanup,
-and delivery ordering remain Contract 4 work.
+and delivery ordering are RuntimeRoot-owned and consume no prepared state again.
 
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
 orchestrates the accepted result. For changed request-originated text,
@@ -203,9 +206,12 @@ then records the outer interaction revision before outer common delivery.
 Flutter notifier failures are reported and do not roll back or suppress the
 accepted outer delivery. For non-text interaction routes, `RuntimeRoot` receives that closed result,
 performs the route-owned `publish: false` InteractionEngine cleanup, merges its
-repaint effect, and only then enters common delivery. Common delivery applies
-spatial/resource effects, publishes the public state when required, emits the
-finalized action, and finally invokes the internal synchronous observer seam.
+repaint effect, and only then enters one guarded common delivery. Its exact
+order is spatial -> resource/session release -> root frame -> bridged frame ->
+public state -> synchronous finalized action -> non-empty internal observer ->
+guard release. Every callback sees installed facts and a closed edit handle;
+resource, notifier, action-listener, and observer failures keep the accepted
+state and continue according to their owner failure boundary.
 The observer typedef and delivery payloads are owned by `contracts/internal/**`,
 while edit keeps planning and install details private.
 

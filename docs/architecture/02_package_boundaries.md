@@ -251,6 +251,12 @@ The descriptor facts crossing this port remain sealed internal variants, so
 frame binding uses descriptor type rather than nullable MIME data to select the
 current image or vector path.
 
+`RuntimeRoot` is the sole composition boundary for sealed accepted delivery:
+it applies spatial and resource/session phases before notifying root and
+bridged frame listeners, public state, synchronous actions, and the non-empty
+effect observer. Neither `CommitApplier`, EditKernel, the surface bridge, nor
+resource/session owners may reconstruct that sequence or prepared state.
+
 Consumer compile fixtures under `test/api_contract/fixtures/**` model external
 application code. They may import only
 `package:iwb_canvas_engine/iwb_canvas_engine.dart`, must not import `src/**`,

@@ -627,7 +627,7 @@ edges:
       - path: docs/contracts/resources.md
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot retains the generic ResourceSessionReleaseSink port. The resource contract defines that port's target/all release responsibility; delivery ordering, two-borrow removal, stale identity, and contained post-acceptance failure are owned by the source contracts and behavioral owners rather than inferred from this composition fact.
+      - RuntimeRoot retains the generic ResourceSessionReleaseSink port. In accepted common delivery it invokes target/all release after spatial work and before root-frame, bridged-frame, state, action, and non-empty observer callbacks; the resource contract defines two-borrow removal, stale identity, and contained post-acceptance failure.
     actual:
       compositionFields:
         - ResourceSessionReleaseSink
@@ -653,7 +653,7 @@ edges:
       - path: docs/contracts/operation_matrix.md
       - path: docs/contracts/public_api_v1.md
     evidence:
-      - RuntimeRoot publishes accepted public state before RuntimeActionFinalizer resolves action ids, timestamps, payloads, and emits CanvasActionCommitted events on CanvasRuntime.actions.
+      - Under RuntimeRoot's one post-commit guard, spatial and resource/session work precede root and bridged frame publication, accepted public state precedes RuntimeActionFinalizer action resolution/emission, and the non-empty observer follows synchronous actions.
     actual:
       compositionFields:
         - RuntimeActionFinalizer
