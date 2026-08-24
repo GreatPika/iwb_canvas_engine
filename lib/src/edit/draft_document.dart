@@ -20,7 +20,6 @@ import 'commit_plan.dart';
 import 'draft_structure.dart';
 import 'draft_resources.dart';
 import 'element_update_application.dart';
-import 'staged_document_load.dart';
 import 'touched_set_builder.dart';
 
 export 'draft_structure.dart'
@@ -62,6 +61,17 @@ final class DraftReplacementWorkEvent {
   final Object activeBacking;
   final Object? replacementBacking;
 }
+
+const _draftReplacementRevisionDelta = StoreRevisionDelta(
+  document: true,
+  projection: true,
+  structural: true,
+  bounds: true,
+  elementVisual: true,
+  background: true,
+  grid: true,
+  resource: true,
+);
 
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
@@ -498,7 +508,7 @@ final class DraftDocument {
       resources: resources,
       selectedElementIds: previous.selectedElementIds,
       revisionDelta: previous.revisionDelta.merge(
-        documentReplacementRevisionDelta,
+        _draftReplacementRevisionDelta,
       ),
       touchedSet: touchedSet,
       documentReplaced: true,
