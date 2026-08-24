@@ -248,9 +248,12 @@ Mandatory guardrails:
 | `surface.interactive_false_pending_line_preserved` | interactive=false cancels active routed pointers, preserves pending line state not owned by an active routed pointer, and does not mutate runtime mode, committed document, selection, or resources |
 
 Surface repaint routing is currently enforced by focused API and surface tests
-rather than new guardrail runner ids. `test/api/runtime_surface_frame_bridge_test.dart`
-proves runtime/surface pre-output invalidation uses
-`CanvasSurfaceRepaintTarget` without importing or exposing `FrameRepaintSignal`.
+plus a structural test rather than new guardrail runner ids.
+`test/api/runtime_surface_frame_bridge_test.dart` proves runtime/surface
+pre-output invalidation publishes the expected `CanvasSurfaceRepaintTarget`
+values. `test/guardrails/runtime_surface_publication_guardrail_test.dart`
+proves the bridge neither imports nor exposes `FrameRepaintSignal` and runtime
+state publication explicitly classifies every surface repaint target.
 `test/surface/surface_frame_output_cache_test.dart` proves
 `SurfaceFrameOutputCache` owns targeted main/overlay output rebuilds, local
 surface invalidation mapping, output identity stability, and all-or-nothing

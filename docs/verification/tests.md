@@ -257,6 +257,7 @@ contracts-to-api, and contracts-to-implementation fixtures, while
 - `test/runtime/dispose_lifecycle_test.dart`
 - `test/runtime/runtime_state_publication_test.dart`
 - `test/api/runtime_surface_frame_bridge_test.dart`
+- `test/guardrails/runtime_surface_publication_guardrail_test.dart`
 - `test/smoke/public_incremental_smoke_test.dart`
 - `test/runtime/load_document_state_publication_test.dart`
 - `test/surface/interactive_false_pointer_routing_test.dart`
@@ -874,8 +875,10 @@ the release route for that evidence.
   runtime-surface bridge publishes `CanvasRuntimeSurfaceFrame` values with
   runtime-owned `CanvasSurfaceRepaintTarget` values before output construction,
   maps preview, selection, resource, load, camera, and fallback paths to the
-  expected main/overlay flags, preserves the public runtime state value, and
-  does not expose or import `FrameRepaintSignal`.
+  expected main/overlay flags, and preserves the public runtime state value.
+- `test/guardrails/runtime_surface_publication_guardrail_test.dart` proves the
+  bridge neither imports nor exposes `FrameRepaintSignal` and every
+  `_publishRuntimeState` call explicitly classifies its surface repaint target.
 - proves root-frame, bridged-frame, and public-state listener failures are
   reported by Flutter while the remaining common delivery, accepted state, and
   post-route mutation continue.
