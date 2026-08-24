@@ -35,6 +35,183 @@ void main() {
   test('programmatic addElement remains action silent', () {
     return expectLater(_verifyProgrammaticAddElementActionSilence(), completes);
   });
+
+  test('draw routes clean previews before every delivery callback', () {
+    return expectLater(_verifyDrawRouteDeliveryCleanup(), completes);
+  });
+}
+
+// Each draw variant must share the same real callback observations; splitting
+// the matrix would obscure a route-specific cleanup/delivery regression.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+Future<void> _verifyDrawRouteDeliveryCleanup() async {
+  for (final route
+      in <
+        ({
+          RuntimeNonTextRoute route,
+          void Function(RuntimeRoot) start,
+          void Function(RuntimeRoot) finish,
+        })
+      >[
+        (
+          route: RuntimeNonTextRoute.drawStroke,
+          start: _startPencilDeliveryProbe,
+          finish: _finishPencilDeliveryProbe,
+        ),
+        (
+          route: RuntimeNonTextRoute.drawStroke,
+          start: _startMarkerDeliveryProbe,
+          finish: _finishMarkerDeliveryProbe,
+        ),
+        (
+          route: RuntimeNonTextRoute.drawLine,
+          start: _startLineDeliveryProbe,
+          finish: _finishLineDeliveryProbe,
+        ),
+      ]) {
+    final trace = <String>[];
+    var terminalDelivery = false;
+    late RuntimeRoot root;
+    root = runtimeRootWithCommittedDocumentSeed(
+      CanvasDocument(),
+      config: const CanvasRuntimeConfig(),
+      commitEffectObserver: (effects) {
+        if (!terminalDelivery) return;
+        _expectCleanDrawDelivery(root);
+        _expectMergedDrawRepaint(effects);
+        trace.add('observer');
+      },
+    );
+    final surface = Object();
+    root.attachSurface(surface);
+    route.start(root);
+    root.surfaceFrameSignal.addListener(() {
+      if (!terminalDelivery) return;
+      _expectCleanDrawDelivery(root);
+      final frame = root.surfaceFrameSignal.value;
+      expect(frame?.mainCanvas, isTrue);
+      expect(frame?.overlayCanvas, isTrue);
+      trace.add('frame');
+    });
+    root.state.addListener(() {
+      if (!terminalDelivery) return;
+      _expectCleanDrawDelivery(root);
+      trace.add('state');
+    });
+    final subscription = root.actions.listen((_) {
+      _expectCleanDrawDelivery(root);
+      trace.add('action');
+    });
+    terminalDelivery = true;
+    final events = <RuntimeRouteTemporalEvent>[];
+    RuntimeRoot.observeRouteTemporalEvents((event) {
+      events.add(event);
+      _recordDrawRouteLifecycleTrace(event, route.route, trace);
+    }, () => route.finish(root));
+    expect(trace, [
+      'prepared',
+      'cleanup',
+      'effects',
+      'delivery',
+      'frame',
+      'state',
+      'action',
+      'observer',
+    ]);
+    _expectDrawRouteLifecycle(events, route.route);
+    await subscription.cancel();
+    root.detachSurface(surface);
+    root.dispose();
+  }
+}
+
+void _recordDrawRouteLifecycleTrace(
+  RuntimeRouteTemporalEvent event,
+  RuntimeNonTextRoute route,
+  List<String> trace,
+) {
+  if (event.route != route) return;
+  switch (event.kind) {
+    case RuntimeRouteTemporalEventKind.preparedApplyReturned:
+      trace.add('prepared');
+    case RuntimeRouteTemporalEventKind.routeCleanupCompleted:
+      trace.add('cleanup');
+    case RuntimeRouteTemporalEventKind.cleanupEffectsAugmented:
+      trace.add('effects');
+    case RuntimeRouteTemporalEventKind.commonDeliveryEntered:
+      trace.add('delivery');
+    default:
+      break;
+  }
+}
+
+void _expectDrawRouteLifecycle(
+  List<RuntimeRouteTemporalEvent> events,
+  RuntimeNonTextRoute route,
+) {
+  expect(
+    events.where((event) => event.route == route).map((event) => event.kind),
+    [
+      RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+      RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+    ],
+  );
+}
+
+void _startPencilDeliveryProbe(RuntimeRoot root) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle.defaultStyle);
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(2, 3)),
+  );
+}
+
+void _finishPencilDeliveryProbe(RuntimeRoot root) {
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(4, 5)),
+  );
+}
+
+void _startMarkerDeliveryProbe(RuntimeRoot root) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.marker));
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
+}
+
+void _finishMarkerDeliveryProbe(RuntimeRoot root) {
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(2, 3)),
+  );
+}
+
+void _startLineDeliveryProbe(RuntimeRoot root) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.line));
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.up, Offset.zero));
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(2, 3)),
+  );
+}
+
+void _finishLineDeliveryProbe(RuntimeRoot root) {
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.up, const Offset(2, 3)),
+  );
+}
+
+void _expectCleanDrawDelivery(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+void _expectMergedDrawRepaint(List<CommitDeliveryEffect> effects) {
+  final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isTrue);
 }
 
 Future<void> _verifyDrawCommitDelivery() async {

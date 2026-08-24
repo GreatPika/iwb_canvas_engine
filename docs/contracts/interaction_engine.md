@@ -260,6 +260,17 @@ hit testing, spatial candidate selection, exact eraser checks, commit-intent
 creation, committed document mutation, committed selection mutation, or resource
 mutation.
 
+For an accepted non-text terminal, `RuntimeRoot` first receives the already
+closed EditKernel result, then asks InteractionEngine for cleanup with
+publication suppressed, augments the sealed delivery effects with the cleanup
+repaint, and only then enters common delivery. InteractionEngine remains the
+cleanup-policy owner: it does not invoke a resolver, Store/EditKernel, frame,
+state, action, or observer callback in that gap. A selected-move resolver is
+also RuntimeRoot-owned: no configured callback or guard runs for the direct
+finite non-zero path, while a configured finite acceptance completes its guard
+before preparation; cancel, zero, invalid, thrown, and reentrant branches
+never open preparation.
+
 `PointerCleanupOutcome` is pointer-only and effect-only. It records previous
 preview kind, whether preview changed, whether public state is needed, repaint
 target, active token/session release, pending line cleared or preserved,

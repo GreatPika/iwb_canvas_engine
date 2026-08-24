@@ -3,11 +3,20 @@ import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
+import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/move_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/store/committed_document.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
+
+// This fixture exercises one public pointer route across its real owners, so
+// keeping the focused imports together is clearer than introducing test glue.
+// ignore_for_file: number-of-imports
 
 const _selectedMoveDragEnd = Offset(9, 0);
 const _groupMoveStart = Offset(10, 0);
@@ -71,6 +80,7 @@ void _registerSelectedMoveTerminalTests() {
   _testSelectedMoveCommitWithResolver();
   _testGroupInteriorSelectedMoveCommitWithResolver();
   _testSelectedVectorMoveCommitUpdatesDocument();
+  _testSelectedMoveResolverPrecedesPreparation();
 }
 
 void _registerSelectedMoveCleanupTests() {
@@ -90,6 +100,8 @@ void _registerSelectedMoveCleanupTests() {
 void _registerResolverReentrancyTests() {
   _testSelectedMoveResolverReentrancy();
   _testSelectedMoveResolverDisposeReentrancy();
+  _testSelectedMoveResolverFailureFidelity();
+  _testSelectedMoveCleanupPrecedesDelivery();
 }
 
 void _testMoveMachineGroupAdmissionFacts() {
@@ -931,6 +943,204 @@ void _testSelectedVectorMoveCommitUpdatesDocument() {
   );
 }
 
+// The branch matrix shares one route setup and semantic Store observation.
+// Keeping it together makes rejected-branch absence directly comparable.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testSelectedMoveResolverPrecedesPreparation() {
+  test(
+    'selected move resolver closes before preparation and rejected branches',
+    () {
+      final directTrace = <String>[];
+      final directEvents = <RuntimeRouteTemporalEvent>[];
+      final direct = _observedMoveRuntime();
+      addTearDown(direct.dispose);
+      direct.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(direct);
+      RuntimeRoot.observeRouteTemporalEvents(
+        (event) {
+          directEvents.add(event);
+          _recordResolverGuardTrace(event, directTrace);
+        },
+        () => CommittedDocument.observeSparseCandidateEvents(
+          (event) {
+            if (event.kind == StoreSparseCandidateEventKind.open) {
+              directTrace.add('prepare-open');
+            }
+          },
+          () => direct.handlePointer(
+            _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+          ),
+        ),
+      );
+      expect(directTrace, ['prepare-open']);
+      _expectResolverGuardEvents(directEvents, const []);
+
+      final acceptedTrace = <String>[];
+      final acceptedEvents = <RuntimeRouteTemporalEvent>[];
+      final accepted = _observedMoveRuntime(
+        resolver: (_) {
+          acceptedTrace.add('resolver-enter');
+          try {
+            return const CanvasMoveCommit(delta: Offset(3, 0));
+          } finally {
+            acceptedTrace.add('resolver-exit');
+          }
+        },
+      );
+      addTearDown(accepted.dispose);
+      accepted.selection.setSelection([CanvasElementId('a')]);
+      _startSelectedMove(accepted);
+      RuntimeRoot.observeRouteTemporalEvents(
+        (event) {
+          acceptedEvents.add(event);
+          _recordResolverGuardTrace(event, acceptedTrace);
+        },
+        () => CommittedDocument.observeSparseCandidateEvents(
+          (event) {
+            if (event.kind == StoreSparseCandidateEventKind.open) {
+              acceptedTrace.add('prepare-open');
+            }
+          },
+          () => accepted.handlePointer(
+            _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+          ),
+        ),
+      );
+      expect(acceptedTrace, [
+        'guard-enter',
+        'resolver-enter',
+        'resolver-exit',
+        'guard-release',
+        'prepare-open',
+      ]);
+      _expectResolverGuardEvents(acceptedEvents, [
+        RuntimeRouteTemporalEventKind.resolverGuardEntered,
+        RuntimeRouteTemporalEventKind.resolverGuardReleased,
+      ]);
+
+      for (final resolver in <CanvasMoveCommitResolver>[
+        (_) => const CanvasMoveCancel(),
+        (_) => const CanvasMoveCommit(delta: Offset.zero),
+        (_) => const CanvasMoveCommit(delta: Offset(double.infinity, 0)),
+        (_) => throw StateError('resolver rejection'),
+      ]) {
+        final trace = <String>[];
+        final routeEvents = <RuntimeRouteTemporalEvent>[];
+        final rejected = _observedMoveRuntime(
+          resolver: (request) {
+            trace.add('resolver-enter');
+            try {
+              return resolver(request);
+            } finally {
+              trace.add('resolver-exit');
+            }
+          },
+        );
+        addTearDown(rejected.dispose);
+        rejected.selection.setSelection([CanvasElementId('a')]);
+        _startSelectedMove(rejected);
+        RuntimeRoot.observeRouteTemporalEvents(
+          (event) {
+            routeEvents.add(event);
+            _recordResolverGuardTrace(event, trace);
+          },
+          () => CommittedDocument.observeSparseCandidateEvents(
+            (event) {
+              if (event.kind == StoreSparseCandidateEventKind.open) {
+                trace.add('prepare-open');
+              }
+            },
+            () {
+              try {
+                rejected.handlePointer(
+                  _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+                );
+              } on Object {
+                // Resolver failure is an admitted rejected branch; its public
+                // projection is asserted separately below.
+              }
+            },
+          ),
+        );
+        expect(trace, [
+          'guard-enter',
+          'resolver-enter',
+          'resolver-exit',
+          'guard-release',
+        ]);
+        _expectResolverGuardEvents(routeEvents, [
+          RuntimeRouteTemporalEventKind.resolverGuardEntered,
+          RuntimeRouteTemporalEventKind.resolverGuardReleased,
+        ]);
+        expect(rejected.preview, isA<CanvasNoPreview>());
+        expect(rejected.interactionEngine.activeSession, isNull);
+      }
+    },
+  );
+}
+
+void _recordResolverGuardTrace(
+  RuntimeRouteTemporalEvent event,
+  List<String> trace,
+) {
+  switch (event.kind) {
+    case RuntimeRouteTemporalEventKind.resolverGuardEntered:
+      trace.add('guard-enter');
+    case RuntimeRouteTemporalEventKind.resolverGuardReleased:
+      trace.add('guard-release');
+    default:
+      break;
+  }
+}
+
+void _expectResolverGuardEvents(
+  List<RuntimeRouteTemporalEvent> events,
+  List<RuntimeRouteTemporalEventKind> expected,
+) {
+  expect(
+    events
+        .where(
+          (event) =>
+              event.kind ==
+                  RuntimeRouteTemporalEventKind.resolverGuardEntered ||
+              event.kind == RuntimeRouteTemporalEventKind.resolverGuardReleased,
+        )
+        .map((event) => event.kind),
+    expected,
+  );
+}
+
+void _expectRouteLifecycle(
+  List<RuntimeRouteTemporalEvent> events,
+  RuntimeNonTextRoute route,
+  List<RuntimeRouteTemporalEventKind> expected,
+) {
+  expect(
+    events.where((event) => event.route == route).map((event) => event.kind),
+    expected,
+  );
+}
+
+void _recordRouteLifecycleTrace(
+  RuntimeRouteTemporalEvent event,
+  RuntimeNonTextRoute route,
+  List<String> trace,
+) {
+  if (event.route != route) return;
+  switch (event.kind) {
+    case RuntimeRouteTemporalEventKind.preparedApplyReturned:
+      trace.add('prepared');
+    case RuntimeRouteTemporalEventKind.routeCleanupCompleted:
+      trace.add('cleanup');
+    case RuntimeRouteTemporalEventKind.cleanupEffectsAugmented:
+      trace.add('effects');
+    case RuntimeRouteTemporalEventKind.commonDeliveryEntered:
+      trace.add('delivery');
+    default:
+      break;
+  }
+}
+
 CanvasMoveCommit _commitVectorMove(CanvasMoveCommitRequest _) {
   return const CanvasMoveCommit(delta: Offset(7, 8));
 }
@@ -1381,6 +1591,234 @@ void _testSelectedMoveResolverDisposeReentrancy() {
   });
 }
 
+// Exact public errors, diagnostics, snapshots, and guard release are one
+// failure contract; splitting them would hide the required relation.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testSelectedMoveResolverFailureFidelity() {
+  test(
+    'selected move resolver preserves rejection and thrown-error fidelity',
+    () {
+      final sentinel = StateError('move resolver sentinel');
+      late RuntimeRoot root;
+      var branch = 0;
+      root = RuntimeRoot.test(
+        config: CanvasRuntimeConfig(
+          diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+          moveCommitResolver: (_) {
+            return switch (branch) {
+              0 => root.runResolverCallback(() => const CanvasMoveCancel()),
+              1 => _rejectPublicMutationFromResolver(root),
+              2 => throw sentinel,
+              _ => const CanvasMoveCommit(delta: Offset(2, 0)),
+            };
+          },
+        ),
+        store: DocumentStoreKernel.withCommittedDocumentForTesting(
+          CommittedDocument(_document()),
+        ),
+      );
+      final actions = <CanvasActionCommitted>[];
+      final subscription = root.actions.listen(actions.add);
+      addTearDown(() async {
+        await subscription.cancel();
+        root.dispose();
+      });
+      root.selection.setSelection([CanvasElementId('a')]);
+
+      _startSelectedMove(root);
+      final nested = _captureResolverFailureWithoutPreparation(root);
+      expect(nested.runtimeType, ResolverCallbackRejection);
+      expect(
+        nested.message,
+        'Nested resource resolver callbacks are not supported.',
+      );
+      _expectResolverFailureSnapshot(root, actions);
+
+      branch = 1;
+      _startSelectedMove(root);
+      final mutation = _captureResolverFailureWithoutPreparation(root);
+      expect(mutation.runtimeType, ResolverCallbackRejection);
+      expect(
+        mutation.message,
+        'CanvasRuntime public mutations cannot run during resource resolver callbacks.',
+      );
+      expect(
+        root.diagnosticRecords.map((record) => record.code),
+        contains(
+          const DiagnosticCode.interaction(
+            InteractionDiagnosticCode.resolverReentrantMutationRejected,
+          ),
+        ),
+      );
+      _expectResolverFailureSnapshot(root, actions);
+
+      branch = 2;
+      _startSelectedMove(root);
+      final thrown = _captureResolverFailureWithoutPreparation(root);
+      expect(identical(thrown, sentinel), isTrue);
+      _expectResolverFailureSnapshot(root, actions);
+
+      branch = 3;
+      _dragSelectedMove(root, start: Offset.zero, end: _selectedMoveDragEnd);
+      expect(actions, hasLength(1));
+      expect(_rect(root, 'a').transform.translation, const Offset(2, 0));
+    },
+  );
+}
+
+// The callback surfaces must observe one shared selected-move terminal state.
+// Keeping its lifecycle and callbacks together makes their temporal relation
+// falsifiable without a second observation path.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _testSelectedMoveCleanupPrecedesDelivery() {
+  test('selected move callbacks observe cleanup and merged repaint intent', () {
+    final trace = <String>[];
+    var observerCalls = 0;
+    var terminalDelivery = false;
+    List<CommitDeliveryEffect>? observedEffects;
+    late RuntimeRoot root;
+    root = _runtimeRoot(
+      config: CanvasRuntimeConfig(
+        moveCommitResolver: (_) => const CanvasMoveCommit(delta: Offset(2, 0)),
+      ),
+      commitEffectObserver: (effects) {
+        observerCalls += 1;
+        observedEffects = effects;
+        _expectCleanSelectedMoveDelivery(root);
+        trace.add('observer');
+      },
+    );
+    final surface = Object();
+    root.attachSurface(surface);
+    root.selection.setSelection([CanvasElementId('a')]);
+    _startSelectedMove(root);
+    root.surfaceFrameSignal.addListener(() {
+      if (!terminalDelivery) return;
+      _expectCleanSelectedMoveDelivery(root);
+      final signal = root.surfaceFrameSignal.value;
+      expect(signal?.mainCanvas, isTrue);
+      expect(signal?.overlayCanvas, isFalse);
+      trace.add('frame');
+    });
+    root.state.addListener(() {
+      _expectCleanSelectedMoveDelivery(root);
+      trace.add('state');
+    });
+    final subscription = root.actions.listen((_) {
+      _expectCleanSelectedMoveDelivery(root);
+      trace.add('action');
+    });
+    addTearDown(() async {
+      await subscription.cancel();
+      terminalDelivery = false;
+      root.detachSurface(surface);
+      root.dispose();
+    });
+
+    final events = <RuntimeRouteTemporalEvent>[];
+    terminalDelivery = true;
+    RuntimeRoot.observeRouteTemporalEvents(
+      (event) {
+        events.add(event);
+        _recordRouteLifecycleTrace(
+          event,
+          RuntimeNonTextRoute.selectedMove,
+          trace,
+        );
+      },
+      () => root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+      ),
+    );
+
+    expect(trace, [
+      'prepared',
+      'cleanup',
+      'effects',
+      'delivery',
+      'frame',
+      'state',
+      'action',
+      'observer',
+    ]);
+    expect(observerCalls, 1);
+    final deliveryEffects = observedEffects;
+    if (deliveryEffects == null) {
+      fail('Expected selected-move commit-effect observer delivery.');
+    }
+    _expectSelectedMoveMergedRepaint(deliveryEffects);
+    _expectRouteLifecycle(events, RuntimeNonTextRoute.selectedMove, const [
+      RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+      RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+    ]);
+  });
+}
+
+void _expectCleanSelectedMoveDelivery(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+void _expectSelectedMoveMergedRepaint(List<CommitDeliveryEffect> effects) {
+  final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isFalse);
+}
+
+CanvasMoveResolution _rejectPublicMutationFromResolver(RuntimeRoot root) {
+  root.generateElementId();
+
+  return const CanvasMoveCancel();
+}
+
+StateError _captureResolverFailureWithoutPreparation(RuntimeRoot root) {
+  final preparationEvents = <StoreSparseCandidateEvent>[];
+  final routeEvents = <RuntimeRouteTemporalEvent>[];
+  StateError? failure;
+  RuntimeRoot.observeRouteTemporalEvents(
+    routeEvents.add,
+    () => CommittedDocument.observeSparseCandidateEvents(
+      (event) {
+        if (event.kind == StoreSparseCandidateEventKind.open) {
+          preparationEvents.add(event);
+        }
+      },
+      () {
+        try {
+          root.handlePointer(
+            _sample(CanvasPointerLifecyclePhase.up, _selectedMoveDragEnd),
+          );
+        } on Object catch (error) {
+          expect(error, isA<StateError>());
+          failure = error as StateError;
+        }
+      },
+    ),
+  );
+  expect(preparationEvents, isEmpty);
+  _expectResolverGuardEvents(routeEvents, [
+    RuntimeRouteTemporalEventKind.resolverGuardEntered,
+    RuntimeRouteTemporalEventKind.resolverGuardReleased,
+  ]);
+
+  return failure ??
+      (throw StateError('Expected selected move resolver failure.'));
+}
+
+void _expectResolverFailureSnapshot(
+  RuntimeRoot root,
+  List<CanvasActionCommitted> actions,
+) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(root.state.value.summary.elementCount, 3);
+  expect(root.selection.selectedElementIds, {CanvasElementId('a')});
+  expect(_rect(root, 'a').transform, CanvasTransform.identity);
+  expect(actions, isEmpty);
+}
+
 void _dragSelectedMove(
   RuntimeRoot root, {
   required Offset start,
@@ -1521,11 +1959,25 @@ CanvasRuntimeConfig _wideTapDragStartConfig() {
 RuntimeRoot _runtimeRoot({
   CanvasMoveCommitResolver? resolver,
   CanvasRuntimeConfig? config,
+  CommitEffectObserver? commitEffectObserver,
 }) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
+    commitEffectObserver: commitEffectObserver,
   );
+}
+
+RuntimeRoot _observedMoveRuntime({CanvasMoveCommitResolver? resolver}) {
+  final store = DocumentStoreKernel.withCommittedDocumentForTesting(
+    CommittedDocument(_document()),
+  );
+  final root = RuntimeRoot.test(
+    config: CanvasRuntimeConfig(moveCommitResolver: resolver),
+    store: store,
+  );
+
+  return root;
 }
 
 CanvasPointerSample _sample(

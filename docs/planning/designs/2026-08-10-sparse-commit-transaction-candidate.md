@@ -257,7 +257,7 @@ Order Constraints: the supplemental layer-only `clearContent` behavior contract 
 
 Temporal Surface Closure: the invariant is that pre-prepare callbacks, the synchronous edit callback, ordered mutation journal, preparation, atomic apply, handle closure, route-owned post-install/pre-delivery work, and guarded common delivery expose exactly the locked order. Synchronous surfaces are the selected-move resolver; public `CanvasEditPort.edit`; command/interaction routes; the callback-local `CanvasEdit` handle; the public text-edit `activeSession` ValueListenable; resource-session release callbacks; root and bridged surface-frame ValueNotifier listeners; runtime-state ValueNotifier listeners; synchronous broadcast action listeners; and the internal commit-effect observer. RuntimeRoot owns resolver and delivery guards; EditKernel owns the active-session guard. Within journal replay, immediate duplicate/source/no-op/kind decisions use current intermediate state, missing-ID updates short-circuit before source validation, every effective update keeps its deferred validation, relationship validity waits for final state, `removeUnusedResource` reads current counts, and clear/reset affects only later mutations.
 
-Selected move resolves before opening EditKernel. A configured resolver runs synchronously under `runResolverCallback`; nested resolver execution and public runtime mutation are rejected with the current `ResolverCallbackRejection` type/message, and mutation rejection retains its diagnostic. A thrown resolver or non-finite returned delta performs `resolverError` cleanup and rethrows the current exception. Cancel, `null`, or zero delta performs `resolverCancel` cleanup and returns without ID candidate, EditSession, preparation, install, or delivery. Only a finite non-zero delta enters preparation.
+Selected move resolves before opening EditKernel. A configured resolver runs synchronously under `runResolverCallback`; nested resolver execution and public runtime mutation are rejected with the current `ResolverCallbackRejection` type/message, and mutation rejection retains its diagnostic. A thrown resolver or non-finite returned delta performs `resolverError` cleanup and rethrows the current exception. `CanvasMoveCancel` or a zero delta performs `resolverCancel` cleanup and returns without ID candidate, EditSession, preparation, install, or delivery. Only a finite non-zero delta enters preparation.
 
 Draw and line read the admission owner's normalized next-element-ID cursor in expected `O(1)` immediately before their one-element EditKernel preparation. No callback, resolver, listener, stream, microtask, or event-loop yield occurs between candidate read and preparation. A failed or no-op preparation leaves cursor and reservation state unchanged; accepted store install admits the candidate through the ordered transient ledger and restores the first-free invariant before returning. The route never retains or publishes a candidate.
 
@@ -383,7 +383,7 @@ sequenceDiagram
             Resolver-->>Runtime: CanvasMoveCommit
             Runtime-->>Route: resolved finite delta after guard closes
             Note over Route: continue to preparation
-        else cancel, null, or zero
+        else CanvasMoveCancel or zero
             Resolver-->>Runtime: CanvasMoveCancel or zero delta
             Runtime-->>Route: cancellation after guard closes
             Route->>Route: resolverCancel cleanup

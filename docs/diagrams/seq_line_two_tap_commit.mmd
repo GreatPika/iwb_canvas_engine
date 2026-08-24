@@ -169,24 +169,21 @@ sequenceDiagram
         Store->>Store: accepted ledger admits the line ID, then replaces layer membership, registry, line row, and revision state
         Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
         Store-->>Applier: committed revision facts
-        Applier->>Spatial: apply touched-id spatial add for new line id
-        Spatial-->>Applier: spatial index updated for new paint and hit bounds
-        Applier->>Projection: evict public document projection by projectionRevision
-        Applier->>Events: materialize CanvasActionCommitted drawLine after install
-        Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
-        EK-->>Runtime: edit result
-        Runtime->>IE: post-success line cleanup request
+        EK-->>Runtime: closed edit result
+        Runtime->>IE: post-success line cleanup, publish: false
         IE->>Cleanup: typed cleanup request for line-owned pending state
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, pending line cleared)
         IE->>Preview: apply outcome: publish CanvasNoPreview for pending line or line preview
         IE->>Preview: bump previewRevision for cleared active preview
-        Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
-        Applier-->>Runtime: committed document facts
+        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>Spatial: apply touched-id spatial add for new line id
+        Spatial-->>Runtime: spatial index updated for new paint and hit bounds
+        Runtime->>Projection: evict public document projection cache by projectionRevision
+        Runtime->>Frame: publish merged main and overlay repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
-        Events->>Signals: publish drawLine action notification
-        Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+        Runtime->>Signals: publish drawLine action notification
         Signals-->>Surface: repaint main scene with committed line and overlay without preview
         Runtime-->>Tools: terminal handling complete
       else edit exception, rejected Future, or preflight failure

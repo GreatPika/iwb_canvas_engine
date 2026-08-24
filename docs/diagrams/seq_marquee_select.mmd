@@ -116,17 +116,19 @@ sequenceDiagram
       Note over Applier,Selection: Atomic install is the commit boundary.
       Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
       Selection-->>Applier: committed selection revision facts
-      Applier-->>Runtime: committed selection facts and staged action intents
-      Runtime->>IE: finishMarquee(postSuccessCommit)
+      Applier-->>EK: sealed selection apply result
+      EK->>EK: close edit session and stale handle
+      EK-->>Runtime: closed selection apply result
+      Runtime->>IE: finishMarquee(postSuccessCommit), publish: false
       IE->>Cleanup: typed cleanup request for marquee session
       Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
       IE->>Preview: apply outcome: publish CanvasNoPreview and clear marquee session
       IE->>Preview: bump previewRevision for cleared active preview
-      Preview->>Frame: request overlay repaint cleanup
       Preview-->>Runtime: preview cleanup revision fact
+      Runtime->>Runtime: merge cleanup repaint before common delivery
+      Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
       Runtime->>Signals: publish one CanvasRuntimeState with selection and preview effects
-      Events->>Signals: publish selectMarquee action notification
-      Frame->>Signals: publish committed main repaint and overlay cleanup repaint notifications
+      Runtime->>Signals: publish selectMarquee action notification
       Signals-->>Surface: repaint main scene selection and overlay without marquee
       IE-->>Tools: terminal handling complete
     else edit exception, rejected Future, or preflight failure

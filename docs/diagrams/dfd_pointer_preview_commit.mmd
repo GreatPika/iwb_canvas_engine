@@ -123,12 +123,13 @@ flowchart LR
   AtomicInstall -->|"apply selection effects atomically"| SelectionEffect
   SelectionEffect -->|"update selected ids/revision"| SelectionFacts
 
-  AtomicInstall -->|"apply touched spatial scope"| SpatialDelta
-  AtomicInstall -->|"evict changed projections/caches"| ProjectionEvict
-  AtomicInstall -->|"schedule committed scene repaint"| MainRepaint
-  AtomicInstall -->|"publish changed terminal action"| Actions
   AtomicInstall -->|"commit result"| EditResult
-  EditResult -->|"post-success cleanup request\nthrough InteractionEngine"| TerminalCleanup
+  EditResult -->|"EditKernel closes handle, then RuntimeRoot requests publish-false cleanup"| TerminalCleanup
+  TerminalCleanup -->|"cleanup outcome augments repaint before common delivery"| PublicSignals
+  EditResult -->|"RuntimeRoot common delivery: spatial scope"| SpatialDelta
+  EditResult -->|"RuntimeRoot common delivery: projection eviction"| ProjectionEvict
+  EditResult -->|"RuntimeRoot common delivery: merged scene repaint"| MainRepaint
+  EditResult -->|"RuntimeRoot common delivery: changed action after state"| Actions
 
   InteractionEdit -.->|"edit exception, rejected Future,\nor preflight failure"| Rollback
   Rollback -.->|"candidate remains next; committed document, selection, revisions,\nand action events unchanged"| ErrorProjection

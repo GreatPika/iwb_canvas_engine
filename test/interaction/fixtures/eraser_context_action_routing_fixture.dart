@@ -4,9 +4,11 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
@@ -15,6 +17,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.da
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 typedef _ContextTapInput = ({
   Offset position,
@@ -44,6 +47,149 @@ void _registerEraserTests() {
   test('draw stroke machine still rejects eraser', () {
     expect(_verifyDrawStrokeRejectsEraserSession, returnsNormally);
   });
+
+  test('eraser callbacks observe cleanup and merged repaint intent', () {
+    expect(_verifyEraserCleanupPrecedesDelivery, returnsNormally);
+  });
+}
+
+// One accepted eraser terminal must relate its cleanup to every callback.
+// Keeping the lifecycle and callbacks together makes the route's temporal
+// relation explicit instead of hiding it behind test-only helper layers.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _verifyEraserCleanupPrecedesDelivery() {
+  final trace = <String>[];
+  var terminalDelivery = false;
+  late RuntimeRoot root;
+  root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('eraser-layer'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('erasable-a'),
+              size: const Size(10, 10),
+            ),
+          ],
+        ),
+      ],
+    ),
+    config: const CanvasRuntimeConfig(),
+    commitEffectObserver: (effects) {
+      if (!terminalDelivery) return;
+      _expectCleanEraserDelivery(root);
+      final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+      expect(repaint.mainCanvas, isTrue);
+      expect(repaint.overlayCanvas, isTrue);
+      trace.add('observer');
+    },
+  );
+  final surface = Object();
+  root.attachSurface(surface);
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  root.handlePointer(
+    _runtimeSample(CanvasPointerLifecyclePhase.down, Offset.zero),
+  );
+  root.handlePointer(
+    _runtimeSample(CanvasPointerLifecyclePhase.move, const Offset(2, 3)),
+  );
+  root.surfaceFrameSignal.addListener(() {
+    if (!terminalDelivery) return;
+    _expectCleanEraserDelivery(root);
+    final frame = root.surfaceFrameSignal.value;
+    expect(frame?.mainCanvas, isTrue);
+    expect(frame?.overlayCanvas, isTrue);
+    trace.add('frame');
+  });
+  root.state.addListener(() {
+    if (!terminalDelivery) return;
+    _expectCleanEraserDelivery(root);
+    trace.add('state');
+  });
+  final subscription = root.actions.listen((_) {
+    _expectCleanEraserDelivery(root);
+    trace.add('action');
+  });
+  addTearDown(() async {
+    await subscription.cancel();
+    terminalDelivery = false;
+    root.detachSurface(surface);
+    root.dispose();
+  });
+  terminalDelivery = true;
+  final events = <RuntimeRouteTemporalEvent>[];
+  RuntimeRoot.observeRouteTemporalEvents(
+    (event) {
+      events.add(event);
+      _recordEraserRouteLifecycleTrace(event, trace);
+    },
+    () => root.handlePointer(
+      _runtimeSample(CanvasPointerLifecyclePhase.up, const Offset(4, 5)),
+    ),
+  );
+  expect(trace, [
+    'prepared',
+    'cleanup',
+    'effects',
+    'delivery',
+    'frame',
+    'state',
+    'action',
+    'observer',
+  ]);
+  _expectEraserRouteLifecycle(events);
+}
+
+void _recordEraserRouteLifecycleTrace(
+  RuntimeRouteTemporalEvent event,
+  List<String> trace,
+) {
+  if (event.route != RuntimeNonTextRoute.eraser) return;
+  switch (event.kind) {
+    case RuntimeRouteTemporalEventKind.preparedApplyReturned:
+      trace.add('prepared');
+    case RuntimeRouteTemporalEventKind.routeCleanupCompleted:
+      trace.add('cleanup');
+    case RuntimeRouteTemporalEventKind.cleanupEffectsAugmented:
+      trace.add('effects');
+    case RuntimeRouteTemporalEventKind.commonDeliveryEntered:
+      trace.add('delivery');
+    default:
+      break;
+  }
+}
+
+void _expectEraserRouteLifecycle(List<RuntimeRouteTemporalEvent> events) {
+  expect(
+    events
+        .where((event) => event.route == RuntimeNonTextRoute.eraser)
+        .map((event) => event.kind),
+    [
+      RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+      RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+    ],
+  );
+}
+
+void _expectCleanEraserDelivery(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+CanvasPointerSample _runtimeSample(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) {
+  return CanvasPointerSample(
+    pointerId: 1,
+    position: position,
+    phase: phase,
+    kind: PointerDeviceKind.touch,
+  );
 }
 
 void _registerContextTapTests() {

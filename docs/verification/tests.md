@@ -762,7 +762,11 @@ the release route for that evidence.
   proves failed route preparation leaves the Store candidate for the next
   explicit ID, accepted route successor order remains `e0`, `e1`, `e2`, and
   runtime route reads record one non-mutating admission observation without
-  read-phase reservation, advance, collision, or prefix visits.
+  read-phase reservation, advance, collision, or prefix visits. Its accepted
+  pencil, marker, and line traces observe RuntimeRoot's closed-apply, cleanup,
+  cleanup-effect augmentation, and common-delivery boundaries; their real
+  callbacks observe cleared preview/session and the merged main-plus-overlay
+  repaint before state, action, and observer delivery.
 - `test/runtime/draw_cleanup_integration_test.dart` proves draw cleanup paths,
   load success, load failure, `interactive=false`, settings changes, cancel,
   and no-op terminals do not reserve the next draw output timestamp.
@@ -794,7 +798,10 @@ the release route for that evidence.
   without exposing store tables or mutation owners to interaction machines.
 - `test/interaction/eraser_context_action_routing_test.dart` proves eraser machine routing,
   immutable preview publication, terminal commit intent decisions, direct
-  double-tap request production, and two-tap context revalidation behavior.
+  double-tap request production, and two-tap context revalidation behavior; an
+  accepted eraser commit traces closed apply, cleanup, cleanup-effect
+  augmentation, and common-delivery entry before its cleared preview/session
+  and merged repaint reach frame, state, action, and observer callbacks.
 - `test/interaction/context_action_request_test.dart` proves direct and
   pointer-sample context-action request issuance, target classification,
   request id generation, live registry guard facts, finite-position validation,
@@ -980,12 +987,21 @@ the release route for that evidence.
 - `test/interaction/move_machine_test.dart` proves selected-move admission,
   preview, resolver request shape, commit, cancel, stale/invalid terminal,
   zero-delta/no-movable cleanup, resolver/edit failure cleanup, transform math,
-  post-success cleanup, and move action intent facts.
+  exact resolver rejection type/message and thrown identity, direct
+  no-resolver zero-guard preparation versus configured guard-release-before-
+  preparation, rejected guard-release/no-preparation branches, post-success
+  cleanup, and closed-apply/cleanup/common-delivery traces whose real
+  frame/state/action/observer callbacks see the cleaned selected-move state
+  and merged repaint intent.
 - `test/interaction/select_machine_test.dart` proves marquee preview,
   normalized world rects, point-click topmost hit selection including line
   hits, spatial/exact filtering, stale/deleted skipping, unchanged-selection
   cleanup, changed-selection commit, previous/next selection action facts, and
-  document-order action ids.
+  document-order action ids; accepted marquee cleanup is publication-suppressed
+  and merged before common runtime delivery, whose frame/state/action/observer
+  callbacks observe the cleared marquee session. Its RuntimeRoot lifecycle
+  trace proves closed apply, cleanup, cleanup-effect augmentation, and entry to
+  common delivery precede those callbacks.
 
 #### `test/interaction/pointer_tool_cleanup_coordinator_test.dart`
 - proves `PointerToolCleanupCoordinator` outcomes for cleanup reason plus

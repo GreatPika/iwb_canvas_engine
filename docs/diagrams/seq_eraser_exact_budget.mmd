@@ -108,20 +108,20 @@ sequenceDiagram
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: atomic install
         Store-->>Applier: committed revision facts
-        Applier->>SpatialApply: apply touched removals only
-        Applier->>Projection: evict by projectionRevision
-        Applier->>Events: materialize erase action after install
-        Applier->>Frame: publish committed main repaint bus
+        EK->>EK: close edit session and stale handle
+        EK-->>Runtime: closed edit result
+        Runtime->>IE: post-success eraser cleanup, publish: false
         IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: clear eraser corridor preview
         IE->>Preview: bump previewRevision for cleared active preview
-        Preview->>Frame: request overlay cleanup repaint
         Preview-->>Runtime: preview cleanup revision fact
-        Applier-->>Runtime: committed document and selection facts
+        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>SpatialApply: apply touched removals only
+        Runtime->>Projection: evict by projectionRevision
+        Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
         Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
-        Events->>Signals: publish erase action notification
-        Frame->>Signals: publish main repaint and overlay cleanup repaint
+        Runtime->>Signals: publish erase action notification
       end
     end
   end

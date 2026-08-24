@@ -79,12 +79,13 @@ sequenceDiagram
   Applier->>Selection: install prepared selection effects
   Store-->>Applier: committed document revision facts
   Selection-->>Applier: committed selection revision facts
-  Applier->>Events: commit buffered events
+  Applier->>Events: seal buffered event intents into the apply result
   Applier-->>EK: immutable CommitApplyResult
   EK->>EK: close handle
   EK->>Runtime: deliver accepted apply result
-  Runtime->>Runtime: publish public state when required
-  Runtime->>Effects: observe typed post-install effects
+  Runtime->>Runtime: route cleanup/effect augmentation before common delivery
+  Runtime->>Effects: begin common delivery with typed spatial/resource effects
+  Runtime->>Runtime: publish frame/state/action, then notify the effect observer
   EK-->>Caller: return callback result
 ```
 
@@ -196,10 +197,13 @@ and delivery ordering remain Contract 4 work.
 
 `EditKernel` closes and stales the active edit handle, clears the active-session
 state, and only then asks `RuntimeRoot` to consume the accepted apply result.
-`RuntimeRoot` publishes the public state snapshot first when the result requires
-publication, then invokes the internal synchronous observer seam. The observer
-typedef and delivery payloads are owned by `contracts/internal/**`, while edit
-keeps planning and install details private.
+For non-text interaction routes, `RuntimeRoot` receives that closed result,
+performs the route-owned `publish: false` InteractionEngine cleanup, merges its
+repaint effect, and only then enters common delivery. Common delivery applies
+spatial/resource effects, publishes the public state when required, emits the
+finalized action, and finally invokes the internal synchronous observer seam.
+The observer typedef and delivery payloads are owned by `contracts/internal/**`,
+while edit keeps planning and install details private.
 
 Empty effect lists are not delivered. Observer failures are contained
 post-commit notification failures: they do not roll back accepted document,
@@ -346,8 +350,9 @@ the committed document, revisions, selection, and frame output untouched.
 
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a
-marquee selection compile explicit selection-owner effects. The applier
-publishes document and selection effects as one atomic `CanvasRuntimeState`; if
+marquee selection compile explicit selection-owner effects. `CommitApplier`
+installs document and selection effects atomically; `RuntimeRoot` publishes the
+resulting combined `CanvasRuntimeState` only after any route-owned cleanup. If
 preflight or rollback happens before that boundary, both owners remain
 unchanged.
 

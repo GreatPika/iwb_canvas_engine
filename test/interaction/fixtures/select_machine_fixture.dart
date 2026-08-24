@@ -34,8 +34,126 @@ void main() {
   _testPointClickSelectsLine();
   _testUnchangedSelectionCleansWithoutAction();
   _testChangedSelectionCommitsAndEmitsAction();
+  _testMarqueeCleanupPrecedesDelivery();
   _testTerminalAdmissionRejectsUnreliableQueryFacts();
   _testUnreliableTerminalCandidatesCleanupOnly();
+}
+
+// One marquee terminal is observed across all real downstream callbacks.
+// ignore: halstead-volume, source-lines-of-code
+void _testMarqueeCleanupPrecedesDelivery() {
+  test('marquee callbacks observe cleanup and merged repaint intent', () {
+    final trace = <String>[];
+    var terminalDelivery = false;
+    late RuntimeRoot root;
+    root = _runtimeRoot(
+      commitEffectObserver: (effects) {
+        if (!terminalDelivery) return;
+        _expectCleanMarqueeDelivery(root);
+        _expectMergedMarqueeRepaint(effects);
+        trace.add('observer');
+      },
+    );
+    final surface = Object();
+    root.attachSurface(surface);
+    root.selection.setSelection([CanvasElementId('a')]);
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.down, const Offset(-20, -20)),
+    );
+    root.handlePointer(
+      _sample(CanvasPointerLifecyclePhase.move, const Offset(55, 12)),
+    );
+    root.surfaceFrameSignal.addListener(() {
+      if (!terminalDelivery) return;
+      _expectCleanMarqueeDelivery(root);
+      final frame = root.surfaceFrameSignal.value;
+      expect(frame?.mainCanvas, isTrue);
+      expect(frame?.overlayCanvas, isTrue);
+      trace.add('frame');
+    });
+    root.state.addListener(() {
+      if (!terminalDelivery) return;
+      _expectCleanMarqueeDelivery(root);
+      trace.add('state');
+    });
+    final subscription = root.actions.listen((_) {
+      _expectCleanMarqueeDelivery(root);
+      trace.add('action');
+    });
+    addTearDown(() async {
+      await subscription.cancel();
+      terminalDelivery = false;
+      root.detachSurface(surface);
+      root.dispose();
+    });
+    terminalDelivery = true;
+    final events = <RuntimeRouteTemporalEvent>[];
+    RuntimeRoot.observeRouteTemporalEvents(
+      (event) {
+        events.add(event);
+        _recordMarqueeRouteLifecycleTrace(event, trace);
+      },
+      () => root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, const Offset(55, 12)),
+      ),
+    );
+
+    expect(trace, [
+      'prepared',
+      'cleanup',
+      'effects',
+      'delivery',
+      'frame',
+      'state',
+      'action',
+      'observer',
+    ]);
+    _expectMarqueeRouteLifecycle(events);
+  });
+}
+
+void _recordMarqueeRouteLifecycleTrace(
+  RuntimeRouteTemporalEvent event,
+  List<String> trace,
+) {
+  if (event.route != RuntimeNonTextRoute.marquee) return;
+  switch (event.kind) {
+    case RuntimeRouteTemporalEventKind.preparedApplyReturned:
+      trace.add('prepared');
+    case RuntimeRouteTemporalEventKind.routeCleanupCompleted:
+      trace.add('cleanup');
+    case RuntimeRouteTemporalEventKind.cleanupEffectsAugmented:
+      trace.add('effects');
+    case RuntimeRouteTemporalEventKind.commonDeliveryEntered:
+      trace.add('delivery');
+    default:
+      break;
+  }
+}
+
+void _expectMarqueeRouteLifecycle(List<RuntimeRouteTemporalEvent> events) {
+  expect(
+    events
+        .where((event) => event.route == RuntimeNonTextRoute.marquee)
+        .map((event) => event.kind),
+    [
+      RuntimeRouteTemporalEventKind.preparedApplyReturned,
+      RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+      RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+      RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+    ],
+  );
+}
+
+void _expectCleanMarqueeDelivery(RuntimeRoot root) {
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+void _expectMergedMarqueeRepaint(List<CommitDeliveryEffect> effects) {
+  final repaint = effects.whereType<RepaintDeliveryEffect>().single;
+  expect(repaint.mainCanvas, isTrue);
+  expect(repaint.overlayCanvas, isTrue);
 }
 
 void _testMarqueeAdmissionAndPreview() {

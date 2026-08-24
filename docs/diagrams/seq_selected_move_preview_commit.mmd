@@ -133,8 +133,8 @@ sequenceDiagram
     ReadPort-->>IE: CanvasMoveCommitRequest inputs
 
     opt resolver configured
-      IE->>Resolver: resolve(request with proposedDelta)
-      Resolver-->>IE: CanvasMoveCommit(delta) or CanvasMoveCancel
+      Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard
+      Resolver-->>Runtime: CanvasMoveCommit(delta) or CanvasMoveCancel; guard closes
     end
 
     alt CanvasMoveCancel returned
@@ -184,22 +184,20 @@ sequenceDiagram
         Store->>Store: replace transform rows and revision state
         Note over Applier,Store: Atomic install is the commit boundary.
         Store-->>Applier: committed revision facts
-        Applier->>Spatial: apply touched-id spatial update
-        Applier->>Projection: evict public projection cache by projectionRevision
-        Applier->>Events: commit buffered action event
-        Applier->>Frame: publish committed main repaint bus
         EK->>EK: close edit session and stale handle
-        EK-->>IE: edit result
+        EK-->>Runtime: closed edit result
+        Runtime->>IE: post-success selected-move cleanup, publish: false
         IE->>Cleanup: typed cleanup request for selected move session
         Cleanup-->>IE: PointerCleanupOutcome(main repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear selected move session
         IE->>Preview: bump previewRevision for cleared active preview
-        Preview->>Frame: request main-scene repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
-        Applier-->>Runtime: committed document facts
+        Runtime->>Runtime: merge cleanup repaint before common delivery
+        Runtime->>Spatial: apply touched-id spatial update
+        Runtime->>Projection: evict public projection cache by projectionRevision
+        Runtime->>Frame: publish merged main repaint notification
         Runtime->>Signals: publish CanvasRuntimeState after document and preview effects
-        Events->>Signals: publish move action notification
-        Frame->>Signals: publish committed and cleanup main repaint notifications
+        Runtime->>Signals: publish move action notification
         Signals-->>Surface: repaint main scene without preview delta
         IE-->>Tools: terminal handling complete
       else edit exception, rejected Future, or preflight failure

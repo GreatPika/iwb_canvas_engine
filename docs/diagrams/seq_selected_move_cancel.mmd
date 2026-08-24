@@ -122,9 +122,9 @@ sequenceDiagram
     ReadPort->>Store: read summary, moved element reads, and selected bounds
     Store-->>ReadPort: CanvasMoveCommitRequest inputs
     ReadPort-->>IE: CanvasMoveCommitRequest inputs
-    IE->>Resolver: resolve(request with proposedDelta)
-    Resolver-->>IE: CanvasMoveCancel(reason)
-    IE->>IE: discard selected move commit intent
+    Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard
+    Resolver-->>Runtime: CanvasMoveCancel(reason); guard closes
+    Runtime->>IE: discard selected move commit intent and request cleanup
   end
 
   IE->>Cleanup: typed cleanup request for selected move cancel

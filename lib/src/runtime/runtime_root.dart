@@ -91,6 +91,28 @@ typedef RuntimeSurfaceFrameSignal = ({
   String reason,
 });
 
+@visibleForTesting
+enum RuntimeRouteTemporalEventKind {
+  resolverGuardEntered,
+  resolverGuardReleased,
+  preparedApplyReturned,
+  routeCleanupCompleted,
+  cleanupEffectsAugmented,
+  commonDeliveryEntered,
+}
+
+@visibleForTesting
+enum RuntimeNonTextRoute { selectedMove, marquee, drawStroke, drawLine, eraser }
+
+@immutable
+@visibleForTesting
+final class RuntimeRouteTemporalEvent {
+  const RuntimeRouteTemporalEvent({required this.kind, this.route});
+
+  final RuntimeRouteTemporalEventKind kind;
+  final RuntimeNonTextRoute? route;
+}
+
 typedef _RuntimeSurfaceRepaintTarget = ({
   bool mainCanvas,
   bool overlayCanvas,
@@ -180,6 +202,7 @@ final class RuntimeRoot
   // Configuration and owned infrastructure.
   final RuntimeConfig config;
   final DocumentStoreKernel _store;
+  static final Object _routeTemporalEventZoneKey = Object();
   final DiagnosticsHub? _diagnostics;
   final LoadInteractionBoundary? _loadInteractionBoundary;
   final TextEditPrepareOverride? _textEditPrepareOverride;
@@ -1458,6 +1481,22 @@ final class RuntimeRoot
   }
 
   // Mutation guard.
+  @visibleForTesting
+  static T observeRouteTemporalEvents<T>(
+    void Function(RuntimeRouteTemporalEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_routeTemporalEventZoneKey: sink});
+
+  static void _recordRouteTemporalEvent(RuntimeRouteTemporalEvent event) {
+    assert(() {
+      final sink = Zone.current[_routeTemporalEventZoneKey];
+      if (sink is void Function(RuntimeRouteTemporalEvent)) {
+        sink(event);
+      }
+      return true;
+    }(), 'runtime route temporal event observation failed');
+  }
+
   @override
   T runResolverCallback<T>(T Function() callback) {
     _ensureNotDisposed();
@@ -1467,10 +1506,20 @@ final class RuntimeRoot
       );
     }
     _isRunningResolverCallback = true;
+    _recordRouteTemporalEvent(
+      const RuntimeRouteTemporalEvent(
+        kind: RuntimeRouteTemporalEventKind.resolverGuardEntered,
+      ),
+    );
     try {
       return callback();
     } finally {
       _isRunningResolverCallback = false;
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.resolverGuardReleased,
+        ),
+      );
     }
   }
 
@@ -1878,7 +1927,18 @@ final class RuntimeRoot
     return _applySelectionReplacement(outcome.selectionReplacement);
   }
 
-  void _deliverEditCommitResult(CommitDeliveryResult applyResult) {
+  void _deliverEditCommitResult(
+    CommitDeliveryResult applyResult, {
+    RuntimeNonTextRoute? route,
+  }) {
+    if (route != null) {
+      _recordRouteTemporalEvent(
+        RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.commonDeliveryEntered,
+          route: route,
+        ),
+      );
+    }
     _isDeliveringCommitEffects = true;
     try {
       _deliverSpatialEffects(applyResult.effects);
@@ -2116,6 +2176,9 @@ final class RuntimeRoot
   }
 
   // Selected move commit flow.
+  // Keep the terminal lifecycle adjacent so the closed-result, cleanup, and
+  // common-delivery boundary cannot drift apart for this route.
+  // ignore: source-lines-of-code
   void _deliverSelectedMoveCommit(
     SelectedMoveCommitIntent intent, {
     required int? timestampHintMs,
@@ -2141,11 +2204,30 @@ final class RuntimeRoot
         delta: resolvedDelta,
         timestampHintMs: timestampHintMs,
       );
-      _cleanupSelectedMove(
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+          route: RuntimeNonTextRoute.selectedMove,
+        ),
+      );
+      final cleanup = _cleanupSelectedMove(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
-      _deliverEditCommitResult(applyResult);
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+          route: RuntimeNonTextRoute.selectedMove,
+        ),
+      );
+      _deliverEditCommitResult(
+        _withPointerCleanupEffects(
+          applyResult,
+          cleanup,
+          RuntimeNonTextRoute.selectedMove,
+        ),
+        route: RuntimeNonTextRoute.selectedMove,
+      );
     } on Object {
       _cleanupSelectedMove(PointerCleanupReason.editFailure);
       rethrow;
@@ -2206,7 +2288,7 @@ final class RuntimeRoot
     );
   }
 
-  void _cleanupSelectedMove(
+  InteractionCleanupOutcome _cleanupSelectedMove(
     PointerCleanupReason reason, {
     bool publish = true,
   }) {
@@ -2217,9 +2299,14 @@ final class RuntimeRoot
         surfaceRepaintTarget: _surfaceRepaintTargetForCleanup(outcome),
       );
     }
+
+    return outcome;
   }
 
   // Marquee commit flow.
+  // Keep the terminal lifecycle adjacent so the closed-result, cleanup, and
+  // common-delivery boundary cannot drift apart for this route.
+  // ignore: source-lines-of-code
   void _deliverMarqueeCommit(
     MarqueeCommitIntent intent, {
     required int? timestampHintMs,
@@ -2238,13 +2325,30 @@ final class RuntimeRoot
           ],
         ),
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+          route: RuntimeNonTextRoute.marquee,
+        ),
+      );
       final cleanup = _cleanupMarquee(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
         preservePendingContextTap: intent.preservePendingContextTap,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+          route: RuntimeNonTextRoute.marquee,
+        ),
+      );
       _deliverEditCommitResult(
-        _withPointerCleanupEffects(applyResult, cleanup),
+        _withPointerCleanupEffects(
+          applyResult,
+          cleanup,
+          RuntimeNonTextRoute.marquee,
+        ),
+        route: RuntimeNonTextRoute.marquee,
       );
     } on Object {
       _cleanupMarquee(PointerCleanupReason.editFailure);
@@ -2282,12 +2386,29 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+          route: RuntimeNonTextRoute.drawStroke,
+        ),
+      );
       final cleanup = _cleanupDrawStroke(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+          route: RuntimeNonTextRoute.drawStroke,
+        ),
+      );
       _deliverEditCommitResult(
-        _withPointerCleanupEffects(applyResult, cleanup),
+        _withPointerCleanupEffects(
+          applyResult,
+          cleanup,
+          RuntimeNonTextRoute.drawStroke,
+        ),
+        route: RuntimeNonTextRoute.drawStroke,
       );
     } on Object {
       _cleanupDrawStroke(PointerCleanupReason.editFailure);
@@ -2352,12 +2473,29 @@ final class RuntimeRoot
         elementId: elementId,
         timestampHintMs: timestampHintMs,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+          route: RuntimeNonTextRoute.drawLine,
+        ),
+      );
       final cleanup = _cleanupLineEndpoint(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+          route: RuntimeNonTextRoute.drawLine,
+        ),
+      );
       _deliverEditCommitResult(
-        _withPointerCleanupEffects(applyResult, cleanup),
+        _withPointerCleanupEffects(
+          applyResult,
+          cleanup,
+          RuntimeNonTextRoute.drawLine,
+        ),
+        route: RuntimeNonTextRoute.drawLine,
       );
     } on Object {
       _cleanupLineEndpoint(PointerCleanupReason.editFailure);
@@ -2424,12 +2562,29 @@ final class RuntimeRoot
             intent: intent,
             timestampHintMs: timestampHintMs,
           );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.preparedApplyReturned,
+          route: RuntimeNonTextRoute.eraser,
+        ),
+      );
       final cleanup = _cleanupEraser(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
       );
+      _recordRouteTemporalEvent(
+        const RuntimeRouteTemporalEvent(
+          kind: RuntimeRouteTemporalEventKind.routeCleanupCompleted,
+          route: RuntimeNonTextRoute.eraser,
+        ),
+      );
       _deliverEditCommitResult(
-        _withPointerCleanupEffects(applyResult, cleanup),
+        _withPointerCleanupEffects(
+          applyResult,
+          cleanup,
+          RuntimeNonTextRoute.eraser,
+        ),
+        route: RuntimeNonTextRoute.eraser,
       );
     } on Object {
       _cleanupEraser(PointerCleanupReason.editFailure);
@@ -2475,8 +2630,9 @@ final class RuntimeRoot
   CommitDeliveryResult _withPointerCleanupEffects(
     CommitDeliveryResult result,
     InteractionCleanupOutcome cleanup,
+    RuntimeNonTextRoute route,
   ) {
-    return CommitDeliveryResult(
+    final augmented = CommitDeliveryResult(
       shouldPublishState:
           result.shouldPublishState || cleanup.publicStateNeeded,
       replacedDocument: result.replacedDocument,
@@ -2486,6 +2642,13 @@ final class RuntimeRoot
       ]),
       actionIntents: result.actionIntents,
     );
+    _recordRouteTemporalEvent(
+      RuntimeRouteTemporalEvent(
+        kind: RuntimeRouteTemporalEventKind.cleanupEffectsAugmented,
+        route: route,
+      ),
+    );
+    return augmented;
   }
 
   List<CommitDeliveryEffect> _cleanupDeliveryEffects(
