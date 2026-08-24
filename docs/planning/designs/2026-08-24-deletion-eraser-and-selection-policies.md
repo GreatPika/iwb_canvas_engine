@@ -16,7 +16,7 @@ outcome: R-001
 | ID | Kind | Locator | Use |
 | --- | --- | --- | --- |
 | S-001 | research | `docs/history/research/2026-08-24-deletion-eraser-and-selection-policies.md` | Historical mapping of deletion, eraser, selection, store, and action paths |
-| S-002 | user | user request | Original specification, five added guarantees, and accepted Q1-Q23 decisions whose exact mandatory meaning is normalized in R-002 through R-014 |
+| S-002 | user | user request | Original specification, five added guarantees, accepted Q1-Q23 decisions, and the later decision that the deletion resolver is mandatory because no external-user compatibility path is required; exact mandatory meaning is normalized in R-002 through R-014 |
 | S-003 | repository | `lib/src/contracts/public/canvas_runtime.dart` | Current public configuration, runtime state, and selection-port authority |
 | S-004 | repository | `lib/src/contracts/public/canvas_element.dart` | Current public element-kind and element authority |
 | S-005 | repository | `lib/src/runtime/runtime_command_facts_adapter.dart` | Current selection command-facts owner and ordering route |
@@ -66,6 +66,11 @@ outcome: R-001
 | S-049 | repository | `docs/_registry/diagrams.yaml` | Current semantic/generated diagram registration authority |
 | S-050 | repository | `lib/src/contracts/internal/command_facts_port.dart` | Current selection-delete command-facts contract and consumer seam |
 | S-051 | repository | `docs/architecture/01_runtime_ownership.md` | Current RuntimeRoot composition, state-publication, Store, Selection, EditKernel, InteractionEngine, and DiagnosticsHub ownership authority |
+| S-052 | repository | `example/lib/src/canvas_example_defaults.dart` | Current maintained example default configuration and app runtime construction |
+| S-053 | repository | `example/test/performance_fixture_limits_test.dart` | Current example performance-limit test runtime construction |
+| S-054 | repository | `example/test/canvas_example_sample_test.dart` | Current example sample test runtime construction |
+| S-055 | repository | `example/lib/perf/performance_host.dart` | Current example performance host fallback runtime construction |
+| S-056 | repository | `example/lib/perf/performance_scenario.dart` | Current example performance scenario replacement/runtime constructions |
 
 ### Source Coverage
 
@@ -75,7 +80,7 @@ outcome: R-001
 | research | S-001 |
 | plan | none |
 | user | S-002 |
-| repository | S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043, S-044, S-045, S-046, S-047, S-048, S-049, S-050, S-051 |
+| repository | S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043, S-044, S-045, S-046, S-047, S-048, S-049, S-050, S-051, S-052, S-053, S-054, S-055, S-056 |
 | other | none |
 
 ### Evidence
@@ -148,6 +153,12 @@ outcome: R-001
 | E-064 | S-050 | `lines 7-31` | `CommandFactsPort` currently owns `selectionDeleteFacts`, whose DTO exposes only an ordered deletable-ID list to runtime consumers. |
 | E-065 | S-012 | `lines 29-72` | Public selection mutations normalize IDs through membership before storing them, so an unresolved selected ID requires an owner-level controlled-facts witness rather than a public-state setup. |
 | E-066 | S-051 | `lines 49-73` | Runtime ownership is already split among Store, Selection, EditKernel, InteractionEngine, and DiagnosticsHub, while RuntimeRoot alone composes their facts into public state after accepted changes. |
+| E-067 | S-036 | `lines 27-29` | `CanvasRuntime` currently defaults its public `config` argument to `const CanvasRuntimeConfig()`, so a required non-null deletion resolver also requires removing that facade default rather than hiding a default-accept resolver. |
+| E-068 | S-052 | `lines 41-53` | The maintained app defaults construct one `CanvasRuntimeConfig` and pass it explicitly to `CanvasRuntime`; the config construction must add the required resolver. |
+| E-069 | S-053 | `line 15` | The example performance-limit test constructs `CanvasRuntime()` with omitted config. |
+| E-070 | S-054 | `line 195` | The example sample test constructs `CanvasRuntime()` with omitted config. |
+| E-071 | S-055 | `line 16` | The example performance host fallback constructs `CanvasRuntime()` with omitted config. |
+| E-072 | S-056 | `lines 796-900` | The example performance scenario contains four `CanvasRuntime()` replacement/runtime constructions with omitted config. |
 
 ### Requirements
 
@@ -156,15 +167,15 @@ outcome: R-001
 | R-001 | outcome | Clients can safely own deletion Undo by receiving and vetoing complete final selection-delete and eraser removals, while independently configuring eraser-kind and selection-delete policies and reading whole-selection delete availability. | S-002, E-001, E-003, E-005, E-006 | Private helper names, file decomposition, and internal token representation remain open. |
 | R-002 | user_decision | The resolver runs once only for a non-empty final removal set; explicit cancel creates no diagnostic, while resolver exception has the same no-mutation outcome plus one dedicated bounded `interaction` error diagnostic that does not escape and is fully absorbed when diagnostics are disabled. Both outcomes preserve document and selection revisions and emit no committed action or timestamp. Terminal erase additionally completes its preview/session cleanup; selection delete leaves independent eraser interaction state unchanged. | S-002, E-006, E-007, E-017, E-033, E-034, E-035, E-044 | Diagnostic code identifier and private cleanup-reason identifier remain open. |
 | R-003 | user_decision | The existing `CommitApplier` and Store/Selection owners gain only the minimal internal deferred-install seam needed by `deleteSelection` and terminal `erase`: before the resolver all normally fallible preparation is complete; after accept one private single-use token installs document then selection synchronously without a normal validation, stale, or copy failure. The existing resolver guard permits runtime reads and client-owned Undo mutation while rejecting every public runtime mutation/edit/tool command, runtime disposal, and nested resolver call during the callback. Callback return and prepared installation remain in one uninterrupted synchronous stack with no external callback or publication between them. No new coordinator, general transaction framework, public token, or rollback is permitted. | S-002, E-007, E-008, E-009, E-010, E-011, E-018, E-022, E-023, E-037, E-039, E-040, E-041, E-043, E-050 | Allocation-only copying whose only failure is VM-fatal and whether the guard flag remains set after callback return are open; private token and no-fail consumer identifiers remain open; unrelated commit paths remain unchanged. |
-| R-004 | user_decision | `CanvasRuntimeConfig` keeps its const constructor and adds exactly `CanvasDeletionCommitResolver? deletionCommitResolver`, `Set<CanvasElementKind>? eraserElementKinds`, and `CanvasSelectionDeletePolicy selectionDeletePolicy = CanvasSelectionDeletePolicy.partial`; `RuntimeConfig.from` takes one runtime-owned unmodifiable copy of a supplied set. | S-002, E-002, E-015, E-028 | Private runtime-config field storage remains open. |
-| R-005 | user_decision | Eraser kind admission treats null as unrestricted, empty as admitting no kinds, and a non-empty set as an exact allow-list; the same filter applies to preview and terminal reads before candidate-limit and exact-check accounting, independently of resolver presence. | S-002, E-005, E-015, E-024, E-038, E-039 | Local predicate and set-lookup mechanics remain open. |
+| R-004 | user_decision | `CanvasRuntimeConfig` keeps its const constructor and adds exactly required non-null `CanvasDeletionCommitResolver deletionCommitResolver`, `Set<CanvasElementKind>? eraserElementKinds`, and `CanvasSelectionDeletePolicy selectionDeletePolicy = CanvasSelectionDeletePolicy.partial`; every config construction must supply the resolver, `CanvasRuntime` makes its `config` argument required instead of constructing a default config, and `RuntimeConfig.from` takes one runtime-owned unmodifiable copy of a supplied eraser set. | S-002, E-002, E-015, E-028, E-067 | Named-versus-positional placement inside `CanvasRuntimeConfig` and private runtime-config field storage remain open; resolver nullability, a default resolver, and an omitted runtime config are not open. |
+| R-005 | user_decision | Eraser kind admission treats null as unrestricted, empty as admitting no kinds, and a non-empty set as an exact allow-list; the same filter applies to preview and terminal reads before candidate-limit and exact-check accounting and before the mandatory resolver sees the final set. | S-002, E-005, E-015, E-024, E-038, E-039 | Local predicate and set-lookup mechanics remain open. |
 | R-006 | user_decision | `CanvasSelectionPort.deleteAvailability` returns value-equal immutable `CanvasSelectionDeleteAvailability(hasSelection, allSelectedElementsDeletable)`, with both false for empty selection. Availability is not copied into `CanvasRuntimeState`; clients re-read it after document or selection revision changes, and `deleteSelection` re-reads the same canonical facts immediately before execution rather than trusting UI state. | S-002, E-003, E-004, E-021, E-025, E-036, E-064 | Private canonical-facts representation remains open. |
-| R-007 | user_decision | `CanvasSelectionDeletePolicy.partial` remains the default and removes only the eligible subset; `allOrNone` removes the whole selection only when every selected ID resolves to content with `isDeletable == true`. Unresolved IDs fail closed, `isLocked` does not affect deletion eligibility, and the policy applies without a resolver. | S-002, E-004, E-021, E-025, E-064, E-065 | Local policy-switch placement remains open. |
+| R-007 | user_decision | `CanvasSelectionDeletePolicy.partial` remains the default and removes only the eligible subset; `allOrNone` removes the whole selection only when every selected ID resolves to content with `isDeletable == true`. Unresolved IDs fail closed, `isLocked` does not affect deletion eligibility, and the policy determines the final set before the mandatory resolver is invoked. | S-002, E-004, E-021, E-025, E-064, E-065 | Local policy-switch placement remains open. |
 | R-008 | user_decision | `CanvasDeletionCommitRequest` contains `CanvasDeletionOperation operation` and an unmodifiable-copy list of `CanvasDeletionEntry`; each entry contains the existing immutable `CanvasElement` reference, source `CanvasLayerId`, and original `elementIndex`. Entries are built before mutation in document-layer then in-layer order by a committed-store batch read using direct element/location/order-token facts. The complete selection-delete and terminal-eraser ordering routes retire or bypass their existing full-handle scans and perform no `CanvasDocument` materialization, persistent-index addition, or O(N) ordering pass. | S-002, E-004, E-012, E-013, E-016, E-019, E-029, E-036 | Internal batch-fact type and sorting algorithm remain open; each complete route is O(k log k) for arbitrary IDs and O(k) for canonical IDs. |
-| R-009 | user_decision | When `deletionCommitResolver` is null, deletion retains the current one-phase installation path and constructs neither callback DTOs nor a deferred token; selection and eraser policies still apply. | S-002, E-002, E-006, E-008, E-028 | Shared private helper reuse remains open only when it removes duplication. |
+| R-009 | user_decision | `deletionCommitResolver` is required and non-null: both public deletion routes must use it for every final nonempty removal set, with no nullable, default-accept, or legacy one-phase bypass. Empty or policy-rejected final sets remain no-ops and construct neither callback DTOs nor a deferred token. | S-002, E-002, E-006, E-008, E-028 | Shared private helper reuse remains open only when it removes duplication; no-op detection placement remains open before resolver-specific construction. |
 | R-010 | user_decision | Accept consumes the prepared token and installs document plus selection without intermediate publication, then terminal erase guarantees its cleanup before state publication and unchanged delete/erase action delivery; selection delete does not change eraser interaction state. Post-install delivery failure cannot roll back deletion or reinterpret accept; preparation failure before the callback remains fail-fast, never invokes the resolver, and still guarantees terminal-eraser cleanup. VM-fatal conditions such as out-of-memory are outside this atomicity guarantee. | S-002, E-009, E-017, E-026, E-027, E-030, E-031, E-032, E-037, E-044 | Existing delivery helper and private cleanup-reason decomposition remain open. |
 | R-011 | user_decision | Selection deletion and eraser removal do not implicitly remove empty layers or resource descriptors; the callback entry's element, layer ID, and source index are sufficient for client-owned Undo. | S-002, E-014, E-020 | Documentation placement for this guarantee remains open. |
-| R-012 | user_decision | The new selection-port getter is an accepted source-breaking direct interface extension with a migration note in the public API contract and release treatment through the current release-gate owner; optional configuration defaults preserve current runtime behavior. No V2 port, capability cast, duplicate getter, or `CanvasRuntimeState` mirror may be introduced as a compatibility workaround. | S-002, E-002, E-003, E-025, E-042, E-048, E-049 | Release version identifier remains governed by the release process. |
+| R-012 | user_decision | The required resolver/config constructor arguments and new selection-port getter are accepted source-breaking direct API changes because no external-user compatibility path is required. Every repository `CanvasRuntimeConfig`/`CanvasRuntime` construction, including the maintained `example/` sample, performance, and test consumers, and every direct port implementation migrates atomically with a migration note and release treatment through the current release-gate owner. No nullable/default-accept resolver fallback, omitted-config runtime facade, V2 port, capability cast, duplicate getter, or `CanvasRuntimeState` mirror may be introduced as a compatibility workaround. | S-002, E-002, E-003, E-025, E-042, E-048, E-049, E-067, E-068, E-069, E-070, E-071, E-072 | Release version identifier remains governed by the release process. |
 | R-013 | user_decision | The public callback contract consists exactly of `CanvasSelectionDeletePolicy { partial, allOrNone }`, `CanvasDeletionOperation { deleteSelection, erase }`, `CanvasDeletionDecision { accept, cancel }`, `CanvasDeletionCommitResolver`, `CanvasDeletionCommitRequest`, `CanvasDeletionEntry`, and `CanvasSelectionDeleteAvailability`. The resolver accepts or cancels the whole prepared set only; request and entry use identity equality, availability uses value equality, and no extra metadata or resolution variants are added. | S-002, E-029, E-036 | Public declaration file placement and documentation ordering remain open. |
 | R-014 | exclusion | Engine-owned Undo, interception of `CanvasCommandPort.removeElement`, `CanvasEdit.removeElement`, clear/import/resource operations, changed action payloads, changed locking or selection eligibility, non-eraser tools, new coordinators, generic transaction frameworks, public prepared tokens, rollback, and new persistent ordering indexes are out of scope. | S-002, E-026, E-030, E-031, E-032 | None; adding any excluded surface requires architecture re-entry. |
 | R-015 | repository_rule | A deletion-resolver failure diagnostic requires an explicit new diagnostics routing row and internal interaction code with bounded operation and error-kind facts only; element content, runtime objects, resolver payloads, and public diagnostic streams remain forbidden. | S-021, S-022, S-023, E-033, E-034, E-035 | Exact bounded error-kind encoding remains open inside diagnostics authority. |
@@ -173,13 +184,13 @@ outcome: R-001
 
 - Comparison: `single_viable`
 - Result: `selected F-001`
-- Result basis: F-001, M-001, M-002, M-003, M-004, M-005, M-006, M-007, M-008, M-009, M-010, M-011, M-012, M-013, M-014, M-015, R-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008, R-009, R-010, R-011, R-012, R-013, R-014, R-015, E-008, E-009, E-010, E-011, E-012, E-016, E-018, E-019, E-022, E-023, E-037, E-038, E-039, E-040, E-043, E-044, E-045, E-046, E-047, E-051, E-052, E-053, E-054, E-055, E-056, E-057, E-058, E-059, E-060, E-061, E-062, E-063, E-064, E-065
+- Result basis: F-001, M-001, M-002, M-003, M-004, M-005, M-006, M-007, M-008, M-009, M-010, M-011, M-012, M-013, M-014, M-015, R-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008, R-009, R-010, R-011, R-012, R-013, R-014, R-015, E-008, E-009, E-010, E-011, E-012, E-016, E-018, E-019, E-022, E-023, E-037, E-038, E-039, E-040, E-043, E-044, E-045, E-046, E-047, E-051, E-052, E-053, E-054, E-055, E-056, E-057, E-058, E-059, E-060, E-061, E-062, E-063, E-064, E-065, E-067
 
 ### Forms
 
 | ID | Form | Hard constraints | Main trade-off | Basis |
 | --- | --- | --- | --- | --- |
-| F-001 | Extend the existing committed-store facts seam and the current `CommitApplier` prepared state with a narrow deletion batch projection and deletion-only deferred installation; keep runtime orchestration, Store and Selection ownership, resolver guarding, and the no-callback one-phase route in their current owners. | pass: resolver-before-prepare leaves expected failures after client Undo registration; resolver-after-install cannot veto mutation; a new coordinator, generic transaction layer, runtime-owned installer pair, or rollback path violates R-003 and R-014; closure or helper-name variations are incidental implementation shape rather than architecture forms. | Adds one private single-use installation lifecycle only to the two intercepted deletion routes while leaving allocation-only copy and post-callback guard-release mechanics open; in return it adds no coordinator, general transaction abstraction, rollback path, document materialization, persistent index, or O(N) deletion-order scan. | R-001, R-002, R-003, R-006, R-008, R-009, R-014, R-015, E-008, E-009, E-010, E-011, E-012, E-016, E-018, E-019, E-022, E-023, E-037, E-038, E-039, E-040, E-043, E-044, E-045, E-046, E-047, E-051, E-052, E-053, E-054, E-055, E-056, E-057, E-058, E-059, E-060, E-061, E-062, E-063, E-064, E-065, E-066 |
+| F-001 | Extend the existing committed-store facts seam and the current `CommitApplier` prepared state with a narrow deletion batch projection and deletion-only deferred installation; keep runtime orchestration, Store and Selection ownership, and resolver guarding in their current owners while making the resolver the single nonempty-deletion path. | pass: resolver-before-prepare leaves expected failures after client Undo registration; resolver-after-install cannot veto mutation; a nullable/default-accept resolver or omitted-config runtime facade violates R-004/R-009/R-012; a new coordinator, generic transaction layer, runtime-owned installer pair, or rollback path violates R-003 and R-014; closure or helper-name variations are incidental implementation shape rather than architecture forms. | Every nonempty deletion pays request/deferred-state construction and one callback, and every repository construction must migrate explicitly, but the design removes the second legacy execution mode and adds no coordinator, general transaction abstraction, rollback path, document materialization, persistent index, or O(N) deletion-order scan. | R-001, R-002, R-003, R-004, R-006, R-008, R-009, R-012, R-014, R-015, E-008, E-009, E-010, E-011, E-012, E-016, E-018, E-019, E-022, E-023, E-037, E-038, E-039, E-040, E-043, E-044, E-045, E-046, E-047, E-051, E-052, E-053, E-054, E-055, E-056, E-057, E-058, E-059, E-060, E-061, E-062, E-063, E-064, E-065, E-066, E-067 |
 
 ### Material-Obligation Delta
 
@@ -224,18 +235,18 @@ outcome: R-001
 
 ### D-002 — Public configuration, DTOs, and compatibility
 - Concerns: `compatibility`, `migration_retirement`, `state_data`
-- Lock: The public surface adds exactly the three configured fields and seven public deletion policy/request/availability declarations in R-004 and R-013; configuration is immutable per runtime, the eraser set is copied once into runtime-owned unmodifiable state, deletion request entries are an unmodifiable copy of retainable immutable element references, and delete availability remains a value-equal derived port value rather than duplicated runtime state. Migration extends the existing port and configuration in place: declarations, runtime implementation, export inventory, owning contract, and consumer compile fixtures become consistent before release; external `CanvasSelectionPort` implementers add the getter when adopting that source-breaking release. No old public surface is retired, and no V2 port, capability cast, duplicate getter, or runtime-state mirror may coexist. Release admission requires the migration note, compatible defaults, exact public export/signature checks, and successful compilation of both the runtime implementation and a direct external port implementation.
+- Lock: The public surface adds exactly the three configuration fields and seven public deletion policy/request/availability declarations in R-004 and R-013; `deletionCommitResolver` is a required non-null `CanvasRuntimeConfig` construction argument and `CanvasRuntime` requires an explicit config, configuration is immutable per runtime, the eraser set is copied once into runtime-owned unmodifiable state, deletion request entries are an unmodifiable copy of retainable immutable element references, and delete availability remains a value-equal derived port value rather than duplicated runtime state. Migration extends the existing configuration, runtime facade, and port in place: declarations, every repository config/runtime construction (with `example/` migrated and verified as an explicit maintained consumer surface), runtime implementation, export inventory, owning contract, and consumer compile fixtures become consistent before release; direct `CanvasSelectionPort` implementers add the getter in that same source-breaking release. No nullable/default-accept resolver fallback, omitted-config runtime facade, V2 port, capability cast, duplicate getter, or runtime-state mirror may coexist. Release admission requires the migration note, exact required constructors and public export/signature checks, and successful compilation of all repository constructions, the maintained example, the runtime implementation, and a direct external port implementation.
 - Open: Declaration file placement, documentation ordering, private runtime field storage, private availability-facts representation, and the release version chosen by the release process remain open.
-- Basis: R-004, R-006, R-012, R-013, E-002, E-003, E-028, E-029, E-036, E-042, E-048, E-049, E-051, E-052, E-056, E-057
+- Basis: R-004, R-006, R-012, R-013, E-002, E-003, E-028, E-029, E-036, E-042, E-048, E-049, E-051, E-052, E-056, E-057, E-067, E-068, E-069, E-070, E-071, E-072
 - Form: F-001
 - Realizes: M-004, M-006, M-012, M-013
 - Depends on: D-001
 - Contract targets: `compatibility`, `migration_retirement`, `state_data`, `acceptance`, `evidence`, `verification`, `durable_impact`, `unit_family`
-- Rationale: One creation-time configuration source and one derived selection-port value preserve compatibility defaults and avoid a second state lifecycle while exposing the exact client contract.
+- Rationale: One required creation-time resolver and one derived selection-port value eliminate a second deletion mode and a second state lifecycle while exposing the exact client contract; the accepted source break is migrated atomically because no external-user compatibility path is required.
 
 ### D-003 — Canonical selection and eraser policy
 - Concerns: `policy`, `source_of_truth`
-- Lock: One canonical `CommandFactsPort` boundary backed by committed Store and Selection facts owns selection existence and deletion eligibility for both `deleteAvailability` and command execution; eligibility is resolvable content-layer membership plus `isDeletable == true`, unresolved IDs fail closed, and `isLocked` is irrelevant. `partial` and `allOrNone` apply independently of resolver presence. Eraser kind admission uses the immutable runtime set with null/empty/nonempty semantics and is applied identically to preview and terminal candidates before candidate and exact-check budgets. Element deletion does not imply layer or resource-descriptor deletion.
+- Lock: One canonical `CommandFactsPort` boundary backed by committed Store and Selection facts owns selection existence and deletion eligibility for both `deleteAvailability` and command execution; eligibility is resolvable content-layer membership plus `isDeletable == true`, unresolved IDs fail closed, and `isLocked` is irrelevant. `partial` and `allOrNone` determine the final selection set before mandatory resolver admission. Eraser kind admission uses the immutable runtime set with null/empty/nonempty semantics and is applied identically to preview and terminal candidates before candidate and exact-check budgets and before mandatory resolver admission. Element deletion does not imply layer or resource-descriptor deletion.
 - Open: The internal facts DTO decomposition, local predicate, policy-switch, and set-membership helper shape remain open as long as both consumers use the same facts boundary.
 - Basis: R-005, R-006, R-007, R-011, E-004, E-005, E-014, E-020, E-021, E-024, E-025, E-052, E-054, E-064, E-065
 - Form: F-001
@@ -257,14 +268,14 @@ outcome: R-001
 
 ### D-005 — Resolver temporal and atomic boundary
 - Concerns: `temporal`, `atomicity`
-- Lock: With a configured resolver, final nonempty deletion facts, callback request, validated candidate document, normalized selection backing, revision/action inputs, and private single-use install state are complete before the callback. The existing synchronous resolver guard permits reads and client Undo mutation while rejecting public runtime mutation/edit/tool commands, runtime disposal, and nested resolver calls without committed or lifecycle effects during the callback. Accept then consumes the state once in the same uninterrupted synchronous stack and installs document then selection without intervening publication or any normal validation, stale, or copy failure. Terminal eraser cleanup is guaranteed before fallible external delivery, followed by current state and action delivery; selection delete leaves eraser interaction state unchanged. Cancel or callback exception discards prepared state with no document, selection, revision, timestamp, or action effect and performs terminal-eraser cleanup only for erase. Preparation failure occurs before callback and keeps current fail-fast semantics. With no resolver, the current one-phase install route remains and creates neither callback DTO nor deferred state. VM-fatal conditions remain outside the guarantee.
+- Lock: For every final nonempty deletion set, the required resolver is the only route to installation. Final deletion facts, callback request, validated candidate document, normalized selection backing, revision/action inputs, and private single-use install state are complete before the callback. The existing synchronous resolver guard permits reads and client Undo mutation while rejecting public runtime mutation/edit/tool commands, runtime disposal, and nested resolver calls without committed or lifecycle effects during the callback. Accept then consumes the state once in the same uninterrupted synchronous stack and installs document then selection without intervening publication or any normal validation, stale, or copy failure. Terminal eraser cleanup is guaranteed before fallible external delivery, followed by current state and action delivery; selection delete leaves eraser interaction state unchanged. Cancel or callback exception discards prepared state with no document, selection, revision, timestamp, or action effect and performs terminal-eraser cleanup only for erase. Preparation failure occurs before callback and keeps current fail-fast semantics. Empty and policy-rejected sets return before request/deferred-state construction or callback; no nullable, default-accept, or legacy one-phase bypass exists. VM-fatal conditions remain outside the guarantee.
 - Open: Private single-use state representation, no-fail consumer identifiers, allocation-only copy mechanics, guard release after callback return, cleanup-reason decomposition, and reuse of a private helper where it reduces duplication remain open.
 - Basis: R-002, R-003, R-009, R-010, E-006, E-007, E-008, E-009, E-010, E-011, E-017, E-018, E-022, E-023, E-027, E-041, E-043, E-044, E-047, E-050, E-053, E-054, E-055
 - Form: F-001
 - Realizes: M-002, M-003, M-009, M-010
 - Depends on: D-001, D-003, D-004
 - Contract targets: `temporal`, `atomicity`, `acceptance`, `evidence`, `verification`, `durable_impact`, `unit_family`
-- Rationale: The callback creates exactly one new failure boundary; local deferred installation closes it without changing unrelated commits or introducing rollback.
+- Rationale: The required callback creates exactly one failure boundary for every nonempty deletion; local deferred installation closes it without a parallel legacy mode, changing unrelated commits, or introducing rollback.
 
 ### D-006 — Resolver-exception diagnostics
 - Concerns: `owner`
@@ -279,9 +290,9 @@ outcome: R-001
 
 ### D-007 — Explicit scope boundary
 - Concerns: `out_of_scope`
-- Lock: Engine-owned Undo, direct command/edit element removal, clear, import, resource operations, action-payload changes, locking or general selection-eligibility changes, non-eraser tools, new coordinators, generic transaction frameworks, public prepared tokens, rollback, persistent ordering indexes, V2/capability compatibility surfaces, duplicate availability getters, and runtime-state availability mirrors remain excluded.
+- Lock: Engine-owned Undo, direct command/edit element removal, clear, import, resource operations, action-payload changes, locking or general selection-eligibility changes, non-eraser tools, new coordinators, generic transaction frameworks, public prepared tokens, rollback, persistent ordering indexes, nullable/default-accept resolver or omitted-config runtime compatibility paths, V2/capability compatibility surfaces, duplicate availability getters, and runtime-state availability mirrors remain excluded.
 - Open: None; any excluded surface or mechanism requires architecture re-entry.
-- Basis: R-014, E-026, E-030, E-031, E-032
+- Basis: R-012, R-014, E-026, E-030, E-031, E-032, E-067
 - Form: F-001
 - Realizes: M-014
 - Depends on: D-001
@@ -306,14 +317,14 @@ outcome: R-001
 - Surface: `lib/src/contracts/public/canvas_runtime.dart`; `lib/src/contracts/public/canvas_actions.dart`; `lib/src/runtime/runtime_config.dart`; `docs/contracts/public_api_v1.md`; `docs/_registry/public_api_v1.yaml`; `test/api_contract/public_api_v1_compiles_as_written_test.dart`; `docs/verification/release_gates.md`
 - Required by: D-002
 - Resulting authority: D-002
-- Contract requirement: Update the public declaration owners, runtime-owned configuration copy, authoritative signatures and migration note, equality policy, no-retirement posture, direct external port compile consumer, exported-name inventory, and final public-API release gate for the exact configuration, resolver, request, entry, policy, decision, operation, and availability surfaces locked by D-002.
+- Contract requirement: Update the public declaration owners, the runtime facade constructor, every repository config/runtime construction, runtime-owned configuration copy, authoritative signatures and migration note, equality policy, no-retirement posture, direct external port compile consumer, exported-name inventory, and final public-API release gate for the exact required resolver/config, request, entry, policy, decision, operation, and availability surfaces locked by D-002.
 
 ### I-002 — Deletion policy and commit lifecycle contracts
 - Action: update
 - Surface: `lib/src/runtime/runtime_root.dart`; `lib/src/contracts/internal/command_facts_port.dart`; `lib/src/runtime/runtime_command_facts_adapter.dart`; `lib/src/runtime/runtime_interaction_read_adapter.dart`; `lib/src/edit/edit_kernel.dart`; `lib/src/edit/commit_applier.dart`; `lib/src/store/document_store_kernel.dart`; `lib/src/selection/selection_kernel.dart`; `lib/src/contracts/internal/prepared_selection_effect.dart`; `docs/architecture/01_runtime_ownership.md`; `docs/architecture/03_data_model.md`; `docs/contracts/geometry.md`; `docs/contracts/operation_matrix.md`; `docs/contracts/edit_kernel.md`; `docs/contracts/interaction_engine.md`; `docs/diagrams/seq_eraser_commit.mmd`; `docs/diagrams/seq_eraser_exact_budget.mmd`; `docs/diagrams/state_eraser.mmd`
 - Required by: D-001, D-002, D-003, D-004, D-005, D-006
 - Resulting authority: D-001, D-002, D-003, D-004, D-005, D-006
-- Contract requirement: Update RuntimeRoot's configuration, availability, callback, guard, install, cleanup, delivery, and diagnostic-initiation integration together with the exact internal command-facts, interaction-read, edit/apply, Store, Selection, and prepared-selection owners plus every maintained policy/lifecycle contract and semantic diagram. The resulting route must publish one canonical availability/execution facts boundary, filtered eraser-budget policy, Store-owned O(k log k)/O(k) deletion projection without `CanvasDocument` materialization, guarded callback prepare-veto-install boundary with exact cardinality, dedicated diagnostic handoff, cancel/error/no-callback effects, cleanup/publication/action order, and unchanged layer/resource semantics.
+- Contract requirement: Update RuntimeRoot's configuration, availability, callback, guard, install, cleanup, delivery, and diagnostic-initiation integration together with the exact internal command-facts, interaction-read, edit/apply, Store, Selection, and prepared-selection owners plus every maintained policy/lifecycle contract and semantic diagram. The resulting route must publish one canonical availability/execution facts boundary, filtered eraser-budget policy, Store-owned O(k log k)/O(k) deletion projection without `CanvasDocument` materialization, one mandatory guarded callback prepare-veto-install boundary with exact cardinality and no legacy bypass, dedicated diagnostic handoff, cancel/error/empty-set no-callback effects, cleanup/publication/action order, and unchanged layer/resource semantics.
 
 ### I-003 — Deletion-resolver diagnostic route
 - Action: update
@@ -340,12 +351,12 @@ outcome: R-001
 - Evidence constraints: Cover both entry routes and their real delivery boundary with a failing witness for bypass or post-veto mutation; keep the durable regression at the runtime owner and do not substitute copied inventories or helper-shape assertions.
 - Architecture seam: D-001
 
-### A-002 — Public declarations, exports, and defaults
+### A-002 — Public declarations, exports, requiredness, and defaults
 - Verifies: R-004, R-012, R-013, D-002/compatibility, I-001
-- Claim: The public API exposes exactly the accepted deletion configuration, policy, resolver, request, entry, decision, operation, and availability declarations with legacy-preserving defaults, and its owning contract and export inventory agree.
-- Failure: A declaration, signature, enum member, export, or default is missing, extra, or incompatible with R-004, R-012, or R-013.
-- Oracle: Compile a consumer against every exact public signature and default, inspect the root public export, and compare the resulting authoritative contract and export inventory with the compiled surface.
-- Proxy risk: An inventory-only check can pass while declarations or defaults differ, and compilation alone can pass while the owning contract remains stale.
+- Claim: The public API exposes exactly the accepted deletion configuration, policy, resolver, request, entry, decision, operation, and availability declarations; the resolver and runtime config are required and non-null, the remaining accepted defaults are exact, and the owning contract and export inventory agree.
+- Failure: A declaration, signature, enum member, export, resolver/config-requiredness constraint, or remaining default is missing, extra, or incompatible with R-004, R-012, or R-013.
+- Oracle: Compile consumers against every exact public signature, require explicit resolver and runtime config construction, exercise the remaining defaults, inspect the root public export, and compare the resulting authoritative contract and export inventory with the compiled surface.
+- Proxy risk: An inventory-only check can pass while declarations, requiredness, or defaults differ, and compilation of only an explicitly configured happy path can pass while the owning contract or omitted-resolver rejection remains stale.
 - Evidence constraints: Use the real public barrel and typed consumer boundary plus the authoritative contract/inventory; do not make a copied declaration list or test fixture the production owner.
 - Architecture seam: D-002
 
@@ -367,11 +378,11 @@ outcome: R-001
 - Evidence constraints: Use the real state listenable and selection port across both revision families; do not accept private cache inspection as the freshness oracle.
 - Architecture seam: D-002
 
-### A-005 — Direct interface migration and no-retirement gate
+### A-005 — Direct configuration/interface migration and no-retirement gate
 - Verifies: R-012, D-002/migration_retirement, I-001
-- Claim: The source-breaking release extends the existing configuration and `CanvasSelectionPort` directly, migrates the runtime and a direct external implementer before release, documents the migration, retires no old public surface, and admits no V2 port, capability cast, duplicate getter, or runtime-state mirror.
-- Failure: A release-visible state has incompatible declarations/implementers, lacks the migration note, retains a parallel compatibility surface, or publishes before exact public compile/export/default checks pass.
-- Oracle: Compile the runtime implementation and a direct external `CanvasSelectionPort` implementation against the resulting public declarations, inspect the public barrel and runtime-state surface for forbidden alternatives, and verify the migration note and release classification in the same release state.
+- Claim: The source-breaking release makes the resolver and runtime config required, extends `CanvasSelectionPort` directly, migrates every repository config/runtime construction plus the runtime implementation and a direct external implementer before release, documents all migrations, retires no unrelated public surface, and admits no nullable/default-accept fallback, omitted-config facade, V2 port, capability cast, duplicate getter, or runtime-state mirror.
+- Failure: A release-visible state retains an omitted/null/default resolver or omitted runtime config construction, has incompatible declarations/implementers, lacks a migration note, retains a parallel compatibility surface, or publishes before exact public compile/export/requiredness/default checks pass.
+- Oracle: Compile every repository config/runtime construction, the runtime implementation, and a direct external `CanvasSelectionPort` implementation against the resulting public declarations; require omitted/null resolver and omitted runtime config constructions to fail at the type boundary, inspect the public barrel and runtime-state surface for forbidden alternatives, and verify the migration note and release classification in the same release state.
 - Proxy risk: A migration note alone cannot prove implementer compatibility or absence of a parallel surface, while source absence alone cannot prove release ordering.
 - Evidence constraints: Evaluate the complete release-visible state and real interface implementers; negative proof is bounded to public declarations, exports, runtime state, and direct port consumers rather than a repository-wide token scan.
 - Architecture seam: D-002
@@ -387,9 +398,9 @@ outcome: R-001
 
 ### A-007 — Eraser admission before work budgets
 - Verifies: R-005, D-003/policy
-- Claim: Null, empty, and nonempty eraser-kind policies apply identically to preview and terminal reads before candidate-limit and exact-check accounting, independently of resolver presence.
-- Failure: A disallowed kind appears in preview or commit, consumes either budget, null or empty semantics collapse, or callback presence changes admission.
-- Oracle: Use mixed-kind spatial candidates around both limits and observe preview hits, terminal removals, candidate accounting, and exact-check accounting for null, empty, and explicit allow-lists with and without a resolver.
+- Claim: Null, empty, and nonempty eraser-kind policies apply identically to preview and terminal reads before candidate-limit, exact-check accounting, and mandatory resolver admission.
+- Failure: A disallowed kind appears in preview or the resolver request, consumes either budget, or null and empty eraser-kind semantics collapse.
+- Oracle: Use mixed-kind spatial candidates around both limits and observe preview hits, resolver-request removals, candidate accounting, and exact-check accounting for null, empty, and explicit allow-lists.
 - Proxy risk: Final removed-ID assertions cannot detect budget spent on filtered candidates or preview/commit drift.
 - Evidence constraints: Instrument the existing candidate and exact-check owner boundaries without replacing their counters or geometry with a test-only policy implementation.
 - Architecture seam: D-003
@@ -484,20 +495,20 @@ outcome: R-001
 - Evidence constraints: Observe the existing eraser lifecycle and delivery boundaries; do not add a second cleanup owner for testing.
 - Architecture seam: D-005
 
-### A-018 — Resolver-null one-phase route
+### A-018 — Mandatory resolver is the sole nonempty deletion route
 - Verifies: R-009, D-005/temporal
-- Claim: When the resolver is absent, both deletion routes retain current one-phase prepare-and-install behavior and create neither deletion callback DTOs nor deferred install state, while selection and eraser policies still apply.
-- Failure: Resolver-specific allocation or deferred installation occurs, legacy action/effect behavior changes, or either policy is bypassed.
-- Oracle: Exercise both routes with resolver absent and instrument only the DTO/deferred-state construction seams plus public effects under each policy.
-- Proxy risk: Matching final state cannot prove the required fast path or absence of resolver-specific work.
-- Evidence constraints: Use a narrow allocation/construction witness owned by the new seam, not broad heap profiling or private helper-name assertions.
+- Claim: Both public deletion routes invoke the required resolver exactly once for every final nonempty set and have no nullable, default-accept, or legacy direct-install bypass; empty and policy-rejected sets create no callback DTO or deferred state and invoke no resolver.
+- Failure: Either nonempty route installs without the public resolver, accepts a nullable/default fallback, invokes more than once, or an empty/rejected operation constructs resolver state or invokes the callback.
+- Oracle: Require resolver construction at the real public config boundary, then exercise both routes across nonempty accept/cancel/error and empty/policy-rejected cases while correlating public callback cardinality, request/deferred-state construction, and committed effects.
+- Proxy risk: Matching final state or a non-null field declaration cannot prove that both runtime routes use the resolver or that no-op operations avoid resolver-specific work.
+- Evidence constraints: Observe the real public constructor and both public deletion routes plus a narrow construction seam; reject private helper-call assertions, a default-accept test substitute, and broad heap profiling.
 - Architecture seam: D-005
 
 ### A-019 — Existing deletion action compatibility
 - Verifies: R-010, R-014
 - Claim: Accepted selection delete and terminal erase emit their existing committed action types and payload shapes with the accepted final removed IDs and unchanged timestamp semantics.
 - Failure: An action type or payload changes, a new deletion action is introduced, removed IDs diverge from the installed set, or timestamp behavior changes.
-- Oracle: Accept both deletion routes with and without a configured resolver and compare emitted public actions with the existing delete/erase action contracts for type, payload, IDs, and timestamp behavior.
+- Oracle: Accept both deletion routes through the required resolver and compare emitted public actions with the existing delete/erase action contracts for type, payload, IDs, and timestamp behavior.
 - Proxy risk: Final document state cannot prove public action compatibility, while declaration inspection cannot prove runtime payload construction.
 - Evidence constraints: Exercise the real action finalizer and public action stream; do not copy action construction into a test-only oracle.
 - Architecture seam: D-005, D-007
@@ -613,17 +624,17 @@ outcome: R-001
 - Invalidates: D-004, A-010, A-011, A-022, A-023, I-002
 - Resolution requires: Re-enter architecture with measured Store facts and choose a new ordering/index authority explicitly before changing the accepted complexity or entry-index guarantee.
 
-### H-003 — Public compatibility policy rejects the direct port extension
-- Trigger: The release owner determines that the source-breaking `CanvasSelectionPort.deleteAvailability` addition cannot ship under the repository's active semver and migration policy in the intended release.
+### H-003 — Public compatibility policy rejects the direct breaking migration
+- Trigger: The release owner determines that the required `deletionCommitResolver`, required `CanvasRuntime.config`, or source-breaking `CanvasSelectionPort.deleteAvailability` migration cannot ship under the repository's active semver and migration policy in the intended release.
 - Invalidates: D-002, A-002, A-005, A-021, I-001, I-002
-- Resolution requires: Obtain a new product and architecture decision on the public compatibility surface; do not introduce an unapproved V2 port, capability cast, duplicated getter, or runtime-state mirror as an implementation workaround.
+- Resolution requires: Obtain a new product and architecture decision on the public compatibility surface; do not introduce an unapproved nullable/default-accept resolver fallback, V2 port, capability cast, duplicated getter, or runtime-state mirror as an implementation workaround.
 
 ## Contract Interface
 
 - Profile: `BEHAVIOR_CHANGE`
 - Obligations: `PUBLIC_API_CHANGE`, `SEQUENCED_MIGRATION_AND_RETIREMENT`, `TEMPORAL_SURFACE_CLOSURE`, `ALL_OR_NOTHING_FAILURE_BOUNDARY`, `SOURCE_OF_TRUTH_SINGULARITY`, `WORK_BUDGET_CLOSURE`, `NEGATIVE_PROOF_AND_FIXTURE_QUARANTINE`
 - ADR Impact: none
-- Sources: S-001, S-002, S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043, S-044, S-045, S-046, S-047, S-048, S-049, S-050, S-051
+- Sources: S-001, S-002, S-003, S-004, S-005, S-006, S-007, S-008, S-009, S-010, S-011, S-012, S-013, S-014, S-015, S-016, S-017, S-018, S-019, S-020, S-021, S-022, S-023, S-024, S-025, S-026, S-027, S-028, S-029, S-030, S-031, S-032, S-033, S-034, S-035, S-036, S-037, S-038, S-039, S-040, S-041, S-042, S-043, S-044, S-045, S-046, S-047, S-048, S-049, S-050, S-051, S-052, S-053, S-054, S-055, S-056
 - Requirements: R-001, R-002, R-003, R-004, R-005, R-006, R-007, R-008, R-009, R-010, R-011, R-012, R-013, R-014, R-015
 - Commitments: D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008
 - Assurance: A-001, A-002, A-003, A-004, A-005, A-006, A-007, A-008, A-009, A-010, A-011, A-012, A-013, A-014, A-015, A-016, A-017, A-018, A-019, A-020, A-021, A-022, A-023, A-024, A-025, A-026, A-027, A-028, A-029, A-030
@@ -654,20 +665,7 @@ sequenceDiagram
     opt terminal Eraser only
       Entry-->>Entry: cleanup preview and session
     end
-  else resolver is absent
-    Entry->>Apply: current one-phase prepare + install
-    alt preparation succeeds
-      Apply->>Owners: document then selection
-      opt terminal Eraser only
-        Entry-->>Entry: cleanup preview and session
-      end
-      Entry->>Public: publish state and existing action
-    else preparation fails
-      opt terminal Eraser only
-        Entry-->>Entry: cleanup preview and session
-      end
-    end
-  else resolver is configured
+  else final removal set is nonempty
     Entry->>Facts: batch-project canonical element/layer/index entries
     Entry->>Apply: prepare validated document + selection + delivery inputs
     alt preparation fails before resolver
