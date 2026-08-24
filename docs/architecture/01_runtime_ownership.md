@@ -144,6 +144,13 @@ projection, store internals, resource/session internals, selection internals, or
 per-property concrete owner probes. Committed mutations requested by interaction
 still go through `EditKernel`.
 
+`RuntimeRoot` materializes `CanvasRuntimeConfig.eraserElementKinds` once and
+passes only that runtime-owned policy to its `InteractionReadPort` adapter.
+After eraser facts resolve, the shared adapter admits `CanvasElementKind` values
+before eraser candidate and exact-check budgets for both preview and terminal
+reads; it does not duplicate the element-kind truth or alter spatial-query
+failure semantics.
+
 Frame capture also uses a narrow intent-specific document boundary.
 `FrameFactsPort` is owned by `lib/src/contracts/internal/**` and is the
 accepted committed-state read seam between the frame-internal facade and

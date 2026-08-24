@@ -282,6 +282,7 @@ final class RuntimeRoot
         selection: _selection,
         spatial: _spatial,
         controllerEpoch: () => _epochRevision,
+        eraserElementKinds: config.eraserElementKinds,
       );
   late final EditKernel _editKernel = EditKernel(
     mutationGuard: this,

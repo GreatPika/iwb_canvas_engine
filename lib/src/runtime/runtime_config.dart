@@ -1,5 +1,6 @@
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_runtime.dart';
 import '../contracts/public/canvas_tools.dart';
@@ -12,6 +13,9 @@ final class RuntimeConfig {
       clearSelectionOnDrawModeEnter = config.clearSelectionOnDrawModeEnter,
       moveCommitResolver = config.moveCommitResolver,
       selectionDeletePolicy = config.selectionDeletePolicy,
+      eraserElementKinds = _materializeEraserElementKinds(
+        config.eraserElementKinds,
+      ),
       diagnostics = RuntimeDiagnosticsConfig.from(config.diagnosticPolicy);
 
   final CanvasPointerPolicy pointerPolicy;
@@ -20,7 +24,14 @@ final class RuntimeConfig {
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
+  final Set<CanvasElementKind>? eraserElementKinds;
   final RuntimeDiagnosticsConfig diagnostics;
+}
+
+Set<CanvasElementKind>? _materializeEraserElementKinds(
+  Set<CanvasElementKind>? kinds,
+) {
+  return kinds == null ? null : Set.unmodifiable(kinds);
 }
 
 sealed class RuntimeDiagnosticsConfig {

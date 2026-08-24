@@ -52,6 +52,7 @@ final class CanvasRuntimeConfig {
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
+    this.eraserElementKinds,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -61,6 +62,12 @@ final class CanvasRuntimeConfig {
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
+
+  /// Limits eraser reads to these element kinds; null admits every kind.
+  ///
+  /// An empty set disables erasure. A supplied set is copied by the runtime,
+  /// so later caller mutations cannot change a running runtime's policy.
+  final Set<CanvasElementKind>? eraserElementKinds;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 

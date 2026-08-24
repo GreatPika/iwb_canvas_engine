@@ -512,6 +512,7 @@ final class CanvasRuntimeConfig {
     this.clearSelectionOnDrawModeEnter = false,
     this.moveCommitResolver,
     this.selectionDeletePolicy = CanvasSelectionDeletePolicy.partial,
+    this.eraserElementKinds,
     this.diagnosticPolicy = const CanvasDiagnosticPolicy.disabled(),
   });
 
@@ -521,9 +522,16 @@ final class CanvasRuntimeConfig {
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
+  final Set<CanvasElementKind>? eraserElementKinds;
   final CanvasDiagnosticPolicy diagnosticPolicy;
 }
 ```
+
+`eraserElementKinds` configures eraser-kind admission for the lifetime of one
+runtime. `null` preserves unrestricted v1 erasing, an empty set disables
+erasure, and a non-empty set is an exact allow-list of
+`CanvasElementKind` values. The runtime takes one unmodifiable copy of a
+supplied set; later caller mutation cannot change a running runtime's policy.
 
 ### 4.6 Flutter surface
 

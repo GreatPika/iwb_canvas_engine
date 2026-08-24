@@ -168,6 +168,17 @@ Eraser:
 - background elements are not erased in v1.
 - vector content elements use their transformed sized box for exact eraser
   admission; background vectors remain excluded with other backgrounds.
+- `CanvasRuntimeConfig.eraserElementKinds` is admitted after committed facts
+  resolve and before eraser candidate-limit accounting, exact-check accounting,
+  and exact hit testing: `null` admits all kinds, an empty set admits none, and
+  a non-empty set admits only its exact `CanvasElementKind` allow-list.
+- Disallowed resolved facts consume no eraser candidate or exact-check budget,
+  do not reach exact eraser hit testing, and appear in neither preview ids nor
+  the terminal final-read ids. Eraser read candidate counts describe only these
+  policy-admitted facts while retaining skipped-resolution facts. The same
+  admission applies to preview and terminal reads; it does not replace the
+  preceding spatial query or its typed invalid, stale, and spatial-budget
+  outcomes.
 ```
 
 Eraser exact-check budget:

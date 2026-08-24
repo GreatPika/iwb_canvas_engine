@@ -23,12 +23,14 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     required SelectionFactsPort selection,
     required SpatialKernel spatial,
     required int Function() controllerEpoch,
+    Set<Object>? eraserElementKinds,
     HitTestPolicy hitTestPolicy = const HitTestPolicy(),
   }) : _frame = frame,
        _documentSummary = documentSummary,
        _selection = selection,
        _spatial = spatial,
        _controllerEpoch = controllerEpoch,
+       _eraserElementKinds = eraserElementKinds,
        _hitTestPolicy = hitTestPolicy;
 
   final FrameFactsPort _frame;
@@ -36,6 +38,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   final SelectionFactsPort _selection;
   final SpatialKernel _spatial;
   final int Function() _controllerEpoch;
+  final Set<Object>? _eraserElementKinds;
   final HitTestPolicy _hitTestPolicy;
 
   @override
@@ -341,9 +344,17 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       query,
       resolve: _frame.resolveElement,
     );
-    final queryFacts = interactionQueryFacts(query, candidates);
+    final admittedCandidates = _eraserCandidates(candidates);
+    final rawQueryFacts = interactionQueryFacts(query, candidates);
+    final queryFacts =
+        rawQueryFacts.status == InteractionReadQueryStatus.candidates
+        ? InteractionReadQueryFacts.candidates(
+            candidateCount: admittedCandidates.handles.length,
+            skippedCandidateCount: candidates.skippedCandidateCount,
+          )
+        : rawQueryFacts;
     if (!interactionQueryHasCandidates(query) ||
-        candidates.handles.length > budget.candidateLimit) {
+        admittedCandidates.handles.length > budget.candidateLimit) {
       return EraserReadFacts(
         corridorPoints: corridor.points,
         erasedElementIds: const [],
@@ -351,14 +362,15 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         controllerEpoch: context.controllerEpoch,
         documentRevision: context.documentRevision,
         exactCheckCount: 0,
-        exactBudgetExceeded: interactionQueryHasCandidates(query),
+        exactBudgetExceeded:
+            admittedCandidates.handles.length > budget.candidateLimit,
         query: queryFacts,
       );
     }
 
     final erasedIds = <CanvasElementId>[];
     var exactChecks = 0;
-    for (final facts in candidates.facts) {
+    for (final facts in admittedCandidates.facts) {
       exactChecks += 1;
       if (exactChecks > budget.exactCheckLimit) {
         return EraserReadFacts(
@@ -389,6 +401,32 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       exactCheckCount: exactChecks,
       exactBudgetExceeded: false,
       query: queryFacts,
+    );
+  }
+
+  RuntimeResolvedSpatialCandidates _eraserCandidates(
+    RuntimeResolvedSpatialCandidates candidates,
+  ) {
+    final allowedKinds = _eraserElementKinds;
+    if (allowedKinds == null) {
+      return candidates;
+    }
+
+    final handles = <FrameElementHandle>[];
+    final facts = <FrameElementFacts>[];
+    for (var index = 0; index < candidates.facts.length; index += 1) {
+      final factsAtIndex = candidates.facts[index];
+      if (!allowedKinds.contains(factsAtIndex.kind)) {
+        continue;
+      }
+      handles.add(candidates.handles[index]);
+      facts.add(factsAtIndex);
+    }
+
+    return RuntimeResolvedSpatialCandidates(
+      handles: List.unmodifiable(handles),
+      facts: List.unmodifiable(facts),
+      skippedCandidateCount: candidates.skippedCandidateCount,
     );
   }
 

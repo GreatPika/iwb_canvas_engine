@@ -25,6 +25,7 @@ void main() {
   _testMarqueeCommitFacts();
   _testMarqueeQueryBudgetFacts();
   _testEraserReadFacts();
+  _testEraserKindPolicyBeforeBudgets();
   _testContextTargetReadFacts();
   _testVectorContextTargetReadFacts();
   _testRejectedContextTargetReadOutcomes();
@@ -406,6 +407,72 @@ void _testEraserReadFacts() {
   });
 }
 
+// Preview near-limit and terminal parity share one real adapter setup, so this
+// proof remains together instead of duplicating the mixed-kind fixture data.
+// ignore: halstead-volume, source-lines-of-code
+void _testEraserKindPolicyBeforeBudgets() {
+  test(
+    'eraser kind policy filters preview and terminal reads before budgets',
+    () {
+      final root = _eraserPolicyRoot(
+        const CanvasRuntimeConfig(eraserElementKinds: {CanvasElementKind.rect}),
+        disallowedTextCount: 512,
+      );
+      addTearDown(root.dispose);
+
+      final request = EraserReadRequest(
+        corridorPoints: const [Offset(0, 0)],
+        eraserThickness: 2,
+      );
+      final preview = root.interactionReadPort.eraserPreviewFacts(request);
+      final terminal = root.interactionReadPort.eraserTerminalFacts(request);
+
+      expect(preview.query.candidateCount, 1);
+      expect(preview.exactCheckCount, 1);
+      expect(preview.exactBudgetExceeded, isFalse);
+      expect(preview.erasedElementIds, [CanvasElementId('allowed-rect')]);
+      expect(terminal.query.candidateCount, 1);
+      expect(terminal.exactCheckCount, 1);
+      expect(terminal.exactBudgetExceeded, isFalse);
+      expect(terminal.erasedElementIds, [CanvasElementId('allowed-rect')]);
+    },
+  );
+
+  test('null preserves eraser admission and empty disables it', () {
+    final unrestrictedRoot = _eraserPolicyRoot(const CanvasRuntimeConfig());
+    final disabledRoot = _eraserPolicyRoot(
+      const CanvasRuntimeConfig(eraserElementKinds: {}),
+    );
+    addTearDown(unrestrictedRoot.dispose);
+    addTearDown(disabledRoot.dispose);
+
+    final request = EraserReadRequest(
+      corridorPoints: const [Offset(0, 0)],
+      eraserThickness: 2,
+    );
+    final unrestricted = unrestrictedRoot.interactionReadPort
+        .eraserTerminalFacts(request);
+    final disabledPreview = disabledRoot.interactionReadPort.eraserPreviewFacts(
+      request,
+    );
+    final disabledTerminal = disabledRoot.interactionReadPort
+        .eraserTerminalFacts(request);
+
+    expect(unrestricted.query.candidateCount, 2);
+    expect(unrestricted.exactCheckCount, 2);
+    expect(unrestricted.erasedElementIds, [
+      CanvasElementId('disallowed-text-0'),
+      CanvasElementId('allowed-rect'),
+    ]);
+    expect(disabledPreview.query.candidateCount, 0);
+    expect(disabledPreview.exactCheckCount, 0);
+    expect(disabledPreview.erasedElementIds, isEmpty);
+    expect(disabledTerminal.query.candidateCount, 0);
+    expect(disabledTerminal.exactCheckCount, 0);
+    expect(disabledTerminal.erasedElementIds, isEmpty);
+  });
+}
+
 // This target matrix stays together so content-vs-empty behavior and guard facts
 // are proved against the same document ordering fixture.
 // ignore: halstead-volume
@@ -598,6 +665,33 @@ RuntimeRoot _runtimeRoot() {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: const CanvasRuntimeConfig(),
+  );
+}
+
+RuntimeRoot _eraserPolicyRoot(
+  CanvasRuntimeConfig config, {
+  int disallowedTextCount = 1,
+}) {
+  return runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('eraser-policy-layer'),
+          elements: [
+            for (var index = 0; index < disallowedTextCount; index += 1)
+              CanvasTextElement(
+                id: CanvasElementId('disallowed-text-$index'),
+                text: 'text',
+                color: const Color(0xFF000000),
+                textDirection: TextDirection.ltr,
+                transform: CanvasTransform.translation(const Offset(-5, -5)),
+              ),
+            _rect('allowed-rect', const Offset(-5, -5)),
+          ],
+        ),
+      ],
+    ),
+    config: config,
   );
 }
 
