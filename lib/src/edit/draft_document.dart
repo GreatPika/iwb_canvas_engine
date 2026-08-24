@@ -62,17 +62,6 @@ final class DraftReplacementWorkEvent {
   final Object? replacementBacking;
 }
 
-const _draftReplacementRevisionDelta = StoreRevisionDelta(
-  document: true,
-  projection: true,
-  structural: true,
-  bounds: true,
-  elementVisual: true,
-  background: true,
-  grid: true,
-  resource: true,
-);
-
 // The draft boundary directly names the public DTOs it can mutate so rollback
 // admission remains auditable in one owner instead of being split into sync
 // glue. Element update application is shared with sparse sessions so DTO patch
@@ -508,7 +497,7 @@ final class DraftDocument {
       resources: resources,
       selectedElementIds: previous.selectedElementIds,
       revisionDelta: previous.revisionDelta.merge(
-        _draftReplacementRevisionDelta,
+        const StoreRevisionDelta.documentReplacement(),
       ),
       touchedSet: touchedSet,
       documentReplaced: true,

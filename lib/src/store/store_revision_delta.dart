@@ -49,6 +49,18 @@ final class StoreRevisionDelta {
   const StoreRevisionDelta.projectionOnly()
     : this(document: true, projection: true);
 
+  const StoreRevisionDelta.documentReplacement()
+    : this(
+        document: true,
+        projection: true,
+        structural: true,
+        bounds: true,
+        elementVisual: true,
+        background: true,
+        grid: true,
+        resource: true,
+      );
+
   final bool document;
   final bool projection;
   final bool structural;

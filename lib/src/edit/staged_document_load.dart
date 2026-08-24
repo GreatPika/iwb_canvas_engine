@@ -80,7 +80,7 @@ final class LoadDocumentPipeline {
     try {
       preparedStoreImport = _store.prepareSchemaV1Import(
         sink,
-        _replacementRevisionDelta,
+        const StoreRevisionDelta.documentReplacement(),
       );
     } on CanvasDataException catch (error, stackTrace) {
       Error.throwWithStackTrace(
@@ -96,7 +96,7 @@ final class LoadDocumentPipeline {
       palette: committed.palette,
       metadata: committed.metadata,
       summary: preparedStoreImport.summary,
-      revisionDelta: _replacementRevisionDelta,
+      revisionDelta: const StoreRevisionDelta.documentReplacement(),
       storeImport: preparedStoreImport,
       ownerToken: _ownerToken,
     );
@@ -141,21 +141,10 @@ PreparedDocumentLoad prepareDraftReplacement(CanvasDocument document) {
       layerCount: storeDocument.elements.layerTable.rows.length,
       resourceCount: storeDocument.resourceTable.count,
     ),
-    revisionDelta: _replacementRevisionDelta,
+    revisionDelta: const StoreRevisionDelta.documentReplacement(),
     storeDocument: storeDocument,
     ownerToken: _draftReplacementOwnerToken,
   );
 }
-
-const _replacementRevisionDelta = StoreRevisionDelta(
-  document: true,
-  projection: true,
-  structural: true,
-  bounds: true,
-  elementVisual: true,
-  background: true,
-  grid: true,
-  resource: true,
-);
 
 final Object _draftReplacementOwnerToken = Object();
