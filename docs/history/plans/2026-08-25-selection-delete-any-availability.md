@@ -84,7 +84,7 @@ Work Budget And Cost Displacement: Construction/import/reset adds only assignmen
 
 ## Execution Units
 
-### [ ] Unit 1: Expose the existing any-deletable selection fact
+### [x] Unit 1: Expose the existing any-deletable selection fact
 
 Owner: Public deletion availability and its canonical `SelectionDeleteFacts` conversion boundary.
 Boundary: Extend the existing value and conversion owner atomically, preserve legacy construction and current-facts timing, update only existing owner-aligned evidence and normative public documentation, and leave the producer, storage, schema, registry, and runtime-state topology unchanged.
