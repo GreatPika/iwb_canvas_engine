@@ -92,7 +92,7 @@ sequenceDiagram
     else final stroke is accepted
       IE-->>Runtime: DrawStrokeCommitIntent with final points and style facts
       Runtime->>Store: read current non-mutating element ID candidate
-      Store-->>Runtime: current candidate; no reservation or cursor advance
+      Store-->>Runtime: current candidate with no reservation or cursor advance
       Runtime->>Runtime: construct CanvasStrokeElement with local candidate
       Runtime->>EK: open synchronous interaction edit
       EK->>EK: reject disposed or nested edit
@@ -116,7 +116,7 @@ sequenceDiagram
         CC->>Events: attach staged draw action to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: accepted ledger admits the stroke ID, replaces layer membership, registry, stroke row, and revision state, and invalidates projection revision; cache rebuilds lazily on read
+        Store->>Store: accepted ledger admits the stroke ID, replaces layer membership, registry, stroke row, and revision state, invalidates projection revision, and leaves cache rebuild lazy until read
         Note over Applier,Store: Atomic install is the commit boundary, InteractionEngine never mutates Store directly.
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle

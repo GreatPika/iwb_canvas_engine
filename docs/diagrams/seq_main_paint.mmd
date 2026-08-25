@@ -101,7 +101,7 @@ sequenceDiagram
       Supplement-->>Frame: merged records with per-frame supplement
     end
     Note over Supplement,PlanCache: Selected supplement records are per-frame and are not stored in OrdinaryPaintRecordCache.
-    Note over Ordinary,Supplement: RenderElementRecord payload dispatch uses only its sealed RenderElementRow; no render-family mirror is cached or copied.
+    Note over Ordinary,Supplement: RenderElementRecord payload dispatch uses only its sealed RenderElementRow, and no render-family mirror is cached or copied.
   end
 
   Frame->>Background: build static background plan
@@ -147,7 +147,7 @@ sequenceDiagram
   Frame->>Painter: paint immutable records, resolved assets, and bounded frame render caches
   Note over Frame,Painter: Ordinary element and stroke opacity is applied through primitive paint alpha. It must not call Canvas.saveLayer in the hot ordinary opacity path.
   Note over Frame,Painter: Painter draws selection chrome after main records so selected chrome remains above all main scene content.
-  Note over Frame,Painter: A vector record with alpha zero is a paint no-op. At full alpha it clips, translates, independently scales intrinsic size to target size, calls drawPicture with zero layers, then restores; at partial alpha it uses exactly one target-bounded layer. No Picture-to-image conversion or frame-wide opacity cap.
+  Note over Frame,Painter: A vector record with alpha zero is a paint no-op. At full alpha it clips, translates, independently scales intrinsic size to target size, calls drawPicture with zero layers, then restores, while at partial alpha it uses exactly one target-bounded layer. No Picture-to-image conversion or frame-wide opacity cap.
   Painter-->>Surface: draw main scene
 
   Note over Painter: Painter consumes immutable RenderElementRecord data only, it performs no live runtime reads.

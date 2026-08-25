@@ -21,7 +21,7 @@ sequenceDiagram
 
   alt raw length or parse fails
     Codec->>Diagnostics: create codec diagnostic with code, path, and sanitized details
-    Diagnostics-->>Codec: record if enabled; keep original exception unchanged
+    Diagnostics-->>Codec: record if enabled and keep original exception unchanged
     Codec--x Runtime: throw CanvasDataException
     Runtime--x API: throw CanvasDataException without cleanup or install
     API--x App: throw CanvasDataException
@@ -51,14 +51,14 @@ sequenceDiagram
         Store--x Runtime: CanvasDataException from prepared-row admission
         Runtime->>Codec: recordSchemaV1FailureDiagnostic(error)
         Codec->>Diagnostics: create codec diagnostic with sanitized details
-        Diagnostics-->>Codec: record if enabled; keep original exception unchanged
+        Diagnostics-->>Codec: record if enabled and keep original exception unchanged
         Codec-->>Runtime: return the same CanvasDataException
         Runtime--x API: throw CanvasDataException without cleanup or install
         API--x App: throw CanvasDataException
       end
     else schema validation rejects
       Schema->>Diagnostics: create codec diagnostic with code, path, and sanitized details
-      Diagnostics-->>Codec: record if enabled; keep original exception unchanged
+      Diagnostics-->>Codec: record if enabled and keep original exception unchanged
       Codec--x Runtime: throw CanvasDataException
       Runtime--x API: throw CanvasDataException without cleanup or install
       API--x App: throw CanvasDataException
@@ -91,9 +91,9 @@ sequenceDiagram
     API-->>App: encoded Map or JSON string
   else DTO validation rejects
     Schema->>Diagnostics: create codec diagnostic with sanitized path/details
-    Diagnostics-->>Codec: record if enabled; keep original exception unchanged
+    Diagnostics-->>Codec: record if enabled and keep original exception unchanged
     Codec--x API: throw CanvasDataException
     API--x App: throw CanvasDataException
   end
 
-  Note over Runtime,Store: Runtime load uses import events and store rows; explicit decode uses the same reader but a codec-local DTO builder sink, never the runtime load route.
+  Note over Runtime,Store: Runtime load uses import events and store rows, while explicit decode uses the same reader but a codec-local DTO builder sink, never the runtime load route.

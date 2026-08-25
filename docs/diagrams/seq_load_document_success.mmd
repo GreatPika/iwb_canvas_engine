@@ -52,7 +52,7 @@ sequenceDiagram
   Session->>Session: release cache and same-frame suppression borrows
   Session->>Surface: identity-aware all retained-main-output resource release
   Surface->>Surface: remove retained main-output resource bindings
-  Note over Session,Surface: Reset returns only after both session and retained-output borrows are absent; no app resolver call or app asset disposal occurs.
+  Note over Session,Surface: Reset returns only after both session and retained-output borrows are absent, with no app resolver call or app asset disposal.
   Runtime->>Frame: reset replacement-scoped caches and schedule repaint
   Runtime->>Signals: publish one CanvasRuntimeState after install
   Note over Signals: JSON load emits no CanvasActionCommitted event and does not build the first CanvasDocument projection.

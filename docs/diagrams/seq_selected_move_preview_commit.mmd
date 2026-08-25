@@ -134,7 +134,7 @@ sequenceDiagram
 
     opt resolver configured
       Runtime->>Resolver: resolve(request with proposedDelta) under runtime guard
-      Resolver-->>Runtime: CanvasMoveCommit(delta) or CanvasMoveCancel; guard closes
+      Resolver-->>Runtime: CanvasMoveCommit(delta) or CanvasMoveCancel, then guard closes
     end
 
     alt CanvasMoveCancel returned
@@ -181,7 +181,7 @@ sequenceDiagram
         CC->>Events: attach staged moveSelection event to commit
         CC->>Applier: hand off compiled CommitPlan
         Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: replace transform rows and revision state, invalidate projection revision; cache rebuilds lazily on read
+        Store->>Store: replace transform rows and revision state, invalidate projection revision, and leave cache rebuild lazy until read
         Note over Applier,Store: Atomic install is the commit boundary.
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle

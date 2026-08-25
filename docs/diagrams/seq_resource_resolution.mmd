@@ -110,7 +110,7 @@ sequenceDiagram
   Painter-->>Surface: draw main scene
 
   Note over Assets,Resolver: PaintAssetBindingService is the only frame collaborator that receives SurfaceResourceSession, painter owns no typed CanvasResourceResolver reference.
-  Note over Session,Resolver: Returned resource assets are owned by the application. The engine never disposes them; cache eviction and release drop references only.
+  Note over Session,Resolver: Returned resource assets are owned by the application. The engine never disposes them, and cache eviction and release drop references only.
   Note over Capture,Store: Main paint uses FrameFactsPort for committed frame and row facts, does not materialize CanvasDocument, and does not read DocumentProjectionCache.
   Note over Port,Store: ResourcePort cannot mutate descriptors. Descriptor mutation is only through the CanvasEdit commit path outside this sequence.
   Note over Surface,Painter: Resource resolution uses surface session state, frame inputs, and resource descriptors only.
@@ -122,7 +122,7 @@ sequenceDiagram
     Resources-->>Runtime: ResourceDirtyOutcome with target/all release
     Runtime->>Session: release target resource or all active borrows if attached
     Session->>Cache: remove matching cache/suppression borrows
-    Session->>Surface: active identity releases matching retained main-output binding; stale identity is no-op
+    Session->>Surface: active identity releases matching retained main-output binding, while stale identity is no-op
     Runtime->>State: publish CanvasRuntimeState with updated state.revisions.resourceVisual
     Runtime->>Signals: schedule main repaint
     Signals-->>Surface: repaint main scene

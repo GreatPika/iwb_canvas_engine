@@ -16,7 +16,7 @@ sequenceDiagram
   Runtime->>Spatial: applyTouched(FrameFactsPort, touched ids)
   alt document replacement
     Spatial->>Spatial: schedule replacement rebuild from committed frame facts
-    Note over Spatial: Current index is dropped; the next spatial query rebuilds it. Ordinary touched delta work does not run.
+    Note over Spatial: Current index is dropped, and the next spatial query rebuilds it. Ordinary touched delta work does not run.
   else clear with zero post-clear elements
     Spatial->>Spatial: resetEmpty at accepted structuralRevision
     Note over Spatial: Empty reset is valid only for a genuinely zero-element committed frame.
@@ -42,7 +42,7 @@ sequenceDiagram
       Spatial->>Membership: replace/remove entriesById for touched ids
       Spatial-->>Runtime: touched spatial update committed
       Note over Spatial,Runtime: Atomic apply publishes only complete touched-id membership changes.
-      Note over Spatial,PaintIndex: A retained-background clear removes only actual content ids; untouched background paint membership remains. Hit/context eligibility is unchanged.
+      Note over Spatial,PaintIndex: A retained-background clear removes only actual content ids, while untouched background paint membership remains. Hit/context eligibility is unchanged.
     else stale id, generation, structuralRevision, or membership validation fails
       Spatial->>Spatial: discard prepared delta without applying partial removals/additions
       Spatial->>Spatial: mark spatial index invalid

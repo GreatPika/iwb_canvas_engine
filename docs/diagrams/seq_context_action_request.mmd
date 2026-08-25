@@ -35,7 +35,7 @@ sequenceDiagram
       Spatial-->>IE: candidates or typed non-candidate result
       alt invalid-index, stale-index, budget-exceeded, or unresolved/skipped candidate
         IE-->>Tools: reject before timestamp, request id, or stream emission
-        Note over IE,Signals: Rejected target reads emit no public request. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics; invalid-index records none.
+        Note over IE,Signals: Rejected target reads emit no public request. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics, while invalid-index records none.
       else candidate result
         IE->>ReadPort: resolve candidate handles to current immutable facts
         alt any candidate handle unresolved or skipped
@@ -90,7 +90,7 @@ sequenceDiagram
   Spatial-->>IE: candidates or typed non-candidate result
   alt first tap target read is invalid-index, stale-index, budget-exceeded, or unresolved/skipped candidate
     IE-->>Tools: finish tap without pending context tap or request
-    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics; invalid-index records none.
+    Note over IE,Signals: Rejected first tap stores no pending context tap. Stale-index, budget-exceeded, and unresolved/skipped candidates record bounded interaction diagnostics, while invalid-index records none.
   else candidate result
     IE->>ReadPort: resolve candidate handles to current immutable facts
     alt any candidate handle unresolved or skipped
@@ -214,10 +214,10 @@ sequenceDiagram
       Commands->>Registry: consume and remove request facts
       alt request matches active text session
         Commands->>AppUI: synchronously publish activeSession = null
-        Note over AppUI,Signals: The active-session listener sees accepted text and consumed request. It may complete a separate accepted nested mutation before every outer frame/state/action/observer callback; Flutter-reported listener errors do not stop the outer route.
+        Note over AppUI,Signals: The active-session listener sees accepted text and consumed request. It may complete a separate accepted nested mutation before every outer frame/state/action/observer callback, and Flutter-reported listener errors do not stop the outer route.
         Commands->>Commands: record outer text-edit interaction revision
       else direct live request without active session
-        Note over Commands,Signals: No active-session dismissal, listener window, or interaction revision; accepted changed text still reaches common delivery.
+        Note over Commands,Signals: No active-session dismissal, listener window, or interaction revision, while accepted changed text still reaches common delivery.
       end
       Commands->>Signals: outer guarded delivery: spatial, resource/release, root frame, bridge frame, state, editText action, observer
       Commands-->>App: true

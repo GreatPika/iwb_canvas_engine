@@ -17,7 +17,7 @@ stateDiagram-v2
   note right of NoSurfaceDirtySignal
     Dirty-resource calls still publish public resourceVisual state
     and main repaint intent without an attached surface. There is
-    no session cache to invalidate; the next attach starts empty.
+    no session cache to invalidate, and the next attach starts empty.
   end note
   NoSurfaceDirtySignal --> NoSurface: increment public resource visual revision and publish state
 
@@ -43,10 +43,10 @@ stateDiagram-v2
   ActiveSession --> DroppingSession: detach or runtime swap / lifecycle drop
   ActiveSession --> Disposed: dispose() / lifecycle drop
 
-  ResolverReplaced --> ActiveSession: install resolver and increment resolverGeneration; clear cache/suppression/pending budget follow-up; then release identity-aware retained output
+  ResolverReplaced --> ActiveSession: install resolver and increment resolverGeneration, clear cache/suppression/pending budget follow-up, then release identity-aware retained output
 
   state "Document replacement reset" as DocumentReset
-  DocumentReset --> ActiveSession: RuntimeRoot calls lifecycle reset; session and retained-output borrows release before publication
+  DocumentReset --> ActiveSession: RuntimeRoot calls lifecycle reset, then session and retained-output borrows release before publication
 
   state "Dropping active session" as DroppingSession
   DroppingSession --> NoSurface: lifecycle drop releases session cache/suppression, then retained output, before return
@@ -81,7 +81,7 @@ stateDiagram-v2
   note right of CacheLookup
     ResourceAssetCache identity is keyed strictly by
     resolverGeneration + resourceId + resourceRevision.
-    Image byte and vector-zero-byte admission are policy-owned; descriptor byteLength
+    Image byte and vector-zero-byte admission are policy-owned, while descriptor byteLength
     remains descriptor metadata, not cache pressure truth.
     Dirty-resource operations release affected/all active-session
     cache/suppression borrows, then matching retained main-output borrows,
@@ -174,7 +174,7 @@ stateDiagram-v2
   note right of PlaceholderResult
     Missing descriptors, resolver exceptions, and unresolved/null results paint a
     bounded placeholder. They do not trigger full-document
-    repaint loops. Null results suppress only same-frame retries;
+    repaint loops. Null results suppress only same-frame retries, while
     resolver exceptions remain retryable on later frames.
   end note
   PlaceholderResult --> ActiveSession: paint completes
