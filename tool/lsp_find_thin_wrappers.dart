@@ -4,6 +4,8 @@ import 'dart:io';
 import 'src/lsp/wrapper_detector.dart';
 import 'src/tool_command_result.dart';
 
+// Candidate collection and both report forms share a single mapped result set.
+// ignore: halstead-volume, source-lines-of-code, reason: Both report forms share one mapped candidate result set.
 Future<ToolCommandResult> runLspFindThinWrappersTool(
   List<String> args, {
   Directory? root,

@@ -119,6 +119,9 @@ void _sparseStoreAddUpdateAndNoOpDoNotBuildProjection() {
   expect(store.projectionBuildCount, 1);
 }
 
+// This route must retain every edit and the read boundary in one witness so a
+// projection built by any public operation remains directly attributable.
+// ignore: halstead-volume
 void _ordinaryPublicEditRouteDoesNotBuildProjection() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(

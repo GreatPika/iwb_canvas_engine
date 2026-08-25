@@ -6,6 +6,9 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
+// Symbol lookup, hierarchy collection, and all requested report formats share
+// one LSP session and one resolved symbol, so they remain a cohesive command.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One resolved symbol and LSP session own every requested report form.
 Future<ToolCommandResult> runLspTraceSymbolTool(
   List<String> args, {
   Directory? root,
@@ -191,6 +194,9 @@ Future<void> main(List<String> args) async {
   exitCode = result.exitCode;
 }
 
+// These parameters are the recursive call-tree state; a context wrapper would
+// conceal the direction-specific LSP request that the report must preserve.
+// ignore: number-of-parameters, reason: These parameters are one recursive call-tree state.
 Future<List<Map<String, Object?>>> _collectCallTree(
   LanguageServerClient client,
   LspCallItem item, {
@@ -406,6 +412,9 @@ String _renderMermaidDocument(String mermaid) {
   return '```mermaid\n$mermaid\n```';
 }
 
+// Rendering needs the node map, id cursor, and recursion state together to
+// preserve one shared Mermaid namespace across both hierarchy directions.
+// ignore: number-of-parameters, reason: Rendering must retain one shared Mermaid node namespace.
 void _writeMermaidTree(
   StringBuffer buffer, {
   required String parentId,

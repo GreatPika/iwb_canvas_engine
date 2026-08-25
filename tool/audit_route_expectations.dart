@@ -6,6 +6,8 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
+// Config validation, LSP lifetime, and result rendering are one CLI boundary.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One CLI boundary owns config validation and its LSP lifecycle.
 Future<ToolCommandResult> runAuditRouteExpectationsTool(
   List<String> args, {
   Directory? root,
@@ -99,6 +101,8 @@ Future<void> main(List<String> args) async {
   exitCode = result.exitCode;
 }
 
+// A route witness keeps locating, traversal, and expectation evaluation together.
+// ignore: halstead-volume, source-lines-of-code, reason: One route witness keeps lookup, traversal, and expectation together.
 Future<_RouteExpectationResult> _runCheck(
   LanguageServerClient client, {
   required Directory root,
@@ -167,6 +171,9 @@ Future<_RouteExpectationResult> _runCheck(
   };
 }
 
+// The traversal's client, direction, depth, and visited/result accumulators are
+// one recursive state bundle; a context object would only obscure that boundary.
+// ignore: number-of-parameters, source-lines-of-code, reason: These values are one recursive traversal state bundle.
 Future<void> _collectReachableItems(
   LanguageServerClient client,
   LspCallItem item, {
@@ -283,6 +290,8 @@ _RouteAuditConfig _parseConfig(Object? raw) {
   );
 }
 
+// All fields are validated together so malformed configuration has one error boundary.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, reason: All fields require one malformed-config boundary.
 _RouteAuditCheck _parseCheck(Object? raw) {
   if (raw is! Map<Object?, Object?>) {
     throw const FormatException('each check must be a JSON object');

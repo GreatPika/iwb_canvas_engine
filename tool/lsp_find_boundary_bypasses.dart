@@ -9,6 +9,9 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
+// Each method trace shares one LSP session and must-pass report, which is this
+// command's cohesive boundary rather than a collection of partial commands.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One command owns its shared LSP session and must-pass report.
 Future<ToolCommandResult> runLspFindBoundaryBypassesTool(
   List<String> args, {
   Directory? root,

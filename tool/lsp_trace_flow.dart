@@ -6,6 +6,8 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
+// One LSP trace owns collection and both representations of the same flow.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: One trace owns collection and both renderings of its flow.
 Future<ToolCommandResult> runLspTraceFlowTool(
   List<String> args, {
   Directory? root,

@@ -1,5 +1,30 @@
 import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
+
+final class PublicExportDirectiveFact {
+  const PublicExportDirectiveFact({
+    required this.source,
+    required this.uriRefs,
+    required this.filters,
+  });
+
+  final String source;
+  final List<String> uriRefs;
+  final List<Map<String, Object?>> filters;
+}
+
+List<PublicExportDirectiveFact> collectPublicExportDirectiveFacts(
+  ParsedUnitResult parsedUnit,
+) => [
+  for (final directive
+      in parsedUnit.unit.directives.whereType<ExportDirective>())
+    PublicExportDirectiveFact(
+      source: directive.toSource(),
+      uriRefs: _collectDirectiveUriRefs(directive),
+      filters: _collectDirectiveFilters(directive),
+    ),
+];
 
 final class EffectivePublicExportedElement {
   const EffectivePublicExportedElement({
@@ -56,6 +81,49 @@ EffectivePublicExportNamespace collectEffectivePublicExportNamespace({
 
   return EffectivePublicExportNamespace(elements: elements);
 }
+
+List<String> _collectDirectiveUriRefs(ExportDirective directive) {
+  final refs = <String>[];
+
+  void addUri(StringLiteral literal) {
+    final uri = literal.stringValue;
+    if (uri == null || uri.isEmpty) {
+      return;
+    }
+    refs.add(uri);
+  }
+
+  addUri(directive.uri);
+  for (final configuration in directive.configurations) {
+    addUri(configuration.uri);
+  }
+  return refs;
+}
+
+List<Map<String, Object?>> _collectDirectiveFilters(
+  ExportDirective directive,
+) => directive.combinators
+    .map(
+      (combinator) => switch (combinator) {
+        ShowCombinator() => <String, Object?>{
+          'kind': 'show',
+          'names':
+              combinator.shownNames
+                  .map((identifier) => identifier.name)
+                  .toList(growable: false)
+                ..sort(),
+        },
+        HideCombinator() => <String, Object?>{
+          'kind': 'hide',
+          'names':
+              combinator.hiddenNames
+                  .map((identifier) => identifier.name)
+                  .toList(growable: false)
+                ..sort(),
+        },
+      },
+    )
+    .toList(growable: false);
 
 String? repoRelativePathForPublicExportElement({
   required Element element,

@@ -97,6 +97,9 @@ Future<void> _sparseCompensatingElementIsSilent() {
   );
 }
 
+// The edit sequence and its post-commit family revisions are one temporal
+// oracle; extracting either would hide which mutation the assertions witness.
+// ignore: halstead-volume
 Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(

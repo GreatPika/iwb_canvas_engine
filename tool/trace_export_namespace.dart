@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
 import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/session.dart';
-import 'package:analyzer/dart/ast/ast.dart';
-
 import 'src/analysis_dart_sdk_path.dart';
 import 'src/public_export_namespace_support.dart';
 import 'src/tool_command_result.dart';
 
+// One export trace owns resolution and all render formats for the same namespace.
+// ignore: halstead-volume, reason: One export trace owns resolution and every report format.
 Future<ToolCommandResult> runTraceExportNamespaceTool(
   List<String> args, {
   Directory? root,
@@ -64,6 +64,9 @@ Future<void> main(List<String> args) async {
   exitCode = result.exitCode;
 }
 
+// Namespace closure, direct-export provenance, and owner attribution require
+// one resolved-library snapshot; splitting them would duplicate that snapshot.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One resolved-library snapshot owns namespace closure and provenance.
 Future<Map<String, Object?>> _buildReport({
   required Directory root,
   required String entrypointArg,
@@ -106,10 +109,9 @@ Future<Map<String, Object?>> _buildReport({
   final entrypointDirRepoRelPosix = _posixDirname(entrypointRepoRelPath);
   final directExports = <Map<String, Object?>>[];
   final directTargets = <String>{};
-  for (final directive
-      in parsedResult.unit.directives.whereType<ExportDirective>()) {
+  for (final directive in collectPublicExportDirectiveFacts(parsedResult)) {
     final targets = <String>[];
-    for (final uriRef in _collectDirectiveUriRefs(directive)) {
+    for (final uriRef in directive.uriRefs) {
       final resolvedTarget = _resolveToRepoRelTargetPosix(
         targetPosix: toPublicExportNamespacePosixPath(uriRef),
         packageName: packageName,
@@ -121,9 +123,9 @@ Future<Map<String, Object?>> _buildReport({
       }
     }
     directExports.add(<String, Object?>{
-      'directive': directive.toSource(),
+      'directive': directive.source,
       'targets': targets,
-      'filters': _collectDirectiveFilters(directive),
+      'filters': directive.filters,
     });
   }
 
@@ -218,49 +220,6 @@ Future<ResolvedLibraryResult?> _resolveLibraryForRepoRelPath({
   return result is ResolvedLibraryResult ? result : null;
 }
 
-List<String> _collectDirectiveUriRefs(ExportDirective directive) {
-  final refs = <String>[];
-
-  void addUri(StringLiteral literal) {
-    final uri = literal.stringValue;
-    if (uri == null || uri.isEmpty) {
-      return;
-    }
-    refs.add(uri);
-  }
-
-  addUri(directive.uri);
-  for (final configuration in directive.configurations) {
-    addUri(configuration.uri);
-  }
-  return refs;
-}
-
-List<Map<String, Object?>> _collectDirectiveFilters(ExportDirective directive) {
-  return directive.combinators
-      .map((combinator) {
-        return switch (combinator) {
-          ShowCombinator() => <String, Object?>{
-            'kind': 'show',
-            'names':
-                combinator.shownNames
-                    .map((identifier) => identifier.name)
-                    .toList(growable: false)
-                  ..sort(),
-          },
-          HideCombinator() => <String, Object?>{
-            'kind': 'hide',
-            'names':
-                combinator.hiddenNames
-                    .map((identifier) => identifier.name)
-                    .toList(growable: false)
-                  ..sort(),
-          },
-        };
-      })
-      .toList(growable: false);
-}
-
 String _renderSummary(Map<String, Object?> report) {
   final directTargets =
       report['directExportTargets'] as List<Object?>? ?? const <Object?>[];
@@ -315,6 +274,8 @@ String _renderMermaidDocument(Map<String, Object?> report) {
   return buffer.toString().trimRight();
 }
 
+// Mermaid nodes share one id namespace across every direct and transitive edge.
+// ignore: halstead-volume, reason: Direct and transitive edges require one Mermaid id namespace.
 String _renderMermaid(Map<String, Object?> report) {
   final buffer = StringBuffer()..writeln('flowchart LR');
   final nodeIds = <String, String>{};

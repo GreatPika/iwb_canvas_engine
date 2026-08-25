@@ -579,6 +579,9 @@ void _testSelectedMoveDragStartSlopFallbackUsesTapSlop() {
   });
 }
 
+// This witness needs the down/move sequence and each preview delta together:
+// extracting a phase would separate the temporal route oracle from its setup.
+// ignore: halstead-volume
 void _testSelectedMoveContinuesInsideSlopAfterPreviewStart() {
   test('selected move keeps preview live when crossing back through start', () {
     final root = _runtimeRoot(

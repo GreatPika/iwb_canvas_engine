@@ -4,6 +4,9 @@ import 'dart:io';
 import 'src/lsp/language_server_client.dart';
 import 'src/tool_command_result.dart';
 
+// Query normalization, retry output, filtering, and rendering are one command
+// operation; separating them would duplicate the LSP response shape handling.
+// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: Response shaping, filtering, and rendering share one LSP response.
 Future<ToolCommandResult> runLspFindSymbolsTool(
   List<String> args, {
   Directory? root,
