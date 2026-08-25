@@ -13,6 +13,7 @@ sequenceDiagram
   participant Geometry as GeometryPolicy
   participant EK as EditKernel
   participant Store as DocumentStoreKernel
+  participant Applier as CommitApplier
   participant Selection as SelectionKernel
   participant Runtime as RuntimeRoot
   participant Resolver as required deletion resolver
@@ -122,39 +123,114 @@ sequenceDiagram
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
         Frame->>Signals: publish overlay cleanup repaint request
         Signals-->>Surface: repaint overlay without eraser corridor
-        Note over Touched,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, or erase action is published.
+        Note over Store,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, or erase action is published.
         Note over Runtime,Signals: Active preview cleanup publishes only preview state.
       else at least one element is erased
         IE->>Runtime: terminal intent with Unit-2 filtered canonical Store entries
-        Runtime->>EK: synchronously prepare sparse removal and erase action
-        EK->>Store: validate sparse candidate and bind current revisions/id ledgers
-        EK->>Selection: normalize and own the post-removal selection backing
-        Note over EK,Selection: Document, selection, revision, delivery, and action inputs are complete before the resolver. No public request exists on preparation failure.
-        Runtime->>Resolver: guarded CanvasDeletionCommitRequest(erase, canonical entries)
-        alt resolver accepts
-          Resolver-->>Runtime: accept
-          Note over Runtime,Selection: The private prepared value is consumed once, without callback or publication between these calls.
-          Runtime->>Store: install bound sparse document and admitted ledgers
-          Store-->>Runtime: accepted Store facts
-          Runtime->>Selection: install already-owned selected-id backing
-          Runtime->>IE: cleanup eraser session, publish: false
-          IE->>Cleanup: typed cleanup request
-          Cleanup-->>IE: PointerCleanupOutcome
-          IE->>Preview: clear preview/session
-          Runtime->>Spatial: apply touched-id spatial removal
-          Runtime->>Frame: merge main and cleanup repaint
-          Runtime->>Signals: publish accepted state
-          Runtime->>Signals: publish erase action
-          Note over Runtime,Signals: A state/action listener failure is post-install: accepted Store and Selection facts remain final; there is no retry or rollback.
-        else resolver cancels
-          Resolver-->>Runtime: cancel
-          Runtime->>IE: discard prepared state; cleanup eraser session, publish: false
-          Note over Store,Signals: No Store, Selection, timestamp, action, or diagnostic mutation occurs.
-        else resolver throws ordinary object
-          Resolver-->>Runtime: throw
-          Runtime->>Diagnostics: record bounded deletion-resolver failure(operation, errorKind)
-          Runtime->>IE: discard prepared state; cleanup eraser session, publish: false
-          Note over Store,Signals: No Store, Selection, timestamp, or action mutation occurs.
+        Runtime->>EK: prepare deletion-only removal and existing erase action
+        alt deletion-commit preparation succeeds
+          EK->>EK: validate/build AcceptedCommitDocument + CommitPlan
+          EK->>Runtime: invoke configured deletion preparation seam
+          Runtime->>Applier: prepareDeletion(document, plan)
+          Applier->>Runtime: invoke configured selection-effect preparation callback
+          Runtime->>Runtime: read current selection as needed
+          Runtime->>Store: normalize selection against prepared sparse commit
+          Store-->>Runtime: normalized selected ids
+          Runtime->>Runtime: construct PreparedSelectionEffect and copy ids into owned backing
+          Runtime-->>Applier: PreparedSelectionEffect with owned backing
+          Applier->>Store: prepare sparse deletion install
+          Store-->>Applier: prepared Store install
+          Applier->>Applier: seal single-use prepared state
+          Applier-->>Runtime: single-use prepared deletion
+          Note over EK,Applier: All deletion-specific preparation completes before the callback.
+          Runtime->>Runtime: construct immutable CanvasDeletionCommitRequest and copy entry DTOs
+          alt request construction or entry copy fails
+            Runtime->>IE: cleanup eraser session with editFailure and publish directly
+            IE->>Cleanup: typed cleanup request for eraser failure cleanup
+            Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+            IE->>Preview: apply outcome: clear eraser corridor preview
+            IE->>Preview: bump previewRevision for cleared active preview
+            Preview-->>Runtime: preview cleanup revision fact
+            Runtime->>Frame: deliver overlay cleanup repaint
+            Runtime->>Signals: deliver preview cleanup state/effect only
+            Note over Resolver,Signals: Resolver is not invoked. No Store, Selection, timestamp, action, or diagnostic mutation occurs.
+            Runtime-->>Tools: synchronously rethrow original request-preparation error through handlePointer
+            Tools-->>Surface: propagate original error to the public caller
+          else request constructed
+            Runtime->>Resolver: guarded required deletion request
+            alt resolver accepts
+              Resolver-->>Runtime: accept
+              Note over Runtime,Store: Resolver return and the first Store install share one synchronous stack with no external callback or publication between them.
+              Runtime->>Applier: consume prepared deletion once
+              Applier->>Store: install prepared document
+              Store-->>Applier: committed Store facts
+              Applier->>Selection: transfer owned PreparedSelectionEffect backing and install
+              Selection-->>Applier: committed selection facts
+              Applier-->>Runtime: accepted delivery facts
+              Runtime->>IE: post-success eraser cleanup, publish: false
+              IE->>Cleanup: typed cleanup request for eraser postSuccessCommit cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Spatial: apply touched removals only
+              Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
+              Runtime->>Signals: deliver state after document, selection, and preview effects
+              Runtime->>Signals: deliver existing erase action notification
+              Note over Runtime,Signals: State/action delivery is post-install. Accepted Store and Selection facts remain final if delivery fails.
+            else resolver cancels
+              Resolver-->>Runtime: cancel
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverCancel, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverCancel cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, action, or diagnostic mutation occurs.
+            else resolver guard rejects
+              Resolver-->>Runtime: ResolverCallbackRejection contained as cancel (didThrow: true)
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverError, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, action, or resolver-failure diagnostic mutation occurs.
+            else resolver throws ordinary object
+              Resolver-->>Runtime: throw
+              Runtime->>Diagnostics: record one bounded deletion-resolver failure
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverError, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, or action mutation occurs.
+            end
+            Note over Resolver,Diagnostics: Guard rejection is contained as cancel with didThrow=true. Only an ordinary callback error records the bounded diagnostic.
+          end
+        else deletion-commit preparation fails
+          Note over EK,Store: The original error can arise in EditKernel validation/build, RuntimeRoot's configured preparation seam, CommitApplier preparation, or Store normalization/bind.
+          Runtime->>IE: cleanup eraser session with editFailure and publish directly
+          IE->>Cleanup: typed cleanup request for eraser failure cleanup
+          Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+          IE->>Preview: apply outcome: clear eraser corridor preview
+          IE->>Preview: bump previewRevision for cleared active preview
+          Preview-->>Runtime: preview cleanup revision fact
+          Runtime->>Frame: deliver overlay cleanup repaint
+          Runtime->>Signals: deliver preview cleanup state/effect only
+          Note over Resolver,Signals: Resolver is not invoked. No Store, Selection, timestamp, action, or resolver diagnostic mutation occurs.
+          Runtime-->>Tools: synchronously rethrow original preparation error through handlePointer
+          Tools-->>Surface: propagate original error to the public caller
         end
       end
     end
