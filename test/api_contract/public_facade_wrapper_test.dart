@@ -36,7 +36,7 @@ void main() {
         ),
       ],
     );
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(source));
 
     expect(runtime.state.value.summary.elementCount, 1);

@@ -38,6 +38,45 @@ void main() {
     'selection deletion re-reads current deletion facts',
     _selectionDeletionRereadsCurrentFacts,
   );
+  test(
+    'selection deletion presents the full Store entry set before cancellation',
+    _selectionDeletionResolverCanCancelThePreparedSet,
+  );
+}
+
+// The request and cancel snapshot are one public-route witness, so keeping
+// their assertions together makes the Store-to-resolver contract readable.
+// ignore: halstead-volume
+void _selectionDeletionResolverCanCancelThePreparedSet() {
+  final requests = <CanvasDeletionCommitRequest>[];
+  final runtime = runtimeWithDocument(
+    _document(),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (request) {
+        requests.add(request);
+        return CanvasDeletionDecision.cancel;
+      },
+    ),
+  );
+  addTearDown(runtime.dispose);
+  runtime.selection.setSelection([
+    CanvasElementId('rect-b'),
+    CanvasElementId('rect-a'),
+  ]);
+  final before = runtime.state.value;
+
+  runtime.selection.deleteSelection();
+
+  expect(requests, hasLength(1));
+  final request = requests.single;
+  expect(request.operation, CanvasDeletionOperation.deleteSelection);
+  expect(request.entries.map((entry) => entry.element.id), [
+    CanvasElementId('rect-a'),
+    CanvasElementId('rect-b'),
+  ]);
+  expect(request.entries[0].elementIndex, 0);
+  expect(request.entries[1].elementIndex, 2);
+  expect(runtime.state.value, before);
 }
 
 // The scenario keeps eligibility, transform math, validation, and action shape
@@ -179,6 +218,7 @@ Future<void> _allOrNoneSelectionDeletionRejectsMixedSelection() async {
   final allOrNoneRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -215,6 +255,7 @@ Future<void> _lockedContentRemainsDeletableUnderAllOrNone() async {
   final lockedRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -383,3 +424,6 @@ void _expectTransformClose(CanvasTransform actual, CanvasTransform expected) {
   expect(actual.tx, closeTo(expected.tx, 0.000000001));
   expect(actual.ty, closeTo(expected.ty, 0.000000001));
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

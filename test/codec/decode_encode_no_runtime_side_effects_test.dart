@@ -43,7 +43,7 @@ void main() {
         ),
       ],
     );
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
     final beforeDocument = runtime.readDocument();
     final beforeState = runtime.state.value;

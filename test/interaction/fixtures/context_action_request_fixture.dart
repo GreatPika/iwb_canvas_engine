@@ -223,7 +223,9 @@ Future<void> _verifyPointerRequestTimestampOrder() async {
 Future<void> _verifyDisposeSuppressesQueuedRequestBeforeDone() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(selectableContent: false, hitPadding: 0),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final events = <String>[];
   final done = Completer<void>();
@@ -529,6 +531,7 @@ Future<void> _verifyPointerSampleMismatchIsPrivate() async {
 Future<void> _verifyPointerTapInsideTapSlopIsTapOnly() async {
   final scenario = _RuntimeContextRequestScenario(
     config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 8, dragStartSlop: 4),
     ),
   );
@@ -576,7 +579,9 @@ final class _RuntimeContextRequestScenario {
   _RuntimeContextRequestScenario({
     bool selectableContent = false,
     double hitPadding = 0,
-    CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+    CanvasRuntimeConfig config = const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     CanvasDocument? initialDocument,
   }) {
     root = runtimeRootWithCommittedDocumentSeed(
@@ -793,3 +798,6 @@ final class _FakeContextFrameFactsPort implements FrameFactsPort {
   @override
   FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) => null;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

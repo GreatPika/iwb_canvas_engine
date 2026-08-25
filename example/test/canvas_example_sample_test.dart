@@ -192,7 +192,7 @@ void _registerSurfaceRenderingResolverTest() {
   testWidgets('CanvasSurface asks resolver for the sample-cat descriptor', (
     tester,
   ) async {
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     runtime.edits.loadDocumentFromJson(
       encodeCanvasDocumentToJson(_sampleImageDocument()),
     );
@@ -340,3 +340,9 @@ final class _RecordingResourceResolver implements CanvasResourceResolver {
   @override
   CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

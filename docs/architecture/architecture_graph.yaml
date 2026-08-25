@@ -154,11 +154,12 @@ nodes:
     sourceDocs:
       - path: docs/architecture/01_runtime_ownership.md
     evidence:
-      - RuntimeRoot composes store, selection, config, facts, public state, and the runtime-local interaction read adapter.
+      - RuntimeRoot composes store, selection, config, facts, public state, and runtime-local interaction read and diagnostics adapters.
     actual:
       declarations:
         - RuntimeRoot
         - RuntimeInteractionReadAdapter
+        - RuntimeInteractionDiagnosticsAdapter
       implementedInterfaces:
         - DocumentFactsPort
         - FrameFactsPort
@@ -561,6 +562,22 @@ edges:
       sensitiveThrowOwner: codec.schema_v1
       sensitiveThrowRoutes:
         - recordSchemaV1FailureDiagnostic
+  - id: runtime.deletion_resolver_failure.reports_to_diagnostics
+    from: runtime.root
+    to: diagnostics.hub
+    kind: diagnostic_route
+    status: required
+    sourceDocs:
+      - path: docs/contracts/diagnostics.md
+      - path: docs/contracts/public_api_v1.md
+    evidence:
+      - RuntimeRoot contains synchronous deletion-resolver exceptions and routes exactly one bounded operation/error-kind diagnostic through the existing adapter without public diagnostic exposure.
+    actual:
+      delegationMembers:
+        - RuntimeRoot._resolveDeletion
+        - RuntimeInteractionDiagnosticsAdapter.recordDeletionResolverFailed
+      delegationTargets:
+        - DiagnosticsHub
   - id: interaction.engine.reliability_events.report_to_diagnostics
     from: interaction.engine
     to: diagnostics.hub
@@ -732,7 +749,7 @@ edges:
       - RuntimeRoot delivers accepted eraser and request-originated text changes through EditKernel.prepareInteractionCommit before public state/action delivery.
     actual:
       delegationMembers:
-        - RuntimeRoot._prepareEraserCommit
+        - RuntimeRoot._prepareEraserDeletion
         - RuntimeRoot.commitTextEdit
       delegationTargets:
         - EditKernel
@@ -1508,6 +1525,7 @@ sourceCoverage:
       - diagnostics.hub
       - codec.schema_v1.failures.report_to_diagnostics
       - interaction.engine.reliability_events.report_to_diagnostics
+      - runtime.deletion_resolver_failure.reports_to_diagnostics
   - sectionId: section_22_guardrails_machine_checks
     disposition: graph_obligation
     graphIds:

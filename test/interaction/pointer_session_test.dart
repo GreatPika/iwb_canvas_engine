@@ -554,6 +554,12 @@ final class _RecordingInteractionDiagnosticsSink
       _discardDiagnosticEvent();
 
   @override
+  void recordDeletionResolverFailed({
+    required String operation,
+    required String errorKind,
+  }) => _discardDiagnosticEvent();
+
+  @override
   void recordSelectedMoveStartDeniedNotMovable({
     required int selectedCount,
     required int movableCount,

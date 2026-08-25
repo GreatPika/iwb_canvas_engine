@@ -89,6 +89,20 @@ enum DeletionProjectionWorkEvent {
   arbitraryOrderComparison,
 }
 
+@visibleForTesting
+enum DeletionPreparedInstallEvent { bound, installed }
+
+/// Distinct Store-owned preparation phases of a deferred deletion.
+///
+/// Test injection remains at the owner operation, so a route fixture cannot
+/// mistake a RuntimeRoot catch-all for Store preparation.
+@visibleForTesting
+enum DeletionStorePreparationPhase {
+  sparseValidationAndMutation,
+  staleStoreBind,
+  selectionNormalization,
+}
+
 // Sparse preparation exposes only phase-attributed semantic work. The fixture
 // owns the trace, so the transaction keeps no telemetry history in production.
 @immutable
@@ -118,6 +132,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   static final Object _sparseTransactionWorkZoneKey = Object();
   static final Object _deletionProjectionWorkZoneKey = Object();
   static final Object _deletionEntryProjectionZoneKey = Object();
+  static final Object _deletionPreparedInstallZoneKey = Object();
+  static final Object _deletionPreparedInstallFailureZoneKey = Object();
+  static final Object _deletionPreparationFailureZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(
@@ -171,6 +188,65 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     T Function() operation,
   ) {
     return runZoned(operation, zoneValues: {_idAdmissionWorkZoneKey: sink});
+  }
+
+  /// Assert-only observation of the deletion-specific Store boundary.
+  @visibleForTesting
+  static T observeDeletionPreparedInstall<T>(
+    void Function(DeletionPreparedInstallEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_deletionPreparedInstallZoneKey: sink});
+
+  /// Causes the real deletion binding owner to fail only under test asserts.
+  @visibleForTesting
+  static T injectDeletionPreparedInstallFailure<T>(
+    Error error,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_deletionPreparedInstallFailureZoneKey: error},
+  );
+
+  /// Causes one real Store preparation phase to fail only under test asserts.
+  @visibleForTesting
+  static T injectDeletionPreparationFailure<T>(
+    DeletionStorePreparationPhase phase,
+    Error error,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {
+      _deletionPreparationFailureZoneKey: (phase: phase, error: error),
+    },
+  );
+
+  static bool _throwInjectedDeletionPreparationFailure(
+    DeletionStorePreparationPhase expected,
+  ) {
+    final value = Zone.current[_deletionPreparationFailureZoneKey];
+    if (value is ({DeletionStorePreparationPhase phase, Error error}) &&
+        value.phase == expected) {
+      throw value.error;
+    }
+    return true;
+  }
+
+  static bool _throwInjectedDeletionPreparedInstallFailure() {
+    final error = Zone.current[_deletionPreparedInstallFailureZoneKey];
+    if (error is Error) {
+      throw error;
+    }
+    return true;
+  }
+
+  static bool _recordDeletionPreparedInstall(
+    DeletionPreparedInstallEvent event,
+  ) {
+    final sink = Zone.current[_deletionPreparedInstallZoneKey];
+    if (sink is void Function(DeletionPreparedInstallEvent)) {
+      sink(event);
+    }
+    return true;
   }
 
   @visibleForTesting
@@ -566,6 +642,16 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     if (commit.baseRevisions != _document.revisions) {
       throw StateError('Prepared sparse store commit is stale.');
     }
+    assert(
+      _recordDeletionPreparedInstall(DeletionPreparedInstallEvent.bound),
+      'deletion Store preparation observation failed',
+    );
+    assert(
+      _throwInjectedDeletionPreparationFailure(
+        DeletionStorePreparationPhase.selectionNormalization,
+      ),
+      'deletion Store selection normalization injection did not complete',
+    );
 
     return _normalizeSelectionInCommittedDocument(commit.document, ids);
   }
@@ -707,6 +793,12 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
+    assert(
+      _throwInjectedDeletionPreparationFailure(
+        DeletionStorePreparationPhase.sparseValidationAndMutation,
+      ),
+      'deletion Store sparse preparation injection did not complete',
+    );
     final revisionDelta = commit.revisionDelta;
     final journal = _SparseTransactionJournal(commit.mutations);
     return _StoreTransactionCandidate.edit(
@@ -1015,6 +1107,56 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     _elementIds.admitLedger(commit.admittedElementIds);
     _layerIds.admitLedger(commit.admittedLayerIds);
     _resourceIds.admitLedger(commit.admittedResourceIds);
+  }
+
+  /// Binds a deletion sparse commit while its revision is still authoritative.
+  ///
+  /// The deletion resolver runs after this check.  Its accepted path therefore
+  /// owns only the already-bound document assignment and id admission; ordinary
+  /// sparse callers keep using [installSparseCommit] and its stale guard.
+  PreparedDeletionSparseStoreInstall prepareDeletionSparseInstall(
+    PreparedSparseStoreCommit commit,
+  ) {
+    if (!commit.hasChanges) {
+      throw StateError('A prepared deletion sparse commit must change Store.');
+    }
+    if (commit.baseRevisions != _document.revisions) {
+      throw StateError('Prepared sparse store commit is stale.');
+    }
+    assert(
+      _throwInjectedDeletionPreparationFailure(
+        DeletionStorePreparationPhase.staleStoreBind,
+      ),
+      'deletion Store bind injection did not complete',
+    );
+    assert(
+      _throwInjectedDeletionPreparedInstallFailure(),
+      'deletion Store preparation failure injection did not complete',
+    );
+    return PreparedDeletionSparseStoreInstall._(
+      owner: this,
+      document: commit.document,
+      admittedElementIds: commit.admittedElementIds,
+      admittedLayerIds: commit.admittedLayerIds,
+      admittedResourceIds: commit.admittedResourceIds,
+    );
+  }
+
+  void _installBoundDeletionSparseCommit(
+    PreparedDeletionSparseStoreInstall prepared,
+  ) {
+    assert(
+      identical(prepared._owner, this),
+      'Bound deletion Store installation belongs to another Store owner.',
+    );
+    assert(
+      _recordDeletionPreparedInstall(DeletionPreparedInstallEvent.installed),
+      'deletion Store installation observation failed',
+    );
+    _document = prepared._document;
+    _elementIds.admitLedger(prepared._admittedElementIds);
+    _layerIds.admitLedger(prepared._admittedLayerIds);
+    _resourceIds.admitLedger(prepared._admittedResourceIds);
   }
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
@@ -1473,6 +1615,41 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     return _SparseMutationResult.changed(
       requiredRevisionDelta: const StoreRevisionDelta.projectionOnly(),
     );
+  }
+}
+
+/// Store-owned, single-use installation capability for a deletion decision.
+///
+/// This stays outside the public barrel.  A second consume is an owner bug:
+/// [PreparedDeletionApply] rejects it before reaching Store, so the Store-side
+/// assertion adds no release-mode failure path after resolver acceptance.
+final class PreparedDeletionSparseStoreInstall {
+  PreparedDeletionSparseStoreInstall._({
+    required DocumentStoreKernel owner,
+    required CommittedDocument document,
+    required List<String> admittedElementIds,
+    required List<String> admittedLayerIds,
+    required List<String> admittedResourceIds,
+  }) : _owner = owner,
+       _document = document,
+       _admittedElementIds = admittedElementIds,
+       _admittedLayerIds = admittedLayerIds,
+       _admittedResourceIds = admittedResourceIds;
+
+  final DocumentStoreKernel _owner;
+  final CommittedDocument _document;
+  final List<String> _admittedElementIds;
+  final List<String> _admittedLayerIds;
+  final List<String> _admittedResourceIds;
+  bool _consumed = false;
+
+  void consume() {
+    assert(
+      !_consumed,
+      'A bound deletion Store install can only be consumed once.',
+    );
+    _consumed = true;
+    _owner._installBoundDeletionSparseCommit(this);
   }
 }
 

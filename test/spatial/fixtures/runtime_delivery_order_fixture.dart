@@ -108,7 +108,9 @@ void _testClearContentRetainsBackgroundSpatialDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _clearDocument(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
         commitEffectObserver: (effects) {
           events.add('observer');
           observerSnapshots.add(_clearPaintSnapshot(root));
@@ -321,7 +323,9 @@ RuntimeRoot _runtimeRoot([
 ]) {
   return runtimeRootWithCommittedDocumentSeed(
     _document([_rect('initial')]),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: observer,
   );
 }
@@ -414,3 +418,6 @@ SpatialQueryWindow _nearMoved() {
     structuralRevision: 1,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

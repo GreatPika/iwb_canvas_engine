@@ -12,6 +12,7 @@ final class RuntimeConfig {
       initialDrawStyle = config.initialDrawStyle,
       clearSelectionOnDrawModeEnter = config.clearSelectionOnDrawModeEnter,
       moveCommitResolver = config.moveCommitResolver,
+      deletionCommitResolver = config.deletionCommitResolver,
       selectionDeletePolicy = config.selectionDeletePolicy,
       eraserElementKinds = _materializeEraserElementKinds(
         config.eraserElementKinds,
@@ -23,6 +24,7 @@ final class RuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasDeletionCommitResolver deletionCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final Set<CanvasElementKind>? eraserElementKinds;
   final RuntimeDiagnosticsConfig diagnostics;

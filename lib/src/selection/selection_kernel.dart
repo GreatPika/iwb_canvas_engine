@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:collection';
+
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/internal/selection_facts_port.dart';
@@ -13,7 +16,8 @@ final class SelectionKernel implements SelectionFactsPort {
     : _membership = membership;
 
   final SelectionMembershipPort _membership;
-  final LinkedHashSet<CanvasElementId> _selectedIds = LinkedHashSet();
+  static final Object _preparedInstallZoneKey = Object();
+  LinkedHashSet<CanvasElementId> _selectedIds = LinkedHashSet();
   int _selectionRevision = 0;
 
   Set<CanvasElementId> get selectedElementIds => Set.unmodifiable(_selectedIds);
@@ -73,7 +77,39 @@ final class SelectionKernel implements SelectionFactsPort {
   }
 
   bool installPreparedEffect(PreparedSelectionEffect effect) {
-    return _replaceSelection(effect.elementIds);
+    return installOwnedPreparedElementIds(effect.takeOwnedElementIds());
+  }
+
+  /// Observes the already-owned deletion backing installation in tests only.
+  @visibleForTesting
+  static T observePreparedInstall<T>(
+    void Function() sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_preparedInstallZoneKey: sink});
+
+  /// Installs the backing transferred before a deletion resolver is invoked.
+  ///
+  /// The caller owns the one-time transfer.  This performs no normalization,
+  /// validation, or copying after Store has accepted the bound deletion.
+  bool installOwnedPreparedElementIds(LinkedHashSet<CanvasElementId> next) {
+    assert(
+      _recordPreparedInstall(),
+      'prepared Selection installation observation failed',
+    );
+    if (_sameMembership(_selectedIds, next)) {
+      return false;
+    }
+    _selectedIds = next;
+    _selectionRevision += 1;
+    return true;
+  }
+
+  bool _recordPreparedInstall() {
+    final sink = Zone.current[_preparedInstallZoneKey];
+    if (sink is void Function()) {
+      sink();
+    }
+    return true;
   }
 
   bool _replaceSelection(Iterable<CanvasElementId> ids) {

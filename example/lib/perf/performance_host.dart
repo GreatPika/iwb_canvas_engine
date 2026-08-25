@@ -13,7 +13,8 @@ final class PerformanceHostController extends ChangeNotifier {
   PerformanceHostController({
     CanvasRuntime? runtime,
     PerformanceHostResourceResolver? resourceResolver,
-  }) : _runtime = runtime ?? CanvasRuntime(),
+  }) : _runtime =
+           runtime ?? CanvasRuntime(config: _acceptDeletionRuntimeConfig()),
        resourceResolver = resourceResolver ?? PerformanceHostResourceResolver();
 
   CanvasRuntime _runtime;
@@ -155,3 +156,9 @@ CanvasTextEditSession? startPerformanceTextEditingFromContextAction(
 ) {
   return runtime.textEditing.startFromContextAction(request);
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

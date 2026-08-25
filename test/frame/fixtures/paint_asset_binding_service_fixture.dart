@@ -304,7 +304,9 @@ void _testReentrantResolverRejectedThroughAssetBinding() {
   test('asset binding rejects public runtime mutations from resolver', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final resolver = RecordingResourceResolver((_) {
       root.generateElementId();
@@ -340,7 +342,9 @@ void _testNestedResolverRejectedThroughAssetBinding() {
     final image = await createResourceTestImage();
     final root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final resolver = RecordingResourceResolver((_) {
       return root.runResolverCallback(() => image);
@@ -561,3 +565,6 @@ FrameCaptureInputs _inputs() {
     previewRevision: 0,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

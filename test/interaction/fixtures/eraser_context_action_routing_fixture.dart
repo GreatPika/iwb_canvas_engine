@@ -75,7 +75,9 @@ void _verifyEraserCleanupPrecedesDelivery() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: (effects) {
       if (!terminalDelivery) return;
       _expectCleanEraserDelivery(root);
@@ -955,3 +957,6 @@ ContextTargetReadOutcome _contextOutcome(CanvasElementId? id) {
     ),
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

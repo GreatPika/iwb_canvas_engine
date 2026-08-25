@@ -33,7 +33,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 void main() {
   test('state.value is readable immediately after construction', () {
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
 
     expect(runtime.state.value, isA<CanvasRuntimeState>());
     expect(runtime.state.value.revisions, _zeroRevisions());
@@ -169,7 +169,7 @@ CanvasDocument _document() {
 }
 
 CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;

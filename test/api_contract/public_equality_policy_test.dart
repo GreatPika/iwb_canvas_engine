@@ -84,6 +84,35 @@ void main() {
       ),
     );
 
+    final deletionElement = CanvasRectElement(
+      id: CanvasElementId('deletion-element'),
+      size: const Size(1, 1),
+    );
+    final deletionEntry = CanvasDeletionEntry(
+      element: deletionElement,
+      layerId: CanvasLayerId('layer-1'),
+      elementIndex: 0,
+    );
+    final deletionRequest = CanvasDeletionCommitRequest(
+      operation: CanvasDeletionOperation.deleteSelection,
+      entries: [deletionEntry],
+    );
+    expect(
+      CanvasDeletionEntry(
+        element: deletionElement,
+        layerId: CanvasLayerId('layer-1'),
+        elementIndex: 0,
+      ),
+      isNot(equals(deletionEntry)),
+    );
+    expect(
+      CanvasDeletionCommitRequest(
+        operation: CanvasDeletionOperation.deleteSelection,
+        entries: [deletionEntry],
+      ),
+      isNot(equals(deletionRequest)),
+    );
+
     _expectValueEquality(
       CanvasTransform(a: 1, b: 2, c: 3, d: 4, tx: 5, ty: 6),
       CanvasTransform(a: 1, b: 2, c: 3, d: 4, tx: 5, ty: 6),

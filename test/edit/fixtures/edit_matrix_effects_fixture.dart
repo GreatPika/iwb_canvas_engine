@@ -529,7 +529,9 @@ final _updateTaxonomyCases = [
 void _expectAddElementInstallsAfterCommit() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final id = root.edits.edit((edit) {
@@ -552,7 +554,9 @@ void _expectAddElementInstallsAfterCommit() {
 void _expectEnsureLayerNoOpRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -568,7 +572,9 @@ void _expectEnsureLayerNoOpRow() {
 void _expectEnsureLayerRevisionFamilies() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -585,7 +591,9 @@ void _expectEnsureLayerRevisionFamilies() {
 void _expectAdmissionErrorsUsePublicCodes() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   expect(
@@ -617,7 +625,9 @@ void _expectAdmissionErrorsUsePublicCodes() {
 void _expectImageResourceUpdateRejectsUnresolvedResource() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   expect(
@@ -649,7 +659,9 @@ void _expectImageReferenceAndResourceAcceptBothOrders({
   for (final resourceFirst in [true, false]) {
     final root = runtimeRootWithCommittedDocumentSeed(
       _documentWithUnusedResource(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final resource = CanvasImageResource(
       id: CanvasResourceId('new-image-resource'),
@@ -686,7 +698,9 @@ void _expectImageReferenceAndResourceAcceptBothOrders({
 void _expectRemoveUnusedResourceNoOps() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final before = root.readDocument();
 
@@ -707,7 +721,9 @@ void _expectRemoveUnusedResourceNoOps() {
 void _expectMaterializedVectorReferenceKeepsResource() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedVectorResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final beforeDocument = root.readDocument();
   final beforeState = root.state.value;
@@ -728,7 +744,9 @@ void _expectMaterializedVectorReferenceKeepsResource() {
 void _expectSparseVectorOverrideKeepsResource() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedVectorResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final beforeResourceRevision = root.frameRevisions.resourceRevision;
 
@@ -761,7 +779,9 @@ void _expectSparseVectorOverrideKeepsResource() {
 void _expectIdenticalVectorResourceUpsertIsNoOp({required bool materialized}) {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedVectorResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final beforeDocument = root.readDocument();
   final beforeState = root.state.value;
@@ -785,7 +805,9 @@ void _expectIdenticalVectorResourceUpsertIsNoOp({required bool materialized}) {
 void _expectUnusedResourceRemovalInstalls() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final removed = root.edits.edit((edit) {
@@ -801,7 +823,9 @@ void _expectUnusedResourceRemovalInstalls() {
 void _expectReplaceDraftDocumentResourceDescriptorsUseAcceptedRevision() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   root.edits.edit((edit) {
@@ -822,7 +846,9 @@ void _expectReplaceDraftDocumentResourceDescriptorsUseAcceptedRevision() {
 void _expectMaterializedNonResourceEditPreservesResourceDescriptorRevision() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithTwoReferencedResources(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.edits.edit((edit) {
     edit.upsertResource(
@@ -887,7 +913,9 @@ Future<void> _expectEditOperationRowsRollback() async {
   for (final operationCase in _editOperationMatrixCases) {
     final root = runtimeRootWithCommittedDocumentSeed(
       operationCase.document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final actions = <CanvasActionCommitted>[];
     final subscription = root.actions.listen(actions.add);
@@ -915,7 +943,9 @@ Future<void> _expectEditOperationRowsEmitNoActions() async {
   for (final operationCase in _editOperationMatrixCases) {
     final root = runtimeRootWithCommittedDocumentSeed(
       operationCase.document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final actions = <CanvasActionCommitted>[];
     final subscription = root.actions.listen(actions.add);
@@ -945,7 +975,9 @@ void _expectUpdateTaxonomyEffects() {
 void _expectBackgroundElementRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final id = root.edits.edit((edit) {
@@ -960,7 +992,9 @@ void _expectBackgroundElementRow() {
 void _expectUpdateElementRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -979,7 +1013,9 @@ void _expectUpdateElementRow() {
 void _expectRemoveElementRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final removed = root.edits.edit((edit) {
@@ -994,7 +1030,9 @@ void _expectRemoveElementRow() {
 void _expectClearContentRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithClearContentReferences(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final result = root.edits.edit((edit) {
@@ -1128,7 +1166,9 @@ void _expectClearContentStoreDescriptors(RuntimeRoot root) {
 void _expectPersistedCameraRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   root.edits.edit((edit) {
@@ -1142,7 +1182,9 @@ void _expectPersistedCameraRow() {
 void _expectBackgroundRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   root.edits.edit((edit) {
@@ -1156,7 +1198,9 @@ void _expectBackgroundRow() {
 void _expectGridRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final grid = CanvasGrid(enabled: true, cellSize: 24);
 
@@ -1171,7 +1215,9 @@ void _expectGridRow() {
 void _expectPaletteRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final palette = CanvasPalette(
     penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
@@ -1193,7 +1239,9 @@ void _expectPaletteRow() {
 void _expectUpsertResourceRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -1216,7 +1264,9 @@ void _expectUpsertResourceRow() {
 void _expectNoOpEditRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   var notifications = 0;
   root.state.addListener(() {
@@ -1240,7 +1290,9 @@ void _expectReplaceDraftDocumentRow() {
 void _expectReplacementClearsRemovedSelection() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.selection.setSelection([CanvasElementId('rect-1')]);
   final beforeSelectionRevision = root.state.value.revisions.selection;
@@ -1267,7 +1319,9 @@ void _expectReplacementClearsRemovedSelection() {
 void _expectReplacementClearsIneligibleSelection() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.selection.setSelection([CanvasElementId('rect-1')]);
 
@@ -2205,3 +2259,6 @@ final class _UpdateTaxonomyCase {
 }
 
 typedef _ExpectedRevisionDelta = EditMatrixExpectedRevisionDelta;
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

@@ -296,7 +296,9 @@ Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
 bool _runtimeTokenGuardedSessionInstall() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final activeToken = Object();
   final staleToken = Object();
@@ -333,7 +335,9 @@ bool _dirtyInvalidatesInstalledSessionBeforePublish() {
 void _expectTargetDirtyInvalidatesBeforePublish() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final token = Object();
   final session = _RecordingLifecycleSession();
@@ -354,7 +358,9 @@ void _expectTargetDirtyInvalidatesBeforePublish() {
 void _expectMarkAllInvalidatesBeforePublish() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final token = Object();
   final session = _RecordingLifecycleSession();
@@ -375,7 +381,9 @@ void _expectMarkAllInvalidatesBeforePublish() {
 void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final activeToken = Object();
   final staleToken = Object();
@@ -600,8 +608,14 @@ final class _RecordingLifecycleSession
 }
 
 CanvasRuntime runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

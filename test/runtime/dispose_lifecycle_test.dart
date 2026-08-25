@@ -44,7 +44,7 @@ void main() {
 }
 
 CanvasRuntime _runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;

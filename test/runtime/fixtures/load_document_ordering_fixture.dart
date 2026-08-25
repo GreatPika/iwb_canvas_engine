@@ -125,7 +125,9 @@ void _expectPreparedCleanupReentrancyGuard() {
 Future<void> _expectTextEditCleanupReentrancyGuard() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _textDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final requests = <CanvasContextActionRequested>[];
   final subscription = root.contextActionRequests.listen(requests.add);
@@ -392,7 +394,9 @@ RuntimeRoot _runtimeRoot(
 }) {
   final root = runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     loadInteractionBoundary: boundary,
     commitEffectObserver: observeEffects,
   );
@@ -664,3 +668,6 @@ final class _RecordingLoadBoundary implements LoadInteractionBoundary {
     return LoadInteractionCleanupOutcome.noChange;
   }
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

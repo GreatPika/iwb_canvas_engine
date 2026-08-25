@@ -241,7 +241,9 @@ RuntimeRoot _runtime() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 }
 
@@ -284,3 +286,6 @@ FrameCaptureInputs _frameInputs() {
     previewRevision: 0,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

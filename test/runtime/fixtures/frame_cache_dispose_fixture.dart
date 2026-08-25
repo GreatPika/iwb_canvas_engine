@@ -10,7 +10,9 @@ void main() {
     () {
       final root = runtimeRootWithCommittedDocumentSeed(
         CanvasDocument(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
       );
       final output = root.buildResourceFreeMainFrame(
         viewportWorldBounds: const Rect.fromLTWH(0, 0, 100, 100),
@@ -28,3 +30,6 @@ void main() {
     },
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

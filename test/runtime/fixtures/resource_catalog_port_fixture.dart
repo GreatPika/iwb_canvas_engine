@@ -8,7 +8,9 @@ void main() {
   test('catalog reads return copied committed resources', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
 
     expect(() {
@@ -79,3 +81,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

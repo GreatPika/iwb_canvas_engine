@@ -11,7 +11,9 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
+import '../contracts/public/canvas_ids.dart';
 import '../store/committed_document.dart';
+import '../store/document_store_kernel.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_commit_finalization.dart';
 import '../store/store_revision_delta.dart';
@@ -22,6 +24,10 @@ typedef DocumentInstall =
 typedef DocumentReplace =
     void Function(CommittedDocument document, StoreRevisionDelta delta);
 typedef SparseDocumentInstall = void Function(PreparedSparseStoreCommit commit);
+typedef DeletionSparseDocumentPrepare =
+    PreparedDeletionSparseStoreInstall Function(
+      PreparedSparseStoreCommit commit,
+    );
 typedef PreparedMaterializedDocumentInstall =
     void Function(PreparedMaterializedStoreCommit commit);
 typedef SelectionEffectPrepare =
@@ -30,6 +36,16 @@ typedef SelectionEffectPrepare =
       PreparedCommitDocument document,
     );
 typedef SelectionEffectInstall = bool Function(PreparedSelectionEffect effect);
+typedef OwnedSelectionEffectInstall =
+    bool Function(LinkedHashSet<CanvasElementId> elementIds);
+
+/// Distinct pre-resolver phases owned by the prepared commit boundary.
+@visibleForTesting
+enum DeletionCommitPreparationPhase {
+  documentPreparation,
+  revisionPreparation,
+  actionInputSealing,
+}
 
 final class CommitDocumentInstallers {
   const CommitDocumentInstallers({
@@ -37,22 +53,26 @@ final class CommitDocumentInstallers {
     required this.replaceDocument,
     required this.installSparseCommit,
     required this.installPreparedMaterializedCommit,
+    this.prepareDeletionSparseInstall,
   });
 
   final DocumentInstall installDocument;
   final DocumentReplace replaceDocument;
   final SparseDocumentInstall installSparseCommit;
   final PreparedMaterializedDocumentInstall installPreparedMaterializedCommit;
+  final DeletionSparseDocumentPrepare? prepareDeletionSparseInstall;
 }
 
 final class CommitSelectionInstallers {
   const CommitSelectionInstallers({
     required this.prepareSelectionEffect,
     required this.installSelectionEffect,
+    this.installOwnedSelectionEffect,
   });
 
   final SelectionEffectPrepare prepareSelectionEffect;
   final SelectionEffectInstall installSelectionEffect;
+  final OwnedSelectionEffectInstall? installOwnedSelectionEffect;
 }
 
 sealed class AcceptedCommitDocument {
@@ -123,10 +143,69 @@ final class PreparedUnchangedStoreDocument extends PreparedCommitDocument {
     : super(revisionDelta: const StoreRevisionDelta());
 }
 
+/// Work owned by the private deletion-only prepared package.
+///
+/// The events exist solely behind assertions and a Zone observer. They expose
+/// lifecycle work to route tests without retaining a production counter or
+/// widening the package into a transaction abstraction.
+@visibleForTesting
+enum PreparedDeletionApplyWorkEvent {
+  prepared,
+  consumed,
+  selectionBackingTransferred,
+  discarded,
+}
+
+// Accepted document forms and the deletion-only bounded Store install meet at
+// this one ordering owner; splitting them would hide the atomic install seam.
+// ignore: coupling-between-object-classes
 final class CommitApplier {
   const CommitApplier();
 
   static final Object _sealedDeliveryWorkZoneKey = Object();
+  static final Object _preparedDeletionWorkZoneKey = Object();
+  static final Object _deletionPreparationFailureZoneKey = Object();
+
+  /// Observes the private deletion package's terminal lifecycle in tests.
+  @visibleForTesting
+  static T observePreparedDeletionWork<T>(
+    void Function(PreparedDeletionApplyWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_preparedDeletionWorkZoneKey: sink});
+
+  /// Causes one CommitApplier preparation phase to fail under asserts only.
+  @visibleForTesting
+  static T injectDeletionPreparationFailure<T>(
+    DeletionCommitPreparationPhase phase,
+    Error error,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {
+      _deletionPreparationFailureZoneKey: (phase: phase, error: error),
+    },
+  );
+
+  static bool _throwInjectedDeletionPreparationFailure(
+    DeletionCommitPreparationPhase expected,
+  ) {
+    final value = Zone.current[_deletionPreparationFailureZoneKey];
+    if (value is ({DeletionCommitPreparationPhase phase, Error error}) &&
+        value.phase == expected) {
+      throw value.error;
+    }
+    return true;
+  }
+
+  static bool _recordPreparedDeletionWork(
+    PreparedDeletionApplyWorkEvent event,
+  ) {
+    final sink = Zone.current[_preparedDeletionWorkZoneKey];
+    if (sink is void Function(PreparedDeletionApplyWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
 
   // This assert-only observer reports preparation and real sealed-collection
   // reads, so tests count owner work rather than self-reported loops.
@@ -202,6 +281,136 @@ final class CommitApplier {
     );
     return state.resultFor(didChangeSelection: didChangeSelection);
   }
+
+  /// Prepares the deletion-only deferred install boundary.
+  ///
+  /// All validation and selection backing construction happen before a
+  /// resolver is invoked. The returned package is package-private by export
+  /// policy and can be consumed once only by the two deletion routes.
+  PreparedDeletionApply prepareDeletion({
+    required AcceptedCommitDocument document,
+    required CommitPlan plan,
+    required CommitDocumentInstallers documentInstallers,
+    required CommitSelectionInstallers selectionInstallers,
+  }) {
+    if (!plan.hasChanges) {
+      throw StateError('A deferred deletion requires a changed commit plan.');
+    }
+    final state = _PreparedApplyState.prepare(
+      document: document,
+      plan: plan,
+      prepareSelectionEffect: selectionInstallers.prepareSelectionEffect,
+    );
+    final sparseInstall = switch (state.document) {
+      PreparedSparseStoreDocument(:final commit) =>
+        (documentInstallers.prepareDeletionSparseInstall ??
+                _missingDeletionSparseInstall)
+            .call(commit),
+      _ => throw StateError(
+        'A deferred deletion requires a sparse Store commit.',
+      ),
+    };
+    final installOwnedSelectionEffect =
+        selectionInstallers.installOwnedSelectionEffect ??
+        _missingOwnedSelectionInstall;
+    final prepared = PreparedDeletionApply._(
+      state: state,
+      sparseInstall: sparseInstall,
+      installOwnedSelectionEffect: installOwnedSelectionEffect,
+    );
+    assert(
+      _recordPreparedDeletionWork(PreparedDeletionApplyWorkEvent.prepared),
+      'prepared deletion work observation failed',
+    );
+    return prepared;
+  }
+}
+
+PreparedDeletionSparseStoreInstall _missingDeletionSparseInstall(
+  PreparedSparseStoreCommit _,
+) => throw StateError('Deletion Store preparation is unavailable.');
+
+bool _missingOwnedSelectionInstall(LinkedHashSet<CanvasElementId> _) =>
+    throw StateError('Deletion selection installation is unavailable.');
+
+/// A single-use deletion-only install package.
+///
+/// It is not exported from the package and deliberately has no rollback or
+/// generic transaction operations.
+final class PreparedDeletionApply {
+  PreparedDeletionApply._({
+    required _PreparedApplyState state,
+    required PreparedDeletionSparseStoreInstall sparseInstall,
+    required OwnedSelectionEffectInstall installOwnedSelectionEffect,
+  }) : _owned = _PreparedDeletionOwned(
+         state: state,
+         sparseInstall: sparseInstall,
+         installOwnedSelectionEffect: installOwnedSelectionEffect,
+       );
+
+  _PreparedDeletionOwned? _owned;
+  bool _terminal = false;
+
+  CommitDeliveryResult consume() {
+    final owned = _takeOwned();
+    assert(
+      CommitApplier._recordPreparedDeletionWork(
+        PreparedDeletionApplyWorkEvent.consumed,
+      ),
+      'prepared deletion work observation failed',
+    );
+    final ownedSelectionIds = owned.state.selectionEffect
+        ?.takeOwnedElementIds();
+    if (ownedSelectionIds != null) {
+      assert(
+        CommitApplier._recordPreparedDeletionWork(
+          PreparedDeletionApplyWorkEvent.selectionBackingTransferred,
+        ),
+        'prepared deletion work observation failed',
+      );
+    }
+    owned.sparseInstall.consume();
+    final didChangeSelection = ownedSelectionIds == null
+        ? false
+        : owned.installOwnedSelectionEffect(ownedSelectionIds);
+    return owned.state.resultFor(didChangeSelection: didChangeSelection);
+  }
+
+  /// Releases a rejected resolver's private prepared state without rollback.
+  void discard() {
+    _takeOwned();
+    assert(
+      CommitApplier._recordPreparedDeletionWork(
+        PreparedDeletionApplyWorkEvent.discarded,
+      ),
+      'prepared deletion work observation failed',
+    );
+  }
+
+  _PreparedDeletionOwned _takeOwned() {
+    if (_terminal) {
+      throw StateError('A prepared deletion can only be consumed once.');
+    }
+    _terminal = true;
+    final owned = _owned;
+    if (owned == null) {
+      throw StateError('A prepared deletion has no owned install state.');
+    }
+    _owned = null;
+    return owned;
+  }
+}
+
+final class _PreparedDeletionOwned {
+  const _PreparedDeletionOwned({
+    required this.state,
+    required this.sparseInstall,
+    required this.installOwnedSelectionEffect,
+  });
+
+  final _PreparedApplyState state;
+  final PreparedDeletionSparseStoreInstall sparseInstall;
+  final OwnedSelectionEffectInstall installOwnedSelectionEffect;
 }
 
 void _installPreparedDocument(
@@ -241,8 +450,29 @@ final class _PreparedApplyState {
     required CommitPlan plan,
     required SelectionEffectPrepare prepareSelectionEffect,
   }) {
+    assert(
+      CommitApplier._throwInjectedDeletionPreparationFailure(
+        DeletionCommitPreparationPhase.documentPreparation,
+      ),
+      'deletion document preparation injection did not complete',
+    );
     final preparedDocument = _prepareDocument(document);
     final deliveryEffects = _deliveryEffectsFor(plan.effects);
+    assert(
+      CommitApplier._throwInjectedDeletionPreparationFailure(
+        DeletionCommitPreparationPhase.revisionPreparation,
+      ),
+      'deletion revision preparation injection did not complete',
+    );
+    final installsDocument = plan.revisionDelta.hasChanges;
+    final documentRevisionChanged = plan.revisionDelta.document;
+    final documentReplaced = plan.documentReplaced;
+    assert(
+      CommitApplier._throwInjectedDeletionPreparationFailure(
+        DeletionCommitPreparationPhase.actionInputSealing,
+      ),
+      'deletion action input sealing injection did not complete',
+    );
     final actionIntents = plan.actionIntents;
     final selectionEffect = switch (plan.selectionEffect) {
       null => null,
@@ -251,9 +481,9 @@ final class _PreparedApplyState {
 
     return _PreparedApplyState(
       document: preparedDocument,
-      installsDocument: plan.revisionDelta.hasChanges,
-      documentRevisionChanged: plan.revisionDelta.document,
-      documentReplaced: plan.documentReplaced,
+      installsDocument: installsDocument,
+      documentRevisionChanged: documentRevisionChanged,
+      documentReplaced: documentReplaced,
       deliveryEffects: deliveryEffects,
       actionIntents: actionIntents,
       selectionEffect: selectionEffect,

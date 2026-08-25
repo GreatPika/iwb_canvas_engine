@@ -279,7 +279,9 @@ void _expectReplacementCommitsInsideEdit() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -317,3 +319,6 @@ void _expectSameDocumentShape(CanvasDocument actual, CanvasDocument expected) {
     );
   }
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

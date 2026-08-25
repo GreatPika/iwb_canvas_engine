@@ -24,7 +24,9 @@ void main() {
 void _selectionChangesPublishSelectionFactsWithoutDocumentEffects() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   try {
     final selection = root.selection;
@@ -191,3 +193,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

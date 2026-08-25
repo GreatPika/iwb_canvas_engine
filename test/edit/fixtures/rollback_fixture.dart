@@ -264,7 +264,9 @@ void _expectLiveRuntimeMutationsRejectedDuringEdit() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -391,3 +393,6 @@ List<CanvasElementId> _spatialIds(RuntimeRoot root) {
     _ => fail('Expected SpatialCandidatesResult, got $result'),
   };
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

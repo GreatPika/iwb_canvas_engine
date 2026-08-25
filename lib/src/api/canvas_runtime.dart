@@ -19,13 +19,14 @@ import 'canvas_runtime_frame_bridge.dart';
 import 'canvas_runtime_surface_bridge.dart';
 
 export '../contracts/public/canvas_runtime.dart';
+export '../contracts/public/canvas_deletion.dart';
 
 /// Public API v1 declaration for [CanvasRuntime].
 // The facade intentionally exposes the complete runtime port set from one
 // public entrypoint; splitting it would fragment the consumer contract.
 // ignore: coupling-between-object-classes, number-of-methods
 final class CanvasRuntime {
-  CanvasRuntime({CanvasRuntimeConfig config = const CanvasRuntimeConfig()}) {
+  CanvasRuntime({required CanvasRuntimeConfig config}) {
     _root = RuntimeRoot(config: config);
     attachCanvasRuntimeFrameRoot(this, _root);
     attachCanvasRuntimeSurfacePort(this, _root);

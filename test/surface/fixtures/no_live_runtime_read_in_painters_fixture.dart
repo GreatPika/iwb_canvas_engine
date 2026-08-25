@@ -20,7 +20,7 @@ void _registerBehavioralPainterBoundaryTests() {
     (tester) async {
       final image = _createImage();
       final resolver = _CountingResolver(image);
-      final runtime = CanvasRuntime();
+      final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
       addTearDown(runtime.dispose);
       addTearDown(image.dispose);
       runtime.edits.loadDocumentFromJson(
@@ -187,3 +187,9 @@ final class _CountingResolver implements CanvasResourceResolver {
   @override
   CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

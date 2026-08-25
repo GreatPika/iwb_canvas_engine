@@ -39,6 +39,7 @@ CanvasDocument createCanvasExampleDocument() {
 
 CanvasRuntimeConfig createCanvasExampleRuntimeConfig() {
   return CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
     clearSelectionOnDrawModeEnter: true,
     pointerPolicy: CanvasPointerPolicy(
       tapSlop: 1,
@@ -57,3 +58,6 @@ CanvasRuntime createCanvasExampleRuntime() {
 
   return runtime;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

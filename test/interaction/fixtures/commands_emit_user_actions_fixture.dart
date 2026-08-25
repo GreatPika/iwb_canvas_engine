@@ -327,6 +327,7 @@ RuntimeRoot _eraserRoot([
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: CanvasDrawStyle(
         tool: CanvasDrawTool.eraser,
@@ -382,7 +383,9 @@ void _performEmptyEraserStroke(RuntimeRoot root) {
 RuntimeRoot _runtimeRoot({required List<String> events}) {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.state.addListener(() {
     events.add('state:${root.state.value.revisions.selection}');
@@ -584,3 +587,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

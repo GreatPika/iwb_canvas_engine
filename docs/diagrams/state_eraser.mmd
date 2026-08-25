@@ -76,26 +76,28 @@ stateDiagram-v2
 
     state EraseDecision <<choice>>
     EraseDecision --> CleanupOnly: erased ids empty
-    EraseDecision --> EditCommit: erased ids non-empty
+    EraseDecision --> PreparedResolver: erased ids non-empty
 
-    state "EditKernel erase commit" as EditCommit
-    note right of EditCommit
-      InteractionEngine opens a synchronous EditKernel session
-      and removes erased ids through draft mutations only.
-      The Store is never mutated directly.
+    state "Prepared deletion resolver" as PreparedResolver
+    note right of PreparedResolver
+      RuntimeRoot prepares the sparse document, Store revision/id binding,
+      selection backing, revision, delivery, and erase action inputs before
+      calling the required guarded resolver with canonical Store entries.
+      Preparation failure has no callback and enters cleanup.
     end note
 
-    EditCommit --> CommitSucceeded: EditKernel outcome installed commit
-    EditCommit --> CleanupOnly: EditKernel rejected, rolled back, or threw
+    PreparedResolver --> AcceptedInstall: resolver accepts
+    PreparedResolver --> CleanupOnly: resolver cancels or throws / discard
 
-    state "Commit succeeded" as CommitSucceeded
-    note right of CommitSucceeded
-      Atomic install is the commit boundary. Removed ids drive
-      exact touched set, spatial removals, projection eviction,
-      main repaint, and deferred erase action materialization.
+    state "Single-use accepted install" as AcceptedInstall
+    note right of AcceptedInstall
+      The private prepared value consumes once: Store installs its bound
+      sparse document and ledgers, then Selection installs its owned backing.
+      No normal failure, callback, publication, retry, or rollback lies
+      between those two owner installs.
     end note
 
-    CommitSucceeded --> CleanupBeforeSignals: close edit handle and request eraser cleanup
+    AcceptedInstall --> CleanupBeforeSignals: accepted Store then Selection
 
     state "Cleanup before public state" as CleanupBeforeSignals
     note right of CleanupBeforeSignals
@@ -114,7 +116,7 @@ stateDiagram-v2
       Cancel, mode change, prepared load cleanup, interactive=false,
       dispose, stale or invalid terminal, empty erased ids,
       eraser budget exceeded with no partial erase,
-      and EditKernel failure create typed cleanup requests for
+      resolver cancel/error and preparation failure create typed cleanup requests for
       preview/session only.
       Empty/no-op cleanup publishes no erase action or document
       state. Active preview cleanup publishes CanvasRuntimeState
@@ -136,7 +138,7 @@ stateDiagram-v2
 
     state "Overlay cleanup repaint" as CleanupOverlay
     CleanupOverlay --> [*]: request overlay repaint only from coordinator-owned outcome
-    CleanupOverlay --> PublishCommitSignals: successful commit effects after cleanup
+    CleanupOverlay --> PublishCommitSignals: accepted install effects after cleanup
   }
 
   Previewing --> Idle: eraser session closed

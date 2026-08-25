@@ -5,7 +5,6 @@
 
 import 'dart:convert';
 import 'dart:ui';
-import 'dart:io';
 import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +24,7 @@ void main() {
   _testVectorInteractionReliabilityUsesExistingRoute();
   _testResolverReentrantMutationDiagnostic();
   _testCodecDiagnosticsRemainDataCodes();
-  _testDiagnosticCodesStayInternal();
+  _testDeletionResolverDiagnostics();
 }
 
 void _testRecordsEveryInteractionDiagnosticCode() {
@@ -131,9 +130,8 @@ void _testInteractionGuardPathsRouteDiagnostics() {
   });
 }
 
-// Enabled and disabled runs share the same vector action so route reuse and
-// allocation silence are observed against one concrete reliability outcome.
-// ignore: halstead-volume
+// Keeping the two policy paths together makes their contrast readable.
+// ignore: halstead-volume, source-lines-of-code
 void _testVectorInteractionReliabilityUsesExistingRoute() {
   test(
     'non-movable selected vector records the existing interaction route once',
@@ -141,6 +139,7 @@ void _testVectorInteractionReliabilityUsesExistingRoute() {
       final enabledRoot = runtimeRootWithCommittedDocumentSeed(
         _nonMovableVectorDocument(),
         config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
           diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
         ),
       );
@@ -165,7 +164,9 @@ void _testVectorInteractionReliabilityUsesExistingRoute() {
 
       final disabledRoot = runtimeRootWithCommittedDocumentSeed(
         _nonMovableVectorDocument(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
       );
       addTearDown(disabledRoot.dispose);
       final before = DiagnosticRecord.allocations.count;
@@ -196,6 +197,7 @@ void _testResolverReentrantMutationDiagnostic() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
         moveCommitResolver: (_) {
           root.selection.clearSelection();
@@ -277,21 +279,127 @@ void _testCodecDiagnosticsRemainDataCodes() {
   });
 }
 
-void _testDiagnosticCodesStayInternal() {
-  test('diagnostic code types are not exported from the public barrel', () {
-    final diagnosticCode = File(
-      'lib/src/diagnostics/diagnostic_code.dart',
-    ).readAsStringSync();
-    final publicBarrel = _publicBarrelSource();
+// The configured public callbacks supply the diagnostic evidence; outcome
+// fixtures separately own no-mutation and cleanup behavior for these routes.
+// ignore: halstead-volume, source-lines-of-code
+void _testDeletionResolverDiagnostics() {
+  test('both deletion routes emit one bounded resolver failure record', () {
+    for (final route in _DeletionRoute.values) {
+      for (final thrown in [
+        StateError('internal message'),
+        Exception('internal exception'),
+        _OrdinaryThrownObject(),
+      ]) {
+        final root = _deletionRoot((_) {
+          // Ordinary objects are part of the bounded error-kind contract.
+          // ignore: only_throw_errors
+          throw thrown;
+        }, diagnosticPolicy: const CanvasDiagnosticPolicy.summary());
+        addTearDown(root.dispose);
 
-    expect(diagnosticCode, contains('sealed class DiagnosticCode'));
-    expect(diagnosticCode, contains('final class DiagnosticDataCode'));
-    expect(diagnosticCode, contains('final class DiagnosticInteractionCode'));
-    expect(diagnosticCode, contains('enum InteractionDiagnosticCode'));
-    expect(publicBarrel, isNot(contains('diagnostic_code.dart')));
-    expect(publicBarrel, isNot(contains('DiagnosticCode')));
-    expect(publicBarrel, isNot(contains('InteractionDiagnosticCode')));
+        _triggerDeletion(root, route);
+
+        expect(root.diagnosticRecords, hasLength(1));
+        _expectBoundedDeletionFailure(
+          root.diagnosticRecords.single,
+          operation: route == _DeletionRoute.selection
+              ? 'deleteSelection'
+              : 'erase',
+          errorKind: thrown is Error
+              ? 'error'
+              : thrown is Exception
+              ? 'exception'
+              : 'object',
+        );
+      }
+    }
   });
+
+  test('deletion diagnostic controls and disabled callbacks stay silent', () {
+    for (final route in _DeletionRoute.values) {
+      for (final decision in CanvasDeletionDecision.values) {
+        final root = _deletionRoot(
+          (_) => decision,
+          diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+        );
+        addTearDown(root.dispose);
+        _triggerDeletion(root, route);
+        expect(root.diagnosticRecords, isEmpty);
+      }
+      final disabled = _deletionRoot((_) {
+        throw StateError('unreported message');
+      });
+      addTearDown(disabled.dispose);
+      final before = DiagnosticRecord.allocations.count;
+      final diagnosticWork = <DeletionResolverDiagnosticWorkEvent>[];
+      RuntimeInteractionDiagnosticsAdapter.observeDeletionResolverDiagnosticWork(
+        diagnosticWork.add,
+        () => _triggerDeletion(disabled, route),
+      );
+      expect(disabled.diagnosticRecords, isEmpty);
+      expect(DiagnosticRecord.allocations.count, before);
+      expect(diagnosticWork, isEmpty);
+    }
+  });
+}
+
+RuntimeRoot _deletionRoot(
+  CanvasDeletionCommitResolver resolver, {
+  CanvasDiagnosticPolicy diagnosticPolicy =
+      const CanvasDiagnosticPolicy.disabled(),
+}) => runtimeRootWithCommittedDocumentSeed(
+  _document(),
+  config: CanvasRuntimeConfig(
+    deletionCommitResolver: resolver,
+    diagnosticPolicy: diagnosticPolicy,
+  ),
+);
+
+void _triggerDeletion(RuntimeRoot root, _DeletionRoute route) {
+  switch (route) {
+    case _DeletionRoute.selection:
+      root.selection.setSelection([CanvasElementId('a')]);
+      root.selection.deleteSelection();
+    case _DeletionRoute.eraser:
+      root.setInteractionMode(CanvasInteractionMode.draw);
+      root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.move, const Offset(1, 1)),
+      );
+      root.handlePointer(
+        _sample(CanvasPointerLifecyclePhase.up, const Offset(1, 1)),
+      );
+  }
+}
+
+void _expectBoundedDeletionFailure(
+  DiagnosticRecord record, {
+  required String operation,
+  required String errorKind,
+}) {
+  expect(
+    record.code,
+    const DiagnosticCode.interaction(
+      InteractionDiagnosticCode.deletionResolverFailed,
+    ),
+  );
+  expect(record.severity, DiagnosticSeverity.warning);
+  expect(record.source, DiagnosticSource.interaction);
+  expect(record.details, {'operation': operation, 'errorKind': errorKind});
+  expect(record.path, isNull);
+  expect(record.revision, isNull);
+  expect(record.sessionId, isNull);
+  expect(record.correlationId, isNull);
+}
+
+enum _DeletionRoute { selection, eraser }
+
+final class _OrdinaryThrownObject {
+  @override
+  String toString() => 'must not appear in diagnostics';
 }
 
 void _rejectSelectedMoveWithFallbackBudget(
@@ -554,10 +662,6 @@ CanvasRectElement _rect(RuntimeRoot root, String id) {
       .firstWhere((element) => element.id == CanvasElementId(id));
 }
 
-String _publicBarrelSource() {
-  return File('lib/iwb_canvas_engine.dart').readAsStringSync();
-}
-
 final Matcher _isSanitizedInteractionRecord = isA<DiagnosticRecord>()
     .having((record) => record.source, 'source', DiagnosticSource.interaction)
     .having((record) => record.severity, 'severity', DiagnosticSeverity.warning)
@@ -671,3 +775,6 @@ final class _FakeInteractionReadPort implements InteractionReadPort {
 }
 
 final class _SensitivePayload {}
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

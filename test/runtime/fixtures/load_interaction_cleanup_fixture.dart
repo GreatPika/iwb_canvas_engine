@@ -460,7 +460,9 @@ void _expectDisposeCleanupRevisions(
 RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
   return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: observer,
   );
 }
@@ -469,6 +471,7 @@ RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
   return runtimeRootWithCommittedDocumentSeed(
     _unselectedMoveDocument(),
     config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
     ),
     commitEffectObserver: observer,
@@ -615,3 +618,6 @@ CanvasDocument _invalidReplacementDocument() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

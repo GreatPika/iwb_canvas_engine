@@ -477,7 +477,9 @@ final class _Scenario {
     : this._(
         runtimeRootWithCommittedDocumentSeed(
           _document(),
-          config: const CanvasRuntimeConfig(),
+          config: const CanvasRuntimeConfig(
+            deletionCommitResolver: _acceptDeletionCommit,
+          ),
         ),
       );
 
@@ -485,7 +487,9 @@ final class _Scenario {
     : this._(
         runtimeRootWithCommittedDocumentSeed(
           _document(),
-          config: const CanvasRuntimeConfig(),
+          config: const CanvasRuntimeConfig(
+            deletionCommitResolver: _acceptDeletionCommit,
+          ),
           textEditPrepareOverride: (input) {
             onPrepare();
 
@@ -742,3 +746,6 @@ CanvasTextElement _textElement() {
     transform: CanvasTransform.translation(const Offset(120, 0)),
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

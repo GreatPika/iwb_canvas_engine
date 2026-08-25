@@ -385,7 +385,9 @@ RuntimeRoot _runtimeRoot(
   if (loadInteractionBoundary != null) {
     return runtimeRootWithCommittedDocumentSeed(
       _initialDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       loadInteractionBoundary: loadInteractionBoundary,
       commitEffectObserver: effectBatches.add,
     );
@@ -393,7 +395,9 @@ RuntimeRoot _runtimeRoot(
 
   return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -736,3 +740,6 @@ String _jsonWithImportFieldFailure() {
     },
   });
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

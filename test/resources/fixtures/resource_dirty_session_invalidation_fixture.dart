@@ -20,7 +20,9 @@ void _testTargetDirtyActiveSessionInvalidation() {
     final effects = <List<CommitDeliveryEffect>>[];
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       commitEffectObserver: effects.add,
     );
     final session = SurfaceResourceSession(
@@ -84,3 +86,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

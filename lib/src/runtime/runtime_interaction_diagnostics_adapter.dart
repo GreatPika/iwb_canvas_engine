@@ -1,12 +1,44 @@
+import 'dart:async';
+
+import 'package:meta/meta.dart' show visibleForTesting;
+
 import '../diagnostics/diagnostic_code.dart';
 import '../diagnostics/diagnostics_hub.dart';
 import '../interaction/interaction_diagnostics_sink.dart';
 
+@visibleForTesting
+enum DeletionResolverDiagnosticWorkEvent { eventBuilt, detailsBuilt }
+
+// The adapter deliberately keeps every InteractionDiagnosticsSink delegation
+// visible at this boundary; splitting the deletion-only test observer out would
+// obscure the direct RuntimeRoot-to-Hub diagnostic route.
+// ignore: number-of-methods
 final class RuntimeInteractionDiagnosticsAdapter
     implements InteractionDiagnosticsSink {
   const RuntimeInteractionDiagnosticsAdapter(this._hub);
 
+  static final Object _deletionResolverDiagnosticWorkZoneKey = Object();
   final DiagnosticsHub? _hub;
+
+  /// Observes only deletion-resolver diagnostic construction under assertions.
+  @visibleForTesting
+  static T observeDeletionResolverDiagnosticWork<T>(
+    void Function(DeletionResolverDiagnosticWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_deletionResolverDiagnosticWorkZoneKey: sink},
+  );
+
+  static bool _recordDeletionResolverDiagnosticWork(
+    DeletionResolverDiagnosticWorkEvent event,
+  ) {
+    final sink = Zone.current[_deletionResolverDiagnosticWorkZoneKey];
+    if (sink is void Function(DeletionResolverDiagnosticWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
 
   @override
   void recordHitTestFallbackObserved({
@@ -94,6 +126,40 @@ final class RuntimeInteractionDiagnosticsAdapter
       _hub,
       code: InteractionDiagnosticCode.resolverReentrantMutationRejected,
       details: () => {'operation': operation},
+    );
+  }
+
+  @override
+  void recordDeletionResolverFailed({
+    required String operation,
+    required String errorKind,
+  }) => _hub?.record(_deletionResolverFailureEvent(operation, errorKind));
+
+  DiagnosticEvent _deletionResolverFailureEvent(
+    String operation,
+    String errorKind,
+  ) {
+    assert(
+      _recordDeletionResolverDiagnosticWork(
+        DeletionResolverDiagnosticWorkEvent.eventBuilt,
+      ),
+      'deletion resolver diagnostic work observation failed',
+    );
+    return DiagnosticEvent(
+      code: const DiagnosticCode.interaction(
+        InteractionDiagnosticCode.deletionResolverFailed,
+      ),
+      severity: DiagnosticSeverity.warning,
+      source: DiagnosticSource.interaction,
+      details: () {
+        assert(
+          _recordDeletionResolverDiagnosticWork(
+            DeletionResolverDiagnosticWorkEvent.detailsBuilt,
+          ),
+          'deletion resolver diagnostic work observation failed',
+        );
+        return {'operation': operation, 'errorKind': errorKind};
+      },
     );
   }
 }

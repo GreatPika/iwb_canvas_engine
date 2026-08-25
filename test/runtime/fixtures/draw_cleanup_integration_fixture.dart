@@ -189,7 +189,9 @@ final class _CleanupTimestampScenario {
 
   late final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
   final actions = <CanvasActionCommitted>[];
@@ -205,3 +207,6 @@ final class _CleanupTimestampScenario {
     root.dispose();
   }
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

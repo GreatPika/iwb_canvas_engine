@@ -50,7 +50,9 @@ void main() {
 void _verifyPreviewOnlyPublication() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final actions = <CanvasActionCommitted>[];
   final actionSubscription = root.actions.listen(actions.add);
@@ -89,7 +91,9 @@ void _expectSelectedMovePreview(CanvasPreviewState preview) {
 void _verifySilentNoOpPreviewChanges() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   addTearDown(root.dispose);
   final snapshots = <CanvasRuntimeState>[];
@@ -218,7 +222,9 @@ _DrawPreviewScenario _drawPreviewScenario() {
 RuntimeRoot _drawRuntimeRoot() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
@@ -231,7 +237,9 @@ RuntimeRoot _drawRuntimeRoot() {
 _DrawPreviewScenario _linePreviewScenario() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
@@ -258,7 +266,9 @@ _DrawPreviewScenario _linePreviewScenario() {
 _DrawPreviewScenario _eraserPreviewScenario() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
@@ -391,3 +401,6 @@ void _expectPencilPreview(
   expect(pencil.thickness, 5);
   expect(pencil.opacity, 1);
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

@@ -259,6 +259,19 @@ hit testing, spatial candidate selection, exact eraser checks, commit-intent
 creation, committed document mutation, committed selection mutation, or resource
 mutation.
 
+For a nonempty terminal eraser intent, RuntimeRoot receives the Unit-2 filtered
+canonical Store entries and prepares the complete sparse deletion before calling
+the required guarded resolver. That preparation includes Store validation and
+revision/ledger binding, Selection backing, revision facts, sealed delivery, and
+erase action inputs. Resolver cancel or ordinary failure discards the private
+prepared state without a document, selection, timestamp, or action change; an
+ordinary failure records only the bounded internal `{operation, errorKind}`
+diagnostic. On accept, Store installs its bound state once, Selection installs
+its already-owned backing once, and only then does RuntimeRoot ask the
+coordinator for `publish: false` cleanup. Every terminal branch, including a
+post-install state/action delivery failure, completes that cleanup before the
+fallible delivery; accepted state remains final and is never rolled back.
+
 For an accepted non-text terminal, `RuntimeRoot` first receives the already
 closed EditKernel result, then asks InteractionEngine for cleanup with
 publication suppressed, augments the sealed delivery effects with the cleanup

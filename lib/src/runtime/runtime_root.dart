@@ -4,6 +4,7 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -142,6 +143,29 @@ final class _DeletionEntryRouteWorkScope {
   bool readToEntryActive = false;
 }
 
+/// Test-only facts for the two resolver-specific values a route constructs.
+@visibleForTesting
+enum RuntimeDeletionRouteConstructionKind {
+  request,
+  selectionPreparedCommit,
+  eraserPreparedCommit,
+}
+
+/// Per-entry work performed while constructing the public deletion request.
+@visibleForTesting
+enum RuntimeDeletionRequestWorkEvent { entryCopied }
+
+/// The public request owner has two separate pre-callback preparation steps.
+@visibleForTesting
+enum RuntimeDeletionRequestPreparationPhase { requestConstruction, entryCopy }
+
+final class _DeletionResolution {
+  const _DeletionResolution(this.decision, {this.didThrow = false});
+
+  final CanvasDeletionDecision decision;
+  final bool didThrow;
+}
+
 // Common delivery has public callback seams for resource, frame, state, action,
 // and observer facts. This assert-only event supplies only their semantic
 // ordering and guard boundaries; sealed-collection work is observed at its
@@ -256,6 +280,9 @@ final class RuntimeRoot
   final DocumentStoreKernel _store;
   static final Object _routeTemporalEventZoneKey = Object();
   static final Object _deletionEntryRouteWorkZoneKey = Object();
+  static final Object _deletionRouteConstructionZoneKey = Object();
+  static final Object _deletionRequestWorkZoneKey = Object();
+  static final Object _deletionRequestPreparationFailureZoneKey = Object();
   static final Object _frameHandleEnumerationZoneKey = Object();
   static final Object _commonDeliveryEventZoneKey = Object();
   final DiagnosticsHub? _diagnostics;
@@ -321,6 +348,7 @@ final class RuntimeRoot
     prepareSparseCommit: _store.prepareSparseCommit,
     prepareMaterializedCommit: _store.prepareMaterializedCommit,
     installCommit: _applyEditCommit,
+    prepareDeletionCommit: _prepareDeletionEditCommit,
     deliverApplyResult: _deliverEditCommitResult,
     installLoadedDocument: _loadDocumentFromJson,
   );
@@ -987,7 +1015,7 @@ final class RuntimeRoot
     final removalIds = List<CanvasElementId>.unmodifiable(
       removalEntries.map((entry) => entry.id),
     );
-    final applyResult = _editKernel.prepareInteractionCommit(
+    final prepared = _editKernel.prepareDeletionInteractionCommit(
       (edit) {
         for (final id in removalIds) {
           edit.removeElement(id);
@@ -1000,7 +1028,93 @@ final class RuntimeRoot
         ),
       ]),
     );
-    _deliverEditCommitResult(applyResult);
+    assert(
+      _recordDeletionRouteConstruction(
+        RuntimeDeletionRouteConstructionKind.selectionPreparedCommit,
+      ),
+      'selection deletion preparation observation failed',
+    );
+    final resolution = _resolveDeletion(
+      _deletionRequest(
+        operation: CanvasDeletionOperation.deleteSelection,
+        entries: removalEntries,
+      ),
+    );
+    if (resolution.decision != CanvasDeletionDecision.accept) {
+      prepared.discard();
+      return;
+    }
+    _deliverEditCommitResult(prepared.consume());
+  }
+
+  CanvasDeletionCommitRequest _deletionRequest({
+    required CanvasDeletionOperation operation,
+    required Iterable<DeletionEntryFacts> entries,
+  }) {
+    assert(
+      _throwInjectedDeletionRequestPreparationFailure(
+        RuntimeDeletionRequestPreparationPhase.requestConstruction,
+      ),
+      'deletion request construction injection did not complete',
+    );
+    final request = CanvasDeletionCommitRequest(
+      operation: operation,
+      entries: entries.map((entry) {
+        assert(
+          _throwInjectedDeletionRequestPreparationFailure(
+            RuntimeDeletionRequestPreparationPhase.entryCopy,
+          ),
+          'deletion request copy injection did not complete',
+        );
+        assert(
+          _recordDeletionRequestWork(
+            RuntimeDeletionRequestWorkEvent.entryCopied,
+          ),
+          'deletion request work observation failed',
+        );
+        return CanvasDeletionEntry(
+          element: entry.element,
+          layerId: entry.layerId,
+          elementIndex: entry.elementIndex,
+        );
+      }),
+    );
+    assert(
+      _recordDeletionRouteConstruction(
+        RuntimeDeletionRouteConstructionKind.request,
+      ),
+      'deletion request construction observation failed',
+    );
+    return request;
+  }
+
+  _DeletionResolution _resolveDeletion(CanvasDeletionCommitRequest request) {
+    try {
+      return _DeletionResolution(
+        runResolverCallback(() => config.deletionCommitResolver(request)),
+      );
+    } on Object catch (error) {
+      RuntimeInteractionDiagnosticsAdapter(
+        _diagnostics,
+      ).recordDeletionResolverFailed(
+        operation: request.operation.name,
+        errorKind: _deletionResolverErrorKind(error),
+      );
+      return const _DeletionResolution(
+        CanvasDeletionDecision.cancel,
+        didThrow: true,
+      );
+    }
+  }
+
+  String _deletionResolverErrorKind(Object error) {
+    if (error is Error) {
+      return 'error';
+    }
+    if (error is Exception) {
+      return 'exception';
+    }
+    return 'object';
   }
 
   List<DeletionEntryFacts> _selectionDeleteEntries() {
@@ -1620,6 +1734,68 @@ final class RuntimeRoot
     },
   );
 
+  /// Observes actual deferred-commit and DTO construction under assertions.
+  @visibleForTesting
+  static T observeDeletionRouteConstruction<T>(
+    void Function(RuntimeDeletionRouteConstructionKind kind) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_deletionRouteConstructionZoneKey: sink},
+  );
+
+  static bool _recordDeletionRouteConstruction(
+    RuntimeDeletionRouteConstructionKind kind,
+  ) {
+    final sink = Zone.current[_deletionRouteConstructionZoneKey];
+    if (sink is void Function(RuntimeDeletionRouteConstructionKind)) {
+      sink(kind);
+    }
+    return true;
+  }
+
+  /// Counts only the real entry copies made for a public deletion request.
+  @visibleForTesting
+  static T observeDeletionRequestWork<T>(
+    void Function(RuntimeDeletionRequestWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_deletionRequestWorkZoneKey: sink});
+
+  /// Causes a request construction phase to fail only when assertions run.
+  @visibleForTesting
+  static T injectDeletionRequestPreparationFailure<T>(
+    RuntimeDeletionRequestPreparationPhase phase,
+    Error error,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {
+      _deletionRequestPreparationFailureZoneKey: (phase: phase, error: error),
+    },
+  );
+
+  static bool _throwInjectedDeletionRequestPreparationFailure(
+    RuntimeDeletionRequestPreparationPhase expected,
+  ) {
+    final value = Zone.current[_deletionRequestPreparationFailureZoneKey];
+    if (value
+            is ({RuntimeDeletionRequestPreparationPhase phase, Error error}) &&
+        value.phase == expected) {
+      throw value.error;
+    }
+    return true;
+  }
+
+  static bool _recordDeletionRequestWork(
+    RuntimeDeletionRequestWorkEvent event,
+  ) {
+    final sink = Zone.current[_deletionRequestWorkZoneKey];
+    if (sink is void Function(RuntimeDeletionRequestWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
   /// Test-only observation of real frame-wide reads. Assertion gating keeps
   /// the production frame path free of counters, state, and extra passes.
   @visibleForTesting
@@ -2081,6 +2257,29 @@ final class RuntimeRoot
     );
   }
 
+  PreparedDeletionApply _prepareDeletionEditCommit(
+    AcceptedCommitDocument document,
+    CommitPlan plan,
+  ) {
+    return _commitApplier.prepareDeletion(
+      document: document,
+      plan: plan,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: _store.installDocument,
+        replaceDocument: _store.replaceDocument,
+        installSparseCommit: _store.installSparseCommit,
+        installPreparedMaterializedCommit:
+            _store.installPreparedMaterializedCommit,
+        prepareDeletionSparseInstall: _store.prepareDeletionSparseInstall,
+      ),
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: _prepareCommitSelectionEffect,
+        installSelectionEffect: _applyCommitSelectionEffect,
+        installOwnedSelectionEffect: _installOwnedCommitSelectionEffect,
+      ),
+    );
+  }
+
   PreparedSelectionEffect _prepareCommitSelectionEffect(
     CommitSelectionEffect effect,
     PreparedCommitDocument document,
@@ -2113,6 +2312,10 @@ final class RuntimeRoot
   bool _applyCommitSelectionEffect(PreparedSelectionEffect effect) {
     return _selection.installPreparedEffect(effect);
   }
+
+  bool _installOwnedCommitSelectionEffect(
+    LinkedHashSet<CanvasElementId> elementIds,
+  ) => _selection.installOwnedPreparedElementIds(elementIds);
 
   bool _applySelectionReplacement(
     InteractionSelectionReplacement? replacement,
@@ -2847,15 +3050,34 @@ final class RuntimeRoot
   }
 
   // Eraser commit flow.
+  // Resolver outcome, cleanup, and delivery must stay in one temporal owner so
+  // cleanup cannot move after a fallible external delivery.
+  // ignore: halstead-volume, source-lines-of-code
   void _deliverEraserCommit(
     EraserCommitIntent intent, {
     required int? timestampHintMs,
-    CommitDeliveryResult Function()? prepareCommit,
+    PreparedDeletionCommit Function()? prepareCommit,
   }) {
     try {
-      final applyResult =
+      final entries = intent.erasedEntries;
+      if (entries.isEmpty) {
+        final cleanup = _cleanupEraser(
+          PointerCleanupReason.noOpTerminal,
+          publish: false,
+        );
+        _deliverEditCommitResult(
+          _withPointerCleanupEffects(
+            CommitDeliveryResult(shouldPublishState: false),
+            cleanup,
+            RuntimeNonTextRoute.eraser,
+          ),
+          route: RuntimeNonTextRoute.eraser,
+        );
+        return;
+      }
+      final prepared =
           prepareCommit?.call() ??
-          _prepareEraserCommit(
+          _prepareEraserDeletion(
             intent: intent,
             timestampHintMs: timestampHintMs,
           );
@@ -2866,6 +3088,31 @@ final class RuntimeRoot
         ),
         'runtime route temporal event observation failed',
       );
+      final resolution = _resolveDeletion(
+        _deletionRequest(
+          operation: CanvasDeletionOperation.erase,
+          entries: entries,
+        ),
+      );
+      if (resolution.decision != CanvasDeletionDecision.accept) {
+        prepared.discard();
+        final cleanup = _cleanupEraser(
+          resolution.didThrow
+              ? PointerCleanupReason.resolverError
+              : PointerCleanupReason.resolverCancel,
+          publish: false,
+        );
+        _deliverEditCommitResult(
+          _withPointerCleanupEffects(
+            CommitDeliveryResult(shouldPublishState: false),
+            cleanup,
+            RuntimeNonTextRoute.eraser,
+          ),
+          route: RuntimeNonTextRoute.eraser,
+        );
+        return;
+      }
+      final applyResult = prepared.consume();
       final cleanup = _cleanupEraser(
         PointerCleanupReason.postSuccessCommit,
         publish: false,
@@ -2891,11 +3138,11 @@ final class RuntimeRoot
     }
   }
 
-  CommitDeliveryResult _prepareEraserCommit({
+  PreparedDeletionCommit _prepareEraserDeletion({
     required EraserCommitIntent intent,
     required int? timestampHintMs,
   }) {
-    return _editKernel.prepareInteractionCommit(
+    final prepared = _editKernel.prepareDeletionInteractionCommit(
       (edit) {
         for (final id in intent.erasedElementIds) {
           edit.removeElement(id);
@@ -2910,6 +3157,13 @@ final class RuntimeRoot
         ),
       ]),
     );
+    assert(
+      _recordDeletionRouteConstruction(
+        RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
+      ),
+      'eraser deletion preparation observation failed',
+    );
+    return prepared;
   }
 
   InteractionCleanupOutcome _cleanupEraser(

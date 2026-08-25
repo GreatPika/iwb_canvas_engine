@@ -2,7 +2,10 @@
 // pointer/tool ownership instead of simplifying it.
 // ignore_for_file: number-of-imports
 
+import 'dart:async';
 import 'dart:ui';
+
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
@@ -31,6 +34,8 @@ import 'text_edit_guard_decision.dart';
 // so the active pointer lifecycle has one auditable owner.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class InteractionEngine {
+  static final Object _cleanupZoneKey = Object();
+
   InteractionEngine({
     required CanvasInteractionMode initialMode,
     required CanvasDrawStyle initialDrawStyle,
@@ -271,6 +276,13 @@ final class InteractionEngine {
   InteractionCleanupOutcome finishEraser(PointerCleanupReason reason) {
     return _cleanupWithReason(reason);
   }
+
+  /// Observes one real interaction cleanup in tests without retaining history.
+  @visibleForTesting
+  static T observeCleanup<T>(
+    void Function(PointerCleanupReason reason) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_cleanupZoneKey: sink});
 
   ContextActionRequestIntent? handleDoubleTap(
     Offset viewPosition,
@@ -1715,6 +1727,7 @@ final class InteractionEngine {
     PointerCleanupReason reason, {
     bool preservePendingContextTap = false,
   }) {
+    assert(_recordCleanup(reason), 'interaction cleanup observation failed');
     return cleanupPointerTool(
       PointerCleanupRequest(
         reason: reason,
@@ -1727,6 +1740,14 @@ final class InteractionEngine {
         preservePendingContextTap: preservePendingContextTap,
       ),
     );
+  }
+
+  static bool _recordCleanup(PointerCleanupReason reason) {
+    final sink = Zone.current[_cleanupZoneKey];
+    if (sink is void Function(PointerCleanupReason)) {
+      sink(reason);
+    }
+    return true;
   }
 
   InteractionSelectionReplacement? _selectionReplacementForCleanup(

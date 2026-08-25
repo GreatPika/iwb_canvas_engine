@@ -101,7 +101,9 @@ Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _baseDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final beforeFrameRevisions = root.frameRevisions;
@@ -127,7 +129,9 @@ Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
 Future<void> _sparsePartialCompensationRestoresRowRevisions() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _baseDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final before = _RowRevisionProbe.capture(root);
 
@@ -142,7 +146,9 @@ Future<void> _sparseImplicitReAddPublishesContentOrder() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _twoElementDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final beforeFrameRevisions = root.frameRevisions;
@@ -235,7 +241,9 @@ Future<void> _expectSilentNetNoOpCommit({
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _baseDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final probe = _NetNoOpProbe(root: root, effectBatches: effectBatches);
@@ -442,3 +450,6 @@ CanvasPalette _alternatePalette() {
     gridSizes: const [8, 16],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

@@ -187,7 +187,7 @@ void main() {
   });
 
   test('runtime JSON load rejects aggregate metadata before install', () {
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     try {
       runtime.edits.loadDocumentFromJson(
         encodeCanvasDocumentToJson(
@@ -482,7 +482,7 @@ CanvasDocument _loadDocumentFromObject(Map<String, Object?> json) {
 }
 
 CanvasDocument _loadDocumentFromJson(String json) {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   try {
     runtime.edits.loadDocumentFromJson(json);
 

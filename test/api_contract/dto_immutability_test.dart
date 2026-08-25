@@ -166,5 +166,29 @@ void main() {
     expect(() => request.movedElements.clear(), throwsUnsupportedError);
     expect(() => preview.points.clear(), throwsUnsupportedError);
   });
+
+  test('deletion requests retain entries and reject exposed mutation', () {
+    final element = CanvasRectElement(
+      id: CanvasElementId('delete-1'),
+      size: const Size(1, 1),
+    );
+    final entries = [
+      CanvasDeletionEntry(
+        element: element,
+        layerId: CanvasLayerId('layer-1'),
+        elementIndex: 0,
+      ),
+    ];
+    final request = CanvasDeletionCommitRequest(
+      operation: CanvasDeletionOperation.deleteSelection,
+      entries: entries,
+    );
+
+    entries.clear();
+
+    expect(request.entries, hasLength(1));
+    expect(request.entries.single.element, same(element));
+    expect(() => request.entries.clear(), throwsUnsupportedError);
+  });
 }
 ''';

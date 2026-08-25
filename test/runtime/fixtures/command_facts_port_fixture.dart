@@ -99,7 +99,11 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
 }
 
 void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
-  final root = RuntimeRoot(config: const CanvasRuntimeConfig());
+  final root = RuntimeRoot(
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
+  );
   addTearDown(root.dispose);
   root.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_invalidFactsDocument()),
@@ -789,3 +793,6 @@ FrameElementFacts _workContentFacts(FrameElementHandle handle) {
     _ => _facts(id: handle.id, orderToken: handle.orderToken),
   };
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

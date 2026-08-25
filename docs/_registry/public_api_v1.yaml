@@ -3,6 +3,11 @@
 public_exports:
   - CanvasRuntime
   - CanvasRuntimeConfig
+  - CanvasDeletionCommitResolver
+  - CanvasDeletionOperation
+  - CanvasDeletionDecision
+  - CanvasDeletionCommitRequest
+  - CanvasDeletionEntry
   - CanvasSelectionDeletePolicy
   - CanvasSelectionDeleteAvailability
   - CanvasRuntimeState

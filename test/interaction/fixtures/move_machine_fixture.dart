@@ -257,6 +257,7 @@ void _testUnselectedMovableDragCancelRestoresSelection() {
   test('cancel during unselected movable drag restores previous selection', () {
     final scenario = _actionScenario(
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -304,6 +305,7 @@ void _testUnselectedMovableDragUsesDragStartSlop() {
   test('unselected movable drag starts after dragStartSlop before tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -556,6 +558,7 @@ void _testSelectedMoveDragStartSlopFallbackUsesTapSlop() {
   test('selected move dragStartSlop null falls back to tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
       ),
     );
@@ -580,6 +583,7 @@ void _testSelectedMoveContinuesInsideSlopAfterPreviewStart() {
   test('selected move keeps preview live when crossing back through start', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -679,7 +683,9 @@ void _testSingleSelectedLineBoundsMissDoesNotStartSelectedMove() {
   test('single selected line bounds miss does not start selected move', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _singleLineDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     )..selection.setSelection([CanvasElementId('line-a')]);
     addTearDown(root.dispose);
 
@@ -926,6 +932,7 @@ void _testSelectedVectorMoveCommitUpdatesDocument() {
           ],
         ),
         config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
           moveCommitResolver: _commitVectorMove,
         ),
       );
@@ -1493,6 +1500,7 @@ _NoCommitScenario _occludedNoCommitScenario({
       occluderLocked: occluderLocked,
     ),
     config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       moveCommitResolver: (request) {
         resolverCalls += 1;
 
@@ -1603,6 +1611,7 @@ void _testSelectedMoveResolverFailureFidelity() {
       var branch = 0;
       root = RuntimeRoot.test(
         config: CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
           diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
           moveCommitResolver: (_) {
             return switch (branch) {
@@ -1679,6 +1688,7 @@ void _testSelectedMoveCleanupPrecedesDelivery() {
     late RuntimeRoot root;
     root = _runtimeRoot(
       config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
         moveCommitResolver: (_) => const CanvasMoveCommit(delta: Offset(2, 0)),
       ),
       commitEffectObserver: (effects) {
@@ -1928,7 +1938,9 @@ void _cancelSelectedMove(RuntimeRoot root, Offset position) {
 }
 
 _ActionScenario _actionScenario({
-  CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+  CanvasRuntimeConfig config = const CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
+  ),
 }) {
   final root = _runtimeRoot(config: config);
   final actions = <CanvasActionCommitted>[];
@@ -1945,6 +1957,7 @@ CanvasRuntimeConfig _dragStartBeforeTapConfig({
   CanvasMoveCommitResolver? moveCommitResolver,
 }) {
   return CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
     pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
     moveCommitResolver: moveCommitResolver,
   );
@@ -1952,6 +1965,7 @@ CanvasRuntimeConfig _dragStartBeforeTapConfig({
 
 CanvasRuntimeConfig _wideTapDragStartConfig() {
   return CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
     pointerPolicy: CanvasPointerPolicy(tapSlop: 32, dragStartSlop: 4),
   );
 }
@@ -1963,7 +1977,12 @@ RuntimeRoot _runtimeRoot({
 }) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: config ?? CanvasRuntimeConfig(moveCommitResolver: resolver),
+    config:
+        config ??
+        CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+          moveCommitResolver: resolver,
+        ),
     commitEffectObserver: commitEffectObserver,
   );
 }
@@ -2135,3 +2154,6 @@ final class _NoCommitScenario {
   final List<CanvasActionCommitted> actions;
   final int Function() resolverCalls;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

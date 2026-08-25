@@ -12,7 +12,7 @@ void main() {
     for (final entry in fixtures.entries) {
       final document = entry.value;
       final json = performanceFixtureJson(document);
-      final runtime = CanvasRuntime();
+      final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
       addTearDown(runtime.dispose);
 
       expect(performanceElementCount(document), 100000, reason: entry.key);
@@ -24,3 +24,9 @@ void main() {
     }
   });
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

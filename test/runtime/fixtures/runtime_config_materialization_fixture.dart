@@ -66,6 +66,7 @@ void _runtimeRootMaterializesSelectionDeletePolicy() {
   final allOrNoneRoot = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -92,11 +93,17 @@ void _runtimeRootOwnsEraserKindPolicyCopy() {
   );
   final disabledRoot = runtimeRootWithCommittedDocumentSeed(
     _eraserPolicyDocument(),
-    config: const CanvasRuntimeConfig(eraserElementKinds: {}),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      eraserElementKinds: {},
+    ),
   );
   final restrictedRoot = runtimeRootWithCommittedDocumentSeed(
     _eraserPolicyDocument(),
-    config: CanvasRuntimeConfig(eraserElementKinds: suppliedKinds),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      eraserElementKinds: suppliedKinds,
+    ),
   );
   addTearDown(unrestrictedRoot.dispose);
   addTearDown(disabledRoot.dispose);
@@ -175,6 +182,12 @@ CanvasDocument _eraserPolicyDocument() {
 RuntimeRoot _runtimeRootWithDiagnostics(CanvasDiagnosticPolicy policy) {
   return runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: CanvasRuntimeConfig(diagnosticPolicy: policy),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      diagnosticPolicy: policy,
+    ),
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

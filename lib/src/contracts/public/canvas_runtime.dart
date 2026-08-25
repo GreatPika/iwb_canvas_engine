@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 
 import 'canvas_actions.dart';
 import 'canvas_diagnostics.dart';
+import 'canvas_deletion.dart';
 import 'canvas_document.dart';
 import 'canvas_element.dart';
 import 'canvas_element_update.dart';
@@ -18,34 +19,12 @@ import 'canvas_pointer.dart';
 import 'canvas_resource.dart';
 import 'canvas_tools.dart';
 
-/// Determines how selection deletion handles ineligible selected elements.
-enum CanvasSelectionDeletePolicy { partial, allOrNone }
-
-@immutable
-/// Describes whether the current selection can be deleted.
-final class CanvasSelectionDeleteAvailability {
-  const CanvasSelectionDeleteAvailability({
-    required this.hasSelection,
-    required this.allSelectedElementsDeletable,
-  });
-
-  final bool hasSelection;
-  final bool allSelectedElementsDeletable;
-
-  @override
-  bool operator ==(Object other) {
-    return other is CanvasSelectionDeleteAvailability &&
-        other.hasSelection == hasSelection &&
-        other.allSelectedElementsDeletable == allSelectedElementsDeletable;
-  }
-
-  @override
-  int get hashCode => Object.hash(hasSelection, allSelectedElementsDeletable);
-}
+export 'canvas_deletion.dart';
 
 /// Public API v1 declaration for [CanvasRuntimeConfig].
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
+    required this.deletionCommitResolver,
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
     this.initialMode = CanvasInteractionMode.move,
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
@@ -61,6 +40,7 @@ final class CanvasRuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasDeletionCommitResolver deletionCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
 
   /// Limits eraser reads to these element kinds; null admits every kind.

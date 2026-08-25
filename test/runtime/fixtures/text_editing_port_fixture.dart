@@ -181,7 +181,9 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
         commitEffectObserver: (_) {
           if (!committing) {
             return;
@@ -310,7 +312,9 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
         commitEffectObserver: (_) {
           if (committing) {
             trace.add('outer-observer');
@@ -1002,7 +1006,9 @@ final class _Scenario {
   _Scenario({CanvasDocument? document})
     : root = runtimeRootWithCommittedDocumentSeed(
         document ?? _document(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
       ) {
     actionSubscription = root.actions.listen(actions.add);
     requestSubscription = root.contextActionRequests.listen(requests.add);
@@ -1011,7 +1017,9 @@ final class _Scenario {
   _Scenario.failedTextPrepare()
     : root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
         textEditPrepareOverride: (_) {
           return CommitDeliveryResult(shouldPublishState: false);
         },
@@ -1141,3 +1149,6 @@ final _textId = CanvasElementId('text-a');
 final _rectId = CanvasElementId('rect-a');
 final _listenerNestedRectId = CanvasElementId('listener-nested-rect');
 final _listenerFailureRectId = CanvasElementId('listener-failure-rect');
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

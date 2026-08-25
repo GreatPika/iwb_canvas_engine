@@ -1954,8 +1954,14 @@ final class _RecordingResolver implements CanvasResourceResolver {
 }
 
 CanvasRuntime runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   return runtime;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

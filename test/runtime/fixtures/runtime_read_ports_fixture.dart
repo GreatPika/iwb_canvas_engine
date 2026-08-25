@@ -11,7 +11,9 @@ void main() {
   test('document and frame ports return committed facts only', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
 
     expect(() {
@@ -27,7 +29,9 @@ void main() {
   test('test root starts view camera from committed document camera', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _documentWithCamera(CanvasCamera(offset: const Offset(11, 13))),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
 
     expect(root.readDocument().camera.offset, const Offset(11, 13));
@@ -54,7 +58,9 @@ void _testVectorFrameDescriptor() {
           ),
         ],
       ),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final descriptor = root.frameFactsPort.resourceDescriptor(
       CanvasResourceId('vector-a'),
@@ -306,3 +312,6 @@ List<CanvasResource> _resources() {
     ),
   ];
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

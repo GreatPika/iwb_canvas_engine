@@ -24,7 +24,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 void main() {
   test('camera starts from document and updates only view camera revision', () {
     final persistedCamera = CanvasCamera(offset: const Offset(4, 8));
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     runtime.edits.loadDocumentFromJson(
       encodeCanvasDocumentToJson(CanvasDocument(camera: persistedCamera)),
     );
@@ -59,7 +59,7 @@ void main() {
   });
 
   test('camera rejects invalid offsets with CanvasDataException', () {
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
 
     expect(
       () => runtime.camera.setOffset(const Offset(double.nan, 0)),

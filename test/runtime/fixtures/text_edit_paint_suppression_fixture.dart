@@ -190,7 +190,9 @@ final class _Scenario {
   _Scenario()
     : root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(),
+        config: const CanvasRuntimeConfig(
+          deletionCommitResolver: _acceptDeletionCommit,
+        ),
       ) {
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
@@ -291,3 +293,6 @@ CanvasDocument _document({String text = 'hello'}) {
 
 final _textId = CanvasElementId('text-a');
 final _rectId = CanvasElementId('rect-a');
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

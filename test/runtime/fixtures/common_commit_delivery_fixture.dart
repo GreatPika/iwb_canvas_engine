@@ -251,7 +251,9 @@ final class _CommonDeliveryScenario {
   _CommonDeliveryScenario(CanvasDocument document) {
     root = runtimeRootWithCommittedDocumentSeed(
       document,
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       commitEffectObserver: (effects) {
         if (effects.isNotEmpty && _isDelivering) {
           _recordCallback('observer');
@@ -452,7 +454,9 @@ void _expectActionListenerFailureIsContained() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: (_) => events.add('observer'),
   );
   root.state.addListener(() => events.add('state'));
@@ -504,7 +508,9 @@ final class _ObserverDeliveryScenario {
   _ObserverDeliveryScenario() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       commitEffectObserver: _observeEffects,
     );
     baselineViewCameraRevision = root.state.value.revisions.viewCamera;
@@ -636,7 +642,9 @@ final class _ObserverFailureScenario {
   _ObserverFailureScenario() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       commitEffectObserver: _throwFromObserver,
     );
     root.state.addListener(() {
@@ -772,3 +780,6 @@ String _textValue(RuntimeRoot root) {
       .single
       .text;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

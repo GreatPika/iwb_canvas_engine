@@ -42,6 +42,7 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
   final runtime = runtimeWithDocument(
     _document(),
     config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: style,
       pointerPolicy: policy,
@@ -57,7 +58,9 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
 
 // The no-op and effective-setter checks share one revision timeline, so keeping
 // them together is clearer than splitting the same state progression.
-// ignore: halstead-volume
+// The explicit required resolver is part of the same public construction
+// witness; splitting the setup would obscure the mode-to-preview contract.
+// ignore: halstead-volume, source-lines-of-code
 void _setterNoopsAreSilentAndEffectiveChangesPublishInteractionState() {
   final runtime = runtimeWithDocument(_document());
   addTearDown(runtime.dispose);
@@ -84,12 +87,17 @@ void _setterNoopsAreSilentAndEffectiveChangesPublishInteractionState() {
 
 // Selection clearing and draw-mode pointer preview stay in one scenario to
 // prove the configured mode-change contract and preview-only draw behavior.
-// ignore: halstead-volume
+// The explicit required resolver is part of the same public construction
+// witness; splitting the setup would obscure the mode-to-preview contract.
+// ignore: halstead-volume, source-lines-of-code
 Future<void>
 _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
   final runtime = runtimeWithDocument(
     _document(),
-    config: const CanvasRuntimeConfig(clearSelectionOnDrawModeEnter: true),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      clearSelectionOnDrawModeEnter: true,
+    ),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = runtime.actions.listen(actions.add);
@@ -243,3 +251,6 @@ CanvasPointerSample _pointer(
     kind: PointerDeviceKind.touch,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

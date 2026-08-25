@@ -793,7 +793,7 @@ PerformanceScenarioActionPlan _surfaceRuntimeSwapScenario() {
   return PerformanceScenarioActionPlan(
     id: 'surface_runtime_swap',
     action: (context) async {
-      final replacement = CanvasRuntime();
+      final replacement = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
       _loadDocument(replacement, performanceRectDocument(1000));
       context.host.swapRuntime(replacement);
       await context.pumpScenarioFrame();
@@ -814,7 +814,7 @@ PerformanceScenarioActionPlan _disposeDuringPreviewScenario() {
         pointerId: 1,
         includeTerminal: false,
       ));
-      final replacement = CanvasRuntime();
+      final replacement = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
       _loadDocument(replacement, performanceRectDocument(1000));
       context.host.swapRuntime(replacement);
       await context.pumpScenarioFrame();
@@ -878,7 +878,9 @@ PerformanceScenarioActionPlan _firstCanvasFrameScenario() {
 Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
   PerformanceScenarioContext context,
 ) async {
-  context.host.swapRuntime(CanvasRuntime());
+  context.host.swapRuntime(
+    CanvasRuntime(config: _acceptDeletionRuntimeConfig()),
+  );
   await context.pumpScenarioFrame();
   final preparedJson = performanceFixtureJson(performanceRectDocument(100000));
   return PerformancePreparedPhaseAction(
@@ -897,7 +899,7 @@ Future<PerformancePreparedPhaseAction> _prepareLoadDocument100k(
 Future<PerformancePreparedPhaseAction> _prepareFirstCanvasFrame50k(
   PerformanceScenarioContext context,
 ) async {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   _loadDocument(runtime, performanceRectDocument(50000));
   context.host.swapRuntime(runtime);
   return PerformancePreparedPhaseAction(
@@ -1061,3 +1063,9 @@ CanvasPointerSample _pointer(
     timestampMs: timestampMs,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

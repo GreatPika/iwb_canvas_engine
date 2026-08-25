@@ -76,7 +76,9 @@ void main() {
 void _expectNullableClearUpdatesField() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -162,7 +164,9 @@ void _expectMismatchedUpdateKindRejected() {
 void _expectGeometryUpdateAdvancesBoundsRevision() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -200,7 +204,9 @@ void _expectVisibilityUpdateTouchesSelection() {
 void _expectVectorSparseUpdatePreservesOmittedFields() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _vectorDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   final changed = root.edits.edit((edit) {
@@ -227,7 +233,9 @@ void _expectVectorSparseUpdatePreservesOmittedFields() {
 void _expectVectorResourceKindMismatchPreservesDocument() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _vectorDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final before = root.readDocument();
 
@@ -261,7 +269,9 @@ void _expectVectorKindTransitionInEitherCallbackOrder() {
   for (final resourceFirst in [true, false]) {
     final root = runtimeRootWithCommittedDocumentSeed(
       _imageDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
     final vectorResource = CanvasVectorResource(
       id: CanvasResourceId('shared-resource'),
@@ -365,7 +375,9 @@ void _expectRejectedResourceEditPreservesRuntimeFacts({
 }) {
   final root = runtimeRootWithCommittedDocumentSeed(
     document,
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   root.attachSurface(Object());
   root.selection.setSelection([document.layers.single.elements.single.id]);
@@ -466,7 +478,12 @@ CanvasDocument _imageDocument() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

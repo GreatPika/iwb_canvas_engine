@@ -10,7 +10,9 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 // ignore: number-of-parameters
 RuntimeRoot runtimeRootWithCommittedDocumentSeed(
   CanvasDocument document, {
-  CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+  CanvasRuntimeConfig config = const CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
+  ),
   LoadInteractionBoundary? loadInteractionBoundary,
   TextEditPrepareOverride? textEditPrepareOverride,
   CommitEffectObserver? commitEffectObserver,
@@ -35,3 +37,6 @@ RuntimeRoot runtimeRootWithCommittedDocumentSeed(
 
   return root;
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

@@ -23,6 +23,9 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
+// This fixture keeps distinct stable owner-boundary failures in one existing
+// commit-delivery proof surface instead of duplicating document setup.
+// ignore: halstead-volume
 void main() {
   test('selection replacement commits without document delta', () {
     expect(_verifySelectionReplacementCommit, returnsNormally);
@@ -67,6 +70,13 @@ void main() {
   test('stale sparse preparation fails before every installer', () {
     expect(_verifyStaleSparsePreparationFailsBeforeInstallers, returnsNormally);
   });
+
+  test(
+    'prepared deletion binds failures before callback and installs once',
+    () {
+      expect(_verifyPreparedDeletionInstallBoundary, returnsNormally);
+    },
+  );
 }
 
 void _verifySelectionReplacementCommit() {
@@ -962,6 +972,55 @@ final class _SparseSelectionCommitProof {
     );
   }
 
+  PreparedDeletionApply prepareDeletion() {
+    return const CommitApplier().prepareDeletion(
+      document: AcceptedSparseStoreDocument(commit: prepared),
+      plan: plan,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: (_, _) => fail('Unexpected document install.'),
+        replaceDocument: (_, _) => fail('Unexpected replacement.'),
+        installSparseCommit: (_) =>
+            fail('Deletion used ordinary sparse install.'),
+        installPreparedMaterializedCommit: (_) =>
+            fail('Unexpected prepared materialized install.'),
+        prepareDeletionSparseInstall: store.prepareDeletionSparseInstall,
+      ),
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: _prepareSelectionEffect,
+        installSelectionEffect: (_) =>
+            fail('Deletion used ordinary selection install.'),
+        installOwnedSelectionEffect: (ids) {
+          events.add('selection-install');
+          return selection.installOwnedPreparedElementIds(ids);
+        },
+      ),
+    );
+  }
+
+  PreparedDeletionApply prepareDeletionWithThrowingSelection() {
+    return const CommitApplier().prepareDeletion(
+      document: AcceptedSparseStoreDocument(commit: prepared),
+      plan: plan,
+      documentInstallers: CommitDocumentInstallers(
+        installDocument: (_, _) => fail('Unexpected document install.'),
+        replaceDocument: (_, _) => fail('Unexpected replacement.'),
+        installSparseCommit: (_) => fail('Unexpected sparse install.'),
+        installPreparedMaterializedCommit: (_) =>
+            fail('Unexpected prepared materialized install.'),
+        prepareDeletionSparseInstall: store.prepareDeletionSparseInstall,
+      ),
+      selectionInstallers: CommitSelectionInstallers(
+        prepareSelectionEffect: (_, _) {
+          events.add('prepare-selection');
+          throw StateError('selection preparation failed');
+        },
+        installSelectionEffect: (_) => fail('Unexpected selection install.'),
+        installOwnedSelectionEffect: (_) =>
+            fail('Unexpected selection install.'),
+      ),
+    );
+  }
+
   void makePreparedCommitStale() {
     final preparedDocumentRevision = prepared.baseRevisions.documentRevision;
     store.installDocument(
@@ -1013,6 +1072,66 @@ final class _SparseSelectionCommitProof {
 
     return selection.installPreparedEffect(effect);
   }
+}
+
+// The trace and snapshots jointly prove fail-fast, uninterrupted ownership,
+// and single-use behavior; splitting them would weaken their shared witness.
+// ignore: halstead-volume, source-lines-of-code
+void _verifyPreparedDeletionInstallBoundary() {
+  final stale = _SparseSelectionCommitProof()..makePreparedCommitStale();
+  final staleBefore = _CommitApplyOwnerSnapshot.capture(
+    stale.store,
+    stale.selection,
+    stale.events,
+  );
+  expect(stale.prepareDeletion, throwsStateError);
+  staleBefore.expectUnchanged(
+    stale.store,
+    stale.selection,
+    stale.events,
+    eventSuffix: ['prepare-selection'],
+  );
+
+  final selectionFailure = _SparseSelectionCommitProof();
+  final selectionFailureBefore = _CommitApplyOwnerSnapshot.capture(
+    selectionFailure.store,
+    selectionFailure.selection,
+    selectionFailure.events,
+  );
+  expect(
+    selectionFailure.prepareDeletionWithThrowingSelection,
+    throwsStateError,
+  );
+  selectionFailureBefore.expectUnchanged(
+    selectionFailure.store,
+    selectionFailure.selection,
+    selectionFailure.events,
+    eventSuffix: ['prepare-selection'],
+  );
+
+  final proof = _SparseSelectionCommitProof();
+  final prepared = proof.prepareDeletion();
+  expect(proof.events, ['prepare-selection']);
+  proof.events.add('resolver-return');
+  DocumentStoreKernel.observeDeletionPreparedInstall((event) {
+    if (event == DeletionPreparedInstallEvent.installed) {
+      proof.events.add('store-install');
+    }
+  }, prepared.consume);
+  expect(proof.events, [
+    'prepare-selection',
+    'resolver-return',
+    'store-install',
+    'selection-install',
+  ]);
+  expect(proof.selection.selectedElementIds, {CanvasElementId('b')});
+  final afterAccept = _CommitApplyOwnerSnapshot.capture(
+    proof.store,
+    proof.selection,
+    proof.events,
+  );
+  expect(prepared.consume, throwsStateError);
+  afterAccept.expectUnchanged(proof.store, proof.selection, proof.events);
 }
 
 final class _CommitApplyOwnerSnapshot {
@@ -1093,7 +1212,9 @@ final class _CommitApplyOwnerSnapshot {
 RuntimeRoot _runtimeRoot() {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 }
 
@@ -1142,3 +1263,6 @@ final class _ThrowingMembership implements SelectionMembershipPort {
     throw StateError('membership should not be read.');
   }
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

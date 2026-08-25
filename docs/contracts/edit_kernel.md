@@ -198,6 +198,20 @@ carry the shared immutable `TouchedSet` from
 builder and store revision deltas private. Runtime route augmentation, cleanup,
 and delivery ordering are RuntimeRoot-owned and consume no prepared state again.
 
+Deletion is a narrower prepare/consume branch, not a generic transaction.
+`EditKernel` prepares the sparse candidate; Store completes sparse validation
+and binds the current revision and admitted-ID ledgers; `CommitApplier` seals
+the document, revision, delivery, action, and `PreparedSelectionEffect` inputs.
+Only then does `RuntimeRoot` construct the public immutable request and enter
+the required resolver guard. An accepted resolver consumes one private package:
+the bound Store assignment/admission occurs first, then Selection receives the
+already-owned backing without copying, validation, or normalization. No normal
+failure, publication, callback, retry, or rollback lies between those two
+installs. Cancel and ordinary resolver failure discard the package with no
+committed mutation; the latter is diagnosed only by RuntimeRoot's bounded
+internal diagnostics route. This deletion rule does not change the ordinary
+edit rollback boundary before any accepted install.
+
 `EditKernel` closes and stales the active edit handle before `RuntimeRoot`
 orchestrates the accepted result. For changed request-originated text,
 RuntimeRoot consumes the request and always enters outer common delivery. Only

@@ -28,6 +28,11 @@ typedef CommitInstaller =
       AcceptedCommitDocument document,
       CommitPlan plan,
     );
+typedef DeletionCommitPreparer =
+    PreparedDeletionApply Function(
+      AcceptedCommitDocument document,
+      CommitPlan plan,
+    );
 typedef SparseCommitPreparer =
     PreparedSparseStoreCommit Function(StoreSparseCommit commit);
 typedef MaterializedCommitPreparer =
@@ -52,6 +57,7 @@ final class EditKernel {
     required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
     required DocumentLoadInstaller installLoadedDocument,
+    DeletionCommitPreparer? prepareDeletionCommit,
   }) : _mutationGuard = mutationGuard,
        _readDocument = readDocument,
        _readSparseFacts = readSparseFacts,
@@ -59,6 +65,7 @@ final class EditKernel {
        _prepareSparseCommit = prepareSparseCommit,
        _prepareMaterializedCommit = prepareMaterializedCommit,
        _installCommit = installCommit,
+       _prepareDeletionCommit = prepareDeletionCommit,
        _deliverApplyResult = deliverApplyResult,
        _installLoadedDocument = installLoadedDocument;
 
@@ -69,6 +76,7 @@ final class EditKernel {
   final SparseCommitPreparer _prepareSparseCommit;
   final MaterializedCommitPreparer _prepareMaterializedCommit;
   final CommitInstaller _installCommit;
+  final DeletionCommitPreparer? _prepareDeletionCommit;
   final CommitApplyResultDelivery _deliverApplyResult;
   final DocumentLoadInstaller _installLoadedDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
@@ -141,6 +149,43 @@ final class EditKernel {
       }
 
       return CommitDeliveryResult(shouldPublishState: false);
+    } finally {
+      session.close();
+      _isSessionOpen = false;
+    }
+  }
+
+  /// Prepares a sparse deletion before a client resolver is entered.
+  PreparedDeletionCommit prepareDeletionInteractionCommit<T>(
+    T Function(CanvasEdit edit) fn, {
+    CommitPlan Function(CommitPlan plan)? augmentPlan,
+  }) {
+    _mutationGuard.ensureRuntimeMutationAllowed();
+    if (_isSessionOpen) {
+      throw StateError('CanvasRuntime edit sessions cannot be nested.');
+    }
+    _isSessionOpen = true;
+    final selectedElementIds = _selectedElementIds();
+    final session = _openSparseSession(selectedElementIds);
+    try {
+      final result = fn(session);
+      if (result is Future<Object?>) {
+        throw StateError(
+          'CanvasRuntime edit callbacks must complete synchronously.',
+        );
+      }
+      final accepted = _acceptedCommitFor(session, selectedElementIds);
+      if (!accepted.plan.hasChanges) {
+        throw StateError('A prepared deletion requires a changed commit plan.');
+      }
+      final plan = augmentPlan?.call(accepted.plan) ?? accepted.plan;
+      return PreparedDeletionCommit._(
+        (_prepareDeletionCommit ??
+            (throw StateError('Deletion preparation is unavailable.')))(
+          accepted.document,
+          plan,
+        ),
+      );
     } finally {
       session.close();
       _isSessionOpen = false;
@@ -229,6 +274,17 @@ final class EditKernel {
       ),
     );
   }
+}
+
+/// Opaque package-private deletion installation capability.
+final class PreparedDeletionCommit {
+  PreparedDeletionCommit._(this._apply);
+
+  final PreparedDeletionApply _apply;
+
+  CommitDeliveryResult consume() => _apply.consume();
+
+  void discard() => _apply.discard();
 }
 
 final class _AcceptedStoreCommitInput {

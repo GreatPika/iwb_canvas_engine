@@ -42,7 +42,10 @@ void main() {
 Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
+    ),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -88,7 +91,10 @@ void _expectDrawActionPayloads(List<CanvasActionCommitted> actions) {
 Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: CanvasRuntimeConfig(pointerPolicy: CanvasPointerPolicy(tapSlop: 1)),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+      pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
+    ),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -119,7 +125,9 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
 Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -567,3 +575,6 @@ CanvasPointerSample _pointer(
 }
 
 final CanvasElementId _textId = CanvasElementId('text-a');
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

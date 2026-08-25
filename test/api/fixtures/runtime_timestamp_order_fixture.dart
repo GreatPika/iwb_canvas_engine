@@ -33,7 +33,9 @@ final class _TimestampScenario {
 
   final RuntimeRoot root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
   final List<CanvasActionCommitted> actions = <CanvasActionCommitted>[];
   late final StreamSubscription<CanvasActionCommitted> subscription;
@@ -122,3 +124,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

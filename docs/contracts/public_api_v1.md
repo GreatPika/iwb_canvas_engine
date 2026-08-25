@@ -230,6 +230,8 @@ CanvasActionPayload and payload family types
 CanvasContextActionRequested
 CanvasContextActionTarget and target family types
 CanvasMoveCommitRequest
+CanvasDeletionCommitRequest
+CanvasDeletionEntry
 CanvasResource and resource family types
 CanvasDataException
 CanvasPreparedVector
@@ -370,7 +372,7 @@ dynamic or generated invalid field updates -> validation error before draft muta
 ```dart
 final class CanvasRuntime {
   CanvasRuntime({
-    CanvasRuntimeConfig config = const CanvasRuntimeConfig(),
+    required CanvasRuntimeConfig config,
   });
 
   CanvasDocument readDocument();
@@ -494,6 +496,35 @@ revision domains.
 ```dart
 enum CanvasSelectionDeletePolicy { partial, allOrNone }
 
+enum CanvasDeletionOperation { deleteSelection, erase }
+
+enum CanvasDeletionDecision { accept, cancel }
+
+typedef CanvasDeletionCommitResolver =
+    CanvasDeletionDecision Function(CanvasDeletionCommitRequest request);
+
+final class CanvasDeletionEntry {
+  const CanvasDeletionEntry({
+    required this.element,
+    required this.layerId,
+    required this.elementIndex,
+  });
+
+  final CanvasElement element;
+  final CanvasLayerId layerId;
+  final int elementIndex;
+}
+
+final class CanvasDeletionCommitRequest {
+  CanvasDeletionCommitRequest({
+    required this.operation,
+    required Iterable<CanvasDeletionEntry> entries,
+  });
+
+  final CanvasDeletionOperation operation;
+  final List<CanvasDeletionEntry> entries;
+}
+
 final class CanvasSelectionDeleteAvailability {
   const CanvasSelectionDeleteAvailability({
     required this.hasSelection,
@@ -506,6 +537,7 @@ final class CanvasSelectionDeleteAvailability {
 
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
+    required this.deletionCommitResolver,
     this.pointerPolicy = CanvasPointerPolicy.defaultPolicy,
     this.initialMode = CanvasInteractionMode.move,
     this.initialDrawStyle = CanvasDrawStyle.defaultStyle,
@@ -521,6 +553,7 @@ final class CanvasRuntimeConfig {
   final CanvasDrawStyle initialDrawStyle;
   final bool clearSelectionOnDrawModeEnter;
   final CanvasMoveCommitResolver? moveCommitResolver;
+  final CanvasDeletionCommitResolver deletionCommitResolver;
   final CanvasSelectionDeletePolicy selectionDeletePolicy;
   final Set<CanvasElementKind>? eraserElementKinds;
   final CanvasDiagnosticPolicy diagnosticPolicy;
@@ -532,6 +565,13 @@ runtime. `null` preserves unrestricted v1 erasing, an empty set disables
 erasure, and a non-empty set is an exact allow-list of
 `CanvasElementKind` values. The runtime takes one unmodifiable copy of a
 supplied set; later caller mutation cannot change a running runtime's policy.
+
+`deletionCommitResolver` is required and receives each complete nonempty
+selection-delete or terminal-eraser Store projection before mutation. It either
+accepts or cancels the whole set; cancellation leaves committed state unchanged.
+Resolver exceptions are contained as internal bounded diagnostics. Omitted
+runtime config or resolver is a compile-time error; there is no default-accept
+compatibility path.
 
 ### 4.6 Flutter surface
 

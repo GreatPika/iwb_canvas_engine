@@ -42,7 +42,9 @@ void _expectKernelCatalogDelegation() {
 void _expectRuntimeResourcePort() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
   );
 
   expect(() {
@@ -128,3 +130,6 @@ CanvasImageResource _imageResource({
     source: CanvasResourceSource.appKey(appKey),
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

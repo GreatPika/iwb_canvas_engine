@@ -14,14 +14,9 @@ sequenceDiagram
   participant EK as EditKernel
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
-  participant Draft as DraftDocument
-  participant Touched as TouchedSet
-  participant CC as CommitCompiler
-  participant Effects as CommitEffects
-  participant Applier as CommitApplier
-  participant Projection as DocumentProjectionCache
-  participant Events as EventBuffer
   participant Runtime as RuntimeRoot
+  participant Resolver as required deletion resolver
+  participant Diagnostics as DiagnosticsHub
   participant Signals as Public state/effects
 
   User->>Surface: pointer down in draw mode with eraser tool
@@ -130,70 +125,36 @@ sequenceDiagram
         Note over Touched,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, or erase action is published.
         Note over Runtime,Signals: Active preview cleanup publishes only preview state.
       else at least one element is erased
-        IE->>EK: open synchronous interaction edit
-        EK->>EK: reject disposed or nested edit
-        EK->>Store: read committed revision snapshot
-        Store-->>EK: committed tables and document revision
-        EK->>Selection: read selection snapshot
-        Selection-->>EK: selected ids and selectionRevision
-        EK->>Draft: create rollback-safe draft
-        IE->>EK: provide erase mutation request and erase action descriptor
-        EK->>Draft: remove each erasedElementId through edit mutation
-        Note over EK,Draft: InteractionEngine never mutates DocumentStoreKernel directly.
-        Draft->>Touched: record removedElementIds and selection prune when removed ids were selected
-        Note over Touched: Exact committed scope: removed ids, document, structural, bounds, elementVisual, projection, and selectionRevision if selection changed.
-        EK->>Events: stage deferred erase action descriptor
-        Note over Events: Not public yet. Deferred payload is CanvasEraseActionPayload(eraserThickness, erasedElementIds, corridorPointCount).
-        EK->>EK: reject Future result before success path
-        EK->>CC: compile exact erase touched set and invalidation
-        Touched-->>CC: removed ids and revision facts
-        alt commit preflight and install succeed
-          CC->>Store: preflight registry and layer membership invariants
-          Store-->>CC: preflight accepted
-          CC->>Selection: preflight selection prune effect
-          Selection-->>CC: preflight accepted
-          CC->>Effects: prepare typed main RepaintIntent
-          CC->>Events: attach staged erase action to commit
-          CC->>Applier: hand off compiled CommitPlan
-          Applier->>Store: install document effects atomically
-          Store->>Store: remove registry rows, layer memberships, and family rows, invalidate projection revision; cache rebuilds lazily on read
-          Store-->>Applier: committed revision facts
-          Applier->>Selection: install selection prune atomically
-          Selection->>Selection: remove erased ids from selected ids when needed
-          Selection-->>Applier: committed selection revision facts
-          Note over Applier,Selection: Owner installs are sequential and irreversible; no action is visible before both succeed.
-          EK->>EK: close edit session and stale handle
-          EK-->>Runtime: closed edit result
-          Runtime->>IE: post-success eraser cleanup, publish: false
-          IE->>Cleanup: typed cleanup request for eraser session
-        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
-        IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
-          IE->>Preview: bump previewRevision for cleared active preview
-          Preview-->>Runtime: preview cleanup revision fact
-          Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
-          Runtime->>Spatial: apply touched-id spatial remove for erased ids
-          Spatial-->>Runtime: deleted ids removed from hit and paint indexes
-          Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
-          Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
-          Runtime->>Signals: publish erase action notification
-          Signals-->>Surface: repaint main scene without erased elements and overlay without eraser corridor
-          IE-->>Tools: terminal handling complete
-        else edit exception, rejected Future, or preflight failure
-          EK->>Events: discard pending erase action
-          EK->>EK: rollback draft and close session
-          EK-->>IE: terminal failure
-          IE->>Cleanup: typed cleanup request for eraser session
-        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
-        IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
-          IE->>Preview: bump previewRevision for cleared active preview
-          Preview->>Frame: request overlay repaint cleanup
-          Preview-->>Runtime: preview cleanup revision fact
-          Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-          Frame->>Signals: publish overlay cleanup repaint request
-          Signals-->>Surface: repaint overlay without eraser corridor
-          Note over Store,Signals: Rollback keeps committed document revisions, spatial index, projection cache, main repaint, and erase action unchanged.
-          Note over Runtime,Signals: Active preview cleanup publishes only preview state.
-          Note over Selection: Rollback keeps selected ids and selectionRevision unchanged.
+        IE->>Runtime: terminal intent with Unit-2 filtered canonical Store entries
+        Runtime->>EK: synchronously prepare sparse removal and erase action
+        EK->>Store: validate sparse candidate and bind current revisions/id ledgers
+        EK->>Selection: normalize and own the post-removal selection backing
+        Note over EK,Selection: Document, selection, revision, delivery, and action inputs are complete before the resolver. No public request exists on preparation failure.
+        Runtime->>Resolver: guarded CanvasDeletionCommitRequest(erase, canonical entries)
+        alt resolver accepts
+          Resolver-->>Runtime: accept
+          Note over Runtime,Selection: The private prepared value is consumed once, without callback or publication between these calls.
+          Runtime->>Store: install bound sparse document and admitted ledgers
+          Store-->>Runtime: accepted Store facts
+          Runtime->>Selection: install already-owned selected-id backing
+          Runtime->>IE: cleanup eraser session, publish: false
+          IE->>Cleanup: typed cleanup request
+          Cleanup-->>IE: PointerCleanupOutcome
+          IE->>Preview: clear preview/session
+          Runtime->>Spatial: apply touched-id spatial removal
+          Runtime->>Frame: merge main and cleanup repaint
+          Runtime->>Signals: publish accepted state
+          Runtime->>Signals: publish erase action
+          Note over Runtime,Signals: A state/action listener failure is post-install: accepted Store and Selection facts remain final; there is no retry or rollback.
+        else resolver cancels
+          Resolver-->>Runtime: cancel
+          Runtime->>IE: discard prepared state; cleanup eraser session, publish: false
+          Note over Store,Signals: No Store, Selection, timestamp, action, or diagnostic mutation occurs.
+        else resolver throws ordinary object
+          Resolver-->>Runtime: throw
+          Runtime->>Diagnostics: record bounded deletion-resolver failure(operation, errorKind)
+          Runtime->>IE: discard prepared state; cleanup eraser session, publish: false
+          Note over Store,Signals: No Store, Selection, timestamp, or action mutation occurs.
         end
       end
     end

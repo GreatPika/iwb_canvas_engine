@@ -13,6 +13,38 @@ void main() {
     );
     expect(analyze.exitCode, 0, reason: _processOutput(analyze));
   });
+
+  test(
+    'runtime configuration and deletion resolver are required to compile',
+    () async {
+      final analyze = await _analyzeConsumerSource('''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void rejectsRequiredDeletionInputs() {
+  CanvasRuntime();
+  CanvasRuntimeConfig(deletionCommitResolver: null);
+}
+''');
+      expect(analyze.exitCode, isNot(0));
+    },
+  );
+
+  test(
+    'internal deletion diagnostics are unavailable from the public barrel',
+    () async {
+      final analyze = await _analyzeConsumerSource('''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void rejectsInternalDeletionDiagnostics() {
+  DiagnosticCode? code;
+  InteractionDiagnosticCode? interaction;
+  DiagnosticRecord? record;
+  print((code, interaction, record));
+}
+''');
+      expect(analyze.exitCode, isNot(0));
+    },
+  );
 }
 
 Future<ProcessResult> _analyzeConsumerSource(String source) async {
@@ -85,6 +117,10 @@ import 'dart:ui' as ui show Image;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+CanvasDeletionDecision _acceptDeletionCommit(
+  CanvasDeletionCommitRequest _,
+) => CanvasDeletionDecision.accept;
 
 void acceptPublicSurface() {
 $publicUses
@@ -241,6 +277,7 @@ void _exerciseP2ContractSurface() {
 
   final runtime = CanvasRuntime(
     config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(
         tapSlop: 9,
         doubleTapSlop: 18,
@@ -266,8 +303,9 @@ void _exerciseP2ContractSurface() {
       ),
     ),
   );
-  const defaultSelectionDeleteConfig = CanvasRuntimeConfig();
+  const defaultSelectionDeleteConfig = CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
   const explicitSelectionDeleteConfig = CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
     selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
   );
   const deleteAvailability = CanvasSelectionDeleteAvailability(

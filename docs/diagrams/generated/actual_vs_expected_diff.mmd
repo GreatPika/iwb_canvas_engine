@@ -46,6 +46,7 @@ flowchart LR
   frame_renderer -->|resolves resources through| resource_surface_session
   interaction_engine -->|reports errors to| diagnostics_hub
   load_document_pipeline -->|changes data through| store_document_kernel
+  runtime_root -->|reports errors to| diagnostics_hub
   runtime_root -->|owns and creates| geometry_spatial_index
   runtime_root -->|provides FrameFactsPort| frame_renderer
   runtime_root -->|emits user actions| api_canvas_runtime

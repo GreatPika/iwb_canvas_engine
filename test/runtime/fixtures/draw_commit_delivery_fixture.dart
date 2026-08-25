@@ -86,7 +86,9 @@ Future<void> _verifyDrawRouteDeliveryCleanup() async {
     late RuntimeRoot root;
     root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
       commitEffectObserver: (effects) {
         if (!terminalDelivery) return;
         _expectCleanDrawDelivery(root);
@@ -960,7 +962,9 @@ _DrawScenario _scenario({CanvasDocument? initialDocument}) {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     initialDocument ?? CanvasDocument(),
-    config: const CanvasRuntimeConfig(),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: _acceptDeletionCommit,
+    ),
     commitEffectObserver: effectBatches.add,
   );
   final actions = <CanvasActionCommitted>[];
@@ -1050,3 +1054,6 @@ CanvasPointerSample _pointer(
     timestampMs: timestampMs,
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

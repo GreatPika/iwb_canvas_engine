@@ -187,6 +187,7 @@ final class PublicIntegrationResourceResolver
 
 CanvasRuntimeConfig _runtimeConfig() {
   return CanvasRuntimeConfig(
+    deletionCommitResolver: _acceptDeletionCommit,
     pointerPolicy: CanvasPointerPolicy(),
     initialMode: CanvasInteractionMode.move,
     initialDrawStyle: CanvasDrawStyle(),
@@ -206,3 +207,6 @@ CanvasRuntimeConfig _runtimeConfig() {
 T _compileOnly<T>() => throw StateError('compile-only fixture value');
 
 int _use(Object? value) => Object.hash(value, null);
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;

@@ -24,9 +24,16 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasDeletionDecision _acceptDeletionCommit(
+  CanvasDeletionCommitRequest _,
+) => CanvasDeletionDecision.accept;
+
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
+    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+
 void main() {
   testWidgets('schema v1 document reaches runtime state and selection', (tester) async {
-    final runtime = CanvasRuntime();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
     runtime.edits.loadDocumentFromJson(jsonEncode(_smallSchemaV1Document()));
     final resolver = _NoopResolver();
     addTearDown(runtime.dispose);
@@ -558,6 +565,7 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
   var resolverCalls = 0;
   final runtime = CanvasRuntime(
     config: CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
       clearSelectionOnDrawModeEnter: true,
       moveCommitResolver: (request) {
         resolverCalls += 1;
@@ -736,7 +744,7 @@ Future<void> _exercisePublicSelectionMoveAndCommandSurface() async {
 }
 
 Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   final actions = <CanvasActionCommitted>[];
   final actionSubscription = runtime.actions.listen(actions.add);
   addTearDown(() async {
@@ -854,7 +862,7 @@ Future<void> _exercisePublicDrawWorkflow(WidgetTester tester) async {
 Future<void> _exercisePublicEraserAndContextRequestWorkflow(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_eraserContextRequestDocument()),
   );
@@ -938,7 +946,7 @@ Future<void> _exercisePublicEraserAndContextRequestWorkflow(
 Future<void> _exercisePublicCustomTextEditingOverlay(
   WidgetTester tester,
 ) async {
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_eraserContextRequestDocument(
       cameraOffset: const Offset(5, 3),
@@ -1005,7 +1013,7 @@ Future<void> _exercisePublicCustomTextEditingOverlay(
 Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   WidgetTester tester,
 ) async {
-  final resourceFreeRuntime = CanvasRuntime();
+  final resourceFreeRuntime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   resourceFreeRuntime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_surfaceShapeDocument()),
   );
@@ -1021,7 +1029,7 @@ Future<void> _exercisePublicCanvasSurfacePointerAndResourceBridge(
   expect(_paintHosts(), findsOneWidget);
   expect(resourceFreeResolver.calls, 0);
 
-  final runtime = CanvasRuntime();
+  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
   runtime.edits.loadDocumentFromJson(
     encodeCanvasDocumentToJson(_surfaceImageDocument()),
   );

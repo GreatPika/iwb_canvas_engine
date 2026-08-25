@@ -16,7 +16,9 @@ void _testCommittedScopeFacts() {
   test('committed frame facts expose spatial scope facts', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
 
     final frame = root.frameFactsPort;
@@ -39,7 +41,9 @@ void _testHandleValidation() {
   test('scope facts do not weaken handle validation', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(),
+      config: const CanvasRuntimeConfig(
+        deletionCommitResolver: _acceptDeletionCommit,
+      ),
     );
 
     final frame = root.frameFactsPort;
@@ -181,3 +185,6 @@ CanvasDocument _document() {
     ],
   );
 }
+
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
