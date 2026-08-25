@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import '../contracts/internal/command_facts_port.dart';
+import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/selection_facts_port.dart';

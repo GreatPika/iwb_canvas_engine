@@ -2,11 +2,9 @@ import 'dart:ui';
 
 import '../public/canvas_actions.dart';
 import '../public/canvas_document.dart';
+import '../public/canvas_deletion.dart';
 import '../public/canvas_ids.dart';
-import '../public/canvas_runtime.dart';
 import 'deletion_entry_projection_port.dart';
-
-export 'deletion_entry_projection_port.dart';
 
 abstract interface class CommandFactsPort {
   SelectionTransformFacts selectionTransformFacts();

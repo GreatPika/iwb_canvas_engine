@@ -1,5 +1,6 @@
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_diagnostics.dart';
+import '../contracts/public/canvas_deletion.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_pointer.dart';
 import '../contracts/public/canvas_runtime.dart';

@@ -1,7 +1,12 @@
-import 'dart:ui';
+// This fixture keeps Store projection, adapter route, intent identity/order, and
+// work observers on one captured trace; splitting for an import threshold would
+// blur the owner evidence and make the route less readable.
+// ignore_for_file: number-of-imports
 
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';

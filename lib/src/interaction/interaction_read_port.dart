@@ -6,8 +6,6 @@ import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/internal/deletion_entry_projection_port.dart';
 
-export '../contracts/internal/deletion_entry_projection_port.dart';
-
 // The interaction read port is the single immutable fact boundary for pointer
 // decisions; splitting it by tool would let active gesture owners reassemble
 // committed facts piecemeal.

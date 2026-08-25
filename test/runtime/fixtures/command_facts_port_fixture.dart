@@ -1,6 +1,9 @@
 // Test body is a named helper so DCM metrics stay on the scenario; assertions
 // live in that helper and DCM does not follow tear-offs.
-// ignore_for_file: missing-test-assertion
+// This fixture is one executable CommandFactsPort composition witness across
+// Frame, Selection, Resource, and DeletionProjection; splitting for the import
+// threshold would scatter shared fakes and setup, obscuring that boundary.
+// ignore_for_file: missing-test-assertion, number-of-imports
 
 import 'dart:collection';
 import 'dart:ui';
@@ -8,6 +11,7 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/command_facts_port.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';

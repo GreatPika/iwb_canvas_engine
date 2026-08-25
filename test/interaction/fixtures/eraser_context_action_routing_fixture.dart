@@ -9,6 +9,7 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';

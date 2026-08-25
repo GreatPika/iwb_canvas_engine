@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';

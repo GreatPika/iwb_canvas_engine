@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'interaction_read_port.dart';

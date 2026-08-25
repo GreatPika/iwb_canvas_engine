@@ -19,8 +19,6 @@ import 'canvas_pointer.dart';
 import 'canvas_resource.dart';
 import 'canvas_tools.dart';
 
-export 'canvas_deletion.dart';
-
 /// Public API v1 declaration for [CanvasRuntimeConfig].
 final class CanvasRuntimeConfig {
   const CanvasRuntimeConfig({
