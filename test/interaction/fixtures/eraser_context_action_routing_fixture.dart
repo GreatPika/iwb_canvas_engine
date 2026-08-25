@@ -802,7 +802,7 @@ EraserReadFacts _eraserFacts({
       : List<DeletionEntryFacts>.unmodifiable(erasedEntries);
   return EraserReadFacts.terminal(
     corridorPoints: corridor,
-    erasedEntries: entries,
+    erasedEntryProjection: DeletionEntryProjection(entries),
     eraserThickness: 7,
     controllerEpoch: 1,
     documentRevision: 0,

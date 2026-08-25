@@ -276,7 +276,7 @@ final class EraserReadFacts {
 
   EraserReadFacts.terminal({
     required Iterable<Offset> corridorPoints,
-    required List<DeletionEntryFacts> erasedEntries,
+    required DeletionEntryProjection erasedEntryProjection,
     required this.eraserThickness,
     required this.controllerEpoch,
     required this.documentRevision,
@@ -285,7 +285,7 @@ final class EraserReadFacts {
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : corridorPoints = List.unmodifiable(corridorPoints),
        _previewErasedElementIds = null,
-       _terminalErasedEntries = erasedEntries;
+       _terminalErasedEntries = erasedEntryProjection.entries;
 
   final List<Offset> corridorPoints;
 

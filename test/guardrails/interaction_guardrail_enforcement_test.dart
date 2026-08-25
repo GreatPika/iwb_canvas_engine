@@ -227,11 +227,13 @@ void _registerEraserReadPortNegativeProof() {
     final mutableFixture = _interactionReadPortSource().replaceFirst(
       '''
 }) : corridorPoints = List.unmodifiable(corridorPoints),
-       erasedElementIds = List.unmodifiable(erasedElementIds);
+       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
+       _terminalErasedEntries = null;
 ''',
       '''
 }) : corridorPoints = corridorPoints,
-       erasedElementIds = List.unmodifiable(erasedElementIds);
+       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
+       _terminalErasedEntries = null;
 ''',
     );
     final violations = _readPortImmutableViolations(mutableFixture);
@@ -246,11 +248,13 @@ void _registerEraserReadPortNegativeProof() {
     final mutableFixture = _interactionReadPortSource().replaceFirst(
       '''
 }) : corridorPoints = List.unmodifiable(corridorPoints),
-       erasedElementIds = List.unmodifiable(erasedElementIds);
+       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
+       _terminalErasedEntries = null;
 ''',
       '''
 }) : corridorPoints = List.unmodifiable(corridorPoints),
-       erasedElementIds = erasedElementIds;
+       _previewErasedElementIds = erasedElementIds,
+       _terminalErasedEntries = null;
 ''',
     );
     final violations = _readPortImmutableViolations(mutableFixture);

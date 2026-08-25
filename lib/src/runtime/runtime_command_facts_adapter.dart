@@ -64,14 +64,16 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
   SelectionDeleteFacts selectionDeleteFacts() {
     final selected = _selection.selectionFacts.selectedElementIds;
     final projected = _deletionEntryProjection.projectDeletionEntries(selected);
+    final projectedEntries = projected.entries;
     final deletableEntries = <DeletionEntryFacts>[];
-    for (final entry in projected) {
+    for (final entry in projectedEntries) {
       if (entry.element.isDeletable) {
         deletableEntries.add(entry);
       }
     }
-    final orderedDeletableEntries = deletableEntries.length == projected.length
-        ? projected
+    final orderedDeletableEntries =
+        deletableEntries.length == projectedEntries.length
+        ? projectedEntries
         : List<DeletionEntryFacts>.unmodifiable(deletableEntries);
     final distinctSelected = selected.toSet();
 
@@ -79,7 +81,7 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
       hasSelection: selected.isNotEmpty,
       allSelectedElementsDeletable:
           selected.isNotEmpty &&
-          projected.length == distinctSelected.length &&
+          projectedEntries.length == distinctSelected.length &&
           orderedDeletableEntries.length == distinctSelected.length,
       deletableEntries: orderedDeletableEntries,
     );

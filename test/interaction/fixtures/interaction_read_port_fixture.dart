@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
@@ -416,8 +417,25 @@ void _testEraserReadFacts() {
     expect(facts.exactCheckCount, greaterThanOrEqualTo(1));
     expect(facts.exactBudgetExceeded, isFalse);
     expect(root.projectionBuildCount, 0);
+
+    final callerOwnedEntries = [...facts.erasedEntries];
+    final callerProjection = DeletionEntryProjection(callerOwnedEntries);
+    final copiedFacts = EraserReadFacts.terminal(
+      corridorPoints: facts.corridorPoints,
+      erasedEntryProjection: callerProjection,
+      eraserThickness: facts.eraserThickness,
+      controllerEpoch: facts.controllerEpoch,
+      documentRevision: facts.documentRevision,
+      exactCheckCount: facts.exactCheckCount,
+      exactBudgetExceeded: facts.exactBudgetExceeded,
+      query: facts.query,
+    );
+    callerOwnedEntries.clear();
+
+    expect(copiedFacts.erasedEntries, hasLength(1));
     expect(() => facts.corridorPoints.clear(), throwsUnsupportedError);
     expect(() => facts.erasedElementIds.clear(), throwsUnsupportedError);
+    expect(() => copiedFacts.erasedEntries.clear(), throwsUnsupportedError);
   });
 }
 

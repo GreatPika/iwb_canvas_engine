@@ -502,7 +502,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 
   @override
-  List<DeletionEntryFacts> projectDeletionEntries(
+  DeletionEntryProjection projectDeletionEntries(
     Iterable<CanvasElementId> ids,
   ) {
     final document = _document;
@@ -531,9 +531,10 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         entries.add(entry);
       }
     }
-    final result = _orderDeletionEntries(entries);
+    _orderDeletionEntries(entries);
+    final result = DeletionEntryProjection(entries);
     assert(
-      _recordDeletionEntryProjection(result),
+      _recordDeletionEntryProjection(result.entries),
       'deletion entry projection observation failed',
     );
     return result;
@@ -598,11 +599,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     );
   }
 
-  List<DeletionEntryFacts> _orderDeletionEntries(
-    List<DeletionEntryFacts> entries,
-  ) {
+  void _orderDeletionEntries(List<DeletionEntryFacts> entries) {
     if (_entriesAreCanonical(entries)) {
-      return List.unmodifiable(entries);
+      return;
     }
     entries.sort((left, right) {
       assert(
@@ -613,7 +612,6 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       );
       return left.orderToken.compareTo(right.orderToken);
     });
-    return List.unmodifiable(entries);
   }
 
   bool _entriesAreCanonical(List<DeletionEntryFacts> entries) {

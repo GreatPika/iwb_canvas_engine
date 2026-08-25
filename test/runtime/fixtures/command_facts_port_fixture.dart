@@ -361,7 +361,7 @@ final class _Resources implements ResourceCatalogPort {
 final class _FixtureDeletionEntryProjection
     implements DeletionEntryProjectionPort {
   @override
-  List<DeletionEntryFacts> projectDeletionEntries(
+  DeletionEntryProjection projectDeletionEntries(
     Iterable<CanvasElementId> ids,
   ) {
     final entries = <DeletionEntryFacts>[];
@@ -387,7 +387,7 @@ final class _FixtureDeletionEntryProjection
       }
     }
     entries.sort((left, right) => left.orderToken.compareTo(right.orderToken));
-    return List.unmodifiable(entries);
+    return DeletionEntryProjection(entries);
   }
 
   int _orderToken(CanvasElementId id) => switch (id.value) {

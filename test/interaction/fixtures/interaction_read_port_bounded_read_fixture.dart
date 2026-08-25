@@ -71,9 +71,9 @@ final class _NoDeletionEntryProjection implements DeletionEntryProjectionPort {
   const _NoDeletionEntryProjection();
 
   @override
-  List<DeletionEntryFacts> projectDeletionEntries(
+  DeletionEntryProjection projectDeletionEntries(
     Iterable<CanvasElementId> ids,
-  ) => const [];
+  ) => const DeletionEntryProjection.empty();
 }
 
 FrameElementFacts _frameRectFacts(String id, Offset offset, int orderToken) {

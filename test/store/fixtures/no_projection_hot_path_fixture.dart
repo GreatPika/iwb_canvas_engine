@@ -278,7 +278,7 @@ void _storeDeletionProjectionUsesCommittedEntryFacts() {
     later.id,
     CanvasElementId('missing'),
     CanvasElementId('background'),
-  ]);
+  ]).entries;
 
   _expectProjectedEntryFacts(entries, store, [
     _ExpectedDeletionEntry(selected.id, CanvasLayerId('layer-a'), 1, 2),
@@ -393,7 +393,7 @@ Map<DeletionProjectionWorkEvent, int> _deletionProjectionWork(
   final counts = <DeletionProjectionWorkEvent, int>{};
   final entries = DocumentStoreKernel.observeDeletionProjectionWork(
     (event) => counts.update(event, (count) => count + 1, ifAbsent: () => 1),
-    () => store.projectDeletionEntries(ids),
+    () => store.projectDeletionEntries(ids).entries,
   );
   expect(entries, hasLength(ids.length));
   return counts;

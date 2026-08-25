@@ -351,11 +351,13 @@ const _cleanupDependencyBanPaths = [
 final class _ReadPortCopiedField {
   const _ReadPortCopiedField(
     this.className,
+    this.constructorOffset,
     this.fieldName,
     this.sourceParameterName,
   );
 
   final String className;
+  final int constructorOffset;
   final String fieldName;
   final String sourceParameterName;
 }
@@ -386,6 +388,7 @@ Iterable<_ReadPortCopiedField> _constructorCopiedFields(
     if (sourceParameterName != null) {
       yield _ReadPortCopiedField(
         classDeclaration.namePart.typeName.lexeme,
+        constructor.offset,
         initializer.fieldName.name,
         sourceParameterName,
       );
@@ -397,6 +400,7 @@ Iterable<_ReadPortCopiedField> _constructorCopiedFields(
         _fieldFormalNeedsImmutableCopy(classDeclaration, fieldName)) {
       yield _ReadPortCopiedField(
         classDeclaration.namePart.typeName.lexeme,
+        constructor.offset,
         fieldName,
         fieldName,
       );
@@ -530,6 +534,7 @@ final class _ConstructorCopyVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitConstructorDeclaration(ConstructorDeclaration node) {
     if (_classStack.lastOrNull == field.className &&
+        node.offset == field.constructorOffset &&
         _constructorCopiesField(node, field)) {
       didCopyField = true;
     }

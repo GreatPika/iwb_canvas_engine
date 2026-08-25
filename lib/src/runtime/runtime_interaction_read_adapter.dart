@@ -478,14 +478,14 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         query: snapshot.query,
       );
     }
-    final entries = result.projectTerminalEntries
+    final projection = result.projectTerminalEntries
         ? _terminalEraserEntries(
             List.unmodifiable(result.exactHits.map((hit) => hit.id)),
           )
-        : const <DeletionEntryFacts>[];
+        : const DeletionEntryProjection.empty();
     return EraserReadFacts.terminal(
       corridorPoints: snapshot.corridorPoints,
-      erasedEntries: entries,
+      erasedEntryProjection: projection,
       eraserThickness: snapshot.eraserThickness,
       controllerEpoch: snapshot.controllerEpoch,
       documentRevision: snapshot.documentRevision,
@@ -503,7 +503,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     return List.unmodifiable(hits.map((hit) => hit.id));
   }
 
-  List<DeletionEntryFacts> _terminalEraserEntries(
+  DeletionEntryProjection _terminalEraserEntries(
     List<CanvasElementId> exactHitIds,
   ) {
     assert(
@@ -515,19 +515,19 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       ),
       'eraser entry route work observation failed',
     );
-    final entries = _deletionEntryProjection.projectDeletionEntries(
+    final projection = _deletionEntryProjection.projectDeletionEntries(
       exactHitIds,
     );
     assert(
       _recordEraserEntryRouteWork(
         RuntimeEraserEntryRouteWorkEvent(
           kind: RuntimeEraserEntryRouteWorkKind.entriesReady,
-          entries: entries,
+          entries: projection.entries,
         ),
       ),
       'eraser entry route work observation failed',
     );
-    return entries;
+    return projection;
   }
 
   RuntimeResolvedSpatialCandidates _eraserCandidates(

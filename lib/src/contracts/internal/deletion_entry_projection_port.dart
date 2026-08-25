@@ -19,8 +19,18 @@ final class DeletionEntryFacts {
   CanvasElementId get id => element.id;
 }
 
+// This value owns the immutable result of one Store projection. Downstream
+// deletion routes may retain [entries] without another copy or a mutable-list
+// trust convention.
+final class DeletionEntryProjection {
+  DeletionEntryProjection(Iterable<DeletionEntryFacts> entries)
+    : entries = List.unmodifiable(entries);
+
+  const DeletionEntryProjection.empty() : entries = const [];
+
+  final List<DeletionEntryFacts> entries;
+}
+
 abstract interface class DeletionEntryProjectionPort {
-  List<DeletionEntryFacts> projectDeletionEntries(
-    Iterable<CanvasElementId> ids,
-  );
+  DeletionEntryProjection projectDeletionEntries(Iterable<CanvasElementId> ids);
 }
