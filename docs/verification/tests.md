@@ -166,6 +166,10 @@ Do not assume:
 Required tests:
 
 - `test/api_contract/public_api_v1_compiles_as_written_test.dart`
+- `test/api/selection_deletion_resolver_test.dart`
+- `test/interaction/terminal_eraser_deletion_resolver_test.dart`
+- `test/runtime/deletion_resolver_work_test.dart`
+- `test/diagnostics/interaction_diagnostics_test.dart`
 - `test/api_contract/public_exports_complete_test.dart`
 - `test/api_contract/api_facades_do_not_export_internal_test.dart`
 - `test/api_contract/public_api_no_unapproved_placeholders_test.dart`
@@ -209,6 +213,18 @@ checks wrapper export, named facade bridge, implementation-to-api,
 contracts-to-api, and contracts-to-implementation fixtures, while
 `current_closure_checker_test` proves the same forbidden-edge classes in
 `architecture_graph.yaml`.
+
+Deletion release evidence is intentionally split by public seam: the external
+compile owner independently rejects omitted `CanvasRuntime.config` and a null
+deletion resolver; selection and terminal eraser fixtures exercise their real
+routes; the runtime work fixture owns prepared/install/cleanup cardinality; and
+the diagnostics fixture owns the bounded resolver-failure record. The
+maintained example is a separate package verification step:
+
+```bash
+cd example && flutter analyze
+cd example && flutter test
+```
 - `test/codec/schema_v1/known_fields_validation_test.dart`
 - `test/codec/schema_v1/canonical_encode_roundtrip_test.dart`
 - `test/codec/schema_v1/metadata_projection_test.dart`

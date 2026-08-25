@@ -3,8 +3,10 @@
 // delivery observers rather than reproducing their work in test helpers.
 // ignore_for_file: number-of-imports
 
+import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
@@ -148,6 +150,81 @@ void main() {
       }
     }
   });
+
+  test(
+    'accepted eraser cleanup remains singular through delivery failures',
+    () async {
+      for (final failure in _EraserDeliveryFailure.values) {
+        final result = await _runAcceptedEraserDeliveryFailure(failure);
+        addTearDown(result.dispose);
+
+        expect(result.callbacks, 1);
+        expect(result.cleanupReasons, [PointerCleanupReason.postSuccessCommit]);
+        expect(result.remainingIds, isEmpty);
+        expect(result.selectionIds, isEmpty);
+        expect(result.deliveryErrors, isNotEmpty);
+      }
+    },
+  );
+}
+
+// Keeping the real listener setup, pointer terminal, cleanup observer, and
+// finality snapshot adjacent prevents a synthetic delivery path from passing.
+// ignore: halstead-volume, source-lines-of-code
+Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
+  _EraserDeliveryFailure failure,
+) async {
+  var callbacks = 0;
+  final cleanupReasons = <PointerCleanupReason>[];
+  final errors = <Object>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _document(targetCount: 2),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        callbacks += 1;
+        return CanvasDeletionDecision.accept;
+      },
+    ),
+  );
+  var armed = false;
+  final previousFlutterError = FlutterError.onError;
+  FlutterError.onError = (details) => errors.add(details.exception);
+  root.state.addListener(() {
+    if (armed && failure == _EraserDeliveryFailure.state) {
+      throw StateError('state delivery failure');
+    }
+  });
+  late StreamSubscription<CanvasActionCommitted> subscription;
+  runZonedGuarded(() {
+    subscription = root.actions.listen((_) {
+      if (armed && failure == _EraserDeliveryFailure.action) {
+        throw StateError('action delivery failure');
+      }
+    });
+  }, (error, _) => errors.add(error));
+  _beginEraser(root, const Offset(60, 0));
+  armed = true;
+  InteractionEngine.observeCleanup(
+    cleanupReasons.add,
+    () => root.handlePointer(
+      _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+    ),
+  );
+  await Future<void>.delayed(Duration.zero);
+  await subscription.cancel();
+  FlutterError.onError = previousFlutterError;
+
+  return _AcceptedEraserDeliveryFailureResult(
+    root: root,
+    callbacks: callbacks,
+    cleanupReasons: cleanupReasons,
+    deliveryErrors: errors,
+    remainingIds: [
+      for (final layer in root.readDocument().layers)
+        for (final element in layer.elements) element.id,
+    ],
+    selectionIds: root.selectedElementIds,
+  );
 }
 
 // The route result keeps direct owner observations together. It deliberately
@@ -252,6 +329,15 @@ void _expectNonemptyConstruction(
   ]);
   expect(result.requestEntryCopies, targetCount);
   if (outcome == _ResolverOutcome.accept) {
+    expect(result.sealedDeliveryWork, (
+      preparations: 1,
+      effectLengthReads: 1,
+      effectIterations: 2,
+      effectElements: route == _DeletionRoute.selection ? 8 : 10,
+      actionLengthReads: 3,
+      actionIterations: 0,
+      actionElements: 1,
+    ));
     expect(result.preparedWork, [
       PreparedDeletionApplyWorkEvent.prepared,
       PreparedDeletionApplyWorkEvent.consumed,
@@ -465,6 +551,8 @@ final _emptyRequest = CanvasDeletionCommitRequest(
 
 enum _DeletionRoute { selection, eraser }
 
+enum _EraserDeliveryFailure { state, action }
+
 enum _ResolverOutcome {
   accept,
   cancel,
@@ -519,6 +607,26 @@ final class _DeletionWorkResult {
   final Map<String, int> sparseWork;
   final _SealedWorkVector? sealedDeliveryWork;
   final List<PointerCleanupReason> cleanupReasons;
+
+  void dispose() => root.dispose();
+}
+
+final class _AcceptedEraserDeliveryFailureResult {
+  const _AcceptedEraserDeliveryFailureResult({
+    required this.root,
+    required this.callbacks,
+    required this.cleanupReasons,
+    required this.deliveryErrors,
+    required this.remainingIds,
+    required this.selectionIds,
+  });
+
+  final RuntimeRoot root;
+  final int callbacks;
+  final List<PointerCleanupReason> cleanupReasons;
+  final List<Object> deliveryErrors;
+  final List<CanvasElementId> remainingIds;
+  final Set<CanvasElementId> selectionIds;
 
   void dispose() => root.dispose();
 }

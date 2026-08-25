@@ -14,20 +14,27 @@ void main() {
     expect(analyze.exitCode, 0, reason: _processOutput(analyze));
   });
 
-  test(
-    'runtime configuration and deletion resolver are required to compile',
-    () async {
-      final analyze = await _analyzeConsumerSource('''
+  test('runtime configuration is required to compile', () async {
+    final analyze = await _analyzeConsumerSource('''
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-void rejectsRequiredDeletionInputs() {
+void rejectsOmittedRuntimeConfig() {
   CanvasRuntime();
+}
+''');
+    expect(analyze.exitCode, isNot(0));
+  });
+
+  test('non-null deletion resolver is required to compile', () async {
+    final analyze = await _analyzeConsumerSource('''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void rejectsNullDeletionResolver() {
   CanvasRuntimeConfig(deletionCommitResolver: null);
 }
 ''');
-      expect(analyze.exitCode, isNot(0));
-    },
-  );
+    expect(analyze.exitCode, isNot(0));
+  });
 
   test(
     'internal deletion diagnostics are unavailable from the public barrel',

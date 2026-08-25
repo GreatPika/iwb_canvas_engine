@@ -41,8 +41,13 @@ void main() {
       _terminalCancelAndThrowAreContained();
     },
   );
-  test('terminal eraser callback keeps the existing resolver guard', () {
-    _terminalEraserCallbackUsesExistingGuard();
+  for (final family in _guardedEraserMutationFamilies) {
+    test('terminal eraser rejects ${family.name} in its resolver', () {
+      _terminalEraserCallbackUsesExistingGuard(family);
+    });
+  }
+  test('terminal eraser resolver permits reads and client-owned undo work', () {
+    _terminalResolverAllowsReadsAndClientUndoWork();
   });
   test(
     'terminal eraser remains accepted after state or action delivery failure',
@@ -359,7 +364,9 @@ void _terminalCancelAndThrowAreContained() {
 
 // The callback actions and terminal cleanup must share one real-route witness.
 // ignore: halstead-volume
-void _terminalEraserCallbackUsesExistingGuard() {
+void _terminalEraserCallbackUsesExistingGuard(
+  _GuardedEraserMutationFamily family,
+) {
   late RuntimeRoot root;
   root = RuntimeRoot.test(
     store: DocumentStoreKernel.withCommittedDocumentForTesting(
@@ -368,9 +375,10 @@ void _terminalEraserCallbackUsesExistingGuard() {
     config: CanvasRuntimeConfig(
       deletionCommitResolver: (_) {
         expect(root.readDocument().layers, isNotEmpty);
-        for (final mutation in _guardedEraserMutations(root)) {
-          expect(mutation, throwsA(isA<ResolverCallbackRejection>()));
-        }
+        expect(
+          () => family.invoke(root),
+          throwsA(isA<ResolverCallbackRejection>()),
+        );
         return CanvasDeletionDecision.cancel;
       },
     ),
@@ -381,9 +389,37 @@ void _terminalEraserCallbackUsesExistingGuard() {
     root.detachSurface(surface);
     root.dispose();
   });
-  final before = root.readDocument();
+  final before = _TerminalGuardSnapshot.capture(root);
   _startEraser(root);
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.up));
+  before.expectCommittedFactsUnchanged(root);
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+void _terminalResolverAllowsReadsAndClientUndoWork() {
+  final clientUndo = <CanvasDocument>[];
+  late RuntimeRoot root;
+  root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(_document()),
+    ),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        final document = root.readDocument();
+        clientUndo.add(document);
+        expect(clientUndo.removeLast(), same(document));
+        return CanvasDeletionDecision.cancel;
+      },
+    ),
+  );
+  addTearDown(root.dispose);
+  final before = root.readDocument();
+  _startEraser(root);
+
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.up));
+
+  expect(clientUndo, isEmpty);
   expect(root.readDocument(), before);
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
@@ -722,36 +758,104 @@ final class _EraserPreparationFailureCase {
   final bool hasPreparedCommit;
 }
 
-// This terminal route repeats the public facade families deliberately: its
-// callback entry is independent from selection deletion and cannot be inferred.
-// ignore: halstead-volume
-List<void Function()> _guardedEraserMutations(RuntimeRoot root) => [
-  () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
-  root.resources.markAllResourcesDirty,
-  () => root.selection.setSelection([CanvasElementId('erasable')]),
-  root.selection.clearSelection,
-  () => root.selection.moveSelection(const Offset(1, 1)),
-  root.selection.deleteSelection,
-  () => root.setCameraOffset(const Offset(1, 1)),
-  root.generateElementId,
-  root.generateLayerId,
-  root.generateResourceId,
-  () => root.edits.edit(
-    (edit) => edit.removeElement(CanvasElementId('erasable')),
+final _guardedEraserMutationFamilies = <_GuardedEraserMutationFamily>[
+  _GuardedEraserMutationFamily(
+    'resource dirty one',
+    (root) => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
   ),
-  () =>
-      root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(_document())),
-  () => root.commands.removeElement(CanvasElementId('erasable')),
-  root.commands.clearContent,
-  () => root.tools.setMode(root.tools.mode),
-  () => root.tools.setDrawStyle(root.tools.drawStyle),
-  () => root.tools.setDrawTool(root.tools.drawStyle.tool),
-  () => root.tools.setDrawColor(root.tools.drawStyle.color),
-  () => root.tools.setPointerPolicy(root.tools.pointerPolicy),
-  () => root.textEditing.setReadOnly(true),
-  root.dispose,
-  () => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+  _GuardedEraserMutationFamily(
+    'resource dirty all',
+    (root) => root.resources.markAllResourcesDirty(),
+  ),
+  _GuardedEraserMutationFamily(
+    'selection set',
+    (root) => root.selection.setSelection([CanvasElementId('erasable')]),
+  ),
+  _GuardedEraserMutationFamily(
+    'selection clear',
+    (root) => root.selection.clearSelection(),
+  ),
+  _GuardedEraserMutationFamily(
+    'selection move',
+    (root) => root.selection.moveSelection(const Offset(1, 1)),
+  ),
+  _GuardedEraserMutationFamily(
+    'selection delete',
+    (root) => root.selection.deleteSelection(),
+  ),
+  _GuardedEraserMutationFamily(
+    'camera',
+    (root) => root.setCameraOffset(const Offset(1, 1)),
+  ),
+  _GuardedEraserMutationFamily(
+    'element id generation',
+    (root) => root.generateElementId(),
+  ),
+  _GuardedEraserMutationFamily(
+    'layer id generation',
+    (root) => root.generateLayerId(),
+  ),
+  _GuardedEraserMutationFamily(
+    'resource id generation',
+    (root) => root.generateResourceId(),
+  ),
+  _GuardedEraserMutationFamily(
+    'edit remove',
+    (root) => root.edits.edit(
+      (edit) => edit.removeElement(CanvasElementId('erasable')),
+    ),
+  ),
+  _GuardedEraserMutationFamily(
+    'edit load',
+    (root) => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_document()),
+    ),
+  ),
+  _GuardedEraserMutationFamily(
+    'command remove',
+    (root) => root.commands.removeElement(CanvasElementId('erasable')),
+  ),
+  _GuardedEraserMutationFamily(
+    'command clear',
+    (root) => root.commands.clearContent(),
+  ),
+  _GuardedEraserMutationFamily(
+    'tool mode',
+    (root) => root.tools.setMode(root.tools.mode),
+  ),
+  _GuardedEraserMutationFamily(
+    'tool style',
+    (root) => root.tools.setDrawStyle(root.tools.drawStyle),
+  ),
+  _GuardedEraserMutationFamily(
+    'tool draw tool',
+    (root) => root.tools.setDrawTool(root.tools.drawStyle.tool),
+  ),
+  _GuardedEraserMutationFamily(
+    'tool color',
+    (root) => root.tools.setDrawColor(root.tools.drawStyle.color),
+  ),
+  _GuardedEraserMutationFamily(
+    'tool pointer policy',
+    (root) => root.tools.setPointerPolicy(root.tools.pointerPolicy),
+  ),
+  _GuardedEraserMutationFamily(
+    'text read-only',
+    (root) => root.textEditing.setReadOnly(true),
+  ),
+  _GuardedEraserMutationFamily('dispose', (root) => root.dispose()),
+  _GuardedEraserMutationFamily(
+    'nested resolver',
+    (root) => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+  ),
 ];
+
+final class _GuardedEraserMutationFamily {
+  const _GuardedEraserMutationFamily(this.name, this.invoke);
+
+  final String name;
+  final void Function(RuntimeRoot root) invoke;
+}
 
 void _startEraser(RuntimeRoot root) {
   root.setInteractionMode(CanvasInteractionMode.draw);
@@ -819,6 +923,41 @@ CanvasDocument _mixedKindDocument() => CanvasDocument(
 final class _ThrownEraserObject {
   @override
   String toString() => 'ordinary-eraser-object';
+}
+
+final class _TerminalGuardSnapshot {
+  const _TerminalGuardSnapshot({
+    required this.document,
+    required this.selection,
+    required this.state,
+    required this.camera,
+  });
+
+  factory _TerminalGuardSnapshot.capture(RuntimeRoot root) =>
+      _TerminalGuardSnapshot(
+        document: root.readDocument(),
+        selection: root.selectedElementIds,
+        state: root.state.value,
+        camera: root.viewCameraOffset,
+      );
+
+  final CanvasDocument document;
+  final Set<CanvasElementId> selection;
+  final CanvasRuntimeState state;
+  final Offset camera;
+
+  void expectCommittedFactsUnchanged(RuntimeRoot root) {
+    expect(root.readDocument(), document);
+    expect(root.selectedElementIds, selection);
+    expect(root.state.value.revisions.document, state.revisions.document);
+    expect(root.state.value.revisions.selection, state.revisions.selection);
+    expect(root.state.value.revisions.viewCamera, state.revisions.viewCamera);
+    expect(
+      root.state.value.revisions.resourceVisual,
+      state.revisions.resourceVisual,
+    );
+    expect(root.viewCameraOffset, camera);
+  }
 }
 
 CanvasDeletionDecision _acceptDeletion(CanvasDeletionCommitRequest _) =>

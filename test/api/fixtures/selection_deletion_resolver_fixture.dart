@@ -21,6 +21,9 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
+// Route registrations stay visible together so every public resolver family is
+// auditable without a second fixture registry that could drift from this owner.
+// ignore: source-lines-of-code
 void main() {
   test(
     'selection delete exposes exact immutable Store entries before accept',
@@ -43,9 +46,17 @@ void main() {
   test('empty and all-or-none rejected selection stay resolver silent', () {
     _excludedSelectionSetsStaySilent();
   });
-  test('selection deletion callback keeps the existing resolver guard', () {
-    _selectionDeletionCallbackUsesExistingGuard();
-  });
+  for (final family in _guardedPublicMutationFamilies) {
+    test('selection deletion rejects ${family.name} in its resolver', () {
+      _selectionDeletionCallbackUsesExistingGuard(family);
+    });
+  }
+  test(
+    'selection deletion resolver permits reads and client-owned undo work',
+    () {
+      _selectionResolverAllowsReadsAndClientUndoWork();
+    },
+  );
   test('selection preparation failures remain diagnostic-silent', () {
     _selectionPreparationFailuresStayDiagnosticSilent();
   });
@@ -94,11 +105,14 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
     installTrace.add('action');
   });
   addTearDown(subscription.cancel);
+  _prepareIndependentEraser(root);
   root.selection.setSelection([
     CanvasElementId('b'),
     CanvasElementId('c'),
     CanvasElementId('a'),
   ]);
+  _beginIndependentEraser(root);
+  final eraser = _IndependentEraserSnapshot.capture(root);
   deliveryEvents.clear();
   installTrace.clear();
   final construction = <RuntimeDeletionRouteConstructionKind>[];
@@ -158,6 +172,7 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
     RuntimeDeletionRouteConstructionKind.selectionPreparedCommit,
     RuntimeDeletionRouteConstructionKind.request,
   ]);
+  eraser.expectUnchanged(root);
   expect(
     root.readDocument().layers.expand((layer) => layer.elements),
     isNot(contains(CanvasElementId('a'))),
@@ -171,7 +186,9 @@ void _cancelLeavesNoEffect() {
     return CanvasDeletionDecision.cancel;
   });
   addTearDown(root.dispose);
+  _prepareIndependentEraser(root);
   root.selection.setSelection([CanvasElementId('a')]);
+  _beginIndependentEraser(root);
   final before = _SelectionDeleteSnapshot.capture(root);
   final construction = <RuntimeDeletionRouteConstructionKind>[];
 
@@ -208,7 +225,9 @@ void _ordinaryResolverThrowsAreContained() {
       throw thrown;
     }, diagnosticPolicy: const CanvasDiagnosticPolicy.summary());
     addTearDown(root.dispose);
+    _prepareIndependentEraser(root);
     root.selection.setSelection([CanvasElementId('a')]);
+    _beginIndependentEraser(root);
     final before = _SelectionDeleteSnapshot.capture(root);
     final construction = <RuntimeDeletionRouteConstructionKind>[];
 
@@ -279,20 +298,43 @@ void _excludedSelectionSetsStaySilent() {
   before.expectUnchanged(rejectedRoot);
 }
 
-void _selectionDeletionCallbackUsesExistingGuard() {
+void _selectionDeletionCallbackUsesExistingGuard(
+  _GuardedMutationFamily family,
+) {
   late RuntimeRoot root;
   root = _root((_) {
     expect(root.readDocument().layers, isNotEmpty);
     expect(root.selectedElementIds, {CanvasElementId('a')});
-    for (final mutation in _guardedPublicMutations(root)) {
-      expect(mutation, throwsA(isA<ResolverCallbackRejection>()));
-    }
+    expect(
+      () => family.invoke(root),
+      throwsA(isA<ResolverCallbackRejection>()),
+    );
     return CanvasDeletionDecision.cancel;
   });
   addTearDown(root.dispose);
   root.selection.setSelection([CanvasElementId('a')]);
   final before = _SelectionDeleteSnapshot.capture(root);
   root.selection.deleteSelection();
+  before.expectUnchanged(root);
+}
+
+void _selectionResolverAllowsReadsAndClientUndoWork() {
+  final clientUndo = <CanvasDocument>[];
+  late RuntimeRoot root;
+  root = _root((_) {
+    final document = root.readDocument();
+    expect(root.selectedElementIds, {CanvasElementId('a')});
+    clientUndo.add(document);
+    expect(clientUndo.removeLast(), same(document));
+    return CanvasDeletionDecision.cancel;
+  });
+  addTearDown(root.dispose);
+  root.selection.setSelection([CanvasElementId('a')]);
+  final before = _SelectionDeleteSnapshot.capture(root);
+
+  root.selection.deleteSelection();
+
+  expect(clientUndo, isEmpty);
   before.expectUnchanged(root);
 }
 
@@ -437,7 +479,10 @@ Future<void> _selectionDeliveryFailuresRemainFinal() async {
       return CanvasDeletionDecision.accept;
     });
     addTearDown(root.dispose);
+    _prepareIndependentEraser(root);
     root.selection.setSelection([CanvasElementId('a')]);
+    _beginIndependentEraser(root);
+    final eraser = _IndependentEraserSnapshot.capture(root);
     var armed = false;
     final errors = <Object>[];
     final previousFlutterError = FlutterError.onError;
@@ -469,6 +514,7 @@ Future<void> _selectionDeliveryFailuresRemainFinal() async {
     expect(errors, isNotEmpty);
     expect(_idsAfterDelete(root), isNot(contains(CanvasElementId('a'))));
     expect(root.selectedElementIds, isEmpty);
+    eraser.expectUnchanged(root);
     expect(actions, hasLength(1));
     expect(actions.single.type, CanvasActionType.deleteElements);
     expect(actions.single.timestampMs, 67);
@@ -594,34 +640,103 @@ List<CanvasElementId> _idsAfterDelete(RuntimeRoot root) => [
 
 enum _DeliveryFailure { state, action }
 
-// Each public facade family must remain independently represented in the same
-// callback witness; splitting this list would obscure omissions behind setup.
-// ignore: halstead-volume
-List<void Function()> _guardedPublicMutations(RuntimeRoot root) => [
-  () => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
-  root.resources.markAllResourcesDirty,
-  () => root.selection.setSelection([CanvasElementId('a')]),
-  root.selection.clearSelection,
-  () => root.selection.moveSelection(const Offset(1, 1)),
-  root.selection.deleteSelection,
-  () => root.setCameraOffset(const Offset(1, 1)),
-  root.generateElementId,
-  root.generateLayerId,
-  root.generateResourceId,
-  () => root.edits.edit((edit) => edit.removeElement(CanvasElementId('a'))),
-  () =>
-      root.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(_document())),
-  () => root.commands.removeElement(CanvasElementId('a')),
-  root.commands.clearContent,
-  () => root.tools.setMode(root.tools.mode),
-  () => root.tools.setDrawStyle(root.tools.drawStyle),
-  () => root.tools.setDrawTool(root.tools.drawStyle.tool),
-  () => root.tools.setDrawColor(root.tools.drawStyle.color),
-  () => root.tools.setPointerPolicy(root.tools.pointerPolicy),
-  () => root.textEditing.setReadOnly(true),
-  root.dispose,
-  () => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+final _guardedPublicMutationFamilies = <_GuardedMutationFamily>[
+  _GuardedMutationFamily(
+    'resource dirty one',
+    (root) => root.resources.markResourceDirty(CanvasResourceId('resource-a')),
+  ),
+  _GuardedMutationFamily(
+    'resource dirty all',
+    (root) => root.resources.markAllResourcesDirty(),
+  ),
+  _GuardedMutationFamily(
+    'selection set',
+    (root) => root.selection.setSelection([CanvasElementId('a')]),
+  ),
+  _GuardedMutationFamily(
+    'selection clear',
+    (root) => root.selection.clearSelection(),
+  ),
+  _GuardedMutationFamily(
+    'selection move',
+    (root) => root.selection.moveSelection(const Offset(1, 1)),
+  ),
+  _GuardedMutationFamily(
+    'selection delete',
+    (root) => root.selection.deleteSelection(),
+  ),
+  _GuardedMutationFamily(
+    'camera',
+    (root) => root.setCameraOffset(const Offset(1, 1)),
+  ),
+  _GuardedMutationFamily(
+    'element id generation',
+    (root) => root.generateElementId(),
+  ),
+  _GuardedMutationFamily(
+    'layer id generation',
+    (root) => root.generateLayerId(),
+  ),
+  _GuardedMutationFamily(
+    'resource id generation',
+    (root) => root.generateResourceId(),
+  ),
+  _GuardedMutationFamily(
+    'edit remove',
+    (root) =>
+        root.edits.edit((edit) => edit.removeElement(CanvasElementId('a'))),
+  ),
+  _GuardedMutationFamily(
+    'edit load',
+    (root) => root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_document()),
+    ),
+  ),
+  _GuardedMutationFamily(
+    'command remove',
+    (root) => root.commands.removeElement(CanvasElementId('a')),
+  ),
+  _GuardedMutationFamily(
+    'command clear',
+    (root) => root.commands.clearContent(),
+  ),
+  _GuardedMutationFamily(
+    'tool mode',
+    (root) => root.tools.setMode(root.tools.mode),
+  ),
+  _GuardedMutationFamily(
+    'tool style',
+    (root) => root.tools.setDrawStyle(root.tools.drawStyle),
+  ),
+  _GuardedMutationFamily(
+    'tool draw tool',
+    (root) => root.tools.setDrawTool(root.tools.drawStyle.tool),
+  ),
+  _GuardedMutationFamily(
+    'tool color',
+    (root) => root.tools.setDrawColor(root.tools.drawStyle.color),
+  ),
+  _GuardedMutationFamily(
+    'tool pointer policy',
+    (root) => root.tools.setPointerPolicy(root.tools.pointerPolicy),
+  ),
+  _GuardedMutationFamily(
+    'text read-only',
+    (root) => root.textEditing.setReadOnly(true),
+  ),
+  _GuardedMutationFamily('dispose', (root) => root.dispose()),
+  _GuardedMutationFamily(
+    'nested resolver',
+    (root) => root.runResolverCallback(() => CanvasDeletionDecision.cancel),
+  ),
 ];
+
+final class _GuardedMutationFamily {
+  const _GuardedMutationFamily(this.name, this.invoke);
+
+  final String name;
+  final void Function(RuntimeRoot root) invoke;
+}
 
 RuntimeRoot _root(
   CanvasDeletionCommitResolver resolver, {
@@ -650,6 +765,11 @@ CanvasDocument _document() => CanvasDocument(
           isDeletable: false,
         ),
         CanvasRectElement(id: CanvasElementId('c'), size: const Size(2, 2)),
+        CanvasRectElement(
+          id: CanvasElementId('eraser-independent'),
+          transform: CanvasTransform.translation(const Offset(100, 0)),
+          size: const Size(2, 2),
+        ),
       ],
     ),
     CanvasLayer(
@@ -666,6 +786,9 @@ final class _SelectionDeleteSnapshot {
     required this.document,
     required this.selectedIds,
     required this.state,
+    required this.camera,
+    required this.preview,
+    required this.session,
   });
 
   factory _SelectionDeleteSnapshot.capture(RuntimeRoot root) =>
@@ -673,17 +796,82 @@ final class _SelectionDeleteSnapshot {
         document: root.readDocument(),
         selectedIds: root.selectedElementIds,
         state: root.state.value,
+        camera: root.viewCameraOffset,
+        preview: root.preview,
+        session: root.interactionEngine.activeSession,
       );
 
   final CanvasDocument document;
   final Set<CanvasElementId> selectedIds;
   final CanvasRuntimeState state;
+  final Offset camera;
+  final CanvasPreviewState preview;
+  final Object? session;
 
   void expectUnchanged(RuntimeRoot root) {
     expect(root.readDocument(), document);
     expect(root.selectedElementIds, selectedIds);
     expect(root.state.value, state);
+    expect(root.viewCameraOffset, camera);
+    expect(root.preview, same(preview));
+    expect(root.interactionEngine.activeSession, same(session));
   }
+}
+
+final class _IndependentEraserSnapshot {
+  const _IndependentEraserSnapshot({
+    required this.preview,
+    required this.session,
+    required this.interactionRevision,
+  });
+
+  factory _IndependentEraserSnapshot.capture(RuntimeRoot root) {
+    final session = root.interactionEngine.activeSession;
+    if (session == null) {
+      fail('Expected an active independent eraser session.');
+    }
+    return _IndependentEraserSnapshot(
+      preview: root.preview,
+      session: session,
+      interactionRevision: root.state.value.revisions.interaction,
+    );
+  }
+
+  final CanvasPreviewState preview;
+  final Object session;
+  final int interactionRevision;
+
+  void expectUnchanged(RuntimeRoot root) {
+    expect(root.preview, same(preview));
+    expect(root.interactionEngine.activeSession, same(session));
+    expect(root.state.value.revisions.interaction, interactionRevision);
+  }
+}
+
+void _prepareIndependentEraser(RuntimeRoot root) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+}
+
+void _beginIndependentEraser(RuntimeRoot root) {
+  root.handlePointer(
+    CanvasPointerSample(
+      pointerId: 71,
+      phase: CanvasPointerLifecyclePhase.down,
+      position: const Offset(101, 1),
+      kind: PointerDeviceKind.touch,
+      timestampMs: 71,
+    ),
+  );
+  root.handlePointer(
+    CanvasPointerSample(
+      pointerId: 71,
+      phase: CanvasPointerLifecyclePhase.move,
+      position: const Offset(101, 1),
+      kind: PointerDeviceKind.touch,
+      timestampMs: 72,
+    ),
+  );
 }
 
 final class _ThrownObject {

@@ -175,6 +175,12 @@ work.
 39. Direct `CanvasSelectionPort` implementations expose `deleteAvailability`,
     and `CanvasSelectionDeletePolicy.partial` remains the default runtime
     configuration policy without a parallel availability state surface.
+40. `CanvasRuntime.config` and its non-null deletion resolver remain required
+    at the external compile boundary; selection deletion and terminal eraser
+    resolver suites prove their distinct public routes, guarded prepare/consume
+    behavior, bounded work, and bounded diagnostics.
+41. The maintained example is verified separately with
+    `cd example && flutter analyze` and `cd example && flutter test`.
 ```
 
 ---
