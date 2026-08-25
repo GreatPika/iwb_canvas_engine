@@ -21,6 +21,12 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+  return CanvasRuntimeConfig(
+    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+  );
+}
+
 void main() {
   test('camera starts from document and updates only view camera revision', () {
     final persistedCamera = CanvasCamera(offset: const Offset(4, 8));

@@ -31,6 +31,12 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+  return CanvasRuntimeConfig(
+    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+  );
+}
+
 void main() {
   test('state.value is readable immediately after construction', () {
     final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());

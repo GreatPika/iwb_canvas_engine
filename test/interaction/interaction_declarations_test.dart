@@ -261,6 +261,7 @@ Set<String> _fieldNames(CompilationUnit unit, String className) {
 
   return {
     for (final field in declaration.body.members.whereType<FieldDeclaration>())
-      for (final variable in field.fields.variables) variable.name.lexeme,
+      if (!field.isStatic)
+        for (final variable in field.fields.variables) variable.name.lexeme,
   };
 }

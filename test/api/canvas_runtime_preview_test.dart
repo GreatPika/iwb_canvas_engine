@@ -20,6 +20,12 @@ const _source = r'''
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasRuntimeConfig _acceptDeletionRuntimeConfig() {
+  return CanvasRuntimeConfig(
+    deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+  );
+}
+
 void main() {
   test('preview is readable and remains default', () {
     final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
