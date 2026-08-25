@@ -165,7 +165,7 @@ Work Budget And Cost Displacement: Construction permits one O(m) copy of an m-ki
 
 ## Execution Units
 
-### [ ] Unit 1: Establish canonical selection deletion policy and derived availability
+### [x] Unit 1: Establish canonical selection deletion policy and derived availability
 
 Owner: Public runtime contracts, RuntimeConfig, CommandFactsPort/runtime adapter, RuntimeRoot selection port, public API registry/contract, release migration surface, and selection/API verification owners.
 Boundary: Add only `CanvasSelectionDeletePolicy`, `CanvasSelectionDeleteAvailability`, the defaulted selection-policy config field, and the direct `CanvasSelectionPort.deleteAvailability` extension; keep availability derived and absent from runtime state; make availability and command execution consume the same fresh committed facts; quarantine invalid facts in owner-level fixtures; update the public owners changed by this independently useful resolver-free behavior.
@@ -184,7 +184,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Apply eraser kind policy before preview and terminal budgets
+### [x] Unit 2: Apply eraser kind policy before preview and terminal budgets
 
 Owner: Public/runtime configuration, runtime interaction read adapter, existing eraser hit policy, public API and geometry contract owners, eraser budget diagram, and geometry/runtime verification owners.
 Boundary: Add only `eraserElementKinds`, make one runtime-owned unmodifiable copy, and filter preview and terminal candidates with identical null/empty/allow-list semantics before candidate and exact-check accounting; expose the filtered terminal final-read result as Unit 4 input without depending on the not-yet-created resolver request; do not duplicate `CanvasElementKind` or change exact hit routing.
@@ -200,7 +200,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 3: Move deletion entry projection and both ordering routes to Store
+### [x] Unit 3: Move deletion entry projection and both ordering routes to Store
 
 Owner: DocumentStoreKernel and element-order facts, CommandFactsPort/runtime selection adapter, runtime terminal eraser ordering route, Store/data-order documentation, and Store plus end-to-end work verification owners.
 Boundary: Add one Store-owned batch projection from final IDs to immutable element/layer/original-index/order facts on one snapshot; migrate the current selection and terminal eraser ordering consumers immediately; remove or bypass their O(N) full-handle scans without adding a persistent index or materializing `CanvasDocument`.
@@ -220,7 +220,7 @@ Acceptance Outcomes:
 Depends On:
 - Unit 1 — produces: canonical selection existence, eligibility, and final policy IDs; consumed as: Store projection input for the selection deletion route.
 
-### [ ] Unit 4: Cut over both public deletion routes to the resolver atomically
+### [x] Unit 4: Cut over both public deletion routes to the resolver atomically
 
 Owner: Public deletion contracts and registry, RuntimeConfig, RuntimeRoot selection and terminal eraser coordination plus resolver guard, EditKernel, CommitApplier, Store and Selection installers, existing InteractionEngine cleanup owner, runtime diagnostics adapter, DiagnosticsHub code/contract, action finalizer, maintained `example/` sample/performance/test consumers, architecture graph/generated views, public/edit/runtime/diagnostic and eraser lifecycle documentation/diagrams, and their nearest route-local and cross-route verification owners.
 Boundary: Land the required non-null resolver configuration, required `CanvasRuntime.config`, and five public resolver/request/entry/decision/operation declarations simultaneously with every repository config/runtime construction—including all maintained `example/` consumers—and both accepted public deletion consumers; introduce only the deletion-specific private prepare/single-use consume seam; complete all expected failures before either callback; reuse the existing guard; contain callback errors through the admitted diagnostic route; guarantee terminal cleanup before fallible delivery; remove the direct-install bypass; migrate graph, direct public consumers, example package, and all route-local and cross-route evidence atomically. Execute this atomic unit through the mandatory shared-spine, selection-route, eraser-route, and final-cross-route checkpoints defined by Order Constraints, reviewing focused behavior and evidence at each checkpoint while keeping the whole unit unmerged until final closure.
