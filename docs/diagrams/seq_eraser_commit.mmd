@@ -7,6 +7,7 @@ sequenceDiagram
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
   participant Cleanup as PointerToolCleanupCoordinator
+  participant ReadPort as RuntimeInteractionReadAdapter (InteractionReadPort)
   participant Preview as CanvasPreviewState
   participant Frame as FrameEngine
   participant Spatial as SpatialKernel
@@ -96,10 +97,12 @@ sequenceDiagram
     Surface->>Tools: handlePointer(CanvasPointerInput finite up)
     Tools->>IE: same-token finite terminal sample
     IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
-    IE->>Spatial: query final corridor envelope for content hit candidates
-    Spatial-->>IE: committed candidate handles with generation and structuralRevision
-    alt terminal candidate/check budget exceeded / no partial erase
-      IE->>Cleanup: typed cleanup request for eraser session
+    IE->>ReadPort: eraserTerminalFacts(corridor points, eraser thickness)
+    ReadPort->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
+    Spatial-->>ReadPort: terminal candidate handles or typed non-candidate query outcome
+    alt terminal query is invalid, stale, or spatial-budget-exceeded
+      ReadPort-->>IE: terminal facts with empty entries and preserved query status
+      IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
       IE->>Preview: bump previewRevision for cleared active preview
@@ -108,27 +111,58 @@ sequenceDiagram
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Frame->>Signals: publish overlay cleanup repaint request
       Signals-->>Surface: repaint overlay without eraser corridor
-      Note over Geometry,Signals: Terminal budget is 4096 candidates / 32768 exact checks. Budget exceeded is cleanup/no-op only: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
-    else terminal budget available
-      IE->>Geometry: exact eraser checks, require isDeletable and exclude background elements
-      Geometry-->>IE: final erasedElementIds in document order
-
-      alt final erasedElementIds is empty
-        IE->>Cleanup: typed cleanup request for eraser session
-        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
-        IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
+      Note over Spatial,Signals: Every non-candidate query outcome is cleanup/no-op only. Invalid and stale remain distinct from spatial-budget-exceeded, and none publishes partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
+    else terminal spatial candidates returned
+      ReadPort->>ReadPort: resolve committed facts, admit runtime eraser kinds, and count admitted candidates
+      Note over ReadPort: Disallowed facts consume neither candidate nor exact-check budget. Terminal limits are 4096 admitted candidates / 32768 exact checks.
+      alt admitted candidate limit exceeded before exact checks
+        ReadPort-->>IE: typed terminal budget-exceeded facts
+        IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+          Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+          IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
         IE->>Preview: bump previewRevision for cleared active preview
         Preview->>Frame: request overlay repaint cleanup
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
         Frame->>Signals: publish overlay cleanup repaint request
         Signals-->>Surface: repaint overlay without eraser corridor
-        Note over Store,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, or erase action is published.
-        Note over Runtime,Signals: Active preview cleanup publishes only preview state.
-      else at least one element is erased
-        IE->>Runtime: terminal intent with Unit-2 filtered canonical Store entries
-        Runtime->>EK: prepare deletion-only removal and existing erase action
-        alt deletion-commit preparation succeeds
+        Note over ReadPort,Signals: Candidate budget exceeded is cleanup/no-op only: no Geometry call, partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
+      else admitted candidate limit available
+        ReadPort->>Geometry: exact hit checks for admitted deletable non-background candidates(segment-to-family), while ReadPort counts each check first
+        Geometry-->>ReadPort: hit/miss results only
+        alt ReadPort exact-check limit exceeded before the next Geometry call
+          ReadPort-->>IE: typed terminal budget-exceeded facts with no partial ids
+          IE->>Cleanup: typed cleanup request for eraser no-op cleanup
+            Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+            IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
+          IE->>Preview: bump previewRevision for cleared active preview
+          Preview->>Frame: request overlay repaint cleanup
+          Preview-->>Runtime: preview cleanup revision fact
+          Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+          Frame->>Signals: publish overlay cleanup repaint request
+          Signals-->>Surface: repaint overlay without eraser corridor
+          Note over ReadPort,Signals: Exact-check budget exceeded is cleanup/no-op only: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
+        else terminal exact checks complete
+          ReadPort->>Store: project exact-hit ids into final deletion entries
+          Store-->>ReadPort: immutable entries in committed document order
+          ReadPort-->>IE: terminal facts with Store-projected deletion entries
+
+          alt terminal deletion entries empty
+          IE->>Cleanup: typed cleanup request for eraser session
+          Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+          IE->>Preview: apply outcome: publish CanvasNoPreview and clear eraser session
+          IE->>Preview: bump previewRevision for cleared active preview
+          Preview->>Frame: request overlay repaint cleanup
+          Preview-->>Runtime: preview cleanup revision fact
+          Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+          Frame->>Signals: publish overlay cleanup repaint request
+          Signals-->>Surface: repaint overlay without eraser corridor
+          Note over Store,Signals: No touched set, committed document revision change, spatial remove, projection eviction, main repaint, or erase action is published.
+          Note over Runtime,Signals: Active preview cleanup publishes only preview state.
+          else terminal deletion entries non-empty
+          IE->>Runtime: terminal eraser intent with Store-projected entries
+          Runtime->>EK: prepare deletion-only removal and existing erase action
+          alt deletion-commit preparation succeeds
           EK->>EK: validate/build AcceptedCommitDocument + CommitPlan
           EK->>Runtime: invoke configured deletion preparation seam
           Runtime->>Applier: prepareDeletion(document, plan)
@@ -231,7 +265,9 @@ sequenceDiagram
           Note over Resolver,Signals: Resolver is not invoked. No Store, Selection, timestamp, action, or resolver diagnostic mutation occurs.
           Runtime-->>Tools: synchronously rethrow original preparation error through handlePointer
           Tools-->>Surface: propagate original error to the public caller
+          end
         end
       end
     end
   end
+end
