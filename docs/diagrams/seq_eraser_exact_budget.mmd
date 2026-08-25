@@ -7,18 +7,18 @@ sequenceDiagram
   participant Tools as CanvasToolPort
   participant IE as InteractionEngine
   participant Cleanup as PointerToolCleanupCoordinator
+  participant ReadPort as RuntimeInteractionReadAdapter (InteractionReadPort)
   participant Preview as CanvasPreviewState
   participant Spatial as SpatialKernel
   participant Geometry as GeometryPolicy
   participant EK as EditKernel
   participant Store as DocumentStoreKernel
-  participant CC as CommitCompiler
-  participant Effects as CommitEffects
   participant Applier as CommitApplier
+  participant Selection as SelectionKernel
+  participant Resolver as required deletion resolver
+  participant Diagnostics as DiagnosticsHub
   participant SpatialApply as SpatialKernel update
-  participant Projection as DocumentProjectionCache
   participant Frame as FrameEngine
-  participant Events as EventBuffer
   participant BudgetProbe as Eraser budget probes non-hub
   participant Runtime as RuntimeRoot
   participant Signals as Public state/effects
@@ -27,10 +27,12 @@ sequenceDiagram
   Surface->>Tools: handlePointer(CanvasPointerInput finite samples)
   Tools->>IE: normalized finite eraser sample and finite thickness
   IE->>IE: append eraser corridor point in world coordinates
-  IE->>Spatial: query erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
-  Spatial-->>IE: bounded candidate handles or typed budget-exceeded
+  IE->>ReadPort: eraserPreviewFacts(corridor points, eraser thickness)
+  ReadPort->>Spatial: query preview erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
+  Spatial-->>ReadPort: preview candidate handles or typed budget-exceeded
 
   alt preview spatial budget exceeded
+    ReadPort-->>IE: typed preview budget-exceeded facts
     IE->>Preview: publish corridor-only preview, no tentative ids
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -38,11 +40,12 @@ sequenceDiagram
     IE->>BudgetProbe: increment eraser preview budget-exceeded probe
     Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
     else preview spatial candidates returned
-    Note over IE,Geometry: Runtime interaction reads resolve committed facts, then admit the runtime eraser-kind policy before eraser candidate and exact-check accounting. Null admits every kind; empty admits none; disallowed facts never reach exact hit testing.
-    IE->>Geometry: preview exact checks for policy-admitted deletable non-background candidates(segment-to-family)
+    Note over ReadPort,Geometry: ReadPort resolves committed facts, then admits the runtime eraser-kind policy before eraser candidate and exact-check accounting. Null admits every kind. Empty admits none. Disallowed facts never reach exact hit testing.
+    ReadPort->>Geometry: preview exact checks for policy-admitted deletable non-background candidates(segment-to-family)
     Note over Geometry: Preview budget is 512 candidates / 4096 exact checks per sample.
     alt preview candidate/check budget exceeded
-      Geometry-->>IE: preview budget exceeded
+      Geometry-->>ReadPort: preview budget exceeded
+      ReadPort-->>IE: typed preview budget-exceeded facts
       IE->>Preview: publish corridor-only preview, no tentative ids
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -50,7 +53,8 @@ sequenceDiagram
       IE->>BudgetProbe: increment eraser preview budget-exceeded probe
       Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
     else preview budget accepts
-      Geometry-->>IE: tentative ids for preview only
+      Geometry-->>ReadPort: policy-filtered preview tentative ids
+      ReadPort-->>IE: preview facts with tentative ids
       IE->>Preview: publish eraser preview with tentative ids
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -61,10 +65,12 @@ sequenceDiagram
   User->>Surface: eraser terminal up
   Surface->>Tools: handlePointer(CanvasPointerInput finite up)
   Tools->>IE: same-token finite terminal eraser intent
-  IE->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
-  Spatial-->>IE: terminal candidate handles or typed budget-exceeded
+  IE->>ReadPort: eraserTerminalFacts(corridor points, eraser thickness)
+  ReadPort->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
+  Spatial-->>ReadPort: terminal candidate handles or typed budget-exceeded
 
   alt terminal spatial budget exceeded
+    ReadPort-->>IE: typed terminal budget-exceeded facts
     IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: clear eraser corridor preview
@@ -75,11 +81,12 @@ sequenceDiagram
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
   else terminal spatial candidates returned
-    Note over IE,Geometry: The same shared kind admission runs before terminal eraser candidate and exact-check accounting; spatial invalid, stale, and spatial-budget results remain typed query outcomes.
-    IE->>Geometry: terminal exact checks for policy-admitted deletable non-background candidates(segment-to-family)
+    Note over ReadPort,Geometry: The same shared kind admission runs before terminal eraser candidate and exact-check accounting. Spatial invalid, stale, and spatial-budget results remain typed query outcomes.
+    ReadPort->>Geometry: terminal exact checks for policy-admitted deletable non-background candidates(segment-to-family)
     Note over Geometry: Terminal budget is 4096 candidates / 32768 exact checks.
     alt terminal candidate/check budget exceeded
-      Geometry-->>IE: terminal budget exceeded
+      Geometry-->>ReadPort: terminal budget exceeded
+      ReadPort-->>IE: typed terminal budget-exceeded facts
       IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: clear eraser corridor preview
@@ -90,8 +97,11 @@ sequenceDiagram
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
     else terminal exact ids accepted
-      Geometry-->>IE: filtered terminal final-read ids for downstream delivery
-      alt terminal exact ids empty
+      Geometry-->>ReadPort: policy-filtered terminal exact-hit ids
+      ReadPort->>Store: project exact-hit ids into final deletion entries
+      Store-->>ReadPort: immutable entries in committed document order
+      ReadPort-->>IE: terminal facts with Store-projected deletion entries
+      alt terminal deletion entries empty
         IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: clear eraser corridor preview
@@ -99,31 +109,112 @@ sequenceDiagram
         Preview->>Frame: request overlay cleanup repaint only
         Preview-->>Runtime: preview cleanup revision fact
         Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-        Note over Store,Signals: Empty terminal exact set is cleanup/no-op for committed content: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
-      else terminal exact ids non-empty
-        IE->>EK: open synchronous interaction edit
-        EK->>Store: read committed revision snapshot
-        EK->>EK: remove exact ids in rollback-safe draft, including selection cleanup
-        EK->>CC: compile exact touched set and staged erase action
-        Note over EK,CC: Touched scope is removed ids plus selection only if erased ids intersect selection. Revisions are document, structural, bounds, elementVisual, projection, and conditional selection.
-        CC->>Effects: prepare typed main repaint and invalidation effects
-        CC->>Applier: hand off compiled CommitPlan
-        Applier->>Store: atomic install
-        Store->>Store: install revision state including projection invalidation; cache rebuilds lazily on read
-        Store-->>Applier: committed revision facts
-        EK->>EK: close edit session and stale handle
-        EK-->>Runtime: closed edit result
-        Runtime->>IE: post-success eraser cleanup, publish: false
-        IE->>Cleanup: typed cleanup request for eraser no-op cleanup
-        Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
-        IE->>Preview: apply outcome: clear eraser corridor preview
-        IE->>Preview: bump previewRevision for cleared active preview
-        Preview-->>Runtime: preview cleanup revision fact
-        Runtime->>Runtime: merge cleanup repaint, then guard spatial -> resource/release -> root frame -> bridge frame -> state -> action -> observer
-        Runtime->>SpatialApply: apply touched removals only
-        Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
-        Runtime->>Signals: publish CanvasRuntimeState after document, selection, and preview effects
-        Runtime->>Signals: publish erase action notification
+        Note over Store,Signals: Empty terminal deletion set is cleanup/no-op for committed content: no document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
+      else terminal deletion entries non-empty
+        IE->>Runtime: terminal eraser intent with Store-projected entries
+        Runtime->>EK: prepare deletion-only removal and existing erase action
+        alt deletion preparation succeeds
+          EK->>EK: validate/build AcceptedCommitDocument + CommitPlan
+          EK->>Runtime: invoke configured deletion preparation seam
+          Runtime->>Applier: prepareDeletion(document, plan)
+          Applier->>Runtime: invoke configured selection-effect preparation callback
+          Runtime->>Runtime: read current selection as needed
+          Runtime->>Store: normalize selection against prepared sparse commit
+          Store-->>Runtime: normalized selected ids
+          Runtime->>Runtime: construct PreparedSelectionEffect and copy ids into owned LinkedHashSet
+          Runtime-->>Applier: PreparedSelectionEffect with owned backing
+          Applier->>Store: prepare sparse deletion install
+          Store-->>Applier: prepared Store install
+          Applier->>Applier: seal single-use prepared state
+          Applier-->>Runtime: single-use prepared deletion
+          Note over EK,Applier: All deletion-specific preparation completes before the callback.
+          Runtime->>Runtime: construct immutable CanvasDeletionCommitRequest and copy entry DTOs
+          alt request construction or entry copy fails
+            Runtime->>IE: cleanup eraser session with editFailure, publish: false
+            IE->>Cleanup: typed cleanup request for eraser failure cleanup
+            Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+            IE->>Preview: apply outcome: clear eraser corridor preview
+            IE->>Preview: bump previewRevision for cleared active preview
+            Preview-->>Runtime: preview cleanup revision fact
+            Runtime->>Frame: deliver overlay cleanup repaint
+            Runtime->>Signals: deliver preview cleanup state/effect only
+            Note over Resolver,Signals: Resolver is not invoked. No Store, Selection, timestamp, action, or diagnostic mutation occurs.
+            Runtime-->>IE: synchronously propagate original request-preparation error
+          else request constructed
+            Runtime->>Resolver: guarded required deletion request
+            alt resolver accepts
+              Resolver-->>Runtime: accept
+              Note over Runtime,Store: Resolver return and the first Store install share one synchronous stack with no external callback or publication between them.
+              Runtime->>Applier: consume prepared deletion once
+              Applier->>Store: install prepared document
+              Store-->>Applier: committed Store facts
+              Applier->>Selection: transfer owned PreparedSelectionEffect backing and install
+              Selection-->>Applier: committed selection facts
+              Applier-->>Runtime: accepted delivery facts
+              Runtime->>IE: post-success eraser cleanup, publish: false
+              IE->>Cleanup: typed cleanup request for eraser postSuccessCommit cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>SpatialApply: apply touched removals only
+              Runtime->>Frame: publish merged main repaint and overlay cleanup repaint
+              Runtime->>Signals: deliver state after document, selection, and preview effects
+              Runtime->>Signals: deliver existing erase action notification
+              Note over Runtime,Signals: State/action delivery is post-install. Accepted Store and Selection facts remain final if delivery fails.
+            else resolver cancels
+              Resolver-->>Runtime: cancel
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverCancel, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverCancel cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, action, or diagnostic mutation occurs.
+            else resolver guard rejects
+              Resolver-->>Runtime: ResolverCallbackRejection contained as cancel (didThrow: true)
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverError, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, action, or resolver-failure diagnostic mutation occurs.
+            else resolver throws ordinary object
+              Resolver-->>Runtime: throw
+              Runtime->>Diagnostics: record one bounded deletion-resolver failure
+              Runtime->>Applier: discard prepared deletion
+              Runtime->>IE: cleanup eraser session with resolverError, publish: false
+              IE->>Cleanup: typed cleanup request for eraser resolverError cleanup
+              Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+              IE->>Preview: apply outcome: clear eraser corridor preview
+              IE->>Preview: bump previewRevision for cleared active preview
+              Preview-->>Runtime: preview cleanup revision fact
+              Runtime->>Frame: deliver overlay cleanup repaint
+              Runtime->>Signals: deliver preview cleanup state/effect only
+              Note over Store,Signals: No Store, Selection, timestamp, or action mutation occurs.
+            end
+            Note over Resolver,Diagnostics: Guard rejection is contained as cancel with didThrow=true. Only an ordinary callback error records the bounded diagnostic.
+          end
+        else deletion-commit preparation fails
+          Note over EK,Store: The original error can arise in EditKernel validation/build, RuntimeRoot's configured preparation seam, CommitApplier preparation, or Store normalization/bind.
+          Runtime->>IE: cleanup eraser session with editFailure, publish: false
+          IE->>Cleanup: typed cleanup request for eraser failure cleanup
+          Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
+          IE->>Preview: apply outcome: clear eraser corridor preview
+          IE->>Preview: bump previewRevision for cleared active preview
+          Preview-->>Runtime: preview cleanup revision fact
+          Runtime->>Frame: deliver overlay cleanup repaint
+          Runtime->>Signals: deliver preview cleanup state/effect only
+          Note over Resolver,Signals: Resolver is not invoked. No Store, Selection, timestamp, action, or resolver diagnostic mutation occurs.
+          Runtime-->>IE: synchronously propagate original preparation error
+        end
       end
     end
   end
