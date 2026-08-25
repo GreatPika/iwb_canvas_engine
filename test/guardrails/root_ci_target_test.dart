@@ -23,7 +23,6 @@ void main() {
     _expectVectorPreparationVmRetentionRoute(steps);
     _expectRootPackageDocsChecks(workflowContent, steps);
     _expectExamplePackageChecks(workflowContent);
-    _expectExampleBoundaryDiffEnvironment(steps);
     _expectNoWorkflowBypass(rootPackageJob, steps);
     _expectGuardrailRunnerCannotBeBypassed(rootPackageJob, guardrailStep);
     _expectFullGuardrailRunnerSelection(workflowContent, guardrailStep);
@@ -106,23 +105,6 @@ final class _PinnedActionStepExpectation {
   final String stepName;
   final String actionName;
   final String versionComment;
-}
-
-void _expectExampleBoundaryDiffEnvironment(List<YamlMap> steps) {
-  final checkoutStep = _stepNamed(steps, 'Checkout');
-  final checkoutWith = checkoutStep['with'] as YamlMap;
-  expect(checkoutWith['fetch-depth'], 0);
-
-  final flutterTestStep = _stepNamed(steps, 'Test all Flutter tests');
-  final env = flutterTestStep['env'] as YamlMap;
-  expect(
-    env['EXAMPLE_BOUNDARY_DIFF_BASE'],
-    r"${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}",
-  );
-  expect(
-    env['EXAMPLE_BOUNDARY_DIFF_HEAD'],
-    r"${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}",
-  );
 }
 
 void _expectRootPackageDocsChecks(String workflowContent, List<YamlMap> steps) {

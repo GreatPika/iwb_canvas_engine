@@ -527,11 +527,6 @@ the release route for that evidence.
   `package:iwb_canvas_engine/iwb_canvas_engine.dart`;
 - rejects example imports of engine internals, package-internal paths, package-internal symbols, and app-adapter responsibility
   names;
-- when the current unstaged, staged, or untracked diff includes non-generated
-  `example/**` changes, fails that current diff if it also modifies production
-  `lib/**` files, reserving engine changes for a separate owner contract;
-- when `EXAMPLE_BOUNDARY_DIFF_BASE` and `EXAMPLE_BOUNDARY_DIFF_HEAD` are set,
-  fails if that committed range modifies production `lib/**` files;
 - proves production engine source under `lib/**` does not contain
   `application canvas port` or `application adapter`.
 

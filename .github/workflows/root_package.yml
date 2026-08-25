@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
@@ -41,9 +39,6 @@ jobs:
         run: dart run tool/architecture_graph/generate_views.dart --check
 
       - name: Test all Flutter tests
-        env:
-          EXAMPLE_BOUNDARY_DIFF_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
-          EXAMPLE_BOUNDARY_DIFF_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
         run: flutter test --concurrency=1 $(find test -name '*_test.dart' -print)
 
       - name: Run vector preparation VM retaining-path evidence

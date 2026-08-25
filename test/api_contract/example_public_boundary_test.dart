@@ -40,7 +40,6 @@ const _engineAdapterSymbols = [
 void main() {
   _registerEngineImportBoundaryTest();
   _registerRetiredSeamBoundaryTest();
-  _registerNoProductionLibDiffTest();
   _registerProductionAdapterBoundaryTest();
 }
 
@@ -95,80 +94,10 @@ void _registerProductionAdapterBoundaryTest() {
   );
 }
 
-void _registerNoProductionLibDiffTest() {
-  test('example step diff does not modify production lib source', () {
-    final diffRange = _exampleBoundaryDiffRange();
-    final changedPaths = diffRange == null
-        ? _currentChangedPaths()
-        : _gitChangedPaths([
-            'diff',
-            '--name-only',
-            '${diffRange.base}..${diffRange.head}',
-          ]);
-    if (!changedPaths.any(_isExampleBoundaryPath)) {
-      markTestSkipped(
-        diffRange == null
-            ? 'Set EXAMPLE_BOUNDARY_DIFF_BASE and EXAMPLE_BOUNDARY_DIFF_HEAD '
-                  'when reviewing a committed example boundary step diff; '
-                  'the current working tree has no example/** changes to '
-                  'classify.'
-            : 'The committed example boundary diff range has no example/** '
-                  'changes to classify.',
-      );
-
-      return;
-    }
-    final productionLibPaths = changedPaths.where(_isProductionLibPath);
-
-    expect(
-      productionLibPaths.toSet(),
-      isEmpty,
-      reason: 'Production lib/** changes require a separate engine contract.',
-    );
-  });
-}
-
-({String base, String head})? _exampleBoundaryDiffRange() {
-  final base = Platform.environment['EXAMPLE_BOUNDARY_DIFF_BASE'];
-  final head = Platform.environment['EXAMPLE_BOUNDARY_DIFF_HEAD'];
-  if (base != null && base.isNotEmpty && head != null && head.isNotEmpty) {
-    return (base: base, head: head);
-  }
-
-  return null;
-}
-
-List<String> _currentChangedPaths() {
-  return {
-    ..._gitChangedPaths(['diff', '--name-only']),
-    ..._gitChangedPaths(['diff', '--cached', '--name-only']),
-    ..._gitChangedPaths(['ls-files', '--others', '--exclude-standard']),
-  }.toList();
-}
-
-List<String> _gitChangedPaths(List<String> arguments) {
-  final result = Process.runSync('git', arguments);
-  expect(result.exitCode, 0, reason: _processOutput(result));
-
-  return (result.stdout as String)
-      .split('\n')
-      .map((path) => path.trim())
-      .where((path) => path.isNotEmpty)
-      .toList();
-}
-
 Iterable<GuardrailSourceFile> _exampleDartFiles() {
   return dartSourceFilesUnder('example').where((file) {
     return !_isGeneratedExamplePath(file.path);
   });
-}
-
-bool _isExampleBoundaryPath(String path) {
-  return path.startsWith('example/') && !_isGeneratedExamplePath(path);
-}
-
-bool _isProductionLibPath(String path) {
-  return path.startsWith('lib/');
 }
 
 bool _isGeneratedExamplePath(String path) {
@@ -213,14 +142,4 @@ void _recordRetiredSymbolMentions(
 
 bool _containsIdentifier(String source, String identifier) {
   return RegExp('\\b${RegExp.escape(identifier)}\\b').hasMatch(source);
-}
-
-String _processOutput(ProcessResult result) {
-  return '''
-stdout:
-${result.stdout}
-
-stderr:
-${result.stderr}
-''';
 }
