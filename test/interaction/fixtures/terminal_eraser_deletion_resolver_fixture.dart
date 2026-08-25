@@ -74,6 +74,7 @@ void main() {
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   CanvasDeletionCommitRequest? request;
+  final events = <String>[];
   final store = DocumentStoreKernel.withCommittedDocumentForTesting(
     CommittedDocument(_document()),
   );
@@ -82,6 +83,7 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
     config: CanvasRuntimeConfig(
       deletionCommitResolver: (candidate) {
         request = candidate;
+        events.add('resolver-return');
         return CanvasDeletionDecision.accept;
       },
     ),
@@ -92,7 +94,6 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
     root.detachSurface(surface);
     root.dispose();
   });
-  final events = <String>[];
   var terminalDelivery = false;
   root.state.addListener(() {
     if (!terminalDelivery) return;
@@ -105,15 +106,35 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   List<DeletionEntryFacts>? projected;
   final construction = <RuntimeDeletionRouteConstructionKind>[];
 
+  root.selection.setSelection([CanvasElementId('erasable')]);
   _startEraser(root);
   terminalDelivery = true;
   RuntimeRoot.observeDeletionRouteConstruction(
     construction.add,
-    () => DocumentStoreKernel.observeDeletionEntryProjection(
-      (entries) => projected = entries,
-      () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+    () => RuntimeRoot.observeRouteTemporalEvents(
+      (event) {
+        if (event.route == RuntimeNonTextRoute.eraser &&
+            event.kind == RuntimeRouteTemporalEventKind.routeCleanupCompleted) {
+          events.add('cleanup');
+        }
+      },
+      () => SelectionKernel.observePreparedInstall(
+        () => events.add('selection'),
+        () => DocumentStoreKernel.observeDeletionPreparedInstall(
+          (event) {
+            if (event == DeletionPreparedInstallEvent.installed) {
+              events.add('store');
+            }
+          },
+          () => DocumentStoreKernel.observeDeletionEntryProjection(
+            (entries) => projected = entries,
+            () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+          ),
+        ),
+      ),
     ),
   );
+  events.add('route-return');
   await Future<void>.delayed(Duration.zero);
 
   final received = request;
@@ -134,7 +155,15 @@ Future<void> _acceptsExactEntriesAndCleansBeforeDelivery() async {
   );
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
-  expect(events.take(2), ['state', 'action']);
+  expect(events, [
+    'resolver-return',
+    'store',
+    'selection',
+    'cleanup',
+    'state',
+    'action',
+    'route-return',
+  ]);
   expect(construction, [
     RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
     RuntimeDeletionRouteConstructionKind.request,
@@ -544,6 +573,9 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
         }, () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up))),
       ),
     );
+    // Record immediately after the public terminal returns. A deferred Store
+    // or Selection install would move this ahead of the owned commit boundary.
+    events.add('route-return');
     await Future<void>.delayed(Duration.zero);
 
     expect(resolverCalls, 1);
@@ -558,6 +590,7 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
       'cleanup',
       'state',
       'action',
+      'route-return',
     ]);
     await throwing.cancel();
   }

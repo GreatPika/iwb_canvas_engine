@@ -16,6 +16,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
@@ -132,12 +133,18 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
           installTrace.add('store');
         }
       },
-      () => DocumentStoreKernel.observeDeletionEntryProjection(
-        (entries) => projected = entries,
-        () => root.selection.deleteSelection(timestampMs: 41),
+      () => SelectionKernel.observePreparedInstall(
+        () => installTrace.add('selection'),
+        () => DocumentStoreKernel.observeDeletionEntryProjection(
+          (entries) => projected = entries,
+          () => root.selection.deleteSelection(timestampMs: 41),
+        ),
       ),
     ),
   );
+  // This marker is deliberately synchronous: a deferred install would put it
+  // before Store or Selection and fail the public route continuity witness.
+  installTrace.add('route-return');
   await Future<void>.delayed(Duration.zero);
 
   final received = request;
@@ -173,7 +180,14 @@ Future<void> _acceptExposesExactRequestAndExistingAction() async {
   expect(actions.single.timestampMs, 41);
   expect(stateEvents, isNotEmpty);
   expect(deliveryEvents.take(2), ['state', 'action']);
-  expect(installTrace, ['resolver-return', 'store', 'state', 'action']);
+  expect(installTrace, [
+    'resolver-return',
+    'store',
+    'selection',
+    'state',
+    'action',
+    'route-return',
+  ]);
   expect(construction, [
     RuntimeDeletionRouteConstructionKind.selectionPreparedCommit,
     RuntimeDeletionRouteConstructionKind.request,

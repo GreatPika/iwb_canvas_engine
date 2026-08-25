@@ -17,6 +17,7 @@ final class SelectionKernel implements SelectionFactsPort {
 
   final SelectionMembershipPort _membership;
   static final Object _preparedInstallZoneKey = Object();
+  static final Object _preparedInstallWorkZoneKey = Object();
   LinkedHashSet<CanvasElementId> _selectedIds = LinkedHashSet();
   int _selectionRevision = 0;
 
@@ -87,6 +88,13 @@ final class SelectionKernel implements SelectionFactsPort {
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_preparedInstallZoneKey: sink});
 
+  /// Observes the actual comparison loop and owned-backing assignment only.
+  @visibleForTesting
+  static T observePreparedInstallWork<T>(
+    void Function(PreparedSelectionInstallWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_preparedInstallWorkZoneKey: sink});
+
   /// Installs the backing transferred before a deletion resolver is invoked.
   ///
   /// The caller owns the one-time transfer.  This performs no normalization,
@@ -96,10 +104,27 @@ final class SelectionKernel implements SelectionFactsPort {
       _recordPreparedInstall(),
       'prepared Selection installation observation failed',
     );
-    if (_sameMembership(_selectedIds, next)) {
-      return false;
+    if (_selectedIds.length == next.length) {
+      final same = _selectedIds.every((id) {
+        assert(
+          _recordPreparedInstallWork(
+            PreparedSelectionInstallWorkEvent.membershipComparisonVisit,
+          ),
+          'prepared Selection comparison observation failed',
+        );
+        return next.contains(id);
+      });
+      if (same) {
+        return false;
+      }
     }
     _selectedIds = next;
+    assert(
+      _recordPreparedInstallWork(
+        PreparedSelectionInstallWorkEvent.ownershipAssigned,
+      ),
+      'prepared Selection assignment observation failed',
+    );
     _selectionRevision += 1;
     return true;
   }
@@ -108,6 +133,16 @@ final class SelectionKernel implements SelectionFactsPort {
     final sink = Zone.current[_preparedInstallZoneKey];
     if (sink is void Function()) {
       sink();
+    }
+    return true;
+  }
+
+  static bool _recordPreparedInstallWork(
+    PreparedSelectionInstallWorkEvent event,
+  ) {
+    final sink = Zone.current[_preparedInstallWorkZoneKey];
+    if (sink is void Function(PreparedSelectionInstallWorkEvent)) {
+      sink(event);
     }
     return true;
   }
@@ -124,6 +159,12 @@ final class SelectionKernel implements SelectionFactsPort {
 
     return true;
   }
+}
+
+@visibleForTesting
+enum PreparedSelectionInstallWorkEvent {
+  membershipComparisonVisit,
+  ownershipAssigned,
 }
 
 bool _sameMembership(Set<CanvasElementId> current, Set<CanvasElementId> next) {

@@ -30,11 +30,21 @@ import 'pointer_tool_cleanup_coordinator.dart';
 import 'select_machine.dart';
 import 'text_edit_guard_decision.dart';
 
+@visibleForTesting
+enum InteractionCleanupWorkEvent {
+  started,
+  previewCleared,
+  pendingLineCleared,
+  pendingContextTapCleared,
+  sessionReleased,
+}
+
 // Pointer sessions, tool settings, preview cleanup, and revisions stay together
 // so the active pointer lifecycle has one auditable owner.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class InteractionEngine {
   static final Object _cleanupZoneKey = Object();
+  static final Object _cleanupWorkZoneKey = Object();
 
   InteractionEngine({
     required CanvasInteractionMode initialMode,
@@ -283,6 +293,13 @@ final class InteractionEngine {
     void Function(PointerCleanupReason reason) sink,
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_cleanupZoneKey: sink});
+
+  /// Observes actual terminal cleanup field work without retaining telemetry.
+  @visibleForTesting
+  static T observeCleanupWork<T>(
+    void Function(InteractionCleanupWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_cleanupWorkZoneKey: sink});
 
   ContextActionRequestIntent? handleDoubleTap(
     Offset viewPosition,
@@ -1728,6 +1745,10 @@ final class InteractionEngine {
     bool preservePendingContextTap = false,
   }) {
     assert(_recordCleanup(reason), 'interaction cleanup observation failed');
+    assert(
+      _recordCleanupWork(InteractionCleanupWorkEvent.started),
+      'interaction cleanup work observation failed',
+    );
     return cleanupPointerTool(
       PointerCleanupRequest(
         reason: reason,
@@ -1746,6 +1767,14 @@ final class InteractionEngine {
     final sink = Zone.current[_cleanupZoneKey];
     if (sink is void Function(PointerCleanupReason)) {
       sink(reason);
+    }
+    return true;
+  }
+
+  static bool _recordCleanupWork(InteractionCleanupWorkEvent event) {
+    final sink = Zone.current[_cleanupWorkZoneKey];
+    if (sink is void Function(InteractionCleanupWorkEvent)) {
+      sink(event);
     }
     return true;
   }
@@ -1804,18 +1833,36 @@ final class InteractionEngine {
 
   void _applyCleanupOutcome(PointerCleanupOutcome outcome) {
     if (outcome.previewChanged) {
+      assert(
+        _recordCleanupWork(InteractionCleanupWorkEvent.previewCleared),
+        'interaction cleanup work observation failed',
+      );
       clearPreview();
     }
     if (outcome.pendingLineDisposition ==
         PointerPendingLineDisposition.cleared) {
+      assert(
+        _recordCleanupWork(InteractionCleanupWorkEvent.pendingLineCleared),
+        'interaction cleanup work observation failed',
+      );
       _pendingLine = null;
     }
     if (outcome.pendingContextTapDisposition ==
         PointerPendingContextTapDisposition.cleared) {
+      assert(
+        _recordCleanupWork(
+          InteractionCleanupWorkEvent.pendingContextTapCleared,
+        ),
+        'interaction cleanup work observation failed',
+      );
       _pendingContextTap = null;
     }
     if (outcome.sessionDisposition == PointerSessionDisposition.released &&
         _activeSession != null) {
+      assert(
+        _recordCleanupWork(InteractionCleanupWorkEvent.sessionReleased),
+        'interaction cleanup work observation failed',
+      );
       _activeSession = null;
     }
   }

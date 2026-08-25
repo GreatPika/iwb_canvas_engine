@@ -155,6 +155,13 @@ enum RuntimeDeletionRouteConstructionKind {
 @visibleForTesting
 enum RuntimeDeletionRequestWorkEvent { entryCopied }
 
+/// Per-effect visits made while appending terminal pointer cleanup delivery.
+@visibleForTesting
+enum RuntimePointerCleanupAugmentationWorkEvent {
+  baseEffectVisit,
+  cleanupEffectVisit,
+}
+
 /// The public request owner has two separate pre-callback preparation steps.
 @visibleForTesting
 enum RuntimeDeletionRequestPreparationPhase { requestConstruction, entryCopy }
@@ -282,6 +289,7 @@ final class RuntimeRoot
   static final Object _deletionEntryRouteWorkZoneKey = Object();
   static final Object _deletionRouteConstructionZoneKey = Object();
   static final Object _deletionRequestWorkZoneKey = Object();
+  static final Object _pointerCleanupAugmentationWorkZoneKey = Object();
   static final Object _deletionRequestPreparationFailureZoneKey = Object();
   static final Object _frameHandleEnumerationZoneKey = Object();
   static final Object _commonDeliveryEventZoneKey = Object();
@@ -1769,6 +1777,16 @@ final class RuntimeRoot
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_deletionRequestWorkZoneKey: sink});
 
+  /// Observes the two real effect collections merged after terminal cleanup.
+  @visibleForTesting
+  static T observePointerCleanupAugmentationWork<T>(
+    void Function(RuntimePointerCleanupAugmentationWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_pointerCleanupAugmentationWorkZoneKey: sink},
+  );
+
   /// Causes a request construction phase to fail only when assertions run.
   @visibleForTesting
   static T injectDeletionRequestPreparationFailure<T>(
@@ -1799,6 +1817,16 @@ final class RuntimeRoot
   ) {
     final sink = Zone.current[_deletionRequestWorkZoneKey];
     if (sink is void Function(RuntimeDeletionRequestWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
+  static bool _recordPointerCleanupAugmentationWork(
+    RuntimePointerCleanupAugmentationWorkEvent event,
+  ) {
+    final sink = Zone.current[_pointerCleanupAugmentationWorkZoneKey];
+    if (sink is void Function(RuntimePointerCleanupAugmentationWorkEvent)) {
       sink(event);
     }
     return true;
@@ -3197,10 +3225,10 @@ final class RuntimeRoot
       shouldPublishState:
           result.shouldPublishState || cleanup.publicStateNeeded,
       replacedDocument: result.replacedDocument,
-      effects: _mergeRepaintEffects([
-        ...result.effects,
-        ..._cleanupDeliveryEffects(cleanup),
-      ]),
+      effects: _mergeRepaintEffects(
+        result.effects,
+        _cleanupDeliveryEffects(cleanup),
+      ),
       actionIntents: result.actionIntents,
     );
     assert(
@@ -3240,13 +3268,40 @@ final class RuntimeRoot
     };
   }
 
+  // The two source loops keep direct per-effect observations at their real
+  // owners; extracting their shared switch would hide which collection ran.
+  // ignore: cyclomatic-complexity, source-lines-of-code
   List<CommitDeliveryEffect> _mergeRepaintEffects(
-    Iterable<CommitDeliveryEffect> effects,
+    Iterable<CommitDeliveryEffect> baseEffects,
+    Iterable<CommitDeliveryEffect> cleanupEffects,
   ) {
     final merged = <CommitDeliveryEffect>[];
     var repaintMain = false;
     var repaintOverlay = false;
-    for (final effect in effects) {
+    for (final effect in baseEffects) {
+      assert(
+        _recordPointerCleanupAugmentationWork(
+          RuntimePointerCleanupAugmentationWorkEvent.baseEffectVisit,
+        ),
+        'pointer cleanup augmentation observation failed',
+      );
+      if (effect case RepaintDeliveryEffect(
+        :final mainCanvas,
+        :final overlayCanvas,
+      )) {
+        repaintMain = repaintMain || mainCanvas;
+        repaintOverlay = repaintOverlay || overlayCanvas;
+      } else {
+        merged.add(effect);
+      }
+    }
+    for (final effect in cleanupEffects) {
+      assert(
+        _recordPointerCleanupAugmentationWork(
+          RuntimePointerCleanupAugmentationWorkEvent.cleanupEffectVisit,
+        ),
+        'pointer cleanup augmentation observation failed',
+      );
       if (effect case RepaintDeliveryEffect(
         :final mainCanvas,
         :final overlayCanvas,

@@ -153,6 +153,7 @@ enum PreparedDeletionApplyWorkEvent {
   prepared,
   consumed,
   selectionBackingTransferred,
+  ownershipReleased,
   discarded,
 }
 
@@ -397,6 +398,12 @@ final class PreparedDeletionApply {
       throw StateError('A prepared deletion has no owned install state.');
     }
     _owned = null;
+    assert(
+      CommitApplier._recordPreparedDeletionWork(
+        PreparedDeletionApplyWorkEvent.ownershipReleased,
+      ),
+      'prepared deletion ownership release observation failed',
+    );
     return owned;
   }
 }

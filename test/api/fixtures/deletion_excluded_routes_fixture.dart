@@ -12,7 +12,9 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // One named test per public family makes the absence of resolver interception
 // auditable; extracting them would duplicate the shared runtime setup only.
-// ignore: halstead-volume, source-lines-of-code
+// Keeping the route effects together is clearer than hiding them behind a
+// helper that could accidentally turn several public families into one proof.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void main() {
   test('direct command removal stays outside deletion resolver', () {
     final scenario = _scenario();
@@ -28,6 +30,21 @@ void main() {
       (edit) => edit.removeElement(CanvasElementId('a')),
     );
     expect(_ids(scenario.root), isNot(contains(CanvasElementId('a'))));
+    expect(scenario.calls, 0);
+  });
+  test('public element locking stays outside deletion resolver', () {
+    final scenario = _scenario();
+    addTearDown(scenario.root.dispose);
+    scenario.root.edits.edit(
+      (edit) => edit.updateElement(
+        CanvasRectElementUpdate(
+          id: CanvasElementId('a'),
+          isLocked: const CanvasFieldSet(true),
+        ),
+      ),
+    );
+    final element = scenario.root.readDocument().layers.single.elements.single;
+    expect(element.isLocked, isTrue);
     expect(scenario.calls, 0);
   });
   test('clear command stays outside deletion resolver', () {

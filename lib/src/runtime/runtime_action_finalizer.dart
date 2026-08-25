@@ -1,11 +1,36 @@
+import 'dart:async';
+
+import 'package:meta/meta.dart' show immutable, visibleForTesting;
+
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_tools.dart';
 
+@visibleForTesting
+enum DeletionActionElementReadPhase { committedAction, payload }
+
+@immutable
+@visibleForTesting
+final class DeletionActionElementReadEvent {
+  const DeletionActionElementReadEvent(this.phase);
+
+  final DeletionActionElementReadPhase phase;
+}
+
 final class RuntimeActionFinalizer {
+  static final Object _deletionElementReadZoneKey = Object();
   int _timestampCursor = -1;
   int _actionSequence = 0;
+
+  /// Observes only the real deletion-ID copies performed by action finalizing.
+  /// The lazy wrapper is created behind assertions, leaving release values and
+  /// their iteration unchanged.
+  @visibleForTesting
+  static T observeDeletionElementIdReads<T>(
+    void Function(DeletionActionElementReadEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_deletionElementReadZoneKey: sink});
 
   List<CanvasActionCommitted> finalize(Iterable<CommitActionIntent> intents) {
     return List.unmodifiable(intents.map(_finalizeIntent));
@@ -16,13 +41,37 @@ final class RuntimeActionFinalizer {
   }
 
   CanvasActionCommitted _finalizeIntent(CommitActionIntent intent) {
+    Iterable<CanvasElementId> observedElementIds = intent.elementIds;
+    assert(() {
+      if (intent is DeleteSelectionActionIntent ||
+          intent is EraseActionIntent) {
+        observedElementIds = _observeDeletionElementIds(
+          observedElementIds,
+          DeletionActionElementReadPhase.committedAction,
+        );
+      }
+      return true;
+    }(), 'deletion action element read observation failed');
     return CanvasActionCommitted(
       actionId: _nextActionId(),
       type: _actionType(intent),
-      elementIds: intent.elementIds,
+      elementIds: observedElementIds,
       timestampMs: _resolveTimestamp(intent.timestampHintMs),
       payload: _payload(intent),
     );
+  }
+
+  static Iterable<CanvasElementId> _observeDeletionElementIds(
+    Iterable<CanvasElementId> ids,
+    DeletionActionElementReadPhase phase,
+  ) {
+    final sink = Zone.current[_deletionElementReadZoneKey];
+    if (sink is! void Function(DeletionActionElementReadEvent)) {
+      return ids;
+    }
+    return _ObservedDeletionElementIds(ids, () {
+      sink(DeletionActionElementReadEvent(phase));
+    });
   }
 
   CanvasActionId _nextActionId() {
@@ -57,20 +106,44 @@ CanvasActionType _actionType(CommitActionIntent intent) {
 }
 
 CanvasActionPayload _payload(CommitActionIntent intent) {
-  return switch (intent) {
-    MoveSelectionActionIntent() => _movePayload(intent),
-    SelectMarqueeActionIntent() => _selectionPayload(intent),
-    TransformSelectionActionIntent() => _transformPayload(intent),
-    DeleteSelectionActionIntent(:final removedElementIds) ||
-    RemoveElementActionIntent(
-      :final removedElementIds,
-    ) => _deletePayload(removedElementIds),
-    ClearContentActionIntent() => _clearPayload(intent),
-    DrawStrokeActionIntent() => _drawStrokePayload(intent),
-    DrawLineActionIntent() => _drawLinePayload(intent),
-    EraseActionIntent() => _erasePayload(intent),
-    EditTextActionIntent() => _editTextPayload(intent),
-  };
+  switch (intent) {
+    case MoveSelectionActionIntent():
+      return _movePayload(intent);
+    case SelectMarqueeActionIntent():
+      return _selectionPayload(intent);
+    case TransformSelectionActionIntent():
+      return _transformPayload(intent);
+    case DeleteSelectionActionIntent(:final removedElementIds):
+      Iterable<CanvasElementId> observedElementIds = removedElementIds;
+      assert(() {
+        observedElementIds = RuntimeActionFinalizer._observeDeletionElementIds(
+          observedElementIds,
+          DeletionActionElementReadPhase.payload,
+        );
+        return true;
+      }(), 'deletion action element read observation failed');
+      return _deletePayload(observedElementIds);
+    case RemoveElementActionIntent(:final removedElementIds):
+      return _deletePayload(removedElementIds);
+    case ClearContentActionIntent():
+      return _clearPayload(intent);
+    case DrawStrokeActionIntent():
+      return _drawStrokePayload(intent);
+    case DrawLineActionIntent():
+      return _drawLinePayload(intent);
+    case EraseActionIntent(:final erasedElementIds):
+      Iterable<CanvasElementId> observedElementIds = erasedElementIds;
+      assert(() {
+        observedElementIds = RuntimeActionFinalizer._observeDeletionElementIds(
+          observedElementIds,
+          DeletionActionElementReadPhase.payload,
+        );
+        return true;
+      }(), 'deletion action element read observation failed');
+      return _erasePayload(intent, observedElementIds);
+    case EditTextActionIntent():
+      return _editTextPayload(intent);
+  }
 }
 
 CanvasTransformActionPayload _movePayload(MoveSelectionActionIntent intent) {
@@ -146,12 +219,46 @@ CanvasDrawLineActionPayload _drawLinePayload(DrawLineActionIntent intent) {
   );
 }
 
-CanvasEraseActionPayload _erasePayload(EraseActionIntent intent) {
+CanvasEraseActionPayload _erasePayload(
+  EraseActionIntent intent,
+  Iterable<CanvasElementId> erasedElementIds,
+) {
   return CanvasEraseActionPayload(
     eraserThickness: intent.eraserThickness,
-    erasedElementIds: intent.erasedElementIds,
+    erasedElementIds: erasedElementIds,
     corridorPointCount: intent.corridorPointCount,
   );
+}
+
+final class _ObservedDeletionElementIds extends Iterable<CanvasElementId> {
+  _ObservedDeletionElementIds(this._delegate, this._onRead);
+
+  final Iterable<CanvasElementId> _delegate;
+  final void Function() _onRead;
+
+  @override
+  Iterator<CanvasElementId> get iterator =>
+      _ObservedDeletionElementIterator(_delegate.iterator, _onRead);
+}
+
+final class _ObservedDeletionElementIterator
+    implements Iterator<CanvasElementId> {
+  _ObservedDeletionElementIterator(this._delegate, this._onRead);
+
+  final Iterator<CanvasElementId> _delegate;
+  final void Function() _onRead;
+
+  @override
+  CanvasElementId get current => _delegate.current;
+
+  @override
+  bool moveNext() {
+    final hasElement = _delegate.moveNext();
+    if (hasElement) {
+      _onRead();
+    }
+    return hasElement;
+  }
 }
 
 CanvasTextEditActionPayload _editTextPayload(EditTextActionIntent intent) {

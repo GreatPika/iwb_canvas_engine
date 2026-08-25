@@ -13,6 +13,7 @@ import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_action_finalizer.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
@@ -108,13 +109,23 @@ void main() {
         expect(large.sparseWork, small.sparseWork);
         expect(large.installWork, small.installWork);
         expect(large.sealedDeliveryWork, small.sealedDeliveryWork);
+        expect(large.ownerLoopWork, small.ownerLoopWork);
+        expect(
+          large.projectionEventsAtResolver,
+          small.projectionEventsAtResolver,
+        );
         expect(small.requestEntryCopies, 2);
         expect(large.requestEntryCopies, 2);
         expect(largerK.requestEntryCopies, 4);
         expect(largerK.preparedWork, small.preparedWork);
         expect(largerK.installWork, small.installWork);
+        expect(largerK.ownerLoopWork.actionCommittedReads, 4);
+        expect(largerK.ownerLoopWork.actionPayloadReads, 4);
+        expect(largerK.ownerLoopWork.idAdmissions, isEmpty);
         _expectTouchedSparseWork(small.sparseWork, targetCount: 2);
         _expectTouchedSparseWork(largerK.sparseWork, targetCount: 4);
+        _expectExactOwnerLoopWork(small, route, targetCount: 2);
+        _expectExactOwnerLoopWork(largerK, route, targetCount: 4);
       }
     },
   );
@@ -134,6 +145,7 @@ void main() {
 
         expect(small.preparedWork, [
           PreparedDeletionApplyWorkEvent.prepared,
+          PreparedDeletionApplyWorkEvent.ownershipReleased,
           PreparedDeletionApplyWorkEvent.discarded,
         ]);
         expect(small.installWork, [DeletionPreparedInstallEvent.bound]);
@@ -141,6 +153,27 @@ void main() {
         expect(small.sparseWork, large.sparseWork);
         expect(small.preparedWork, large.preparedWork);
         expect(small.installWork, large.installWork);
+        expect(small.ownerLoopWork, large.ownerLoopWork);
+        expect(
+          small.projectionEventsAtResolver,
+          large.projectionEventsAtResolver,
+        );
+        expect(small.ownerLoopWork.actionCommittedReads, 0);
+        expect(small.ownerLoopWork.actionPayloadReads, 0);
+        expect(small.ownerLoopWork.selectionInstallWork, isEmpty);
+        expect(small.projectionEventsAtResolver, greaterThan(0));
+        expect(small.projectionEventsAfterResolver, 0);
+        expect(small.entryRouteEventsAfterResolver, 0);
+        expect(
+          small.ownerLoopWork.cleanupWork,
+          route == _DeletionRoute.eraser
+              ? [
+                  InteractionCleanupWorkEvent.started,
+                  InteractionCleanupWorkEvent.previewCleared,
+                  InteractionCleanupWorkEvent.sessionReleased,
+                ]
+              : isEmpty,
+        );
         if (route == _DeletionRoute.eraser) {
           expect(small.cleanupReasons, hasLength(1));
           expect(large.cleanupReasons, hasLength(1));
@@ -160,6 +193,11 @@ void main() {
 
         expect(result.callbacks, 1);
         expect(result.cleanupReasons, [PointerCleanupReason.postSuccessCommit]);
+        expect(result.cleanupWork, [
+          InteractionCleanupWorkEvent.started,
+          InteractionCleanupWorkEvent.previewCleared,
+          InteractionCleanupWorkEvent.sessionReleased,
+        ]);
         expect(result.remainingIds, isEmpty);
         expect(result.selectionIds, isEmpty);
         expect(result.deliveryErrors, isNotEmpty);
@@ -176,6 +214,7 @@ Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
 ) async {
   var callbacks = 0;
   final cleanupReasons = <PointerCleanupReason>[];
+  final cleanupWork = <InteractionCleanupWorkEvent>[];
   final errors = <Object>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(targetCount: 2),
@@ -206,8 +245,11 @@ Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
   armed = true;
   InteractionEngine.observeCleanup(
     cleanupReasons.add,
-    () => root.handlePointer(
-      _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+    () => InteractionEngine.observeCleanupWork(
+      cleanupWork.add,
+      () => root.handlePointer(
+        _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+      ),
     ),
   );
   await Future<void>.delayed(Duration.zero);
@@ -218,6 +260,7 @@ Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
     root: root,
     callbacks: callbacks,
     cleanupReasons: cleanupReasons,
+    cleanupWork: cleanupWork,
     deliveryErrors: errors,
     remainingIds: [
       for (final layer in root.readDocument().layers)
@@ -229,7 +272,8 @@ Future<_AcceptedEraserDeliveryFailureResult> _runAcceptedEraserDeliveryFailure(
 
 // The route result keeps direct owner observations together. It deliberately
 // stores scalar work vectors, not timing or a copied document projection.
-// ignore: halstead-volume, source-lines-of-code
+// Nesting the real owner observers is safer than a test-only proxy seam.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 _DeletionWorkResult _runRoute({
   required _DeletionRoute route,
   required _ResolverOutcome outcome,
@@ -237,6 +281,10 @@ _DeletionWorkResult _runRoute({
   int unrelatedElementCount = 0,
 }) {
   var callbacks = 0;
+  final projectionWork = <DeletionProjectionWorkEvent>[];
+  final entryRouteWork = <RuntimeDeletionEntryRouteWorkEvent>[];
+  var projectionEventsAtResolver = -1;
+  var entryRouteEventsAtResolver = -1;
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(
       targetCount: targetCount,
@@ -245,6 +293,8 @@ _DeletionWorkResult _runRoute({
     config: CanvasRuntimeConfig(
       deletionCommitResolver: (_) {
         callbacks += 1;
+        projectionEventsAtResolver = projectionWork.length;
+        entryRouteEventsAtResolver = entryRouteWork.length;
         return outcome.resolve();
       },
     ),
@@ -255,6 +305,11 @@ _DeletionWorkResult _runRoute({
   final installWork = <DeletionPreparedInstallEvent>[];
   final sparseEvents = <SparseTransactionWorkEvent>[];
   final cleanupReasons = <PointerCleanupReason>[];
+  final idAdmissions = <IdAdmissionWorkEvent>[];
+  final actionElementReads = <DeletionActionElementReadEvent>[];
+  final cleanupWork = <InteractionCleanupWorkEvent>[];
+  final augmentationWork = <RuntimePointerCleanupAugmentationWorkEvent>[];
+  final selectionInstallWork = <PreparedSelectionInstallWorkEvent>[];
   var selectionInstallCount = 0;
   CommitSealedDeliveryWork? sealedDeliveryWork;
 
@@ -263,32 +318,53 @@ _DeletionWorkResult _runRoute({
     _beginEraser(root, const Offset(60, 0));
   }
 
-  CommitApplier.observePreparedDeletionWork(
-    preparedWork.add,
-    () => DocumentStoreKernel.observeSparseTransactionWork(
-      sparseEvents.add,
-      () => RuntimeRoot.observeDeletionRouteConstruction(
-        construction.add,
-        () => RuntimeRoot.observeDeletionRequestWork(
-          requestWork.add,
-          () => DocumentStoreKernel.observeDeletionPreparedInstall(
-            installWork.add,
-            () => SelectionKernel.observePreparedInstall(
-              () => selectionInstallCount += 1,
-              () => InteractionEngine.observeCleanup(
-                cleanupReasons.add,
-                () => CommitApplier.observeSealedDeliveryWork(
-                  (work) => sealedDeliveryWork = work,
-                  () => switch (route) {
-                    _DeletionRoute.selection =>
-                      root.selection.deleteSelection(),
-                    _DeletionRoute.eraser => root.handlePointer(
-                      _pointer(
-                        CanvasPointerLifecyclePhase.up,
-                        const Offset(60, 0),
+  DocumentStoreKernel.observeDeletionProjectionWork(
+    projectionWork.add,
+    () => RuntimeRoot.observeDeletionEntryRouteWork(
+      entryRouteWork.add,
+      () => CommitApplier.observePreparedDeletionWork(
+        preparedWork.add,
+        () => DocumentStoreKernel.observeIdAdmissionWork(
+          idAdmissions.add,
+          () => DocumentStoreKernel.observeSparseTransactionWork(
+            sparseEvents.add,
+            () => RuntimeActionFinalizer.observeDeletionElementIdReads(
+              actionElementReads.add,
+              () => RuntimeRoot.observePointerCleanupAugmentationWork(
+                augmentationWork.add,
+                () => RuntimeRoot.observeDeletionRouteConstruction(
+                  construction.add,
+                  () => RuntimeRoot.observeDeletionRequestWork(
+                    requestWork.add,
+                    () => DocumentStoreKernel.observeDeletionPreparedInstall(
+                      installWork.add,
+                      () => SelectionKernel.observePreparedInstall(
+                        () => selectionInstallCount += 1,
+                        () => SelectionKernel.observePreparedInstallWork(
+                          selectionInstallWork.add,
+                          () => InteractionEngine.observeCleanupWork(
+                            cleanupWork.add,
+                            () => InteractionEngine.observeCleanup(
+                              cleanupReasons.add,
+                              () => CommitApplier.observeSealedDeliveryWork(
+                                (work) => sealedDeliveryWork = work,
+                                () => switch (route) {
+                                  _DeletionRoute.selection =>
+                                    root.selection.deleteSelection(),
+                                  _DeletionRoute.eraser => root.handlePointer(
+                                    _pointer(
+                                      CanvasPointerLifecyclePhase.up,
+                                      const Offset(60, 0),
+                                    ),
+                                  ),
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  },
+                  ),
                 ),
               ),
             ),
@@ -309,11 +385,34 @@ _DeletionWorkResult _runRoute({
     sparseWork: _sparseWorkCounts(sparseEvents),
     sealedDeliveryWork: _sealedWorkVector(sealedDeliveryWork),
     cleanupReasons: cleanupReasons,
+    ownerLoopWork: _OwnerLoopWork(
+      idAdmissions: _idAdmissionCounts(idAdmissions),
+      actionCommittedReads: actionElementReads
+          .where(
+            (event) =>
+                event.phase == DeletionActionElementReadPhase.committedAction,
+          )
+          .length,
+      actionPayloadReads: actionElementReads
+          .where(
+            (event) => event.phase == DeletionActionElementReadPhase.payload,
+          )
+          .length,
+      cleanupAugmentation: augmentationWork,
+      cleanupWork: cleanupWork,
+      selectionInstallWork: selectionInstallWork,
+    ),
+    projectionEventsAtResolver: projectionEventsAtResolver,
+    projectionEventsAfterResolver:
+        projectionWork.length - projectionEventsAtResolver,
+    entryRouteEventsAfterResolver:
+        entryRouteWork.length - entryRouteEventsAtResolver,
   );
 }
 
 // Keeping this branch matrix together makes the counter contrast readable.
-// ignore: halstead-volume
+// It is one accepted-outcome oracle, not independent test behavior.
+// ignore: halstead-volume, source-lines-of-code
 void _expectNonemptyConstruction(
   _DeletionWorkResult result,
   _DeletionRoute route,
@@ -340,6 +439,7 @@ void _expectNonemptyConstruction(
     ));
     expect(result.preparedWork, [
       PreparedDeletionApplyWorkEvent.prepared,
+      PreparedDeletionApplyWorkEvent.ownershipReleased,
       PreparedDeletionApplyWorkEvent.consumed,
       PreparedDeletionApplyWorkEvent.selectionBackingTransferred,
     ]);
@@ -348,6 +448,7 @@ void _expectNonemptyConstruction(
       DeletionPreparedInstallEvent.installed,
     ]);
     expect(result.selectionInstallCount, 1);
+    _expectExactOwnerLoopWork(result, route, targetCount: targetCount);
     final deliveryWork = result.sealedDeliveryWork;
     expect(deliveryWork, isNotNull);
     expect(deliveryWork?.preparations, 1);
@@ -355,12 +456,57 @@ void _expectNonemptyConstruction(
   } else {
     expect(result.preparedWork, [
       PreparedDeletionApplyWorkEvent.prepared,
+      PreparedDeletionApplyWorkEvent.ownershipReleased,
       PreparedDeletionApplyWorkEvent.discarded,
     ]);
     expect(result.installWork, [DeletionPreparedInstallEvent.bound]);
     expect(result.selectionInstallCount, 0);
   }
 }
+
+void _expectExactOwnerLoopWork(
+  _DeletionWorkResult result,
+  _DeletionRoute route, {
+  required int targetCount,
+}) {
+  expect(result.ownerLoopWork.idAdmissions, isEmpty);
+  expect(result.ownerLoopWork.actionCommittedReads, targetCount);
+  expect(result.ownerLoopWork.actionPayloadReads, targetCount);
+  expect(result.ownerLoopWork.selectionInstallWork, [
+    PreparedSelectionInstallWorkEvent.ownershipAssigned,
+  ]);
+  expect(
+    result.ownerLoopWork.cleanupAugmentation,
+    route == _DeletionRoute.eraser
+        ? [
+            for (var index = 0; index < 5; index += 1)
+              RuntimePointerCleanupAugmentationWorkEvent.baseEffectVisit,
+            RuntimePointerCleanupAugmentationWorkEvent.cleanupEffectVisit,
+          ]
+        : isEmpty,
+  );
+  expect(
+    result.ownerLoopWork.cleanupWork,
+    route == _DeletionRoute.eraser
+        ? [
+            InteractionCleanupWorkEvent.started,
+            InteractionCleanupWorkEvent.previewCleared,
+            InteractionCleanupWorkEvent.sessionReleased,
+          ]
+        : isEmpty,
+  );
+}
+
+Map<String, int> _idAdmissionCounts(List<IdAdmissionWorkEvent> events) => {
+  for (final prefix in ['e', 'l', 'r'])
+    prefix: events
+        .where(
+          (event) =>
+              event.prefix == prefix &&
+              event.kind == IdAdmissionWorkKind.sparseLedgerVisit,
+        )
+        .length,
+}..removeWhere((_, count) => count == 0);
 
 void _expectSelectionWithoutDeletion({
   required CanvasDocument document,
@@ -595,6 +741,10 @@ final class _DeletionWorkResult {
     required this.sparseWork,
     required this.sealedDeliveryWork,
     required this.cleanupReasons,
+    required this.ownerLoopWork,
+    required this.projectionEventsAtResolver,
+    required this.projectionEventsAfterResolver,
+    required this.entryRouteEventsAfterResolver,
   });
 
   final RuntimeRoot root;
@@ -607,15 +757,63 @@ final class _DeletionWorkResult {
   final Map<String, int> sparseWork;
   final _SealedWorkVector? sealedDeliveryWork;
   final List<PointerCleanupReason> cleanupReasons;
+  final _OwnerLoopWork ownerLoopWork;
+  final int projectionEventsAtResolver;
+  final int projectionEventsAfterResolver;
+  final int entryRouteEventsAfterResolver;
 
   void dispose() => root.dispose();
 }
+
+@immutable
+final class _OwnerLoopWork {
+  const _OwnerLoopWork({
+    required this.idAdmissions,
+    required this.actionCommittedReads,
+    required this.actionPayloadReads,
+    required this.cleanupAugmentation,
+    required this.cleanupWork,
+    required this.selectionInstallWork,
+  });
+
+  final Map<String, int> idAdmissions;
+  final int actionCommittedReads;
+  final int actionPayloadReads;
+  final List<RuntimePointerCleanupAugmentationWorkEvent> cleanupAugmentation;
+  final List<InteractionCleanupWorkEvent> cleanupWork;
+  final List<PreparedSelectionInstallWorkEvent> selectionInstallWork;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _OwnerLoopWork &&
+      _sameMap(idAdmissions, other.idAdmissions) &&
+      actionCommittedReads == other.actionCommittedReads &&
+      actionPayloadReads == other.actionPayloadReads &&
+      listEquals(cleanupAugmentation, other.cleanupAugmentation) &&
+      listEquals(cleanupWork, other.cleanupWork) &&
+      listEquals(selectionInstallWork, other.selectionInstallWork);
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAll(idAdmissions.entries),
+    actionCommittedReads,
+    actionPayloadReads,
+    Object.hashAll(cleanupAugmentation),
+    Object.hashAll(cleanupWork),
+    Object.hashAll(selectionInstallWork),
+  );
+}
+
+bool _sameMap(Map<String, int> left, Map<String, int> right) =>
+    left.length == right.length &&
+    left.entries.every((entry) => right[entry.key] == entry.value);
 
 final class _AcceptedEraserDeliveryFailureResult {
   const _AcceptedEraserDeliveryFailureResult({
     required this.root,
     required this.callbacks,
     required this.cleanupReasons,
+    required this.cleanupWork,
     required this.deliveryErrors,
     required this.remainingIds,
     required this.selectionIds,
@@ -624,6 +822,7 @@ final class _AcceptedEraserDeliveryFailureResult {
   final RuntimeRoot root;
   final int callbacks;
   final List<PointerCleanupReason> cleanupReasons;
+  final List<InteractionCleanupWorkEvent> cleanupWork;
   final List<Object> deliveryErrors;
   final List<CanvasElementId> remainingIds;
   final Set<CanvasElementId> selectionIds;
