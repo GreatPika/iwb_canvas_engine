@@ -3178,15 +3178,16 @@ final class RuntimeRoot
     required EraserCommitIntent intent,
     required int? timestampHintMs,
   }) {
+    final erasedElementIds = intent.erasedElementIds;
     final prepared = _editKernel.prepareDeletionInteractionCommit(
       (edit) {
-        for (final id in intent.erasedElementIds) {
+        for (final id in erasedElementIds) {
           edit.removeElement(id);
         }
       },
       augmentPlan: (plan) => plan.withActionIntents([
         EraseActionIntent(
-          erasedElementIds: intent.erasedElementIds,
+          erasedElementIds: erasedElementIds,
           eraserThickness: intent.eraserThickness,
           corridorPointCount: intent.corridorPointCount,
           timestampHintMs: timestampHintMs,

@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
+
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
@@ -129,6 +132,10 @@ final class DrawLineCommitIntent {
   final double opacity;
 }
 
+/// Per-entry work while materializing eraser deletion IDs from Store facts.
+@visibleForTesting
+enum EraserDeletionIdMaterializationWorkEvent { entryVisited }
+
 final class EraserCommitIntent {
   EraserCommitIntent({
     required this.sessionId,
@@ -145,8 +152,36 @@ final class EraserCommitIntent {
   // This is the same immutable Store projection accepted by the terminal
   // decision. IDs remain a compatibility view, never an independent payload.
   final List<DeletionEntryFacts> erasedEntries;
-  List<CanvasElementId> get erasedElementIds =>
-      List.unmodifiable(erasedEntries.map((entry) => entry.id));
+
+  static final Object _erasedElementIdMaterializationWorkZoneKey = Object();
+
+  /// Observes assertion-gated entry visits while materializing eraser IDs.
+  @visibleForTesting
+  static T observeErasedElementIdMaterializationWork<T>(
+    void Function(EraserDeletionIdMaterializationWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_erasedElementIdMaterializationWorkZoneKey: sink},
+  );
+
+  List<CanvasElementId> get erasedElementIds => List.unmodifiable(
+    erasedEntries.map((entry) {
+      assert(
+        _recordErasedElementIdMaterializationWork(),
+        'eraser deletion ID materialization observation failed',
+      );
+      return entry.id;
+    }),
+  );
+
+  static bool _recordErasedElementIdMaterializationWork() {
+    final sink = Zone.current[_erasedElementIdMaterializationWorkZoneKey];
+    if (sink is void Function(EraserDeletionIdMaterializationWorkEvent)) {
+      sink(EraserDeletionIdMaterializationWorkEvent.entryVisited);
+    }
+    return true;
+  }
 }
 
 final class InteractionSelectionReplacement {

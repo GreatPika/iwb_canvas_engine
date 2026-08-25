@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_action_finalizer.dart';
@@ -307,6 +308,8 @@ _DeletionWorkResult _runRoute({
   final cleanupReasons = <PointerCleanupReason>[];
   final idAdmissions = <IdAdmissionWorkEvent>[];
   final actionElementReads = <DeletionActionElementReadEvent>[];
+  final eraserIdMaterializationWork =
+      <EraserDeletionIdMaterializationWorkEvent>[];
   final cleanupWork = <InteractionCleanupWorkEvent>[];
   final augmentationWork = <RuntimePointerCleanupAugmentationWorkEvent>[];
   final selectionInstallWork = <PreparedSelectionInstallWorkEvent>[];
@@ -330,34 +333,37 @@ _DeletionWorkResult _runRoute({
             sparseEvents.add,
             () => RuntimeActionFinalizer.observeDeletionElementIdReads(
               actionElementReads.add,
-              () => RuntimeRoot.observePointerCleanupAugmentationWork(
-                augmentationWork.add,
-                () => RuntimeRoot.observeDeletionRouteConstruction(
-                  construction.add,
-                  () => RuntimeRoot.observeDeletionRequestWork(
-                    requestWork.add,
-                    () => DocumentStoreKernel.observeDeletionPreparedInstall(
-                      installWork.add,
-                      () => SelectionKernel.observePreparedInstall(
-                        () => selectionInstallCount += 1,
-                        () => SelectionKernel.observePreparedInstallWork(
-                          selectionInstallWork.add,
-                          () => InteractionEngine.observeCleanupWork(
-                            cleanupWork.add,
-                            () => InteractionEngine.observeCleanup(
-                              cleanupReasons.add,
-                              () => CommitApplier.observeSealedDeliveryWork(
-                                (work) => sealedDeliveryWork = work,
-                                () => switch (route) {
-                                  _DeletionRoute.selection =>
-                                    root.selection.deleteSelection(),
-                                  _DeletionRoute.eraser => root.handlePointer(
-                                    _pointer(
-                                      CanvasPointerLifecyclePhase.up,
-                                      const Offset(60, 0),
+              () => EraserCommitIntent.observeErasedElementIdMaterializationWork(
+                eraserIdMaterializationWork.add,
+                () => RuntimeRoot.observePointerCleanupAugmentationWork(
+                  augmentationWork.add,
+                  () => RuntimeRoot.observeDeletionRouteConstruction(
+                    construction.add,
+                    () => RuntimeRoot.observeDeletionRequestWork(
+                      requestWork.add,
+                      () => DocumentStoreKernel.observeDeletionPreparedInstall(
+                        installWork.add,
+                        () => SelectionKernel.observePreparedInstall(
+                          () => selectionInstallCount += 1,
+                          () => SelectionKernel.observePreparedInstallWork(
+                            selectionInstallWork.add,
+                            () => InteractionEngine.observeCleanupWork(
+                              cleanupWork.add,
+                              () => InteractionEngine.observeCleanup(
+                                cleanupReasons.add,
+                                () => CommitApplier.observeSealedDeliveryWork(
+                                  (work) => sealedDeliveryWork = work,
+                                  () => switch (route) {
+                                    _DeletionRoute.selection =>
+                                      root.selection.deleteSelection(),
+                                    _DeletionRoute.eraser => root.handlePointer(
+                                      _pointer(
+                                        CanvasPointerLifecyclePhase.up,
+                                        const Offset(60, 0),
+                                      ),
                                     ),
-                                  ),
-                                },
+                                  },
+                                ),
                               ),
                             ),
                           ),
@@ -398,6 +404,7 @@ _DeletionWorkResult _runRoute({
             (event) => event.phase == DeletionActionElementReadPhase.payload,
           )
           .length,
+      eraserEntryIdVisits: eraserIdMaterializationWork.length,
       cleanupAugmentation: augmentationWork,
       cleanupWork: cleanupWork,
       selectionInstallWork: selectionInstallWork,
@@ -472,6 +479,10 @@ void _expectExactOwnerLoopWork(
   expect(result.ownerLoopWork.idAdmissions, isEmpty);
   expect(result.ownerLoopWork.actionCommittedReads, targetCount);
   expect(result.ownerLoopWork.actionPayloadReads, targetCount);
+  expect(
+    result.ownerLoopWork.eraserEntryIdVisits,
+    route == _DeletionRoute.eraser ? targetCount : 0,
+  );
   expect(result.ownerLoopWork.selectionInstallWork, [
     PreparedSelectionInstallWorkEvent.ownershipAssigned,
   ]);
@@ -771,6 +782,7 @@ final class _OwnerLoopWork {
     required this.idAdmissions,
     required this.actionCommittedReads,
     required this.actionPayloadReads,
+    required this.eraserEntryIdVisits,
     required this.cleanupAugmentation,
     required this.cleanupWork,
     required this.selectionInstallWork,
@@ -779,6 +791,7 @@ final class _OwnerLoopWork {
   final Map<String, int> idAdmissions;
   final int actionCommittedReads;
   final int actionPayloadReads;
+  final int eraserEntryIdVisits;
   final List<RuntimePointerCleanupAugmentationWorkEvent> cleanupAugmentation;
   final List<InteractionCleanupWorkEvent> cleanupWork;
   final List<PreparedSelectionInstallWorkEvent> selectionInstallWork;
@@ -789,6 +802,7 @@ final class _OwnerLoopWork {
       _sameMap(idAdmissions, other.idAdmissions) &&
       actionCommittedReads == other.actionCommittedReads &&
       actionPayloadReads == other.actionPayloadReads &&
+      eraserEntryIdVisits == other.eraserEntryIdVisits &&
       listEquals(cleanupAugmentation, other.cleanupAugmentation) &&
       listEquals(cleanupWork, other.cleanupWork) &&
       listEquals(selectionInstallWork, other.selectionInstallWork);
@@ -798,6 +812,7 @@ final class _OwnerLoopWork {
     Object.hashAll(idAdmissions.entries),
     actionCommittedReads,
     actionPayloadReads,
+    eraserEntryIdVisits,
     Object.hashAll(cleanupAugmentation),
     Object.hashAll(cleanupWork),
     Object.hashAll(selectionInstallWork),
