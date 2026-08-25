@@ -720,10 +720,7 @@ CanvasDocument _singleLayerDocument({
   return CanvasDocument(
     resources: [resource],
     layers: [
-      CanvasLayer(
-        id: CanvasLayerId('layer-1'),
-        elements: [element],
-      ),
+      CanvasLayer(id: CanvasLayerId('layer-1'), elements: [element]),
     ],
   );
 }
