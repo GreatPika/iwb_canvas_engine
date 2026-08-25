@@ -330,9 +330,15 @@ void _exerciseP2ContractSurface() {
     hasSelection: true,
     allSelectedElementsDeletable: true,
   );
+  const explicitDeleteAvailability = CanvasSelectionDeleteAvailability(
+    hasSelection: true,
+    allSelectedElementsDeletable: false,
+    hasAnySelectedElementDeletable: true,
+  );
   _use(defaultSelectionDeleteConfig.selectionDeletePolicy);
   _use(explicitSelectionDeleteConfig.selectionDeletePolicy);
   _use(deleteAvailability);
+  _use(explicitDeleteAvailability.hasAnySelectedElementDeletable);
   runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
 
   final ValueListenable<CanvasRuntimeState> state = runtime.state;

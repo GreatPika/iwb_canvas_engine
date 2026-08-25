@@ -44,6 +44,7 @@ final class SelectionDeleteFacts {
     return CanvasSelectionDeleteAvailability(
       hasSelection: hasSelection,
       allSelectedElementsDeletable: allSelectedElementsDeletable,
+      hasAnySelectedElementDeletable: deletableEntries.isNotEmpty,
     );
   }
 

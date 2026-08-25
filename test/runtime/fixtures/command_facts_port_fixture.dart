@@ -88,11 +88,13 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
   ]);
   expect(delete.hasSelection, isTrue);
   expect(delete.allSelectedElementsDeletable, isFalse);
+  expect(delete.availability.hasAnySelectedElementDeletable, isTrue);
   expect(
     delete.availability,
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: false,
+      hasAnySelectedElementDeletable: true,
     ),
   );
   expect(

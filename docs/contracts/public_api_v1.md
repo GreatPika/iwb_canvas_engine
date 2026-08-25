@@ -529,10 +529,13 @@ final class CanvasSelectionDeleteAvailability {
   const CanvasSelectionDeleteAvailability({
     required this.hasSelection,
     required this.allSelectedElementsDeletable,
-  });
+    bool? hasAnySelectedElementDeletable,
+  }) : hasAnySelectedElementDeletable =
+           hasAnySelectedElementDeletable ?? allSelectedElementsDeletable;
 
   final bool hasSelection;
   final bool allSelectedElementsDeletable;
+  final bool hasAnySelectedElementDeletable;
 }
 
 final class CanvasRuntimeConfig {
@@ -1744,7 +1747,14 @@ Selection rules:
 - selection-only changes do not evict the public document projection;
 - move/rotate/flip operate only on selected elements with isTransformable=true && isLocked=false;
 - deleteAvailability is derived from current committed selection and document
-  facts; an empty selection reports both fields false;
+  facts. `hasAnySelectedElementDeletable` is optional when constructing
+  CanvasSelectionDeleteAvailability and falls back to
+  `allSelectedElementsDeletable` when omitted; it is stored and participates
+  in value equality and hashCode together with the other two fields. The exact
+  `(hasSelection, hasAnySelectedElementDeletable,
+  allSelectedElementsDeletable)` states are empty `(false, false, false)`,
+  deletable-only `(true, true, true)`, mixed `(true, true, false)`, and
+  protected-only `(true, false, false)`;
 - deleteSelection uses CanvasSelectionDeletePolicy.partial by default and
   deletes only selected content elements with isDeletable=true; allOrNone
   deletes nothing unless every selected element is deletable;

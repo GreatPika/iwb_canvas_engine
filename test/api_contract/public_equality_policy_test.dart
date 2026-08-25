@@ -50,21 +50,25 @@ void main() {
       CanvasSelectionDeleteAvailability(
         hasSelection: true,
         allSelectedElementsDeletable: true,
+        hasAnySelectedElementDeletable: true,
       ),
       CanvasSelectionDeleteAvailability(
         hasSelection: true,
         allSelectedElementsDeletable: true,
+        hasAnySelectedElementDeletable: true,
       ),
     );
     expect(
       const CanvasSelectionDeleteAvailability(
         hasSelection: true,
-        allSelectedElementsDeletable: true,
+        allSelectedElementsDeletable: false,
+        hasAnySelectedElementDeletable: true,
       ),
       isNot(
         const CanvasSelectionDeleteAvailability(
           hasSelection: true,
           allSelectedElementsDeletable: false,
+          hasAnySelectedElementDeletable: false,
         ),
       ),
     );
@@ -72,6 +76,7 @@ void main() {
       CanvasSelectionDeleteAvailability(
         hasSelection: true,
         allSelectedElementsDeletable: true,
+        hasAnySelectedElementDeletable: true,
       ),
     };
     expect(
@@ -80,6 +85,7 @@ void main() {
         CanvasSelectionDeleteAvailability(
           hasSelection: true,
           allSelectedElementsDeletable: true,
+          hasAnySelectedElementDeletable: true,
         ),
       ),
     );

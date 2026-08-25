@@ -46,6 +46,7 @@ void _expectEmptyDeleteAvailability(
     const CanvasSelectionDeleteAvailability(
       hasSelection: false,
       allSelectedElementsDeletable: false,
+      hasAnySelectedElementDeletable: false,
     ),
   );
   expect(notifications, isEmpty);
@@ -62,6 +63,7 @@ void _selectDeletableContent(
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: true,
+      hasAnySelectedElementDeletable: true,
     ),
   );
   expect(notifications.last.revisions.selection, beforeSelectionRevision + 1);
@@ -87,6 +89,7 @@ void _makeSelectedContentNonDeletable(
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: false,
+      hasAnySelectedElementDeletable: false,
     ),
   );
   expect(notifications.last.revisions.document, beforeDocumentRevision + 1);

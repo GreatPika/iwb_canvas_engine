@@ -240,6 +240,7 @@ Future<void> _allOrNoneSelectionDeletionRejectsMixedSelection() async {
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: false,
+      hasAnySelectedElementDeletable: true,
     ),
   );
   allOrNoneRuntime.selection.deleteSelection();
@@ -271,6 +272,7 @@ Future<void> _lockedContentRemainsDeletableUnderAllOrNone() async {
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: true,
+      hasAnySelectedElementDeletable: true,
     ),
   );
   lockedRuntime.selection.deleteSelection();
@@ -300,6 +302,7 @@ Future<void> _selectionDeletionRereadsCurrentFacts() async {
     const CanvasSelectionDeleteAvailability(
       hasSelection: true,
       allSelectedElementsDeletable: true,
+      hasAnySelectedElementDeletable: true,
     ),
   );
   freshFactsRuntime.edits.edit((edit) {
