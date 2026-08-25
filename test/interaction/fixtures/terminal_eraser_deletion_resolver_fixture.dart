@@ -22,6 +22,9 @@ import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
+// Route registrations stay visible together so every terminal callback family
+// remains auditable without a second fixture registry that can drift.
+// ignore: source-lines-of-code
 void main() {
   test(
     'terminal eraser sends the exact Store entries before accepting',
@@ -48,6 +51,9 @@ void main() {
   }
   test('terminal eraser resolver permits reads and client-owned undo work', () {
     _terminalResolverAllowsReadsAndClientUndoWork();
+  });
+  test('unhandled eraser guard rejection keeps only its guard diagnostic', () {
+    _unhandledEraserGuardRejectionIsNotDeletionFailure();
   });
   test(
     'terminal eraser remains accepted after state or action delivery failure',
@@ -423,6 +429,50 @@ void _terminalResolverAllowsReadsAndClientUndoWork() {
   expect(root.readDocument(), before);
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
+}
+
+// This keeps the real pointer route, cleanup, no-effect outcome, and bounded
+// diagnostic oracle adjacent; splitting it would introduce a fake lifecycle.
+// ignore: halstead-volume
+void _unhandledEraserGuardRejectionIsNotDeletionFailure() {
+  late RuntimeRoot root;
+  root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(_document()),
+    ),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        root.setCameraOffset(const Offset(1, 1));
+        return CanvasDeletionDecision.cancel;
+      },
+      diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
+    ),
+  );
+  addTearDown(root.dispose);
+  final before = root.readDocument();
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(subscription.cancel);
+  _startEraser(root);
+
+  expect(
+    () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+    returnsNormally,
+  );
+
+  expect(root.readDocument(), before);
+  expect(actions, isEmpty);
+  expect(root.preview, isA<CanvasNoPreview>());
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(root.diagnosticRecords, hasLength(1));
+  final record = root.diagnosticRecords.single;
+  expect(
+    record.code,
+    const DiagnosticCode.interaction(
+      InteractionDiagnosticCode.resolverReentrantMutationRejected,
+    ),
+  );
+  expect(record.details, {'operation': 'runtimeMutation'});
 }
 
 // The two real public listener owners share the terminal acceptance oracle:

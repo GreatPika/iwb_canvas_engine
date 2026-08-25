@@ -57,6 +57,12 @@ void main() {
       _selectionResolverAllowsReadsAndClientUndoWork();
     },
   );
+  test(
+    'unhandled selection guard rejection keeps only its guard diagnostic',
+    () {
+      _unhandledSelectionGuardRejectionIsNotDeletionFailure();
+    },
+  );
   test('selection preparation failures remain diagnostic-silent', () {
     _selectionPreparationFailuresStayDiagnosticSilent();
   });
@@ -336,6 +342,34 @@ void _selectionResolverAllowsReadsAndClientUndoWork() {
 
   expect(clientUndo, isEmpty);
   before.expectUnchanged(root);
+}
+
+void _unhandledSelectionGuardRejectionIsNotDeletionFailure() {
+  late RuntimeRoot root;
+  root = _root((_) {
+    root.setCameraOffset(const Offset(1, 1));
+    return CanvasDeletionDecision.cancel;
+  }, diagnosticPolicy: const CanvasDiagnosticPolicy.summary());
+  addTearDown(root.dispose);
+  root.selection.setSelection([CanvasElementId('a')]);
+  final before = _SelectionDeleteSnapshot.capture(root);
+  final actions = <CanvasActionCommitted>[];
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(subscription.cancel);
+
+  expect(root.selection.deleteSelection, returnsNormally);
+
+  before.expectUnchanged(root);
+  expect(actions, isEmpty);
+  expect(root.diagnosticRecords, hasLength(1));
+  final record = root.diagnosticRecords.single;
+  expect(
+    record.code,
+    const DiagnosticCode.interaction(
+      InteractionDiagnosticCode.resolverReentrantMutationRejected,
+    ),
+  );
+  expect(record.details, {'operation': 'runtimeMutation'});
 }
 
 void _selectionPreparationFailuresStayDiagnosticSilent() {

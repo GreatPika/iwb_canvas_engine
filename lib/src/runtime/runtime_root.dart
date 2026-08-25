@@ -1093,6 +1093,14 @@ final class RuntimeRoot
       return _DeletionResolution(
         runResolverCallback(() => config.deletionCommitResolver(request)),
       );
+      // ResolverCallbackRejection is the guard's explicit, contained callback
+      // outcome; treating it as an ordinary Error would duplicate diagnostics.
+      // ignore: avoid_catching_errors
+    } on ResolverCallbackRejection {
+      return const _DeletionResolution(
+        CanvasDeletionDecision.cancel,
+        didThrow: true,
+      );
     } on Object catch (error) {
       RuntimeInteractionDiagnosticsAdapter(
         _diagnostics,
