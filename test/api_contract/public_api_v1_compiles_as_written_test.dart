@@ -36,6 +36,17 @@ void rejectsNullDeletionResolver() {
     expect(analyze.exitCode, isNot(0));
   });
 
+  test('deletion resolver is required to compile', () async {
+    final analyze = await _analyzeConsumerSource('''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void rejectsOmittedDeletionResolver() {
+  CanvasRuntimeConfig();
+}
+''');
+    expect(analyze.exitCode, isNot(0));
+  });
+
   test(
     'internal deletion diagnostics are unavailable from the public barrel',
     () async {
