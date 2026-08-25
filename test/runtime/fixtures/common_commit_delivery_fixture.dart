@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -17,6 +16,7 @@ import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test(
@@ -251,9 +251,6 @@ final class _CommonDeliveryScenario {
   _CommonDeliveryScenario(CanvasDocument document) {
     root = runtimeRootWithCommittedDocumentSeed(
       document,
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: (effects) {
         if (effects.isNotEmpty && _isDelivering) {
           _recordCallback('observer');
@@ -454,9 +451,6 @@ void _expectActionListenerFailureIsContained() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (_) => events.add('observer'),
   );
   root.state.addListener(() => events.add('state'));
@@ -508,9 +502,6 @@ final class _ObserverDeliveryScenario {
   _ObserverDeliveryScenario() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: _observeEffects,
     );
     baselineViewCameraRevision = root.state.value.revisions.viewCamera;
@@ -642,9 +633,6 @@ final class _ObserverFailureScenario {
   _ObserverFailureScenario() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: _throwFromObserver,
     );
     root.state.addListener(() {
@@ -780,6 +768,3 @@ String _textValue(RuntimeRoot root) {
       .single
       .text;
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

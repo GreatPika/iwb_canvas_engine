@@ -3,7 +3,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 import '../../support/id_admission_work_recorder.dart';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +19,7 @@ import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('pencil marker and line commits add elements and emit draw actions', () {
@@ -86,9 +86,6 @@ Future<void> _verifyDrawRouteDeliveryCleanup() async {
     late RuntimeRoot root;
     root = runtimeRootWithCommittedDocumentSeed(
       CanvasDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: (effects) {
         if (!terminalDelivery) return;
         _expectCleanDrawDelivery(root);
@@ -962,9 +959,6 @@ _DrawScenario _scenario({CanvasDocument? initialDocument}) {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     initialDocument ?? CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
   final actions = <CanvasActionCommitted>[];
@@ -1054,6 +1048,3 @@ CanvasPointerSample _pointer(
     timestampMs: timestampMs,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

@@ -2,16 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-import "../../support/runtime_root_with_committed_document_seed.dart";
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('catalog reads return copied committed resources', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(_document());
 
     expect(() {
       final catalog = root.resourceCatalogPort;
@@ -81,6 +76,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

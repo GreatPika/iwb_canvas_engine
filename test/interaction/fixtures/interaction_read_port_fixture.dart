@@ -9,7 +9,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import 'interaction_read_port_bounded_read_fixture.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   _testRuntimeInjectsReadPortIntoInteractionEngine();
@@ -19,7 +19,6 @@ void main() {
   _testSelectedMoveStartOccludedGroupUnionFacts();
   _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts();
   _testSingleLineMoveStartDoesNotExposeGroupUnionFacts();
-  testSelectedMoveStartUsesSelectedHandleLookups();
   _testSelectedMoveCommitFiltersStaleFacts();
   _testSelectedMoveCommitRejectsMismatchedSelectionFacts();
   _testMarqueeStartFacts();
@@ -120,9 +119,6 @@ void _testSelectedMoveStartGroupUnionFacts() {
     final root =
         runtimeRootWithCommittedDocumentSeed(
             _groupSelectionDocument(includeOccluder: false),
-            config: const CanvasRuntimeConfig(
-              deletionCommitResolver: _acceptDeletionCommit,
-            ),
           )
           ..selection.setSelection([
             CanvasElementId('selected-left'),
@@ -161,9 +157,6 @@ void _testSelectedMoveStartOccludedGroupUnionFacts() {
       final root =
           runtimeRootWithCommittedDocumentSeed(
               _groupSelectionDocument(includeOccluder: true),
-              config: const CanvasRuntimeConfig(
-                deletionCommitResolver: _acceptDeletionCommit,
-              ),
             )
             ..selection.setSelection([
               CanvasElementId('selected-left'),
@@ -202,9 +195,6 @@ void _testSelectedMoveStartNonSelectableOccludedGroupUnionFacts() {
                 includeOccluder: true,
                 occluderSelectable: false,
               ),
-              config: const CanvasRuntimeConfig(
-                deletionCommitResolver: _acceptDeletionCommit,
-              ),
             )
             ..selection.setSelection([
               CanvasElementId('selected-left'),
@@ -232,9 +222,6 @@ void _testSingleLineMoveStartDoesNotExposeGroupUnionFacts() {
     () {
       final root = runtimeRootWithCommittedDocumentSeed(
         _singleSelectedLineDocument(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
       )..selection.setSelection([CanvasElementId('line-a')]);
       addTearDown(root.dispose);
 
@@ -448,7 +435,7 @@ void _testEraserKindPolicyBeforeBudgets() {
     () {
       final root = _eraserPolicyRoot(
         const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
+          deletionCommitResolver: acceptDeletionCommit,
           eraserElementKinds: {CanvasElementKind.rect},
         ),
         disallowedTextCount: 512,
@@ -475,11 +462,11 @@ void _testEraserKindPolicyBeforeBudgets() {
 
   test('null preserves eraser admission and empty disables it', () {
     final unrestrictedRoot = _eraserPolicyRoot(
-      const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit),
+      const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit),
     );
     final disabledRoot = _eraserPolicyRoot(
       const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        deletionCommitResolver: acceptDeletionCommit,
         eraserElementKinds: {},
       ),
     );
@@ -593,12 +580,7 @@ void _testRejectedContextTargetReadOutcomes() {
 
 void _testInvalidIndexContextTargetReadOutcome() {
   test('context target reads reject invalid spatial index results', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      CanvasDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
     addTearDown(root.dispose);
     root.spatialKernel.applyTouched(
       root,
@@ -639,9 +621,6 @@ void _testBudgetExceededContextTargetReadOutcome() {
   test('context target reads reject fallback budget overflow results', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _fallbackBudgetDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
     );
     addTearDown(root.dispose);
     root.spatialKernel.applyTouched(
@@ -706,12 +685,7 @@ CanvasDocument _fallbackBudgetDocument() {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  return runtimeRootWithCommittedDocumentSeed(_document());
 }
 
 RuntimeRoot _eraserPolicyRoot(
@@ -882,6 +856,3 @@ CanvasRectElement _hiddenRect(String id, Offset offset) {
     isVisible: false,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

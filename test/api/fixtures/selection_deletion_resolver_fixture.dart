@@ -19,7 +19,6 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // Route registrations stay visible together so every public resolver family is
@@ -623,7 +622,6 @@ void _selectionDeletionRetainsLayersAndResources() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletion),
   );
   addTearDown(root.dispose);
   root.selection.setSelection([
@@ -659,9 +657,6 @@ void _selectionDeletionRetainsLayersAndResources() {
   expect(root.resources.resourceById(imageId), isNull);
   expect(root.resources.resourceById(vectorId), isNull);
 }
-
-CanvasDeletionDecision _acceptDeletion(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
 
 void _expectRetainedDescriptor(
   CanvasResource? actual,

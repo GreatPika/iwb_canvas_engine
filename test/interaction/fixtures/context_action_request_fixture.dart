@@ -6,7 +6,6 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -24,6 +23,8 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test('direct content double tap emits one content request', () {
@@ -223,9 +224,6 @@ Future<void> _verifyPointerRequestTimestampOrder() async {
 Future<void> _verifyDisposeSuppressesQueuedRequestBeforeDone() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(selectableContent: false, hitPadding: 0),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
   final events = <String>[];
   final done = Completer<void>();
@@ -531,7 +529,7 @@ Future<void> _verifyPointerSampleMismatchIsPrivate() async {
 Future<void> _verifyPointerTapInsideTapSlopIsTapOnly() async {
   final scenario = _RuntimeContextRequestScenario(
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 8, dragStartSlop: 4),
     ),
   );
@@ -580,7 +578,7 @@ final class _RuntimeContextRequestScenario {
     bool selectableContent = false,
     double hitPadding = 0,
     CanvasRuntimeConfig config = const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
     ),
     CanvasDocument? initialDocument,
   }) {
@@ -798,6 +796,3 @@ final class _FakeContextFrameFactsPort implements FrameFactsPort {
   @override
   FrameResourceDescriptorFacts? resourceDescriptor(CanvasResourceId id) => null;
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

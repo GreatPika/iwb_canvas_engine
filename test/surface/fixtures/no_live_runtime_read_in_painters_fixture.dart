@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   _registerBehavioralPainterBoundaryTests();
@@ -188,8 +189,5 @@ final class _CountingResolver implements CanvasResourceResolver {
   CanvasPreparedVector? resolveVector(CanvasVectorResource resource) => null;
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
-
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit);

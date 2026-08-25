@@ -5,9 +5,10 @@ import '../support/flutter_in_package_test_harness.dart';
 void main() {
   test('interaction read port returns immutable committed facts', () {
     return expectLater(
-      runFlutterInPackageTest(
+      runFlutterInPackageTests([
         'test/interaction/fixtures/interaction_read_port_fixture.dart',
-      ),
+        'test/interaction/fixtures/interaction_read_port_bounded_read_fixture.dart',
+      ]),
       completes,
     );
   });

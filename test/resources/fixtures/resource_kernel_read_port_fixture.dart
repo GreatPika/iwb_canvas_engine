@@ -4,7 +4,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.d
 import 'package:iwb_canvas_engine/src/contracts/internal/resource_dirty_outcome.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/resources/resource_kernel.dart';
-import "../../support/runtime_root_with_committed_document_seed.dart";
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('kernel read port delegates to catalog without owning descriptors', () {
@@ -40,12 +40,7 @@ void _expectKernelCatalogDelegation() {
 }
 
 void _expectRuntimeResourcePort() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
 
   expect(() {
     final resources = root.resources;
@@ -130,6 +125,3 @@ CanvasImageResource _imageResource({
     source: CanvasResourceSource.appKey(appKey),
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

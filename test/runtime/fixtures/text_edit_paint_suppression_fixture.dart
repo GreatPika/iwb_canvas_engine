@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testActiveSessionSuppressesTextPaintAndSelection();
@@ -187,13 +187,7 @@ void _testMainFramePainterDoesNotReadRuntime() {
 }
 
 final class _Scenario {
-  _Scenario()
-    : root = runtimeRootWithCommittedDocumentSeed(
-        _document(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
-      ) {
+  _Scenario() : root = runtimeRootWithCommittedDocumentSeed(_document()) {
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
 
@@ -293,6 +287,3 @@ CanvasDocument _document({String text = 'hello'}) {
 
 final _textId = CanvasElementId('text-a');
 final _rectId = CanvasElementId('rect-a');
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

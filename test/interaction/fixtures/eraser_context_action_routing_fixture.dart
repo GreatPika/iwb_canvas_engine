@@ -4,7 +4,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
-import '../../support/runtime_root_with_committed_document_seed.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -19,6 +18,7 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 typedef _ContextTapInput = ({
   Offset position,
@@ -75,9 +75,6 @@ void _verifyEraserCleanupPrecedesDelivery() {
           ],
         ),
       ],
-    ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
     ),
     commitEffectObserver: (effects) {
       if (!terminalDelivery) return;
@@ -958,6 +955,3 @@ ContextTargetReadOutcome _contextOutcome(CanvasElementId? id) {
     ),
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

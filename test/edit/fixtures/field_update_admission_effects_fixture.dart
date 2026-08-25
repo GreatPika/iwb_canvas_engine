@@ -1,11 +1,11 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // This owner keeps every independently admitted edit outcome visibly
 // registered at its public runtime boundary rather than hiding them behind a
@@ -74,12 +74,7 @@ void main() {
 }
 
 void _expectNullableClearUpdatesField() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
 
   final changed = root.edits.edit((edit) {
     return edit.updateElement(
@@ -162,12 +157,7 @@ void _expectMismatchedUpdateKindRejected() {
 }
 
 void _expectGeometryUpdateAdvancesBoundsRevision() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
 
   final changed = root.edits.edit((edit) {
     return edit.updateElement(
@@ -202,12 +192,7 @@ void _expectVisibilityUpdateTouchesSelection() {
 }
 
 void _expectVectorSparseUpdatePreservesOmittedFields() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _vectorDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_vectorDocument());
 
   final changed = root.edits.edit((edit) {
     return edit.updateElement(
@@ -231,12 +216,7 @@ void _expectVectorSparseUpdatePreservesOmittedFields() {
 }
 
 void _expectVectorResourceKindMismatchPreservesDocument() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _vectorDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_vectorDocument());
   final before = root.readDocument();
 
   expect(
@@ -267,12 +247,7 @@ void _expectVectorResourceKindMismatchPreservesDocument() {
 // ignore: halstead-volume
 void _expectVectorKindTransitionInEitherCallbackOrder() {
   for (final resourceFirst in [true, false]) {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      _imageDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(_imageDocument());
     final vectorResource = CanvasVectorResource(
       id: CanvasResourceId('shared-resource'),
       source: CanvasResourceSource.appKey('shared-resource'),
@@ -373,12 +348,7 @@ void _expectRejectedResourceEditPreservesRuntimeFacts({
   required CanvasDataErrorCode code,
   required String path,
 }) {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    document,
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(document);
   root.attachSurface(Object());
   root.selection.setSelection([document.layers.single.elements.single.id]);
   root.publishUnclassifiedRuntimeStateForTesting();
@@ -478,12 +448,6 @@ CanvasDocument _imageDocument() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

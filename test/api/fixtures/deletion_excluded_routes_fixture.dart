@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // One named test per public family makes the absence of resolver interception

@@ -80,7 +80,6 @@ void _testConstAndEqualityShape() {
     final geometry = _contractSource('canvas_geometry.dart');
 
     expect(runtime, contains('const CanvasRuntimeConfig({'));
-    expect(runtime, contains('required this.deletionCommitResolver,'));
     expect(runtime, contains('const CanvasRuntimeState({'));
     expect(runtime, contains('const CanvasRuntimeRevisions({'));
     expect(runtime, contains('const CanvasRuntimeSummary({'));

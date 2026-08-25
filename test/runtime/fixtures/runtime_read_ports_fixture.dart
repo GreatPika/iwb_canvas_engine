@@ -1,20 +1,15 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('document and frame ports return committed facts only', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(_document());
 
     expect(() {
       _verifyDocumentFacts(root);
@@ -29,9 +24,6 @@ void main() {
   test('test root starts view camera from committed document camera', () {
     final root = runtimeRootWithCommittedDocumentSeed(
       _documentWithCamera(CanvasCamera(offset: const Offset(11, 13))),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
     );
 
     expect(root.readDocument().camera.offset, const Offset(11, 13));
@@ -57,9 +49,6 @@ void _testVectorFrameDescriptor() {
             metadata: CanvasMetadata.fromMap({'role': 'vector'}),
           ),
         ],
-      ),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
       ),
     );
     final descriptor = root.frameFactsPort.resourceDescriptor(
@@ -312,6 +301,3 @@ List<CanvasResource> _resources() {
     ),
   ];
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

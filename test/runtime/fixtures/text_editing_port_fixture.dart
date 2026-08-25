@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testCandidateLookup();
@@ -181,9 +181,6 @@ void _testChangedTextListenerCompletesNestedMutationBeforeOuterDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
         commitEffectObserver: (_) {
           if (!committing) {
             return;
@@ -312,9 +309,6 @@ void _testChangedTextListenerFailureReportsAndContinuesDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
         commitEffectObserver: (_) {
           if (committing) {
             trace.add('outer-observer');
@@ -1004,12 +998,7 @@ void _expectRequestFactsLive(
 
 final class _Scenario {
   _Scenario({CanvasDocument? document})
-    : root = runtimeRootWithCommittedDocumentSeed(
-        document ?? _document(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
-      ) {
+    : root = runtimeRootWithCommittedDocumentSeed(document ?? _document()) {
     actionSubscription = root.actions.listen(actions.add);
     requestSubscription = root.contextActionRequests.listen(requests.add);
   }
@@ -1017,9 +1006,6 @@ final class _Scenario {
   _Scenario.failedTextPrepare()
     : root = runtimeRootWithCommittedDocumentSeed(
         _document(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
         textEditPrepareOverride: (_) {
           return CommitDeliveryResult(shouldPublishState: false);
         },
@@ -1149,6 +1135,3 @@ final _textId = CanvasElementId('text-a');
 final _rectId = CanvasElementId('rect-a');
 final _listenerNestedRectId = CanvasElementId('listener-nested-rect');
 final _listenerFailureRectId = CanvasElementId('listener-failure-rect');
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

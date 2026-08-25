@@ -1,9 +1,9 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 typedef _DrawPreviewStep = ({
   CanvasPointerLifecyclePhase phase,
@@ -48,12 +48,7 @@ void main() {
 }
 
 void _verifyPreviewOnlyPublication() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   final actions = <CanvasActionCommitted>[];
   final actionSubscription = root.actions.listen(actions.add);
   addTearDown(() async {
@@ -89,12 +84,7 @@ void _expectSelectedMovePreview(CanvasPreviewState preview) {
 }
 
 void _verifySilentNoOpPreviewChanges() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   addTearDown(root.dispose);
   final snapshots = <CanvasRuntimeState>[];
   root.state.addListener(() {
@@ -220,12 +210,7 @@ _DrawPreviewScenario _drawPreviewScenario() {
 }
 
 RuntimeRoot _drawRuntimeRoot() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
     CanvasDrawStyle(color: const Color(0xFFAA0000), pencilThickness: 5),
@@ -235,12 +220,7 @@ RuntimeRoot _drawRuntimeRoot() {
 }
 
 _DrawPreviewScenario _linePreviewScenario() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
     CanvasDrawStyle(
@@ -264,12 +244,7 @@ _DrawPreviewScenario _linePreviewScenario() {
 }
 
 _DrawPreviewScenario _eraserPreviewScenario() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(
     CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 6),
@@ -401,6 +376,3 @@ void _expectPencilPreview(
   expect(pencil.thickness, 5);
   expect(pencil.opacity, 1);
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

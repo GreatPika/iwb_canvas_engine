@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -9,6 +8,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_bounda
 import 'package:iwb_canvas_engine/src/contracts/internal/surface_resource_session_lifecycle.dart';
 import 'package:iwb_canvas_engine/src/contracts/public/canvas_contract_limits.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _registerSuccessfulLoadPublicationTests();
@@ -385,9 +385,6 @@ RuntimeRoot _runtimeRoot(
   if (loadInteractionBoundary != null) {
     return runtimeRootWithCommittedDocumentSeed(
       _initialDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       loadInteractionBoundary: loadInteractionBoundary,
       commitEffectObserver: effectBatches.add,
     );
@@ -395,9 +392,6 @@ RuntimeRoot _runtimeRoot(
 
   return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -740,6 +734,3 @@ String _jsonWithImportFieldFailure() {
     },
   });
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

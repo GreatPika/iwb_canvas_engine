@@ -1,5 +1,4 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 import "../../support/document_store_with_document.dart";
 
 // This fixture intentionally names commit, selection, and runtime boundaries in
@@ -22,6 +21,7 @@ import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // This fixture keeps distinct stable owner-boundary failures in one existing
 // commit-delivery proof surface instead of duplicating document setup.
@@ -1210,12 +1210,7 @@ final class _CommitApplyOwnerSnapshot {
 }
 
 RuntimeRoot _runtimeRoot() {
-  return runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  return runtimeRootWithCommittedDocumentSeed(_document());
 }
 
 SelectionKernel _selectionKernel() {
@@ -1263,6 +1258,3 @@ final class _ThrowingMembership implements SelectionMembershipPort {
     throw StateError('membership should not be read.');
   }
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

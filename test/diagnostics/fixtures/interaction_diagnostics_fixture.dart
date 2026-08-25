@@ -5,7 +5,6 @@
 
 import 'dart:convert';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -17,6 +16,8 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   _testRecordsEveryInteractionDiagnosticCode();
@@ -139,7 +140,7 @@ void _testVectorInteractionReliabilityUsesExistingRoute() {
       final enabledRoot = runtimeRootWithCommittedDocumentSeed(
         _nonMovableVectorDocument(),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
+          deletionCommitResolver: acceptDeletionCommit,
           diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
         ),
       );
@@ -164,9 +165,6 @@ void _testVectorInteractionReliabilityUsesExistingRoute() {
 
       final disabledRoot = runtimeRootWithCommittedDocumentSeed(
         _nonMovableVectorDocument(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
       );
       addTearDown(disabledRoot.dispose);
       final before = DiagnosticRecord.allocations.count;
@@ -197,7 +195,7 @@ void _testResolverReentrantMutationDiagnostic() {
     root = runtimeRootWithCommittedDocumentSeed(
       _document(),
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        deletionCommitResolver: acceptDeletionCommit,
         diagnosticPolicy: const CanvasDiagnosticPolicy.summary(),
         moveCommitResolver: (_) {
           root.selection.clearSelection();
@@ -775,6 +773,3 @@ final class _FakeInteractionReadPort implements InteractionReadPort {
 }
 
 final class _SensitivePayload {}
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

@@ -17,8 +17,8 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_action_finalizer.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 // The four route matrices share the same public work oracle. Keeping their
 // registrations adjacent makes the fixed-k/N and terminal-outcome coverage
@@ -52,14 +52,14 @@ void main() {
       _expectSelectionWithoutDeletion(
         document: _document(targetCount: 2),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletion,
+          deletionCommitResolver: acceptDeletionCommit,
         ),
         select: const [],
       );
       _expectSelectionWithoutDeletion(
         document: _document(targetCount: 1, includeNotDeletable: true),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletion,
+          deletionCommitResolver: acceptDeletionCommit,
           selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
         ),
         select: [CanvasElementId('target-0'), CanvasElementId('blocked')],
@@ -67,14 +67,14 @@ void main() {
       _expectEraserWithoutDeletion(
         document: _document(targetCount: 1),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletion,
+          deletionCommitResolver: acceptDeletionCommit,
         ),
         terminalPosition: const Offset(1000, 0),
       );
       _expectEraserWithoutDeletion(
         document: _document(targetCount: 1),
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletion,
+          deletionCommitResolver: acceptDeletionCommit,
           eraserElementKinds: <CanvasElementKind>{},
         ),
         terminalPosition: Offset.zero,
@@ -697,9 +697,6 @@ List<CanvasElementId> _targetIds(int count) => [
   for (var index = 0; index < count; index += 1)
     CanvasElementId('target-$index'),
 ];
-
-CanvasDeletionDecision _acceptDeletion(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
 
 final _emptyRequest = CanvasDeletionCommitRequest(
   operation: CanvasDeletionOperation.deleteSelection,

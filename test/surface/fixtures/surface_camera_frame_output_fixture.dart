@@ -4,10 +4,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
+import '../../support/runtime_with_document.dart';
 
 void main() {
   testWidgets('CanvasSurface camera pan keeps ordinary plan identity', (

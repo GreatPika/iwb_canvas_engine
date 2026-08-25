@@ -22,6 +22,8 @@ import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 
+import '../../support/accept_deletion_commit.dart';
+
 // Route registrations stay visible together so every terminal callback family
 // remains auditable without a second fixture registry that can drift.
 // ignore: source-lines-of-code
@@ -288,7 +290,9 @@ void _terminalEraserRetainsLayersAndResources() {
         ),
       ),
     ),
-    config: const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletion),
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: acceptDeletionCommit,
+    ),
   );
   addTearDown(root.dispose);
   _startEraser(root);
@@ -1042,9 +1046,6 @@ final class _TerminalGuardSnapshot {
     expect(root.viewCameraOffset, camera);
   }
 }
-
-CanvasDeletionDecision _acceptDeletion(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
 
 void _expectRetainedDescriptor(
   CanvasResource? actual,

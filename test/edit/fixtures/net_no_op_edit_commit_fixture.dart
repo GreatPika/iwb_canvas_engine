@@ -7,7 +7,6 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/document_facts_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
@@ -104,9 +103,6 @@ Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _baseDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final beforeFrameRevisions = root.frameRevisions;
@@ -130,12 +126,7 @@ Future<void> _sparsePartialCompensationUsesFinalFamilies() async {
 }
 
 Future<void> _sparsePartialCompensationRestoresRowRevisions() async {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _baseDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_baseDocument());
   final before = _RowRevisionProbe.capture(root);
 
   _applyCompensatedRowRevisionEdit(root);
@@ -149,9 +140,6 @@ Future<void> _sparseImplicitReAddPublishesContentOrder() async {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _twoElementDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final beforeFrameRevisions = root.frameRevisions;
@@ -244,9 +232,6 @@ Future<void> _expectSilentNetNoOpCommit({
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _baseDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (effects) => effectBatches.add(effects),
   );
   final probe = _NetNoOpProbe(root: root, effectBatches: effectBatches);
@@ -453,6 +438,3 @@ CanvasPalette _alternatePalette() {
     gridSizes: const [8, 16],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

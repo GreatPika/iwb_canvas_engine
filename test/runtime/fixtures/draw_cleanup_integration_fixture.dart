@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('runtime cleanup does not advance next draw output timestamp', () async {
@@ -189,9 +189,6 @@ final class _CleanupTimestampScenario {
 
   late final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
   final actions = <CanvasActionCommitted>[];
@@ -207,6 +204,3 @@ final class _CleanupTimestampScenario {
     root.dispose();
   }
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

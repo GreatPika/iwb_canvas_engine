@@ -3,7 +3,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -18,6 +17,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _registerDirtyAcceptanceTests();
@@ -143,9 +143,6 @@ Future<void> _expectDirtyObserverFailureContainment() async {
   final actions = <CanvasActionCommitted>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (effects) {
       effectBatches.add(effects);
       throw StateError('observer failed');
@@ -182,9 +179,6 @@ Future<void> _expectPostRemovalObserverFailureIsContained() async {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (effects) {
       _expectNoBorrow(cache, retainedOutput);
       deliveredEffects.add(effects);
@@ -249,9 +243,6 @@ Future<void> _expectActiveSessionInvalidatesBeforePublish() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (_) {
       sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
@@ -275,9 +266,6 @@ Future<void> _expectDirtyReleaseFailureIsContained() {
   final snapshots = <CanvasRuntimeState>[];
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
   root.state.addListener(() {
@@ -311,9 +299,6 @@ void _expectEditUpsertResourceInvalidatesBeforePublish() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (_) {
       sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
@@ -343,9 +328,6 @@ void _expectEditRemoveResourceInvalidatesBeforePublish() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithUnusedResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (_) {
       sink.expectTargetReleased(CanvasResourceId('resource-a'));
     },
@@ -375,9 +357,6 @@ void _expectEditResourceReleaseFailureIsContained() {
   final sink = _ThrowingResourceSessionReleaseSink();
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
   root.state.addListener(() {
@@ -594,9 +573,6 @@ final class _RealSessionFailureProbe {
     late _RealSessionFailureProbe probe;
     final root = runtimeRootWithCommittedDocumentSeed(
       _documentWithResource(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: (_) => probe.events.add('observer'),
     );
     probe = _RealSessionFailureProbe._(root, cache, output, image);
@@ -634,12 +610,7 @@ final class _RealSessionFailureProbe {
 
 Future<void> _expectClearedActiveSessionIsIgnored() {
   final sink = _RecordingResourceSessionReleaseSink();
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_documentWithResource());
   root.attachResourceSessionReleaseSink(sink);
   root.clearResourceSessionReleaseSink(sink);
 
@@ -662,9 +633,6 @@ final class _DirtyRuntimeScenario {
   _DirtyRuntimeScenario.withDocument(CanvasDocument document) {
     root = runtimeRootWithCommittedDocumentSeed(
       document,
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: effectBatches.add,
     );
     before = _RuntimeFactsSnapshot.capture(root);
@@ -880,9 +848,6 @@ void _expectPostCommitDeliveryGuard() {
   late RuntimeRoot root;
   root = runtimeRootWithCommittedDocumentSeed(
     _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: (batch) {
       effects.add(batch);
       expect(
@@ -968,6 +933,3 @@ CanvasDocument _documentWithUnusedResource() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

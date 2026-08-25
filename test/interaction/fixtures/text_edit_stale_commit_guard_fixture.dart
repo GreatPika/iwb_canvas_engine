@@ -5,7 +5,6 @@
 
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -15,6 +14,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/text_edit_guard_decision.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // This complete registration list is the public behavior matrix for one text
 // request lifecycle; splitting it would obscure which stale/no-op cases belong
@@ -473,23 +473,12 @@ String? _textValueOrNull(RuntimeRoot root) {
 // issued request. Splitting it would hide the lifecycle proof.
 // ignore: coupling-between-object-classes
 final class _Scenario {
-  _Scenario()
-    : this._(
-        runtimeRootWithCommittedDocumentSeed(
-          _document(),
-          config: const CanvasRuntimeConfig(
-            deletionCommitResolver: _acceptDeletionCommit,
-          ),
-        ),
-      );
+  _Scenario() : this._(runtimeRootWithCommittedDocumentSeed(_document()));
 
   _Scenario.failedTextPrepare(void Function() onPrepare)
     : this._(
         runtimeRootWithCommittedDocumentSeed(
           _document(),
-          config: const CanvasRuntimeConfig(
-            deletionCommitResolver: _acceptDeletionCommit,
-          ),
           textEditPrepareOverride: (input) {
             onPrepare();
 
@@ -746,6 +735,3 @@ CanvasTextElement _textElement() {
     transform: CanvasTransform.translation(const Offset(120, 0)),
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

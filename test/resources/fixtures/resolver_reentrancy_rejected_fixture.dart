@@ -1,5 +1,4 @@
 import 'dart:ui' show Offset, Rect, Size;
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 // This resource fixture now covers both the session boundary and the asset binding caller, so the imports intentionally span frame and resource seams.
 // ignore_for_file: number-of-imports
@@ -18,6 +17,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../frame/fixtures/ordinary_paint_test_support.dart';
 import 'surface_resource_session_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testNestedResolverCallbackRejected();
@@ -241,9 +241,6 @@ RuntimeRoot _runtime() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
 }
 
@@ -286,6 +283,3 @@ FrameCaptureInputs _frameInputs() {
     previewRevision: 0,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

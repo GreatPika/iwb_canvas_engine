@@ -1,5 +1,4 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -8,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/load_interaction_boundary.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('failed load prepares before interaction interruption', () {
@@ -123,12 +123,7 @@ void _expectPreparedCleanupReentrancyGuard() {
 // cleanup, and reentrant guard assertions together to prove one temporal window.
 // ignore: halstead-volume, source-lines-of-code
 Future<void> _expectTextEditCleanupReentrancyGuard() async {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _textDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_textDocument());
   final requests = <CanvasContextActionRequested>[];
   final subscription = root.contextActionRequests.listen(requests.add);
   try {
@@ -394,9 +389,6 @@ RuntimeRoot _runtimeRoot(
 }) {
   final root = runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     loadInteractionBoundary: boundary,
     commitEffectObserver: observeEffects,
   );
@@ -668,6 +660,3 @@ final class _RecordingLoadBoundary implements LoadInteractionBoundary {
     return LoadInteractionCleanupOutcome.noChange;
   }
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

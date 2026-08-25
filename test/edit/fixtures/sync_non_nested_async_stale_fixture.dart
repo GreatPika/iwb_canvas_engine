@@ -1,12 +1,12 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/runtime_with_document.dart';
 
 void main() {
   test('successful synchronous edit preserves callback result', () {
@@ -279,9 +279,6 @@ void _expectReplacementCommitsInsideEdit() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -319,6 +316,3 @@ void _expectSameDocumentShape(CanvasDocument actual, CanvasDocument expected) {
     );
   }
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testCommittedScopeFacts();
@@ -14,12 +14,7 @@ void main() {
 
 void _testCommittedScopeFacts() {
   test('committed frame facts expose spatial scope facts', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(_document());
 
     final frame = root.frameFactsPort;
     final handles = frame.elementHandles(
@@ -39,12 +34,7 @@ void _testCommittedScopeFacts() {
 
 void _testHandleValidation() {
   test('scope facts do not weaken handle validation', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(_document());
 
     final frame = root.frameFactsPort;
     final handle = frame
@@ -185,6 +175,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

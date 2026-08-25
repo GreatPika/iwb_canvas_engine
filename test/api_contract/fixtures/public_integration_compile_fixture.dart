@@ -5,6 +5,9 @@
 
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
+    CanvasDeletionDecision.accept;
+
 final class PublicIntegrationCompileFixture {
   PublicIntegrationCompileFixture({CanvasRuntime? runtime})
     : runtime = runtime ?? CanvasRuntime(config: _runtimeConfig());
@@ -207,6 +210,3 @@ CanvasRuntimeConfig _runtimeConfig() {
 T _compileOnly<T>() => throw StateError('compile-only fixture value');
 
 int _use(Object? value) => Object.hash(value, null);
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

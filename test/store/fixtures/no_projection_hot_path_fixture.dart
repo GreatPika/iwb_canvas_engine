@@ -68,9 +68,6 @@ void _registerDeletionProjectionTests() {
 void _projectionCacheBuildsOnlyThroughExplicitRead() {
   final root = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(layers: [CanvasLayer(id: CanvasLayerId('layer-a'))]),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
 
   expect(root.projectionBuildCount, 0);
@@ -137,9 +134,6 @@ void _ordinaryPublicEditRouteDoesNotBuildProjection() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
 
   root.edits.edit((edit) {
@@ -180,9 +174,6 @@ void _draftSummaryRouteDoesNotBuildProjection() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
 
   final summary = root.edits.edit((edit) {
@@ -212,9 +203,6 @@ void _selectionOnlyRouteDoesNotBuildProjection() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
 
   root.selection.setSelection([CanvasElementId('element-a')]);
@@ -236,9 +224,6 @@ void _selectionDeletionDoesNotBuildDocumentProjection() {
           elements: [_rect('selected-b'), _rect('after')],
         ),
       ],
-    ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
     ),
   );
   addTearDown(root.dispose);
@@ -511,6 +496,3 @@ StoreSparseUpdateElement _sparseUpdate({
     elementRevisionDelta: elementRevisionDelta,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

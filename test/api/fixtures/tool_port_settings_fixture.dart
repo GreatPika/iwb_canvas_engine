@@ -7,8 +7,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-
 import '../../support/runtime_with_document.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test(
@@ -42,7 +42,7 @@ void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
   final runtime = runtimeWithDocument(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: style,
       pointerPolicy: policy,
@@ -95,7 +95,7 @@ _modeChangesClearSelectionByFlagAndDrawPointerPublishesPreview() async {
   final runtime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       clearSelectionOnDrawModeEnter: true,
     ),
   );
@@ -251,6 +251,3 @@ CanvasPointerSample _pointer(
     kind: PointerDeviceKind.touch,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

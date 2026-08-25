@@ -13,7 +13,6 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart'
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // The assertions stay together as the terminal route's acceptance owner; each

@@ -6,8 +6,8 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
-
 import '../../support/runtime_with_document.dart';
+import '../../support/accept_deletion_commit.dart';
 
 final _moveTransform = CanvasTransform.translation(const Offset(3, 4));
 
@@ -218,7 +218,7 @@ Future<void> _allOrNoneSelectionDeletionRejectsMixedSelection() async {
   final allOrNoneRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -255,7 +255,7 @@ Future<void> _lockedContentRemainsDeletableUnderAllOrNone() async {
   final lockedRuntime = runtimeWithDocument(
     _document(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -424,6 +424,3 @@ void _expectTransformClose(CanvasTransform actual, CanvasTransform expected) {
   expect(actual.tx, closeTo(expected.tx, 0.000000001));
   expect(actual.ty, closeTo(expected.ty, 0.000000001));
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

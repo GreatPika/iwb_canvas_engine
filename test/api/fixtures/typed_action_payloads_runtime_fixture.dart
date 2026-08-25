@@ -3,14 +3,15 @@
 // ignore_for_file: missing-test-assertion
 
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/runtime_with_document.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test(
@@ -43,7 +44,7 @@ Future<void> _runtimeActionFinalizerPreservesPublicActionPayloadMatrix() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
     ),
   );
@@ -92,7 +93,7 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 1),
     ),
   );
@@ -123,12 +124,7 @@ Future<void> _selectedMoveTerminalEmitsPublicMovePayloadShape() async {
 // the terminal marquee action shape from one runtime interaction.
 // ignore: halstead-volume
 Future<void> _marqueeTerminalEmitsPublicSelectionPayloadShape() async {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
   addTearDown(() async {
@@ -575,6 +571,3 @@ CanvasPointerSample _pointer(
 }
 
 final CanvasElementId _textId = CanvasElementId('text-a');
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

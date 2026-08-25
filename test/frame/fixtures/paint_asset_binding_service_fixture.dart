@@ -1,5 +1,4 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 // The asset-binding fixture imports the frame model, resource session, resolver
 // adapter, and public descriptor payloads together to prove the exact seam.
@@ -23,6 +22,7 @@ import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
 import '../../support/vector_preparation_fixture.dart';
 import 'ordinary_paint_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testFrameEngineAssetBinding();
@@ -302,12 +302,7 @@ void _testFrameBindingContinuesAfterResolverException() {
 
 void _testReentrantResolverRejectedThroughAssetBinding() {
   test('asset binding rejects public runtime mutations from resolver', () {
-    final root = runtimeRootWithCommittedDocumentSeed(
-      CanvasDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
     final resolver = RecordingResourceResolver((_) {
       root.generateElementId();
 
@@ -340,12 +335,7 @@ void _testReentrantResolverRejectedThroughAssetBinding() {
 void _testNestedResolverRejectedThroughAssetBinding() {
   test('asset binding rejects nested resolver callbacks', () async {
     final image = await createResourceTestImage();
-    final root = runtimeRootWithCommittedDocumentSeed(
-      CanvasDocument(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
-    );
+    final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
     final resolver = RecordingResourceResolver((_) {
       return root.runResolverCallback(() => image);
     });
@@ -565,6 +555,3 @@ FrameCaptureInputs _inputs() {
     previewRevision: 0,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

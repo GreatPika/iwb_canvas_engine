@@ -13,7 +13,7 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.d
 // selected-handle lookup invariant is proved without weakening the main
 // read-port behavior matrix.
 // ignore: halstead-volume, source-lines-of-code
-void testSelectedMoveStartUsesSelectedHandleLookups() {
+void main() {
   test(
     'selected move start derives group facts from selected handle lookups',
     () {

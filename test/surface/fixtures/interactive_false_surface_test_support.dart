@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/surface/pointer_adapter.dart';
+import '../../support/runtime_with_document.dart';
 
 Future<void> expectInteractiveFalsePointerRouting(WidgetTester tester) async {
   final runtime = _runtime();

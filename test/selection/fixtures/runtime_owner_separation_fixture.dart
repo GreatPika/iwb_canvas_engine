@@ -1,11 +1,11 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
-import '../../support/runtime_with_document.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/runtime_with_document.dart';
 
 void main() {
   test(
@@ -22,12 +22,7 @@ void main() {
 }
 
 void _selectionChangesPublishSelectionFactsWithoutDocumentEffects() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
   try {
     final selection = root.selection;
 
@@ -193,6 +188,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

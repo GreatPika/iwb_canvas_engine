@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'surface_resource_session_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testTargetDirtyActiveSessionInvalidation();
@@ -20,9 +20,6 @@ void _testTargetDirtyActiveSessionInvalidation() {
     final effects = <List<CommitDeliveryEffect>>[];
     final root = runtimeRootWithCommittedDocumentSeed(
       _document(),
-      config: const CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
-      ),
       commitEffectObserver: effects.add,
     );
     final session = SurfaceResourceSession(
@@ -86,6 +83,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

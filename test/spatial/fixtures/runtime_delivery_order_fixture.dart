@@ -1,5 +1,4 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -8,6 +7,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testInitialSpatialRebuild();
@@ -108,9 +108,6 @@ void _testClearContentRetainsBackgroundSpatialDelivery() {
 
       root = runtimeRootWithCommittedDocumentSeed(
         _clearDocument(),
-        config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
         commitEffectObserver: (effects) {
           events.add('observer');
           observerSnapshots.add(_clearPaintSnapshot(root));
@@ -323,9 +320,6 @@ RuntimeRoot _runtimeRoot([
 ]) {
   return runtimeRootWithCommittedDocumentSeed(
     _document([_rect('initial')]),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: observer,
   );
 }
@@ -418,6 +412,3 @@ SpatialQueryWindow _nearMoved() {
     structuralRevision: 1,
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

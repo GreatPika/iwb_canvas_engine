@@ -15,8 +15,8 @@ import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test(
@@ -327,7 +327,7 @@ RuntimeRoot _eraserRoot([
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       initialMode: CanvasInteractionMode.draw,
       initialDrawStyle: CanvasDrawStyle(
         tool: CanvasDrawTool.eraser,
@@ -381,12 +381,7 @@ void _performEmptyEraserStroke(RuntimeRoot root) {
 }
 
 RuntimeRoot _runtimeRoot({required List<String> events}) {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_document());
   root.state.addListener(() {
     events.add('state:${root.state.value.revisions.selection}');
   });
@@ -587,6 +582,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

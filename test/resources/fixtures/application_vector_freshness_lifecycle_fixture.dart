@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import '../../support/vector_preparation_fixture.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -591,8 +592,5 @@ Future<Color> _paintPixel(WidgetTester tester, Key key) async {
   return color;
 }
 
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
-
 CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);
+    const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit);

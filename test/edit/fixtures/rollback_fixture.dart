@@ -1,5 +1,4 @@
 import 'dart:ui';
-import '../../support/runtime_root_with_committed_document_seed.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -9,6 +8,7 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_query_result.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import 'draft_replacement_backing_fixture.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   registerDraftReplacementBackingTests();
@@ -264,9 +264,6 @@ void _expectLiveRuntimeMutationsRejectedDuringEdit() {
 RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
   return runtimeRootWithCommittedDocumentSeed(
     _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: effectBatches.add,
   );
 }
@@ -393,6 +390,3 @@ List<CanvasElementId> _spatialIds(RuntimeRoot root) {
     _ => fail('Expected SpatialCandidatesResult, got $result'),
   };
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

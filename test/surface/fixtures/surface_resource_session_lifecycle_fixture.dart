@@ -4,7 +4,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:io';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +16,8 @@ import 'package:iwb_canvas_engine/src/resources/surface_resource_session.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../resources/fixtures/surface_resource_session_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/runtime_with_document.dart';
 
 typedef _RejectedAttachScenario = ({
   CanvasRuntime runtime,
@@ -294,12 +295,7 @@ Future<void> _expectDisposedRuntimeRebuildDetachesSurface(
 }
 
 bool _runtimeTokenGuardedSessionInstall() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_documentWithResource());
   final activeToken = Object();
   final staleToken = Object();
   final activeSession = _RecordingLifecycleSession();
@@ -333,12 +329,7 @@ bool _dirtyInvalidatesInstalledSessionBeforePublish() {
 }
 
 void _expectTargetDirtyInvalidatesBeforePublish() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_documentWithResource());
   final token = Object();
   final session = _RecordingLifecycleSession();
   root.attachSurface(token);
@@ -356,12 +347,7 @@ void _expectTargetDirtyInvalidatesBeforePublish() {
 }
 
 void _expectMarkAllInvalidatesBeforePublish() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_documentWithResource());
   final token = Object();
   final session = _RecordingLifecycleSession();
   root.attachSurface(token);
@@ -379,12 +365,7 @@ void _expectMarkAllInvalidatesBeforePublish() {
 }
 
 void _expectDetachedAndStaleSessionsAreIgnoredByDirty() {
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithResource(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final root = runtimeRootWithCommittedDocumentSeed(_documentWithResource());
   final activeToken = Object();
   final staleToken = Object();
   final activeSession = _RecordingLifecycleSession();
@@ -606,16 +587,3 @@ final class _RecordingLifecycleSession
     dropCount += 1;
   }
 }
-
-CanvasRuntime runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
-  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
-
-  return runtime;
-}
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
-
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

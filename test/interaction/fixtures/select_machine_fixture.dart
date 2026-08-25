@@ -3,7 +3,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
@@ -14,6 +13,8 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/interaction/select_machine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 const _marqueeDragStart = Offset(-20, -20);
 const _marqueeBacktrackSteps = [
@@ -180,7 +181,7 @@ void _testMarqueeDragStartSlopControlsFirstPreview() {
   test('marquee dragStartSlop controls the first visible preview', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        deletionCommitResolver: acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -206,7 +207,7 @@ void _testMarqueeDragStartSlopFallbackUsesTapSlop() {
   test('marquee dragStartSlop null falls back to tapSlop', () {
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        deletionCommitResolver: acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 8),
       ),
     );
@@ -233,7 +234,7 @@ void _testMarqueeContinuesInsideSlopAfterPreviewStart() {
     expect(_marqueeBacktrackSteps, hasLength(4));
     final root = _runtimeRoot(
       config: CanvasRuntimeConfig(
-        deletionCommitResolver: _acceptDeletionCommit,
+        deletionCommitResolver: acceptDeletionCommit,
         pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
       ),
     );
@@ -424,7 +425,7 @@ void _testUnreliableTerminalCandidatesCleanupOnly() {
     () async {
       final scenario = _scenario(
         config: const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
+          deletionCommitResolver: acceptDeletionCommit,
           diagnosticPolicy: CanvasDiagnosticPolicy.summary(),
         ),
       );
@@ -556,9 +557,6 @@ _MarqueeScenario _overlappingScenario() {
         ),
       ],
     ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
   );
   final actions = <CanvasActionCommitted>[];
   final subscription = root.actions.listen(actions.add);
@@ -591,9 +589,6 @@ _MarqueeScenario _lineScenario() {
           ],
         ),
       ],
-    ),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
     ),
   );
   final actions = <CanvasActionCommitted>[];
@@ -631,9 +626,7 @@ RuntimeRoot _runtimeRoot({
     _document(),
     config:
         config ??
-        const CanvasRuntimeConfig(
-          deletionCommitResolver: _acceptDeletionCommit,
-        ),
+        const CanvasRuntimeConfig(deletionCommitResolver: acceptDeletionCommit),
     commitEffectObserver: commitEffectObserver,
   );
 }
@@ -710,6 +703,3 @@ final class _MarqueeScenario {
   final List<CanvasActionCommitted> actions;
   final List<List<CommitDeliveryEffect>> effectBatches;
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

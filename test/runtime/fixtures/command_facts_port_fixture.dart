@@ -17,6 +17,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.d
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_command_facts_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test(
@@ -105,7 +106,7 @@ void _expectDeleteFacts(SelectionDeleteFacts delete) {
 void _selectionDeletionFactsFailClosedForInvalidSelectionFacts() {
   final root = RuntimeRoot(
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
     ),
   );
   addTearDown(root.dispose);
@@ -797,6 +798,3 @@ FrameElementFacts _workContentFacts(FrameElementHandle handle) {
     _ => _facts(id: handle.id, orderToken: handle.orderToken),
   };
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

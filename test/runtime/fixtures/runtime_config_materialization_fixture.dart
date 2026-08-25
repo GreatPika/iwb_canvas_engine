@@ -5,7 +5,8 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_config.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
-import "../../support/runtime_root_with_committed_document_seed.dart";
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   test('RuntimeRoot owns materialized diagnostic verbose limits', () {
@@ -66,7 +67,7 @@ void _runtimeRootMaterializesSelectionDeletePolicy() {
   final allOrNoneRoot = runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       selectionDeletePolicy: CanvasSelectionDeletePolicy.allOrNone,
     ),
   );
@@ -94,14 +95,14 @@ void _runtimeRootOwnsEraserKindPolicyCopy() {
   final disabledRoot = runtimeRootWithCommittedDocumentSeed(
     _eraserPolicyDocument(),
     config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       eraserElementKinds: {},
     ),
   );
   final restrictedRoot = runtimeRootWithCommittedDocumentSeed(
     _eraserPolicyDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       eraserElementKinds: suppliedKinds,
     ),
   );
@@ -183,11 +184,8 @@ RuntimeRoot _runtimeRootWithDiagnostics(CanvasDiagnosticPolicy policy) {
   return runtimeRootWithCommittedDocumentSeed(
     CanvasDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       diagnosticPolicy: policy,
     ),
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

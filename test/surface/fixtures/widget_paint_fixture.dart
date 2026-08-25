@@ -22,6 +22,7 @@ import 'package:iwb_canvas_engine/src/surface/main_painter.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 import '../../support/vector_preparation_fixture.dart';
+import '../../support/runtime_with_document.dart';
 
 // The registration block keeps the full CanvasSurface repaint matrix visible in
 // one fixture instead of scattering the proof across unrelated test files.
@@ -1952,16 +1953,3 @@ final class _RecordingResolver implements CanvasResourceResolver {
     return resolvePreparedVector?.call(resource);
   }
 }
-
-CanvasRuntime runtimeWithDocument(CanvasDocument document) {
-  final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
-  runtime.edits.loadDocumentFromJson(encodeCanvasDocumentToJson(document));
-
-  return runtime;
-}
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
-
-CanvasRuntimeConfig _acceptDeletionRuntimeConfig() =>
-    const CanvasRuntimeConfig(deletionCommitResolver: _acceptDeletionCommit);

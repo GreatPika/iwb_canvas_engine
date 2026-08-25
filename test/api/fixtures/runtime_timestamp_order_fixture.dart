@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_action_intent.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test('nullable and backwards action timestamp hints are monotonic', () async {
@@ -31,12 +31,7 @@ final class _TimestampScenario {
     subscription = root.actions.listen(actions.add);
   }
 
-  final RuntimeRoot root = runtimeRootWithCommittedDocumentSeed(
-    _document(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
-  );
+  final RuntimeRoot root = runtimeRootWithCommittedDocumentSeed(_document());
   final List<CanvasActionCommitted> actions = <CanvasActionCommitted>[];
   late final StreamSubscription<CanvasActionCommitted> subscription;
   bool didDispose = false;
@@ -124,6 +119,3 @@ CanvasDocument _document() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;

@@ -1,10 +1,11 @@
 import 'dart:ui';
-import "../../support/runtime_root_with_committed_document_seed.dart";
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
+import '../../support/accept_deletion_commit.dart';
 
 void main() {
   _registerLoadSuccessCleanupTests();
@@ -460,9 +461,6 @@ void _expectDisposeCleanupRevisions(
 RuntimeRoot _runtimeRoot(CommitEffectObserver observer) {
   return runtimeRootWithCommittedDocumentSeed(
     _initialDocument(),
-    config: const CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
-    ),
     commitEffectObserver: observer,
   );
 }
@@ -471,7 +469,7 @@ RuntimeRoot _unselectedMoveRuntimeRoot(CommitEffectObserver observer) {
   return runtimeRootWithCommittedDocumentSeed(
     _unselectedMoveDocument(),
     config: CanvasRuntimeConfig(
-      deletionCommitResolver: _acceptDeletionCommit,
+      deletionCommitResolver: acceptDeletionCommit,
       pointerPolicy: CanvasPointerPolicy(tapSlop: 16, dragStartSlop: 4),
     ),
     commitEffectObserver: observer,
@@ -618,6 +616,3 @@ CanvasDocument _invalidReplacementDocument() {
     ],
   );
 }
-
-CanvasDeletionDecision _acceptDeletionCommit(CanvasDeletionCommitRequest _) =>
-    CanvasDeletionDecision.accept;
