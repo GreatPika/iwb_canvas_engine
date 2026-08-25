@@ -6,14 +6,12 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
-// Config validation, LSP lifetime, and result rendering are one CLI boundary.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One CLI boundary owns config validation and its LSP lifecycle.
 Future<ToolCommandResult> runAuditRouteExpectationsTool(
   List<String> args, {
   Directory? root,
 }) async {
   final workingRoot = root ?? Directory.current;
-  final configPath = _parseStringFlag(args, '--config');
+  final configPath = toolCommandStringFlag(args, '--config');
   if (configPath == null) {
     return const ToolCommandResult(
       exitCode: 1,
@@ -23,82 +21,95 @@ Future<ToolCommandResult> runAuditRouteExpectationsTool(
     );
   }
   final jsonOutput = args.contains('--json');
-  final jsonOutPath = _parseStringFlag(args, '--json-out');
+  final jsonOutPath = toolCommandStringFlag(args, '--json-out');
 
-  final configFile = File(
-    configPath.startsWith('/')
-        ? configPath
-        : '${workingRoot.path}${Platform.pathSeparator}$configPath',
-  );
-  if (!configFile.existsSync()) {
-    return ToolCommandResult(
-      exitCode: 1,
-      stderr:
-          'FAIL: route-audit config not found: '
-          '${configFile.path}\n',
-    );
+  late final _RouteAuditConfig config;
+  try {
+    config = _readConfig(workingRoot, configPath);
+  } on _MissingRouteAuditConfig catch (error) {
+    return _failure('route-audit config not found: ${error.path}');
   }
 
-  final config = _parseConfig(
-    jsonDecode(configFile.readAsStringSync()) as Object?,
-  );
-
-  final client = await LanguageServerClient.start(root: workingRoot);
   try {
-    final results = <_RouteExpectationResult>[];
-    for (final check in config.checks) {
-      results.add(await _runCheck(client, root: workingRoot, check: check));
-    }
-
-    final report = <String, Object?>{
-      'configPath': configPath,
-      'summary': <String, Object?>{
-        'total': results.length,
-        'passed': results.where((result) => result.isPass).length,
-        'failed': results.where((result) => result.isFailure).length,
-        'errors': results.where((result) => result.isError).length,
-      },
-      'results': results
-          .map((result) => result.toJson())
-          .toList(growable: false),
-    };
-    final reportJson = const JsonEncoder.withIndent('  ').convert(report);
-
-    if (jsonOutPath != null) {
-      _writeOutputFile(workingRoot, jsonOutPath, '$reportJson\n');
-    }
-    if (jsonOutput) {
-      return ToolCommandResult(
-        exitCode: _exitCodeForResults(results),
-        stdout: '$reportJson\n',
-      );
-    }
-
-    return ToolCommandResult(
-      exitCode: _exitCodeForResults(results),
-      stdout: _renderTextReport(configPath, results),
-    );
-  } on FormatException catch (error) {
-    return ToolCommandResult(
-      exitCode: 1,
-      stderr: 'FAIL: invalid route-audit config: ${error.message}\n',
+    final results = await _runAudit(workingRoot, config);
+    return _resultForAudit(
+      _RouteAuditOutput(
+        root: workingRoot,
+        configPath: configPath,
+        results: results,
+        jsonOutput: jsonOutput,
+        jsonOutPath: jsonOutPath,
+      ),
     );
   } on SymbolLocateFailure catch (error) {
-    return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
+    return _failure(error.message);
   } on LanguageServerError catch (error) {
-    return ToolCommandResult(
-      exitCode: 1,
-      stderr: 'FAIL: route audit failed: ${error.message}\n',
-    );
-  } finally {
-    await client.close();
+    return _failure('route audit failed: ${error.message}');
   }
 }
+
+ToolCommandResult _failure(String message) =>
+    ToolCommandResult(exitCode: 1, stderr: 'FAIL: $message\n');
 
 Future<void> main(List<String> args) async {
   final result = await runAuditRouteExpectationsTool(args);
   writeToolCommandResult(result);
   exitCode = result.exitCode;
+}
+
+_RouteAuditConfig _readConfig(Directory root, String configPath) {
+  final configFile = File(
+    configPath.startsWith('/')
+        ? configPath
+        : '${root.path}${Platform.pathSeparator}$configPath',
+  );
+  if (!configFile.existsSync()) {
+    throw _MissingRouteAuditConfig(configFile.path);
+  }
+  return _parseConfig(jsonDecode(configFile.readAsStringSync()) as Object?);
+}
+
+Future<List<_RouteExpectationResult>> _runAudit(
+  Directory root,
+  _RouteAuditConfig config,
+) async {
+  final client = await LanguageServerClient.start(root: root);
+  try {
+    return [
+      for (final check in config.checks)
+        await _runCheck(client, root: root, check: check),
+    ];
+  } finally {
+    await client.close();
+  }
+}
+
+Map<String, Object?> _buildReport(
+  String configPath,
+  List<_RouteExpectationResult> results,
+) => <String, Object?>{
+  'configPath': configPath,
+  'summary': <String, Object?>{
+    'total': results.length,
+    'passed': results.where((result) => result.isPass).length,
+    'failed': results.where((result) => result.isFailure).length,
+    'errors': results.where((result) => result.isError).length,
+  },
+  'results': [for (final result in results) result.toJson()],
+};
+
+ToolCommandResult _resultForAudit(_RouteAuditOutput output) {
+  final report = _buildReport(output.configPath, output.results);
+  final reportJson = encodeToolCommandJson(report);
+  if (output.jsonOutPath case final jsonOutPath?) {
+    writeToolCommandOutputFile(output.root, jsonOutPath, '$reportJson\n');
+  }
+  return ToolCommandResult(
+    exitCode: _exitCodeForResults(output.results),
+    stdout: output.jsonOutput
+        ? '$reportJson\n'
+        : _renderTextReport(output.configPath, output.results),
+  );
 }
 
 // A route witness keeps locating, traversal, and expectation evaluation together.
@@ -348,29 +359,32 @@ _RouteAuditCheck _parseCheck(Object? raw) {
   );
 }
 
-String? _parseStringFlag(List<String> args, String name) {
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      return argument.replaceFirst('$name=', '');
-    }
-  }
-  return null;
-}
-
-void _writeOutputFile(Directory root, String relativePath, String content) {
-  final target = File(
-    relativePath.startsWith('/')
-        ? relativePath
-        : '${root.path}${Platform.pathSeparator}$relativePath',
-  );
-  target.parent.createSync(recursive: true);
-  target.writeAsStringSync(content);
-}
-
 final class _RouteAuditConfig {
   const _RouteAuditConfig({required this.checks});
 
   final List<_RouteAuditCheck> checks;
+}
+
+final class _RouteAuditOutput {
+  const _RouteAuditOutput({
+    required this.root,
+    required this.configPath,
+    required this.results,
+    required this.jsonOutput,
+    required this.jsonOutPath,
+  });
+
+  final Directory root;
+  final String configPath;
+  final List<_RouteExpectationResult> results;
+  final bool jsonOutput;
+  final String? jsonOutPath;
+}
+
+final class _MissingRouteAuditConfig implements Exception {
+  const _MissingRouteAuditConfig(this.path);
+
+  final String path;
 }
 
 final class _RouteAuditCheck {

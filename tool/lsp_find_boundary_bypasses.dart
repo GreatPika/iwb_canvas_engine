@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
@@ -9,9 +8,6 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
-// Each method trace shares one LSP session and must-pass report, which is this
-// command's cohesive boundary rather than a collection of partial commands.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One command owns its shared LSP session and must-pass report.
 Future<ToolCommandResult> runLspFindBoundaryBypassesTool(
   List<String> args, {
   Directory? root,
@@ -26,90 +22,25 @@ Future<ToolCommandResult> runLspFindBoundaryBypassesTool(
   }
 
   final workingRoot = root ?? Directory.current;
-  final repoRelativePath = args[0];
-  final className = args[1];
-  final mustPass = _parseRepeatedFlag(args, '--must-pass');
+  final mustPass = toolCommandRepeatedStringFlag(args, '--must-pass');
   if (mustPass.isEmpty) {
     return const ToolCommandResult(
       exitCode: 1,
       stderr: 'FAIL: at least one --must-pass target is required.\n',
     );
   }
-  final depth = _parseIntFlag(args, '--depth') ?? 5;
-  final includePrivate = args.contains('--include-private');
   final jsonOutput = args.contains('--json');
+  final request = _BoundaryAuditRequest.fromArgs(args, workingRoot, mustPass);
+  final methods = _listMethodsForRequest(request);
+  final client = await LanguageServerClient.start(root: request.root);
 
-  final methods = _listClassMethods(
-    root: workingRoot,
-    repoRelativePath: repoRelativePath,
-    className: className,
-    includePrivate: includePrivate,
-  );
-
-  final client = await LanguageServerClient.start(root: workingRoot);
   try {
-    final failures = <Map<String, Object?>>[];
-    for (final methodName in methods) {
-      final symbol = locateSymbol(
-        root: workingRoot,
-        repoRelativePath: repoRelativePath,
-        query: '$className.$methodName',
-      );
-      final start = await prepareCallItemForSymbol(client, symbol);
-      if (start == null) {
-        continue;
-      }
-      final flow = await tracePrimaryOutgoingFlow(
-        client,
-        start,
-        depth: depth,
-        includeExternal: false,
-      );
-      final labels = <String>[
-        flow.start.label,
-        ...flow.steps.map((step) => step.item.label),
-      ];
-      final matched = mustPass.any((requiredTarget) {
-        return labels.any(
-          (label) => _matchesRequiredTarget(label, requiredTarget),
-        );
-      });
-      if (matched) {
-        continue;
-      }
-      failures.add(<String, Object?>{
-        'method': '$className.$methodName',
-        'mustPass': mustPass,
-        'flow': labels,
-      });
-    }
-
-    if (jsonOutput) {
-      return ToolCommandResult(
-        exitCode: failures.isEmpty ? 0 : 1,
-        stdout: '${const JsonEncoder.withIndent('  ').convert(failures)}\n',
-      );
-    }
-
-    final buffer = StringBuffer();
-    if (failures.isEmpty) {
-      buffer.writeln(
-        'No boundary bypasses found in $className '
-        'for ${mustPass.join(', ')}.',
-      );
-      return ToolCommandResult(exitCode: 0, stdout: buffer.toString());
-    }
-    buffer.writeln(
-      'Boundary bypass candidates in $className '
-      'for ${mustPass.join(', ')}:',
+    return await _runBoundaryAudit(
+      client: client,
+      request: request,
+      methods: methods,
+      jsonOutput: jsonOutput,
     );
-    for (final failure in failures) {
-      buffer.writeln('- ${failure['method']}');
-      for (final step in failure['flow'] as List<String>) {
-        buffer.writeln('  flow: $step');
-      }
-    }
-    return ToolCommandResult(exitCode: 1, stdout: buffer.toString());
   } on SymbolLocateFailure catch (error) {
     return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
   } on LanguageServerError catch (error) {
@@ -126,6 +57,142 @@ Future<void> main(List<String> args) async {
   final result = await runLspFindBoundaryBypassesTool(args);
   writeToolCommandResult(result);
   exitCode = result.exitCode;
+}
+
+List<String> _listMethodsForRequest(_BoundaryAuditRequest request) =>
+    _listClassMethods(
+      root: request.root,
+      repoRelativePath: request.repoRelativePath,
+      className: request.className,
+      includePrivate: request.includePrivate,
+    );
+
+Future<ToolCommandResult> _runBoundaryAudit({
+  required LanguageServerClient client,
+  required _BoundaryAuditRequest request,
+  required List<String> methods,
+  required bool jsonOutput,
+}) async {
+  final failures = <Map<String, Object?>>[];
+  for (final methodName in methods) {
+    final failure = await _findMethodBypass(
+      client,
+      request: request,
+      methodName: methodName,
+    );
+    if (failure != null) {
+      failures.add(failure);
+    }
+  }
+  return _resultForFailures(
+    className: request.className,
+    mustPass: request.mustPass,
+    failures: failures,
+    jsonOutput: jsonOutput,
+  );
+}
+
+Future<Map<String, Object?>?> _findMethodBypass(
+  LanguageServerClient client, {
+  required _BoundaryAuditRequest request,
+  required String methodName,
+}) async {
+  final symbol = locateSymbol(
+    root: request.root,
+    repoRelativePath: request.repoRelativePath,
+    query: '${request.className}.$methodName',
+  );
+  final start = await prepareCallItemForSymbol(client, symbol);
+  if (start == null) {
+    return null;
+  }
+  final flow = await tracePrimaryOutgoingFlow(
+    client,
+    start,
+    depth: request.depth,
+    includeExternal: false,
+  );
+  final labels = <String>[
+    flow.start.label,
+    ...flow.steps.map((step) => step.item.label),
+  ];
+  if (request.mustPass.any(
+    (target) => labels.any((label) => _matchesRequiredTarget(label, target)),
+  )) {
+    return null;
+  }
+  return <String, Object?>{
+    'method': '${request.className}.$methodName',
+    'mustPass': request.mustPass,
+    'flow': labels,
+  };
+}
+
+ToolCommandResult _resultForFailures({
+  required String className,
+  required List<String> mustPass,
+  required List<Map<String, Object?>> failures,
+  required bool jsonOutput,
+}) => ToolCommandResult(
+  exitCode: failures.isEmpty ? 0 : 1,
+  stdout: jsonOutput
+      ? '${encodeToolCommandJson(failures)}\n'
+      : _renderTextReport(className, mustPass, failures),
+);
+
+String _renderTextReport(
+  String className,
+  List<String> mustPass,
+  List<Map<String, Object?>> failures,
+) {
+  final buffer = StringBuffer();
+  if (failures.isEmpty) {
+    buffer.writeln(
+      'No boundary bypasses found in $className for ${mustPass.join(', ')}.',
+    );
+    return buffer.toString();
+  }
+  buffer.writeln(
+    'Boundary bypass candidates in $className for ${mustPass.join(', ')}:',
+  );
+  for (final failure in failures) {
+    buffer.writeln('- ${failure['method']}');
+    for (final step in failure['flow'] as List<String>) {
+      buffer.writeln('  flow: $step');
+    }
+  }
+  return buffer.toString();
+}
+
+final class _BoundaryAuditRequest {
+  const _BoundaryAuditRequest({
+    required this.root,
+    required this.repoRelativePath,
+    required this.className,
+    required this.mustPass,
+    required this.depth,
+    required this.includePrivate,
+  });
+
+  factory _BoundaryAuditRequest.fromArgs(
+    List<String> args,
+    Directory root,
+    List<String> mustPass,
+  ) => _BoundaryAuditRequest(
+    root: root,
+    repoRelativePath: args[0],
+    className: args[1],
+    mustPass: mustPass,
+    depth: toolCommandIntFlag(args, '--depth') ?? 5,
+    includePrivate: args.contains('--include-private'),
+  );
+
+  final Directory root;
+  final String repoRelativePath;
+  final String className;
+  final List<String> mustPass;
+  final int depth;
+  final bool includePrivate;
 }
 
 List<String> _listClassMethods({
@@ -175,23 +242,4 @@ bool _matchesRequiredTarget(String label, String requiredTarget) {
     return label == requiredTarget;
   }
   return label == requiredTarget || label.startsWith('$requiredTarget.');
-}
-
-List<String> _parseRepeatedFlag(List<String> args, String name) {
-  final values = <String>[];
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      values.add(argument.replaceFirst('$name=', ''));
-    }
-  }
-  return List<String>.unmodifiable(values);
-}
-
-int? _parseIntFlag(List<String> args, String name) {
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      return int.tryParse(argument.replaceFirst('$name=', ''));
-    }
-  }
-  return null;
 }

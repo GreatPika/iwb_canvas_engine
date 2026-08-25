@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'src/lsp/language_server_client.dart';
@@ -6,9 +5,6 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
-// Symbol lookup, hierarchy collection, and all requested report formats share
-// one LSP session and one resolved symbol, so they remain a cohesive command.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One resolved symbol and LSP session own every requested report form.
 Future<ToolCommandResult> runLspTraceSymbolTool(
   List<String> args, {
   Directory? root,
@@ -24,158 +20,12 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
     );
   }
 
-  final workingRoot = root ?? Directory.current;
-  final repoRelativePath = args[0];
-  final symbolQuery = args[1];
-  final depth = _parseIntFlag(args, '--depth') ?? 1;
-  final direction = _parseStringFlag(args, '--direction') ?? 'both';
-  final includeExternal = args.contains('--include-external');
-  final jsonOutput = args.contains('--json');
-  final jsonOutPath = _parseStringFlag(args, '--json-out');
-  final mermaidOutput = args.contains('--mermaid');
-  final mermaidOutPath = _parseStringFlag(args, '--mermaid-out');
-  final omittedReferencePathPrefixes = _parseRepeatedStringFlag(
-    args,
-    '--omit-reference-path-prefix',
-  );
-
-  late final LocatedSymbol located;
+  final request = _TraceRequest.fromArgs(args, root ?? Directory.current);
   try {
-    located = locateSymbol(
-      root: workingRoot,
-      repoRelativePath: repoRelativePath,
-      query: symbolQuery,
-    );
+    final report = await _collectTraceReport(request);
+    return _resultForTrace(request, report);
   } on SymbolLocateFailure catch (error) {
     return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
-  }
-
-  final client = await LanguageServerClient.start(root: workingRoot);
-  try {
-    await client.openFile(located.repoRelativePath);
-    final item = await prepareCallItemForSymbol(client, located);
-    if (item == null) {
-      throw _TraceFailure(
-        'LSP did not return a call-hierarchy item for '
-        '${located.displayName} in ${located.repoRelativePath}.',
-      );
-    }
-
-    final references = await client.requestWithFileRetry(
-      'textDocument/references',
-      <String, Object?>{
-        'textDocument': <String, Object?>{
-          'uri': client.resolveUri(located.repoRelativePath).toString(),
-        },
-        'position': <String, Object?>{
-          'line': located.line,
-          'character': located.character,
-        },
-        'context': const <String, Object?>{'includeDeclaration': true},
-      },
-    );
-    final implementations = await client.requestWithFileRetry(
-      'textDocument/implementation',
-      <String, Object?>{
-        'textDocument': <String, Object?>{
-          'uri': client.resolveUri(located.repoRelativePath).toString(),
-        },
-        'position': <String, Object?>{
-          'line': located.line,
-          'character': located.character,
-        },
-      },
-    );
-
-    final incoming = switch (direction) {
-      'incoming' || 'both' => await _collectCallTree(
-        client,
-        item,
-        depth: depth,
-        method: 'callHierarchy/incomingCalls',
-        includeExternal: includeExternal,
-      ),
-      _ => const <Map<String, Object?>>[],
-    };
-    final outgoing = switch (direction) {
-      'outgoing' || 'both' => await _collectCallTree(
-        client,
-        item,
-        depth: depth,
-        method: 'callHierarchy/outgoingCalls',
-        includeExternal: includeExternal,
-      ),
-      _ => const <Map<String, Object?>>[],
-    };
-
-    final report = <String, Object?>{
-      'symbol': located.displayName,
-      'kind': located.kind,
-      'path': located.repoRelativePath,
-      'referencesByFile': _countLocationsByFile(
-        client,
-        references as List<Object?>? ?? const <Object?>[],
-        omittedPathPrefixes: omittedReferencePathPrefixes,
-      ),
-      'implementations': _mapLocations(
-        client,
-        implementations as List<Object?>? ?? const <Object?>[],
-      ),
-      'incoming': incoming,
-      'outgoing': outgoing,
-    };
-    final reportJson = const JsonEncoder.withIndent('  ').convert(report);
-    final mermaid = _renderMermaid(report);
-
-    if (jsonOutPath != null) {
-      _writeOutputFile(workingRoot, jsonOutPath, '$reportJson\n');
-    }
-    if (mermaidOutPath != null) {
-      _writeOutputFile(
-        workingRoot,
-        mermaidOutPath,
-        '${_renderMermaidDocument(mermaid)}\n',
-      );
-    }
-
-    if (jsonOutput) {
-      return ToolCommandResult(exitCode: 0, stdout: '$reportJson\n');
-    }
-    if (mermaidOutput) {
-      return ToolCommandResult(exitCode: 0, stdout: '$mermaid\n');
-    }
-
-    final buffer = StringBuffer()
-      ..writeln('Symbol: ${report['symbol']} (${report['kind']})')
-      ..writeln('File: ${report['path']}')
-      ..writeln('References by file:');
-    final referencesByFile = report['referencesByFile'] as Map<String, Object?>;
-    if (referencesByFile.isEmpty) {
-      buffer.writeln('- none');
-    } else {
-      final sortedKeys = referencesByFile.keys.toList()..sort();
-      for (final key in sortedKeys) {
-        buffer.writeln('- $key: ${referencesByFile[key]}');
-      }
-    }
-    final implementationLocations =
-        report['implementations'] as List<Map<String, Object?>>;
-    buffer.writeln('Implementations:');
-    if (implementationLocations.isEmpty) {
-      buffer.writeln('- none');
-    } else {
-      for (final implementation in implementationLocations) {
-        buffer.writeln(
-          '- ${implementation['path']}:${implementation['line']}:'
-          '${implementation['character']}',
-        );
-      }
-    }
-    buffer.writeln('Incoming calls:');
-    _writeTree(buffer, incoming, indent: '');
-    buffer.writeln('Outgoing calls:');
-    _writeTree(buffer, outgoing, indent: '');
-    return ToolCommandResult(exitCode: 0, stdout: buffer.toString());
   } on _TraceFailure catch (error) {
     return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
   } on LanguageServerError catch (error) {
@@ -183,8 +33,6 @@ Future<ToolCommandResult> runLspTraceSymbolTool(
       exitCode: 1,
       stderr: 'FAIL: LSP trace failed: ${error.message}\n',
     );
-  } finally {
-    await client.close();
   }
 }
 
@@ -192,6 +40,192 @@ Future<void> main(List<String> args) async {
   final result = await runLspTraceSymbolTool(args);
   writeToolCommandResult(result);
   exitCode = result.exitCode;
+}
+
+Future<Map<String, Object?>> _collectTraceReport(_TraceRequest request) async {
+  final located = locateSymbol(
+    root: request.root,
+    repoRelativePath: request.repoRelativePath,
+    query: request.symbolQuery,
+  );
+  final client = await LanguageServerClient.start(root: request.root);
+  try {
+    final item = await prepareCallItemForSymbol(client, located);
+    if (item == null) {
+      throw _TraceFailure(
+        'LSP did not return a call-hierarchy item for '
+        '${located.displayName} in ${located.repoRelativePath}.',
+      );
+    }
+    final locations = await _collectLocations(client, located);
+    final trees = await _collectDirectionTrees(client, item, request);
+    return _buildTraceReport(
+      _TraceReportInput(
+        client: client,
+        located: located,
+        locations: locations,
+        trees: trees,
+        request: request,
+      ),
+    );
+  } finally {
+    await client.close();
+  }
+}
+
+Future<({Object? references, Object? implementations})> _collectLocations(
+  LanguageServerClient client,
+  LocatedSymbol located,
+) async {
+  final params = <String, Object?>{
+    'textDocument': <String, Object?>{
+      'uri': client.resolveUri(located.repoRelativePath).toString(),
+    },
+    'position': <String, Object?>{
+      'line': located.line,
+      'character': located.character,
+    },
+  };
+  final references = await client.requestWithFileRetry(
+    'textDocument/references',
+    <String, Object?>{
+      ...params,
+      'context': const <String, Object?>{'includeDeclaration': true},
+    },
+  );
+  final implementations = await client.requestWithFileRetry(
+    'textDocument/implementation',
+    params,
+  );
+  return (references: references, implementations: implementations);
+}
+
+Future<
+  ({List<Map<String, Object?>> incoming, List<Map<String, Object?>> outgoing})
+>
+_collectDirectionTrees(
+  LanguageServerClient client,
+  LspCallItem item,
+  _TraceRequest request,
+) async {
+  final incoming = switch (request.direction) {
+    'incoming' || 'both' => await _collectCallTree(
+      client,
+      item,
+      depth: request.depth,
+      method: 'callHierarchy/incomingCalls',
+      includeExternal: request.includeExternal,
+    ),
+    _ => const <Map<String, Object?>>[],
+  };
+  final outgoing = switch (request.direction) {
+    'outgoing' || 'both' => await _collectCallTree(
+      client,
+      item,
+      depth: request.depth,
+      method: 'callHierarchy/outgoingCalls',
+      includeExternal: request.includeExternal,
+    ),
+    _ => const <Map<String, Object?>>[],
+  };
+  return (incoming: incoming, outgoing: outgoing);
+}
+
+Map<String, Object?> _buildTraceReport(_TraceReportInput input) =>
+    <String, Object?>{
+      'symbol': input.located.displayName,
+      'kind': input.located.kind,
+      'path': input.located.repoRelativePath,
+      'referencesByFile': _countLocationsByFile(
+        input.client,
+        input.locations.references as List<Object?>? ?? const <Object?>[],
+        omittedPathPrefixes: input.request.omittedReferencePathPrefixes,
+      ),
+      'implementations': _mapLocations(
+        input.client,
+        input.locations.implementations as List<Object?>? ?? const <Object?>[],
+      ),
+      'incoming': input.trees.incoming,
+      'outgoing': input.trees.outgoing,
+    };
+
+ToolCommandResult _resultForTrace(
+  _TraceRequest request,
+  Map<String, Object?> report,
+) {
+  final reportJson = encodeToolCommandJson(report);
+  final mermaid = _renderMermaid(report);
+  if (request.jsonOutPath case final path?) {
+    writeToolCommandOutputFile(request.root, path, '$reportJson\n');
+  }
+  if (request.mermaidOutPath case final path?) {
+    writeToolCommandOutputFile(
+      request.root,
+      path,
+      '${_renderMermaidDocument(mermaid)}\n',
+    );
+  }
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: request.jsonOutput
+        ? '$reportJson\n'
+        : request.mermaidOutput
+        ? '$mermaid\n'
+        : _renderTextReport(report),
+  );
+}
+
+String _renderTextReport(Map<String, Object?> report) {
+  final buffer = StringBuffer()
+    ..writeln('Symbol: ${report['symbol']} (${report['kind']})')
+    ..writeln('File: ${report['path']}')
+    ..writeln('References by file:');
+  _writeReferences(buffer, report['referencesByFile'] as Map<String, Object?>);
+  buffer.writeln('Implementations:');
+  _writeImplementations(
+    buffer,
+    report['implementations'] as List<Map<String, Object?>>,
+  );
+  buffer.writeln('Incoming calls:');
+  _writeTree(
+    buffer,
+    report['incoming'] as List<Map<String, Object?>>,
+    indent: '',
+  );
+  buffer.writeln('Outgoing calls:');
+  _writeTree(
+    buffer,
+    report['outgoing'] as List<Map<String, Object?>>,
+    indent: '',
+  );
+  return buffer.toString();
+}
+
+void _writeReferences(StringBuffer buffer, Map<String, Object?> references) {
+  if (references.isEmpty) {
+    buffer.writeln('- none');
+    return;
+  }
+  final keys = references.keys.toList()..sort();
+  for (final key in keys) {
+    buffer.writeln('- $key: ${references[key]}');
+  }
+}
+
+void _writeImplementations(
+  StringBuffer buffer,
+  List<Map<String, Object?>> implementations,
+) {
+  if (implementations.isEmpty) {
+    buffer.writeln('- none');
+    return;
+  }
+  for (final implementation in implementations) {
+    buffer.writeln(
+      '- ${implementation['path']}:${implementation['line']}:'
+      '${implementation['character']}',
+    );
+  }
 }
 
 // These parameters are the recursive call-tree state; a context wrapper would
@@ -341,47 +375,77 @@ void _writeTree(
   }
 }
 
-int? _parseIntFlag(List<String> args, String name) {
-  final value = _parseStringFlag(args, name);
-  if (value == null) {
-    return null;
+final class _TraceRequest {
+  const _TraceRequest({
+    required this.root,
+    required this.repoRelativePath,
+    required this.symbolQuery,
+    required this.depth,
+    required this.direction,
+    required this.includeExternal,
+    required this.jsonOutput,
+    required this.jsonOutPath,
+    required this.mermaidOutput,
+    required this.mermaidOutPath,
+    required this.omittedReferencePathPrefixes,
+  });
+
+  factory _TraceRequest.fromArgs(List<String> args, Directory root) {
+    return _TraceRequest(
+      root: root,
+      repoRelativePath: args[0],
+      symbolQuery: args[1],
+      depth: toolCommandIntFlag(args, '--depth') ?? 1,
+      direction: toolCommandStringFlag(args, '--direction') ?? 'both',
+      includeExternal: args.contains('--include-external'),
+      jsonOutput: args.contains('--json'),
+      jsonOutPath: toolCommandStringFlag(args, '--json-out'),
+      mermaidOutput: args.contains('--mermaid'),
+      mermaidOutPath: toolCommandStringFlag(args, '--mermaid-out'),
+      omittedReferencePathPrefixes: toolCommandRepeatedStringFlag(
+        args,
+        '--omit-reference-path-prefix',
+      ),
+    );
   }
-  return int.tryParse(value);
+
+  final Directory root;
+  final String repoRelativePath;
+  final String symbolQuery;
+  final int depth;
+  final String direction;
+  final bool includeExternal;
+  final bool jsonOutput;
+  final String? jsonOutPath;
+  final bool mermaidOutput;
+  final String? mermaidOutPath;
+  final List<String> omittedReferencePathPrefixes;
 }
 
-String? _parseStringFlag(List<String> args, String name) {
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      return argument.replaceFirst('$name=', '');
-    }
-  }
-  return null;
-}
+final class _TraceReportInput {
+  const _TraceReportInput({
+    required this.client,
+    required this.located,
+    required this.locations,
+    required this.trees,
+    required this.request,
+  });
 
-List<String> _parseRepeatedStringFlag(List<String> args, String name) {
-  final values = <String>[];
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      values.add(argument.replaceFirst('$name=', ''));
-    }
-  }
-  return values;
+  final LanguageServerClient client;
+  final LocatedSymbol located;
+  final ({Object? references, Object? implementations}) locations;
+  final ({
+    List<Map<String, Object?>> incoming,
+    List<Map<String, Object?>> outgoing,
+  })
+  trees;
+  final _TraceRequest request;
 }
 
 final class _TraceFailure implements Exception {
   const _TraceFailure(this.message);
 
   final String message;
-}
-
-void _writeOutputFile(Directory root, String outputPath, String content) {
-  final target = File(
-    outputPath.startsWith('/')
-        ? outputPath
-        : '${root.path}${Platform.pathSeparator}$outputPath',
-  );
-  target.parent.createSync(recursive: true);
-  target.writeAsStringSync(content);
 }
 
 String _renderMermaid(Map<String, Object?> report) {

@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/source/line_info.dart';
 
 List<File> collectFunctionAuditDartFiles(Directory root, List<String> targets) {
   final files = <File>[];
@@ -50,6 +52,45 @@ List<FunctionAuditAnalysis> collectFunctionAuditAnalyses(
   return visitor.analyses;
 }
 
+/// A parsed source file shared by function-order audits.
+final class FunctionAuditSource {
+  FunctionAuditSource._({
+    required this.file,
+    required this.repoRelativePath,
+    required this.analyses,
+    required LineInfo lineInfo,
+  }) : _lineInfo = lineInfo,
+       callGraph = FunctionAuditCallGraph(analyses);
+
+  final File file;
+  final String repoRelativePath;
+  final List<FunctionAuditAnalysis> analyses;
+  final LineInfo _lineInfo;
+  final FunctionAuditCallGraph callGraph;
+
+  int lineForOffset(int offset) => _lineInfo.getLocation(offset).lineNumber;
+}
+
+/// Parses every selected file once so order audits share AST and path setup.
+List<FunctionAuditSource> loadFunctionAuditSources(
+  Directory root,
+  List<File> files,
+) => [for (final file in files) _loadFunctionAuditSource(root, file)];
+
+FunctionAuditSource _loadFunctionAuditSource(Directory root, File file) {
+  final parsed = parseString(
+    path: file.absolute.path,
+    content: file.readAsStringSync(),
+    throwIfDiagnostics: false,
+  );
+  return FunctionAuditSource._(
+    file: file,
+    repoRelativePath: functionAuditRepoRelativePath(root, file),
+    analyses: collectFunctionAuditAnalyses(parsed.unit, file.path),
+    lineInfo: parsed.lineInfo,
+  );
+}
+
 final class FunctionAuditAnalysis {
   const FunctionAuditAnalysis({
     required this.filePath,
@@ -78,6 +119,68 @@ final class FunctionAuditCallOccurrence {
   final String name;
   final int offset;
   final bool inFinally;
+}
+
+/// Resolves same-file calls for the two source-order audits from one AST pass.
+final class FunctionAuditCallGraph {
+  FunctionAuditCallGraph(List<FunctionAuditAnalysis> analyses)
+    : _calleesByName = _indexBySimpleName(analyses);
+
+  final Map<String, Set<FunctionAuditAnalysis>> _calleesByName;
+
+  Set<FunctionAuditAnalysis>? calleesFor(FunctionAuditCallOccurrence call) =>
+      _calleesByName[call.name];
+
+  bool reachesDirectCall(
+    FunctionAuditAnalysis analysis,
+    bool Function(FunctionAuditCallOccurrence call) matches,
+  ) {
+    final memo = <FunctionAuditAnalysis, bool>{};
+    return _reachesDirectCall(
+      analysis,
+      matches,
+      memo,
+      <FunctionAuditAnalysis>{},
+    );
+  }
+
+  bool _reachesDirectCall(
+    FunctionAuditAnalysis analysis,
+    bool Function(FunctionAuditCallOccurrence call) matches,
+    Map<FunctionAuditAnalysis, bool> memo,
+    Set<FunctionAuditAnalysis> active,
+  ) {
+    final cached = memo[analysis];
+    if (cached != null) {
+      return cached;
+    }
+    if (!active.add(analysis)) {
+      return false;
+    }
+    final result = analysis.directCalls.any(
+      (call) =>
+          matches(call) ||
+          (calleesFor(call)?.any(
+                (callee) => _reachesDirectCall(callee, matches, memo, active),
+              ) ??
+              false),
+    );
+    active.remove(analysis);
+    memo[analysis] = result;
+    return result;
+  }
+}
+
+Map<String, Set<FunctionAuditAnalysis>> _indexBySimpleName(
+  List<FunctionAuditAnalysis> analyses,
+) {
+  final result = <String, Set<FunctionAuditAnalysis>>{};
+  for (final analysis in analyses) {
+    result
+        .putIfAbsent(analysis.simpleName, () => <FunctionAuditAnalysis>{})
+        .add(analysis);
+  }
+  return result;
 }
 
 final class _FunctionCollector extends RecursiveAstVisitor<void> {

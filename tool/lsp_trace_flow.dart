@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'src/lsp/language_server_client.dart';
@@ -6,8 +5,6 @@ import 'src/lsp/symbol_locator.dart';
 import 'src/lsp/trace_support.dart';
 import 'src/tool_command_result.dart';
 
-// One LSP trace owns collection and both representations of the same flow.
-// ignore: halstead-volume, source-lines-of-code, maintainability-index, reason: One trace owns collection and both renderings of its flow.
 Future<ToolCommandResult> runLspTraceFlowTool(
   List<String> args, {
   Directory? root,
@@ -24,80 +21,21 @@ Future<ToolCommandResult> runLspTraceFlowTool(
   final workingRoot = root ?? Directory.current;
   final repoRelativePath = args[0];
   final symbolQuery = args[1];
-  final depth = _parseIntFlag(args, '--depth') ?? 6;
+  final depth = toolCommandIntFlag(args, '--depth') ?? 6;
   final jsonOutput = args.contains('--json');
-
   final located = locateSymbol(
     root: workingRoot,
     repoRelativePath: repoRelativePath,
     query: symbolQuery,
   );
-
   final client = await LanguageServerClient.start(root: workingRoot);
   try {
-    final start = await prepareCallItemForSymbol(client, located);
-    if (start == null) {
-      return ToolCommandResult(
-        exitCode: 1,
-        stderr:
-            'FAIL: LSP did not return a call-hierarchy item for '
-            '${located.displayName}.\n',
-      );
-    }
-    final flow = await tracePrimaryOutgoingFlow(
-      client,
-      start,
+    return await _traceFlow(
+      client: client,
+      located: located,
       depth: depth,
-      includeExternal: false,
+      jsonOutput: jsonOutput,
     );
-    final report = <String, Object?>{
-      'start': <String, Object?>{
-        'label': flow.start.label,
-        'path': flow.start.repoRelativePath,
-      },
-      'steps': flow.steps
-          .map(
-            (step) => <String, Object?>{
-              'transition': step.transition,
-              'label': step.item.label,
-              'path': step.item.repoRelativePath,
-              'sideBranches': step.sideBranches
-                  .map(
-                    (branch) => <String, Object?>{
-                      'label': branch.label,
-                      'path': branch.repoRelativePath,
-                    },
-                  )
-                  .toList(growable: false),
-            },
-          )
-          .toList(growable: false),
-    };
-
-    if (jsonOutput) {
-      return ToolCommandResult(
-        exitCode: 0,
-        stdout: '${const JsonEncoder.withIndent('  ').convert(report)}\n',
-      );
-    }
-
-    final buffer = StringBuffer()
-      ..writeln('Primary flow from ${flow.start.label}:')
-      ..writeln(
-        '- start: ${flow.start.label} (${flow.start.repoRelativePath})',
-      );
-    for (final step in flow.steps) {
-      buffer.writeln(
-        '- ${step.transition}: ${step.item.label} '
-        '(${step.item.repoRelativePath})',
-      );
-      for (final branch in step.sideBranches) {
-        buffer.writeln(
-          '  side-branch: ${branch.label} (${branch.repoRelativePath})',
-        );
-      }
-    }
-    return ToolCommandResult(exitCode: 0, stdout: buffer.toString());
   } on SymbolLocateFailure catch (error) {
     return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
   } on LanguageServerError catch (error) {
@@ -116,11 +54,88 @@ Future<void> main(List<String> args) async {
   exitCode = result.exitCode;
 }
 
-int? _parseIntFlag(List<String> args, String name) {
-  for (final argument in args) {
-    if (argument.startsWith('$name=')) {
-      return int.tryParse(argument.replaceFirst('$name=', ''));
+Future<ToolCommandResult> _traceFlow({
+  required LanguageServerClient client,
+  required LocatedSymbol located,
+  required int depth,
+  required bool jsonOutput,
+}) async {
+  final report = await _collectFlowReport(
+    client: client,
+    located: located,
+    depth: depth,
+  );
+  if (report == null) {
+    return ToolCommandResult(
+      exitCode: 1,
+      stderr:
+          'FAIL: LSP did not return a call-hierarchy item for '
+          '${located.displayName}.\n',
+    );
+  }
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: jsonOutput
+        ? '${encodeToolCommandJson(report)}\n'
+        : _renderTextReport(report),
+  );
+}
+
+Future<Map<String, Object?>?> _collectFlowReport({
+  required LanguageServerClient client,
+  required LocatedSymbol located,
+  required int depth,
+}) async {
+  final start = await prepareCallItemForSymbol(client, located);
+  if (start == null) {
+    return null;
+  }
+  final flow = await tracePrimaryOutgoingFlow(
+    client,
+    start,
+    depth: depth,
+    includeExternal: false,
+  );
+  return _flowReport(flow);
+}
+
+Map<String, Object?> _flowReport(StitchedFlow flow) => <String, Object?>{
+  'start': <String, Object?>{
+    'label': flow.start.label,
+    'path': flow.start.repoRelativePath,
+  },
+  'steps': [
+    for (final step in flow.steps)
+      <String, Object?>{
+        'transition': step.transition,
+        'label': step.item.label,
+        'path': step.item.repoRelativePath,
+        'sideBranches': [
+          for (final branch in step.sideBranches)
+            <String, Object?>{
+              'label': branch.label,
+              'path': branch.repoRelativePath,
+            },
+        ],
+      },
+  ],
+};
+
+String _renderTextReport(Map<String, Object?> report) {
+  final start = (report['start'] as Map<String, Object?>);
+  final buffer = StringBuffer()
+    ..writeln('Primary flow from ${start['label']}:')
+    ..writeln('- start: ${start['label']} (${start['path']})');
+  for (final step
+      in (report['steps'] as List<Object?>).cast<Map<String, Object?>>()) {
+    buffer.writeln(
+      '- ${step['transition']}: ${step['label']} (${step['path']})',
+    );
+    for (final branch
+        in (step['sideBranches'] as List<Object?>)
+            .cast<Map<String, Object?>>()) {
+      buffer.writeln('  side-branch: ${branch['label']} (${branch['path']})');
     }
   }
-  return null;
+  return buffer.toString();
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:analyzer/dart/analysis/analysis_context_collection.dart';
@@ -8,8 +7,6 @@ import 'src/analysis_dart_sdk_path.dart';
 import 'src/public_export_namespace_support.dart';
 import 'src/tool_command_result.dart';
 
-// One export trace owns resolution and all render formats for the same namespace.
-// ignore: halstead-volume, reason: One export trace owns resolution and every report format.
 Future<ToolCommandResult> runTraceExportNamespaceTool(
   List<String> args, {
   Directory? root,
@@ -26,33 +23,26 @@ Future<ToolCommandResult> runTraceExportNamespaceTool(
   final workingRoot = root ?? Directory.current;
   final entrypointArg = args.first;
   final jsonOutput = args.contains('--json');
-  final jsonOutPath = _parseStringFlag(args, '--json-out');
+  final optionArgs = args.skip(1).toList(growable: false);
+  final jsonOutPath = toolCommandStringFlag(optionArgs, '--json-out');
   final markdownOutput = args.contains('--md');
-  final markdownOutPath = _parseStringFlag(args, '--md-out');
+  final markdownOutPath = toolCommandStringFlag(optionArgs, '--md-out');
 
   try {
     final report = await _buildReport(
       root: workingRoot,
       entrypointArg: entrypointArg,
     );
-    final reportJson = const JsonEncoder.withIndent('  ').convert(report);
-    final reportMarkdown = _renderMermaidDocument(report);
-
-    if (jsonOutPath != null) {
-      _writeOutputFile(workingRoot, jsonOutPath, '$reportJson\n');
-    }
-    if (markdownOutPath != null) {
-      _writeOutputFile(workingRoot, markdownOutPath, '$reportMarkdown\n');
-    }
-
-    if (jsonOutput) {
-      return ToolCommandResult(exitCode: 0, stdout: '$reportJson\n');
-    }
-    if (markdownOutput) {
-      return ToolCommandResult(exitCode: 0, stdout: '$reportMarkdown\n');
-    }
-
-    return ToolCommandResult(exitCode: 0, stdout: _renderSummary(report));
+    return _resultForReport(
+      _ExportReportOutput(
+        root: workingRoot,
+        report: report,
+        jsonOutput: jsonOutput,
+        jsonOutPath: jsonOutPath,
+        markdownOutput: markdownOutput,
+        markdownOutPath: markdownOutPath,
+      ),
+    );
   } on _TraceFailure catch (error) {
     return ToolCommandResult(exitCode: 1, stderr: 'FAIL: ${error.message}\n');
   }
@@ -62,6 +52,47 @@ Future<void> main(List<String> args) async {
   final result = await runTraceExportNamespaceTool(args);
   writeToolCommandResult(result);
   exitCode = result.exitCode;
+}
+
+ToolCommandResult _resultForReport(_ExportReportOutput output) {
+  final reportJson = encodeToolCommandJson(output.report);
+  final reportMarkdown = _renderMermaidDocument(output.report);
+  if (output.jsonOutPath case final jsonOutPath?) {
+    writeToolCommandOutputFile(output.root, jsonOutPath, '$reportJson\n');
+  }
+  if (output.markdownOutPath case final markdownOutPath?) {
+    writeToolCommandOutputFile(
+      output.root,
+      markdownOutPath,
+      '$reportMarkdown\n',
+    );
+  }
+  return ToolCommandResult(
+    exitCode: 0,
+    stdout: output.jsonOutput
+        ? '$reportJson\n'
+        : output.markdownOutput
+        ? '$reportMarkdown\n'
+        : _renderSummary(output.report),
+  );
+}
+
+final class _ExportReportOutput {
+  const _ExportReportOutput({
+    required this.root,
+    required this.report,
+    required this.jsonOutput,
+    required this.jsonOutPath,
+    required this.markdownOutput,
+    required this.markdownOutPath,
+  });
+
+  final Directory root;
+  final Map<String, Object?> report;
+  final bool jsonOutput;
+  final String? jsonOutPath;
+  final bool markdownOutput;
+  final String? markdownOutPath;
 }
 
 // Namespace closure, direct-export provenance, and owner attribution require
@@ -307,22 +338,6 @@ String _renderMermaid(Map<String, Object?> report) {
   }
 
   return buffer.toString().trimRight();
-}
-
-String? _parseStringFlag(List<String> args, String flag) {
-  final prefix = '$flag=';
-  for (final arg in args.skip(1)) {
-    if (arg.startsWith(prefix)) {
-      return arg.replaceFirst(prefix, '');
-    }
-  }
-  return null;
-}
-
-void _writeOutputFile(Directory root, String relativePath, String content) {
-  final target = File(_resolveAgainstRoot(root, relativePath));
-  target.parent.createSync(recursive: true);
-  target.writeAsStringSync(content);
 }
 
 String _resolveAgainstRoot(Directory root, String path) {

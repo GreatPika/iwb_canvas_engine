@@ -1,232 +1,81 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:analyzer/dart/analysis/utilities.dart';
 import 'src/function_audit_ast.dart';
 import 'src/tool_command_result.dart';
 
-// This command owns the whole terminal-path classification and report, whose
-// predicates share the same parsed-call graph and cannot be separated safely.
-// ignore: cyclomatic-complexity, halstead-volume, source-lines-of-code, maintainability-index, reason: One command owns its shared parsed-call graph and report.
 Future<ToolCommandResult> runAuditTerminalCleanupSafetyTool(
   List<String> args, {
   Directory? root,
 }) async {
-  final workingRoot = root ?? Directory.current;
-  final jsonOutput = args.contains('--json');
   final targetArgs = args.where((arg) => !arg.startsWith('--')).toList();
   if (targetArgs.isEmpty) {
-    return const ToolCommandResult(
-      exitCode: 1,
-      stderr:
-          'Usage: dart run tool/audit_terminal_cleanup_safety.dart '
-          '<path-or-dir> [more-paths] [--json]\n',
-    );
+    return _usageResult();
   }
-  final targets = targetArgs;
 
-  final files = collectFunctionAuditDartFiles(workingRoot, targets);
+  final workingRoot = root ?? Directory.current;
+  final files = collectFunctionAuditDartFiles(workingRoot, targetArgs);
   if (files.isEmpty) {
-    return const ToolCommandResult(
-      exitCode: 1,
-      stderr: 'FAIL: no Dart files matched the provided targets.\n',
-    );
+    return _noFilesResult();
   }
 
-  final violations = <_TerminalCleanupViolation>[];
-  var scannedFunctions = 0;
+  final sources = loadFunctionAuditSources(workingRoot, files);
+  final report = _TerminalCleanupAuditReport.evaluate(sources);
+  return _renderAuditResult(report, jsonOutput: args.contains('--json'));
+}
 
-  for (final file in files) {
-    final parsed = parseString(
-      path: file.absolute.path,
-      content: file.readAsStringSync(),
-      throwIfDiagnostics: false,
-    );
-    final analyses = collectFunctionAuditAnalyses(parsed.unit, file.path);
-    scannedFunctions += analyses.length;
+ToolCommandResult _usageResult() => const ToolCommandResult(
+  exitCode: 1,
+  stderr:
+      'Usage: dart run tool/audit_terminal_cleanup_safety.dart '
+      '<path-or-dir> [more-paths] [--json]\n',
+);
 
-    final bySimpleName = <String, Set<FunctionAuditAnalysis>>{};
-    for (final analysis in analyses) {
-      bySimpleName
-          .putIfAbsent(analysis.simpleName, () => <FunctionAuditAnalysis>{})
-          .add(analysis);
-    }
+ToolCommandResult _noFilesResult() => const ToolCommandResult(
+  exitCode: 1,
+  stderr: 'FAIL: no Dart files matched the provided targets.\n',
+);
 
-    final hazardMemo = <FunctionAuditAnalysis, bool>{};
-    final cleanupMemo = <FunctionAuditAnalysis, bool>{};
+ToolCommandResult _renderAuditResult(
+  _TerminalCleanupAuditReport report, {
+  required bool jsonOutput,
+}) => jsonOutput ? _jsonResult(report) : _textResult(report);
 
-    bool isHazardous(
-      FunctionAuditAnalysis analysis, [
-      Set<FunctionAuditAnalysis>? stack,
-    ]) {
-      final cached = hazardMemo[analysis];
-      if (cached != null) {
-        return cached;
-      }
-      final active = stack ?? <FunctionAuditAnalysis>{};
-      if (!active.add(analysis)) {
-        return false;
-      }
-      final hazardous =
-          analysis.directCalls.any(
-            (call) => _isDirectHazardousCall(call.name),
-          ) ||
-          analysis.directCalls.any((call) {
-            final callees = bySimpleName[call.name];
-            if (callees == null) {
-              return false;
-            }
-            return callees.any((callee) => isHazardous(callee, active));
-          });
-      active.remove(analysis);
-      hazardMemo[analysis] = hazardous;
-      return hazardous;
-    }
+ToolCommandResult _jsonResult(_TerminalCleanupAuditReport report) {
+  final payload = <String, Object?>{
+    'summary': <String, Object?>{
+      'files': report.fileCount,
+      'functions': report.scannedFunctionCount,
+      'violations': report.violations.length,
+    },
+    'violations': [
+      for (final violation in report.violations) violation.toJson(),
+    ],
+  };
+  return ToolCommandResult(
+    exitCode: report.exitCode,
+    stdout: '${const JsonEncoder.withIndent('  ').convert(payload)}\n',
+  );
+}
 
-    bool isCleanup(
-      FunctionAuditAnalysis analysis, [
-      Set<FunctionAuditAnalysis>? stack,
-    ]) {
-      final cached = cleanupMemo[analysis];
-      if (cached != null) {
-        return cached;
-      }
-      final active = stack ?? <FunctionAuditAnalysis>{};
-      if (!active.add(analysis)) {
-        return false;
-      }
-      final cleanup =
-          analysis.directCalls.any((call) => _isDirectCleanupCall(call.name)) ||
-          analysis.directCalls.any((call) {
-            final callees = bySimpleName[call.name];
-            if (callees == null) {
-              return false;
-            }
-            return callees.any((callee) => isCleanup(callee, active));
-          });
-      active.remove(analysis);
-      cleanupMemo[analysis] = cleanup;
-      return cleanup;
-    }
-
-    for (final analysis in analyses) {
-      final hazardousCalls = analysis.directCalls
-          .where((call) {
-            if (_isDirectHazardousCall(call.name)) {
-              return true;
-            }
-            final callees = bySimpleName[call.name];
-            if (callees == null) {
-              return false;
-            }
-            return callees.any(isHazardous);
-          })
-          .toList(growable: false);
-      if (hazardousCalls.isEmpty) {
-        continue;
-      }
-
-      final cleanupCalls = analysis.directCalls
-          .where((call) {
-            if (_isDirectCleanupCall(call.name)) {
-              return true;
-            }
-            final callees = bySimpleName[call.name];
-            if (callees == null) {
-              return false;
-            }
-            return callees.any(isCleanup);
-          })
-          .toList(growable: false);
-      if (cleanupCalls.isEmpty) {
-        continue;
-      }
-
-      final hasCleanupFinally = cleanupCalls.any((call) => call.inFinally);
-      if (hasCleanupFinally) {
-        continue;
-      }
-
-      final hazardOffset = hazardousCalls.map((call) => call.offset).fold<int?>(
-        null,
-        (current, offset) {
-          if (current == null || offset < current) {
-            return offset;
-          }
-          return current;
-        },
-      );
-      if (hazardOffset == null) {
-        continue;
-      }
-
-      final cleanupAfterHazard = cleanupCalls.where((call) {
-        if (call.offset <= hazardOffset) {
-          return false;
-        }
-        return !analysis.abortOffsets.any(
-          (abortOffset) =>
-              abortOffset > hazardOffset && abortOffset < call.offset,
-        );
-      });
-      if (cleanupAfterHazard.isEmpty) {
-        continue;
-      }
-
-      if (!_looksLikeTerminalCleanupCandidate(analysis.simpleName)) {
-        continue;
-      }
-
-      final sortedHazards =
-          hazardousCalls.map((call) => call.name).toSet().toList()..sort();
-      final sortedCleanup =
-          cleanupAfterHazard.map((call) => call.name).toSet().toList()..sort();
-
-      violations.add(
-        _TerminalCleanupViolation(
-          filePath: functionAuditRepoRelativePath(workingRoot, file),
-          line: parsed.lineInfo.getLocation(analysis.offset).lineNumber,
-          ownerDisplayName: analysis.displayName,
-          hazardousCalls: sortedHazards,
-          cleanupCalls: sortedCleanup,
-        ),
-      );
-    }
-  }
-
-  if (jsonOutput) {
-    final payload = <String, Object?>{
-      'summary': <String, Object?>{
-        'files': files.length,
-        'functions': scannedFunctions,
-        'violations': violations.length,
-      },
-      'violations': violations
-          .map((violation) => violation.toJson())
-          .toList(growable: false),
-    };
-    return ToolCommandResult(
-      exitCode: violations.isEmpty ? 0 : 1,
-      stdout: '${const JsonEncoder.withIndent('  ').convert(payload)}\n',
-    );
-  }
-
-  if (violations.isEmpty) {
+ToolCommandResult _textResult(_TerminalCleanupAuditReport report) {
+  if (report.violations.isEmpty) {
     return ToolCommandResult(
       exitCode: 0,
       stdout:
-          'Terminal cleanup safety audit passed: scanned ${files.length} files '
-          'and $scannedFunctions function(s) with no exception-unsafe cleanup '
-          'patterns.\n',
+          'Terminal cleanup safety audit passed: scanned ${report.fileCount} '
+          'files and ${report.scannedFunctionCount} function(s) with no '
+          'exception-unsafe cleanup patterns.\n',
     );
   }
 
   final buffer = StringBuffer()
     ..writeln(
-      'Terminal cleanup safety audit found ${violations.length} violation(s) '
-      'across ${files.length} files and $scannedFunctions function(s):',
+      'Terminal cleanup safety audit found ${report.violations.length} '
+      'violation(s) across ${report.fileCount} files and '
+      '${report.scannedFunctionCount} function(s):',
     );
-  for (final violation in violations) {
+  for (final violation in report.violations) {
     buffer.writeln(
       '- ${violation.filePath}:${violation.line} ${violation.ownerDisplayName}',
     );
@@ -242,26 +91,138 @@ Future<void> main(List<String> args) async {
   exitCode = result.exitCode;
 }
 
-bool _isDirectHazardousCall(String name) {
-  return name.startsWith('commit') ||
-      name.startsWith('_commit') ||
-      name.startsWith('emit') ||
-      name.startsWith('_emit');
+final class _TerminalCleanupAuditReport {
+  const _TerminalCleanupAuditReport({
+    required this.fileCount,
+    required this.scannedFunctionCount,
+    required this.violations,
+  });
+
+  factory _TerminalCleanupAuditReport.evaluate(
+    List<FunctionAuditSource> sources,
+  ) => _TerminalCleanupAuditReport(
+    fileCount: sources.length,
+    scannedFunctionCount: sources.fold(
+      0,
+      (count, source) => count + source.analyses.length,
+    ),
+    violations: [
+      for (final source in sources)
+        ..._TerminalCleanupSafetyEvaluator(source).evaluate(),
+    ],
+  );
+
+  final int fileCount;
+  final int scannedFunctionCount;
+  final List<_TerminalCleanupViolation> violations;
+
+  int get exitCode => violations.isEmpty ? 0 : 1;
 }
 
-bool _isDirectCleanupCall(String name) {
-  return name.startsWith('clear') ||
-      name.startsWith('_clear') ||
-      name.startsWith('reset') ||
-      name.startsWith('_reset');
+final class _TerminalCleanupSafetyEvaluator {
+  _TerminalCleanupSafetyEvaluator(this.source);
+
+  final FunctionAuditSource source;
+
+  List<_TerminalCleanupViolation> evaluate() => [
+    for (final analysis in source.analyses) ?_evaluateAnalysis(analysis),
+  ];
+
+  _TerminalCleanupViolation? _evaluateAnalysis(FunctionAuditAnalysis analysis) {
+    final hazardousCalls = _callsMatching(analysis, _isDirectHazardousCall);
+    if (hazardousCalls.isEmpty) {
+      return null;
+    }
+    final cleanupCalls = _callsMatching(analysis, _isDirectCleanupCall);
+    if (cleanupCalls.isEmpty || cleanupCalls.any((call) => call.inFinally)) {
+      return null;
+    }
+    final hazardOffset = _firstOffset(hazardousCalls);
+    final cleanupAfterHazard = _callsAfter(
+      analysis,
+      cleanupCalls,
+      hazardOffset,
+    );
+    if (cleanupAfterHazard.isEmpty ||
+        !_looksLikeTerminalCleanupCandidate(analysis.simpleName)) {
+      return null;
+    }
+    return _TerminalCleanupViolation(
+      filePath: source.repoRelativePath,
+      line: source.lineForOffset(analysis.offset),
+      ownerDisplayName: analysis.displayName,
+      hazardousCalls: _sortedNames(hazardousCalls),
+      cleanupCalls: _sortedNames(cleanupAfterHazard),
+    );
+  }
+
+  List<FunctionAuditCallOccurrence> _callsMatching(
+    FunctionAuditAnalysis analysis,
+    bool Function(String name) matches,
+  ) => [
+    for (final call in analysis.directCalls)
+      if (_matchesCallOrCallee(call, matches)) call,
+  ];
+
+  bool _matchesCallOrCallee(
+    FunctionAuditCallOccurrence call,
+    bool Function(String name) matches,
+  ) =>
+      matches(call.name) ||
+      (source.callGraph
+              .calleesFor(call)
+              ?.any(
+                (callee) => source.callGraph.reachesDirectCall(
+                  callee,
+                  (nestedCall) => matches(nestedCall.name),
+                ),
+              ) ??
+          false);
+
+  List<FunctionAuditCallOccurrence> _callsAfter(
+    FunctionAuditAnalysis analysis,
+    List<FunctionAuditCallOccurrence> calls,
+    int offset,
+  ) => [
+    for (final call in calls)
+      if (call.offset > offset &&
+          !_hasAbortBetween(analysis, offset, call.offset))
+        call,
+  ];
+
+  bool _hasAbortBetween(
+    FunctionAuditAnalysis analysis,
+    int firstOffset,
+    int secondOffset,
+  ) => analysis.abortOffsets.any(
+    (abortOffset) => abortOffset > firstOffset && abortOffset < secondOffset,
+  );
 }
 
-bool _looksLikeTerminalCleanupCandidate(String name) {
-  return name == 'handleUp' ||
-      name == '_handleUp' ||
-      name == 'commitOnUp' ||
-      name.startsWith('_commit');
-}
+int _firstOffset(List<FunctionAuditCallOccurrence> calls) => calls
+    .map((call) => call.offset)
+    .reduce((left, right) => left < right ? left : right);
+
+List<String> _sortedNames(List<FunctionAuditCallOccurrence> calls) =>
+    (calls.map((call) => call.name).toSet().toList()..sort());
+
+bool _isDirectHazardousCall(String name) =>
+    name.startsWith('commit') ||
+    name.startsWith('_commit') ||
+    name.startsWith('emit') ||
+    name.startsWith('_emit');
+
+bool _isDirectCleanupCall(String name) =>
+    name.startsWith('clear') ||
+    name.startsWith('_clear') ||
+    name.startsWith('reset') ||
+    name.startsWith('_reset');
+
+bool _looksLikeTerminalCleanupCandidate(String name) =>
+    name == 'handleUp' ||
+    name == '_handleUp' ||
+    name == 'commitOnUp' ||
+    name.startsWith('_commit');
 
 final class _TerminalCleanupViolation {
   const _TerminalCleanupViolation({
@@ -278,13 +239,11 @@ final class _TerminalCleanupViolation {
   final List<String> hazardousCalls;
   final List<String> cleanupCalls;
 
-  Map<String, Object?> toJson() {
-    return <String, Object?>{
-      'filePath': filePath,
-      'line': line,
-      'ownerDisplayName': ownerDisplayName,
-      'hazardousCalls': hazardousCalls,
-      'cleanupCalls': cleanupCalls,
-    };
-  }
+  Map<String, Object?> toJson() => <String, Object?>{
+    'filePath': filePath,
+    'line': line,
+    'ownerDisplayName': ownerDisplayName,
+    'hazardousCalls': hazardousCalls,
+    'cleanupCalls': cleanupCalls,
+  };
 }
