@@ -65,6 +65,7 @@ Resource and interaction owners own their resource and interaction rows.
 | setBackgroundColor | persisted background metadata | state.revisions.document; internal backgroundRevision, projection | no | evict | main | none |
 | setGrid | persisted grid metadata | state.revisions.document; internal gridRevision, projection | no | evict | main | none |
 | setPalette | meta | state.revisions.document; internal projection | no | evict | no canvas repaint | none |
+| CanvasEdit.updatePalette | supplied fields replace the latest callback-local complete palette fields; omitted fields remain | same as `setPalette` when the final palette differs; none for all-absent, locally equal, or compensating final equality | no | evict only for an accepted changed final palette | no canvas repaint | none |
 | upsertResource new/changed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used | none |
 | removeUnusedResource removed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used by stale resource visuals only | none |
 | markResourceDirty/markAllResourcesDirty | active session/output resource borrows only | state.revisions.resourceVisual | no | no | main | none |

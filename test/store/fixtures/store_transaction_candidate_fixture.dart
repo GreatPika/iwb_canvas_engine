@@ -45,6 +45,47 @@ void main() {
     'candidate failure and alias matrix keeps preparation atomic',
     _candidateFailureAndAliasMatrix,
   );
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
+  test(
+    'candidate accepts one complete palette mutation through the scalar path',
+    _candidatePaletteMutationUsesExistingPath,
+  );
+}
+
+void _candidatePaletteMutationUsesExistingPath() {
+  final store = documentStoreWithDocument(_candidateBaseDocument());
+  final events = <StoreSparseCandidateEvent>[];
+  final palette = CanvasPalette(
+    penColors: const [Color(0xFF112233)],
+    backgroundColors: const [Color(0xFF445566)],
+    gridSizes: const [12],
+  );
+
+  final prepared = CommittedDocument.observeSparseCandidateEvents(
+    events.add,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        mutations: [StoreSparseSetPalette(palette)],
+        revisionDelta: const StoreRevisionDelta.projectionOnly(),
+      ),
+    ),
+  );
+
+  expect(_samePalette(prepared.document.palette, palette), isTrue);
+  _expectExactTouchedFacts(prepared.touchedFacts, palette: true);
+  expect(
+    events.where(
+      (event) => event.kind == StoreSparseCandidateEventKind.currentScalarRead,
+    ),
+    isNotEmpty,
+  );
+  expect(
+    events.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(1),
+  );
 }
 
 const _allFactsDelta = StoreRevisionDelta(

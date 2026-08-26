@@ -4,6 +4,7 @@ import 'edit_matrix_compile_expectations.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_document.dart';
 import 'package:iwb_canvas_engine/src/edit/draft_resources.dart';
@@ -130,6 +131,10 @@ void _registerOperationMatrixRows() {
   test('edit operation matrix rows emit no user actions', () {
     return expectLater(_expectEditOperationRowsEmitNoActions(), completes);
   });
+
+  test('updatePalette public routes preserve complete palette effects', () {
+    return expectLater(_expectUpdatePalettePublicRouteEffects(), completes);
+  });
 }
 
 void _registerTaxonomyRows() {
@@ -226,6 +231,14 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetPalette,
     _editSetPalette,
+    editMatrixProjectionOnlyPlanEffects,
+  ),
+  const _EditOperationMatrixCase(
+    'updatePalette',
+    _expectUpdatePaletteRow,
+    _documentWithUnusedResource,
+    _draftSetPalette,
+    _editUpdatePalette,
     editMatrixProjectionOnlyPlanEffects,
   ),
   const _EditOperationMatrixCase(
@@ -1132,6 +1145,90 @@ void _expectPaletteRow() {
   _expectFrameRevisions(root);
 }
 
+void _expectUpdatePaletteRow() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+  );
+
+  root.edits.edit(_editUpdatePalette);
+
+  final installed = root.readDocument().palette;
+  expect(installed.penColors, const [Color(0xFF000000), Color(0xFFFFFFFF)]);
+  expect(installed.backgroundColors, const [Color(0xFF112233)]);
+  expect(installed.gridSizes, const [8, 16]);
+  _expectFrameRevisions(root);
+}
+
+Future<void> _expectUpdatePalettePublicRouteEffects() async {
+  final setPalette = await _applyCompletePaletteRoute(
+    materialize: false,
+    apply: _editSetPalette,
+  );
+  final sparseUpdate = await _applyCompletePaletteRoute(
+    materialize: false,
+    apply: _editUpdatePalette,
+  );
+  final materializedUpdate = await _applyCompletePaletteRoute(
+    materialize: true,
+    apply: _editUpdatePalette,
+  );
+
+  sparseUpdate.expectSameDeliveryAs(setPalette, route: 'untouched sparse');
+  materializedUpdate.expectSameDeliveryAs(
+    setPalette,
+    route: 'deliberately materialized',
+  );
+  expect(sparseUpdate.projectionBuilds, 0);
+  expect(materializedUpdate.projectionBuilds, 1);
+}
+
+// The subscribed public delivery trace is one temporal observation; splitting
+// it would disconnect route setup from the facts captured after installation.
+// ignore: halstead-volume
+Future<_PaletteRouteEffects> _applyCompletePaletteRoute({
+  required bool materialize,
+  required void Function(CanvasEdit edit) apply,
+}) async {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+    commitEffectObserver: effectBatches.add,
+  );
+  final actions = <CanvasActionCommitted>[];
+  final contextActions = <CanvasContextActionRequested>[];
+  var statePublications = 0;
+  final actionSubscription = root.actions.listen(actions.add);
+  final contextSubscription = root.contextActionRequests.listen(
+    contextActions.add,
+  );
+  root.state.addListener(() => statePublications += 1);
+
+  root.edits.edit((edit) {
+    if (materialize) {
+      edit.readDraftDocument();
+    }
+    apply(edit);
+  });
+  await Future<void>.delayed(Duration.zero);
+
+  final palette = root.readAppearance().palette;
+  final result = _PaletteRouteEffects(
+    palette: palette,
+    documentRevision: root.documentFacts.documentRevision,
+    frameRevisions: root.frameRevisions,
+    projectionBuilds: root.projectionBuildCount,
+    state: root.state.value,
+    statePublications: statePublications,
+    effectBatches: effectBatches,
+    actions: actions,
+    contextActions: contextActions,
+  );
+  await actionSubscription.cancel();
+  await contextSubscription.cancel();
+  root.dispose();
+  return result;
+}
+
 void _expectUpsertResourceRow() {
   final root = runtimeRootWithCommittedDocumentSeed(
     _documentWithReferencedResource(),
@@ -1329,6 +1426,16 @@ void _draftSetPalette(DraftDocument draft) {
 void _editSetPalette(CanvasEdit edit) {
   edit.setPalette(
     CanvasPalette(
+      penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
+      backgroundColors: const [Color(0xFF112233)],
+      gridSizes: const [8, 16],
+    ),
+  );
+}
+
+void _editUpdatePalette(CanvasEdit edit) {
+  edit.updatePalette(
+    CanvasPaletteUpdate(
       penColors: const [Color(0xFF000000), Color(0xFFFFFFFF)],
       backgroundColors: const [Color(0xFF112233)],
       gridSizes: const [8, 16],
@@ -2120,6 +2227,107 @@ final class _EditOperationMatrixCase {
   final void Function(CanvasEdit edit) mutateEdit;
   final EditMatrixExpectedPlanEffects expectedPlanEffects;
   final Set<String> selectedElementIds;
+}
+
+final class _PaletteRouteEffects {
+  const _PaletteRouteEffects({
+    required this.palette,
+    required this.documentRevision,
+    required this.frameRevisions,
+    required this.projectionBuilds,
+    required this.state,
+    required this.statePublications,
+    required this.effectBatches,
+    required this.actions,
+    required this.contextActions,
+  });
+
+  final CanvasPalette palette;
+  final int documentRevision;
+  final FrameRevisionFacts frameRevisions;
+  final int projectionBuilds;
+  final CanvasRuntimeState state;
+  final int statePublications;
+  final List<List<CommitDeliveryEffect>> effectBatches;
+  final List<CanvasActionCommitted> actions;
+  final List<CanvasContextActionRequested> contextActions;
+
+  // The complete delivery family must remain visible in one comparison so an
+  // omitted projection, repaint, action, or state assertion cannot hide.
+  // ignore: halstead-volume, source-lines-of-code
+  void expectSameDeliveryAs(
+    _PaletteRouteEffects expected, {
+    required String route,
+  }) {
+    expect(palette.penColors, expected.palette.penColors, reason: route);
+    expect(
+      palette.backgroundColors,
+      expected.palette.backgroundColors,
+      reason: route,
+    );
+    expect(palette.gridSizes, expected.palette.gridSizes, reason: route);
+    expect(documentRevision, expected.documentRevision, reason: route);
+    expect(
+      frameRevisions.documentRevision,
+      expected.frameRevisions.documentRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.structuralRevision,
+      expected.frameRevisions.structuralRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.boundsRevision,
+      expected.frameRevisions.boundsRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.elementVisualRevision,
+      expected.frameRevisions.elementVisualRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.backgroundRevision,
+      expected.frameRevisions.backgroundRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.gridRevision,
+      expected.frameRevisions.gridRevision,
+      reason: route,
+    );
+    expect(
+      frameRevisions.resourceRevision,
+      expected.frameRevisions.resourceRevision,
+      reason: route,
+    );
+    expect(state, expected.state, reason: route);
+    expect(statePublications, expected.statePublications, reason: route);
+    expect(actions, isEmpty, reason: route);
+    expect(contextActions, isEmpty, reason: route);
+    expect(effectBatches, hasLength(1), reason: route);
+    expect(
+      effectBatches.single.map((effect) => effect.runtimeType),
+      expected.effectBatches.single.map((effect) => effect.runtimeType),
+      reason: route,
+    );
+    expect(
+      effectBatches.single.whereType<ProjectionDeliveryEffect>(),
+      hasLength(1),
+      reason: route,
+    );
+    expect(
+      effectBatches.single.whereType<PublicStateDeliveryEffect>(),
+      hasLength(1),
+      reason: route,
+    );
+    expect(
+      effectBatches.single.whereType<RepaintDeliveryEffect>(),
+      isEmpty,
+      reason: route,
+    );
+  }
 }
 
 final class _UpdateTaxonomyCase {

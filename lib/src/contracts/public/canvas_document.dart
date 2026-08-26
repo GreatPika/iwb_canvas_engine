@@ -275,6 +275,77 @@ final class CanvasPalette {
   List<double> get gridSizes => _gridSizes;
 }
 
+@immutable
+/// Public API v1 declaration for [CanvasPaletteUpdate].
+final class CanvasPaletteUpdate {
+  factory CanvasPaletteUpdate({
+    Iterable<Color>? penColors,
+    Iterable<Color>? backgroundColors,
+    Iterable<double>? gridSizes,
+  }) {
+    final frozenPenColors = penColors == null
+        ? const <Color>[]
+        : List<Color>.unmodifiable(penColors);
+    final frozenBackgroundColors = backgroundColors == null
+        ? const <Color>[]
+        : List<Color>.unmodifiable(backgroundColors);
+    final frozenGridSizes = gridSizes == null
+        ? const <double>[]
+        : List<double>.unmodifiable(gridSizes);
+
+    if (penColors != null) {
+      _validatePaletteList(frozenPenColors, path: 'palette.penColors');
+    }
+    if (backgroundColors != null) {
+      _validatePaletteList(
+        frozenBackgroundColors,
+        path: 'palette.backgroundColors',
+      );
+    }
+    if (gridSizes != null) {
+      _validatePaletteList(frozenGridSizes, path: 'palette.gridSizes');
+      for (final gridSize in frozenGridSizes) {
+        validatePositiveDouble(
+          gridSize,
+          path: 'palette.gridSizes',
+          max: canvasMaxPositiveSize,
+        );
+      }
+    }
+
+    return CanvasPaletteUpdate._(
+      penColors: frozenPenColors,
+      backgroundColors: frozenBackgroundColors,
+      gridSizes: frozenGridSizes,
+      hasPenColors: penColors != null,
+      hasBackgroundColors: backgroundColors != null,
+      hasGridSizes: gridSizes != null,
+    );
+  }
+
+  const CanvasPaletteUpdate._({
+    required List<Color> penColors,
+    required List<Color> backgroundColors,
+    required List<double> gridSizes,
+    required this.hasPenColors,
+    required this.hasBackgroundColors,
+    required this.hasGridSizes,
+  }) : _penColors = penColors,
+       _backgroundColors = backgroundColors,
+       _gridSizes = gridSizes;
+
+  final List<Color> _penColors;
+  final List<Color> _backgroundColors;
+  final List<double> _gridSizes;
+  final bool hasPenColors;
+  final bool hasBackgroundColors;
+  final bool hasGridSizes;
+
+  List<Color> get penColors => _penColors;
+  List<Color> get backgroundColors => _backgroundColors;
+  List<double> get gridSizes => _gridSizes;
+}
+
 void _validatePaletteList(List<Object> values, {required String path}) {
   if (values.length > canvasMaxPaletteItems) {
     throw CanvasDataException(

@@ -391,10 +391,21 @@ final class DraftDocument {
   }
 
   void setPalette(CanvasPalette nextPalette) {
+    _applyPalette(nextPalette, defensivelyCopy: true);
+  }
+
+  void applyOwnedPalette(CanvasPalette nextPalette) {
+    _applyPalette(nextPalette, defensivelyCopy: false);
+  }
+
+  void _applyPalette(
+    CanvasPalette nextPalette, {
+    required bool defensivelyCopy,
+  }) {
     if (_samePalette(palette, nextPalette)) {
       return;
     }
-    palette = _copyPalette(nextPalette);
+    palette = defensivelyCopy ? _copyPalette(nextPalette) : nextPalette;
     _touchedSet.touchPalette();
     _markProjectionOnly();
   }

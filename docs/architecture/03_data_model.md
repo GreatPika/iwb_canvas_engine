@@ -46,6 +46,15 @@ grid, and palette. It is not retained as Store or runtime state, does not enter
 the document projection cache, and does not traverse metadata, resources,
 layers, or elements.
 
+`CanvasPaletteUpdate` is immutable transaction intent, not committed Store
+state. It snapshots and validates each supplied palette field at construction;
+absence exists only in its presence getters while stored palette fields remain
+non-null. `CanvasEdit.updatePalette` merges supplied fields with the latest
+transaction-local complete palette and reduces to the existing whole-palette
+mutation. Sparse and materialized routes therefore share Store final equality,
+revisions, projection invalidation, publication, and no-op behavior without a
+second palette truth, mutation type, or journal.
+
 ```text
 CommittedDocument
   meta: DocumentMetaRecord

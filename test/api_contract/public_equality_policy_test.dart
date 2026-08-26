@@ -262,6 +262,18 @@ void main() {
   });
 
   test('contract-listed identity types keep identity equality', () {
+    final firstPaletteUpdate = CanvasPaletteUpdate(
+      penColors: const [Color(0xFF102030)],
+    );
+    final secondPaletteUpdate = CanvasPaletteUpdate(
+      penColors: const [Color(0xFF102030)],
+    );
+    expect(identical(firstPaletteUpdate, secondPaletteUpdate), isFalse);
+    expect(firstPaletteUpdate, isNot(secondPaletteUpdate));
+    expect(firstPaletteUpdate, firstPaletteUpdate);
+    expect({firstPaletteUpdate}, contains(firstPaletteUpdate));
+    expect({firstPaletteUpdate}, isNot(contains(secondPaletteUpdate)));
+
     final firstAppearance = CanvasAppearance(
       backgroundColor: const Color(0xFF102030),
       grid: CanvasGrid.disabled,

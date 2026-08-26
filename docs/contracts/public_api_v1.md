@@ -221,6 +221,7 @@ CanvasSurface
 CanvasDocument
 CanvasLayer
 CanvasPalette
+CanvasPaletteUpdate
 CanvasElement and element family types
 CanvasElementUpdate and update family types
 CanvasClearResult
@@ -872,6 +873,22 @@ final class CanvasPalette {
   List<Color> get backgroundColors;
   List<double> get gridSizes;
 }
+
+@immutable
+final class CanvasPaletteUpdate {
+  factory CanvasPaletteUpdate({
+    Iterable<Color>? penColors,
+    Iterable<Color>? backgroundColors,
+    Iterable<double>? gridSizes,
+  });
+
+  final bool hasPenColors;
+  final bool hasBackgroundColors;
+  final bool hasGridSizes;
+  List<Color> get penColors;
+  List<Color> get backgroundColors;
+  List<double> get gridSizes;
+}
 ```
 
 `CanvasDocument` materializes `CanvasPalette.defaults()` when `palette` is null.
@@ -891,6 +908,11 @@ is non-const because it validates and deep-freezes caller-owned map/list values.
 Validated scalar value objects such as `CanvasCamera` and `CanvasGrid` expose
 non-const public factories. Their approved defaults use private const storage
 only for already-validated values that cannot expose invalid public state.
+`CanvasPaletteUpdate` is a non-const immutable, identity-equality intent DTO.
+It snapshots and validates each supplied iterable with the corresponding
+`CanvasPalette` context-free rules. An omitted field has a false `has...`
+getter and an empty unmodifiable list; a supplied empty list has a true
+presence getter and clears only that field when applied.
 `CanvasDocument.camera` stores the persisted document default camera offset,
 using the schema and readDocument round-trip semantics required by this contract. The same
 `CanvasCamera` value type is also used by `CanvasCameraPort.camera` to report
@@ -1528,6 +1550,7 @@ abstract interface class CanvasEdit {
   void setBackgroundColor(Color color);
   void setGrid(CanvasGrid grid);
   void setPalette(CanvasPalette palette);
+  void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
 
   CanvasClearResult clearContent({bool removeUnusedResources = false});

@@ -90,6 +90,9 @@ final class PublicIntegrationCompileFixture {
       edit.setBackgroundColor(_compileOnly());
       edit.setGrid(CanvasGrid());
       edit.setPalette(const CanvasPalette.defaults());
+      edit.updatePalette(
+        CanvasPaletteUpdate(penColors: [const CanvasBackground().color]),
+      );
       edit.setCameraOffset(_compileOnly());
       final clearResult = edit.clearContent(removeUnusedResources: true);
       _use(clearResult.removedElementIds);

@@ -300,7 +300,7 @@ void _exerciseP2ContractSurface() {
     color: const Color(0xFFFFFFFF),
     grid: grid,
   );
-    final palette = CanvasPalette(
+  final palette = CanvasPalette(
     penColors: const [Color(0xFF000000)],
     backgroundColors: const [Color(0xFFFFFFFF)],
       gridSizes: const [8, 16],
@@ -310,9 +310,20 @@ void _exerciseP2ContractSurface() {
     grid: CanvasGrid.disabled,
     palette: CanvasPalette.defaults(),
   );
+  final paletteUpdate = CanvasPaletteUpdate(
+    penColors: const [Color(0xFF000000)],
+    backgroundColors: const [Color(0xFFFFFFFF)],
+    gridSizes: const [8, 16],
+  );
   _use(appearance.backgroundColor);
   _use(appearance.grid);
   _use(appearance.palette);
+  _use(paletteUpdate.hasPenColors);
+  _use(paletteUpdate.hasBackgroundColors);
+  _use(paletteUpdate.hasGridSizes);
+  _use(paletteUpdate.penColors);
+  _use(paletteUpdate.backgroundColors);
+  _use(paletteUpdate.gridSizes);
   final document = CanvasDocument(
     camera: camera,
     background: background,
@@ -959,6 +970,9 @@ final class _ConsumerEdit implements CanvasEdit {
 
   @override
   void setPalette(CanvasPalette palette) {}
+
+  @override
+  void updatePalette(CanvasPaletteUpdate update) {}
 
   @override
   bool updateElement(CanvasElementUpdate update) => true;

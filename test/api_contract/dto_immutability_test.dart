@@ -81,6 +81,25 @@ void main() {
     expect(() => palette.penColors.clear(), throwsUnsupportedError);
     expect(() => palette.backgroundColors.clear(), throwsUnsupportedError);
     expect(() => palette.gridSizes.clear(), throwsUnsupportedError);
+
+    final updatePenColors = [const Color(0xFF123456)];
+    final updateBackgroundColors = [const Color(0xFF654321)];
+    final updateGridSizes = [12.0];
+    final update = CanvasPaletteUpdate(
+      penColors: updatePenColors,
+      backgroundColors: updateBackgroundColors,
+      gridSizes: updateGridSizes,
+    );
+    updatePenColors.clear();
+    updateBackgroundColors.clear();
+    updateGridSizes.clear();
+
+    expect(update.penColors, hasLength(1));
+    expect(update.backgroundColors, hasLength(1));
+    expect(update.gridSizes, hasLength(1));
+    expect(() => update.penColors.clear(), throwsUnsupportedError);
+    expect(() => update.backgroundColors.clear(), throwsUnsupportedError);
+    expect(() => update.gridSizes.clear(), throwsUnsupportedError);
   });
 
   test('metadata is deep frozen', () {

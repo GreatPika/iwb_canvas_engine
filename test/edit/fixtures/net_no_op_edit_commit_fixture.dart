@@ -62,6 +62,11 @@ Future<void> _sparseCompensatingFieldsAreSilent() async {
   );
   await _expectSilentNetNoOpCommit(
     mutate: (edit) {
+      _applyPaletteNoOpSequence(edit);
+    },
+  );
+  await _expectSilentNetNoOpCommit(
+    mutate: (edit) {
       edit.setCameraOffset(const Offset(4, 5));
       edit.setCameraOffset(Offset.zero);
     },
@@ -219,9 +224,30 @@ Future<void> _materializedCompensationIsSilent() {
       edit.readDraftDocument();
       edit.setBackgroundColor(const Color(0xFF112233));
       edit.setBackgroundColor(const Color(0xFFFFFFFF));
+      _applyPaletteNoOpSequence(edit);
       edit.upsertResource(_resource('resource-1', appKey: 'resource-1-next'));
       edit.upsertResource(_resource('resource-1'));
     },
+  );
+}
+
+void _applyPaletteNoOpSequence(CanvasEdit edit) {
+  edit.updatePalette(CanvasPaletteUpdate());
+  edit.updatePalette(CanvasPaletteUpdate(penColors: const [Color(0xFF000000)]));
+  edit.updatePalette(
+    CanvasPaletteUpdate(penColors: _alternatePalette().penColors),
+  );
+  edit.updatePalette(
+    CanvasPaletteUpdate(
+      penColors: const [
+        Color(0xFF000000),
+        Color(0xFFE53935),
+        Color(0xFF1E88E5),
+        Color(0xFF43A047),
+        Color(0xFFFB8C00),
+        Color(0xFF8E24AA),
+      ],
+    ),
   );
 }
 

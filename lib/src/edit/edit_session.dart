@@ -172,6 +172,12 @@ final class EditSession implements CanvasEdit {
   }
 
   @override
+  void updatePalette(CanvasPaletteUpdate update) {
+    _ensureActive();
+    _backing.updatePalette(update);
+  }
+
+  @override
   void setCameraOffset(Offset offset) {
     _ensureActive();
     _backing.setCameraOffset(offset);
@@ -247,6 +253,7 @@ abstract interface class _EditSessionBacking {
   void setBackgroundColor(Color color);
   void setGrid(CanvasGrid grid);
   void setPalette(CanvasPalette palette);
+  void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
   CanvasClearResult clearContent({required bool removeUnusedResources});
   void replaceDraftDocument(CanvasDocument document);
@@ -255,7 +262,9 @@ abstract interface class _EditSessionBacking {
 
 // Materialized backing is a direct DraftDocument adapter for every CanvasEdit
 // entry; splitting it would create method-group sync glue with no owner value.
-// ignore: coupling-between-object-classes, number-of-methods
+// Its complete edit-surface response set is clearer than splitting stale-safe
+// dispatch across forwarding fragments solely to lower a metric.
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class
 final class _MaterializedEditBacking implements _EditSessionBacking {
   _MaterializedEditBacking(this._draft);
 
@@ -344,6 +353,12 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   @override
   void setPalette(CanvasPalette palette) {
     _draft.setPalette(palette);
+  }
+
+  @override
+  void updatePalette(CanvasPaletteUpdate update) {
+    final current = _draft.palette;
+    _draft.applyOwnedPalette(_mergePaletteUpdate(current, update));
   }
 
   @override
@@ -734,6 +749,18 @@ final class _SparseEditBacking implements _EditSessionBacking {
   }
 
   @override
+  void updatePalette(CanvasPaletteUpdate update) {
+    if (_isMaterialized) {
+      final draft = _materializedDraft;
+      draft.applyOwnedPalette(_mergePaletteUpdate(draft.palette, update));
+
+      return;
+    }
+    final current = _paletteOverride ?? _facts.palette;
+    setPalette(_mergePaletteUpdate(current, update));
+  }
+
+  @override
   void setCameraOffset(Offset offset) {
     if (_isMaterialized) {
       _materializedDraft.setCameraOffset(offset);
@@ -1091,6 +1118,25 @@ final class _SparseClearCandidate {
 
   final List<CanvasElementId> removedElementIds;
   final List<CanvasResourceId> removedResourceIds;
+}
+
+CanvasPalette _mergePaletteUpdate(
+  CanvasPalette current,
+  CanvasPaletteUpdate update,
+) {
+  if (!update.hasPenColors &&
+      !update.hasBackgroundColors &&
+      !update.hasGridSizes) {
+    return current;
+  }
+
+  return CanvasPalette(
+    penColors: update.hasPenColors ? update.penColors : current.penColors,
+    backgroundColors: update.hasBackgroundColors
+        ? update.backgroundColors
+        : current.backgroundColors,
+    gridSizes: update.hasGridSizes ? update.gridSizes : current.gridSizes,
+  );
 }
 
 bool _samePalette(CanvasPalette left, CanvasPalette right) {

@@ -17,6 +17,10 @@ void main() {
     expect(_expectCallbackThrowRollsBack, returnsNormally);
   });
 
+  test('callback throw discards direct palette updates', () {
+    expect(_expectPaletteUpdateRollsBack, returnsNormally);
+  });
+
   test('validation failure leaves committed store facts unchanged', () {
     expect(_expectValidationFailureRollsBack, returnsNormally);
   });
@@ -97,6 +101,24 @@ void _expectValidationFailureRollsBack() {
   expect(root.readDocument().layers.single.elements, hasLength(1));
   expect(root.documentFacts.documentRevision, beforeFacts.documentRevision);
   expect(effectBatches, isEmpty);
+  before.expectUnchanged(root, effectBatches);
+}
+
+void _expectPaletteUpdateRollsBack() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final before = _RollbackSnapshot.capture(root, effectBatches);
+
+  expect(
+    () => root.edits.edit((edit) {
+      edit.updatePalette(
+        CanvasPaletteUpdate(penColors: const [Color(0xFF010203)]),
+      );
+      throw StateError('rollback palette update');
+    }),
+    throwsStateError,
+  );
+
   before.expectUnchanged(root, effectBatches);
 }
 

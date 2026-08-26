@@ -136,6 +136,18 @@ accepted committed facts before `CommitCompiler` builds a plan. The compiler
 consumes only the store-accepted revision delta and touched facts, not
 provisional session or draft revision journals.
 
+`CanvasEdit.updatePalette` validates and snapshots supplied fields at DTO
+construction. Its stale-handle guard runs before backing access or merge. Each
+backing merges supplied fields with its latest callback-local complete palette;
+omitted fields retain that value and supplied empty lists clear only their own
+field. A changed sparse call appends one existing complete
+`StoreSparseSetPalette`; a materialized call transfers its merged immutable
+value to Draft's shared private palette-application seam. The whole setter
+defensively copies its caller-owned value before that same seam, so partial
+application adds no second complete-palette copy. The existing complete Store
+mutation, finalization, no-op, rollback, invalidation, publication, and
+no-canvas-repaint path remains authoritative.
+
 `clearContent` has one layer-only semantic across materialized
 `DraftDocument`, sparse-session DTO promotion, and direct
 sparse-store preparation. It removes every ordinary-layer element without using

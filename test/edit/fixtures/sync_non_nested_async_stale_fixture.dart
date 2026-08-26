@@ -96,16 +96,21 @@ void _expectFutureCallbackRejected() {
   final effectBatches = <List<CommitDeliveryEffect>>[];
   final runtime = _runtimeRoot(effectBatches);
   final beforeState = runtime.state.value;
+  late CanvasEdit captured;
   var notifications = 0;
   runtime.state.addListener(() {
     notifications += 1;
   });
 
   expect(
-    () => runtime.edits.edit<Object?>((edit) => Future<void>.value()),
+    () => runtime.edits.edit<Object?>((edit) {
+      captured = edit;
+      return Future<void>.value();
+    }),
     throwsStateError,
   );
 
+  expect(() => captured.updatePalette(CanvasPaletteUpdate()), throwsStateError);
   expect(runtime.state.value, beforeState);
   expect(notifications, 0);
   expect(effectBatches, isEmpty);
@@ -131,6 +136,10 @@ void _expectExceptionClosesHandle() {
   }
   expect(runtime.state.value, beforeState);
   expect(() => staleHandle.draftSummary, throwsStateError);
+  expect(
+    () => staleHandle.updatePalette(CanvasPaletteUpdate()),
+    throwsStateError,
+  );
   expect(effectBatches, isEmpty);
 }
 
@@ -214,6 +223,12 @@ void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
         backgroundColors: const [],
         gridSizes: const [8],
       ),
+    ),
+    throwsStateError,
+  );
+  expect(
+    () => captured.updatePalette(
+      CanvasPaletteUpdate(penColors: const [Color(0xFF000000)]),
     ),
     throwsStateError,
   );
