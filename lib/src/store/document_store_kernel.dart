@@ -326,6 +326,16 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
 
   CanvasDocument readDocument() => _projectionCache.projectionFor(_document);
 
+  CanvasAppearance readAppearance() {
+    final document = _document;
+
+    return CanvasAppearance(
+      backgroundColor: document.background.color,
+      grid: document.background.grid,
+      palette: document.palette,
+    );
+  }
+
   CanvasDocumentSummary get documentSummary => _document.summary;
   int get documentRevision => _document.revisions.documentRevision;
   int get structuralRevision => _document.revisions.structuralRevision;

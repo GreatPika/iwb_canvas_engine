@@ -1,7 +1,12 @@
+// Keeping the API bridge and Store proof seams explicit makes projection bypass
+// coverage auditable; a test barrel or wrapper would hide their ownership.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/store/canvas_element_snapshot.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
@@ -17,6 +22,10 @@ void main() {
 }
 
 void _registerProjectionCacheTests() {
+  test(
+    'appearance read does not build projection across unrelated document sizes',
+    () => expect(_appearanceReadDoesNotBuildProjection, returnsNormally),
+  );
   test(
     'projection cache is touched only by explicit readDocument',
     () =>
@@ -48,6 +57,61 @@ void _registerProjectionCacheTests() {
       _selectionDeletionDoesNotBuildDocumentProjection,
       returnsNormally,
     ),
+  );
+}
+
+void _appearanceReadDoesNotBuildProjection() {
+  for (final unrelatedLayerCount in [0, 1, 8]) {
+    final runtime = CanvasRuntime(
+      config: CanvasRuntimeConfig(
+        deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+      ),
+    );
+    try {
+      runtime.edits.loadDocumentFromJson(
+        encodeCanvasDocumentToJson(
+          _documentWithUnrelatedContent(unrelatedLayerCount),
+        ),
+      );
+      final root = canvasRuntimeFrameRootForSurface(runtime);
+      if (root == null) {
+        throw StateError('CanvasRuntime is missing its attached RuntimeRoot.');
+      }
+
+      expect(root.projectionBuildCount, 0);
+      runtime.readAppearance();
+      runtime.readAppearance();
+      expect(root.projectionBuildCount, 0);
+      runtime.readDocument();
+      expect(root.projectionBuildCount, 1);
+    } finally {
+      runtime.dispose();
+    }
+  }
+}
+
+CanvasDocument _documentWithUnrelatedContent(int count) {
+  return CanvasDocument(
+    resources: [
+      for (var index = 0; index < count; index += 1)
+        CanvasImageResource(
+          id: CanvasResourceId('resource-$index'),
+          source: CanvasResourceSource.appKey('resource-$index'),
+        ),
+    ],
+    backgroundElements: [
+      for (var index = 0; index < count; index += 1) _rect('background-$index'),
+    ],
+    layers: [
+      for (var index = 0; index < count; index += 1)
+        CanvasLayer(
+          id: CanvasLayerId('layer-$index'),
+          elements: [_rect('element-$index')],
+        ),
+    ],
+    metadata: CanvasMetadata.fromMap({
+      'unrelated': List<String>.filled(count, 'value'),
+    }),
   );
 }
 

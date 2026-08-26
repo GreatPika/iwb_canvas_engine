@@ -35,6 +35,7 @@ final class PublicIntegrationCompileFixture {
   }
 
   CanvasDocument observeDocumentAndState() {
+    final runtimeAppearance = runtime.readAppearance();
     final document = runtime.readDocument();
     final state = runtime.state.value;
     final revisions = state.revisions;
@@ -47,6 +48,9 @@ final class PublicIntegrationCompileFixture {
     _use(document.backgroundElements);
     _use(document.layers);
     _use(document.metadata);
+    _use(runtimeAppearance.backgroundColor);
+    _use(runtimeAppearance.grid);
+    _use(runtimeAppearance.palette);
     _use(revisions.document);
     _use(revisions.selection);
     _use(revisions.preview);

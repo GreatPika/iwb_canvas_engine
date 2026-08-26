@@ -63,6 +63,35 @@ void rejectsInternalDeletionDiagnostics() {
       expect(analyze.exitCode, isNot(0));
     },
   );
+
+  _registerForbiddenAppearanceMemberTests();
+}
+
+void _registerForbiddenAppearanceMemberTests() {
+  for (final member in const [
+    'camera',
+    'selection',
+    'metadata',
+    'layers',
+    'elements',
+    'resources',
+  ]) {
+    test(
+      'CanvasAppearance.$member is unavailable from the public barrel',
+      () async {
+        final analyze = await _analyzeConsumerSource('''
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+Object rejectsCanvasAppearanceMember(CanvasAppearance appearance) =>
+    appearance.$member;
+''');
+        final output = _processOutput(analyze);
+
+        expect(analyze.exitCode, isNot(0), reason: output);
+        expect(output, contains('UNDEFINED_GETTER'));
+      },
+    );
+  }
 }
 
 Future<ProcessResult> _analyzeConsumerSource(String source) async {
@@ -87,6 +116,7 @@ Future<ProcessResult> _analyzeConsumerSource(String source) async {
 
     return await Process.run(_dartExecutablePath(), [
       'analyze',
+      '--format=machine',
       'lib/public_api_consumer.dart',
     ], workingDirectory: packageDir.path);
   } finally {
@@ -270,11 +300,19 @@ void _exerciseP2ContractSurface() {
     color: const Color(0xFFFFFFFF),
     grid: grid,
   );
-  final palette = CanvasPalette(
+    final palette = CanvasPalette(
     penColors: const [Color(0xFF000000)],
     backgroundColors: const [Color(0xFFFFFFFF)],
-    gridSizes: const [8, 16],
+      gridSizes: const [8, 16],
+    );
+  const appearance = CanvasAppearance(
+    backgroundColor: Color(0xFFFFFFFF),
+    grid: CanvasGrid.disabled,
+    palette: CanvasPalette.defaults(),
   );
+  _use(appearance.backgroundColor);
+  _use(appearance.grid);
+  _use(appearance.palette);
   final document = CanvasDocument(
     camera: camera,
     background: background,
@@ -349,6 +387,10 @@ void _exerciseP2ContractSurface() {
   _use(revisions.document);
   _use(summary.elementCount);
   _use(runtime.readDocument());
+  final CanvasAppearance runtimeAppearance = runtime.readAppearance();
+  _use(runtimeAppearance.backgroundColor);
+  _use(runtimeAppearance.grid);
+  _use(runtimeAppearance.palette);
   _use(const CanvasRuntimeRevisions(
     document: 1,
     selection: 2,

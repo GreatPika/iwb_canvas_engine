@@ -376,6 +376,7 @@ final class CanvasRuntime {
   });
 
   CanvasDocument readDocument();
+  CanvasAppearance readAppearance();
   ValueListenable<CanvasRuntimeState> get state;
 
   CanvasEditPort get edits;
@@ -416,6 +417,7 @@ Dispose contract:
 - dispose is idempotent;
 - after dispose, mutating public operations throw StateError('CanvasRuntime is disposed.');
 - readDocument after dispose is allowed and returns last committed immutable document;
+- readAppearance after dispose is allowed and returns the last committed immutable appearance;
 - actions stream closes;
 - contextActionRequests stream closes;
 - state.value remains readable after dispose and returns the final runtime
@@ -763,6 +765,19 @@ final class CanvasDocument {
   CanvasMetadata get metadata;
 }
 
+@immutable
+final class CanvasAppearance {
+  const CanvasAppearance({
+    required this.backgroundColor,
+    required this.grid,
+    required this.palette,
+  });
+
+  final Color backgroundColor;
+  final CanvasGrid grid;
+  final CanvasPalette palette;
+}
+
 final class CanvasDocumentSummary {
   const CanvasDocumentSummary({
     required this.elementCount,
@@ -860,6 +875,15 @@ final class CanvasPalette {
 ```
 
 `CanvasDocument` materializes `CanvasPalette.defaults()` when `palette` is null.
+`CanvasAppearance` is a synchronous, immutable, identity-equality view of one
+committed Store boundary. `CanvasRuntime.readAppearance()` returns only the
+background color, complete grid, and complete palette from the last installed
+committed state. It does not materialize a `CanvasDocument`, read draft state,
+publish state, or change revisions; it is readable during an active edit only
+as the last installed value, after successful installation as the new value,
+after rollback as the retained value, and after disposal as the last committed
+value. `CanvasAppearance` exposes no camera, selection, metadata, layers,
+elements, or resources.
 `CanvasPalette` is non-const because it owns caller-provided iterables and must
 copy and validate them before exposing unmodifiable lists. `CanvasMetadata.empty()`
 is const-safe because it accepts no caller-owned input; `CanvasMetadata.fromMap`

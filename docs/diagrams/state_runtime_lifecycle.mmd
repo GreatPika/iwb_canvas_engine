@@ -15,9 +15,13 @@ stateDiagram-v2
   note right of Active
     Public mutating operations are admitted through
     runtime boundary guards and owning kernels.
+    During an edit callback, readAppearance returns the last
+    installed committed appearance; successful installation makes
+    the new appearance readable, while rollback retains the prior one.
   end note
 
   Active --> Active: readDocument() / return current immutable document
+  Active --> Active: readAppearance() / return last installed immutable appearance without projection or publication
   Active --> Active: successful edit or command / atomic commit and typed effects
   Active --> Active: loadDocumentFromJson success / prepared interaction cleanup before install, atomic replacement, cache invalidation
   Active --> Active: loadDocumentFromJson failure / no interrupt, no mutation, no repaint, no events
@@ -78,6 +82,7 @@ stateDiagram-v2
   state "Disposed runtime" as Disposed
   note right of Disposed
     Last committed immutable document remains readable.
+    Last committed immutable appearance remains readable.
 	    CanvasRuntimeState state.value remains readable.
     state delivers no notifications after dispose returns.
     Mutating public operations throw StateError("CanvasRuntime is disposed.").
@@ -85,6 +90,7 @@ stateDiagram-v2
 
   Disposed --> Disposed: dispose() again / return without side effects
   Disposed --> Disposed: readDocument() / return last committed immutable document
+  Disposed --> Disposed: readAppearance() / return last committed immutable appearance
   Disposed --> Disposed: mutating public operation or pointer input / throw StateError
 
   note left of Disposed

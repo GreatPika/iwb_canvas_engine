@@ -919,6 +919,7 @@ final class RuntimeRoot
 
   // Document read and id generation.
   CanvasDocument readDocument() => _store.readDocument();
+  CanvasAppearance readAppearance() => _store.readAppearance();
 
   CanvasElementId generateElementId() {
     ensureRuntimeMutationAllowed();

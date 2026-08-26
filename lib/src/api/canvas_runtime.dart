@@ -35,6 +35,7 @@ final class CanvasRuntime {
   late final RuntimeRoot _root;
 
   CanvasDocument readDocument() => _root.readDocument();
+  CanvasAppearance readAppearance() => _root.readAppearance();
   ValueListenable<CanvasRuntimeState> get state => _root.state;
   CanvasEditPort get edits => _root.edits;
   CanvasSelectionPort get selection => _root.selection;

@@ -40,6 +40,12 @@ Do not assume:
 
 `DocumentStoreKernel` does not store public `CanvasDocument` as live mutable state. It stores compact committed tables.
 
+`CanvasAppearance` is an ephemeral synchronous read assembled by
+`DocumentStoreKernel` from one captured committed aggregate's background color,
+grid, and palette. It is not retained as Store or runtime state, does not enter
+the document projection cache, and does not traverse metadata, resources,
+layers, or elements.
+
 ```text
 CommittedDocument
   meta: DocumentMetaRecord
@@ -360,6 +366,12 @@ accepted operation affects public document projection, but they must not build
 the projection cache. Projection materialization happens only at the explicit
 read paths listed above. This keeps `DocumentStoreKernel` as the committed
 source of truth and `CanvasDocument` as a read DTO.
+
+`readAppearance` is not a projection path: it captures the committed aggregate
+once and returns its immutable appearance values directly. It remains readable
+while an edit callback is active as the last installed state, changes only after
+successful Store installation, retains the prior state after rollback, and stays
+readable after disposal.
 
 Projection DTOs must deep-copy all public collections and materialize frozen
 `CanvasMetadata` values. Runtime tables may store compact metadata facts, but

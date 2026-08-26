@@ -69,6 +69,20 @@ final class CanvasDocument {
 }
 
 @immutable
+/// Public API v1 declaration for [CanvasAppearance].
+final class CanvasAppearance {
+  const CanvasAppearance({
+    required this.backgroundColor,
+    required this.grid,
+    required this.palette,
+  });
+
+  final Color backgroundColor;
+  final CanvasGrid grid;
+  final CanvasPalette palette;
+}
+
+@immutable
 /// Public API v1 declaration for [CanvasDocumentSummary].
 final class CanvasDocumentSummary {
   const CanvasDocumentSummary({

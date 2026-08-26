@@ -51,7 +51,7 @@ Runtime responsibilities are split as follows:
 | Zone | Owns | Must not do |
 |---|---|---|
 | Public API | stable DTOs, operations, events, errors, and application-owned prepared vector values | expose tables, handles, caches, runtime internals, raw Picture liveness, or upstream types |
-| DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache | read gesture state, selection state, or Flutter widget state |
+| DocumentStoreKernel | committed document state, document revisions, resource descriptors, public document projection cache, coherent appearance reads | read gesture state, selection state, Flutter widget state, or a second stored appearance value |
 | FrameFactsPort | immutable committed frame facts for capture, row resolution, descriptor snapshots, and resourceRevision | expose store tables, public document projections, drafts, mutations, selection facts, or frame-owned render models |
 | SelectionKernel | runtime selected ids, selectionRevision, selection normalization, content-only filtering | store committed document content, selected-order cache, or public API types |
 | EditKernel | synchronous edit sessions, draft, touched sets, cross-owner commit/rollback coordination | perform paint or pointer routing |
@@ -71,6 +71,14 @@ after accepted document, selection, preview, view camera, resource visual,
 interaction, or epoch changes. Downstream owners contribute facts through their
 own boundaries; they do not own the public snapshot object or depend on Flutter
 widget state to publish core runtime state.
+
+`CanvasRuntime.readAppearance` is a synchronous facade-to-`RuntimeRoot`-to-Store
+read. `DocumentStoreKernel` captures one committed aggregate and returns only
+its background color, grid, and palette without entering `DocumentProjectionCache`
+or traversing unrelated document owners. The read neither changes state nor
+publishes it: during an edit it exposes the last installed committed values,
+after successful installation it exposes the new values, rollback retains the
+old values, and disposal keeps the final committed appearance readable.
 
 Raster-free vector preparation is a separate public API boundary, not a runtime
 or resource-session route. It captures the invocation context while preparing
