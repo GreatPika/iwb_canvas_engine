@@ -25,7 +25,6 @@ Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
-- `edit.operation_matrix_complete`
 - `events.commands_emit_user_actions`
 - `events.runtime_created_timestamps_monotonic`
 Do not assume:

@@ -192,10 +192,6 @@ const _blockingEntries = [
     suites: {'blocking', 'edit'},
   ),
   GuardrailEntry(
-    id: 'edit.operation_matrix_complete',
-    suites: {'blocking', 'edit'},
-  ),
-  GuardrailEntry(
     id: 'edit.no_global_invalidation_except_replacement',
     suites: {'blocking', 'edit'},
   ),

@@ -47,7 +47,6 @@ Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
-- `edit.operation_matrix_complete`
 - `edit.no_global_invalidation_except_replacement`
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`
@@ -197,7 +196,6 @@ Mandatory guardrails:
 | `edit.sync_non_nested` | nested/async edit rejected |
 | `edit.rollback_no_effects` | rollback discards events/repaint/resources/spatial |
 | `edit.stale_handle_rejected` | stale edit handle throws |
-| `edit.operation_matrix_complete` | every operation matrix row has executable assertions for expanded operation matrix dimensions: touched state, public state revisions, internal revisions, spatial, projection, resource effects, repaint, user-action events, no-op behavior including compensating final fact no-ops, and rollback behavior |
 | `edit.no_global_invalidation_except_replacement` | ordinary edits compile exact accepted touched invalidation from store-finalized facts; only document replacement may use global invalidation |
 | `edit.typed_effects_no_frame_dependency` | CommitCompiler produces typed effects and does not depend on concrete FrameEngine |
 | `events.low_level_edit_no_user_actions` | CanvasEdit.removeElement/clearContent emit no user action events |

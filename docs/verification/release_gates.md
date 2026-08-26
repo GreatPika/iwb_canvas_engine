@@ -45,7 +45,6 @@ Guardrails:
 - `edit.sync_non_nested`
 - `edit.rollback_no_effects`
 - `edit.stale_handle_rejected`
-- `edit.operation_matrix_complete`
 - `edit.no_global_invalidation_except_replacement`
 - `edit.typed_effects_no_frame_dependency`
 - `events.low_level_edit_no_user_actions`

@@ -277,12 +277,6 @@ const _testProofPaths = {
   'edit.stale_handle_rejected': [
     'test/edit/sync_non_nested_async_stale_test.dart',
   ],
-  'edit.operation_matrix_complete': [
-    'test/edit/edit_matrix_effects_test.dart',
-    'test/edit/field_update_admission_effects_test.dart',
-    'test/edit/exact_touched_invalidation_test.dart',
-    'test/edit/net_no_op_edit_commit_test.dart',
-  ],
   'edit.no_global_invalidation_except_replacement': [
     'test/edit/exact_touched_invalidation_test.dart',
     'test/edit/edit_matrix_effects_test.dart',

@@ -107,7 +107,6 @@ indirection, runtime behavior, or runner coverage.
 | `edit.sync_non_nested` | `behavioral_seam_test` | `semantic_sequence` | `derived from repository pattern` | Prove nested and async edit rejection at the edit seam; use sequence checks if body ordering becomes shared. |
 | `edit.rollback_no_effects` | `behavioral_seam_test` | `effect_matrix` | `derived from repository pattern` | Prove rollback drops every effect family and keep coverage tied to the operation/effect matrix. |
 | `edit.stale_handle_rejected` | `behavioral_seam_test` | `semantic_sequence` | `derived from repository pattern` | Prove stale edit handles fail before mutation effects can escape. |
-| `edit.operation_matrix_complete` | `effect_matrix` | `registry_parity`, `runner_inventory` | `derived from repository pattern` | Assert every matrix row has proof for all required dimensions and runner inclusion. |
 | `edit.no_global_invalidation_except_replacement` | `effect_matrix` | `behavioral_seam_test` | `derived from repository pattern` | Use the operation/effect matrix to distinguish ordinary edits from replacement/load paths. |
 | `edit.typed_effects_no_frame_dependency` | `resolved_element_identity` | `effect_matrix` | `strong repository precedent` | Use import/element ownership to block FrameEngine dependency and matrix proof for typed effects. |
 | `events.low_level_edit_no_user_actions` | `behavioral_seam_test` | `effect_matrix` | `derived from repository pattern` | Prove low-level edit operations emit no user action events. |

@@ -131,10 +131,6 @@ Guardrail coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_11_edit_kernel`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
 
-## edit.operation_matrix_complete
-
-- Sections: `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`
-
 ## edit.rollback_no_effects
 
 - Sections: `section_11_edit_kernel`, `section_13_operation_matrix`, `section_22_guardrails_machine_checks`, `section_27_final_release_gates`

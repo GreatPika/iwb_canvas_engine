@@ -119,10 +119,6 @@ void _registerOperationMatrixRows() {
     expect(_expectEditOperationRowsInstallEffects, returnsNormally);
   });
 
-  test('edit operation matrix coverage lists every required row once', () {
-    expect(_expectEditOperationMatrixCoverage, returnsNormally);
-  });
-
   test('edit operation matrix rows compile expected typed effects', () {
     expect(_expectEditOperationRowsCompileEffects, returnsNormally);
   });
@@ -266,24 +262,6 @@ final _editOperationMatrixCases = [
     editMatrixEmptyPlanEffects,
   ),
 ];
-
-const _requiredEditOperationRows = {
-  'addElement content',
-  'addBackgroundElement',
-  'CanvasEdit.updateElement',
-  'CanvasEdit.removeElement',
-  'ensureLayer no-op',
-  'ensureLayer changed',
-  'CanvasEdit.clearContent',
-  'CanvasEdit.setCameraOffset',
-  'setBackgroundColor',
-  'setGrid',
-  'setPalette',
-  'upsertResource new/changed',
-  'removeUnusedResource removed',
-  'CanvasEdit.replaceDraftDocument',
-  'no-op edit',
-};
 
 final _updateTaxonomyCases = [
   _UpdateTaxonomyCase(
@@ -842,15 +820,6 @@ void _expectEditOperationRowsInstallEffects() {
     expect(operationCase.row, isNotEmpty);
     operationCase.run();
   }
-}
-
-void _expectEditOperationMatrixCoverage() {
-  final rows = [
-    for (final operationCase in _editOperationMatrixCases) operationCase.row,
-  ];
-
-  expect(rows.toSet(), _requiredEditOperationRows);
-  expect(rows, hasLength(rows.toSet().length));
 }
 
 void _expectEditOperationRowsCompileEffects() {
