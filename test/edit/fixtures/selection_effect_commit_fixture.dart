@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/selection_membership_po
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_plan.dart';
+import 'package:iwb_canvas_engine/src/edit/edit_kernel.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
@@ -22,6 +23,8 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
+import 'interaction_commit_scenario_support.dart'
+    show AllowMutationGuard, StoreSparseFactsForTest;
 
 // This fixture keeps distinct stable owner-boundary failures in one existing
 // commit-delivery proof surface instead of duplicating document setup.
@@ -630,15 +633,82 @@ void _expectMaterializedConstructionFailurePreservesOwners() {
   expect(aggregateEvents, [StoreSparseCandidateEventKind.aggregatePublication]);
 }
 
-// The cumulative work observer reports sealing before any installer, so this
-// direct CommitApplier witness keeps the independent pre-install boundary.
-// ignore: halstead-volume
+// The cumulative work observer reports sealing before every installer. This
+// keeps valid public partial edits and the admitted owner failure in the one
+// existing commit-boundary witness; separating counters from the armed
+// installers would make the pre-install ordering less direct to audit.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _expectDeliveryPreparationFailurePreservesOwners() {
-  final store = DocumentStoreKernel();
+  final store = documentStoreWithDocument(_document());
   final selection = _selectionKernel()..setSelection([CanvasElementId('a')]);
   final events = <String>[];
   final before = _CommitApplyOwnerSnapshot.capture(store, selection, events);
   var preparationCalls = 0;
+  var commitInstallerCalls = 0;
+  var documentInstallerCalls = 0;
+  var replacementInstallerCalls = 0;
+  var sparseInstallerCalls = 0;
+  var materializedInstallerCalls = 0;
+  var selectionPreparationCalls = 0;
+  var selectionInstallerCalls = 0;
+  var publicDeliveryCalls = 0;
+  final kernel = EditKernel(
+    mutationGuard: AllowMutationGuard(),
+    readDocument: store.readDocument,
+    readSparseFacts: () => StoreSparseFactsForTest(store),
+    selectedElementIds: () => selection.selectedElementIds,
+    prepareSparseCommit: store.prepareSparseCommit,
+    prepareMaterializedCommit: store.prepareMaterializedCommit,
+    installCommit: (document, plan) {
+      commitInstallerCalls += 1;
+
+      return const CommitApplier().apply(
+        document: document,
+        plan: plan,
+        documentInstallers: CommitDocumentInstallers(
+          installDocument: (committed, delta) {
+            documentInstallerCalls += 1;
+            events.add('document');
+            store.installDocument(committed, delta);
+          },
+          replaceDocument: (committed, delta) {
+            replacementInstallerCalls += 1;
+            events.add('replacement');
+            store.replaceDocument(committed, delta);
+          },
+          installSparseCommit: (commit) {
+            sparseInstallerCalls += 1;
+            events.add('sparse-document');
+            store.installSparseCommit(commit);
+          },
+          installPreparedMaterializedCommit: (commit) {
+            materializedInstallerCalls += 1;
+            events.add('prepared-materialized-document');
+            store.installPreparedMaterializedCommit(commit);
+          },
+        ),
+        selectionInstallers: CommitSelectionInstallers(
+          prepareSelectionEffect: (_, _) {
+            selectionPreparationCalls += 1;
+            events.add('prepare-selection');
+
+            return PreparedSelectionEffect(selection.selectedElementIds);
+          },
+          installSelectionEffect: (effect) {
+            selectionInstallerCalls += 1;
+            events.add('selection');
+
+            return selection.installPreparedEffect(effect);
+          },
+        ),
+      );
+    },
+    deliverApplyResult: (_) {
+      publicDeliveryCalls += 1;
+      events.add('public-delivery');
+    },
+    installLoadedDocument: (_) => fail('Unexpected document load.'),
+  );
 
   expect(
     () => CommitApplier.observeSealedDeliveryWork(
@@ -647,34 +717,33 @@ void _expectDeliveryPreparationFailurePreservesOwners() {
         throw StateError('delivery preparation failed');
       },
       () {
-        const CommitApplier().apply(
-          document: AcceptedMaterializedDocument(
-            document: CanvasDocument(),
-            revisionDelta: const StoreRevisionDelta.structural(),
-          ),
-          plan: CommitPlan(
-            revisionDelta: const StoreRevisionDelta.structural(),
-            touchedSet: TouchedSet(),
-            effects: const [ProjectionEffect()],
-          ),
-          documentInstallers: const CommitDocumentInstallers(
-            installDocument: _unexpectedDocumentInstall,
-            replaceDocument: _unexpectedDocumentInstall,
-            installSparseCommit: _unexpectedSparseInstall,
-            installPreparedMaterializedCommit: _unexpectedMaterializedInstall,
-          ),
-          selectionInstallers: const CommitSelectionInstallers(
-            prepareSelectionEffect: _unexpectedSelectionPreparation,
-            installSelectionEffect: _unexpectedSelectionInstall,
-          ),
-        );
+        kernel.edit((edit) {
+          edit.updatePalette(
+            CanvasPaletteUpdate(penColors: const [Color(0xFF010203)]),
+          );
+          edit.updateGrid(CanvasGridUpdate(enabled: true, cellSize: 24));
+        });
       },
     ),
-    throwsStateError,
+    throwsA(
+      isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        'delivery preparation failed',
+      ),
+    ),
   );
 
   expect(preparationCalls, 1);
   before.expectUnchanged(store, selection, events);
+  expect(commitInstallerCalls, 1);
+  expect(documentInstallerCalls, 0);
+  expect(replacementInstallerCalls, 0);
+  expect(sparseInstallerCalls, 0);
+  expect(materializedInstallerCalls, 0);
+  expect(selectionPreparationCalls, 0);
+  expect(selectionInstallerCalls, 0);
+  expect(publicDeliveryCalls, 0);
 }
 
 void _unexpectedDocumentInstall(CommittedDocument _, StoreRevisionDelta _) {
