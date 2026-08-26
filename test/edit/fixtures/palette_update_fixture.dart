@@ -146,6 +146,11 @@ void _registerSequentialBackingTest() {
       final sparse = _applySequentialUpdates(materialize: false);
       final materialized = _applySequentialUpdates(materialize: true);
 
+      for (final result in [sparse, materialized]) {
+        expect(result.palette.penColors, const [Color(0xFF333333)]);
+        expect(result.palette.backgroundColors, const [Color(0xFF222222)]);
+        expect(result.palette.gridSizes, const [8]);
+      }
       expect(sparse.palette.penColors, materialized.palette.penColors);
       expect(
         sparse.palette.backgroundColors,

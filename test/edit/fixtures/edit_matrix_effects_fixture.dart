@@ -1186,65 +1186,55 @@ void _expectUpdateGridRow() {
 }
 
 Future<void> _expectUpdatePalettePublicRouteEffects() async {
-  final setPalette = await _applyCompletePaletteRoute(
+  final setPalette = await _captureCompleteEditRoute(
     materialize: false,
     apply: _editSetPalette,
   );
-  final sparseUpdate = await _applyCompletePaletteRoute(
+  final sparseUpdate = await _captureCompleteEditRoute(
     materialize: false,
     apply: _editUpdatePalette,
   );
-  final materializedUpdate = await _applyCompletePaletteRoute(
+  final materializedUpdate = await _captureCompleteEditRoute(
     materialize: true,
     apply: _editUpdatePalette,
   );
 
-  sparseUpdate.expectSameDeliveryAs(
-    setPalette,
-    route: 'untouched sparse',
-    expectsRepaint: false,
-  );
+  sparseUpdate.expectSameDeliveryAs(setPalette, route: 'untouched sparse');
   materializedUpdate.expectSameDeliveryAs(
     setPalette,
     route: 'deliberately materialized',
-    expectsRepaint: false,
   );
   expect(sparseUpdate.projectionBuilds, 0);
   expect(materializedUpdate.projectionBuilds, 1);
 }
 
 Future<void> _expectUpdateGridPublicRouteEffects() async {
-  final setGrid = await _applyCompleteGridRoute(
+  final setGrid = await _captureCompleteEditRoute(
     materialize: false,
     apply: _editSetGrid,
   );
-  final sparseUpdate = await _applyCompleteGridRoute(
+  final sparseUpdate = await _captureCompleteEditRoute(
     materialize: false,
     apply: _editUpdateGrid,
   );
-  final materializedUpdate = await _applyCompleteGridRoute(
+  final materializedUpdate = await _captureCompleteEditRoute(
     materialize: true,
     apply: _editUpdateGrid,
   );
 
-  sparseUpdate.expectSameDeliveryAs(
-    setGrid,
-    route: 'untouched sparse',
-    expectsRepaint: true,
-  );
+  sparseUpdate.expectSameDeliveryAs(setGrid, route: 'untouched sparse');
   materializedUpdate.expectSameDeliveryAs(
     setGrid,
     route: 'deliberately materialized',
-    expectsRepaint: true,
   );
   expect(sparseUpdate.projectionBuilds, 0);
   expect(materializedUpdate.projectionBuilds, 1);
 }
 
-// Rationale: this public grid-delivery trace stays complete so every effect
-// family remains visible instead of being hidden behind shared setup.
+// The subscribed public delivery trace is one temporal observation shared by
+// palette and grid parity; splitting it would duplicate its public facts.
 // ignore: halstead-volume
-Future<_PaletteRouteEffects> _applyCompleteGridRoute({
+Future<_EditRouteEffects> _captureCompleteEditRoute({
   required bool materialize,
   required void Function(CanvasEdit edit) apply,
 }) async {
@@ -1271,55 +1261,7 @@ Future<_PaletteRouteEffects> _applyCompleteGridRoute({
   await Future<void>.delayed(Duration.zero);
 
   final appearance = root.readAppearance();
-  final result = _PaletteRouteEffects(
-    palette: appearance.palette,
-    grid: appearance.grid,
-    documentRevision: root.documentFacts.documentRevision,
-    frameRevisions: root.frameRevisions,
-    projectionBuilds: root.projectionBuildCount,
-    state: root.state.value,
-    statePublications: statePublications,
-    effectBatches: effectBatches,
-    actions: actions,
-    contextActions: contextActions,
-  );
-  await actionSubscription.cancel();
-  await contextSubscription.cancel();
-  root.dispose();
-  return result;
-}
-
-// The subscribed public delivery trace is one temporal observation; splitting
-// it would disconnect route setup from the facts captured after installation.
-// ignore: halstead-volume
-Future<_PaletteRouteEffects> _applyCompletePaletteRoute({
-  required bool materialize,
-  required void Function(CanvasEdit edit) apply,
-}) async {
-  final effectBatches = <List<CommitDeliveryEffect>>[];
-  final root = runtimeRootWithCommittedDocumentSeed(
-    _documentWithUnusedResource(),
-    commitEffectObserver: effectBatches.add,
-  );
-  final actions = <CanvasActionCommitted>[];
-  final contextActions = <CanvasContextActionRequested>[];
-  var statePublications = 0;
-  final actionSubscription = root.actions.listen(actions.add);
-  final contextSubscription = root.contextActionRequests.listen(
-    contextActions.add,
-  );
-  root.state.addListener(() => statePublications += 1);
-
-  root.edits.edit((edit) {
-    if (materialize) {
-      edit.readDraftDocument();
-    }
-    apply(edit);
-  });
-  await Future<void>.delayed(Duration.zero);
-
-  final appearance = root.readAppearance();
-  final result = _PaletteRouteEffects(
+  final result = _EditRouteEffects(
     palette: appearance.palette,
     grid: appearance.grid,
     documentRevision: root.documentFacts.documentRevision,
@@ -2341,8 +2283,8 @@ final class _EditOperationMatrixCase {
   final Set<String> selectedElementIds;
 }
 
-final class _PaletteRouteEffects {
-  const _PaletteRouteEffects({
+final class _EditRouteEffects {
+  const _EditRouteEffects({
     required this.palette,
     required this.grid,
     required this.documentRevision,
@@ -2370,9 +2312,8 @@ final class _PaletteRouteEffects {
   // omitted projection, repaint, action, or state assertion cannot hide.
   // ignore: halstead-volume, source-lines-of-code
   void expectSameDeliveryAs(
-    _PaletteRouteEffects expected, {
+    _EditRouteEffects expected, {
     required String route,
-    required bool expectsRepaint,
   }) {
     expect(palette.penColors, expected.palette.penColors, reason: route);
     expect(
@@ -2439,8 +2380,18 @@ final class _PaletteRouteEffects {
       reason: route,
     );
     expect(
-      effectBatches.single.whereType<RepaintDeliveryEffect>(),
-      expectsRepaint ? hasLength(1) : isEmpty,
+      effectBatches.single.whereType<RepaintDeliveryEffect>().map(
+        (effect) => (
+          mainCanvas: effect.mainCanvas,
+          overlayCanvas: effect.overlayCanvas,
+        ),
+      ),
+      expected.effectBatches.single.whereType<RepaintDeliveryEffect>().map(
+        (effect) => (
+          mainCanvas: effect.mainCanvas,
+          overlayCanvas: effect.overlayCanvas,
+        ),
+      ),
       reason: route,
     );
   }

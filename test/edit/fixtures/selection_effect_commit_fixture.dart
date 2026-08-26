@@ -23,8 +23,7 @@ import 'package:iwb_canvas_engine/src/store/sparse_store_commit.dart';
 import 'package:iwb_canvas_engine/src/store/store_commit_finalization.dart';
 import 'package:iwb_canvas_engine/src/store/store_revision_delta.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
-import 'interaction_commit_scenario_support.dart'
-    show AllowMutationGuard, StoreSparseFactsForTest;
+import 'edit_kernel_test_support.dart';
 
 // This fixture keeps distinct stable owner-boundary failures in one existing
 // commit-delivery proof surface instead of duplicating document setup.

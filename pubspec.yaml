@@ -1,6 +1,6 @@
 name: iwb_canvas_engine
 description: "Scene-based canvas engine for Flutter: model, rendering, input, JSON serialization."
-version: 7.1.0
+version: 8.0.0
 publish_to: none
 
 environment:
