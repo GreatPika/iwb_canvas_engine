@@ -108,7 +108,7 @@ void _registerAppearanceCollectionImmutabilityTest() {
 
 // Keeping the complete lifecycle chronology together makes committed-state
 // visibility and notification boundaries safer to read than helper fragments.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _registerAppearanceLifecycleTest() {
   test(
     'appearance remains the last installed value through lifecycle boundaries',
@@ -121,8 +121,24 @@ void _registerAppearanceLifecycleTest() {
 
       runtime.edits.edit((edit) {
         edit.setBackgroundColor(_secondBackgroundColor);
-        edit.setGrid(_secondGrid);
-        edit.setPalette(_secondPalette);
+        _expectAppearance(runtime.readAppearance(), first);
+        expect(notifications, 0);
+        edit.updateGrid(
+          CanvasGridUpdate(
+            enabled: _secondGrid.enabled,
+            cellSize: _secondGrid.cellSize,
+            color: _secondGrid.color,
+          ),
+        );
+        _expectAppearance(runtime.readAppearance(), first);
+        expect(notifications, 0);
+        edit.updatePalette(
+          CanvasPaletteUpdate(
+            penColors: _secondPalette.penColors,
+            backgroundColors: _secondPalette.backgroundColors,
+            gridSizes: _secondPalette.gridSizes,
+          ),
+        );
 
         _expectAppearance(runtime.readAppearance(), first);
         expect(notifications, 0);
@@ -133,10 +149,27 @@ void _registerAppearanceLifecycleTest() {
       expect(
         () => runtime.edits.edit((edit) {
           edit.setBackgroundColor(_firstBackgroundColor);
-          edit.setGrid(_firstGrid);
-          edit.setPalette(_firstPalette);
+          _expectAppearance(runtime.readAppearance(), second);
+          expect(notifications, 1);
+          edit.updateGrid(
+            CanvasGridUpdate(
+              enabled: _firstGrid.enabled,
+              cellSize: _firstGrid.cellSize,
+              color: _firstGrid.color,
+            ),
+          );
+          _expectAppearance(runtime.readAppearance(), second);
+          expect(notifications, 1);
+          edit.updatePalette(
+            CanvasPaletteUpdate(
+              penColors: _firstPalette.penColors,
+              backgroundColors: _firstPalette.backgroundColors,
+              gridSizes: _firstPalette.gridSizes,
+            ),
+          );
 
           _expectAppearance(runtime.readAppearance(), second);
+          expect(notifications, 1);
           throw StateError('rollback');
         }),
         throwsStateError,
