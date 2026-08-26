@@ -12,6 +12,7 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 void main() {
   _registerExistingNoOpTests();
   _registerGridNoOpTests();
+  _registerPaletteNoOpTests();
 }
 
 void _registerExistingNoOpTests() {
@@ -82,11 +83,6 @@ Future<void> _sparseCompensatingFieldsAreSilent() async {
     mutate: (edit) {
       edit.setPalette(_alternatePalette());
       edit.setPalette(const CanvasPalette.defaults());
-    },
-  );
-  await _expectSilentNetNoOpCommit(
-    mutate: (edit) {
-      _applyPaletteNoOpSequence(edit);
     },
   );
   await _expectSilentNetNoOpCommit(
@@ -248,53 +244,93 @@ Future<void> _materializedCompensationIsSilent() {
       edit.readDraftDocument();
       edit.setBackgroundColor(const Color(0xFF112233));
       edit.setBackgroundColor(const Color(0xFFFFFFFF));
-      _applyPaletteNoOpSequence(edit);
       edit.upsertResource(_resource('resource-1', appKey: 'resource-1-next'));
       edit.upsertResource(_resource('resource-1'));
     },
   );
 }
 
-void _applyPaletteNoOpSequence(CanvasEdit edit) {
-  edit.updatePalette(CanvasPaletteUpdate());
-  edit.updatePalette(CanvasPaletteUpdate(penColors: const [Color(0xFF000000)]));
-  edit.updatePalette(
-    CanvasPaletteUpdate(penColors: _alternatePalette().penColors),
+void _registerPaletteNoOpTests() {
+  test(
+    'all-null palette update is silent on both edit backings',
+    () => expectLater(_allNullPaletteUpdateIsSilentOnBothBackings(), completes),
   );
-  edit.updatePalette(
-    CanvasPaletteUpdate(
-      penColors: const [
-        Color(0xFF000000),
-        Color(0xFFE53935),
-        Color(0xFF1E88E5),
-        Color(0xFF43A047),
-        Color(0xFFFB8C00),
-        Color(0xFF8E24AA),
-      ],
+  test(
+    'locally equal palette update is silent on both edit backings',
+    () => expectLater(
+      _locallyEqualPaletteUpdateIsSilentOnBothBackings(),
+      completes,
+    ),
+  );
+  test(
+    'compensating palette updates are silent on both edit backings',
+    () => expectLater(
+      _compensatingPaletteUpdatesAreSilentOnBothBackings(),
+      completes,
     ),
   );
 }
 
+Future<void> _allNullPaletteUpdateIsSilentOnBothBackings() {
+  return _expectNoOpOnBothBackings(
+    (edit) => edit.updatePalette(CanvasPaletteUpdate()),
+  );
+}
+
+Future<void> _locallyEqualPaletteUpdateIsSilentOnBothBackings() {
+  final current = const CanvasPalette.defaults();
+  return _expectNoOpOnBothBackings(
+    (edit) => edit.updatePalette(
+      CanvasPaletteUpdate(
+        penColors: current.penColors,
+        backgroundColors: current.backgroundColors,
+        gridSizes: current.gridSizes,
+      ),
+    ),
+  );
+}
+
+Future<void> _compensatingPaletteUpdatesAreSilentOnBothBackings() {
+  final current = const CanvasPalette.defaults();
+  final alternate = _alternatePalette();
+  return _expectNoOpOnBothBackings((edit) {
+    edit.updatePalette(
+      CanvasPaletteUpdate(
+        penColors: alternate.penColors,
+        backgroundColors: alternate.backgroundColors,
+        gridSizes: alternate.gridSizes,
+      ),
+    );
+    edit.updatePalette(
+      CanvasPaletteUpdate(
+        penColors: current.penColors,
+        backgroundColors: current.backgroundColors,
+        gridSizes: current.gridSizes,
+      ),
+    );
+  });
+}
+
 Future<void> _allNullGridUpdateIsSilentOnBothBackings() {
-  return _expectGridNoOpOnBothBackings(
+  return _expectNoOpOnBothBackings(
     (edit) => edit.updateGrid(CanvasGridUpdate()),
   );
 }
 
 Future<void> _locallyEqualGridUpdateIsSilentOnBothBackings() {
-  return _expectGridNoOpOnBothBackings(
+  return _expectNoOpOnBothBackings(
     (edit) => edit.updateGrid(CanvasGridUpdate(cellSize: 10)),
   );
 }
 
 Future<void> _compensatingGridUpdatesAreSilentOnBothBackings() {
-  return _expectGridNoOpOnBothBackings((edit) {
+  return _expectNoOpOnBothBackings((edit) {
     edit.updateGrid(CanvasGridUpdate(color: const Color(0xFF010203)));
     edit.updateGrid(CanvasGridUpdate(color: const Color(0x1F000000)));
   });
 }
 
-Future<void> _expectGridNoOpOnBothBackings(
+Future<void> _expectNoOpOnBothBackings(
   void Function(CanvasEdit edit) mutate,
 ) async {
   await _expectSilentNetNoOpCommit(mutate: mutate);
