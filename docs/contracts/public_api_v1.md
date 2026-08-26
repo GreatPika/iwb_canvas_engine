@@ -219,6 +219,7 @@ CanvasRuntime
 CanvasRuntimeConfig
 CanvasSurface
 CanvasDocument
+CanvasAppearance
 CanvasLayer
 CanvasPalette
 CanvasPaletteUpdate

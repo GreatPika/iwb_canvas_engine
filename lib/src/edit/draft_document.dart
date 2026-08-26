@@ -237,7 +237,7 @@ final class DraftDocument {
       case StoreSparseSetCamera(:final camera):
         setCameraOffset(camera.offset);
       case StoreSparseSetPalette(:final palette):
-        setPalette(palette);
+        applyOwnedPalette(palette);
     }
     _recordSparseMutationApplication(mutation);
   }

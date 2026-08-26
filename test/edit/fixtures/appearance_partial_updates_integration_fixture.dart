@@ -37,29 +37,49 @@ void main() {
 // delivery together, so neither the earlier work nor commit observables become
 // a proxy for the other.
 Future<void> _expectCaughtGridRejectionCommitsEarlierMixedUpdates() async {
-  final probe = await _AtomicityProbe.open();
-  final before = probe.toSnapshot();
+  final control = await _openCommittedMixedControl();
+  try {
+    final probe = await _AtomicityProbe.open();
+    try {
+      final before = probe.toSnapshot();
 
-  probe.root.edits.edit((edit) {
-    _applyValidMixedUpdates(edit);
-    expect(
-      () => edit.updateGrid(CanvasGridUpdate(cellSize: 0)),
-      throwsA(
-        isA<CanvasDataException>()
-            .having(
-              (error) => error.code,
-              'code',
-              CanvasDataErrorCode.fieldMustBePositive,
-            )
-            .having((error) => error.path, 'path', 'grid.cellSize'),
-      ),
-    );
-  });
-  await probe.flush();
+      probe.root.edits.edit((edit) {
+        _applyValidMixedUpdates(edit);
+        expect(
+          () => edit.updateGrid(CanvasGridUpdate(cellSize: 0)),
+          throwsA(
+            isA<CanvasDataException>()
+                .having(
+                  (error) => error.code,
+                  'code',
+                  CanvasDataErrorCode.fieldMustBePositive,
+                )
+                .having((error) => error.path, 'path', 'grid.cellSize'),
+          ),
+        );
+      });
+      await probe.flush();
 
-  _expectMixedUpdatesCommitted(probe.root, before);
-  probe.expectOneAcceptedMixedDelivery();
-  await probe.close();
+      _expectMixedUpdatesCommitted(probe.root, before);
+      probe.expectAcceptedMixedDeliveryParity(control);
+    } finally {
+      await probe.close();
+    }
+  } finally {
+    await control.close();
+  }
+}
+
+Future<_AtomicityProbe> _openCommittedMixedControl() async {
+  final control = await _AtomicityProbe.open();
+  try {
+    control.root.edits.edit(_applyValidMixedUpdates);
+    await control.flush();
+    return control;
+  } catch (_) {
+    await control.close();
+    rethrow;
+  }
 }
 
 Future<void> _expectEscapingGridValidationRollsBackMixedUpdates() async {
@@ -252,11 +272,19 @@ final class _AtomicityProbe {
 
   Future<void> flush() => Future<void>.delayed(Duration.zero);
 
-  void expectOneAcceptedMixedDelivery() {
+  void expectAcceptedMixedDeliveryParity(_AtomicityProbe control) {
     expect(statePublicationCount, 1);
+    expect(control.statePublicationCount, 1);
     expect(actions, isEmpty);
+    expect(control.actions, isEmpty);
     expect(contextActions, isEmpty);
+    expect(control.contextActions, isEmpty);
     expect(effectBatches, hasLength(1));
+    expect(control.effectBatches, hasLength(1));
+    _expectSameDeliveryBatch(
+      effectBatches.single,
+      control.effectBatches.single,
+    );
   }
 
   Future<void> close() async {
@@ -267,6 +295,30 @@ final class _AtomicityProbe {
 
   void _recordStatePublication() {
     statePublicationCount += 1;
+  }
+}
+
+void _expectSameDeliveryBatch(
+  List<CommitDeliveryEffect> actual,
+  List<CommitDeliveryEffect> control,
+) {
+  expect(
+    actual.map((effect) => effect.runtimeType),
+    control.map((effect) => effect.runtimeType),
+  );
+  for (var index = 0; index < actual.length; index += 1) {
+    final actualEffect = actual[index];
+    final controlEffect = control[index];
+    switch ((actualEffect, controlEffect)) {
+      case (
+        final RepaintDeliveryEffect actualRepaint,
+        final RepaintDeliveryEffect controlRepaint,
+      ):
+        expect(actualRepaint.mainCanvas, controlRepaint.mainCanvas);
+        expect(actualRepaint.overlayCanvas, controlRepaint.overlayCanvas);
+      default:
+        break;
+    }
   }
 }
 
