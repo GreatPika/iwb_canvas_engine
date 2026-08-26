@@ -55,6 +55,15 @@ mutation. Sparse and materialized routes therefore share Store final equality,
 revisions, projection invalidation, publication, and no-op behavior without a
 second palette truth, mutation type, or journal.
 
+`CanvasGridUpdate` is immutable scalar transaction intent, not committed Store
+state. Null denotes omission only; every stored grid field remains non-null.
+It validates context-free cell-size failures at construction, then
+`CanvasEdit.updateGrid` merges supplied fields with the latest transaction-local
+complete grid and constructs one existing `CanvasGrid` for context-dependent
+validation. A changed sparse result reduces to the existing complete background
+mutation, preserving Store-owned final equality, grid revisions, effects, and
+publication without a second grid truth, mutation type, or journal.
+
 ```text
 CommittedDocument
   meta: DocumentMetaRecord

@@ -222,6 +222,7 @@ CanvasDocument
 CanvasLayer
 CanvasPalette
 CanvasPaletteUpdate
+CanvasGridUpdate
 CanvasElement and element family types
 CanvasElementUpdate and update family types
 CanvasClearResult
@@ -889,6 +890,19 @@ final class CanvasPaletteUpdate {
   List<Color> get backgroundColors;
   List<double> get gridSizes;
 }
+
+@immutable
+final class CanvasGridUpdate {
+  factory CanvasGridUpdate({
+    bool? enabled,
+    double? cellSize,
+    Color? color,
+  });
+
+  final bool? enabled;
+  final double? cellSize;
+  final Color? color;
+}
 ```
 
 `CanvasDocument` materializes `CanvasPalette.defaults()` when `palette` is null.
@@ -913,6 +927,10 @@ It snapshots and validates each supplied iterable with the corresponding
 `CanvasPalette` context-free rules. An omitted field has a false `has...`
 getter and an empty unmodifiable list; a supplied empty list has a true
 presence getter and clears only that field when applied.
+`CanvasGridUpdate` is a non-const immutable, identity-equality scalar intent
+DTO. Null is omission for each field; a supplied `cellSize` rejects non-finite,
+negative, and above-maximum values at construction, while enabled-grid positive
+and minimum-size validation remains at the complete `CanvasGrid` merge boundary.
 `CanvasDocument.camera` stores the persisted document default camera offset,
 using the schema and readDocument round-trip semantics required by this contract. The same
 `CanvasCamera` value type is also used by `CanvasCameraPort.camera` to report
@@ -1549,6 +1567,7 @@ abstract interface class CanvasEdit {
 
   void setBackgroundColor(Color color);
   void setGrid(CanvasGrid grid);
+  void updateGrid(CanvasGridUpdate update);
   void setPalette(CanvasPalette palette);
   void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);

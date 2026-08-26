@@ -166,6 +166,12 @@ final class EditSession implements CanvasEdit {
   }
 
   @override
+  void updateGrid(CanvasGridUpdate update) {
+    _ensureActive();
+    _backing.updateGrid(update);
+  }
+
+  @override
   void setPalette(CanvasPalette palette) {
     _ensureActive();
     _backing.setPalette(palette);
@@ -252,6 +258,7 @@ abstract interface class _EditSessionBacking {
   bool removeUnusedResource(CanvasResourceId id);
   void setBackgroundColor(Color color);
   void setGrid(CanvasGrid grid);
+  void updateGrid(CanvasGridUpdate update);
   void setPalette(CanvasPalette palette);
   void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
@@ -348,6 +355,11 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   @override
   void setGrid(CanvasGrid grid) {
     _draft.setGrid(grid);
+  }
+
+  @override
+  void updateGrid(CanvasGridUpdate update) {
+    _draft.setGrid(_mergeGridUpdate(_draft.background.grid, update));
   }
 
   @override
@@ -729,6 +741,18 @@ final class _SparseEditBacking implements _EditSessionBacking {
     _mutationJournal.append(StoreSparseSetBackground(nextBackground));
     _touchedSet.touchGrid();
     _mergeRevisionDelta(const StoreRevisionDelta.grid());
+  }
+
+  @override
+  void updateGrid(CanvasGridUpdate update) {
+    if (_isMaterialized) {
+      final draft = _materializedDraft;
+      draft.setGrid(_mergeGridUpdate(draft.background.grid, update));
+
+      return;
+    }
+    final current = (_backgroundOverride ?? _facts.background).grid;
+    setGrid(_mergeGridUpdate(current, update));
   }
 
   @override
@@ -1136,6 +1160,20 @@ CanvasPalette _mergePaletteUpdate(
         ? update.backgroundColors
         : current.backgroundColors,
     gridSizes: update.hasGridSizes ? update.gridSizes : current.gridSizes,
+  );
+}
+
+CanvasGrid _mergeGridUpdate(CanvasGrid current, CanvasGridUpdate update) {
+  if (update.enabled == null &&
+      update.cellSize == null &&
+      update.color == null) {
+    return current;
+  }
+
+  return CanvasGrid(
+    enabled: update.enabled ?? current.enabled,
+    cellSize: update.cellSize ?? current.cellSize,
+    color: update.color ?? current.color,
   );
 }
 

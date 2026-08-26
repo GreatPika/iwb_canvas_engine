@@ -89,6 +89,7 @@ final class PublicIntegrationCompileFixture {
       edit.removeUnusedResource(resourceId);
       edit.setBackgroundColor(_compileOnly());
       edit.setGrid(CanvasGrid());
+      edit.updateGrid(CanvasGridUpdate(cellSize: 12));
       edit.setPalette(const CanvasPalette.defaults());
       edit.updatePalette(
         CanvasPaletteUpdate(penColors: [const CanvasBackground().color]),

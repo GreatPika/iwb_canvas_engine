@@ -10,6 +10,11 @@ import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
+  _registerExistingNoOpTests();
+  _registerGridNoOpTests();
+}
+
+void _registerExistingNoOpTests() {
   test(
     'sparse compensating field edits commit as delivery-silent no-ops',
     () => expectLater(_sparseCompensatingFieldsAreSilent(), completes),
@@ -44,6 +49,25 @@ void main() {
   test(
     'materialized fallback compensation commits as delivery-silent no-op',
     () => expectLater(_materializedCompensationIsSilent(), completes),
+  );
+}
+
+void _registerGridNoOpTests() {
+  test(
+    'all-null grid update is silent on both edit backings',
+    () => expectLater(_allNullGridUpdateIsSilentOnBothBackings(), completes),
+  );
+  test(
+    'locally equal grid update is silent on both edit backings',
+    () =>
+        expectLater(_locallyEqualGridUpdateIsSilentOnBothBackings(), completes),
+  );
+  test(
+    'compensating grid updates are silent on both edit backings',
+    () => expectLater(
+      _compensatingGridUpdatesAreSilentOnBothBackings(),
+      completes,
+    ),
   );
 }
 
@@ -248,6 +272,38 @@ void _applyPaletteNoOpSequence(CanvasEdit edit) {
         Color(0xFF8E24AA),
       ],
     ),
+  );
+}
+
+Future<void> _allNullGridUpdateIsSilentOnBothBackings() {
+  return _expectGridNoOpOnBothBackings(
+    (edit) => edit.updateGrid(CanvasGridUpdate()),
+  );
+}
+
+Future<void> _locallyEqualGridUpdateIsSilentOnBothBackings() {
+  return _expectGridNoOpOnBothBackings(
+    (edit) => edit.updateGrid(CanvasGridUpdate(cellSize: 10)),
+  );
+}
+
+Future<void> _compensatingGridUpdatesAreSilentOnBothBackings() {
+  return _expectGridNoOpOnBothBackings((edit) {
+    edit.updateGrid(CanvasGridUpdate(color: const Color(0xFF010203)));
+    edit.updateGrid(CanvasGridUpdate(color: const Color(0x1F000000)));
+  });
+}
+
+Future<void> _expectGridNoOpOnBothBackings(
+  void Function(CanvasEdit edit) mutate,
+) async {
+  await _expectSilentNetNoOpCommit(mutate: mutate);
+  await _expectSilentNetNoOpCommit(
+    expectedProjectionBuildDelta: 1,
+    mutate: (edit) {
+      edit.readDraftDocument();
+      mutate(edit);
+    },
   );
 }
 

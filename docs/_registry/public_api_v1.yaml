@@ -21,6 +21,7 @@ public_exports:
   - CanvasLayer
   - CanvasPalette
   - CanvasPaletteUpdate
+  - CanvasGridUpdate
   - CanvasBackground
   - CanvasGrid
   - CanvasCamera

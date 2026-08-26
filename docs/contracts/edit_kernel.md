@@ -148,6 +148,15 @@ application adds no second complete-palette copy. The existing complete Store
 mutation, finalization, no-op, rollback, invalidation, publication, and
 no-canvas-repaint path remains authoritative.
 
+`CanvasEdit.updateGrid` validates supplied context-free scalar values at DTO
+construction. Its stale-handle guard runs before backing access or merge. Each
+backing merges non-null fields with its latest callback-local complete grid and
+constructs one `CanvasGrid`, preserving complete enabled-grid validation at that
+existing value boundary. A changed sparse call appends one existing complete
+`StoreSparseSetBackground`; materialized and sparse routes reuse `setGrid` for
+the same final equality, grid revision, projection invalidation, repaint,
+rollback, and publication behavior.
+
 `clearContent` has one layer-only semantic across materialized
 `DraftDocument`, sparse-session DTO promotion, and direct
 sparse-store preparation. It removes every ordinary-layer element without using

@@ -64,6 +64,7 @@ Resource and interaction owners own their resource and interaction rows.
 | CanvasCameraPort.setOffset/panBy | runtime view camera | state.revisions.viewCamera | no | no | main + overlay | none |
 | setBackgroundColor | persisted background metadata | state.revisions.document; internal backgroundRevision, projection | no | evict | main | none |
 | setGrid | persisted grid metadata | state.revisions.document; internal gridRevision, projection | no | evict | main | none |
+| CanvasEdit.updateGrid | supplied non-null fields replace the latest callback-local complete grid fields; null fields remain | same as `setGrid` when the final grid differs; none for all-null, locally equal, or compensating final equality | no | evict only for an accepted changed final grid | main | none |
 | setPalette | meta | state.revisions.document; internal projection | no | evict | no canvas repaint | none |
 | CanvasEdit.updatePalette | supplied fields replace the latest callback-local complete palette fields; omitted fields remain | same as `setPalette` when the final palette differs; none for all-absent, locally equal, or compensating final equality | no | evict only for an accepted changed final palette | no canvas repaint | none |
 | upsertResource new/changed | resource table | state.revisions.document; internal resource, projection | no | evict | main if used | none |

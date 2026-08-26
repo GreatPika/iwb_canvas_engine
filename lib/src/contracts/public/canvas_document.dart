@@ -229,6 +229,36 @@ final class CanvasGrid {
   int get hashCode => Object.hash(enabled, cellSize, color);
 }
 
+@immutable
+/// Public API v1 declaration for [CanvasGridUpdate].
+final class CanvasGridUpdate {
+  factory CanvasGridUpdate({bool? enabled, double? cellSize, Color? color}) {
+    if (cellSize != null) {
+      validateNonNegativeDouble(
+        cellSize,
+        path: 'grid.cellSize',
+        max: canvasMaxPositiveSize,
+      );
+    }
+
+    return CanvasGridUpdate._(
+      enabled: enabled,
+      cellSize: cellSize,
+      color: color,
+    );
+  }
+
+  const CanvasGridUpdate._({
+    required this.enabled,
+    required this.cellSize,
+    required this.color,
+  });
+
+  final bool? enabled;
+  final double? cellSize;
+  final Color? color;
+}
+
 /// Public API v1 declaration for [CanvasPalette].
 final class CanvasPalette {
   CanvasPalette({

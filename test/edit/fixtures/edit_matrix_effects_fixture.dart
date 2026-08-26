@@ -135,6 +135,10 @@ void _registerOperationMatrixRows() {
   test('updatePalette public routes preserve complete palette effects', () {
     return expectLater(_expectUpdatePalettePublicRouteEffects(), completes);
   });
+
+  test('updateGrid public routes preserve complete grid effects', () {
+    return expectLater(_expectUpdateGridPublicRouteEffects(), completes);
+  });
 }
 
 void _registerTaxonomyRows() {
@@ -223,6 +227,14 @@ final _editOperationMatrixCases = [
     _documentWithUnusedResource,
     _draftSetGrid,
     _editSetGrid,
+    editMatrixGridPlanEffects,
+  ),
+  const _EditOperationMatrixCase(
+    'updateGrid',
+    _expectUpdateGridRow,
+    _documentWithUnusedResource,
+    _draftSetGrid,
+    _editUpdateGrid,
     editMatrixGridPlanEffects,
   ),
   const _EditOperationMatrixCase(
@@ -1159,6 +1171,20 @@ void _expectUpdatePaletteRow() {
   _expectFrameRevisions(root);
 }
 
+void _expectUpdateGridRow() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+  );
+
+  root.edits.edit(_editUpdateGrid);
+
+  expect(
+    root.readDocument().background.grid,
+    CanvasGrid(enabled: true, cellSize: 24),
+  );
+  _expectFrameRevisions(root, grid: 1);
+}
+
 Future<void> _expectUpdatePalettePublicRouteEffects() async {
   final setPalette = await _applyCompletePaletteRoute(
     materialize: false,
@@ -1173,13 +1199,94 @@ Future<void> _expectUpdatePalettePublicRouteEffects() async {
     apply: _editUpdatePalette,
   );
 
-  sparseUpdate.expectSameDeliveryAs(setPalette, route: 'untouched sparse');
+  sparseUpdate.expectSameDeliveryAs(
+    setPalette,
+    route: 'untouched sparse',
+    expectsRepaint: false,
+  );
   materializedUpdate.expectSameDeliveryAs(
     setPalette,
     route: 'deliberately materialized',
+    expectsRepaint: false,
   );
   expect(sparseUpdate.projectionBuilds, 0);
   expect(materializedUpdate.projectionBuilds, 1);
+}
+
+Future<void> _expectUpdateGridPublicRouteEffects() async {
+  final setGrid = await _applyCompleteGridRoute(
+    materialize: false,
+    apply: _editSetGrid,
+  );
+  final sparseUpdate = await _applyCompleteGridRoute(
+    materialize: false,
+    apply: _editUpdateGrid,
+  );
+  final materializedUpdate = await _applyCompleteGridRoute(
+    materialize: true,
+    apply: _editUpdateGrid,
+  );
+
+  sparseUpdate.expectSameDeliveryAs(
+    setGrid,
+    route: 'untouched sparse',
+    expectsRepaint: true,
+  );
+  materializedUpdate.expectSameDeliveryAs(
+    setGrid,
+    route: 'deliberately materialized',
+    expectsRepaint: true,
+  );
+  expect(sparseUpdate.projectionBuilds, 0);
+  expect(materializedUpdate.projectionBuilds, 1);
+}
+
+// Rationale: this public grid-delivery trace stays complete so every effect
+// family remains visible instead of being hidden behind shared setup.
+// ignore: halstead-volume
+Future<_PaletteRouteEffects> _applyCompleteGridRoute({
+  required bool materialize,
+  required void Function(CanvasEdit edit) apply,
+}) async {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _documentWithUnusedResource(),
+    commitEffectObserver: effectBatches.add,
+  );
+  final actions = <CanvasActionCommitted>[];
+  final contextActions = <CanvasContextActionRequested>[];
+  var statePublications = 0;
+  final actionSubscription = root.actions.listen(actions.add);
+  final contextSubscription = root.contextActionRequests.listen(
+    contextActions.add,
+  );
+  root.state.addListener(() => statePublications += 1);
+
+  root.edits.edit((edit) {
+    if (materialize) {
+      edit.readDraftDocument();
+    }
+    apply(edit);
+  });
+  await Future<void>.delayed(Duration.zero);
+
+  final appearance = root.readAppearance();
+  final result = _PaletteRouteEffects(
+    palette: appearance.palette,
+    grid: appearance.grid,
+    documentRevision: root.documentFacts.documentRevision,
+    frameRevisions: root.frameRevisions,
+    projectionBuilds: root.projectionBuildCount,
+    state: root.state.value,
+    statePublications: statePublications,
+    effectBatches: effectBatches,
+    actions: actions,
+    contextActions: contextActions,
+  );
+  await actionSubscription.cancel();
+  await contextSubscription.cancel();
+  root.dispose();
+  return result;
 }
 
 // The subscribed public delivery trace is one temporal observation; splitting
@@ -1211,9 +1318,10 @@ Future<_PaletteRouteEffects> _applyCompletePaletteRoute({
   });
   await Future<void>.delayed(Duration.zero);
 
-  final palette = root.readAppearance().palette;
+  final appearance = root.readAppearance();
   final result = _PaletteRouteEffects(
-    palette: palette,
+    palette: appearance.palette,
+    grid: appearance.grid,
     documentRevision: root.documentFacts.documentRevision,
     frameRevisions: root.frameRevisions,
     projectionBuilds: root.projectionBuildCount,
@@ -1411,6 +1519,10 @@ void _draftSetGrid(DraftDocument draft) {
 
 void _editSetGrid(CanvasEdit edit) {
   edit.setGrid(CanvasGrid(enabled: true, cellSize: 24));
+}
+
+void _editUpdateGrid(CanvasEdit edit) {
+  edit.updateGrid(CanvasGridUpdate(enabled: true, cellSize: 24));
 }
 
 void _draftSetPalette(DraftDocument draft) {
@@ -2232,6 +2344,7 @@ final class _EditOperationMatrixCase {
 final class _PaletteRouteEffects {
   const _PaletteRouteEffects({
     required this.palette,
+    required this.grid,
     required this.documentRevision,
     required this.frameRevisions,
     required this.projectionBuilds,
@@ -2243,6 +2356,7 @@ final class _PaletteRouteEffects {
   });
 
   final CanvasPalette palette;
+  final CanvasGrid grid;
   final int documentRevision;
   final FrameRevisionFacts frameRevisions;
   final int projectionBuilds;
@@ -2258,6 +2372,7 @@ final class _PaletteRouteEffects {
   void expectSameDeliveryAs(
     _PaletteRouteEffects expected, {
     required String route,
+    required bool expectsRepaint,
   }) {
     expect(palette.penColors, expected.palette.penColors, reason: route);
     expect(
@@ -2266,6 +2381,7 @@ final class _PaletteRouteEffects {
       reason: route,
     );
     expect(palette.gridSizes, expected.palette.gridSizes, reason: route);
+    expect(grid, expected.grid, reason: route);
     expect(documentRevision, expected.documentRevision, reason: route);
     expect(
       frameRevisions.documentRevision,
@@ -2324,7 +2440,7 @@ final class _PaletteRouteEffects {
     );
     expect(
       effectBatches.single.whereType<RepaintDeliveryEffect>(),
-      isEmpty,
+      expectsRepaint ? hasLength(1) : isEmpty,
       reason: route,
     );
   }

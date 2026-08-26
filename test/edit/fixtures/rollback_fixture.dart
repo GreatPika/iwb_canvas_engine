@@ -21,6 +21,10 @@ void main() {
     expect(_expectPaletteUpdateRollsBack, returnsNormally);
   });
 
+  test('callback throw discards direct grid updates', () {
+    expect(_expectGridUpdateRollsBack, returnsNormally);
+  });
+
   test('validation failure leaves committed store facts unchanged', () {
     expect(_expectValidationFailureRollsBack, returnsNormally);
   });
@@ -115,6 +119,22 @@ void _expectPaletteUpdateRollsBack() {
         CanvasPaletteUpdate(penColors: const [Color(0xFF010203)]),
       );
       throw StateError('rollback palette update');
+    }),
+    throwsStateError,
+  );
+
+  before.expectUnchanged(root, effectBatches);
+}
+
+void _expectGridUpdateRollsBack() {
+  final effectBatches = <List<CommitDeliveryEffect>>[];
+  final root = _runtimeRoot(effectBatches);
+  final before = _RollbackSnapshot.capture(root, effectBatches);
+
+  expect(
+    () => root.edits.edit((edit) {
+      edit.updateGrid(CanvasGridUpdate(enabled: true, cellSize: 24));
+      throw StateError('rollback grid update');
     }),
     throwsStateError,
   );

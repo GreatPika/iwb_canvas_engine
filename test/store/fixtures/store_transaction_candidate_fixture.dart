@@ -50,6 +50,11 @@ void main() {
     'candidate accepts one complete palette mutation through the scalar path',
     _candidatePaletteMutationUsesExistingPath,
   );
+  // ignore: missing-test-assertion, reason: The named helper owns the direct assertions.
+  test(
+    'candidate accepts one complete grid background mutation through the scalar path',
+    _candidateGridMutationUsesExistingPath,
+  );
 }
 
 void _candidatePaletteMutationUsesExistingPath() {
@@ -73,6 +78,41 @@ void _candidatePaletteMutationUsesExistingPath() {
 
   expect(_samePalette(prepared.document.palette, palette), isTrue);
   _expectExactTouchedFacts(prepared.touchedFacts, palette: true);
+  expect(
+    events.where(
+      (event) => event.kind == StoreSparseCandidateEventKind.currentScalarRead,
+    ),
+    isNotEmpty,
+  );
+  expect(
+    events.where(
+      (event) =>
+          event.kind == StoreSparseCandidateEventKind.aggregatePublication,
+    ),
+    hasLength(1),
+  );
+}
+
+void _candidateGridMutationUsesExistingPath() {
+  final store = documentStoreWithDocument(_candidateBaseDocument());
+  final events = <StoreSparseCandidateEvent>[];
+  final background = CanvasBackground(
+    color: const Color(0xFFFFFFFF),
+    grid: CanvasGrid(enabled: true, cellSize: 24),
+  );
+
+  final prepared = CommittedDocument.observeSparseCandidateEvents(
+    events.add,
+    () => store.prepareSparseCommit(
+      StoreSparseCommit(
+        mutations: [StoreSparseSetBackground(background)],
+        revisionDelta: const StoreRevisionDelta.grid(),
+      ),
+    ),
+  );
+
+  expect(prepared.document.background.grid, background.grid);
+  _expectExactTouchedFacts(prepared.touchedFacts, grid: true);
   expect(
     events.where(
       (event) => event.kind == StoreSparseCandidateEventKind.currentScalarRead,

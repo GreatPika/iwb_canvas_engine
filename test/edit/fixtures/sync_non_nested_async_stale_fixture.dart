@@ -111,6 +111,10 @@ void _expectFutureCallbackRejected() {
   );
 
   expect(() => captured.updatePalette(CanvasPaletteUpdate()), throwsStateError);
+  expect(
+    () => captured.updateGrid(CanvasGridUpdate(enabled: true)),
+    throwsStateError,
+  );
   expect(runtime.state.value, beforeState);
   expect(notifications, 0);
   expect(effectBatches, isEmpty);
@@ -138,6 +142,10 @@ void _expectExceptionClosesHandle() {
   expect(() => staleHandle.draftSummary, throwsStateError);
   expect(
     () => staleHandle.updatePalette(CanvasPaletteUpdate()),
+    throwsStateError,
+  );
+  expect(
+    () => staleHandle.updateGrid(CanvasGridUpdate(enabled: true)),
     throwsStateError,
   );
   expect(effectBatches, isEmpty);
@@ -232,6 +240,10 @@ void _expectStaleDocumentEntriesRejected(CanvasEdit captured) {
     ),
     throwsStateError,
   );
+  expect(
+    () => captured.updateGrid(CanvasGridUpdate(enabled: true)),
+    throwsStateError,
+  );
   expect(() => captured.setCameraOffset(const Offset(1, 2)), throwsStateError);
   expect(() => captured.clearContent(), throwsStateError);
   expect(
@@ -300,6 +312,7 @@ RuntimeRoot _runtimeRoot(List<List<CommitDeliveryEffect>> effectBatches) {
 
 CanvasDocument _document() {
   return CanvasDocument(
+    background: CanvasBackground(grid: CanvasGrid(cellSize: 0)),
     resources: [
       CanvasImageResource(
         id: CanvasResourceId('resource-1'),

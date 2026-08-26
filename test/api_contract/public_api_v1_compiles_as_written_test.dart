@@ -65,6 +65,7 @@ void rejectsInternalDeletionDiagnostics() {
   );
 
   _registerForbiddenAppearanceMemberTests();
+  _registerFinalEditInterfaceNegativeTests();
 }
 
 void _registerForbiddenAppearanceMemberTests() {
@@ -92,6 +93,79 @@ Object rejectsCanvasAppearanceMember(CanvasAppearance appearance) =>
       },
     );
   }
+}
+
+void _registerFinalEditInterfaceNegativeTests() {
+  _registerMissingEditMethodTest(
+    description: 'CanvasEdit implementation cannot omit updatePalette',
+    implementedMethod: 'void updateGrid(CanvasGridUpdate update) {}',
+    missingMethod: 'updatePalette',
+  );
+  _registerMissingEditMethodTest(
+    description: 'CanvasEdit implementation cannot omit updateGrid',
+    implementedMethod: 'void updatePalette(CanvasPaletteUpdate update) {}',
+    missingMethod: 'updateGrid',
+  );
+  test(
+    'CanvasEdit.updateBackground is unavailable from the public barrel',
+    () async {
+      final analyze = await _analyzeConsumerSource('''
+import 'dart:ui';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+void rejectsUpdateBackground(CanvasEdit edit) {
+  edit.updateBackground(const Color(0xFF010203));
+}
+''');
+      final output = _processOutput(analyze);
+
+      expect(analyze.exitCode, isNot(0), reason: output);
+      expect(output, contains('UNDEFINED_METHOD'));
+    },
+  );
+}
+
+void _registerMissingEditMethodTest({
+  required String description,
+  required String implementedMethod,
+  required String missingMethod,
+}) {
+  test(description, () async {
+    final analyze = await _analyzeConsumerSource('''
+import 'dart:ui';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+
+final class IncompleteEdit implements CanvasEdit {
+  @override
+  CanvasDocument readDraftDocument() => CanvasDocument();
+  @override
+  CanvasDocumentSummary get draftSummary => const CanvasDocumentSummary(
+    elementCount: 0, layerCount: 0, resourceCount: 0,
+  );
+  @override bool ensureLayer(CanvasLayerId id, {int? index}) => false;
+  @override CanvasElementId addElement(CanvasElement element, {CanvasLayerId? layerId, int? index}) => element.id;
+  @override CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) => element.id;
+  @override bool updateElement(CanvasElementUpdate update) => false;
+  @override bool removeElement(CanvasElementId id) => false;
+  @override bool upsertResource(CanvasResource resource) => false;
+  @override bool removeUnusedResource(CanvasResourceId id) => false;
+  @override void setBackgroundColor(Color color) {}
+  @override void setGrid(CanvasGrid grid) {}
+  @override void setPalette(CanvasPalette palette) {}
+  @override $implementedMethod
+  @override void setCameraOffset(Offset offset) {}
+  @override CanvasClearResult clearContent({bool removeUnusedResources = false}) => CanvasClearResult(removedElementIds: const [], removedResourceIds: const [], didClearContent: false);
+  @override void replaceDraftDocument(CanvasDocument document) {}
+}
+
+void expectsMissingImplementation(IncompleteEdit edit) { print(edit); }
+''');
+    final output = _processOutput(analyze);
+
+    expect(analyze.exitCode, isNot(0), reason: output);
+    expect(output, contains('NON_ABSTRACT_CLASS_INHERITS_ABSTRACT_MEMBER'));
+    expect(output, contains(missingMethod));
+  });
 }
 
 Future<ProcessResult> _analyzeConsumerSource(String source) async {
@@ -315,6 +389,11 @@ void _exerciseP2ContractSurface() {
     backgroundColors: const [Color(0xFFFFFFFF)],
     gridSizes: const [8, 16],
   );
+  final gridUpdate = CanvasGridUpdate(
+    enabled: true,
+    cellSize: 16,
+    color: const Color(0x22000000),
+  );
   _use(appearance.backgroundColor);
   _use(appearance.grid);
   _use(appearance.palette);
@@ -324,6 +403,9 @@ void _exerciseP2ContractSurface() {
   _use(paletteUpdate.penColors);
   _use(paletteUpdate.backgroundColors);
   _use(paletteUpdate.gridSizes);
+  _use(gridUpdate.enabled);
+  _use(gridUpdate.cellSize);
+  _use(gridUpdate.color);
   final document = CanvasDocument(
     camera: camera,
     background: background,
@@ -967,6 +1049,9 @@ final class _ConsumerEdit implements CanvasEdit {
 
   @override
   void setGrid(CanvasGrid grid) {}
+
+  @override
+  void updateGrid(CanvasGridUpdate update) {}
 
   @override
   void setPalette(CanvasPalette palette) {}

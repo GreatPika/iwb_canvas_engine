@@ -274,6 +274,14 @@ void main() {
     expect({firstPaletteUpdate}, contains(firstPaletteUpdate));
     expect({firstPaletteUpdate}, isNot(contains(secondPaletteUpdate)));
 
+    final firstGridUpdate = CanvasGridUpdate(cellSize: 12);
+    final secondGridUpdate = CanvasGridUpdate(cellSize: 12);
+    expect(identical(firstGridUpdate, secondGridUpdate), isFalse);
+    expect(firstGridUpdate, isNot(secondGridUpdate));
+    expect(firstGridUpdate, firstGridUpdate);
+    expect({firstGridUpdate}, contains(firstGridUpdate));
+    expect({firstGridUpdate}, isNot(contains(secondGridUpdate)));
+
     final firstAppearance = CanvasAppearance(
       backgroundColor: const Color(0xFF102030),
       grid: CanvasGrid.disabled,

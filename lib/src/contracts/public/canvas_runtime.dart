@@ -153,7 +153,7 @@ abstract interface class CanvasEditPort {
 /// Public API v1 declaration for [CanvasEdit].
 // The edit port is a single public transaction surface, so its method list
 // stays together instead of being split by metrics.
-// ignore: number-of-methods
+// ignore: coupling-between-object-classes, number-of-methods
 abstract interface class CanvasEdit {
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
@@ -170,6 +170,7 @@ abstract interface class CanvasEdit {
   bool removeUnusedResource(CanvasResourceId id);
   void setBackgroundColor(Color color);
   void setGrid(CanvasGrid grid);
+  void updateGrid(CanvasGridUpdate update);
   void setPalette(CanvasPalette palette);
   void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
