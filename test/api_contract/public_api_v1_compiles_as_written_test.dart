@@ -99,11 +99,13 @@ void _registerFinalEditInterfaceNegativeTests() {
   _registerMissingEditMethodTest(
     description: 'CanvasEdit implementation cannot omit updatePalette',
     implementedMethod: 'void updateGrid(CanvasGridUpdate update) {}',
+    implementedMethodName: 'updateGrid',
     missingMethod: 'updatePalette',
   );
   _registerMissingEditMethodTest(
     description: 'CanvasEdit implementation cannot omit updateGrid',
     implementedMethod: 'void updatePalette(CanvasPaletteUpdate update) {}',
+    implementedMethodName: 'updatePalette',
     missingMethod: 'updateGrid',
   );
   test(
@@ -125,13 +127,18 @@ void rejectsUpdateBackground(CanvasEdit edit) {
   );
 }
 
+// The complete consumer witness stays beside its diagnostic assertions so a
+// missing public member remains directly legible in the failing source.
+// ignore: halstead-volume
 void _registerMissingEditMethodTest({
   required String description,
   required String implementedMethod,
+  required String implementedMethodName,
   required String missingMethod,
 }) {
   test(description, () async {
-    final analyze = await _analyzeConsumerSource('''
+    final source =
+        '''
 import 'dart:ui';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
@@ -159,13 +166,83 @@ final class IncompleteEdit implements CanvasEdit {
 }
 
 void expectsMissingImplementation(IncompleteEdit edit) { print(edit); }
-''');
+''';
+    final analyze = await _analyzeConsumerSource(source);
     final output = _processOutput(analyze);
+    final errors = _machineDiagnostics(
+      analyze.stdout.toString(),
+    ).where((diagnostic) => diagnostic.severity == 'ERROR').toList();
 
     expect(analyze.exitCode, isNot(0), reason: output);
-    expect(output, contains('NON_ABSTRACT_CLASS_INHERITS_ABSTRACT_MEMBER'));
-    expect(output, contains(missingMethod));
+    expect(errors, hasLength(1), reason: output);
+
+    final error = errors.single;
+    expect(error.code, 'NON_ABSTRACT_CLASS_INHERITS_ABSTRACT_MEMBER');
+    expect(
+      String.fromCharCodes(
+        source
+            .split('\n')[error.line - 1]
+            .codeUnits
+            .skip(error.column - 1)
+            .take(error.length),
+      ),
+      'IncompleteEdit',
+    );
+    expect(
+      error.message,
+      "Missing concrete implementation of 'CanvasEdit.$missingMethod'.",
+    );
+    expect(error.message, isNot(contains('CanvasEdit.$implementedMethodName')));
   });
+}
+
+List<_AnalyzerMachineDiagnostic> _machineDiagnostics(String output) {
+  return output
+      .split('\n')
+      .where((line) => line.isNotEmpty)
+      .map(_parseMachineDiagnostic)
+      .toList();
+}
+
+_AnalyzerMachineDiagnostic _parseMachineDiagnostic(String line) {
+  final fields = line.split('|');
+  if (fields.length < 8) {
+    throw FormatException('Unexpected analyzer machine diagnostic: $line');
+  }
+
+  final lineNumber = int.tryParse(fields[4]);
+  final columnNumber = int.tryParse(fields[5]);
+  final length = int.tryParse(fields[6]);
+  if (lineNumber == null || columnNumber == null || length == null) {
+    throw FormatException('Unexpected analyzer machine diagnostic: $line');
+  }
+
+  return _AnalyzerMachineDiagnostic(
+    severity: fields[0],
+    code: fields[2],
+    line: lineNumber,
+    column: columnNumber,
+    length: length,
+    message: fields.sublist(7).join('|'),
+  );
+}
+
+final class _AnalyzerMachineDiagnostic {
+  const _AnalyzerMachineDiagnostic({
+    required this.severity,
+    required this.code,
+    required this.line,
+    required this.column,
+    required this.length,
+    required this.message,
+  });
+
+  final String severity;
+  final String code;
+  final int line;
+  final int column;
+  final int length;
+  final String message;
 }
 
 Future<ProcessResult> _analyzeConsumerSource(String source) async {
