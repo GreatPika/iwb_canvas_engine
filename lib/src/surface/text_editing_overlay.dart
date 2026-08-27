@@ -329,7 +329,11 @@ final class _CanvasTextEditingOverlayState
     if (session == null || controller == null || !session.isActive) {
       return;
     }
-    session.updateText(controller.text);
+    final text = controller.text;
+    if (text == session.liveText) {
+      return;
+    }
+    session.updateText(text);
     if (mounted) {
       // Rebuild after the session accepts edited text; text state is owned by
       // the runtime session, not duplicated in this widget state.

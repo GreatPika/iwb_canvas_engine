@@ -155,6 +155,11 @@ void _testActiveSessionPublishesLiveUpdates() {
 
         expect(session.liveText, 'listener update');
         expect(notifications, 1);
+
+        session.updateText('listener update');
+
+        expect(session.liveText, 'listener update');
+        expect(notifications, 1);
       } finally {
         scenario.root.textEditing.activeSession.removeListener(listener);
         await scenario.dispose();

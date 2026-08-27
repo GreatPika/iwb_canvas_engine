@@ -4258,6 +4258,9 @@ final class _RuntimeTextEditingPort implements CanvasTextEditingPort {
     if (!identical(_active?.session, state.session)) {
       return;
     }
+    if (state.liveText == text) {
+      return;
+    }
     state.liveText = text;
     _activeSession.notifyLiveTextChanged();
   }
