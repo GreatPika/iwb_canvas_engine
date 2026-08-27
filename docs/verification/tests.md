@@ -835,6 +835,302 @@ the release route for that evidence.
   and stay synchronized with `docs/architecture/architecture_graph.yaml`.
 
 #### eraser/context-action eraser and context-action request tests
+
+Eraser corridor permanent artifact admissions:
+
+The `eraser-proof-families-admitted` outcome maps through
+`proof-admission-closure-evidence` to the twelve admissions below (`A-008`).
+They are separate because each real owner can fail while the other owner-level
+signals remain green; artifact targets identify the durable proof location, not
+the source of product truth.
+
+- `bounded-capture-work-admission`
+  - Contract chain: `bounded-capture-move-work` →
+    `bounded-capture-work-evidence` → `bounded-capture-work-admission`
+    (`A-001`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: `PointerEraserCapture` mutation and retained-preview
+    publication in `lib/src/interaction/eraser_machine.dart`.
+  - Verification owner: interaction eraser routing suite.
+  - Failure family: an ordinary distinct move copies or traverses an existing
+    retained prefix, or retained publication depends on discarded history.
+  - Concrete failing witness: the current capture spreads the complete prior
+    list for every distinct append and has no 8001-to-4000 resample.
+  - Direct oracle/pass signal: real owner work events report zero
+    existing-prefix traversal/copy on ordinary append, bounded active counts,
+    an immediate 8001-to-4000 resample after every triggering append across
+    repeated overflow cycles, and equal publication point work for equal
+    retained counts reached through different history lengths.
+  - Rejected proxies/limits: final length, elapsed time, allocation strategy,
+    snapshot count, and private storage shape do not prove this bound.
+  - Durable and refactor-stable value: preserves copy-free ordinary mutation
+    and retained-state-bounded work across storage and helper refactors without
+    a wall-clock threshold.
+  - Artifact target: `test/interaction/eraser_context_action_routing_test.dart`
+    and its existing fixture.
+
+- `retained-approximation-admission`
+  - Contract chain: `retained-approximation-is-truth` →
+    `retained-approximation-evidence` → `retained-approximation-admission`
+    (`A-002`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: retained-corridor capture in
+    `lib/src/interaction/eraser_machine.dart` and its terminal handoff through
+    `InteractionEngine` and `RuntimeInteractionReadAdapter`.
+  - Verification owner: interaction eraser routing and terminal resolver suites.
+  - Failure family: preview, terminal geometry, intent/action point count, or
+    documented accuracy boundary uses a corridor other than the retained
+    approximation.
+  - Concrete failing witness: current preview, terminal geometry, and point
+    count consume the complete original corridor, so the selected approximation
+    cannot be exercised.
+  - Direct oracle/pass signal: real capture-to-preview/terminal observations
+    compare every output index to `(i * (n - 1)) ~/ 3999`, including non-even
+    interiors, and observe the same retained corridor plus the accepted narrow
+    detour miss and shortcut-chord hit.
+  - Rejected proxies/limits: endpoint-only checks, alternative rounding,
+    helper-only resampling, and predecessor behavior are insufficient.
+  - Durable and refactor-stable value: keeps one semantic corridor and its
+    explicit accuracy cost across capture, runtime, and geometry refactors.
+  - Artifact target: existing eraser routing and terminal resolver fixtures.
+
+- `visual-only-move-admission`
+  - Contract chain: `visual-only-move-route` → `visual-only-move-evidence` →
+    `visual-only-move-admission` (`A-003`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: eraser down/move routing in
+    `lib/src/interaction/interaction_engine.dart` at the
+    `InteractionReadPort` boundary.
+  - Verification owner: interaction eraser routing suite.
+  - Failure family: a move retains a preview read or hidden geometry/deletion
+    phase while its visible preview remains correct.
+  - Concrete failing witness: the existing route enters `eraserPreviewFacts`
+    for every distinct move.
+  - Direct oracle/pass signal: phase events show one down read, no move read,
+    geometry, or deletion-projection event, and one publication after each
+    admitted append/resample.
+  - Rejected proxies/limits: machine-only output, aggregate read counts,
+    elapsed time, and helper names cannot distinguish down from move work.
+  - Durable and refactor-stable value: retains the phase-level routing contract
+    through private method and observer renames.
+  - Artifact target: `test/interaction/eraser_context_action_routing_test.dart`
+    and its existing fixture.
+
+- `sample-admission-admission`
+  - Contract chain: `sample-admission-semantics` → `sample-admission-evidence`
+    → `sample-admission-admission` (`A-014`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: sample admission and overflow resampling in
+    `PointerEraserCapture` in `lib/src/interaction/eraser_machine.dart`.
+  - Verification owner: interaction eraser routing suite.
+  - Failure family: a distinct move or terminal sample is duplicated, skipped,
+    resampled before admission, or loses its newest endpoint.
+  - Concrete failing witness: current duplicate suppression has no overflow
+    transition against which append-before-resample ordering can be falsified.
+  - Direct oracle/pass signal: real-route admission and retained-result events
+    show duplicate suppression, exactly one append per distinct sample, append
+    before resample, and retention of the newest terminal endpoint.
+  - Rejected proxies/limits: final retained length and helper-call assertions
+    cannot establish admission order.
+  - Durable and refactor-stable value: preserves sample semantics across helper
+    extraction and storage-representation changes.
+  - Artifact target: `test/interaction/eraser_context_action_routing_test.dart`
+    and its existing fixture.
+
+- `single-mutable-source-admission`
+  - Contract chain: `single-capture-passive-session` →
+    `single-mutable-source-evidence` → `single-mutable-source-admission`
+    (`A-015`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: `PointerEraserCapture` and passive
+    `PointerSession` carriage in `lib/src/interaction/pointer_session.dart`.
+  - Verification owner: pointer-session owning suite plus bounded production
+    consumer closure.
+  - Failure family: a second raw/mutable corridor or obsolete copied session
+    remains reachable beside the active retained capture.
+  - Concrete failing witness: the current replacement model cannot demonstrate
+    same-identity mutable capture across session-shell updates.
+  - Direct oracle/pass signal: lifecycle identity observations show shells
+    forwarding one capture, later mutation visible through the active shell,
+    obsolete shells unreachable, and only immutable snapshots crossing
+    boundaries; repository-derived consumer closure completes that observation.
+  - Rejected proxies/limits: list equality and source-field scanning alone can
+    leave an equal hidden raw trajectory undetected.
+  - Durable and refactor-stable value: protects identity, reachability, and
+    boundary ownership without fixing a container implementation.
+  - Artifact target: `test/interaction/pointer_session_test.dart`.
+
+- `capture-cleanup-lifecycle-admission`
+  - Contract chain: `capture-cleanup-covers-every-exit` →
+    `capture-cleanup-lifecycle-evidence` →
+    `capture-cleanup-lifecycle-admission` (`A-016`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: centralized eraser cleanup across the existing
+    `InteractionEngine` and `RuntimeRoot` exit routes.
+  - Verification owner: existing interaction routing, geometry no-partial, and
+    terminal resolver suites.
+  - Failure family: mutable capture remains reachable after a source-owned exit
+    or clears through a second owner at the wrong observable phase.
+  - Concrete failing witness: preview can disappear while an obsolete session
+    shell still retains capture after load, resolver error, preparation failure,
+    or another lifecycle exit.
+  - Direct oracle/pass signal: direct active-owner reachability and phase
+    observations show centralized release for cancel, dispose, prepared load,
+    tool/mode and `interactive=false` changes, all pre-acceptance results,
+    edit/preparation failures, resolver outcomes, success, and post-consume
+    failure.
+  - Rejected proxies/limits: preview disappearance, garbage-collection timing,
+    or a second cleanup hook do not prove cleanup ownership or timing.
+  - Durable and refactor-stable value: keeps owner reachability and cleanup
+    ordering stable through session and cleanup implementation changes.
+  - Artifact target: existing eraser routing, no-partial, terminal resolver,
+    load cleanup, tool settings, interactive-false, and dispose suites.
+
+- `cleanup-work-displacement-admission`
+  - Contract chain: `cleanup-performs-no-displaced-work` →
+    `cleanup-work-displacement-evidence` →
+    `cleanup-work-displacement-admission` (`A-012`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: centralized eraser cleanup and downstream corridor
+    and geometry work owners in `InteractionEngine` and
+    `RuntimeInteractionReadAdapter`.
+  - Verification owner: existing interaction routing, geometry no-partial,
+    terminal resolver, load cleanup, tool settings, interactive-false, and
+    dispose suites.
+  - Failure family: cleanup releases capture correctly while recomputing
+    retained-corridor or geometry work before release.
+  - Concrete failing witness: cleanup snapshots the corridor or recomputes an
+    envelope and then clears the session, leaving lifecycle and final-output
+    assertions green.
+  - Direct oracle/pass signal: real cleanup-phase counters report zero corridor
+    traversal, snapshot, resample, read, envelope, query, candidate, and exact
+    work while the active capture/session is released.
+  - Rejected proxies/limits: successful release, aggregate counts, final
+    output, helper calls, and timing cannot replace phase-specific zero-work
+    counters.
+  - Durable and refactor-stable value: prevents work displacement across
+    cleanup, session, storage, and geometry helper refactors.
+  - Artifact target: existing eraser routing, no-partial, terminal resolver,
+    load cleanup, tool settings, interactive-false, and dispose suites.
+
+- `single-terminal-pass-admission`
+  - Contract chain: `single-terminal-evaluation` →
+    `single-terminal-pass-evidence` → `single-terminal-pass-admission`
+    (`A-009`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: pointer-up terminal route in
+    `InteractionEngine` through `RuntimeInteractionReadAdapter`.
+  - Verification owner: terminal eraser entry-route work suite.
+  - Failure family: one pointer-up repeats a retained snapshot, terminal read,
+    envelope/query/candidate/exact evaluation, or starts preparation early.
+  - Concrete failing witness: existing terminal-entry events can remain correct
+    while one read hides duplicate exact evaluation.
+  - Direct oracle/pass signal: success, empty, and overflow traces each show
+    exactly one retained snapshot and exactly one ordered terminal-read,
+    envelope, query, candidate-ordering, and exact-evaluation phase, with
+    preparation only after successful evaluation.
+  - Rejected proxies/limits: final state, elapsed time, and read count alone
+    cannot expose repeated work behind one read.
+  - Durable and refactor-stable value: retains phase cardinality and ordering
+    through private algorithm decomposition without timing thresholds.
+  - Artifact target: `test/interaction/terminal_eraser_entry_route_work_test.dart`
+    and its existing fixture.
+
+- `retained-overlay-rendering-admission`
+  - Contract chain: `retained-corridors-render-through-existing-overlay` →
+    `retained-overlay-rendering-evidence` →
+    `retained-overlay-rendering-admission` (`A-010`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: existing preview planner, drawable policy, and
+    overlay painter route in `lib/src/frame` and `lib/src/surface`.
+  - Verification owner: existing surface overlay drawable policy suite.
+  - Failure family: a valid post-resample corridor disappears or bypasses the
+    established overlay route.
+  - Concrete failing witness: planner equality or publication regression drops
+    only post-resample preview while helper drawing still succeeds.
+  - Direct oracle/pass signal: captured frames for one-point, ordinary, and
+    post-resample public previews each contain visible overlay output through
+    the existing planner/painter path.
+  - Rejected proxies/limits: helper-only pixels, DTO construction, or a second
+    painter are not route evidence.
+  - Durable and refactor-stable value: preserves public-preview-to-pixel
+    continuity through capture and planner refactors.
+  - Artifact target: `test/surface/overlay_drawable_policy_test.dart` and its
+    existing fixture.
+
+- `preview-effect-isolation-admission`
+  - Contract chain: `preview-publication-remains-isolated` →
+    `preview-effect-isolation-evidence` →
+    `preview-effect-isolation-admission` (`A-011`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: preview publication in `InteractionEngine` and the
+    runtime preview state/revision and repaint classification owners.
+  - Verification owner: existing interaction public preview-state suite.
+  - Failure family: down, move, or post-resample preview mutates a committed or
+    derived owner without emitting an action.
+  - Concrete failing witness: hidden spatial or projection mutation leaves the
+    action stream and final terminal result unchanged.
+  - Direct oracle/pass signal: real runtime owner observations show only
+    preview state/revision and overlay repaint changing for initial, move, and
+    post-resample publication.
+  - Rejected proxies/limits: DTO assertions, action absence, and final terminal
+    state cannot detect derived-owner mutation.
+  - Durable and refactor-stable value: keeps preview-only isolation across
+    runtime publication and derived-state refactors.
+  - Artifact target: `test/interaction/preview_public_state_test.dart` and its
+    existing fixture.
+
+- `preacceptance-no-partial-admission` extends the existing no-partial owner;
+  it does not create a parallel family.
+  - Contract chain: `preacceptance-failures-are-no-partial` →
+    `preacceptance-no-partial-evidence` →
+    `preacceptance-no-partial-admission` (`A-017`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: the pre-acceptance terminal boundary from
+    `InteractionEngine` through `RuntimeInteractionReadAdapter` before
+    deletion preparation.
+  - Verification owner: existing geometry eraser no-partial suite.
+  - Failure family: stale, invalid, spatial/candidate/exact-budget, or empty
+    retained-corridor results reach preparation or mutate a committed/derived
+    owner.
+  - Concrete failing witness: partial preparation can be discarded before
+    action emission, leaving the current observable subset apparently clean.
+  - Direct oracle/pass signal: each named rejection directly shows no
+    preparation, unchanged document/selection/spatial/projection/main-repaint/
+    action owners, and active-capture cleanup.
+  - Rejected proxies/limits: action absence and terminal-work counts alone do
+    not prove preparation exclusion or derived-owner stability; resolver
+    rejection and post-consume failure remain separate families.
+  - Durable and refactor-stable value: extends pre-acceptance atomicity across
+    candidate, projection, and cleanup refactors.
+  - Artifact target: `test/geometry/eraser_exact_budget_no_partial_commit_test.dart`
+    and its existing fixture.
+
+- `accepted-delivery-finality-admission` extends the existing accepted-delivery
+  and finality owner; it does not duplicate delivery proof.
+  - Contract chain: `accepted-eraser-delivery-is-final` →
+    `accepted-delivery-finality-evidence` →
+    `accepted-delivery-finality-admission` (`A-013`).
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: prepared eraser commit resolution, consume, cleanup,
+    and common delivery in `RuntimeRoot` and its action finalizer.
+  - Verification owner: existing terminal eraser deletion resolver suite.
+  - Failure family: resolver rejection, accepted cleanup, retained point-count
+    propagation, or post-consume delivery finality acquires the wrong order or
+    rollback semantics.
+  - Concrete failing witness: a listener failure rolls back and recreates the
+    same final document, allowing final-state-only assertions to pass.
+  - Direct oracle/pass signal: rejection and acceptance traces jointly show
+    prepare-before-resolver, discard-or-consume, cleanup-before-delivery,
+    unchanged retained `corridorPointCount`, and final committed state after
+    listener failure.
+  - Rejected proxies/limits: action counts, final snapshot alone, and design
+    prose cannot prove the consume/cleanup/delivery order.
+  - Durable and refactor-stable value: extends public finality and temporal
+    ordering through `RuntimeRoot` and intent refactors.
+  - Artifact target: `test/interaction/terminal_eraser_deletion_resolver_test.dart`
+    and its existing fixture.
+
 - `test/interaction/interaction_read_port_test.dart` proves eraser/context-action immutable read
   facts for eraser, context targets, and text guard inputs, with
   `CanvasElementKind` as the context-target and stale-guard discriminator,
