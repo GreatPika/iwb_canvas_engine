@@ -164,6 +164,13 @@ enum RuntimePointerCleanupAugmentationWorkEvent {
   cleanupEffectVisit,
 }
 
+/// Trace points at RuntimeRoot's deferred context-request delivery boundary.
+@visibleForTesting
+enum RuntimeContextRequestDeliveryTraceEvent {
+  pendingBatchDetached,
+  pendingRequestDelivered,
+}
+
 /// The public request owner has two separate pre-callback preparation steps.
 @visibleForTesting
 enum RuntimeDeletionRequestPreparationPhase { requestConstruction, entryCopy }
@@ -292,6 +299,7 @@ final class RuntimeRoot
   static final Object _deletionRouteConstructionZoneKey = Object();
   static final Object _deletionRequestWorkZoneKey = Object();
   static final Object _pointerCleanupAugmentationWorkZoneKey = Object();
+  static final Object _contextRequestDeliveryTraceZoneKey = Object();
   static final Object _deletionRequestPreparationFailureZoneKey = Object();
   static final Object _frameHandleEnumerationZoneKey = Object();
   static final Object _commonDeliveryEventZoneKey = Object();
@@ -325,9 +333,7 @@ final class RuntimeRoot
   int _runtimeStatePublicationGeneration = 0;
   int _epochRevision = 0;
   int _textEditInteractionRevision = 0;
-  int _contextRequestGeneration = 0;
-  final List<({int generation, PendingContextActionRequest pendingRequest})>
-  _pendingContextRequests = [];
+  List<PendingContextActionRequest> _pendingContextRequests = [];
   bool _isContextRequestDeliveryScheduled = false;
 
   // Mutation and lifecycle guards.
@@ -1793,6 +1799,16 @@ final class RuntimeRoot
     zoneValues: {_pointerCleanupAugmentationWorkZoneKey: sink},
   );
 
+  /// Traces the deferred batch handoff and each request delivery visit.
+  @visibleForTesting
+  static T traceContextRequestDelivery<T>(
+    void Function(RuntimeContextRequestDeliveryTraceEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_contextRequestDeliveryTraceZoneKey: sink},
+  );
+
   /// Causes a request construction phase to fail only when assertions run.
   @visibleForTesting
   static T injectDeletionRequestPreparationFailure<T>(
@@ -1833,6 +1849,16 @@ final class RuntimeRoot
   ) {
     final sink = Zone.current[_pointerCleanupAugmentationWorkZoneKey];
     if (sink is void Function(RuntimePointerCleanupAugmentationWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
+  static bool _recordContextRequestDeliveryTrace(
+    RuntimeContextRequestDeliveryTraceEvent event,
+  ) {
+    final sink = Zone.current[_contextRequestDeliveryTraceZoneKey];
+    if (sink is void Function(RuntimeContextRequestDeliveryTraceEvent)) {
       sink(event);
     }
     return true;
@@ -2666,10 +2692,7 @@ final class RuntimeRoot
   }
 
   void _emitContextRequest(ContextActionRequestIntent intent) {
-    _pendingContextRequests.add((
-      generation: _contextRequestGeneration,
-      pendingRequest: intent.pendingRequest,
-    ));
+    _pendingContextRequests.add(intent.pendingRequest);
     if (_isContextRequestDeliveryScheduled) {
       return;
     }
@@ -2677,6 +2700,12 @@ final class RuntimeRoot
     scheduleMicrotask(() {
       _isContextRequestDeliveryScheduled = false;
       for (final pendingRequest in _takeDeliverablePendingContextRequests()) {
+        assert(
+          _recordContextRequestDeliveryTrace(
+            RuntimeContextRequestDeliveryTraceEvent.pendingRequestDelivered,
+          ),
+          'context request delivery trace observation failed',
+        );
         final timestampMs = _actionFinalizer.reserveTimestamp(
           pendingRequest.timestampHintMs,
         );
@@ -2687,7 +2716,6 @@ final class RuntimeRoot
   }
 
   void _suppressPendingContextRequests() {
-    _contextRequestGeneration += 1;
     _pendingContextRequests.clear();
   }
 
@@ -2697,16 +2725,16 @@ final class RuntimeRoot
 
       return const [];
     }
-    final pending = List.of(_pendingContextRequests);
-    _pendingContextRequests.clear();
-    final deliverable = <PendingContextActionRequest>[];
-    for (final entry in pending) {
-      if (entry.generation == _contextRequestGeneration) {
-        deliverable.add(entry.pendingRequest);
-      }
-    }
+    final pending = _pendingContextRequests;
+    _pendingContextRequests = [];
+    assert(
+      _recordContextRequestDeliveryTrace(
+        RuntimeContextRequestDeliveryTraceEvent.pendingBatchDetached,
+      ),
+      'context request delivery trace observation failed',
+    );
 
-    return deliverable;
+    return pending;
   }
 
   // Selected move commit flow.

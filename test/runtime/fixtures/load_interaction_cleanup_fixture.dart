@@ -229,17 +229,14 @@ Future<void> _verifyLoadSuccessClearsLiveRequestFacts() async {
 
 Future<void> _verifyLoadSuccessSuppressesQueuedRequest() async {
   final contextRequests = <CanvasContextActionRequested>[];
+  final trace = <RuntimeContextRequestDeliveryTraceEvent>[];
   final root = _runtimeRoot(_ignoreCommitEffects);
   final subscription = root.contextActionRequests.listen(contextRequests.add);
   try {
-    root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
-
-    root.edits.loadDocumentFromJson(
-      encodeCanvasDocumentToJson(_replacementDocument()),
-    );
-    await Future<void>.delayed(Duration.zero);
+    await _queueContextRequestThenLoad(root, trace);
 
     expect(contextRequests, isEmpty);
+    expect(trace, isEmpty);
     expect(root.readDocument().layers.single.id, CanvasLayerId('new-layer'));
 
     root.handleDoubleTap(position: Offset.zero);
@@ -252,6 +249,18 @@ Future<void> _verifyLoadSuccessSuppressesQueuedRequest() async {
     root.dispose();
   }
 }
+
+Future<void> _queueContextRequestThenLoad(
+  RuntimeRoot root,
+  List<RuntimeContextRequestDeliveryTraceEvent> trace,
+) => RuntimeRoot.traceContextRequestDelivery(trace.add, () async {
+  root.handleDoubleTap(position: Offset.zero, timestampMs: 1);
+
+  root.edits.loadDocumentFromJson(
+    encodeCanvasDocumentToJson(_replacementDocument()),
+  );
+  await Future<void>.delayed(Duration.zero);
+});
 
 Future<void> _verifyDisposeClearsLiveRequestFacts() async {
   final root = _runtimeRoot(_ignoreCommitEffects);

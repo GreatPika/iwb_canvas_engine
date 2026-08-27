@@ -850,8 +850,33 @@ the release route for that evidence.
   request id generation, live registry guard facts, finite-position validation,
   selection taps preserving the first-tap context history for universal
   double-tap recognition, rejected invalid/stale/budget target reads with no
-  public request, accepted asynchronous stream delivery, and stream-only public
-  effects.
+  public request, accepted asynchronous stream delivery, stream-only public
+  effects, and the observed handoff/delivery lifecycle sequence for a deferred request
+  batch.
+
+Deferred context-request batch delivery-sequence admission:
+
+- Covers: `context-request-deferred-batch-sequence`
+- Impact: `EXTEND_COVERAGE`
+- Failure family: incorrect RuntimeRoot lifecycle sequencing at the deferred
+  context-request delivery boundary.
+- Failure mode or stable invariant: RuntimeRoot detaches a pending batch once,
+  then traces one delivery visit for every accepted request; a
+  load/dispose-suppressed batch traces neither.
+- Verification owners: `test/interaction/context_action_request_test.dart`
+  for delivery/dispose, and `test/runtime/load_interaction_cleanup_test.dart`
+  for successful-load suppression.
+- Current verification gap: request behavior and suppression were covered, but
+  the owner seam did not expose the deferred batch handoff/delivery sequence.
+- Failing witness: a deferred burst can produce correct public stream events
+  while omitting the batch handoff or reporting the wrong number of delivery
+  visits.
+- Durable and refactor-stable value: the assertion-gated owner seam asserts the
+  delivery-boundary lifecycle sequence without depending on private buffer types or
+  helper names.
+- Artifact targets: `test/interaction/fixtures/context_action_request_fixture.dart`,
+  `test/runtime/fixtures/load_interaction_cleanup_fixture.dart`, and their
+  assertion-gated RuntimeRoot delivery trace.
 - `test/geometry/eraser_exact_budget_no_partial_commit_test.dart` proves
   terminal eraser budget overflow cleans up without partial document mutation,
   action delivery, or DiagnosticsHub allocation.

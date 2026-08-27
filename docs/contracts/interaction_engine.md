@@ -364,8 +364,9 @@ either a content element or empty canvas after candidate spatial admission
 succeeds and all candidate handles resolve to current immutable facts. The
 queued request is delivered only if runtime load/dispose cleanup does not
 suppress pending context requests before the scheduled delivery microtask.
-The runtime resolves the request timestamp during that delivery turn, after
-closed-stream and generation suppression filtering and immediately before
+The runtime resolves the request timestamp during that delivery turn only after
+the pending batch survives load/dispose cleanup, is detached for delivery, and
+the context-request stream remains open; it resolves immediately before
 building the public `CanvasContextActionRequested`. Suppressed queued requests
 discard their timestamp hint without advancing the runtime timestamp cursor.
 Rejected invalid-index, stale-index, budget-exceeded, and

@@ -78,6 +78,9 @@ void _registerAsyncContextRequestStreamTests() {
   test('pointer requests resolve delivery timestamps monotonically', () {
     return expectLater(_verifyPointerRequestTimestampOrder(), completes);
   });
+  test('context request batch has the expected deferred delivery trace', () {
+    return expectLater(_verifyContextRequestBatchDeliveryTrace(), completes);
+  });
   test('dispose suppresses accepted queued request before stream done', () {
     return expectLater(
       _verifyDisposeSuppressesQueuedRequestBeforeDone(),
@@ -221,11 +224,48 @@ Future<void> _verifyPointerRequestTimestampOrder() async {
   }
 }
 
+// RuntimeRoot owns this deferred handoff. The witness protects its lifecycle
+// sequence: one batch detach, then one delivery visit per request.
+Future<void> _verifyContextRequestBatchDeliveryTrace() async {
+  const requestCount = 64;
+  final scenario = _RuntimeContextRequestScenario();
+  final trace = <RuntimeContextRequestDeliveryTraceEvent>[];
+  try {
+    await RuntimeRoot.traceContextRequestDelivery(trace.add, () async {
+      for (var index = 0; index < requestCount; index += 1) {
+        scenario.root.handleDoubleTap(
+          position: const Offset(20, 0),
+          timestampMs: index,
+        );
+      }
+      expect(scenario.requests, isEmpty);
+
+      await _flushEvents();
+    });
+
+    expect(scenario.requests, hasLength(requestCount));
+    expect(
+      scenario.requests.map((request) => request.timestampMs),
+      List<int>.generate(requestCount, (index) => index),
+    );
+    expect(trace, [
+      RuntimeContextRequestDeliveryTraceEvent.pendingBatchDetached,
+      ...List<RuntimeContextRequestDeliveryTraceEvent>.filled(
+        requestCount,
+        RuntimeContextRequestDeliveryTraceEvent.pendingRequestDelivered,
+      ),
+    ]);
+  } finally {
+    await scenario.dispose();
+  }
+}
+
 Future<void> _verifyDisposeSuppressesQueuedRequestBeforeDone() async {
   final root = runtimeRootWithCommittedDocumentSeed(
     _document(selectableContent: false, hitPadding: 0),
   );
   final events = <String>[];
+  final trace = <RuntimeContextRequestDeliveryTraceEvent>[];
   final done = Completer<void>();
   root.contextActionRequests.listen(
     (request) {
@@ -237,12 +277,15 @@ Future<void> _verifyDisposeSuppressesQueuedRequestBeforeDone() async {
     },
   );
 
-  root.handleDoubleTap(position: const Offset(20, 0), timestampMs: 7);
-  root.dispose();
+  await RuntimeRoot.traceContextRequestDelivery(trace.add, () async {
+    root.handleDoubleTap(position: const Offset(20, 0), timestampMs: 7);
+    root.dispose();
 
-  await done.future;
+    await done.future;
+  });
 
   expect(events, ['done']);
+  expect(trace, isEmpty);
 }
 
 Future<void> _verifyPaddedContextHitRequest() async {
