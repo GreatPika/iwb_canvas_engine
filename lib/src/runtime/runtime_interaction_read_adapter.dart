@@ -26,6 +26,12 @@ enum RuntimeEraserEntryRouteWorkKind {
 }
 
 @visibleForTesting
+enum RuntimeSelectedMoveOrderingWorkEvent {
+  canonicalOrderComparison,
+  sortStarted,
+}
+
+@visibleForTesting
 final class RuntimeEraserEntryRouteWorkEvent {
   const RuntimeEraserEntryRouteWorkEvent({
     required this.kind,
@@ -39,6 +45,7 @@ final class RuntimeEraserEntryRouteWorkEvent {
 }
 
 final Object _eraserEntryRouteWorkZoneKey = Object();
+final Object _selectedMoveOrderingWorkZoneKey = Object();
 
 // The runtime read adapter intentionally names each read collaborator so the
 // interaction owner receives one immutable fact seam without hiding ownership
@@ -89,6 +96,26 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     if (sink is void Function(RuntimeEraserEntryRouteWorkEvent)) {
       sink(event);
     }
+    return true;
+  }
+
+  /// Assert-only observation proves canonical pointer sessions avoid sorting
+  /// without retaining release state or adding a second terminal pass.
+  @visibleForTesting
+  static T observeSelectedMoveOrderingWork<T>(
+    void Function(RuntimeSelectedMoveOrderingWorkEvent event) sink,
+    T Function() operation,
+  ) =>
+      runZoned(operation, zoneValues: {_selectedMoveOrderingWorkZoneKey: sink});
+
+  static bool _recordSelectedMoveOrderingWork(
+    RuntimeSelectedMoveOrderingWorkEvent event,
+  ) {
+    final sink = Zone.current[_selectedMoveOrderingWorkZoneKey];
+    if (sink is void Function(RuntimeSelectedMoveOrderingWorkEvent)) {
+      sink(event);
+    }
+
     return true;
   }
 
@@ -175,22 +202,27 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   SelectedMoveCommitFacts selectedMoveCommitFacts(
     SelectedMoveCommitReadRequest request,
   ) {
-    final context = _readContext();
+    final context = _selectedMoveStartReadContext();
     final sessionSelectedIds = request.sessionSelectedIds.toSet();
-    final requestedMovableIds = request.sessionMovableIds.where(
-      sessionSelectedIds.contains,
+    final requestedMovableIds = request.sessionMovableIds
+        .where(sessionSelectedIds.contains)
+        .toSet();
+    final requestedHandles = _selectedHandlesInDocumentOrder(
+      structuralRevision: context.structuralRevision,
+      ids: requestedMovableIds,
     );
-    final movableIds = _movableIds(context, requestedMovableIds);
+    final movableIds = _movableIdsFromHandles(requestedHandles);
     final moveReadModels = selectedMoveReadModels(
       RuntimeSelectedMoveReadModelInputs(
         frame: _frame,
         documentSummary: _documentSummary,
-        handles: context.handles,
+        handles: requestedHandles,
         movableIds: movableIds,
       ),
     );
+    final movableIdSet = movableIds.toSet();
     final skippedIds = request.sessionMovableIds
-        .where((id) => !movableIds.contains(id))
+        .where((id) => !movableIdSet.contains(id))
         .toList(growable: false);
 
     return SelectedMoveCommitFacts(
@@ -659,18 +691,6 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     );
   }
 
-  List<CanvasElementId> _movableIds(
-    _InteractionReadContext context,
-    Iterable<CanvasElementId> ids,
-  ) {
-    final requestedIds = ids.toSet();
-
-    return [
-      for (final handle in context.handles)
-        if (requestedIds.contains(handle.id) && _isMovable(handle)) handle.id,
-    ];
-  }
-
   List<FrameElementHandle> _selectedHandlesInDocumentOrder({
     required int structuralRevision,
     required Iterable<CanvasElementId> ids,
@@ -679,8 +699,19 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     for (final id in ids) {
       final handle = _frame.elementHandleForId(structuralRevision, id);
       if (handle != null) {
-        _insertHandleByOrder(handles, handle);
+        handles.add(handle);
       }
+    }
+    if (!_areHandlesInDocumentOrder(handles)) {
+      assert(
+        _recordSelectedMoveOrderingWork(
+          RuntimeSelectedMoveOrderingWorkEvent.sortStarted,
+        ),
+        'selected move ordering observation failed',
+      );
+      handles.sort(
+        (left, right) => left.orderToken.compareTo(right.orderToken),
+      );
     }
 
     return List.unmodifiable(handles);
@@ -708,6 +739,22 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         facts.isSelectable &&
         !facts.isLocked &&
         facts.isTransformable;
+  }
+
+  bool _areHandlesInDocumentOrder(List<FrameElementHandle> handles) {
+    for (var index = 1; index < handles.length; index += 1) {
+      assert(
+        _recordSelectedMoveOrderingWork(
+          RuntimeSelectedMoveOrderingWorkEvent.canonicalOrderComparison,
+        ),
+        'selected move ordering observation failed',
+      );
+      if (handles[index - 1].orderToken > handles[index].orderToken) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // Group union admission facts stay together because bounds, top order, and
@@ -855,20 +902,6 @@ bool _sameIdSet(
   final rightSet = right.toSet();
 
   return leftSet.length == rightSet.length && leftSet.containsAll(rightSet);
-}
-
-void _insertHandleByOrder(
-  List<FrameElementHandle> ordered,
-  FrameElementHandle handle,
-) {
-  for (var index = 0; index < ordered.length; index += 1) {
-    if (handle.orderToken < ordered[index].orderToken) {
-      ordered.insert(index, handle);
-
-      return;
-    }
-  }
-  ordered.add(handle);
 }
 
 Rect _normalizeRect(Rect rect) {

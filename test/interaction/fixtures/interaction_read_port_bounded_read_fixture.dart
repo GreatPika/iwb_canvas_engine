@@ -9,13 +9,13 @@ import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 
-// This bounded-read fixture keeps the fake frame and assertions together so the
-// selected-handle lookup invariant is proved without weakening the main
-// read-port behavior matrix.
-// ignore: halstead-volume, source-lines-of-code
+// This bounded-read fixture keeps the fake frame and ordering assertions
+// together so the sparse terminal invariant is proved as one behavior instead
+// of weakening it across separate setup paths.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void main() {
   test(
-    'selected move start derives group facts from selected handle lookups',
+    'selected move reads derive selected facts from selected handle lookups',
     () {
       final frame = _CountingFrameFactsPort([
         _frameRectFacts('unselected-before', const Offset(-100, 0), 0),
@@ -48,9 +48,18 @@ void main() {
         deletionEntryProjection: const _NoDeletionEntryProjection(),
       );
 
-      final facts = adapter.selectedMoveStartFacts(
-        const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
-      );
+      final orderingWork = <RuntimeSelectedMoveOrderingWorkEvent, int>{};
+      final facts =
+          RuntimeInteractionReadAdapter.observeSelectedMoveOrderingWork(
+            (event) => orderingWork.update(
+              event,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            ),
+            () => adapter.selectedMoveStartFacts(
+              const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
+            ),
+          );
 
       expect(facts.selectedIds, [
         CanvasElementId('selected-left'),
@@ -63,6 +72,117 @@ void main() {
       expect(facts.insideSelectedGroupUnion, isTrue);
       expect(frame.elementHandlesCalls, 0);
       expect(frame.elementHandleForIdCalls, lessThan(frame.factCount));
+      expect(orderingWork[RuntimeSelectedMoveOrderingWorkEvent.sortStarted], 1);
+      expect(
+        orderingWork[RuntimeSelectedMoveOrderingWorkEvent
+            .canonicalOrderComparison],
+        1,
+      );
+
+      frame.resetAccessCounts();
+      orderingWork.clear();
+      final commit =
+          RuntimeInteractionReadAdapter.observeSelectedMoveOrderingWork(
+            (event) => orderingWork.update(
+              event,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            ),
+            () => adapter.selectedMoveCommitFacts(
+              SelectedMoveCommitReadRequest(
+                sessionSelectedIds: facts.selectedIds,
+                sessionMovableIds: facts.movableSelectedIds,
+                selectionRevision: facts.selectionRevision,
+              ),
+            ),
+          );
+
+      expect(commit.movableIds, [
+        CanvasElementId('selected-left'),
+        CanvasElementId('selected-right'),
+      ]);
+      expect(
+        commit.movedElements.map((element) => element.id),
+        commit.movableIds,
+      );
+      expect(commit.skippedSessionIds, isEmpty);
+      expect(commit.hasDocumentChangesAvailable, isTrue);
+      expect(frame.elementHandlesCalls, 0);
+      expect(frame.elementHandleForIdCalls, lessThanOrEqualTo(2));
+      expect(frame.resolveElementCalls, lessThanOrEqualTo(4));
+      expect(
+        orderingWork[RuntimeSelectedMoveOrderingWorkEvent.sortStarted],
+        isNull,
+      );
+      expect(
+        orderingWork[RuntimeSelectedMoveOrderingWorkEvent
+            .canonicalOrderComparison],
+        1,
+      );
+    },
+  );
+  _testSelectedMoveTerminalResortsCurrentHandles();
+}
+
+// This keeps session capture, structural reorder, and terminal assertions in
+// one flow so the current-order fallback cannot be proved by disconnected
+// setup helpers.
+// ignore: halstead-volume, source-lines-of-code
+void _testSelectedMoveTerminalResortsCurrentHandles() {
+  test(
+    'selected move terminal sorts current handles after structural reorder',
+    () {
+      final leftId = CanvasElementId('selected-left');
+      final rightId = CanvasElementId('selected-right');
+      final frame = _CountingFrameFactsPort([
+        _frameRectFacts(leftId.value, Offset.zero, 1),
+        _frameRectFacts(rightId.value, const Offset(30, 0), 3),
+      ]);
+      final adapter = RuntimeInteractionReadAdapter(
+        frame: frame,
+        documentSummary: () => const CanvasDocumentSummary(
+          elementCount: 2,
+          layerCount: 1,
+          resourceCount: 0,
+        ),
+        selection: _SelectionFactsFixture([rightId, leftId]),
+        spatial: SpatialKernel()..rebuild(frame),
+        controllerEpoch: () => 0,
+        deletionEntryProjection: const _NoDeletionEntryProjection(),
+      );
+      final start = adapter.selectedMoveStartFacts(
+        const SelectedMoveStartReadRequest(worldPosition: Offset(15, 0)),
+      );
+      expect(start.movableSelectedIds, [leftId, rightId]);
+
+      frame.reorder({leftId: 3, rightId: 1});
+      frame.resetAccessCounts();
+      final orderingWork = <RuntimeSelectedMoveOrderingWorkEvent, int>{};
+      final commit =
+          RuntimeInteractionReadAdapter.observeSelectedMoveOrderingWork(
+            (event) => orderingWork.update(
+              event,
+              (count) => count + 1,
+              ifAbsent: () => 1,
+            ),
+            () => adapter.selectedMoveCommitFacts(
+              SelectedMoveCommitReadRequest(
+                sessionSelectedIds: start.selectedIds,
+                sessionMovableIds: start.movableSelectedIds,
+                selectionRevision: start.selectionRevision,
+              ),
+            ),
+          );
+
+      expect(commit.movableIds, [rightId, leftId]);
+      expect(commit.movedElements.map((element) => element.id), [
+        rightId,
+        leftId,
+      ]);
+      expect(frame.elementHandlesCalls, 0);
+      expect(frame.elementHandleForIdCalls, lessThanOrEqualTo(2));
+      expect(frame.resolveElementCalls, lessThanOrEqualTo(4));
+      expect(orderingWork[RuntimeSelectedMoveOrderingWorkEvent.sortStarted], 1);
     },
   );
 }
@@ -114,22 +234,34 @@ final class _SelectionFactsFixture implements SelectionFactsPort {
 // count broad handle scans separately from selected-id lookups.
 // ignore: number-of-methods
 final class _CountingFrameFactsPort implements FrameFactsPort {
-  _CountingFrameFactsPort(List<FrameElementFacts> facts) : _facts = facts;
+  _CountingFrameFactsPort(List<FrameElementFacts> facts)
+    : _facts = facts,
+      _factsById = {for (final facts in facts) facts.id: facts},
+      _orderTokens = {for (final facts in facts) facts.id: facts.orderToken};
 
   final List<FrameElementFacts> _facts;
+  final Map<CanvasElementId, FrameElementFacts> _factsById;
+  final Map<CanvasElementId, int> _orderTokens;
+  int _structuralRevision = 0;
   int elementCountCalls = 0;
   int elementHandlesCalls = 0;
   int elementHandleForIdCalls = 0;
+  int resolveElementCalls = 0;
   int get factCount => _facts.length;
+
+  void reorder(Map<CanvasElementId, int> orderTokens) {
+    _orderTokens.addAll(orderTokens);
+    _structuralRevision += 1;
+  }
 
   @override
   CanvasBackground get background => const CanvasBackground();
 
   @override
   FrameRevisionFacts get frameRevisions {
-    return const FrameRevisionFacts(
-      documentRevision: 0,
-      structuralRevision: 0,
+    return FrameRevisionFacts(
+      documentRevision: _structuralRevision,
+      structuralRevision: _structuralRevision,
       boundsRevision: 0,
       elementVisualRevision: 0,
       backgroundRevision: 0,
@@ -142,6 +274,7 @@ final class _CountingFrameFactsPort implements FrameFactsPort {
     elementCountCalls = 0;
     elementHandlesCalls = 0;
     elementHandleForIdCalls = 0;
+    resolveElementCalls = 0;
   }
 
   @override
@@ -164,24 +297,19 @@ final class _CountingFrameFactsPort implements FrameFactsPort {
     CanvasElementId id,
   ) {
     elementHandleForIdCalls += 1;
-    for (final facts in _facts) {
-      if (facts.id == id) {
-        return _handleFor(facts);
-      }
-    }
+    final facts = _factsById[id];
 
-    return null;
+    return facts == null ? null : _handleFor(facts);
   }
 
   @override
   FrameElementFacts? resolveElement(FrameElementHandle handle) {
-    for (final facts in _facts) {
-      if (facts.id == handle.id && facts.orderToken == handle.orderToken) {
-        return facts;
-      }
-    }
+    resolveElementCalls += 1;
+    final facts = _factsById[handle.id];
 
-    return null;
+    return facts != null && _orderTokens[handle.id] == handle.orderToken
+        ? facts
+        : null;
   }
 
   @override
@@ -192,9 +320,9 @@ final class _CountingFrameFactsPort implements FrameFactsPort {
   FrameElementHandle _handleFor(FrameElementFacts facts) {
     return FrameElementHandle(
       id: facts.id,
-      structuralRevision: 0,
+      structuralRevision: _structuralRevision,
       generation: facts.generation,
-      orderToken: facts.orderToken,
+      orderToken: _orderTokens[facts.id]!,
     );
   }
 }

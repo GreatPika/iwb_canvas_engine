@@ -1050,6 +1050,30 @@ Permanent artifact admission:
 - `test/interaction/interaction_read_port_test.dart` proves read-port facts
   are immutable, intent-specific, document-ordered, stale/deleted filtered,
   and free of mutable document, draft, store, resource, and selection internals.
+  - **Selected-move terminal sparse and canonical-order budget.**
+    - Impact: `EXTEND_COVERAGE`.
+    - Covers:
+      `test/interaction/fixtures/interaction_read_port_bounded_read_fixture.dart`.
+    - Artifact target: `test/interaction/interaction_read_port_test.dart`
+      entrypoint and its interaction read-port bounded-read fixture.
+    - Failure family: selected-move terminal work and ordering regress after
+      sparse session capture.
+    - Verification owner:
+      `RuntimeInteractionReadAdapter.selectedMoveCommitFacts` through the
+      interaction read-port fixture.
+    - Current verification gap: interaction read-port tests covered immutable,
+      ordered, and stale-filtered facts, but did not bound terminal frame reads
+      or distinguish canonical ordering from a current-order fallback.
+    - Failure mode or stable invariant: pointer release for a small selection
+      must not scale with unrelated document content; canonical current handles
+      must avoid sorting; a structural reorder must restore current document
+      order before commit facts are emitted.
+    - Failing witness: the fixture observes `elementHandles`, more than the
+      point-read budget, or ordering-work events inconsistent with the
+      canonical and fallback cases.
+    - Durable and refactor-stable value: preserves the current-order sparse
+      terminal contract across frame, selection, and interaction-reader
+      refactors without prescribing their representations.
 - `test/interaction/move_machine_test.dart` proves selected-move admission,
   preview, resolver request shape, commit, cancel, stale/invalid terminal,
   zero-delta/no-movable cleanup, resolver/edit failure cleanup, transform math,
