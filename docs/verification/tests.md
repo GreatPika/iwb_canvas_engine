@@ -757,6 +757,23 @@ the release route for that evidence.
 - `test/runtime/command_facts_port_test.dart` proves immutable command fact
   bundles, document order, center pivot, layer-only clear facts, bounded typed
   frame/resource reads, and no interaction dependency.
+  - **Partial-selection fact-read budget.** Owner:
+    `RuntimeCommandFactsAdapter.selectionTransformFacts`. Impact: moving a
+    small selection must not become slower as unrelated document content grows.
+    Failure mode: the owner walks every frame handle before resolving selected
+    ids. Failing witness: the fixture's frame-read counters observe any
+    `elementHandles` enumeration while resolving a partial selection. Durable
+    value: preserves the selected-id lookup budget across storage and reader
+    refactors without prescribing their implementation.
+  - **Canonical-selection ordering budget.** Owner:
+    `RuntimeCommandFactsAdapter.selectionTransformFacts`. Impact: moving
+    `selectAll` or `selectAll` minus one item must avoid needless
+    `O(N log N)` work. Failure mode: the owner sorts selected handles even
+    when selection already has document order. Failing witness: the
+    ordering-work observer records a sort after `selectAll` or its one-item
+    deselection variant. Durable value: preserves the observable canonical
+    ordering fast path while allowing the selection and frame representations
+    to change.
 - `test/runtime/load_interaction_cleanup_test.dart` proves load and dispose
   use interaction-owned cleanup without post-install interaction calls.
 

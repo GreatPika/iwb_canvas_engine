@@ -1,14 +1,12 @@
-import 'dart:ui';
-
 import '../contracts/internal/command_facts_port.dart';
 import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/resource_catalog_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
-import '../contracts/public/canvas_actions.dart';
 import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../geometry/geometry_policy.dart';
+import 'selection_transform_facts_reader.dart';
 
 typedef CommandDocumentSummaryReader = CanvasDocumentSummary Function();
 
@@ -39,26 +37,12 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
   final GeometryPolicy _geometryPolicy;
 
   @override
-  SelectionTransformFacts selectionTransformFacts() {
-    final context = _context();
-    final selectedIds = _documentOrderIds(
-      handles: context.handles,
-      ids: context.selection.selectedElementIds,
-    );
-    final selectedSet = selectedIds.toSet();
-    final movable = [
-      for (final handle in context.handles)
-        if (selectedSet.contains(handle.id))
-          if (_frame.resolveElement(handle) case final facts?)
-            if (_isMovable(facts)) _elementRead(facts),
-    ];
-
-    return SelectionTransformFacts(
-      selectedIds: selectedIds,
-      movableElements: movable,
-      selectionBoundsWorld: _unionBounds(movable),
-    );
-  }
+  SelectionTransformFacts selectionTransformFacts() =>
+      readSelectionTransformFacts(
+        frame: _frame,
+        selection: _selection,
+        geometryPolicy: _geometryPolicy,
+      );
 
   @override
   SelectionDeleteFacts selectionDeleteFacts() {
@@ -131,62 +115,4 @@ final class RuntimeCommandFactsAdapter implements CommandFactsPort {
           : const [],
     );
   }
-
-  _CommandReadContext _context() {
-    final structuralRevision = _frame.frameRevisions.structuralRevision;
-
-    return _CommandReadContext(
-      handles: _frame.elementHandles(structuralRevision),
-      selection: _selection.selectionFacts,
-    );
-  }
-
-  bool _isMovable(FrameElementFacts facts) {
-    return facts.locationKind == FrameElementLocationKind.content &&
-        !facts.isLocked &&
-        facts.isTransformable;
-  }
-
-  CanvasElementRead _elementRead(FrameElementFacts facts) {
-    return CanvasElementRead(
-      id: facts.id,
-      kind: facts.kind,
-      revision: facts.revision,
-      boundsWorld: _geometryPolicy.boundsFor(facts).paintBoundsWorld,
-      transform: facts.transform,
-      isLocked: facts.isLocked,
-      isTransformable: facts.isTransformable,
-    );
-  }
-}
-
-final class _CommandReadContext {
-  const _CommandReadContext({required this.handles, required this.selection});
-
-  final List<FrameElementHandle> handles;
-  final SelectionFacts selection;
-}
-
-List<CanvasElementId> _documentOrderIds({
-  required Iterable<FrameElementHandle> handles,
-  required Iterable<CanvasElementId> ids,
-}) {
-  final selected = ids.toSet();
-
-  return List.unmodifiable([
-    for (final handle in handles)
-      if (selected.contains(handle.id)) handle.id,
-  ]);
-}
-
-Rect _unionBounds(List<CanvasElementRead> elements) {
-  if (elements.isEmpty) {
-    return Rect.zero;
-  }
-  var bounds = elements.first.boundsWorld;
-  for (final element in elements.skip(1)) {
-    bounds = bounds.expandToInclude(element.boundsWorld);
-  }
-
-  return bounds;
 }

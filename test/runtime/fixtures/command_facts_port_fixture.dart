@@ -17,6 +17,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resource_catalog_port.d
 import 'package:iwb_canvas_engine/src/contracts/internal/selection_facts_port.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_command_facts_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/runtime/selection_transform_facts_reader.dart';
 import '../../support/accept_deletion_commit.dart';
 
 void main() {
@@ -36,6 +37,14 @@ void main() {
     'selection deletion resolves selected IDs through Store entries without a frame walk',
     _selectionDeletionUsesProjectedEntriesWithoutFrameWalk,
   );
+  test(
+    'selection transform resolves only selected handles without a frame walk',
+    _selectionTransformResolvesOnlySelectedHandlesWithoutFrameWalk,
+  );
+  test(
+    'selection transform skips sorting for select-all and one deselection',
+    _selectionTransformSkipsSortingForCanonicalSelection,
+  );
 }
 
 void _commandFactsAreImmutableAndOrderedByDocumentHandles() {
@@ -47,9 +56,9 @@ void _commandFactsAreImmutableAndOrderedByDocumentHandles() {
   _expectClearFacts(adapter.clearContentFacts(removeUnusedResources: true));
 }
 
-RuntimeCommandFactsAdapter _adapter() {
+RuntimeCommandFactsAdapter _adapter({FrameFactsPort? frame}) {
   return RuntimeCommandFactsAdapter(
-    frame: _FrameFacts(),
+    frame: frame ?? _FrameFacts(),
     selection: _SelectionFacts(),
     resources: _Resources(),
     deletionEntryProjection: _FixtureDeletionEntryProjection(),
@@ -58,6 +67,89 @@ RuntimeCommandFactsAdapter _adapter() {
       layerCount: 1,
       resourceCount: 3,
     ),
+  );
+}
+
+void _selectionTransformResolvesOnlySelectedHandlesWithoutFrameWalk() {
+  final frame = _FrameFacts();
+  final orderingWork = <SelectionTransformOrderingWorkEvent, int>{};
+
+  final facts = observeSelectionTransformOrderingWork(
+    (event) =>
+        orderingWork.update(event, (count) => count + 1, ifAbsent: () => 1),
+    () => _adapter(frame: frame).selectionTransformFacts(),
+  );
+
+  _expectTransformFacts(facts);
+  expect(frame.handleEnumerations, 0);
+  expect(frame.handleLookups, facts.selectedIds.length);
+  expect(frame.elementResolutions, facts.selectedIds.length);
+  expect(orderingWork[SelectionTransformOrderingWorkEvent.sortStarted], 1);
+}
+
+void _selectionTransformSkipsSortingForCanonicalSelection() {
+  final all = _canonicalSelectionTransformOrderingWork();
+  final allButOne = _canonicalSelectionTransformOrderingWork(
+    deselectedId: CanvasElementId('ordered-b'),
+  );
+
+  expect(all[SelectionTransformOrderingWorkEvent.sortStarted], isNull);
+  expect(all[SelectionTransformOrderingWorkEvent.canonicalOrderComparison], 2);
+  expect(allButOne[SelectionTransformOrderingWorkEvent.sortStarted], isNull);
+  expect(
+    allButOne[SelectionTransformOrderingWorkEvent.canonicalOrderComparison],
+    1,
+  );
+}
+
+Map<SelectionTransformOrderingWorkEvent, int>
+_canonicalSelectionTransformOrderingWork({CanvasElementId? deselectedId}) {
+  final root = RuntimeRoot(
+    config: const CanvasRuntimeConfig(
+      deletionCommitResolver: acceptDeletionCommit,
+    ),
+  );
+  try {
+    root.edits.loadDocumentFromJson(
+      encodeCanvasDocumentToJson(_orderedSelectionDocument()),
+    );
+    root.selectAll(onlySelectable: false);
+    if (deselectedId != null) {
+      root.toggleSelection(deselectedId);
+    }
+    final work = <SelectionTransformOrderingWorkEvent, int>{};
+    observeSelectionTransformOrderingWork(
+      (event) => work.update(event, (count) => count + 1, ifAbsent: () => 1),
+      () => root.moveSelection(const Offset(1, 0)),
+    );
+
+    return work;
+  } finally {
+    root.dispose();
+  }
+}
+
+CanvasDocument _orderedSelectionDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('ordered-layer'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('ordered-a'),
+            size: const Size(1, 1),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('ordered-b'),
+            size: const Size(1, 1),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('ordered-c'),
+            size: const Size(1, 1),
+          ),
+        ],
+      ),
+    ],
   );
 }
 
@@ -412,6 +504,8 @@ final class _FrameFacts implements FrameFactsPort {
     _handle('not-deletable-a', 5),
   ];
   int handleEnumerations = 0;
+  int handleLookups = 0;
+  int elementResolutions = 0;
 
   @override
   FrameRevisionFacts get frameRevisions => const FrameRevisionFacts(
@@ -441,11 +535,13 @@ final class _FrameFacts implements FrameFactsPort {
     int structuralRevision,
     CanvasElementId id,
   ) {
+    handleLookups += 1;
     return _handles.where((handle) => handle.id == id).firstOrNull;
   }
 
   @override
   FrameElementFacts? resolveElement(FrameElementHandle handle) {
+    elementResolutions += 1;
     return switch (handle.id.value) {
       'background-a' ||
       'background-vector-a' => _fixtureBackgroundFacts(handle),
