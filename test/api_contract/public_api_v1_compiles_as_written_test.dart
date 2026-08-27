@@ -1152,6 +1152,9 @@ final class _ConsumerSelectionPort implements CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds => {_id};
 
   @override
+  List<CanvasElementRead> get transformableSelectedElements => const [];
+
+  @override
   CanvasSelectionDeleteAvailability get deleteAvailability =>
       const CanvasSelectionDeleteAvailability(
         hasSelection: true,

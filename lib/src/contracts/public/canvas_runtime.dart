@@ -214,6 +214,7 @@ abstract interface class CanvasCommandPort {
 // ignore: number-of-methods
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
+  List<CanvasElementRead> get transformableSelectedElements;
   CanvasSelectionDeleteAvailability get deleteAvailability;
   void setSelection(Iterable<CanvasElementId> ids);
   void toggleSelection(CanvasElementId id);

@@ -1785,6 +1785,7 @@ Rules:
 ```dart
 abstract interface class CanvasSelectionPort {
   Set<CanvasElementId> get selectedElementIds;
+  List<CanvasElementRead> get transformableSelectedElements;
   CanvasSelectionDeleteAvailability get deleteAvailability;
 
   void setSelection(Iterable<CanvasElementId> ids);
@@ -1813,6 +1814,8 @@ Selection rules:
 - selection-only changes update selectionRevision, not documentRevision;
 - selection-only changes do not evict the public document projection;
 - move/rotate/flip operate only on selected elements with isTransformable=true && isLocked=false;
+- transformableSelectedElements returns the current transformable selected
+  content elements in document order as immutable CanvasElementRead facts;
 - deleteAvailability is derived from current committed selection and document
   facts. `hasAnySelectedElementDeletable` is optional when constructing
   CanvasSelectionDeleteAvailability and falls back to

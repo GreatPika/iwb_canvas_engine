@@ -1165,6 +1165,9 @@ final class RuntimeRoot
     return _commandFacts.selectionDeleteFacts().availability;
   }
 
+  List<CanvasElementRead> get transformableSelectedElements =>
+      _commandFacts.selectionTransformFacts().movableElements;
+
   void _deliverSelectionTransformAroundCenter({
     required CanvasTransformOperation operation,
     required CanvasTransform localTransform,
@@ -3462,6 +3465,10 @@ final class _RuntimeSelectionPort implements CanvasSelectionPort {
 
   @override
   Set<CanvasElementId> get selectedElementIds => root.selectedElementIds;
+
+  @override
+  List<CanvasElementRead> get transformableSelectedElements =>
+      root.transformableSelectedElements;
 
   @override
   CanvasSelectionDeleteAvailability get deleteAvailability =>

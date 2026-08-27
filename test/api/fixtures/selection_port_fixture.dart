@@ -17,6 +17,55 @@ void main() {
     'delete availability is derived from current selection and document facts',
     _deleteAvailabilityIsDerivedFromCurrentSelectionAndDocumentFacts,
   );
+  test(
+    'transformable selected elements are immutable ordered transform facts',
+    _transformableSelectedElementsAreImmutableOrderedTransformFacts,
+  );
+}
+
+void _transformableSelectedElementsAreImmutableOrderedTransformFacts() {
+  final runtime = runtimeWithDocument(_transformableSelectionDocument());
+  addTearDown(runtime.dispose);
+
+  _expectTransformableSelectionSnapshot(runtime);
+  _expectNoTransformableSelection(runtime);
+}
+
+void _expectTransformableSelectionSnapshot(CanvasRuntime runtime) {
+  runtime.selection.setSelection([
+    CanvasElementId('transformable-last'),
+    CanvasElementId('not-transformable'),
+    CanvasElementId('locked'),
+    CanvasElementId('transformable-first'),
+  ]);
+
+  final elements = runtime.selection.transformableSelectedElements;
+  _expectTransformableElementFacts(elements);
+  expect(() => elements.clear(), throwsUnsupportedError);
+}
+
+void _expectTransformableElementFacts(List<CanvasElementRead> elements) {
+  expect(elements.map((element) => element.id), [
+    CanvasElementId('transformable-first'),
+    CanvasElementId('transformable-last'),
+  ]);
+  expect(
+    elements.map((element) => element.kind),
+    everyElement(CanvasElementKind.rect),
+  );
+  expect(elements.map((element) => element.revision), everyElement(0));
+  expect(elements.map((element) => element.transform), [
+    CanvasTransform.translation(const Offset(2, 3)),
+    CanvasTransform.translation(const Offset(-4, 5)),
+  ]);
+}
+
+void _expectNoTransformableSelection(CanvasRuntime runtime) {
+  runtime.selection.setSelection([
+    CanvasElementId('locked'),
+    CanvasElementId('not-transformable'),
+  ]);
+  expect(runtime.selection.transformableSelectedElements, isEmpty);
 }
 
 void _deleteAvailabilityIsDerivedFromCurrentSelectionAndDocumentFacts() {
@@ -211,6 +260,38 @@ CanvasDocument _document() {
             id: CanvasElementId('not-selectable-a'),
             size: const Size(2, 2),
             isSelectable: false,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _transformableSelectionDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer-a'),
+        elements: [
+          CanvasRectElement(
+            id: CanvasElementId('transformable-first'),
+            size: const Size(2, 2),
+            transform: CanvasTransform.translation(const Offset(2, 3)),
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('locked'),
+            size: const Size(2, 2),
+            isLocked: true,
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('not-transformable'),
+            size: const Size(2, 2),
+            isTransformable: false,
+          ),
+          CanvasRectElement(
+            id: CanvasElementId('transformable-last'),
+            size: const Size(2, 2),
+            transform: CanvasTransform.translation(const Offset(-4, 5)),
           ),
         ],
       ),
