@@ -263,6 +263,10 @@ Test coverage generated from `docs/_registry/sections.yaml`.
 
 - Sections: `section_15_frame_render_contract`, `section_18_cache_policy`, `section_23_tests`
 
+## test.frame.selected_handle_work
+
+- Sections: `section_15_frame_render_contract`, `section_23_tests`
+
 ## test.frame.selected_supplement_staging_no_global_sort
 
 - Sections: `section_15_frame_render_contract`, `section_23_tests`

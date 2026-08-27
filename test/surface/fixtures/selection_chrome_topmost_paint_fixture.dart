@@ -34,8 +34,6 @@ void _registerSelectionChromePaintBoundaryTests() {
     expect(mainPainterSource, isNot(contains('paintOrderToken')));
     expect(mainPainterSource, isNot(contains('nextDecorationIndex')));
     expect(mainPainterSource, isNot(contains('.sort(')));
-    expect(mainPainterSource, isNot(contains('SelectedOrderSnapshot')));
-    expect(mainPainterSource, isNot(contains('selectedOrderSnapshot')));
     expect(mainPainterSource, isNot(contains('saveLayer')));
     expect(mainPainterSource, isNot(contains('ordinaryPaintRecordCache')));
   });

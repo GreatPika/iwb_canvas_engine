@@ -44,7 +44,6 @@ Do not assume:
 | ResourceAssetCache | SurfaceResourceSession | resolverGeneration, resourceId, resourceRevision | resolver replacement, descriptor change, resource dirty target/all release, detach/dispose/runtime swap | 1024 aggregate ready assets and 64 MiB decoded image bytes per active session | target/all release, generation reset, oversized no-retention, then aggregate-entry/image-byte LRU | `length`, `currentSizeBytes`, fixed 128-call resolver guard, and pending budget follow-up flag | yes bounded sync resolver |
 | SurfaceFrameOutputCache | CanvasSurface | runtime identity, viewportWorldBounds, devicePixelRatio, selectionStyle, gridStyle, resolverGeneration, runtime-owned surface repaint target, resource budget follow-up request | runtime surface-frame publication, local input key change, resolver replacement, resource budget follow-up, detach/dispose/runtime swap | 1 main output and 1 overlay output per active surface | replace targeted layer output after successful build; build both targeted outputs before publishing either for both-layer targets; clear on detach/dispose/runtime swap | builder counts, output identity, notifier dispatch, render paint marks | yes bounded surface adapter |
 | SelectionDecorationPlan | Frame | selectionRevision, structuralRevision, boundsRevision, selected-move chrome hidden flag, captured selectionStyle, devicePixelRatio | selection/structure/bounds/selected-move active state/captured style/DPR input | 1 current decoration plan | replace on revision, bounds, selected-move active state, style, or DPR change | selected count, rebuild count | yes bounded |
-| SelectedOrderCache | Frame | selectionRevision/structuralRevision | selection/structure | 1 selected-order snapshot | replace on revision change | selected count, rebuild count | yes bounded |
 | SpatialIndex | Spatial | structural/bounds revisions | touched geometry/structure | current index only | invalid/rebuild lifecycle, not cache eviction | fallback count, budget-exceeded count | yes query only |
 | PreviewStateSnapshot | Interaction | previewRevision | pointer/tool/load/mode/dispose | 1 preview snapshot | replace on previewRevision | preview revision churn | yes tiny |
 | DiagnosticFormattingCache | Diagnostics | diagnostic id | verbose diagnostics only | 128 formatted previews | LRU, disabled on hot success path | allocation count, truncation count | no hot success path |
@@ -107,9 +106,5 @@ Committed background elements are still ordinary render records: they are
 admitted through spatial candidates and cached through their structural, bounds,
 elementVisual, generation, and order-token facts. The separate background/grid
 identity above belongs to static background and grid rendering only.
-
-`SelectedOrderCache` is derived data. Its source of truth is the selection owner
-plus document order facts from the document boundary; it may be retained only as
-a bounded snapshot keyed by `selectionRevision` and `structuralRevision`.
 
 ---

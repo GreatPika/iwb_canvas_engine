@@ -5,7 +5,6 @@ import 'paint_asset_binding_service.dart';
 import 'paint_plan.dart';
 import 'render_primitive_cache_snapshot.dart';
 import 'selected_move_supplement_planner.dart';
-import 'selected_order_cache.dart';
 import 'selection_decoration_planner.dart';
 import 'static_background_planner.dart';
 
@@ -15,7 +14,6 @@ final class MainFramePaintOutput {
     required this.ordinaryPlan,
     required this.staticBackgroundPlan,
     required this.selectionDecorationPlan,
-    required this.selectedOrderSnapshot,
     required this.selectedMoveSupplementPlan,
     required this.renderPrimitiveSnapshot,
     required this.assetBindings,
@@ -26,7 +24,6 @@ final class MainFramePaintOutput {
   final PaintPlan ordinaryPlan;
   final StaticBackgroundPlan staticBackgroundPlan;
   final SelectionDecorationPlan selectionDecorationPlan;
-  final SelectedOrderSnapshot selectedOrderSnapshot;
   final SelectedMoveSupplementPlan selectedMoveSupplementPlan;
   final RenderPrimitiveCacheSnapshot renderPrimitiveSnapshot;
   final FrameAssetBindings assetBindings;
@@ -42,7 +39,6 @@ final class MainFramePaintOutput {
       ordinaryPlan: ordinaryPlan,
       staticBackgroundPlan: staticBackgroundPlan,
       selectionDecorationPlan: selectionDecorationPlan,
-      selectedOrderSnapshot: selectedOrderSnapshot,
       selectedMoveSupplementPlan: selectedMoveSupplementPlan,
       renderPrimitiveSnapshot: renderPrimitiveSnapshot,
       assetBindings: nextBindings,

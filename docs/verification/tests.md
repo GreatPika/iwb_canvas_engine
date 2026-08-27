@@ -120,6 +120,7 @@ Required tests:
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.frame_spatial_paint_admission`
 - `test.frame.frame_drawable_policy`
+- `test.frame.selected_handle_work`
 - `test.frame.marquee_captured_style`
 - `test.surface.no_live_runtime_read_in_painters`
 - `test.surface.overlay_drawable_policy`
@@ -316,6 +317,7 @@ cd example && flutter test
 - `test/frame/frame_record_painter_boundary_test.dart`
 - `test/frame/frame_spatial_paint_admission_test.dart`
 - `test/frame/frame_drawable_policy_test.dart`
+- `test/frame/frame_selected_handle_work_test.dart`
 - `test/frame/marquee_captured_style_test.dart`
 - `test/surface/no_live_runtime_read_in_painters_test.dart`
 - `test/surface/overlay_drawable_policy_test.dart`
@@ -933,8 +935,6 @@ the release route for that evidence.
   or updating SpatialKernel;
 - proves document replacement, delete, clear, and eraser paths publish
   document and selection effects as one atomic CanvasRuntimeState;
-- proves selectedOrder is derived from selectionRevision and
-  structuralRevision, not stored as an independent source of truth.
 
 #### `test/frame/frame_spatial_paint_admission_test.dart`
 - proves frame paint admission accepts only explicit spatial candidate results;
@@ -985,6 +985,30 @@ the release route for that evidence.
   churn;
 - proves chrome placement metadata and structural invalidation stay
   frame-owned, and that selected document order is not the chrome paint source.
+
+#### `test/frame/frame_selected_handle_work_test.dart`
+- proves main-frame construction performs at most one committed handle lookup
+  per selected element when spatial admission yields no candidates;
+- proves selected main-output rebuilds do not repeat handle reads for unused
+  ordering data.
+
+Permanent artifact admission:
+- Impact: `ADD`;
+- Failure family: main-output construction repeats selected-handle work for
+  derived data that has no render consumer;
+- Failure mode or stable invariant: with empty spatial admission, frame capture
+  performs at most one committed-handle lookup per selected element and no
+  later main-output stage repeats those reads for unused ordering data;
+- Verification owner: the FrameEngine owning frame suite;
+- Current verification gap: prior frame tests checked selected ordering values
+  and cache identity but did not measure work performed before a cache hit;
+- Failing witness: before removal, the 128-element red fixture observed 256
+  committed-handle lookups against a 128-lookup budget;
+- Durable and refactor-stable value: the port-level upper bound permits fewer
+  lookups and private frame refactors while rejecting a repeated selected-order
+  pass;
+- Artifact target: `test/frame/frame_selected_handle_work_test.dart` and its
+  owner-scoped fixture.
 
 #### `test/surface/selection_chrome_topmost_paint_test.dart`
 - proves `MainFramePainter` paints selection chrome after the main record stream

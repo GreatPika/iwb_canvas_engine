@@ -414,6 +414,7 @@ final class TestFrameFactsPort implements FrameFactsPort {
   final Set<CanvasElementId> _staleIds;
   final Map<CanvasResourceId, FrameResourceDescriptorFacts>
   _resourceDescriptors;
+  int elementHandleForIdCalls = 0;
   int resolveElementCalls = 0;
 
   @override
@@ -440,6 +441,7 @@ final class TestFrameFactsPort implements FrameFactsPort {
     int structuralRevision,
     CanvasElementId id,
   ) {
+    elementHandleForIdCalls += 1;
     final element = _elements[id];
     if (element == null) {
       return null;

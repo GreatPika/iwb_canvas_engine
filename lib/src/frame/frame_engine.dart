@@ -18,7 +18,6 @@ import 'paint_asset_binding_service.dart';
 import 'paint_plan.dart';
 import 'render_element_record.dart';
 import 'selected_move_supplement_planner.dart';
-import 'selected_order_cache.dart';
 import 'selection_decoration_planner.dart';
 import 'static_background_planner.dart';
 
@@ -37,8 +36,7 @@ final class FrameEngine {
     required SelectionFactsPort selectionFacts,
     required SpatialKernel spatialKernel,
     FrameTextLayoutMeasurer? textLayoutMeasurer,
-  }) : _frameFacts = frameFacts,
-       _capture = FrameCaptureService(
+  }) : _capture = FrameCaptureService(
          frameFacts: frameFacts,
          selectionFacts: selectionFacts,
          queryPaint: spatialKernel.queryPaint,
@@ -51,14 +49,12 @@ final class FrameEngine {
          queryPaint: spatialKernel.queryPaint,
        );
 
-  final FrameFactsPort _frameFacts;
   final FrameCaptureService _capture;
   final OrdinaryPaintPlanner _ordinaryPaintPlanner;
   final StaticBackgroundPlanner _staticBackgroundPlanner =
       StaticBackgroundPlanner();
   final SelectionDecorationPlanner _selectionDecorationPlanner =
       SelectionDecorationPlanner();
-  final SelectedOrderCache _selectedOrderCache = SelectedOrderCache();
   final OverlayPreviewPlanner _overlayPreviewPlanner =
       const OverlayPreviewPlanner();
   final SelectedMoveSupplementPlanner _selectedMoveSupplementPlanner;
@@ -112,7 +108,6 @@ final class FrameEngine {
       viewCameraBucket: viewCameraBucket,
     );
     final selectionDecorationPlan = _selectionDecorationPlanner.build(frame);
-    final selectedOrderSnapshot = _selectedOrderSnapshot(frame);
     final renderPrimitiveSnapshot = _ordinaryPaintPlanner
         .renderPrimitiveSnapshotFor(selectedMoveSupplement.mergedRecords);
     final assetBindings = bindAssets == null
@@ -127,7 +122,6 @@ final class FrameEngine {
       ordinaryPlan: paintPlan,
       staticBackgroundPlan: staticBackgroundPlan,
       selectionDecorationPlan: selectionDecorationPlan,
-      selectedOrderSnapshot: selectedOrderSnapshot,
       selectedMoveSupplementPlan: selectedMoveSupplement,
       renderPrimitiveSnapshot: renderPrimitiveSnapshot,
       assetBindings: assetBindings,
@@ -168,23 +162,6 @@ final class FrameEngine {
 
   void dispose() {
     _staticBackgroundPlanner.dispose();
-  }
-
-  SelectedOrderSnapshot _selectedOrderSnapshot(CapturedMainFrame frame) {
-    final selectedIds = frame.snapshot.selection.selectedElementIds;
-    final structuralRevision = frame.snapshot.revisions.structuralRevision;
-
-    return _selectedOrderCache.readOrBuild(
-      key: SelectedOrderKey(
-        selectionRevision: frame.snapshot.selection.selectionRevision,
-        structuralRevision: structuralRevision,
-      ),
-      orderedSelectedIds: _selectedIdsInDocumentOrder(
-        selectedIds,
-        structuralRevision,
-        _frameFacts,
-      ),
-    );
   }
 
   FrameRepaintSignal _mainRepaintSignal(CapturedMainFrame frame) {
@@ -238,34 +215,4 @@ final class _OrdinaryMainPlan {
   const _OrdinaryMainPlan({required this.plan});
 
   final PaintPlan plan;
-}
-
-Iterable<CanvasElementId> _selectedIdsInDocumentOrder(
-  Iterable<CanvasElementId> selectedIds,
-  int structuralRevision,
-  FrameFactsPort frameFacts,
-) {
-  final ordered = <FrameElementHandle>[];
-  for (final id in selectedIds) {
-    final handle = frameFacts.elementHandleForId(structuralRevision, id);
-    if (handle != null) {
-      _insertSelectedHandle(ordered, handle);
-    }
-  }
-
-  return [for (final handle in ordered) handle.id];
-}
-
-void _insertSelectedHandle(
-  List<FrameElementHandle> ordered,
-  FrameElementHandle handle,
-) {
-  for (var index = 0; index < ordered.length; index += 1) {
-    if (handle.orderToken < ordered[index].orderToken) {
-      ordered.insert(index, handle);
-
-      return;
-    }
-  }
-  ordered.add(handle);
 }

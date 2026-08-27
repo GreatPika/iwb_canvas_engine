@@ -24,6 +24,7 @@ Required tests:
 - `test.guardrails.frame_committed_facts_via_frame_facts_port`
 - `test.frame.frame_spatial_paint_admission`
 - `test.frame.frame_drawable_policy`
+- `test.frame.selected_handle_work`
 - `test.frame.marquee_captured_style`
 - `test.surface.no_live_runtime_read_in_painters`
 - `test.surface.overlay_drawable_policy`
@@ -326,10 +327,8 @@ stroke placement so their stroke inner edge aligns with the primitive bounds;
 single line, stroke, text, and path chrome remain bounds/outline placement
 unless a later owner-specific decoration contract changes them. This keeps
 selected-move visual feedback owned by the selected-move supplement without
-adding preview state to ordinary paint cache identity. `selectedOrder` is
-derived data or a bounded cache keyed by `selectionRevision` and
-`structuralRevision`; it is not a second stored selection source of truth and is
-not the chrome paint-order source. Accepted internal ownership:
+adding preview state to ordinary paint cache identity. Selection membership is
+not a chrome paint-order source. Accepted internal ownership:
 `SelectionDecorationPlanner` owns the decoration key, primitive grouping,
 placement metadata, and selected-move chrome suppression facts, and keeps
 selection decoration state out of ordinary record cache identity, selected move

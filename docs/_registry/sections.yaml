@@ -498,6 +498,7 @@
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.frame.frame_spatial_paint_admission
   - test.frame.frame_drawable_policy
+  - test.frame.selected_handle_work
   - test.frame.marquee_captured_style
   - test.surface.no_live_runtime_read_in_painters
   - test.surface.overlay_drawable_policy
@@ -885,6 +886,7 @@
   - test.guardrails.frame_committed_facts_via_frame_facts_port
   - test.frame.frame_spatial_paint_admission
   - test.frame.frame_drawable_policy
+  - test.frame.selected_handle_work
   - test.frame.marquee_captured_style
   - test.surface.no_live_runtime_read_in_painters
   - test.surface.overlay_drawable_policy
