@@ -245,10 +245,10 @@ void _verifyEraserMachineDecisions() {
     style: CanvasDrawStyle.defaultStyle,
   );
   final eraser = start.eraser as PointerEraserCapture;
+  final movedEraser = eraser.appendPoint(const Offset(2, 3));
 
   final preview = machine.preview(
-    eraser: eraser,
-    currentWorld: const Offset(2, 3),
+    eraser: movedEraser,
     facts: _eraserFacts(
       corridor: const [Offset.zero, Offset(2, 3)],
       erasedIds: const [],
@@ -270,6 +270,7 @@ void _verifyEraserMachineDecisions() {
   final intent = terminal.intent as EraserCommitIntent;
   expect(eraser.points, [Offset.zero]);
   expect(eraser.thickness, CanvasDrawStyle.defaultStyle.eraserThickness);
+  expect(preview.eraser, same(movedEraser));
   expect(eraserPreview.corridor, [Offset.zero, const Offset(2, 3)]);
   expect(() => eraserPreview.corridor.clear(), throwsUnsupportedError);
   expect(intent.erasedElementIds, [CanvasElementId('a')]);

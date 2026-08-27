@@ -29,10 +29,10 @@ void _verifyPreviewOverflowCorridorOnly() {
   final before = DiagnosticRecord.allocations.count;
   const machine = EraserMachine();
   final eraser = PointerEraserCapture(points: [Offset.zero], thickness: 6);
+  final movedEraser = eraser.appendPoint(const Offset(10, 0));
 
   final preview = machine.preview(
-    eraser: eraser,
-    currentWorld: const Offset(10, 0),
+    eraser: movedEraser,
     facts: _facts(
       corridor: const [Offset.zero, Offset(10, 0)],
       erasedIds: [CanvasElementId('would-be-partial')],

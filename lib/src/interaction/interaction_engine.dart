@@ -802,8 +802,7 @@ final class InteractionEngine {
       return const _SessionMoveOutcome.unchanged();
     }
     final decision = _eraserMachine.preview(
-      eraser: eraser,
-      currentWorld: currentWorld,
+      eraser: proposed,
       facts: readPort.eraserPreviewFacts(
         EraserReadRequest(
           corridorPoints: proposed.points,

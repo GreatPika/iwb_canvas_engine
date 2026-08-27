@@ -29,19 +29,13 @@ final class EraserMachine {
 
   EraserPreviewDecision preview({
     required PointerEraserCapture eraser,
-    required Offset currentWorld,
     required EraserReadFacts facts,
   }) {
-    final next = eraser.appendPoint(currentWorld);
-    if (identical(next, eraser)) {
-      return const EraserPreviewDecision.noChange();
-    }
-
     return EraserPreviewDecision.changed(
-      eraser: next,
+      eraser: eraser,
       preview: CanvasEraserPreview(
         corridor: facts.corridorPoints,
-        thickness: next.thickness,
+        thickness: eraser.thickness,
       ),
       exactBudgetExceeded: facts.exactBudgetExceeded,
     );
