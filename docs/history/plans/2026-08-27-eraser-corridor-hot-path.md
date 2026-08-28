@@ -8,7 +8,7 @@ Long eraser gestures use one interaction-owned bounded retained corridor, publis
 
 | Category | Source ID | Location or authority |
 | --- | --- | --- |
-| Design | `eraser-corridor-hot-path-design` | docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md |
+| Design | `eraser-corridor-hot-path-design` | docs/history/designs/2026-08-27-eraser-corridor-hot-path.md |
 | Research | `eraser-context-action-research` | docs/history/research/2026-06-02-p12-eraser-context-action-request.md |
 | PLAN | none | none |
 | Other | `prior-eraser-design` | docs/history/designs/2026-08-24-deletion-eraser-and-selection-policies.md |
@@ -87,12 +87,12 @@ Obligations: `PUBLIC_API_CHANGE`, `SEAM_MIGRATION`, `SEQUENCED_MIGRATION_AND_RET
 
 ## Repository Evidence
 
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:133` / accepted outcome: the design requires bounded active memory and per-move work plus one terminal all-or-nothing pass -> implement the owner-level hot-path change rather than a call-site-only optimization.
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:134` / selected retained policy: the accepted values are one mutable corridor, overflow above 8000, uniform endpoint-preserving resample to 4000, and retained-approximation terminal/action meaning -> treat these as fixed behavior, not implementation choices.
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:184` / ownership lock: interaction capture is the single mutable truth, `PointerSession` is a passive same-reference carrier, and mutable storage never crosses the port or public API -> no parallel raw trajectory, snapshot owner, or synchronization glue is permitted.
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:195` / temporal lock: initial down keeps one preview read, moves perform no read/geometry work, terminal takes one snapshot/read/evaluation, and accepted delivery preserves existing phase semantics -> split visual, pre-acceptance, and post-consume evidence rather than inferring one from another.
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:206` / compatibility and consumer closure: public and port signatures stay fixed; implementers and direct consumers are discovered from code while named fixtures are baseline witnesses -> do not add an implementation allowlist or API snapshot registry.
-- `docs/planning/designs/2026-08-27-eraser-corridor-hot-path.md:217` / scope lock: the accepted change excludes public additions, unbounded or incremental exact paths, diagnostics, numeric thresholds, retired benchmark restoration, predecessor imports, and reusable cross-tool buffers -> keep every such surface absent.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:133` / accepted outcome: the design requires bounded active memory and per-move work plus one terminal all-or-nothing pass -> implement the owner-level hot-path change rather than a call-site-only optimization.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:134` / selected retained policy: the accepted values are one mutable corridor, overflow above 8000, uniform endpoint-preserving resample to 4000, and retained-approximation terminal/action meaning -> treat these as fixed behavior, not implementation choices.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:184` / ownership lock: interaction capture is the single mutable truth, `PointerSession` is a passive same-reference carrier, and mutable storage never crosses the port or public API -> no parallel raw trajectory, snapshot owner, or synchronization glue is permitted.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:195` / temporal lock: initial down keeps one preview read, moves perform no read/geometry work, terminal takes one snapshot/read/evaluation, and accepted delivery preserves existing phase semantics -> split visual, pre-acceptance, and post-consume evidence rather than inferring one from another.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:206` / compatibility and consumer closure: public and port signatures stay fixed; implementers and direct consumers are discovered from code while named fixtures are baseline witnesses -> do not add an implementation allowlist or API snapshot registry.
+- `docs/history/designs/2026-08-27-eraser-corridor-hot-path.md:217` / scope lock: the accepted change excludes public additions, unbounded or incremental exact paths, diagnostics, numeric thresholds, retired benchmark restoration, predecessor imports, and reusable cross-tool buffers -> keep every such surface absent.
 - `lib/src/interaction/eraser_machine.dart:78` / current capture owner: `PointerEraserCapture` stores an immutable list and every distinct append spreads the prior list -> replace copy-on-append inside this owner while retaining duplicate suppression.
 - `lib/src/interaction/interaction_engine.dart:556` / initial read route: eraser down obtains the immutable one-point preview through `eraserPreviewFacts` -> preserve this call and its public preview.
 - `lib/src/interaction/interaction_engine.dart:806` / move read route: every admitted move currently calls `eraserPreviewFacts` with the whole proposed corridor -> retire only this caller after visual preview behavior is directly covered.
@@ -127,7 +127,7 @@ Work Budget And Cost Displacement: Construction/import/reset initializes the cap
 
 ## Execution Units
 
-### [ ] Unit 1: Admit the eraser proof families
+### [x] Unit 1: Admit the eraser proof families
 
 Owner: `docs/verification/tests.md` as the permanent verification-admission authority.
 Boundary: Record each design-required independent new or extended eraser failure family with its real production owner, failing witness, direct oracle, proxy limits, durable value, and existing artifact target before those artifacts change; do not create a test inventory, implementation detail lock, or duplicate no-partial/delivery owner.
@@ -142,7 +142,7 @@ Acceptance Outcomes:
 
 Depends On: None
 
-### [ ] Unit 2: Establish the bounded corridor and close its terminal lifecycle
+### [x] Unit 2: Establish the bounded corridor and close its terminal lifecycle
 
 Owner: Executable validation limits, interaction-owned eraser capture and terminal routing, passive `PointerSession` carriage, `RuntimeInteractionReadAdapter`, public preview/planner/painter publication, retained-corridor semantic owners, and the existing RuntimeRoot resolver/consume/cleanup/delivery route.
 Boundary: Atomically add the executable eraser limits, replace copy-on-append capture, establish the retained approximation, close one retained terminal evaluation and every cleanup/atomicity/delivery branch, update retained-corridor semantics, and land every admitted direct proof before the mutable capture or retained terminal/action meaning becomes authoritative; preserve the existing bounded move-time preview read until Unit 3.
@@ -170,7 +170,7 @@ Depends On:
 
 - Unit 1 — produces: every admitted retained-corridor, terminal, cleanup, no-partial, rendering, isolation, and delivery verification family; consumed as: authority for all permanent evidence changed in this unit.
 
-### [ ] Unit 3: Retire move-time reads with consumers and final semantics
+### [x] Unit 3: Retire move-time reads with consumers and final semantics
 
 Owner: Interaction move routing, repository-derived read-port consumers, existing guardrails, visual-only move proof, final eraser semantic owners, and cross-owner scope closure.
 Boundary: Starting from Unit 2's bounded and fully proven retained corridor, atomically migrate every behavior-sensitive consumer to initial-only preview reads, remove the move caller, prove zero move-phase read/geometry work, update the remaining move semantics and diagrams, and close the counter-only acceptance set without changing terminal, cleanup, public, or port declaration behavior.
