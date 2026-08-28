@@ -14,6 +14,7 @@ import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_with_document.dart';
@@ -76,11 +77,13 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   final candidateEvents = <Object>[];
   final exactEvents = <Object>[];
   final projectionEvents = <Object>[];
+  final readEvents = <Object>[];
 
   _observeDownstreamCleanupWork(
     candidateEvents: candidateEvents,
     exactEvents: exactEvents,
     projectionEvents: projectionEvents,
+    readEvents: readEvents,
     operation: () => GeometryPolicy.observeEraserWork(
       geometryEvents.add,
       () => SpatialKernel.observeEraserWork(
@@ -109,6 +112,7 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(candidateEvents, isEmpty);
   expect(exactEvents, isEmpty);
   expect(projectionEvents, isEmpty);
+  expect(readEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
@@ -139,11 +143,13 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   final candidateEvents = <Object>[];
   final exactEvents = <Object>[];
   final projectionEvents = <Object>[];
+  final readEvents = <Object>[];
 
   _observeDownstreamCleanupWork(
     candidateEvents: candidateEvents,
     exactEvents: exactEvents,
     projectionEvents: projectionEvents,
+    readEvents: readEvents,
     operation: () => GeometryPolicy.observeEraserWork(
       geometryEvents.add,
       () => SpatialKernel.observeEraserWork(
@@ -172,13 +178,18 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(candidateEvents, isEmpty);
   expect(exactEvents, isEmpty);
   expect(projectionEvents, isEmpty);
+  expect(readEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
+// Each list belongs to a distinct real work owner on the same cleanup route;
+// grouping them preserves one phase boundary instead of splitting the oracle.
+// ignore: number-of-parameters
 T _observeDownstreamCleanupWork<T>({
   required List<Object> candidateEvents,
   required List<Object> exactEvents,
   required List<Object> projectionEvents,
+  required List<Object> readEvents,
   required T Function() operation,
 }) => observeRuntimeCandidateResolutionWork(
   candidateEvents.add,
@@ -186,7 +197,10 @@ T _observeDownstreamCleanupWork<T>({
     exactEvents.add,
     () => DocumentStoreKernel.observeDeletionEntryProjection(
       projectionEvents.add,
-      operation,
+      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+        readEvents.add,
+        operation,
+      ),
     ),
   ),
 );
