@@ -263,6 +263,7 @@ void _verifyRuntimeTerminalNoPartialCommit({
     _sample(CanvasPointerLifecyclePhase.move, terminalPosition),
   );
   final before = root.state.value;
+  final beforeSpatial = root.spatialKernel.snapshot;
   final beforeStructuralRevision = root.documentFacts.structuralRevision;
   final beforeProjectionBuilds = root.projectionBuildCount;
   final terminalFrames = <RuntimeSurfaceFrameSignal>[];
@@ -310,6 +311,7 @@ void _verifyRuntimeTerminalNoPartialCommit({
   _expectNoPartialRuntimeTerminal(
     root: root,
     before: before,
+    beforeSpatial: beforeSpatial,
     beforeStructuralRevision: beforeStructuralRevision,
     beforeProjectionBuilds: beforeProjectionBuilds,
     actions: actions,
@@ -337,6 +339,7 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
     _epochContext(1),
   );
   final before = root.state.value;
+  final beforeSpatial = root.spatialKernel.snapshot;
   final beforeStructuralRevision = root.documentFacts.structuralRevision;
   final beforeProjectionBuilds = root.projectionBuildCount;
   final actions = <CanvasActionCommitted>[];
@@ -365,6 +368,7 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
   expect(root.state.value.revisions.selection, before.revisions.selection);
   expect(root.documentFacts.structuralRevision, beforeStructuralRevision);
   expect(root.projectionBuildCount, beforeProjectionBuilds);
+  _expectSpatialSnapshotUnchanged(beforeSpatial, root.spatialKernel.snapshot);
   expect(actions, isEmpty);
   expect(trace.where((event) => event.startsWith('geometry:')), isEmpty);
   expect(trace.where((event) => event.startsWith('spatial:')), isEmpty);
@@ -381,6 +385,7 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
 void _expectNoPartialRuntimeTerminal({
   required RuntimeRoot root,
   required CanvasRuntimeState before,
+  required SpatialKernelSnapshot beforeSpatial,
   required int beforeStructuralRevision,
   required int beforeProjectionBuilds,
   required List<CanvasActionCommitted> actions,
@@ -413,6 +418,7 @@ void _expectNoPartialRuntimeTerminal({
   }
   expect(root.documentFacts.structuralRevision, beforeStructuralRevision);
   expect(root.projectionBuildCount, beforeProjectionBuilds);
+  _expectSpatialSnapshotUnchanged(beforeSpatial, root.spatialKernel.snapshot);
   expect(actions, isEmpty);
   expect(preparation, isEmpty);
   if (expectedRoute.contains(RuntimeEraserEntryRouteWorkKind.entriesReady)) {
@@ -436,6 +442,21 @@ void _expectNoPartialRuntimeTerminal({
     hasLength(1),
   );
   _expectNoCaptureOrReadWorkAfterCleanup(trace);
+}
+
+void _expectSpatialSnapshotUnchanged(
+  SpatialKernelSnapshot before,
+  SpatialKernelSnapshot after,
+) {
+  expect(after.structuralRevision, before.structuralRevision);
+  expect(after.isInvalid, before.isInvalid);
+  expect(after.entryCount, before.entryCount);
+  expect(after.hitTilePageCount, before.hitTilePageCount);
+  expect(after.paintTilePageCount, before.paintTilePageCount);
+  expect(after.contextTilePageCount, before.contextTilePageCount);
+  expect(after.hitOutlierCount, before.hitOutlierCount);
+  expect(after.paintOutlierCount, before.paintOutlierCount);
+  expect(after.contextOutlierCount, before.contextOutlierCount);
 }
 
 void _expectNoCaptureOrReadWorkAfterCleanup(List<String> trace) {

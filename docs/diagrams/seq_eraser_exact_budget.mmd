@@ -19,7 +19,6 @@ sequenceDiagram
   participant Diagnostics as DiagnosticsHub
   participant SpatialApply as SpatialKernel update
   participant Frame as FrameEngine
-  participant BudgetProbe as Eraser budget probes non-hub
   participant Runtime as RuntimeRoot
   participant Signals as Public state/effects
 
@@ -37,7 +36,6 @@ sequenceDiagram
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint for corridor only
-    IE->>BudgetProbe: increment eraser preview budget-exceeded probe
     Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
     else preview spatial candidates returned
     Note over ReadPort,Geometry: ReadPort resolves committed facts, then admits the runtime eraser-kind policy before eraser candidate and exact-check accounting. Null admits every kind. Empty admits none. Disallowed facts never reach exact hit testing.
@@ -50,7 +48,6 @@ sequenceDiagram
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint for corridor only
-      IE->>BudgetProbe: increment eraser preview budget-exceeded probe
       Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
     else preview budget accepts
       Geometry-->>ReadPort: policy-filtered preview tentative ids
@@ -94,7 +91,6 @@ sequenceDiagram
         IE->>Preview: apply outcome: clear eraser corridor preview
     IE->>Preview: bump previewRevision for cleared active preview
     Preview->>Frame: request overlay cleanup repaint only
-    IE->>BudgetProbe: increment eraser terminal budget-exceeded probe
     Preview-->>Runtime: preview cleanup revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
@@ -103,14 +99,13 @@ sequenceDiagram
     ReadPort->>Geometry: terminal exact checks for policy-admitted deletable non-background candidates(segment-to-family)
     Note over Geometry: Terminal budget is 4096 candidates / 32768 exact checks.
     alt terminal candidate/check budget exceeded
-      Geometry-->>ReadPort: terminal budget exceeded
+      ReadPort->>ReadPort: enforce candidate limit before exact work, or exact limit before the next exact check
       ReadPort-->>IE: typed terminal budget-exceeded facts
       IE->>Cleanup: typed cleanup request for eraser no-op cleanup
         Cleanup-->>IE: PointerCleanupOutcome(overlay repaint target, preview changed)
         IE->>Preview: apply outcome: clear eraser corridor preview
       IE->>Preview: bump previewRevision for cleared active preview
       Preview->>Frame: request overlay cleanup repaint only
-      IE->>BudgetProbe: increment eraser terminal budget-exceeded probe
       Preview-->>Runtime: preview cleanup revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Note over Store,Signals: Terminal budget exceeded is cleanup/no-op for committed content: no partial erase, document mutation, selection mutation, spatial index mutation, projection/cache eviction, main repaint, or erase action.
