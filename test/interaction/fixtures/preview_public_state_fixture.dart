@@ -195,7 +195,9 @@ void _verifyEraserPreviewOnlyPublication() {
 }
 
 // This one gesture retains the exact public-state comparison across overflow.
-// ignore: halstead-volume
+// The full preview-only sequence must compare every owner before and after the
+// same overflow transition; splitting it would obscure the isolation boundary.
+// ignore: halstead-volume, source-lines-of-code
 void _verifyPostResampleEraserPreviewIsolation() {
   final scenario = _eraserPreviewScenario();
   final surface = Object();

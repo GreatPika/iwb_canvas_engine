@@ -24,7 +24,7 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // The named cases are the accepted no-partial taxonomy; keeping registration
 // adjacent to their one fixture avoids a parallel evidence owner.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
   test('preview budget overflow keeps corridor-only preview', () {
     expect(_verifyPreviewOverflowCorridorOnly, returnsNormally);

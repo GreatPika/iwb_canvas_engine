@@ -1,3 +1,7 @@
+// The direct owner imports keep the public dispose proof coupled to the exact
+// cleanup work seams; hiding them behind a helper would weaken that evidence.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -36,7 +40,7 @@ void main() {
 // This is intentionally an in-package companion to the external-consumer
 // contract: public disposal owns the lifecycle exit, while the attached root
 // is only the established oracle for capture reachability and owner work.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, maintainability-index, source-lines-of-code
 void _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork() {
   final runtime = CanvasRuntime(
     config: CanvasRuntimeConfig(
