@@ -384,6 +384,7 @@ void _verifyRepeatedRetainedEraserRouting() {
 
   final preview = engine.preview as CanvasEraserPreview;
   expect(preview.corridor, hasLength(4000));
+  expect(preview.corridor, engine.activeSession?.eraserCapture?.points);
   expect(readPort.lastPreviewCorridor, [source.first]);
   expect(
     captureEvents.where(

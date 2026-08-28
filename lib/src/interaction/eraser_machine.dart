@@ -118,9 +118,26 @@ final class PointerEraserCapture {
   PointerEraserCapture({
     required Iterable<Offset> points,
     required this.thickness,
-  }) : _points = List<Offset>.of(points);
+  }) : _storage = List<Offset?>.filled(
+         canvasEraserCorridorSoftLimit + 1,
+         null,
+         growable: false,
+       ) {
+    for (final point in points) {
+      if (_length >= _storage.length) {
+        throw ArgumentError.value(
+          points,
+          'points',
+          'initial eraser corridor exceeds bounded capture capacity',
+        );
+      }
+      _storage[_length] = point;
+      _length += 1;
+    }
+  }
 
-  List<Offset> _points;
+  final List<Offset?> _storage;
+  int _length = 0;
   final double thickness;
 
   @visibleForTesting
@@ -135,12 +152,12 @@ final class PointerEraserCapture {
   // extracting metric-shaped helpers would obscure append-before-resample order.
   // ignore: halstead-volume, source-lines-of-code
   PointerEraserSampleAdmission admitPoint(Offset point) {
-    if (_points.isNotEmpty && _points.last == point) {
+    if (_length > 0 && _storage[_length - 1] == point) {
       assert(
         _recordWork(
           PointerEraserCaptureWorkEvent(
             kind: PointerEraserCaptureWorkKind.duplicateSuppressed,
-            retainedPointCount: _points.length,
+            retainedPointCount: _length,
           ),
         ),
         'eraser capture work observation failed',
@@ -148,32 +165,44 @@ final class PointerEraserCapture {
       return const PointerEraserSampleAdmission.duplicate();
     }
 
-    _points.add(point);
+    _storage[_length] = point;
+    _length += 1;
     assert(
       _recordWork(
         PointerEraserCaptureWorkEvent(
           kind: PointerEraserCaptureWorkKind.sampleAdmitted,
-          retainedPointCount: _points.length,
+          retainedPointCount: _length,
         ),
       ),
       'eraser capture work observation failed',
     );
-    if (_points.length > canvasEraserCorridorSoftLimit) {
-      final input = _points;
-      _points = List<Offset>.generate(
-        canvasEraserCorridorResampleTarget,
-        (index) =>
-            input[(index * (input.length - 1)) ~/
-                (canvasEraserCorridorResampleTarget - 1)],
-        growable: true,
-      );
+    if (_length > canvasEraserCorridorSoftLimit) {
+      final inputLength = _length;
+      for (
+        var index = 0;
+        index < canvasEraserCorridorResampleTarget;
+        index += 1
+      ) {
+        final sourceIndex =
+            (index * (inputLength - 1)) ~/
+            (canvasEraserCorridorResampleTarget - 1);
+        _storage[index] = _storage[sourceIndex];
+      }
+      for (
+        var index = canvasEraserCorridorResampleTarget;
+        index < inputLength;
+        index += 1
+      ) {
+        _storage[index] = null;
+      }
+      _length = canvasEraserCorridorResampleTarget;
       assert(
         _recordWork(
           PointerEraserCaptureWorkEvent(
             kind: PointerEraserCaptureWorkKind.resampled,
-            retainedPointCount: _points.length,
-            retainedPrefixPointsTraversed: input.length,
-            retainedPrefixPointsCopied: _points.length,
+            retainedPointCount: _length,
+            retainedPrefixPointsTraversed: inputLength,
+            retainedPrefixPointsCopied: _length,
           ),
         ),
         'eraser capture work observation failed',
@@ -183,7 +212,7 @@ final class PointerEraserCapture {
         _recordWork(
           PointerEraserCaptureWorkEvent(
             kind: PointerEraserCaptureWorkKind.ordinaryAppend,
-            retainedPointCount: _points.length,
+            retainedPointCount: _length,
           ),
         ),
         'eraser capture work observation failed',
@@ -193,14 +222,22 @@ final class PointerEraserCapture {
   }
 
   List<Offset> snapshot() {
-    final snapshot = List<Offset>.unmodifiable(_points);
+    final snapshot = List<Offset>.unmodifiable(
+      List<Offset>.generate(_length, (index) {
+        final point = _storage[index];
+        if (point == null) {
+          throw StateError('eraser capture storage has a gap at $index');
+        }
+        return point;
+      }),
+    );
     assert(
       _recordWork(
         PointerEraserCaptureWorkEvent(
           kind: PointerEraserCaptureWorkKind.snapshotCreated,
           retainedPointCount: snapshot.length,
-          retainedPrefixPointsTraversed: _points.length,
-          retainedPrefixPointsCopied: _points.length,
+          retainedPrefixPointsTraversed: _length,
+          retainedPrefixPointsCopied: _length,
         ),
       ),
       'eraser capture work observation failed',
