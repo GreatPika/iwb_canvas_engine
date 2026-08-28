@@ -867,21 +867,42 @@ void _expectSilentEraserTerminal({
   final captureWork = <PointerEraserCaptureWorkEvent>[];
   final routeWork = <InteractionEraserRouteWorkEvent>[];
   final readWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  final geometryWork = <GeometryPolicyEraserWorkEvent>[];
+  final spatialWork = <SpatialKernelEraserWorkEvent>[];
+  final candidateWork = <RuntimeCandidateResolutionWorkEvent>[];
+  final exactWork = <Object>[];
+  final projectionWork = <Object>[];
 
   final retained = _startEraser(root, retainedOverflow: true);
-  RuntimeRoot.observeDeletionRouteConstruction(
-    construction.add,
-    () => InteractionEngine.observeCleanup(
-      cleanupReasons.add,
-      () => InteractionEngine.observeCleanupWork(
-        cleanupWork.add,
-        () => PointerEraserCapture.observeWork(
-          captureWork.add,
-          () => InteractionEngine.observeEraserRouteWork(
-            routeWork.add,
-            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-              readWork.add,
-              () => terminal(root),
+  observeRuntimeCandidateResolutionWork(
+    candidateWork.add,
+    () => HitTestPolicy.observeExactEraserWork(
+      exactWork.add,
+      () => DocumentStoreKernel.observeDeletionEntryProjection(
+        projectionWork.add,
+        () => GeometryPolicy.observeEraserWork(
+          geometryWork.add,
+          () => SpatialKernel.observeEraserWork(
+            spatialWork.add,
+            () => RuntimeRoot.observeDeletionRouteConstruction(
+              construction.add,
+              () => InteractionEngine.observeCleanup(
+                cleanupReasons.add,
+                () => InteractionEngine.observeCleanupWork(
+                  cleanupWork.add,
+                  () => PointerEraserCapture.observeWork(
+                    captureWork.add,
+                    () => InteractionEngine.observeEraserRouteWork(
+                      routeWork.add,
+                      () =>
+                          RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                            readWork.add,
+                            () => terminal(root),
+                          ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -923,6 +944,14 @@ void _expectSilentEraserTerminal({
         : isEmpty,
   );
   expect(cleanupWork, contains(InteractionCleanupWorkEvent.sessionReleased));
+  if (!readsTerminal) {
+    expect(readWork, isEmpty);
+    expect(geometryWork, isEmpty);
+    expect(spatialWork, isEmpty);
+    expect(candidateWork, isEmpty);
+    expect(exactWork, isEmpty);
+    expect(projectionWork, isEmpty);
+  }
   expect(
     readWork
         .where(

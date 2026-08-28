@@ -23,6 +23,7 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
@@ -787,7 +788,7 @@ void _verifyEraserStaleTerminalCleanup() {
 }
 
 void _verifyEraserCleanupDoesNoCaptureWork() {
-  _expectEraserCleanupWithoutWork(CanvasPointerLifecyclePhase.cancel, 1);
+  _expectRuntimeEraserCancelWithoutWork();
   _expectEraserCleanupWithoutWork(CanvasPointerLifecyclePhase.up, 2);
   _expectNamedEraserCleanupWithoutWork(
     PointerCleanupReason.modeToolChange,
@@ -806,6 +807,76 @@ void _verifyEraserCleanupDoesNoCaptureWork() {
     PointerCleanupReason.dispose,
     (engine) => engine.disposeCleanup(),
   );
+}
+
+// Pointer cancel is a public runtime cleanup route, so all real downstream
+// owners must remain silent while the centralized cleanup releases capture.
+// ignore: halstead-volume, source-lines-of-code
+void _expectRuntimeEraserCancelWithoutWork() {
+  final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
+  addTearDown(root.dispose);
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  root.handlePointer(_sample(1, Offset.zero, CanvasPointerLifecyclePhase.down));
+  final capture = root.interactionEngine.activeSession?.eraserCapture;
+  if (capture == null) fail('eraser down did not retain a capture');
+  final captureEvents = <Object>[];
+  final routeEvents = <Object>[];
+  final readEvents = <Object>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <Object>[];
+  final spatialEvents = <Object>[];
+  final candidateEvents = <Object>[];
+  final exactEvents = <Object>[];
+  final projectionEvents = <Object>[];
+
+  observeRuntimeCandidateResolutionWork(
+    candidateEvents.add,
+    () => HitTestPolicy.observeExactEraserWork(
+      exactEvents.add,
+      () => DocumentStoreKernel.observeDeletionEntryProjection(
+        projectionEvents.add,
+        () => GeometryPolicy.observeEraserWork(
+          geometryEvents.add,
+          () => SpatialKernel.observeEraserWork(
+            spatialEvents.add,
+            () => InteractionEngine.observeCleanupWork(
+              cleanupEvents.add,
+              () => PointerEraserCapture.observeWork(
+                captureEvents.add,
+                () => InteractionEngine.observeEraserRouteWork(
+                  routeEvents.add,
+                  () =>
+                      RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                        readEvents.add,
+                        () => root.handlePointer(
+                          _sample(
+                            1,
+                            const Offset(4, 5),
+                            CanvasPointerLifecyclePhase.cancel,
+                          ),
+                        ),
+                      ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(capture.points, [Offset.zero]);
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(readEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
+  expect(candidateEvents, isEmpty);
+  expect(exactEvents, isEmpty);
+  expect(projectionEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
 // The four lifecycle owners intentionally share one capture-release oracle.

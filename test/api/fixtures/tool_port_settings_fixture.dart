@@ -182,8 +182,8 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
-// Each list belongs to a distinct real work owner on the same cleanup route;
-// grouping them preserves one phase boundary instead of splitting the oracle.
+// Five parameters keep independently owned event streams inside the same
+// cleanup phase, which makes displaced work observable without split traces.
 // ignore: number-of-parameters
 T _observeDownstreamCleanupWork<T>({
   required List<Object> candidateEvents,
