@@ -23,17 +23,17 @@ sequenceDiagram
   participant Runtime as RuntimeRoot
   participant Signals as Public state/effects
 
-  User->>Surface: eraser down/move samples
-  Surface->>Tools: handlePointer(CanvasPointerInput finite samples)
-  Tools->>IE: normalized finite eraser sample and finite thickness
-  IE->>IE: admit distinct point into one retained corridor; resample 8001 to 4000 by floor index when needed
-  IE->>ReadPort: eraserPreviewFacts(corridor points, eraser thickness)
+  User->>Surface: eraser down
+  Surface->>Tools: handlePointer(CanvasPointerInput finite down)
+  Tools->>IE: normalized finite initial eraser sample and finite thickness
+  IE->>IE: start one retained corridor and freeze its immutable initial snapshot
+  IE->>ReadPort: eraserPreviewFacts(initial corridor point, eraser thickness)
   ReadPort->>Spatial: query preview erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
   Spatial-->>ReadPort: preview candidate handles or typed budget-exceeded
 
   alt preview spatial budget exceeded
     ReadPort-->>IE: typed preview budget-exceeded facts
-    IE->>Preview: publish corridor-only preview, no tentative ids
+    IE->>Preview: publish initial corridor-only preview, no tentative ids
     Preview-->>Runtime: preview revision fact
     Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
     Preview->>Frame: request overlay repaint for corridor only
@@ -42,11 +42,11 @@ sequenceDiagram
     else preview spatial candidates returned
     Note over ReadPort,Geometry: ReadPort resolves committed facts, then admits the runtime eraser-kind policy before eraser candidate and exact-check accounting. Null admits every kind. Empty admits none. Disallowed facts never reach exact hit testing.
     ReadPort->>Geometry: preview exact checks for policy-admitted deletable non-background candidates(segment-to-family)
-    Note over Geometry: Preview budget is 512 candidates / 4096 exact checks per sample.
+    Note over Geometry: The initial preview budget is 512 candidates / 4096 exact checks.
     alt preview candidate/check budget exceeded
       Geometry-->>ReadPort: preview budget exceeded
       ReadPort-->>IE: typed preview budget-exceeded facts
-      IE->>Preview: publish corridor-only preview, no tentative ids
+      IE->>Preview: publish initial corridor-only preview, no tentative ids
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint for corridor only
@@ -55,7 +55,24 @@ sequenceDiagram
     else preview budget accepts
       Geometry-->>ReadPort: policy-filtered preview tentative ids
       ReadPort-->>IE: preview facts with tentative ids
-      IE->>Preview: publish eraser preview with tentative ids
+      IE->>Preview: publish initial eraser preview with tentative ids
+      Preview-->>Runtime: preview revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Preview->>Frame: request overlay repaint
+    end
+  end
+
+  loop same-token finite move samples
+    User->>Surface: eraser move
+    Surface->>Tools: handlePointer(CanvasPointerInput finite move)
+    Tools->>IE: normalized finite move sample
+    alt duplicate adjacent sample
+      IE-->>Tools: no snapshot, preview publication, read, or geometry work
+    else distinct sample
+      IE->>IE: append then resample 8001 to 4000 by floor index when needed
+      IE->>IE: freeze one immutable retained corridor snapshot
+      Note over IE,Geometry: Visual-only move: no ReadPort, envelope, Spatial query, candidate ordering, exact hit, or deletion projection.
+      IE->>Preview: publish retained corridor preview
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint

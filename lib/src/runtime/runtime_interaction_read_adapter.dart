@@ -20,6 +20,7 @@ import 'runtime_interaction_move_read_models.dart';
 
 @visibleForTesting
 enum RuntimeEraserEntryRouteWorkKind {
+  previewReadStarted,
   terminalReadStarted,
   corridorEnvelopeReady,
   spatialQueryReady,
@@ -430,6 +431,17 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     required _EraserExactBudget budget,
     required bool terminal,
   }) {
+    if (!terminal) {
+      assert(
+        _recordEraserEntryRouteWork(
+          RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.previewReadStarted,
+            corridorPointCount: request.corridorPoints.length,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
+    }
     if (terminal) {
       assert(
         _recordEraserEntryRouteWork(

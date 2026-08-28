@@ -34,7 +34,6 @@ final class EraserMachine {
   EraserPreviewDecision preview({
     required PointerEraserCapture eraser,
     required List<Offset> corridorPoints,
-    required EraserReadFacts facts,
   }) {
     return EraserPreviewDecision.changed(
       eraser: eraser,
@@ -42,22 +41,19 @@ final class EraserMachine {
         corridor: corridorPoints,
         thickness: eraser.thickness,
       ),
-      exactBudgetExceeded: facts.exactBudgetExceeded,
     );
   }
 
   EraserPreviewDecision initialPreview({
     required PointerEraserCapture eraser,
-    required List<Offset> corridorPoints,
     required EraserReadFacts facts,
   }) {
     return EraserPreviewDecision.changed(
       eraser: eraser,
       preview: CanvasEraserPreview(
-        corridor: corridorPoints,
+        corridor: facts.corridorPoints,
         thickness: eraser.thickness,
       ),
-      exactBudgetExceeded: facts.exactBudgetExceeded,
     );
   }
 
@@ -241,19 +237,16 @@ final class EraserPreviewDecision {
   const EraserPreviewDecision.noChange()
     : changed = false,
       eraser = null,
-      preview = null,
-      exactBudgetExceeded = false;
+      preview = null;
 
   const EraserPreviewDecision.changed({
     required this.eraser,
     required this.preview,
-    required this.exactBudgetExceeded,
   }) : changed = true;
 
   final bool changed;
   final PointerEraserCapture? eraser;
   final CanvasEraserPreview? preview;
-  final bool exactBudgetExceeded;
 }
 
 final class EraserTerminalDecision {

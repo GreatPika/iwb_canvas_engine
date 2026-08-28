@@ -115,9 +115,8 @@ void _verifyPreviewOverflowCorridorOnly() {
   final eraser = PointerEraserCapture(points: [Offset.zero], thickness: 6);
   eraser.admitPoint(const Offset(10, 0));
 
-  final preview = machine.preview(
+  final preview = machine.initialPreview(
     eraser: eraser,
-    corridorPoints: eraser.points,
     facts: _facts(
       corridor: const [Offset.zero, Offset(10, 0)],
       erasedIds: [CanvasElementId('would-be-partial')],
@@ -126,7 +125,6 @@ void _verifyPreviewOverflowCorridorOnly() {
   );
 
   final eraserPreview = preview.preview as CanvasEraserPreview;
-  expect(preview.exactBudgetExceeded, isTrue);
   expect(eraserPreview.corridor, const [Offset.zero, Offset(10, 0)]);
   expect(eraserPreview.thickness, 6);
   expect(DiagnosticRecord.allocations.count, before);

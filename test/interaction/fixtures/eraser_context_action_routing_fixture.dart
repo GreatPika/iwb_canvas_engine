@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
@@ -19,6 +20,8 @@ import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart'
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
 typedef _ContextTapInput = ({
@@ -48,6 +51,10 @@ void _registerEraserTests() {
 
   test('interaction routes draw eraser through eraser machine', () {
     expect(_verifyEraserInteractionRouting, returnsNormally);
+  });
+
+  test('real eraser moves publish visuals without read or geometry work', () {
+    expect(_verifyVisualOnlyEraserRuntimeRouting, returnsNormally);
   });
 
   test('eraser stale terminal cleanup produces no commit intent', () {
@@ -264,10 +271,6 @@ void _verifyEraserMachineDecisions() {
   final preview = machine.preview(
     eraser: eraser,
     corridorPoints: eraser.points,
-    facts: _eraserFacts(
-      corridor: const [Offset.zero, Offset(2, 3)],
-      erasedIds: const [],
-    ),
   );
   final projectedEntry = _projectedEntry();
   final terminalFacts = _eraserFacts(
@@ -379,7 +382,7 @@ void _verifyRepeatedRetainedEraserRouting() {
 
   final preview = engine.preview as CanvasEraserPreview;
   expect(preview.corridor, hasLength(4000));
-  expect(readPort.lastPreviewCorridor, preview.corridor);
+  expect(readPort.lastPreviewCorridor, [source.first]);
   expect(
     captureEvents.where(
       (event) => event.kind == PointerEraserCaptureWorkKind.resampled,
@@ -546,7 +549,7 @@ void _verifyEraserInteractionRouting() {
   expect(intent.erasedElementIds, [CanvasElementId('erasable-a')]);
   expect(intent.corridorPointCount, 3);
   expect(terminal.strokeCommit, isNull);
-  expect(readPort.previewReadCount, 2);
+  expect(readPort.previewReadCount, 1);
   expect(readPort.terminalReadCount, 1);
   expect(routeEvents, [
     InteractionEraserRouteWorkEvent.downSnapshot,
@@ -555,6 +558,148 @@ void _verifyEraserInteractionRouting() {
     InteractionEraserRouteWorkEvent.previewPublished,
     InteractionEraserRouteWorkEvent.terminalSnapshot,
   ]);
+}
+
+// This one real route separates down, duplicate, ordinary, and overflow moves
+// so the existing owner observers can reject hidden read or geometry work.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _verifyVisualOnlyEraserRuntimeRouting() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    CanvasDocument(
+      layers: [
+        CanvasLayer(
+          id: CanvasLayerId('eraser-visual-route'),
+          elements: [
+            CanvasRectElement(
+              id: CanvasElementId('erasable'),
+              size: const Size(20, 20),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+  addTearDown(root.dispose);
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+
+  final downReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+    downReadWork.add,
+    () => root.handlePointer(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+    ),
+  );
+  expect(
+    downReadWork.where(
+      (event) =>
+          event.kind == RuntimeEraserEntryRouteWorkKind.previewReadStarted,
+    ),
+    hasLength(1),
+  );
+
+  final ordinaryCaptureWork = <PointerEraserCaptureWorkEvent>[];
+  final ordinaryRouteWork = <InteractionEraserRouteWorkEvent>[];
+  final ordinaryReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  final ordinaryExactWork = <HitTestPolicyExactEraserWorkEvent>[];
+  final ordinaryProjection = <List<DeletionEntryFacts>>[];
+  PointerEraserCapture.observeWork(
+    ordinaryCaptureWork.add,
+    () => InteractionEngine.observeEraserRouteWork(
+      ordinaryRouteWork.add,
+      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+        ordinaryReadWork.add,
+        () => HitTestPolicy.observeExactEraserWork(
+          ordinaryExactWork.add,
+          () => DocumentStoreKernel.observeDeletionEntryProjection(
+            ordinaryProjection.add,
+            () => root.handlePointer(
+              _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  expect(ordinaryCaptureWork.map((event) => event.kind), [
+    PointerEraserCaptureWorkKind.sampleAdmitted,
+    PointerEraserCaptureWorkKind.ordinaryAppend,
+    PointerEraserCaptureWorkKind.snapshotCreated,
+  ]);
+  expect(ordinaryRouteWork, [
+    InteractionEraserRouteWorkEvent.moveSnapshot,
+    InteractionEraserRouteWorkEvent.previewPublished,
+  ]);
+  expect(ordinaryReadWork, isEmpty);
+  expect(ordinaryExactWork, isEmpty);
+  expect(ordinaryProjection, isEmpty);
+  expect((root.preview as CanvasEraserPreview).corridor, [
+    Offset.zero,
+    const Offset(2, 3),
+  ]);
+
+  final duplicateCaptureWork = <PointerEraserCaptureWorkEvent>[];
+  final duplicateRouteWork = <InteractionEraserRouteWorkEvent>[];
+  final duplicateReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  PointerEraserCapture.observeWork(
+    duplicateCaptureWork.add,
+    () => InteractionEngine.observeEraserRouteWork(
+      duplicateRouteWork.add,
+      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+        duplicateReadWork.add,
+        () => root.handlePointer(
+          _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+        ),
+      ),
+    ),
+  );
+  expect(duplicateCaptureWork.map((event) => event.kind), [
+    PointerEraserCaptureWorkKind.duplicateSuppressed,
+  ]);
+  expect(duplicateRouteWork, isEmpty);
+  expect(duplicateReadWork, isEmpty);
+
+  final overflowRoot = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
+  addTearDown(overflowRoot.dispose);
+  overflowRoot.setInteractionMode(CanvasInteractionMode.draw);
+  overflowRoot.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  overflowRoot.handlePointer(
+    _sample(2, Offset.zero, CanvasPointerLifecyclePhase.down),
+  );
+  for (var index = 1; index < 8000; index += 1) {
+    overflowRoot.handlePointer(
+      _sample(2, Offset(index.toDouble(), 0), CanvasPointerLifecyclePhase.move),
+    );
+  }
+  final overflowCaptureWork = <PointerEraserCaptureWorkEvent>[];
+  final overflowRouteWork = <InteractionEraserRouteWorkEvent>[];
+  final overflowReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  PointerEraserCapture.observeWork(
+    overflowCaptureWork.add,
+    () => InteractionEngine.observeEraserRouteWork(
+      overflowRouteWork.add,
+      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+        overflowReadWork.add,
+        () => overflowRoot.handlePointer(
+          _sample(2, const Offset(8000, 0), CanvasPointerLifecyclePhase.move),
+        ),
+      ),
+    ),
+  );
+  expect(overflowCaptureWork.map((event) => event.kind), [
+    PointerEraserCaptureWorkKind.sampleAdmitted,
+    PointerEraserCaptureWorkKind.resampled,
+    PointerEraserCaptureWorkKind.snapshotCreated,
+  ]);
+  expect(overflowRouteWork, [
+    InteractionEraserRouteWorkEvent.moveSnapshot,
+    InteractionEraserRouteWorkEvent.previewPublished,
+  ]);
+  expect(overflowReadWork, isEmpty);
+  final overflowPreview = overflowRoot.preview as CanvasEraserPreview;
+  expect(overflowPreview.corridor, hasLength(4000));
+  expect(overflowPreview.corridor.first, Offset.zero);
+  expect(overflowPreview.corridor.last, const Offset(8000, 0));
 }
 
 void _verifyEraserStaleTerminalCleanup() {

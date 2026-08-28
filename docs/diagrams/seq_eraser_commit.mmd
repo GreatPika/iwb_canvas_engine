@@ -27,6 +27,12 @@ sequenceDiagram
   IE->>IE: admit one active pointer token
   IE->>IE: read finite eraserThickness and start eraser session
   Note over IE: Session stores pointer token, sessionId, eraserThickness, and corridor points in world coordinates.
+  IE->>ReadPort: eraserPreviewFacts(one immutable initial corridor point, eraser thickness)
+  ReadPort->>Spatial: query initial preview corridor envelope
+  Spatial-->>ReadPort: initial preview facts
+  ReadPort->>Geometry: initial preview exact checks under the preview budget
+  Geometry-->>ReadPort: initial preview facts
+  ReadPort-->>IE: initial immutable preview facts
   IE->>Preview: publish CanvasEraserPreview(corridor, thickness) with first corridor point
   Preview-->>Runtime: preview revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
@@ -40,26 +46,21 @@ sequenceDiagram
     User->>Surface: pointer move
     Surface->>Tools: handlePointer(CanvasPointerInput finite move)
     Tools->>IE: normalized finite move sample
-    IE->>IE: append corridor point and trim if interactive eraser soft limit is exceeded
-    Note over IE: Corridor remains preview state only, no selected-move main-scene preview is staged.
-    IE->>Spatial: query corridor envelope inflated by eraserThickness / 2 + hitPadding + 4.0
-    Spatial-->>IE: committed candidate handles from content hit scope
-    alt preview candidate/check budget exceeded
-      IE->>Preview: keep corridor-only preview and discard tentative ids
-      Note over IE,Geometry: Preview budget is 512 candidates / 4096 exact checks per sample. Budget exceeded does not return partial tentative ids.
-    else preview budget available
-      IE->>Geometry: exact eraser segment-to-family checks for deletable non-background candidates
-      Geometry-->>IE: tentative touched ids for session only
+    alt duplicate adjacent sample
+      IE-->>Tools: ignore without snapshot, preview publication, read, or geometry work
+    else distinct finite sample
+      IE->>IE: append corridor point; immediately resample 8001 to 4000 by floor index when needed
+      IE->>IE: freeze one immutable retained corridor snapshot
+      Note over IE,Geometry: Move is visual-only: no ReadPort, envelope, spatial query, candidate ordering, exact hit, or deletion projection.
+      IE->>Preview: replace immutable CanvasEraserPreview(corridor, thickness)
+      Preview-->>Runtime: preview revision fact
+      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+      Preview->>Frame: request overlay repaint only
+      Frame->>Preview: capture previewRevision and CanvasEraserPreview.corridor once
+      Frame->>Frame: build immutable eraser corridor overlay primitive
+      Frame->>Signals: publish overlay repaint request
+      Signals-->>Surface: repaint overlay eraser corridor
     end
-    Note over IE,Geometry: Read-only candidate refresh can guide terminal intent, but it does not mutate selection owner, Store, spatial index, or caches.
-    IE->>Preview: replace immutable CanvasEraserPreview(corridor, thickness)
-    Preview-->>Runtime: preview revision fact
-    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-    Preview->>Frame: request overlay repaint only
-    Frame->>Preview: capture previewRevision and CanvasEraserPreview.corridor once
-    Frame->>Frame: build immutable eraser corridor overlay primitive
-    Frame->>Signals: publish overlay repaint request
-    Signals-->>Surface: repaint overlay eraser corridor
   end
 
   alt stale non-terminal sample or second pointer down during active routing

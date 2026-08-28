@@ -20,9 +20,16 @@ stateDiagram-v2
     Pointer id is only the routing token.
   end note
 
-  DownAdmission --> Previewing: bind eraser session and publish first corridor point
+  DownAdmission --> InitialPreviewRead: bind eraser session and freeze first corridor point
   DownAdmission --> Idle: wrong mode/tool or non-finite facts / reject without preview
   DownAdmission --> Disposed: disposed runtime / StateError
+
+  state "Initial immutable preview read" as InitialPreviewRead
+  note right of InitialPreviewRead
+    Down alone reads immutable one-point preview facts through the read port.
+    The initial preview budget is 512 candidates / 4096 exact checks.
+  end note
+  InitialPreviewRead --> Previewing: publish first corridor preview
 
   state "Active eraser preview" as Previewing {
     [*] --> CorridorPreview
@@ -30,12 +37,13 @@ stateDiagram-v2
     state "Overlay corridor preview" as CorridorPreview
     note right of CorridorPreview
       Corridor points are immutable snapshots of one retained world-space
-      approximation only. A move still performs its bounded preview read.
-      Updates request overlay repaint only.
+      approximation only. Each admitted move appends before any resample,
+      freezes one retained snapshot, and updates overlay repaint only.
+      Moves perform no read, envelope, spatial query, candidate ordering,
+      exact hit, or deletion projection.
     end note
 
-    CorridorPreview --> CorridorPreview: same-token same-controllerEpoch finite move / admit one point; resample 8001 to 4000 if needed
-    CorridorPreview --> CandidateRefresh: same-token same-controllerEpoch finite move / refresh candidates
+    CorridorPreview --> CorridorPreview: same-token same-controllerEpoch finite move / admit one point; resample 8001 to 4000 if needed; publish visual snapshot
     CorridorPreview --> CorridorPreview: stale token, controllerEpoch mismatch, or non-finite move / ignore
     CorridorPreview --> TerminalGate: same-token up
     CorridorPreview --> CleanupOnly: same-token cancel
@@ -44,21 +52,6 @@ stateDiagram-v2
     CorridorPreview --> CleanupOnly: loadDocument prepared cleanup before install
     CorridorPreview --> CorridorPreview: loadDocumentFromJson failure / preserve if pointer session preserves
     CorridorPreview --> CleanupOnly: runtime.dispose()
-
-    state "Read-only candidate refresh" as CandidateRefresh
-    note right of CandidateRefresh
-      Query SpatialKernel with corridor envelope inflated by
-      eraserThickness / 2 + hitPadding + 4.0. Resolve committed
-      candidates by generation and structuralRevision, then run
-      exact segment-to-family geometry checks for deletable
-      non-background content elements. Preview budget is 512
-      candidates / 4096 exact checks per sample. No committed
-      mutation occurs in preview.
-    end note
-
-    CandidateRefresh --> CorridorPreview: replace overlay preview and session candidate facts
-    CandidateRefresh --> CorridorPreview: no candidates / preview remains corridor only
-    CandidateRefresh --> CorridorPreview: budget exceeded / corridor-only preview, no partial tentative ids
 
     state "Terminal up gate" as TerminalGate
     note right of TerminalGate

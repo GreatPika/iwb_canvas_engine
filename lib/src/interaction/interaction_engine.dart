@@ -575,7 +575,6 @@ final class InteractionEngine {
     );
     final preview = _eraserMachine.initialPreview(
       eraser: eraser,
-      corridorPoints: corridorPoints,
       facts: readPort.eraserPreviewFacts(
         EraserReadRequest(
           corridorPoints: corridorPoints,
@@ -835,12 +834,6 @@ final class InteractionEngine {
     final decision = _eraserMachine.preview(
       eraser: eraser,
       corridorPoints: corridorPoints,
-      facts: readPort.eraserPreviewFacts(
-        EraserReadRequest(
-          corridorPoints: corridorPoints,
-          eraserThickness: eraser.thickness,
-        ),
-      ),
     );
     final updatedEraser = decision.eraser;
     final updatedPreview = decision.preview;

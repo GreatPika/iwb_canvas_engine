@@ -167,10 +167,12 @@ Eraser:
   index `(i * (n - 1)) ~/ 3999` for i in `[0, 3999]`;
 - first and newest points are retained. The resulting shortcut can add an exact
   hit across a discarded detour, while a discarded narrow detour can miss one;
-- preview reads each consume an immutable snapshot derived from that sole
-  retained approximation; pointer-up admits its terminal endpoint first, then
+- the initial down preview read consumes one immutable one-point snapshot from
+  that sole retained approximation. Each admitted move appends, resamples when
+  needed, snapshots, and publishes that retained corridor visually without a
+  read or geometry work. Pointer-up admits its terminal endpoint first, then
   terminal exact geometry consumes exactly one new immutable terminal snapshot.
-  No preview or terminal path reads a raw trajectory;
+  No initial, move, or terminal path reads a raw trajectory;
 - coarse query uses corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0;
 - exact deletion uses segment-to-family geometry checks;
 - deletes only isDeletable=true elements;
@@ -182,12 +184,12 @@ Eraser:
   and exact hit testing: `null` admits all kinds, an empty set admits none, and
   a non-empty set admits only its exact `CanvasElementKind` allow-list.
 - Disallowed resolved facts consume no eraser candidate or exact-check budget,
-  do not reach exact eraser hit testing, and appear in neither preview ids nor
-  the terminal final-read ids. Eraser read candidate counts describe only these
-  policy-admitted facts while retaining skipped-resolution facts. The same
-  admission applies to preview and terminal reads; it does not replace the
-  preceding spatial query or its typed invalid, stale, and spatial-budget
-  outcomes.
+  do not reach exact eraser hit testing, and appear in neither initial-preview
+  ids nor the terminal final-read ids. Eraser read candidate counts describe
+  only these policy-admitted facts while retaining skipped-resolution facts. The
+  same admission applies to the initial preview and terminal reads; it does not
+  replace the preceding spatial query or its typed invalid, stale, and
+  spatial-budget outcomes. Visual moves do not enter this read path.
 ```
 
 Eraser exact-check budget:
@@ -197,7 +199,7 @@ kMaxEraserPreviewCandidatesPerSample = 512;
 kMaxEraserPreviewExactChecksPerSample = 4096;
 kMaxEraserTerminalCandidates = 4096;
 kMaxEraserTerminalExactChecks = 32768;
-preview budget exceeded -> corridor-only preview, no tentative ids;
+initial preview budget exceeded -> corridor-only preview, no tentative ids;
 terminal budget exceeded -> cleanup/no-op, no partial erase;
 budget exceeded increments eraser-owned metric/probe counters only; this is not a DiagnosticsHub write;
 budget exceeded does not mutate document, selection, spatial index, projection,

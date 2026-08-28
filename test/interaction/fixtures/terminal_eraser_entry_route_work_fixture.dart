@@ -30,7 +30,10 @@ void registerTerminalEraserEntryRouteWorkTest() {
     expect(result.facts.erasedElementIds, _terminalEraserTargetIds(2));
     expect(result.facts.erasedEntries, isEmpty);
     expect(result.storeWork, isEmpty);
-    expect(result.routeEvents, isEmpty);
+    expect(
+      result.routeEvents.map((event) => event.kind),
+      [RuntimeEraserEntryRouteWorkKind.previewReadStarted],
+    );
     expect(result.frameHandleEnumerations, 0);
     expect(result.projectionBuildDelta, 0);
   });

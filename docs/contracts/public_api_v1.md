@@ -2444,7 +2444,11 @@ For a long eraser gesture, `CanvasEraserPreview.corridor` is itself the
 bounded, endpoint-preserving retained approximation used by the interaction;
 it is not a raw pointer-sample history. The approximation can miss a narrow
 discarded detour, and one of its shortcut chords can produce a false-positive
-hit across that detour. Accepted erase actions use the same retained corridor.
+hit across that detour. The initial down preview performs the one immutable
+preview read; each admitted move then publishes its retained corridor visually
+without a read or geometry evaluation. Pointer-up uses one terminal retained
+snapshot/read/evaluation, and accepted erase actions use that same retained
+corridor.
 
 Rules:
 
