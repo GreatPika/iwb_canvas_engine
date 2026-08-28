@@ -2,20 +2,106 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:iwb_canvas_engine/src/contracts/public/canvas_preview.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_paint_output.dart';
 import 'package:iwb_canvas_engine/src/frame/frame_repaint_signal.dart';
 import 'package:iwb_canvas_engine/src/frame/overlay_preview_planner.dart';
 import 'package:iwb_canvas_engine/src/surface/overlay_painter.dart';
 
 import '../../frame/fixtures/ordinary_paint_test_support.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   _testOverlayOnePointPreviews();
   _testOverlayStrokePreviewJoins();
   _testOverlayLinePreviewCaps();
   _testOverlayEmptyPreviews();
+  _testRetainedEraserPreviewsUseThePublicOverlayRoute();
 }
+
+// One route assertion intentionally keeps all three public preview forms on
+// one RuntimeRoot output route, so an injected synthetic frame cannot pass.
+// ignore: halstead-volume, source-lines-of-code
+void _testRetainedEraserPreviewsUseThePublicOverlayRoute() {
+  test(
+    'one-point, ordinary, and resampled eraser previews reach the frame',
+    () async {
+      var publishedPreviewForms = 0;
+      final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
+      addTearDown(root.dispose);
+      root.setInteractionMode(CanvasInteractionMode.draw);
+      root.setDrawStyle(
+        CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 6),
+      );
+      OverlayFramePaintOutput output() => root.buildResourceFreeOverlayFrame(
+        viewportWorldBounds: const Rect.fromLTWH(0, 0, 32, 32),
+        devicePixelRatio: 1,
+        selectionStyle: CanvasSelectionStyle.defaultStyle,
+        gridStyle: CanvasGridStyle.defaultStyle,
+      );
+
+      root.handlePointer(
+        _eraserSample(const Offset(5, 5), CanvasPointerLifecyclePhase.down),
+      );
+      await _expectPublicEraserFrame(root.preview, output(), 1);
+      publishedPreviewForms += 1;
+      root.handlePointer(
+        _eraserSample(const Offset(8, 9), CanvasPointerLifecyclePhase.move),
+      );
+      await _expectPublicEraserFrame(root.preview, output(), 2);
+      publishedPreviewForms += 1;
+      for (var index = 2; index <= 8000; index += 1) {
+        root.handlePointer(
+          _eraserSample(
+            Offset(
+              5 + (index % 24).toDouble(),
+              5 + ((index * 7) % 24).toDouble(),
+            ),
+            CanvasPointerLifecyclePhase.move,
+          ),
+        );
+      }
+      await _expectPublicEraserFrame(root.preview, output(), 4000);
+      publishedPreviewForms += 1;
+      expect(publishedPreviewForms, 3);
+    },
+  );
+}
+
+Future<void> _expectPublicEraserFrame(
+  CanvasPreviewState preview,
+  OverlayFramePaintOutput output,
+  int corridorPointCount,
+) async {
+  final eraser = preview as CanvasEraserPreview;
+  expect(eraser.corridor, hasLength(corridorPointCount));
+  final captured = output.capturedFrame.overlayPreview as CanvasEraserPreview;
+  final primitive =
+      output.overlayPreviewPlan.primitives.single as EraserOverlayPrimitive;
+  expect(captured, same(eraser));
+  expect(captured.corridor, eraser.corridor);
+  expect(primitive.corridor, eraser.corridor);
+  expect(
+    await _alphaAt(
+      (canvas) => OverlayFramePainter(
+        outputListenable: ValueNotifier(output),
+      ).paint(canvas, const Size(32, 32)),
+      5,
+      5,
+    ),
+    greaterThan(0),
+  );
+}
+
+CanvasPointerSample _eraserSample(
+  Offset position,
+  CanvasPointerLifecyclePhase phase,
+) => CanvasPointerSample(
+  pointerId: 1,
+  position: position,
+  phase: phase,
+  kind: PointerDeviceKind.touch,
+);
 
 void _testOverlayOnePointPreviews() {
   test('overlay one-point stroke previews produce visible pixels', () async {

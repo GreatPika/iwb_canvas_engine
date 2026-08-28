@@ -1,5 +1,11 @@
-import 'package:test/test.dart';
+import 'dart:ui';
 
+import 'package:flutter_test/flutter_test.dart';
+import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
+import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import '../support/flutter_consumer_test_harness.dart';
 
 void main() {
@@ -13,7 +19,80 @@ void main() {
       completes,
     );
   });
+  // DCM does not follow the named helper, whose assertions intentionally keep
+  // the public route and its owner-level lifecycle observations together.
+  // ignore: missing-test-assertion
+  test(
+    'public dispose releases active eraser without displaced corridor work',
+    _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork,
+  );
 }
+
+// This is intentionally an in-package companion to the external-consumer
+// contract: public disposal owns the lifecycle exit, while the attached root
+// is only the established oracle for capture reachability and owner work.
+// ignore: halstead-volume, source-lines-of-code
+void _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork() {
+  final runtime = CanvasRuntime(
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) => CanvasDeletionDecision.accept,
+    ),
+  );
+  addTearDown(runtime.dispose);
+  runtime.tools.setMode(CanvasInteractionMode.draw);
+  runtime.tools.setDrawTool(CanvasDrawTool.eraser);
+  runtime.tools.handlePointer(
+    _eraserPointer(CanvasPointerLifecyclePhase.down, const Offset(1, 1)),
+  );
+  runtime.tools.handlePointer(
+    _eraserPointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
+  );
+  final root = canvasRuntimeFrameRootForSurface(runtime);
+  if (root == null) {
+    fail('CanvasRuntime did not attach its runtime frame root.');
+  }
+  final retained = root.interactionEngine.activeSession?.eraserCapture;
+  if (retained == null) {
+    fail('dispose did not begin with an eraser capture.');
+  }
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  final readEvents = <RuntimeEraserEntryRouteWorkEvent>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+
+  InteractionEngine.observeCleanupWork(
+    cleanupEvents.add,
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        routeEvents.add,
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          readEvents.add,
+          runtime.dispose,
+        ),
+      ),
+    ),
+  );
+
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(retained.points, const [Offset(1, 1), Offset(4, 4)]);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(readEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
+  expect(runtime.dispose, returnsNormally);
+}
+
+CanvasPointerSample _eraserPointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) => CanvasPointerSample(
+  pointerId: 1,
+  position: position,
+  phase: phase,
+  kind: PointerDeviceKind.touch,
+);
 
 const _disposeLifecycleSource = '''
 import 'dart:ui';

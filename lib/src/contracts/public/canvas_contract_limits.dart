@@ -14,6 +14,10 @@ const int canvasMaxInteractionRequestIdLength = 256;
 const int canvasMaxTextLength = 100000;
 const int canvasMaxSvgPathDataLength = 200000;
 const int canvasMaxStrokePointsPerElement = 20000;
+// This package-internal interaction limit is deliberately not exported through
+// the public API barrel. The eraser capture owns its application.
+const int canvasEraserCorridorSoftLimit = 8000;
+const int canvasEraserCorridorResampleTarget = 4000;
 const int canvasMaxPaletteItems = 1024;
 const int canvasMaxFontFamilyLength = 256;
 const double canvasMinCoordinate = -1e7;

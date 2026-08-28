@@ -39,12 +39,21 @@ enum InteractionCleanupWorkEvent {
   sessionReleased,
 }
 
+@visibleForTesting
+enum InteractionEraserRouteWorkEvent {
+  downSnapshot,
+  moveSnapshot,
+  terminalSnapshot,
+  previewPublished,
+}
+
 // Pointer sessions, tool settings, preview cleanup, and revisions stay together
 // so the active pointer lifecycle has one auditable owner.
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class InteractionEngine {
   static final Object _cleanupZoneKey = Object();
   static final Object _cleanupWorkZoneKey = Object();
+  static final Object _eraserRouteWorkZoneKey = Object();
 
   InteractionEngine({
     required CanvasInteractionMode initialMode,
@@ -301,6 +310,14 @@ final class InteractionEngine {
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_cleanupWorkZoneKey: sink});
 
+  /// Assertion-gated eraser route observation keeps capture and publication
+  /// work visible to existing route fixtures without adding runtime telemetry.
+  @visibleForTesting
+  static T observeEraserRouteWork<T>(
+    void Function(InteractionEraserRouteWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_eraserRouteWorkZoneKey: sink});
+
   ContextActionRequestIntent? handleDoubleTap(
     Offset viewPosition,
     InteractionPointerContext context, {
@@ -551,11 +568,17 @@ final class InteractionEngine {
     if (!start.admitted || eraser == null) {
       return _ignored(sample);
     }
+    final corridorPoints = eraser.snapshot();
+    assert(
+      _recordEraserRouteWork(InteractionEraserRouteWorkEvent.downSnapshot),
+      'eraser route work observation failed',
+    );
     final preview = _eraserMachine.initialPreview(
       eraser: eraser,
+      corridorPoints: corridorPoints,
       facts: readPort.eraserPreviewFacts(
         EraserReadRequest(
-          corridorPoints: eraser.points,
+          corridorPoints: corridorPoints,
           eraserThickness: eraser.thickness,
         ),
       ),
@@ -566,6 +589,10 @@ final class InteractionEngine {
       return _ignored(sample);
     }
     _activeSession = _eraserSession(sample, nextEraser, nextPreview);
+    assert(
+      _recordEraserRouteWork(InteractionEraserRouteWorkEvent.previewPublished),
+      'eraser route work observation failed',
+    );
     replacePreview(nextPreview);
 
     return _admitted(sample);
@@ -797,16 +824,21 @@ final class InteractionEngine {
     if (eraser == null) {
       return const _SessionMoveOutcome.unchanged();
     }
-    final proposed = eraser.appendPoint(currentWorld);
-    if (identical(proposed, eraser)) {
+    if (!eraser.admitPoint(currentWorld).admitted) {
       return const _SessionMoveOutcome.unchanged();
     }
+    final corridorPoints = eraser.snapshot();
+    assert(
+      _recordEraserRouteWork(InteractionEraserRouteWorkEvent.moveSnapshot),
+      'eraser route work observation failed',
+    );
     final decision = _eraserMachine.preview(
-      eraser: proposed,
+      eraser: eraser,
+      corridorPoints: corridorPoints,
       facts: readPort.eraserPreviewFacts(
         EraserReadRequest(
-          corridorPoints: proposed.points,
-          eraserThickness: proposed.thickness,
+          corridorPoints: corridorPoints,
+          eraserThickness: eraser.thickness,
         ),
       ),
     );
@@ -819,6 +851,11 @@ final class InteractionEngine {
       currentWorld: currentWorld,
       eraser: updatedEraser,
       lastPreview: updatedPreview,
+    );
+
+    assert(
+      _recordEraserRouteWork(InteractionEraserRouteWorkEvent.previewPublished),
+      'eraser route work observation failed',
     );
 
     return _SessionMoveOutcome.fromPreviewChanged(
@@ -1332,15 +1369,22 @@ final class InteractionEngine {
     if (eraser == null) {
       return _cleanupTerminal(sample, PointerCleanupReason.noOpTerminal);
     }
-    final proposed = eraser.appendPoint(sample.worldPosition);
+    eraser.admitPoint(sample.worldPosition);
+    final corridorPoints = eraser.snapshot();
+    assert(
+      _recordEraserRouteWork(InteractionEraserRouteWorkEvent.terminalSnapshot),
+      'eraser route work observation failed',
+    );
     final terminal = _eraserMachine.terminal(
-      sessionId: session.sessionId,
-      pointerToken: session.token,
-      eraser: eraser,
-      facts: readPort.eraserTerminalFacts(
-        EraserReadRequest(
-          corridorPoints: proposed.points,
-          eraserThickness: proposed.thickness,
+      input: EraserTerminalInput(
+        sessionId: session.sessionId,
+        pointerToken: session.token,
+        eraser: eraser,
+        facts: readPort.eraserTerminalFacts(
+          EraserReadRequest(
+            corridorPoints: corridorPoints,
+            eraserThickness: eraser.thickness,
+          ),
         ),
       ),
     );
@@ -1773,6 +1817,14 @@ final class InteractionEngine {
   static bool _recordCleanupWork(InteractionCleanupWorkEvent event) {
     final sink = Zone.current[_cleanupWorkZoneKey];
     if (sink is void Function(InteractionCleanupWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
+  static bool _recordEraserRouteWork(InteractionEraserRouteWorkEvent event) {
+    final sink = Zone.current[_eraserRouteWorkZoneKey];
+    if (sink is void Function(InteractionEraserRouteWorkEvent)) {
       sink(event);
     }
     return true;

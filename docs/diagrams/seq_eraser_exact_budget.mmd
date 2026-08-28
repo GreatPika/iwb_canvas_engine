@@ -26,7 +26,7 @@ sequenceDiagram
   User->>Surface: eraser down/move samples
   Surface->>Tools: handlePointer(CanvasPointerInput finite samples)
   Tools->>IE: normalized finite eraser sample and finite thickness
-  IE->>IE: append eraser corridor point in world coordinates
+  IE->>IE: admit distinct point into one retained corridor; resample 8001 to 4000 by floor index when needed
   IE->>ReadPort: eraserPreviewFacts(corridor points, eraser thickness)
   ReadPort->>Spatial: query preview erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
   Spatial-->>ReadPort: preview candidate handles or typed budget-exceeded
@@ -65,7 +65,8 @@ sequenceDiagram
   User->>Surface: eraser terminal up
   Surface->>Tools: handlePointer(CanvasPointerInput finite up)
   Tools->>IE: same-token finite terminal eraser intent
-  IE->>ReadPort: eraserTerminalFacts(corridor points, eraser thickness)
+  IE->>IE: admit distinct terminal point and freeze one retained immutable corridor snapshot
+  IE->>ReadPort: eraserTerminalFacts(the retained snapshot, eraser thickness)
   ReadPort->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
   Spatial-->>ReadPort: terminal candidate handles or typed budget-exceeded
 

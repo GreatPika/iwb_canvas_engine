@@ -259,6 +259,15 @@ hit testing, spatial candidate selection, exact eraser checks, commit-intent
 creation, committed document mutation, committed selection mutation, or resource
 mutation.
 
+An eraser session owns one mutable, interaction-private retained corridor. A
+`PointerSession` carries only that capture reference; it does not snapshot or
+replace it. Each distinct move and terminal point is admitted before any
+overflow resample. Down and admitted moves retain their existing bounded
+immutable preview reads in this release. Terminal freezes one immutable retained
+snapshot, performs one terminal read/evaluation from it, and derives the commit
+intent's `corridorPointCount` from that same snapshot. A rejected terminal
+starts no deletion preparation and uses the centralized cleanup route.
+
 For a nonempty terminal eraser intent, RuntimeRoot receives the Unit-2 filtered
 canonical Store entries and prepares the complete sparse deletion before calling
 the required guarded resolver. That preparation includes Store validation and

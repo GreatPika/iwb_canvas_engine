@@ -96,8 +96,8 @@ sequenceDiagram
     User->>Surface: pointer up
     Surface->>Tools: handlePointer(CanvasPointerInput finite up)
     Tools->>IE: same-token finite terminal sample
-    IE->>IE: append terminal point if distinct and trim corridor to eraser point limit
-    IE->>ReadPort: eraserTerminalFacts(corridor points, eraser thickness)
+    IE->>IE: admit terminal point if distinct; resample 8001 retained points to 4000, then freeze one immutable snapshot
+    IE->>ReadPort: eraserTerminalFacts(the retained snapshot, eraser thickness)
     ReadPort->>Spatial: query terminal erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
     Spatial-->>ReadPort: terminal candidate handles or typed non-candidate query outcome
     alt terminal query is invalid, stale, or spatial-budget-exceeded

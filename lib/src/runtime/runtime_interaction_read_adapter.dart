@@ -21,6 +21,11 @@ import 'runtime_interaction_move_read_models.dart';
 @visibleForTesting
 enum RuntimeEraserEntryRouteWorkKind {
   terminalReadStarted,
+  corridorEnvelopeReady,
+  spatialQueryReady,
+  candidatesReady,
+  exactCandidateChecked,
+  exactEvaluationReady,
   exactHitIdsReady,
   entriesReady,
 }
@@ -37,11 +42,19 @@ final class RuntimeEraserEntryRouteWorkEvent {
     required this.kind,
     this.exactHitIds = const [],
     this.entries = const [],
+    this.query = const InteractionReadQueryFacts.notRun(),
+    this.corridorPointCount = 0,
+    this.exactCheckCount = 0,
+    this.exactCandidateId,
   });
 
   final RuntimeEraserEntryRouteWorkKind kind;
   final List<CanvasElementId> exactHitIds;
   final List<DeletionEntryFacts> entries;
+  final InteractionReadQueryFacts query;
+  final int corridorPointCount;
+  final int exactCheckCount;
+  final CanvasElementId? exactCandidateId;
 }
 
 final Object _eraserEntryRouteWorkZoneKey = Object();
@@ -409,7 +422,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   // and budget branching in one snapshot so preview and terminal decisions
   // cannot observe different committed facts. Splitting those reads merely for
   // a metric would make that snapshot ownership less obvious.
-  // ignore: halstead-volume, source-lines-of-code, maintainability-index
+  // The terminal phases stay in this one snapshot owner so the trace cannot
+  // hide a second read behind a metric-only helper split.
+  // ignore: halstead-volume, source-lines-of-code, maintainability-index, cyclomatic-complexity
   EraserReadFacts _eraserFacts(
     EraserReadRequest request, {
     required _EraserExactBudget budget,
@@ -418,8 +433,9 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     if (terminal) {
       assert(
         _recordEraserEntryRouteWork(
-          const RuntimeEraserEntryRouteWorkEvent(
+          RuntimeEraserEntryRouteWorkEvent(
             kind: RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+            corridorPointCount: request.corridorPoints.length,
           ),
         ),
         'eraser entry route work observation failed',
@@ -431,12 +447,55 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       eraserThickness: request.eraserThickness,
       hitPadding: 0,
     );
+    if (terminal) {
+      assert(
+        _recordEraserEntryRouteWork(
+          const RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
+    }
     final query = _spatial.queryEraser(
       SpatialQueryWindow(
         boundsWorld: corridor.envelopeWorld,
         structuralRevision: context.structuralRevision,
       ),
     );
+    final spatialQueryFacts = interactionQueryFacts(
+      query,
+      const RuntimeResolvedSpatialCandidates(),
+    );
+    if (terminal) {
+      assert(
+        _recordEraserEntryRouteWork(
+          RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+            query: spatialQueryFacts,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
+    }
+    if (!interactionQueryHasCandidates(query)) {
+      return _finalizeEraserFacts(
+        (
+          terminal: terminal,
+          corridorPoints: corridor.points,
+          eraserThickness: request.eraserThickness,
+          controllerEpoch: context.controllerEpoch,
+          documentRevision: context.documentRevision,
+          query: spatialQueryFacts,
+        ),
+        (
+          exactCheckCount: 0,
+          exactBudgetExceeded: false,
+          exactHits: const <_EraserExactHit>[],
+          projectTerminalEntries: false,
+        ),
+      );
+    }
     final candidates = resolveInteractionCandidates(
       query,
       resolve: _frame.resolveElement,
@@ -450,6 +509,17 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
             skippedCandidateCount: candidates.skippedCandidateCount,
           )
         : rawQueryFacts;
+    if (terminal) {
+      assert(
+        _recordEraserEntryRouteWork(
+          RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.candidatesReady,
+            query: queryFacts,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
+    }
     final snapshot = (
       terminal: terminal,
       corridorPoints: corridor.points,
@@ -458,8 +528,17 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       documentRevision: context.documentRevision,
       query: queryFacts,
     );
-    if (!interactionQueryHasCandidates(query) ||
-        admittedCandidates.handles.length > budget.candidateLimit) {
+    if (admittedCandidates.handles.length > budget.candidateLimit) {
+      if (terminal) {
+        assert(
+          _recordEraserEntryRouteWork(
+            const RuntimeEraserEntryRouteWorkEvent(
+              kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+            ),
+          ),
+          'eraser entry route work observation failed',
+        );
+      }
       return _finalizeEraserFacts(snapshot, (
         exactCheckCount: 0,
         exactBudgetExceeded:
@@ -474,6 +553,16 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     for (final facts in admittedCandidates.facts) {
       exactChecks += 1;
       if (exactChecks > budget.exactCheckLimit) {
+        if (terminal) {
+          assert(
+            _recordEraserEntryRouteWork(
+              const RuntimeEraserEntryRouteWorkEvent(
+                kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+              ),
+            ),
+            'eraser entry route work observation failed',
+          );
+        }
         return _finalizeEraserFacts(snapshot, (
           exactCheckCount: exactChecks,
           exactBudgetExceeded: true,
@@ -481,9 +570,32 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
           projectTerminalEntries: false,
         ));
       }
+      if (terminal) {
+        assert(
+          _recordEraserEntryRouteWork(
+            RuntimeEraserEntryRouteWorkEvent(
+              kind: RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
+              exactCheckCount: exactChecks,
+              exactCandidateId: facts.id,
+            ),
+          ),
+          'eraser entry route work observation failed',
+        );
+      }
       if (_hitTestPolicy.exactEraserHit(corridor: corridor, facts: facts)) {
         exactHits.add(_EraserExactHit(facts.id, facts.orderToken));
       }
+    }
+
+    if (terminal) {
+      assert(
+        _recordEraserEntryRouteWork(
+          const RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
     }
 
     return _finalizeEraserFacts(snapshot, (

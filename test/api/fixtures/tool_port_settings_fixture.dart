@@ -7,8 +7,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import '../../support/runtime_with_document.dart';
 import '../../support/accept_deletion_commit.dart';
+import '../../support/runtime_root_with_committed_document_seed.dart';
 
 void main() {
   test(
@@ -30,6 +33,97 @@ void main() {
     'mode flag false and direct double tap stay bounded',
     _modeFlagFalseAndDirectDoubleTapStayBounded,
   );
+  test(
+    'tool change releases an active eraser without corridor work',
+    _toolChangeReleasesActiveEraserWithoutCorridorWork,
+  );
+  test(
+    'mode change releases an active eraser without corridor work',
+    _modeChangeReleasesActiveEraserWithoutCorridorWork,
+  );
+}
+
+// The tool-port route keeps capture identity and its cleanup work observation
+// together so the public setting change remains the asserted owner seam.
+// ignore: halstead-volume
+void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
+  final runtime = runtimeRootWithCommittedDocumentSeed(_document());
+  addTearDown(runtime.dispose);
+  runtime.tools.setMode(CanvasInteractionMode.draw);
+  runtime.tools.setDrawTool(CanvasDrawTool.eraser);
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 1)),
+  );
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
+  );
+  final retained = runtime.interactionEngine.activeSession?.eraserCapture;
+  if (retained == null) {
+    fail('tool cleanup did not begin with an eraser capture');
+  }
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+
+  InteractionEngine.observeCleanupWork(
+    cleanupEvents.add,
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        routeEvents.add,
+        () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
+      ),
+    ),
+  );
+
+  expect(runtime.interactionEngine.activeSession, isNull);
+  expect(retained.points, const [Offset(1, 1), Offset(4, 4)]);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
+}
+
+// Mode changes are a separate public lifecycle exit from tool changes. Keep
+// the direct owner observations here so a retained capture cannot hide behind
+// preview disappearance or an otherwise silent settings publication.
+// ignore: halstead-volume
+void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
+  final runtime = runtimeRootWithCommittedDocumentSeed(_document());
+  addTearDown(runtime.dispose);
+  runtime.tools.setMode(CanvasInteractionMode.draw);
+  runtime.tools.setDrawTool(CanvasDrawTool.eraser);
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 1)),
+  );
+  runtime.tools.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
+  );
+  final retained = runtime.interactionEngine.activeSession?.eraserCapture;
+  if (retained == null) {
+    fail('mode cleanup did not begin with an eraser capture');
+  }
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+
+  InteractionEngine.observeCleanupWork(
+    cleanupEvents.add,
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        routeEvents.add,
+        () => runtime.tools.setMode(CanvasInteractionMode.move),
+      ),
+    ),
+  );
+
+  expect(runtime.interactionEngine.activeSession, isNull);
+  expect(retained.points, const [Offset(1, 1), Offset(4, 4)]);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
 void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {

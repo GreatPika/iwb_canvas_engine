@@ -1,10 +1,13 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
+import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
+import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import 'package:iwb_canvas_engine/src/surface/pointer_adapter.dart';
 import '../../support/runtime_with_document.dart';
 
@@ -39,6 +42,58 @@ Future<void> expectInteractiveFalseActiveSessionCancel(
     runtime,
     staleGesture: gesture,
   );
+  await _expectInteractiveFalseReleasesActiveEraser(tester, runtime);
+}
+
+// The CanvasSurface route owns this public toggle; the existing frame bridge
+// recovers its already-attached root solely for owner-level lifecycle proof.
+// ignore: halstead-volume, source-lines-of-code
+Future<void> _expectInteractiveFalseReleasesActiveEraser(
+  WidgetTester tester,
+  CanvasRuntime runtime,
+) async {
+  runtime.tools.setDrawTool(CanvasDrawTool.eraser);
+  final gesture = await _downOnPaintHost(tester, const Offset(4, 5));
+  await gesture.moveTo(tester.getTopLeft(_paintHosts()) + const Offset(7, 8));
+  await tester.pump();
+  final root = canvasRuntimeFrameRootForSurface(runtime);
+  if (root == null) {
+    fail('CanvasSurface did not attach its runtime frame root.');
+  }
+  final capture = root.interactionEngine.activeSession?.eraserCapture;
+  if (capture == null) {
+    fail('interactive false did not begin with an eraser capture.');
+  }
+  final captureEvents = <Object>[];
+  final interactionEvents = <Object>[];
+  final readEvents = <Object>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+
+  await InteractionEngine.observeCleanupWork(
+    cleanupEvents.add,
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        interactionEvents.add,
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          readEvents.add,
+          () => tester.pumpWidget(
+            _SurfaceHost(runtime: runtime, interactive: false),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+
+  expect(root.interactionEngine.activeSession, isNull);
+  expect(capture.points, const [Offset(4, 5), Offset(7, 8)]);
+  expect(runtime.preview, isA<CanvasNoPreview>());
+  expect(captureEvents, isEmpty);
+  expect(interactionEvents, isEmpty);
+  expect(readEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
+  await gesture.removePointer();
 }
 
 Future<void> expectInteractiveFalsePendingLinePreserved(
@@ -303,7 +358,7 @@ final class _RuntimeMonitor {
         _runtime.selection.selectedElementIds,
       ),
       beforeResources = _resourceFacts(_runtime.resources.resources) {
-    _subscription = _runtime.actions.listen(actions.add);
+    _cancelSubscription = _runtime.actions.listen(actions.add).cancel;
     _runtime.state.addListener(_countStateTick);
   }
 
@@ -316,7 +371,7 @@ final class _RuntimeMonitor {
   final Set<CanvasElementId> beforeSelection;
   final List<_ResourceFact> beforeResources;
   final List<CanvasActionCommitted> actions = [];
-  late final StreamSubscription<CanvasActionCommitted> _subscription;
+  late final void Function() _cancelSubscription;
   int stateTicks = 0;
 
   void expectNoRuntimeEffects(CanvasRuntime runtime) {
@@ -337,9 +392,9 @@ final class _RuntimeMonitor {
     expect(actions, isEmpty);
   }
 
-  Future<void> dispose() async {
+  void dispose() {
     _runtime.state.removeListener(_countStateTick);
-    await _subscription.cancel();
+    _cancelSubscription();
   }
 
   void _countStateTick() {

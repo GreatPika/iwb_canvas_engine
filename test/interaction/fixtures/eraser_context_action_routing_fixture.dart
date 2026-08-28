@@ -15,6 +15,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.da
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_runtime_intents.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_sample_normalizer.dart';
+import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
@@ -33,6 +34,14 @@ void main() {
 }
 
 void _registerEraserTests() {
+  test('eraser capture retains the exact bounded approximation', () {
+    expect(_verifyEraserCaptureRetainedApproximation, returnsNormally);
+  });
+
+  test('real eraser route retains repeated bounded approximations', () {
+    expect(_verifyRepeatedRetainedEraserRouting, returnsNormally);
+  });
+
   test('eraser machine captures preview and commit decisions', () {
     expect(_verifyEraserMachineDecisions, returnsNormally);
   });
@@ -43,6 +52,10 @@ void _registerEraserTests() {
 
   test('eraser stale terminal cleanup produces no commit intent', () {
     expect(_verifyEraserStaleTerminalCleanup, returnsNormally);
+  });
+
+  test('eraser cleanup releases capture without displaced work', () {
+    expect(_verifyEraserCleanupDoesNoCaptureWork, returnsNormally);
   });
 
   test('draw stroke machine still rejects eraser', () {
@@ -236,7 +249,7 @@ void _registerRejectedContextTapTests() {
 
 // The machine assertions stay together to prove capture, preview, immutability,
 // and commit-intent fields on the same eraser transition sequence.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _verifyEraserMachineDecisions() {
   const machine = EraserMachine();
   final start = machine.start(
@@ -245,39 +258,237 @@ void _verifyEraserMachineDecisions() {
     style: CanvasDrawStyle.defaultStyle,
   );
   final eraser = start.eraser as PointerEraserCapture;
-  final movedEraser = eraser.appendPoint(const Offset(2, 3));
+  final admission = eraser.admitPoint(const Offset(2, 3));
+  expect(admission.admitted, isTrue);
 
   final preview = machine.preview(
-    eraser: movedEraser,
+    eraser: eraser,
+    corridorPoints: eraser.points,
     facts: _eraserFacts(
       corridor: const [Offset.zero, Offset(2, 3)],
       erasedIds: const [],
     ),
   );
   final projectedEntry = _projectedEntry();
+  final terminalFacts = _eraserFacts(
+    corridor: const [Offset.zero, Offset(2, 3), Offset(4, 5)],
+    erasedIds: [CanvasElementId('a')],
+    erasedEntries: [projectedEntry],
+  );
   final terminal = machine.terminal(
-    sessionId: const PointerSessionId(1),
-    pointerToken: const PointerSessionToken(2),
-    eraser: preview.eraser as PointerEraserCapture,
-    facts: _eraserFacts(
-      corridor: const [Offset.zero, Offset(2, 3), Offset(4, 5)],
-      erasedIds: [CanvasElementId('a')],
-      erasedEntries: [projectedEntry],
+    input: EraserTerminalInput(
+      sessionId: const PointerSessionId(1),
+      pointerToken: const PointerSessionToken(2),
+      eraser: preview.eraser as PointerEraserCapture,
+      facts: terminalFacts,
     ),
   );
 
   final eraserPreview = preview.preview as CanvasEraserPreview;
   final intent = terminal.intent as EraserCommitIntent;
-  expect(eraser.points, [Offset.zero]);
+  expect(eraser.points, [Offset.zero, const Offset(2, 3)]);
   expect(eraser.thickness, CanvasDrawStyle.defaultStyle.eraserThickness);
-  expect(preview.eraser, same(movedEraser));
+  expect(preview.eraser, same(eraser));
   expect(eraserPreview.corridor, [Offset.zero, const Offset(2, 3)]);
   expect(() => eraserPreview.corridor.clear(), throwsUnsupportedError);
   expect(intent.erasedElementIds, [CanvasElementId('a')]);
   expect(intent.erasedEntries, hasLength(1));
   expect(intent.erasedEntries.single.element, same(projectedEntry.element));
   expect(intent.eraserThickness, eraser.thickness);
-  expect(intent.corridorPointCount, 3);
+  expect(intent.corridorPointCount, terminalFacts.corridorPoints.length);
+}
+
+// This scenario keeps its retained-corridor observations together so that the
+// resample and duplicate assertions continue to describe one user interaction.
+// ignore: halstead-volume, source-lines-of-code
+void _verifyEraserCaptureRetainedApproximation() {
+  final source = <Offset>[
+    for (var index = 0; index <= 8000; index += 1)
+      Offset(index.toDouble(), (index % 7).toDouble()),
+  ];
+  final events = <PointerEraserCaptureWorkEvent>[];
+  final eraser = PointerEraserCapture(points: [source.first], thickness: 6);
+
+  PointerEraserCapture.observeWork(events.add, () {
+    for (final point in source.skip(1)) {
+      expect(eraser.admitPoint(point).admitted, isTrue);
+    }
+    expect(eraser.admitPoint(source.last).admitted, isFalse);
+  });
+
+  final retained = eraser.points;
+  expect(retained, hasLength(4000));
+  expect(retained.first, source.first);
+  expect(retained.last, source.last);
+  expect(retained, [
+    for (var index = 0; index < 4000; index += 1)
+      source[(index * (source.length - 1)) ~/ 3999],
+  ]);
+  expect(
+    events.where(
+      (event) => event.kind == PointerEraserCaptureWorkKind.resampled,
+    ),
+    hasLength(1),
+  );
+  expect(events.skip(events.length - 3).map((event) => event.kind), [
+    PointerEraserCaptureWorkKind.sampleAdmitted,
+    PointerEraserCaptureWorkKind.resampled,
+    PointerEraserCaptureWorkKind.duplicateSuppressed,
+  ]);
+  expect(
+    events.where(
+      (event) => event.kind == PointerEraserCaptureWorkKind.ordinaryAppend,
+    ),
+    everyElement(
+      isA<PointerEraserCaptureWorkEvent>()
+          .having(
+            (event) => event.retainedPrefixPointsTraversed,
+            'traversed',
+            0,
+          )
+          .having((event) => event.retainedPrefixPointsCopied, 'copied', 0),
+    ),
+  );
+}
+
+// This route deliberately keeps its two overflow cycles and terminal boundary
+// together: the retained public preview and terminal read must have one truth.
+// The direct overflow/publication comparisons are intentionally co-located so
+// equal-count snapshots cannot be separated from their two real resamples.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index, cyclomatic-complexity
+void _verifyRepeatedRetainedEraserRouting() {
+  final source = <Offset>[
+    for (var index = 0; index <= 12001; index += 1)
+      Offset(index.toDouble(), ((index * 17) % 29).toDouble()),
+  ];
+  final readPort = _FakeReadPort();
+  final engine = _eraserEngine(readPort);
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  PointerEraserCapture.observeWork(captureEvents.add, () {
+    engine.handlePointerSample(
+      _sample(1, source.first, CanvasPointerLifecyclePhase.down),
+      _context(1),
+    );
+    for (var index = 1; index < source.length; index += 1) {
+      engine.handlePointerSample(
+        _sample(1, source[index], CanvasPointerLifecyclePhase.move),
+        _context(1),
+      );
+    }
+  });
+
+  final preview = engine.preview as CanvasEraserPreview;
+  expect(preview.corridor, hasLength(4000));
+  expect(readPort.lastPreviewCorridor, preview.corridor);
+  expect(
+    captureEvents.where(
+      (event) => event.kind == PointerEraserCaptureWorkKind.resampled,
+    ),
+    everyElement(
+      isA<PointerEraserCaptureWorkEvent>().having(
+        (event) => event.retainedPointCount,
+        'retained count',
+        4000,
+      ),
+    ),
+  );
+  expect(
+    captureEvents
+        .where((event) => event.kind == PointerEraserCaptureWorkKind.resampled)
+        .length,
+    2,
+  );
+  final resamples = [
+    for (final event in captureEvents)
+      if (event.kind == PointerEraserCaptureWorkKind.resampled) event,
+  ];
+  expect(resamples.map((event) => event.retainedPrefixPointsTraversed), [
+    8001,
+    8001,
+  ]);
+  expect(resamples.map((event) => event.retainedPrefixPointsCopied), [
+    4000,
+    4000,
+  ]);
+  final firstFullPublication = captureEvents.firstWhere(
+    (event) =>
+        event.kind == PointerEraserCaptureWorkKind.snapshotCreated &&
+        event.retainedPointCount == 4000,
+  );
+  final postResamplePublications = [
+    for (var index = 0; index < captureEvents.length - 1; index += 1)
+      if (captureEvents[index].kind == PointerEraserCaptureWorkKind.resampled)
+        captureEvents[index + 1],
+  ];
+  expect(postResamplePublications.map((event) => event.kind), [
+    PointerEraserCaptureWorkKind.snapshotCreated,
+    PointerEraserCaptureWorkKind.snapshotCreated,
+  ]);
+  expect(
+    [
+      firstFullPublication,
+      ...postResamplePublications,
+    ].map((event) => event.retainedPointCount),
+    [4000, 4000, 4000],
+  );
+  expect(
+    [
+      firstFullPublication,
+      ...postResamplePublications,
+    ].map((event) => event.retainedPrefixPointsTraversed),
+    [4000, 4000, 4000],
+  );
+  expect(
+    [
+      firstFullPublication,
+      ...postResamplePublications,
+    ].map((event) => event.retainedPrefixPointsCopied),
+    [4000, 4000, 4000],
+  );
+  expect(
+    captureEvents.where(
+      (event) => event.kind == PointerEraserCaptureWorkKind.ordinaryAppend,
+    ),
+    everyElement(
+      isA<PointerEraserCaptureWorkEvent>()
+          .having(
+            (event) => event.retainedPrefixPointsTraversed,
+            'traversed',
+            0,
+          )
+          .having((event) => event.retainedPrefixPointsCopied, 'copied', 0),
+    ),
+  );
+
+  final terminalSource = <Offset>[
+    for (var index = 0; index <= 8000; index += 1)
+      Offset(index.toDouble(), ((index * 13) % 31).toDouble()),
+  ];
+  final terminalRead = _FakeReadPort(erasedIds: [CanvasElementId('a')]);
+  final terminalEngine = _eraserEngine(terminalRead);
+  terminalEngine.handlePointerSample(
+    _sample(2, terminalSource.first, CanvasPointerLifecyclePhase.down),
+    _context(1),
+  );
+  for (var index = 1; index < terminalSource.length - 1; index += 1) {
+    terminalEngine.handlePointerSample(
+      _sample(2, terminalSource[index], CanvasPointerLifecyclePhase.move),
+      _context(1),
+    );
+  }
+  final terminal = terminalEngine.handlePointerSample(
+    _sample(2, terminalSource.last, CanvasPointerLifecyclePhase.up),
+    _context(1),
+  );
+  final expected = [
+    for (var index = 0; index < 4000; index += 1)
+      terminalSource[(index * (terminalSource.length - 1)) ~/ 3999],
+  ];
+  final intent = terminal.eraserCommit as EraserCommitIntent;
+  expect(terminalRead.lastTerminalCorridor, expected);
+  expect(intent.corridorPointCount, expected.length);
+  expect(expected.first, terminalSource.first);
+  expect(expected.last, terminalSource.last);
 }
 
 DeletionEntryFacts _projectedEntry() => DeletionEntryFacts(
@@ -289,23 +500,36 @@ DeletionEntryFacts _projectedEntry() => DeletionEntryFacts(
 
 // The routing assertions stay together to prove session capture, preview reads,
 // terminal reads, and admission handoff for one public pointer sequence.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _verifyEraserInteractionRouting() {
   final readPort = _FakeReadPort(erasedIds: [CanvasElementId('erasable-a')]);
   final engine = _eraserEngine(readPort);
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  late PointerEraserCapture downCapture;
 
-  final down = engine.handlePointerSample(
-    _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
-    _context(1),
-  );
-  final move = engine.handlePointerSample(
-    _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
-    _context(1),
-  );
-  final terminal = engine.handlePointerSample(
-    _sample(1, const Offset(4, 5), CanvasPointerLifecyclePhase.up),
-    _context(1),
-  );
+  final result = InteractionEngine.observeEraserRouteWork(routeEvents.add, () {
+    final down = engine.handlePointerSample(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(1),
+    );
+    final capture = engine.activeSession?.eraserCapture;
+    if (capture == null) {
+      fail('eraser down did not retain its capture');
+    }
+    downCapture = capture;
+    final move = engine.handlePointerSample(
+      _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+      _context(1),
+    );
+    final terminal = engine.handlePointerSample(
+      _sample(1, const Offset(4, 5), CanvasPointerLifecyclePhase.up),
+      _context(1),
+    );
+    return (down: down, move: move, terminal: terminal);
+  });
+  final down = result.down;
+  final move = result.move;
+  final terminal = result.terminal;
 
   expect(down.kind, InteractionPointerAdmissionKind.admitted);
   expect(move.kind, InteractionPointerAdmissionKind.admitted);
@@ -313,7 +537,10 @@ void _verifyEraserInteractionRouting() {
   expect(engine.activeSession?.eraserCapture?.points, [
     Offset.zero,
     const Offset(2, 3),
+    const Offset(4, 5),
   ]);
+  expect(engine.activeSession?.eraserCapture, same(downCapture));
+  expect(downCapture.points.last, const Offset(4, 5));
   expect(engine.preview, isA<CanvasEraserPreview>());
   final intent = terminal.eraserCommit as EraserCommitIntent;
   expect(intent.erasedElementIds, [CanvasElementId('erasable-a')]);
@@ -321,6 +548,13 @@ void _verifyEraserInteractionRouting() {
   expect(terminal.strokeCommit, isNull);
   expect(readPort.previewReadCount, 2);
   expect(readPort.terminalReadCount, 1);
+  expect(routeEvents, [
+    InteractionEraserRouteWorkEvent.downSnapshot,
+    InteractionEraserRouteWorkEvent.previewPublished,
+    InteractionEraserRouteWorkEvent.moveSnapshot,
+    InteractionEraserRouteWorkEvent.previewPublished,
+    InteractionEraserRouteWorkEvent.terminalSnapshot,
+  ]);
 }
 
 void _verifyEraserStaleTerminalCleanup() {
@@ -343,6 +577,106 @@ void _verifyEraserStaleTerminalCleanup() {
   expect(terminal.eraserCommit, isNull);
   expect(engine.activeSession, isNull);
   expect(engine.preview, isA<CanvasNoPreview>());
+}
+
+void _verifyEraserCleanupDoesNoCaptureWork() {
+  _expectEraserCleanupWithoutWork(CanvasPointerLifecyclePhase.cancel, 1);
+  _expectEraserCleanupWithoutWork(CanvasPointerLifecyclePhase.up, 2);
+  _expectNamedEraserCleanupWithoutWork(
+    PointerCleanupReason.modeToolChange,
+    (engine) =>
+        engine.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.marker)),
+  );
+  _expectNamedEraserCleanupWithoutWork(
+    PointerCleanupReason.interactiveDisabled,
+    (engine) => engine.interactiveDisabledCleanup(),
+  );
+  _expectNamedEraserCleanupWithoutWork(
+    PointerCleanupReason.preparedLoadSuccess,
+    (engine) => engine.prepareLoadCleanup(),
+  );
+  _expectNamedEraserCleanupWithoutWork(
+    PointerCleanupReason.dispose,
+    (engine) => engine.disposeCleanup(),
+  );
+}
+
+// The four lifecycle owners intentionally share one capture-release oracle.
+// ignore: halstead-volume
+void _expectNamedEraserCleanupWithoutWork(
+  PointerCleanupReason expectedReason,
+  Object? Function(InteractionEngine engine) operation,
+) {
+  final engine = _eraserEngine(_FakeReadPort())
+    ..handlePointerSample(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(1),
+    );
+  final capture = engine.activeSession?.eraserCapture;
+  if (capture == null) {
+    fail('eraser down did not retain a capture');
+  }
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final cleanupReasons = <PointerCleanupReason>[];
+
+  InteractionEngine.observeCleanup(
+    cleanupReasons.add,
+    () => InteractionEngine.observeCleanupWork(
+      cleanupEvents.add,
+      () => PointerEraserCapture.observeWork(
+        captureEvents.add,
+        () => InteractionEngine.observeEraserRouteWork(
+          routeEvents.add,
+          () => operation(engine),
+        ),
+      ),
+    ),
+  );
+
+  expect(cleanupReasons, [expectedReason]);
+  expect(engine.activeSession, isNull);
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
+}
+
+void _expectEraserCleanupWithoutWork(
+  CanvasPointerLifecyclePhase phase,
+  int terminalEpoch,
+) {
+  final engine = _eraserEngine(_FakeReadPort())
+    ..handlePointerSample(
+      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      _context(1),
+    );
+  final capture = engine.activeSession?.eraserCapture;
+  if (capture == null) {
+    fail('eraser down did not retain a capture');
+  }
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final routeEvents = <InteractionEraserRouteWorkEvent>[];
+  final cleanupEvents = <InteractionCleanupWorkEvent>[];
+
+  InteractionEngine.observeCleanupWork(
+    cleanupEvents.add,
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        routeEvents.add,
+        () => engine.handlePointerSample(
+          _sample(1, const Offset(4, 5), phase),
+          _context(terminalEpoch),
+        ),
+      ),
+    ),
+  );
+
+  expect(engine.activeSession, isNull);
+  expect(captureEvents, isEmpty);
+  expect(routeEvents, isEmpty);
+  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
 void _verifyDrawStrokeRejectsEraserSession() {
@@ -834,6 +1168,8 @@ final class _FakeReadPort implements InteractionReadPort {
   var _directContextReads = 0;
   var _pendingContextReads = 0;
   var _secondContextReads = 0;
+  List<Offset>? lastPreviewCorridor;
+  List<Offset>? lastTerminalCorridor;
   void Function()? onDirectContextRead;
 
   int get previewReadCount => _previewReads;
@@ -845,6 +1181,7 @@ final class _FakeReadPort implements InteractionReadPort {
   @override
   EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
     _previewReads += 1;
+    lastPreviewCorridor = request.corridorPoints;
 
     return _eraserFacts(corridor: request.corridorPoints, erasedIds: const []);
   }
@@ -852,6 +1189,7 @@ final class _FakeReadPort implements InteractionReadPort {
   @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
     _terminalReads += 1;
+    lastTerminalCorridor = request.corridorPoints;
 
     return _eraserFacts(corridor: request.corridorPoints, erasedIds: erasedIds);
   }

@@ -45,6 +45,10 @@ void main() {
   test('eraser previews publish only preview revision', () {
     expect(_verifyEraserPreviewOnlyPublication, returnsNormally);
   });
+
+  test('post-resample eraser preview remains isolated', () {
+    expect(_verifyPostResampleEraserPreviewIsolation, returnsNormally);
+  });
 }
 
 void _verifyPreviewOnlyPublication() {
@@ -187,6 +191,51 @@ void _verifyEraserPreviewOnlyPublication() {
     const Offset(3, 4),
     const [Offset.zero, Offset(3, 4)],
   );
+}
+
+// This one gesture retains the exact public-state comparison across overflow.
+// ignore: halstead-volume
+void _verifyPostResampleEraserPreviewIsolation() {
+  final scenario = _eraserPreviewScenario();
+  final surface = Object();
+  scenario.root.attachSurface(surface);
+  addTearDown(() => scenario.root.detachSurface(surface));
+  scenario.root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.down, Offset.zero),
+  );
+  scenario.root.handlePointer(
+    _sample(CanvasPointerLifecyclePhase.move, const Offset(3, 4)),
+  );
+  scenario.snapshots.clear();
+  final before = scenario.root.state.value;
+  final beforeProjectionBuilds = scenario.root.projectionBuildCount;
+  final frames = <RuntimeSurfaceFrameSignal?>[];
+  scenario.root.surfaceFrameSignal.addListener(() {
+    frames.add(scenario.root.surfaceFrameSignal.value);
+  });
+
+  for (var index = 2; index <= 8000; index += 1) {
+    scenario.root.handlePointer(
+      _sample(
+        CanvasPointerLifecyclePhase.move,
+        Offset((index % 24).toDouble(), ((index * 7) % 24).toDouble()),
+      ),
+    );
+  }
+
+  final preview = scenario.root.preview as CanvasEraserPreview;
+  expect(preview.corridor, hasLength(4000));
+  expect(scenario.snapshots, isNotEmpty);
+  _expectOnlyPreviewRevisionChanged(
+    before,
+    scenario.snapshots.last,
+    previewDelta: 7999,
+  );
+  expect(scenario.root.projectionBuildCount, beforeProjectionBuilds);
+  expect(scenario.actions, isEmpty);
+  expect(frames, isNotEmpty);
+  expect(frames.last?.mainCanvas, isFalse);
+  expect(frames.last?.overlayCanvas, isTrue);
 }
 
 _DrawPreviewScenario _drawPreviewScenario() {
@@ -342,15 +391,16 @@ void _expectLinePreview(CanvasPreviewState preview, {required Offset end}) {
 
 void _expectOnlyPreviewRevisionChanged(
   CanvasRuntimeState before,
-  CanvasRuntimeState after,
-) {
+  CanvasRuntimeState after, {
+  int previewDelta = 1,
+}) {
   expect(after.revisions.document, before.revisions.document);
   expect(after.revisions.selection, before.revisions.selection);
   expect(after.revisions.resourceVisual, before.revisions.resourceVisual);
   expect(after.revisions.interaction, before.revisions.interaction);
   expect(after.revisions.viewCamera, before.revisions.viewCamera);
   expect(after.revisions.epoch, before.revisions.epoch);
-  expect(after.revisions.preview, before.revisions.preview + 1);
+  expect(after.revisions.preview, before.revisions.preview + previewDelta);
   expect(after.summary, before.summary);
 }
 

@@ -29,11 +29,12 @@ stateDiagram-v2
 
     state "Overlay corridor preview" as CorridorPreview
     note right of CorridorPreview
-      Corridor points are world-space preview facts only.
+      Corridor points are immutable snapshots of one retained world-space
+      approximation only. A move still performs its bounded preview read.
       Updates request overlay repaint only.
     end note
 
-    CorridorPreview --> CorridorPreview: same-token same-controllerEpoch finite move / append corridor
+    CorridorPreview --> CorridorPreview: same-token same-controllerEpoch finite move / admit one point; resample 8001 to 4000 if needed
     CorridorPreview --> CandidateRefresh: same-token same-controllerEpoch finite move / refresh candidates
     CorridorPreview --> CorridorPreview: stale token, controllerEpoch mismatch, or non-finite move / ignore
     CorridorPreview --> TerminalGate: same-token up

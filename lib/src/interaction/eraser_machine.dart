@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../contracts/internal/deletion_entry_projection_port.dart';
+import '../contracts/public/canvas_contract_limits.dart';
 import '../contracts/public/canvas_preview.dart';
 import '../contracts/public/canvas_tools.dart';
 import 'interaction_read_port.dart';
@@ -29,12 +33,13 @@ final class EraserMachine {
 
   EraserPreviewDecision preview({
     required PointerEraserCapture eraser,
+    required List<Offset> corridorPoints,
     required EraserReadFacts facts,
   }) {
     return EraserPreviewDecision.changed(
       eraser: eraser,
       preview: CanvasEraserPreview(
-        corridor: facts.corridorPoints,
+        corridor: corridorPoints,
         thickness: eraser.thickness,
       ),
       exactBudgetExceeded: facts.exactBudgetExceeded,
@@ -43,57 +48,184 @@ final class EraserMachine {
 
   EraserPreviewDecision initialPreview({
     required PointerEraserCapture eraser,
+    required List<Offset> corridorPoints,
     required EraserReadFacts facts,
   }) {
     return EraserPreviewDecision.changed(
       eraser: eraser,
       preview: CanvasEraserPreview(
-        corridor: facts.corridorPoints,
+        corridor: corridorPoints,
         thickness: eraser.thickness,
       ),
       exactBudgetExceeded: facts.exactBudgetExceeded,
     );
   }
 
-  EraserTerminalDecision terminal({
-    required PointerSessionId sessionId,
-    required PointerSessionToken pointerToken,
-    required PointerEraserCapture eraser,
-    required EraserReadFacts facts,
-  }) {
-    if (facts.exactBudgetExceeded || facts.erasedEntries.isEmpty) {
+  EraserTerminalDecision terminal({required EraserTerminalInput input}) {
+    if (input.facts.exactBudgetExceeded || input.facts.erasedEntries.isEmpty) {
       return const EraserTerminalDecision.cleanupOnly();
     }
 
     return EraserTerminalDecision.commit(
-      sessionId: sessionId,
-      pointerToken: pointerToken,
-      eraser: eraser,
-      corridorPointCount: facts.corridorPoints.length,
-      erasedEntries: facts.erasedEntries,
+      sessionId: input.sessionId,
+      pointerToken: input.pointerToken,
+      eraser: input.eraser,
+      corridorPointCount: input.facts.corridorPoints.length,
+      erasedEntries: input.facts.erasedEntries,
     );
   }
 }
 
+final class EraserTerminalInput {
+  const EraserTerminalInput({
+    required this.sessionId,
+    required this.pointerToken,
+    required this.eraser,
+    required this.facts,
+  });
+
+  final PointerSessionId sessionId;
+  final PointerSessionToken pointerToken;
+  final PointerEraserCapture eraser;
+  final EraserReadFacts facts;
+}
+
+@visibleForTesting
+enum PointerEraserCaptureWorkKind {
+  sampleAdmitted,
+  duplicateSuppressed,
+  ordinaryAppend,
+  resampled,
+  snapshotCreated,
+}
+
+@visibleForTesting
+final class PointerEraserCaptureWorkEvent {
+  const PointerEraserCaptureWorkEvent({
+    required this.kind,
+    required this.retainedPointCount,
+    this.retainedPrefixPointsTraversed = 0,
+    this.retainedPrefixPointsCopied = 0,
+  });
+
+  final PointerEraserCaptureWorkKind kind;
+  final int retainedPointCount;
+  final int retainedPrefixPointsTraversed;
+  final int retainedPrefixPointsCopied;
+}
+
+final Object _eraserCaptureWorkZoneKey = Object();
+
+/// The active eraser corridor is the sole mutable trajectory. Callers obtain
+/// immutable snapshots only when crossing preview or read boundaries.
 final class PointerEraserCapture {
   PointerEraserCapture({
     required Iterable<Offset> points,
     required this.thickness,
-  }) : points = List.unmodifiable(points);
+  }) : _points = List<Offset>.of(points);
 
-  final List<Offset> points;
+  List<Offset> _points;
   final double thickness;
 
-  PointerEraserCapture appendPoint(Offset point) {
-    if (points.isNotEmpty && points.last == point) {
-      return this;
+  @visibleForTesting
+  static T observeWork<T>(
+    void Function(PointerEraserCaptureWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_eraserCaptureWorkZoneKey: sink});
+
+  List<Offset> get points => snapshot();
+
+  // Admission and overflow resampling must remain one atomic owner operation:
+  // extracting metric-shaped helpers would obscure append-before-resample order.
+  // ignore: halstead-volume, source-lines-of-code
+  PointerEraserSampleAdmission admitPoint(Offset point) {
+    if (_points.isNotEmpty && _points.last == point) {
+      assert(
+        _recordWork(
+          PointerEraserCaptureWorkEvent(
+            kind: PointerEraserCaptureWorkKind.duplicateSuppressed,
+            retainedPointCount: _points.length,
+          ),
+        ),
+        'eraser capture work observation failed',
+      );
+      return const PointerEraserSampleAdmission.duplicate();
     }
 
-    return PointerEraserCapture(
-      points: [...points, point],
-      thickness: thickness,
+    _points.add(point);
+    assert(
+      _recordWork(
+        PointerEraserCaptureWorkEvent(
+          kind: PointerEraserCaptureWorkKind.sampleAdmitted,
+          retainedPointCount: _points.length,
+        ),
+      ),
+      'eraser capture work observation failed',
     );
+    if (_points.length > canvasEraserCorridorSoftLimit) {
+      final input = _points;
+      _points = List<Offset>.generate(
+        canvasEraserCorridorResampleTarget,
+        (index) =>
+            input[(index * (input.length - 1)) ~/
+                (canvasEraserCorridorResampleTarget - 1)],
+        growable: true,
+      );
+      assert(
+        _recordWork(
+          PointerEraserCaptureWorkEvent(
+            kind: PointerEraserCaptureWorkKind.resampled,
+            retainedPointCount: _points.length,
+            retainedPrefixPointsTraversed: input.length,
+            retainedPrefixPointsCopied: _points.length,
+          ),
+        ),
+        'eraser capture work observation failed',
+      );
+    } else {
+      assert(
+        _recordWork(
+          PointerEraserCaptureWorkEvent(
+            kind: PointerEraserCaptureWorkKind.ordinaryAppend,
+            retainedPointCount: _points.length,
+          ),
+        ),
+        'eraser capture work observation failed',
+      );
+    }
+    return const PointerEraserSampleAdmission.admitted();
   }
+
+  List<Offset> snapshot() {
+    final snapshot = List<Offset>.unmodifiable(_points);
+    assert(
+      _recordWork(
+        PointerEraserCaptureWorkEvent(
+          kind: PointerEraserCaptureWorkKind.snapshotCreated,
+          retainedPointCount: snapshot.length,
+          retainedPrefixPointsTraversed: _points.length,
+          retainedPrefixPointsCopied: _points.length,
+        ),
+      ),
+      'eraser capture work observation failed',
+    );
+    return snapshot;
+  }
+
+  static bool _recordWork(PointerEraserCaptureWorkEvent event) {
+    final sink = Zone.current[_eraserCaptureWorkZoneKey];
+    if (sink is void Function(PointerEraserCaptureWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+}
+
+final class PointerEraserSampleAdmission {
+  const PointerEraserSampleAdmission.admitted() : admitted = true;
+  const PointerEraserSampleAdmission.duplicate() : admitted = false;
+
+  final bool admitted;
 }
 
 final class EraserStartDecision {

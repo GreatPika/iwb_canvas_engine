@@ -162,6 +162,15 @@ Eraser:
 
 ```text
 - eraser corridor is a polyline in world coordinates;
+- interaction retains one bounded approximation of that polyline: after a
+  distinct admission grows it past 8000 points, output index i selects input
+  index `(i * (n - 1)) ~/ 3999` for i in `[0, 3999]`;
+- first and newest points are retained. The resulting shortcut can add an exact
+  hit across a discarded detour, while a discarded narrow detour can miss one;
+- preview reads each consume an immutable snapshot derived from that sole
+  retained approximation; pointer-up admits its terminal endpoint first, then
+  terminal exact geometry consumes exactly one new immutable terminal snapshot.
+  No preview or terminal path reads a raw trajectory;
 - coarse query uses corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0;
 - exact deletion uses segment-to-family geometry checks;
 - deletes only isDeletable=true elements;

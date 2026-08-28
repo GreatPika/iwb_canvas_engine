@@ -2440,6 +2440,12 @@ final class CanvasEraserPreview extends CanvasPreviewState {
 }
 ```
 
+For a long eraser gesture, `CanvasEraserPreview.corridor` is itself the
+bounded, endpoint-preserving retained approximation used by the interaction;
+it is not a raw pointer-sample history. The approximation can miss a narrow
+discarded detour, and one of its shortcut chords can produce a false-positive
+hit across that detour. Accepted erase actions use the same retained corridor.
+
 Rules:
 
 ```text
@@ -2613,6 +2619,10 @@ Payload collection rules:
 - CanvasClearActionPayload.removedElementIds defensively copies input;
 - CanvasClearActionPayload.removedResourceIds defensively copies input;
 - CanvasEraseActionPayload.erasedElementIds defensively copies input;
+- CanvasEraseActionPayload.corridorPointCount is the number of points in the
+  retained endpoint-preserving eraser corridor used for the accepted terminal
+  evaluation; it is the count for the same approximation exposed by
+  CanvasEraserPreview.corridor, not the count of raw pointer samples;
 - CanvasTextEditActionPayload carries text lengths only and never raw previous
   or next text content;
 - CanvasActionCommitted.elementIds defensively copies input.

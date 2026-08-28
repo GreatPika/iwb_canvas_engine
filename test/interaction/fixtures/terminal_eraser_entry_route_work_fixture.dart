@@ -7,7 +7,9 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
@@ -17,7 +19,7 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 
 // The assertions stay together as the terminal route's acceptance owner; each
 // one reuses the same captured trace without duplicating its false-positive kills.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void registerTerminalEraserEntryRouteWorkTest() {
   test('eraser preview keeps canonical ids without terminal Store work', () {
     final result = _runEraserPreviewEntryRoute(
@@ -98,8 +100,317 @@ void registerTerminalEraserEntryRouteWorkTest() {
     expect(base.projectionBuildDelta, 0);
     expect(withUnrelated.projectionBuildDelta, 0);
   });
+  test('real terminal pointer route reads once before preparation', () {
+    expect(_verifyRealTerminalPointerRoute, returnsNormally);
+  });
+  test('real empty terminal reads once without preparation', () {
+    expect(
+      () => _verifyRealTerminalNoPreparation(
+        document: CanvasDocument(),
+        terminalPosition: const Offset(60, 0),
+        expectedKinds: _emptyTerminalKinds,
+      ),
+      returnsNormally,
+    );
+  });
+  test('real candidate-overflow terminal reads once without preparation', () {
+    expect(
+      () => _verifyRealTerminalNoPreparation(
+        document: _overCandidateTerminalDocument(),
+        terminalPosition: const Offset(60, 0),
+        expectedKinds: _spatialOverflowTerminalKinds,
+        expectedBudgetReason:
+            InteractionReadBudgetExceededReason.fallbackCandidateBudgetExceeded,
+      ),
+      returnsNormally,
+    );
+  });
+  test('real spatial-overflow terminal stops before candidate work', () {
+    expect(
+      () => _verifyRealTerminalNoPreparation(
+        document: CanvasDocument(),
+        downPosition: const Offset(-10000000, 0),
+        terminalPosition: const Offset(10000000, 0),
+        expectedKinds: _spatialOverflowTerminalKinds,
+        expectedBudgetReason:
+            InteractionReadBudgetExceededReason.queryTileBudgetExceeded,
+      ),
+      returnsNormally,
+    );
+  });
 }
 
+const _shortTerminalKinds = [
+  RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+  RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+  RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+  RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+];
+
+const _emptyTerminalKinds = [
+  ..._shortTerminalKinds,
+  RuntimeEraserEntryRouteWorkKind.exactHitIdsReady,
+  RuntimeEraserEntryRouteWorkKind.entriesReady,
+];
+
+const _spatialOverflowTerminalKinds = [
+  RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+  RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+  RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+];
+
+// One pointer-up trace must retain all terminal owner phases, actual snapshot,
+// exact checks, and preparation; splitting it would weaken their ordering proof.
+// ignore: halstead-volume, source-lines-of-code
+void _verifyRealTerminalPointerRoute() {
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _terminalEraserDocument(_terminalEraserTargetIds(1), 0),
+  );
+  addTearDown(root.dispose);
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  final routeEvents = <RuntimeEraserEntryRouteWorkEvent>[];
+  final interactionEvents = <InteractionEraserRouteWorkEvent>[];
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final exactEvents = <HitTestPolicyExactEraserWorkEvent>[];
+  final terminalTrace = <Object>[];
+  final preparation = <RuntimeDeletionRouteConstructionKind>[];
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, const Offset(60, 0)),
+  );
+
+  HitTestPolicy.observeExactEraserWork(
+    (event) {
+      exactEvents.add(event);
+      terminalTrace.add(event);
+    },
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => RuntimeRoot.observeDeletionRouteConstruction(
+        preparation.add,
+        () => InteractionEngine.observeEraserRouteWork(
+          interactionEvents.add,
+          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+            (event) {
+              routeEvents.add(event);
+              terminalTrace.add(event);
+            },
+            () => root.handlePointer(
+              _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  expect(interactionEvents, [InteractionEraserRouteWorkEvent.terminalSnapshot]);
+  expect(routeEvents.map((event) => event.kind), [
+    RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+    RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+    RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+    RuntimeEraserEntryRouteWorkKind.candidatesReady,
+    RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
+    RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+    RuntimeEraserEntryRouteWorkKind.exactHitIdsReady,
+    RuntimeEraserEntryRouteWorkKind.entriesReady,
+  ]);
+  expect(preparation, [
+    RuntimeDeletionRouteConstructionKind.eraserPreparedCommit,
+    RuntimeDeletionRouteConstructionKind.request,
+  ]);
+  _expectSingleTerminalSnapshot(captureEvents, routeEvents);
+  _expectOneExactPass(routeEvents, exactEvents, terminalTrace);
+}
+
+CanvasPointerSample _pointer(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) => CanvasPointerSample(
+  pointerId: 99,
+  phase: phase,
+  position: position,
+  kind: PointerDeviceKind.touch,
+);
+
+// The failure variants share the real pointer-up owner and differ only by the
+// committed input that stops terminal evaluation before RuntimeRoot prepares.
+// The no-preparation variants deliberately share one full phase/owner trace.
+// ignore: halstead-volume, number-of-parameters, source-lines-of-code
+void _verifyRealTerminalNoPreparation({
+  required CanvasDocument document,
+  required Offset terminalPosition,
+  required List<RuntimeEraserEntryRouteWorkKind> expectedKinds,
+  Offset downPosition = Offset.zero,
+  InteractionReadBudgetExceededReason? expectedBudgetReason,
+}) {
+  final root = runtimeRootWithCommittedDocumentSeed(document);
+  addTearDown(root.dispose);
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
+  final routeEvents = <RuntimeEraserEntryRouteWorkEvent>[];
+  final interactionEvents = <InteractionEraserRouteWorkEvent>[];
+  final captureEvents = <PointerEraserCaptureWorkEvent>[];
+  final exactEvents = <HitTestPolicyExactEraserWorkEvent>[];
+  final terminalTrace = <Object>[];
+  final preparation = <RuntimeDeletionRouteConstructionKind>[];
+  root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, downPosition));
+  root.handlePointer(
+    _pointer(CanvasPointerLifecyclePhase.move, terminalPosition),
+  );
+
+  HitTestPolicy.observeExactEraserWork(
+    (event) {
+      exactEvents.add(event);
+      terminalTrace.add(event);
+    },
+    () => PointerEraserCapture.observeWork(
+      captureEvents.add,
+      () => RuntimeRoot.observeDeletionRouteConstruction(
+        preparation.add,
+        () => InteractionEngine.observeEraserRouteWork(
+          interactionEvents.add,
+          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+            (event) {
+              routeEvents.add(event);
+              terminalTrace.add(event);
+            },
+            () => root.handlePointer(
+              _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  expect(interactionEvents, [InteractionEraserRouteWorkEvent.terminalSnapshot]);
+  expect(routeEvents.map((event) => event.kind), expectedKinds);
+  _expectSingleTerminalSnapshot(captureEvents, routeEvents);
+  expect(
+    routeEvents.where(
+      (event) =>
+          event.kind == RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
+    ),
+    isEmpty,
+  );
+  expect(exactEvents, isEmpty);
+  expect(terminalTrace.whereType<HitTestPolicyExactEraserWorkEvent>(), isEmpty);
+  if (expectedBudgetReason != null) {
+    final spatialQuery = routeEvents
+        .firstWhere(
+          (event) =>
+              event.kind == RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+        )
+        .query;
+    expect(spatialQuery.status, InteractionReadQueryStatus.budgetExceeded);
+    expect(spatialQuery.budgetExceededReason, expectedBudgetReason);
+  }
+  expect(preparation, isEmpty);
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+void _expectSingleTerminalSnapshot(
+  List<PointerEraserCaptureWorkEvent> captureEvents,
+  List<RuntimeEraserEntryRouteWorkEvent> routeEvents,
+) {
+  final snapshot = captureEvents.singleWhere(
+    (event) => event.kind == PointerEraserCaptureWorkKind.snapshotCreated,
+  );
+  final terminalRead = routeEvents.firstWhere(
+    (event) =>
+        event.kind == RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+  );
+  expect(snapshot.retainedPointCount, terminalRead.corridorPointCount);
+  expect(snapshot.retainedPrefixPointsTraversed, snapshot.retainedPointCount);
+  expect(snapshot.retainedPrefixPointsCopied, snapshot.retainedPointCount);
+}
+
+// The marker/owner correlation and their enclosing phase order are one
+// falsification signal; splitting it would make duplicate exact work easier to
+// hide across helpers.
+// ignore: halstead-volume, source-lines-of-code
+void _expectOneExactPass(
+  List<RuntimeEraserEntryRouteWorkEvent> routeEvents,
+  List<HitTestPolicyExactEraserWorkEvent> exactEvents,
+  List<Object> terminalTrace,
+) {
+  final candidateIndex = routeEvents.indexWhere(
+    (event) => event.kind == RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  );
+  final exactCompleteIndex = routeEvents.indexWhere(
+    (event) =>
+        event.kind == RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+  );
+  final checks = [
+    for (var index = candidateIndex + 1; index < exactCompleteIndex; index += 1)
+      if (routeEvents[index].kind ==
+          RuntimeEraserEntryRouteWorkKind.exactCandidateChecked)
+        routeEvents[index],
+  ];
+  expect(candidateIndex, isNonNegative);
+  expect(exactCompleteIndex, greaterThan(candidateIndex));
+  expect(checks.length, routeEvents[candidateIndex].query.candidateCount);
+  expect(checks.map((event) => event.exactCheckCount), [1]);
+  expect(checks.map((event) => event.exactCandidateId), [
+    CanvasElementId('target-0'),
+  ]);
+  expect(exactEvents.map((event) => event.candidateId), [
+    CanvasElementId('target-0'),
+  ]);
+  expect(
+    checks.map((event) => event.exactCandidateId),
+    exactEvents.map((event) => event.candidateId),
+  );
+  final candidatesReadyTraceIndex = terminalTrace.indexWhere(
+    (event) =>
+        event is RuntimeEraserEntryRouteWorkEvent &&
+        event.kind == RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  );
+  final exactCompleteTraceIndex = terminalTrace.indexWhere(
+    (event) =>
+        event is RuntimeEraserEntryRouteWorkEvent &&
+        event.kind == RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+  );
+  final exactInvocationTraceIndexes = [
+    for (var index = 0; index < terminalTrace.length; index += 1)
+      if (terminalTrace[index] is HitTestPolicyExactEraserWorkEvent) index,
+  ];
+  expect(candidatesReadyTraceIndex, isNonNegative);
+  expect(exactCompleteTraceIndex, greaterThan(candidatesReadyTraceIndex));
+  expect(exactInvocationTraceIndexes, hasLength(exactEvents.length));
+  expect(
+    exactInvocationTraceIndexes,
+    everyElement(
+      allOf(
+        greaterThan(candidatesReadyTraceIndex),
+        lessThan(exactCompleteTraceIndex),
+      ),
+    ),
+  );
+}
+
+CanvasDocument _overCandidateTerminalDocument() => CanvasDocument(
+  layers: [
+    CanvasLayer(
+      id: CanvasLayerId('candidate-layer'),
+      elements: [
+        for (var index = 0; index <= 4096; index += 1)
+          CanvasRectElement(
+            id: CanvasElementId('candidate-$index'),
+            transform: CanvasTransform.translation(Offset.zero),
+            size: const Size(10, 10),
+          ),
+      ],
+    ),
+  ],
+);
+
+// The direct adapter/intent comparison stays whole so each exact-check event
+// remains ordered with the same immutable entries it is validating.
+// ignore: halstead-volume
 void _expectCompleteTerminalRoute(
   _TerminalEraserEntryRouteWork result,
   List<CanvasElementId> expectedIds,
@@ -112,6 +423,12 @@ void _expectCompleteTerminalRoute(
   }
   expect(result.routeKinds, [
     RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+    RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+    RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+    RuntimeEraserEntryRouteWorkKind.candidatesReady,
+    for (var index = 0; index < expectedIds.length; index += 1)
+      RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
+    RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
     RuntimeEraserEntryRouteWorkKind.exactHitIdsReady,
     RuntimeEraserEntryRouteWorkKind.entriesReady,
   ]);
@@ -135,13 +452,15 @@ _TerminalEraserEntryRouteWork _runTerminalEraserEntryRoute({
   );
   final intent = const EraserMachine()
       .terminal(
-        sessionId: const PointerSessionId(1),
-        pointerToken: const PointerSessionToken(2),
-        eraser: PointerEraserCapture(
-          points: const [Offset.zero, Offset(60, 0)],
-          thickness: 2,
+        input: EraserTerminalInput(
+          sessionId: const PointerSessionId(1),
+          pointerToken: const PointerSessionToken(2),
+          eraser: PointerEraserCapture(
+            points: const [Offset.zero, Offset(60, 0)],
+            thickness: 2,
+          ),
+          facts: read.facts,
         ),
-        facts: read.facts,
       )
       .intent;
 

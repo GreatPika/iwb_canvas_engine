@@ -42,7 +42,7 @@ These limits are mandatory for v1 and define the current package validation boun
 | interactive stroke soft limit | `22000` |
 | interactive stroke trim-to | `18000` |
 | interactive eraser points soft limit | `8000` |
-| interactive eraser points trim-to | `4000` |
+| interactive eraser points resample target | `4000` |
 | max palette items | `1024` per palette list |
 | max font family length | `256` |
 | coordinate min/max | `[-1e7, 1e7]` |
@@ -51,6 +51,7 @@ These limits are mandatory for v1 and define the current package validation boun
 | max thickness | `1e5` |
 | max hitPadding | `1e5` |
 | opacity range | `[0, 1]` |
+
 | marker opacity range | `[0, 1]` |
 | transform scale singular value min/max | `[1e-4, 1e4]` |
 | path hit samples per metric | `2048` |
@@ -61,6 +62,13 @@ These limits are mandatory for v1 and define the current package validation boun
 | metadata max total encoded bytes | `1MB` |
 | diagnostic verbose preview length | default `256`, range `[1, 4096]` chars |
 | diagnostic verbose list entries | default `32`, range `[1, 128]` |
+
+The executable interaction-owned eraser policy admits each distinct world point
+once. When admission grows the retained corridor from 8000 to 8001 points, it
+immediately replaces that corridor with 4000 points; output point `i` is input
+point `(i * (n - 1)) ~/ 3999`. This endpoint-preserving retained approximation,
+not a raw input history, is the only corridor used by later preview and terminal
+work.
 
 Validation is applied at:
 

@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_element.dart';
@@ -10,6 +13,15 @@ import 'geometry_policy.dart';
 typedef FrameElementResolver =
     FrameElementFacts? Function(FrameElementHandle handle);
 
+@visibleForTesting
+final class HitTestPolicyExactEraserWorkEvent {
+  const HitTestPolicyExactEraserWorkEvent({required this.candidateId});
+
+  final CanvasElementId candidateId;
+}
+
+final Object _exactEraserWorkZoneKey = Object();
+
 final class HitTestResult {
   const HitTestResult({required this.id, required this.orderToken});
 
@@ -19,11 +31,20 @@ final class HitTestResult {
 
 // Point, marquee, eraser, and context hit checks stay in one geometry policy so
 // every interaction path shares the same eligibility and exact-hit rules.
-// ignore: weighted-methods-per-class
+// Its assertion-only eraser observer belongs with that actual operation; a
+// second helper owner would obscure what is being counted.
+// ignore: weighted-methods-per-class, number-of-methods
 final class HitTestPolicy {
   const HitTestPolicy({this.geometryPolicy = const GeometryPolicy()});
 
   final GeometryPolicy geometryPolicy;
+
+  /// Observes actual eraser geometry invocations in assertion builds only.
+  @visibleForTesting
+  static T observeExactEraserWork<T>(
+    void Function(HitTestPolicyExactEraserWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_exactEraserWorkZoneKey: sink});
 
   CanvasElementId? topmostHit({
     required Offset point,
@@ -166,6 +187,12 @@ final class HitTestPolicy {
     required EraserCorridor corridor,
     required FrameElementFacts facts,
   }) {
+    assert(
+      _recordExactEraserWork(
+        HitTestPolicyExactEraserWorkEvent(candidateId: facts.id),
+      ),
+      'exact eraser work observation failed',
+    );
     if (!_isEraserEligible(corridor, facts, geometryPolicy)) {
       return false;
     }
@@ -179,6 +206,14 @@ final class HitTestPolicy {
       CanvasElementKind.stroke => _eraserHitsStroke(corridor, facts),
       CanvasElementKind.path => _eraserHitsPath(corridor, facts),
     };
+  }
+
+  static bool _recordExactEraserWork(HitTestPolicyExactEraserWorkEvent event) {
+    final sink = Zone.current[_exactEraserWorkZoneKey];
+    if (sink is void Function(HitTestPolicyExactEraserWorkEvent)) {
+      sink(event);
+    }
+    return true;
   }
 }
 

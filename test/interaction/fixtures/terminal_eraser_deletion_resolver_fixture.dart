@@ -15,8 +15,11 @@ import 'package:iwb_canvas_engine/src/contracts/internal/prepared_selection_effe
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
+import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
@@ -26,7 +29,9 @@ import '../../support/accept_deletion_commit.dart';
 
 // Route registrations stay visible together so every terminal callback family
 // remains auditable without a second fixture registry that can drift.
-// ignore: source-lines-of-code
+// The accepted resolver callback families share this registration owner; a
+// split registry would weaken auditability of their terminal lifecycle scope.
+// ignore: source-lines-of-code, halstead-volume
 void main() {
   test(
     'terminal eraser sends the exact Store entries before accepting',
@@ -69,6 +74,162 @@ void main() {
   test('terminal eraser preparation failures clean and rethrow unchanged', () {
     _terminalEraserPreparationFailuresFailFast();
   });
+  test('resampled eraser terminal carries its retained point count', () {
+    _resampledEraserTerminalCarriesRetainedCount();
+  });
+  test('retained approximation exposes detour and shortcut witnesses', () {
+    _retainedApproximationGeometryWitnesses();
+  });
+  test('terminal cleanup does no retained corridor work after its phase', () {
+    _terminalCleanupDoesNoDisplacedCorridorWork();
+  });
+}
+
+// The two targets share one discarded first detour: its original point hits
+// the upper target while the retained chord hits only the lower target.
+// ignore: halstead-volume, source-lines-of-code
+void _retainedApproximationGeometryWitnesses() {
+  final missedTargetId = CanvasElementId('retained-detour-miss');
+  final shortcutTargetId = CanvasElementId('retained-shortcut-hit');
+  CanvasDeletionCommitRequest? request;
+  final actions = <CanvasActionCommitted>[];
+  final root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(
+        CanvasDocument(
+          layers: [
+            CanvasLayer(
+              id: CanvasLayerId('retained-layer'),
+              elements: [
+                CanvasRectElement(
+                  id: missedTargetId,
+                  transform: CanvasTransform.translation(const Offset(-1, 9)),
+                  size: const Size(2, 2),
+                ),
+                CanvasRectElement(
+                  id: shortcutTargetId,
+                  transform: CanvasTransform.translation(const Offset(-1, -1)),
+                  size: const Size(2, 2),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (candidate) {
+        request = candidate;
+        return CanvasDeletionDecision.accept;
+      },
+    ),
+  );
+  addTearDown(root.dispose);
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(subscription.cancel);
+  final source = _retainedWitnessSource();
+  final retained = _startEraserAlong(root, source);
+  final expected = [
+    for (var index = 0; index < 4000; index += 1)
+      source[(index * (source.length - 1)) ~/ 3999],
+  ];
+
+  root.handlePointer(_sampleAt(CanvasPointerLifecyclePhase.up, source.last));
+
+  expect(retained?.points, expected);
+  expect(retained?.points, isNot(contains(source[1])));
+  final payload = actions.single.payload as CanvasEraseActionPayload;
+  expect(request?.entries.map((entry) => entry.element.id), [shortcutTargetId]);
+  expect(payload.erasedElementIds, [shortcutTargetId]);
+  expect(payload.corridorPointCount, expected.length);
+  expect(payload.erasedElementIds, isNot(contains(missedTargetId)));
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+List<Offset> _retainedWitnessSource() => [
+  const Offset(-10, 0),
+  const Offset(0, 10),
+  const Offset(10, 0),
+  for (var index = 3; index <= 8000; index += 1)
+    Offset(1000 + index.toDouble(), (index % 5).toDouble()),
+];
+
+void _resampledEraserTerminalCarriesRetainedCount() {
+  final actions = <CanvasActionCommitted>[];
+  late RuntimeRoot root;
+  root = RuntimeRoot.test(
+    store: DocumentStoreKernel.withCommittedDocumentForTesting(
+      CommittedDocument(_document()),
+    ),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        expect(
+          root.interactionEngine.activeSession?.eraserCapture?.points,
+          hasLength(4000),
+        );
+        return CanvasDeletionDecision.accept;
+      },
+    ),
+  );
+  addTearDown(root.dispose);
+  final subscription = root.actions.listen(actions.add);
+  addTearDown(subscription.cancel);
+
+  final retained = _startEraser(root, retainedOverflow: true);
+  root.handlePointer(_sample(CanvasPointerLifecyclePhase.up));
+
+  final payload = actions.single.payload as CanvasEraseActionPayload;
+  expect(payload.corridorPointCount, 4000);
+  expect(retained?.points, hasLength(4000));
+  expect(root.interactionEngine.activeSession, isNull);
+}
+
+// This trace uses each actual owner instead of aggregate counters: terminal
+// capture/read work must be complete before cleanup starts, and cleanup may
+// only release the already-retained capture.
+// ignore: halstead-volume, source-lines-of-code
+void _terminalCleanupDoesNoDisplacedCorridorWork() {
+  for (final decision in [
+    CanvasDeletionDecision.cancel,
+    CanvasDeletionDecision.accept,
+  ]) {
+    final trace = <String>[];
+    late RuntimeRoot root;
+    root = RuntimeRoot.test(
+      store: DocumentStoreKernel.withCommittedDocumentForTesting(
+        CommittedDocument(_document()),
+      ),
+      config: CanvasRuntimeConfig(deletionCommitResolver: (_) => decision),
+    );
+    addTearDown(root.dispose);
+    final retained = _startEraser(root, retainedOverflow: true);
+
+    InteractionEngine.observeCleanupWork(
+      (event) => trace.add('cleanup:$event'),
+      () => PointerEraserCapture.observeWork(
+        (event) => trace.add('capture:${event.kind}'),
+        () => InteractionEngine.observeEraserRouteWork(
+          (event) => trace.add('interaction:$event'),
+          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+            (event) => trace.add('read:${event.kind}'),
+            () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+          ),
+        ),
+      ),
+    );
+
+    final cleanupStart = trace.indexOf(
+      'cleanup:${InteractionCleanupWorkEvent.started}',
+    );
+    expect(cleanupStart, isNonNegative);
+    expect(trace.skip(cleanupStart + 1), everyElement(startsWith('cleanup:')));
+    expect(
+      trace,
+      contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),
+    );
+    expect(retained?.points, hasLength(4000));
+    expect(root.interactionEngine.activeSession, isNull);
+  }
 }
 
 // Exact request identity and cleanup-before-public-delivery share this one
@@ -326,7 +487,7 @@ void _terminalEraserRetainsLayersAndResources() {
 }
 
 // Shared pointer setup keeps both no-effect outcomes against one cleanup oracle.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _terminalCancelAndThrowAreContained() {
   for (final thrown in <Object?>[
     null,
@@ -335,6 +496,7 @@ void _terminalCancelAndThrowAreContained() {
     _ThrownEraserObject(),
   ]) {
     var calls = 0;
+    PointerEraserCapture? retained;
     final root = RuntimeRoot.test(
       store: DocumentStoreKernel.withCommittedDocumentForTesting(
         CommittedDocument(_document()),
@@ -342,6 +504,7 @@ void _terminalCancelAndThrowAreContained() {
       config: CanvasRuntimeConfig(
         deletionCommitResolver: (_) {
           calls += 1;
+          expect(retained?.points, hasLength(4000));
           if (thrown != null) {
             // This terminal route deliberately covers ordinary object throws.
             // ignore: only_throw_errors
@@ -362,12 +525,16 @@ void _terminalCancelAndThrowAreContained() {
     });
     final before = root.readDocument();
     final construction = <RuntimeDeletionRouteConstructionKind>[];
-    _startEraser(root);
+    final cleanupTrace = <String>[];
+    retained = _startEraser(root, retainedOverflow: true);
 
     expect(
       () => RuntimeRoot.observeDeletionRouteConstruction(
         construction.add,
-        () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+        () => _observeTerminalCleanupWork(
+          cleanupTrace,
+          () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+        ),
       ),
       returnsNormally,
     );
@@ -377,8 +544,10 @@ void _terminalCancelAndThrowAreContained() {
       RuntimeDeletionRouteConstructionKind.request,
     ]);
     expect(root.readDocument(), before);
+    expect(retained?.points, hasLength(4000));
     expect(root.preview, isA<CanvasNoPreview>());
     expect(root.interactionEngine.activeSession, isNull);
+    _expectCleanupTraceHasNoDisplacedWork(cleanupTrace);
     if (thrown != null) {
       expect(root.diagnosticRecords, hasLength(1));
       expect(
@@ -559,7 +728,8 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
       });
     }, (error, _) => errors.add(error));
     root.selection.setSelection([CanvasElementId('erasable')]);
-    _startEraser(root);
+    final retained = _startEraser(root, retainedOverflow: true);
+    final cleanupTrace = <String>[];
     armed = true;
     RuntimeRoot.observeRouteTemporalEvents(
       (event) {
@@ -570,11 +740,17 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
       },
       () => SelectionKernel.observePreparedInstall(
         () => events.add('selection'),
-        () => DocumentStoreKernel.observeDeletionPreparedInstall((event) {
-          if (event == DeletionPreparedInstallEvent.installed) {
-            events.add('store');
-          }
-        }, () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up))),
+        () => DocumentStoreKernel.observeDeletionPreparedInstall(
+          (event) {
+            if (event == DeletionPreparedInstallEvent.installed) {
+              events.add('store');
+            }
+          },
+          () => _observeTerminalCleanupWork(
+            cleanupTrace,
+            () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+          ),
+        ),
       ),
     );
     // Record immediately after the public terminal returns. A deferred Store
@@ -585,8 +761,10 @@ Future<void> _terminalEraserDeliveryFailuresRemainFinal() async {
     expect(resolverCalls, 1);
     expect(errors, isNotEmpty);
     expect(_idsAfterEraser(root), isEmpty);
+    expect(retained?.points, hasLength(4000));
     expect(root.preview, isA<CanvasNoPreview>());
     expect(root.interactionEngine.activeSession, isNull);
+    _expectCleanupTraceHasNoDisplacedWork(cleanupTrace);
     expect(events, [
       'resolver-return',
       'store',
@@ -618,6 +796,7 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
     terminal: (root) =>
         root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     expectedCleanup: PointerCleanupReason.noOpTerminal,
+    readsTerminal: true,
   );
   _expectSilentEraserTerminal(
     document: _document(),
@@ -625,6 +804,7 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
     terminal: (root) =>
         root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     expectedCleanup: PointerCleanupReason.noOpTerminal,
+    readsTerminal: true,
   );
   _expectSilentEraserTerminal(
     document: _document(),
@@ -638,17 +818,21 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
       ),
     ),
     expectedCleanup: PointerCleanupReason.invalidTerminal,
+    readsTerminal: false,
   );
 }
 
 // One helper keeps the public route setup and its complete no-effect oracle
 // together; splitting them would duplicate the same lifecycle witness.
-// ignore: halstead-volume
+// The public terminal variants need their route-specific input and one shared
+// owner-state oracle; splitting them would duplicate the same lifecycle proof.
+// ignore: halstead-volume, number-of-parameters, source-lines-of-code, maintainability-index
 void _expectSilentEraserTerminal({
   required CanvasDocument document,
   required Set<CanvasElementKind>? eraserElementKinds,
   required void Function(RuntimeRoot root) terminal,
   required PointerCleanupReason expectedCleanup,
+  required bool readsTerminal,
 }) {
   var resolverCalls = 0;
   final root = RuntimeRoot.test(
@@ -669,15 +853,33 @@ void _expectSilentEraserTerminal({
   addTearDown(subscription.cancel);
   final beforeDocument = root.readDocument();
   final beforeSelection = root.selection.selectedElementIds;
+  final beforeState = root.state.value;
+  final beforeProjectionBuilds = root.projectionBuildCount;
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   final cleanupReasons = <PointerCleanupReason>[];
+  final cleanupWork = <InteractionCleanupWorkEvent>[];
+  final captureWork = <PointerEraserCaptureWorkEvent>[];
+  final routeWork = <InteractionEraserRouteWorkEvent>[];
+  final readWork = <RuntimeEraserEntryRouteWorkEvent>[];
 
-  _startEraser(root);
+  final retained = _startEraser(root, retainedOverflow: true);
   RuntimeRoot.observeDeletionRouteConstruction(
     construction.add,
     () => InteractionEngine.observeCleanup(
       cleanupReasons.add,
-      () => terminal(root),
+      () => InteractionEngine.observeCleanupWork(
+        cleanupWork.add,
+        () => PointerEraserCapture.observeWork(
+          captureWork.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeWork.add,
+            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+              readWork.add,
+              () => terminal(root),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 
@@ -686,10 +888,43 @@ void _expectSilentEraserTerminal({
   expect(cleanupReasons, [expectedCleanup]);
   expect(root.readDocument(), beforeDocument);
   expect(root.selection.selectedElementIds, beforeSelection);
+  expect(root.state.value.revisions.document, beforeState.revisions.document);
+  expect(root.state.value.revisions.selection, beforeState.revisions.selection);
+  expect(
+    root.state.value.revisions.resourceVisual,
+    beforeState.revisions.resourceVisual,
+  );
+  expect(
+    root.state.value.revisions.viewCamera,
+    beforeState.revisions.viewCamera,
+  );
+  expect(root.projectionBuildCount, beforeProjectionBuilds);
   expect(actions, isEmpty);
   expect(root.diagnosticRecords, isEmpty);
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
+  expect(retained?.points, hasLength(readsTerminal ? 4000 : 8000));
+  expect(
+    captureWork.where(
+      (event) => event.kind == PointerEraserCaptureWorkKind.snapshotCreated,
+    ),
+    readsTerminal ? hasLength(1) : isEmpty,
+  );
+  expect(
+    routeWork,
+    readsTerminal
+        ? [InteractionEraserRouteWorkEvent.terminalSnapshot]
+        : isEmpty,
+  );
+  expect(cleanupWork, contains(InteractionCleanupWorkEvent.sessionReleased));
+  expect(
+    readWork
+        .where(
+          (event) => event.kind == RuntimeEraserEntryRouteWorkKind.entriesReady,
+        )
+        .expand((event) => event.entries),
+    isEmpty,
+  );
 }
 
 // Preparation is intentionally faulted at the two real owner boundaries. The
@@ -800,6 +1035,7 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
   final beforeSelection = root.selection.selectedElementIds;
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   final cleanupReasons = <PointerCleanupReason>[];
+  final cleanupTrace = <String>[];
   _startEraser(root);
 
   RuntimeRoot.observeDeletionRouteConstruction(
@@ -809,7 +1045,10 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
       () => failure.inject(
         error,
         () => expect(
-          () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+          () => _observeTerminalCleanupWork(
+            cleanupTrace,
+            () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+          ),
           throwsA(same(error)),
         ),
       ),
@@ -831,6 +1070,33 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
   expect(root.diagnosticRecords, isEmpty);
   expect(root.preview, isA<CanvasNoPreview>());
   expect(root.interactionEngine.activeSession, isNull);
+  _expectCleanupTraceHasNoDisplacedWork(cleanupTrace);
+}
+
+T _observeTerminalCleanupWork<T>(List<String> trace, T Function() operation) {
+  return InteractionEngine.observeCleanupWork(
+    (event) => trace.add('cleanup:$event'),
+    () => PointerEraserCapture.observeWork(
+      (event) => trace.add('capture:${event.kind}'),
+      () => InteractionEngine.observeEraserRouteWork(
+        (event) => trace.add('interaction:$event'),
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          (event) => trace.add('read:${event.kind}'),
+          operation,
+        ),
+      ),
+    ),
+  );
+}
+
+void _expectCleanupTraceHasNoDisplacedWork(List<String> trace) {
+  final start = trace.indexOf('cleanup:${InteractionCleanupWorkEvent.started}');
+  expect(start, isNonNegative);
+  expect(trace.skip(start + 1), everyElement(startsWith('cleanup:')));
+  expect(
+    trace,
+    contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),
+  );
 }
 
 final class _EraserPreparationFailureCase {
@@ -944,21 +1210,68 @@ final class _GuardedEraserMutationFamily {
   final void Function(RuntimeRoot root) invoke;
 }
 
-void _startEraser(RuntimeRoot root) {
+PointerEraserCapture? _startEraser(
+  RuntimeRoot root, {
+  bool retainedOverflow = false,
+}) {
   root.setInteractionMode(CanvasInteractionMode.draw);
   root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.down));
   root.handlePointer(_sample(CanvasPointerLifecyclePhase.move));
+  if (retainedOverflow) {
+    for (var index = 2; index <= 8000; index += 1) {
+      root.handlePointer(
+        CanvasPointerSample(
+          pointerId: 3,
+          phase: CanvasPointerLifecyclePhase.move,
+          position: Offset(
+            (index % 24).toDouble(),
+            ((index * 7) % 24).toDouble(),
+          ),
+          kind: PointerDeviceKind.touch,
+          timestampMs: 23,
+        ),
+      );
+    }
+  }
+  return root.interactionEngine.activeSession?.eraserCapture;
+}
+
+PointerEraserCapture? _startEraserAlong(RuntimeRoot root, List<Offset> points) {
+  root.setInteractionMode(CanvasInteractionMode.draw);
+  root.setDrawStyle(
+    CanvasDrawStyle(tool: CanvasDrawTool.eraser, eraserThickness: 2),
+  );
+  final context = InteractionPointerContext(
+    viewCameraOffset: root.viewCameraOffset,
+    controllerEpoch: 0,
+  );
+  root.interactionEngine.handlePointerSample(
+    _sampleAt(CanvasPointerLifecyclePhase.down, points.first),
+    context,
+  );
+  for (final point in points.skip(1).take(points.length - 2)) {
+    root.interactionEngine.handlePointerSample(
+      _sampleAt(CanvasPointerLifecyclePhase.move, point),
+      context,
+    );
+  }
+  return root.interactionEngine.activeSession?.eraserCapture;
 }
 
 CanvasPointerSample _sample(CanvasPointerLifecyclePhase phase) =>
-    CanvasPointerSample(
-      pointerId: 3,
-      phase: phase,
-      position: const Offset(1, 1),
-      kind: PointerDeviceKind.touch,
-      timestampMs: 23,
-    );
+    _sampleAt(phase, const Offset(1, 1));
+
+CanvasPointerSample _sampleAt(
+  CanvasPointerLifecyclePhase phase,
+  Offset position,
+) => CanvasPointerSample(
+  pointerId: 3,
+  phase: phase,
+  position: position,
+  kind: PointerDeviceKind.touch,
+  timestampMs: 23,
+);
 
 CanvasDocument _document() => CanvasDocument(
   layers: [
