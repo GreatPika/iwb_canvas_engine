@@ -10,6 +10,7 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
@@ -18,6 +19,7 @@ import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_session_identity.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_diagnostics_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
@@ -472,7 +474,10 @@ void _expectNoCaptureOrReadWorkAfterCleanup(List<String> trace) {
               event.startsWith('capture:') ||
               event.startsWith('read:') ||
               event.startsWith('geometry:') ||
-              event.startsWith('spatial:'),
+              event.startsWith('spatial:') ||
+              event.startsWith('candidate:') ||
+              event.startsWith('exact:') ||
+              event == 'projection',
         ),
     isEmpty,
   );
@@ -485,11 +490,20 @@ void _expectNoCaptureOrReadWorkAfterCleanup(List<String> trace) {
 T _observeTerminalGeometryAndSpatialWork<T>(
   List<String> trace,
   T Function() operation,
-) => GeometryPolicy.observeEraserWork(
-  (event) => trace.add('geometry:${event.name}'),
-  () => SpatialKernel.observeEraserWork(
-    (event) => trace.add('spatial:${event.name}'),
-    operation,
+) => observeRuntimeCandidateResolutionWork(
+  (event) => trace.add('candidate:${event.name}'),
+  () => HitTestPolicy.observeExactEraserWork(
+    (event) => trace.add('exact:${event.candidateId.value}'),
+    () => DocumentStoreKernel.observeDeletionEntryProjection(
+      (_) => trace.add('projection'),
+      () => GeometryPolicy.observeEraserWork(
+        (event) => trace.add('geometry:${event.name}'),
+        () => SpatialKernel.observeEraserWork(
+          (event) => trace.add('spatial:${event.name}'),
+          operation,
+        ),
+      ),
+    ),
   ),
 );
 
