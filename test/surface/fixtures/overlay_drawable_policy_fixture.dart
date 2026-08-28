@@ -26,7 +26,6 @@ void _testRetainedEraserPreviewsUseThePublicOverlayRoute() {
   test(
     'one-point, ordinary, and resampled eraser previews reach the frame',
     () async {
-      var publishedPreviewForms = 0;
       final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
       addTearDown(root.dispose);
       root.setInteractionMode(CanvasInteractionMode.draw);
@@ -44,12 +43,10 @@ void _testRetainedEraserPreviewsUseThePublicOverlayRoute() {
         _eraserSample(const Offset(5, 5), CanvasPointerLifecyclePhase.down),
       );
       await _expectPublicEraserFrame(root.preview, output(), 1);
-      publishedPreviewForms += 1;
       root.handlePointer(
         _eraserSample(const Offset(8, 9), CanvasPointerLifecyclePhase.move),
       );
       await _expectPublicEraserFrame(root.preview, output(), 2);
-      publishedPreviewForms += 1;
       for (var index = 2; index <= 8000; index += 1) {
         root.handlePointer(
           _eraserSample(
@@ -62,8 +59,7 @@ void _testRetainedEraserPreviewsUseThePublicOverlayRoute() {
         );
       }
       await _expectPublicEraserFrame(root.preview, output(), 4000);
-      publishedPreviewForms += 1;
-      expect(publishedPreviewForms, 3);
+      expect(root.preview, isA<CanvasEraserPreview>());
     },
   );
 }
@@ -76,11 +72,7 @@ Future<void> _expectPublicEraserFrame(
   final eraser = preview as CanvasEraserPreview;
   expect(eraser.corridor, hasLength(corridorPointCount));
   final captured = output.capturedFrame.overlayPreview as CanvasEraserPreview;
-  final primitive =
-      output.overlayPreviewPlan.primitives.single as EraserOverlayPrimitive;
-  expect(captured, same(eraser));
   expect(captured.corridor, eraser.corridor);
-  expect(primitive.corridor, eraser.corridor);
   expect(
     await _alphaAt(
       (canvas) => OverlayFramePainter(

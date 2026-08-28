@@ -1,5 +1,5 @@
-// Test bodies are named helpers so DCM metrics stay on each scenario; the
-// assertions live in those helpers and DCM does not follow tear-offs.
+// Public test scenarios stay named while shared setup and assertions remain in
+// cohesive helpers; DCM does not follow tear-offs across those boundaries.
 // The lifecycle observer imports are explicit so the public port route keeps
 // the actual cleanup owners visible.
 // ignore_for_file: missing-test-assertion, number-of-imports
@@ -51,10 +51,26 @@ void main() {
   );
 }
 
-// The tool-port route keeps capture identity and its cleanup work observation
-// together so the public setting change remains the asserted owner seam.
+void _toolChangeReleasesActiveEraserWithoutCorridorWork() =>
+    _settingsChangeReleasesActiveEraserWithoutCorridorWork(
+      (tools) => tools.setDrawTool(CanvasDrawTool.marker),
+    );
+
+void _modeChangeReleasesActiveEraserWithoutCorridorWork() =>
+    _settingsChangeReleasesActiveEraserWithoutCorridorWork(
+      (tools) => tools.setMode(CanvasInteractionMode.move),
+    );
+
+// The tool-port routes share the same lifecycle boundary. Keeping their full
+// observer stack and oracle together makes drift between equivalent cleanup
+// exits visible while each public operation remains a separately named test.
+// The setup, owner observers, and final oracle must stay together to prove the
+// complete cleanup boundary; splitting them to satisfy metrics would hide that
+// invariant behind helpers with no independent meaning.
 // ignore: halstead-volume, source-lines-of-code
-void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
+void _settingsChangeReleasesActiveEraserWithoutCorridorWork(
+  void Function(CanvasToolPort tools) changeSetting,
+) {
   final runtime = runtimeRootWithCommittedDocumentSeed(_document());
   addTearDown(runtime.dispose);
   runtime.tools.setMode(CanvasInteractionMode.draw);
@@ -67,7 +83,7 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   );
   final retained = runtime.interactionEngine.activeSession?.eraserCapture;
   if (retained == null) {
-    fail('tool cleanup did not begin with an eraser capture');
+    fail('settings cleanup did not begin with an eraser capture');
   }
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
@@ -94,73 +110,7 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
             captureEvents.add,
             () => InteractionEngine.observeEraserRouteWork(
               routeEvents.add,
-              () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-
-  expect(runtime.interactionEngine.activeSession, isNull);
-  expect(retained.points, const [Offset(1, 1), Offset(4, 4)]);
-  expect(runtime.preview, isA<CanvasNoPreview>());
-  expect(captureEvents, isEmpty);
-  expect(routeEvents, isEmpty);
-  expect(geometryEvents, isEmpty);
-  expect(spatialEvents, isEmpty);
-  expect(candidateEvents, isEmpty);
-  expect(exactEvents, isEmpty);
-  expect(projectionEvents, isEmpty);
-  expect(readEvents, isEmpty);
-  expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
-}
-
-// Mode changes are a separate public lifecycle exit from tool changes. Keep
-// the direct owner observations here so a retained capture cannot hide behind
-// preview disappearance or an otherwise silent settings publication.
-// ignore: halstead-volume, source-lines-of-code
-void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
-  final runtime = runtimeRootWithCommittedDocumentSeed(_document());
-  addTearDown(runtime.dispose);
-  runtime.tools.setMode(CanvasInteractionMode.draw);
-  runtime.tools.setDrawTool(CanvasDrawTool.eraser);
-  runtime.tools.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.down, const Offset(1, 1)),
-  );
-  runtime.tools.handlePointer(
-    _pointer(CanvasPointerLifecyclePhase.move, const Offset(4, 4)),
-  );
-  final retained = runtime.interactionEngine.activeSession?.eraserCapture;
-  if (retained == null) {
-    fail('mode cleanup did not begin with an eraser capture');
-  }
-  final captureEvents = <PointerEraserCaptureWorkEvent>[];
-  final routeEvents = <InteractionEraserRouteWorkEvent>[];
-  final cleanupEvents = <InteractionCleanupWorkEvent>[];
-  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
-  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
-  final candidateEvents = <Object>[];
-  final exactEvents = <Object>[];
-  final projectionEvents = <Object>[];
-  final readEvents = <Object>[];
-
-  _observeDownstreamCleanupWork(
-    candidateEvents: candidateEvents,
-    exactEvents: exactEvents,
-    projectionEvents: projectionEvents,
-    readEvents: readEvents,
-    operation: () => GeometryPolicy.observeEraserWork(
-      geometryEvents.add,
-      () => SpatialKernel.observeEraserWork(
-        spatialEvents.add,
-        () => InteractionEngine.observeCleanupWork(
-          cleanupEvents.add,
-          () => PointerEraserCapture.observeWork(
-            captureEvents.add,
-            () => InteractionEngine.observeEraserRouteWork(
-              routeEvents.add,
-              () => runtime.tools.setMode(CanvasInteractionMode.move),
+              () => changeSetting(runtime.tools),
             ),
           ),
         ),

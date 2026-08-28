@@ -264,9 +264,8 @@ void _verifyRuntimeTerminalNoPartialCommit({
   root.handlePointer(
     _sample(CanvasPointerLifecyclePhase.move, terminalPosition),
   );
-  final before = root.state.value;
+  final beforeOwners = _PreacceptanceOwnerSnapshot.capture(root);
   final beforeSpatial = root.spatialKernel.snapshot;
-  final beforeStructuralRevision = root.documentFacts.structuralRevision;
   final beforeProjectionBuilds = root.projectionBuildCount;
   final terminalFrames = <RuntimeSurfaceFrameSignal>[];
   root.surfaceFrameSignal.addListener(() {
@@ -312,9 +311,8 @@ void _verifyRuntimeTerminalNoPartialCommit({
   ]);
   _expectNoPartialRuntimeTerminal(
     root: root,
-    before: before,
+    beforeOwners: beforeOwners,
     beforeSpatial: beforeSpatial,
-    beforeStructuralRevision: beforeStructuralRevision,
     beforeProjectionBuilds: beforeProjectionBuilds,
     actions: actions,
     preparation: preparation,
@@ -386,9 +384,8 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
 // ignore: halstead-volume, number-of-parameters, source-lines-of-code
 void _expectNoPartialRuntimeTerminal({
   required RuntimeRoot root,
-  required CanvasRuntimeState before,
+  required _PreacceptanceOwnerSnapshot beforeOwners,
   required SpatialKernelSnapshot beforeSpatial,
-  required int beforeStructuralRevision,
   required int beforeProjectionBuilds,
   required List<CanvasActionCommitted> actions,
   required List<RuntimeDeletionRouteConstructionKind> preparation,
@@ -401,13 +398,7 @@ void _expectNoPartialRuntimeTerminal({
 }) {
   expect(root.interactionEngine.activeSession, isNull);
   expect(root.preview, isA<CanvasNoPreview>());
-  expect(root.state.value.revisions.document, before.revisions.document);
-  expect(root.state.value.revisions.selection, before.revisions.selection);
-  expect(root.state.value.revisions.viewCamera, before.revisions.viewCamera);
-  expect(
-    root.state.value.revisions.resourceVisual,
-    before.revisions.resourceVisual,
-  );
+  beforeOwners.expectUnchanged(root);
   if (expectedBudgetReason != null) {
     final spatialQuery = routeEvents
         .firstWhere(
@@ -418,7 +409,6 @@ void _expectNoPartialRuntimeTerminal({
     expect(spatialQuery.status, InteractionReadQueryStatus.budgetExceeded);
     expect(spatialQuery.budgetExceededReason, expectedBudgetReason);
   }
-  expect(root.documentFacts.structuralRevision, beforeStructuralRevision);
   expect(root.projectionBuildCount, beforeProjectionBuilds);
   _expectSpatialSnapshotUnchanged(beforeSpatial, root.spatialKernel.snapshot);
   expect(actions, isEmpty);
@@ -444,6 +434,44 @@ void _expectNoPartialRuntimeTerminal({
     hasLength(1),
   );
   _expectNoCaptureOrReadWorkAfterCleanup(trace);
+}
+
+final class _PreacceptanceOwnerSnapshot {
+  _PreacceptanceOwnerSnapshot._({
+    required this.document,
+    required this.selectedIds,
+    required this.publicState,
+    required this.structuralRevision,
+  });
+
+  factory _PreacceptanceOwnerSnapshot.capture(RuntimeRoot root) {
+    return _PreacceptanceOwnerSnapshot._(
+      document: root.readDocument(),
+      selectedIds: Set<CanvasElementId>.of(root.selectedElementIds),
+      publicState: root.state.value,
+      structuralRevision: root.documentFacts.structuralRevision,
+    );
+  }
+
+  final CanvasDocument document;
+  final Set<CanvasElementId> selectedIds;
+  final CanvasRuntimeState publicState;
+  final int structuralRevision;
+
+  void expectUnchanged(RuntimeRoot root) {
+    final after = root.state.value;
+    expect(root.readDocument(), document);
+    expect(root.selectedElementIds, selectedIds);
+    expect(after.summary, publicState.summary);
+    expect(after.revisions.document, publicState.revisions.document);
+    expect(after.revisions.selection, publicState.revisions.selection);
+    expect(after.revisions.viewCamera, publicState.revisions.viewCamera);
+    expect(
+      after.revisions.resourceVisual,
+      publicState.revisions.resourceVisual,
+    );
+    expect(root.documentFacts.structuralRevision, structuralRevision);
+  }
 }
 
 void _expectSpatialSnapshotUnchanged(

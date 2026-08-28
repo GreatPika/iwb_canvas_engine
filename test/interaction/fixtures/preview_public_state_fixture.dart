@@ -242,8 +242,10 @@ void _verifyPostResampleEraserPreviewIsolation() {
   );
   expect(scenario.actions, isEmpty);
   expect(frames, isNotEmpty);
-  expect(frames.last?.mainCanvas, isFalse);
-  expect(frames.last?.overlayCanvas, isTrue);
+  for (final frame in frames) {
+    expect(frame?.mainCanvas, isFalse);
+    expect(frame?.overlayCanvas, isTrue);
+  }
 }
 
 _DrawPreviewScenario _drawPreviewScenario() {

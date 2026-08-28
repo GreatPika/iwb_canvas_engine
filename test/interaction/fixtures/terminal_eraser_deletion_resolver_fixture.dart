@@ -213,15 +213,7 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
       () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     );
 
-    final cleanupStart = trace.indexOf(
-      'cleanup:${InteractionCleanupWorkEvent.started}',
-    );
-    expect(cleanupStart, isNonNegative);
-    expect(trace.skip(cleanupStart + 1), everyElement(startsWith('cleanup:')));
-    expect(
-      trace,
-      contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),
-    );
+    _expectOrderedTerminalCleanup(trace);
     expect(trace.where((event) => event.startsWith('geometry:')), [
       'geometry:${GeometryPolicyEraserWorkEvent.corridorEnvelope.name}',
     ]);
@@ -802,7 +794,7 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
     terminal: (root) =>
         root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     expectedCleanup: PointerCleanupReason.noOpTerminal,
-    readsTerminal: true,
+    expectedReadKinds: _silentTerminalReadKinds,
   );
   _expectSilentEraserTerminal(
     document: _document(),
@@ -810,7 +802,7 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
     terminal: (root) =>
         root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     expectedCleanup: PointerCleanupReason.noOpTerminal,
-    readsTerminal: true,
+    expectedReadKinds: _silentTerminalReadKinds,
   );
   _expectSilentEraserTerminal(
     document: _document(),
@@ -824,9 +816,19 @@ void _terminalEraserNonDeleteTerminalsStaySilent() {
       ),
     ),
     expectedCleanup: PointerCleanupReason.invalidTerminal,
-    readsTerminal: false,
+    expectedReadKinds: const [],
   );
 }
+
+const _silentTerminalReadKinds = [
+  RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+  RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+  RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+  RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+  RuntimeEraserEntryRouteWorkKind.exactHitIdsReady,
+  RuntimeEraserEntryRouteWorkKind.entriesReady,
+];
 
 // One helper keeps the public route setup and its complete no-effect oracle
 // together; splitting them would duplicate the same lifecycle witness.
@@ -838,8 +840,9 @@ void _expectSilentEraserTerminal({
   required Set<CanvasElementKind>? eraserElementKinds,
   required void Function(RuntimeRoot root) terminal,
   required PointerCleanupReason expectedCleanup,
-  required bool readsTerminal,
+  required List<RuntimeEraserEntryRouteWorkKind> expectedReadKinds,
 }) {
+  final readsTerminal = expectedReadKinds.isNotEmpty;
   var resolverCalls = 0;
   final root = RuntimeRoot.test(
     store: DocumentStoreKernel.withCommittedDocumentForTesting(
@@ -944,14 +947,26 @@ void _expectSilentEraserTerminal({
         : isEmpty,
   );
   expect(cleanupWork, contains(InteractionCleanupWorkEvent.sessionReleased));
-  if (!readsTerminal) {
-    expect(readWork, isEmpty);
-    expect(geometryWork, isEmpty);
-    expect(spatialWork, isEmpty);
-    expect(candidateWork, isEmpty);
-    expect(exactWork, isEmpty);
-    expect(projectionWork, isEmpty);
-  }
+  expect(readWork.map((event) => event.kind), expectedReadKinds);
+  expect(
+    geometryWork,
+    readsTerminal ? [GeometryPolicyEraserWorkEvent.corridorEnvelope] : isEmpty,
+  );
+  expect(
+    spatialWork,
+    readsTerminal ? [SpatialKernelEraserWorkEvent.queryEraser] : isEmpty,
+  );
+  final resolvesCandidates = expectedReadKinds.contains(
+    RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  );
+  expect(
+    candidateWork,
+    resolvesCandidates
+        ? [RuntimeCandidateResolutionWorkEvent.resolved]
+        : isEmpty,
+  );
+  expect(exactWork, isEmpty);
+  expect(projectionWork, resolvesCandidates ? hasLength(1) : isEmpty);
   expect(
     readWork
         .where(
@@ -1141,19 +1156,24 @@ T _observeTerminalCleanupWork<T>(List<String> trace, T Function() operation) {
 }
 
 void _expectCleanupTraceHasNoDisplacedWork(List<String> trace) {
-  final start = trace.indexOf('cleanup:${InteractionCleanupWorkEvent.started}');
-  expect(start, isNonNegative);
-  expect(trace.skip(start + 1), everyElement(startsWith('cleanup:')));
+  _expectOrderedTerminalCleanup(trace);
   expect(trace.where((event) => event.startsWith('geometry:')), [
     'geometry:${GeometryPolicyEraserWorkEvent.corridorEnvelope.name}',
   ]);
   expect(trace.where((event) => event.startsWith('spatial:')), [
     'spatial:${SpatialKernelEraserWorkEvent.queryEraser.name}',
   ]);
-  expect(
-    trace,
-    contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),
-  );
+}
+
+void _expectOrderedTerminalCleanup(List<String> trace) {
+  final started = 'cleanup:${InteractionCleanupWorkEvent.started}';
+  final released = 'cleanup:${InteractionCleanupWorkEvent.sessionReleased}';
+  expect(trace.where((event) => event == started), [started]);
+  expect(trace.where((event) => event == released), [released]);
+  final start = trace.indexOf(started);
+  final release = trace.indexOf(released);
+  expect(release, greaterThan(start));
+  expect(trace.skip(start + 1), everyElement(startsWith('cleanup:')));
 }
 
 final class _EraserPreparationFailureCase {

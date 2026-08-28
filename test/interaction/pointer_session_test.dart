@@ -47,7 +47,7 @@ void main() {
   });
 
   test('eraser session shells forward one mutable capture identity', () {
-    expect(_verifyPassiveEraserSessionCapture, returnsNormally);
+    expect(_verifyEraserSessionCaptureIdentity, returnsNormally);
   });
 
   test('exposes output timestamp resolver only through pointer context', () {
@@ -55,9 +55,9 @@ void main() {
   });
 }
 
-// The existing session API is the owner seam for both passive shells.
+// The engine move route is the owner seam for both published session shells.
 // ignore: halstead-volume
-void _verifyPassiveEraserSessionCapture() {
+void _verifyEraserSessionCaptureIdentity() {
   final engine = InteractionEngine(
     initialMode: CanvasInteractionMode.draw,
     initialDrawStyle: CanvasDrawStyle(
@@ -75,15 +75,19 @@ void _verifyPassiveEraserSessionCapture() {
   if (original == null || capture == null) {
     fail('eraser start did not create a session capture');
   }
-  capture.admitPoint(const Offset(2, 3));
-  final updated = original.updateEraser(
-    currentWorld: const Offset(2, 3),
-    eraser: capture,
-    lastPreview: CanvasEraserPreview(corridor: capture.points, thickness: 6),
+  final move = engine.handlePointerSample(
+    _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+    _context(controllerEpoch: 1),
   );
+  final updated = engine.activeSession;
+  if (updated == null) {
+    fail('eraser move did not publish its updated session shell');
+  }
   capture.admitPoint(const Offset(4, 5));
 
+  expect(move.kind, InteractionPointerAdmissionKind.admitted);
   expect(updated, isNot(same(original)));
+  expect(engine.activeSession, same(updated));
   expect(original.eraserCapture, same(capture));
   expect(updated.eraserCapture, same(capture));
   expect(original.eraserCapture?.points, [

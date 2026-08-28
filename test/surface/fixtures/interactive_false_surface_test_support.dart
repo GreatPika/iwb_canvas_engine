@@ -102,9 +102,12 @@ Future<void> _expectInteractiveFalseReleasesActiveEraser(
                   () =>
                       RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
                         readEvents.add,
-                        () => tester.pumpWidget(
-                          _SurfaceHost(runtime: runtime, interactive: false),
-                        ),
+                        () async {
+                          await tester.pumpWidget(
+                            _SurfaceHost(runtime: runtime, interactive: false),
+                          );
+                          await tester.pump();
+                        },
                       ),
                 ),
               ),
@@ -114,7 +117,6 @@ Future<void> _expectInteractiveFalseReleasesActiveEraser(
       ),
     ),
   );
-  await tester.pump();
 
   expect(root.interactionEngine.activeSession, isNull);
   expect(capture.points, const [Offset(4, 5), Offset(7, 8)]);
