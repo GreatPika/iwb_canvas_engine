@@ -208,25 +208,9 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
     addTearDown(root.dispose);
     final retained = _startEraser(root, retainedOverflow: true);
 
-    GeometryPolicy.observeEraserWork(
-      (event) => trace.add('geometry:${event.name}'),
-      () => SpatialKernel.observeEraserWork(
-        (event) => trace.add('spatial:${event.name}'),
-        () => InteractionEngine.observeCleanupWork(
-          (event) => trace.add('cleanup:$event'),
-          () => PointerEraserCapture.observeWork(
-            (event) => trace.add('capture:${event.kind}'),
-            () => InteractionEngine.observeEraserRouteWork(
-              (event) => trace.add('interaction:$event'),
-              () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-                (event) => trace.add('read:${event.kind}'),
-                () =>
-                    root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
-              ),
-            ),
-          ),
-        ),
-      ),
+    _observeTerminalCleanupWork(
+      trace,
+      () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
     );
 
     final cleanupStart = trace.indexOf(
@@ -244,6 +228,11 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
     expect(trace.where((event) => event.startsWith('spatial:')), [
       'spatial:${SpatialKernelEraserWorkEvent.queryEraser.name}',
     ]);
+    expect(trace.where((event) => event.startsWith('candidate:')), [
+      'candidate:${RuntimeCandidateResolutionWorkEvent.resolved.name}',
+    ]);
+    expect(trace.where((event) => event.startsWith('exact:')), hasLength(1));
+    expect(trace.where((event) => event == 'projection'), ['projection']);
     expect(retained?.points, hasLength(4000));
     expect(root.interactionEngine.activeSession, isNull);
   }

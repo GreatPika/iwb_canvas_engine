@@ -93,7 +93,7 @@ outcome: R-001
 | E-018 | S-014 | `lines 332-350` | InteractionEngine is the eraser preview producer and eraser preview remains overlay-only state separated from committed document mutation. |
 | E-019 | S-015 | `lines 39-160` | The sequence depicts per-move candidate/exact refresh plus terminal full-corridor work, and claims trim on move and terminal even though maintained capture does not enforce it. |
 | E-020 | S-016 | `lines 29-112` | The exact-budget sequence separately owns preview budget branches and terminal all-or-nothing overflow behavior. |
-| E-021 | S-017 | `lines 27-156` | The state diagram models candidate refresh on every move, final-corridor terminal evaluation, and cleanup/no-partial terminal failure paths. |
+| E-021 | S-017 | `lines 27-151` | The state diagram models candidate refresh on every move, final-corridor terminal evaluation, and cleanup/no-partial terminal failure paths. |
 | E-022 | S-018 | `lines 705-998` | Current verification owns eraser budget inputs, read/routing boundaries, terminal no-partial behavior, interaction guardrails, and one-/multi-point overlay behavior. |
 | E-023 | S-019 | `lines 28-280` | The official external-public Flutter profile route has no numeric pass threshold, local comparison is supporting evidence only, and retired benchmark infrastructure must not return. |
 | E-024 | S-020 | `lines 168-409` | The interaction guardrail enforces defensive immutable collection fields across the read-port boundary; it does not require the eraser corridor field itself to remain. |

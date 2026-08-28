@@ -375,7 +375,9 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
 // could otherwise touch, while allowing the expected preview-clear repaint.
 // This assertion consumes the one captured owner trace as a unit; splitting
 // its state and work assertions would obscure the cross-owner no-partial rule.
-// ignore: halstead-volume, number-of-parameters
+// All pre-acceptance owner effects must be compared against the same captured
+// terminal outcome; splitting the assertions would obscure partial effects.
+// ignore: halstead-volume, number-of-parameters, source-lines-of-code
 void _expectNoPartialRuntimeTerminal({
   required RuntimeRoot root,
   required CanvasRuntimeState before,
@@ -413,7 +415,11 @@ void _expectNoPartialRuntimeTerminal({
   expect(root.projectionBuildCount, beforeProjectionBuilds);
   expect(actions, isEmpty);
   expect(preparation, isEmpty);
-  expect(projectedEntries.expand((entries) => entries), isEmpty);
+  if (expectedRoute.contains(RuntimeEraserEntryRouteWorkKind.entriesReady)) {
+    expect(projectedEntries, [isEmpty]);
+  } else {
+    expect(projectedEntries, isEmpty);
+  }
   expect(terminalFrames.where((frame) => frame.mainCanvas), isEmpty);
   expect(
     trace
