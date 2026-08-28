@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
@@ -59,16 +61,24 @@ void _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork() {
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final readEvents = <RuntimeEraserEntryRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
 
-  InteractionEngine.observeCleanupWork(
-    cleanupEvents.add,
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => InteractionEngine.observeEraserRouteWork(
-        routeEvents.add,
-        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-          readEvents.add,
-          runtime.dispose,
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanupWork(
+        cleanupEvents.add,
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeEvents.add,
+            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+              readEvents.add,
+              runtime.dispose,
+            ),
+          ),
         ),
       ),
     ),
@@ -80,6 +90,8 @@ void _publicDisposeReleasesActiveEraserWithoutDisplacedCorridorWork() {
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
   expect(readEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
   expect(runtime.dispose, returnsNormally);
 }

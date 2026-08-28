@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/touched_set.dart';
 import 'geometry_policy.dart';
@@ -9,6 +13,14 @@ import 'spatial_kernel_query_state.dart';
 import 'spatial_query_policy.dart';
 import 'spatial_query_result.dart';
 
+@visibleForTesting
+enum SpatialKernelEraserWorkEvent { queryEraser }
+
+final Object _eraserWorkZoneKey = Object();
+
+// The owner observer belongs with queryEraser, and this kernel already owns
+// the coupled index/query lifecycle that makes its operation meaningful.
+// ignore: coupling-between-object-classes, number-of-methods
 final class SpatialKernel {
   SpatialKernel({this.geometryPolicy = const GeometryPolicy()});
 
@@ -18,6 +30,21 @@ final class SpatialKernel {
   final SpatialCandidateHandleMapper _candidateMapper =
       SpatialCandidateHandleMapper();
   FrameFactsPort? _pendingReplacementFrame;
+
+  /// Observes actual eraser spatial queries in assertion builds only.
+  @visibleForTesting
+  static T observeEraserWork<T>(
+    void Function(SpatialKernelEraserWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_eraserWorkZoneKey: sink});
+
+  static bool _recordEraserWork(SpatialKernelEraserWorkEvent event) {
+    final sink = Zone.current[_eraserWorkZoneKey];
+    if (sink is void Function(SpatialKernelEraserWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
 
   SpatialKernelSnapshot get snapshot {
     final indexes = _indexes.snapshot;
@@ -169,6 +196,10 @@ extension SpatialKernelInteractionQueries on SpatialKernel {
   }
 
   SpatialQueryResult queryEraser(SpatialQueryWindow window) {
+    assert(
+      SpatialKernel._recordEraserWork(SpatialKernelEraserWorkEvent.queryEraser),
+      'spatial eraser work observation failed',
+    );
     return _queryIndex(window, _indexes.queryPaint);
   }
 
@@ -224,3 +255,6 @@ final class SpatialKernelSnapshot {
   final int paintOutlierCount;
   final int contextOutlierCount;
 }
+// The spatial kernel owns all query kinds and the assertion-only eraser owner
+// observer; splitting it would obscure which real query is being counted.
+// ignore_for_file: number-of-imports

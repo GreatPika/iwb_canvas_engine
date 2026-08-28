@@ -1,8 +1,14 @@
+// This lifecycle fixture observes the public load route and its actual owners
+// together, so its explicit imports remain more legible than a wrapper.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
@@ -143,7 +149,7 @@ void _verifyLoadFailurePreservesInteraction() {
 
 // The prepared-load route must retain capture identity, cleanup events, and
 // public-state revision assertions in one witness.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _verifyLoadSuccessCleansEraserInteraction() {
   final actionEvents = <CanvasActionCommitted>[];
   final root = _runtimeRoot(_ignoreCommitEffects);
@@ -158,18 +164,26 @@ void _verifyLoadSuccessCleansEraserInteraction() {
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
 
-  InteractionEngine.observeCleanupWork(
-    cleanupEvents.add,
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => InteractionEngine.observeEraserRouteWork(
-        routeEvents.add,
-        () => root.edits.loadDocumentFromJson(
-          encodeCanvasDocumentToJson(_replacementDocument()),
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanupWork(
+        cleanupEvents.add,
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeEvents.add,
+            () => root.edits.loadDocumentFromJson(
+              encodeCanvasDocumentToJson(_replacementDocument()),
+            ),
+          ),
         ),
       ),
     ),
@@ -180,6 +194,8 @@ void _verifyLoadSuccessCleansEraserInteraction() {
   expect(retained.points, const [Offset.zero, Offset(1, 0)]);
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
   expect(root.preview, isA<CanvasNoPreview>());
   expect(actionEvents, isEmpty);

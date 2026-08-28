@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path_drawing/path_drawing.dart';
 
 import '../contracts/internal/frame_facts_port.dart';
@@ -19,8 +21,20 @@ const int kMaxEraserPreviewExactChecksPerSample = 4096;
 const int kMaxEraserTerminalCandidates = 4096;
 const int kMaxEraserTerminalExactChecks = 32768;
 
+@visibleForTesting
+enum GeometryPolicyEraserWorkEvent { corridorEnvelope }
+
+final Object _eraserWorkZoneKey = Object();
+
 final class GeometryPolicy {
   const GeometryPolicy();
+
+  /// Observes actual eraser-corridor construction in assertion builds only.
+  @visibleForTesting
+  static T observeEraserWork<T>(
+    void Function(GeometryPolicyEraserWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(operation, zoneValues: {_eraserWorkZoneKey: sink});
 
   GeometryBounds boundsFor(FrameElementFacts facts) {
     final local = _localGeometryMetricsFor(facts);
@@ -64,6 +78,10 @@ final class GeometryPolicy {
     required double eraserThickness,
     required double hitPadding,
   }) {
+    assert(
+      _recordEraserWork(GeometryPolicyEraserWorkEvent.corridorEnvelope),
+      'geometry eraser work observation failed',
+    );
     final hasOnlyFinitePoints = points.every(isFiniteOffset);
     final finitePoints = hasOnlyFinitePoints
         ? List<Offset>.unmodifiable(points)
@@ -96,6 +114,14 @@ final class GeometryPolicy {
       candidateLimit: kMaxEraserTerminalCandidates,
       exactCheckLimit: kMaxEraserTerminalExactChecks,
     );
+  }
+
+  static bool _recordEraserWork(GeometryPolicyEraserWorkEvent event) {
+    final sink = Zone.current[_eraserWorkZoneKey];
+    if (sink is void Function(GeometryPolicyEraserWorkEvent)) {
+      sink(event);
+    }
+    return true;
   }
 }
 

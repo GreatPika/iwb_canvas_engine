@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
@@ -584,10 +586,16 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   root.setDrawStyle(CanvasDrawStyle(tool: CanvasDrawTool.eraser));
 
   final downReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
-  RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-    downReadWork.add,
-    () => root.handlePointer(
-      _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+  final downGeometryWork = <GeometryPolicyEraserWorkEvent>[];
+  final downSpatialWork = <SpatialKernelEraserWorkEvent>[];
+  _observeEraserGeometryAndSpatialWork(
+    downGeometryWork,
+    downSpatialWork,
+    () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+      downReadWork.add,
+      () => root.handlePointer(
+        _sample(1, Offset.zero, CanvasPointerLifecyclePhase.down),
+      ),
     ),
   );
   expect(
@@ -597,24 +605,36 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
     ),
     hasLength(1),
   );
+  expect(downGeometryWork, [GeometryPolicyEraserWorkEvent.corridorEnvelope]);
+  expect(downSpatialWork, [SpatialKernelEraserWorkEvent.queryEraser]);
 
   final ordinaryCaptureWork = <PointerEraserCaptureWorkEvent>[];
   final ordinaryRouteWork = <InteractionEraserRouteWorkEvent>[];
   final ordinaryReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
   final ordinaryExactWork = <HitTestPolicyExactEraserWorkEvent>[];
   final ordinaryProjection = <List<DeletionEntryFacts>>[];
-  PointerEraserCapture.observeWork(
-    ordinaryCaptureWork.add,
-    () => InteractionEngine.observeEraserRouteWork(
-      ordinaryRouteWork.add,
-      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-        ordinaryReadWork.add,
-        () => HitTestPolicy.observeExactEraserWork(
-          ordinaryExactWork.add,
-          () => DocumentStoreKernel.observeDeletionEntryProjection(
-            ordinaryProjection.add,
-            () => root.handlePointer(
-              _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+  final ordinaryGeometryWork = <GeometryPolicyEraserWorkEvent>[];
+  final ordinarySpatialWork = <SpatialKernelEraserWorkEvent>[];
+  _observeEraserGeometryAndSpatialWork(
+    ordinaryGeometryWork,
+    ordinarySpatialWork,
+    () => PointerEraserCapture.observeWork(
+      ordinaryCaptureWork.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        ordinaryRouteWork.add,
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          ordinaryReadWork.add,
+          () => HitTestPolicy.observeExactEraserWork(
+            ordinaryExactWork.add,
+            () => DocumentStoreKernel.observeDeletionEntryProjection(
+              ordinaryProjection.add,
+              () => root.handlePointer(
+                _sample(
+                  1,
+                  const Offset(2, 3),
+                  CanvasPointerLifecyclePhase.move,
+                ),
+              ),
             ),
           ),
         ),
@@ -633,6 +653,8 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   expect(ordinaryReadWork, isEmpty);
   expect(ordinaryExactWork, isEmpty);
   expect(ordinaryProjection, isEmpty);
+  expect(ordinaryGeometryWork, isEmpty);
+  expect(ordinarySpatialWork, isEmpty);
   expect((root.preview as CanvasEraserPreview).corridor, [
     Offset.zero,
     const Offset(2, 3),
@@ -641,14 +663,20 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   final duplicateCaptureWork = <PointerEraserCaptureWorkEvent>[];
   final duplicateRouteWork = <InteractionEraserRouteWorkEvent>[];
   final duplicateReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
-  PointerEraserCapture.observeWork(
-    duplicateCaptureWork.add,
-    () => InteractionEngine.observeEraserRouteWork(
-      duplicateRouteWork.add,
-      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-        duplicateReadWork.add,
-        () => root.handlePointer(
-          _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+  final duplicateGeometryWork = <GeometryPolicyEraserWorkEvent>[];
+  final duplicateSpatialWork = <SpatialKernelEraserWorkEvent>[];
+  _observeEraserGeometryAndSpatialWork(
+    duplicateGeometryWork,
+    duplicateSpatialWork,
+    () => PointerEraserCapture.observeWork(
+      duplicateCaptureWork.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        duplicateRouteWork.add,
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          duplicateReadWork.add,
+          () => root.handlePointer(
+            _sample(1, const Offset(2, 3), CanvasPointerLifecyclePhase.move),
+          ),
         ),
       ),
     ),
@@ -658,6 +686,8 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   ]);
   expect(duplicateRouteWork, isEmpty);
   expect(duplicateReadWork, isEmpty);
+  expect(duplicateGeometryWork, isEmpty);
+  expect(duplicateSpatialWork, isEmpty);
 
   final overflowRoot = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   addTearDown(overflowRoot.dispose);
@@ -674,14 +704,20 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   final overflowCaptureWork = <PointerEraserCaptureWorkEvent>[];
   final overflowRouteWork = <InteractionEraserRouteWorkEvent>[];
   final overflowReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
-  PointerEraserCapture.observeWork(
-    overflowCaptureWork.add,
-    () => InteractionEngine.observeEraserRouteWork(
-      overflowRouteWork.add,
-      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-        overflowReadWork.add,
-        () => overflowRoot.handlePointer(
-          _sample(2, const Offset(8000, 0), CanvasPointerLifecyclePhase.move),
+  final overflowGeometryWork = <GeometryPolicyEraserWorkEvent>[];
+  final overflowSpatialWork = <SpatialKernelEraserWorkEvent>[];
+  _observeEraserGeometryAndSpatialWork(
+    overflowGeometryWork,
+    overflowSpatialWork,
+    () => PointerEraserCapture.observeWork(
+      overflowCaptureWork.add,
+      () => InteractionEngine.observeEraserRouteWork(
+        overflowRouteWork.add,
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          overflowReadWork.add,
+          () => overflowRoot.handlePointer(
+            _sample(2, const Offset(8000, 0), CanvasPointerLifecyclePhase.move),
+          ),
         ),
       ),
     ),
@@ -696,11 +732,22 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
     InteractionEraserRouteWorkEvent.previewPublished,
   ]);
   expect(overflowReadWork, isEmpty);
+  expect(overflowGeometryWork, isEmpty);
+  expect(overflowSpatialWork, isEmpty);
   final overflowPreview = overflowRoot.preview as CanvasEraserPreview;
   expect(overflowPreview.corridor, hasLength(4000));
   expect(overflowPreview.corridor.first, Offset.zero);
   expect(overflowPreview.corridor.last, const Offset(8000, 0));
 }
+
+T _observeEraserGeometryAndSpatialWork<T>(
+  List<GeometryPolicyEraserWorkEvent> geometryWork,
+  List<SpatialKernelEraserWorkEvent> spatialWork,
+  T Function() operation,
+) => GeometryPolicy.observeEraserWork(
+  geometryWork.add,
+  () => SpatialKernel.observeEraserWork(spatialWork.add, operation),
+);
 
 void _verifyEraserStaleTerminalCleanup() {
   final engine = _eraserEngine(_FakeReadPort())
@@ -747,7 +794,7 @@ void _verifyEraserCleanupDoesNoCaptureWork() {
 }
 
 // The four lifecycle owners intentionally share one capture-release oracle.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _expectNamedEraserCleanupWithoutWork(
   PointerCleanupReason expectedReason,
   Object? Function(InteractionEngine engine) operation,
@@ -765,16 +812,24 @@ void _expectNamedEraserCleanupWithoutWork(
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
   final cleanupReasons = <PointerCleanupReason>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
 
-  InteractionEngine.observeCleanup(
-    cleanupReasons.add,
-    () => InteractionEngine.observeCleanupWork(
-      cleanupEvents.add,
-      () => PointerEraserCapture.observeWork(
-        captureEvents.add,
-        () => InteractionEngine.observeEraserRouteWork(
-          routeEvents.add,
-          () => operation(engine),
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanup(
+        cleanupReasons.add,
+        () => InteractionEngine.observeCleanupWork(
+          cleanupEvents.add,
+          () => PointerEraserCapture.observeWork(
+            captureEvents.add,
+            () => InteractionEngine.observeEraserRouteWork(
+              routeEvents.add,
+              () => operation(engine),
+            ),
+          ),
         ),
       ),
     ),
@@ -784,9 +839,14 @@ void _expectNamedEraserCleanupWithoutWork(
   expect(engine.activeSession, isNull);
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
+// The terminal cleanup path and both owner counters must remain in one trace
+// so a geometry query cannot disappear between otherwise empty observers.
+// ignore: halstead-volume
 void _expectEraserCleanupWithoutWork(
   CanvasPointerLifecyclePhase phase,
   int terminalEpoch,
@@ -803,16 +863,24 @@ void _expectEraserCleanupWithoutWork(
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
 
-  InteractionEngine.observeCleanupWork(
-    cleanupEvents.add,
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => InteractionEngine.observeEraserRouteWork(
-        routeEvents.add,
-        () => engine.handlePointerSample(
-          _sample(1, const Offset(4, 5), phase),
-          _context(terminalEpoch),
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanupWork(
+        cleanupEvents.add,
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeEvents.add,
+            () => engine.handlePointerSample(
+              _sample(1, const Offset(4, 5), phase),
+              _context(terminalEpoch),
+            ),
+          ),
         ),
       ),
     ),
@@ -821,6 +889,8 @@ void _expectEraserCleanupWithoutWork(
   expect(engine.activeSession, isNull);
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 

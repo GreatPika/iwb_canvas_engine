@@ -1,12 +1,16 @@
 // Test bodies are named helpers so DCM metrics stay on each scenario; the
 // assertions live in those helpers and DCM does not follow tear-offs.
-// ignore_for_file: missing-test-assertion
+// The lifecycle observer imports are explicit so the public port route keeps
+// the actual cleanup owners visible.
+// ignore_for_file: missing-test-assertion, number-of-imports
 
 import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import '../../support/runtime_with_document.dart';
@@ -45,7 +49,7 @@ void main() {
 
 // The tool-port route keeps capture identity and its cleanup work observation
 // together so the public setting change remains the asserted owner seam.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   final runtime = runtimeRootWithCommittedDocumentSeed(_document());
   addTearDown(runtime.dispose);
@@ -64,14 +68,22 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
 
-  InteractionEngine.observeCleanupWork(
-    cleanupEvents.add,
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => InteractionEngine.observeEraserRouteWork(
-        routeEvents.add,
-        () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanupWork(
+        cleanupEvents.add,
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeEvents.add,
+            () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
+          ),
+        ),
       ),
     ),
   );
@@ -81,13 +93,15 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(runtime.preview, isA<CanvasNoPreview>());
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
 // Mode changes are a separate public lifecycle exit from tool changes. Keep
 // the direct owner observations here so a retained capture cannot hide behind
 // preview disappearance or an otherwise silent settings publication.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   final runtime = runtimeRootWithCommittedDocumentSeed(_document());
   addTearDown(runtime.dispose);
@@ -106,14 +120,22 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final routeEvents = <InteractionEraserRouteWorkEvent>[];
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
 
-  InteractionEngine.observeCleanupWork(
-    cleanupEvents.add,
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => InteractionEngine.observeEraserRouteWork(
-        routeEvents.add,
-        () => runtime.tools.setMode(CanvasInteractionMode.move),
+  GeometryPolicy.observeEraserWork(
+    geometryEvents.add,
+    () => SpatialKernel.observeEraserWork(
+      spatialEvents.add,
+      () => InteractionEngine.observeCleanupWork(
+        cleanupEvents.add,
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => InteractionEngine.observeEraserRouteWork(
+            routeEvents.add,
+            () => runtime.tools.setMode(CanvasInteractionMode.move),
+          ),
+        ),
       ),
     ),
   );
@@ -123,6 +145,8 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(runtime.preview, isA<CanvasNoPreview>());
   expect(captureEvents, isEmpty);
   expect(routeEvents, isEmpty);
+  expect(geometryEvents, isEmpty);
+  expect(spatialEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 

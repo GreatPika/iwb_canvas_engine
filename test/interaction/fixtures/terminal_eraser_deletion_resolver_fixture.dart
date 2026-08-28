@@ -15,6 +15,8 @@ import 'package:iwb_canvas_engine/src/contracts/internal/prepared_selection_effe
 import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
@@ -204,15 +206,22 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
     addTearDown(root.dispose);
     final retained = _startEraser(root, retainedOverflow: true);
 
-    InteractionEngine.observeCleanupWork(
-      (event) => trace.add('cleanup:$event'),
-      () => PointerEraserCapture.observeWork(
-        (event) => trace.add('capture:${event.kind}'),
-        () => InteractionEngine.observeEraserRouteWork(
-          (event) => trace.add('interaction:$event'),
-          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-            (event) => trace.add('read:${event.kind}'),
-            () => root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+    GeometryPolicy.observeEraserWork(
+      (event) => trace.add('geometry:${event.name}'),
+      () => SpatialKernel.observeEraserWork(
+        (event) => trace.add('spatial:${event.name}'),
+        () => InteractionEngine.observeCleanupWork(
+          (event) => trace.add('cleanup:$event'),
+          () => PointerEraserCapture.observeWork(
+            (event) => trace.add('capture:${event.kind}'),
+            () => InteractionEngine.observeEraserRouteWork(
+              (event) => trace.add('interaction:$event'),
+              () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                (event) => trace.add('read:${event.kind}'),
+                () =>
+                    root.handlePointer(_sample(CanvasPointerLifecyclePhase.up)),
+              ),
+            ),
           ),
         ),
       ),
@@ -227,6 +236,12 @@ void _terminalCleanupDoesNoDisplacedCorridorWork() {
       trace,
       contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),
     );
+    expect(trace.where((event) => event.startsWith('geometry:')), [
+      'geometry:${GeometryPolicyEraserWorkEvent.corridorEnvelope.name}',
+    ]);
+    expect(trace.where((event) => event.startsWith('spatial:')), [
+      'spatial:${SpatialKernelEraserWorkEvent.queryEraser.name}',
+    ]);
     expect(retained?.points, hasLength(4000));
     expect(root.interactionEngine.activeSession, isNull);
   }
@@ -1074,15 +1089,21 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
 }
 
 T _observeTerminalCleanupWork<T>(List<String> trace, T Function() operation) {
-  return InteractionEngine.observeCleanupWork(
-    (event) => trace.add('cleanup:$event'),
-    () => PointerEraserCapture.observeWork(
-      (event) => trace.add('capture:${event.kind}'),
-      () => InteractionEngine.observeEraserRouteWork(
-        (event) => trace.add('interaction:$event'),
-        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-          (event) => trace.add('read:${event.kind}'),
-          operation,
+  return GeometryPolicy.observeEraserWork(
+    (event) => trace.add('geometry:${event.name}'),
+    () => SpatialKernel.observeEraserWork(
+      (event) => trace.add('spatial:${event.name}'),
+      () => InteractionEngine.observeCleanupWork(
+        (event) => trace.add('cleanup:$event'),
+        () => PointerEraserCapture.observeWork(
+          (event) => trace.add('capture:${event.kind}'),
+          () => InteractionEngine.observeEraserRouteWork(
+            (event) => trace.add('interaction:$event'),
+            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+              (event) => trace.add('read:${event.kind}'),
+              operation,
+            ),
+          ),
         ),
       ),
     ),
@@ -1093,6 +1114,12 @@ void _expectCleanupTraceHasNoDisplacedWork(List<String> trace) {
   final start = trace.indexOf('cleanup:${InteractionCleanupWorkEvent.started}');
   expect(start, isNonNegative);
   expect(trace.skip(start + 1), everyElement(startsWith('cleanup:')));
+  expect(trace.where((event) => event.startsWith('geometry:')), [
+    'geometry:${GeometryPolicyEraserWorkEvent.corridorEnvelope.name}',
+  ]);
+  expect(trace.where((event) => event.startsWith('spatial:')), [
+    'spatial:${SpatialKernelEraserWorkEvent.queryEraser.name}',
+  ]);
   expect(
     trace,
     contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased}'),

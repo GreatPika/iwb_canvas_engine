@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
@@ -164,13 +166,16 @@ void _verifyTerminalOverflowInteractionCleanup() {
   final before = DiagnosticRecord.allocations.count;
 
   final trace = <String>[];
-  final terminal = PointerEraserCapture.observeWork(
-    (event) => trace.add('capture:${event.kind.name}'),
-    () => InteractionEngine.observeEraserRouteWork(
-      (event) => trace.add('interaction:${event.name}'),
-      () => InteractionEngine.observeCleanupWork(
-        (event) => trace.add('cleanup:${event.name}'),
-        () => _runOverflowEraserGesture(engine),
+  final terminal = _observeTerminalGeometryAndSpatialWork(
+    trace,
+    () => PointerEraserCapture.observeWork(
+      (event) => trace.add('capture:${event.kind.name}'),
+      () => InteractionEngine.observeEraserRouteWork(
+        (event) => trace.add('interaction:${event.name}'),
+        () => InteractionEngine.observeCleanupWork(
+          (event) => trace.add('cleanup:${event.name}'),
+          () => _runOverflowEraserGesture(engine),
+        ),
       ),
     ),
   );
@@ -185,6 +190,8 @@ void _verifyTerminalOverflowInteractionCleanup() {
     hasLength(1),
   );
   expect(readPort.terminalReadCount, 1);
+  expect(trace.where((event) => event.startsWith('geometry:')), isEmpty);
+  expect(trace.where((event) => event.startsWith('spatial:')), isEmpty);
   _expectNoCaptureOrReadWorkAfterCleanup(trace);
   expect(hub.records, isEmpty);
   expect(DiagnosticRecord.allocations.count, before);
@@ -233,23 +240,26 @@ void _verifyRuntimeTerminalNoPartialCommit({
   final routeEvents = <RuntimeEraserEntryRouteWorkEvent>[];
   final preparation = <RuntimeDeletionRouteConstructionKind>[];
   final projectedEntries = <List<Object>>[];
-  PointerEraserCapture.observeWork(
-    (event) => trace.add('capture:${event.kind.name}'),
-    () => InteractionEngine.observeEraserRouteWork(
-      (event) => trace.add('interaction:${event.name}'),
-      () => InteractionEngine.observeCleanupWork(
-        (event) => trace.add('cleanup:${event.name}'),
-        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-          (event) {
-            routeEvents.add(event);
-            trace.add('read:${event.kind.name}');
-          },
-          () => RuntimeRoot.observeDeletionRouteConstruction(
-            preparation.add,
-            () => DocumentStoreKernel.observeDeletionEntryProjection(
-              (entries) => projectedEntries.add(List<Object>.of(entries)),
-              () => root.handlePointer(
-                _sample(CanvasPointerLifecyclePhase.up, terminalPosition),
+  _observeTerminalGeometryAndSpatialWork(
+    trace,
+    () => PointerEraserCapture.observeWork(
+      (event) => trace.add('capture:${event.kind.name}'),
+      () => InteractionEngine.observeEraserRouteWork(
+        (event) => trace.add('interaction:${event.name}'),
+        () => InteractionEngine.observeCleanupWork(
+          (event) => trace.add('cleanup:${event.name}'),
+          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+            (event) {
+              routeEvents.add(event);
+              trace.add('read:${event.kind.name}');
+            },
+            () => RuntimeRoot.observeDeletionRouteConstruction(
+              preparation.add,
+              () => DocumentStoreKernel.observeDeletionEntryProjection(
+                (entries) => projectedEntries.add(List<Object>.of(entries)),
+                () => root.handlePointer(
+                  _sample(CanvasPointerLifecyclePhase.up, terminalPosition),
+                ),
               ),
             ),
           ),
@@ -257,6 +267,12 @@ void _verifyRuntimeTerminalNoPartialCommit({
       ),
     ),
   );
+  expect(trace.where((event) => event.startsWith('geometry:')), [
+    'geometry:${GeometryPolicyEraserWorkEvent.corridorEnvelope.name}',
+  ]);
+  expect(trace.where((event) => event.startsWith('spatial:')), [
+    'spatial:${SpatialKernelEraserWorkEvent.queryEraser.name}',
+  ]);
   _expectNoPartialRuntimeTerminal(
     root: root,
     before: before,
@@ -275,7 +291,7 @@ void _verifyRuntimeTerminalNoPartialCommit({
 
 // The stale route keeps its lifecycle, state, and cleanup observations
 // together because no RuntimeRoot delivery is permitted after the mismatch.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code
 void _verifyStaleRuntimeTerminalNoPartialCommit() {
   final root = runtimeRootWithCommittedDocumentSeed(CanvasDocument());
   addTearDown(root.dispose);
@@ -293,15 +309,18 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
   final actionSubscription = root.actions.listen(actions.add);
   addTearDown(actionSubscription.cancel);
   final trace = <String>[];
-  final terminal = PointerEraserCapture.observeWork(
-    (event) => trace.add('capture:${event.kind.name}'),
-    () => InteractionEngine.observeCleanupWork(
-      (event) => trace.add('cleanup:${event.name}'),
-      () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-        (event) => trace.add('read:${event.kind.name}'),
-        () => engine.handlePointerSample(
-          _sample(CanvasPointerLifecyclePhase.up, const Offset(20, 0)),
-          _epochContext(2),
+  final terminal = _observeTerminalGeometryAndSpatialWork(
+    trace,
+    () => PointerEraserCapture.observeWork(
+      (event) => trace.add('capture:${event.kind.name}'),
+      () => InteractionEngine.observeCleanupWork(
+        (event) => trace.add('cleanup:${event.name}'),
+        () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+          (event) => trace.add('read:${event.kind.name}'),
+          () => engine.handlePointerSample(
+            _sample(CanvasPointerLifecyclePhase.up, const Offset(20, 0)),
+            _epochContext(2),
+          ),
         ),
       ),
     ),
@@ -313,6 +332,8 @@ void _verifyStaleRuntimeTerminalNoPartialCommit() {
   expect(root.documentFacts.structuralRevision, beforeStructuralRevision);
   expect(root.projectionBuildCount, beforeProjectionBuilds);
   expect(actions, isEmpty);
+  expect(trace.where((event) => event.startsWith('geometry:')), isEmpty);
+  expect(trace.where((event) => event.startsWith('spatial:')), isEmpty);
   _expectNoCaptureOrReadWorkAfterCleanup(trace);
 }
 
@@ -386,7 +407,11 @@ void _expectNoCaptureOrReadWorkAfterCleanup(List<String> trace) {
     trace
         .skip(cleanupStart + 1)
         .where(
-          (event) => event.startsWith('capture:') || event.startsWith('read:'),
+          (event) =>
+              event.startsWith('capture:') ||
+              event.startsWith('read:') ||
+              event.startsWith('geometry:') ||
+              event.startsWith('spatial:'),
         ),
     isEmpty,
   );
@@ -395,6 +420,17 @@ void _expectNoCaptureOrReadWorkAfterCleanup(List<String> trace) {
     contains('cleanup:${InteractionCleanupWorkEvent.sessionReleased.name}'),
   );
 }
+
+T _observeTerminalGeometryAndSpatialWork<T>(
+  List<String> trace,
+  T Function() operation,
+) => GeometryPolicy.observeEraserWork(
+  (event) => trace.add('geometry:${event.name}'),
+  () => SpatialKernel.observeEraserWork(
+    (event) => trace.add('spatial:${event.name}'),
+    operation,
+  ),
+);
 
 InteractionPointerContext _epochContext(int epoch) => InteractionPointerContext(
   viewCameraOffset: Offset.zero,

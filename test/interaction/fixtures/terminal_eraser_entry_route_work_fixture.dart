@@ -7,7 +7,9 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
+import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
@@ -30,10 +32,9 @@ void registerTerminalEraserEntryRouteWorkTest() {
     expect(result.facts.erasedElementIds, _terminalEraserTargetIds(2));
     expect(result.facts.erasedEntries, isEmpty);
     expect(result.storeWork, isEmpty);
-    expect(
-      result.routeEvents.map((event) => event.kind),
-      [RuntimeEraserEntryRouteWorkKind.previewReadStarted],
-    );
+    expect(result.routeEvents.map((event) => event.kind), [
+      RuntimeEraserEntryRouteWorkKind.previewReadStarted,
+    ]);
     expect(result.frameHandleEnumerations, 0);
     expect(result.projectionBuildDelta, 0);
   });
@@ -177,6 +178,8 @@ void _verifyRealTerminalPointerRoute() {
   final interactionEvents = <InteractionEraserRouteWorkEvent>[];
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final exactEvents = <HitTestPolicyExactEraserWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
   final terminalTrace = <Object>[];
   final preparation = <RuntimeDeletionRouteConstructionKind>[];
   root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, Offset.zero));
@@ -184,24 +187,36 @@ void _verifyRealTerminalPointerRoute() {
     _pointer(CanvasPointerLifecyclePhase.move, const Offset(60, 0)),
   );
 
-  HitTestPolicy.observeExactEraserWork(
+  GeometryPolicy.observeEraserWork(
     (event) {
-      exactEvents.add(event);
+      geometryEvents.add(event);
       terminalTrace.add(event);
     },
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => RuntimeRoot.observeDeletionRouteConstruction(
-        preparation.add,
-        () => InteractionEngine.observeEraserRouteWork(
-          interactionEvents.add,
-          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-            (event) {
-              routeEvents.add(event);
-              terminalTrace.add(event);
-            },
-            () => root.handlePointer(
-              _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+    () => SpatialKernel.observeEraserWork(
+      (event) {
+        spatialEvents.add(event);
+        terminalTrace.add(event);
+      },
+      () => HitTestPolicy.observeExactEraserWork(
+        (event) {
+          exactEvents.add(event);
+          terminalTrace.add(event);
+        },
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => RuntimeRoot.observeDeletionRouteConstruction(
+            preparation.add,
+            () => InteractionEngine.observeEraserRouteWork(
+              interactionEvents.add,
+              () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                (event) {
+                  routeEvents.add(event);
+                  terminalTrace.add(event);
+                },
+                () => root.handlePointer(
+                  _pointer(CanvasPointerLifecyclePhase.up, const Offset(60, 0)),
+                ),
+              ),
             ),
           ),
         ),
@@ -225,6 +240,12 @@ void _verifyRealTerminalPointerRoute() {
     RuntimeDeletionRouteConstructionKind.request,
   ]);
   _expectSingleTerminalSnapshot(captureEvents, routeEvents);
+  _expectSingleTerminalGeometryAndSpatialPass(
+    routeEvents,
+    geometryEvents,
+    spatialEvents,
+    terminalTrace,
+  );
   _expectOneExactPass(routeEvents, exactEvents, terminalTrace);
 }
 
@@ -241,7 +262,7 @@ CanvasPointerSample _pointer(
 // The failure variants share the real pointer-up owner and differ only by the
 // committed input that stops terminal evaluation before RuntimeRoot prepares.
 // The no-preparation variants deliberately share one full phase/owner trace.
-// ignore: halstead-volume, number-of-parameters, source-lines-of-code
+// ignore: halstead-volume, number-of-parameters, source-lines-of-code, maintainability-index
 void _verifyRealTerminalNoPreparation({
   required CanvasDocument document,
   required Offset terminalPosition,
@@ -257,6 +278,8 @@ void _verifyRealTerminalNoPreparation({
   final interactionEvents = <InteractionEraserRouteWorkEvent>[];
   final captureEvents = <PointerEraserCaptureWorkEvent>[];
   final exactEvents = <HitTestPolicyExactEraserWorkEvent>[];
+  final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
+  final spatialEvents = <SpatialKernelEraserWorkEvent>[];
   final terminalTrace = <Object>[];
   final preparation = <RuntimeDeletionRouteConstructionKind>[];
   root.handlePointer(_pointer(CanvasPointerLifecyclePhase.down, downPosition));
@@ -264,24 +287,36 @@ void _verifyRealTerminalNoPreparation({
     _pointer(CanvasPointerLifecyclePhase.move, terminalPosition),
   );
 
-  HitTestPolicy.observeExactEraserWork(
+  GeometryPolicy.observeEraserWork(
     (event) {
-      exactEvents.add(event);
+      geometryEvents.add(event);
       terminalTrace.add(event);
     },
-    () => PointerEraserCapture.observeWork(
-      captureEvents.add,
-      () => RuntimeRoot.observeDeletionRouteConstruction(
-        preparation.add,
-        () => InteractionEngine.observeEraserRouteWork(
-          interactionEvents.add,
-          () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-            (event) {
-              routeEvents.add(event);
-              terminalTrace.add(event);
-            },
-            () => root.handlePointer(
-              _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
+    () => SpatialKernel.observeEraserWork(
+      (event) {
+        spatialEvents.add(event);
+        terminalTrace.add(event);
+      },
+      () => HitTestPolicy.observeExactEraserWork(
+        (event) {
+          exactEvents.add(event);
+          terminalTrace.add(event);
+        },
+        () => PointerEraserCapture.observeWork(
+          captureEvents.add,
+          () => RuntimeRoot.observeDeletionRouteConstruction(
+            preparation.add,
+            () => InteractionEngine.observeEraserRouteWork(
+              interactionEvents.add,
+              () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                (event) {
+                  routeEvents.add(event);
+                  terminalTrace.add(event);
+                },
+                () => root.handlePointer(
+                  _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
+                ),
+              ),
             ),
           ),
         ),
@@ -292,6 +327,12 @@ void _verifyRealTerminalNoPreparation({
   expect(interactionEvents, [InteractionEraserRouteWorkEvent.terminalSnapshot]);
   expect(routeEvents.map((event) => event.kind), expectedKinds);
   _expectSingleTerminalSnapshot(captureEvents, routeEvents);
+  _expectSingleTerminalGeometryAndSpatialPass(
+    routeEvents,
+    geometryEvents,
+    spatialEvents,
+    terminalTrace,
+  );
   expect(
     routeEvents.where(
       (event) =>
@@ -329,6 +370,43 @@ void _expectSingleTerminalSnapshot(
   expect(snapshot.retainedPointCount, terminalRead.corridorPointCount);
   expect(snapshot.retainedPrefixPointsTraversed, snapshot.retainedPointCount);
   expect(snapshot.retainedPrefixPointsCopied, snapshot.retainedPointCount);
+}
+
+void _expectSingleTerminalGeometryAndSpatialPass(
+  List<RuntimeEraserEntryRouteWorkEvent> routeEvents,
+  List<GeometryPolicyEraserWorkEvent> geometryEvents,
+  List<SpatialKernelEraserWorkEvent> spatialEvents,
+  List<Object> terminalTrace,
+) {
+  expect(geometryEvents, [GeometryPolicyEraserWorkEvent.corridorEnvelope]);
+  expect(spatialEvents, [SpatialKernelEraserWorkEvent.queryEraser]);
+  final terminalReadTraceIndex = terminalTrace.indexWhere(
+    (event) =>
+        event is RuntimeEraserEntryRouteWorkEvent &&
+        event.kind == RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+  );
+  final envelopeTraceIndex = terminalTrace.indexWhere(
+    (event) =>
+        event is RuntimeEraserEntryRouteWorkEvent &&
+        event.kind == RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
+  );
+  final spatialTraceIndex = terminalTrace.indexWhere(
+    (event) =>
+        event is RuntimeEraserEntryRouteWorkEvent &&
+        event.kind == RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+  );
+  final geometryTraceIndex = terminalTrace.indexOf(
+    GeometryPolicyEraserWorkEvent.corridorEnvelope,
+  );
+  final queryTraceIndex = terminalTrace.indexOf(
+    SpatialKernelEraserWorkEvent.queryEraser,
+  );
+  expect(routeEvents, isNotEmpty);
+  expect(terminalReadTraceIndex, isNonNegative);
+  expect(geometryTraceIndex, greaterThan(terminalReadTraceIndex));
+  expect(envelopeTraceIndex, greaterThan(geometryTraceIndex));
+  expect(queryTraceIndex, greaterThan(envelopeTraceIndex));
+  expect(spatialTraceIndex, greaterThan(queryTraceIndex));
 }
 
 // The marker/owner correlation and their enclosing phase order are one
