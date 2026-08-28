@@ -10,9 +10,12 @@ import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_with_document.dart';
 import '../../support/accept_deletion_commit.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
@@ -70,18 +73,26 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
   final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
   final spatialEvents = <SpatialKernelEraserWorkEvent>[];
+  final candidateEvents = <Object>[];
+  final exactEvents = <Object>[];
+  final projectionEvents = <Object>[];
 
-  GeometryPolicy.observeEraserWork(
-    geometryEvents.add,
-    () => SpatialKernel.observeEraserWork(
-      spatialEvents.add,
-      () => InteractionEngine.observeCleanupWork(
-        cleanupEvents.add,
-        () => PointerEraserCapture.observeWork(
-          captureEvents.add,
-          () => InteractionEngine.observeEraserRouteWork(
-            routeEvents.add,
-            () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
+  _observeDownstreamCleanupWork(
+    candidateEvents: candidateEvents,
+    exactEvents: exactEvents,
+    projectionEvents: projectionEvents,
+    operation: () => GeometryPolicy.observeEraserWork(
+      geometryEvents.add,
+      () => SpatialKernel.observeEraserWork(
+        spatialEvents.add,
+        () => InteractionEngine.observeCleanupWork(
+          cleanupEvents.add,
+          () => PointerEraserCapture.observeWork(
+            captureEvents.add,
+            () => InteractionEngine.observeEraserRouteWork(
+              routeEvents.add,
+              () => runtime.tools.setDrawTool(CanvasDrawTool.marker),
+            ),
           ),
         ),
       ),
@@ -95,6 +106,9 @@ void _toolChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(routeEvents, isEmpty);
   expect(geometryEvents, isEmpty);
   expect(spatialEvents, isEmpty);
+  expect(candidateEvents, isEmpty);
+  expect(exactEvents, isEmpty);
+  expect(projectionEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
 
@@ -122,18 +136,26 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
   final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
   final spatialEvents = <SpatialKernelEraserWorkEvent>[];
+  final candidateEvents = <Object>[];
+  final exactEvents = <Object>[];
+  final projectionEvents = <Object>[];
 
-  GeometryPolicy.observeEraserWork(
-    geometryEvents.add,
-    () => SpatialKernel.observeEraserWork(
-      spatialEvents.add,
-      () => InteractionEngine.observeCleanupWork(
-        cleanupEvents.add,
-        () => PointerEraserCapture.observeWork(
-          captureEvents.add,
-          () => InteractionEngine.observeEraserRouteWork(
-            routeEvents.add,
-            () => runtime.tools.setMode(CanvasInteractionMode.move),
+  _observeDownstreamCleanupWork(
+    candidateEvents: candidateEvents,
+    exactEvents: exactEvents,
+    projectionEvents: projectionEvents,
+    operation: () => GeometryPolicy.observeEraserWork(
+      geometryEvents.add,
+      () => SpatialKernel.observeEraserWork(
+        spatialEvents.add,
+        () => InteractionEngine.observeCleanupWork(
+          cleanupEvents.add,
+          () => PointerEraserCapture.observeWork(
+            captureEvents.add,
+            () => InteractionEngine.observeEraserRouteWork(
+              routeEvents.add,
+              () => runtime.tools.setMode(CanvasInteractionMode.move),
+            ),
           ),
         ),
       ),
@@ -147,8 +169,27 @@ void _modeChangeReleasesActiveEraserWithoutCorridorWork() {
   expect(routeEvents, isEmpty);
   expect(geometryEvents, isEmpty);
   expect(spatialEvents, isEmpty);
+  expect(candidateEvents, isEmpty);
+  expect(exactEvents, isEmpty);
+  expect(projectionEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
 }
+
+T _observeDownstreamCleanupWork<T>({
+  required List<Object> candidateEvents,
+  required List<Object> exactEvents,
+  required List<Object> projectionEvents,
+  required T Function() operation,
+}) => observeRuntimeCandidateResolutionWork(
+  candidateEvents.add,
+  () => HitTestPolicy.observeExactEraserWork(
+    exactEvents.add,
+    () => DocumentStoreKernel.observeDeletionEntryProjection(
+      projectionEvents.add,
+      operation,
+    ),
+  ),
+);
 
 void _configuredInitialToolSettingsAreVisibleWithoutRevisionBump() {
   final style = CanvasDrawStyle(

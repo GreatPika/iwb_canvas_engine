@@ -142,6 +142,28 @@ void registerTerminalEraserEntryRouteWorkTest() {
       returnsNormally,
     );
   });
+  test('adapter candidate budget rejects before exact work', () {
+    expect(
+      () => _verifyRealTerminalNoPreparation(
+        document: _terminalEraserDocument(_terminalEraserTargetIds(2), 0),
+        terminalPosition: const Offset(60, 0),
+        expectedKinds: _shortTerminalKinds,
+        candidateLimit: 1,
+      ),
+      returnsNormally,
+    );
+  });
+  test('adapter exact budget rejects before exact hit work', () {
+    expect(
+      () => _verifyRealTerminalNoPreparation(
+        document: _terminalEraserDocument(_terminalEraserTargetIds(1), 0),
+        terminalPosition: const Offset(60, 0),
+        expectedKinds: _shortTerminalKinds,
+        exactCheckLimit: 0,
+      ),
+      returnsNormally,
+    );
+  });
 }
 
 const _shortTerminalKinds = [
@@ -269,6 +291,8 @@ void _verifyRealTerminalNoPreparation({
   required List<RuntimeEraserEntryRouteWorkKind> expectedKinds,
   Offset downPosition = Offset.zero,
   InteractionReadBudgetExceededReason? expectedBudgetReason,
+  int? candidateLimit,
+  int? exactCheckLimit,
 }) {
   final root = runtimeRootWithCommittedDocumentSeed(document);
   addTearDown(root.dispose);
@@ -287,42 +311,54 @@ void _verifyRealTerminalNoPreparation({
     _pointer(CanvasPointerLifecyclePhase.move, terminalPosition),
   );
 
-  GeometryPolicy.observeEraserWork(
-    (event) {
-      geometryEvents.add(event);
-      terminalTrace.add(event);
-    },
-    () => SpatialKernel.observeEraserWork(
+  void runTerminal() {
+    GeometryPolicy.observeEraserWork(
       (event) {
-        spatialEvents.add(event);
+        geometryEvents.add(event);
         terminalTrace.add(event);
       },
-      () => HitTestPolicy.observeExactEraserWork(
+      () => SpatialKernel.observeEraserWork(
         (event) {
-          exactEvents.add(event);
+          spatialEvents.add(event);
           terminalTrace.add(event);
         },
-        () => PointerEraserCapture.observeWork(
-          captureEvents.add,
-          () => RuntimeRoot.observeDeletionRouteConstruction(
-            preparation.add,
-            () => InteractionEngine.observeEraserRouteWork(
-              interactionEvents.add,
-              () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-                (event) {
-                  routeEvents.add(event);
-                  terminalTrace.add(event);
-                },
-                () => root.handlePointer(
-                  _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
+        () => HitTestPolicy.observeExactEraserWork(
+          (event) {
+            exactEvents.add(event);
+            terminalTrace.add(event);
+          },
+          () => PointerEraserCapture.observeWork(
+            captureEvents.add,
+            () => RuntimeRoot.observeDeletionRouteConstruction(
+              preparation.add,
+              () => InteractionEngine.observeEraserRouteWork(
+                interactionEvents.add,
+                () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                  (event) {
+                    routeEvents.add(event);
+                    terminalTrace.add(event);
+                  },
+                  () => root.handlePointer(
+                    _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
+  if (candidateLimit != null || exactCheckLimit != null) {
+    RuntimeInteractionReadAdapter.injectEraserTerminalBudget(
+      candidateLimit: candidateLimit ?? 4096,
+      exactCheckLimit: exactCheckLimit ?? 32768,
+      operation: runTerminal,
+    );
+  } else {
+    runTerminal();
+  }
 
   expect(interactionEvents, [InteractionEraserRouteWorkEvent.terminalSnapshot]);
   expect(routeEvents.map((event) => event.kind), expectedKinds);

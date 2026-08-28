@@ -704,6 +704,8 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
   final overflowCaptureWork = <PointerEraserCaptureWorkEvent>[];
   final overflowRouteWork = <InteractionEraserRouteWorkEvent>[];
   final overflowReadWork = <RuntimeEraserEntryRouteWorkEvent>[];
+  final overflowExactWork = <HitTestPolicyExactEraserWorkEvent>[];
+  final overflowProjection = <List<DeletionEntryFacts>>[];
   final overflowGeometryWork = <GeometryPolicyEraserWorkEvent>[];
   final overflowSpatialWork = <SpatialKernelEraserWorkEvent>[];
   _observeEraserGeometryAndSpatialWork(
@@ -715,8 +717,18 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
         overflowRouteWork.add,
         () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
           overflowReadWork.add,
-          () => overflowRoot.handlePointer(
-            _sample(2, const Offset(8000, 0), CanvasPointerLifecyclePhase.move),
+          () => HitTestPolicy.observeExactEraserWork(
+            overflowExactWork.add,
+            () => DocumentStoreKernel.observeDeletionEntryProjection(
+              overflowProjection.add,
+              () => overflowRoot.handlePointer(
+                _sample(
+                  2,
+                  const Offset(8000, 0),
+                  CanvasPointerLifecyclePhase.move,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -732,6 +744,8 @@ void _verifyVisualOnlyEraserRuntimeRouting() {
     InteractionEraserRouteWorkEvent.previewPublished,
   ]);
   expect(overflowReadWork, isEmpty);
+  expect(overflowExactWork, isEmpty);
+  expect(overflowProjection, isEmpty);
   expect(overflowGeometryWork, isEmpty);
   expect(overflowSpatialWork, isEmpty);
   final overflowPreview = overflowRoot.preview as CanvasEraserPreview;

@@ -94,6 +94,34 @@ void main() {
   test('stale retained terminal has no partial runtime commit', () {
     expect(_verifyStaleRuntimeTerminalNoPartialCommit, returnsNormally);
   });
+  test('adapter candidate-limit terminal has no partial runtime commit', () {
+    expect(
+      () => RuntimeInteractionReadAdapter.injectEraserTerminalBudget(
+        candidateLimit: 1,
+        exactCheckLimit: 32768,
+        operation: () => _verifyRuntimeTerminalNoPartialCommit(
+          document: _twoCandidateDocument(),
+          terminalPosition: const Offset(20, 0),
+          expectedRoute: _adapterBudgetRoute,
+        ),
+      ),
+      returnsNormally,
+    );
+  });
+  test('adapter exact-limit terminal has no partial runtime commit', () {
+    expect(
+      () => RuntimeInteractionReadAdapter.injectEraserTerminalBudget(
+        candidateLimit: 4096,
+        exactCheckLimit: 0,
+        operation: () => _verifyRuntimeTerminalNoPartialCommit(
+          document: _twoCandidateDocument(),
+          terminalPosition: const Offset(20, 0),
+          expectedRoute: _adapterBudgetRoute,
+        ),
+      ),
+      returnsNormally,
+    );
+  });
 }
 
 const _queryOnlyRoute = [
@@ -108,6 +136,12 @@ const _emptyRoute = [
   RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
   RuntimeEraserEntryRouteWorkKind.exactHitIdsReady,
   RuntimeEraserEntryRouteWorkKind.entriesReady,
+];
+
+const _adapterBudgetRoute = [
+  ..._queryOnlyRoute,
+  RuntimeEraserEntryRouteWorkKind.candidatesReady,
+  RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
 ];
 
 void _verifyPreviewOverflowCorridorOnly() {
@@ -446,6 +480,21 @@ CanvasDocument _candidateOverflowDocument() => CanvasDocument(
           CanvasRectElement(
             id: CanvasElementId('candidate-$index'),
             transform: CanvasTransform.translation(Offset.zero),
+            size: const Size(10, 10),
+          ),
+      ],
+    ),
+  ],
+);
+
+CanvasDocument _twoCandidateDocument() => CanvasDocument(
+  layers: [
+    CanvasLayer(
+      id: CanvasLayerId('adapter-budget'),
+      elements: [
+        for (var index = 0; index < 2; index += 1)
+          CanvasRectElement(
+            id: CanvasElementId('adapter-$index'),
             size: const Size(10, 10),
           ),
       ],

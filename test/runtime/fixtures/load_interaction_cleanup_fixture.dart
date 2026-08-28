@@ -8,10 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/commit_delivery.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 import '../../support/accept_deletion_commit.dart';
 
@@ -166,22 +169,34 @@ void _verifyLoadSuccessCleansEraserInteraction() {
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
   final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
   final spatialEvents = <SpatialKernelEraserWorkEvent>[];
+  final candidateEvents = <Object>[];
+  final exactEvents = <Object>[];
+  final projectionEvents = <Object>[];
   root.state.addListener(() {
     snapshots.add(root.state.value);
   });
 
-  GeometryPolicy.observeEraserWork(
-    geometryEvents.add,
-    () => SpatialKernel.observeEraserWork(
-      spatialEvents.add,
-      () => InteractionEngine.observeCleanupWork(
-        cleanupEvents.add,
-        () => PointerEraserCapture.observeWork(
-          captureEvents.add,
-          () => InteractionEngine.observeEraserRouteWork(
-            routeEvents.add,
-            () => root.edits.loadDocumentFromJson(
-              encodeCanvasDocumentToJson(_replacementDocument()),
+  observeRuntimeCandidateResolutionWork(
+    candidateEvents.add,
+    () => HitTestPolicy.observeExactEraserWork(
+      exactEvents.add,
+      () => DocumentStoreKernel.observeDeletionEntryProjection(
+        projectionEvents.add,
+        () => GeometryPolicy.observeEraserWork(
+          geometryEvents.add,
+          () => SpatialKernel.observeEraserWork(
+            spatialEvents.add,
+            () => InteractionEngine.observeCleanupWork(
+              cleanupEvents.add,
+              () => PointerEraserCapture.observeWork(
+                captureEvents.add,
+                () => InteractionEngine.observeEraserRouteWork(
+                  routeEvents.add,
+                  () => root.edits.loadDocumentFromJson(
+                    encodeCanvasDocumentToJson(_replacementDocument()),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -196,6 +211,9 @@ void _verifyLoadSuccessCleansEraserInteraction() {
   expect(routeEvents, isEmpty);
   expect(geometryEvents, isEmpty);
   expect(spatialEvents, isEmpty);
+  expect(candidateEvents, isEmpty);
+  expect(exactEvents, isEmpty);
+  expect(projectionEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
   expect(root.preview, isA<CanvasNoPreview>());
   expect(actionEvents, isEmpty);

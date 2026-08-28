@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import '../../support/runtime_root_with_committed_document_seed.dart';
 
@@ -208,6 +209,7 @@ void _verifyPostResampleEraserPreviewIsolation() {
   );
   scenario.snapshots.clear();
   final before = scenario.root.state.value;
+  final beforeSpatial = scenario.root.spatialKernel.snapshot;
   final beforeProjectionBuilds = scenario.root.projectionBuildCount;
   final frames = <RuntimeSurfaceFrameSignal?>[];
   scenario.root.surfaceFrameSignal.addListener(() {
@@ -232,6 +234,10 @@ void _verifyPostResampleEraserPreviewIsolation() {
     previewDelta: 7999,
   );
   expect(scenario.root.projectionBuildCount, beforeProjectionBuilds);
+  _expectSpatialSnapshotUnchanged(
+    beforeSpatial,
+    scenario.root.spatialKernel.snapshot,
+  );
   expect(scenario.actions, isEmpty);
   expect(frames, isNotEmpty);
   expect(frames.last?.mainCanvas, isFalse);
@@ -350,6 +356,7 @@ void _expectEraserPreviewPublication(
 ) {
   scenario.snapshots.clear();
   final before = scenario.root.state.value;
+  final beforeSpatial = scenario.root.spatialKernel.snapshot;
 
   scenario.root.handlePointer(_sample(phase, position));
 
@@ -358,7 +365,26 @@ void _expectEraserPreviewPublication(
   expect(preview.corridor, expectedCorridor);
   expect(preview.thickness, 6);
   _expectOnlyPreviewRevisionChanged(before, scenario.snapshots.single);
+  _expectSpatialSnapshotUnchanged(
+    beforeSpatial,
+    scenario.root.spatialKernel.snapshot,
+  );
   expect(scenario.actions, isEmpty);
+}
+
+void _expectSpatialSnapshotUnchanged(
+  SpatialKernelSnapshot before,
+  SpatialKernelSnapshot after,
+) {
+  expect(after.structuralRevision, before.structuralRevision);
+  expect(after.isInvalid, before.isInvalid);
+  expect(after.entryCount, before.entryCount);
+  expect(after.hitTilePageCount, before.hitTilePageCount);
+  expect(after.paintTilePageCount, before.paintTilePageCount);
+  expect(after.contextTilePageCount, before.contextTilePageCount);
+  expect(after.hitOutlierCount, before.hitOutlierCount);
+  expect(after.paintOutlierCount, before.paintOutlierCount);
+  expect(after.contextOutlierCount, before.contextOutlierCount);
 }
 
 void _expectPendingLineStartPreview(CanvasPreviewState preview) {

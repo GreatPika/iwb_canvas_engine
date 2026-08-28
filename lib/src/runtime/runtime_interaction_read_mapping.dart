@@ -1,10 +1,24 @@
+import 'dart:async';
 import 'dart:ui';
+
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/public/canvas_element.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../interaction/interaction_read_port.dart';
 import '../geometry/spatial_query_result.dart';
+
+@visibleForTesting
+enum RuntimeCandidateResolutionWorkEvent { resolved }
+
+final Object _candidateResolutionWorkZoneKey = Object();
+
+@visibleForTesting
+T observeRuntimeCandidateResolutionWork<T>(
+  void Function(RuntimeCandidateResolutionWorkEvent event) sink,
+  T Function() operation,
+) => runZoned(operation, zoneValues: {_candidateResolutionWorkZoneKey: sink});
 
 final class RuntimeResolvedSpatialCandidates {
   const RuntimeResolvedSpatialCandidates({
@@ -22,6 +36,12 @@ RuntimeResolvedSpatialCandidates resolveInteractionCandidates(
   SpatialQueryResult query, {
   required FrameElementFacts? Function(FrameElementHandle handle) resolve,
 }) {
+  assert(
+    _recordCandidateResolutionWork(
+      RuntimeCandidateResolutionWorkEvent.resolved,
+    ),
+    'candidate resolution work observation failed',
+  );
   if (query is! SpatialCandidatesResult) {
     return const RuntimeResolvedSpatialCandidates();
   }
@@ -43,6 +63,12 @@ RuntimeResolvedSpatialCandidates resolveInteractionCandidates(
     facts: List.unmodifiable(facts),
     skippedCandidateCount: skipped,
   );
+}
+
+bool _recordCandidateResolutionWork(RuntimeCandidateResolutionWorkEvent event) {
+  final sink = Zone.current[_candidateResolutionWorkZoneKey];
+  if (sink is void Function(RuntimeCandidateResolutionWorkEvent)) sink(event);
+  return true;
 }
 
 bool interactionQueryHasCandidates(SpatialQueryResult query) {

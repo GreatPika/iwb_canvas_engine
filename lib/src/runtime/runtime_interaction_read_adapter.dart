@@ -11,6 +11,7 @@ import '../contracts/internal/deletion_entry_projection_port.dart';
 import '../contracts/internal/frame_facts_port.dart';
 import '../contracts/internal/selection_facts_port.dart';
 import '../contracts/public/canvas_ids.dart';
+import '../geometry/geometry_policy.dart';
 import '../geometry/hit_test_policy.dart';
 import '../geometry/spatial_kernel.dart';
 import '../geometry/spatial_query_policy.dart';
@@ -60,6 +61,17 @@ final class RuntimeEraserEntryRouteWorkEvent {
 
 final Object _eraserEntryRouteWorkZoneKey = Object();
 final Object _selectedMoveOrderingWorkZoneKey = Object();
+final Object _eraserTerminalBudgetZoneKey = Object();
+
+final class _EraserTerminalBudgetOverride {
+  const _EraserTerminalBudgetOverride({
+    required this.candidateLimit,
+    required this.exactCheckLimit,
+  });
+
+  final int candidateLimit;
+  final int exactCheckLimit;
+}
 
 // The runtime read adapter intentionally names each read collaborator so the
 // interaction owner receives one immutable fact seam without hiding ownership
@@ -102,6 +114,22 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     void Function(RuntimeEraserEntryRouteWorkEvent event) sink,
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_eraserEntryRouteWorkZoneKey: sink});
+
+  /// Drives the real terminal budget branches in assertion-enabled fixtures.
+  @visibleForTesting
+  static T injectEraserTerminalBudget<T>({
+    required int candidateLimit,
+    required int exactCheckLimit,
+    required T Function() operation,
+  }) => runZoned(
+    operation,
+    zoneValues: {
+      _eraserTerminalBudgetZoneKey: _EraserTerminalBudgetOverride(
+        candidateLimit: candidateLimit,
+        exactCheckLimit: exactCheckLimit,
+      ),
+    },
+  );
 
   static bool _recordEraserEntryRouteWork(
     RuntimeEraserEntryRouteWorkEvent event,
@@ -355,7 +383,17 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
   @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
-    final budget = _hitTestPolicy.geometryPolicy.eraserTerminalBudgetInputs();
+    var budget = _hitTestPolicy.geometryPolicy.eraserTerminalBudgetInputs();
+    assert(() {
+      final override = Zone.current[_eraserTerminalBudgetZoneKey];
+      if (override case _EraserTerminalBudgetOverride()) {
+        budget = EraserExactBudgetInputs(
+          candidateLimit: override.candidateLimit,
+          exactCheckLimit: override.exactCheckLimit,
+        );
+      }
+      return true;
+    }(), 'eraser terminal budget override failed');
 
     return _eraserFacts(
       request,

@@ -10,10 +10,13 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 
 import 'package:iwb_canvas_engine/src/api/canvas_runtime_frame_bridge.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
+import 'package:iwb_canvas_engine/src/store/document_store_kernel.dart';
 import 'package:iwb_canvas_engine/src/surface/pointer_adapter.dart';
 import '../../support/runtime_with_document.dart';
 
@@ -76,21 +79,34 @@ Future<void> _expectInteractiveFalseReleasesActiveEraser(
   final cleanupEvents = <InteractionCleanupWorkEvent>[];
   final geometryEvents = <GeometryPolicyEraserWorkEvent>[];
   final spatialEvents = <SpatialKernelEraserWorkEvent>[];
+  final candidateEvents = <Object>[];
+  final exactEvents = <Object>[];
+  final projectionEvents = <Object>[];
 
-  await GeometryPolicy.observeEraserWork(
-    geometryEvents.add,
-    () => SpatialKernel.observeEraserWork(
-      spatialEvents.add,
-      () => InteractionEngine.observeCleanupWork(
-        cleanupEvents.add,
-        () => PointerEraserCapture.observeWork(
-          captureEvents.add,
-          () => InteractionEngine.observeEraserRouteWork(
-            interactionEvents.add,
-            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-              readEvents.add,
-              () => tester.pumpWidget(
-                _SurfaceHost(runtime: runtime, interactive: false),
+  await observeRuntimeCandidateResolutionWork(
+    candidateEvents.add,
+    () => HitTestPolicy.observeExactEraserWork(
+      exactEvents.add,
+      () => DocumentStoreKernel.observeDeletionEntryProjection(
+        projectionEvents.add,
+        () => GeometryPolicy.observeEraserWork(
+          geometryEvents.add,
+          () => SpatialKernel.observeEraserWork(
+            spatialEvents.add,
+            () => InteractionEngine.observeCleanupWork(
+              cleanupEvents.add,
+              () => PointerEraserCapture.observeWork(
+                captureEvents.add,
+                () => InteractionEngine.observeEraserRouteWork(
+                  interactionEvents.add,
+                  () =>
+                      RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                        readEvents.add,
+                        () => tester.pumpWidget(
+                          _SurfaceHost(runtime: runtime, interactive: false),
+                        ),
+                      ),
+                ),
               ),
             ),
           ),
@@ -108,6 +124,9 @@ Future<void> _expectInteractiveFalseReleasesActiveEraser(
   expect(readEvents, isEmpty);
   expect(geometryEvents, isEmpty);
   expect(spatialEvents, isEmpty);
+  expect(candidateEvents, isEmpty);
+  expect(exactEvents, isEmpty);
+  expect(projectionEvents, isEmpty);
   expect(cleanupEvents, contains(InteractionCleanupWorkEvent.sessionReleased));
   await gesture.removePointer();
 }

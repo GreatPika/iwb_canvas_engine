@@ -55,7 +55,7 @@ sequenceDiagram
     else preview budget accepts
       Geometry-->>ReadPort: policy-filtered preview tentative ids
       ReadPort-->>IE: preview facts with tentative ids
-      IE->>Preview: publish initial eraser preview with tentative ids
+      IE->>Preview: publish initial corridor/thickness-only eraser preview
       Preview-->>Runtime: preview revision fact
       Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
       Preview->>Frame: request overlay repaint

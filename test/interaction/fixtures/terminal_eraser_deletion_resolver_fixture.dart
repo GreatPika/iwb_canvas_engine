@@ -16,12 +16,14 @@ import 'package:iwb_canvas_engine/src/contracts/internal/resolver_mutation_guard
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/edit/commit_applier.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
+import 'package:iwb_canvas_engine/src/geometry/hit_test_policy.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_kernel.dart';
 import 'package:iwb_canvas_engine/src/interaction/eraser_machine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_engine.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_pointer_context.dart';
 import 'package:iwb_canvas_engine/src/interaction/pointer_cleanup_protocol.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_mapping.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 import 'package:iwb_canvas_engine/src/selection/selection_kernel.dart';
 import 'package:iwb_canvas_engine/src/store/committed_document.dart';
@@ -1091,17 +1093,27 @@ void _expectEraserPreparationFailure(_EraserPreparationFailureCase failure) {
 T _observeTerminalCleanupWork<T>(List<String> trace, T Function() operation) {
   return GeometryPolicy.observeEraserWork(
     (event) => trace.add('geometry:${event.name}'),
-    () => SpatialKernel.observeEraserWork(
-      (event) => trace.add('spatial:${event.name}'),
-      () => InteractionEngine.observeCleanupWork(
-        (event) => trace.add('cleanup:$event'),
-        () => PointerEraserCapture.observeWork(
-          (event) => trace.add('capture:${event.kind}'),
-          () => InteractionEngine.observeEraserRouteWork(
-            (event) => trace.add('interaction:$event'),
-            () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
-              (event) => trace.add('read:${event.kind}'),
-              operation,
+    () => observeRuntimeCandidateResolutionWork(
+      (event) => trace.add('candidate:${event.name}'),
+      () => HitTestPolicy.observeExactEraserWork(
+        (event) => trace.add('exact:${event.candidateId.value}'),
+        () => DocumentStoreKernel.observeDeletionEntryProjection(
+          (_) => trace.add('projection'),
+          () => SpatialKernel.observeEraserWork(
+            (event) => trace.add('spatial:${event.name}'),
+            () => InteractionEngine.observeCleanupWork(
+              (event) => trace.add('cleanup:$event'),
+              () => PointerEraserCapture.observeWork(
+                (event) => trace.add('capture:${event.kind}'),
+                () => InteractionEngine.observeEraserRouteWork(
+                  (event) => trace.add('interaction:$event'),
+                  () =>
+                      RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
+                        (event) => trace.add('read:${event.kind}'),
+                        operation,
+                      ),
+                ),
+              ),
             ),
           ),
         ),
