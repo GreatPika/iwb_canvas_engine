@@ -33,10 +33,10 @@ Classify before brainstorming:
 
 ## 3. Candidate Development
 
-Invoke `$superpowers:brainstorming` only when classification leaves a material
-architecture choice. Ask one question at a time and develop the complete candidate
-comparison required by `design-rules-basis-candidates.md`, including `F`, `M`,
-applicable `P`, strict dominance, and incomparable trade-offs.
+When classification leaves a material architecture choice, ask the user one question
+at a time and develop the complete candidate comparison required by
+`design-rules-basis-candidates.md`, including `F`, `M`, applicable `P`, strict
+dominance, and incomparable trade-offs.
 
 Obtain approval only for the material axes and deltas actually presented. Brainstorming
 must not create `docs/superpowers` or other superpowers output, a commit, a Change
