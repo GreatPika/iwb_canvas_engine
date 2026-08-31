@@ -24,22 +24,6 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 // one reuses the same captured trace without duplicating its false-positive kills.
 // ignore: halstead-volume, source-lines-of-code, maintainability-index
 void registerTerminalEraserEntryRouteWorkTest() {
-  test('eraser preview keeps canonical ids without terminal Store work', () {
-    final result = _runEraserPreviewEntryRoute(
-      targetIds: _terminalEraserTargetIds(2),
-    );
-    addTearDown(result.dispose);
-
-    expect(result.facts.erasedElementIds, _terminalEraserTargetIds(2));
-    expect(result.facts.erasedEntries, isEmpty);
-    expect(result.storeWork, isEmpty);
-    expect(result.routeEvents.map((event) => event.kind), [
-      RuntimeEraserEntryRouteWorkKind.previewReadStarted,
-    ]);
-    expect(result.frameHandleEnumerations, 0);
-    expect(result.projectionBuildDelta, 0);
-  });
-
   test(
     'terminal eraser carries a single exact hit without order comparisons',
     () {
@@ -638,7 +622,6 @@ _TerminalEraserEntryRouteWork _runTerminalEraserEntryRoute({
   final read = _runEraserReadRoute(
     targetIds: targetIds,
     unrelatedElementCount: unrelatedElementCount,
-    terminal: true,
   );
   final intent = const EraserMachine()
       .terminal(
@@ -667,33 +650,12 @@ _TerminalEraserEntryRouteWork _runTerminalEraserEntryRoute({
   );
 }
 
-_EraserPreviewEntryRouteWork _runEraserPreviewEntryRoute({
-  required List<CanvasElementId> targetIds,
-  int unrelatedElementCount = 0,
-}) {
-  final read = _runEraserReadRoute(
-    targetIds: targetIds,
-    unrelatedElementCount: unrelatedElementCount,
-    terminal: false,
-  );
-
-  return _EraserPreviewEntryRouteWork(
-    root: read.root,
-    facts: read.facts,
-    storeWork: read.storeWork,
-    routeEvents: read.routeEvents,
-    frameHandleEnumerations: read.frameHandleEnumerations,
-    projectionBuildDelta: read.projectionBuildDelta,
-  );
-}
-
 // One nested boundary measures read-to-entry work against the same root
 // snapshot; splitting its observers would weaken that route witness.
 // ignore: halstead-volume, source-lines-of-code
 _EraserReadRoute _runEraserReadRoute({
   required List<CanvasElementId> targetIds,
   required int unrelatedElementCount,
-  required bool terminal,
 }) {
   final root = runtimeRootWithCommittedDocumentSeed(
     _terminalEraserDocument(targetIds, unrelatedElementCount),
@@ -711,19 +673,12 @@ _EraserReadRoute _runEraserReadRoute({
         () => frameHandleEnumerations += 1,
         () => RuntimeInteractionReadAdapter.observeEraserEntryRouteWork(
           routeEvents.add,
-          () => terminal
-              ? root.interactionReadPort.eraserTerminalFacts(
-                  EraserReadRequest(
-                    corridorPoints: const [Offset.zero, Offset(60, 0)],
-                    eraserThickness: 2,
-                  ),
-                )
-              : root.interactionReadPort.eraserPreviewFacts(
-                  EraserReadRequest(
-                    corridorPoints: const [Offset.zero, Offset(60, 0)],
-                    eraserThickness: 2,
-                  ),
-                ),
+          () => root.interactionReadPort.eraserTerminalFacts(
+            EraserReadRequest(
+              corridorPoints: const [Offset.zero, Offset(60, 0)],
+              eraserThickness: 2,
+            ),
+          ),
         ),
       ),
     ),
@@ -837,24 +792,4 @@ final class _TerminalEraserEntryRouteWork {
       )
       .map((event) => event.exactHitIds)
       .firstOrNull;
-}
-
-final class _EraserPreviewEntryRouteWork {
-  const _EraserPreviewEntryRouteWork({
-    required this.root,
-    required this.facts,
-    required this.storeWork,
-    required this.routeEvents,
-    required this.frameHandleEnumerations,
-    required this.projectionBuildDelta,
-  });
-
-  final RuntimeRoot root;
-  final EraserReadFacts facts;
-  final Map<DeletionProjectionWorkEvent, int> storeWork;
-  final List<RuntimeEraserEntryRouteWorkEvent> routeEvents;
-  final int frameHandleEnumerations;
-  final int projectionBuildDelta;
-
-  void dispose() => root.dispose();
 }

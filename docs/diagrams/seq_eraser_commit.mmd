@@ -27,12 +27,8 @@ sequenceDiagram
   IE->>IE: admit one active pointer token
   IE->>IE: read finite eraserThickness and start eraser session
   Note over IE: Session stores pointer token, sessionId, eraserThickness, and corridor points in world coordinates.
-  IE->>ReadPort: eraserPreviewFacts(one immutable initial corridor point, eraser thickness)
-  ReadPort->>Spatial: query initial preview corridor envelope
-  Spatial-->>ReadPort: initial preview facts
-  ReadPort->>Geometry: initial preview exact checks under the preview budget
-  Geometry-->>ReadPort: initial preview facts
-  ReadPort-->>IE: initial immutable preview facts
+  IE->>IE: freeze one immutable first-point capture snapshot
+  Note over IE,Geometry: Down is visual-only: no ReadPort, envelope, spatial query, candidate resolution, exact hit, or deletion projection.
   IE->>Preview: publish CanvasEraserPreview(corridor, thickness) with first corridor point
   Preview-->>Runtime: preview revision fact
   Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview

@@ -44,19 +44,6 @@ final class EraserMachine {
     );
   }
 
-  EraserPreviewDecision initialPreview({
-    required PointerEraserCapture eraser,
-    required EraserReadFacts facts,
-  }) {
-    return EraserPreviewDecision.changed(
-      eraser: eraser,
-      preview: CanvasEraserPreview(
-        corridor: facts.corridorPoints,
-        thickness: eraser.thickness,
-      ),
-    );
-  }
-
   EraserTerminalDecision terminal({required EraserTerminalInput input}) {
     if (input.facts.exactBudgetExceeded || input.facts.erasedEntries.isEmpty) {
       return const EraserTerminalDecision.cleanupOnly();

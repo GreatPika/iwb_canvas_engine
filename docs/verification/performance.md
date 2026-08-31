@@ -87,48 +87,11 @@ performance is future Android Macrobenchmark scope.
 
 ## Scenario group catalog
 
-| Scenario group | Migration | Phase key | Repeats |
-|---|---|---|---|
-| `load_document.1k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `load_document.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `load_document.50k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `load_document.100k` | `redesigned` | `setup.fixture_json` | `repeat_001` |
-| `load_document.100k` | `redesigned` | `warm.load_document` | `repeat_001` |
-| `load_document.100k` | `redesigned` | `steady.load_document` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `first_canvas_frame.50k` | `redesigned` | `setup.preloaded_runtime` | `repeat_001` |
-| `first_canvas_frame.50k` | `redesigned` | `warm.first_canvas_frame` | `repeat_001` |
-| `first_canvas_frame.50k` | `redesigned` | `steady.first_canvas_frame` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `camera_pan.50k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `camera_pan.100k` | `redesigned` | `setup.loaded_document` | `repeat_001` |
-| `camera_pan.100k` | `redesigned` | `warm.camera_pan` | `repeat_001` |
-| `camera_pan.100k` | `redesigned` | `steady.camera_pan` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `selection_tap.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `selection_move.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `selection_move.50k` | `redesigned` | `setup.loaded_selected_document` | `repeat_001` |
-| `selection_move.50k` | `redesigned` | `warm.selection_move` | `repeat_001` |
-| `selection_move.50k` | `redesigned` | `steady.selection_move` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `marquee_select.50k` | `redesigned` | `setup.loaded_document` | `repeat_001` |
-| `marquee_select.50k` | `redesigned` | `warm.marquee_select` | `repeat_001` |
-| `marquee_select.50k` | `redesigned` | `steady.marquee_select` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `pencil_draw.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `marker_draw.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `line_two_tap.50k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `eraser_normal.50k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `eraser_dense_50k` | `redesigned` | `setup.loaded_draw_mode_document` | `repeat_001` |
-| `eraser_dense_50k` | `redesigned` | `warm.eraser_dense` | `repeat_001` |
-| `eraser_dense_50k` | `redesigned` | `steady.eraser_dense` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
-| `context_delete.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `text_edit.open_commit` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `text_style_change.10k` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `resource_image_cold` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `resource_image_warm` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `resource_mark_dirty` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `missing_resource` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `surface_runtime_swap` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `dispose_during_preview` | `single.current_behavior` | `single.current_behavior` | `repeat_001` |
-| `json_export.50k` | `redesigned` | `setup.loaded_document` | `repeat_001` |
-| `json_export.50k` | `redesigned` | `warm.json_export` | `repeat_001` |
-| `json_export.50k` | `redesigned` | `steady.json_export` | `repeat_001`, `repeat_002`, `repeat_003`, `repeat_004`, `repeat_005` |
+The [executable catalog](../../example/lib/perf/performance_scenario_catalog.dart)
+owns scenario membership, phase names, repeat counts, and preparation metadata.
+The route, artifact writer, and artifact checker consume that catalog directly.
+Tests verify phase rules and faithful propagation into artifacts, not a copied
+list of groups, metadata strings, or fixed totals.
 
 The `load_document.100k` and `camera_pan.100k` groups are catalog requirements
 only for exact fixtures that fit the current validation limits. Do not expand
@@ -140,15 +103,10 @@ Warm and steady repeats for redesigned groups must start from the same
 canonical prepared state. Preparation and reset are outside the measured warm
 and steady traces.
 
-| Scenario group | canonicalPreparation | resetReason | measuredAction |
-|---|---|---|---|
-| `load_document.100k` | `empty_runtime_with_prepared_json_fixture` | `load_writes_document_state` | `load_document` |
-| `first_canvas_frame.50k` | `preloaded_runtime_not_rendered_by_measured_surface` | `first_frame_cost_disappears_after_render` | `first_canvas_frame` |
-| `camera_pan.100k` | `loaded_document_camera_origin_settled_surface` | `pan_accumulates_camera_offset` | `camera_pan` |
-| `selection_move.50k` | `loaded_selected_document_original_geometry` | `move_translates_selected_geometry` | `selection_move` |
-| `marquee_select.50k` | `loaded_document_move_mode_no_selection_settled_surface` | `marquee_commit_replaces_selection` | `marquee_select` |
-| `json_export.50k` | `loaded_document_stable_order_no_pending_edit` | `export_reset_keeps_repeats_comparable` | `json_export` |
-| `eraser_dense_50k` | `loaded_draw_mode_eraser_document_without_prior_erasure` | `eraser_removes_elements` | `eraser_dense` |
+Each warm/steady descriptor declares `canonicalPreparation`, `resetReason`, and
+`measuredAction`. Warm and steady phases within one group share those values;
+the writer preserves them verbatim in each repeat artifact. Scenario-specific
+values live only in the executable catalog linked above.
 
 ## Artifact contract
 

@@ -225,37 +225,8 @@ void _registerEraserReadPortNegativeProof() {
 
   test('read-port eraser facts corridor fixture is rejected', () async {
     final mutableFixture = _interactionReadPortSource().replaceFirst(
-      '''
-}) : corridorPoints = List.unmodifiable(corridorPoints),
-       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
-       _terminalErasedEntries = null;
-''',
-      '''
-}) : corridorPoints = corridorPoints,
-       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
-       _terminalErasedEntries = null;
-''',
-    );
-    final violations = _readPortImmutableViolations(mutableFixture);
-    expect(violations, isNotEmpty);
-    await _expectStructuralRejection(
-      id: interactionReadPortImmutableFactsGuardrailId,
-      violations: violations,
-    );
-  });
-
-  test('read-port eraser facts erased ids fixture is rejected', () async {
-    final mutableFixture = _interactionReadPortSource().replaceFirst(
-      '''
-}) : corridorPoints = List.unmodifiable(corridorPoints),
-       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
-       _terminalErasedEntries = null;
-''',
-      '''
-}) : corridorPoints = List.unmodifiable(corridorPoints),
-       _previewErasedElementIds = erasedElementIds,
-       _terminalErasedEntries = null;
-''',
+      '}) : corridorPoints = List.unmodifiable(corridorPoints),',
+      '}) : corridorPoints = corridorPoints,',
     );
     final violations = _readPortImmutableViolations(mutableFixture);
     expect(violations, isNotEmpty);

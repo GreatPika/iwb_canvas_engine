@@ -23,8 +23,6 @@ abstract interface class InteractionReadPort {
 
   MarqueeCommitFacts marqueeCommitFacts(MarqueeCommitReadRequest request);
 
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request);
-
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request);
 
   ContextTargetReadOutcome directContextTargetFacts(
@@ -261,19 +259,6 @@ final class EraserReadRequest {
 }
 
 final class EraserReadFacts {
-  EraserReadFacts.preview({
-    required Iterable<Offset> corridorPoints,
-    required Iterable<CanvasElementId> erasedElementIds,
-    required this.eraserThickness,
-    required this.controllerEpoch,
-    required this.documentRevision,
-    required this.exactCheckCount,
-    required this.exactBudgetExceeded,
-    this.query = const InteractionReadQueryFacts.notRun(),
-  }) : corridorPoints = List.unmodifiable(corridorPoints),
-       _previewErasedElementIds = List.unmodifiable(erasedElementIds),
-       _terminalErasedEntries = null;
-
   EraserReadFacts.terminal({
     required Iterable<Offset> corridorPoints,
     required DeletionEntryProjection erasedEntryProjection,
@@ -284,21 +269,13 @@ final class EraserReadFacts {
     required this.exactBudgetExceeded,
     this.query = const InteractionReadQueryFacts.notRun(),
   }) : corridorPoints = List.unmodifiable(corridorPoints),
-       _previewErasedElementIds = null,
-       _terminalErasedEntries = erasedEntryProjection.entries;
+       erasedEntries = erasedEntryProjection.entries;
 
   final List<Offset> corridorPoints;
 
-  final List<CanvasElementId>? _previewErasedElementIds;
-  final List<DeletionEntryFacts>? _terminalErasedEntries;
-
-  // Preview owns exact-hit IDs; terminal owns the immutable Store projection.
-  // The public internal view derives the other representation only where it
-  // exists, preventing independently supplied payloads from diverging.
-  List<DeletionEntryFacts> get erasedEntries =>
-      _terminalErasedEntries ?? const [];
+  // IDs derive from the immutable Store projection rather than a second payload.
+  final List<DeletionEntryFacts> erasedEntries;
   List<CanvasElementId> get erasedElementIds =>
-      _previewErasedElementIds ??
       List.unmodifiable(erasedEntries.map((entry) => entry.id));
   final double eraserThickness;
   final int controllerEpoch;

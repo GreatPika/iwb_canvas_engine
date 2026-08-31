@@ -356,6 +356,24 @@ final List<PerformanceScenarioActionGroup> _performanceScenarioActionGroups =
         ),
         prepare: _prepareEraserDense50k,
       ),
+      _redesignedGroup(
+        descriptor: _catalogGroup('eraser_delete_many.1k'),
+        actions: (
+          setup: _eraserDeletionBatchSetupScenario(),
+          warm: _eraserDeletionBatchActionScenario(),
+          steady: _eraserDeletionBatchActionScenario(),
+        ),
+        prepare: _prepareEraserDeletionBatch1k,
+      ),
+      _redesignedGroup(
+        descriptor: _catalogGroup('context_request_batch.64'),
+        actions: (
+          setup: _contextRequestBatchSetupScenario(),
+          warm: _contextRequestBatchActionScenario(),
+          steady: _contextRequestBatchActionScenario(),
+        ),
+        prepare: _prepareContextRequestBatch64,
+      ),
       for (final action in _singleCurrentBehaviorActions)
         _singleCurrentBehaviorGroup(action),
     ]);
@@ -646,6 +664,40 @@ PerformanceScenarioActionPlan _eraserDenseActionScenario() {
         includeTerminal: true,
       ), configureTool: false);
     },
+  );
+}
+
+PerformanceScenarioActionPlan _eraserDeletionBatchSetupScenario() {
+  return const PerformanceScenarioActionPlan(
+    id: 'eraser_delete_many.1k',
+    action: _loadEraserDeletionBatchDocument,
+  );
+}
+
+PerformanceScenarioActionPlan _eraserDeletionBatchActionScenario() {
+  return PerformanceScenarioActionPlan(
+    id: 'eraser_delete_many.1k',
+    action: (context) => _pointerDrag(context, (
+      from: const Offset(20, 24),
+      to: const Offset(108, 24),
+      drawTool: CanvasDrawTool.eraser,
+      pointerId: 1,
+      includeTerminal: true,
+    ), configureTool: false),
+  );
+}
+
+PerformanceScenarioActionPlan _contextRequestBatchSetupScenario() {
+  return const PerformanceScenarioActionPlan(
+    id: 'context_request_batch.64',
+    action: _loadContextRequestBatchDocument,
+  );
+}
+
+PerformanceScenarioActionPlan _contextRequestBatchActionScenario() {
+  return const PerformanceScenarioActionPlan(
+    id: 'context_request_batch.64',
+    action: _dispatchContextRequestBatch,
   );
 }
 
@@ -993,6 +1045,92 @@ Future<PerformancePreparedPhaseAction> _prepareEraserDense50k(
       'erasedElementCountBeforeAction': 0,
     },
   );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareEraserDeletionBatch1k(
+  PerformanceScenarioContext context,
+) async {
+  await _loadEraserDeletionBatchDocument(context);
+  return PerformancePreparedPhaseAction(
+    action: _eraserDeletionBatchActionScenario().action,
+    fixtureMetadata: const {
+      'loadedElementCount': performanceEraserDeletionBatchCount,
+      'expectedErasedElementCount': performanceEraserDeletionBatchCount,
+      'toolModeBeforeAction': 'draw',
+      'drawToolBeforeAction': 'eraser',
+    },
+  );
+}
+
+Future<PerformancePreparedPhaseAction> _prepareContextRequestBatch64(
+  PerformanceScenarioContext context,
+) async {
+  await _loadContextRequestBatchDocument(context);
+  return PerformancePreparedPhaseAction(
+    action: _contextRequestBatchActionScenario().action,
+    fixtureMetadata: const {
+      'loadedElementCount': 0,
+      'contextRequestBatchCount': performanceContextRequestBatchCount,
+      'toolModeBeforeAction': 'move',
+    },
+  );
+}
+
+Future<void> _loadEraserDeletionBatchDocument(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceEraserDeletionBatchDocument());
+  context.runtime.tools
+    ..setMode(CanvasInteractionMode.draw)
+    ..setDrawTool(CanvasDrawTool.eraser);
+  await context.pumpScenarioFrame();
+}
+
+Future<void> _loadContextRequestBatchDocument(
+  PerformanceScenarioContext context,
+) async {
+  _loadDocument(context.runtime, performanceContextRequestBatchDocument());
+  context.runtime.tools.setMode(CanvasInteractionMode.move);
+  await context.pumpScenarioFrame();
+}
+
+Future<void> _dispatchContextRequestBatch(
+  PerformanceScenarioContext context,
+) async {
+  final requests = <CanvasContextActionRequested>[];
+  final delivered = Completer<void>();
+  var yieldedDuringDispatch = false;
+  final subscription = context.runtime.contextActionRequests.listen((request) {
+    requests.add(request);
+    if (requests.length == performanceContextRequestBatchCount) {
+      delivered.complete();
+    }
+  });
+  try {
+    scheduleMicrotask(() {
+      yieldedDuringDispatch = true;
+    });
+    for (
+      var index = 0;
+      index < performanceContextRequestBatchCount;
+      index += 1
+    ) {
+      context.runtime.tools.handleDoubleTap(
+        position: const Offset(200, 200),
+        timestampMs: index,
+      );
+    }
+    if (yieldedDuringDispatch) {
+      throw StateError('context request batch yielded during dispatch');
+    }
+    await context.pumpScenarioFrame();
+    await delivered.future;
+    if (requests.length != performanceContextRequestBatchCount) {
+      throw StateError('context request batch delivery was incomplete');
+    }
+  } finally {
+    await subscription.cancel();
+  }
 }
 
 void _loadDocument(CanvasRuntime runtime, CanvasDocument document) {

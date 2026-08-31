@@ -21,7 +21,6 @@ import 'runtime_interaction_move_read_models.dart';
 
 @visibleForTesting
 enum RuntimeEraserEntryRouteWorkKind {
-  previewReadStarted,
   terminalReadStarted,
   corridorEnvelopeReady,
   spatialQueryReady,
@@ -366,22 +365,6 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
   }
 
   @override
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    final budget = _hitTestPolicy.geometryPolicy.eraserPreviewBudgetInputs(
-      request.corridorPoints.length,
-    );
-
-    return _eraserFacts(
-      request,
-      terminal: false,
-      budget: (
-        candidateLimit: budget.candidateLimit,
-        exactCheckLimit: budget.exactCheckLimit,
-      ),
-    );
-  }
-
-  @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
     var budget = _hitTestPolicy.geometryPolicy.eraserTerminalBudgetInputs();
     assert(() {
@@ -397,7 +380,6 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
 
     return _eraserFacts(
       request,
-      terminal: true,
       budget: (
         candidateLimit: budget.candidateLimit,
         exactCheckLimit: budget.exactCheckLimit,
@@ -457,56 +439,38 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     );
   }
 
-  // Eraser reads need corridor normalization, spatial candidates, exact hits,
-  // and budget branching in one snapshot so preview and terminal decisions
-  // cannot observe different committed facts. Splitting those reads merely for
-  // a metric would make that snapshot ownership less obvious.
+  // Terminal reads keep corridor normalization, spatial candidates, exact hits,
+  // and budget branching in one committed snapshot.
   // The terminal phases stay in this one snapshot owner so the trace cannot
   // hide a second read behind a metric-only helper split.
   // ignore: halstead-volume, source-lines-of-code, maintainability-index, cyclomatic-complexity
   EraserReadFacts _eraserFacts(
     EraserReadRequest request, {
     required _EraserExactBudget budget,
-    required bool terminal,
   }) {
-    if (!terminal) {
-      assert(
-        _recordEraserEntryRouteWork(
-          RuntimeEraserEntryRouteWorkEvent(
-            kind: RuntimeEraserEntryRouteWorkKind.previewReadStarted,
-            corridorPointCount: request.corridorPoints.length,
-          ),
+    assert(
+      _recordEraserEntryRouteWork(
+        RuntimeEraserEntryRouteWorkEvent(
+          kind: RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
+          corridorPointCount: request.corridorPoints.length,
         ),
-        'eraser entry route work observation failed',
-      );
-    }
-    if (terminal) {
-      assert(
-        _recordEraserEntryRouteWork(
-          RuntimeEraserEntryRouteWorkEvent(
-            kind: RuntimeEraserEntryRouteWorkKind.terminalReadStarted,
-            corridorPointCount: request.corridorPoints.length,
-          ),
-        ),
-        'eraser entry route work observation failed',
-      );
-    }
+      ),
+      'eraser entry route work observation failed',
+    );
     final context = _eraserReadContext();
     final corridor = _hitTestPolicy.geometryPolicy.corridorEnvelope(
       points: request.corridorPoints,
       eraserThickness: request.eraserThickness,
       hitPadding: 0,
     );
-    if (terminal) {
-      assert(
-        _recordEraserEntryRouteWork(
-          const RuntimeEraserEntryRouteWorkEvent(
-            kind: RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
-          ),
+    assert(
+      _recordEraserEntryRouteWork(
+        const RuntimeEraserEntryRouteWorkEvent(
+          kind: RuntimeEraserEntryRouteWorkKind.corridorEnvelopeReady,
         ),
-        'eraser entry route work observation failed',
-      );
-    }
+      ),
+      'eraser entry route work observation failed',
+    );
     final query = _spatial.queryEraser(
       SpatialQueryWindow(
         boundsWorld: corridor.envelopeWorld,
@@ -517,21 +481,18 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       query,
       const RuntimeResolvedSpatialCandidates(),
     );
-    if (terminal) {
-      assert(
-        _recordEraserEntryRouteWork(
-          RuntimeEraserEntryRouteWorkEvent(
-            kind: RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
-            query: spatialQueryFacts,
-          ),
+    assert(
+      _recordEraserEntryRouteWork(
+        RuntimeEraserEntryRouteWorkEvent(
+          kind: RuntimeEraserEntryRouteWorkKind.spatialQueryReady,
+          query: spatialQueryFacts,
         ),
-        'eraser entry route work observation failed',
-      );
-    }
+      ),
+      'eraser entry route work observation failed',
+    );
     if (!interactionQueryHasCandidates(query)) {
       return _finalizeEraserFacts(
         (
-          terminal: terminal,
           corridorPoints: corridor.points,
           eraserThickness: request.eraserThickness,
           controllerEpoch: context.controllerEpoch,
@@ -541,7 +502,7 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         (
           exactCheckCount: 0,
           exactBudgetExceeded: false,
-          exactHits: const <_EraserExactHit>[],
+          exactHits: const <CanvasElementId>[],
           projectTerminalEntries: false,
         ),
       );
@@ -559,19 +520,16 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
             skippedCandidateCount: candidates.skippedCandidateCount,
           )
         : rawQueryFacts;
-    if (terminal) {
-      assert(
-        _recordEraserEntryRouteWork(
-          RuntimeEraserEntryRouteWorkEvent(
-            kind: RuntimeEraserEntryRouteWorkKind.candidatesReady,
-            query: queryFacts,
-          ),
+    assert(
+      _recordEraserEntryRouteWork(
+        RuntimeEraserEntryRouteWorkEvent(
+          kind: RuntimeEraserEntryRouteWorkKind.candidatesReady,
+          query: queryFacts,
         ),
-        'eraser entry route work observation failed',
-      );
-    }
+      ),
+      'eraser entry route work observation failed',
+    );
     final snapshot = (
-      terminal: terminal,
       corridorPoints: corridor.points,
       eraserThickness: request.eraserThickness,
       controllerEpoch: context.controllerEpoch,
@@ -579,65 +537,6 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       query: queryFacts,
     );
     if (admittedCandidates.handles.length > budget.candidateLimit) {
-      if (terminal) {
-        assert(
-          _recordEraserEntryRouteWork(
-            const RuntimeEraserEntryRouteWorkEvent(
-              kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
-            ),
-          ),
-          'eraser entry route work observation failed',
-        );
-      }
-      return _finalizeEraserFacts(snapshot, (
-        exactCheckCount: 0,
-        exactBudgetExceeded:
-            admittedCandidates.handles.length > budget.candidateLimit,
-        exactHits: const <_EraserExactHit>[],
-        projectTerminalEntries: false,
-      ));
-    }
-
-    final exactHits = <_EraserExactHit>[];
-    var exactChecks = 0;
-    for (final facts in admittedCandidates.facts) {
-      exactChecks += 1;
-      if (exactChecks > budget.exactCheckLimit) {
-        if (terminal) {
-          assert(
-            _recordEraserEntryRouteWork(
-              const RuntimeEraserEntryRouteWorkEvent(
-                kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
-              ),
-            ),
-            'eraser entry route work observation failed',
-          );
-        }
-        return _finalizeEraserFacts(snapshot, (
-          exactCheckCount: exactChecks,
-          exactBudgetExceeded: true,
-          exactHits: const <_EraserExactHit>[],
-          projectTerminalEntries: false,
-        ));
-      }
-      if (terminal) {
-        assert(
-          _recordEraserEntryRouteWork(
-            RuntimeEraserEntryRouteWorkEvent(
-              kind: RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
-              exactCheckCount: exactChecks,
-              exactCandidateId: facts.id,
-            ),
-          ),
-          'eraser entry route work observation failed',
-        );
-      }
-      if (_hitTestPolicy.exactEraserHit(corridor: corridor, facts: facts)) {
-        exactHits.add(_EraserExactHit(facts.id, facts.orderToken));
-      }
-    }
-
-    if (terminal) {
       assert(
         _recordEraserEntryRouteWork(
           const RuntimeEraserEntryRouteWorkEvent(
@@ -646,7 +545,58 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
         ),
         'eraser entry route work observation failed',
       );
+      return _finalizeEraserFacts(snapshot, (
+        exactCheckCount: 0,
+        exactBudgetExceeded:
+            admittedCandidates.handles.length > budget.candidateLimit,
+        exactHits: const <CanvasElementId>[],
+        projectTerminalEntries: false,
+      ));
     }
+
+    final exactHits = <CanvasElementId>[];
+    var exactChecks = 0;
+    for (final facts in admittedCandidates.facts) {
+      exactChecks += 1;
+      if (exactChecks > budget.exactCheckLimit) {
+        assert(
+          _recordEraserEntryRouteWork(
+            const RuntimeEraserEntryRouteWorkEvent(
+              kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+            ),
+          ),
+          'eraser entry route work observation failed',
+        );
+        return _finalizeEraserFacts(snapshot, (
+          exactCheckCount: exactChecks,
+          exactBudgetExceeded: true,
+          exactHits: const <CanvasElementId>[],
+          projectTerminalEntries: false,
+        ));
+      }
+      assert(
+        _recordEraserEntryRouteWork(
+          RuntimeEraserEntryRouteWorkEvent(
+            kind: RuntimeEraserEntryRouteWorkKind.exactCandidateChecked,
+            exactCheckCount: exactChecks,
+            exactCandidateId: facts.id,
+          ),
+        ),
+        'eraser entry route work observation failed',
+      );
+      if (_hitTestPolicy.exactEraserHit(corridor: corridor, facts: facts)) {
+        exactHits.add(facts.id);
+      }
+    }
+
+    assert(
+      _recordEraserEntryRouteWork(
+        const RuntimeEraserEntryRouteWorkEvent(
+          kind: RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
+        ),
+      ),
+      'eraser entry route work observation failed',
+    );
 
     return _finalizeEraserFacts(snapshot, (
       exactCheckCount: exactChecks,
@@ -660,22 +610,8 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
     _EraserFactsSnapshot snapshot,
     _EraserExactReadResult result,
   ) {
-    if (!snapshot.terminal) {
-      return EraserReadFacts.preview(
-        corridorPoints: snapshot.corridorPoints,
-        erasedElementIds: _orderedEraserIds(result.exactHits),
-        eraserThickness: snapshot.eraserThickness,
-        controllerEpoch: snapshot.controllerEpoch,
-        documentRevision: snapshot.documentRevision,
-        exactCheckCount: result.exactCheckCount,
-        exactBudgetExceeded: result.exactBudgetExceeded,
-        query: snapshot.query,
-      );
-    }
     final projection = result.projectTerminalEntries
-        ? _terminalEraserEntries(
-            List.unmodifiable(result.exactHits.map((hit) => hit.id)),
-          )
+        ? _terminalEraserEntries(List.unmodifiable(result.exactHits))
         : const DeletionEntryProjection.empty();
     return EraserReadFacts.terminal(
       corridorPoints: snapshot.corridorPoints,
@@ -687,14 +623,6 @@ final class RuntimeInteractionReadAdapter implements InteractionReadPort {
       exactBudgetExceeded: result.exactBudgetExceeded,
       query: snapshot.query,
     );
-  }
-
-  List<CanvasElementId> _orderedEraserIds(List<_EraserExactHit> hits) {
-    if (hits.length < 2) {
-      return List.unmodifiable(hits.map((hit) => hit.id));
-    }
-    hits.sort((left, right) => left.orderToken.compareTo(right.orderToken));
-    return List.unmodifiable(hits.map((hit) => hit.id));
   }
 
   DeletionEntryProjection _terminalEraserEntries(
@@ -980,7 +908,6 @@ bool _hasReliableCandidateFacts(InteractionReadQueryFacts query) {
 typedef _EraserExactBudget = ({int candidateLimit, int exactCheckLimit});
 
 typedef _EraserFactsSnapshot = ({
-  bool terminal,
   List<Offset> corridorPoints,
   double eraserThickness,
   int controllerEpoch,
@@ -991,16 +918,9 @@ typedef _EraserFactsSnapshot = ({
 typedef _EraserExactReadResult = ({
   int exactCheckCount,
   bool exactBudgetExceeded,
-  List<_EraserExactHit> exactHits,
+  List<CanvasElementId> exactHits,
   bool projectTerminalEntries,
 });
-
-final class _EraserExactHit {
-  const _EraserExactHit(this.id, this.orderToken);
-
-  final CanvasElementId id;
-  final int orderToken;
-}
 
 final class _EraserReadContext {
   const _EraserReadContext({

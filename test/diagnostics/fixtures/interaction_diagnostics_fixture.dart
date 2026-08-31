@@ -8,6 +8,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/codec/schema_v1_diagnostics.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostic_code.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
@@ -722,21 +723,16 @@ final class _FakeInteractionReadPort implements InteractionReadPort {
   }
 
   @override
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    return EraserReadFacts.preview(
+  EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
+    return EraserReadFacts.terminal(
       corridorPoints: request.corridorPoints,
-      erasedElementIds: const [],
+      erasedEntryProjection: const DeletionEntryProjection.empty(),
       eraserThickness: request.eraserThickness,
       controllerEpoch: 0,
       documentRevision: 0,
       exactCheckCount: 0,
       exactBudgetExceeded: false,
     );
-  }
-
-  @override
-  EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
-    return eraserPreviewFacts(request);
   }
 
   @override

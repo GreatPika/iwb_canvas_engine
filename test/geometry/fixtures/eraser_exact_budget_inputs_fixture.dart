@@ -101,19 +101,13 @@ void _testExactEraserInputs() {
 }
 
 void _testBudgetInputShapes() {
-  test(
-    'preview and terminal exact-check budget input shapes are no-partial',
-    () {
-      final geometry = const GeometryPolicy();
-      final preview = geometry.eraserPreviewBudgetInputs(2);
-      final terminal = geometry.eraserTerminalBudgetInputs();
+  test('terminal exact-check budget input shape is no-partial', () {
+    final geometry = const GeometryPolicy();
+    final terminal = geometry.eraserTerminalBudgetInputs();
 
-      expect(preview.candidateLimit, 1024);
-      expect(preview.exactCheckLimit, 8192);
-      expect(terminal.candidateLimit, 4096);
-      expect(terminal.exactCheckLimit, 32768);
-    },
-  );
+    expect(terminal.candidateLimit, 4096);
+    expect(terminal.exactCheckLimit, 32768);
+  });
 }
 
 EraserCorridor _corridor() {

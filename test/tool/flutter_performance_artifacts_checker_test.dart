@@ -42,7 +42,10 @@ void _registerPositiveArtifactTest() {
       expect(result.exitCode, 0, reason: result.stderr);
       expect(
         result.stdout,
-        contains('verified 26 Flutter performance scenario'),
+        contains(
+          'verified ${catalog.performanceScenarioCatalogGroups.length} '
+          'Flutter performance scenario',
+        ),
       );
     },
   );

@@ -262,11 +262,12 @@ mutation.
 An eraser session owns one mutable, interaction-private retained corridor. A
 `PointerSession` carries only that capture reference; it does not snapshot or
 replace it. Each distinct move and terminal point is admitted before any
-overflow resample. Down takes the one bounded immutable preview read. Each
-admitted move then snapshots and publishes its retained corridor as a visual-only
-preview, with no read, envelope, query, candidate ordering, exact hit, or
-deletion projection. Terminal freezes one immutable retained snapshot, performs
-one terminal read/evaluation from it, and derives the commit intent's
+overflow resample. Down snapshots the first captured point and publishes a
+visual-only preview with the current draw style's eraser thickness. Each admitted
+move snapshots and publishes its retained corridor in the same way. Neither
+phase performs a scene read, envelope construction, spatial query, candidate
+resolution, exact hit, or deletion projection. Terminal freezes one immutable
+retained snapshot, performs one terminal read/evaluation from it, and derives the commit intent's
 `corridorPointCount` from that same snapshot. A rejected terminal starts no
 deletion preparation and uses the centralized cleanup route.
 

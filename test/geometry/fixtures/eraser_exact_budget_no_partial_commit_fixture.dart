@@ -7,6 +7,7 @@ import 'dart:ui' show Offset, PointerDeviceKind, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
+import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projection_port.dart';
 import 'package:iwb_canvas_engine/src/contracts/internal/frame_facts_port.dart';
 import 'package:iwb_canvas_engine/src/diagnostics/diagnostics_hub.dart';
 import 'package:iwb_canvas_engine/src/geometry/geometry_policy.dart';
@@ -28,10 +29,6 @@ import '../../support/runtime_root_with_committed_document_seed.dart';
 // adjacent to their one fixture avoids a parallel evidence owner.
 // ignore: halstead-volume, maintainability-index, source-lines-of-code
 void main() {
-  test('preview budget overflow keeps corridor-only preview', () {
-    expect(_verifyPreviewOverflowCorridorOnly, returnsNormally);
-  });
-
   test('terminal budget overflow produces no partial commit intent', () {
     expect(_verifyTerminalOverflowNoPartialCommit, returnsNormally);
   });
@@ -145,28 +142,6 @@ const _adapterBudgetRoute = [
   RuntimeEraserEntryRouteWorkKind.candidatesReady,
   RuntimeEraserEntryRouteWorkKind.exactEvaluationReady,
 ];
-
-void _verifyPreviewOverflowCorridorOnly() {
-  DiagnosticRecord.allocations.reset();
-  final before = DiagnosticRecord.allocations.count;
-  const machine = EraserMachine();
-  final eraser = PointerEraserCapture(points: [Offset.zero], thickness: 6);
-  eraser.admitPoint(const Offset(10, 0));
-
-  final preview = machine.initialPreview(
-    eraser: eraser,
-    facts: _facts(
-      corridor: const [Offset.zero, Offset(10, 0)],
-      erasedIds: [CanvasElementId('would-be-partial')],
-      exactBudgetExceeded: true,
-    ),
-  );
-
-  final eraserPreview = preview.preview as CanvasEraserPreview;
-  expect(eraserPreview.corridor, const [Offset.zero, Offset(10, 0)]);
-  expect(eraserPreview.thickness, 6);
-  expect(DiagnosticRecord.allocations.count, before);
-}
 
 void _verifyTerminalOverflowNoPartialCommit() {
   DiagnosticRecord.allocations.reset();
@@ -661,10 +636,17 @@ EraserReadFacts _facts({
   required Iterable<CanvasElementId> erasedIds,
   required bool exactBudgetExceeded,
 }) {
-  final ids = List<CanvasElementId>.unmodifiable(erasedIds);
-  return EraserReadFacts.preview(
+  return EraserReadFacts.terminal(
     corridorPoints: corridor,
-    erasedElementIds: ids,
+    erasedEntryProjection: DeletionEntryProjection([
+      for (final id in erasedIds)
+        DeletionEntryFacts(
+          element: CanvasRectElement(id: id, size: const Size(10, 10)),
+          layerId: CanvasLayerId('fixture-layer'),
+          elementIndex: 0,
+          orderToken: 0,
+        ),
+    ]),
     eraserThickness: 6,
     controllerEpoch: 1,
     documentRevision: 0,
@@ -696,18 +678,7 @@ InteractionPointerContext _context() {
 // eraser read paths are used by the interaction engine.
 // ignore: coupling-between-object-classes
 final class _BudgetOverflowReadPort implements InteractionReadPort {
-  int previewReadCount = 0;
   int terminalReadCount = 0;
-
-  @override
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    previewReadCount += 1;
-    return _facts(
-      corridor: request.corridorPoints,
-      erasedIds: const [],
-      exactBudgetExceeded: false,
-    );
-  }
 
   @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {

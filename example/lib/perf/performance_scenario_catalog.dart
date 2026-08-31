@@ -259,6 +259,66 @@ final List<PerformanceScenarioCatalogGroup> performanceScenarioCatalogGroups =
           ),
         ],
       ),
+      const PerformanceScenarioCatalogGroup(
+        id: 'eraser_delete_many.1k',
+        migration: 'redesigned',
+        phases: [
+          PerformanceScenarioCatalogPhase(
+            kind: 'setup',
+            name: 'loaded_eraser_batch_document',
+            comparisonRole: 'setup_context',
+          ),
+          PerformanceScenarioCatalogPhase(
+            kind: 'warm',
+            name: 'eraser_delete_many',
+            comparisonRole: 'first_use_action',
+            canonicalPreparation:
+                'loaded_eraser_batch_document_without_prior_erasure',
+            resetReason: 'eraser_removes_batch_elements',
+            measuredAction: 'eraser_delete_many',
+          ),
+          PerformanceScenarioCatalogPhase(
+            kind: 'steady',
+            name: 'eraser_delete_many',
+            comparisonRole: 'steady_action',
+            repeats: performanceSteadyRepeatCount,
+            canonicalPreparation:
+                'loaded_eraser_batch_document_without_prior_erasure',
+            resetReason: 'eraser_removes_batch_elements',
+            measuredAction: 'eraser_delete_many',
+          ),
+        ],
+      ),
+      const PerformanceScenarioCatalogGroup(
+        id: 'context_request_batch.64',
+        migration: 'redesigned',
+        phases: [
+          PerformanceScenarioCatalogPhase(
+            kind: 'setup',
+            name: 'loaded_empty_document',
+            comparisonRole: 'setup_context',
+          ),
+          PerformanceScenarioCatalogPhase(
+            kind: 'warm',
+            name: 'context_request_batch',
+            comparisonRole: 'first_use_action',
+            canonicalPreparation:
+                'loaded_empty_document_without_pending_context_requests',
+            resetReason: 'context_request_batch_is_delivered',
+            measuredAction: 'context_request_batch',
+          ),
+          PerformanceScenarioCatalogPhase(
+            kind: 'steady',
+            name: 'context_request_batch',
+            comparisonRole: 'steady_action',
+            repeats: performanceSteadyRepeatCount,
+            canonicalPreparation:
+                'loaded_empty_document_without_pending_context_requests',
+            resetReason: 'context_request_batch_is_delivered',
+            measuredAction: 'context_request_batch',
+          ),
+        ],
+      ),
       for (final id in performanceSingleCurrentBehaviorGroupIds)
         PerformanceScenarioCatalogGroup(
           id: id,

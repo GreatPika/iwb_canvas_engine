@@ -3,6 +3,11 @@ import 'package:iwb_canvas_engine/iwb_canvas_engine.dart';
 import 'package:iwb_canvas_engine_example/perf/performance_fixtures.dart';
 
 void main() {
+  _registerValidationFixtureTest();
+  _registerBatchFixtureTest();
+}
+
+void _registerValidationFixtureTest() {
   test('100k performance fixtures fit current validation limits', () {
     final fixtures = {
       performanceLoadDocument100kFixtureId: performanceRectDocument(100000),
@@ -22,6 +27,27 @@ void main() {
         reason: entry.key,
       );
     }
+  });
+}
+
+void _registerBatchFixtureTest() {
+  test('batch performance fixtures express their declared workload', () {
+    final eraserDocument = performanceEraserDeletionBatchDocument();
+    final contextDocument = performanceContextRequestBatchDocument();
+    final runtime = CanvasRuntime(config: _acceptDeletionRuntimeConfig());
+    addTearDown(runtime.dispose);
+
+    expect(
+      performanceElementCount(eraserDocument),
+      performanceEraserDeletionBatchCount,
+    );
+    expect(performanceElementCount(contextDocument), 0);
+    expect(
+      () => runtime.edits.loadDocumentFromJson(
+        performanceFixtureJson(eraserDocument),
+      ),
+      returnsNormally,
+    );
   });
 }
 

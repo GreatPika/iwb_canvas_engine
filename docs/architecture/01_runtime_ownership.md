@@ -155,9 +155,10 @@ still go through `EditKernel`.
 `RuntimeRoot` materializes `CanvasRuntimeConfig.eraserElementKinds` once and
 passes only that runtime-owned policy to its `InteractionReadPort` adapter.
 After eraser facts resolve, the shared adapter admits `CanvasElementKind` values
-before eraser candidate and exact-check budgets for both preview and terminal
-reads; it does not duplicate the element-kind truth or alter spatial-query
-failure semantics.
+before terminal eraser candidate and exact-check budgets; it does not duplicate
+the element-kind truth or alter spatial-query failure semantics. Down and move
+build visual previews directly from immutable capture snapshots and do not
+enter the interaction read adapter.
 
 For terminal eraser deletion, the final exact-hit IDs are passed directly to
 the Store-owned deletion-entry projection. The interaction read adapter carries

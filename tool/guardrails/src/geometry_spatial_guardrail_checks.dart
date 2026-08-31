@@ -856,15 +856,14 @@ List<GuardrailViolation> checkGeometryEraserExactBudgetInputSources({
   required String hitContent,
 }) {
   final violations = <GuardrailViolation>[];
-  if (!geometryContent.contains('eraserPreviewBudgetInputs') ||
-      !geometryContent.contains('eraserTerminalBudgetInputs') ||
+  if (!geometryContent.contains('eraserTerminalBudgetInputs') ||
       !_eraserBudgetInputShapeIsLimitsOnly(geometryContent)) {
     violations.add(
       GuardrailViolation(
         guardrailId: geometryEraserExactBudgetGuardrailId,
         path: geometryPath,
         message:
-            'Eraser guardrail covers primitive and exact-check budget inputs.',
+            'Eraser guardrail covers terminal candidate and exact-check budget inputs.',
       ),
     );
   }

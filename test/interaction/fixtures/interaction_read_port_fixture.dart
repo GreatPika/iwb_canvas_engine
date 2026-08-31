@@ -1,3 +1,7 @@
+// Read-port contract tests use the real runtime adapter and its terminal budget
+// injector directly; keeping these owner imports explicit avoids test wrappers.
+// ignore_for_file: number-of-imports
+
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +10,7 @@ import 'package:iwb_canvas_engine/src/contracts/internal/deletion_entry_projecti
 import 'package:iwb_canvas_engine/src/contracts/internal/touched_set.dart';
 import 'package:iwb_canvas_engine/src/geometry/spatial_query_policy.dart';
 import 'package:iwb_canvas_engine/src/interaction/interaction_read_port.dart';
+import 'package:iwb_canvas_engine/src/runtime/runtime_interaction_read_adapter.dart';
 import 'package:iwb_canvas_engine/src/runtime/runtime_root.dart';
 
 import '../../support/runtime_root_with_committed_document_seed.dart';
@@ -426,39 +431,33 @@ void _testEraserReadFacts() {
   });
 }
 
-// Preview near-limit and terminal parity share one real adapter setup, so this
-// proof remains together instead of duplicating the mixed-kind fixture data.
+// Kind filtering and terminal budgets share one real mixed-kind adapter setup.
 // ignore: halstead-volume, source-lines-of-code
 void _testEraserKindPolicyBeforeBudgets() {
-  test(
-    'eraser kind policy filters preview and terminal reads before budgets',
-    () {
-      final root = _eraserPolicyRoot(
-        const CanvasRuntimeConfig(
-          deletionCommitResolver: acceptDeletionCommit,
-          eraserElementKinds: {CanvasElementKind.rect},
-        ),
-        disallowedTextCount: 512,
-      );
-      addTearDown(root.dispose);
+  test('eraser kind policy filters terminal reads before budgets', () {
+    final root = _eraserPolicyRoot(
+      const CanvasRuntimeConfig(
+        deletionCommitResolver: acceptDeletionCommit,
+        eraserElementKinds: {CanvasElementKind.rect},
+      ),
+    );
+    addTearDown(root.dispose);
 
-      final request = EraserReadRequest(
-        corridorPoints: const [Offset(0, 0)],
-        eraserThickness: 2,
-      );
-      final preview = root.interactionReadPort.eraserPreviewFacts(request);
-      final terminal = root.interactionReadPort.eraserTerminalFacts(request);
+    final request = EraserReadRequest(
+      corridorPoints: const [Offset(0, 0)],
+      eraserThickness: 2,
+    );
+    final terminal = RuntimeInteractionReadAdapter.injectEraserTerminalBudget(
+      candidateLimit: 1,
+      exactCheckLimit: 1,
+      operation: () => root.interactionReadPort.eraserTerminalFacts(request),
+    );
 
-      expect(preview.query.candidateCount, 1);
-      expect(preview.exactCheckCount, 1);
-      expect(preview.exactBudgetExceeded, isFalse);
-      expect(preview.erasedElementIds, [CanvasElementId('allowed-rect')]);
-      expect(terminal.query.candidateCount, 1);
-      expect(terminal.exactCheckCount, 1);
-      expect(terminal.exactBudgetExceeded, isFalse);
-      expect(terminal.erasedElementIds, [CanvasElementId('allowed-rect')]);
-    },
-  );
+    expect(terminal.query.candidateCount, 1);
+    expect(terminal.exactCheckCount, 1);
+    expect(terminal.exactBudgetExceeded, isFalse);
+    expect(terminal.erasedElementIds, [CanvasElementId('allowed-rect')]);
+  });
 
   test('null preserves eraser admission and empty disables it', () {
     final unrestrictedRoot = _eraserPolicyRoot(
@@ -479,9 +478,6 @@ void _testEraserKindPolicyBeforeBudgets() {
     );
     final unrestricted = unrestrictedRoot.interactionReadPort
         .eraserTerminalFacts(request);
-    final disabledPreview = disabledRoot.interactionReadPort.eraserPreviewFacts(
-      request,
-    );
     final disabledTerminal = disabledRoot.interactionReadPort
         .eraserTerminalFacts(request);
 
@@ -491,9 +487,6 @@ void _testEraserKindPolicyBeforeBudgets() {
       CanvasElementId('disallowed-text-0'),
       CanvasElementId('allowed-rect'),
     ]);
-    expect(disabledPreview.query.candidateCount, 0);
-    expect(disabledPreview.exactCheckCount, 0);
-    expect(disabledPreview.erasedElementIds, isEmpty);
     expect(disabledTerminal.query.candidateCount, 0);
     expect(disabledTerminal.exactCheckCount, 0);
     expect(disabledTerminal.erasedElementIds, isEmpty);

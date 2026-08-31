@@ -40,6 +40,17 @@ const _expectedFixtureMetadata = {
     'drawToolBeforeAction': 'eraser',
     'erasedElementCountBeforeAction': 0,
   },
+  'eraser_delete_many.1k': {
+    'loadedElementCount': performanceEraserDeletionBatchCount,
+    'expectedErasedElementCount': performanceEraserDeletionBatchCount,
+    'toolModeBeforeAction': 'draw',
+    'drawToolBeforeAction': 'eraser',
+  },
+  'context_request_batch.64': {
+    'loadedElementCount': 0,
+    'contextRequestBatchCount': performanceContextRequestBatchCount,
+    'toolModeBeforeAction': 'move',
+  },
 };
 
 void main() {
@@ -48,13 +59,25 @@ void main() {
   testWidgets('redesigned steady repeats start from canonical public state', (
     _,
   ) async {
-    expect(_expectedFixtureMetadata, hasLength(7));
-    await _expectRedesignedSteadyRepeatPreparation(binding);
+    await expectLater(
+      _expectRedesignedSteadyRepeatPreparation(binding),
+      completes,
+    );
   });
 
   test('interaction setup phases stop before measured actions', () async {
-    expect(_interactionSetupExpectations, hasLength(3));
-    await _expectInteractionSetupSeparation();
+    await expectLater(_expectInteractionSetupSeparation(), completes);
+  });
+
+  testWidgets('batch performance phases execute their declared workloads', (
+    _,
+  ) async {
+    final workload = await _executeBatchWorkloads(binding);
+    expect(workload.erasedElementCount, performanceEraserDeletionBatchCount);
+    expect(
+      workload.contextRequests,
+      hasLength(performanceContextRequestBatchCount),
+    );
   });
 }
 
@@ -195,6 +218,10 @@ void _expectPreActionPreparedState(
       _expectJsonExportPreAction(snapshot);
     case 'eraser_dense_50k':
       _expectEraserPreAction(snapshot);
+    case 'eraser_delete_many.1k':
+      _expectEraserDeletionBatchPreAction(snapshot);
+    case 'context_request_batch.64':
+      _expectContextRequestBatchPreAction(snapshot);
     default:
       fail('Unexpected redesigned group ${snapshot.scenarioGroup}');
   }
@@ -250,6 +277,24 @@ void _expectEraserPreAction(PerformancePhasePreparationSnapshot snapshot) {
   expect(snapshot.drawTool, CanvasDrawTool.eraser);
 }
 
+void _expectEraserDeletionBatchPreAction(
+  PerformancePhasePreparationSnapshot snapshot,
+) {
+  expect(
+    snapshot.publicState.summary.elementCount,
+    performanceEraserDeletionBatchCount,
+  );
+  expect(snapshot.toolMode, CanvasInteractionMode.draw);
+  expect(snapshot.drawTool, CanvasDrawTool.eraser);
+}
+
+void _expectContextRequestBatchPreAction(
+  PerformancePhasePreparationSnapshot snapshot,
+) {
+  expect(snapshot.publicState.summary.elementCount, 0);
+  expect(snapshot.toolMode, CanvasInteractionMode.move);
+}
+
 const _interactionSetupExpectations = [
   _InteractionSetupExpectation(
     scenarioGroup: 'selection_move.50k',
@@ -265,6 +310,16 @@ const _interactionSetupExpectations = [
     scenarioGroup: 'eraser_dense_50k',
     phaseKey: 'setup.loaded_draw_mode_document',
     verify: _expectEraserSetup,
+  ),
+  _InteractionSetupExpectation(
+    scenarioGroup: 'eraser_delete_many.1k',
+    phaseKey: 'setup.loaded_eraser_batch_document',
+    verify: _expectEraserDeletionBatchSetup,
+  ),
+  _InteractionSetupExpectation(
+    scenarioGroup: 'context_request_batch.64',
+    phaseKey: 'setup.loaded_empty_document',
+    verify: _expectContextRequestBatchSetup,
   ),
 ];
 
@@ -302,5 +357,85 @@ void _expectEraserSetup(CanvasRuntime runtime) {
   expect(
     encodeCanvasDocumentToJson(runtime.readDocument()),
     encodeCanvasDocumentToJson(performanceRectDocument(50000)),
+  );
+}
+
+void _expectEraserDeletionBatchSetup(CanvasRuntime runtime) {
+  expect(
+    runtime.state.value.summary.elementCount,
+    performanceEraserDeletionBatchCount,
+  );
+  expect(runtime.tools.mode, CanvasInteractionMode.draw);
+  expect(runtime.tools.drawStyle.tool, CanvasDrawTool.eraser);
+  expect(
+    encodeCanvasDocumentToJson(runtime.readDocument()),
+    encodeCanvasDocumentToJson(performanceEraserDeletionBatchDocument()),
+  );
+}
+
+void _expectContextRequestBatchSetup(CanvasRuntime runtime) {
+  expect(runtime.state.value.summary.elementCount, 0);
+  expect(runtime.tools.mode, CanvasInteractionMode.move);
+  expect(
+    encodeCanvasDocumentToJson(runtime.readDocument()),
+    encodeCanvasDocumentToJson(performanceContextRequestBatchDocument()),
+  );
+}
+
+Future<
+  ({int erasedElementCount, List<CanvasContextActionRequested> contextRequests})
+>
+_executeBatchWorkloads(IntegrationTestWidgetsFlutterBinding binding) async {
+  final eraserController = PerformanceHostController();
+  addTearDown(eraserController.dispose);
+  await _batchPhaseRun(
+    'eraser_delete_many.1k',
+    'warm.eraser_delete_many',
+  ).runTraced(
+    binding: binding,
+    host: eraserController,
+    pumpFrame: _pumpNoFrame,
+    settle: _settleNoop,
+    traceAction: (action, {required reportKey}) => action(),
+  );
+  final erasedElementCount =
+      performanceEraserDeletionBatchCount -
+      eraserController.runtime.state.value.summary.elementCount;
+
+  final contextController = PerformanceHostController();
+  addTearDown(contextController.dispose);
+  final contextRequests = <CanvasContextActionRequested>[];
+  await _batchPhaseRun(
+    'context_request_batch.64',
+    'warm.context_request_batch',
+  ).runTraced(
+    binding: binding,
+    host: contextController,
+    pumpFrame: _pumpNoFrame,
+    settle: _settleNoop,
+    traceAction: (action, {required reportKey}) async {
+      final subscription = contextController.runtime.contextActionRequests
+          .listen(contextRequests.add);
+      try {
+        await action();
+      } finally {
+        await subscription.cancel();
+      }
+    },
+  );
+  return (
+    erasedElementCount: erasedElementCount,
+    contextRequests: contextRequests,
+  );
+}
+
+PerformanceScenarioActionPhaseRun _batchPhaseRun(
+  String scenarioGroupId,
+  String phaseKey,
+) {
+  return allPerformanceScenarioActionPhaseRuns.singleWhere(
+    (candidate) =>
+        candidate.scenarioGroupId == scenarioGroupId &&
+        candidate.phaseKey == phaseKey,
   );
 }

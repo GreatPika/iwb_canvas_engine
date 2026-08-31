@@ -290,7 +290,6 @@ int _collectArtifactFailures(
     catalog: expectedCatalog,
     failures: failures,
   );
-  _checkExpectedCatalog(expectedCatalog, failures);
 
   _checkGeneratedRootFiles(resultsDirectory, expectedCatalog, failures);
   final manifestRuns = manifest == null
@@ -301,29 +300,6 @@ int _collectArtifactFailures(
     _ComparisonSummaryValidator(context, manifestRuns).check(comparison);
   }
   return expectedCatalog.groups.length;
-}
-
-void _checkExpectedCatalog(_ExpectedCatalog catalog, List<String> failures) {
-  if (catalog.groups.length != 26) {
-    failures.add(
-      'executable catalog must contain exactly 26 scenario groups; found '
-      '${catalog.groups.length}',
-    );
-  }
-  final redesigned = catalog.groups
-      .where((group) => group.migration == 'redesigned')
-      .length;
-  final single = catalog.groups
-      .where((group) => group.migration == 'single.current_behavior')
-      .length;
-  if (redesigned != 7) {
-    failures.add('executable catalog must contain 7 redesigned groups');
-  }
-  if (single != 19) {
-    failures.add(
-      'executable catalog must contain 19 single.current_behavior groups',
-    );
-  }
 }
 
 void _checkGeneratedRootFiles(

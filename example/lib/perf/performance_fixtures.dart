@@ -8,6 +8,33 @@ const performancePrimaryRectId = 'r0';
 const performancePrimaryTextId = 't0';
 const performancePrimaryResourceId = 'res0';
 const performanceMissingResourceId = 'missing-res';
+const performanceEraserDeletionBatchCount = 1024;
+const performanceContextRequestBatchCount = 64;
+
+CanvasDocument performanceEraserDeletionBatchDocument() {
+  return CanvasDocument(
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('l0'),
+        elements: List<CanvasElement>.generate(
+          performanceEraserDeletionBatchCount,
+          (index) => CanvasRectElement(
+            id: CanvasElementId('erase-$index'),
+            transform: CanvasTransform.translation(const Offset(64, 24)),
+            size: const Size(2, 2),
+          ),
+          growable: false,
+        ),
+      ),
+    ],
+  );
+}
+
+CanvasDocument performanceContextRequestBatchDocument() {
+  return CanvasDocument(
+    layers: [CanvasLayer(id: CanvasLayerId('l0'), elements: const [])],
+  );
+}
 
 CanvasDocument performanceRectDocument(int elementCount) {
   return CanvasDocument(

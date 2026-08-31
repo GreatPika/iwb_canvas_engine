@@ -573,14 +573,9 @@ final class InteractionEngine {
       _recordEraserRouteWork(InteractionEraserRouteWorkEvent.downSnapshot),
       'eraser route work observation failed',
     );
-    final preview = _eraserMachine.initialPreview(
+    final preview = _eraserMachine.preview(
       eraser: eraser,
-      facts: readPort.eraserPreviewFacts(
-        EraserReadRequest(
-          corridorPoints: corridorPoints,
-          eraserThickness: eraser.thickness,
-        ),
-      ),
+      corridorPoints: corridorPoints,
     );
     final nextPreview = preview.preview;
     final nextEraser = preview.eraser;

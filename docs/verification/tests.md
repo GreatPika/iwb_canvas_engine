@@ -533,22 +533,26 @@ the release route for that evidence.
   `application canvas port` or `application adapter`.
 
 #### Example integration performance route
-- `docs/verification/performance.md` owns the official Flutter performance
-  verification route, including the scenario group catalog, phase grammar,
+- `example/lib/perf/performance_scenario_catalog.dart` owns the executable
+  scenario composition and phase metadata. `docs/verification/performance.md`
+  owns the official Flutter performance verification route, phase grammar,
   report-key grammar, profile-drive command, nested artifact contract,
   generated manifest and comparison-summary shapes, completion-only gate
   semantics, and non-threshold policy;
-- `test/performance/flutter_performance_route_contract_test.dart` proves route
-  source structure directly: the integration test delegates to the traced
-  runner, the traced runner owns the report key and settle boundary, and the
-  retired benchmark route remains absent. It must not parse documentation as a
-  catalog or schema data source;
+- `test/performance/flutter_performance_route_contract_test.dart` proves catalog
+  phase rules and executable action-run coverage, integration-route delegation,
+  and traced-runner report-key and settle boundaries. It must not copy catalog
+  membership or metadata, or parse documentation as a catalog/schema source;
 - `example/test/performance_phase_preparation_test.dart` proves the
   redesigned warm and steady phases start from canonical prepared state and
-  keep reset/reseed work outside measured traces;
+  keep reset/reseed work outside measured traces. Its batch workload test also
+  proves the eraser case removes all 1,024 prepared elements and independently
+  observes all 64 context requests through the public stream inside the measured
+  action. The context action retains its no-yield dispatch check;
 - `test/tool/flutter_performance_driver_writer_test.dart` proves the host-side
   performance driver writes official Flutter timeline artifacts, generated
-  manifests, and comparison summaries under the nested route artifact shape;
+  manifests, and comparison summaries under the nested route artifact shape,
+  preserving metadata from the executable catalog without a second catalog;
 - `example/test/performance_host_smoke_test.dart` proves the example
   performance host can mount and drive public runtime, surface, command, tool,
   resource, and text-editing paths through the public package barrel;
@@ -564,6 +568,25 @@ the release route for that evidence.
   it must run the example app with
   `cd example && flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/perf_canvas_surface_test.dart --profile --no-dds`
   and then run the artifact checker for the active route output.
+
+Context benchmark workload permanent artifact admission:
+
+- Failure mode/stable invariant: `context_request_batch.64` must execute its
+  declared workload, dispatching 64 requests without yielding and delivering
+  them inside the measured action; action completion alone is not evidence.
+- Owner: the example performance scenario route, verified by
+  `example/test/performance_phase_preparation_test.dart` through
+  `CanvasRuntime.contextActionRequests` at the existing trace-action boundary.
+- Failing witness: binding the measured phase to the empty-document setup
+  action leaves the old constant-boolean assertion green. The public-stream
+  assertion rejects the same binding with zero observed requests instead of 64.
+- Minimum proof: observe the real catalog-selected action's public stream only
+  during its measured trace, assert the declared request count, and execute the
+  wrong-action-binding negative probe. The action's existing no-yield check
+  continues to reject split dispatches.
+- Durable value: detects vanished benchmark work even when preparation and
+  tracing still succeed. This extends the existing owning test; no production
+  telemetry, private runtime import, or separate scanner is admitted.
 
 #### `test/api_contract/public_api_v1_compiles_as_written_test.dart`
 - compiles the exported API declarations in an empty consumer package;
@@ -703,7 +726,7 @@ the release route for that evidence.
   read concrete store tables.
 
 #### `test/geometry/eraser_exact_budget_inputs_test.dart`
-- proves geometry/spatial eraser corridor, exact-hit input limits, and preview/terminal
+- proves geometry/spatial eraser corridor, exact-hit input limits, and terminal
   candidate and exact-check budget input shapes;
 - intentionally leaves terminal cleanup/no-op commit behavior to eraser/context-action.
 
@@ -904,9 +927,9 @@ the source of product truth.
   - Verification owner: interaction eraser routing suite.
   - Failure family: a move retains a preview read or hidden geometry/deletion
     phase while its visible preview remains correct.
-  - Concrete failing witness: the existing route enters `eraserPreviewFacts`
+  - Concrete failing witness: the pre-fix move route entered a scene read
     for every distinct move.
-  - Direct oracle/pass signal: phase events show one down read, no move read,
+  - Direct oracle/pass signal: phase events show no down or move scene read,
     geometry, or deletion-projection event, and one publication after each
     admitted append/resample.
   - Rejected proxies/limits: machine-only output, aggregate read counts,
@@ -915,6 +938,31 @@ the source of product truth.
     through private method and observer renames.
   - Artifact target: `test/interaction/eraser_context_action_routing_test.dart`
     and its existing fixture.
+
+- `visual-only-down-admission`
+  - Impact: `EXTEND_COVERAGE`.
+  - Production seam/owner: real eraser pointer admission in `InteractionEngine`,
+    observed through RuntimeRoot preview/document/selection/actions and existing
+    assertion-only capture, read, geometry, spatial, candidate, exact-hit, and
+    Store projection observers.
+  - Verification owner: `test/interaction/eraser_context_action_routing_test.dart`
+    and its existing fixture, case `real eraser down and moves publish visuals
+    without scene work`.
+  - Failure family: first preview publication unnecessarily evaluates the
+    committed scene even though it needs only the first capture snapshot.
+  - Concrete failing witness: before the fix, one valid down published the
+    correct preview but recorded a read, corridor envelope, spatial query,
+    candidate resolution, and exact hit. The zero-scene-work assertion failed.
+  - Direct oracle/pass signal: down publishes the first point with the configured
+    thickness using one immutable capture snapshot, with no scene work, document
+    or selection change, or action. The same gesture keeps moves visual-only,
+    then records exactly one terminal snapshot, read, envelope, spatial query,
+    candidate resolution, and exact evaluation, deletes the target, prunes its
+    selection, clears preview/session, and emits the existing erase action.
+  - Rejected proxies/limits: machine-only output, source-name bans, wall-clock
+    timings, and observers installed only after down cannot prove this boundary.
+  - Durable and refactor-stable value: detects scene work moved into any part of
+    pointer handling or cleanup without prescribing private helper structure.
 
 - `sample-admission-admission`
   - Contract chain: `sample-admission-semantics` → `sample-admission-evidence`
@@ -1131,12 +1179,13 @@ the source of product truth.
   - Artifact target: `test/interaction/terminal_eraser_deletion_resolver_test.dart`
     and its existing fixture.
 
-- `test/interaction/interaction_read_port_test.dart` proves eraser/context-action immutable read
-  facts for eraser, context targets, and text guard inputs, with
+- `test/interaction/interaction_read_port_test.dart` proves immutable read
+  facts for terminal eraser, context targets, and text guard inputs, with
   `CanvasElementKind` as the context-target and stale-guard discriminator,
   without exposing store tables or mutation owners to interaction machines.
 - `test/interaction/eraser_context_action_routing_test.dart` proves eraser machine routing,
-  immutable preview publication, terminal commit intent decisions, direct
+  visual-only immutable down/move previews with no scene work, exactly one
+  terminal snapshot/read/evaluation, terminal commit intent decisions, direct
   double-tap request production, and two-tap context revalidation behavior; an
   accepted eraser commit traces closed apply, cleanup, cleanup-effect
   augmentation, and common-delivery entry before its cleared preview/session

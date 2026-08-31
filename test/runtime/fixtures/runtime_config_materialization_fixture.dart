@@ -144,12 +144,6 @@ void _runtimeRootOwnsEraserKindPolicyCopy() {
   );
   expect(
     restrictedRoot.interactionReadPort
-        .eraserPreviewFacts(request)
-        .erasedElementIds,
-    [CanvasElementId('rect')],
-  );
-  expect(
-    restrictedRoot.interactionReadPort
         .eraserTerminalFacts(request)
         .erasedElementIds,
     [CanvasElementId('rect')],

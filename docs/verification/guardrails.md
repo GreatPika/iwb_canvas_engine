@@ -208,14 +208,14 @@ Mandatory guardrails:
 | `preview.marquee_overlay_only` | marquee preview is routed only through the overlay repaint domain |
 | `interaction.no_concrete_store_imports` | InteractionEngine uses EditKernel and narrow read-only query ports, not concrete store imports or mutations |
 | `interaction.no_concrete_selection_imports` | InteractionEngine uses intent-specific selection query ports and EditKernel commits, not concrete SelectionKernel imports or mutations |
-| `interaction.read_port_immutable_facts` | InteractionReadPort request and fact objects derive caller-provided collection fields from constructor/field shape and defensively copy them before exposing them to interaction machines, including eraser corridor and erased-id lists |
+| `interaction.read_port_immutable_facts` | InteractionReadPort request and fact objects defensively copy caller-provided collections before exposing them to interaction machines, including the terminal eraser corridor; deletion entries retain the immutable Store-owned projection and IDs derive from it |
 | `interaction.no_command_facts_import` | interaction code must not import command facts; command read facts stay owned by runtime command adapters |
 | `interaction.cleanup_coordinator_dependency_bans` | PointerToolCleanupCoordinator must not depend on runtime, edit, frame, resources, store, selection, Flutter bridge, Flutter package, resolver callback, or resolver guard owners |
 | `interaction.no_resolver_on_cancel_paths` | selected-move resolver is not called on cancel, load, mode-change, `interactive=false`, stale terminal, or dispose paths |
 | `interaction.no_stale_terminal_commit` | stale or controllerEpoch-mismatched terminal samples cannot create selected-move, draw, line, or eraser commit intents |
 | `interaction.pointer_cleanup_coordinator_only` | cleanup-capable tool machines return typed cleanup requests to `InteractionEngine`, `InteractionEngine` is the only caller of `PointerToolCleanupCoordinator`, and no tool machine owns shared preview/session cleanup policy, cleanup-effect publication, or direct coordinator calls |
 | `geometry.committed_handle_order` | geometry and hit-test policy use committed handle order tokens without bypassing committed frame facts |
-| `geometry.eraser_exact_budget_no_partial` | eraser primitive and exact-check budget inputs cannot produce partial-erasure paths, and terminal overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation |
+| `geometry.eraser_exact_budget_no_partial` | terminal eraser candidate and exact-check budget inputs cannot produce partial-erasure paths, and overflow cleanup remains a no-op with no document mutation, action emission, or DiagnosticsHub allocation; down and move are visual-only and have no geometry budgets |
 | `spatial.no_full_clone_ordinary_edit` | ordinary spatial updates touch only changed ids/pages; full rebuild is reserved for replacement/load paths |
 | `spatial.stale_candidate_rejected` | stale candidate handles are rejected by generation and structuralRevision checks before frame/hit use |
 | `spatial.fallback_budget_enforced` | query-tile and fallback-candidate budgets increment non-hub counters and return typed budget-exceeded results without partial candidates |

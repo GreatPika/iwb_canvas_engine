@@ -534,7 +534,7 @@ const _structuralDescriptions = {
   geometryCommittedHandleOrderGuardrailId:
       'geometry/spatial committed order-token structural check',
   geometryEraserExactBudgetGuardrailId:
-      'eraser primitive and exact-check budget-input check',
+      'terminal eraser candidate and exact-check budget-input check',
   spatialNoFullCloneGuardrailId:
       'ordinary spatial update full-frame enumeration check',
   spatialStaleCandidateGuardrailId:

@@ -26,38 +26,11 @@ sequenceDiagram
   Surface->>Tools: handlePointer(CanvasPointerInput finite down)
   Tools->>IE: normalized finite initial eraser sample and finite thickness
   IE->>IE: start one retained corridor and freeze its immutable initial snapshot
-  IE->>ReadPort: eraserPreviewFacts(initial corridor point, eraser thickness)
-  ReadPort->>Spatial: query preview erase candidates(corridor envelope inflated by eraserThickness/2 + hitPadding + 4.0)
-  Spatial-->>ReadPort: preview candidate handles or typed budget-exceeded
-
-  alt preview spatial budget exceeded
-    ReadPort-->>IE: typed preview budget-exceeded facts
-    IE->>Preview: publish initial corridor-only preview, no tentative ids
-    Preview-->>Runtime: preview revision fact
-    Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-    Preview->>Frame: request overlay repaint for corridor only
-    Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
-    else preview spatial candidates returned
-    Note over ReadPort,Geometry: ReadPort resolves committed facts, then admits the runtime eraser-kind policy before eraser candidate and exact-check accounting. Null admits every kind. Empty admits none. Disallowed facts never reach exact hit testing.
-    ReadPort->>Geometry: preview exact checks for policy-admitted deletable non-background candidates(segment-to-family)
-    Note over Geometry: The initial preview budget is 512 candidates / 4096 exact checks.
-    alt preview candidate/check budget exceeded
-      Geometry-->>ReadPort: preview budget exceeded
-      ReadPort-->>IE: typed preview budget-exceeded facts
-      IE->>Preview: publish initial corridor-only preview, no tentative ids
-      Preview-->>Runtime: preview revision fact
-      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-      Preview->>Frame: request overlay repaint for corridor only
-      Note over EK,Signals: Preview budget exceeded produces no document mutation, selection change, spatial update, projection/cache eviction, main repaint, or erase action.
-    else preview budget accepts
-      Geometry-->>ReadPort: policy-filtered preview tentative ids
-      ReadPort-->>IE: preview facts with tentative ids
-      IE->>Preview: publish initial corridor/thickness-only eraser preview
-      Preview-->>Runtime: preview revision fact
-      Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
-      Preview->>Frame: request overlay repaint
-    end
-  end
+  Note over IE,Geometry: Down is visual-only: no ReadPort, envelope, spatial query, candidate resolution, exact hit, or deletion projection.
+  IE->>Preview: publish CanvasEraserPreview(first point, draw-style thickness)
+  Preview-->>Runtime: preview revision fact
+  Runtime->>Signals: publish CanvasRuntimeState with updated state.revisions.preview
+  Preview->>Frame: request overlay repaint
 
   loop same-token finite move samples
     User->>Surface: eraser move

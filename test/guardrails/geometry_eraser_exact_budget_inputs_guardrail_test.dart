@@ -19,8 +19,6 @@ void main() {
     final payloadShapeViolations = checkGeometryEraserExactBudgetInputSources(
       geometryPath: 'lib/src/geometry/geometry_policy.dart',
       geometryContent: '''
-EraserExactBudgetInputs eraserPreviewBudgetInputs(int sampleCount) =>
-    EraserExactBudgetInputs(candidateLimit: 1, exactCheckLimit: 1);
 EraserExactBudgetInputs eraserTerminalBudgetInputs() =>
     EraserExactBudgetInputs(candidateLimit: 1, exactCheckLimit: 1);
 final class EraserExactBudgetInputs {

@@ -519,21 +519,8 @@ final class _PointerSessionReadPort implements InteractionReadPort {
   }
 
   @override
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    return EraserReadFacts.preview(
-      corridorPoints: request.corridorPoints,
-      erasedElementIds: const [],
-      eraserThickness: request.eraserThickness,
-      controllerEpoch: 1,
-      documentRevision: 0,
-      exactCheckCount: 0,
-      exactBudgetExceeded: false,
-    );
-  }
-
-  @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
-    return eraserPreviewFacts(request);
+    throw UnimplementedError('eraser terminal is outside this fixture.');
   }
 
   @override

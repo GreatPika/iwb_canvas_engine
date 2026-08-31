@@ -20,16 +20,9 @@ stateDiagram-v2
     Pointer id is only the routing token.
   end note
 
-  DownAdmission --> InitialPreviewRead: bind eraser session and freeze first corridor point
+  DownAdmission --> Previewing: bind eraser session; freeze first corridor point; publish visual preview
   DownAdmission --> Idle: wrong mode/tool or non-finite facts / reject without preview
   DownAdmission --> Disposed: disposed runtime / StateError
-
-  state "Initial immutable preview read" as InitialPreviewRead
-  note right of InitialPreviewRead
-    Down alone reads immutable one-point preview facts through the read port.
-    The initial preview budget is 512 candidates / 4096 exact checks.
-  end note
-  InitialPreviewRead --> Previewing: publish first corridor preview
 
   state "Active eraser preview" as Previewing {
     [*] --> CorridorPreview
@@ -39,7 +32,7 @@ stateDiagram-v2
       Corridor points are immutable snapshots of one retained world-space
       approximation only. Each admitted move appends before any resample,
       freezes one retained snapshot, and updates overlay repaint only.
-      Moves perform no read, envelope, spatial query, candidate ordering,
+      Down and moves perform no scene read, envelope, spatial query, candidate resolution,
       exact hit, or deletion projection.
     end note
 
@@ -62,7 +55,7 @@ stateDiagram-v2
     end note
 
     TerminalGate --> CleanupOnly: stale token, controllerEpoch mismatch, non-finite, or invalid terminal
-    TerminalGate --> FinalCandidates: valid terminal / query final corridor
+    TerminalGate --> FinalCandidates: valid terminal / admit endpoint; resample if needed; one immutable snapshot and one terminal read
 
     state "Final candidate and geometry check" as FinalCandidates
     FinalCandidates --> EraseDecision: compute erased ids from valid deletable content candidates

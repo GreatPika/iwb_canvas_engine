@@ -678,11 +678,6 @@ final class _TextGuardReadPort implements InteractionReadPort {
   }
 
   @override
-  EraserReadFacts eraserPreviewFacts(EraserReadRequest request) {
-    throw UnimplementedError('eraser preview is outside this fixture.');
-  }
-
-  @override
   EraserReadFacts eraserTerminalFacts(EraserReadRequest request) {
     throw UnimplementedError('eraser terminal is outside this fixture.');
   }

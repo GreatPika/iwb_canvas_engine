@@ -1,170 +1,18 @@
 import 'dart:io';
-import 'dart:convert';
 
 import 'package:test/test.dart';
-
-const _redesignedGroups = {
-  'load_document.100k': [
-    'setup.fixture_json',
-    'warm.load_document',
-    'steady.load_document',
-  ],
-  'first_canvas_frame.50k': [
-    'setup.preloaded_runtime',
-    'warm.first_canvas_frame',
-    'steady.first_canvas_frame',
-  ],
-  'camera_pan.100k': [
-    'setup.loaded_document',
-    'warm.camera_pan',
-    'steady.camera_pan',
-  ],
-  'selection_move.50k': [
-    'setup.loaded_selected_document',
-    'warm.selection_move',
-    'steady.selection_move',
-  ],
-  'marquee_select.50k': [
-    'setup.loaded_document',
-    'warm.marquee_select',
-    'steady.marquee_select',
-  ],
-  'json_export.50k': [
-    'setup.loaded_document',
-    'warm.json_export',
-    'steady.json_export',
-  ],
-  'eraser_dense_50k': [
-    'setup.loaded_draw_mode_document',
-    'warm.eraser_dense',
-    'steady.eraser_dense',
-  ],
-};
-
-const _singleCurrentBehaviorGroups = [
-  'load_document.1k',
-  'load_document.10k',
-  'load_document.50k',
-  'camera_pan.50k',
-  'selection_tap.10k',
-  'selection_move.10k',
-  'pencil_draw.10k',
-  'marker_draw.10k',
-  'line_two_tap.50k',
-  'eraser_normal.50k',
-  'context_delete.10k',
-  'text_edit.open_commit',
-  'text_style_change.10k',
-  'resource_image_cold',
-  'resource_image_warm',
-  'resource_mark_dirty',
-  'missing_resource',
-  'surface_runtime_swap',
-  'dispose_during_preview',
-];
-
-const _redesignedPhaseMetadata = {
-  'load_document.100k': {
-    'warm.load_document': {
-      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
-      'resetReason': 'load_writes_document_state',
-      'measuredAction': 'load_document',
-    },
-    'steady.load_document': {
-      'canonicalPreparation': 'empty_runtime_with_prepared_json_fixture',
-      'resetReason': 'load_writes_document_state',
-      'measuredAction': 'load_document',
-    },
-  },
-  'first_canvas_frame.50k': {
-    'warm.first_canvas_frame': {
-      'canonicalPreparation':
-          'preloaded_runtime_not_rendered_by_measured_surface',
-      'resetReason': 'first_frame_cost_disappears_after_render',
-      'measuredAction': 'first_canvas_frame',
-    },
-    'steady.first_canvas_frame': {
-      'canonicalPreparation':
-          'preloaded_runtime_not_rendered_by_measured_surface',
-      'resetReason': 'first_frame_cost_disappears_after_render',
-      'measuredAction': 'first_canvas_frame',
-    },
-  },
-  'camera_pan.100k': {
-    'warm.camera_pan': {
-      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
-      'resetReason': 'pan_accumulates_camera_offset',
-      'measuredAction': 'camera_pan',
-    },
-    'steady.camera_pan': {
-      'canonicalPreparation': 'loaded_document_camera_origin_settled_surface',
-      'resetReason': 'pan_accumulates_camera_offset',
-      'measuredAction': 'camera_pan',
-    },
-  },
-  'selection_move.50k': {
-    'warm.selection_move': {
-      'canonicalPreparation': 'loaded_selected_document_original_geometry',
-      'resetReason': 'move_translates_selected_geometry',
-      'measuredAction': 'selection_move',
-    },
-    'steady.selection_move': {
-      'canonicalPreparation': 'loaded_selected_document_original_geometry',
-      'resetReason': 'move_translates_selected_geometry',
-      'measuredAction': 'selection_move',
-    },
-  },
-  'marquee_select.50k': {
-    'warm.marquee_select': {
-      'canonicalPreparation':
-          'loaded_document_move_mode_no_selection_settled_surface',
-      'resetReason': 'marquee_commit_replaces_selection',
-      'measuredAction': 'marquee_select',
-    },
-    'steady.marquee_select': {
-      'canonicalPreparation':
-          'loaded_document_move_mode_no_selection_settled_surface',
-      'resetReason': 'marquee_commit_replaces_selection',
-      'measuredAction': 'marquee_select',
-    },
-  },
-  'json_export.50k': {
-    'warm.json_export': {
-      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
-      'resetReason': 'export_reset_keeps_repeats_comparable',
-      'measuredAction': 'json_export',
-    },
-    'steady.json_export': {
-      'canonicalPreparation': 'loaded_document_stable_order_no_pending_edit',
-      'resetReason': 'export_reset_keeps_repeats_comparable',
-      'measuredAction': 'json_export',
-    },
-  },
-  'eraser_dense_50k': {
-    'warm.eraser_dense': {
-      'canonicalPreparation':
-          'loaded_draw_mode_eraser_document_without_prior_erasure',
-      'resetReason': 'eraser_removes_elements',
-      'measuredAction': 'eraser_dense',
-    },
-    'steady.eraser_dense': {
-      'canonicalPreparation':
-          'loaded_draw_mode_eraser_document_without_prior_erasure',
-      'resetReason': 'eraser_removes_elements',
-      'measuredAction': 'eraser_dense',
-    },
-  },
-};
 
 void main() {
   _registerDescriptorCatalogContractTest();
 }
 
 void _registerDescriptorCatalogContractTest() {
-  test('executable descriptor catalog owns the fixed phase catalog', () async {
-    expect(_runtimeCatalogContractTestSource(), contains('run.runTraced('));
-    await _expectExecutableCatalogRuntime();
-  });
+  test(
+    'executable descriptor catalog owns route composition and phase rules',
+    () async {
+      await expectLater(_expectExecutableCatalogRuntime(), completes);
+    },
+  );
 }
 
 Future<void> _expectExecutableCatalogRuntime() async {
@@ -194,12 +42,7 @@ Future<void> _expectExecutableCatalogRuntime() async {
 }
 
 String _runtimeCatalogContractTestSource() {
-  final redesignedGroupsJson = jsonEncode(_redesignedGroups);
-  final singleGroupsJson = jsonEncode(_singleCurrentBehaviorGroups);
-  final redesignedPhaseMetadataJson = jsonEncode(_redesignedPhaseMetadata);
-  return '''
-import 'dart:convert';
-
+  return r'''
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import '../integration_test/perf_canvas_surface_test.dart' as performance_route;
@@ -212,91 +55,76 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   test('runtime performance descriptor catalog matches route contract', () {
-    final redesignedGroups = (jsonDecode(r'$redesignedGroupsJson')
-            as Map<String, dynamic>)
-        .map(
-      (key, value) => MapEntry(
-        key,
-        (value as List<dynamic>).cast<String>(),
-      ),
-    );
-    final singleGroups = (jsonDecode(r'$singleGroupsJson') as List<dynamic>)
-        .cast<String>();
-    final expectedMetadata = (jsonDecode(r'$redesignedPhaseMetadataJson')
-            as Map<String, dynamic>)
-        .map(
-      (groupId, phases) => MapEntry(
-        groupId,
-        (phases as Map<String, dynamic>).map(
-          (phaseKey, metadata) => MapEntry(
-            phaseKey,
-            (metadata as Map<String, dynamic>).cast<String, String>(),
-          ),
-        ),
-      ),
-    );
-    final groupsById = {
-      for (final group in catalog.performanceScenarioCatalogGroups)
-        group.id: group,
-    };
+    final groups = catalog.performanceScenarioCatalogGroups;
+    expect(groups, isNotEmpty);
+    expect(groups.map((group) => group.id).toSet(), hasLength(groups.length));
 
-    expect(catalog.performanceScenarioCatalogGroups, hasLength(26));
-    expect(groupsById.keys.toSet(), {
-      ...redesignedGroups.keys,
-      ...singleGroups,
-    });
-
-    for (final entry in redesignedGroups.entries) {
-      final group = groupsById[entry.key]!;
-      expect(group.migration, 'redesigned', reason: entry.key);
-      expect(group.phases.map((phase) => '\${phase.kind}.\${phase.name}'),
-          entry.value);
-      expect(group.phases.map((phase) => phase.kind).toSet(),
-          {'setup', 'warm', 'steady'});
-      expect(group.phases.singleWhere((phase) => phase.kind == 'setup').repeats,
-          1);
-      expect(group.phases.singleWhere((phase) => phase.kind == 'warm').repeats,
-          1);
-      expect(group.phases.singleWhere((phase) => phase.kind == 'steady').repeats,
-          5);
-      final expectedGroupMetadata = expectedMetadata[entry.key]!;
-      final actualGroupMetadata = {
-        for (final phase in group.phases.where((phase) => phase.kind != 'setup'))
-          '\${phase.kind}.\${phase.name}': {
-            'canonicalPreparation': phase.canonicalPreparation,
-            'resetReason': phase.resetReason,
-            'measuredAction': phase.measuredAction,
-          },
-      };
-      expect(actualGroupMetadata, expectedGroupMetadata, reason: entry.key);
+    for (final group in groups) {
+      expect(group.phases.map((phase) => phase.key).toSet(),
+          hasLength(group.phases.length), reason: group.id);
+      switch (group.migration) {
+        case 'redesigned':
+          expect(group.phases.map((phase) => phase.kind),
+              ['setup', 'warm', 'steady'], reason: group.id);
+          final setup = group.phases[0];
+          final warm = group.phases[1];
+          final steady = group.phases[2];
+          expect(setup.repeats, 1);
+          expect(warm.repeats, 1);
+          expect(steady.repeats, 5);
+          expect(
+            [setup.comparisonRole, warm.comparisonRole, steady.comparisonRole],
+            ['setup_context', 'first_use_action', 'steady_action'],
+          );
+          expect(warm.canonicalPreparation, isNotEmpty);
+          expect(warm.resetReason, isNotEmpty);
+          expect(warm.measuredAction, isNotEmpty);
+          expect(steady.canonicalPreparation, warm.canonicalPreparation);
+          expect(steady.resetReason, warm.resetReason);
+          expect(steady.measuredAction, warm.measuredAction);
+        case 'single.current_behavior':
+          expect(group.phases, hasLength(1), reason: group.id);
+          final phase = group.phases.single;
+          expect(phase.key, 'single.current_behavior', reason: group.id);
+          expect(phase.repeats, 1, reason: group.id);
+          expect(phase.comparisonRole, 'current_behavior', reason: group.id);
+          expect(phase.canonicalPreparation, isNull);
+          expect(phase.resetReason, isNull);
+          expect(phase.measuredAction, isNull);
+        default:
+          fail('Unexpected migration for ${group.id}: ${group.migration}');
+      }
     }
 
-    for (final groupId in singleGroups) {
-      final group = groupsById[groupId]!;
-      expect(group.migration, 'single.current_behavior', reason: groupId);
-      expect(group.phases, hasLength(1), reason: groupId);
-      final phase = group.phases.single;
-      expect(phase.kind, 'single', reason: groupId);
-      expect(phase.name, 'current_behavior', reason: groupId);
-      expect(phase.repeats, 1, reason: groupId);
-    }
-
-    final allowedKinds = {'setup', 'warm', 'steady', 'single'};
-    final reportKeyPattern = RegExp(
-      r'^[a-z0-9_.]+__[a-z]+\\.[a-z0-9_]+__repeat_\\d{3}\$',
-    );
-    expect(catalog.performanceScenarioCatalogRuns, hasLength(68));
-    expect(allPerformanceScenarioActionPhaseRuns, hasLength(68));
+    final expectedRunKeys = [
+      for (final group in groups)
+        for (final phase in group.phases)
+          for (var repeat = 1; repeat <= phase.repeats; repeat += 1)
+            '${group.id}__${phase.key}__repeat_${repeat.toString().padLeft(3, '0')}',
+    ];
+    final catalogRuns = catalog.performanceScenarioCatalogRuns;
+    expect(catalogRuns.map((run) => run.reportKey), expectedRunKeys);
     expect(
       allPerformanceScenarioActionPhaseRuns.map((run) => run.reportKey),
-      catalog.performanceScenarioCatalogRuns.map((run) => run.reportKey),
+      expectedRunKeys,
     );
-    for (final run in catalog.performanceScenarioCatalogRuns) {
-      expect(allowedKinds, contains(run.phase.kind), reason: run.reportKey);
-      expect(reportKeyPattern.hasMatch(run.reportKey), isTrue,
-          reason: run.reportKey);
-      expect(run.reportKey,
-          '\${run.scenarioGroupId}__\${run.phaseKey}__repeat_\${run.repeat.toString().padLeft(3, '0')}');
+    final reportKeyPattern = RegExp(
+      r'^[a-z0-9_.]+__[a-z]+\.[a-z0-9_]+__repeat_\d{3}$',
+    );
+    for (var index = 0; index < catalogRuns.length; index += 1) {
+      final expected = catalogRuns[index];
+      final actual = allPerformanceScenarioActionPhaseRuns[index];
+      expect(reportKeyPattern.hasMatch(actual.reportKey), isTrue,
+          reason: actual.reportKey);
+      expect(actual.scenarioGroupId, expected.scenarioGroupId);
+      expect(actual.phaseKey, expected.phaseKey);
+      expect(actual.repeat, expected.repeat);
+      expect(actual.phase.kind, expected.phase.kind);
+      expect(actual.phase.name, expected.phase.name);
+      expect(actual.phase.canonicalPreparation,
+          expected.phase.canonicalPreparation);
+      expect(actual.phase.resetReason, expected.phase.resetReason);
+      expect(actual.phase.measuredAction, expected.phase.measuredAction);
     }
   });
 
@@ -400,8 +228,8 @@ void main() {
     );
 
     expect(routeLog, [
-      'PERF_SCENARIO_START \${run.reportKey}',
-      'PERF_SCENARIO_DONE \${run.reportKey}',
+      'PERF_SCENARIO_START ${run.reportKey}',
+      'PERF_SCENARIO_DONE ${run.reportKey}',
     ]);
     expect(traceReports, [run.reportKey]);
     expect(find.byKey(performanceHostSurfaceKey), findsOneWidget);

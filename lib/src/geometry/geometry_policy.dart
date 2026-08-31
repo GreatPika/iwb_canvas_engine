@@ -16,8 +16,6 @@ const int kCanvasSpatialCellSize = 256;
 const int kCanvasMaxCellsPerElement = 1024;
 const int kCanvasMaxQueryCells = 50000;
 
-const int kMaxEraserPreviewCandidatesPerSample = 512;
-const int kMaxEraserPreviewExactChecksPerSample = 4096;
 const int kMaxEraserTerminalCandidates = 4096;
 const int kMaxEraserTerminalExactChecks = 32768;
 
@@ -99,13 +97,6 @@ final class GeometryPolicy {
           : sanitizeFiniteRect(aabbFromPoints(finitePoints).inflate(radius)),
       radiusWorld: radius,
       exactRadiusWorld: exactRadius,
-    );
-  }
-
-  EraserExactBudgetInputs eraserPreviewBudgetInputs(int sampleCount) {
-    return EraserExactBudgetInputs(
-      candidateLimit: kMaxEraserPreviewCandidatesPerSample * sampleCount,
-      exactCheckLimit: kMaxEraserPreviewExactChecksPerSample * sampleCount,
     );
   }
 

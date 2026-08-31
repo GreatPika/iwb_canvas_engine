@@ -81,8 +81,8 @@ flowchart LR
   StaleSample -.->|"no preview, repaint, edit, or event"| Surface
   TokenGate -.->|"stale terminal or terminal cleanup input\ncleanup only, no commit intent"| TerminalCleanup
 
-  TokenGate -->|"valid down/move sample\nfor draw/line/move delta"| SessionPreview
-  TokenGate -->|"valid sample needing candidates\nhit policy, marquee, eraser"| SpatialQuery
+  TokenGate -->|"valid down/move sample\nfor draw/line/visual eraser/move delta"| SessionPreview
+  TokenGate -->|"valid sample needing candidates\nhit policy, marquee, terminal eraser"| SpatialQuery
   SpatialQuery -->|"read-only candidate lookup"| Candidates
   SpatialQuery -->|"batched intent-specific selection facts"| SelectionFacts
   Candidates -->|"hit-test, selection, or eraser candidate facts"| SpatialQuery
