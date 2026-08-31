@@ -69,7 +69,7 @@ flowchart LR
   Committed -->|"sparse committed facts"| SparseJournal
   Committed -->|"projection only for explicit materialization"| MaterializedFallback
   SessionGate -->|"valid live handle"| EditHandle
-  EditHandle -->|"ordinary document/resource mutations\nand selection requests"| SparseJournal
+  EditHandle -->|"ordinary document/resource mutations"| SparseJournal
   EditHandle -.->|"explicit draft projection/replacement"| MaterializedFallback
   EditHandle -->|"callback completes"| Finalize
   Finalize -->|"synchronous callback value"| Touched
@@ -82,10 +82,10 @@ flowchart LR
   Touched -->|"non-empty exact invalidation inputs"| Compiler
   Compiler -->|"produces immutable payload"| Plan
   Compiler -->|"prepare sparse commit/materialized fallback before install"| Committed
-  Plan -->|"commit payload for atomic install"| Install
-  Install -->|"prepare accepted selection before store swap"| SelectionEffects
+  Plan -->|"prepare Store/ID, selection ownership, and sealed delivery before assignment"| Install
+  Install -->|"prepare equality/revision and transfer selection backing before Store bind"| SelectionEffects
   Install -->|"replace committed tables and invalidate projection revision atomically"| Committed
-  Install -->|"apply prepared selection effects atomically"| SelectionEffects
+  Install -->|"optionally assign already-owned changed selection"| SelectionEffects
   SelectionEffects -->|"update selected ids/revision"| SelectionState
 
   Install -->|"return sealed accepted delivery values"| CommonDelivery

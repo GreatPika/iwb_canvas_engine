@@ -746,7 +746,8 @@ edges:
     sourceDocs:
       - path: docs/contracts/operation_matrix.md
     evidence:
-      - RuntimeRoot delivers accepted eraser and request-originated text changes through EditKernel.prepareInteractionCommit before public state/action delivery.
+      - RuntimeRoot._prepareEraserDeletion creates its current private deferred capability through EditKernel.prepareDeferredInteractionCommit; the existing eraser resolver later consumes or discards the common prepared apply before public state/action delivery.
+      - RuntimeRoot.commitTextEdit uses EditKernel.prepareInteractionCommit, which immediately consumes the same common prepared apply before public state/action delivery.
     actual:
       delegationMembers:
         - RuntimeRoot._prepareEraserDeletion

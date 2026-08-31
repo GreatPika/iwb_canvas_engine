@@ -110,9 +110,14 @@ sequenceDiagram
     Runtime->>Touched: record selectionChanged only
     Note over Events: type selectMarquee. elementIds are next selection in document order. payload CanvasSelectionActionPayload(previousSelection, nextSelection, marqueeRectWorld).
     alt commit preflight and install succeed
-      EK->>Applier: apply prepared selection CommitPlan
-      Applier->>Selection: install selection effect atomically
-      Selection->>Selection: replace selected ids and selectionRevision
+      EK->>Applier: prepare common single-use selection apply
+      Applier->>Selection: prepare equality, final revision, and owned backing
+      alt selection changed
+        Applier->>Selection: consume assignment-only selection install
+        Selection->>Selection: replace selected ids and selectionRevision
+      else selection equality
+        Note over Applier,Selection: No owner installer runs.
+      end
       Note over Applier,Selection: Atomic install is the commit boundary.
       Note over Selection,Spatial: Selection changes do not update spatial indexes or projection cache.
       Selection-->>Applier: committed selection revision facts

@@ -380,6 +380,13 @@ sequential clear barriers, and one bounded selective descriptor-table lifecycle
 using owner observations. These suites assert actual result, revision, touched,
 and resource effects rather than preflight candidates.
 
+`test/edit/net_no_op_edit_commit_test.dart` includes the accepted-interaction
+fixture for the single-use prepared lifetime across materialized, replacement,
+sparse, selection-only, and no-op forms. It compares committed owner revisions,
+selection, and all generated-ID candidates after every terminal outcome.
+`test/edit/selection_effect_commit_test.dart` proves that an equal prepared
+selection bypasses the real installer while preserving the same owner state.
+
 `test/runtime/command_facts_port_test.dart` covers immutable layer-only command
 facts and the deterministic one-handle/one-catalog-pass budget.
 `test/api/command_port_actions_test.dart` covers public retained-background

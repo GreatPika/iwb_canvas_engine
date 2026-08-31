@@ -27,7 +27,7 @@ import 'edit_kernel_test_support.dart';
 
 // This fixture keeps distinct stable owner-boundary failures in one existing
 // commit-delivery proof surface instead of duplicating document setup.
-// ignore: halstead-volume
+// ignore: halstead-volume, source-lines-of-code, reason: Existing fixture registrations name distinct admitted behaviors.
 void main() {
   test('selection replacement commits without document delta', () {
     expect(_verifySelectionReplacementCommit, returnsNormally);
@@ -61,8 +61,12 @@ void main() {
     expect(_verifyMaterializedApplyUsesOneCommittedDocument, returnsNormally);
   });
 
-  test('document branch preserves its pre- and post-install boundary', () {
+  test('document admission failure preserves both owners before install', () {
     expect(_verifyDocumentBranchAtomicity, returnsNormally);
+  });
+
+  test('consumed selection backing fails before Store preparation', () {
+    expect(_verifyConsumedSelectionBackingFailsBeforeStore, returnsNormally);
   });
 
   test('selection-only and no-op apply never touch store installers', () {
@@ -143,7 +147,7 @@ void _verifySelectionNoOpDropsActionIntents() {
 
   final result = _applyPlan(plan, selection, events);
 
-  expect(events, ['prepare-selection', 'selection']);
+  expect(events, ['prepare-selection']);
   expect(selection.selectionFacts.selectionRevision, 1);
   expect(result.shouldPublishState, isFalse);
   expect(result.effects, isEmpty);
@@ -252,7 +256,9 @@ void _verifyPreparedSelectionInstallSkipsMembership() {
 
   expect(
     selection.installPreparedEffect(
-      PreparedSelectionEffect([CanvasElementId('prepared')]),
+      PreparedSelectionEffect([
+        CanvasElementId('prepared'),
+      ]).transferOwnership(),
     ),
     isTrue,
   );
@@ -360,21 +366,14 @@ CommitDeliveryResult _expectMaterializedDocumentIdentity(CommitPlan plan) {
         ),
         plan: plan,
         documentInstallers: CommitDocumentInstallers(
-          installDocument: (document, _) {
-            if (plan.documentReplaced) {
-              fail('Replacement reached the ordinary document installer.');
+          prepareDocumentInstall: (document, {required documentReplaced}) {
+            if (documentReplaced != plan.documentReplaced ||
+                document is! PreparedMaterializedDocument) {
+              fail('Materialized document preparation used the wrong branch.');
             }
-            installedDocument = document;
+            installedDocument = document.document;
+            return () => 0;
           },
-          replaceDocument: (document, _) {
-            if (!plan.documentReplaced) {
-              fail('Ordinary installation reached the replacement installer.');
-            }
-            installedDocument = document;
-          },
-          installSparseCommit: (_) => fail('Unexpected sparse install.'),
-          installPreparedMaterializedCommit: (_) =>
-              fail('Unexpected prepared materialized install.'),
         ),
         selectionInstallers: CommitSelectionInstallers(
           prepareSelectionEffect: (_, document) {
@@ -412,11 +411,13 @@ void _expectPreparedMaterializedStoreIdentity() {
       selectionEffect: ReplaceSelectionEffect([CanvasElementId('selected')]),
     ),
     documentInstallers: CommitDocumentInstallers(
-      installDocument: (_, _) => fail('Unexpected document install.'),
-      replaceDocument: (_, _) => fail('Unexpected replacement.'),
-      installSparseCommit: (_) => fail('Unexpected sparse install.'),
-      installPreparedMaterializedCommit: (commit) {
-        installedCommit = commit;
+      prepareDocumentInstall: (document, {required documentReplaced}) {
+        if (documentReplaced ||
+            document is! PreparedMaterializedStoreDocument) {
+          fail('Unexpected prepared materialized Store branch.');
+        }
+        installedCommit = document.commit;
+        return () => 0;
       },
     ),
     selectionInstallers: CommitSelectionInstallers(
@@ -458,7 +459,7 @@ void _verifyDocumentBranchAtomicity() {
   _expectMaterializedConstructionFailurePreservesOwners();
   _expectDeliveryPreparationFailurePreservesOwners();
   _expectPreparedMaterializedStaleFailurePreservesOwners();
-  _expectDocumentInstallSurvivesSelectionFailure();
+  _expectAdmissionFailurePreservesOwners();
 }
 
 // Materialized commits fail through a different condition than sparse commits.
@@ -484,12 +485,15 @@ void _expectPreparedMaterializedStaleFailurePreservesOwners() {
         selectionEffect: ReplaceSelectionEffect([CanvasElementId('b')]),
       ),
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (_, _) => fail('Unexpected document install.'),
-        replaceDocument: (_, _) => fail('Unexpected replacement.'),
-        installSparseCommit: (_) => fail('Unexpected sparse install.'),
-        installPreparedMaterializedCommit: (commit) {
+        prepareDocumentInstall: (document, {required documentReplaced}) {
+          if (documentReplaced ||
+              document is! PreparedMaterializedStoreDocument) {
+            fail('Unexpected prepared materialized Store branch.');
+          }
           events.add('prepared-materialized-document');
-          store.installPreparedMaterializedCommit(commit);
+          return store
+              .preparePreparedMaterializedInstall(document.commit)
+              .consume;
         },
       ),
       selectionInstallers: CommitSelectionInstallers(
@@ -521,30 +525,100 @@ void _expectPreparedMaterializedStaleFailurePreservesOwners() {
   );
 }
 
-// This one trace must keep Store/admission installation, selection failure, and
-// retained-owner observations adjacent to prove that order and no rollback.
+// A real late Store admission observation fails after the element ledger has
+// been prepared but before any owner assignment. It therefore kills the former
+// Store-first install order without adding a fallible installation callback.
 // ignore: halstead-volume, source-lines-of-code
-void _expectDocumentInstallSurvivesSelectionFailure() {
+void _expectAdmissionFailurePreservesOwners() {
   final store = DocumentStoreKernel();
   final selection = _selectionKernel()..setSelection([CanvasElementId('a')]);
   final events = <String>[];
+  final before = _CommitApplyOwnerSnapshot.capture(store, selection, events);
+
+  expect(
+    () => DocumentStoreKernel.observeIdAdmissionWork(
+      (event) {
+        if (event.prefix == 'l' &&
+            event.phase == IdAdmissionWorkPhase.acceptedAdmission &&
+            event.kind == IdAdmissionWorkKind.inputVisit) {
+          throw StateError('late layer admission preparation failed');
+        }
+      },
+      () {
+        const CommitApplier().apply(
+          document: AcceptedMaterializedDocument(
+            document: CanvasDocument(
+              layers: [
+                CanvasLayer(
+                  id: CanvasLayerId('l0'),
+                  elements: [
+                    CanvasRectElement(
+                      id: CanvasElementId('e0'),
+                      size: const Size(1, 1),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            revisionDelta: const StoreRevisionDelta.structural(),
+          ),
+          plan: CommitPlan(
+            revisionDelta: const StoreRevisionDelta.structural(),
+            touchedSet: TouchedSet(selection: true),
+            selectionEffect: ReplaceSelectionEffect([CanvasElementId('e0')]),
+          ),
+          documentInstallers: CommitDocumentInstallers(
+            prepareDocumentInstall: (document, {required documentReplaced}) {
+              events.add('prepare-store');
+              if (documentReplaced ||
+                  document is! PreparedMaterializedDocument) {
+                fail('Expected an ordinary materialized Store preparation.');
+              }
+              return store
+                  .prepareDocumentInstall(
+                    document.document,
+                    document.revisionDelta,
+                  )
+                  .consume;
+            },
+          ),
+          selectionInstallers: CommitSelectionInstallers(
+            prepareSelectionEffect: (_, _) {
+              events.add('prepare-selection');
+              return selection.prepareEffect([CanvasElementId('e0')]);
+            },
+            installSelectionEffect: (effect) {
+              events.add('selection');
+              return selection.installPreparedEffect(effect);
+            },
+          ),
+        );
+      },
+    ),
+    throwsStateError,
+  );
+
+  before.expectUnchanged(
+    store,
+    selection,
+    events,
+    eventSuffix: ['prepare-selection', 'prepare-store'],
+  );
+}
+
+// ignore: halstead-volume, reason: This owner snapshot and real pre-consumed input form one atomicity witness.
+void _verifyConsumedSelectionBackingFailsBeforeStore() {
+  final store = DocumentStoreKernel();
+  final selection = _selectionKernel()..setSelection([CanvasElementId('a')]);
+  final events = <String>[];
+  final before = _CommitApplyOwnerSnapshot.capture(store, selection, events);
+  final alreadyTransferred = selection.prepareEffect([CanvasElementId('e0')]);
+  alreadyTransferred.transferOwnership();
 
   expect(
     () => const CommitApplier().apply(
       document: AcceptedMaterializedDocument(
-        document: CanvasDocument(
-          layers: [
-            CanvasLayer(
-              id: CanvasLayerId('layer-1'),
-              elements: [
-                CanvasRectElement(
-                  id: CanvasElementId('e0'),
-                  size: const Size(1, 1),
-                ),
-              ],
-            ),
-          ],
-        ),
+        document: CanvasDocument(),
         revisionDelta: const StoreRevisionDelta.structural(),
       ),
       plan: CommitPlan(
@@ -553,35 +627,19 @@ void _expectDocumentInstallSurvivesSelectionFailure() {
         selectionEffect: ReplaceSelectionEffect([CanvasElementId('e0')]),
       ),
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (document, delta) {
-          events.add('document');
-          store.installDocument(document, delta);
+        prepareDocumentInstall: (_, {required documentReplaced}) {
+          events.add('prepare-store');
+          fail('Consumed Selection backing reached Store preparation.');
         },
-        replaceDocument: (_, _) => fail('Unexpected replacement.'),
-        installSparseCommit: (_) => fail('Unexpected sparse install.'),
-        installPreparedMaterializedCommit: (_) =>
-            fail('Unexpected prepared materialized install.'),
       ),
       selectionInstallers: CommitSelectionInstallers(
-        prepareSelectionEffect: (_, _) {
-          events.add('prepare-selection');
-
-          return PreparedSelectionEffect([CanvasElementId('e0')]);
-        },
-        installSelectionEffect: (_) {
-          events.add('selection');
-          throw StateError('prepared selection install failed');
-        },
+        prepareSelectionEffect: (_, _) => alreadyTransferred,
+        installSelectionEffect: (_) => fail('Unexpected Selection tail.'),
       ),
     ),
     throwsStateError,
   );
-
-  expect(events, ['prepare-selection', 'document', 'selection']);
-  expect(store.readDocument().layers.single.elements.single.id.value, 'e0');
-  expect(store.documentRevision, 1);
-  expect(store.readElementIdCandidate().value, 'e1');
-  expect(selection.selectedElementIds, {CanvasElementId('a')});
+  before.expectUnchanged(store, selection, events);
 }
 
 // Aggregate construction and the exact unchanged snapshot share one witness so
@@ -613,10 +671,7 @@ void _expectMaterializedConstructionFailurePreservesOwners() {
             touchedSet: TouchedSet(),
           ),
           documentInstallers: const CommitDocumentInstallers(
-            installDocument: _unexpectedDocumentInstall,
-            replaceDocument: _unexpectedDocumentInstall,
-            installSparseCommit: _unexpectedSparseInstall,
-            installPreparedMaterializedCommit: _unexpectedMaterializedInstall,
+            prepareDocumentInstall: _unexpectedPreparedDocumentInstall,
           ),
           selectionInstallers: const CommitSelectionInstallers(
             prepareSelectionEffect: _unexpectedSelectionPreparation,
@@ -665,25 +720,42 @@ void _expectDeliveryPreparationFailurePreservesOwners() {
         document: document,
         plan: plan,
         documentInstallers: CommitDocumentInstallers(
-          installDocument: (committed, delta) {
-            documentInstallerCalls += 1;
-            events.add('document');
-            store.installDocument(committed, delta);
-          },
-          replaceDocument: (committed, delta) {
-            replacementInstallerCalls += 1;
-            events.add('replacement');
-            store.replaceDocument(committed, delta);
-          },
-          installSparseCommit: (commit) {
-            sparseInstallerCalls += 1;
-            events.add('sparse-document');
-            store.installSparseCommit(commit);
-          },
-          installPreparedMaterializedCommit: (commit) {
-            materializedInstallerCalls += 1;
-            events.add('prepared-materialized-document');
-            store.installPreparedMaterializedCommit(commit);
+          prepareDocumentInstall: (document, {required documentReplaced}) {
+            return switch (document) {
+              PreparedMaterializedDocument(
+                :final document,
+                :final revisionDelta,
+              ) =>
+                () {
+                  if (documentReplaced) {
+                    replacementInstallerCalls += 1;
+                    events.add('replacement');
+                    store
+                        .prepareReplacementDocumentInstall(
+                          document,
+                          revisionDelta,
+                        )
+                        .consume();
+                  } else {
+                    documentInstallerCalls += 1;
+                    events.add('document');
+                    store
+                        .prepareDocumentInstall(document, revisionDelta)
+                        .consume();
+                  }
+                },
+              PreparedSparseStoreDocument(:final commit) => () {
+                sparseInstallerCalls += 1;
+                events.add('sparse-document');
+                store.prepareSparseInstall(commit).consume();
+              },
+              PreparedMaterializedStoreDocument(:final commit) => () {
+                materializedInstallerCalls += 1;
+                events.add('prepared-materialized-document');
+                store.preparePreparedMaterializedInstall(commit).consume();
+              },
+              PreparedUnchangedStoreDocument() => () => 0,
+            };
           },
         ),
         selectionInstallers: CommitSelectionInstallers(
@@ -745,24 +817,17 @@ void _expectDeliveryPreparationFailurePreservesOwners() {
   expect(publicDeliveryCalls, 0);
 }
 
-void _unexpectedDocumentInstall(CommittedDocument _, StoreRevisionDelta _) {
-  fail('Pre-install failure reached the document installer.');
-}
-
-void _unexpectedSparseInstall(PreparedSparseStoreCommit _) {
-  fail('Pre-install failure reached the sparse installer.');
-}
-
-void _unexpectedMaterializedInstall(PreparedMaterializedStoreCommit _) {
-  fail('Pre-install failure reached the materialized installer.');
-}
+void Function() _unexpectedPreparedDocumentInstall(
+  PreparedCommitDocument _, {
+  required bool documentReplaced,
+}) => fail('Pre-install failure reached document preparation.');
 
 PreparedSelectionEffect _unexpectedSelectionPreparation(
   CommitSelectionEffect _,
   PreparedCommitDocument _,
 ) => fail('Pre-install failure reached selection preparation.');
 
-bool _unexpectedSelectionInstall(PreparedSelectionEffect _) {
+bool _unexpectedSelectionInstall(PreparedSelectionInstall _) {
   fail('Pre-install failure reached selection installation.');
 }
 
@@ -773,20 +838,19 @@ void _verifySelectionOnlyAndNoOpAvoidStoreInstallers() {
   final store = documentStoreWithDocument(_document());
   final selection = _selectionKernel()..setSelection([CanvasElementId('a')]);
   final events = <String>[];
+  var sharedSelectionInstallerCalls = 0;
   final installers = CommitDocumentInstallers(
-    installDocument: (_, _) => fail('Selection-only apply touched Store.'),
-    replaceDocument: (_, _) => fail('Selection-only apply touched Store.'),
-    installSparseCommit: (_) => fail('Selection-only apply touched Store.'),
-    installPreparedMaterializedCommit: (_) =>
+    prepareDocumentInstall: (_, {required documentReplaced}) =>
         fail('Selection-only apply touched Store.'),
   );
   final selectionInstallers = CommitSelectionInstallers(
     prepareSelectionEffect: (_, _) {
       events.add('prepare-selection');
 
-      return PreparedSelectionEffect([CanvasElementId('b')]);
+      return selection.prepareEffect([CanvasElementId('b')]);
     },
     installSelectionEffect: (effect) {
+      sharedSelectionInstallerCalls += 1;
       events.add('selection');
 
       return selection.installPreparedEffect(effect);
@@ -801,6 +865,7 @@ void _verifySelectionOnlyAndNoOpAvoidStoreInstallers() {
   );
 
   expect(events, ['prepare-selection', 'selection']);
+  expect(sharedSelectionInstallerCalls, 1);
   expect(selectionOnly.shouldPublishState, isTrue);
   expect(selection.selectedElementIds, {CanvasElementId('b')});
 
@@ -880,8 +945,10 @@ void _verifySelectionOnlyAndNoOpAvoidStoreInstallers() {
     'prepare-selection',
     'selection',
     'prepare-selection',
-    'selection',
   ]);
+  expect(sharedSelectionInstallerCalls, 1);
+  expect(selection.selectedElementIds, {CanvasElementId('b')});
+  expect(selection.selectionFacts.selectionRevision, 2);
   expect(selectionNoOp.shouldPublishState, isFalse);
   expect(selectionNoOp.effects, isEmpty);
   expect(selectionNoOp.actionIntents, isEmpty);
@@ -900,7 +967,6 @@ void _verifySelectionOnlyAndNoOpAvoidStoreInstallers() {
     'prepare-selection',
     'selection',
     'prepare-selection',
-    'selection',
   ]);
   expect(trueNoOp.shouldPublishState, isFalse);
   expect(trueNoOp.effects, isEmpty);
@@ -948,24 +1014,25 @@ CommitDeliveryResult _applyPlan(
     ),
     plan: plan,
     documentInstallers: CommitDocumentInstallers(
-      installDocument: (_, _) => events.add('document'),
-      replaceDocument: (_, _) => events.add('replacement'),
-      installSparseCommit: (_) => events.add('sparse-document'),
-      installPreparedMaterializedCommit: (_) =>
-          events.add('prepared-materialized-document'),
+      prepareDocumentInstall: (document, {required documentReplaced}) => () {
+        events.add(switch (document) {
+          PreparedMaterializedDocument() =>
+            documentReplaced ? 'replacement' : 'document',
+          PreparedSparseStoreDocument() => 'sparse-document',
+          PreparedMaterializedStoreDocument() =>
+            'prepared-materialized-document',
+          PreparedUnchangedStoreDocument() => 'unchanged-document',
+        });
+      },
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (effect, _) {
         events.add('prepare-selection');
 
-        return switch (effect) {
-          PruneSelectionEffect() => PreparedSelectionEffect(
-            selection.selectedElementIds,
-          ),
-          ReplaceSelectionEffect(:final elementIds) => PreparedSelectionEffect(
-            elementIds,
-          ),
-        };
+        return selection.prepareEffect(switch (effect) {
+          PruneSelectionEffect() => selection.selectedElementIds,
+          ReplaceSelectionEffect(:final elementIds) => elementIds,
+        });
       },
       installSelectionEffect: (effect) {
         events.add('selection');
@@ -1006,11 +1073,17 @@ final class _SparseSelectionCommitProof {
       document: AcceptedSparseStoreDocument(commit: prepared),
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (_, _) => events.add('document'),
-        replaceDocument: (_, _) => events.add('replacement'),
-        installSparseCommit: _installSparseCommit,
-        installPreparedMaterializedCommit: (_) =>
-            events.add('prepared-materialized-document'),
+        prepareDocumentInstall: (document, {required documentReplaced}) {
+          if (documentReplaced || document is! PreparedSparseStoreDocument) {
+            fail('Sparse apply prepared the wrong Store document form.');
+          }
+          final preparedInstall = store.prepareSparseInstall(document.commit);
+          return () {
+            events.add('sparse-document');
+            installedCommit = document.commit;
+            preparedInstall.consume();
+          };
+        },
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareSelectionEffect,
@@ -1024,11 +1097,17 @@ final class _SparseSelectionCommitProof {
       document: AcceptedSparseStoreDocument(commit: prepared),
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (_, _) => events.add('document'),
-        replaceDocument: (_, _) => events.add('replacement'),
-        installSparseCommit: _installSparseCommit,
-        installPreparedMaterializedCommit: (_) =>
-            events.add('prepared-materialized-document'),
+        prepareDocumentInstall: (document, {required documentReplaced}) {
+          if (documentReplaced || document is! PreparedSparseStoreDocument) {
+            fail('Sparse apply prepared the wrong Store document form.');
+          }
+          final preparedInstall = store.prepareSparseInstall(document.commit);
+          return () {
+            events.add('sparse-document');
+            installedCommit = document.commit;
+            preparedInstall.consume();
+          };
+        },
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: (_, _) {
@@ -1040,42 +1119,39 @@ final class _SparseSelectionCommitProof {
     );
   }
 
-  PreparedDeletionApply prepareDeletion() {
-    return const CommitApplier().prepareDeletion(
+  PreparedInteractionApply prepareDeletion() {
+    return const CommitApplier().prepareInteraction(
       document: AcceptedSparseStoreDocument(commit: prepared),
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (_, _) => fail('Unexpected document install.'),
-        replaceDocument: (_, _) => fail('Unexpected replacement.'),
-        installSparseCommit: (_) =>
-            fail('Deletion used ordinary sparse install.'),
-        installPreparedMaterializedCommit: (_) =>
-            fail('Unexpected prepared materialized install.'),
-        prepareDeletionSparseInstall: store.prepareDeletionSparseInstall,
+        prepareDocumentInstall: (document, {required documentReplaced}) {
+          if (documentReplaced || document is! PreparedSparseStoreDocument) {
+            fail('Deferred deletion did not prepare a sparse Store install.');
+          }
+          return store.prepareSparseInstall(document.commit).consume;
+        },
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareSelectionEffect,
-        installSelectionEffect: (_) =>
-            fail('Deletion used ordinary selection install.'),
-        installOwnedSelectionEffect: (ids) {
+        installSelectionEffect: (effect) {
           events.add('selection-install');
-          return selection.installOwnedPreparedElementIds(ids);
+          return selection.installPreparedEffect(effect);
         },
       ),
     );
   }
 
-  PreparedDeletionApply prepareDeletionWithThrowingSelection() {
-    return const CommitApplier().prepareDeletion(
+  PreparedInteractionApply prepareDeletionWithThrowingSelection() {
+    return const CommitApplier().prepareInteraction(
       document: AcceptedSparseStoreDocument(commit: prepared),
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: (_, _) => fail('Unexpected document install.'),
-        replaceDocument: (_, _) => fail('Unexpected replacement.'),
-        installSparseCommit: (_) => fail('Unexpected sparse install.'),
-        installPreparedMaterializedCommit: (_) =>
-            fail('Unexpected prepared materialized install.'),
-        prepareDeletionSparseInstall: store.prepareDeletionSparseInstall,
+        prepareDocumentInstall: (document, {required documentReplaced}) {
+          if (documentReplaced || document is! PreparedSparseStoreDocument) {
+            fail('Deferred deletion did not prepare a sparse Store install.');
+          }
+          return store.prepareSparseInstall(document.commit).consume;
+        },
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: (_, _) {
@@ -1083,8 +1159,6 @@ final class _SparseSelectionCommitProof {
           throw StateError('selection preparation failed');
         },
         installSelectionEffect: (_) => fail('Unexpected selection install.'),
-        installOwnedSelectionEffect: (_) =>
-            fail('Unexpected selection install.'),
       ),
     );
   }
@@ -1108,12 +1182,6 @@ final class _SparseSelectionCommitProof {
     expect(installedCommit, same(prepared));
   }
 
-  void _installSparseCommit(PreparedSparseStoreCommit commit) {
-    events.add('sparse-document');
-    installedCommit = commit;
-    store.installSparseCommit(commit);
-  }
-
   PreparedSelectionEffect _prepareSelectionEffect(
     CommitSelectionEffect effect,
     PreparedCommitDocument document,
@@ -1122,20 +1190,18 @@ final class _SparseSelectionCommitProof {
     final commit = (document as PreparedSparseStoreDocument).commit;
     selectionCommit = commit;
 
-    return switch (effect) {
-      PruneSelectionEffect() => PreparedSelectionEffect(
-        store.normalizeSelectionForSparseCommit(
-          commit,
-          selection.selectedElementIds,
-        ),
+    final acceptedIds = switch (effect) {
+      PruneSelectionEffect() => store.normalizeSelectionForSparseCommit(
+        commit,
+        selection.selectedElementIds,
       ),
-      ReplaceSelectionEffect(:final elementIds) => PreparedSelectionEffect(
+      ReplaceSelectionEffect(:final elementIds) =>
         store.normalizeSelectionForSparseCommit(commit, elementIds),
-      ),
     };
+    return selection.prepareEffect(acceptedIds);
   }
 
-  bool _installSelectionEffect(PreparedSelectionEffect effect) {
+  bool _installSelectionEffect(PreparedSelectionInstall effect) {
     events.add('selection');
 
     return selection.installPreparedEffect(effect);
@@ -1144,7 +1210,7 @@ final class _SparseSelectionCommitProof {
 
 // The trace and snapshots jointly prove fail-fast, uninterrupted ownership,
 // and single-use behavior; splitting them would weaken their shared witness.
-// ignore: halstead-volume, source-lines-of-code
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
 void _verifyPreparedDeletionInstallBoundary() {
   final stale = _SparseSelectionCommitProof()..makePreparedCommitStale();
   final staleBefore = _CommitApplyOwnerSnapshot.capture(
@@ -1200,6 +1266,58 @@ void _verifyPreparedDeletionInstallBoundary() {
   );
   expect(prepared.consume, throwsStateError);
   afterAccept.expectUnchanged(proof.store, proof.selection, proof.events);
+
+  final discardedThenConsumed = _SparseSelectionCommitProof();
+  final discardedBefore = _CommitApplyOwnerSnapshot.capture(
+    discardedThenConsumed.store,
+    discardedThenConsumed.selection,
+    discardedThenConsumed.events,
+  );
+  final discarded = discardedThenConsumed.prepareDeletion();
+  discarded.discard();
+  discardedBefore.expectUnchanged(
+    discardedThenConsumed.store,
+    discardedThenConsumed.selection,
+    discardedThenConsumed.events,
+    eventSuffix: ['prepare-selection'],
+  );
+  expect(discarded.consume, throwsStateError);
+  discardedBefore.expectUnchanged(
+    discardedThenConsumed.store,
+    discardedThenConsumed.selection,
+    discardedThenConsumed.events,
+    eventSuffix: ['prepare-selection'],
+  );
+
+  final consumedThenDiscarded = _SparseSelectionCommitProof();
+  final consumed = consumedThenDiscarded.prepareDeletion();
+  consumed.consume();
+  final consumedAfter = _CommitApplyOwnerSnapshot.capture(
+    consumedThenDiscarded.store,
+    consumedThenDiscarded.selection,
+    consumedThenDiscarded.events,
+  );
+  expect(consumed.discard, throwsStateError);
+  consumedAfter.expectUnchanged(
+    consumedThenDiscarded.store,
+    consumedThenDiscarded.selection,
+    consumedThenDiscarded.events,
+  );
+
+  final discardedTwice = _SparseSelectionCommitProof();
+  final twice = discardedTwice.prepareDeletion();
+  twice.discard();
+  final twiceAfter = _CommitApplyOwnerSnapshot.capture(
+    discardedTwice.store,
+    discardedTwice.selection,
+    discardedTwice.events,
+  );
+  expect(twice.discard, throwsStateError);
+  twiceAfter.expectUnchanged(
+    discardedTwice.store,
+    discardedTwice.selection,
+    discardedTwice.events,
+  );
 }
 
 final class _CommitApplyOwnerSnapshot {
@@ -1214,6 +1332,8 @@ final class _CommitApplyOwnerSnapshot {
     required this.resourceRevision,
     required this.projectionBuildCount,
     required this.nextElementId,
+    required this.nextLayerId,
+    required this.nextResourceId,
     required this.selectedElementIds,
     required this.selectionRevision,
     required this.events,
@@ -1235,6 +1355,8 @@ final class _CommitApplyOwnerSnapshot {
       resourceRevision: store.resourceRevision,
       projectionBuildCount: store.projectionBuildCount,
       nextElementId: store.readElementIdCandidate(),
+      nextLayerId: store.readLayerIdCandidate(),
+      nextResourceId: store.readResourceIdCandidate(),
       selectedElementIds: selection.selectedElementIds,
       selectionRevision: selection.selectionFacts.selectionRevision,
       events: List.unmodifiable(events),
@@ -1251,6 +1373,8 @@ final class _CommitApplyOwnerSnapshot {
   final int resourceRevision;
   final int projectionBuildCount;
   final CanvasElementId nextElementId;
+  final CanvasLayerId nextLayerId;
+  final CanvasResourceId nextResourceId;
   final Set<CanvasElementId> selectedElementIds;
   final int selectionRevision;
   final List<String> events;
@@ -1261,6 +1385,7 @@ final class _CommitApplyOwnerSnapshot {
     List<String> currentEvents, {
     Iterable<String> eventSuffix = const [],
   }) {
+    expect(identical(store.readDocument(), document), isTrue);
     expect(store.readDocument(), document);
     expect(store.documentRevision, documentRevision);
     expect(store.structuralRevision, structuralRevision);
@@ -1271,6 +1396,8 @@ final class _CommitApplyOwnerSnapshot {
     expect(store.resourceRevision, resourceRevision);
     expect(store.projectionBuildCount, projectionBuildCount);
     expect(store.readElementIdCandidate(), nextElementId);
+    expect(store.readLayerIdCandidate(), nextLayerId);
+    expect(store.readResourceIdCandidate(), nextResourceId);
     expect(selection.selectedElementIds, selectedElementIds);
     expect(selection.selectionFacts.selectionRevision, selectionRevision);
     expect(currentEvents, [...events, ...eventSuffix]);

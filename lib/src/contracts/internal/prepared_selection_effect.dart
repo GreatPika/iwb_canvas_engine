@@ -6,8 +6,29 @@ import 'package:meta/meta.dart' show visibleForTesting;
 import '../public/canvas_ids.dart';
 
 final class PreparedSelectionEffect {
-  PreparedSelectionEffect(Iterable<CanvasElementId> elementIds)
-    : _ownedElementIds = LinkedHashSet<CanvasElementId>.of(elementIds) {
+  /// Test doubles must supply a final state too; production SelectionKernel
+  /// uses [PreparedSelectionEffect.prepared] with its authoritative revision.
+  @visibleForTesting
+  PreparedSelectionEffect(
+    Iterable<CanvasElementId> elementIds, {
+    bool didChange = true,
+    int nextRevision = 1,
+  }) : _ownedElementIds = LinkedHashSet<CanvasElementId>.of(elementIds),
+       _didChange = didChange,
+       _nextRevision = nextRevision {
+    assert(
+      _throwInjectedPreparationFailure(),
+      'prepared Selection failure injection did not complete',
+    );
+  }
+
+  PreparedSelectionEffect.prepared(
+    LinkedHashSet<CanvasElementId> ownedElementIds, {
+    required bool didChange,
+    required int nextRevision,
+  }) : _ownedElementIds = ownedElementIds,
+       _didChange = didChange,
+       _nextRevision = nextRevision {
     assert(
       _throwInjectedPreparationFailure(),
       'prepared Selection failure injection did not complete',
@@ -16,7 +37,9 @@ final class PreparedSelectionEffect {
 
   static final Object _preparationFailureZoneKey = Object();
   final LinkedHashSet<CanvasElementId> _ownedElementIds;
-  bool _consumed = false;
+  final bool _didChange;
+  final int _nextRevision;
+  bool _transferred = false;
 
   /// Causes the real prepared-backing owner to fail only under test asserts.
   @visibleForTesting
@@ -31,17 +54,32 @@ final class PreparedSelectionEffect {
     return true;
   }
 
-  /// Transfers the backing prepared before the resolver to SelectionKernel.
-  ///
-  /// This internal value is part of the deletion install package and cannot be
-  /// copied or validated after Store installation.
-  LinkedHashSet<CanvasElementId> takeOwnedElementIds() {
-    if (_consumed) {
+  /// Transfers the selection-owned final state before any Store mutation.
+  PreparedSelectionInstall transferOwnership() {
+    if (_transferred) {
       throw StateError(
-        'A prepared selection effect can only be installed once.',
+        'A prepared selection effect can only be transferred once.',
       );
     }
-    _consumed = true;
-    return _ownedElementIds;
+    _transferred = true;
+    return PreparedSelectionInstall._(
+      elementIds: _ownedElementIds,
+      didChange: _didChange,
+      nextRevision: _nextRevision,
+    );
   }
+}
+
+/// Selection-owned final install state. Its fields are complete before Store
+/// installation and the Selection tail performs only the recorded assignments.
+final class PreparedSelectionInstall {
+  const PreparedSelectionInstall._({
+    required this.elementIds,
+    required this.didChange,
+    required this.nextRevision,
+  });
+
+  final LinkedHashSet<CanvasElementId> elementIds;
+  final bool didChange;
+  final int nextRevision;
 }

@@ -21,26 +21,16 @@ import 'committed_document.dart';
 import 'document_projection_cache.dart';
 import 'element_registry.dart';
 import 'family_tables.dart';
+import 'id_admission.dart';
 import 'layer_table.dart';
 import 'resource_table.dart';
+import 'revision_state.dart';
 import 'schema_v1_store_import.dart';
 import 'sparse_store_commit.dart';
 import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
 
-@visibleForTesting
-enum IdAdmissionWorkPhase { reset, acceptedAdmission, generation }
-
-@visibleForTesting
-enum IdAdmissionWorkKind {
-  inputVisit,
-  sparseLedgerVisit,
-  cursorProbe,
-  collision,
-  advance,
-  candidateObservation,
-  reservation,
-}
+export 'id_admission.dart' show IdAdmissionWorkKind, IdAdmissionWorkPhase;
 
 // Admission observations carry a semantic operation and, when it is a sparse
 // ledger visit, the visited ID. Tests own accumulation, so production retains
@@ -152,33 +142,92 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 
   void _resetIdAdmissionFromOwners() {
-    _elementIds = _IdAdmission(
+    final admissions = _resetIdAdmissionsFor(_document);
+    _elementIds = admissions.elements;
+    _layerIds = admissions.layers;
+    _resourceIds = admissions.resources;
+  }
+
+  StoreIdAdmissions _resetIdAdmissionsFor(CommittedDocument document) {
+    return StoreIdAdmissions(
+      elements: StoreIdAdmission.fromEnumerated(
       prefix: 'e',
-      enumerate: _document.elements.familyTables.enumerateElementIds,
-    );
-    _layerIds = _IdAdmission(
+      enumerate: document.elements.familyTables.enumerateElementIds,
+      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+        prefix: 'e',
+        phase: phase,
+        kind: kind,
+        subject: subject,
+      ),
+      ),
+      layers: StoreIdAdmission.fromEnumerated(
       prefix: 'l',
-      enumerate: _document.elements.layerTable.enumerateLayerIds,
-    );
-    _resourceIds = _IdAdmission(
+      enumerate: document.elements.layerTable.enumerateLayerIds,
+      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+        prefix: 'l',
+        phase: phase,
+        kind: kind,
+        subject: subject,
+      ),
+      ),
+      resources: StoreIdAdmission.fromEnumerated(
       prefix: 'r',
-      enumerate: _document.resourceTable.enumerateResourceIds,
+      enumerate: document.resourceTable.enumerateResourceIds,
+      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+        prefix: 'r',
+        phase: phase,
+        kind: kind,
+        subject: subject,
+      ),
+      ),
     );
   }
 
-  void _admitCompleteDocumentOwners() {
-    _elementIds.admitComplete(
-      _document.elements.familyTables.enumerateElementIds,
+  StoreIdAdmissions _admitCompleteDocumentOwners(CommittedDocument document) {
+    return StoreIdAdmissions(
+      elements: _elementIds.admitComplete(
+        document.elements.familyTables.enumerateElementIds,
+      ),
+      layers: _layerIds.admitComplete(
+        document.elements.layerTable.enumerateLayerIds,
+      ),
+      resources: _resourceIds.admitComplete(
+        document.resourceTable.enumerateResourceIds,
+      ),
     );
-    _layerIds.admitComplete(_document.elements.layerTable.enumerateLayerIds);
-    _resourceIds.admitComplete(_document.resourceTable.enumerateResourceIds);
+  }
+
+  StoreIdAdmissions _admitSparseLedgers(PreparedSparseStoreCommit commit) {
+    return _admitSparseIdLists(
+      elementIds: commit.admittedElementIds,
+      layerIds: commit.admittedLayerIds,
+      resourceIds: commit.admittedResourceIds,
+    );
+  }
+
+  StoreIdAdmissions _admitSparseIdLists({
+    required Iterable<String> elementIds,
+    required Iterable<String> layerIds,
+    required Iterable<String> resourceIds,
+  }) {
+    return StoreIdAdmissions(
+      elements: _elementIds.admitLedger(elementIds),
+      layers: _layerIds.admitLedger(layerIds),
+      resources: _resourceIds.admitLedger(resourceIds),
+    );
+  }
+
+  void _installIdAdmissions(StoreIdAdmissions admissions) {
+    _elementIds = admissions.elements;
+    _layerIds = admissions.layers;
+    _resourceIds = admissions.resources;
   }
 
   CommittedDocument _document;
   final DocumentProjectionCache _projectionCache = DocumentProjectionCache();
-  late _IdAdmission _elementIds;
-  late _IdAdmission _layerIds;
-  late _IdAdmission _resourceIds;
+  late StoreIdAdmission _elementIds;
+  late StoreIdAdmission _layerIds;
+  late StoreIdAdmission _resourceIds;
 
   // The Zone sink is test-only and assert-gated at the owner operation, so it
   // cannot retain admission state or add production telemetry work.
@@ -300,6 +349,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       return true;
     }(), 'id admission work observation failed');
   }
+
 
   // The direct Store owner emits these observations at the journal/ledger
   // boundary, which lets tests distinguish replay work from finalization work.
@@ -673,8 +723,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
 
   CanvasElementId generateElementId() {
     final candidate = _elementIds.observeCandidate();
-    _elementIds.reserveCandidate(candidate);
-    return CanvasElementId(candidate);
+    final reserved = _elementIds.reserveCandidate(candidate);
+    _elementIds = reserved.admission;
+    return CanvasElementId(reserved.value);
   }
 
   CanvasElementId readElementIdCandidate() {
@@ -682,36 +733,35 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 
   CanvasLayerId generateLayerId() {
-    return CanvasLayerId(_layerIds.nextValue());
+    final candidate = _layerIds.observeCandidate();
+    final reserved = _layerIds.reserveCandidate(candidate);
+    _layerIds = reserved.admission;
+    return CanvasLayerId(reserved.value);
+  }
+
+  CanvasLayerId readLayerIdCandidate() {
+    return CanvasLayerId(_layerIds.observeCandidate());
   }
 
   CanvasResourceId generateResourceId() {
-    return CanvasResourceId(_resourceIds.nextValue());
+    final candidate = _resourceIds.observeCandidate();
+    final reserved = _resourceIds.reserveCandidate(candidate);
+    _resourceIds = reserved.admission;
+    return CanvasResourceId(reserved.value);
+  }
+
+  CanvasResourceId readResourceIdCandidate() {
+    return CanvasResourceId(_resourceIds.observeCandidate());
   }
 
   void installDocument(CommittedDocument document, StoreRevisionDelta delta) {
-    _validateFinalCandidateResourceRelationships(
-      _ResourceRelationshipCandidate(document),
-    );
-    if (!delta.hasChanges) {
-      return;
-    }
-    _document = _acceptFullDocument(document, delta);
-    _admitCompleteDocumentOwners();
+    prepareDocumentInstall(document, delta).consume();
   }
 
-  void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
-    _validateFinalCandidateResourceRelationships(
-      _ResourceRelationshipCandidate(document),
-    );
-    if (!delta.hasChanges) {
-      return;
-    }
-    _document = _acceptFullDocument(document, delta);
-    _resetIdAdmissionFromOwners();
-  }
-
-  void replacePreparedLoadDocument(
+  /// Prevalidates a normal full-document install while this Store snapshot is
+  /// authoritative. Its terminal path has only freshness checks and backing
+  /// assignments, so another owner cannot observe a partial admission.
+  PreparedStoreDocumentInstall prepareDocumentInstall(
     CommittedDocument document,
     StoreRevisionDelta delta,
   ) {
@@ -719,10 +769,47 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       _ResourceRelationshipCandidate(document),
     );
     if (!delta.hasChanges) {
-      return;
+      return PreparedStoreDocumentInstall.noOp();
     }
-    _document = _acceptFullDocument(document, delta);
-    _resetIdAdmissionFromOwners();
+    final accepted = _acceptFullDocument(document, delta);
+    final admissions = _admitCompleteDocumentOwners(accepted);
+    return PreparedStoreDocumentInstall._(
+      owner: this,
+      baseDocument: _document,
+      document: accepted,
+      idAdmissions: admissions,
+    );
+  }
+
+  void replaceDocument(CommittedDocument document, StoreRevisionDelta delta) {
+    prepareReplacementDocumentInstall(document, delta).consume();
+  }
+
+  PreparedStoreDocumentInstall prepareReplacementDocumentInstall(
+    CommittedDocument document,
+    StoreRevisionDelta delta,
+  ) {
+    _validateFinalCandidateResourceRelationships(
+      _ResourceRelationshipCandidate(document),
+    );
+    if (!delta.hasChanges) {
+      return PreparedStoreDocumentInstall.noOp();
+    }
+    final accepted = _acceptFullDocument(document, delta);
+    final admissions = _resetIdAdmissionsFor(accepted);
+    return PreparedStoreDocumentInstall._(
+      owner: this,
+      baseDocument: _document,
+      document: accepted,
+      idAdmissions: admissions,
+    );
+  }
+
+  void replacePreparedLoadDocument(
+    CommittedDocument document,
+    StoreRevisionDelta delta,
+  ) {
+    prepareReplacementDocumentInstall(document, delta).consume();
   }
 
   PreparedStoreDocumentImport prepareSchemaV1Import(
@@ -770,25 +857,39 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       required: acceptedDelta,
     );
 
+    final acceptedDocument = _acceptFullDocument(candidate, acceptedDelta);
     return PreparedMaterializedStoreCommit(
       baseDocument: _document,
-      document: _acceptFullDocument(candidate, acceptedDelta),
+      document: acceptedDocument,
       revisionDelta: acceptedDelta,
       touchedFacts: _committedDocumentTouchedFacts(_document, candidate),
+      idAdmissions: _admitCompleteDocumentOwners(acceptedDocument),
     );
   }
 
   void installPreparedMaterializedCommit(
     PreparedMaterializedStoreCommit commit,
   ) {
+    preparePreparedMaterializedInstall(commit).consume();
+  }
+
+  PreparedStoreDocumentInstall preparePreparedMaterializedInstall(
+    PreparedMaterializedStoreCommit commit,
+  ) {
     if (!commit.hasChanges) {
-      return;
+      return PreparedStoreDocumentInstall.noOp();
     }
     if (!identical(commit.baseDocument, _document)) {
       throw StateError('Prepared materialized store commit is stale.');
     }
-    _document = commit.document;
-    _admitCompleteDocumentOwners();
+    final admissions = commit.idAdmissions ??
+        _admitCompleteDocumentOwners(commit.document);
+    return PreparedStoreDocumentInstall._(
+      owner: this,
+      baseDocument: commit.baseDocument,
+      document: commit.document,
+      idAdmissions: admissions,
+    );
   }
 
   void installPreparedSchemaV1Import(PreparedStoreDocumentImport prepared) {
@@ -796,8 +897,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     if (!prepared.hasChanges) {
       return;
     }
+    final admissions = _resetIdAdmissionsFor(prepared.document);
     _document = prepared.document;
-    _resetIdAdmissionFromOwners();
+    _installIdAdmissions(admissions);
   }
 
   PreparedSparseStoreCommit prepareSparseCommit(StoreSparseCommit commit) {
@@ -913,14 +1015,22 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
         layerCandidates: accounting.readAcceptedLayerCandidates(),
       );
       candidate.phase(StoreSparseCandidateEventKind.consume);
+      final admittedElementIds = accounting.readAdmittedElementIds();
+      final admittedLayerIds = accounting.readAdmittedLayerIds();
+      final admittedResourceIds = accounting.readAdmittedResourceIds();
       return PreparedSparseStoreCommit(
         baseRevisions: _document.revisions,
         document: acceptedDocument,
         revisionDelta: acceptedDelta,
         touchedFacts: acceptedTouchedFacts,
-        admittedElementIds: accounting.readAdmittedElementIds(),
-        admittedLayerIds: accounting.readAdmittedLayerIds(),
-        admittedResourceIds: accounting.readAdmittedResourceIds(),
+        admittedElementIds: admittedElementIds,
+        admittedLayerIds: admittedLayerIds,
+        admittedResourceIds: admittedResourceIds,
+        idAdmissions: _admitSparseIdLists(
+          elementIds: admittedElementIds,
+          layerIds: admittedLayerIds,
+          resourceIds: admittedResourceIds,
+        ),
       );
     } catch (_) {
       candidate.phase(StoreSparseCandidateEventKind.discard);
@@ -1105,28 +1215,14 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 
   void installSparseCommit(PreparedSparseStoreCommit commit) {
-    if (!commit.hasChanges) {
-      return;
-    }
-    if (commit.baseRevisions != _document.revisions) {
-      throw StateError('Prepared sparse store commit is stale.');
-    }
-    _document = commit.document;
-    _elementIds.admitLedger(commit.admittedElementIds);
-    _layerIds.admitLedger(commit.admittedLayerIds);
-    _resourceIds.admitLedger(commit.admittedResourceIds);
+    prepareSparseInstall(commit).consume();
   }
 
-  /// Binds a deletion sparse commit while its revision is still authoritative.
-  ///
-  /// The deletion resolver runs after this check.  Its accepted path therefore
-  /// owns only the already-bound document assignment and id admission; ordinary
-  /// sparse callers keep using [installSparseCommit] and its stale guard.
-  PreparedDeletionSparseStoreInstall prepareDeletionSparseInstall(
+  PreparedStoreDocumentInstall prepareSparseInstall(
     PreparedSparseStoreCommit commit,
   ) {
     if (!commit.hasChanges) {
-      throw StateError('A prepared deletion sparse commit must change Store.');
+      return PreparedStoreDocumentInstall.noOp();
     }
     if (commit.baseRevisions != _document.revisions) {
       throw StateError('Prepared sparse store commit is stale.');
@@ -1135,24 +1231,27 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       _throwInjectedDeletionPreparationFailure(
         DeletionStorePreparationPhase.staleStoreBind,
       ),
-      'deletion Store bind injection did not complete',
+      'prepared Store bind injection did not complete',
     );
     assert(
       _throwInjectedDeletionPreparedInstallFailure(),
-      'deletion Store preparation failure injection did not complete',
+      'prepared Store installation failure injection did not complete',
     );
-    return PreparedDeletionSparseStoreInstall._(
+    final admissions = commit.idAdmissions ?? _admitSparseLedgers(commit);
+    return PreparedStoreDocumentInstall._(
       owner: this,
+      baseRevisions: commit.baseRevisions,
       document: commit.document,
-      admittedElementIds: commit.admittedElementIds,
-      admittedLayerIds: commit.admittedLayerIds,
-      admittedResourceIds: commit.admittedResourceIds,
+      idAdmissions: admissions,
     );
   }
 
-  void _installBoundDeletionSparseCommit(
-    PreparedDeletionSparseStoreInstall prepared,
+  void _installPreparedStoreDocument(
+    PreparedStoreDocumentInstall prepared,
   ) {
+    if (!prepared._isFreshFor(this)) {
+      throw StateError('Prepared Store document install is stale.');
+    }
     assert(
       identical(prepared._owner, this),
       'Bound deletion Store installation belongs to another Store owner.',
@@ -1161,10 +1260,13 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       _recordDeletionPreparedInstall(DeletionPreparedInstallEvent.installed),
       'deletion Store installation observation failed',
     );
-    _document = prepared._document;
-    _elementIds.admitLedger(prepared._admittedElementIds);
-    _layerIds.admitLedger(prepared._admittedLayerIds);
-    _resourceIds.admitLedger(prepared._admittedResourceIds);
+    final document = prepared._document;
+    final admissions = prepared._idAdmissions;
+    if (document == null || admissions == null) {
+      throw StateError('A no-op Store install cannot be installed by an owner.');
+    }
+    _document = document;
+    _installIdAdmissions(admissions);
   }
 
   // Dispatch stays as one exhaustive journal switch so mutation ordering and
@@ -1626,38 +1728,54 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   }
 }
 
-/// Store-owned, single-use installation capability for a deletion decision.
+/// Store-owned prepared installation for every current document form.
 ///
-/// This stays outside the public barrel.  A second consume is an owner bug:
-/// [PreparedDeletionApply] rejects it before reaching Store, so the Store-side
-/// assertion adds no release-mode failure path after resolver acceptance.
-final class PreparedDeletionSparseStoreInstall {
-  PreparedDeletionSparseStoreInstall._({
+/// The capability is internal to the Store/Edit/Runtime composition. It owns
+/// no resolver policy; consume merely rechecks the prepared freshness fact and
+/// swaps the already prepared document and admission backings.
+final class PreparedStoreDocumentInstall {
+  PreparedStoreDocumentInstall._({
     required DocumentStoreKernel owner,
     required CommittedDocument document,
-    required List<String> admittedElementIds,
-    required List<String> admittedLayerIds,
-    required List<String> admittedResourceIds,
+    required StoreIdAdmissions idAdmissions,
+    this.baseDocument,
+    this.baseRevisions,
   }) : _owner = owner,
        _document = document,
-       _admittedElementIds = admittedElementIds,
-       _admittedLayerIds = admittedLayerIds,
-       _admittedResourceIds = admittedResourceIds;
+       _idAdmissions = idAdmissions;
 
-  final DocumentStoreKernel _owner;
-  final CommittedDocument _document;
-  final List<String> _admittedElementIds;
-  final List<String> _admittedLayerIds;
-  final List<String> _admittedResourceIds;
+  PreparedStoreDocumentInstall.noOp()
+    : _owner = null,
+      baseDocument = null,
+      baseRevisions = null,
+      _document = null,
+      _idAdmissions = null;
+
+  final DocumentStoreKernel? _owner;
+  final CommittedDocument? baseDocument;
+  final RevisionState? baseRevisions;
+  final CommittedDocument? _document;
+  final StoreIdAdmissions? _idAdmissions;
   bool _consumed = false;
 
   void consume() {
-    assert(
-      !_consumed,
-      'A bound deletion Store install can only be consumed once.',
-    );
+    if (_consumed) {
+      throw StateError('A prepared Store install can only be consumed once.');
+    }
     _consumed = true;
-    _owner._installBoundDeletionSparseCommit(this);
+    final owner = _owner;
+    if (owner != null) {
+      owner._installPreparedStoreDocument(this);
+    }
+  }
+
+  bool _isFreshFor(DocumentStoreKernel owner) {
+    final expectedDocument = baseDocument;
+    if (expectedDocument != null && !identical(expectedDocument, owner._document)) {
+      return false;
+    }
+    final expectedRevisions = baseRevisions;
+    return expectedRevisions == null || expectedRevisions == owner._document.revisions;
   }
 }
 
@@ -3712,113 +3830,3 @@ final class StoreElementFacts {
 }
 
 enum StoreElementLocationKind { background, content }
-
-final class _IdAdmission {
-  _IdAdmission({
-    required this.prefix,
-    required void Function(void Function(String) accept) enumerate,
-  }) : _reserved = <String>{} {
-    enumerate((id) {
-      _record(IdAdmissionWorkPhase.reset, IdAdmissionWorkKind.inputVisit);
-      _reserved.add(id);
-    });
-    _normalize(IdAdmissionWorkPhase.reset);
-  }
-
-  final String prefix;
-  final Set<String> _reserved;
-  int _next = 0;
-
-  String observeCandidate() {
-    _record(
-      IdAdmissionWorkPhase.generation,
-      IdAdmissionWorkKind.candidateObservation,
-    );
-    return '$prefix$_next';
-  }
-
-  String nextValue() {
-    final candidate = '$prefix$_next';
-    reserveCandidate(candidate);
-    return candidate;
-  }
-
-  void reserveCandidate(String candidate) {
-    if (candidate != '$prefix$_next') {
-      throw StateError('Id admission candidate is stale.');
-    }
-    if (!_reserved.add(candidate)) {
-      throw StateError('Id admission candidate is already reserved.');
-    }
-    _record(IdAdmissionWorkPhase.generation, IdAdmissionWorkKind.reservation);
-    _next += 1;
-    _record(IdAdmissionWorkPhase.generation, IdAdmissionWorkKind.advance);
-    _normalize(IdAdmissionWorkPhase.generation);
-  }
-
-  void admitComplete(void Function(void Function(String) accept) enumerate) {
-    _admit(
-      phase: IdAdmissionWorkPhase.acceptedAdmission,
-      values: (accept) => enumerate(accept),
-    );
-  }
-
-  void admitLedger(Iterable<String> ids) {
-    _admit(
-      phase: IdAdmissionWorkPhase.acceptedAdmission,
-      values: (accept) {
-        for (final id in ids) {
-          _record(
-            IdAdmissionWorkPhase.acceptedAdmission,
-            IdAdmissionWorkKind.sparseLedgerVisit,
-            subject: id,
-          );
-          accept(id);
-        }
-      },
-    );
-  }
-
-  void _admit({
-    required IdAdmissionWorkPhase phase,
-    required void Function(void Function(String) accept) values,
-  }) {
-    final currentCandidate = '$prefix$_next';
-    var shouldNormalize = false;
-    values((id) {
-      _record(phase, IdAdmissionWorkKind.inputVisit);
-      if (_reserved.add(id) && id == currentCandidate) {
-        shouldNormalize = true;
-      }
-    });
-    if (shouldNormalize) {
-      _normalize(phase);
-    }
-  }
-
-  void _normalize(IdAdmissionWorkPhase phase) {
-    while (true) {
-      final candidate = '$prefix$_next';
-      _record(phase, IdAdmissionWorkKind.cursorProbe);
-      if (!_reserved.contains(candidate)) {
-        return;
-      }
-      _record(phase, IdAdmissionWorkKind.collision);
-      _next += 1;
-      _record(phase, IdAdmissionWorkKind.advance);
-    }
-  }
-
-  void _record(
-    IdAdmissionWorkPhase phase,
-    IdAdmissionWorkKind kind, {
-    String? subject,
-  }) {
-    DocumentStoreKernel._recordIdAdmissionWork(
-      prefix: prefix,
-      phase: phase,
-      kind: kind,
-      subject: subject,
-    );
-  }
-}

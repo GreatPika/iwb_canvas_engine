@@ -146,16 +146,17 @@ state directly; it does not create or retain a public `CanvasDocument`.
 Materialized fallback remains available only for explicit draft projection
 requests such as `CanvasEdit.readDraftDocument` and whole-draft replacement.
 
-`CommitApplier` owns the accepted apply lifetime after Store preparation. It
-converts a materialized accepted document to one `CommittedDocument` before any
+`CommitApplier` owns the accepted apply lifetime across current Store
+preparation. It converts a materialized accepted document to one
+`CommittedDocument` before any
 install and shares that exact immutable value with selection normalization and
 the Store installer. Prepared sparse and materialized Store commits retain their
 existing immutable DTO identity. Before mutation, the same apply state seals
-delivery effects/action inputs and prepares selection. It then takes exactly one
-branch: Store/admission installation followed by optional prepared selection,
-prepared selection alone, or a true no-op. No rollback follows a successful
-Store install; a later selection-install failure retains the accepted document,
-revisions, and admission state. Runtime route augmentation, cleanup, and
+delivery effects/action inputs, prepares selection equality/final revision/owned
+backing, and binds Store freshness, document, and ID-admission backings. It then
+takes exactly one branch: Store/admission assignment followed by optional
+prepared selection assignment, prepared selection alone, or a true no-op.
+Runtime route augmentation, cleanup, and
 delivery are separate Contract 4 owners. Sparse selection preparation consumes
 the existing Store stale boundary before installation, so a stale prepared
 payload does not reach either installer.
@@ -254,8 +255,12 @@ For a complete committed document, `DocumentStoreKernel` seeds generated-ID
 admission by immediately enumerating the authoritative `FamilyTables`,
 `LayerTable`, and `ResourceTable` owners. Construction, reset, replacement,
 prepared load, and Schema v1 import use this owner enumeration; sparse accepted
-work instead admits its existing ordered ledger. Committed membership mirrors
-and their append overlays are retired.
+work instead admits its existing ordered ledger. The Store-private admission
+backing retains a closed seed only for initial complete-owner membership and a
+separate immutable radix only for later sparse admissions; the two sets are
+disjoint and lookup has constant owner depth. Replacement/reset creates a new
+seed, while sparse preparation neither copies nor scans it. Committed membership
+mirrors and their append overlays are retired.
 
 The admission owner maintains each generated prefix cursor at its first free
 ID. Its package-internal element candidate read is non-mutating. Explicit

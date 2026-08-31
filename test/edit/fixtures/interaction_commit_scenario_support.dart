@@ -31,6 +31,9 @@ CanvasDocument interactionCommitBaseDocument({
   );
 }
 
+// The fixture intentionally composes the real Edit/Store/Selection owners.
+// Keeping its one scenario object intact is clearer than metric-only adapters.
+// ignore: coupling-between-object-classes
 final class InteractionCommitScenario {
   InteractionCommitScenario(
     this.store, {
@@ -71,15 +74,26 @@ final class InteractionCommitScenario {
         document: document,
         plan: plan,
         documentInstallers: CommitDocumentInstallers(
-          installDocument: store.installDocument,
-          replaceDocument: store.replaceDocument,
-          installSparseCommit: (commit) {
-            sparseInstallCount += 1;
-            store.installSparseCommit(commit);
-          },
-          installPreparedMaterializedCommit: (commit) {
-            preparedMaterializedInstallCount += 1;
-            store.installPreparedMaterializedCommit(commit);
+          prepareDocumentInstall: (document, {required documentReplaced}) {
+            return switch (document) {
+              PreparedMaterializedDocument(:final document, :final revisionDelta) =>
+                (documentReplaced
+                        ? store.prepareReplacementDocumentInstall(
+                            document,
+                            revisionDelta,
+                          )
+                        : store.prepareDocumentInstall(document, revisionDelta))
+                    .consume,
+              PreparedSparseStoreDocument(:final commit) => () {
+                sparseInstallCount += 1;
+                store.prepareSparseInstall(commit).consume();
+              },
+              PreparedMaterializedStoreDocument(:final commit) => () {
+                preparedMaterializedInstallCount += 1;
+                store.preparePreparedMaterializedInstall(commit).consume();
+              },
+              PreparedUnchangedStoreDocument() => () => 0,
+            };
           },
         ),
         selectionInstallers: CommitSelectionInstallers(

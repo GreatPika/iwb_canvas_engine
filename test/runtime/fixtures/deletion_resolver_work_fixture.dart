@@ -145,12 +145,13 @@ void main() {
         addTearDown(large.dispose);
 
         expect(small.preparedWork, [
-          PreparedDeletionApplyWorkEvent.prepared,
-          PreparedDeletionApplyWorkEvent.ownershipReleased,
-          PreparedDeletionApplyWorkEvent.discarded,
+          PreparedInteractionApplyWorkEvent.selectionBackingTransferred,
+          PreparedInteractionApplyWorkEvent.prepared,
+          PreparedInteractionApplyWorkEvent.ownershipReleased,
+          PreparedInteractionApplyWorkEvent.discarded,
         ]);
         expect(small.installWork, [DeletionPreparedInstallEvent.bound]);
-        expect(small.selectionInstallCount, 0);
+        expect(small.selectionInstallCount, 1);
         expect(small.sparseWork, large.sparseWork);
         expect(small.preparedWork, large.preparedWork);
         expect(small.installWork, large.installWork);
@@ -161,7 +162,9 @@ void main() {
         );
         expect(small.ownerLoopWork.actionCommittedReads, 0);
         expect(small.ownerLoopWork.actionPayloadReads, 0);
-        expect(small.ownerLoopWork.selectionInstallWork, isEmpty);
+        expect(small.ownerLoopWork.selectionInstallWork, [
+          PreparedSelectionInstallWorkEvent.ownedBackingPrepared,
+        ]);
         expect(small.projectionEventsAtResolver, greaterThan(0));
         expect(small.projectionEventsAfterResolver, 0);
         expect(small.entryRouteEventsAfterResolver, 0);
@@ -302,7 +305,7 @@ _DeletionWorkResult _runRoute({
   );
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   final requestWork = <RuntimeDeletionRequestWorkEvent>[];
-  final preparedWork = <PreparedDeletionApplyWorkEvent>[];
+  final preparedWork = <PreparedInteractionApplyWorkEvent>[];
   final installWork = <DeletionPreparedInstallEvent>[];
   final sparseEvents = <SparseTransactionWorkEvent>[];
   final cleanupReasons = <PointerCleanupReason>[];
@@ -325,7 +328,7 @@ _DeletionWorkResult _runRoute({
     projectionWork.add,
     () => RuntimeRoot.observeDeletionEntryRouteWork(
       entryRouteWork.add,
-      () => CommitApplier.observePreparedDeletionWork(
+      () => CommitApplier.observePreparedInteractionWork(
         preparedWork.add,
         () => DocumentStoreKernel.observeIdAdmissionWork(
           idAdmissions.add,
@@ -445,10 +448,10 @@ void _expectNonemptyConstruction(
       actionElements: 1,
     ));
     expect(result.preparedWork, [
-      PreparedDeletionApplyWorkEvent.prepared,
-      PreparedDeletionApplyWorkEvent.ownershipReleased,
-      PreparedDeletionApplyWorkEvent.consumed,
-      PreparedDeletionApplyWorkEvent.selectionBackingTransferred,
+      PreparedInteractionApplyWorkEvent.selectionBackingTransferred,
+      PreparedInteractionApplyWorkEvent.prepared,
+      PreparedInteractionApplyWorkEvent.ownershipReleased,
+      PreparedInteractionApplyWorkEvent.consumed,
     ]);
     expect(result.installWork, [
       DeletionPreparedInstallEvent.bound,
@@ -462,12 +465,13 @@ void _expectNonemptyConstruction(
     expect(deliveryWork?.actionElements, 1);
   } else {
     expect(result.preparedWork, [
-      PreparedDeletionApplyWorkEvent.prepared,
-      PreparedDeletionApplyWorkEvent.ownershipReleased,
-      PreparedDeletionApplyWorkEvent.discarded,
+      PreparedInteractionApplyWorkEvent.selectionBackingTransferred,
+      PreparedInteractionApplyWorkEvent.prepared,
+      PreparedInteractionApplyWorkEvent.ownershipReleased,
+      PreparedInteractionApplyWorkEvent.discarded,
     ]);
     expect(result.installWork, [DeletionPreparedInstallEvent.bound]);
-    expect(result.selectionInstallCount, 0);
+    expect(result.selectionInstallCount, 1);
   }
 }
 
@@ -484,7 +488,7 @@ void _expectExactOwnerLoopWork(
     route == _DeletionRoute.eraser ? targetCount : 0,
   );
   expect(result.ownerLoopWork.selectionInstallWork, [
-    PreparedSelectionInstallWorkEvent.ownershipAssigned,
+    PreparedSelectionInstallWorkEvent.ownedBackingPrepared,
   ]);
   expect(
     result.ownerLoopWork.cleanupAugmentation,
@@ -540,12 +544,12 @@ void _expectSelectionWithoutDeletion({
   root.selection.setSelection(select);
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   final requestWork = <RuntimeDeletionRequestWorkEvent>[];
-  final preparedWork = <PreparedDeletionApplyWorkEvent>[];
+  final preparedWork = <PreparedInteractionApplyWorkEvent>[];
   RuntimeRoot.observeDeletionRouteConstruction(
     construction.add,
     () => RuntimeRoot.observeDeletionRequestWork(
       requestWork.add,
-      () => CommitApplier.observePreparedDeletionWork(
+      () => CommitApplier.observePreparedInteractionWork(
         preparedWork.add,
         root.selection.deleteSelection,
       ),
@@ -577,12 +581,12 @@ void _expectEraserWithoutDeletion({
   _beginEraser(root, terminalPosition, start: terminalPosition);
   final construction = <RuntimeDeletionRouteConstructionKind>[];
   final requestWork = <RuntimeDeletionRequestWorkEvent>[];
-  final preparedWork = <PreparedDeletionApplyWorkEvent>[];
+  final preparedWork = <PreparedInteractionApplyWorkEvent>[];
   RuntimeRoot.observeDeletionRouteConstruction(
     construction.add,
     () => RuntimeRoot.observeDeletionRequestWork(
       requestWork.add,
-      () => CommitApplier.observePreparedDeletionWork(
+      () => CommitApplier.observePreparedInteractionWork(
         preparedWork.add,
         () => root.handlePointer(
           _pointer(CanvasPointerLifecyclePhase.up, terminalPosition),
@@ -759,7 +763,7 @@ final class _DeletionWorkResult {
   final int callbacks;
   final List<RuntimeDeletionRouteConstructionKind> construction;
   final int requestEntryCopies;
-  final List<PreparedDeletionApplyWorkEvent> preparedWork;
+  final List<PreparedInteractionApplyWorkEvent> preparedWork;
   final List<DeletionPreparedInstallEvent> installWork;
   final int selectionInstallCount;
   final Map<String, int> sparseWork;

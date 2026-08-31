@@ -78,7 +78,7 @@ stateDiagram-v2
 
     state "Preflight" as Preflight
     Preflight --> Rollback: invariant, validation, or admission failure
-    Preflight --> AtomicInstall: prepared sparse/materialized document and prepared selection accepted
+    Preflight --> AtomicInstall: prepared Store/ID backing, selection ownership, and sealed delivery accepted
 
     state "Rollback discard" as Rollback
     note left of Rollback
@@ -94,7 +94,7 @@ stateDiagram-v2
       This is the only commit boundary.
       Public notifications are not allowed before this state.
     end note
-    AtomicInstall --> CloseCommitted: install prepared document, then prepared selection
+    AtomicInstall --> CloseCommitted: assignment-only Store install, then optional assignment-only selection install
 
     state "Close and mark handle stale" as CloseCommitted
 

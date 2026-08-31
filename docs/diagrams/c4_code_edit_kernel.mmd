@@ -14,7 +14,7 @@ Container_Boundary(edit_kernel, "EditKernel (lib/src/edit/)") {
   Component(TouchedSet, "TouchedSet", "change tracker", "Records exact document, geometry, visual, resource, selection, and replacement touches.")
   Component(CommitCompiler, "CommitCompiler", "commit compiler", "Compiles touched state, preflights invariants, prepares typed effects, and produces a CommitPlan.")
   Component(CommitPlan, "CommitPlan", "commit description", "Immutable commit payload with revisions, cache invalidation, repaint requests, and buffered events.")
-  Component(CommitApplier, "CommitApplier", "atomic installer", "Installs prepared sparse/materialized document and prepared selection effects.")
+  Component(CommitApplier, "CommitApplier", "prepared apply owner", "Prepares one single-use Store/Selection install and sealed delivery result, then consumes assignment-only owner tails.")
 }
 
 Rel(PublicAPI, ContractsPublic, "wrapper exports")
@@ -34,4 +34,4 @@ Rel(CommitCompiler, CommitPlan, "produces immutable commit plan")
 Rel(CommitCompiler, CommitApplier, "hands off preflighted commit work")
 Rel(CommitPlan, CommitApplier, "describes install payload")
 Rel(CommitApplier, DocumentStoreKernel, "atomically installs prepared sparse/materialized state")
-Rel(CommitApplier, SelectionKernel, "installs prepared selection effects after store install")
+Rel(CommitApplier, SelectionKernel, "optionally installs already-owned changed selection after Store install")

@@ -180,7 +180,8 @@ sequenceDiagram
         CC->>Effects: prepare typed main RepaintIntent
         CC->>Events: attach staged moveSelection event to commit
         CC->>Applier: hand off compiled CommitPlan
-        Applier->>Store: install compiled CommitPlan atomically
+        Applier->>Applier: prepare common single-use apply, seal delivery, and bind Store ownership
+        Applier->>Store: consume assignment-only Store install
         Store->>Store: replace transform rows and revision state, invalidate projection revision, and leave cache rebuild lazy until read
         Note over Applier,Store: Atomic install is the commit boundary.
         Store-->>Applier: committed revision facts

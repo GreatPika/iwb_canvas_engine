@@ -3,6 +3,7 @@ import '../contracts/public/canvas_document.dart';
 import '../contracts/public/canvas_ids.dart';
 import '../contracts/public/canvas_resource.dart';
 import 'committed_document.dart';
+import 'id_admission.dart';
 import 'revision_state.dart';
 import 'store_commit_finalization.dart';
 import 'store_revision_delta.dart';
@@ -26,6 +27,7 @@ final class PreparedSparseStoreCommit {
     this.admittedElementIds = const [],
     this.admittedLayerIds = const [],
     this.admittedResourceIds = const [],
+    this.idAdmissions,
   });
 
   final RevisionState baseRevisions;
@@ -35,6 +37,7 @@ final class PreparedSparseStoreCommit {
   final List<String> admittedElementIds;
   final List<String> admittedLayerIds;
   final List<String> admittedResourceIds;
+  final StoreIdAdmissions? idAdmissions;
 
   bool get hasChanges => revisionDelta.hasChanges;
 }

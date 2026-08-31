@@ -33,7 +33,7 @@ sequenceDiagram
 
   activate Handle
   Caller->>Handle: synchronous CanvasEdit mutations
-  Handle->>Sparse: record ordinary document/resource mutations and selection requests
+  Handle->>Sparse: record ordinary document/resource mutations
   Sparse->>Touched: record exact sparse mutation facts
   opt explicit readDraftDocument or replaceDraftDocument
     Handle->>Draft: materialize committed projection and replay sparse journal
@@ -45,25 +45,33 @@ sequenceDiagram
   Caller-->>EK: callback result
   EK->>EK: reject Future result before success path
   Note over EK: If the callback returns a Future, rollback applies and no commit work runs.
-  EK->>CC: compile touched set, revisions, invalidation, repaint intent
-  Touched-->>CC: exact changed state
   EK->>Store: prepare sparse commit or materialized accepted document
   Store-->>EK: prepared accepted document facts
+  EK->>CC: compile touched set, revisions, invalidation, repaint intent
+  Touched-->>CC: exact changed state
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Events: stage commit event buffer
   Note over Events: Low-level CanvasEdit commits stage no user action events.
 
   CC->>Applier: hand off compiled CommitPlan
-  Applier->>Selection: prepare accepted selection effects before store install
-  Selection-->>Applier: prepared selection accepted
-  Applier->>Store: install prepared sparse/materialized document atomically
-  Applier->>Selection: install prepared selection effects atomically
-  Store->>Store: replace committed tables and revision state
-  Selection->>Selection: replace selected ids and selectionRevision from prepared ids
-  Note over Applier,Selection: Atomic install is the cross-owner commit boundary.
-  Store-->>Applier: committed revision facts
-  Selection-->>Applier: committed selection revision facts
-  Applier-->>Runtime: committed runtime facts
+  Applier->>Applier: materialize accepted document when needed and seal delivery/action inputs
+  Applier->>Selection: prepare equality, final revision, and transfer owned backing
+  Selection-->>Applier: prepared selection install state
+  Applier->>Applier: seal exact CommitDeliveryResult
+  Applier->>Store: prevalidate freshness, final revisions, and ID admission backings
+  Store-->>Applier: bound assignment-only Store install
+  alt document branch changes
+    Applier->>Store: consume assignment-only Store install
+    Store->>Store: replace committed tables, revisions, and admitted-ID backing
+  end
+  alt prepared selection changed
+    Applier->>Selection: consume assignment-only selection install
+    Selection->>Selection: replace selected ids and selectionRevision
+  else selection equality or no selection branch
+    Note over Applier,Selection: No Selection installer runs; if the document branch is also unchanged, neither owner installer runs.
+  end
+  Note over Applier,Selection: Atomic install is the cross-owner commit boundary; no comparison, transfer, validation, or observer work remains in either tail.
+  Applier-->>EK: sealed committed runtime facts
 
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any operation after callback throws StateError.

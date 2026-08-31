@@ -1,5 +1,6 @@
 import '../contracts/public/canvas_ids.dart';
 import 'committed_document.dart';
+import 'id_admission.dart';
 import 'store_revision_delta.dart';
 
 final class PreparedMaterializedStoreCommit {
@@ -8,12 +9,14 @@ final class PreparedMaterializedStoreCommit {
     required this.document,
     required this.revisionDelta,
     required this.touchedFacts,
+    this.idAdmissions,
   });
 
   final CommittedDocument baseDocument;
   final CommittedDocument document;
   final StoreRevisionDelta revisionDelta;
   final AcceptedStoreTouchedFacts touchedFacts;
+  final StoreIdAdmissions? idAdmissions;
 
   bool get hasChanges => revisionDelta.hasChanges;
 }

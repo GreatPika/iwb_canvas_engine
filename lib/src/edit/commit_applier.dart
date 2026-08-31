@@ -11,33 +11,24 @@ import '../contracts/internal/commit_delivery.dart';
 import '../contracts/internal/commit_action_intent.dart';
 import '../contracts/internal/prepared_selection_effect.dart';
 import '../contracts/public/canvas_document.dart';
-import '../contracts/public/canvas_ids.dart';
 import '../store/committed_document.dart';
-import '../store/document_store_kernel.dart';
 import '../store/sparse_store_commit.dart';
 import '../store/store_commit_finalization.dart';
 import '../store/store_revision_delta.dart';
 import 'commit_plan.dart';
 
-typedef DocumentInstall =
-    void Function(CommittedDocument document, StoreRevisionDelta delta);
-typedef DocumentReplace =
-    void Function(CommittedDocument document, StoreRevisionDelta delta);
-typedef SparseDocumentInstall = void Function(PreparedSparseStoreCommit commit);
-typedef DeletionSparseDocumentPrepare =
-    PreparedDeletionSparseStoreInstall Function(
-      PreparedSparseStoreCommit commit,
-    );
-typedef PreparedMaterializedDocumentInstall =
-    void Function(PreparedMaterializedStoreCommit commit);
+typedef PreparedDocumentInstall = void Function();
+typedef DocumentInstallPrepare =
+    PreparedDocumentInstall Function(
+      PreparedCommitDocument document, {
+      required bool documentReplaced,
+    });
 typedef SelectionEffectPrepare =
     PreparedSelectionEffect Function(
       CommitSelectionEffect effect,
       PreparedCommitDocument document,
     );
-typedef SelectionEffectInstall = bool Function(PreparedSelectionEffect effect);
-typedef OwnedSelectionEffectInstall =
-    bool Function(LinkedHashSet<CanvasElementId> elementIds);
+typedef SelectionEffectInstall = bool Function(PreparedSelectionInstall effect);
 
 /// Distinct pre-resolver phases owned by the prepared commit boundary.
 @visibleForTesting
@@ -48,31 +39,19 @@ enum DeletionCommitPreparationPhase {
 }
 
 final class CommitDocumentInstallers {
-  const CommitDocumentInstallers({
-    required this.installDocument,
-    required this.replaceDocument,
-    required this.installSparseCommit,
-    required this.installPreparedMaterializedCommit,
-    this.prepareDeletionSparseInstall,
-  });
+  const CommitDocumentInstallers({required this.prepareDocumentInstall});
 
-  final DocumentInstall installDocument;
-  final DocumentReplace replaceDocument;
-  final SparseDocumentInstall installSparseCommit;
-  final PreparedMaterializedDocumentInstall installPreparedMaterializedCommit;
-  final DeletionSparseDocumentPrepare? prepareDeletionSparseInstall;
+  final DocumentInstallPrepare prepareDocumentInstall;
 }
 
 final class CommitSelectionInstallers {
   const CommitSelectionInstallers({
     required this.prepareSelectionEffect,
     required this.installSelectionEffect,
-    this.installOwnedSelectionEffect,
   });
 
   final SelectionEffectPrepare prepareSelectionEffect;
   final SelectionEffectInstall installSelectionEffect;
-  final OwnedSelectionEffectInstall? installOwnedSelectionEffect;
 }
 
 sealed class AcceptedCommitDocument {
@@ -143,13 +122,13 @@ final class PreparedUnchangedStoreDocument extends PreparedCommitDocument {
     : super(revisionDelta: const StoreRevisionDelta());
 }
 
-/// Work owned by the private deletion-only prepared package.
+/// Work owned by the private prepared interaction package.
 ///
 /// The events exist solely behind assertions and a Zone observer. They expose
 /// lifecycle work to route tests without retaining a production counter or
 /// widening the package into a transaction abstraction.
 @visibleForTesting
-enum PreparedDeletionApplyWorkEvent {
+enum PreparedInteractionApplyWorkEvent {
   prepared,
   consumed,
   selectionBackingTransferred,
@@ -169,8 +148,8 @@ final class CommitApplier {
 
   /// Observes the private deletion package's terminal lifecycle in tests.
   @visibleForTesting
-  static T observePreparedDeletionWork<T>(
-    void Function(PreparedDeletionApplyWorkEvent event) sink,
+  static T observePreparedInteractionWork<T>(
+    void Function(PreparedInteractionApplyWorkEvent event) sink,
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_preparedDeletionWorkZoneKey: sink});
 
@@ -198,11 +177,11 @@ final class CommitApplier {
     return true;
   }
 
-  static bool _recordPreparedDeletionWork(
-    PreparedDeletionApplyWorkEvent event,
+  static bool _recordPreparedInteractionWork(
+    PreparedInteractionApplyWorkEvent event,
   ) {
     final sink = Zone.current[_preparedDeletionWorkZoneKey];
-    if (sink is void Function(PreparedDeletionApplyWorkEvent)) {
+    if (sink is void Function(PreparedInteractionApplyWorkEvent)) {
       sink(event);
     }
     return true;
@@ -260,135 +239,105 @@ final class CommitApplier {
     required CommitDocumentInstallers documentInstallers,
     required CommitSelectionInstallers selectionInstallers,
   }) {
-    if (!plan.hasChanges) {
-      return CommitDeliveryResult(shouldPublishState: false);
-    }
-
-    final state = _PreparedApplyState.prepare(
+    return prepareInteraction(
       document: document,
       plan: plan,
-      prepareSelectionEffect: selectionInstallers.prepareSelectionEffect,
-    );
-    if (state.installsDocument) {
-      _installPreparedDocument(
-        state.document,
-        documentReplaced: state.documentReplaced,
-        documentInstallers: documentInstallers,
-      );
-    }
-    final didChangeSelection = _installSelectionEffect(
-      state.selectionEffect,
-      selectionInstallers.installSelectionEffect,
-    );
-    return state.resultFor(didChangeSelection: didChangeSelection);
+      documentInstallers: documentInstallers,
+      selectionInstallers: selectionInstallers,
+    ).consume();
   }
 
-  /// Prepares the deletion-only deferred install boundary.
-  ///
-  /// All validation and selection backing construction happen before a
-  /// resolver is invoked. The returned package is package-private by export
-  /// policy and can be consumed once only by the two deletion routes.
-  PreparedDeletionApply prepareDeletion({
+  /// Prepares every current interaction route for one terminal consume.
+  PreparedInteractionApply prepareInteraction({
     required AcceptedCommitDocument document,
     required CommitPlan plan,
     required CommitDocumentInstallers documentInstallers,
     required CommitSelectionInstallers selectionInstallers,
   }) {
     if (!plan.hasChanges) {
-      throw StateError('A deferred deletion requires a changed commit plan.');
+      return PreparedInteractionApply.noOp();
     }
     final state = _PreparedApplyState.prepare(
       document: document,
       plan: plan,
       prepareSelectionEffect: selectionInstallers.prepareSelectionEffect,
     );
-    final sparseInstall = switch (state.document) {
-      PreparedSparseStoreDocument(:final commit) =>
-        (documentInstallers.prepareDeletionSparseInstall ??
-                _missingDeletionSparseInstall)
-            .call(commit),
-      _ => throw StateError(
-        'A deferred deletion requires a sparse Store commit.',
-      ),
+    final installDocument = state.installsDocument
+        ? documentInstallers.prepareDocumentInstall(
+            state.document,
+            documentReplaced: state.documentReplaced,
+          )
+        : () => 0;
+    final installSelection = switch (state.selectionInstall) {
+      final effect? when effect.didChange =>
+        () => selectionInstallers.installSelectionEffect(effect),
+      _ => () => false,
     };
-    final installOwnedSelectionEffect =
-        selectionInstallers.installOwnedSelectionEffect ??
-        _missingOwnedSelectionInstall;
-    final prepared = PreparedDeletionApply._(
+    final prepared = PreparedInteractionApply._(
       state: state,
-      sparseInstall: sparseInstall,
-      installOwnedSelectionEffect: installOwnedSelectionEffect,
+      installDocument: installDocument,
+      installSelection: installSelection,
     );
     assert(
-      _recordPreparedDeletionWork(PreparedDeletionApplyWorkEvent.prepared),
-      'prepared deletion work observation failed',
+      _recordPreparedInteractionWork(
+        PreparedInteractionApplyWorkEvent.prepared,
+      ),
+      'prepared interaction work observation failed',
     );
     return prepared;
   }
 }
 
-PreparedDeletionSparseStoreInstall _missingDeletionSparseInstall(
-  PreparedSparseStoreCommit _,
-) => throw StateError('Deletion Store preparation is unavailable.');
-
-bool _missingOwnedSelectionInstall(LinkedHashSet<CanvasElementId> _) =>
-    throw StateError('Deletion selection installation is unavailable.');
-
-/// A single-use deletion-only install package.
+/// A single-use prepared interaction install package.
 ///
 /// It is not exported from the package and deliberately has no rollback or
 /// generic transaction operations.
-final class PreparedDeletionApply {
-  PreparedDeletionApply._({
+final class PreparedInteractionApply {
+  PreparedInteractionApply._({
     required _PreparedApplyState state,
-    required PreparedDeletionSparseStoreInstall sparseInstall,
-    required OwnedSelectionEffectInstall installOwnedSelectionEffect,
-  }) : _owned = _PreparedDeletionOwned(
+    required void Function() installDocument,
+    required bool Function() installSelection,
+  }) : _owned = _PreparedInteractionOwned(
          state: state,
-         sparseInstall: sparseInstall,
-         installOwnedSelectionEffect: installOwnedSelectionEffect,
+         installDocument: installDocument,
+         installSelection: installSelection,
        );
 
-  _PreparedDeletionOwned? _owned;
+  PreparedInteractionApply.noOp()
+    : _owned = _PreparedInteractionOwned(
+        state: _PreparedApplyState.noOp(),
+        installDocument: () => 0,
+        installSelection: () => false,
+      );
+
+  _PreparedInteractionOwned? _owned;
   bool _terminal = false;
 
   CommitDeliveryResult consume() {
     final owned = _takeOwned();
     assert(
-      CommitApplier._recordPreparedDeletionWork(
-        PreparedDeletionApplyWorkEvent.consumed,
+      CommitApplier._recordPreparedInteractionWork(
+        PreparedInteractionApplyWorkEvent.consumed,
       ),
       'prepared deletion work observation failed',
     );
-    final ownedSelectionIds = owned.state.selectionEffect
-        ?.takeOwnedElementIds();
-    if (ownedSelectionIds != null) {
-      assert(
-        CommitApplier._recordPreparedDeletionWork(
-          PreparedDeletionApplyWorkEvent.selectionBackingTransferred,
-        ),
-        'prepared deletion work observation failed',
-      );
-    }
-    owned.sparseInstall.consume();
-    final didChangeSelection = ownedSelectionIds == null
-        ? false
-        : owned.installOwnedSelectionEffect(ownedSelectionIds);
-    return owned.state.resultFor(didChangeSelection: didChangeSelection);
+    owned.installDocument();
+    owned.installSelection();
+    return owned.state.result;
   }
 
   /// Releases a rejected resolver's private prepared state without rollback.
   void discard() {
     _takeOwned();
     assert(
-      CommitApplier._recordPreparedDeletionWork(
-        PreparedDeletionApplyWorkEvent.discarded,
+      CommitApplier._recordPreparedInteractionWork(
+        PreparedInteractionApplyWorkEvent.discarded,
       ),
       'prepared deletion work observation failed',
     );
   }
 
-  _PreparedDeletionOwned _takeOwned() {
+  _PreparedInteractionOwned _takeOwned() {
     if (_terminal) {
       throw StateError('A prepared deletion can only be consumed once.');
     }
@@ -399,8 +348,8 @@ final class PreparedDeletionApply {
     }
     _owned = null;
     assert(
-      CommitApplier._recordPreparedDeletionWork(
-        PreparedDeletionApplyWorkEvent.ownershipReleased,
+      CommitApplier._recordPreparedInteractionWork(
+        PreparedInteractionApplyWorkEvent.ownershipReleased,
       ),
       'prepared deletion ownership release observation failed',
     );
@@ -408,39 +357,21 @@ final class PreparedDeletionApply {
   }
 }
 
-final class _PreparedDeletionOwned {
-  const _PreparedDeletionOwned({
+final class _PreparedInteractionOwned {
+  const _PreparedInteractionOwned({
     required this.state,
-    required this.sparseInstall,
-    required this.installOwnedSelectionEffect,
+    required this.installDocument,
+    required this.installSelection,
   });
 
   final _PreparedApplyState state;
-  final PreparedDeletionSparseStoreInstall sparseInstall;
-  final OwnedSelectionEffectInstall installOwnedSelectionEffect;
+  final void Function() installDocument;
+  final bool Function() installSelection;
 }
 
-void _installPreparedDocument(
-  PreparedCommitDocument document, {
-  required bool documentReplaced,
-  required CommitDocumentInstallers documentInstallers,
-}) {
-  switch (document) {
-    case PreparedMaterializedDocument(:final document, :final revisionDelta):
-      if (documentReplaced) {
-        documentInstallers.replaceDocument(document, revisionDelta);
-      } else {
-        documentInstallers.installDocument(document, revisionDelta);
-      }
-    case PreparedSparseStoreDocument():
-      documentInstallers.installSparseCommit(document.commit);
-    case PreparedMaterializedStoreDocument(:final commit):
-      documentInstallers.installPreparedMaterializedCommit(commit);
-    case PreparedUnchangedStoreDocument():
-      break;
-  }
-}
-
+// This state deliberately keeps document, selection transfer, and sealed
+// result facts together so no fallible preparation crosses the owner tail.
+// ignore: coupling-between-object-classes, reason: Atomic preparation needs the complete owner facts.
 final class _PreparedApplyState {
   _PreparedApplyState({
     required this.document,
@@ -449,9 +380,22 @@ final class _PreparedApplyState {
     required this.documentReplaced,
     required this.deliveryEffects,
     required this.actionIntents,
-    required this.selectionEffect,
+    required this.selectionInstall,
+    required this.result,
   });
 
+  factory _PreparedApplyState.noOp() => _PreparedApplyState(
+    document: const PreparedUnchangedStoreDocument(),
+    installsDocument: false,
+    documentRevisionChanged: false,
+    documentReplaced: false,
+    deliveryEffects: const [],
+    actionIntents: const [],
+    selectionInstall: null,
+    result: CommitDeliveryResult(shouldPublishState: false),
+  );
+
+  // ignore: halstead-volume, source-lines-of-code, reason: Preparation order is the atomicity boundary.
   factory _PreparedApplyState.prepare({
     required AcceptedCommitDocument document,
     required CommitPlan plan,
@@ -485,6 +429,24 @@ final class _PreparedApplyState {
       null => null,
       final effect => prepareSelectionEffect(effect, preparedDocument),
     };
+    final selectionInstall = selectionEffect?.transferOwnership();
+    if (selectionInstall != null) {
+      assert(
+        CommitApplier._recordPreparedInteractionWork(
+          PreparedInteractionApplyWorkEvent.selectionBackingTransferred,
+        ),
+        'prepared selection transfer observation failed',
+      );
+    }
+    final didChangeSelection = selectionInstall?.didChange ?? false;
+    final result = _resultFor(
+      installsDocument: installsDocument,
+      documentRevisionChanged: documentRevisionChanged,
+      documentReplaced: documentReplaced,
+      didChangeSelection: didChangeSelection,
+      deliveryEffects: deliveryEffects,
+      actionIntents: actionIntents,
+    );
 
     return _PreparedApplyState(
       document: preparedDocument,
@@ -493,7 +455,8 @@ final class _PreparedApplyState {
       documentReplaced: documentReplaced,
       deliveryEffects: deliveryEffects,
       actionIntents: actionIntents,
-      selectionEffect: selectionEffect,
+      selectionInstall: selectionInstall,
+      result: result,
     );
   }
 
@@ -503,22 +466,31 @@ final class _PreparedApplyState {
   final bool documentReplaced;
   final List<CommitDeliveryEffect> deliveryEffects;
   final List<CommitActionIntent> actionIntents;
-  final PreparedSelectionEffect? selectionEffect;
+  final PreparedSelectionInstall? selectionInstall;
+  final CommitDeliveryResult result;
+}
 
-  CommitDeliveryResult resultFor({required bool didChangeSelection}) {
-    final didAcceptChange = installsDocument || didChangeSelection;
-    final shouldPublishState = documentRevisionChanged || didChangeSelection;
-    if (!didAcceptChange) {
-      return CommitDeliveryResult(shouldPublishState: false);
-    }
-
-    return CommitDeliveryResult.sealed(
-      shouldPublishState: shouldPublishState,
-      replacedDocument: documentReplaced,
-      effects: deliveryEffects,
-      actionIntents: shouldPublishState ? actionIntents : const [],
-    );
+// ignore: number-of-parameters, reason: The sealed result is derived from these one-time prepared facts.
+CommitDeliveryResult _resultFor({
+  required bool installsDocument,
+  required bool documentRevisionChanged,
+  required bool documentReplaced,
+  required bool didChangeSelection,
+  required List<CommitDeliveryEffect> deliveryEffects,
+  required List<CommitActionIntent> actionIntents,
+}) {
+  final didAcceptChange = installsDocument || didChangeSelection;
+  final shouldPublishState = documentRevisionChanged || didChangeSelection;
+  if (!didAcceptChange) {
+    return CommitDeliveryResult(shouldPublishState: false);
   }
+
+  return CommitDeliveryResult.sealed(
+    shouldPublishState: shouldPublishState,
+    replacedDocument: documentReplaced,
+    effects: deliveryEffects,
+    actionIntents: shouldPublishState ? actionIntents : const [],
+  );
 }
 
 enum CommitSealedDeliveryPhase { spatial, resource, repaint, action, observer }
@@ -739,17 +711,6 @@ PreparedCommitDocument _prepareDocument(AcceptedCommitDocument document) {
       PreparedMaterializedStoreDocument(commit: commit),
     AcceptedUnchangedStoreDocument() => const PreparedUnchangedStoreDocument(),
   };
-}
-
-bool _installSelectionEffect(
-  PreparedSelectionEffect? effect,
-  SelectionEffectInstall install,
-) {
-  if (effect == null) {
-    return false;
-  }
-
-  return install(effect);
 }
 
 List<CommitDeliveryEffect> _deliveryEffectsFor(List<CommitEffect> effects) {

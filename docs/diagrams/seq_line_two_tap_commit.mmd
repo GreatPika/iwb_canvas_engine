@@ -165,8 +165,9 @@ sequenceDiagram
         CC->>Effects: prepare typed main RepaintIntent
         CC->>Events: attach staged drawLine action to commit
         CC->>Applier: hand off compiled CommitPlan
-        Applier->>Store: install compiled CommitPlan atomically
-        Store->>Store: accepted ledger admits the line ID, replaces layer membership, registry, line row, and revision state, invalidates projection revision, and leaves cache rebuild lazy until read
+        Applier->>Applier: prepare common single-use apply, seal delivery, and bind Store/ID ownership
+        Applier->>Store: consume assignment-only Store install
+        Store->>Store: assign prebound line-ID admission, layer membership, registry, line row, and revision state; invalidate projection revision and leave cache rebuild lazy until read
         Note over Applier,Store: Atomic install is the commit boundary. InteractionEngine never mutates Store directly.
         Store-->>Applier: committed revision facts
         EK->>EK: close edit session and stale handle

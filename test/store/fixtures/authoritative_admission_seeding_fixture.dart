@@ -84,22 +84,23 @@ void _registerSupportedSizeWitness() {
 void _registerSparseLedgerTest() {
   test('sparse install admits only its accepted ordered ledgers', () {
     final store = DocumentStoreKernel();
-    final prepared = store.prepareSparseCommit(
-      StoreSparseCommit(
-        revisionDelta: _completeDelta,
-        mutations: [
-          StoreSparseEnsureLayer(CanvasLayerId('l0')),
-          StoreSparseEnsureLayer(CanvasLayerId('l2')),
-          StoreSparseAddElement(element: _rect('e0'), background: true),
-          StoreSparseAddElement(element: _rect('e2'), background: true),
-          StoreSparseUpsertResource(_resource('r0')),
-          StoreSparseUpsertResource(_resource('r2')),
-        ],
-      ),
-    );
     final trace = _AdmissionTrace(IdAdmissionWorkPhase.acceptedAdmission);
-
-    trace.observe(() => store.installSparseCommit(prepared));
+    trace.observe(() {
+      final prepared = store.prepareSparseCommit(
+        StoreSparseCommit(
+          revisionDelta: _completeDelta,
+          mutations: [
+            StoreSparseEnsureLayer(CanvasLayerId('l0')),
+            StoreSparseEnsureLayer(CanvasLayerId('l2')),
+            StoreSparseAddElement(element: _rect('e0'), background: true),
+            StoreSparseAddElement(element: _rect('e2'), background: true),
+            StoreSparseUpsertResource(_resource('r0')),
+            StoreSparseUpsertResource(_resource('r2')),
+          ],
+        ),
+      );
+      store.installSparseCommit(prepared);
+    });
 
     expect(trace.events, _expectedSparseTrace);
     expect(
@@ -281,11 +282,13 @@ DocumentStoreKernel _runInstallPreparedMaterializedCommit(
   _AdmissionTrace trace,
 ) {
   final store = DocumentStoreKernel();
-  final prepared = store.prepareMaterializedCommit(
-    snapshot.document,
-    _completeDelta,
-  );
-  trace.observe(() => store.installPreparedMaterializedCommit(prepared));
+  trace.observe(() {
+    final prepared = store.prepareMaterializedCommit(
+      snapshot.document,
+      _completeDelta,
+    );
+    store.installPreparedMaterializedCommit(prepared);
+  });
   return store;
 }
 

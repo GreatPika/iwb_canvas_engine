@@ -4,7 +4,6 @@
 // ignore_for_file: number-of-imports
 
 import 'dart:async';
-import 'dart:collection';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -364,7 +363,7 @@ final class RuntimeRoot
     prepareSparseCommit: _store.prepareSparseCommit,
     prepareMaterializedCommit: _store.prepareMaterializedCommit,
     installCommit: _applyEditCommit,
-    prepareDeletionCommit: _prepareDeletionEditCommit,
+    prepareDeferredInteractionCommit: _prepareDeferredInteractionCommit,
     deliverApplyResult: _deliverEditCommitResult,
     installLoadedDocument: _loadDocumentFromJson,
   );
@@ -1032,7 +1031,7 @@ final class RuntimeRoot
     final removalIds = List<CanvasElementId>.unmodifiable(
       removalEntries.map((entry) => entry.id),
     );
-    final prepared = _editKernel.prepareDeletionInteractionCommit(
+    final prepared = _editKernel.prepareDeferredInteractionCommit(
       (edit) {
         for (final id in removalIds) {
           edit.removeElement(id);
@@ -2312,11 +2311,7 @@ final class RuntimeRoot
       document: document,
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: _store.installDocument,
-        replaceDocument: _store.replaceDocument,
-        installSparseCommit: _store.installSparseCommit,
-        installPreparedMaterializedCommit:
-            _store.installPreparedMaterializedCommit,
+        prepareDocumentInstall: _prepareStoreDocumentInstall,
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareCommitSelectionEffect,
@@ -2325,27 +2320,42 @@ final class RuntimeRoot
     );
   }
 
-  PreparedDeletionApply _prepareDeletionEditCommit(
+  PreparedInteractionApply _prepareDeferredInteractionCommit(
     AcceptedCommitDocument document,
     CommitPlan plan,
   ) {
-    return _commitApplier.prepareDeletion(
+    return _commitApplier.prepareInteraction(
       document: document,
       plan: plan,
       documentInstallers: CommitDocumentInstallers(
-        installDocument: _store.installDocument,
-        replaceDocument: _store.replaceDocument,
-        installSparseCommit: _store.installSparseCommit,
-        installPreparedMaterializedCommit:
-            _store.installPreparedMaterializedCommit,
-        prepareDeletionSparseInstall: _store.prepareDeletionSparseInstall,
+        prepareDocumentInstall: _prepareStoreDocumentInstall,
       ),
       selectionInstallers: CommitSelectionInstallers(
         prepareSelectionEffect: _prepareCommitSelectionEffect,
         installSelectionEffect: _applyCommitSelectionEffect,
-        installOwnedSelectionEffect: _installOwnedCommitSelectionEffect,
       ),
     );
+  }
+
+  void Function() _prepareStoreDocumentInstall(
+    PreparedCommitDocument document, {
+    required bool documentReplaced,
+  }) {
+    return switch (document) {
+      PreparedMaterializedDocument(:final document, :final revisionDelta) =>
+        (documentReplaced
+                ? _store.prepareReplacementDocumentInstall(
+                    document,
+                    revisionDelta,
+                  )
+                : _store.prepareDocumentInstall(document, revisionDelta))
+            .consume,
+      PreparedSparseStoreDocument(:final commit) =>
+        _store.prepareSparseInstall(commit).consume,
+      PreparedMaterializedStoreDocument(:final commit) =>
+        _store.preparePreparedMaterializedInstall(commit).consume,
+      PreparedUnchangedStoreDocument() => () => 0,
+    };
   }
 
   PreparedSelectionEffect _prepareCommitSelectionEffect(
@@ -2374,16 +2384,12 @@ final class RuntimeRoot
       PreparedUnchangedStoreDocument() => _store.normalizeSelection(elementIds),
     };
 
-    return PreparedSelectionEffect(acceptedIds);
+    return _selection.prepareEffect(acceptedIds);
   }
 
-  bool _applyCommitSelectionEffect(PreparedSelectionEffect effect) {
+  bool _applyCommitSelectionEffect(PreparedSelectionInstall effect) {
     return _selection.installPreparedEffect(effect);
   }
-
-  bool _installOwnedCommitSelectionEffect(
-    LinkedHashSet<CanvasElementId> elementIds,
-  ) => _selection.installOwnedPreparedElementIds(elementIds);
 
   bool _applySelectionReplacement(
     InteractionSelectionReplacement? replacement,
@@ -3126,7 +3132,7 @@ final class RuntimeRoot
   void _deliverEraserCommit(
     EraserCommitIntent intent, {
     required int? timestampHintMs,
-    PreparedDeletionCommit Function()? prepareCommit,
+    PreparedInteractionCommit Function()? prepareCommit,
   }) {
     try {
       final entries = intent.erasedEntries;
@@ -3208,12 +3214,12 @@ final class RuntimeRoot
     }
   }
 
-  PreparedDeletionCommit _prepareEraserDeletion({
+  PreparedInteractionCommit _prepareEraserDeletion({
     required EraserCommitIntent intent,
     required int? timestampHintMs,
   }) {
     final erasedElementIds = intent.erasedElementIds;
-    final prepared = _editKernel.prepareDeletionInteractionCommit(
+    final prepared = _editKernel.prepareDeferredInteractionCommit(
       (edit) {
         for (final id in erasedElementIds) {
           edit.removeElement(id);

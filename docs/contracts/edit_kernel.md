@@ -73,9 +73,10 @@ sequenceDiagram
   EK->>CC: compile accepted touched set + invalidation
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Applier: hand off compiled CommitPlan
-  Applier->>Applier: prepare one immutable apply state
-  Applier->>Selection: prepare accepted selection effects before store install
-  Applier->>Store: install sparse commit or materialized document
+  Applier->>Applier: prepare one single-use interaction package and seal delivery
+  Applier->>Selection: prepare membership equality, revision, and owned backing
+  Applier->>Store: prevalidate freshness and bind document plus ID backings
+  Applier->>Store: consume assignment-only Store install
   Applier->>Selection: install prepared selection effects
   Store-->>Applier: committed document revision facts
   Selection-->>Applier: committed selection revision facts
@@ -183,13 +184,14 @@ apply state before either irreversible branch. It materializes a full accepted
 document at most once and passes that same `CommittedDocument` to selection
 normalization and the Store installer; sparse and prepared-materialized Store
 payloads remain their existing immutable DTOs. It also seals typed delivery
-effects and action inputs, then prepares selection from accepted document facts
-before installation. The document branch installs Store/admission first and
-then the prepared selection; a later selection-install failure retains that
-accepted Store state and is not rolled back. A selection-only branch invokes
-only the prepared selection installer, and a true no-op invokes no installer or
-delivery preparation. `SelectionKernel` installs only the prepared selected ids;
-it does not re-read public document membership from the current store. Sparse
+effects and action inputs, then prepares selection equality, final revision, and
+owned backing from accepted document facts before binding Store installation.
+The document branch assigns Store/admission first and then the already-owned
+prepared selection; neither assignment tail performs comparison, transfer, or
+normalization. A selection-only branch invokes only the prepared selection
+installer, and a true no-op invokes no installer or delivery preparation.
+`SelectionKernel` installs only the prepared selected ids; it does not re-read
+public document membership from the current store. Sparse
 selection preparation retains the Store-owned prepared-commit stale check; a
 stale payload fails before every installer and leaves accepted state unchanged.
 For one-element stroke and line routes, RuntimeRoot supplies the Store's current
@@ -219,16 +221,15 @@ carry the shared immutable `TouchedSet` from
 builder and store revision deltas private. Runtime route augmentation, cleanup,
 and delivery ordering are RuntimeRoot-owned and consume no prepared state again.
 
-Deletion is a narrower prepare/consume branch, not a generic transaction.
+Deletion uses the same private prepared interaction lifetime as immediate edits.
 `EditKernel` prepares the sparse candidate; Store completes sparse validation
 and binds the current revision and admitted-ID ledgers; `CommitApplier` seals
 the document, revision, delivery, action, and `PreparedSelectionEffect` inputs.
 Only then does `RuntimeRoot` construct the public immutable request and enter
 the required resolver guard. An accepted resolver consumes one private package:
 the bound Store assignment/admission occurs first, then Selection receives the
-already-owned backing without copying, validation, or normalization. No normal
-failure, publication, callback, retry, or rollback lies between those two
-installs. Cancel and ordinary resolver failure discard the package with no
+already-owned backing without copying, validation, normalization, comparison,
+or observer work. Cancel and ordinary resolver failure discard the package with no
 committed mutation; the latter is diagnosed only by RuntimeRoot's bounded
 internal diagnostics route. This deletion rule does not change the ordinary
 edit rollback boundary before any accepted install.
@@ -399,9 +400,9 @@ the committed document, revisions, selection, and frame output untouched.
 Selection effects are not draft fields inside committed document state. Edits
 that remove selected elements, clear content, delete selection, or commit a
 marquee selection compile explicit selection-owner effects. `CommitApplier`
-prepares both owners before mutation, then installs document effects before
-selection effects; a selection-install failure does not roll back an already
-accepted Store install. `RuntimeRoot` publishes the resulting combined
+prepares both owners before mutation, then assigns document effects before
+selection effects; both assignment tails use their already-prepared state.
+`RuntimeRoot` publishes the resulting combined
 `CanvasRuntimeState` only after both installs succeed and any route-owned
 cleanup completes. A failure during shared preparation leaves both owners
 unchanged.

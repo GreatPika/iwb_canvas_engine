@@ -28,8 +28,8 @@ typedef CommitInstaller =
       AcceptedCommitDocument document,
       CommitPlan plan,
     );
-typedef DeletionCommitPreparer =
-    PreparedDeletionApply Function(
+typedef InteractionCommitPreparer =
+    PreparedInteractionApply Function(
       AcceptedCommitDocument document,
       CommitPlan plan,
     );
@@ -57,7 +57,7 @@ final class EditKernel {
     required CommitInstaller installCommit,
     required CommitApplyResultDelivery deliverApplyResult,
     required DocumentLoadInstaller installLoadedDocument,
-    DeletionCommitPreparer? prepareDeletionCommit,
+    InteractionCommitPreparer? prepareDeferredInteractionCommit,
   }) : _mutationGuard = mutationGuard,
        _readDocument = readDocument,
        _readSparseFacts = readSparseFacts,
@@ -65,7 +65,7 @@ final class EditKernel {
        _prepareSparseCommit = prepareSparseCommit,
        _prepareMaterializedCommit = prepareMaterializedCommit,
        _installCommit = installCommit,
-       _prepareDeletionCommit = prepareDeletionCommit,
+       _prepareDeferredInteractionCommit = prepareDeferredInteractionCommit,
        _deliverApplyResult = deliverApplyResult,
        _installLoadedDocument = installLoadedDocument;
 
@@ -76,7 +76,7 @@ final class EditKernel {
   final SparseCommitPreparer _prepareSparseCommit;
   final MaterializedCommitPreparer _prepareMaterializedCommit;
   final CommitInstaller _installCommit;
-  final DeletionCommitPreparer? _prepareDeletionCommit;
+  final InteractionCommitPreparer? _prepareDeferredInteractionCommit;
   final CommitApplyResultDelivery _deliverApplyResult;
   final DocumentLoadInstaller _installLoadedDocument;
   late final CanvasEditPort port = _EditKernelPort(this);
@@ -155,8 +155,8 @@ final class EditKernel {
     }
   }
 
-  /// Prepares a sparse deletion before a client resolver is entered.
-  PreparedDeletionCommit prepareDeletionInteractionCommit<T>(
+  /// Prepares a current interaction before its existing resolver is entered.
+  PreparedInteractionCommit prepareDeferredInteractionCommit<T>(
     T Function(CanvasEdit edit) fn, {
     CommitPlan Function(CommitPlan plan)? augmentPlan,
   }) {
@@ -179,9 +179,9 @@ final class EditKernel {
         throw StateError('A prepared deletion requires a changed commit plan.');
       }
       final plan = augmentPlan?.call(accepted.plan) ?? accepted.plan;
-      return PreparedDeletionCommit._(
-        (_prepareDeletionCommit ??
-            (throw StateError('Deletion preparation is unavailable.')))(
+      return PreparedInteractionCommit._(
+        (_prepareDeferredInteractionCommit ??
+            (throw StateError('Interaction preparation is unavailable.')))(
           accepted.document,
           plan,
         ),
@@ -276,16 +276,17 @@ final class EditKernel {
   }
 }
 
-/// Opaque package-private deletion installation capability.
-final class PreparedDeletionCommit {
-  PreparedDeletionCommit._(this._apply);
+/// Opaque package-private interaction installation capability.
+final class PreparedInteractionCommit {
+  PreparedInteractionCommit._(this._apply);
 
-  final PreparedDeletionApply _apply;
+  final PreparedInteractionApply _apply;
 
   CommitDeliveryResult consume() => _apply.consume();
 
   void discard() => _apply.discard();
 }
+
 
 final class _AcceptedStoreCommitInput {
   const _AcceptedStoreCommitInput({

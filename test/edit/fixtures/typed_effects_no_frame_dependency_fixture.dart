@@ -73,11 +73,18 @@ CommitDeliveryResult _applyPostInstallPlan(
     ),
     plan: plan,
     documentInstallers: CommitDocumentInstallers(
-      installDocument: (_, _) => events.add('document'),
-      replaceDocument: (_, _) => events.add('replacement'),
-      installSparseCommit: (_) => events.add('sparse-document'),
-      installPreparedMaterializedCommit: (_) =>
-          events.add('prepared-materialized-document'),
+      prepareDocumentInstall: (document, {required documentReplaced}) => () {
+        events.add(
+          switch (document) {
+            PreparedMaterializedDocument() =>
+              documentReplaced ? 'replacement' : 'document',
+            PreparedSparseStoreDocument() => 'sparse-document',
+            PreparedMaterializedStoreDocument() =>
+              'prepared-materialized-document',
+            PreparedUnchangedStoreDocument() => 'unchanged-document',
+          },
+        );
+      },
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (_, _) {
@@ -121,11 +128,18 @@ void _expectEmptyApplyResult() {
     ),
     plan: CommitPlan.empty(),
     documentInstallers: CommitDocumentInstallers(
-      installDocument: (_, _) => events.add('document'),
-      replaceDocument: (_, _) => events.add('replacement'),
-      installSparseCommit: (_) => events.add('sparse-document'),
-      installPreparedMaterializedCommit: (_) =>
-          events.add('prepared-materialized-document'),
+      prepareDocumentInstall: (document, {required documentReplaced}) => () {
+        events.add(
+          switch (document) {
+            PreparedMaterializedDocument() =>
+              documentReplaced ? 'replacement' : 'document',
+            PreparedSparseStoreDocument() => 'sparse-document',
+            PreparedMaterializedStoreDocument() =>
+              'prepared-materialized-document',
+            PreparedUnchangedStoreDocument() => 'unchanged-document',
+          },
+        );
+      },
     ),
     selectionInstallers: CommitSelectionInstallers(
       prepareSelectionEffect: (_, _) {

@@ -27,7 +27,7 @@ sequenceDiagram
 
   alt callback throws
     activate Handle
-    Caller->>Handle: draft document/resource mutations and selection requests
+    Caller->>Handle: draft document/resource mutations
     Handle->>Draft: mutate draft only
     Draft->>Touched: record exact mutation facts
     Caller--x EK: throw original exception
@@ -46,11 +46,19 @@ sequenceDiagram
     deactivate Handle
     Caller-->>EK: callback result
     EK->>EK: reject Future result before success path
-    EK->>CC: compile touched set and invalidation candidates
-    Touched-->>CC: exact changed state
-    CC->>Store: preflight invariants
-    Store--x CC: preflight error
-    CC--x EK: rethrow preflight error
+    EK->>Store: prepare sparse/materialized accepted candidate when applicable
+    alt Store candidate preflight fails
+      Store--x EK: candidate error
+    else accepted candidate reaches compiled plan
+      Store-->>EK: accepted final document facts
+      EK->>CC: compile touched set and invalidation candidates
+      Touched-->>CC: exact changed state
+      CC->>Applier: hand off compiled CommitPlan
+      Applier->>Applier: materialize accepted document and seal delivery/action inputs
+      Applier->>Selection: prepare equality, final revision, and transfer backing
+      Applier->>Store: prevalidate freshness, final revisions, and ID admission backings
+      Applier--x EK: selection, sealing, freshness, or ownership error before either assignment-only installer
+    end
   end
 
   EK->>Effects: discard buffered events, repaint, resources, spatial, and projection effects
@@ -58,8 +66,8 @@ sequenceDiagram
   EK->>Touched: discard touched set
   EK->>Handle: close session and mark handle stale
   Note over Handle: Any later handle operation throws StateError.
-  Note over EK,Selection: Selection owner remains unchanged.
-  Note over EK,Store: Committed document identity and document revisions remain unchanged. InteractionEngine-owned preview is outside Store.
+  Note over EK,Selection: Selection owner, selection revision, and prepared backing ownership remain unchanged or released without installation.
+  Note over EK,Store: Committed document identity, all document revisions, and all ID admissions remain unchanged. InteractionEngine-owned preview is outside Store.
   Note over Store,Signals: No atomic install runs and no action event, text edit event, public state publication, scene repaint, or overlay repaint is published.
   EK--x API: rethrow original exception, async edit rejection, or preflight error
   API--x Caller: propagate safely

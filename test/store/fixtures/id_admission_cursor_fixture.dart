@@ -303,16 +303,20 @@ String _candidateAfterPreparedLoad() {
 
 String _candidateAfterMaterializedInstall() {
   final store = DocumentStoreKernel();
-  final prepared = store.prepareMaterializedCommit(
-    _singleElementDocument(),
-    const StoreRevisionDelta.structural(),
-  );
-  return _candidateAfterRoute(
-    store,
-    () => store.installPreparedMaterializedCommit(prepared),
+  final work = observeIdAdmissionWork(() {
+    final prepared = store.prepareMaterializedCommit(
+      _singleElementDocument(),
+      const StoreRevisionDelta.structural(),
+    );
+    store.installPreparedMaterializedCommit(prepared);
+  });
+  final candidate = store.readElementIdCandidate().value;
+  _expectOneOccupiedPrefixNormalization(
+    work,
     phase: IdAdmissionWorkPhase.acceptedAdmission,
     inputVisits: 1,
   );
+  return candidate;
 }
 
 String _candidateAfterSchemaV1Import() {

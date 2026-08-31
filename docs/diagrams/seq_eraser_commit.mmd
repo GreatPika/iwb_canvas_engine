@@ -162,18 +162,18 @@ sequenceDiagram
           alt deletion-commit preparation succeeds
           EK->>EK: validate/build AcceptedCommitDocument + CommitPlan
           EK->>Runtime: invoke configured deletion preparation seam
-          Runtime->>Applier: prepareDeletion(document, plan)
+          Runtime->>Applier: prepareInteraction(document, plan)
           Applier->>Runtime: invoke configured selection-effect preparation callback
           Runtime->>Runtime: read current selection as needed
           Runtime->>Store: normalize selection against prepared sparse commit
           Store-->>Runtime: normalized selected ids
-          Runtime->>Runtime: construct PreparedSelectionEffect and copy ids into owned backing
-          Runtime-->>Applier: PreparedSelectionEffect with owned backing
-          Applier->>Store: prepare sparse deletion install
+          Runtime->>Runtime: prepare selection equality, final revision, and owned backing
+          Runtime-->>Applier: prepared selection install state
+          Applier->>Store: prevalidate sparse deletion and bind ID admissions
           Store-->>Applier: prepared Store install
           Applier->>Applier: seal single-use prepared state
           Applier-->>Runtime: single-use prepared deletion
-          Note over EK,Applier: All deletion-specific preparation completes before the callback.
+          Note over EK,Applier: All current interaction preparation completes before the callback.
           Runtime->>Runtime: construct immutable CanvasDeletionCommitRequest and copy entry DTOs
           alt request construction or entry copy fails
             Runtime->>IE: cleanup eraser session with editFailure and publish directly
@@ -192,10 +192,10 @@ sequenceDiagram
             alt resolver accepts
               Resolver-->>Runtime: accept
               Note over Runtime,Store: Resolver return and the first Store install share one synchronous stack with no external callback or publication between them.
-              Runtime->>Applier: consume prepared deletion once
-              Applier->>Store: install prepared document
+              Runtime->>Applier: consume prepared interaction once
+              Applier->>Store: assignment-only prepared document install
               Store-->>Applier: committed Store facts
-              Applier->>Selection: transfer owned PreparedSelectionEffect backing and install
+              Applier->>Selection: assignment-only already-owned selection install
               Selection-->>Applier: committed selection facts
               Applier-->>Runtime: accepted delivery facts
               Runtime->>IE: post-success eraser cleanup, publish: false

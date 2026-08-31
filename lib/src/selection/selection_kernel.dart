@@ -77,8 +77,33 @@ final class SelectionKernel implements SelectionFactsPort {
     return _replaceSelection(_membership.normalizeSelection(_selectedIds));
   }
 
-  bool installPreparedEffect(PreparedSelectionEffect effect) {
-    return installOwnedPreparedElementIds(effect.takeOwnedElementIds());
+  bool installPreparedEffect(PreparedSelectionInstall effect) {
+    if (!effect.didChange) {
+      return false;
+    }
+    _selectedIds = effect.elementIds;
+    _selectionRevision = effect.nextRevision;
+    return true;
+  }
+
+  PreparedSelectionEffect prepareEffect(Iterable<CanvasElementId> ids) {
+    final next = LinkedHashSet<CanvasElementId>.of(ids);
+    assert(
+      _recordPreparedInstall(),
+      'prepared Selection transfer observation failed',
+    );
+    final didChange = !_samePreparedMembership(_selectedIds, next);
+    assert(
+      _recordPreparedInstallWork(
+        PreparedSelectionInstallWorkEvent.ownedBackingPrepared,
+      ),
+      'prepared Selection ownership observation failed',
+    );
+    return PreparedSelectionEffect.prepared(
+      next,
+      didChange: didChange,
+      nextRevision: didChange ? _selectionRevision + 1 : _selectionRevision,
+    );
   }
 
   /// Observes the already-owned deletion backing installation in tests only.
@@ -88,46 +113,12 @@ final class SelectionKernel implements SelectionFactsPort {
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_preparedInstallZoneKey: sink});
 
-  /// Observes the actual comparison loop and owned-backing assignment only.
+  /// Observes real comparison and backing transfer during preparation only.
   @visibleForTesting
   static T observePreparedInstallWork<T>(
     void Function(PreparedSelectionInstallWorkEvent event) sink,
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_preparedInstallWorkZoneKey: sink});
-
-  /// Installs the backing transferred before a deletion resolver is invoked.
-  ///
-  /// The caller owns the one-time transfer.  This performs no normalization,
-  /// validation, or copying after Store has accepted the bound deletion.
-  bool installOwnedPreparedElementIds(LinkedHashSet<CanvasElementId> next) {
-    assert(
-      _recordPreparedInstall(),
-      'prepared Selection installation observation failed',
-    );
-    if (_selectedIds.length == next.length) {
-      final same = _selectedIds.every((id) {
-        assert(
-          _recordPreparedInstallWork(
-            PreparedSelectionInstallWorkEvent.membershipComparisonVisit,
-          ),
-          'prepared Selection comparison observation failed',
-        );
-        return next.contains(id);
-      });
-      if (same) {
-        return false;
-      }
-    }
-    _selectedIds = next;
-    assert(
-      _recordPreparedInstallWork(
-        PreparedSelectionInstallWorkEvent.ownershipAssigned,
-      ),
-      'prepared Selection assignment observation failed',
-    );
-    _selectionRevision += 1;
-    return true;
-  }
 
   bool _recordPreparedInstall() {
     final sink = Zone.current[_preparedInstallZoneKey];
@@ -164,7 +155,25 @@ final class SelectionKernel implements SelectionFactsPort {
 @visibleForTesting
 enum PreparedSelectionInstallWorkEvent {
   membershipComparisonVisit,
-  ownershipAssigned,
+  ownedBackingPrepared,
+}
+
+bool _samePreparedMembership(
+  Set<CanvasElementId> current,
+  Set<CanvasElementId> next,
+) {
+  if (current.length != next.length) {
+    return false;
+  }
+  return current.every((id) {
+    assert(
+      SelectionKernel._recordPreparedInstallWork(
+        PreparedSelectionInstallWorkEvent.membershipComparisonVisit,
+      ),
+      'prepared Selection comparison observation failed',
+    );
+    return next.contains(id);
+  });
 }
 
 bool _sameMembership(Set<CanvasElementId> current, Set<CanvasElementId> next) {
