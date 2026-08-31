@@ -137,6 +137,23 @@ accepted committed facts before `CommitCompiler` builds a plan. The compiler
 consumes only the store-accepted revision delta and touched facts, not
 provisional session or draft revision journals.
 
+`CanvasEdit.setSelection` keeps one callback-local immutable desired-id
+snapshot on the session. Repeated successful setters replace that one intent;
+an iterable failure leaves the prior intent intact. The compiler makes it the
+effective selection effect without changing the accepted `TouchedSet`. The
+existing Store final-candidate membership boundary filters it once against the
+final sparse, materialized, or replacement candidate; SelectionKernel then
+prepares equality, revision, and its owned install backing during the shared
+prepared-install boundary. Thus a document-final no-op can still use the
+unchanged-document selection branch, while an omitted intent retains the
+current implicit prune or replacement-validity behavior. Closing or rolling
+back the session discards the intent; document load remains an independent
+selection-clear path.
+
+A callback that only calls `setSelection` leaves its sparse backing unopened.
+Store membership checks only the desired IDs against indexed final-candidate
+facts; Selection equality then visits only current selected IDs.
+
 `CanvasEdit.updatePalette` validates and snapshots supplied fields at DTO
 construction. Its stale-handle guard runs before backing access or merge. Each
 backing merges supplied fields with its latest callback-local complete palette;

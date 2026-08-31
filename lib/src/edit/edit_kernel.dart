@@ -90,8 +90,7 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final selectedElementIds = _selectedElementIds();
-    final session = _openSparseSession(selectedElementIds);
+    final session = _openSparseSession();
 
     try {
       final result = fn(session);
@@ -100,7 +99,7 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      final accepted = _acceptedCommitFor(session, selectedElementIds);
+      final accepted = _acceptedCommitFor(session);
       if (accepted.plan.hasChanges) {
         final applyResult = _installCommittedDocument(
           accepted.document,
@@ -128,8 +127,7 @@ final class EditKernel {
     }
 
     _isSessionOpen = true;
-    final selectedElementIds = _selectedElementIds();
-    final session = _openSparseSession(selectedElementIds);
+    final session = _openSparseSession();
 
     try {
       final result = fn(session);
@@ -138,7 +136,7 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      final accepted = _acceptedCommitFor(session, selectedElementIds);
+      final accepted = _acceptedCommitFor(session);
       if (accepted.plan.hasChanges) {
         final plan = augmentPlan?.call(accepted.plan) ?? accepted.plan;
         final applyResult = _installCommittedDocument(accepted.document, plan);
@@ -165,8 +163,7 @@ final class EditKernel {
       throw StateError('CanvasRuntime edit sessions cannot be nested.');
     }
     _isSessionOpen = true;
-    final selectedElementIds = _selectedElementIds();
-    final session = _openSparseSession(selectedElementIds);
+    final session = _openSparseSession();
     try {
       final result = fn(session);
       if (result is Future<Object?>) {
@@ -174,7 +171,7 @@ final class EditKernel {
           'CanvasRuntime edit callbacks must complete synchronously.',
         );
       }
-      final accepted = _acceptedCommitFor(session, selectedElementIds);
+      final accepted = _acceptedCommitFor(session);
       if (!accepted.plan.hasChanges) {
         throw StateError('A prepared deletion requires a changed commit plan.');
       }
@@ -217,24 +214,31 @@ final class EditKernel {
     CommitPlan plan,
   ) => _installCommit.call(document, plan);
 
-  EditSession _openSparseSession(Set<CanvasElementId> selectedElementIds) {
+  EditSession _openSparseSession() {
     return EditSession.sparse(
-      facts: _readSparseFacts(),
-      promoteDraft: () => DraftDocument(
+      readFacts: _readSparseFacts,
+      promoteDraft: (selectedElementIds) => DraftDocument(
         _readDocument(),
         selectedElementIds: selectedElementIds,
       ),
-      selectedElementIds: selectedElementIds,
+      // Active edit callbacks cannot mutate root selection, so this deferred
+      // read is equivalent to the former edit-start snapshot and avoids
+      // opening sparse selection state for a staged-selection-only callback.
+      readSelectedElementIds: _selectedElementIds,
     );
   }
 
-  _AcceptedEditCommit _acceptedCommitFor(
-    EditSession session,
-    Set<CanvasElementId> selectedElementIds,
-  ) {
+  // Sparse, materialized, replacement, and selection-only candidates converge
+  // here; keeping the terminal choice together makes atomic routing auditable.
+  // ignore: halstead-volume, source-lines-of-code
+  _AcceptedEditCommit _acceptedCommitFor(EditSession session) {
+    final selectionEffect = session.pendingSelectionEffect;
     if (!session.didChange) {
-      return _AcceptedEditCommit.empty();
+      return selectionEffect == null
+          ? _AcceptedEditCommit.empty()
+          : _acceptedSelectionOnlyCommit(selectionEffect);
     }
+    final selectedElementIds = session.selectedElementIds;
     if (session.hasMaterializedDraft) {
       if (session.didReplaceDraftDocument) {
         return _AcceptedEditCommit(
@@ -245,6 +249,7 @@ final class EditKernel {
           plan: const CommitCompiler().compile(
             revisionDelta: session.revisionDelta,
             touchedSet: session.touchedSet,
+            selectionEffect: selectionEffect,
           ),
         );
       }
@@ -259,6 +264,7 @@ final class EditKernel {
           revisionDelta: prepared.revisionDelta,
           touchedFacts: prepared.touchedFacts,
           selectedElementIds: selectedElementIds,
+          selectionEffect: selectionEffect,
         ),
       );
     }
@@ -271,6 +277,7 @@ final class EditKernel {
         revisionDelta: prepared.revisionDelta,
         touchedFacts: prepared.touchedFacts,
         selectedElementIds: selectedElementIds,
+        selectionEffect: selectionEffect,
       ),
     );
   }
@@ -287,26 +294,30 @@ final class PreparedInteractionCommit {
   void discard() => _apply.discard();
 }
 
-
 final class _AcceptedStoreCommitInput {
   const _AcceptedStoreCommitInput({
     required this.document,
     required this.revisionDelta,
     required this.touchedFacts,
     required this.selectedElementIds,
+    required this.selectionEffect,
   });
 
   final AcceptedCommitDocument document;
   final StoreRevisionDelta revisionDelta;
   final AcceptedStoreTouchedFacts touchedFacts;
   final Set<CanvasElementId> selectedElementIds;
+  final CommitSelectionEffect? selectionEffect;
 }
 
 _AcceptedEditCommit _acceptedPreparedStoreCommit(
   _AcceptedStoreCommitInput input,
 ) {
   if (!input.revisionDelta.hasChanges) {
-    return _AcceptedEditCommit.empty();
+    final selectionEffect = input.selectionEffect;
+    return selectionEffect == null
+        ? _AcceptedEditCommit.empty()
+        : _acceptedSelectionOnlyCommit(selectionEffect);
   }
 
   return _AcceptedEditCommit(
@@ -317,6 +328,20 @@ _AcceptedEditCommit _acceptedPreparedStoreCommit(
         input.touchedFacts,
         selectedElementIds: input.selectedElementIds,
       ),
+      selectionEffect: input.selectionEffect,
+    ),
+  );
+}
+
+_AcceptedEditCommit _acceptedSelectionOnlyCommit(
+  CommitSelectionEffect selectionEffect,
+) {
+  return _AcceptedEditCommit(
+    document: const AcceptedUnchangedStoreDocument(),
+    plan: const CommitCompiler().compile(
+      revisionDelta: const StoreRevisionDelta(),
+      touchedSet: TouchedSet(),
+      selectionEffect: selectionEffect,
     ),
   );
 }

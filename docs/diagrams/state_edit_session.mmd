@@ -25,16 +25,16 @@ stateDiagram-v2
 
     state "Open sparse session and live handle" as Opening
     note right of Opening
-      Read committed store facts, create a sparse
-      callback-local journal, create an empty touched set,
-      and bind the live CanvasEdit handle to this session.
-      Only current edit-session, document, and update entities participate.
+      Bind the live CanvasEdit handle and session only.
+      First document/resource operation lazily reads Store facts and
+      selection, then opens its sparse journal and touched facts;
+      setSelection-only retains callback-local desired intent.
     end note
 
     Opening --> CallbackExecuting: invoke fn(handle)
 
     state "Callback executing" as CallbackExecuting
-    CallbackExecuting --> CallbackExecuting: synchronous CanvasEdit mutation / record sparse journal and touched facts
+    CallbackExecuting --> CallbackExecuting: synchronous CanvasEdit mutation / record sparse journal, touched facts, or one desired-selection snapshot
     CallbackExecuting --> MaterializedFallback: readDraftDocument or replaceDraftDocument
     MaterializedFallback --> CallbackExecuting: replay sparse journal into rollback-safe draft
     CallbackExecuting --> CallbackExecuting: nested edit(fn) attempt / throw StateError; no nested session opens
@@ -57,11 +57,12 @@ stateDiagram-v2
     FutureRejected --> Rollback: treat as failed edit
 
     state "Callback returned normally" as CallbackReturned
-    CallbackReturned --> NoOpDecision: inspect touched set
+    CallbackReturned --> NoOpDecision: inspect accepted document facts and explicit desired selection
 
     state NoOpDecision <<choice>>
-    NoOpDecision --> NoOpEmptyTouched: touched set is empty
-    NoOpDecision --> CommitPlanning: touched set is non-empty
+    NoOpDecision --> NoOpEmptyTouched: no accepted document change and no explicit desired selection
+    NoOpDecision --> CommitPlanning: explicit desired selection only
+    NoOpDecision --> CommitPlanning: accepted document change
 
     state "No-op empty touched set" as NoOpEmptyTouched
     note right of NoOpEmptyTouched

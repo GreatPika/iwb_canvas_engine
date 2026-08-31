@@ -88,6 +88,9 @@ final class DraftDocument {
   TouchedSetBuilder get _touchedSet => _backing.touchedSet;
   Set<CanvasElementId> get _selectedElementIds => _backing.selectedElementIds;
 
+  /// Preserves the edit-start selection for materialized commit ownership.
+  Set<CanvasElementId> get selectedElementIds => _selectedElementIds;
+
   bool get didChange => _revisionDelta.hasChanges;
   bool get documentReplaced => _backing.documentReplaced;
   StoreRevisionDelta get revisionDelta => _revisionDelta;

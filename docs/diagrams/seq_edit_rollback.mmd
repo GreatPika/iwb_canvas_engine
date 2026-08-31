@@ -7,6 +7,7 @@ sequenceDiagram
   participant EK as EditKernel
   participant Store as DocumentStoreKernel
   participant Selection as SelectionKernel
+  participant Sparse as Sparse edit journal
   participant Draft as DraftDocument
   participant Handle as CanvasEdit handle
   participant Touched as TouchedSet
@@ -17,19 +18,23 @@ sequenceDiagram
   Caller->>API: edit(fn)
   API->>EK: open synchronous edit session
   EK->>EK: reject disposed or nested edit
-  EK->>Store: read committed identity and revision snapshot
-  Store-->>EK: committed tables and document revisions
-  EK->>Selection: read selection snapshot for draft effects
-  Selection-->>EK: selected ids and selectionRevision
-  EK->>Draft: create rollback-safe draft
   EK->>Handle: bind live handle to session
   EK-->>Caller: invoke fn(handle)
 
   alt callback throws
     activate Handle
-    Caller->>Handle: draft document/resource mutations
-    Handle->>Draft: mutate draft only
-    Draft->>Touched: record exact mutation facts
+    Caller->>Handle: document/resource mutations or setSelection intent
+    opt document/resource mutation
+      Handle->>Sparse: open Store facts/selection snapshot and record mutation
+      Sparse->>Touched: record exact sparse mutation facts
+      opt explicit draft read or replacement
+        Handle->>Draft: promote sparse journal into draft
+        Draft->>Touched: record materialized fallback facts
+      end
+    end
+    opt setSelection intent
+      Handle->>Handle: retain pending desired-selection snapshot
+    end
     Caller--x EK: throw original exception
     deactivate Handle
     EK->>EK: capture original exception
@@ -39,9 +44,18 @@ sequenceDiagram
     Note over EK: Returned Future is treated as a rollback path and no async mutation may outlive the session.
   else preflight fails before atomic install
     activate Handle
-    Caller->>Handle: synchronous CanvasEdit mutations
-    Handle->>Draft: mutate draft only
-    Draft->>Touched: record exact mutation facts
+    Caller->>Handle: document/resource mutations or setSelection intent
+    opt document/resource mutation
+      Handle->>Sparse: open Store facts/selection snapshot and record mutation
+      Sparse->>Touched: record exact sparse mutation facts
+      opt explicit draft read or replacement
+        Handle->>Draft: promote sparse journal into draft
+        Draft->>Touched: record materialized fallback facts
+      end
+    end
+    opt setSelection intent
+      Handle->>Handle: retain pending desired-selection snapshot
+    end
     Handle-->>Caller: mutation results
     deactivate Handle
     Caller-->>EK: callback result
@@ -64,7 +78,7 @@ sequenceDiagram
   EK->>Effects: discard buffered events, repaint, resources, spatial, and projection effects
   EK->>Draft: discard draft
   EK->>Touched: discard touched set
-  EK->>Handle: close session and mark handle stale
+  EK->>Handle: discard pending desired-selection intent, close session, and mark handle stale
   Note over Handle: Any later handle operation throws StateError.
   Note over EK,Selection: Selection owner, selection revision, and prepared backing ownership remain unchanged or released without installation.
   Note over EK,Store: Committed document identity, all document revisions, and all ID admissions remain unchanged. InteractionEngine-owned preview is outside Store.

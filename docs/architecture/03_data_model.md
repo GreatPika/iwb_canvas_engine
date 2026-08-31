@@ -156,6 +156,16 @@ delivery effects/action inputs, prepares selection equality/final revision/owned
 backing, and binds Store freshness, document, and ID-admission backings. It then
 takes exactly one branch: Store/admission assignment followed by optional
 prepared selection assignment, prepared selection alone, or a true no-op.
+An edit-local explicit desired selection is one immutable callback snapshot.
+The Store final-candidate membership boundary filters it against the final
+prepared candidate, not an intermediate draft, and SelectionKernel owns the
+resulting equality, revision, and install backing. It can therefore accompany
+an accepted document change or be the prepared-selection-alone branch without
+making selection document data.
+For an explicit desired set, Store membership is addressed by desired ID against
+indexed final-candidate location/family facts (not a document-row scan), then
+Selection equality is bounded by the current selected set. A selection-only
+callback leaves the sparse edit backing unopened.
 Runtime route augmentation, cleanup, and
 delivery are separate Contract 4 owners. Sparse selection preparation consumes
 the existing Store stale boundary before installation, so a stale prepared

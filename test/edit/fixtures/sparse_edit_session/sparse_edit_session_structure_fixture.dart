@@ -840,9 +840,9 @@ void _sparseIndexedOrdersHaveBoundedOwnerAttributedWork() {
     layerCount: layerCount,
   );
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: baseSparseDraft,
-    selectedElementIds: const [],
+    readFacts: () => facts,
+    promoteDraft: (_) => baseSparseDraft(),
+    readSelectedElementIds: () => const {},
   );
   final structureEvents = <SparseEditStructureWorkEvent>[];
   final sequenceEvents = <IndexedOrderSequenceWorkEvent>[];
@@ -957,9 +957,9 @@ void _sparseIndexedOrdersHaveBoundedOwnerAttributedWork() {
     layerCount: layerCount,
   );
   final earlySession = EditSession.sparse(
-    facts: earlyFacts,
-    promoteDraft: baseSparseDraft,
-    selectedElementIds: const [],
+    readFacts: () => earlyFacts,
+    promoteDraft: (_) => baseSparseDraft(),
+    readSelectedElementIds: () => const {},
   );
   final earlyStructureEvents = <SparseEditStructureWorkEvent>[];
   final earlySequenceEvents = <IndexedOrderSequenceWorkEvent>[];

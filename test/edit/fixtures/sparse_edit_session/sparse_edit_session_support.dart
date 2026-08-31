@@ -377,12 +377,14 @@ EditSession sparseSessionForDocument(
   DraftDocument Function()? promoteDraft,
   Iterable<CanvasElementId> selectedElementIds = const [],
 }) {
+  final facts = SparseFixtureFacts(document);
   return EditSession.sparse(
-    facts: SparseFixtureFacts(document),
-    promoteDraft:
-        promoteDraft ??
-        () => DraftDocument(document, selectedElementIds: selectedElementIds),
-    selectedElementIds: selectedElementIds,
+    readFacts: () => facts,
+    promoteDraft: (_) =>
+        (promoteDraft ??
+        () =>
+            DraftDocument(document, selectedElementIds: selectedElementIds))(),
+    readSelectedElementIds: () => Set.of(selectedElementIds),
   );
 }
 

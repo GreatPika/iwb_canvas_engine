@@ -82,6 +82,11 @@ enum DeletionProjectionWorkEvent {
 @visibleForTesting
 enum DeletionPreparedInstallEvent { bound, installed }
 
+/// Selection membership visits are addressed by desired ID, never by document
+/// row, so owner fixtures can prove unrelated canvas rows stay out of the path.
+@visibleForTesting
+enum SelectionNormalizationWorkEvent { desiredIdVisit }
+
 /// Distinct Store-owned preparation phases of a deferred deletion.
 ///
 /// Test injection remains at the owner operation, so a route fixture cannot
@@ -125,6 +130,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   static final Object _deletionPreparedInstallZoneKey = Object();
   static final Object _deletionPreparedInstallFailureZoneKey = Object();
   static final Object _deletionPreparationFailureZoneKey = Object();
+  static final Object _selectionNormalizationWorkZoneKey = Object();
 
   DocumentStoreKernel() : _document = CommittedDocument.empty() {
     _validateFinalCandidateResourceRelationships(
@@ -151,34 +157,34 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
   StoreIdAdmissions _resetIdAdmissionsFor(CommittedDocument document) {
     return StoreIdAdmissions(
       elements: StoreIdAdmission.fromEnumerated(
-      prefix: 'e',
-      enumerate: document.elements.familyTables.enumerateElementIds,
-      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
         prefix: 'e',
-        phase: phase,
-        kind: kind,
-        subject: subject,
-      ),
+        enumerate: document.elements.familyTables.enumerateElementIds,
+        record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+          prefix: 'e',
+          phase: phase,
+          kind: kind,
+          subject: subject,
+        ),
       ),
       layers: StoreIdAdmission.fromEnumerated(
-      prefix: 'l',
-      enumerate: document.elements.layerTable.enumerateLayerIds,
-      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
         prefix: 'l',
-        phase: phase,
-        kind: kind,
-        subject: subject,
-      ),
+        enumerate: document.elements.layerTable.enumerateLayerIds,
+        record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+          prefix: 'l',
+          phase: phase,
+          kind: kind,
+          subject: subject,
+        ),
       ),
       resources: StoreIdAdmission.fromEnumerated(
-      prefix: 'r',
-      enumerate: document.resourceTable.enumerateResourceIds,
-      record: (phase, kind, {subject}) => _recordIdAdmissionWork(
         prefix: 'r',
-        phase: phase,
-        kind: kind,
-        subject: subject,
-      ),
+        enumerate: document.resourceTable.enumerateResourceIds,
+        record: (phase, kind, {subject}) => _recordIdAdmissionWork(
+          prefix: 'r',
+          phase: phase,
+          kind: kind,
+          subject: subject,
+        ),
       ),
     );
   }
@@ -304,6 +310,25 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     T Function() operation,
   ) => runZoned(operation, zoneValues: {_deletionProjectionWorkZoneKey: sink});
 
+  @visibleForTesting
+  static T observeSelectionNormalizationWork<T>(
+    void Function(SelectionNormalizationWorkEvent event) sink,
+    T Function() operation,
+  ) => runZoned(
+    operation,
+    zoneValues: {_selectionNormalizationWorkZoneKey: sink},
+  );
+
+  static bool _recordSelectionNormalizationWork(
+    SelectionNormalizationWorkEvent event,
+  ) {
+    final sink = Zone.current[_selectionNormalizationWorkZoneKey];
+    if (sink is void Function(SelectionNormalizationWorkEvent)) {
+      sink(event);
+    }
+    return true;
+  }
+
   /// Exposes the immutable result only while assertions are enabled, so route
   /// fixtures can prove consumers retain the Store-produced entry sequence.
   @visibleForTesting
@@ -349,7 +374,6 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
       return true;
     }(), 'id admission work observation failed');
   }
-
 
   // The direct Store owner emits these observations at the journal/ledger
   // boundary, which lets tests distinguish replay work from finalization work.
@@ -882,8 +906,8 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     if (!identical(commit.baseDocument, _document)) {
       throw StateError('Prepared materialized store commit is stale.');
     }
-    final admissions = commit.idAdmissions ??
-        _admitCompleteDocumentOwners(commit.document);
+    final admissions =
+        commit.idAdmissions ?? _admitCompleteDocumentOwners(commit.document);
     return PreparedStoreDocumentInstall._(
       owner: this,
       baseDocument: commit.baseDocument,
@@ -1246,9 +1270,7 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     );
   }
 
-  void _installPreparedStoreDocument(
-    PreparedStoreDocumentInstall prepared,
-  ) {
+  void _installPreparedStoreDocument(PreparedStoreDocumentInstall prepared) {
     if (!prepared._isFreshFor(this)) {
       throw StateError('Prepared Store document install is stale.');
     }
@@ -1263,7 +1285,9 @@ final class DocumentStoreKernel implements DeletionEntryProjectionPort {
     final document = prepared._document;
     final admissions = prepared._idAdmissions;
     if (document == null || admissions == null) {
-      throw StateError('A no-op Store install cannot be installed by an owner.');
+      throw StateError(
+        'A no-op Store install cannot be installed by an owner.',
+      );
     }
     _document = document;
     _installIdAdmissions(admissions);
@@ -1771,11 +1795,13 @@ final class PreparedStoreDocumentInstall {
 
   bool _isFreshFor(DocumentStoreKernel owner) {
     final expectedDocument = baseDocument;
-    if (expectedDocument != null && !identical(expectedDocument, owner._document)) {
+    if (expectedDocument != null &&
+        !identical(expectedDocument, owner._document)) {
       return false;
     }
     final expectedRevisions = baseRevisions;
-    return expectedRevisions == null || expectedRevisions == owner._document.revisions;
+    return expectedRevisions == null ||
+        expectedRevisions == owner._document.revisions;
   }
 }
 
@@ -2813,12 +2839,26 @@ Set<CanvasElementId> _normalizeSelectionInCommittedDocument(
   CommittedDocument document,
   Iterable<CanvasElementId> ids,
 ) {
-  final selectable = document.elements.selectableElementIds;
-
   return {
     for (final id in ids)
-      if (selectable.contains(id)) id,
+      if (_isSelectionEligibleInCommittedDocument(document, id)) id,
   };
+}
+
+bool _isSelectionEligibleInCommittedDocument(
+  CommittedDocument document,
+  CanvasElementId id,
+) {
+  assert(
+    DocumentStoreKernel._recordSelectionNormalizationWork(
+      SelectionNormalizationWorkEvent.desiredIdVisit,
+    ),
+    'selection normalization work observation failed',
+  );
+  final location = document.elements.elementLocationFacts[id];
+
+  return location?.kind == ElementLocationKind.content &&
+      document.elements.familyTables.isSelectionEligible(id);
 }
 
 StoreRevisionDelta _validatedSparseRevisionDelta(StoreRevisionDelta delta) {

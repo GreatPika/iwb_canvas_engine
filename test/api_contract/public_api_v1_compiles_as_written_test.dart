@@ -161,6 +161,7 @@ final class IncompleteEdit implements CanvasEdit {
   @override void setPalette(CanvasPalette palette) {}
   @override $implementedMethod
   @override void setCameraOffset(Offset offset) {}
+  @override void setSelection(Iterable<CanvasElementId> ids) {}
   @override CanvasClearResult clearContent({bool removeUnusedResources = false}) => CanvasClearResult(removedElementIds: const [], removedResourceIds: const [], didClearContent: false);
   @override void replaceDraftDocument(CanvasDocument document) {}
 }
@@ -1123,6 +1124,9 @@ final class _ConsumerEdit implements CanvasEdit {
 
   @override
   void setCameraOffset(Offset offset) {}
+
+  @override
+  void setSelection(Iterable<CanvasElementId> ids) {}
 
   @override
   void setGrid(CanvasGrid grid) {}

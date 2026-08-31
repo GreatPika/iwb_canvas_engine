@@ -12,19 +12,24 @@ final class CommitCompiler {
   CommitPlan compile({
     required StoreRevisionDelta revisionDelta,
     required TouchedSet touchedSet,
+    CommitSelectionEffect? selectionEffect,
   }) {
-    final selectionEffect = touchedSet.selection
-        ? const PruneSelectionEffect()
-        : null;
-    if (!revisionDelta.hasChanges && selectionEffect == null) {
+    final effectiveSelectionEffect =
+        selectionEffect ??
+        (touchedSet.selection ? const PruneSelectionEffect() : null);
+    if (!revisionDelta.hasChanges && effectiveSelectionEffect == null) {
       return CommitPlan.empty();
     }
 
     return CommitPlan(
       revisionDelta: revisionDelta,
       touchedSet: touchedSet,
-      selectionEffect: selectionEffect,
-      effects: _effectsFor(revisionDelta, touchedSet),
+      selectionEffect: effectiveSelectionEffect,
+      effects: _effectsFor(
+        revisionDelta,
+        touchedSet,
+        selectionChanged: effectiveSelectionEffect != null,
+      ),
     );
   }
 
@@ -41,15 +46,16 @@ final class CommitCompiler {
 
 List<CommitEffect> _effectsFor(
   StoreRevisionDelta revisionDelta,
-  TouchedSet touchedSet,
-) {
+  TouchedSet touchedSet, {
+  required bool selectionChanged,
+}) {
   if (touchedSet.documentReplaced) {
     return [
       const ProjectionEffect(),
       SpatialEffect(touchedSet: touchedSet),
       ResourceEffect(touchedSet: touchedSet),
       const RepaintEffect(mainCanvas: true),
-      if (touchedSet.selection) const SelectionEffect(),
+      if (selectionChanged) const SelectionEffect(),
       const PublicStateEffect(),
     ];
   }
@@ -59,11 +65,10 @@ List<CommitEffect> _effectsFor(
     if (_needsSpatialEffect(revisionDelta, touchedSet))
       SpatialEffect(touchedSet: touchedSet),
     if (revisionDelta.resource) ResourceEffect(touchedSet: touchedSet),
-    if (_needsMainRepaint(revisionDelta, touchedSet))
+    if (_needsMainRepaint(revisionDelta, touchedSet, selectionChanged))
       const RepaintEffect(mainCanvas: true),
-    if (touchedSet.selection) const SelectionEffect(),
-    if (revisionDelta.document || touchedSet.selection)
-      const PublicStateEffect(),
+    if (selectionChanged) const SelectionEffect(),
+    if (revisionDelta.document || selectionChanged) const PublicStateEffect(),
   ];
 }
 
@@ -80,11 +85,12 @@ bool _needsSpatialEffect(
 bool _needsMainRepaint(
   StoreRevisionDelta revisionDelta,
   TouchedSet touchedSet,
+  bool selectionChanged,
 ) {
   return revisionDelta.structural ||
       revisionDelta.elementVisual ||
       revisionDelta.background ||
       revisionDelta.grid ||
       touchedSet.resourceVisualChangedIds.isNotEmpty ||
-      touchedSet.selection;
+      selectionChanged;
 }

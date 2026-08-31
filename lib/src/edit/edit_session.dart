@@ -45,6 +45,7 @@ final class SparsePromotionWorkEvent {
 }
 
 final Object _sparsePromotionWorkZoneKey = Object();
+final TouchedSet _emptyTouchedSet = TouchedSet();
 
 /// Records the sparse promotion boundary only under asserts.
 @visibleForTesting
@@ -55,41 +56,65 @@ T observeSparsePromotionWork<T>(
   return runZoned(operation, zoneValues: {_sparsePromotionWorkZoneKey: sink});
 }
 
+_EditSessionBacking Function() _sparseBackingFactory({
+  required SparseEditSessionFacts Function() readFacts,
+  required DraftDocument Function(Set<CanvasElementId>) promoteDraft,
+  required Set<CanvasElementId> Function() readSelectedElementIds,
+}) =>
+    () => _SparseEditBacking(
+      readFacts: readFacts,
+      promoteDraft: promoteDraft,
+      selectedElementIds: readSelectedElementIds,
+    );
+
 // CanvasEdit is intentionally represented by one session handle: the stale
 // guard and draft reference must stay uniform across every public entry point.
 // Keeping the full CanvasEdit routing surface together makes stale-handle
 // enforcement uniform; splitting it would only distribute forwarding logic.
-// ignore: coupling-between-object-classes, number-of-methods, response-for-class
+// ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class EditSession implements CanvasEdit {
   EditSession({required DraftDocument draft})
-    : _backing = _MaterializedEditBacking(draft);
+    : _backing = _MaterializedEditBacking(draft),
+      _openSparseBacking = null;
 
   EditSession.sparse({
-    required SparseEditSessionFacts facts,
-    required DraftDocument Function() promoteDraft,
-    required Iterable<CanvasElementId> selectedElementIds,
-  }) : _backing = _SparseEditBacking(
-         facts: facts,
+    required SparseEditSessionFacts Function() readFacts,
+    required DraftDocument Function(Set<CanvasElementId>) promoteDraft,
+    required Set<CanvasElementId> Function() readSelectedElementIds,
+  }) : _backing = null,
+       _openSparseBacking = _sparseBackingFactory(
+         readFacts: readFacts,
          promoteDraft: promoteDraft,
-         selectedElementIds: selectedElementIds,
+         readSelectedElementIds: readSelectedElementIds,
        );
 
-  final _EditSessionBacking _backing;
+  _EditSessionBacking? _backing;
+  final _EditSessionBacking Function()? _openSparseBacking;
+  ReplaceSelectionEffect? _pendingSelectionEffect;
   bool _isClosed = false;
 
-  bool get didChange => _backing.didChange;
-  StoreRevisionDelta get revisionDelta => _backing.revisionDelta;
-  TouchedSet get touchedSet => _backing.touchedSet;
-  CommitPlan get commitPlan => _backing.commitPlan;
-  bool get hasMaterializedDraft => _backing.isMaterialized;
-  bool get didReplaceDraftDocument => _backing.documentReplaced;
-  StoreSparseCommit get sparseCommit => _backing.sparseCommit;
+  bool get didChange => _backing?.didChange ?? false;
+  StoreRevisionDelta get revisionDelta =>
+      _backing?.revisionDelta ?? const StoreRevisionDelta();
+  TouchedSet get touchedSet => _backing?.touchedSet ?? _emptyTouchedSet;
+  CommitPlan get commitPlan => const CommitCompiler().compile(
+    revisionDelta: revisionDelta,
+    touchedSet: touchedSet,
+    selectionEffect: _pendingSelectionEffect,
+  );
+  bool get hasMaterializedDraft => _backing?.isMaterialized ?? false;
+  bool get didReplaceDraftDocument => _backing?.documentReplaced ?? false;
+  StoreSparseCommit get sparseCommit => _documentBacking.sparseCommit;
+  Set<CanvasElementId> get selectedElementIds =>
+      _documentBacking.selectedElementIds;
+  ReplaceSelectionEffect? get pendingSelectionEffect => _pendingSelectionEffect;
 
   void close() {
     if (_isClosed) {
       return;
     }
-    _backing.close();
+    _backing?.close();
+    _pendingSelectionEffect = null;
     _isClosed = true;
   }
 
@@ -97,20 +122,20 @@ final class EditSession implements CanvasEdit {
   CanvasDocument readDraftDocument() {
     _ensureActive();
 
-    return _backing.readDraftDocument();
+    return _documentBacking.readDraftDocument();
   }
 
   @override
   CanvasDocumentSummary get draftSummary {
     _ensureActive();
 
-    return _backing.draftSummary;
+    return _documentBacking.draftSummary;
   }
 
   @override
   bool ensureLayer(CanvasLayerId id, {int? index}) {
     _ensureActive();
-    return _backing.ensureLayer(id, index: index);
+    return _documentBacking.ensureLayer(id, index: index);
   }
 
   @override
@@ -120,91 +145,114 @@ final class EditSession implements CanvasEdit {
     int? index,
   }) {
     _ensureActive();
-    return _backing.addElement(element, layerId: layerId, index: index);
+    return _documentBacking.addElement(element, layerId: layerId, index: index);
   }
 
   @override
   CanvasElementId addBackgroundElement(CanvasElement element, {int? index}) {
     _ensureActive();
-    return _backing.addBackgroundElement(element, index: index);
+    return _documentBacking.addBackgroundElement(element, index: index);
   }
 
   @override
   bool updateElement(CanvasElementUpdate update) {
     _ensureActive();
-    return _backing.updateElement(update);
+    return _documentBacking.updateElement(update);
   }
 
   @override
   bool removeElement(CanvasElementId id) {
     _ensureActive();
-    return _backing.removeElement(id);
+    return _documentBacking.removeElement(id);
   }
 
   @override
   bool upsertResource(CanvasResource resource) {
     _ensureActive();
-    return _backing.upsertResource(resource);
+    return _documentBacking.upsertResource(resource);
   }
 
   @override
   bool removeUnusedResource(CanvasResourceId id) {
     _ensureActive();
-    return _backing.removeUnusedResource(id);
+    return _documentBacking.removeUnusedResource(id);
   }
 
   @override
   void setBackgroundColor(Color color) {
     _ensureActive();
-    _backing.setBackgroundColor(color);
+    _documentBacking.setBackgroundColor(color);
   }
 
   @override
   void setGrid(CanvasGrid grid) {
     _ensureActive();
-    _backing.setGrid(grid);
+    _documentBacking.setGrid(grid);
   }
 
   @override
   void updateGrid(CanvasGridUpdate update) {
     _ensureActive();
-    _backing.updateGrid(update);
+    _documentBacking.updateGrid(update);
   }
 
   @override
   void setPalette(CanvasPalette palette) {
     _ensureActive();
-    _backing.setPalette(palette);
+    _documentBacking.setPalette(palette);
   }
 
   @override
   void updatePalette(CanvasPaletteUpdate update) {
     _ensureActive();
-    _backing.updatePalette(update);
+    _documentBacking.updatePalette(update);
   }
 
   @override
   void setCameraOffset(Offset offset) {
     _ensureActive();
-    _backing.setCameraOffset(offset);
+    _documentBacking.setCameraOffset(offset);
+  }
+
+  @override
+  void setSelection(Iterable<CanvasElementId> ids) {
+    _ensureActive();
+    // Construct before replacing prior intent: a throwing iterable must leave
+    // the last successful callback-local request intact.
+    final next = ReplaceSelectionEffect(ids);
+    _pendingSelectionEffect = next;
   }
 
   @override
   CanvasClearResult clearContent({bool removeUnusedResources = false}) {
     _ensureActive();
-    return _backing.clearContent(removeUnusedResources: removeUnusedResources);
+    return _documentBacking.clearContent(
+      removeUnusedResources: removeUnusedResources,
+    );
   }
 
   @override
   void replaceDraftDocument(CanvasDocument document) {
     _ensureActive();
-    _backing.replaceDraftDocument(document);
+    _documentBacking.replaceDraftDocument(document);
   }
 
   void _ensureActive() {
     if (_isClosed) {
       throw StateError('CanvasEdit handle is stale.');
     }
+  }
+
+  _EditSessionBacking get _documentBacking {
+    final existing = _backing;
+    if (existing != null) {
+      return existing;
+    }
+    final sparseFactory = _openSparseBacking;
+    if (sparseFactory == null) {
+      throw StateError('Materialized edit sessions always retain a backing.');
+    }
+    return _backing = sparseFactory();
   }
 }
 
@@ -239,9 +287,9 @@ abstract interface class _EditSessionBacking {
   bool get didChange;
   bool get isMaterialized;
   bool get documentReplaced;
+  Set<CanvasElementId> get selectedElementIds;
   StoreRevisionDelta get revisionDelta;
   TouchedSet get touchedSet;
-  CommitPlan get commitPlan;
   StoreSparseCommit get sparseCommit;
   CanvasDocument readDraftDocument();
   CanvasDocumentSummary get draftSummary;
@@ -290,10 +338,10 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
   TouchedSet get touchedSet => _draft.touchedSet;
 
   @override
-  CommitPlan get commitPlan => _draft.commitPlan;
+  bool get documentReplaced => _draft.documentReplaced;
 
   @override
-  bool get documentReplaced => _draft.documentReplaced;
+  Set<CanvasElementId> get selectedElementIds => _draft.selectedElementIds;
 
   @override
   StoreSparseCommit get sparseCommit {
@@ -400,9 +448,19 @@ final class _MaterializedEditBacking implements _EditSessionBacking {
 // ignore: coupling-between-object-classes, number-of-methods, response-for-class, weighted-methods-per-class
 final class _SparseEditBacking implements _EditSessionBacking {
   _SparseEditBacking({
+    required SparseEditSessionFacts Function() readFacts,
+    required DraftDocument Function(Set<CanvasElementId>) promoteDraft,
+    required Set<CanvasElementId> Function() selectedElementIds,
+  }) : this._(
+         facts: readFacts(),
+         promoteDraft: promoteDraft,
+         selectedElementIds: selectedElementIds(),
+       );
+
+  _SparseEditBacking._({
     required SparseEditSessionFacts facts,
-    required DraftDocument Function() promoteDraft,
-    required Iterable<CanvasElementId> selectedElementIds,
+    required DraftDocument Function(Set<CanvasElementId>) promoteDraft,
+    required Set<CanvasElementId> selectedElementIds,
   }) : _facts = facts,
        _promoteDraft = promoteDraft,
        _committedSummary = facts.summary,
@@ -411,7 +469,7 @@ final class _SparseEditBacking implements _EditSessionBacking {
        _selectedElementIds = Set.unmodifiable(selectedElementIds);
 
   final SparseEditSessionFacts _facts;
-  final DraftDocument Function() _promoteDraft;
+  final DraftDocument Function(Set<CanvasElementId>) _promoteDraft;
   final CanvasDocumentSummary _committedSummary;
   final SparseEditStructure _structure;
   final SparseEditResourceReferences _resourceReferences;
@@ -435,7 +493,9 @@ final class _SparseEditBacking implements _EditSessionBacking {
     if (existing != null) {
       return existing;
     }
-    final target = DraftSparsePromotionTarget.open(_promoteDraft);
+    final target = DraftSparsePromotionTarget.open(
+      () => _promoteDraft(_selectedElementIds),
+    );
     _mutationJournal.promoteInto(target);
     final promoted = target.finish();
     _structure.dispose();
@@ -451,39 +511,25 @@ final class _SparseEditBacking implements _EditSessionBacking {
   bool get isMaterialized => _isMaterialized;
 
   @override
-  bool get didChange {
-    return _draft?.didChange ??
-        _mutationJournal.isNotEmpty ||
-            _backgroundOverride != null ||
-            _cameraOverride != null ||
-            _paletteOverride != null;
-  }
+  bool get didChange =>
+      _draft?.didChange ??
+      _mutationJournal.isNotEmpty ||
+          _backgroundOverride != null ||
+          _cameraOverride != null ||
+          _paletteOverride != null;
 
   @override
-  StoreRevisionDelta get revisionDelta {
-    return _draft?.revisionDelta ?? _revisionDelta;
-  }
+  StoreRevisionDelta get revisionDelta =>
+      _draft?.revisionDelta ?? _revisionDelta;
 
   @override
-  TouchedSet get touchedSet {
-    return _draft?.touchedSet ?? _touchedSet.build();
-  }
-
-  @override
-  CommitPlan get commitPlan {
-    final draft = _draft;
-    if (draft != null) {
-      return draft.commitPlan;
-    }
-
-    return const CommitCompiler().compile(
-      revisionDelta: _revisionDelta,
-      touchedSet: _touchedSet.build(),
-    );
-  }
+  TouchedSet get touchedSet => _draft?.touchedSet ?? _touchedSet.build();
 
   @override
   bool get documentReplaced => _draft?.documentReplaced ?? false;
+
+  @override
+  Set<CanvasElementId> get selectedElementIds => _selectedElementIds;
 
   @override
   StoreSparseCommit get sparseCommit {

@@ -239,9 +239,9 @@ void _promotionAppliesSparseClearContent() {
 void _draftSummaryOpensWithoutCommittedIdEnumeration() {
   final facts = SparseFixtureFacts(baseSparseDocument());
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: baseSparseDraft,
-    selectedElementIds: const [],
+    readFacts: () => facts,
+    promoteDraft: (_) => baseSparseDraft(),
+    readSelectedElementIds: () => const {},
   );
 
   _expectSparseSummary(

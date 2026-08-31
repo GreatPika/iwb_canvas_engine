@@ -83,6 +83,459 @@ void main() {
       expect(_verifyPreparedDeletionInstallBoundary, returnsNormally);
     },
   );
+
+  test('edit stages explicit selection until final atomic publication', () {
+    expect(_verifyStagedEditSelection, returnsNormally);
+  });
+
+  test(
+    'staged edit selection keeps its last successful intent on failures',
+    () {
+      expect(_verifyStagedEditSelectionFailures, returnsNormally);
+    },
+  );
+
+  test(
+    'staged edit selection overrides replacement pruning only when present',
+    () {
+      expect(_verifyStagedReplacementSelection, returnsNormally);
+    },
+  );
+
+  test('staged selection survives sparse and promoted document net no-ops', () {
+    expect(_verifyStagedSelectionWithDocumentNetNoOp, returnsNormally);
+  });
+
+  test('staged selection normalization visits only desired ids', () {
+    expect(_verifyStagedSelectionNormalizationWork, returnsNormally);
+  });
+}
+
+// This public edit/selection seam is the admitted staged-selection witness:
+// it observes the callback, first publication, and final owner revisions.
+void _verifyStagedEditSelection() {
+  for (final materializeBeforeSetter in [false, true]) {
+    _verifyStagedEditSelectionOrder(
+      setBeforeContent: true,
+      materializeBeforeSetter: materializeBeforeSetter,
+    );
+    _verifyStagedEditSelectionOrder(
+      setBeforeContent: false,
+      materializeBeforeSetter: materializeBeforeSetter,
+    );
+  }
+}
+
+// This remains on the public edit seam while attributing the two independent
+// owners: Store membership is bounded by desired K and Selection equality by S.
+// ignore: source-lines-of-code
+void _verifyStagedSelectionNormalizationWork() {
+  for (final unrelatedCount in [10, 5000]) {
+    final root = runtimeRootWithCommittedDocumentSeed(
+      _selectionNormalizationWorkDocument(unrelatedCount),
+    );
+    final selected = [
+      CanvasElementId('element-0'),
+      CanvasElementId('element-1'),
+    ];
+    final desired = [
+      ...selected,
+      CanvasElementId('background'),
+      CanvasElementId('missing'),
+    ];
+    root.selection.setSelection(selected);
+    final normalizationWork = <SelectionNormalizationWorkEvent>[];
+    final equalityWork = <PreparedSelectionInstallWorkEvent>[];
+
+    DocumentStoreKernel.observeSelectionNormalizationWork(
+      normalizationWork.add,
+      () => SelectionKernel.observePreparedInstallWork(
+        equalityWork.add,
+        () => root.edits.edit((edit) => edit.setSelection(desired)),
+      ),
+    );
+
+    expect(normalizationWork, [
+      SelectionNormalizationWorkEvent.desiredIdVisit,
+      SelectionNormalizationWorkEvent.desiredIdVisit,
+      SelectionNormalizationWorkEvent.desiredIdVisit,
+      SelectionNormalizationWorkEvent.desiredIdVisit,
+    ], reason: 'Unrelated document rows must not participate in membership.');
+    expect(
+      equalityWork
+          .where(
+            (event) =>
+                event ==
+                PreparedSelectionInstallWorkEvent.membershipComparisonVisit,
+          )
+          .length,
+      2,
+      reason: 'Equal selection compares only the current selected S ids.',
+    );
+  }
+}
+
+// The one public-seam witness keeps callback, first-publication, and owner
+// facts together; separating them would weaken the atomicity observation.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _verifyStagedEditSelectionOrder({
+  required bool setBeforeContent,
+  required bool materializeBeforeSetter,
+}) {
+  final ids = _StagedSelectionIds();
+  var resolverCalls = 0;
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _stagedSelectionDocument(),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        resolverCalls += 1;
+        return CanvasDeletionDecision.accept;
+      },
+    ),
+  );
+  root.selection.setSelection([ids.removed]);
+  final before = root.state.value;
+  final publications =
+      <
+        ({
+          CanvasRuntimeState state,
+          CanvasDocument document,
+          Set<CanvasElementId> ids,
+        })
+      >[];
+  root.state.addListener(
+    () => publications.add((
+      state: root.state.value,
+      document: root.readDocument(),
+      ids: root.selectedElementIds,
+    )),
+  );
+  final actions = <CanvasActionCommitted>[];
+  root.actions.listen(actions.add);
+  final preparationWork = <PreparedSelectionInstallWorkEvent>[];
+
+  final desired = <CanvasElementId>[
+    ids.restored,
+    ids.valid,
+    ids.hidden,
+    ids.unselectable,
+    ids.background,
+    ids.missing,
+  ];
+  SelectionKernel.observePreparedInstallWork(preparationWork.add, () {
+    root.edits.edit((edit) {
+      if (materializeBeforeSetter) {
+        expect(edit.readDraftDocument().layers, hasLength(1));
+      }
+      if (setBeforeContent) {
+        edit.setSelection([ids.removed]);
+        edit.setSelection(desired);
+        desired.clear();
+      }
+      expect(root.selectedElementIds, {ids.removed});
+      expect(edit.removeElement(ids.removed), isTrue);
+      edit.addElement(_stagedRect(ids.restored), layerId: ids.layer);
+      if (!setBeforeContent) {
+        edit.setSelection([ids.removed]);
+        edit.setSelection(desired);
+        desired.clear();
+      }
+      expect(root.selectedElementIds, {ids.removed});
+    });
+  });
+
+  expect(root.selectedElementIds, {ids.restored, ids.valid});
+  expect(root.state.value.revisions.document, before.revisions.document + 1);
+  expect(root.state.value.revisions.selection, before.revisions.selection + 1);
+  expect(publications, hasLength(1));
+  final first = publications.single;
+  expect(first.ids, {ids.restored, ids.valid});
+  expect(first.document.layers.single.elements.map((element) => element.id), {
+    ids.valid,
+    ids.hidden,
+    ids.unselectable,
+    ids.restored,
+  });
+  expect(first.state.revisions.document, before.revisions.document + 1);
+  expect(first.state.revisions.selection, before.revisions.selection + 1);
+  expect(
+    preparationWork.where(
+      (event) =>
+          event == PreparedSelectionInstallWorkEvent.ownedBackingPrepared,
+    ),
+    hasLength(1),
+  );
+  expect(actions, isEmpty);
+  expect(resolverCalls, 0);
+}
+
+// Failure variants share the same intent-lifetime guarantee and stay adjacent
+// so each one uses the real edit callback rather than a private test seam.
+// ignore: halstead-volume, source-lines-of-code, maintainability-index
+void _verifyStagedEditSelectionFailures() {
+  final root = _runtimeRoot();
+  root.selection.setSelection([CanvasElementId('a')]);
+  final before = root.state.value;
+  final publications = <Set<CanvasElementId>>[];
+  root.state.addListener(() => publications.add(root.selectedElementIds));
+  final actions = <CanvasActionCommitted>[];
+  root.actions.listen(actions.add);
+
+  root.edits.edit((edit) {
+    edit.setSelection([CanvasElementId('b')]);
+    expect(
+      () => edit.setSelection(_throwingSelectionIds()),
+      throwsA(isA<StateError>()),
+    );
+    expect(root.selectedElementIds, {CanvasElementId('a')});
+  });
+
+  expect(root.selectedElementIds, {CanvasElementId('b')});
+  expect(root.state.value.revisions.document, before.revisions.document);
+  expect(root.state.value.revisions.selection, before.revisions.selection + 1);
+  expect(publications, [
+    {CanvasElementId('b')},
+  ]);
+
+  final equalBefore = root.state.value;
+  root.edits.edit((edit) => edit.setSelection([CanvasElementId('b')]));
+  expect(root.state.value, equalBefore);
+  expect(publications, [
+    {CanvasElementId('b')},
+  ]);
+
+  root.edits.edit((edit) => edit.setSelection(const []));
+  expect(root.selectedElementIds, isEmpty);
+  expect(root.state.value.revisions.document, before.revisions.document);
+  expect(root.state.value.revisions.selection, before.revisions.selection + 2);
+  expect(publications, [
+    {CanvasElementId('b')},
+    <CanvasElementId>{},
+  ]);
+  expect(actions, isEmpty);
+  final emptyEqualBefore = root.state.value;
+  root.edits.edit((edit) => edit.setSelection(const []));
+  expect(root.state.value, emptyEqualBefore);
+  expect(publications, [
+    {CanvasElementId('b')},
+    <CanvasElementId>{},
+  ]);
+
+  final callbackFailure = _runtimeRoot();
+  callbackFailure.selection.setSelection([CanvasElementId('a')]);
+  expect(
+    () => callbackFailure.edits.edit((edit) {
+      edit.setSelection([CanvasElementId('b')]);
+      throw StateError('callback failure');
+    }),
+    throwsStateError,
+  );
+  expect(callbackFailure.selectedElementIds, {CanvasElementId('a')});
+
+  final replacementFailure = _runtimeRoot();
+  replacementFailure.selection.setSelection([CanvasElementId('a')]);
+  expect(
+    () => replacementFailure.edits.edit((edit) {
+      edit.setSelection([CanvasElementId('b')]);
+      edit.replaceDraftDocument(_invalidReplacementDocument());
+    }),
+    throwsA(
+      isA<CanvasDataException>().having(
+        (error) => error.code,
+        'code',
+        CanvasDataErrorCode.duplicateElementId,
+      ),
+    ),
+  );
+  expect(replacementFailure.selectedElementIds, {CanvasElementId('a')});
+}
+
+void _verifyStagedReplacementSelection() {
+  _verifyStagedSelectionBeforeReplacement();
+
+  final ids = _StagedSelectionIds();
+  final root = runtimeRootWithCommittedDocumentSeed(_stagedSelectionDocument());
+  root.selection.setSelection([ids.valid]);
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(
+      CanvasDocument(
+        layers: [
+          CanvasLayer(id: ids.layer, elements: [_stagedRect(ids.valid)]),
+        ],
+      ),
+    );
+  });
+  expect(root.selectedElementIds, {ids.valid});
+
+  root.edits.edit((edit) {
+    edit.replaceDraftDocument(
+      CanvasDocument(
+        layers: [
+          CanvasLayer(id: ids.layer, elements: [_stagedRect(ids.restored)]),
+        ],
+      ),
+    );
+    edit.setSelection([ids.restored, ids.missing]);
+  });
+  expect(root.selectedElementIds, {ids.restored});
+}
+
+// Callback and first-publication facts must share this one root trace; splitting
+// them would duplicate mutable setup and weaken the atomicity witness.
+// ignore: halstead-volume, source-lines-of-code
+void _verifyStagedSelectionBeforeReplacement() {
+  final ids = _StagedSelectionIds();
+  var resolverCalls = 0;
+  final root = runtimeRootWithCommittedDocumentSeed(
+    _stagedSelectionDocument(),
+    config: CanvasRuntimeConfig(
+      deletionCommitResolver: (_) {
+        resolverCalls += 1;
+        return CanvasDeletionDecision.accept;
+      },
+    ),
+  );
+  root.selection.setSelection([ids.valid]);
+  final before = root.state.value;
+  final publications =
+      <
+        ({
+          CanvasRuntimeState state,
+          CanvasDocument document,
+          Set<CanvasElementId> selection,
+        })
+      >[];
+  root.state.addListener(
+    () => publications.add((
+      state: root.state.value,
+      document: root.readDocument(),
+      selection: root.selectedElementIds,
+    )),
+  );
+  final actions = <CanvasActionCommitted>[];
+  root.actions.listen(actions.add);
+
+  root.edits.edit((edit) {
+    edit.setSelection([ids.restored, ids.missing]);
+    expect(root.selectedElementIds, {ids.valid});
+    edit.replaceDraftDocument(
+      CanvasDocument(
+        layers: [
+          CanvasLayer(id: ids.layer, elements: [_stagedRect(ids.restored)]),
+        ],
+      ),
+    );
+    expect(root.selectedElementIds, {ids.valid});
+  });
+
+  expect(root.selectedElementIds, {ids.restored});
+  expect(root.state.value.revisions.document, before.revisions.document + 1);
+  expect(root.state.value.revisions.selection, before.revisions.selection + 1);
+  expect(publications, hasLength(1));
+  final first = publications.single;
+  expect(first.selection, {ids.restored});
+  expect(first.document.layers.single.elements.map((element) => element.id), {
+    ids.restored,
+  });
+  expect(first.state.revisions.document, before.revisions.document + 1);
+  expect(first.state.revisions.selection, before.revisions.selection + 1);
+  expect(actions, isEmpty);
+  expect(resolverCalls, 0);
+}
+
+// Sparse and promoted variants must assert the same public no-op contract.
+// ignore: halstead-volume
+void _verifyStagedSelectionWithDocumentNetNoOp() {
+  for (final promoteBeforeMutation in [false, true]) {
+    final root = _runtimeRoot();
+    root.selection.setSelection([CanvasElementId('a')]);
+    final before = root.state.value;
+    final beforeDocument = root.readDocument();
+    final publications = <CanvasRuntimeState>[];
+    root.state.addListener(() => publications.add(root.state.value));
+
+    root.edits.edit((edit) {
+      if (promoteBeforeMutation) {
+        expect(edit.readDraftDocument().layers, hasLength(1));
+      }
+      final transient = CanvasRectElement(
+        id: CanvasElementId('transient'),
+        size: const Size(1, 1),
+      );
+      edit.addElement(transient, layerId: CanvasLayerId('layer-1'));
+      expect(edit.removeElement(transient.id), isTrue);
+      edit.setSelection([CanvasElementId('b')]);
+    });
+
+    expect(root.readDocument(), same(beforeDocument));
+    expect(root.selectedElementIds, {CanvasElementId('b')});
+    expect(root.state.value.revisions.document, before.revisions.document);
+    expect(
+      root.state.value.revisions.selection,
+      before.revisions.selection + 1,
+    );
+    expect(publications, hasLength(1));
+    expect(publications.single.revisions.document, before.revisions.document);
+    expect(
+      publications.single.revisions.selection,
+      before.revisions.selection + 1,
+    );
+  }
+}
+
+Iterable<CanvasElementId> _throwingSelectionIds() sync* {
+  yield CanvasElementId('b');
+  throw StateError('selection iterable failed');
+}
+
+CanvasDocument _invalidReplacementDocument() => CanvasDocument(
+  backgroundElements: [_stagedRect(CanvasElementId('duplicate'))],
+  layers: [
+    CanvasLayer(
+      id: CanvasLayerId('duplicate-layer'),
+      elements: [_stagedRect(CanvasElementId('duplicate'))],
+    ),
+  ],
+);
+
+CanvasDocument _stagedSelectionDocument() {
+  final ids = _StagedSelectionIds();
+  return CanvasDocument(
+    backgroundElements: [_stagedRect(ids.background)],
+    layers: [
+      CanvasLayer(
+        id: ids.layer,
+        elements: [
+          _stagedRect(ids.removed),
+          _stagedRect(ids.valid),
+          _stagedRect(ids.hidden, isVisible: false),
+          _stagedRect(ids.unselectable, isSelectable: false),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasRectElement _stagedRect(
+  CanvasElementId id, {
+  bool isVisible = true,
+  bool isSelectable = true,
+}) => CanvasRectElement(
+  id: id,
+  size: const Size(1, 1),
+  isVisible: isVisible,
+  isSelectable: isSelectable,
+);
+
+final class _StagedSelectionIds {
+  final CanvasLayerId layer = CanvasLayerId('staged-layer');
+  final CanvasElementId removed = CanvasElementId('removed');
+  final CanvasElementId valid = CanvasElementId('valid');
+  final CanvasElementId restored = CanvasElementId('restored');
+  final CanvasElementId hidden = CanvasElementId('hidden');
+  final CanvasElementId unselectable = CanvasElementId('unselectable');
+  final CanvasElementId background = CanvasElementId('background');
+  final CanvasElementId missing = CanvasElementId('missing');
 }
 
 void _verifySelectionReplacementCommit() {
@@ -1420,6 +1873,29 @@ CanvasDocument _document() {
         elements: [
           CanvasRectElement(id: CanvasElementId('a'), size: const Size(1, 1)),
           CanvasRectElement(id: CanvasElementId('b'), size: const Size(1, 1)),
+        ],
+      ),
+    ],
+  );
+}
+
+CanvasDocument _selectionNormalizationWorkDocument(int unrelatedCount) {
+  return CanvasDocument(
+    backgroundElements: [
+      CanvasRectElement(
+        id: CanvasElementId('background'),
+        size: const Size(1, 1),
+      ),
+    ],
+    layers: [
+      CanvasLayer(
+        id: CanvasLayerId('layer'),
+        elements: [
+          for (var index = 0; index < unrelatedCount; index += 1)
+            CanvasRectElement(
+              id: CanvasElementId('element-$index'),
+              size: const Size(1, 1),
+            ),
         ],
       ),
     ],

@@ -174,6 +174,7 @@ abstract interface class CanvasEdit {
   void setPalette(CanvasPalette palette);
   void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
+  void setSelection(Iterable<CanvasElementId> ids);
   CanvasClearResult clearContent({bool removeUnusedResources = false});
   void replaceDraftDocument(CanvasDocument document);
 }

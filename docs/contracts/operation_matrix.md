@@ -52,6 +52,7 @@ Resource and interaction owners own their resource and interaction rows.
 | command removeElement | registry/layer membership, plus selection-owner prune when removed id was selected | state.revisions.document, state.revisions.selection if pruned; internal structural, bounds, elementVisual, projection | remove id | evict | main | deleteElements if removed; `runtime_created_timestamps_monotonic` |
 | ensureLayer no-op | none | none | none | none | none | none |
 | ensureLayer changed | layer table/order | state.revisions.document; internal structural, projection | no | evict | main | none |
+| CanvasEdit.setSelection | callback-local desired ids filtered by Store final-candidate membership, then Selection equality/revision/install | state.revisions.selection only when normalized membership changes; state.revisions.document is unchanged for selection-only edits | none | no | main | none |
 | setSelection/toggleSelection/clearSelection/selectAll | selection owner | state.revisions.selection | none | no | main | none |
 | marquee commit | selection owner | state.revisions.selection, state.revisions.preview if active preview cleared | none | no | RuntimeRoot closes the edit result, suppresses cleanup publication, merges main + overlay repaint, then common delivery | selectMarquee after public state if changed; `runtime_created_timestamps_monotonic` |
 | selected move preview | preview only | state.revisions.preview | none | no | main only | none |
@@ -74,7 +75,7 @@ Resource and interaction owners own their resource and interaction rows.
 | CanvasToolPort.handlePointer dispatcher | validates/routes pointer input to selection, move, draw, line, eraser, context-tap, or cleanup rows | none by itself | none by itself | none by itself | none by itself | none by itself |
 | loadDocumentFromJson success | whole document plus selection-owner clear, prepared interaction cleanup outcome, runtime view camera initialized from persisted document camera | state.revisions.document, state.revisions.selection, state.revisions.preview if active preview cleared, state.revisions.viewCamera, state.revisions.epoch; internal document-level revisions | rebuild | evict | main + overlay | none |
 | loadDocumentFromJson failure | none | none | none | none | none | none |
-| CanvasEdit.replaceDraftDocument | whole draft document plus selection-owner clear if current selection references replaced content | state.revisions.document, state.revisions.selection if cleared, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
+| CanvasEdit.replaceDraftDocument | whole draft document plus implicit selection-owner validity behavior, or an explicit staged CanvasEdit.setSelection intent normalized against the replacement | state.revisions.document, state.revisions.selection if the resulting membership changes, state.revisions.epoch; internal document-level revisions | rebuild | evict | main | none |
 | pencil/marker preview | preview only | state.revisions.preview | none | no | overlay | none |
 | pencil/marker commit | add stroke | state.revisions.document, state.revisions.preview if active preview cleared; internal structural, bounds, elementVisual, projection | accepted Store-ledger admission reserves the RuntimeRoot-read candidate; failed/no-op preparation leaves it next | evict | closed apply -> publish-false cleanup/effect merge -> common delivery, main + overlay | drawPencil/drawMarker after public state; `runtime_created_timestamps_monotonic` |
 | line first tap | preview pending | state.revisions.preview | none | no | overlay | none; timestamped preview `runtime_created_timestamps_monotonic` |
@@ -340,10 +341,11 @@ Owner coverage: staged load owns this executable edit-session replacement row.
 edit commit path.
 
 Touched state: whole draft document; selection owner when replacement makes the
-current selection invalid.
+current selection invalid, unless the callback stages an explicit desired
+selection which replaces that implicit result after final-document normalization.
 
 Public state revisions: `state.revisions.document`; `state.revisions.selection`
-if selection is cleared; `state.revisions.epoch`.
+if the resulting normalized membership changes; `state.revisions.epoch`.
 
 Internal revisions: document-level revisions including controllerEpoch,
 structural, resource, bounds, elementVisual, backgroundRevision, gridRevision,

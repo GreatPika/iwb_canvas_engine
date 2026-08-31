@@ -1572,6 +1572,7 @@ abstract interface class CanvasEdit {
   void setPalette(CanvasPalette palette);
   void updatePalette(CanvasPaletteUpdate update);
   void setCameraOffset(Offset offset);
+  void setSelection(Iterable<CanvasElementId> ids);
 
   CanvasClearResult clearContent({bool removeUnusedResources = false});
   void replaceDraftDocument(CanvasDocument document);
@@ -1599,6 +1600,11 @@ Edit contract:
 - final-candidate relationship admission runs before an edit installs or
   publishes any partial document, so a resource plus all replacement references
   may be supplied in either callback order;
+- CanvasEdit.setSelection snapshots its iterable in the synchronous callback;
+  the last successful call is normalized once against the final accepted
+  document and installed atomically with it. It never changes live selection in
+  the callback, emits no user action, and an equal normalized result is silent;
+  an omitted call retains the edit's existing prune/replacement behavior;
 - removeUnusedResource fails with false if resource is referenced by any background/content element, including invisible or locked elements.
 - clearContent removes every ordinary-layer element regardless of
   `isDeletable`, while preserving persisted background/grid metadata and the

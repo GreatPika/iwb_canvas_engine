@@ -360,9 +360,9 @@ void _sparseResourceReferencesUseAcceptedOverlay() {
 void _expectSparseResourceQueryUsesSplitCommittedCounts() {
   final facts = SparseFixtureFacts(_documentWithTwoResources());
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () => DraftDocument(facts.document),
-    selectedElementIds: const [],
+    readFacts: () => facts,
+    promoteDraft: (_) => DraftDocument(facts.document),
+    readSelectedElementIds: () => const {},
   );
 
   expect(
@@ -671,9 +671,9 @@ int _expectSparseResourceQueryWorkAtSupportedSize(int imageMutationCount) {
     committedResourceCount: resourceCount,
   );
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () => throw StateError('resource query must stay sparse'),
-    selectedElementIds: const [],
+    readFacts: () => facts,
+    promoteDraft: (_) => throw StateError('resource query must stay sparse'),
+    readSelectedElementIds: () => const {},
   );
   final work = _SparseReferenceWorkCounts();
   var entryReadsBeforeQueries = 0;
@@ -779,9 +779,9 @@ void _expectSparseResourceClearWorkAtSupportedSize({
     committedResourceCount: resourceCount,
   );
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () => throw StateError('clear must stay sparse'),
-    selectedElementIds: const [],
+    readFacts: () => facts,
+    promoteDraft: (_) => throw StateError('clear must stay sparse'),
+    readSelectedElementIds: () => const {},
   );
   if (priorImageMutationCount > 0) {
     for (var index = 0; index < priorImageMutationCount; index += 1) {
@@ -937,13 +937,13 @@ void _sparseClearRetainsBackgroundImageAndVectorResources() {
   var materializations = 0;
   final facts = SparseFixtureFacts(clearBackgroundResourcesDocument());
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () {
+    readFacts: () => facts,
+    promoteDraft: (_) {
       materializations += 1;
 
       return DraftDocument(clearBackgroundResourcesDocument());
     },
-    selectedElementIds: [CanvasElementId('content-image')],
+    readSelectedElementIds: () => {CanvasElementId('content-image')},
   );
   facts.resetReadCounters();
 
@@ -1015,13 +1015,13 @@ void _sparseClearRetainsCommittedAndLocalBackgroundResources() {
   final seed = _documentWithCommittedAndLocalClearResources();
   final facts = SparseFixtureFacts(seed);
   final session = EditSession.sparse(
-    facts: facts,
-    promoteDraft: () {
+    readFacts: () => facts,
+    promoteDraft: (_) {
       materializations += 1;
 
       return DraftDocument(seed);
     },
-    selectedElementIds: const [],
+    readSelectedElementIds: () => const {},
   );
 
   session.addBackgroundElement(

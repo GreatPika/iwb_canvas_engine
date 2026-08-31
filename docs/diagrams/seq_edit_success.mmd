@@ -23,18 +23,24 @@ sequenceDiagram
   Caller->>API: edit(fn)
   API->>EK: open synchronous edit session
   EK->>EK: reject disposed or nested edit
-  EK->>Store: read committed sparse facts
-  Store-->>EK: committed summary, rows, resource facts, revisions
-  EK->>Selection: read selected ids and selectionRevision
-  Selection-->>EK: selection snapshot for sparse effects
-  EK->>Sparse: open callback-local sparse journal
   EK->>Handle: bind live handle to session
   EK-->>Caller: invoke fn(handle)
 
   activate Handle
   Caller->>Handle: synchronous CanvasEdit mutations
-  Handle->>Sparse: record ordinary document/resource mutations
-  Sparse->>Touched: record exact sparse mutation facts
+  opt CanvasEdit.setSelection(ids)
+    Handle->>Handle: snapshot last desired ids; retain live Selection unchanged
+  end
+  alt document/resource mutation
+    Handle->>Store: first backing open reads committed sparse facts
+    Store-->>Handle: committed summary, rows, resource facts, revisions
+    Handle->>Selection: first backing open reads selected ids
+    Selection-->>Handle: selection snapshot for sparse effects
+    Handle->>Sparse: open callback-local journal and record ordinary mutation
+    Sparse->>Touched: record exact sparse mutation facts
+  else setSelection-only
+    Note over Handle,Sparse: Desired intent stays callback-local; sparse backing remains unopened.
+  end
   opt explicit readDraftDocument or replaceDraftDocument
     Handle->>Draft: materialize committed projection and replay sparse journal
     Draft->>Touched: record materialized fallback facts
@@ -45,18 +51,26 @@ sequenceDiagram
   Caller-->>EK: callback result
   EK->>EK: reject Future result before success path
   Note over EK: If the callback returns a Future, rollback applies and no commit work runs.
-  EK->>Store: prepare sparse commit or materialized accepted document
-  Store-->>EK: prepared accepted document facts
-  EK->>CC: compile touched set, revisions, invalidation, repaint intent
-  Touched-->>CC: exact changed state
+  alt document/resource mutation
+    EK->>Store: prepare sparse commit or materialized accepted document
+    Store-->>EK: prepared accepted document facts
+    EK->>CC: compile accepted touched facts plus explicit desired selection when present
+    Touched-->>CC: exact changed state
+  else explicit selection only
+    EK->>CC: compile accepted unchanged document plus desired selection
+  end
   CC->>Effects: prepare typed RepaintIntent and invalidation effects
   CC->>Events: stage commit event buffer
   Note over Events: Low-level CanvasEdit commits stage no user action events.
 
   CC->>Applier: hand off compiled CommitPlan
   Applier->>Applier: materialize accepted document when needed and seal delivery/action inputs
-  Applier->>Selection: prepare equality, final revision, and transfer owned backing
-  Selection-->>Applier: prepared selection install state
+  opt explicit desired selection or implicit prune/replacement effect
+    Applier->>Store: normalize desired membership against final candidate
+    Store-->>Applier: final eligible membership
+    Applier->>Selection: prepare equality, final revision, and transfer owned backing
+    Selection-->>Applier: prepared selection install state
+  end
   Applier->>Applier: seal exact CommitDeliveryResult
   Applier->>Store: prevalidate freshness, final revisions, and ID admission backings
   Store-->>Applier: bound assignment-only Store install

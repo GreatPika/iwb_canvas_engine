@@ -553,12 +553,12 @@ _SparseClearTraceOutcome _runSparseClearTrace(
     selectedElementIds: {CanvasElementId('content-image')},
   );
   final session = EditSession.sparse(
-    facts: SparseFixtureFacts(seed),
-    promoteDraft: () => DraftDocument(
+    readFacts: () => SparseFixtureFacts(seed),
+    promoteDraft: (_) => DraftDocument(
       seed,
       selectedElementIds: [CanvasElementId('content-image')],
     ),
-    selectedElementIds: [CanvasElementId('content-image')],
+    readSelectedElementIds: () => {CanvasElementId('content-image')},
   );
   final materialized = DraftDocument(
     seed,
